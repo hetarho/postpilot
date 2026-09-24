@@ -4,6 +4,8 @@ import {
   contentLanguageToProto,
   PostSchema,
   ProtoQualityMetric,
+  ProtoReplacementSurface,
+  ReplacementCandidateSchema,
   VoiceRefSchema,
 } from '@/shared/api'
 import { toPostDraft } from './post-queries'
@@ -47,6 +49,40 @@ describe('toPostDraft', () => {
       }),
     )
     expect(draft.qualityRules).toEqual(['title_saturation', 'composition'])
+  })
+
+  // GEN-53: a dropped offer changes nothing, so a surface this build cannot name is dropped.
+  it('maps replacement candidates and drops one with an unknown surface', () => {
+    const draft = toPostDraft(
+      create(PostSchema, {
+        slug: 'post',
+        voice,
+        targetLanguage: contentLanguageToProto('ko'),
+        replacementCandidates: [
+          create(ReplacementCandidateSchema, {
+            surface: ProtoReplacementSurface.TAG,
+            index: 1,
+            source: '산책',
+            phrases: ['산책로', '여행'],
+          }),
+          create(ReplacementCandidateSchema, {
+            surface: 9_999 as ProtoReplacementSurface,
+            source: '제주',
+            phrases: ['제주도'],
+          }),
+          create(ReplacementCandidateSchema, {
+            surface: ProtoReplacementSurface.BODY,
+            index: 0,
+            source: '기다렸다',
+            phrases: ['기다린다'],
+          }),
+        ],
+      }),
+    )
+    expect(draft.replacementCandidates).toEqual([
+      { surface: 'tag', index: 1, source: '산책', phrases: ['산책로', '여행'] },
+      { surface: 'body', index: 0, source: '기다렸다', phrases: ['기다린다'] },
+    ])
   })
 
   it('reads both as empty for a post that is not published', () => {

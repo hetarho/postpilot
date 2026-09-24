@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, type Ref } from 'react'
 import { Pencil } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { Button } from '../button/Button'
@@ -17,6 +17,7 @@ export function Editable({
   children,
   className,
   readOnly = false,
+  editButtonRef,
 }: {
   /** The pencil's accessible name. An icon-only button has no other name (§9), and it has to name
    *  the field, since a screen full of pencils named "수정" identifies nothing. */
@@ -26,6 +27,9 @@ export function Editable({
   className?: string
   /** Keeps the read presentation but removes the mutation affordance. */
   readOnly?: boolean
+  /** The pencil, for a caller that has to put focus back on it once something inside the read
+   *  view that held focus is gone. */
+  editButtonRef?: Ref<HTMLButtonElement>
 }) {
   const [editing, setEditing] = useState(false)
   if (editing && !readOnly) return <div className={className}>{edit(() => setEditing(false))}</div>
@@ -34,6 +38,7 @@ export function Editable({
       <div className="min-w-0 flex-1">{children}</div>
       {!readOnly && (
         <Button
+          ref={editButtonRef}
           variant="ghost"
           size="icon"
           aria-label={editLabel}

@@ -31,6 +31,8 @@ import {
   type Observation,
   type PostContent,
   PostContentSchema,
+  ReplacementCandidateSchema,
+  type ProtoReplacementCandidate,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
@@ -48,7 +50,7 @@ import {
   qualityMetricToProto,
   type QualityMetricId,
 } from '@/entities/quality'
-import { parseNaverBlogUrl } from '@/entities/post'
+import { parseNaverBlogUrl, replacementSurfaceToProto } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
 
@@ -141,6 +143,13 @@ export interface FakePostRow {
   videos?: FakeVideoRow[]
   activeJob?: FakeGenerationJobRow
   content?: PostContent
+  /** What the last write offered to replace, as stored (GEN-53). */
+  replacementCandidates?: Array<{
+    surface: 'title' | 'tag' | 'body'
+    index: number
+    source: string
+    phrases: string[]
+  }>
   observations?: Observation[]
   pendingExperimentId?: string
   contentRevision?: bigint
@@ -206,6 +215,8 @@ export interface FakePostsOptions {
   refuseField?: boolean
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
+  /** Every SavePostContent as it arrived: slug, the revision it expected and the content. */
+  contentSaves?: Array<{ slug: string; expectedRevision: bigint; content: PostContent }>
   /** The next SavePostDraft on this slug first publishes the post and is then refused as
    *  locked, the way a publish from another tab lands between two autosaves (POST-86). */
   publishOnDraftSave?: string
@@ -238,6 +249,7 @@ type Row = {
   videos: Video[]
   activeJob?: ProtoGenerationJob
   content?: PostContent
+  replacementCandidates: ProtoReplacementCandidate[]
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint
@@ -377,6 +389,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         (row.tags
           ? create(PostContentSchema, { title: row.title ?? '', tags: row.tags })
           : undefined),
+      replacementCandidates: (row.replacementCandidates ?? []).map((candidate) =>
+        create(ReplacementCandidateSchema, {
+          ...candidate,
+          surface: replacementSurfaceToProto(candidate.surface),
+        }),
+      ),
       observations: row.observations ?? [],
       pendingExperimentId: row.pendingExperimentId ?? '',
       contentRevision: row.contentRevision ?? 0n,
@@ -564,6 +582,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       videos: existing?.videos ?? [],
       activeJob: existing?.activeJob,
       content: existing?.content,
+      // Kept by a draft save, as by a manual content save and a revision (T341).
+      replacementCandidates: existing?.replacementCandidates ?? [],
       observations: existing?.observations ?? [],
       pendingExperimentId: existing?.pendingExperimentId ?? '',
       contentRevision: existing?.contentRevision ?? 0n,
@@ -618,6 +638,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.savePostContent, async (req) => {
     calls?.push('SavePostContent')
+    if (req.content)
+      options.contentSaves?.push({
+        slug: req.slug,
+        expectedRevision: req.expectedRevision,
+        content: req.content,
+      })
     await options.contentSaveGate
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)

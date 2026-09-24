@@ -111,3 +111,72 @@ describe('a VIDEO block', () => {
     expect(screen.getAllByText('기기의 원본 영상을 첨부해 주세요')).toHaveLength(2)
   })
 })
+
+// POST-79: the article's own text is handed out with its place, so ② can mark a span in it; the
+// summary, captions, alt text and a slot never are.
+it('renders every text through renderText with its place', () => {
+  const seen: string[] = []
+  render(
+    <BlockList
+      content={POST_CONTENT_FIXTURE}
+      images={[]}
+      renderText={(text, at) => {
+        seen.push(`${JSON.stringify(at)} ${text}`)
+        return `[${text}]`
+      }}
+    />,
+  )
+
+  expect(seen).toEqual([
+    '{"surface":"title"} 비 온 뒤의 제주',
+    '{"surface":"tag","index":0} 제주',
+    '{"surface":"tag","index":1} 산책',
+    '{"surface":"tag","index":2} 여행',
+    '{"surface":"body","index":0} 비가 그치기를 기다렸다.',
+    '{"surface":"body","index":1} <바다> & "바람"도 잠잠했다.',
+    '{"surface":"body","index":2} 바닷가로',
+    '{"surface":"body","index":4} 챙긴 것',
+    '{"surface":"body","index":6} 서두르지 않아도 괜찮다.',
+    '{"surface":"body","index":7,"item":0} 우산',
+    '{"surface":"body","index":7,"item":1} 따뜻한 차',
+  ])
+  expect(screen.getByRole('heading', { name: '[비 온 뒤의 제주]', level: 3 })).toBeInTheDocument()
+  expect(screen.getByText('#[산책]')).toBeInTheDocument()
+  expect(screen.getByText('비가 그친 뒤 천천히 걸은 하루')).toBeInTheDocument()
+})
+
+it('renders plain text without renderText', () => {
+  render(<BlockList content={POST_CONTENT_FIXTURE} images={[]} />)
+
+  expect(screen.getByRole('heading', { name: '비 온 뒤의 제주', level: 3 })).toBeInTheDocument()
+  expect(screen.getByText('#산책')).toBeInTheDocument()
+  expect(screen.getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
+  expect(screen.getByText('따뜻한 차')).toBeInTheDocument()
+})
+
+it('never passes a slot TEXT block', () => {
+  const seen: string[] = []
+  render(
+    <BlockList
+      content={create(PostContentSchema, {
+        title: '제목',
+        blocks: [
+          create(BlockSchema, {
+            type: BlockType.TEXT,
+            content: '{{slot:1}}',
+            slot: { kind: 'place', label: '가게 위치' },
+          }),
+          create(BlockSchema, { type: BlockType.TEXT, content: '본문' }),
+        ],
+      })}
+      images={[]}
+      renderText={(text, at) => {
+        seen.push(`${JSON.stringify(at)} ${text}`)
+        return text
+      }}
+    />,
+  )
+
+  expect(seen).toEqual(['{"surface":"title"} 제목', '{"surface":"body","index":1} 본문'])
+  expect(screen.getByText('가게 위치')).toBeInTheDocument()
+})

@@ -12,11 +12,16 @@ import { useTranslation } from 'react-i18next'
 import { unfilledSlotCount } from '@/shared/lib'
 import {
   BlockList,
+  applyReplacement,
   blockWith,
   copyPostContent,
+  isPublished,
   newBlock,
   postContentWith,
+  spansAt,
+  visibleSpans,
   type PostDraft,
+  type ReplacementSpan,
 } from '@/entities/post'
 import { BlockType, type Block, type PostContent } from '@/shared/api'
 import {
@@ -30,6 +35,7 @@ import {
   Typography,
 } from '@/shared/ui'
 import { useContentAutosave } from '../model/useContentAutosave'
+import { MarkedText } from './ReplacementMark'
 
 export interface BlockEditorHandle {
   flush: () => Promise<bigint>
@@ -74,6 +80,27 @@ export const BlockEditor = forwardRef<
     valid,
   })
   useEffect(() => onContentChange?.(content), [content, onContentChange])
+
+  // The write's candidates still standing in the text on screen (GEN-53). Stale ones are dropped
+  // here, at render, so a take or an edit that moves a source away drops its mark at once.
+  const spans = useMemo(
+    () => (isPublished(post) ? [] : visibleSpans(content, post.replacementCandidates)),
+    [content, post],
+  )
+  // Every pencil, so focus can land on the one that held a taken mark: the mark itself is gone the
+  // moment its source is (THEME-33).
+  const pencils = useRef(new Map<string, HTMLButtonElement>())
+  const pencilRef = (key: string) => (button: HTMLButtonElement | null) => {
+    if (button) pencils.current.set(key, button)
+    else pencils.current.delete(key)
+  }
+  // A take is exactly a typed edit: the content changes here and the autosave sends it with the
+  // revision the editor holds, recording nothing about where the words came from (POST-80).
+  const take = (span: ReplacementSpan, phrase: string) => {
+    setContent(applyReplacement(content, span, phrase))
+    const key = span.at.surface === 'body' ? `block:${span.at.index}` : 'header'
+    requestAnimationFrame(() => pencils.current.get(key)?.focus())
+  }
   useImperativeHandle(ref, () => ({ flush: autosave.flush, content: () => content }), [
     autosave.flush,
     content,
@@ -125,9 +152,15 @@ export const BlockEditor = forwardRef<
         content={content}
         images={post.images}
         videos={post.videos}
+        renderText={
+          spans.length
+            ? (text, at) => <MarkedText text={text} spans={spansAt(spans, at)} onTake={take} />
+            : undefined
+        }
         renderHeader={(rendered) => (
           <Editable
             editLabel={t('edit.titleSummaryTags')}
+            editButtonRef={pencilRef('header')}
             edit={(exit) => <HeaderFields content={content} onChange={setContent} onDone={exit} />}
           >
             {rendered}
@@ -143,6 +176,7 @@ export const BlockEditor = forwardRef<
             onChange={(value) => updateBlock(index, value)}
             onMove={(direction) => moveBlock(index, direction)}
             onRemove={() => removeBlock(index)}
+            editButtonRef={pencilRef(`block:${index}`)}
           >
             {rendered}
           </BlockEditRow>
@@ -173,6 +207,7 @@ function BlockEditRow({
   onChange,
   onMove,
   onRemove,
+  editButtonRef,
   children,
 }: {
   block: Block
@@ -183,12 +218,14 @@ function BlockEditRow({
   onChange: (block: Block) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
+  editButtonRef: (button: HTMLButtonElement | null) => void
   children: ReactNode
 }) {
   const { t } = useTranslation('posts')
   return (
     <Editable
       editLabel={t('edit.blockEdit', { index: index + 1 })}
+      editButtonRef={editButtonRef}
       edit={(exit) => (
         <BlockControls
           block={block}

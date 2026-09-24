@@ -56,6 +56,7 @@ import { i18n as recordPublishedUrlI18n } from '@/features/record-published-url/
 import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config/i18n'
 import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/config/i18n'
+import { i18n as editPostContentI18n } from '@/features/edit-post-content/config/i18n'
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
@@ -191,6 +192,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   selectPostFieldI18n,
   qualityI18n,
   chooseQualityRulesI18n,
+  editPostContentI18n,
   postI18n,
   postsI18n,
   uploadPhotosI18n,
@@ -234,6 +236,7 @@ export const resources = {
       ...selectPostFieldI18n.ko,
       ...qualityI18n.ko,
       ...chooseQualityRulesI18n.ko,
+      ...editPostContentI18n.ko,
       ...postI18n.ko,
       ...postsI18n.ko,
       ...uploadPhotosI18n.ko,
@@ -344,6 +347,7 @@ export const resources = {
       ...selectPostFieldI18n.en,
       ...qualityI18n.en,
       ...chooseQualityRulesI18n.en,
+      ...editPostContentI18n.en,
       ...postI18n.en,
       ...postsI18n.en,
       ...uploadPhotosI18n.en,

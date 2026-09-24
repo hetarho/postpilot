@@ -3279,6 +3279,227 @@ describe('the brief quality rows', () => {
   })
 })
 
+// POST-79, POST-80: ② marks where the last write's candidates still stand, and taking a phrase is
+// an ordinary content save that records nothing about where the words came from.
+describe('the replacement marks', () => {
+  const SLUG = '20260820-rain'
+  const CANDIDATES: NonNullable<FakePostRow['replacementCandidates']> = [
+    { surface: 'title', index: 0, source: '제주', phrases: ['제주도', '제주 바다'] },
+    // '여행' would duplicate tag 2, so only '산책로' is offered.
+    { surface: 'tag', index: 1, source: '산책', phrases: ['산책로', '여행'] },
+    {
+      surface: 'body',
+      index: 0,
+      source: '기다렸다',
+      phrases: ['기다린다', '기다려 본다', '기다리고 있었다', '기다렸어요'],
+    },
+    { surface: 'body', index: 0, source: '비가', phrases: ['빗줄기가'] },
+    { surface: 'body', index: 2, source: '바닷가로', phrases: ['해변으로'] },
+  ]
+  const finalized: FakePostRow = {
+    slug: SLUG,
+    status: 'finalized',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+    finalizedRevision: 1n,
+    finalizedAt: '2026-08-20T12:00:00Z',
+    replacementCandidates: CANDIDATES,
+  }
+  const article = () => within(screen.getByRole('article', { name: '생성된 글' }))
+
+  function renderMarks(row: FakePostRow = finalized) {
+    const calls: string[] = []
+    const contentSaves: NonNullable<FakePostsOptions['contentSaves']> = []
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      calls,
+      posts: { calls, contentSaves, posts: [row] },
+    })
+    return { calls, contentSaves }
+  }
+
+  async function openRefine(user: ReturnType<typeof userEvent.setup>) {
+    await openStep(user, '글 다듬기')
+    await screen.findByRole('article', { name: '생성된 글' })
+  }
+
+  it('marks the title, a tag and a TEXT block', async () => {
+    const user = userEvent.setup()
+    renderMarks()
+    await openRefine(user)
+
+    const heading = article().getByRole('heading', { level: 3 })
+    const title = within(heading)
+    expect(title.getByRole('button', { name: '제주' })).toHaveAttribute('aria-haspopup', 'dialog')
+    // The text around a mark is kept whole.
+    expect(heading).toHaveTextContent(/^비 온 뒤의 제주$/)
+    expect(article().getByRole('button', { name: '비가' }).parentElement).toHaveTextContent(
+      /^비가 그치기를 기다렸다\.$/,
+    )
+    const tags = within(article().getByRole('list', { name: '태그' }))
+    // A chip stands alone, so its mark grows to the pointer floor under a coarse pointer; a mark in
+    // a sentence takes WCAG 2.5.8's inline exception (THEME-23).
+    expect(tags.getByRole('button', { name: '산책' })).toHaveClass(
+      'pointer-coarse:min-h-11',
+      'pointer-coarse:min-w-11',
+    )
+    expect(article().getByRole('button', { name: '기다렸다' })).not.toHaveClass(
+      'pointer-coarse:min-h-11',
+    )
+    // The tag chip with no candidate stays plain text.
+    expect(tags.queryByRole('button', { name: '제주' })).toBeNull()
+    expect(article().getByRole('button', { name: '기다렸다' })).toBeInTheDocument()
+    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
+  })
+
+  it('offers at most three phrases and no duplicate tag', async () => {
+    const user = userEvent.setup()
+    renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '기다렸다' }))
+    const panel = within(await screen.findByRole('dialog', { name: '‘기다렸다’ 바꿔 쓰기' }))
+    expect(panel.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      '기다린다',
+      '기다려 본다',
+      '기다리고 있었다',
+    ])
+    expect(panel.getByRole('button', { name: '‘기다린다’(으)로 바꾸기' })).toBeInTheDocument()
+    expect(panel.getByText('‘기다렸다’ 대신 쓸 수 있는 표현')).toBeInTheDocument()
+    // What was observed about the phrases, and nothing about what they gain.
+    expect(
+      panel.getByText('네이버 검색 결과의 제목과 설명에 자주 나온 표현이에요.'),
+    ).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    await user.click(article().getByRole('button', { name: '산책' }))
+    const tagPanel = within(await screen.findByRole('dialog', { name: '‘산책’ 바꿔 쓰기' }))
+    expect(tagPanel.getAllByRole('button').map((button) => button.textContent)).toEqual(['산책로'])
+  })
+
+  it('saves a take with the expected revision and returns 확정 to 검토', async () => {
+    const user = userEvent.setup()
+    const { contentSaves } = renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '기다렸다' }))
+    await user.click(await screen.findByRole('button', { name: '‘기다려 본다’(으)로 바꾸기' }))
+
+    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
+    expect(contentSaves[0].slug).toBe(SLUG)
+    expect(contentSaves[0].expectedRevision).toBe(1n)
+    expect(contentSaves[0].content.blocks[0].content).toBe('비가 그치기를 기다려 본다.')
+    // The rest of the content went as the editor held it.
+    expect(contentSaves[0].content.title).toBe(POST_CONTENT_FIXTURE.title)
+    expect(contentSaves[0].content.tags).toEqual(POST_CONTENT_FIXTURE.tags)
+    // Focus lands on the pencil of the block that held the text, never on <body>.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '1번째 블록 수정' })).toHaveFocus(),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status', { name: '글 상태' })).toHaveTextContent('검토'),
+    )
+    expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  // A phrase can contain its own source, which then still stands: the mark stays, and the panel
+  // the take came from closes all the same. Focus goes to the header's pencil.
+  it('closes the panel on a take, even where the source still stands', async () => {
+    const user = userEvent.setup()
+    const { contentSaves } = renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '제주' }))
+    await user.click(await screen.findByRole('button', { name: '‘제주도’(으)로 바꾸기' }))
+
+    expect(screen.queryByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeNull()
+    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
+    expect(contentSaves[0].content.title).toBe('비 온 뒤의 제주도')
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '제목과 요약, 태그 수정' })).toHaveFocus(),
+    )
+    expect(article().getByRole('heading', { level: 3 })).toHaveTextContent(/^비 온 뒤의 제주도$/)
+  })
+
+  it('puts focus on the pencil of the block the take changed', async () => {
+    const user = userEvent.setup()
+    const { contentSaves } = renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '바닷가로' }))
+    await user.click(await screen.findByRole('button', { name: '‘해변으로’(으)로 바꾸기' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '3번째 블록 수정' })).toHaveFocus(),
+    )
+    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
+    expect(contentSaves[0].content.blocks[2].content).toBe('해변으로')
+  })
+
+  it('keeps a neighbouring mark after a take', async () => {
+    const user = userEvent.setup()
+    renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '기다렸다' }))
+    await user.click(await screen.findByRole('button', { name: '‘기다린다’(으)로 바꾸기' }))
+
+    await waitFor(() => expect(article().queryByRole('button', { name: '기다렸다' })).toBeNull())
+    expect(article().getByText(/기다린다\./)).toBeInTheDocument()
+    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
+    expect(article().getByRole('button', { name: '제주' })).toBeInTheDocument()
+  })
+
+  it('drops a mark whose source was edited away', async () => {
+    const user = userEvent.setup()
+    renderMarks()
+    await openRefine(user)
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    // An open editor is plain fields: no mark stands in the block it edits.
+    expect(article().queryByRole('button', { name: '비가' })).toBeNull()
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '비가 그쳤다.')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(article().queryByRole('button', { name: '기다렸다' })).toBeNull()
+    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
+  })
+
+  it('sends nothing for an ignored mark', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderMarks()
+    await openRefine(user)
+
+    await user.click(article().getByRole('button', { name: '제주' }))
+    expect(await screen.findByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeNull()
+
+    // Past the content debounce: opening and closing a mark is no edit (POST-79).
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    expect(calls).not.toContain('SavePostContent')
+  })
+
+  it('shows no marks on a published post', async () => {
+    const user = userEvent.setup()
+    renderMarks({
+      ...finalized,
+      status: 'published',
+      publishedUrl: 'https://blog.naver.com/alice/1',
+      publishedAt: '2026-08-21T09:00:00Z',
+    })
+    await openRefine(user)
+
+    expect(article().getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
+    expect(article().queryByRole('button')).toBeNull()
+  })
+})
+
 // POST-86: a published post takes no write but its address and the delete. It opens on 글 완성,
 // ② reads its prose, ① shows its material read-only and says why exactly once, and a save refused
 // because the post was published elsewhere is an answer rather than an outage.

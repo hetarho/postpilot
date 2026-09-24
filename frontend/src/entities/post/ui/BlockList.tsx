@@ -6,6 +6,7 @@ import { Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
 import { blockKey, imageByFile } from '../model/content'
+import type { TextAt } from '../model/replacements'
 
 interface BlockListProps {
   content: PostContent
@@ -36,7 +37,14 @@ interface BlockListProps {
   /** Wraps a rendered VIDEO block. The export preview uses it to put its own hint beside the
    *  clip; the reading and editing views take the default. */
   renderVideo?: (block: PostContent['blocks'][number], rendered: ReactNode) => ReactNode
+  /** Renders one piece of the article's own text — the title, a tag after its `#`, the content of
+   *  a TEXT, HEADING or QUOTE block and each LIST item — with the place it stands, so ② can mark a
+   *  replacement span inside it. The default is the text itself; a slot, a caption, alt text and
+   *  the summary never pass through it. */
+  renderText?: (text: string, at: TextAt) => ReactNode
 }
+
+const plainText = (text: string) => text
 
 /** The canonical block array rendered as a read-only draft. */
 export function BlockList({
@@ -49,6 +57,7 @@ export function BlockList({
   renderHeader,
   renderMissingImage,
   renderVideo,
+  renderText = plainText,
 }: BlockListProps) {
   const { t } = useTranslation('posts')
   const imagesByFile = imageByFile(images)
@@ -76,7 +85,7 @@ export function BlockList({
               a nested reading section, so it keeps heading semantics without competing with the
               page title for the top visual role (design-language §3 / Job 38 A10). */}
           <Typography variant="title" as="h3" className="mt-1 break-words">
-            {content.title}
+            {renderText(content.title, { surface: 'title' })}
           </Typography>
           {content.summary && (
             <Typography variant="body" className="text-content-secondary mt-3 break-words">
@@ -85,14 +94,14 @@ export function BlockList({
           )}
           {content.tags.length > 0 && (
             <ul aria-label={t('tags')} className="mt-3 flex flex-wrap gap-2">
-              {content.tags.map((tag) => (
+              {content.tags.map((tag, index) => (
                 <Typography
                   variant="meta"
                   as="li"
                   key={tag}
                   className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 break-words"
                 >
-                  #{tag}
+                  #{renderText(tag, { surface: 'tag', index })}
                 </Typography>
               ))}
             </ul>
@@ -114,7 +123,7 @@ export function BlockList({
                 block,
                 index,
                 <Typography variant="body" key={key} className="break-words whitespace-pre-wrap">
-                  {block.content}
+                  {renderText(block.content, { surface: 'body', index })}
                 </Typography>,
               )
             case BlockType.HEADING:
@@ -123,11 +132,11 @@ export function BlockList({
                 index,
                 block.level === 3 ? (
                   <Typography variant="title" as="h5" key={key} className="pt-3 break-words">
-                    {block.content}
+                    {renderText(block.content, { surface: 'body', index })}
                   </Typography>
                 ) : (
                   <Typography variant="title" as="h4" key={key} className="pt-5 break-words">
-                    {block.content}
+                    {renderText(block.content, { surface: 'body', index })}
                   </Typography>
                 ),
               )
@@ -213,7 +222,7 @@ export function BlockList({
                   key={key}
                   className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 break-words"
                 >
-                  {block.content}
+                  {renderText(block.content, { surface: 'body', index })}
                 </Typography>,
               )
             case BlockType.LIST:
@@ -227,7 +236,9 @@ export function BlockList({
                   className="list-disc space-y-1 pl-5 break-words"
                 >
                   {block.items.map((item, itemIndex) => (
-                    <li key={`${item}:${itemIndex}`}>{item}</li>
+                    <li key={`${item}:${itemIndex}`}>
+                      {renderText(item, { surface: 'body', index, item: itemIndex })}
+                    </li>
                   ))}
                 </Typography>,
               )

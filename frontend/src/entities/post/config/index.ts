@@ -21,6 +21,10 @@ export const POST_TAG_COUNT_DEFAULT = 4
 export const POST_TAG_COUNT_MIN = 1
 export const POST_TAG_COUNT_MAX = 10
 
+/** How many phrases one replacement mark offers at most (GEN-54). A product rule, not a
+ *  mirrored server limit: the write may return more, and the mark shows this many. */
+export const REPLACEMENT_PHRASES_MAX = 3
+
 /** The longest Naver Blog address a post stores, in code points. Mirrors the server's
  *  `post.PublishedURLMaxChars` (ARCH-21), which stays authoritative. */
 export const POST_PUBLISHED_URL_MAX_CHARS = 2048

@@ -199,6 +199,8 @@ export {
   PostSchema,
   PostSummarySchema,
   ReobserveSelectionSchema,
+  ReplacementCandidateSchema,
+  ReplacementSurface as ProtoReplacementSurface,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
@@ -215,6 +217,7 @@ export {
 } from './gen/postpilot/v1/post_pb'
 export type {
   Block,
+  ReplacementCandidate as ProtoReplacementCandidate,
   TemplateAnswer as ProtoTemplateAnswer,
   VoiceRef as ProtoVoiceRef,
   GenerationJob as ProtoGenerationJob,

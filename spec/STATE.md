@@ -51,15 +51,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T351 | ② marks replacement spans over the title, tags and body, and taking one is a manual edit | POST GEN QUAL ARCH THEME | T349 | todo |
 | T352 | A durable generate carries its frozen memories into the write prompt | MEM GEN ARCH | - | todo |
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T351 (then T352 and T353, the two independent bug fixes)
+- implement-task T352 (then T353)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T351 done; ② marks each stored replacement candidate whose source still stands (the title, a tag by index, TEXT without a slot, HEADING, QUOTE, the first LIST item holding it) at its first occurrence, the first in answer order winning an overlap, with at most three phrases and no tag phrase that would empty or duplicate a tag; a take is an ordinary content save that returns 확정 to 검토, drops its mark at render, keeps its neighbours and focuses the pencil that held it; opening or ignoring a mark sends nothing, and a published post or an open editor shows none; FE gates pass (p35)
+- 260924 T351 claimed (p35)
 - 260924 T350 done; /guidelines opens with the 상위 노출 단어 사용 preset above the list and the empty state: its server text read-only, its own switch and a 적용할 분야 picker that is its fields scope, each saving its own half and showing the answered state at once, a line saying the owner's guidelines win, a prompt while it is on with no 분야, and a refusal in the catalogue's words; FE gates pass (p35)
 - 260924 T350 claimed (p35)
 - 260924 T349 done; ①'s brief shows 발행 글 점검 after 목표 분량 with M1–M4 in their four states from the account aggregate: an over-band row is a checkbox whose toggletip quotes the rule text it adds, ticks autosave the whole set with the length, a stored within-band tick is kept, the boxes hold still for a running job or the publish lock, and the read is prefetched, follows the target language and refreshes after URL, content and delete saves; FE gates pass (p35)
@@ -78,5 +79,3 @@
 - 260924 T343 claimed (p35)
 - 260924 T342 done; a guideline can be scoped to listed 분야 (all three shapes validated, collapsed, rescoped as one normalized patch), the owner switches the 상위 노출 단어 사용 preset and picks its 분야 as a presence patch outside the cap and text uniqueness, and every generation and write snapshot freezes global, template and 분야 texts with the preset line last while a revision never carries it; only the owner's procedures write guideline rows (structural test); BE gate passes (p35)
 - 260924 T342 claimed (p35)
-- 260924 T341 done; a generation and an applied write winner replace the post's stored nouns and replacement candidates (none clears them), a revision and a manual save keep them, an identical content with other annotations is a new machine write, Post.replacement_candidates carries them in stored order while nouns stay off the wire, and a lab candidate's output carries both with a legacy output reading as none; BE gate and gen:sql pass (p35)
-- 260924 T341 claimed (p35)

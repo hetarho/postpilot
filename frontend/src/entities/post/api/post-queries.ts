@@ -18,6 +18,8 @@ import {
   type PostSummary,
 } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
+import type { ReplacementCandidate } from '../model/replacements'
+import { toReplacementCandidate } from './replacement-mappers'
 
 export function toPostDraft(post: Post): PostDraft {
   return {
@@ -42,6 +44,9 @@ export function toPostDraft(post: Post): PostDraft {
     videos: post.videos.map(toPostVideo),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
     content: post.content,
+    replacementCandidates: post.replacementCandidates
+      .map(toReplacementCandidate)
+      .filter((candidate): candidate is ReplacementCandidate => candidate !== undefined),
     observations: post.observations,
     pendingExperimentId: post.pendingExperimentId,
     contentRevision: post.contentRevision,
