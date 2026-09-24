@@ -65,7 +65,6 @@
 | T371 | The small mirrors are pinned | ARCH | T362 T364 T369 | todo |
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
-| T374 | The template screen's ask-conflict flags follow the mounted composition | ARCH | - | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
 | T380 | A standalone CPU worker prepares and renders frozen media jobs | ARCH CLIP | T378 T379 | todo |
 | T381 | Generation resumes from prepared artifacts without repeating AI work | ARCH GEN CLIP | T376 T377 T379 T380 | todo |
@@ -80,9 +79,11 @@
 ## next
 - implement-task T380 next for the media-worker wave (T376..T379 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T374 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T371 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T374 done; an ask conflict a 블록 composition raised is lowered when it unmounts, so 원문 saves a source that parses; FE gates pass (p42)
+- 260925 T374 claimed (p42)
 - 260925 T369 done; an empty search answer keeps a field's stored phrase list and retries after the delay (QUAL-46), and a refresh interval below the quality context's 1h floor fails the boot naming its key; BE gate passes (p42)
 - 260925 T369 claimed (p42)
 - 260925 T364 done; MeasureSelf's answer is pinned per MeasureVersion by a golden digest over a 20-post corpus, and emoji tails (variation selectors, ZWJ, format runes, keycaps) trim at 어절 edges under MeasureVersion 2; BE gate passes (p42)
@@ -101,5 +102,3 @@
 - 260925 T354 claimed (p42)
 - 260925 T378 done (mw): authenticated separate worker API, compatible claims, fenced reports, bounded transport and private runtime status; HTTP/SQLite/race, isolated ARCH-26/FE/CI/codegen checks pass; T379 next
 - 260925 T378 claimed (mw); T377 committed as b56a62bc; sequential media-wave scope only
-- 260925 create-task POST MEM done: T355 rewritten as the brief's whole-set 저장 (분야 joins SavePostGenerationOptions, a partial request is refused, 분야 and 기억 사용 leave ①'s panel, the draft queue's 분야 channel goes); T356 T357 T361 T363 T366 T367 T368 T372 T373 T375 updated to match, T366 now after T355, T373 also refuses an unknown quality tick
-- 260925 create-task POST MEM start (r14, r3: 분야 and 기억 사용 in the brief, saved together by its 저장; updates todo T355 T356 T366 T367 T368 T373 T375)

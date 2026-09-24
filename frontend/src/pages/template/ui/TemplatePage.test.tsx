@@ -511,6 +511,44 @@ describe('the title area', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 
+  // Review F28: a conflict the 블록 composition raised must not outlive it. 원문 shows what is
+  // saved, and the colliding row was never in it, so the source parses and 저장 goes through.
+  it('lets 저장 through in 원문 once the body row that asked under a title label is gone', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
+    await user.type(await screen.findByLabelText('이름'), ' 2편')
+
+    const body = bodySection()
+    await user.click(paletteButton('고정 문구'))
+    await user.type(within(body).getByLabelText('들어갈 문구'), '가게 이름')
+    await user.click(within(body).getByRole('switch', { name: '데이터 받기' }))
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0].body).toBe('<write>인트로를 씁니다</write>')
+    expect(updates[0].titleArea).toBe(TITLED.titleArea)
+  })
+
+  it('lets 저장 through in 원문 once the title rows that asked under one label are gone', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await screen.findByLabelText('이름')
+
+    await user.click(within(titleSection()).getByRole('button', { name: /방문 후기/ }))
+    await user.click(within(titleSection()).getByRole('switch', { name: '데이터 받기' }))
+    const label = within(titleSection()).getByLabelText('입력란 제목')
+    await user.clear(label)
+    await user.type(label, '가게 이름')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+  })
+
   // The title is compared and saved as it is, like the body: trimming it would make a stored
   // title with an outer space read as dirty on open and be rewritten on save.
   it('never trims the stored title area', async () => {

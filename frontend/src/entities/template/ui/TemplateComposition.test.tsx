@@ -483,16 +483,22 @@ describe('titles the other area asks under', () => {
     const [value, setValue] = useState(initial)
     const [taken, setTaken] = useState<ReadonlySet<string>>(new Set())
     const [conflict, setConflict] = useState(false)
+    const [shown, setShown] = useState(true)
     return (
       <>
-        <TemplateComposition
-          value={value}
-          onChange={setValue}
-          takenAskTitles={taken}
-          onAskConflict={setConflict}
-        />
+        {shown && (
+          <TemplateComposition
+            value={value}
+            onChange={setValue}
+            takenAskTitles={taken}
+            onAskConflict={setConflict}
+          />
+        )}
         <button type="button" onClick={() => setTaken(new Set(['가게 이름']))}>
           take
+        </button>
+        <button type="button" onClick={() => setShown(false)}>
+          hide
         </button>
         <button type="button" onClick={() => setTaken(new Set())}>
           release
@@ -503,6 +509,16 @@ describe('titles the other area asks under', () => {
     )
   }
   const INITIAL = '<ask label="가게 이름"/>\n<write>인트로</write>'
+
+  // A flag it raised must not outlive the composition: gone, it has no rows left to conflict.
+  it('reports no conflict once it unmounts', async () => {
+    const user = userEvent.setup()
+    render(<BodyEditor initial={INITIAL} />)
+    await user.click(screen.getByRole('button', { name: 'take' }))
+    expect(screen.getByTestId('conflict')).toHaveTextContent('true')
+    await user.click(screen.getByRole('button', { name: 'hide' }))
+    expect(screen.getByTestId('conflict')).toHaveTextContent('false')
+  })
 
   it('raises the row message and leaves the row out, then puts it back when released', async () => {
     const user = userEvent.setup()

@@ -243,6 +243,9 @@ function Composition({
   // can see, so there would be nothing left there to notice.
   const conflicted = duplicates.size > 0
   useEffect(() => onAskConflict?.(conflicted), [conflicted, onAskConflict])
+  // An unmounted composition has no rows left to conflict, and a flag it raised must not outlive
+  // it: switching to 원문, or the value no longer reading, would otherwise hold 저장 for good.
+  useEffect(() => () => onAskConflict?.(false), [onAskConflict])
 
   const context: RowContext = {
     area,
