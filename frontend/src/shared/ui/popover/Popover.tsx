@@ -26,6 +26,9 @@ const focusableSelector =
  *  where it belongs — the listeners that close it capture one stable `close` for their lifetime. */
 export interface PopoverHandle {
   open: () => void
+  /** Puts focus on the trigger — for a caller whose choice holds the trigger disabled while it
+   *  saves, so focus can only come back once the save has settled. */
+  focus: () => void
 }
 
 export const Popover = forwardRef<
@@ -43,6 +46,12 @@ export const Popover = forwardRef<
      *  waits on — 렌더하기 while the render it chose is running. */
     triggerPending?: boolean
     triggerClassName?: string
+    /** The trigger's own attributes where it is a FIELD's control: the `id` its visible label
+     *  points at, a name that wears the current value (`"<label> <value>"`, the way a `Listbox`
+     *  is named) and the ids of its help and error. The panel keeps `label` as its name. */
+    triggerAttributes?: { id?: string; 'aria-label'?: string; 'aria-describedby'?: string }
+    /** The panel's content. A control inside it marked `data-autofocus` takes focus on open, so a
+     *  set of choices opens on the current one; otherwise the first focusable control does. */
     children: (close: () => void) => ReactNode
     disabled?: boolean
     /** Above remains the action-bar default; compact header controls explicitly open below. */
@@ -65,6 +74,7 @@ export const Popover = forwardRef<
     triggerVariant = 'secondary',
     triggerPending = false,
     triggerClassName,
+    triggerAttributes,
     children,
     disabled = false,
     placement = 'above',
@@ -86,11 +96,27 @@ export const Popover = forwardRef<
   // regardless of whether CSS is painting it.
   const asSheet = phone === 'sheet' && !wide
 
-  const close = () => {
+  // A press outside the panel lets focus go where that press sends it.
+  const dismiss = () => {
     setOpen(false)
   }
 
-  useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), [])
+  // Closing from inside — a choice made, an action taken — unmounts the control that held focus,
+  // which would drop it to the body, so it goes back to the trigger as a dialog's does.
+  const close = () => {
+    const focusWasInside = Boolean(panelRef.current?.contains(document.activeElement))
+    setOpen(false)
+    if (focusWasInside) queueMicrotask(() => triggerRef.current?.focus({ preventScroll: true }))
+  }
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: () => setOpen(true),
+      focus: () => triggerRef.current?.focus({ preventScroll: true }),
+    }),
+    [],
+  )
 
   // The panel is anchored to the trigger, and a trigger can sit anywhere in the viewport. Nothing
   // in CSS knows where, so both bounds are measured here.
@@ -127,7 +153,8 @@ export const Popover = forwardRef<
     const focusableElements = () =>
       Array.from(panelRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
     queueMicrotask(() => {
-      const firstElement = focusableElements()[0]
+      const firstElement =
+        panelRef.current?.querySelector<HTMLElement>('[data-autofocus]') ?? focusableElements()[0]
       if (firstElement) firstElement.focus()
       else panelRef.current?.focus()
     })
@@ -144,7 +171,7 @@ export const Popover = forwardRef<
       // Nor on the panel of an `InlinePopover` or a `Toggletip` opened from inside this one, which
       // are portalled for the same reason and carry the anchored-panel attribute.
       if (target?.closest?.(`[${ANCHORED_PANEL_ATTRIBUTE}]`)) return
-      if (!rootRef.current?.contains(target)) close()
+      if (!rootRef.current?.contains(target)) dismiss()
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -200,6 +227,7 @@ export const Popover = forwardRef<
       disabled={disabled}
       pending={triggerPending}
       className={triggerClassName}
+      {...triggerAttributes}
       onClick={() => setOpen((value) => !value)}
     >
       {triggerLabel ?? t('popover.options')}

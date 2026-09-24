@@ -1,7 +1,8 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { twMerge } from 'tailwind-merge'
 
-/** A chip that is pressed or not: one option in a set where any number may be chosen at once.
+/** A chip that is pressed or not: one option in a set where any number may be chosen at once, or
+ *  — where the caller releases the others as it presses one, as ①'s 분야 does — exactly one.
  *
  *  It is a `button` with `aria-pressed` rather than a checkbox, because a set of them is a
  *  row of tappable labels rather than a form field, and assistive technology should announce

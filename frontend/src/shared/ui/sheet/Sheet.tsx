@@ -81,7 +81,9 @@ export function Sheet({
     const self = identity.current
     openSheets.push(self)
     returnFocus.current = document.activeElement as HTMLElement | null
-    panel.current?.focus()
+    // A set of choices names its current one with `data-autofocus`, so the keyboard arrives where
+    // the state already is; anything else starts on the panel itself.
+    ;(panel.current?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.current)?.focus()
 
     // Touch scrolling is not a Tab key: without this, dragging anywhere on the scrim scrolls the
     // page underneath the sheet, and the user lands somewhere else when it closes (§7).

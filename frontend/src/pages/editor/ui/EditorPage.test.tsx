@@ -2809,12 +2809,13 @@ describe('the post 분야', () => {
   const following = (first: Node, second: Node) =>
     Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
 
-  const fieldPicker = () => screen.findByRole('combobox', { name: /^분야 / })
+  const fieldPicker = () => screen.findByRole('button', { name: /^분야 / })
   async function pickField(user: ReturnType<typeof userEvent.setup>, name: string) {
     const picker = await fieldPicker()
     await waitFor(() => expect(picker).toBeEnabled())
     await user.click(picker)
-    await user.click(await screen.findByRole('option', { name }))
+    const chips = await screen.findByRole('group', { name: '분야' })
+    await user.click(within(chips).getByRole('button', { name }))
     return picker
   }
 
@@ -2837,7 +2838,7 @@ describe('the post 분야', () => {
 
     const lastAnswer = await screen.findByLabelText('총평 별점')
     // A post with no 분야 reads 없음, under a label a sighted user can read.
-    const picker = await screen.findByRole('combobox', { name: '분야 없음' })
+    const picker = await screen.findByRole('button', { name: '분야 없음' })
     expect(screen.getByText('분야', { selector: 'label' })).not.toHaveClass('sr-only')
     expect(picker).toHaveAccessibleDescription(HELP)
     const memories = screen.getByRole('checkbox', { name: '기억 사용' })
@@ -2846,7 +2847,7 @@ describe('the post 분야', () => {
 
     // It is ①'s field, so the writing brief holds no 분야 of its own.
     const brief = await openBrief(user)
-    expect(within(brief).queryByRole('combobox', { name: /^분야/ })).toBeNull()
+    expect(within(brief).queryByRole('button', { name: /^분야/ })).toBeNull()
   })
 
   it('autosaves a pick on a saved post and keeps it across a reload', async () => {
@@ -2870,7 +2871,7 @@ describe('the post 분야', () => {
 
     first.unmount()
     renderAppAt(`/posts/${SLUG}`, { transport: first.transport })
-    expect(await screen.findByRole('combobox', { name: '분야 카페' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '분야 카페' })).toBeInTheDocument()
   })
 
   it('carries a 분야 chosen on /posts/new into the create', async () => {
@@ -2903,7 +2904,7 @@ describe('the post 분야', () => {
       () => expect(draftSaves[0]).toMatchObject({ slug: '', field: 'restaurant' }),
       AUTOSAVED,
     )
-    expect(await screen.findByRole('combobox', { name: '분야 맛집' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '분야 맛집' })).toBeInTheDocument()
   })
 
   it('clears with 없음', async () => {
@@ -2914,7 +2915,7 @@ describe('the post 분야', () => {
       posts: { draftSaves, posts: [{ slug: SLUG, title: '제주', field: 'cafe' }] },
     })
 
-    const picker = await screen.findByRole('combobox', { name: '분야 카페' })
+    const picker = await screen.findByRole('button', { name: '분야 카페' })
     await pickField(user, '없음')
     // A present UNSPECIFIED, which is what clears it — distinct from omitting the field.
     await waitFor(() => expect(draftSaves).toHaveLength(1))
@@ -2936,7 +2937,6 @@ describe('the post 분야', () => {
     // Nothing landed, so the picker still shows what the server holds.
     await waitFor(() => expect(picker).toBeEnabled())
     expect(picker).toHaveAccessibleName('분야 없음')
-    expect(picker).toHaveAttribute('aria-invalid', 'true')
     expect(picker).toHaveAccessibleDescription(expect.stringContaining(why))
 
     // The next title save carries text only, so the refused pick is not retried with every save.
@@ -2970,7 +2970,7 @@ describe('the post 분야', () => {
     })
 
     await openStep(user, '글 생성')
-    const picker = await screen.findByRole('combobox', { name: '분야 카페' })
+    const picker = await screen.findByRole('button', { name: '분야 카페' })
     expect(picker).toBeDisabled()
     // T339's one sentence is the reason (POST-86); the picker adds none of its own.
     expect(
