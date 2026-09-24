@@ -12,7 +12,7 @@ FROM rust:alpine@sha256:1716b3aa042d735f4566d14dc54e8037de9d69556e2d5dd58131d93a
 COPY backend/build/render-tools.sh /build-render-tools.sh
 RUN sh /build-render-tools.sh
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS builder
 WORKDIR /src
 # Cache modules first — this layer is reused unless go.mod/go.sum change.
 COPY backend/go.mod backend/go.sum ./
@@ -23,13 +23,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/a
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
+RUN mkdir -p /worker-work
 
 FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
 
-FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS media-runtime
 WORKDIR /
-COPY --from=builder /api /api
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
 COPY --from=media-build /opt/media/share/ /usr/share/postpilot-media/
 COPY --from=render-build /opt/render/bin/resvg /usr/local/bin/resvg
@@ -37,6 +37,11 @@ COPY --from=render-build /opt/render/share/ /usr/share/postpilot-render/
 COPY backend/build/render-tools.sh backend/build/RENDER.md /usr/share/postpilot-render/
 COPY backend/assets/fonts/ /usr/share/postpilot-fonts/
 COPY backend/build/media-tools.sh backend/build/MEDIA.md /usr/share/postpilot-media/
+# Shared pinned media/font assets above; API configuration never enters a worker.
+USER nonroot:nonroot
+
+FROM media-runtime AS runtime
+COPY --from=builder /api /api
 # The model registry ships with the image it was written for. A stack may still mount
 # its own file over /config/providers.yaml (or point PROVIDERS_CONFIG elsewhere).
 COPY backend/config /config
@@ -97,6 +102,38 @@ RUN ["/media.test", "-test.run=^TestBundledToolingCoverage$", "-test.v"]
 # path, and what it catches cannot be caught anywhere else.
 FROM runtime AS deployable
 COPY --from=media-tooling /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+
+# Execution-only runtime: no API binary, registry config, database or provider env.
+FROM media-runtime AS media-worker-runtime
+ARG SOURCE_REVISION=local
+ARG TARGETARCH
+# Updated/checked by scripts/media-assets.mjs; runtime manifest also reports tool/font hashes.
+ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
+LABEL org.opencontainers.image.title="Postpilot CPU media worker" \
+      org.opencontainers.image.revision=$SOURCE_REVISION \
+      org.opencontainers.image.architecture=$TARGETARCH \
+      org.postpilot.media.protocol="1" \
+      org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.assets="assets-v1" \
+      org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
+      org.postpilot.media.manifest-command="/media-worker manifest"
+COPY --from=builder /media-worker /media-worker
+COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work
+ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-worker", "health"]
+ENTRYPOINT ["/media-worker"]
+
+FROM media-worker-runtime AS media-worker-tooling
+# Offline, shell-free, actual CPU encode/decode plus the complete capability manifest.
+RUN ["/media-worker", "manifest"]
+
+FROM media-worker-runtime AS media-worker-deployable
+COPY --from=media-worker-tooling /media-worker /media-worker
+
+FROM media-worker-deployable AS media-worker-smoke
+COPY --from=builder /media.test /media.test
+ENV CLIP_MEDIA_SMOKE=1
+ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants)$", "-test.v", "-test.timeout=45m"]
 
 FROM deployable AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.

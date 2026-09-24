@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -300,10 +301,20 @@ func TestWorkerCommandHealth(t *testing.T) {
 	defer api.Close()
 	for _, mode := range []string{"cpu", "auto", "nvenc"} {
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		base := filepath.Join(t.TempDir(), "health")
+		root := worker.WorkRoot(base, "smoke-cpu")
+		if err := os.MkdirAll(root, 0700); err != nil {
+			t.Fatal(err)
+		}
+		release, err := worker.LockWorkRoot(root)
+		if err != nil {
+			t.Fatal(err)
+		}
 		command := exec.CommandContext(ctx, "/media-worker", "health")
-		command.Env = []string{"MEDIA_API_URL=" + api.URL, "MEDIA_WORKER_ID=smoke-cpu", "MEDIA_WORKER_TOKEN=" + token, "MEDIA_ACCEL=" + mode, "CLIP_WORK_ROOT=" + filepath.Join(t.TempDir(), "health"), "DATABASE_PATH=/unwritable/no-database", "PROVIDERS_CONFIG=/no-providers"}
+		command.Env = []string{"MEDIA_API_URL=" + api.URL, "MEDIA_WORKER_ID=smoke-cpu", "MEDIA_WORKER_TOKEN=" + token, "MEDIA_ACCEL=" + mode, "CLIP_WORK_ROOT=" + base, "DATABASE_PATH=/unwritable/no-database", "PROVIDERS_CONFIG=/no-providers"}
 		out, err := command.CombinedOutput()
-		cancel()
+		release()
+		t.Cleanup(cancel)
 		if mode == "nvenc" {
 			if err == nil || !strings.Contains(string(out), "not approved") {
 				t.Fatalf("nvenc readiness: %v %s", err, out)
@@ -313,6 +324,50 @@ func TestWorkerCommandHealth(t *testing.T) {
 		if err != nil || !strings.Contains(string(out), `"Profile":"cpu"`) || !strings.Contains(string(out), `"Ready":true`) {
 			t.Fatalf("standalone %s boot: %v %s", mode, err, out)
 		}
+		if _, err := os.Stat(worker.WorkRoot(base, "smoke-cpu-health")); !os.IsNotExist(err) {
+			t.Fatal("health workspace aliased another worker identity")
+		}
+		stopped := exec.CommandContext(ctx, "/media-worker", "health")
+		stopped.Env = command.Env
+		if out, err = stopped.CombinedOutput(); err == nil || !strings.Contains(string(out), "not running") {
+			t.Fatalf("health ignored stopped worker: %v %s", err, out)
+		}
+	}
+}
+
+func TestWorkerImageIsolation(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("execution-only image check")
+	}
+	if os.Getuid() == 0 {
+		t.Fatal("worker image runs as root")
+	}
+	for _, path := range []string{"/api", "/config/providers.yaml"} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("API artifact exists in worker: %s", path)
+		}
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "/media-worker", "manifest")
+	command.Env = []string{"MEDIA_ACCEL=cpu", "CLIP_WORK_ROOT=" + filepath.Join(t.TempDir(), "manifest")}
+	raw, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("offline profile check: %v %s", err, raw)
+	}
+	var profile clip.MediaWorkerProfile
+	if err = json.Unmarshal(raw, &profile); err != nil || profile.WorkerID != "" || profile.ContractVersion != clip.MediaContractVersion || profile.RendererVersion != clip.MediaRendererVersion || profile.AssetVersion != clip.MediaAssetVersion {
+		t.Fatal("invalid offline contract", err)
+	}
+	var manifest runtimeManifest
+	if err = json.Unmarshal([]byte(profile.RuntimeManifest), &manifest); err != nil || len(manifest.Fingerprint) != 64 || manifest.Tools["ffmpeg"].SHA256 == "" || len(manifest.Fonts) == 0 {
+		t.Fatal("missing runtime provenance", err)
+	}
+	invalid := exec.CommandContext(ctx, "/media-worker", "manifest")
+	invalid.Env = append(command.Env, "CLIP_ENCODE_THREADS=999")
+	out, err := invalid.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "encode threads") {
+		t.Fatalf("invalid worker config lost its cause: %v %s", err, out)
 	}
 }
 

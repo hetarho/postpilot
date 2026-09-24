@@ -33,3 +33,21 @@ func LockWorkRoot(root string) (func(), error) {
 	}
 	return func() { _ = unix.Flock(fd, unix.LOCK_UN); _ = f.Close() }, nil
 }
+
+// Air remains alive after its child exits. Health must observe the running
+// worker's kernel lock, not merely prove that another CLI can reach the API.
+func CheckWorkRootActive(root string) error {
+	fd, err := unix.Open(filepath.Join(root, ".worker-lock"), unix.O_RDWR|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return errors.New("media worker is not running")
+	}
+	defer unix.Close(fd)
+	err = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB)
+	if errors.Is(err, unix.EWOULDBLOCK) {
+		return nil
+	}
+	if err == nil {
+		_ = unix.Flock(fd, unix.LOCK_UN)
+	}
+	return errors.New("media worker is not running")
+}

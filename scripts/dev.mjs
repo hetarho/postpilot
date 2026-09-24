@@ -1,112 +1,79 @@
-// `pnpm dev` — the host Vite client beside the Air-supervised Compose API (ARCH-42),
-// with an optional `--seed` that replaces the local installation's account data first.
-//
-// Why this is a script rather than the one-line `concurrently` invocation it used to be:
-// pnpm appends a script's extra arguments to the end of its command line, so
-// `pnpm dev --seed` would have handed `--seed` to concurrently as if it were a third
-// command to run. A flag that changes what happens BEFORE the two processes start needs
-// somewhere to be read, and this is it.
-//
-// The seed runs with the API stopped, on purpose. SQLite gives one writer, the api holds
-// it for as long as it is up, and a seed racing a live boot is how you get a half-wiped
-// database and a 502 nobody can explain.
-
+// Start the complete local CPU media stack; seed writes only while both clients
+// of its durable jobs are stopped. Planning is pure so tests never wipe a DB.
 import { parseArgs } from 'node:util'
+import { randomBytes } from 'node:crypto'
+import { chmodSync, existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { note, repoRoot, run, section } from './lib.mjs'
 
-import { note, ok, run, section } from './lib.mjs'
+export const mediaDevEnv = '.env.media.dev'
+export function prepareDevEnvironment(root = repoRoot) {
+  const path = resolve(root, mediaDevEnv)
+  if (!existsSync(path)) {
+    const token = randomBytes(32).toString('base64url')
+    const contents = [
+      'MEDIA_API_URL=http://backend:9000',
+      'MEDIA_WORKER_ID=dev-cpu',
+      `MEDIA_WORKER_TOKEN=${token}`,
+      `MEDIA_WORKER_CREDENTIALS=${JSON.stringify({ 'dev-cpu': token })}`,
+      '',
+    ].join('\n')
+    try { writeFileSync(path, contents, { flag: 'wx', mode: 0o600 }) }
+    catch (error) { if (error.code !== 'EEXIST') throw error }
+  }
+  if (!lstatSync(path).isFile()) throw new Error(`${mediaDevEnv} must be a regular local file`)
+  const text = readFileSync(path, 'utf8')
+  const fields = Object.fromEntries(text.trim().split('\n').map(line => {
+    const at = line.indexOf('=')
+    return [line.slice(0, at), line.slice(at + 1)]
+  }))
+  let credentials
+  try { credentials = JSON.parse(fields.MEDIA_WORKER_CREDENTIALS) } catch { /* named error below */ }
+  const token = fields.MEDIA_WORKER_TOKEN ?? ''
+  const bytes = Buffer.from(token, 'base64url')
+  const expected = ['MEDIA_API_URL', 'MEDIA_WORKER_CREDENTIALS', 'MEDIA_WORKER_ID', 'MEDIA_WORKER_TOKEN']
+  if (Object.keys(fields).sort().join(',') !== expected.join(',') || bytes.length !== 32 || new Set(bytes).size < 16)
+    throw new Error(`${mediaDevEnv} must contain only the generated local media settings`)
+  if (fields.MEDIA_WORKER_ID !== 'dev-cpu' || fields.MEDIA_API_URL !== 'http://backend:9000' || !/^[\w-]{43}$/.test(token) || credentials?.['dev-cpu'] !== token || Object.keys(credentials).length !== 1)
+    throw new Error(`${mediaDevEnv} is not a matching local API/worker credential file`)
+  chmodSync(path, 0o600)
+  return path
+}
 
-const { values } = parseArgs({
-  options: {
+export function devPlan({ seed = false, purgeObjects = false, apiOnly = false } = {}) {
+  if (purgeObjects && !seed) throw new Error('--purge-objects requires --seed')
+  const compose = ['compose', '--profile', 'dev']
+  const steps = []
+  if (seed) {
+    steps.push(['docker', [...compose, 'stop', 'backend', 'media-worker']])
+    if (purgeObjects) {
+      steps.push(['docker', [...compose, 'up', '-d', 'minio']])
+      steps.push(['docker', [...compose, 'run', '--rm', '--no-deps', '-T', '--entrypoint', 'sh', 'minio-init', '-c',
+        'mc alias set local http://minio:9000 postpilot postpilot-dev-secret >/dev/null && if mc ls local/postpilot >/dev/null 2>&1; then mc rm --recursive --force local/postpilot; fi']])
+    }
+    steps.push(['docker', [...compose, 'run', '--rm', '--no-deps', '-T', 'backend', 'go', 'run', './cmd/seed']])
+  }
+  steps.push(apiOnly
+    ? ['docker', [...compose, 'up', '--build', '--watch', 'backend', 'media-worker']]
+    : ['pnpm', ['exec', 'concurrently', '-n', 'web,services', '-c', 'cyan,magenta', 'pnpm run dev:web', 'pnpm run dev:api']])
+  return steps
+}
+
+export function executeDevPlan(steps, execute = run) {
+  for (const [command, args] of steps) execute(command, args)
+}
+
+function main() {
+  const { values } = parseArgs({ options: {
     seed: { type: 'boolean', default: false },
-    // Object storage is left alone by default. A seed run means "give me the fixture", not
-    // "throw away the photos I uploaded five minutes ago", and the rows that named them are
-    // gone either way — so purging the bucket is asked for explicitly.
     'purge-objects': { type: 'boolean', default: false },
-  },
-  allowPositionals: false,
-  strict: false,
-})
-
-if (values.seed) seed({ purgeObjects: Boolean(values['purge-objects']) })
-
-section('dev')
-note('web → http://localhost:2564 · api → http://localhost:7678')
-// Exactly the command this script replaced, so the everyday path behaves as it always has.
-run('pnpm', [
-  'exec',
-  'concurrently',
-  '-n',
-  'web,api',
-  '-c',
-  'cyan,magenta',
-  'pnpm run dev:web',
-  'pnpm run dev:api',
-])
-
-/**
- * Replace the local installation's account data with the fixed test fixture.
- *
- * The api is stopped first and never restarted here: the `concurrently` call above brings
- * it back with the rest of the stack, so a failed seed leaves nothing running and nothing
- * half-written.
- */
-function seed({ purgeObjects }) {
-  section('seed')
-
-  note('api 중지 (SQLite 쓰기 핸들을 놓아주기 위해)')
-  run('docker', ['compose', '--profile', 'dev', 'stop', 'backend'])
-
-  if (purgeObjects) purge()
-
-  note('테스트 계정 데이터 재생성')
-  // --no-deps because the seed touches only the database: it needs no bucket, and waiting
-  // for MinIO's healthcheck would add half a minute to every reset for nothing.
-  run('docker', [
-    'compose',
-    '--profile',
-    'dev',
-    'run',
-    '--rm',
-    '--no-deps',
-    '-T',
-    'backend',
-    'go',
-    'run',
-    './cmd/seed',
-  ])
-  ok('시드 완료')
+    'api-only': { type: 'boolean', default: false },
+  }, allowPositionals: false, strict: false })
+  const plan = devPlan({ seed: values.seed, purgeObjects: values['purge-objects'], apiOnly: values['api-only'] })
+  prepareDevEnvironment()
+  section(values.seed ? 'seed + dev' : 'dev')
+  note('web → http://localhost:2564 · api → http://localhost:7678 · CPU media worker → private network')
+  executeDevPlan(plan)
 }
-
-/**
- * Empty the local MinIO bucket.
- *
- * Only reachable behind `--purge-objects`. The seeded posts carry no attachments, so what
- * this removes is whatever earlier runs uploaded — objects whose rows the wipe already
- * deleted, and which nothing can reach again.
- *
- * It deliberately never creates the bucket. minio-init creates it AND makes it private,
- * which is the property a presigned-URL-only photo depends on (PRD F-5); a cleanup step
- * that could bring one into existence without the second half of that pair would be a
- * quiet way to publish everything uploaded afterwards. A missing bucket is simply nothing
- * to purge.
- */
-function purge() {
-  note('MinIO 버킷 비우기')
-  run('docker', ['compose', '--profile', 'dev', 'up', '-d', 'minio'])
-  run('docker', [
-    'compose',
-    '--profile',
-    'dev',
-    'run',
-    '--rm',
-    '--no-deps',
-    '-T',
-    '--entrypoint',
-    'sh',
-    'minio-init',
-    '-c',
-    'mc alias set local http://minio:9000 postpilot postpilot-dev-secret >/dev/null && ' +
-      'if mc ls local/postpilot >/dev/null 2>&1; then mc rm --recursive --force local/postpilot; fi',
-  ])
-  ok('오브젝트 정리 완료')
-}
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main()

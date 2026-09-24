@@ -40,14 +40,13 @@ services:
       R2_ACCESS_KEY_ID: postpilot
       R2_SECRET_ACCESS_KEY: postpilot-dev-secret
       R2_BUCKET: postpilot
-      # Production pins ffmpeg to one encoder thread because libx264 above one is
-      # not bit-exact and its box has a single physical core anyway. Neither holds
-      # here: this machine has cores to spare and no delivered byte to reproduce,
-      # so a local render should not crawl at the production box's speed. Tune the
-      # two numbers to the machine — they only need to stay under its core count,
-      # and the decoder may take more than the encoder.
+      # Explicit local overrides, validated against the owning media thread cap.
+      # Production keeps 1 encode / 2 decode threads and one job per worker.
       CLIP_ENCODE_THREADS: "6"
       CLIP_DECODE_THREADS: "8"
+      CLIP_MEDIA_EXECUTION: worker
+      MEDIA_INTERNAL_ADDR: ":9000"
+      MEDIA_STORAGE_ENDPOINT: http://minio:9000
     # Provider API keys come from the repo-root .env, whatever names providers.yaml's
     # `api_key_env` uses — no per-provider line to add here. The explicit values above
     # win over the file, so its PORT/DB_PATH/R2_* (meant for a host-side run) do not
@@ -55,6 +54,26 @@ services:
     env_file:
       - path: .env
         required: false
+      - path: .env.media.dev
+        required: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      start_period: 300s
+      retries: 6
+    develop:
+      watch: &media_asset_watch
+        - action: rebuild
+          path: ./backend/assets
+        - action: rebuild
+          path: ./backend/build
+        - action: rebuild
+          path: ./backend/Dockerfile.dev
+        - action: rebuild
+          path: ./backend/internal/clip/overlay
+        - action: rebuild
+          path: ./backend/internal/clip/design
     ports:
       - "7678:8080"
     volumes:
@@ -65,6 +84,41 @@ services:
     depends_on:
       minio-init:
         condition: service_completed_successfully
+
+  media-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    profiles: ["dev"]
+    command: ["air", "-c", ".air-worker.toml"]
+    env_file:
+      - path: .env.media.dev
+        required: true
+    environment:
+      MEDIA_ACCEL: cpu
+      MEDIA_WORKER_CONCURRENCY: "1"
+      CLIP_WORK_ROOT: /var/lib/postpilot-media/work
+      CLIP_ENCODE_THREADS: "6"
+      CLIP_DECODE_THREADS: "8"
+    # Code and module caches are shareable. SQLite, API env and scratch space are not.
+    volumes:
+      - ./backend:/app
+      - backend_go_mod:/go/pkg/mod
+      - media_worker_build:/app/tmp
+      - media_worker_work:/var/lib/postpilot-media
+    stop_grace_period: 45s
+    healthcheck:
+      test: ["CMD", "/app/tmp/media-worker", "health"]
+      interval: 15s
+      timeout: 30s
+      start_period: 300s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+    develop:
+      watch: *media_asset_watch
 
   # Local stand-in for Cloudflare R2. Same S3 API, so nothing in the Go code knows the
   # difference. Console on 9001 if you want to look at what was uploaded.
@@ -107,5 +161,7 @@ services:
 volumes:
   backend_go_mod:
   backend_tmp:
+  media_worker_build:
+  media_worker_work:
   backend_data:
   minio_data:

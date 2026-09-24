@@ -116,6 +116,19 @@ func TestStandaloneWorkerResourcesRequireNoAPISettings(t *testing.T) {
 	}
 }
 
+func TestWorkerManifestSettingsNeedNoDeploymentSecrets(t *testing.T) {
+	t.Setenv("MEDIA_API_URL", "")
+	t.Setenv("MEDIA_WORKER_ID", "")
+	t.Setenv("MEDIA_WORKER_TOKEN", "")
+	c, err := LoadWorkerRuntime()
+	if err != nil || c.Accel != "cpu" || c.EncodeThreads != 1 || c.DecodeThreads != 2 {
+		t.Fatal(c.Accel, err)
+	}
+	if _, err = LoadWorkerConfig(); err == nil {
+		t.Fatal("live worker accepted missing credentials")
+	}
+}
+
 func TestAPIMediaSettingsStillLoadStageBudgets(t *testing.T) {
 	t.Setenv("CLIP_MEDIA_STAGE_TIMEOUT", "47m")
 	t.Setenv("CLIP_MEDIA_MAX_ATTEMPTS", "4")

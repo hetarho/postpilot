@@ -43,11 +43,29 @@ Node 버전은 `.node-version`에 고정되어 있다. fnm·nvm·asdf 같은 도
 cp .env.example .env
 pnpm install
 
-pnpm dev        # 프론트(:2564) + 백엔드(:7678) 동시
+pnpm dev        # 프론트(:2564) + API(:7678) + CPU media worker + MinIO
 # 또는 따로
 pnpm dev:web    # Vite  — http://localhost:2564
-pnpm dev:api    # Go API in Docker (air 핫리로드) — http://localhost:7678/health
+pnpm dev:api    # API + CPU worker in Docker (Air) — http://localhost:7678/health
 ```
+
+The launcher creates `.env.media.dev` with a random local worker credential (mode 0600).
+It is ignored by Git and is separate from the API's `.env`. Do not copy VPS credentials
+into it. The worker has its own build/work volumes and no database volume or provider
+configuration. `pnpm dev:api` explicitly starts both services; MinIO remains private.
+
+Docker Compose 2.24+ is required for the [env file settings](https://docs.docker.com/reference/compose-file/services/#required)
+and [asset rebuild watching](https://docs.docker.com/compose/how-tos/file-watch/).
+Go edits reload each process with Air; changes to fonts, overlay/design assets or media
+build scripts rebuild both images. Check both services with `docker compose --profile dev ps`
+and `docker compose --profile dev logs backend media-worker`. The API's health endpoint
+reports API readiness; the worker check requires its running process, CPU tooling
+and an authenticated API connection. Offline image inspection uses `/media-worker manifest`.
+
+`pnpm dev --seed` stops both services before changing account data. If seeding fails,
+they remain stopped. Object deletion still requires the explicit `--purge-objects` flag.
+Local encode/decode defaults are 6/8 threads, validated against the media context's cap;
+production CPU defaults remain 1/2 threads and one job per worker.
 
 브라우저에서 `http://localhost:2564` 를 열면 "Hello, world" 아래에
 `api: pong (v0.0.1)` 이 떠야 한다. 그게 프론트 → Connect → Go 왕복이 살아 있다는 뜻이다.

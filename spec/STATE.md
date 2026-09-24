@@ -65,17 +65,18 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T385 | Local development and CPU images run API and worker separately | ARCH | T383 | todo |
 | T386 | Deployment configuration keeps the CPU VPS default and supports a separate worker | ARCH CLIP | T383 T385 | todo |
 | T387 | CPU separation passes local release checks with the VPS layout as default | ARCH CLIP GEN | T384 T386 | todo |
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T385 next for the media-worker wave (T376..T384 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T386 next for the media-worker wave (T376..T385 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T385 done (mw): nonroot CPU worker image, complete watched dev stack and process-aware health; isolated CI, real startup/reload/rebuild recovery, API image smoke and CPU byte/frame parity pass; T386 next
+- 260925 T385 claimed (mw); T384 committed as 07f0d060; CPU execution images and complete local development stack only
 - 260925 T384 done (mw): durable wait/run/retry labels and pending cancellation; real stage transitions, reopen/polling, retained results/observations and all CI gates pass; T385 next
 - 260925 T384 claimed (mw); T383 committed as 41ef2e03; durable media progress and owner-facing failure/cancellation states only
 - 260925 T383 done (mw): bounded recovery, cancellation acknowledgement, durable artifact cleanup and isolated worker workspaces; full CI, race checks, CPU parity and all 28 release scenarios pass; T384 next
@@ -94,5 +95,3 @@
 - 260925 T369 claimed (p42)
 - 260925 T364 done; MeasureSelf's answer is pinned per MeasureVersion by a golden digest over a 20-post corpus, and emoji tails (variation selectors, ZWJ, format runes, keycaps) trim at 어절 edges under MeasureVersion 2; BE gate passes (p42)
 - 260925 T364 claimed (p42)
-- 260925 T362 done; one replacement-placement fixture and one tag-identity fixture are run by the Go and TS suites alike, and the browser's whitespace is now Go's unicode.IsSpace set; BE and FE gates pass (p42)
-- 260925 T362 claimed (p42)

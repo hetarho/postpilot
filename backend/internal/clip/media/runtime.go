@@ -1,14 +1,18 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"image/png"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -76,6 +80,9 @@ func (r *Rendering) RuntimeProfile(ctx context.Context, accel string) (clip.Medi
 			}
 		}
 	}
+	if err := r.checkCPUExecution(ctx, runner); err != nil {
+		return clip.MediaWorkerProfile{}, err
+	}
 	for _, font := range bundledFonts {
 		manifest.Fonts[font.Key] = font.SHA256
 	}
@@ -90,4 +97,31 @@ func (r *Rendering) RuntimeProfile(ctx context.Context, accel string) (clip.Medi
 		return clip.MediaWorkerProfile{}, clip.ErrInvalid
 	}
 	return clip.MediaWorkerProfile{ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profile: clip.MediaCPUProfile, RuntimeManifest: string(raw)}, nil
+}
+
+// An executable listing is insufficient: exercise the encoder and decoder with
+// three synthetic frames inside the same bounded, disposable workspace.
+func (r *Rendering) checkCPUExecution(ctx context.Context, runner ExecRunner) error {
+	return r.media.WithWorkspace(ctx, "cpu-capability", func(ws clip.MediaWorkspace) error {
+		cfg := r.media.cfg
+		path := filepath.Join(ws.Path, "cpu-probe.mp4")
+		_, err := runner.Run(ctx, Command{Binary: cfg.FFmpegPath, Dir: ws.Path, Args: []string{
+			"-hide_banner", "-nostdin", "-v", "error", "-filter_threads", "1", "-f", "lavfi", "-i", "color=c=blue:s=176x96:r=30", "-frames:v", "3", "-an",
+			"-c:v", "libx264", "-preset", "ultrafast", "-crf", "28", "-pix_fmt", "yuv420p", "-threads", strconv.Itoa(cfg.EncodeThreads), "-y", path,
+		}})
+		if err != nil {
+			return errors.New("CPU H.264 execution check failed")
+		}
+		out, err := runner.Run(ctx, Command{Binary: cfg.FFmpegPath, Dir: ws.Path, Args: []string{
+			"-hide_banner", "-nostdin", "-v", "error", "-filter_threads", "1", "-threads", strconv.Itoa(cfg.DecodeThreads), "-i", path, "-frames:v", "1", "-an", "-threads", "1", "-c:v", "png", "-f", "image2pipe", "pipe:1",
+		}})
+		if err != nil {
+			return errors.New("CPU H.264 decode check failed")
+		}
+		frame, err := png.Decode(bytes.NewReader(out))
+		if err != nil || frame.Bounds().Dx() != 176 || frame.Bounds().Dy() != 96 {
+			return errors.New("CPU H.264 decode check failed")
+		}
+		return nil
+	})
 }

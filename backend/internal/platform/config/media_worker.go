@@ -121,11 +121,18 @@ type WorkerConfig struct {
 }
 
 func LoadWorkerConfig() (WorkerConfig, error) {
-	auth, err := LoadMediaWorker()
+	c, err := LoadWorkerRuntime()
 	if err != nil {
-		return WorkerConfig{}, err
+		return c, err
 	}
-	c := WorkerConfig{MediaWorker: auth, Accel: getenv("MEDIA_ACCEL", "cpu")}
+	c.MediaWorker, err = LoadMediaWorker()
+	return c, err
+}
+
+// LoadWorkerRuntime permits offline image inspection without deployment secrets.
+func LoadWorkerRuntime() (WorkerConfig, error) {
+	c := WorkerConfig{Accel: getenv("MEDIA_ACCEL", "cpu")}
+	var err error
 	if c.Accel != "cpu" && c.Accel != "auto" && c.Accel != "nvenc" {
 		return c, errors.New("MEDIA_ACCEL must be cpu, auto or nvenc")
 	}

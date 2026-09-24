@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:web": "pnpm --filter ./frontend dev",
-    "dev:api": "docker compose --profile dev up --build backend",
+    "dev:api": "node scripts/dev.mjs --api-only",
     "gen": "node scripts/gen.mjs",
     "gen:proto": "node scripts/gen.mjs proto",
     "gen:sql": "node scripts/gen.mjs sql",
@@ -19,6 +19,7 @@
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "test": "pnpm --filter ./frontend test",
+    "test:dev": "node --test scripts/dev.test.mjs",
     "smoke": "docker build --progress=plain --target production -t postpilot:gate -f backend/Dockerfile .",
     "smoke:media": "docker build --progress=plain --target media-smoke -t postpilot:gate-media -f backend/Dockerfile .",
     "smoke:input": "docker build --progress=plain --target clip-input-smoke -t postpilot:gate-input -f backend/Dockerfile .",
