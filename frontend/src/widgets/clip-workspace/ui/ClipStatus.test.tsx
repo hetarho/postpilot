@@ -50,6 +50,42 @@ const project = (over: Partial<ClipProject> = {}): ClipProject => ({
 })
 const QUIET: SaveStatus = { failing: false, label: '' }
 
+it('updates the mounted status and indeterminate bar through media recovery and cancellation', () => {
+  const viewFor = (current: GenerationJob) => (
+    <>
+      <ClipStatusLine
+        project={project()}
+        job={current}
+        upload={{ phase: 'idle' }}
+        correction="clean"
+        save={QUIET}
+      />
+      <ClipProgressBar job={current} upload={{ phase: 'idle', entries: [] }} />
+    </>
+  )
+  const current = job({
+    kind: 'render_clip',
+    stage: 'render_wait',
+    progressDone: 0,
+    progressTotal: 0,
+  })
+  const view = render(viewFor(current))
+  for (const [stage, label] of [
+    ['render_wait', '영상 렌더링 대기 중'],
+    ['render', '영상 렌더링'],
+    ['render_retry', '영상 렌더링 재시도 대기 중'],
+  ]) {
+    view.rerender(viewFor({ ...current, stage }))
+    expect(screen.getByRole('status', { name: '클립 상태' })).toHaveTextContent(label)
+    expect(screen.getByRole('progressbar', { name: label })).not.toHaveAttribute('aria-valuenow')
+  }
+  view.rerender(viewFor({ ...current, cancelRequestedAt: '2026-09-25' }))
+  expect(screen.getByRole('status', { name: '클립 상태' })).toHaveTextContent('취소 중')
+  view.rerender(viewFor({ ...current, status: 'done' }))
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  expect(screen.getByRole('status', { name: '클립 상태' })).toHaveTextContent('')
+})
+
 function line(
   over: {
     project?: ClipProject

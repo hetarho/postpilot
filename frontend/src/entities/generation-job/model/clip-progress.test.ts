@@ -47,3 +47,38 @@ it('keeps clip target, failed stage and strict credit refusal through the wire m
   expect(job.stage).toBe('prepare')
   expect(job.failure?.reason).toBe('INSUFFICIENT_CREDITS')
 })
+
+it.each(['prepare_wait', 'render_wait', 'prepare_retry', 'render_retry'])(
+  'restores %s from the wire without an invented ratio or AI retry count',
+  (stage) => {
+    const job = toGenerationJob(
+      create(GenerationJobSchema, {
+        id: 'same-job',
+        kind: 'render_clip',
+        status: 'running',
+        stage,
+        progressDone: 2,
+        progressTotal: 3,
+        canCancel: true,
+        cancellationPolicyVersion: 1,
+      }),
+    )
+    expect(job).toMatchObject({ id: 'same-job', stage, canCancel: true })
+    expect(progressRatio(job)).toBeUndefined()
+    expect(progressLabel(job)).not.toContain('(2/3)')
+  },
+)
+
+it('keeps cancellation pending until the terminal acknowledgement, including a completion winner', () => {
+  const job = {
+    kind: 'render_clip',
+    stage: 'render_retry',
+    status: 'running',
+    cancelRequestedAt: '2026-09-25',
+    progressDone: 1,
+    progressTotal: 2,
+  }
+  expect(progressLabel(job)).toBe('취소 중')
+  expect(progressRatio(job)).toBeUndefined()
+  expect(progressLabel({ ...job, status: 'done' })).not.toBe('취소 중')
+})

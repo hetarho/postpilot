@@ -5,6 +5,12 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     title: '내 영상',
+    mediaStage: {
+      prepare_wait: '원본 준비 대기 중',
+      prepare_retry: '원본 준비 재시도 대기 중',
+      render_wait: '영상 렌더링 대기 중',
+      render_retry: '영상 렌더링 재시도 대기 중',
+    },
     state: {
       draft: '초안',
       refining: '다듬는 중',
@@ -123,6 +129,12 @@ export const i18n = {
   },
   en: {
     title: 'My videos',
+    mediaStage: {
+      prepare_wait: 'Waiting to prepare sources',
+      prepare_retry: 'Waiting to retry source preparation',
+      render_wait: 'Waiting to render video',
+      render_retry: 'Waiting to retry video rendering',
+    },
     state: {
       draft: 'Draft',
       refining: 'Refining',

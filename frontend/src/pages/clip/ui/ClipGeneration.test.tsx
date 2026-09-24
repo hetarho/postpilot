@@ -98,6 +98,93 @@ function mount(
 async function goToStep(name: '생성' | '수정' | '완성') {
   await userEvent.setup().click(await screen.findByRole('tab', { name }))
 }
+
+it('reopens a waiting media job, keeps its focused controls through recovery, and shows cancellation until done', async () => {
+  const job: FakeGenerationJobRow = {
+    id: 'media',
+    kind: 'render_clip',
+    clipProjectId: 'clip',
+    status: 'running',
+    stage: 'render_wait',
+    canCancel: true,
+    progressDone: 0,
+    progressTotal: 0,
+  }
+  const starts: unknown[] = []
+  const view = mount(
+    {
+      projects: [{ ...project, result, latestJob: job }],
+      generationStarts: starts,
+      readProject: (p) => ({ ...p, latestJob: job }),
+    },
+    { jobs: [job] },
+  )
+  const refetch = () =>
+    act(() =>
+      view.queryClient.refetchQueries({
+        queryKey: createConnectQueryKey({
+          schema: GenerationService.method.getGeneration,
+          input: { id: job.id },
+          transport: view.transport,
+          cardinality: 'finite',
+        }),
+      }),
+    )
+  await screen.findByRole('progressbar', { name: '영상 렌더링 대기 중' })
+  expect(screen.getByRole('button', { name: '취소' })).toBeEnabled()
+  expect(screen.queryByLabelText('클립 제목')).not.toBeInTheDocument()
+  for (const [stage, label] of [
+    ['render', '영상 렌더링'],
+    ['render_retry', '영상 렌더링 재시도 대기 중'],
+  ]) {
+    job.stage = stage
+    await refetch()
+    expect(await screen.findByRole('progressbar', { name: label })).not.toHaveAttribute(
+      'aria-valuenow',
+    )
+  }
+  job.cancelRequestedAt = '2026-09-25T00:00:00Z'
+  job.canCancel = false
+  await refetch()
+  expect(await screen.findByRole('progressbar', { name: '취소 중' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '취소 중' })).toBeDisabled()
+  job.status = 'done'
+  await refetch()
+  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  expect(starts).toHaveLength(0)
+})
+
+it.each(['CLIP_MEDIA_UNAVAILABLE', 'CLIP_MEDIA_RETRY_EXHAUSTED', 'CLIP_MEDIA_TIMEOUT'] as const)(
+  'offers explicit continuation after %s while preserving the previous result',
+  async (failureReason) => {
+    const job: FakeGenerationJobRow = {
+      id: 'media',
+      kind: 'generate_clip',
+      status: 'failed',
+      stage: 'prepare_wait',
+      failureReason,
+    }
+    const starts: unknown[] = []
+    mount(
+      { projects: [{ ...project, result, latestJob: job }], generationStarts: starts },
+      { jobs: [job] },
+    )
+    await goToStep('생성')
+    expect(
+      await screen.findByText(/잠시 후 다시 시도하세요\. 완료된 분석과 이전 결과는 유지됩니다/),
+    ).toBeVisible()
+    expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
+    expect(starts).toHaveLength(0)
+    await goToStep('수정')
+    expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+    await goToStep('생성')
+    await selectSource()
+    expect(
+      await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
+    ).toBeEnabled()
+    expect(starts).toHaveLength(0)
+  },
+)
 async function selectSource() {
   const file = new File(['clip'], 'clip.mp4', { type: 'video/mp4' })
   vi.mocked(readSourceManifest).mockResolvedValue([

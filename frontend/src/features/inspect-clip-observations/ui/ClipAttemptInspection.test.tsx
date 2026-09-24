@@ -53,6 +53,30 @@ function failedProject() {
 }
 
 it.each(['ko', 'en'] as const)(
+  'keeps completed observations beside an actionable media failure in %s',
+  (language) => {
+    initializeI18n(language)
+    const project = failedProject()
+    project.latestJob!.failure = { reason: 'CLIP_MEDIA_RETRY_EXHAUSTED', params: {} }
+    project.latestJob!.stage = 'render_retry'
+    project.attemptInspection!.stage = 'render_retry'
+    project.attemptInspection!.validationCheck = 'unknown'
+    render(<ClipAttemptInspection project={project} localSources={[]} />)
+    expect(
+      screen.getByText(language === 'ko' ? /잠시 후 다시 시도하세요/ : /Try again later/),
+    ).toBeVisible()
+    expect(screen.getAllByText('이번 시도의 관찰')[0]).toBeVisible()
+    expect(
+      screen.getByText(
+        language === 'ko'
+          ? '원본 분석 2 / 3 구간 완료'
+          : 'Original analysis: 2 of 3 chunks completed',
+      ),
+    ).toBeVisible()
+  },
+)
+
+it.each(['ko', 'en'] as const)(
   'shows the authoritative historical element error in %s',
   (language) => {
     initializeI18n(language)

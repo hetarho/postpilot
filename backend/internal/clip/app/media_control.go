@@ -38,7 +38,10 @@ func (m *MediaControl) ClaimMediaStage(ctx context.Context, profile clip.MediaWo
 		if err != nil {
 			return err
 		}
-		return authorizeMediaParent(ctx, p, lease.Stage, task, now)
+		if err = authorizeMediaParent(ctx, p, lease.Stage, task, now); err != nil {
+			return err
+		}
+		return p.Waits.UpdateProgress(ctx, lease.Stage.ParentJobID, clip.MediaJobStage(lease.Stage), 0, 0, now)
 	})
 	if err != nil {
 		return nil, err
@@ -79,6 +82,13 @@ func (m *MediaControl) FailMediaStage(ctx context.Context, auth clip.MediaLeaseC
 			}
 			return p.Control.AcknowledgeMediaStop(ctx, auth, now)
 		}
-		return p.Control.FailMediaStage(ctx, auth, failure, now)
+		if err = p.Control.FailMediaStage(ctx, auth, failure, now); err != nil {
+			return err
+		}
+		updated, err := p.Recovery.MediaRecoveryState(ctx, auth.StageID)
+		if err != nil || updated.Stage.State != clip.MediaQueued {
+			return err
+		}
+		return p.Waits.UpdateProgress(ctx, updated.Stage.ParentJobID, clip.MediaJobStage(updated.Stage), 0, 0, now)
 	})
 }

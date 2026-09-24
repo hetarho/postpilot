@@ -48,3 +48,16 @@ func SafeMediaOutcome(outcome string) string {
 	}
 	return "unknown"
 }
+
+// MediaJobStage describes persisted execution state, never an inferred ETA or
+// percentage. A reclaimed stage keeps its owning job and reports recovery.
+func MediaJobStage(s MediaStage) string {
+	stage := string(s.Operation)
+	if s.State == MediaQueued {
+		if s.AttemptCount > 0 {
+			return stage + "_retry"
+		}
+		return stage + "_wait"
+	}
+	return stage
+}

@@ -47,7 +47,8 @@ const CLIP_KINDS = new Set(['generate_clip', 'render_clip', 'revise_clip'])
  *  An unrecognized or not-yet-set stage is a running job like any other, so it takes the generic
  *  running label rather than announcing that nothing has happened yet. This is also why a voice
  *  `seed` run finally says something true: it hits this branch. */
-export const CLIP_STAGES = [
+const MEDIA_WAIT_STAGES = ['prepare_wait', 'prepare_retry', 'render_wait', 'render_retry'] as const
+const GENERATION_CLIP_STAGES = [
   'prepare',
   'analyze',
   'analyze_retry',
@@ -63,15 +64,27 @@ export const CLIP_STAGES = [
   'save',
   'cleanup',
 ] as const
+export const CLIP_STAGES = [...MEDIA_WAIT_STAGES, ...GENERATION_CLIP_STAGES] as const
+
 export function progressLabel(
   job: Pick<GenerationJob, 'stage'> &
-    Partial<Pick<GenerationJob, 'kind' | 'progressDone' | 'progressTotal'>>,
+    Partial<
+      Pick<
+        GenerationJob,
+        'kind' | 'progressDone' | 'progressTotal' | 'cancelRequestedAt' | 'status'
+      >
+    >,
 ): string {
   if (CLIP_KINDS.has(job.kind ?? '')) {
-    const stage = CLIP_STAGES.find((stage) => stage === job.stage)
-    const label = i18next.t(stage ? `generation.stage.${stage}` : 'generation.running', {
-      ns: 'clips',
-    })
+    if (job.cancelRequestedAt && !['done', 'failed', 'cancelled'].includes(job.status ?? '')) {
+      return i18next.t('cancellation.cancelling', { ns: 'clips' })
+    }
+    const stage = GENERATION_CLIP_STAGES.find((stage) => stage === job.stage)
+    const media = MEDIA_WAIT_STAGES.find((stage) => stage === job.stage)
+    const label = i18next.t(
+      media ? `mediaStage.${media}` : stage ? `generation.stage.${stage}` : 'generation.running',
+      { ns: 'clips' },
+    )
     if (
       ['analyze_retry', 'flow_retry', 'narrate_retry', 'plan_retry'].includes(job.stage) &&
       job.progressTotal === 3 &&
@@ -111,8 +124,9 @@ export function progressLabel(
  *  zero is also `undefined`: 0/0 is not "complete". */
 export function progressRatio(
   job: Pick<GenerationJob, 'stage' | 'progressDone' | 'progressTotal'> &
-    Partial<Pick<GenerationJob, 'kind'>>,
+    Partial<Pick<GenerationJob, 'kind' | 'cancelRequestedAt'>>,
 ): { done: number; total: number } | undefined {
+  if (job.cancelRequestedAt) return undefined
   const clipRatio = CLIP_KINDS.has(job.kind ?? '') && ['prepare', 'analyze'].includes(job.stage)
   if ((!RATIO_STAGES.has(job.stage) && !clipRatio) || job.progressTotal <= 0) return undefined
   return { done: job.progressDone, total: job.progressTotal }

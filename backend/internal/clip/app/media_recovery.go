@@ -204,6 +204,11 @@ func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 				return err
 			}
 		}
+		if (s.State == clip.MediaQueued || s.State == clip.MediaRunning) && j.Stage != clip.MediaJobStage(s) {
+			if err = p.Waits.UpdateProgress(ctx, s.ParentJobID, clip.MediaJobStage(s), 0, 0, now); err != nil {
+				return err
+			}
+		}
 		all := s.State != clip.MediaRunning && s.State != clip.MediaSucceeded
 		if err = p.Recovery.RetireMediaArtifacts(ctx, id, s.CurrentAttemptID, all); err != nil {
 			return err

@@ -134,7 +134,7 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 				return err
 			}
 			pending = true
-			return nil
+			return p.Waits.UpdateProgress(ctx, in.JobID, clip.MediaJobStage(stage), 0, 0, now)
 		}
 		if err != nil {
 			return err

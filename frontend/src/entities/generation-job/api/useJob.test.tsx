@@ -80,3 +80,90 @@ it('invalidates the owner query when the job fails so recoverable experiment sta
 
   expect(queryClient.getQueryState(ownerKey)?.isInvalidated).toBe(true)
 })
+
+it('reopens and polls the same media job through waiting, execution, retry and cancellation', async () => {
+  const calls: string[] = []
+  const transport = createFakeJobsTransport({
+    calls,
+    sequence: [
+      {
+        id: 'media',
+        kind: 'generate_clip',
+        status: 'running',
+        stage: 'prepare_wait',
+        canCancel: true,
+      },
+      { id: 'media', kind: 'generate_clip', status: 'running', stage: 'prepare', canCancel: true },
+      {
+        id: 'media',
+        kind: 'generate_clip',
+        status: 'running',
+        stage: 'prepare_retry',
+        canCancel: true,
+      },
+      {
+        id: 'media',
+        kind: 'generate_clip',
+        status: 'running',
+        stage: 'analyze',
+        progressDone: 2,
+        progressTotal: 4,
+        canCancel: true,
+      },
+      {
+        id: 'media',
+        kind: 'generate_clip',
+        status: 'running',
+        stage: 'analyze',
+        progressDone: 2,
+        progressTotal: 4,
+        cancelRequestedAt: '2026-09-25',
+      },
+      {
+        id: 'media',
+        kind: 'generate_clip',
+        status: 'cancelled',
+        stage: 'analyze',
+        progressDone: 2,
+        progressTotal: 4,
+      },
+    ],
+  })
+  const first = renderHook(() => useJob('media'), {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await tick(1)
+  expect(first.result.current.job).toMatchObject({
+    id: 'media',
+    stage: 'prepare_wait',
+    canCancel: true,
+  })
+  first.unmount()
+  const reopened = renderHook(() => useJob('media'), {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await tick(1)
+  expect(reopened.result.current.job?.stage).toBe('prepare')
+  await tick(POLL_INTERVAL_MS)
+  await tick(1)
+  expect(reopened.result.current.job).toMatchObject({
+    id: 'media',
+    stage: 'prepare_retry',
+    canCancel: true,
+  })
+  await tick(POLL_INTERVAL_MS)
+  await tick(1)
+  expect(reopened.result.current.job).toMatchObject({ progressDone: 2, progressTotal: 4 })
+  await tick(POLL_INTERVAL_MS)
+  await tick(1)
+  expect(reopened.result.current.job).toMatchObject({
+    status: 'running',
+    cancelRequestedAt: '2026-09-25',
+  })
+  await tick(POLL_INTERVAL_MS)
+  await tick(1)
+  expect(reopened.result.current.job?.status).toBe('cancelled')
+  const terminalReads = calls.length
+  await tick(POLL_INTERVAL_MS * 3)
+  expect(calls).toHaveLength(terminalReads)
+})
