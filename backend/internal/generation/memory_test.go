@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -177,6 +178,107 @@ func TestOnlyAPostThatOptedInReachesTheMemoryPort(t *testing.T) {
 	for _, unwanted := range []string{"쓰지 않는 답", "관찰자의 산문", "고요함"} {
 		if strings.Contains(key, unwanted) {
 			t.Errorf("the retrieval key carries %q: %s", unwanted, key)
+		}
+	}
+}
+
+// memoryDrainService is a service whose post has 기억 사용 on, so only the payload can keep
+// a memory out of a run: a live retrieval would find the recorder's texts.
+func memoryDrainService(recorder *recordingMemories) (*Service, *fakeJobs, *fakeModels) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, UseMemory: true, Memo: "연남동에서 점심"}}
+	jobs := &fakeJobs{id: "job"}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.memories = recorder
+	return svc, jobs, models
+}
+
+// MEM-19 through the drain: the texts Start froze are the texts the write prompt carries, even
+// when the memory context answers differently by the time the job runs, and Generate never asks
+// it again. They land in the per-post half as one section; the stable half is the run's without
+// memories, byte for byte (MEM-20).
+func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
+	ctx := context.Background()
+	recorder := &recordingMemories{texts: testMemories()}
+	svc, jobs, models := memoryDrainService(recorder)
+
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	frozen := jobs.generations[0].Memories
+	if len(frozen) != 2 {
+		t.Fatalf("the start froze %v", frozen)
+	}
+
+	// Between the enqueue and the drain every memory is edited or deleted.
+	recorder.texts = []string{"바뀐 기억"}
+
+	job := GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Memories: frozen}
+	if err := svc.Generate(ctx, job, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	sent := models.calls[0].request
+	user := sent.Messages[0].Parts[0].Text
+	section := "[기억]\n- 매운 음식을 못 먹는다\n- 연남동에 자주 간다\n" + memoryPrecedence + "\n"
+	if !strings.Contains(user, section) || strings.Count(user, "[기억]") != 1 || strings.Count(user, memoryPrecedence) != 1 {
+		t.Fatalf("the per-post half does not carry the frozen section once:\n%s", user)
+	}
+	if strings.Contains(sent.System, "[기억]") || strings.Contains(sent.System+user, "바뀐 기억") {
+		t.Fatalf("the drain read the live memories or reached the stable half:\n%s\n%s", sent.System, user)
+	}
+	if recorder.calls != 1 {
+		t.Fatalf("memories were retrieved %d times; only the enqueue may", recorder.calls)
+	}
+
+	job.Memories = nil
+	if err := svc.Generate(ctx, job, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	without := models.calls[1].request
+	if without.System != sent.System {
+		t.Fatal("the memories changed the stable half")
+	}
+	if strings.Replace(user, section, "", 1) != without.Messages[0].Parts[0].Text {
+		t.Fatal("the memories changed the per-post half beyond their section")
+	}
+}
+
+// A job whose payload holds no memories — the option was off, or the payload predates the
+// member — writes the prompt it wrote before: no section, no closing line and no memory text,
+// and nothing is retrieved, even for a post that has the option on by now.
+func TestADurableGenerateWithoutMemoriesIsUnchanged(t *testing.T) {
+	legacy, err := DecodeGenerationPayload([]byte(`{"target_language":"ko","observe_files":null}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var first *llm.Request
+	for name, memories := range map[string][]string{"nil": nil, "empty": {}, "legacy payload": legacy.Memories} {
+		recorder := &recordingMemories{texts: testMemories()}
+		svc, _, models := memoryDrainService(recorder)
+		if err := svc.Generate(context.Background(), GenerateJob{
+			UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Memories: memories,
+		}, func(string, int, int) {}); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		sent := models.calls[0].request
+		for _, half := range []string{sent.System, sent.Messages[0].Parts[0].Text} {
+			if strings.Contains(half, "기억") {
+				t.Fatalf("%s: the prompt carries memory bytes:\n%s", name, half)
+			}
+			for _, text := range testMemories() {
+				if strings.Contains(half, text) {
+					t.Fatalf("%s: the prompt carries %q", name, text)
+				}
+			}
+		}
+		if recorder.calls != 0 {
+			t.Fatalf("%s: the drain retrieved memories %d times", name, recorder.calls)
+		}
+		if first == nil {
+			first = &sent
+		} else if sent.System != first.System || sent.Messages[0].Parts[0].Text != first.Messages[0].Parts[0].Text {
+			t.Fatalf("%s: the prompt differs from the other memory-less jobs", name)
 		}
 	}
 }

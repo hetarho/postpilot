@@ -51,14 +51,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T352 | A durable generate carries its frozen memories into the write prompt | MEM GEN ARCH | - | todo |
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T352 (then T353)
-- T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
+- implement-task T353 (the last todo)
+- T353 is an independent pre-existing bug fix (the 기억 사용 toggle clears 목표 글자 수)
+- update-ssot MEM MODEL: whether a write comparison's snapshot freezes 기억 (T352 finding in the log)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T352 done; a durable generate's write prompt carries the memories Start froze into the payload as one [기억] section in the per-post half, in payload order, with the stable half unchanged; the drain never asks the memory port, and a job with no memories (option off or a legacy payload) builds the prompt it built before; BE gate passes (p35)
+- 260924 finding (T352): the write-comparison snapshot (`SnapshotWriteInput`) freezes 지침, quality rules and 분야 phrases but no 기억, so an A/B write of a post with 기억 사용 on compares prompts without its memories; MODEL-30 and MEM-19 do not say whether it should (update-ssot MEM MODEL) (p35)
+- 260924 T352 claimed (p35)
 - 260924 T351 done; ② marks each stored replacement candidate whose source still stands (the title, a tag by index, TEXT without a slot, HEADING, QUOTE, the first LIST item holding it) at its first occurrence, the first in answer order winning an overlap, with at most three phrases and no tag phrase that would empty or duplicate a tag; a take is an ordinary content save that returns 확정 to 검토, drops its mark at render, keeps its neighbours and focuses the pencil that held it; opening or ignoring a mark sends nothing, and a published post or an open editor shows none; FE gates pass (p35)
 - 260924 T351 claimed (p35)
 - 260924 T350 done; /guidelines opens with the 상위 노출 단어 사용 preset above the list and the empty state: its server text read-only, its own switch and a 적용할 분야 picker that is its fields scope, each saving its own half and showing the answered state at once, a line saying the owner's guidelines win, a prompt while it is on with no 분야, and a refusal in the catalogue's words; FE gates pass (p35)
@@ -76,6 +79,3 @@
 - 260924 T344 done; StartGeneration and the write-comparison snapshot freeze the ticked rule texts still over band (in the run's language) and the 분야's first 30 phrases, the job row and the worker carry both, the drain and a revision never ask the quality context, and a post with nothing ticked and no list writes the payload and prompt it wrote before; end to end the phrase section and the preset line reach the write and never the revision; BE gate passes (p35)
 - 260924 T344 claimed (p35)
 - 260924 T343 done; ③ ends with a 발행 field that pastes, replaces or clears the post's Naver address through SavePostPublishedUrl, refuses a non-Naver address in place with the server's own sentence before sending (the shared fixture pins the pre-check), stays closed with its reason before 확정, and shows server refusals under the field; FE gates and lint:retirement pass (p35)
-- 260924 T343 claimed (p35)
-- 260924 T342 done; a guideline can be scoped to listed 분야 (all three shapes validated, collapsed, rescoped as one normalized patch), the owner switches the 상위 노출 단어 사용 preset and picks its 분야 as a presence patch outside the cap and text uniqueness, and every generation and write snapshot freezes global, template and 분야 texts with the preset line last while a revision never carries it; only the owner's procedures write guideline rows (structural test); BE gate passes (p35)
-- 260924 T342 claimed (p35)

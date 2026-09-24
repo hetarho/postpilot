@@ -43,6 +43,8 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	post.Template = cloneTemplate(job.Template)
 	// Same rule for the 지침: the frozen texts, never a fresh resolution.
 	post.Guidelines = cloneTexts(job.Guidelines)
+	// Same rule for 기억: the frozen texts, never a fresh retrieval (MEM-19).
+	post.Memories = cloneTexts(job.Memories)
 	// The frozen rule texts and phrases reach the write from the payload alone; the quality
 	// context is never asked again here.
 	post.QualityRules = cloneTexts(job.QualityRules)
