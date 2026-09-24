@@ -1,0 +1,32 @@
+# Explicit default CPU layout. The bridge permits outbound signed-object traffic;
+# no worker/control port is published and the worker never joins the shared edge.
+services:
+  api:
+    environment:
+      CLIP_MEDIA_EXECUTION: worker
+      MEDIA_INTERNAL_ADDR: ":9000"
+    networks:
+      media: {}
+  media-worker:
+    image: ghcr.io/hetarho/postpilot-media-worker:${MEDIA_WORKER_IMAGE_TAG:?Set the worker image SHA in worker.env}
+    env_file: worker.env
+    restart: unless-stopped
+    cpus: ${MEDIA_WORKER_CPUS:-1.0}
+    mem_limit: ${MEDIA_WORKER_MEMORY:-512m}
+    memswap_limit: ${MEDIA_WORKER_MEMORY:-512m}
+    stop_grace_period: ${MEDIA_STOP_TIMEOUT:-45}s
+    volumes:
+      - media_work:/var/lib/postpilot-media
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD", "/media-worker", "health"]
+      interval: 15s
+      timeout: 30s
+      start_period: 30s
+      retries: 4
+
+networks:
+  media: {}
+volumes:
+  media_work:

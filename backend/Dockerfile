@@ -29,6 +29,16 @@ FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS media-runtime
+# Both independently versioned images declare the same contract and asset inputs.
+ARG SOURCE_REVISION=local
+ARG TARGETARCH
+ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
+      org.opencontainers.image.architecture=$TARGETARCH \
+      org.postpilot.media.protocol="1" \
+      org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.assets="assets-v1" \
+      org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST
 WORKDIR /
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
 COPY --from=media-build /opt/media/share/ /usr/share/postpilot-media/
@@ -41,6 +51,8 @@ COPY backend/build/media-tools.sh backend/build/MEDIA.md /usr/share/postpilot-me
 USER nonroot:nonroot
 
 FROM media-runtime AS runtime
+LABEL org.opencontainers.image.title="Postpilot API" \
+      org.postpilot.media.rollback-safe="1"
 COPY --from=builder /api /api
 # The model registry ships with the image it was written for. A stack may still mount
 # its own file over /config/providers.yaml (or point PROVIDERS_CONFIG elsewhere).
@@ -105,17 +117,7 @@ COPY --from=media-tooling /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 # Execution-only runtime: no API binary, registry config, database or provider env.
 FROM media-runtime AS media-worker-runtime
-ARG SOURCE_REVISION=local
-ARG TARGETARCH
-# Updated/checked by scripts/media-assets.mjs; runtime manifest also reports tool/font hashes.
-ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
 LABEL org.opencontainers.image.title="Postpilot CPU media worker" \
-      org.opencontainers.image.revision=$SOURCE_REVISION \
-      org.opencontainers.image.architecture=$TARGETARCH \
-      org.postpilot.media.protocol="1" \
-      org.postpilot.media.renderer="cpu-v1" \
-      org.postpilot.media.assets="assets-v1" \
-      org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.manifest-command="/media-worker manifest"
 COPY --from=builder /media-worker /media-worker
 COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work

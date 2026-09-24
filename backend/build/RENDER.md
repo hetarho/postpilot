@@ -1,5 +1,43 @@
 # Deterministic clip rendering
 
+## API and execution-worker contract
+
+Preparation and final rendering use an execution-only `cmd/media-worker` process.
+The API keeps SQLite, authorization, planning, providers, credits and publication.
+Workers pull authenticated protocol 1 leases (`cpu-v1`, `assets-v1`), use short-lived
+private object grants and return measured immutable receipts. No shared DB or work
+directory is required. API restart preserves valid leases and accepted handoffs;
+retries cannot replay an uncertain paid provider call. Cancellation and revision
+changes fence claims/publication, with acknowledgement or lease expiry before cleanup.
+
+`MEDIA_ACCEL=cpu` and `auto` currently select the validated CPU profile; strict
+`nvenc` refuses activation pending CLIP-163 and real NVIDIA acceptance. CPU defaults
+remain one job, one encode thread and two decode threads. The existing 8 GiB workspace,
+512 MiB prepared-copy and per-input limits remain bounded in the owning context.
+Deployment limits are explicit, never calculated from detected core count.
+
+`/media-worker manifest` and `/api media-manifest` inspect actual tool/font/overlay
+capabilities offline, without opening the application DB or loading providers.
+Worker `status` adds an authenticated compatible API probe; `health` also requires
+the running worker's kernel workspace lock. SIGTERM stops new claims and drains for
+`MEDIA_DRAIN_TIMEOUT` before cancelling/reaping active subprocesses. Container stop
+grace must exceed drain by at least 15 seconds; the default pair is 30/45 seconds.
+
+Independent API/worker SHA pins carry shared protocol/renderer/asset labels and an
+asset-input SHA-256. Runtime manifests record actual architecture, binary hashes,
+font hashes and bounded execution settings. Git revisions may differ when contracts
+match. `scripts/media-assets.mjs --update` refreshes the OCI asset-input label after
+an intentional asset edit; `pnpm test:dev` rejects a stale label.
+
+The supported rollback floor is API media rollback version 1 (OCI
+`org.postpilot.media.rollback-safe=1`, including migrations through 0082 and durable
+media recovery). Pre-worker APIs are refused: their boot sweep can fail parked jobs.
+The rollout never deletes wait records, rewinds SQLite or mounts the DB in a worker.
+See [DEPLOY.md §8](../../DEPLOY.md#8-media-worker-deployment) for layout selection,
+bootstrap, private ingress, drain, compatibility checks and saved-env rollback.
+
+## Pinned renderer assets
+
 Overlay drawing is loaded from versioned SVG assets. See the
 [preset authoring and deployment guide](../../docs/design/overlay-presets.md)
 for file layout, dynamic text fields and `CLIP_OVERLAY_DIR`. The embedded default

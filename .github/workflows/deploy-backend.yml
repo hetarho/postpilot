@@ -23,7 +23,10 @@ on:
     paths:
       - 'backend/**'
       - 'docker-compose.prod.yml'
+      - 'docker-compose.media.*.yml'
       - 'deploy/backend-rollout.sh'
+      - 'deploy/media_rollout.py'
+      - 'deploy/media/**'
       - 'deploy/*_test.py'
       - '.github/workflows/deploy-backend.yml'
 
@@ -40,6 +43,7 @@ jobs:
       packages: write
     env:
       IMAGE: ghcr.io/hetarho/postpilot-api
+      MEDIA_WORKER_IMAGE: ghcr.io/hetarho/postpilot-media-worker
       ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
@@ -53,12 +57,17 @@ jobs:
       - name: Validate production Compose
         env:
           IMAGE_TAG: validation
+          MEDIA_WORKER_IMAGE_TAG: validation
           API_UPSTREAM: postpilot-api-validation
         run: |
           test ! -e .env
           cp .env.production.example .env
-          trap 'rm -f .env' EXIT
-          docker compose -f docker-compose.prod.yml config --quiet --no-env-resolution
+          cp deploy/media/worker.env.example worker.env
+          cp deploy/media/worker.env.example deploy/media/worker.env
+          trap 'rm -f .env worker.env deploy/media/worker.env' EXIT
+          docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.colocated.yml config --quiet --no-env-resolution
+          docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.remote.yml config --quiet --no-env-resolution
+          docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution
 
       - name: Verify rollout recovery and the deploy workflow's shape
         run: python3 -m unittest discover -s deploy -p '*_test.py' -v
@@ -88,10 +97,25 @@ jobs:
           # TO RESTORE THE BLOCKING GATE: delete this `target:` line (the default is the
           # last stage, `production`) and give `rollout` below `needs: [build, smoke]`.
           target: deployable
+          build-args: SOURCE_REVISION=${{ github.sha }}
           push: ${{ vars.DEPLOY_ENABLED == 'true' }}
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:${{ env.ENV_NAME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build independent CPU worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          target: media-worker-deployable
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          push: ${{ vars.DEPLOY_ENABLED == 'true' }}
+          tags: |
+            ${{ env.MEDIA_WORKER_IMAGE }}:${{ github.sha }}
+            ${{ env.MEDIA_WORKER_IMAGE }}:${{ env.ENV_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -121,6 +145,18 @@ jobs:
           push: false
           cache-from: type=gha
 
+      - name: Build the CPU worker execution smoke
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          target: media-worker-smoke
+          load: true
+          tags: postpilot-worker-smoke:ci
+          cache-from: type=gha
+      - name: Run CPU worker parity, isolation and health
+        run: docker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci
+
   rollout:
     needs: build
     runs-on: ubuntu-latest
@@ -142,19 +178,20 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: 'docker-compose.prod.yml,deploy/backend-rollout.sh'
+          source: 'docker-compose.prod.yml,docker-compose.media.colocated.yml,docker-compose.media.remote.yml,deploy/backend-rollout.sh,deploy/media_rollout.py,deploy/media/worker.env.example'
           target: '/srv/postpilot-${{ env.ENV_NAME }}'
 
       - name: Pull → swap → health gate → roll back on failure
         uses: appleboy/ssh-action@v1.2.0
         env:
           IMAGE_TAG: ${{ github.sha }}
+          MEDIA_WORKER_IMAGE_TAG: ${{ github.sha }}
           API_ORIGIN: ${{ vars.API_ORIGIN }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          envs: IMAGE_TAG,ENV_NAME,API_ORIGIN
+          envs: IMAGE_TAG,MEDIA_WORKER_IMAGE_TAG,ENV_NAME,API_ORIGIN
           script: |
             set -eu
             cd "/srv/postpilot-${ENV_NAME}"

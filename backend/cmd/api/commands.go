@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/postpilot/backend/internal/auth"
@@ -71,6 +72,15 @@ func runCommand(args []string) bool {
 		return false
 	}
 	ctx := context.Background()
+	if args[0] == "media-manifest" {
+		if len(args) != 1 {
+			fatal("media-manifest", fmt.Errorf("usage: api media-manifest"))
+		}
+		if err := mediaManifest(ctx, os.Stdout); err != nil {
+			fatal("media-manifest", err)
+		}
+		return true
+	}
 	// The environment is read HERE, in the composition root, and handed to the command
 	// (ARCH-6): nothing under `internal/` learns where the database is by itself.
 	cfg, err := config.Load()

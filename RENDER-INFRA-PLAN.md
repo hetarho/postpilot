@@ -1,5 +1,11 @@
 # 클립 렌더 성능과 인프라 계획 — 2026-09-18
 
+> Historical investigation, not the deployment contract. The implemented pull/lease,
+> private artifact and recovery contracts are in `spec/ssot/ARCH.md` (ARCH-45..59)
+> and `backend/build/RENDER.md`; current commands are in `DEPLOY.md` §8.
+> The host inventory, open queue notes and timings below describe 2026-09-18 and
+> must not be used as current capacity measurements or GPU activation evidence.
+
 렌더가 운영에서 반복해 실패한 건을 조사하다가, 원인이 하나가 아니라 **천장 여러 겹**이라는
 것이 드러나 계획 문서로 범위를 넓혔다. 무엇이 실측이고 무엇이 추정인지, 무엇을 고쳤고 무엇이
 남았는지를 구분해 적었다. 앞선 기록(`CLIP-WORKSPACE-FINDINGS.md`)을 흡수했다.

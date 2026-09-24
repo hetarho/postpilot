@@ -9,7 +9,7 @@
 # reaches the first command).
 services:
   api:
-    image: ghcr.io/hetarho/postpilot-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/hetarho/postpilot-api:${IMAGE_TAG:?Set an immutable API image SHA}
     env_file: .env
     restart: unless-stopped
     expose:

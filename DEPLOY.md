@@ -1,8 +1,9 @@
 # 배포 — postpilot 운영 문서
 
-**현재 아무것도 배포돼 있지 않다.** 이 문서는 리포가 이미 갖춘 배포 뼈대가
-*무엇을 전제로 하는지*와, 그 환경을 **처음부터 세우는 절차**를 적는다.
-시크릿 값은 절대 커밋하지 않는다 — 이름과 위치만 적는다(§3).
+The default remains the existing CPU VPS, with API/SQLite and a separate CPU
+media worker. Repository changes provide images, configuration and locally verified
+procedures; the operator applies them to each host. Start with [§8](#8-media-worker-deployment)
+for the worker upgrade. Secrets stay in restrictive, untracked env files.
 
 구조는 cosimosi와 동일하다. VPS를 이미 쓰고 있다면 **같은 박스·같은 edge Caddy를
 그대로 재사용**하면 된다(§5의 3번 부트스트랩을 건너뛰고, edge는 §4의 공유 절차를 따른다 —
@@ -35,15 +36,14 @@
 push가 가면 `deploy-backend.yml`이 이 순서로 돈다.
 
 ```
-build    Compose 검증 → 이미지 빌드 → GHCR push (:<sha> + :prod 두 태그)
-rollout  compose 파일과 deploy/backend-rollout.sh를 VPS로 동기화
-         → .env 백업, API_UPSTREAM·CORS_ORIGIN 비어 있으면 손대기 전에 중단
-         → pull (실패해도 다운타임 없음)
-         → up -d  (SQLite는 단일 라이터라 컨테이너를 교체한다)
-         → /health 게이트 (재시도 15회)  ✗ 이면 기동 로그를 남기고 이전 IMAGE_TAG로 복구
-         → 롤백한 이미지의 /health도 확인한 뒤 배포 실패 보고
-verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함)
-         → 같은 origin으로 R2 버킷의 GET preflight 확인 (사진 복사가 여기 달려 있다)
+build    validate all layouts → build API + CPU worker → separate GHCR SHA tags
+rollout  sync Compose/controller files to the API VPS (no SSH to a worker PC)
+         → validate env and selected image contracts before downtime
+         → pull selected services → drain a local worker → replace API
+         → API /health + private compatible-worker status smoke
+         → start/check the colocated worker when selected
+         → failure: restore the supported image/env/config snapshot and health-check it
+verify   browser-origin API CORS and R2 GET preflight checks
 ```
 
 - **마이그레이션 스텝이 따로 없는 건 의도다.** DB가 이 스택 볼륨 안의 SQLite 파일이라
@@ -110,6 +110,9 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 │   └── .env                     # 모든 프로젝트의 도메인 변수 (접두사 필수, 도메인만)
 ├── postpilot-staging/           # (지금은 안 씀) staging 스택
 │   ├── docker-compose.prod.yml  # 배포 워크플로가 매번 동기화한다 — 손으로 복사하지 않는다
+│   ├── docker-compose.media.colocated.yml / docker-compose.media.remote.yml
+│   ├── worker.env               # chmod 600, execution-only identity/settings
+│   ├── .deploy/                 # chmod 700, current/previous deployment snapshots
 │   ├── .env                     # chmod 600
 │   └── data/                    # SQLite 파일. uid 65532 소유여야 한다
 └── postpilot-prod/              # main이 배포되는 스택 (구성 동일)
@@ -411,13 +414,13 @@ verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 �
 
 ## 6. 롤백
 
-- **백엔드**: VPS `/srv/postpilot-<env>/.env`의 `IMAGE_TAG=<이전 SHA>`로 바꾸고
-  해당 디렉터리에서 `unset IMAGE_TAG` 후
-  `docker compose -f docker-compose.prod.yml pull api && docker compose -f docker-compose.prod.yml up -d api`.
-  (GHCR 이미지는 커밋 SHA로 태깅돼 있다.)
-  셸에 export된 `IMAGE_TAG`는 `.env`보다 우선하므로 반드시 해제한다. 자동 배포는
-  입력 SHA를 `TARGET_IMAGE_TAG`에 보관한 뒤 해제하고 `.env`만으로 이미지를 선택한다.
-  복구 후 `/health` 응답과 `docker compose -f docker-compose.prod.yml ps -a`의 실행 이미지를 확인한다.
+- **Backend**: from `/srv/postpilot-<env>`, run
+  `API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --rollback`.
+  This restores both service pins, both env files and the matching Compose files from
+  `.deploy/previous`, checks compatibility, drains the worker, then verifies recovery.
+  Exported incoming tags cannot override that snapshot. Do not restore a tag with a
+  direct API-only `compose up`: pre-worker boot is unsafe for parked media jobs. The
+  minimum supported media rollback is version 1 (`org.postpilot.media.rollback-safe=1`).
   migration 0072를 지난 환경은 이 경계 아래로 되돌리지 않는다. 구 이미지가 필요해도 데이터베이스의
   폐기 트리거와 무효화된 자격증명을 유지해야 하며 자동 발행을 다시 활성화하는 설정은 없다.
   migration 0076을 지난 환경은 publishing 테이블을 요구하는 bridge/구 바이너리로 롤백할 수 없다. 0076의
@@ -436,3 +439,165 @@ verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 �
 - **R2 백업** — 버킷 자체의 백업은 아직 없다(PRD §9.4). `data/`의 SQLite는 디렉터리
   하나만 받으면 되지만, 사진은 R2에 있다.
 - **관측(Sentry/PostHog)** — 사용자가 생기면.
+
+
+## 8. Media worker deployment
+
+### Files, services and prerequisites
+
+Linux Docker hosts need Docker Engine, Compose 2.24+, Python 3, `curl`, registry pull
+access and writable nonroot data/work storage. The API/SQLite and shared edge Caddy
+stay on the VPS. Never copy the API `.env`, database, provider keys, billing keys or
+R2 credentials to the executor. Signed object URLs must be reachable from that host;
+`MEDIA_STORAGE_ENDPOINT` is independently configurable and defaults to `R2_ENDPOINT`.
+A remote Linux host needs outbound private API/TLS and object-storage access only.
+Windows/WSL2 is not a validated production host in this delivery.
+
+| Placement | Compose files, in order | Services managed on this host |
+|---|---|---|
+| Default CPU VPS | `docker-compose.prod.yml`, `docker-compose.media.colocated.yml` | `api`, `media-worker` |
+| API VPS with remote worker | `docker-compose.prod.yml`, `docker-compose.media.remote.yml` | `api` |
+| Separate CPU worker | Copy `deploy/media/docker-compose.yml` to that stack's `docker-compose.yml` | `media-worker` |
+
+The VPS `.env` selects `MEDIA_TOPOLOGY=colocated` (default) or `remote` and keeps
+`IMAGE_TAG=<full API commit SHA>`. In both layouts a separate `worker.env` records
+`MEDIA_WORKER_IMAGE_TAG=<full worker commit SHA>` and the executor's settings.
+The API VPS retains that worker pin for compatibility inspection; a routine remote
+API rollout does not change it or require the PC to be powered on. Synchronize this
+pin after an independently verified worker upgrade. Compatible revisions can differ.
+
+Copy `deploy/media/worker.env.example` to `worker.env`, fill its image pin and use
+`chmod 600 .env worker.env`. Generate a unique token per environment/executor:
+
+```bash
+python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+```
+
+Set the token in `worker.env` as `MEDIA_WORKER_TOKEN`; put the same ID/token pair in
+API `.env` as `MEDIA_WORKER_CREDENTIALS={"prod-cpu-1":"<token>"}`. Rotate by allowing
+both identities in the API, starting the new identity after draining the old one,
+then removing the old credential. Never run two executors with one identity.
+
+For colocation use `MEDIA_API_URL=http://api:9000`. The API and executor share a
+private Compose bridge, with outbound access for signed storage transfers. No worker
+port is published and the executor never joins the shared edge network. Public Caddy
+continues to forward only to API port 8080; media operations exist on port 9000 only.
+
+The 1 CPU / 512 MiB executor example is a starting limit, not a claim about free
+capacity on the shared VPS. It disables worker swap, keeps one job and 1/2 encode/decode
+threads, and leaves the existing finite 8 GiB workspace limit. Reserve memory/CPU for
+API, Caddy, the OS and other applications; use the CPU release/preflight procedure
+before selecting production limits. Container limits do not provision host capacity.
+Do not carry old `CLIP_FONT_PATH=.../pretendard/...` settings forward: remove those
+obsolete overrides to use the image's validated Wanted Sans defaults. API preview
+assets remain in the API image.
+
+### Initial CPU VPS upgrade
+
+The first worker-aware deployment is a forward-only maintenance step when the old
+API lacks media rollback version 1. Prepare files and credentials first; retain the
+existing `data/` directory and its ownership. Pause new submissions and let current
+in-process work finish, take a consistent SQLite backup, and retain the previous
+runtime configuration. Do not restore an old database to force an image rollback.
+The old service stays up while configuration/image checks run.
+
+```bash
+cd /srv/postpilot-prod
+# Existing .env: keep provider/storage/auth values; set MEDIA_TOPOLOGY=colocated.
+# Both files must already contain their initial full SHA pins and matching identity.
+chmod 600 .env worker.env
+IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
+  API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --check --bootstrap
+IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
+  API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --bootstrap
+```
+
+`--check` may pull images and execute disposable offline/status probes; it never
+stops services or persists incoming tags. The initial upgrade retains its original
+files in `.deploy/bootstrap-before`. If startup fails and the prior API is below the
+rollback floor, the controller refuses to boot that legacy image, keeps the new pins
+and reports fix-forward recovery. After the first successful deployment, ordinary
+failures restore `.deploy/last-good` automatically. `--bootstrap` is unnecessary for
+subsequent supported updates. No command above is executed by repository verification.
+
+### Routine rollout, drain and recovery
+
+```bash
+# VPS: topology comes from .env. Remote mode preserves worker.env's image pin.
+IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
+  API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh
+# Supported manual rollback restores image pins, credentials and Compose together.
+API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --rollback
+# Stop taking work and finish or relinquish the active lease before stopping locally.
+API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --drain
+```
+
+SIGTERM stops claims immediately. The default 30-second worker drain is followed by
+15 seconds for cancellation reporting and process reaping; `MEDIA_STOP_TIMEOUT`
+controls the container grace and must be at least drain + 15 seconds. An interrupted
+lease is recovered by the API without replaying paid calls. Rollout never uses
+`--remove-orphans` to discard a busy worker. When later changing colocation to remote,
+explicit selection drains the old local executor; remove its stopped container only
+after checking that it is no longer executing. SQLite remains in its original volume.
+
+The controller checks protocol, renderer and asset versions plus the asset-input
+hash, and probes actual configured fonts/tools before replacing a service. The
+rollback floor is a media-aware API with `org.postpilot.media.rollback-safe=1`;
+pre-worker APIs are rejected even if a tag is still available. Application migrations
+remain forward-only. Inspect startup logs and keep `.deploy` private: its snapshots
+contain credentials. Current and immediately previous pins are retained during image
+cleanup; only older unused tags in the two Postpilot repositories are removed.
+
+For logs/status, use the same explicit file list from the table. Example:
+
+```bash
+docker compose --env-file .env --env-file worker.env \
+  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml ps
+docker compose --env-file .env --env-file worker.env \
+  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml logs --tail 80 api media-worker
+```
+
+### Preparing a private remote Linux worker later
+
+On the VPS select `MEDIA_TOPOLOGY=remote`. The remote override publishes only
+`127.0.0.1:9000:9000`; configure private Tailscale ingress explicitly after installing
+and enrolling both hosts, enabling tailnet HTTPS, and granting only the worker
+identity/device access to this port. Use an unused Serve port and retain other
+applications' Serve rules:
+
+```bash
+sudo tailscale serve --bg --https=9443 http://127.0.0.1:9000
+tailscale serve status
+```
+
+Use Serve, never public Funnel. Set `MEDIA_API_URL=https://<vps>.<tailnet>.ts.net:9443`
+in the remote worker's `worker.env` (and the VPS copy used to record its configuration).
+Do not add media paths to the public Caddy fragment or open public port 9000.
+These one-time network/host steps are operator work, not application auto-discovery.
+See [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) and its
+[CLI reference](https://tailscale.com/docs/reference/tailscale-cli/serve).
+
+On the separate host copy `deploy/media/docker-compose.yml` as `docker-compose.yml`,
+`deploy/media/rollout.sh` and `deploy/media_rollout.py` preserving their relative
+`deploy/` paths, and only its filled `worker.env`. Pin the worker image independently.
+The first activation must pass the actual worker host's CPU/tooling + authenticated
+private API smoke before it is allowed to claim work:
+
+```bash
+cd /srv/postpilot-media
+chmod 600 worker.env
+docker compose --env-file worker.env pull media-worker
+docker compose --env-file worker.env run --rm --no-deps media-worker status
+MEDIA_WORKER_IMAGE_TAG='<worker-sha>' sh deploy/media/rollout.sh --bootstrap
+# Later updates/rollback/drain on this same host:
+MEDIA_WORKER_IMAGE_TAG='<worker-sha>' sh deploy/media/rollout.sh
+sh deploy/media/rollout.sh --rollback
+sh deploy/media/rollout.sh --drain
+```
+
+The standalone rollout repeats that real-host status probe before downtime and then
+checks the running worker. Verify a disposable end-to-end render and object cleanup
+before switching live traffic. Turning off this PC makes media work wait/retry within
+its existing budgets; the API and web remain available. NVIDIA images/device setup
+and the three-environment matrix are completed by the GPU guide; production GPU
+activation remains gated by CLIP-163 and later real-hardware validation.
