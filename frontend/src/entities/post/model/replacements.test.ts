@@ -1,12 +1,17 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { clone, create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
+import { REPLACEMENT_PHRASES_MAX } from '../config'
 import {
   applyReplacement,
   canonicalTag,
   spansAt,
   visibleSpans,
   type ReplacementCandidate,
+  type ReplacementSurface,
 } from './replacements'
 
 const CONTENT = create(PostContentSchema, {
@@ -132,7 +137,6 @@ describe('the phrases a mark offers', () => {
   })
 
   it('does not offer a tag phrase that would canonically duplicate another tag or empty it', () => {
-    expect(canonicalTag('  #카페   투어 ')).toBe('카페 투어')
     const [span] = visibleSpans(CONTENT, [
       candidate('tag', 0, '성수', ['주말', '## 주말', '#', '성수동']),
     ])
@@ -248,4 +252,73 @@ describe('taking a phrase', () => {
     const taken = applyReplacement(CONTENT, span, '브런치')
     expect(visibleSpans(taken, [candidate('title', 0, '카페')])).toEqual([])
   })
+})
+
+const backendFixture = (path: string) =>
+  JSON.parse(
+    readFileSync(resolve(import.meta.dirname, '../../../../../backend/internal/', path), 'utf8'),
+  )
+
+interface FixtureBlock {
+  type: keyof typeof BlockType
+  content?: string
+  level?: number
+  file?: string
+  caption?: string
+  items?: string[]
+  slot?: { kind: string }
+}
+
+interface PlacementCase {
+  name: string
+  candidate: { surface: string; index: number; source: string; phrases: string[] }
+  stands: boolean
+  offers?: string[]
+  title?: string
+}
+
+// The same file the server's ValidateReplacements runs (GEN-53, GEN-54), so the two cannot
+// disagree: a rule changed on either side is a failing case here or there.
+describe('the shared placement fixture', () => {
+  const fixture = backendFixture('generation/testdata/replacements/cases.json')
+  const base = create(PostContentSchema, {
+    title: fixture.content.title,
+    tags: fixture.content.tags,
+    blocks: fixture.content.blocks.map((b: FixtureBlock) =>
+      create(BlockSchema, {
+        type: BlockType[b.type],
+        content: b.content ?? '',
+        level: b.level ?? 0,
+        file: b.file ?? '',
+        caption: b.caption ?? '',
+        items: b.items ?? [],
+        slot: b.slot && { kind: b.slot.kind, label: '' },
+      }),
+    ),
+  })
+
+  it('caps the phrases at the server’s own limit', () => {
+    expect(REPLACEMENT_PHRASES_MAX).toBe(fixture.phrasesMax)
+  })
+
+  it.each(fixture.cases as PlacementCase[])('$name', (c) => {
+    const content = clone(PostContentSchema, base)
+    if (c.title !== undefined) content.title = c.title
+    const spans = visibleSpans(content, [
+      { ...c.candidate, surface: c.candidate.surface as ReplacementSurface },
+    ])
+    expect(spans).toHaveLength(c.stands ? 1 : 0)
+    if (c.offers) expect(spans[0].phrases).toEqual(c.offers)
+  })
+})
+
+// The server's tag identity (post.ValidateContent), from the fixture both suites run.
+describe('the tag identity', () => {
+  const fixture = backendFixture('post/testdata/tag_identity/cases.json')
+  it.each(fixture.cases as { name: string; tag: string; canonical: string }[])(
+    '$name',
+    ({ tag, canonical }) => {
+      expect(canonicalTag(tag)).toBe(canonical)
+    },
+  )
 })

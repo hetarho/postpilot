@@ -2,7 +2,10 @@ package generation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -33,37 +36,12 @@ func TestValidateReplacementsDropsEveryInvalidEntry(t *testing.T) {
 	keep := func(surface ReplacementSurface, index int, source string) Replacement {
 		return Replacement{Surface: surface, Index: index, Source: source, Phrases: []string{"분위기 좋은 카페"}}
 	}
-	for name, test := range map[string]struct {
-		candidate Replacement
-		kept      bool
-	}{
-		"a title containing its source":             {keep(ReplacementTitle, 7, "카페 후기"), true},
-		"a title not containing it":                 {keep(ReplacementTitle, 0, "라떼 맛집"), false},
-		"a tag containing it":                       {keep(ReplacementTag, 0, "성수 카페"), true},
-		"a tag past the list":                       {keep(ReplacementTag, 2, "디저트"), false},
-		"a negative tag index":                      {keep(ReplacementTag, -1, "디저트"), false},
-		"a tag not containing it":                   {keep(ReplacementTag, 1, "성수 카페"), false},
-		"a TEXT block containing it":                {keep(ReplacementBody, 0, "성수동 카페"), true},
-		"a HEADING containing it":                   {keep(ReplacementBody, 2, "성수동 카페"), true},
-		"a QUOTE containing it":                     {keep(ReplacementBody, 3, "촉촉했다"), true},
-		"a LIST with an item containing it":         {keep(ReplacementBody, 4, "케이크 7,000원"), true},
-		"a LIST with no item containing it":         {keep(ReplacementBody, 4, "마카롱"), false},
-		"an IMAGE block":                            {keep(ReplacementBody, 1, "케이크"), false},
-		"an unfilled slot":                          {keep(ReplacementBody, 5, "{{slot:1}}"), false},
-		"a VIDEO block":                             {keep(ReplacementBody, 6, "clip"), false},
-		"a block past the content":                  {keep(ReplacementBody, 7, "케이크"), false},
-		"a body block not containing it":            {keep(ReplacementBody, 0, "마카롱"), false},
-		"an unknown surface":                        {keep("summary", 0, "카페"), false},
-		"a blank source":                            {keep(ReplacementBody, 0, "   "), false},
-		"only an unlisted phrase":                   {Replacement{Surface: ReplacementBody, Index: 0, Source: "성수동 카페", Phrases: []string{"성수동 핫플"}}, false},
-		"only the source itself as a phrase":        {Replacement{Surface: ReplacementTag, Index: 1, Source: "디저트 맛집", Phrases: []string{"디저트 맛집"}}, false},
-		"no phrase at all":                          {Replacement{Surface: ReplacementBody, Index: 0, Source: "성수동 카페"}, false},
-		"a source containing exact case and spaces": {keep(ReplacementTitle, 0, "성수동  카페"), false},
-	} {
-		got := ValidateReplacements([]Replacement{test.candidate}, content, testPhrases)
-		if kept := len(got) == 1; kept != test.kept {
-			t.Errorf("%s: kept = %v, want %v (%+v)", name, kept, test.kept, got)
-		}
+	// Which spans stand is the shared fixture's (TestReplacementFixture); what stays here is the
+	// validation of model output, which a stored candidate has already passed, so the browser
+	// has no counterpart to run it against.
+	unlisted := Replacement{Surface: ReplacementBody, Index: 0, Source: "성수동 카페", Phrases: []string{"성수동 핫플"}}
+	if got := ValidateReplacements([]Replacement{unlisted}, content, testPhrases); len(got) != 0 {
+		t.Errorf("only an unlisted phrase: kept %+v", got)
 	}
 
 	// The title is always index 0; a trimmed source is compared as trimmed.
@@ -177,4 +155,80 @@ func TestReplacementIndexesResolveAgainstTheFinalContent(t *testing.T) {
 			t.Fatalf("replacements = %+v, want %+v", got, want)
 		}
 	})
+}
+
+// The placement and phrase rules the browser mirrors (GEN-53, GEN-54), pinned by one fixture
+// both suites run: a rule changed on one side fails the other. generation.Block carries no JSON
+// tags (ARCH-7), so the fixture decodes into structs of its own.
+func TestReplacementFixture(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "replacements", "cases.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type block struct {
+		Type    string   `json:"type"`
+		Content string   `json:"content"`
+		Level   int32    `json:"level"`
+		File    string   `json:"file"`
+		Caption string   `json:"caption"`
+		Items   []string `json:"items"`
+		Slot    *struct {
+			Kind string `json:"kind"`
+		} `json:"slot"`
+	}
+	var fixture struct {
+		SpansMax   int      `json:"spansMax"`
+		PhrasesMax int      `json:"phrasesMax"`
+		Phrases    []string `json:"phrases"`
+		Content    struct {
+			Title  string   `json:"title"`
+			Tags   []string `json:"tags"`
+			Blocks []block  `json:"blocks"`
+		} `json:"content"`
+		Cases []struct {
+			Name      string `json:"name"`
+			Candidate struct {
+				Surface string   `json:"surface"`
+				Index   int      `json:"index"`
+				Source  string   `json:"source"`
+				Phrases []string `json:"phrases"`
+			} `json:"candidate"`
+			Stands bool     `json:"stands"`
+			Offers []string `json:"offers"`
+			Title  *string  `json:"title"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	if fixture.SpansMax != ReplacementSpansMax || fixture.PhrasesMax != ReplacementPhrasesMax {
+		t.Fatalf("fixture caps %d/%d, want ReplacementSpansMax %d and ReplacementPhrasesMax %d",
+			fixture.SpansMax, fixture.PhrasesMax, ReplacementSpansMax, ReplacementPhrasesMax)
+	}
+	if len(fixture.Cases) == 0 {
+		t.Fatal("the fixture has no cases")
+	}
+	base := PostContent{Title: fixture.Content.Title, Tags: fixture.Content.Tags}
+	for _, b := range fixture.Content.Blocks {
+		mapped := Block{Type: BlockType(b.Type), Content: b.Content, Level: b.Level, File: b.File, Caption: b.Caption, Items: b.Items}
+		if b.Slot != nil {
+			mapped.Slot = &BlockSlot{Kind: b.Slot.Kind}
+		}
+		base.Blocks = append(base.Blocks, mapped)
+	}
+	for _, c := range fixture.Cases {
+		content := base
+		if c.Title != nil {
+			content.Title = *c.Title
+		}
+		candidate := Replacement{Surface: ReplacementSurface(c.Candidate.Surface), Index: c.Candidate.Index, Source: c.Candidate.Source, Phrases: c.Candidate.Phrases}
+		got := ValidateReplacements([]Replacement{candidate}, content, fixture.Phrases)
+		if stands := len(got) == 1; stands != c.Stands {
+			t.Errorf("%s: stands = %v, want %v (%+v)", c.Name, stands, c.Stands, got)
+			continue
+		}
+		if c.Offers != nil && !reflect.DeepEqual(got[0].Phrases, c.Offers) {
+			t.Errorf("%s: offers %q, want %q", c.Name, got[0].Phrases, c.Offers)
+		}
+	}
 }

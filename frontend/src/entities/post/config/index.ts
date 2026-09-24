@@ -21,8 +21,9 @@ export const POST_TAG_COUNT_DEFAULT = 4
 export const POST_TAG_COUNT_MIN = 1
 export const POST_TAG_COUNT_MAX = 10
 
-/** How many phrases one replacement mark offers at most (GEN-54). A product rule, not a
- *  mirrored server limit: the write may return more, and the mark shows this many. */
+/** How many phrases one replacement mark offers at most. Mirrors `generation.ReplacementPhrasesMax`
+ *  (GEN-54): the server keeps at most this many phrases per candidate, and the shared fixture's
+ *  `phrasesMax` pins the two equal. */
 export const REPLACEMENT_PHRASES_MAX = 3
 
 /** The longest Naver Blog address a post stores, in code points. Mirrors the server's

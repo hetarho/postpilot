@@ -1,0 +1,360 @@
+{
+  "_comment": [
+    "Which stored replacement candidates stand and what they offer (GEN-53, GEN-54, POST-79).",
+    "Read by backend/internal/generation/replacements_test.go (ValidateReplacements) and by",
+    "frontend/src/entities/post/model/replacements.test.ts (visibleSpans): a rule changed on one side fails the other.",
+    "Every phrase a case offers is in `phrases` and already trimmed, so the server's listing and trimming never decide a shared case.",
+    "`title`, when present, replaces the content's title for that one case; `offers`, when present, is the exact phrase list kept."
+  ],
+  "spansMax": 20,
+  "phrasesMax": 3,
+  "phrases": [
+    "솔직 후기",
+    "분위기 좋은 카페",
+    "디저트 맛집",
+    "주차 가능한 카페"
+  ],
+  "content": {
+    "title": "성수동 카페 후기",
+    "tags": [
+      "성수 카페",
+      "디저트 맛집 추천"
+    ],
+    "blocks": [
+      {
+        "type": "TEXT",
+        "content": "성수동 카페에서 케이크를 먹었다."
+      },
+      {
+        "type": "IMAGE",
+        "file": "IMG_1.jpg",
+        "caption": "케이크"
+      },
+      {
+        "type": "HEADING",
+        "content": "성수동 카페 메뉴",
+        "level": 2
+      },
+      {
+        "type": "QUOTE",
+        "content": "케이크가 촉촉했다"
+      },
+      {
+        "type": "LIST",
+        "items": [
+          "라떼 6,000원",
+          "케이크 7,000원"
+        ]
+      },
+      {
+        "type": "TEXT",
+        "content": "{{slot:1}}",
+        "slot": {
+          "kind": "place"
+        }
+      },
+      {
+        "type": "VIDEO",
+        "file": "clip.mp4"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "a title containing its source",
+      "candidate": {
+        "surface": "title",
+        "index": 0,
+        "source": "카페 후기",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a title not containing it",
+      "candidate": {
+        "surface": "title",
+        "index": 0,
+        "source": "라떼 맛집",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a tag containing it",
+      "candidate": {
+        "surface": "tag",
+        "index": 0,
+        "source": "성수 카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a tag past the list",
+      "candidate": {
+        "surface": "tag",
+        "index": 2,
+        "source": "디저트",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a negative tag index",
+      "candidate": {
+        "surface": "tag",
+        "index": -1,
+        "source": "디저트",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a tag not containing it",
+      "candidate": {
+        "surface": "tag",
+        "index": 1,
+        "source": "성수 카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a TEXT block containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 0,
+        "source": "성수동 카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a HEADING containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 2,
+        "source": "성수동 카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a QUOTE containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 3,
+        "source": "촉촉했다",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a LIST with an item containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 4,
+        "source": "케이크 7,000원",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true
+    },
+    {
+      "name": "a LIST with no item containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 4,
+        "source": "마카롱",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "an IMAGE block",
+      "candidate": {
+        "surface": "body",
+        "index": 1,
+        "source": "케이크",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "an unfilled slot",
+      "candidate": {
+        "surface": "body",
+        "index": 5,
+        "source": "{{slot:1}}",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a VIDEO block",
+      "candidate": {
+        "surface": "body",
+        "index": 6,
+        "source": "clip",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a block past the content",
+      "candidate": {
+        "surface": "body",
+        "index": 7,
+        "source": "케이크",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a body block not containing it",
+      "candidate": {
+        "surface": "body",
+        "index": 0,
+        "source": "마카롱",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "an unknown surface",
+      "candidate": {
+        "surface": "summary",
+        "index": 0,
+        "source": "카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "a blank source",
+      "candidate": {
+        "surface": "body",
+        "index": 0,
+        "source": "   ",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "only the source itself as a phrase",
+      "candidate": {
+        "surface": "tag",
+        "index": 1,
+        "source": "디저트 맛집",
+        "phrases": [
+          "디저트 맛집"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "no phrase at all",
+      "candidate": {
+        "surface": "body",
+        "index": 0,
+        "source": "성수동 카페",
+        "phrases": []
+      },
+      "stands": false
+    },
+    {
+      "name": "a source containing exact case and spaces",
+      "candidate": {
+        "surface": "title",
+        "index": 0,
+        "source": "성수동  카페",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false
+    },
+    {
+      "name": "offers at most phrasesMax, in answer order",
+      "candidate": {
+        "surface": "body",
+        "index": 0,
+        "source": "성수동 카페",
+        "phrases": [
+          "솔직 후기",
+          "분위기 좋은 카페",
+          "디저트 맛집",
+          "주차 가능한 카페"
+        ]
+      },
+      "stands": true,
+      "offers": [
+        "솔직 후기",
+        "분위기 좋은 카페",
+        "디저트 맛집"
+      ]
+    },
+    {
+      "name": "a source that is only U+FEFF is not blank",
+      "candidate": {
+        "surface": "title",
+        "index": 0,
+        "source": "\ufeff",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": true,
+      "title": "비 온 뒤\ufeff제주"
+    },
+    {
+      "name": "a source that is only U+0085 is blank",
+      "candidate": {
+        "surface": "title",
+        "index": 0,
+        "source": "\u0085",
+        "phrases": [
+          "분위기 좋은 카페"
+        ]
+      },
+      "stands": false,
+      "title": "비 온 뒤\u0085제주"
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 package post
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -51,5 +54,32 @@ func TestValidateContentRejectsCanonicallyDuplicateTags(t *testing.T) {
 	var invalid *InvalidContentError
 	if err := ValidateContent(content, nil, nil); !errors.As(err, &invalid) {
 		t.Fatalf("error=%v, want InvalidContentError", err)
+	}
+}
+
+// The tag identity the browser mirrors, pinned by one fixture both suites run: a whitespace or
+// hash rule changed on one side fails the other.
+func TestCanonicalTagFixture(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "tag_identity", "cases.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Cases []struct {
+			Name      string `json:"name"`
+			Tag       string `json:"tag"`
+			Canonical string `json:"canonical"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.Cases) == 0 {
+		t.Fatal("the fixture has no cases")
+	}
+	for _, c := range fixture.Cases {
+		if got := canonicalTag(c.Tag); got != c.Canonical {
+			t.Errorf("%s: canonicalTag(%q) = %q, want %q", c.Name, c.Tag, got, c.Canonical)
+		}
 	}
 }

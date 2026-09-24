@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "The tag identity post.ValidateContent applies (canonicalTag): whitespace runs collapsed, leading '#'s dropped, case kept.",
+    "Whitespace is Go's unicode.IsSpace set. Read by backend/internal/post/content_edit_test.go and by",
+    "frontend/src/entities/post/model/replacements.test.ts. \"canonical\": \"\" means the tag is refused as empty."
+  ],
+  "cases": [
+    {
+      "name": "collapses runs and drops the hash",
+      "tag": "  #카페   투어 ",
+      "canonical": "카페 투어"
+    },
+    {
+      "name": "drops every leading hash",
+      "tag": "##주말",
+      "canonical": "주말"
+    },
+    {
+      "name": "keeps a hash after a space",
+      "tag": "# # 주말",
+      "canonical": "# 주말"
+    },
+    {
+      "name": "a tab and a newline are spaces",
+      "tag": "카페\t\n투어",
+      "canonical": "카페 투어"
+    },
+    {
+      "name": "a no-break space is a space",
+      "tag": "카페\u00a0투어",
+      "canonical": "카페 투어"
+    },
+    {
+      "name": "an ideographic space is a space",
+      "tag": "카페\u3000투어",
+      "canonical": "카페 투어"
+    },
+    {
+      "name": "U+0085 is a space",
+      "tag": "\u0085#카페",
+      "canonical": "카페"
+    },
+    {
+      "name": "U+FEFF is not a space",
+      "tag": "\ufeff#카페",
+      "canonical": "\ufeff#카페"
+    },
+    {
+      "name": "only spaces is empty",
+      "tag": " \u3000 ",
+      "canonical": ""
+    },
+    {
+      "name": "only hashes is empty",
+      "tag": "###",
+      "canonical": ""
+    }
+  ]
+}

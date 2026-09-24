@@ -1,6 +1,8 @@
 // Where a write's replacement candidates still stand in the content on screen (GEN-53, POST-79).
 // Pure on purpose (ARCH-18): the stored candidates are never edited, so every stale one is dropped
 // here, at render, by the same containment rules the server applies when it keeps them (T330).
+// backend/internal/generation/testdata/replacements/cases.json is that contract, and
+// backend/internal/post/testdata/tag_identity/cases.json the tag identity: both suites run them.
 import { BlockType, type PostContent } from '@/shared/api'
 import { REPLACEMENT_PHRASES_MAX } from '../config'
 import { blockWith, postContentWith } from './content'
@@ -32,10 +34,21 @@ export interface ReplacementSpan {
   phrases: string[]
 }
 
-/** The server's tag identity (`ValidateContent`): runs of whitespace collapsed, leading `#`s
+/** Whitespace as the server means it: Go's `unicode.IsSpace` set, spelled out, because
+ *  JavaScript's `\s` and `trim()` are that set without U+0085 and with U+FEFF — a byte-order mark
+ *  the server keeps as text would be trimmed here, and a next-line the server trims would stay. */
+const SPACE = '\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000'
+const SPACE_RUN = new RegExp(`[${SPACE}]+`)
+const SPACE_EDGES = new RegExp(`^[${SPACE}]+|[${SPACE}]+$`, 'g')
+
+function trimSpace(text: string): string {
+  return text.replace(SPACE_EDGES, '')
+}
+
+/** The server's tag identity (`post.canonicalTag`): runs of whitespace collapsed, leading `#`s
  *  dropped, case kept. A take that made two tags equal by it would be refused. */
 export function canonicalTag(tag: string): string {
-  return tag.split(/\s+/).filter(Boolean).join(' ').replace(/^#+/, '').trim()
+  return trimSpace(tag.split(SPACE_RUN).filter(Boolean).join(' ').replace(/^#+/, ''))
 }
 
 function samePlace(a: TextAt, b: TextAt): boolean {
@@ -94,7 +107,7 @@ export function visibleSpans(
 ): ReplacementSpan[] {
   const spans: ReplacementSpan[] = []
   for (const candidate of candidates) {
-    if (candidate.source.trim() === '') continue
+    if (trimSpace(candidate.source) === '') continue
     const place = textOf(content, candidate)
     if (!place) continue
     // Case-sensitive, like the server's containment.
@@ -102,7 +115,7 @@ export function visibleSpans(
     if (start === -1) continue
     const end = start + candidate.source.length
     let phrases = [...new Set(candidate.phrases)].filter(
-      (phrase) => phrase.trim() !== '' && phrase !== candidate.source,
+      (phrase) => trimSpace(phrase) !== '' && phrase !== candidate.source,
     )
     const at = place.at
     if (at.surface === 'tag') {

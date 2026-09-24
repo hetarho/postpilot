@@ -35,8 +35,8 @@ type Replacement struct {
 // ReplacementPhrasesMax phrases survive, in model order (GEN-54), so an invalid entry never
 // spends a place.
 //
-// These rules are the contract the browser mirrors to mark spans over the stored content: a
-// change here is a change on both sides.
+// These rules are the contract the browser mirrors to mark spans over the stored content:
+// testdata/replacements/cases.json is that contract, and both suites run it.
 func ValidateReplacements(candidates []Replacement, content PostContent, phrases []string) []Replacement {
 	listed := make(map[string]bool, len(phrases))
 	for _, phrase := range phrases {

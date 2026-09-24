@@ -11,13 +11,21 @@ import (
 // Photos and videos arrive as separate lists because a block names one KIND of
 // attachment: a filename is unique across both, so an IMAGE block naming a video is the
 // wrong block type rather than an unknown file, and the message has to be able to say so.
+// canonicalTag is a tag's identity: runs of whitespace collapsed to one space, leading '#'s
+// dropped, case kept. Whitespace is unicode.IsSpace (what Fields and TrimSpace use); the browser
+// spells that set out to mark replacement spans, and testdata/tag_identity/cases.json pins the
+// two equal.
+func canonicalTag(tag string) string {
+	return strings.TrimSpace(strings.TrimLeft(strings.Join(strings.Fields(tag), " "), "#"))
+}
+
 func ValidateContent(content PostContent, attached []Image, videos []Video) error {
 	if len(content.Blocks) == 0 {
 		return &InvalidContentError{Reason: "at least one block is required"}
 	}
 	tags := make(map[string]struct{}, len(content.Tags))
 	for _, tag := range content.Tags {
-		canonical := strings.TrimSpace(strings.TrimLeft(strings.Join(strings.Fields(tag), " "), "#"))
+		canonical := canonicalTag(tag)
 		if canonical == "" {
 			return &InvalidContentError{Reason: "tag cannot be empty"}
 		}
