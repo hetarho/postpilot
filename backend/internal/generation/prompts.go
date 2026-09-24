@@ -211,6 +211,15 @@ const templatePrecedence = "템플릿은 글의 구성·순서·포함할 내용
 // 지침 (TMPL-13).
 const templateTitleInstruction = "JSON의 title은 바로 다음 --- 사이의 제목 형식을 따르세요. 그 뒤 --- 사이의 내용은 본문의 형식입니다."
 
+// reviseTemplateTitleInstruction is the revise pass's form of that line (TMPL-51): the title
+// form binds only a request that asks to change the title, and any other revision keeps the
+// title as it stands — a title the owner edited away from the form stays theirs until they
+// ask. RevisePrompt's own "제목…고쳐 달라고 한 경우에만 바꾸세요" line says the same, so the two
+// no longer conflict. "수정 요청" is the prompt's own name for the request and "현재 제목"
+// points at [현재 PostContent]'s title; the tail is shared with the write line, so the body
+// fence keeps one meaning. Like the rest of the section it never says 지침 (TMPL-13).
+const reviseTemplateTitleInstruction = "수정 요청이 제목을 바꾸라고 할 때만 JSON의 title을 바로 다음 --- 사이의 제목 형식에 맞춰 쓰고, 그 밖의 수정에서는 현재 제목을 그대로 두세요. 그 뒤 --- 사이의 내용은 본문의 형식입니다."
+
 // writeTemplateSection appends the frozen template AFTER the complete voice profile and
 // before the per-post material. That position is load-bearing twice over, exactly as the
 // purpose section's was: the profile prefix stays byte-identical across posts of different
@@ -222,7 +231,9 @@ const templateTitleInstruction = "JSON의 title은 바로 다음 --- 사이의 �
 // able to change what the model was asked for.
 //
 // A nil template writes nothing at all, so a post without one adds no template bytes.
-func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
+// titleInstruction is the pass's own title line: templateTitleInstruction for the write,
+// reviseTemplateTitleInstruction for a revision; nothing else in the section differs.
+func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstruction string) {
 	if brief == nil {
 		return
 	}
@@ -238,7 +249,7 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
 	// The title form sits above the body form, in fences of its own (GEN-52). An empty title
 	// area writes nothing, so every template authored before it existed keeps its bytes.
 	if brief.TitleArea != "" {
-		fmt.Fprintf(out, "\n%s\n---\n%s\n---", templateTitleInstruction, brief.TitleArea)
+		fmt.Fprintf(out, "\n%s\n---\n%s\n---", titleInstruction, brief.TitleArea)
 	}
 	fmt.Fprintf(out, "\n---\n%s\n---", brief.Body)
 	fmt.Fprintf(out, "\n%s", templatePrecedence)
@@ -259,25 +270,29 @@ const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항
 // POST-81): the rule texts the owner ticked on the writing brief, frozen at enqueue and
 // already rendered in the target language. The heading stays Korean for every target, like
 // every other section heading. The closing line says a 지침 outranks them (QUAL-13), and 지침
-// still names one thing: the [작문 지침] section further down.
+// still names one thing: the [작문 지침] section above, in the stable half.
 const qualityRulesHeading = "[발행 글 측정 규칙]"
 
 const qualityRulesPrecedence = "지침이 위 규칙과 충돌하면 지침을 우선하세요."
 
-// writeQualityRulesSection renders the ticked rules after the static rules and before the
-// naturalness baseline or the voice profile (GEN-14, GEN-51). An empty slice writes nothing
-// at all, so ticking nothing leaves the run identical to one before the rules existed
-// (POST-81). Write-only: a revision keeps unrelated sentences verbatim, and a rule sweep
-// would rewrite them.
-func writeQualityRulesSection(out *strings.Builder, rules []string) {
+// qualityRulesSection renders the ticked rules at the head of the per-post half, before
+// [이번 글] (GEN-14, GEN-51): the ticks differ per post, and the stable prefix is what the
+// provider's cache and every prompt golden rest on (MEM-20's reason), so a ticked post keeps
+// the same prefix as an unticked one. Position no longer ranks them below the 지침; the
+// closing line does. No rules render as the empty string, so ticking nothing leaves the run
+// identical to one before the rules existed (POST-81). Write-only: a revision keeps
+// unrelated sentences verbatim, and a rule sweep would rewrite them.
+func qualityRulesSection(rules []string) string {
 	if len(rules) == 0 {
-		return
+		return ""
 	}
-	out.WriteString("\n\n" + qualityRulesHeading)
+	var out strings.Builder
+	out.WriteString(qualityRulesHeading)
 	for _, text := range rules {
 		out.WriteString("\n- " + text)
 	}
-	out.WriteString("\n" + qualityRulesPrecedence)
+	out.WriteString("\n" + qualityRulesPrecedence + "\n\n")
+	return out.String()
 }
 
 // writeGuidelinesSection appends the frozen guideline texts as ONE section at ONE position:
@@ -399,7 +414,8 @@ type WritePromptInput struct {
 	Guidelines []string
 	// Memories are the frozen 기억 texts, empty for a post that did not opt in (MEM-20).
 	Memories []string
-	// QualityRules are the frozen ticked rule texts (GEN-51), empty for a run that ticked none.
+	// QualityRules are the frozen ticked rule texts (GEN-51), empty for a run that ticked none;
+	// they open the per-post half, never the stable prefix (GEN-14).
 	QualityRules []string
 	// FieldPhrases is the frozen 분야 phrase list (GEN-48), empty for a post with none.
 	FieldPhrases []string
@@ -429,16 +445,15 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		// direct prompt use fail closed instead of silently defaulting to Korean.
 		stable.WriteString("Unsupported output language; do not generate content.")
 	}
-	writeQualityRulesSection(&stable, input.QualityRules)
 	writeProfileSection(&stable, input.Language, input.Profile, input.TargetLength)
-	writeTemplateSection(&stable, input.Template)
+	writeTemplateSection(&stable, input.Template, templateTitleInstruction)
 	writeGuidelinesSection(&stable, input.Guidelines)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
 	// The phrase and memory sections sit between the memo and the attachments, in that order,
 	// and each renders to the empty string when it has nothing — which is what keeps a post
 	// with neither byte-identical.
-	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, fieldPhrasesSection(input.FieldPhrases), memorySection(input.Memories), photoMaterial)
+	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, fieldPhrasesSection(input.FieldPhrases), memorySection(input.Memories), photoMaterial)
 	return stable.String(), perPost
 }
 

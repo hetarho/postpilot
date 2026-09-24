@@ -121,7 +121,7 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	writeProfileSection(&stable, language, profile, targetLength)
 	// The same section, at the same relative position, as the write prompt: a revision of a
 	// post with a template must not be given a different brief than the pass that wrote it.
-	writeTemplateSection(&stable, template)
+	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction)
 	// The same section, at the same relative position, for the same reason.
 	writeGuidelinesSection(&stable, guidelines)
 

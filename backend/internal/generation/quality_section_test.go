@@ -18,27 +18,25 @@ func testQualityRules() []string {
 	}
 }
 
-// GEN-14, GEN-51: the ticked rules are one section after the static, tag-count, language and
-// video lines, and before the naturalness baseline for a Korean target or the voice profile
-// for an English one, so a 지침 further down still outranks them. Ticking nothing leaves the
-// prompt of a run from before the rules existed, byte for byte (POST-81).
-func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T) {
+// GEN-14, GEN-51: the ticked rules are the first thing in the per-post half, closed by the one
+// line that ranks them below a 지침. The stable half is byte-identical to the same input with no
+// ticks — the ticks differ per post and must not move the cached prefix — and the per-post half
+// is the section followed by the unticked per-post half. Ticking nothing leaves the prompt of a
+// run from before the rules existed, byte for byte (POST-81).
+func TestTickedQualityRulesOpenThePerPostHalf(t *testing.T) {
 	rules := testQualityRules()
-	section := "\n\n" + qualityRulesHeading + "\n- " + rules[0] + "\n- " + rules[1] + "\n" + qualityRulesPrecedence
-	englishLanguageLine := "This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint."
 	portable := goldenProfile()
 	portable.Portable = true
 	for name, test := range map[string]struct {
-		language      Language
-		profile       Profile
-		videos        []string
-		before, after string
+		language Language
+		profile  Profile
+		videos   []string
 	}{
-		"Korean target":            {LanguageKorean, goldenProfile(), []string{"a.mp4"}, videoWriteInstructions, "\n\n" + NaturalnessBaseline + "\n\n[스타일가이드]\n"},
-		"English full profile":     {LanguageEnglish, goldenProfile(), nil, englishLanguageLine, "\n\n[스타일가이드]\n"},
-		"English portable profile": {LanguageEnglish, portable, nil, englishLanguageLine, "\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n"},
+		"Korean target":            {LanguageKorean, goldenProfile(), []string{"a.mp4"}},
+		"English full profile":     {LanguageEnglish, goldenProfile(), nil},
+		"English portable profile": {LanguageEnglish, portable, nil},
 	} {
-		system, user := BuildWritePromptForLanguage(WritePromptInput{
+		input := WritePromptInput{
 			Language:     test.language,
 			Profile:      test.profile,
 			Observations: goldenObservations(),
@@ -49,16 +47,19 @@ func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T
 			TagCount:     4,
 			Template:     testBrief(),
 			Guidelines:   testGuidelines(),
-			QualityRules: rules,
-		})
-		if got := strings.Count(system, qualityRulesHeading); got != 1 {
-			t.Errorf("%s: the section appears %d times", name, got)
 		}
-		if !strings.Contains(system, test.before+section+test.after) {
-			t.Errorf("%s: the section is not directly between %q and %q:\n%s", name, test.before, test.after, system)
+		systemWithout, userWithout := BuildWritePromptForLanguage(input)
+		input.QualityRules = rules
+		system, user := BuildWritePromptForLanguage(input)
+		if system != systemWithout {
+			t.Errorf("%s: the ticks moved the stable half", name)
 		}
-		if strings.Contains(user, qualityRulesHeading) {
-			t.Errorf("%s: the section reached the per-post half", name)
+		if strings.Contains(system, "[발행 글 측정 규칙]") {
+			t.Errorf("%s: the section reached the stable half", name)
+		}
+		want := "[발행 글 측정 규칙]\n- " + rules[0] + "\n- " + rules[1] + "\n지침이 위 규칙과 충돌하면 지침을 우선하세요.\n\n" + userWithout
+		if user != want {
+			t.Errorf("%s: the per-post half is not the section followed by the unticked half:\n%s", name, user)
 		}
 	}
 

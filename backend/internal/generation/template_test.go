@@ -148,6 +148,7 @@ func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
 	for name, text := range map[string]string{
 		"legend": templateLegend, "slot legend": templateSlotLegend, "fact legend": templateFactLegend,
 		"precedence": templatePrecedence, "title instruction": templateTitleInstruction,
+		"revise title instruction": reviseTemplateTitleInstruction,
 	} {
 		if strings.Contains(text, "지침") {
 			t.Errorf("the template %s says 지침: %q", name, text)
@@ -159,7 +160,7 @@ func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
 }
 
 // GEN-52, TMPL-50: a frozen title area is its own instruction inside the brief, fenced above
-// the body form; the section is byte-identical in the write and the revise prompt (TMPL-51);
+// the body form; the revise prompt carries the same section with its own title line (TMPL-51);
 // and an empty title area adds no bytes at all. The sections are compared by slicing from
 // their heading, because a title-area write prompt's static prefix is the title-form variant.
 func TestTemplateTitleAreaPrecedesTheBodyFence(t *testing.T) {
@@ -176,8 +177,10 @@ func TestTemplateTitleAreaPrecedesTheBodyFence(t *testing.T) {
 	if got := templateSection(write); got != want {
 		t.Fatalf("template section =\n%q\nwant\n%q", got, want)
 	}
-	if templateSection(revise) != templateSection(write) {
-		t.Fatalf("the revise section differs from the write section:\n%q", templateSection(revise))
+	// TMPL-51: the revision carries the same section with its own title line, which binds only a
+	// request that asks to change the title.
+	if want := strings.Replace(templateSection(write), templateTitleInstruction, reviseTemplateTitleInstruction, 1); templateSection(revise) != want {
+		t.Fatalf("the revise section is not the write section with the revise title line:\n%q", templateSection(revise))
 	}
 
 	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
@@ -185,6 +188,31 @@ func TestTemplateTitleAreaPrecedesTheBodyFence(t *testing.T) {
 	withoutTitle := strings.Replace(want, "\n"+templateTitleInstruction+"\n---\n"+brief.TitleArea+"\n---", "", 1)
 	if got := strings.TrimPrefix(plain, baseline); got != withoutTitle {
 		t.Fatalf("an empty title area changed the section:\n%q\nwant\n%q", got, withoutTitle)
+	}
+}
+
+// TMPL-51: in a revision the template's title form binds only a request that asks to change the
+// title; any other revision keeps the title as it stands. The line is pinned literally, it sits
+// where the write's title line sits, for either content language, and the write keeps its own.
+func TestTheReviseTitleFormBindsOnlyATitleRequest(t *testing.T) {
+	if reviseTemplateTitleInstruction != "수정 요청이 제목을 바꾸라고 할 때만 JSON의 title을 바로 다음 --- 사이의 제목 형식에 맞춰 쓰고, 그 밖의 수정에서는 현재 제목을 그대로 두세요. 그 뒤 --- 사이의 내용은 본문의 형식입니다." {
+		t.Fatalf("the revise title line changed: %q", reviseTemplateTitleInstruction)
+	}
+	brief := titleAreaBrief()
+	fenced := "\n" + reviseTemplateTitleInstruction + "\n---\n" + brief.TitleArea + "\n---\n---\n" + brief.Body
+	korean, _ := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, brief, nil)
+	english, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, brief, nil)
+	for name, system := range map[string]string{"Korean": korean, "English": english} {
+		if strings.Count(system, fenced) != 1 {
+			t.Errorf("the %s revise prompt does not carry the revise title line in the fence once:\n%s", name, system)
+		}
+		if strings.Contains(system, templateTitleInstruction) {
+			t.Errorf("the %s revise prompt carries the write's title line", name)
+		}
+	}
+	write, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, brief, nil)
+	if !strings.Contains(write, templateTitleInstruction) || strings.Contains(write, reviseTemplateTitleInstruction) {
+		t.Fatal("the write prompt lost its own title line or gained the revise one")
 	}
 }
 
