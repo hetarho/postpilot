@@ -26,6 +26,15 @@ export interface Guideline {
   updatedAt: string
 }
 
+/** The product's one guideline, 상위 노출 단어 사용 (GUIDE-29). Its text is the server's and never
+ *  edited (GUIDE-32); its 적용할 분야 IS its `fields` scope, and it applies to no post while it is
+ *  on with none (GUIDE-38). */
+export interface GuidelinePreset {
+  text: string
+  enabled: boolean
+  fields: BlogFieldId[]
+}
+
 /** A recorded revision instruction awaiting review (change 26). It is a receipt for something the
  *  user typed — nothing rewrites, summarizes, generalizes or ranks it, and it reaches no prompt
  *  until it is approved as a guideline.

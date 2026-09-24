@@ -1,7 +1,18 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
-import { GuidelineSchema, ProtoBlogField, ProtoGuidelineScope } from '@/shared/api'
-import { fromScopeKind, toGuideline, toScopeKind, toScopePatch } from './guideline-queries'
+import {
+  GuidelinePresetSchema,
+  GuidelineSchema,
+  ProtoBlogField,
+  ProtoGuidelineScope,
+} from '@/shared/api'
+import {
+  fromScopeKind,
+  toGuideline,
+  toGuidelinePreset,
+  toScopeKind,
+  toScopePatch,
+} from './guideline-queries'
 
 const wireScopes = Object.values(ProtoGuidelineScope).filter(
   (value): value is ProtoGuidelineScope =>
@@ -66,5 +77,28 @@ describe('a guideline on the wire', () => {
       templateIds: ['t'],
       fields: [],
     })
+  })
+})
+
+// GUIDE-29: the preset rides every list read, and its absence is a malformed read, not an empty one.
+describe('the guideline preset on the wire', () => {
+  it('maps the text, the switch and the 분야, dropping anything that names no 분야', () => {
+    expect(
+      toGuidelinePreset(
+        create(GuidelinePresetSchema, {
+          text: '[분야 상위 글 문구]\n원문에 없는 내용은 쓰지 않는다.',
+          enabled: true,
+          fields: [ProtoBlogField.RESTAURANT, ProtoBlogField.UNSPECIFIED, 9_999 as ProtoBlogField],
+        }),
+      ),
+    ).toEqual({
+      text: '[분야 상위 글 문구]\n원문에 없는 내용은 쓰지 않는다.',
+      enabled: true,
+      fields: ['restaurant'],
+    })
+  })
+
+  it('refuses a list read that carries no preset', () => {
+    expect(() => toGuidelinePreset(undefined)).toThrow('guideline list carries no preset')
   })
 })

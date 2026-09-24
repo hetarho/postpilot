@@ -59,6 +59,7 @@ import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
+import { i18n as adoptGuidelinePresetI18n } from '@/features/adopt-guideline-preset/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
 import { i18n as extractMemoriesI18n } from '@/features/extract-memories/config/i18n'
 import { i18n as usePostMemoriesI18n } from '@/features/use-post-memories/config/i18n'
@@ -163,6 +164,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   editWithAiGuidelinesI18n,
   guidelineI18n,
   guidelinesI18n,
+  adoptGuidelinePresetI18n,
   reviewGuidelineCandidateI18n,
   aiModelsI18n,
   applyModelRecommendationI18n,
@@ -266,6 +268,7 @@ export const resources = {
       ...editWithAiGuidelinesI18n.ko,
       ...guidelineI18n.ko,
       ...guidelinesI18n.ko,
+      ...adoptGuidelinePresetI18n.ko,
       ...reviewGuidelineCandidateI18n.ko,
     },
     memories: {
@@ -375,6 +378,7 @@ export const resources = {
       ...editWithAiGuidelinesI18n.en,
       ...guidelineI18n.en,
       ...guidelinesI18n.en,
+      ...adoptGuidelinePresetI18n.en,
       ...reviewGuidelineCandidateI18n.en,
     },
     memories: {

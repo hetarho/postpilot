@@ -51,16 +51,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T350 | /guidelines pins the 상위 노출 단어 사용 preset row with its switch and 적용할 분야 | GUIDE QUAL ARCH THEME | T347 | todo |
 | T351 | ② marks replacement spans over the title, tags and body, and taking one is a manual edit | POST GEN QUAL ARCH THEME | T349 | todo |
 | T352 | A durable generate carries its frozen memories into the write prompt | MEM GEN ARCH | - | todo |
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T350 (then the dep order in the tasks table; T350 and T351 are unblocked)
+- implement-task T351 (then T352 and T353, the two independent bug fixes)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T350 done; /guidelines opens with the 상위 노출 단어 사용 preset above the list and the empty state: its server text read-only, its own switch and a 적용할 분야 picker that is its fields scope, each saving its own half and showing the answered state at once, a line saying the owner's guidelines win, a prompt while it is on with no 분야, and a refusal in the catalogue's words; FE gates pass (p35)
+- 260924 T350 claimed (p35)
 - 260924 T349 done; ①'s brief shows 발행 글 점검 after 목표 분량 with M1–M4 in their four states from the account aggregate: an over-band row is a checkbox whose toggletip quotes the rule text it adds, ticks autosave the whole set with the length, a stored within-band tick is kept, the boxes hold still for a running job or the publish lock, and the read is prefetched, follows the target language and refreshes after URL, content and delete saves; FE gates pass (p35)
 - 260924 T349 claimed (p35)
 - 260924 T348 done; `pnpm dev --seed` shows the quality surfaces with no Naver keys: pro and master publish 2 and 11 posts at valid Naver addresses (master meeting every minimum), every generated post stores nouns its text contains, pro's and master's posts carry 일상·생각 with three candidates on each review post, master's first draft uses the 하루 기록 title-area template, and the daily_life phrase list is written only when absent and survives every seed; BE gate passes (p35)
@@ -79,5 +80,3 @@
 - 260924 T342 claimed (p35)
 - 260924 T341 done; a generation and an applied write winner replace the post's stored nouns and replacement candidates (none clears them), a revision and a manual save keep them, an identical content with other annotations is a new machine write, Post.replacement_candidates carries them in stored order while nouns stay off the wire, and a lab candidate's output carries both with a legacy output reading as none; BE gate and gen:sql pass (p35)
 - 260924 T341 claimed (p35)
-- 260924 T340 done; the template screen authors an optional 제목 형식 above 템플릿 구성 under one 블록 · 원문 switch: the title builder offers only AI가 쓰는 글 and 고정 문구 on one line joined by spaces, a body row asking under a title label says so and stays out until the title lets it go, 제목 원문 has its own field, counter and failure, an unreadable title is fixed or cleared from its own section, and the parse refusal keeps its area; FE gates pass (p35)
-- 260924 T340 claimed (p35)

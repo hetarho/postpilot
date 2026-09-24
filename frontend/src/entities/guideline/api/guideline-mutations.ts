@@ -2,11 +2,17 @@ import { useState } from 'react'
 import { createClient } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
+import { blogFieldToProto, type BlogFieldId } from '@/entities/blog-field/@x/guideline'
 import { GuidelineService } from '@/shared/api'
-import { globalScope, type GuidelineScope } from '../model/types'
+import {
+  globalScope,
+  type Guideline,
+  type GuidelinePreset,
+  type GuidelineScope,
+} from '../model/types'
 import { invalidateGuidelineCandidates, invalidateGuidelines } from './guideline-cache'
 import { guidelineErrorMessage } from './guideline-errors'
-import { toScopePatch } from './guideline-queries'
+import { guidelinesQueryKey, toGuidelinePreset, toScopePatch } from './guideline-queries'
 
 /** The three write callers live with the entity rather than in the action slices because the
  *  revision capture needs the create one too, and a feature may not import a sibling feature.
@@ -28,6 +34,34 @@ export function useCreateGuidelineCall(ownerId: string) {
      *  reappearing as a candidate — that path matches by text and needs no id. */
     create: (text: string, scope: GuidelineScope, fromCandidateId?: string) =>
       mutation.mutateAsync({ text: text.trim(), ...toScopePatch(scope), fromCandidateId }),
+  }
+}
+
+/** The preset's switch and its 적용할 분야 (GUIDE-29, GUIDE-38). Presence is the edit unit here too:
+ *  each patch carries its own half, so a switch flip can never overwrite a 분야 set saved from
+ *  another tab, or the reverse.
+ *
+ *  The answer IS the resulting preset, so it goes into the list entry at once — the switch shows the
+ *  saved state without waiting for the refetch the invalidation starts, and the next pick is
+ *  computed from the set the server holds. */
+export function useUpdateGuidelinePresetCall(ownerId: string) {
+  const transport = useTransport()
+  const queryClient = useQueryClient()
+  const mutation = useMutation(GuidelineService.method.updateGuidelinePreset, {
+    onSuccess: (response) => {
+      queryClient.setQueryData<{ guidelines: Guideline[]; preset: GuidelinePreset }>(
+        guidelinesQueryKey(transport, ownerId),
+        (old) => old && { ...old, preset: toGuidelinePreset(response.preset) },
+      )
+      invalidateGuidelines(queryClient, transport, ownerId)
+    },
+  })
+  return {
+    ...mutation,
+    errorMessage: guidelineErrorMessage(mutation.error),
+    setEnabled: (enabled: boolean) => mutation.mutateAsync({ enabled }),
+    setFields: (fields: readonly BlogFieldId[]) =>
+      mutation.mutateAsync({ fields: { fields: fields.map(blogFieldToProto) } }),
   }
 }
 

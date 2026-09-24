@@ -5,12 +5,14 @@ import {
   DeleteGuidelineResponseSchema,
   DismissGuidelineCandidateResponseSchema,
   GuidelineCandidateSchema,
+  GuidelinePresetSchema,
   GuidelineSchema,
   GuidelineService,
   ListGuidelineCandidatesResponseSchema,
   ListGuidelinesResponseSchema,
   ProtoGuidelineScope,
   type ProtoBlogField,
+  UpdateGuidelinePresetResponseSchema,
   UpdateGuidelineResponseSchema,
 } from '@/shared/api'
 import { blogFieldFromProto, blogFieldToProto, type BlogFieldId } from '@/entities/blog-field'
@@ -83,7 +85,19 @@ export interface FakeGuidelinesOptions {
   }>
   /** Records every DismissGuidelineCandidate. */
   dismissals?: string[]
+  /** The preset's switch and 분야. Omitted means off with none, where every account starts. */
+  preset?: { enabled?: boolean; fields?: BlogFieldId[] }
+  /** Records every UpdateGuidelinePreset exactly as it arrived, absent halves as undefined. */
+  presetUpdates?: Array<{ enabled: boolean | undefined; fields: ProtoBlogField[] | undefined }>
+  /** Refuse every preset save as naming a 분야 the server does not know. */
+  presetUpdateFails?: boolean
+  /** Holds every preset save until the test releases it, so the pending state is observable. */
+  presetUpdateGate?: Promise<void>
 }
+
+/** The preset's text as this fake serves it. The real one is the server's, and never edited. */
+export const FAKE_GUIDELINE_PRESET_TEXT =
+  '[분야 상위 글 문구]\n원문이 이미 같은 뜻으로 쓴 자리에서만 아래 문구로 바꿔 쓴다.'
 
 const DEFAULT_AT = '2026-09-01T12:00:00Z'
 
@@ -177,6 +191,18 @@ export function registerGuidelineService(
     ]
   }
 
+  // The product's preset: one per account, always answered with the list (GUIDE-29).
+  const preset = {
+    enabled: options.preset?.enabled ?? false,
+    fields: options.preset?.fields ?? [],
+  }
+  const presetProto = () =>
+    create(GuidelinePresetSchema, {
+      text: FAKE_GUIDELINE_PRESET_TEXT,
+      enabled: preset.enabled,
+      fields: preset.fields.map(blogFieldToProto),
+    })
+
   // Candidates (change 26). Declared before the create handler because a create is also an
   // approval: the server marks the candidate in the same transaction, so the fake must too.
   const candidates = new Map<string, FakeGuidelineCandidateRow>()
@@ -185,7 +211,29 @@ export function registerGuidelineService(
   rpc(GuidelineService.method.listGuidelines, () => {
     calls?.push('ListGuidelines')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    return create(ListGuidelinesResponseSchema, { guidelines: listed().map(toProto) })
+    return create(ListGuidelinesResponseSchema, {
+      guidelines: listed().map(toProto),
+      preset: presetProto(),
+    })
+  })
+
+  rpc(GuidelineService.method.updateGuidelinePreset, async (req) => {
+    calls?.push('UpdateGuidelinePreset')
+    await options.presetUpdateGate
+    options.presetUpdates?.push({
+      enabled: req.enabled,
+      fields: req.fields ? [...req.fields.fields] : undefined,
+    })
+    if (options.presetUpdateFails) throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
+    // Presence, like the server: an absent half keeps what is stored.
+    if (req.fields !== undefined) {
+      const fields = toFieldIds(req.fields.fields)
+      if (fields.length !== req.fields.fields.length)
+        throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
+      preset.fields = fields
+    }
+    if (req.enabled !== undefined) preset.enabled = req.enabled
+    return create(UpdateGuidelinePresetResponseSchema, { preset: presetProto() })
   })
 
   rpc(GuidelineService.method.createGuideline, (req) => {

@@ -3,7 +3,11 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoBlogField, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
+import {
+  FAKE_GUIDELINE_PRESET_TEXT,
+  type FakeGuidelineRow,
+  type FakeGuidelinesOptions,
+} from '@/test/guidelines'
 import type { FakeTemplateRow } from '@/test/templates'
 
 const USER = { id: 'alice' }
@@ -478,7 +482,9 @@ describe('the 분야 scope', () => {
     const list = await section('저장된 지침')
     await waitFor(() => expect(list.getAllByRole('listitem')).toHaveLength(4))
     expect(
-      screen.getByText('지침은 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.'),
+      screen.getByText(
+        '지침은 전역 지침, 템플릿 지침, 분야 지침 순서로 적용되고, 상위 노출 단어 사용은 맨 마지막에 적용돼요.',
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/특정 템플릿이나 분야에만 적용되게 좁힐 수도 있어요/),
@@ -519,6 +525,137 @@ describe('the 분야 scope', () => {
     expect(await screen.findByText('지침 목록을 불러오지 못했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
     expect(screen.queryByText('앞으로 올 범위')).toBeNull()
+  })
+})
+
+/** GUIDE-29, GUIDE-38: the product's preset is always first, shows its text read-only, and is
+ *  adopted by its own switch for the 분야 the owner picks. Its nine labels are queried inside its
+ *  region, since the scope control carries the same nine. */
+describe('the 상위 노출 단어 사용 preset', () => {
+  const PRESET = '상위 노출 단어 사용'
+  const presetRegion = async () => within(await screen.findByRole('region', { name: PRESET }))
+
+  it('sits before the saved list, with a text that has no edit control', async () => {
+    renderGuidelines()
+
+    const region = await screen.findByRole('region', { name: PRESET })
+    const list = await screen.findByRole('region', { name: '저장된 지침' })
+    expect(region.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The server's text, line breaks kept, and nothing to edit or delete it with (GUIDE-32).
+    expect(region.textContent).toContain(FAKE_GUIDELINE_PRESET_TEXT)
+    const inside = within(region)
+    expect(inside.queryByRole('textbox')).toBeNull()
+    expect(inside.queryByRole('button')).toBeNull()
+    expect(inside.getByRole('switch', { name: PRESET })).not.toBeChecked()
+    // It yields to the owner's own rules, and says what its phrases are by where they appear.
+    expect(
+      inside.getByText('내가 저장한 지침과 부딪치면 항상 내 지침을 따라요.'),
+    ).toBeInTheDocument()
+    expect(
+      inside.getByText(/네이버 검색 상위 글 제목과 설명에 자주 나오는 문구를/),
+    ).toBeInTheDocument()
+    expect(inside.getByRole('group', { name: '적용할 분야' })).toBeInTheDocument()
+    expect(inside.getByText('적용할 분야')).not.toHaveClass('sr-only')
+  })
+
+  it('sits before the empty state too', async () => {
+    renderGuidelines({ guidelines: [] })
+
+    const region = await screen.findByRole('region', { name: PRESET })
+    // The page says what the preset is, that it cannot be edited and where it applies.
+    expect(
+      screen.getByText(
+        /맨 위의 상위 노출 단어 사용은 제품이 제공하는 지침이라 고칠 수 없고, 켜 두면 고른 분야의 글에만 적용돼요\./,
+      ),
+    ).toBeInTheDocument()
+    const empty = await screen.findByRole('region', { name: '아직 저장된 지침이 없어요' })
+    expect(region.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('switches on with the switch alone and shows the saved state', async () => {
+    const user = userEvent.setup()
+    const presetUpdates: NonNullable<FakeGuidelinesOptions['presetUpdates']> = []
+    renderGuidelines({ presetUpdates })
+
+    const toggle = (await presetRegion()).getByRole('switch', { name: PRESET })
+    await user.click(toggle)
+
+    await waitFor(() => expect(presetUpdates).toEqual([{ enabled: true, fields: undefined }]))
+    await waitFor(() => expect(toggle).toBeChecked())
+  })
+
+  it('saves each 분야 pick as the whole set on its own, while the preset is off', async () => {
+    const user = userEvent.setup()
+    const presetUpdates: NonNullable<FakeGuidelinesOptions['presetUpdates']> = []
+    renderGuidelines({ presetUpdates })
+
+    const region = await presetRegion()
+    await user.click(region.getByLabelText('카페'))
+    await waitFor(() => expect(presetUpdates).toHaveLength(1))
+    await waitFor(() => expect(region.getByLabelText('맛집')).toBeEnabled())
+    await user.click(region.getByLabelText('맛집'))
+
+    await waitFor(() => expect(presetUpdates).toHaveLength(2))
+    expect(presetUpdates).toEqual([
+      { enabled: undefined, fields: [ProtoBlogField.CAFE] },
+      { enabled: undefined, fields: [ProtoBlogField.RESTAURANT, ProtoBlogField.CAFE] },
+    ])
+    await waitFor(() => expect(region.getByLabelText('맛집')).toBeChecked())
+    expect(region.getByRole('switch', { name: PRESET })).not.toBeChecked()
+  })
+
+  it('holds the switch and the picker still while a save is out', async () => {
+    const user = userEvent.setup()
+    let release = () => {}
+    const presetUpdateGate = new Promise<void>((resolve) => (release = resolve))
+    renderGuidelines({ presetUpdateGate })
+
+    const region = await presetRegion()
+    await user.click(region.getByRole('switch', { name: PRESET }))
+
+    await waitFor(() => expect(region.getByRole('switch', { name: PRESET })).toBeDisabled())
+    expect(region.getByLabelText('카페')).toBeDisabled()
+    release()
+    await waitFor(() => expect(region.getByRole('switch', { name: PRESET })).toBeEnabled())
+    expect(region.getByLabelText('카페')).toBeEnabled()
+  })
+
+  // GUIDE-38: on with no 분야 reaches no post, and the row asks for a first one.
+  it('asks for a first 분야 while on with none, until one is picked', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ preset: { enabled: true, fields: [] } })
+
+    const region = await presetRegion()
+    const ask =
+      '켜져 있지만 고른 분야가 없어서 어떤 글에도 적용되지 않아요. 적용할 분야를 하나 골라 주세요.'
+    expect(region.getByText(ask)).toBeInTheDocument()
+    await user.click(region.getByLabelText('카페'))
+
+    await waitFor(() => expect(region.queryByText(ask)).toBeNull())
+  })
+
+  it('stops asking once the preset is switched off', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ preset: { enabled: true, fields: [] } })
+
+    const region = await presetRegion()
+    await user.click(region.getByRole('switch', { name: PRESET }))
+
+    await waitFor(() => expect(region.queryByRole('status')).toBeNull())
+  })
+
+  it('shows a refused save in the failure catalogue’s words and keeps the saved state', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ presetUpdateFails: true })
+
+    const region = await presetRegion()
+    const toggle = region.getByRole('switch', { name: PRESET })
+    await user.click(toggle)
+
+    expect(
+      await region.findByText('선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.'),
+    ).toBeInTheDocument()
+    expect(toggle).not.toBeChecked()
   })
 })
 

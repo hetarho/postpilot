@@ -2,6 +2,7 @@ export * from './config'
 export type {
   Guideline,
   GuidelineCandidate,
+  GuidelinePreset,
   GuidelineTemplateRef,
   GuidelineScope,
   GuidelineScopeKind,
@@ -21,6 +22,7 @@ export {
   guidelinesQueryKey,
   toGuideline,
   toGuidelineCandidate,
+  toGuidelinePreset,
   toScopePatch,
 } from './api/guideline-queries'
 export {
@@ -35,6 +37,7 @@ export {
   useDeleteGuidelineCall,
   useDismissGuidelineCandidateCall,
   useUpdateGuidelineCall,
+  useUpdateGuidelinePresetCall,
 } from './api/guideline-mutations'
 export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-errors'
 export { GuidelineScopeField } from './ui/GuidelineScopeField'
