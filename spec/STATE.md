@@ -47,16 +47,19 @@
 | clip-release-smoke-260914 | converted@260916 |
 | arch-260919 | converted@260919 |
 | publishing-260922 | converted@260922 |
+| published-quality-260924 | ready@260924 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 
 ## next
-- no todo left: create-task for the next job, or review-code for the T352 and T353 findings in the log
-- update-ssot MEM MODEL: whether a write comparison's snapshot freezes 기억 (T352 finding in the log)
+- create-task review/published-quality-260924 (29 adopted, P1 F1 F2 F4 F18 first)
+- update-ssot MEM MODEL: whether a write comparison's snapshot freezes 기억 (T352 finding in the log); update-ssot POST QUAL GUIDE GEN TMPL THEME for the notes in review/published-quality-260924 (POST-20 first: F4 waits on it)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 review-code published-quality-260924 ready; 29 findings adopted: 4 P1 (F1 durable generate drops the native-effort flag since 260905, F2 its six hand-copied hops, F4 target length lost or split by mixed presence, F18 InlinePopover Tab), 8 P2, 17 P3; gates green
+- 260924 review-code published-quality-260924 start (scope: T322..T353, fe065cdc..f42a3c95)
 - 260924 T353 done; ticking or unticking 기억 사용 resends the post's 목표 글자 수 with the flag, so a stored length survives the toggle and its refetch, a natural-length post stays natural, and the tag count stays absent and kept; FE gates pass (p35)
 - 260924 finding (T353): a 기억 사용 toggle or a 발행 글 점검 tick pressed while the brief's own length save is still in flight resends the length the post held before it, and the later request wins, so the new number can be lost in that round trip (p35)
 - 260924 T353 claimed (p35)
@@ -75,5 +78,3 @@
 - 260924 T347 claimed (p35)
 - 260924 T346 done; ② shows one 이 글의 측정값 row directly above the article on a post with content that is not published: M2, M3 and M4 in three groups with the server's band edges, 주의 or 양호 only where a band was judged, 측정할 수 없어요 for an unset value and 0 for a stored one, M2's minimum line while under it, the bands-are-ours line, and loading and failure lines; it reads per content revision and refetches after content, URL and delete saves; FE gates pass (p35)
 - 260924 T346 claimed (p35)
-- 260924 T345 done; ① picks the post's 분야 under the data fields and above 기억 사용 (before the photos on /posts/new) through a fifth draft-queue channel with the 템플릿's presence rules: a create carries a chosen 분야 and omits 없음, a saved post sends a pick at once and 없음 as a present clear, a refusal is taken back with its reason under the field, and a published post shows it disabled under T339's one reason; FE gates pass (p35)
-- 260924 T345 claimed (p35)
