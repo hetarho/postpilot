@@ -127,3 +127,19 @@ func TestAPIMediaSettingsStillLoadStageBudgets(t *testing.T) {
 		t.Fatal("API stage budgets were dropped")
 	}
 }
+
+func TestTemporaryMediaRolloutDefaultsToExistingVPSPath(t *testing.T) {
+	t.Setenv("CLIP_MEDIA_EXECUTION", "")
+	var c Config
+	if err := loadClipMedia(&c); err != nil || c.ClipMediaExecution != "embedded" {
+		t.Fatal(c.ClipMediaExecution, err)
+	}
+	t.Setenv("CLIP_MEDIA_EXECUTION", "worker")
+	if err := loadClipMedia(&c); err != nil || c.ClipMediaExecution != "worker" {
+		t.Fatal(c.ClipMediaExecution, err)
+	}
+	t.Setenv("CLIP_MEDIA_EXECUTION", "automatic")
+	if err := loadClipMedia(&c); err == nil {
+		t.Fatal("unknown dispatch mode accepted")
+	}
+}

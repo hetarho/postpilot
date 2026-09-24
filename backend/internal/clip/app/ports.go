@@ -32,6 +32,7 @@ type JobTx interface {
 // JobWaitTx parks/wakes the same parent in the transaction that creates or
 // accepts its external stage. Payloads and wait keys remain opaque to job.
 type JobWaitTx interface {
+	Continuation(context.Context, string) (job.Continuation, error)
 	Park(context.Context, string, string, job.ResumePolicy, time.Time) error
 	Wake(context.Context, string, string, time.Time) (bool, error)
 }
@@ -66,6 +67,7 @@ type Ports struct {
 	Jobs      JobTx
 	Waits     JobWaitTx
 	Media     MediaArtifactTx
+	Stages    MediaDispatchTx
 	Clips     ClipTx
 	Admission Admission
 }

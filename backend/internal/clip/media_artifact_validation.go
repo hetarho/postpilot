@@ -29,9 +29,16 @@ func ValidateMediaTask(op MediaOperation, task MediaTask, cfg MediaConfig) error
 		seen[s.ID] = true
 		totalBytes += s.Bytes
 		duration += s.DurationMS
+		reuseDuration := s.DurationMS
+		if len(s.ReusedChunks) > 0 {
+			if _, err := ValidateProbedSources(cfg, []ProbedSource{{Metadata: s.SourceMetadata, Info: s.Info}}); err != nil {
+				return err
+			}
+			reuseDuration = s.Info.DurationMS
+		}
 		previous := -1
 		for _, index := range s.ReusedChunks {
-			if index <= previous || index > (s.DurationMS-1)/cfg.ChunkDurationMS {
+			if index <= previous || index > (reuseDuration-1)/cfg.ChunkDurationMS {
 				return ErrInvalid
 			}
 			previous = index

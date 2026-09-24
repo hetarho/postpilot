@@ -192,6 +192,7 @@ const BillingTickInterval = 10 * time.Minute
 
 // Config is the fully-resolved process configuration.
 type Config struct {
+	ClipMediaExecution     string
 	MediaInternalAddr      string
 	MediaStorageEndpoint   string
 	MediaWorkerCredentials map[string]string

@@ -79,6 +79,18 @@ func (e *Executor) prepare(ctx context.Context, ws clip.MediaWorkspace, w clip.M
 	var probed []clip.ProbedSource
 	var bytes int64
 	for _, s := range task.Sources {
+		// The API selects only validated compatible observations. If every
+		// interval is already observed, their frozen verified source info is
+		// sufficient: no original download or decode needs repeating.
+		count := (s.Info.DurationMS + e.cfg.ChunkDurationMS - 1) / e.cfg.ChunkDurationMS
+		if count > 0 && len(s.ReusedChunks) == count {
+			probed = append(probed, clip.ProbedSource{Metadata: s.SourceMetadata, Info: s.Info})
+			if _, err := clip.ValidateProbedSources(e.cfg, probed); err != nil {
+				return err
+			}
+			result.Sources = append(result.Sources, clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: s.Info})
+			continue
+		}
 		original, drop, err := e.fetch(ctx, ws, w, s)
 		if err != nil {
 			return err

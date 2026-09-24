@@ -14,11 +14,13 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	jobctx "github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 )
 
 type GenerationService struct {
 	previewOwners sync.Map
+	remoteMedia   *MediaDispatch
 	store         clip.GenerationStore
 	projects      *Service
 	sources       *SourceService
@@ -40,10 +42,12 @@ type GenerationService struct {
 // the pricing and accounting sit on the credit path, and the admission answers
 // eligibility — a service missing any of them refuses or misreports rather than runs.
 type GenerationDeps struct {
-	Finisher   clip.ClipFinisher
-	Pricing    clip.QuotePricing
-	Accounting clip.AccountingReader
-	Admission  clip.AnalysisAdmission
+	// Nil is the temporary embedded rollout path; removed by T387.
+	RemoteMedia *MediaDispatch
+	Finisher    clip.ClipFinisher
+	Pricing     clip.QuotePricing
+	Accounting  clip.AccountingReader
+	Admission   clip.AnalysisAdmission
 }
 
 func NewGenerationService(store clip.GenerationStore, projects *Service, sources *SourceService, objects clip.ProcessingObjects, media clip.Media, planner clip.Planner, renderer clip.Renderer, jobs clip.GenerationJobs, cfg clip.GenerationConfig, deps GenerationDeps) *GenerationService {
@@ -53,7 +57,7 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 	if deps.Finisher == nil || deps.Pricing == nil || deps.Accounting == nil || deps.Admission == nil {
 		panic("clip: finisher, pricing, accounting and admission are required")
 	}
-	s := &GenerationService{store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
+	s := &GenerationService{remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
 		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission}
 	// The project service and its generation side need each other; the pair is closed
 	// here, where both exist, instead of through a setter the composition root could forget.
@@ -174,12 +178,12 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	// The failure is recorded after it has been wrapped with its stage (defers run last
 	// registered first), so the checkpoint names the stage the diagnostic belongs to.
 	defer func() {
-		if err != nil {
+		if err != nil && !errors.Is(err, jobctx.ErrYield) {
 			r.recordFailure(ctx, err)
 		}
 	}()
 	defer func() {
-		if err != nil {
+		if err != nil && !errors.Is(err, jobctx.ErrYield) {
 			err = &clip.StageFailure{Stage: r.stage, Cause: err}
 		}
 	}()
@@ -189,10 +193,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	r.checkpoint.TotalSources = len(r.b.Sources)
 	s.checkpoint(ctx, user, project, r.checkpoint)
 	r.ctx = r.observeMedia(ctx)
-	err = s.media.WithWorkspace(r.ctx, job, func(ws clip.MediaWorkspace) error {
-		if err := r.prepare(ws); err != nil {
-			return err
-		}
+	continueAI := func() error {
 		if err := r.analyze(); err != nil {
 			return err
 		}
@@ -200,7 +201,19 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		return r.save()
-	})
+	}
+	if s.remoteMedia != nil {
+		if err = r.prepareRemote(currentProject.EditPlanRevision); err == nil {
+			err = continueAI()
+		}
+	} else {
+		err = s.media.WithWorkspace(r.ctx, job, func(ws clip.MediaWorkspace) error {
+			if err := r.prepare(ws); err != nil {
+				return err
+			}
+			return continueAI()
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -377,13 +390,20 @@ func (r *generationRun) observeMedia(ctx context.Context) context.Context {
 // proxy, price and profile check precedes that reservation; later calls can consume
 // only this exact allowance.
 func (r *generationRun) prepare(ws clip.MediaWorkspace) error {
-	s, ctx, pricing := r.s, r.ctx, r.pricing
+	s, ctx := r.s, r.ctx
 	r.set("prepare", 0, len(r.b.Sources))
 	sources, prepared, err := s.prepareRecoveredBatch(ctx, ws, r.b, r.recovery, func(n int) { r.set("prepare", n, len(r.b.Sources)) })
 	if err != nil {
 		return err
 	}
 	r.sources, r.prepared = sources, prepared
+	return r.admitPrepared()
+}
+
+// Every source/copy verdict precedes the shared quote and reservation checks.
+func (r *generationRun) admitPrepared() error {
+	s, ctx, pricing := r.s, r.ctx, r.pricing
+	sources, prepared := r.sources, r.prepared
 	count := 0
 	for _, v := range prepared {
 		if v.reused == nil {
@@ -444,7 +464,7 @@ func (r *generationRun) analyze() error {
 		if v.reused != nil {
 			observation = *v.reused
 		} else {
-			observation, err = s.observe(r.correcting("analyze"), v.chunk, r.sources[v.source], r.pricing.Observe, r.p.Language)
+			observation, err = s.observePrepared(r.correcting("analyze"), v, r.sources[v.source], r.pricing, r.p.Language)
 		}
 		if err != nil {
 			return admissionRefusal(r.pricing.Observe.Ref, err)
@@ -642,6 +662,7 @@ func (r *generationRun) finish(currentProject clip.Project) error {
 }
 
 type preparedChunk struct {
+	video  *llm.InlineVideo
 	reused *clip.ChunkAnalysis
 	source int
 	chunk  clip.AnalysisChunk

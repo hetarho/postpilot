@@ -210,3 +210,11 @@ func (s *Store) ReserveMediaArtifact(ctx context.Context, auth clip.MediaLeaseCr
 	}
 	return nil
 }
+
+func (s *Store) MediaStageForJob(ctx context.Context, parent string, operation clip.MediaOperation) (clip.MediaStage, error) {
+	row, err := s.read.GetMediaStageByParent(ctx, sqlc.GetMediaStageByParentParams{ParentJobID: parent, StageKey: string(operation)})
+	if err != nil {
+		return clip.MediaStage{}, dbError(err)
+	}
+	return mediaStageRow(row)
+}

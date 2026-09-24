@@ -77,3 +77,16 @@ func (s *Store) AcknowledgeWaitCancellation(ctx context.Context, id, key string,
 	n, err := s.write.AcknowledgeWaitCancellation(ctx, sqlc.AcknowledgeWaitCancellationParams{Now: nullString(formatTime(now)), JobID: id, WaitKey: key})
 	return n == 1, err
 }
+
+// Continuation describes the durable handoff to its owning workflow without
+// teaching the queue about any product's payload or artifact state.
+func (s *Store) Continuation(ctx context.Context, id string) (job.Continuation, error) {
+	c, err := s.read.GetContinuation(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return job.Continuation{}, job.ErrInvalidWait
+	}
+	if err != nil {
+		return job.Continuation{}, err
+	}
+	return job.Continuation{JobID: c.JobID, WaitKey: c.WaitKey, State: job.ContinuationState(c.State), Policy: job.ResumePolicy(c.ResumePolicy)}, nil
+}

@@ -138,3 +138,24 @@ func TestPrepareMissingCopiesIdentityAndCleanupOnEveryExit(t *testing.T) {
 		})
 	}
 }
+
+func TestFullyObservedSourceNeedsNoDownloadOrDecode(t *testing.T) {
+	info := clip.MediaInfo{Width: 1280, Height: 720, DurationMS: 120000}
+	source := clip.MediaTaskSource{ID: "source", SourceMetadata: clip.SourceMetadata{Filename: "take.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 120000, Width: 1280, Height: 720, Fingerprint: "already-verified"}, Info: info, ReusedChunks: []int{0, 1}}
+	task := clip.MediaTask{Version: clip.MediaContractVersion, Sources: []clip.MediaTaskSource{source}}
+	payload, err := mediacodec.EncodeTask(task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	media := &taskMedia{dir: t.TempDir(), info: info}
+	// Nil artifact/render ports prove the all-observed request performs no I/O.
+	executor := worker.NewExecutor(media, nil, nil, clip.DefaultMediaConfig(clip.Environment{}))
+	raw, err := executor.Execute(t.Context(), clip.MediaWork{Operation: clip.MediaPrepare, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: payload, InputDigest: clip.MediaPayloadDigest(payload)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := mediacodec.DecodeResult(raw)
+	if err != nil || len(result.Sources) != 1 || len(result.Outputs) != 0 || media.calls != 0 || len(media.copies) != 0 {
+		t.Fatal("completed media work repeated", result, err)
+	}
+}

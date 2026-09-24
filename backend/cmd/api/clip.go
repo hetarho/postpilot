@@ -27,7 +27,7 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 	return func(tx *sql.Tx) clipapp.Ports {
 		jobs := jobstore.NewTx(tx, jobKinds())
 		clips := clipstore.NewTx(tx)
-		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips}
+		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips}
 		if ledger != nil {
 			ports.Admission = clipAdmission{jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}}
 		}
@@ -66,11 +66,19 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, jobKinds()), store, nil)
+	var remote *clipapp.MediaDispatch
+	if cfg.ClipMediaExecution == "worker" {
+		remote, err = clipapp.NewMediaDispatch(writer, bind, clip.DefaultMediaStageLimits(clipEnvironment(cfg)), clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
+		if err != nil {
+			return nil, err
+		}
+	}
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
-		Finisher:   finisher,
-		Pricing:    clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
-		Accounting: clipapp.NewAccounting(models.ledger),
-		Admission:  clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
+		RemoteMedia: remote,
+		Finisher:    finisher,
+		Pricing:     clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
+		Accounting:  clipapp.NewAccounting(models.ledger),
+		Admission:   clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
 	})
 	if _, err = queue.SweepUnactivated(ctx); err != nil {
 		return nil, err

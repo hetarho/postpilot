@@ -290,6 +290,19 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		if approved != nil && required > *approved {
 			return &CreditCeilingError{Required: required, Approved: *approved}
 		}
+		// A committed reservation may lose its response. Check inside the same
+		// writer transaction before renewing or spending any lot a second time.
+		prior, _, found, err := tx.HoldForJob(ctx, start.JobID)
+		if err != nil {
+			return err
+		}
+		if found {
+			sameApproval := prior.ApprovedMaxCredits == nil && approved == nil || prior.ApprovedMaxCredits != nil && approved != nil && *prior.ApprovedMaxCredits == *approved
+			if prior.UserID != start.UserID || prior.Kind != start.Kind || prior.HoldCredits != required || !sameApproval || prior.CancellationPolicyVersion != policyVersion {
+				return errors.New("hold conflicts with existing reservation")
+			}
+			return nil
+		}
 		renewsAt, err := s.renew(ctx, tx, start.UserID, start.Plan, now)
 		if err != nil {
 			return err

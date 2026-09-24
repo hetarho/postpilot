@@ -298,6 +298,14 @@ func (a *MediaArtifacts) Accept(ctx context.Context, auth clip.MediaLeaseCredent
 			return err
 		}
 		stage, err = p.Media.AcceptMediaArtifacts(ctx, auth, canonical, result.Outputs, a.now().UTC())
+		if err != nil {
+			return err
+		}
+		// Receipt and wake are one commit. An exact replay never reopens a
+		// claimed continuation or re-enters paid work.
+		if p.Waits != nil {
+			_, err = p.Waits.Wake(ctx, stage.ParentJobID, MediaWaitKey(stage.ID), a.now().UTC())
+		}
 		return err
 	})
 	return stage, err

@@ -65,7 +65,6 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T381 | Generation resumes from prepared artifacts without repeating AI work | ARCH GEN CLIP | T376 T377 T379 T380 | todo |
 | T382 | A worker render becomes the result through one durable API commit | ARCH CLIP | T381 | todo |
 | T383 | Recovery bounds media retries and cleans cancelled or abandoned work | ARCH CLIP GEN | T381 T382 | todo |
 | T384 | Clip progress distinguishes waiting, execution and media recovery | ARCH CLIP | T383 | todo |
@@ -75,11 +74,13 @@
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T381 next for the media-worker wave (T376..T380 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T382 next for the media-worker wave (T376..T381 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T381 done (mw): atomic remote preparation handoff, verified inline artifacts and retained recovery; exact hold/call fault tests, ledger replay, isolated CI and real CPU/input smokes pass; T382 next
+- 260925 T381 claimed (mw); T380 committed as 86cf1e16; remote preparation continuation only
 - 260925 T371 done; five two-place values are each pinned to one source or one test: the URL length, the slot-token grammar (template owns it), the search page size (sent as display), the composition count and the replacement instruction's caps; BE and FE gates pass (p42)
 - 260925 T371 claimed (p42)
 - 260925 T380 done (mw): standalone CPU execution, bounded transfers/leases/drain and measured runtime profiles; byte/frame parity including sequence captions, Linux reaping, health and isolated CI pass; T381 next
@@ -98,5 +99,3 @@
 - 260925 T379 claimed (mw); T378 committed as 0d43a284; private artifact handoff only
 - 260925 T360 done; ticked quality rules open the per-post half with the stable prefix unmoved, and the revise title form binds only a title request; BE gate passes (one parallel-session test aside) (p42)
 - 260925 T360 claimed (p42)
-- 260925 T359 done; the write prompt builder takes one WritePromptInput and template Create one Authored; prompts byte-identical, BE gate passes (p42)
-- 260925 T359 claimed (p42)

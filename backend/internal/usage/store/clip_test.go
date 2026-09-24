@@ -20,8 +20,12 @@ func TestClipDuplicateReservationCannotDebitAgain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := svc.Hold(ctx, request); err != nil {
+		t.Fatal("identical reservation must reuse its committed hold", err)
+	}
+	request.Approval.ApprovedMaxCredits++
 	if err := svc.Hold(ctx, request); err == nil {
-		t.Fatal("duplicate hold must fail closed")
+		t.Fatal("conflicting reservation must fail closed")
 	}
 	after, err := svc.BalanceFor(ctx, "alice", plan.Free)
 	if err != nil || before.Credits != after.Credits {
