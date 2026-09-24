@@ -20,7 +20,7 @@
 | ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 14 | 13 | POST-51✎ POST-54✎ POST-71✎ POST-81✎ POST-82✎ POST-89+ | 0 |
+| POST | 14 | 14 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 12 | 12 | - | 0 |
 | MODEL | 17 | 17 | - | 0 |
@@ -35,7 +35,7 @@
 | CLIP | 44 | 40 | CLIP-13✎ CLIP-163+ | 2 |
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 3 | 2 | MEM-18✎ MEM-26✎ | 2 |
+| MEM | 3 | 3 | - | 2 |
 | QUAL | 4 | 4 | - | 0 |
 
 ## review
@@ -53,7 +53,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T354 | A generate's payload is encoded and decoded inside generation | ARCH | - | todo |
-| T355 | Saving one generation option never touches another | POST ARCH | - | todo |
+| T355 | The writing brief saves its run options together | POST MEM ARCH | - | todo |
 | T356 | Tab moves through an anchored panel; a hover-opened panel closes on Escape | THEME ARCH | T355 | todo |
 | T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
 | T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
@@ -64,7 +64,7 @@
 | T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
 | T364 | A measurement change cannot ship without its version bump, and emoji tails trim | ARCH | - | todo |
 | T365 | Generation preconditions take one named input | ARCH | - | todo |
-| T366 | The draft queue's assignments are one record per channel | ARCH | - | todo |
+| T366 | The draft queue's assignments are one record per channel | ARCH | T355 | todo |
 | T367 | The autosave owns the published lock, and every control reads the lock from the post it holds | ARCH | T355 T365 T366 | todo |
 | T368 | The editor page suites pin behavior, not wiring | ARCH | T355 T356 T363 T365 T367 | todo |
 | T369 | An empty search answer keeps the stored list, and the refresh interval has a floor | QUAL ARCH | T364 | todo |
@@ -89,9 +89,11 @@
 ## next
 - implement-task T378 next for the media-worker wave (T376 and T377 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- create-task POST MEM first: 분야 and 기억 사용 move into the writing brief, saved together by its 저장 — rewrite todo T355 and re-check T366 T367 T368 T373 T375, which assume the old placement; then implement-task T354; create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T354 (then T355 T356 by dep; 22 todo from review/published-quality-260924, T355 now the brief's whole-set 저장); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 create-task POST MEM done: T355 rewritten as the brief's whole-set 저장 (분야 joins SavePostGenerationOptions, a partial request is refused, 분야 and 기억 사용 leave ①'s panel, the draft queue's 분야 channel goes); T356 T357 T361 T363 T366 T367 T368 T372 T373 T375 updated to match, T366 now after T355, T373 also refuses an unknown quality tick
+- 260925 create-task POST MEM start (r14, r3: 분야 and 기억 사용 in the brief, saved together by its 저장; updates todo T355 T356 T366 T367 T368 T373 T375)
 - 260925 T377 done (mw): durable park/wake and replay policies, continued queue processing and fenced cancellation acknowledgement; SQLite/queue/race, ARCH-26, FE/CI/codegen and spec checks pass; T378 next
 - 260925 T377 claimed (mw); T376 committed as 2554cef1; sequential media-wave scope only
 - 260925 T376 done (mw): durable fenced media stages/attempts/artifact reservations and bounded env limits; SQLite concurrency/race/upgrade, ARCH-26, FE/CI/codegen and spec checks pass; production dispatch unchanged; commit per task, T377 next
@@ -110,5 +112,3 @@
 - 260925 POST r12..r13 POST-77 no-op (no code impact: the shared URL fixture already refuses the blog's home)
 - 260924 POST r13: POST-88 removed and POST-20 back to its r11 text — an options save's presence rules are a request contract for the F4 task's impl notes, not product behavior
 - 260924 create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (this wave's deltas only)
-- 260924 update-ssot done: POST r12 (POST-20✎ POST-77✎ POST-79✎ POST-88+ options saves are partial, a taken candidate is spent), MEM r2 MEM-19✎ + MODEL r17 MODEL-30✎ + GEN-18✎ a write comparison freezes 기억, GEN-14✎ GEN-51✎ ticked rules move to the per-post half, GEN-53✎, TMPL r11 TMPL-51✎ the title form binds only a title request in revise, GUIDE r6 GUIDE-40+ QUAL r4 QUAL-41✎ QUAL-46+, THEME r18 THEME-42+; no doing task affected
-- 260924 update-ssot POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (review/published-quality-260924 notes)
