@@ -82,6 +82,9 @@ type contexts struct {
 
 func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	cfg, handle, registry := p.cfg, p.db, p.registry
+	if err := clip.DefaultMediaStageLimits(clipEnvironment(cfg)).Validate(); err != nil {
+		return nil, fmt.Errorf("CLIP_MEDIA_* stage limits: require 0 < lease < wait <= stage <= 6h and 1..5 attempts: %w", err)
+	}
 	c := &contexts{platform: p}
 
 	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})

@@ -2,7 +2,32 @@ package config
 
 import (
 	"testing"
+	"time"
 )
+
+func TestMediaStageEnvironmentOverrides(t *testing.T) {
+	for _, key := range []string{"CLIP_MEDIA_LEASE_TTL", "CLIP_MEDIA_WAIT_TIMEOUT", "CLIP_MEDIA_STAGE_TIMEOUT", "CLIP_MEDIA_MAX_ATTEMPTS"} {
+		for _, value := range []string{"0", "-1", "invalid"} {
+			t.Run(key+value, func(t *testing.T) {
+				t.Setenv(key, value)
+				if err := loadMediaStageOverrides(&Config{}); err == nil {
+					t.Fatal("invalid override accepted")
+				}
+			})
+		}
+	}
+	t.Setenv("CLIP_MEDIA_LEASE_TTL", "45s")
+	t.Setenv("CLIP_MEDIA_WAIT_TIMEOUT", "5m")
+	t.Setenv("CLIP_MEDIA_STAGE_TIMEOUT", "1h")
+	t.Setenv("CLIP_MEDIA_MAX_ATTEMPTS", "2")
+	var cfg Config
+	if err := loadMediaStageOverrides(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ClipMediaLeaseTTL != 45*time.Second || cfg.ClipMediaWaitTimeout != 5*time.Minute || cfg.ClipMediaStageTimeout != time.Hour || cfg.ClipMediaMaxAttempts != 2 {
+		t.Fatal("overrides lost")
+	}
+}
 
 // The product shape these paths feed is pinned in internal/clip (limits_test.go).
 // What belongs here is only that the environment is parsed and validated.

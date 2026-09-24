@@ -51,6 +51,46 @@ type ClipGenerationQuote struct {
 	ConsumedJobID sql.NullString
 }
 
+type ClipMediaAttempt struct {
+	ID              string
+	StageID         string
+	Ordinal         int64
+	WorkerID        string
+	TokenHash       string
+	LeaseExpiresAt  string
+	StartedAt       string
+	FinishedAt      sql.NullString
+	SelectedProfile string
+	RuntimeManifest string
+	Progress        int64
+	Outcome         sql.NullString
+}
+
+type ClipMediaStage struct {
+	ID               string
+	ParentJobID      string
+	UserID           string
+	ProjectID        string
+	ExpectedRevision int64
+	StageKey         string
+	Operation        string
+	ContractVersion  int64
+	InputDigest      string
+	InputPayload     string
+	RendererVersion  string
+	AssetVersion     string
+	State            string
+	CurrentAttemptID sql.NullString
+	AttemptCount     int64
+	CreatedAt        string
+	QueueDeadlineAt  string
+	DeadlineAt       string
+	LeaseTtlNs       int64
+	AttemptLimit     int64
+	AcceptedResult   sql.NullString
+	Failure          sql.NullString
+}
+
 type ClipProject struct {
 	ID                       string
 	UserID                   string

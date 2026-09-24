@@ -51,17 +51,50 @@ const (
 // originals follow product policy independently of incomplete uploads.
 const OriginalRetention = 24 * time.Hour
 
+const (
+	MediaLeaseTTL         = time.Minute
+	MediaHeartbeatHint    = 15 * time.Second
+	MediaWaitTimeout      = 30 * time.Minute
+	MediaStageTimeout     = 2 * time.Hour
+	MediaStageTimeoutMax  = 6 * time.Hour
+	MediaAttempts         = 3
+	MediaAttemptsMax      = 5
+	MediaPayloadMaxBytes  = 2 * 1024 * 1024
+	MediaManifestMaxBytes = 16 * 1024
+	MediaLabelMaxBytes    = 256
+	MediaProgressMax      = 1000
+)
+
+func DefaultMediaStageLimits(env Environment) MediaStageLimits {
+	l := MediaStageLimits{LeaseTTL: MediaLeaseTTL, WaitTimeout: MediaWaitTimeout, StageTimeout: MediaStageTimeout, MaxAttempts: MediaAttempts}
+	if env.MediaLeaseTTL != 0 {
+		l.LeaseTTL = env.MediaLeaseTTL
+	}
+	if env.MediaWaitTimeout != 0 {
+		l.WaitTimeout = env.MediaWaitTimeout
+	}
+	if env.MediaStageTimeout != 0 {
+		l.StageTimeout = env.MediaStageTimeout
+	}
+	if env.MediaMaxAttempts != 0 {
+		l.MaxAttempts = env.MediaMaxAttempts
+	}
+	return l
+}
+
 // Environment is the deployment-owned half of a clip configuration: paths the
 // image lays down, timeouts an operator may tune, and the presign windows the
 // platform owns. cmd/api fills it from the parsed env and the Default*
 // constructors below merge it into the product limits.
 type Environment struct {
-	WorkRoot    string
-	FFmpegPath  string
-	FFprobePath string
-	ResvgPath   string
-	OverlayDir  string
-	FontPaths   map[string]string
+	MediaLeaseTTL, MediaWaitTimeout, MediaStageTimeout time.Duration
+	MediaMaxAttempts                                   int
+	WorkRoot                                           string
+	FFmpegPath                                         string
+	FFprobePath                                        string
+	ResvgPath                                          string
+	OverlayDir                                         string
+	FontPaths                                          map[string]string
 
 	WorkStaleAge  time.Duration
 	MediaTimeout  time.Duration

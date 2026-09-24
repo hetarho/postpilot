@@ -254,9 +254,11 @@ type Config struct {
 	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
 	ClipResvgPath                                 string
 	// Every bundled font file CDS-17 names, keyed as RenderConfig.FontPaths is.
-	ClipFontPaths                      map[string]string
-	ClipOverlayDir                     string
-	ClipWorkStaleAge, ClipMediaTimeout time.Duration
+	ClipFontPaths                                                  map[string]string
+	ClipOverlayDir                                                 string
+	ClipWorkStaleAge, ClipMediaTimeout                             time.Duration
+	ClipMediaLeaseTTL, ClipMediaWaitTimeout, ClipMediaStageTimeout time.Duration
+	ClipMediaMaxAttempts                                           int
 	// How many threads one ffmpeg may take. libx264 above one thread is not
 	// bit-exact, so raising the encoder moves delivered bytes (CLIP-124,
 	// CLIP-125) — production leaves these at 1 and 2. They are settings because a

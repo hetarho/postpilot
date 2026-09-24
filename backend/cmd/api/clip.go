@@ -38,6 +38,8 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 // package owns the product rules, and this is the one merge point.
 func clipEnvironment(cfg *config.Config) clip.Environment {
 	return clip.Environment{
+		MediaLeaseTTL: cfg.ClipMediaLeaseTTL, MediaWaitTimeout: cfg.ClipMediaWaitTimeout,
+		MediaStageTimeout: cfg.ClipMediaStageTimeout, MediaMaxAttempts: cfg.ClipMediaMaxAttempts,
 		WorkRoot: cfg.ClipWorkRoot, FFmpegPath: cfg.ClipFFmpegPath, FFprobePath: cfg.ClipFFprobePath,
 		ResvgPath: cfg.ClipResvgPath, OverlayDir: cfg.ClipOverlayDir, FontPaths: cfg.ClipFontPaths,
 		WorkStaleAge: cfg.ClipWorkStaleAge, MediaTimeout: cfg.ClipMediaTimeout,

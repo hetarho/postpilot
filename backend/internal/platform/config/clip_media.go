@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func loadClipMedia(cfg *Config) error {
@@ -48,5 +50,34 @@ func loadClipMedia(cfg *Config) error {
 		return err
 	}
 	cfg.ClipDecodeThreads, err = positiveInt("CLIP_DECODE_THREADS", "2")
-	return err
+	if err != nil {
+		return err
+	}
+	return loadMediaStageOverrides(cfg)
+}
+
+// Domain defaults and upper bounds are merged/validated by the clip constructor.
+func loadMediaStageOverrides(cfg *Config) error {
+	for _, field := range []struct {
+		name   string
+		target *time.Duration
+	}{
+		{"CLIP_MEDIA_LEASE_TTL", &cfg.ClipMediaLeaseTTL},
+		{"CLIP_MEDIA_WAIT_TIMEOUT", &cfg.ClipMediaWaitTimeout},
+		{"CLIP_MEDIA_STAGE_TIMEOUT", &cfg.ClipMediaStageTimeout},
+	} {
+		value, err := optionalPositiveDuration(field.name)
+		if err != nil {
+			return err
+		}
+		*field.target = value
+	}
+	if value := getenv("CLIP_MEDIA_MAX_ATTEMPTS", ""); value != "" {
+		n, err := strconv.Atoi(value)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("CLIP_MEDIA_MAX_ATTEMPTS must be a positive integer")
+		}
+		cfg.ClipMediaMaxAttempts = n
+	}
+	return nil
 }
