@@ -525,8 +525,14 @@ describe('opening a post', () => {
     const generate = await screen.findByRole('button', { name: '생성' })
     const compare = screen.getByRole('button', { name: 'A/B 비교' })
     await waitFor(() => expect(generate).toBeEnabled())
-    expect(compare).toBeDisabled()
-    expect(screen.getByText(/A\/B 비교: 작성 A\/B 모델 두 개를 선택하세요/)).toBeInTheDocument()
+    // The reason is the disabled button's tooltip, not a line under the row (owner 2026-09-24).
+    const PAIR = '작성 A/B 모델 두 개를 선택하세요.'
+    expect(compare).toHaveAttribute('aria-disabled', 'true')
+    expect(compare).toHaveAccessibleDescription(PAIR)
+    expect(screen.queryByText(PAIR, { ignore: '.sr-only' })).toBeNull()
+    // A press shows it: a thumb has no hover to rest on.
+    await user.click(compare)
+    expect(await screen.findByText(PAIR, { ignore: '.sr-only' })).toBeInTheDocument()
 
     // The pair the button is waiting on is set in the brief itself now, so the fix is two
     // dropdowns away rather than a page away.

@@ -1,6 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clsx } from 'clsx'
 import { useStartGeneration, type GenerationJob } from '@/entities/generation-job'
 import { useStartWriteExperiment } from '@/entities/model-experiment'
 import { isPublished, type PostDraft } from '@/entities/post'
@@ -14,6 +13,7 @@ import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
   AppFailureMessage,
   Button,
+  ExplainedButton,
   FieldMessage,
   Notice,
   Typography,
@@ -232,39 +232,24 @@ export const GenerationActions = forwardRef<
   const generateSetup = !modelPending && isSetupBlocker(ordinary.blocker) ? ordinary.reason : ''
   const compareSetup = !modelPending && isSetupBlocker(ab.blocker) ? ab.reason : ''
 
-  // One line per action, in the action's own words — collapsed to ONE bare line when both are
-  // refused for the same reason, because the prefixes only exist to tell two reasons apart.
-  const reasons = (className?: string) => (
-    <div className={clsx('grid gap-1 empty:hidden', className)}>
-      {generateSetup && generateSetup === compareSetup ? (
-        <Typography variant="label" as="p" role="status">
-          {generateSetup}
-        </Typography>
-      ) : (
-        <>
-          {generateSetup && (
-            <Typography variant="label" as="p" role="status">
-              {t('generation.generateReason', {
-                reason: generateSetup,
-                interpolation: { escapeValue: false },
-              })}
-            </Typography>
-          )}
-          {compareSetup && (
-            <Typography variant="label" as="p" role="status">
-              {t('generation.compareReason', {
-                reason: compareSetup,
-                // This value is another catalog sentence, never user or model data. Avoid
-                // double-escaping its slash into visible `&#x2F;` while global interpolation
-                // escaping remains enabled for untrusted values.
-                interpolation: { escapeValue: false },
-              })}
-            </Typography>
-          )}
-        </>
-      )}
-    </div>
-  )
+  // Only 생성's refusal is a line under the row. A/B 비교 is the occasional second opinion, so its
+  // own reason is the disabled button's tooltip rather than a second sentence every visit reads
+  // (owner decision 2026-09-24). The line is bare when both are refused for the same reason — it
+  // then speaks for both — and names 생성 otherwise, so it is never read as A/B 비교's.
+  const generateLine = (className?: string) =>
+    generateSetup && (
+      <Typography variant="label" as="p" role="status" className={className}>
+        {generateSetup === compareSetup
+          ? generateSetup
+          : t('generation.generateReason', {
+              reason: generateSetup,
+              // This value is another catalog sentence, never user or model data. Avoid
+              // double-escaping its slash into visible `&#x2F;` while global interpolation
+              // escaping remains enabled for untrusted values.
+              interpolation: { escapeValue: false },
+            })}
+      </Typography>
+    )
 
   if (needsBrief) {
     return (
@@ -304,14 +289,18 @@ export const GenerationActions = forwardRef<
           full-size targets here. From `sm:` up the pair right-aligns at its natural width, where a
           stretched CTA would only be a wide box with a two-character label in the middle. */}
       <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
-        <Button
+        <ExplainedButton
           variant="secondary"
           disabled={sharedDisabled || !ab.ok}
+          // Only while the choice is the one thing in the way: a pending A/B result, a start in
+          // flight or a selection still loading keeps it an ordinary disabled button, whose
+          // answer is the 결과 확인 link or the status line, not a model to choose.
+          reason={sharedDisabled ? '' : compareSetup}
           pending={preparing === 'comparison' || comparison.isPending}
           onClick={() => void start('comparison')}
         >
           {t('generation.compare')}
-        </Button>
+        </ExplainedButton>
         <Button
           variant="cta"
           disabled={sharedDisabled || !ordinary.ok}
@@ -321,7 +310,7 @@ export const GenerationActions = forwardRef<
           {t('generation.generate')}
         </Button>
       </div>
-      {ordinary.blocker !== 'published' && reasons('mt-2')}
+      {ordinary.blocker !== 'published' && generateLine('mt-2')}
       {pendingExperiment && (
         <a
           href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}

@@ -125,7 +125,6 @@ export const i18n = {
         brief: '글쓰기 옵션에서 모델 선택',
       },
       generateReason: '생성: {{reason}}',
-      compareReason: 'A/B 비교: {{reason}}',
       reviewResult: 'A/B 결과 확인',
       saveFailed: '글을 저장하지 못했어요.',
       brief: {
@@ -287,7 +286,6 @@ export const i18n = {
         brief: 'Choose models in writing options',
       },
       generateReason: 'Generate: {{reason}}',
-      compareReason: 'A/B comparison: {{reason}}',
       reviewResult: 'Review A/B result',
       saveFailed: 'Could not save the post.',
       brief: {

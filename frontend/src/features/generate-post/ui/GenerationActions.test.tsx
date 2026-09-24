@@ -66,12 +66,16 @@ function setup(signedVideoUrl: boolean) {
 it('explains URL incompatibility and refuses both actions before saving', async () => {
   const user = userEvent.setup()
   const { starts, comparisons, beforeStart } = setup(false)
+  // One bare line speaks for both, since both are refused for the same reason.
   expect(await screen.findByRole('status')).toHaveTextContent('영상 링크')
-  for (const name of ['생성', 'A/B 비교']) {
-    const button = screen.getByRole('button', { name })
-    expect(button).toBeDisabled()
-    await user.click(button)
-  }
+  const generate = screen.getByRole('button', { name: '생성' })
+  expect(generate).toBeDisabled()
+  await user.click(generate)
+  // A/B 비교 says its own reason as a tooltip, so it stays reachable rather than natively disabled.
+  const compare = screen.getByRole('button', { name: 'A/B 비교' })
+  expect(compare).toHaveAttribute('aria-disabled', 'true')
+  expect(compare).toHaveAccessibleDescription(expect.stringContaining('영상 링크'))
+  await user.click(compare)
   expect(beforeStart).not.toHaveBeenCalled()
   expect(starts).toHaveLength(0)
   expect(comparisons).toHaveLength(0)
