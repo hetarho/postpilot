@@ -406,7 +406,7 @@ func TestSaveContentAcceptsVideoBlocksForAttachedClips(t *testing.T) {
 		{Type: BlockText, Content: "문단"},
 		{Type: BlockVideo, File: "clip.mp4", Caption: "파도"},
 	}}
-	saved, err := svc.SaveContent(ctx, alice, p.Slug, content, 0)
+	saved, err := svc.SaveContent(ctx, alice, p.Slug, content, 0, nil)
 	if err != nil {
 		t.Fatalf("SaveContent: %v", err)
 	}
@@ -415,7 +415,7 @@ func TestSaveContentAcceptsVideoBlocksForAttachedClips(t *testing.T) {
 	}
 
 	stray := PostContent{Title: "제목", Blocks: []Block{{Type: BlockVideo, File: "gone.mp4"}}}
-	if _, err := svc.SaveContent(ctx, alice, p.Slug, stray, saved.ContentRevision); !errors.Is(err, ErrInvalidContent) {
+	if _, err := svc.SaveContent(ctx, alice, p.Slug, stray, saved.ContentRevision, nil); !errors.Is(err, ErrInvalidContent) {
 		t.Fatalf("SaveContent with an unattached video = %v, want ErrInvalidContent", err)
 	}
 }

@@ -77,7 +77,11 @@ func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", postpilotv1.FailureReason_POST_CONTENT_INVALID, nil)
 	}
-	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision())
+	taken := make([]int, len(req.Msg.GetTakenCandidates()))
+	for i, index := range req.Msg.GetTakenCandidates() {
+		taken[i] = int(index)
+	}
+	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision(), taken)
 	if err != nil {
 		return nil, toConnectError("save post content", err)
 	}

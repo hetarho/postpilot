@@ -264,13 +264,20 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	return n > 0, nil
 }
 
-func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, candidates *[]post.ReplacementCandidate, updatedAt time.Time) (bool, error) {
 	encoded, err := marshalContent(content)
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
+	var remaining sql.NullString
+	if candidates != nil {
+		if remaining, err = marshalCandidates(*candidates); err != nil {
+			return false, fmt.Errorf("encode replacement candidates: %w", err)
+		}
+	}
 	n, err := s.write.SavePostContent(ctx, sqlc.SavePostContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Content: sql.NullString{String: encoded, Valid: true}, SpendCandidate: candidates != nil,
+		ReplacementCandidates: remaining, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
 	})
 	if err != nil {

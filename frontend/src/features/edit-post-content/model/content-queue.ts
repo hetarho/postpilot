@@ -1,18 +1,37 @@
 import { appFailureFromConnect, type PostContent } from '@/shared/api'
 import { createAutosaveQueue } from '@/shared/lib'
-import { ContentRevisionConflictError, copyPostContent } from '@/entities/post'
+import {
+  ContentRevisionConflictError,
+  copyPostContent,
+  sameCandidate,
+  type ReplacementCandidate,
+} from '@/entities/post'
 
 /** The block editor's autosave, one queue per post slug and OUTSIDE React.
  *
  *  The machine is `shared/lib/autosave`; what belongs to the content is here — every save
  *  carries the revision it was edited from, and a revision the server has moved past is a
  *  CONFLICT: the queue stops rather than retrying, because the same body will be refused again
- *  and the editor has to be told to reload. */
+ *  and the editor has to be told to reload.
+ *
+ *  A snapshot also carries the replacement candidates its edits took (POST-79). They are kept BY
+ *  VALUE and resolved to indices only when a save goes out, against the list at the revision that
+ *  save carries: a take made against the list on screen can be sent at a later revision whose list
+ *  is shorter, and a raw index would then name the wrong entry. Takes and typing inside one
+ *  debounce coalesce into one save carrying the union; a failed save keeps its takes for the
+ *  retry, even when typing merged into it; and once a save lands its takes no longer resolve, so
+ *  the next one carries only those made since. */
 export type ContentSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict'
 export interface ContentSnapshot {
   content: PostContent
+  /** The candidates this snapshot's edits took; none for ordinary typing. */
+  taken: readonly ReplacementCandidate[]
 }
-export type SendContent = (snapshot: ContentSnapshot, expectedRevision: bigint) => Promise<bigint>
+export type SendContent = (
+  snapshot: ContentSnapshot,
+  expectedRevision: bigint,
+  takenCandidates: readonly number[],
+) => Promise<{ revision: bigint; candidates: readonly ReplacementCandidate[] }>
 
 export interface ContentQueueHandle {
   state: () => ContentSaveState
@@ -25,16 +44,40 @@ export interface ContentQueueHandle {
 interface Attachment {
   revision: bigint
   saved: ContentSnapshot
+  /** The replacement candidates the server holds at `revision`: what a take resolves against. */
+  candidates: readonly ReplacementCandidate[]
   send: SendContent
   onState?: (state: ContentSaveState) => void
 }
 const attached = new Map<string, Attachment>()
 
 function copy(snapshot: ContentSnapshot): ContentSnapshot {
-  return { content: copyPostContent(snapshot.content) }
+  return { content: copyPostContent(snapshot.content), taken: [...snapshot.taken] }
 }
 function same(a: ContentSnapshot, b: ContentSnapshot): boolean {
   return JSON.stringify(a.content) === JSON.stringify(b.content)
+}
+
+/** The takes of both, each once. */
+function union(
+  a: readonly ReplacementCandidate[],
+  b: readonly ReplacementCandidate[],
+): ReplacementCandidate[] {
+  return [...a, ...b.filter((next) => !a.some((known) => sameCandidate(known, next)))]
+}
+
+/** The indices a save sends: each take resolved against the list at the revision it carries,
+ *  deduped and sorted. A take that no longer resolves was spent by a save that already landed. */
+function resolveTakes(
+  taken: readonly ReplacementCandidate[],
+  candidates: readonly ReplacementCandidate[],
+): number[] {
+  const indices = new Set<number>()
+  for (const take of taken) {
+    const found = candidates.find((candidate) => sameCandidate(candidate, take))
+    if (found) indices.add(found.listIndex)
+  }
+  return [...indices].sort((a, b) => a - b)
 }
 
 const queue = createAutosaveQueue<ContentSnapshot, bigint>({
@@ -48,19 +91,33 @@ const queue = createAutosaveQueue<ContentSnapshot, bigint>({
   // A keystroke that lands back on what the server holds — or on what the request now out is
   // making it hold — is not a change, and a failing save keeps its own backoff.
   retryOnEdit: 'keep',
+  // A new object every time: `pending` may be the draft in flight, and the machine tells a draft
+  // typed during the flight from the one it sent by identity.
+  merge: (pending, next) => ({
+    content: next.content,
+    taken: union(pending?.taken ?? [], next.taken),
+  }),
   settled: (snapshot, sending, slug) => {
     const baseline = sending ?? attached.get(slug)?.saved
-    return baseline !== undefined && same(snapshot, baseline)
+    return snapshot.taken.length === 0 && baseline !== undefined && same(snapshot, baseline)
   },
   send: async (snapshot, { key }) => {
     const post = attached.get(key)
     if (!post) throw new Error('content queue detached')
-    // The attachment holds the revision, not the queue: it is what the editor mounted against
-    // and what each answered save moves forward.
-    const revision = await post.send(copy(snapshot), post.revision)
-    post.revision = revision
+    // Only the typed-back-to-the-source case, whose takes no longer mean anything: the offer
+    // stands again with its source.
+    if (same(snapshot, post.saved)) return post.revision
+    // The attachment holds the revision and the list, not the queue: they are what the editor
+    // mounted against and what each answered save moves forward.
+    const answer = await post.send(
+      copy(snapshot),
+      post.revision,
+      resolveTakes(snapshot.taken, post.candidates),
+    )
+    post.revision = answer.revision
+    post.candidates = answer.candidates
     post.saved = copy(snapshot)
-    return revision
+    return answer.revision
   },
 })
 
@@ -97,6 +154,8 @@ export function attachContentQueue(options: {
   slug: string
   revision: bigint
   saved: ContentSnapshot
+  /** The replacement candidates the server holds at `revision`. */
+  candidates: readonly ReplacementCandidate[]
   send: SendContent
   onState: (state: ContentSaveState) => void
 }): ContentQueueHandle {
@@ -108,6 +167,7 @@ export function attachContentQueue(options: {
   const post: Attachment = existing ?? {
     revision: options.revision,
     saved: copy(options.saved),
+    candidates: options.candidates,
     send: options.send,
   }
   post.send = options.send

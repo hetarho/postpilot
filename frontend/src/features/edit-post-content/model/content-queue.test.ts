@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { Code } from '@connectrpc/connect'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ContentRevisionConflictError } from '@/entities/post'
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { ContentRevisionConflictError, type ReplacementCandidate } from '@/entities/post'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
 import { connectAppError } from '@/test/app-error'
@@ -10,14 +10,16 @@ import {
   discardContentQueue,
   discardContentQueues,
   type ContentSnapshot,
+  type SendContent,
 } from './content-queue'
 
-function snapshot(title: string): ContentSnapshot {
+function snapshot(title: string, taken: ReplacementCandidate[] = []): ContentSnapshot {
   return {
     content: create(PostContentSchema, {
       title,
       blocks: [create(BlockSchema, { type: BlockType.TEXT, content: title })],
     }),
+    taken,
   }
 }
 
@@ -33,12 +35,15 @@ describe('content save queue', () => {
     const send = vi.fn((sent: ContentSnapshot, revision: bigint) => {
       void sent
       void revision
-      return new Promise<bigint>((resolve) => releases.push(resolve))
+      return new Promise<{ revision: bigint; candidates: ReplacementCandidate[] }>((resolve) =>
+        releases.push((next) => resolve({ revision: next, candidates: [] })),
+      )
     })
     const handle = attachContentQueue({
       slug: 'post',
       revision: 1n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -71,6 +76,7 @@ describe('content save queue', () => {
       slug: 'post',
       revision: 1n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -93,6 +99,7 @@ describe('content save queue', () => {
       slug: 'gone',
       revision: 1n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -100,6 +107,7 @@ describe('content save queue', () => {
       slug: 'stays',
       revision: 1n,
       saved: snapshot('A'),
+      candidates: [],
       send: other,
       onState: vi.fn(),
     })
@@ -119,11 +127,12 @@ describe('content save queue', () => {
 
   it("rejects the discarded queue's pending flush with the delete reason", async () => {
     vi.useFakeTimers()
-    const send = vi.fn(() => new Promise<bigint>(() => {}))
+    const send = vi.fn(() => new Promise<never>(() => {}))
     const handle = attachContentQueue({
       slug: 'gone',
       revision: 1n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -142,6 +151,7 @@ describe('content save queue', () => {
       slug: 'post',
       revision: 7n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: (state) => states.push(state),
     })
@@ -163,6 +173,7 @@ describe('content save queue', () => {
       slug: 'post',
       revision: 7n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -181,6 +192,7 @@ describe('content save queue', () => {
       slug: 'post',
       revision: 7n,
       saved: snapshot('A'),
+      candidates: [],
       send,
       onState: vi.fn(),
     })
@@ -188,5 +200,118 @@ describe('content save queue', () => {
     handle.queue(snapshot('B'))
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS + AUTOSAVE_RETRY_BASE_MS)
     expect(send).toHaveBeenCalledTimes(2)
+  })
+})
+
+// POST-79: a take's candidate rides the save that carries its content, resolved to an index only
+// when that save goes out, against the list at the revision it carries.
+describe('taken candidates', () => {
+  const candidate = (source: string, listIndex: number): ReplacementCandidate => ({
+    surface: 'body',
+    index: 0,
+    source,
+    phrases: [`${source}!`],
+    listIndex,
+  })
+  const [a, b, c] = [candidate('a', 0), candidate('b', 1), candidate('c', 2)]
+  type Answer = { revision: bigint; candidates: ReplacementCandidate[] }
+
+  function attach(send: SendContent) {
+    return attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      saved: snapshot('A'),
+      candidates: [a, b, c],
+      send,
+      onState: vi.fn(),
+    })
+  }
+  const indicesOf = (send: Mock<SendContent>, call: number) => send.mock.calls[call]?.[2]
+  const titleOf = (send: Mock<SendContent>, call: number) =>
+    send.mock.calls[call]?.[0].content.title
+
+  it('sends a take’s index with the save that carries its content', async () => {
+    vi.useFakeTimers()
+    const send = vi.fn<SendContent>(async (): Promise<Answer> => ({
+      revision: 2n,
+      candidates: [a, c],
+    }))
+    const handle = attach(send)
+
+    handle.queue(snapshot('B', [b]))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(titleOf(send, 0)).toBe('B')
+    expect(indicesOf(send, 0)).toEqual([1])
+  })
+
+  it('sends two takes and the typing between them as one save carrying both', async () => {
+    vi.useFakeTimers()
+    const send = vi.fn<SendContent>(async (): Promise<Answer> => ({
+      revision: 2n,
+      candidates: [a],
+    }))
+    const handle = attach(send)
+
+    handle.queue(snapshot('B', [c]))
+    handle.queue(snapshot('C', [b]))
+    handle.queue(snapshot('D'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(titleOf(send, 0)).toBe('D')
+    expect(indicesOf(send, 0)).toEqual([1, 2])
+  })
+
+  it('sends a take made during another take’s save next, resolved against the answered list', async () => {
+    vi.useFakeTimers()
+    const releases: Array<(answer: Answer) => void> = []
+    const send = vi.fn<SendContent>(() => new Promise<Answer>((resolve) => releases.push(resolve)))
+    const handle = attach(send)
+
+    handle.queue(snapshot('B', [b]))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(indicesOf(send, 0)).toEqual([1])
+    handle.queue(snapshot('C', [c]))
+    // The server spent b: c is index 1 in what it answers.
+    releases[0]?.({ revision: 2n, candidates: [candidate('a', 0), candidate('c', 1)] })
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(titleOf(send, 1)).toBe('C')
+    expect(send.mock.calls[1]?.[1]).toBe(2n)
+    expect(indicesOf(send, 1)).toEqual([1])
+  })
+
+  it('sends typing made during a take’s save next, with no index', async () => {
+    vi.useFakeTimers()
+    const releases: Array<(answer: Answer) => void> = []
+    const send = vi.fn<SendContent>(() => new Promise<Answer>((resolve) => releases.push(resolve)))
+    const handle = attach(send)
+
+    handle.queue(snapshot('B', [b]))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    handle.queue(snapshot('C'))
+    releases[0]?.({ revision: 2n, candidates: [candidate('a', 0), candidate('c', 1)] })
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(titleOf(send, 1)).toBe('C')
+    expect(indicesOf(send, 1)).toEqual([])
+  })
+
+  it('keeps a failed save’s takes for the retry, even when typing merged into it', async () => {
+    vi.useFakeTimers()
+    const send = vi
+      .fn<SendContent>()
+      .mockRejectedValueOnce(connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable))
+      .mockResolvedValue({ revision: 2n, candidates: [a, c] })
+    const handle = attach(send)
+
+    handle.queue(snapshot('B', [b]))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(indicesOf(send, 0)).toEqual([1])
+    handle.queue(snapshot('C'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_RETRY_BASE_MS)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(titleOf(send, 1)).toBe('C')
+    expect(indicesOf(send, 1)).toEqual([1])
   })
 })

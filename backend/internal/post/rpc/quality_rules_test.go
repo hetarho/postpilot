@@ -95,6 +95,14 @@ func (aliceVoice) Voices(_ context.Context, userID string) ([]post.VoiceRef, err
 // presence rule on the wire is provable only through one.
 func rpcService(t *testing.T) *Handler {
 	t.Helper()
+	h, _ := rpcServiceWith(t)
+	return h
+}
+
+// rpcServiceWith also hands back the service, for a test that seeds what no RPC writes — a
+// generation's replacement candidates, say.
+func rpcServiceWith(t *testing.T) (*Handler, *post.Service) {
+	t.Helper()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "post.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -112,10 +120,11 @@ func rpcService(t *testing.T) *Handler {
 			t.Fatal(err)
 		}
 	}
-	return NewHandler(post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, post.Limits{}, post.Deps{
+	svc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, post.Limits{}, post.Deps{
 		Jobs: noJobs{}, Voices: aliceVoice{}, Experiments: noExperiments{}, ContentPurger: noPurge{},
 		CandidateLinks: noDetach{}, MemoryLinks: noDetach{}, Fields: knownFields{},
-	}))
+	})
+	return NewHandler(svc), svc
 }
 
 func draftRequest(slug, title string, field *postpilotv1.BlogField) *connect.Request[postpilotv1.SavePostDraftRequest] {

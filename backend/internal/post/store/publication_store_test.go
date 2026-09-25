@@ -77,7 +77,7 @@ func TestPublishRefusesADraftAStaleFinalizationAndAnotherAccount(t *testing.T) {
 	}
 	finalizedRow(t, s, "stale", "alice")
 	edited := post.PostContent{Title: "고친 글", Blocks: []post.Block{{Type: post.BlockText, Content: "고친 문장"}}}
-	if ok, err := s.SaveContent(ctx, "stale", "alice", edited, 1, testNow.Add(2*time.Minute)); err != nil || !ok {
+	if ok, err := s.SaveContent(ctx, "stale", "alice", edited, 1, nil, testNow.Add(2*time.Minute)); err != nil || !ok {
 		t.Fatalf("edit: ok=%v err=%v", ok, err)
 	}
 	if ok, err := s.PublishPost(ctx, "stale", "alice", firstAddress, testNow); err != nil || ok {

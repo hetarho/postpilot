@@ -10,6 +10,8 @@ import {
   PostContentSchema,
   PostSchema,
   PostService,
+  ProtoReplacementSurface,
+  ReplacementCandidateSchema,
   SavePostContentResponseSchema,
 } from '@/shared/api'
 import { connectAppError } from '@/test/app-error'
@@ -46,7 +48,10 @@ it('marks every quality query stale after a save', async () => {
     wrapper: withProviders(transport, queryClient),
   })
 
-  await expect(view.result.current.save('post-a', create(PostContentSchema), 1n)).resolves.toBe(2n)
+  await expect(view.result.current.save('post-a', create(PostContentSchema), 1n)).resolves.toEqual({
+    revision: 2n,
+    candidates: [],
+  })
   await waitFor(() => expect(queryClient.getQueryState(qualityKey)?.isInvalidated).toBe(true))
 })
 
@@ -93,4 +98,63 @@ it('refetches the post and the list when the post was published elsewhere', asyn
   expect(appFailureFromConnect(cause).reason).toBe('POST_PUBLISHED_LOCKED')
   await waitFor(() => expect(queryClient.getQueryState(postKey)?.isInvalidated).toBe(true))
   expect(queryClient.getQueryState(listKey)?.isInvalidated).toBe(true)
+})
+
+// POST-79: the taken indices go as given, and the answer's shorter list reaches the cached post
+// at once, so a spent mark does not come back before a refetch.
+it('sends the taken indices and patches the answer’s candidates into the cache', async () => {
+  const sent: number[][] = []
+  const remaining = create(ReplacementCandidateSchema, {
+    surface: ProtoReplacementSurface.BODY,
+    index: 0,
+    source: '비가',
+    phrases: ['빗방울이'],
+  })
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.savePostContent, (req) => {
+      sent.push([...req.takenCandidates])
+      return create(SavePostContentResponseSchema, {
+        post: create(PostSchema, {
+          slug: req.slug,
+          contentRevision: 3n,
+          content: req.content,
+          replacementCandidates: [remaining],
+        }),
+      })
+    })
+  })
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const postKey = getPostQueryKey(transport, 'post')
+  queryClient.setQueryData(
+    postKey,
+    create(GetPostResponseSchema, {
+      post: create(PostSchema, {
+        slug: 'post',
+        contentRevision: 2n,
+        replacementCandidates: [
+          create(ReplacementCandidateSchema, {
+            surface: ProtoReplacementSurface.TITLE,
+            source: '제주',
+          }),
+          remaining,
+        ],
+      }),
+    }),
+  )
+  const view = renderHook(() => useSavePostContent(), {
+    wrapper: withProviders(transport, queryClient),
+  })
+
+  const answer = await view.result.current.save('post', create(PostContentSchema), 2n, [0])
+  expect(sent).toEqual([[0]])
+  expect(answer.revision).toBe(3n)
+  expect(answer.candidates.map((c) => [c.source, c.listIndex])).toEqual([['비가', 0]])
+  const cached = queryClient.getQueryData<{
+    post?: { replacementCandidates: { source: string }[] }
+  }>(postKey)
+  expect(cached?.post?.replacementCandidates.map((c) => c.source)).toEqual(['비가'])
+
+  // Nothing taken sends an empty list.
+  await view.result.current.save('post', create(PostContentSchema), 3n)
+  expect(sent.at(-1)).toEqual([])
 })

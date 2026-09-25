@@ -110,7 +110,7 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 		return s.UpdateGeneratedContent(context.Background(), "p", "alice", lockContent, post.LanguageKorean, post.WriteAnnotations{}, lockLater)
 	},
 	"SavePostContent": func(s *store.Store) (bool, error) {
-		return s.SaveContent(context.Background(), "p", "alice", lockContent, 1, lockLater)
+		return s.SaveContent(context.Background(), "p", "alice", lockContent, 1, nil, lockLater)
 	},
 	"SavePostGenerationOptions": func(s *store.Store) (bool, error) {
 		return s.SaveGenerationOptions(context.Background(), "p", "alice", post.GenerationOptionsSet{TargetLength: &lockLength, TagCount: 5, UseMemory: true, Field: "cafe"}, lockLater)

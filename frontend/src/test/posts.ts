@@ -220,7 +220,13 @@ export interface FakePostsOptions {
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
   /** Every SavePostContent as it arrived: slug, the revision it expected and the content. */
-  contentSaves?: Array<{ slug: string; expectedRevision: bigint; content: PostContent }>
+  contentSaves?: Array<{
+    slug: string
+    expectedRevision: bigint
+    content: PostContent
+    /** The replacement candidates the save spent, as indices into the stored list (POST-79). */
+    takenCandidates: number[]
+  }>
   /** The next SavePostDraft on this slug first publishes the post and is then refused as
    *  locked, the way a publish from another tab lands between two autosaves (POST-86). */
   publishOnDraftSave?: string
@@ -647,6 +653,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         slug: req.slug,
         expectedRevision: req.expectedRevision,
         content: req.content,
+        takenCandidates: [...req.takenCandidates],
       })
     await options.contentSaveGate
     const row = rows.get(req.slug)
@@ -654,9 +661,18 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (row.contentRevision !== req.expectedRevision)
       throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!req.content) throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
+    // Like the server: a repeated index, or one outside the stored list, is malformed.
+    const taken = new Set(req.takenCandidates)
+    if (
+      taken.size !== req.takenCandidates.length ||
+      req.takenCandidates.some((index) => index < 0 || index >= row.replacementCandidates.length)
+    )
+      throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
     // Only a save that changes something is refused: an identical one stays a no-op (R7).
     if (JSON.stringify(row.content) !== JSON.stringify(req.content)) {
       refuseIfPublished(row)
+      // A take spends its candidate in the same write (POST-79); the rest keep their order.
+      row.replacementCandidates = row.replacementCandidates.filter((_, index) => !taken.has(index))
       row.content = req.content
       row.contentRevision += 1n
       row.status = 'review'

@@ -2226,8 +2226,13 @@ type SavePostContentRequest struct {
 	Slug             string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
 	Content          *PostContent           `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	ExpectedRevision int64                  `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Replacement candidates this save's edits took (POST-79): indices into the post's stored list
+	// as GetPost returned it at expected_revision. All are removed in the same write as the
+	// content. A duplicate or an index outside the list is POST_CONTENT_INVALID. Empty is an
+	// ordinary save, and an identical content save writes nothing, these included.
+	TakenCandidates []int32 `protobuf:"varint,5,rep,packed,name=taken_candidates,json=takenCandidates,proto3" json:"taken_candidates,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SavePostContentRequest) Reset() {
@@ -2279,6 +2284,13 @@ func (x *SavePostContentRequest) GetExpectedRevision() int64 {
 		return x.ExpectedRevision
 	}
 	return 0
+}
+
+func (x *SavePostContentRequest) GetTakenCandidates() []int32 {
+	if x != nil {
+		return x.TakenCandidates
+	}
+	return nil
 }
 
 type SavePostContentResponse struct {
@@ -3506,11 +3518,12 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x10_target_languageB\b\n" +
 	"\x06_field\"?\n" +
 	"\x15SavePostDraftResponse\x12&\n" +
-	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\x94\x01\n" +
+	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xbf\x01\n" +
 	"\x16SavePostContentRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x123\n" +
 	"\acontent\x18\x02 \x01(\v2\x19.postpilot.v1.PostContentR\acontent\x12+\n" +
-	"\x11expected_revision\x18\x03 \x01(\x03R\x10expectedRevisionJ\x04\b\x04\x10\x05\"A\n" +
+	"\x11expected_revision\x18\x03 \x01(\x03R\x10expectedRevision\x12)\n" +
+	"\x10taken_candidates\x18\x05 \x03(\x05R\x0ftakenCandidatesJ\x04\b\x04\x10\x05\"A\n" +
 	"\x17SavePostContentResponse\x12&\n" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xd8\x02\n" +
 	" SavePostGenerationOptionsRequest\x12\x12\n" +

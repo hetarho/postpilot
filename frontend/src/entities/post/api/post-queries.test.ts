@@ -79,9 +79,10 @@ describe('toPostDraft', () => {
         ],
       }),
     )
+    // Each keeps its index in the server's list, which is what a take sends (POST-79).
     expect(draft.replacementCandidates).toEqual([
-      { surface: 'tag', index: 1, source: '산책', phrases: ['산책로', '여행'] },
-      { surface: 'body', index: 0, source: '기다렸다', phrases: ['기다린다'] },
+      { surface: 'tag', index: 1, source: '산책', phrases: ['산책로', '여행'], listIndex: 0 },
+      { surface: 'body', index: 0, source: '기다렸다', phrases: ['기다린다'], listIndex: 2 },
     ])
   })
 

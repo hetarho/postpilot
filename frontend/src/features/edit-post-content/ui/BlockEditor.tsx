@@ -18,9 +18,11 @@ import {
   isPublished,
   newBlock,
   postContentWith,
+  sameCandidate,
   spansAt,
   visibleSpans,
   type PostDraft,
+  type ReplacementCandidate,
   type ReplacementSpan,
 } from '@/entities/post'
 import { BlockType, type Block, type PostContent } from '@/shared/api'
@@ -78,14 +80,27 @@ export const BlockEditor = forwardRef<
     revision: post.contentRevision,
     content,
     valid,
+    candidates: post.replacementCandidates,
   })
+  // Candidates taken on this mount. Until the save's answer puts the server's shorter list in the
+  // cache, the stored one still holds them, and a phrase that contains its source (제주 → 제주도)
+  // would be marked again. The editor is keyed by its machine write, so a new write starts clean.
+  const [spent, setSpent] = useState<ReplacementCandidate[]>([])
   useEffect(() => onContentChange?.(content), [content, onContentChange])
 
   // The write's candidates still standing in the text on screen (GEN-53). Stale ones are dropped
   // here, at render, so a take or an edit that moves a source away drops its mark at once.
   const spans = useMemo(
-    () => (isPublished(post) ? [] : visibleSpans(content, post.replacementCandidates)),
-    [content, post],
+    () =>
+      isPublished(post)
+        ? []
+        : visibleSpans(
+            content,
+            post.replacementCandidates.filter(
+              (candidate) => !spent.some((taken) => sameCandidate(taken, candidate)),
+            ),
+          ),
+    [content, post, spent],
   )
   // Every pencil, so focus can land on the one that held a taken mark: the mark itself is gone the
   // moment its source is (THEME-33).
@@ -94,9 +109,13 @@ export const BlockEditor = forwardRef<
     if (button) pencils.current.set(key, button)
     else pencils.current.delete(key)
   }
-  // A take is exactly a typed edit: the content changes here and the autosave sends it with the
-  // revision the editor holds, recording nothing about where the words came from (POST-80).
+  // A take is an ordinary edit: the content changes here and the autosave sends it with the
+  // revision the editor holds, recording nothing about where the words came from (POST-80). The
+  // offer is spent, though (POST-79): the same save removes the candidate, and its mark is gone at
+  // once and never returns, while every other mark stays.
   const take = (span: ReplacementSpan, phrase: string) => {
+    autosave.take(span.candidate)
+    setSpent((current) => [...current, span.candidate])
     setContent(applyReplacement(content, span, phrase))
     const key = span.at.surface === 'body' ? `block:${span.at.index}` : 'header'
     requestAnimationFrame(() => pencils.current.get(key)?.focus())

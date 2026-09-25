@@ -3,6 +3,7 @@ package post
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -248,13 +249,20 @@ func (f *fakeStore) AssignField(_ context.Context, slug, userID string, field *s
 	return true, nil
 }
 
-func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, candidates *[]ReplacementCandidate, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
 	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || f.publishedLocked(slug) {
 		return false, nil
+	}
+	// The statement's CASE: a save that took candidates stores what is left, NULL for none.
+	if candidates != nil {
+		existing.ReplacementCandidates = nil
+		if len(*candidates) > 0 {
+			existing.ReplacementCandidates = slices.Clone(*candidates)
+		}
 	}
 	existing.Content = &content
 	existing.ContentRevision++

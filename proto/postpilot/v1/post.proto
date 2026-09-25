@@ -398,6 +398,11 @@ message SavePostContentRequest {
   PostContent content = 2;
   int64 expected_revision = 3;
   reserved 4;
+  // Replacement candidates this save's edits took (POST-79): indices into the post's stored list
+  // as GetPost returned it at expected_revision. All are removed in the same write as the
+  // content. A duplicate or an index outside the list is POST_CONTENT_INVALID. Empty is an
+  // ordinary save, and an identical content save writes nothing, these included.
+  repeated int32 taken_candidates = 5;
 }
 
 message SavePostContentResponse { Post post = 1; }

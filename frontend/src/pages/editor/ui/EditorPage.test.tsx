@@ -3300,12 +3300,12 @@ describe('the replacement marks', () => {
   function renderMarks(row: FakePostRow = finalized) {
     const calls: string[] = []
     const contentSaves: NonNullable<FakePostsOptions['contentSaves']> = []
-    renderAppAt(`/posts/${SLUG}`, {
+    const view = renderAppAt(`/posts/${SLUG}`, {
       user: USER,
       calls,
       posts: { calls, contentSaves, posts: [row] },
     })
-    return { calls, contentSaves }
+    return { calls, contentSaves, view }
   }
 
   async function openRefine(user: ReturnType<typeof userEvent.setup>) {
@@ -3378,6 +3378,8 @@ describe('the replacement marks', () => {
     await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
     expect(contentSaves[0].slug).toBe(SLUG)
     expect(contentSaves[0].expectedRevision).toBe(1n)
+    // The same save spends the candidate it took, by its index in the stored list (POST-79).
+    expect(contentSaves[0].takenCandidates).toEqual([2])
     expect(contentSaves[0].content.blocks[0].content).toBe('비가 그치기를 기다려 본다.')
     // The rest of the content went as the editor held it.
     expect(contentSaves[0].content.title).toBe(POST_CONTENT_FIXTURE.title)
@@ -3392,23 +3394,38 @@ describe('the replacement marks', () => {
     expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  // A phrase can contain its own source, which then still stands: the mark stays, and the panel
-  // the take came from closes all the same. Focus goes to the header's pencil.
-  it('closes the panel on a take, even where the source still stands', async () => {
+  // POST-79: a taken candidate is spent. Its mark never comes back — not even where the phrase
+  // holds its source, as 제주도 holds 제주 — and every other mark stays. Focus goes to the header's
+  // pencil.
+  it('spends a taken candidate, even where its phrase holds the source', async () => {
     const user = userEvent.setup()
-    const { contentSaves } = renderMarks()
+    const { contentSaves, view } = renderMarks()
     await openRefine(user)
 
     await user.click(article().getByRole('button', { name: '제주' }))
     await user.click(await screen.findByRole('button', { name: '‘제주도’(으)로 바꾸기' }))
 
     expect(screen.queryByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeNull()
+    const spent = () => {
+      const heading = article().getByRole('heading', { level: 3 })
+      expect(heading).toHaveTextContent(/^비 온 뒤의 제주도$/)
+      expect(within(heading).queryByRole('button', { name: /제주/ })).toBeNull()
+      for (const neighbour of ['산책', '기다렸다', '비가'])
+        expect(article().getByRole('button', { name: neighbour })).toBeInTheDocument()
+    }
+    spent()
     await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
     expect(contentSaves[0].content.title).toBe('비 온 뒤의 제주도')
+    expect(contentSaves[0].takenCandidates).toEqual([0])
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '제목과 요약, 태그 수정' })).toHaveFocus(),
     )
-    expect(article().getByRole('heading', { level: 3 })).toHaveTextContent(/^비 온 뒤의 제주도$/)
+    spent()
+
+    view.unmount()
+    renderAppAt(`/posts/${SLUG}`, { transport: view.transport })
+    await openRefine(user)
+    spent()
   })
 
   it('puts focus on the pencil of the block the take changed', async () => {

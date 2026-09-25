@@ -23,12 +23,12 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 	if err != nil || finalized.Status != StatusFinalized || finalized.FinalizedRevision != 1 {
 		t.Fatalf("finalize = %+v err=%v", finalized, err)
 	}
-	unchanged, err := svc.SaveContent(context.Background(), alice, created.Slug, content, 1)
+	unchanged, err := svc.SaveContent(context.Background(), alice, created.Slug, content, 1, nil)
 	if err != nil || unchanged.Status != StatusFinalized || unchanged.ContentRevision != 1 {
 		t.Fatalf("identical save = %+v err=%v", unchanged, err)
 	}
 	changed := PostContent{Title: "직접 수정", Blocks: []Block{{Type: BlockText, Content: "내 문장"}}}
-	review, err := svc.SaveContent(context.Background(), alice, created.Slug, changed, 1)
+	review, err := svc.SaveContent(context.Background(), alice, created.Slug, changed, 1, nil)
 	if err != nil || review.Status != StatusReview || review.ContentRevision != 2 || review.FinalizedRevision != 0 {
 		t.Fatalf("changed save = %+v err=%v", review, err)
 	}
@@ -312,7 +312,7 @@ var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture
 	},
 	"SaveContent": {
 		"a changed save": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveContent(context.Background(), alice, f.slug, lockedEdit, f.revision)
+			_, err := svc.SaveContent(context.Background(), alice, f.slug, lockedEdit, f.revision, nil)
 			return err
 		},
 	},
@@ -433,7 +433,7 @@ func TestIdenticalContentSaveOnAPublishedPostIsStillANoOp(t *testing.T) {
 	svc, store, blobs, fixture := newPublishedFixture(t)
 	before := lockedSnapshot(store, blobs, fixture.slug)
 	same := *before.post.Content
-	got, err := svc.SaveContent(context.Background(), alice, fixture.slug, same, fixture.revision)
+	got, err := svc.SaveContent(context.Background(), alice, fixture.slug, same, fixture.revision, nil)
 	if err != nil || got.Status != StatusPublished || got.ContentRevision != fixture.revision {
 		t.Fatalf("identical save = %s rev %d, %v", got.Status, got.ContentRevision, err)
 	}

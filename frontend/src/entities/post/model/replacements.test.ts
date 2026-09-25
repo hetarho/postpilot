@@ -37,9 +37,16 @@ const candidate = (
   index: number,
   source: string,
   phrases: string[] = ['성수동', '서울 성수'],
-): ReplacementCandidate => ({ surface, index, source, phrases })
+): ReplacementCandidate => ({ surface, index, source, phrases, listIndex: 0 })
 
 describe('the placement rules', () => {
+  // POST-79: a take spends the candidate its span stands for.
+  it('carries each span’s candidate', () => {
+    const title = { ...candidate('title', 0, '카페'), listIndex: 3 }
+    const tag = { ...candidate('tag', 1, '투어'), listIndex: 7 }
+    expect(visibleSpans(CONTENT, [title, tag]).map((span) => span.candidate)).toEqual([title, tag])
+  })
+
   it('marks the title, a tag by its index, and TEXT, HEADING and QUOTE blocks', () => {
     const spans = visibleSpans(CONTENT, [
       candidate('title', 0, '카페'),
@@ -305,7 +312,7 @@ describe('the shared placement fixture', () => {
     const content = clone(PostContentSchema, base)
     if (c.title !== undefined) content.title = c.title
     const spans = visibleSpans(content, [
-      { ...c.candidate, surface: c.candidate.surface as ReplacementSurface },
+      { ...c.candidate, surface: c.candidate.surface as ReplacementSurface, listIndex: 0 },
     ])
     expect(spans).toHaveLength(c.stands ? 1 : 0)
     if (c.offers) expect(spans[0].phrases).toEqual(c.offers)

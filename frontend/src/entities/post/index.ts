@@ -26,7 +26,7 @@ export {
 } from './model/content'
 export { BlockList } from './ui/BlockList'
 export type { ReplacementCandidate, ReplacementSpan, TextAt } from './model/replacements'
-export { applyReplacement, spansAt, visibleSpans } from './model/replacements'
+export { applyReplacement, sameCandidate, spansAt, visibleSpans } from './model/replacements'
 export { replacementSurfaceToProto } from './api/replacement-mappers'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'

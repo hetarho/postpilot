@@ -16,6 +16,15 @@ export interface ReplacementCandidate {
   index: number
   source: string
   phrases: string[]
+  /** Its index in the stored list as GetPost returned it: what a take sends (POST-79). `index` is
+   *  the tag's or the block's. */
+  listIndex: number
+}
+
+/** Whether two candidates are the same entry. The server keeps at most one candidate per surface,
+ *  index and source, so the triple names one entry in any list — the one a take spent included. */
+export function sameCandidate(a: ReplacementCandidate, b: ReplacementCandidate): boolean {
+  return a.surface === b.surface && a.index === b.index && a.source === b.source
 }
 
 /** One piece of rendered text a mark can stand in. `item` is set only for a LIST block. */
@@ -32,6 +41,8 @@ export interface ReplacementSpan {
   end: number
   source: string
   phrases: string[]
+  /** The candidate the span stands for, which a take spends (POST-79). */
+  candidate: ReplacementCandidate
 }
 
 /** Whitespace as the server means it: Go's `unicode.IsSpace` set, spelled out, because
@@ -131,7 +142,7 @@ export function visibleSpans(
     if (phrases.length === 0) continue
     if (spans.some((span) => samePlace(span.at, at) && span.start < end && start < span.end))
       continue
-    spans.push({ at, start, end, source: candidate.source, phrases })
+    spans.push({ at, start, end, source: candidate.source, phrases, candidate })
   }
   return spans
 }

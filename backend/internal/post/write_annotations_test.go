@@ -87,7 +87,7 @@ func TestARevisionKeepsNounsAndCandidates(t *testing.T) {
 	}
 }
 
-// POST-80: a manual edit — a taken phrase included — never touches them; stale spans are the
+// POST-80: a manual edit that took no candidate never touches them; stale spans are the
 // browser's to drop at render (GEN-53).
 func TestAManualSaveKeepsNounsAndCandidates(t *testing.T) {
 	svc, _, _ := newTestService(t)
@@ -95,7 +95,7 @@ func TestAManualSaveKeepsNounsAndCandidates(t *testing.T) {
 
 	edited := annotatedContent
 	edited.Title = "성수동 카페 투어"
-	saved, err := svc.SaveContent(context.Background(), "alice", found.Slug, edited, found.ContentRevision)
+	saved, err := svc.SaveContent(context.Background(), "alice", found.Slug, edited, found.ContentRevision, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,6 +104,70 @@ func TestAManualSaveKeepsNounsAndCandidates(t *testing.T) {
 	}
 	if !reflect.DeepEqual(saved.ContentNouns, annotations.Nouns) || !reflect.DeepEqual(saved.ReplacementCandidates, annotations.Candidates) {
 		t.Fatalf("a manual save changed nouns %v candidates %+v", saved.ContentNouns, saved.ReplacementCandidates)
+	}
+}
+
+// POST-79: a take spends exactly the candidates it names, in the same write as the content, and
+// every other candidate keeps its mark.
+func TestATakeSpendsExactlyThoseCandidates(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	found := generatedWith(t, svc, "alice", &annotations)
+
+	edited := annotatedContent
+	edited.Title = "성수동 카페 투어"
+	saved, err := svc.SaveContent(ctx, "alice", found.Slug, edited, found.ContentRevision, []int{0, 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	only := []ReplacementCandidate{annotations.Candidates[1]}
+	reread, err := svc.Get(ctx, "alice", found.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, got := range map[string]Post{"answer": saved, "re-read": reread} {
+		if !reflect.DeepEqual(got.ReplacementCandidates, only) || got.ContentRevision != found.ContentRevision+1 || got.Status != StatusReview {
+			t.Fatalf("%s: candidates %+v at revision %d, %s", name, got.ReplacementCandidates, got.ContentRevision, got.Status)
+		}
+	}
+
+	// A later save that took nothing keeps what is left.
+	edited.Title = "성수동 카페 산책"
+	kept, err := svc.SaveContent(ctx, "alice", found.Slug, edited, reread.ContentRevision, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(kept.ReplacementCandidates, only) {
+		t.Fatalf("a save with no takes changed the list: %+v", kept.ReplacementCandidates)
+	}
+
+	// A malformed take refuses the whole save.
+	edited.Title = "성수동 카페 거리"
+	for _, taken := range [][]int{{-1}, {len(only)}, {0, 0}} {
+		if _, err := svc.SaveContent(ctx, "alice", found.Slug, edited, kept.ContentRevision, taken); !errors.Is(err, ErrInvalidContent) {
+			t.Fatalf("taken %v: err = %v, want ErrInvalidContent", taken, err)
+		}
+		after, err := svc.Get(ctx, "alice", found.Slug)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if after.ContentRevision != kept.ContentRevision || !reflect.DeepEqual(after.ReplacementCandidates, only) {
+			t.Fatalf("taken %v wrote something: revision %d, %+v", taken, after.ContentRevision, after.ReplacementCandidates)
+		}
+	}
+
+	// The revision answers first.
+	if _, err := svc.SaveContent(ctx, "alice", found.Slug, edited, found.ContentRevision, []int{0}); !errors.Is(err, ErrStaleContentRevision) {
+		t.Fatalf("stale take: err = %v, want ErrStaleContentRevision", err)
+	}
+
+	// An identical save writes nothing, its takes included (POST-15).
+	same, err := svc.SaveContent(ctx, "alice", found.Slug, *kept.Content, kept.ContentRevision, []int{0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if same.ContentRevision != kept.ContentRevision || !reflect.DeepEqual(same.ReplacementCandidates, only) {
+		t.Fatalf("an identical save changed something: revision %d, %+v", same.ContentRevision, same.ReplacementCandidates)
 	}
 }
 

@@ -488,22 +488,32 @@ func (q *Queries) ReassignPostVoice(ctx context.Context, arg ReassignPostVoicePa
 }
 
 const savePostContent = `-- name: SavePostContent :execrows
-UPDATE posts SET content = ?, content_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
-WHERE slug = ? AND user_id = ? AND content_revision = ? AND status <> 'published'
+UPDATE posts SET content = ?1, content_revision = content_revision + 1,
+    replacement_candidates = CASE WHEN CAST(?2 AS BOOLEAN)
+        THEN ?3 ELSE replacement_candidates END,
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?4
+WHERE slug = ?5 AND user_id = ?6 AND content_revision = ?7
+  AND status <> 'published'
 `
 
 type SavePostContentParams struct {
-	Content         sql.NullString
-	UpdatedAt       string
-	Slug            string
-	UserID          string
-	ContentRevision int64
+	Content               sql.NullString
+	SpendCandidate        bool
+	ReplacementCandidates sql.NullString
+	UpdatedAt             string
+	Slug                  string
+	UserID                string
+	ContentRevision       int64
 }
 
+// spend_candidate is whether this save took replacement candidates (POST-79): then the column
+// becomes the list left after them, NULL for none, in the same write; otherwise it is kept, not
+// even rewritten from a list read at the same revision.
 func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostContent,
 		arg.Content,
+		arg.SpendCandidate,
+		arg.ReplacementCandidates,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

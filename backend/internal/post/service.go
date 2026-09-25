@@ -823,13 +823,22 @@ func equalCandidate(a, b ReplacementCandidate) bool {
 
 // SaveContent optimistically saves only canonical content. The machine baseline is
 // intentionally absent from the store operation and remains immutable.
-func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64) (Post, error) {
+//
+// taken names the replacement candidates this save's edits took, as indices into the post's
+// list at expectedRevision (POST-79): each is spent in the same write as the content, so its
+// mark never returns, and the rest keep theirs. Nothing records that the words came from a
+// suggestion (POST-80).
+func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64, taken []int) (Post, error) {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
 		return Post{}, err
 	}
 	if found.ContentRevision != expectedRevision {
 		return Post{}, ErrStaleContentRevision
+	}
+	remaining, err := spendCandidates(found.ReplacementCandidates, taken)
+	if err != nil {
+		return Post{}, err
 	}
 	// The identical save stays a no-op on every post, a published one included (POST-15): it
 	// writes nothing, so there is nothing for the lock to refuse.
@@ -854,7 +863,7 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, s.now())
+	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, remaining, s.now())
 	if err != nil {
 		return Post{}, err
 	}
@@ -862,6 +871,30 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrStaleContentRevision)
 	}
 	return s.Get(ctx, userID, slug)
+}
+
+// spendCandidates is the list a save leaves once its takes are removed, in the original order:
+// nil when it took none, which keeps the stored list. An index outside the list, or one named
+// twice, is a malformed request — a client resolves indices against the list at the revision it
+// sends, and dedupes them.
+func spendCandidates(candidates []ReplacementCandidate, taken []int) (*[]ReplacementCandidate, error) {
+	if len(taken) == 0 {
+		return nil, nil
+	}
+	spent := make(map[int]bool, len(taken))
+	for _, index := range taken {
+		if index < 0 || index >= len(candidates) || spent[index] {
+			return nil, &InvalidContentError{Reason: "taken candidates must name distinct entries of the post's list"}
+		}
+		spent[index] = true
+	}
+	remaining := make([]ReplacementCandidate, 0, len(candidates)-len(taken))
+	for i, candidate := range candidates {
+		if !spent[i] {
+			remaining = append(remaining, candidate)
+		}
+	}
+	return &remaining, nil
 }
 
 // GenerationOptionsSet is the writing brief's run options, saved together (POST-89). Every

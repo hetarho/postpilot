@@ -22,9 +22,11 @@ export function replacementSurfaceToProto(surface: ReplacementSurface): ProtoRep
   return TO_PROTO[surface]
 }
 
-/** Undefined for a surface this build cannot name: a dropped offer changes nothing (GEN-53). */
+/** Undefined for a surface this build cannot name: a dropped offer changes nothing (GEN-53).
+ *  `listIndex` is the candidate's place in the list the server sent. */
 export function toReplacementCandidate(
   candidate: ProtoReplacementCandidate,
+  listIndex: number,
 ): ReplacementCandidate | undefined {
   const surface = replacementSurfaceFromProto(candidate.surface)
   if (!surface) return undefined
@@ -33,5 +35,17 @@ export function toReplacementCandidate(
     index: candidate.index,
     source: candidate.source,
     phrases: [...candidate.phrases],
+    listIndex,
   }
+}
+
+/** The list this build can show, each entry keeping its index in the server's list: assigned
+ *  BEFORE an unknown surface is dropped (ARCH-3), which would otherwise shift every later index
+ *  off the list a take names. */
+export function toReplacementCandidates(
+  list: readonly ProtoReplacementCandidate[],
+): ReplacementCandidate[] {
+  return list
+    .map((candidate, listIndex) => toReplacementCandidate(candidate, listIndex))
+    .filter((candidate): candidate is ReplacementCandidate => candidate !== undefined)
 }

@@ -45,9 +45,15 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
        OR replacement_candidates IS NOT sqlc.narg(replacement_candidates));
 
 -- name: SavePostContent :execrows
-UPDATE posts SET content = ?, content_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
-WHERE slug = ? AND user_id = ? AND content_revision = ? AND status <> 'published';
+-- spend_candidate is whether this save took replacement candidates (POST-79): then the column
+-- becomes the list left after them, NULL for none, in the same write; otherwise it is kept, not
+-- even rewritten from a list read at the same revision.
+UPDATE posts SET content = sqlc.arg(content), content_revision = content_revision + 1,
+    replacement_candidates = CASE WHEN CAST(sqlc.arg(spend_candidate) AS BOOLEAN)
+        THEN sqlc.narg(replacement_candidates) ELSE replacement_candidates END,
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision = sqlc.arg(content_revision)
+  AND status <> 'published';
 
 -- name: SavePostGenerationOptions :execrows
 -- The writing brief's run options, written as one set (POST-89): every column is the next value.

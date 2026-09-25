@@ -236,10 +236,10 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	final := post.PostContent{Title: "mine", Blocks: []post.Block{{Type: post.BlockText, Content: "제가 고친 문장이에요."}}}
-	if updated, err := s.SaveContent(ctx, "editable", "alice", final, 1, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveContent(ctx, "editable", "alice", final, 1, nil, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("manual save: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, testNow); err != nil || updated {
+	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, nil, testNow); err != nil || updated {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
 	}
 	target1500 := 1500
@@ -920,14 +920,15 @@ func TestWriteAnnotationsRoundTripOutsideTheContent(t *testing.T) {
 		t.Fatalf("none read back as nouns %v candidates %+v", cleared.ContentNouns, cleared.ReplacementCandidates)
 	}
 
-	// A manual save touches neither column (POST-80): stale spans are the browser's to drop.
+	// A manual save that took nothing touches neither column (POST-80): stale spans are the
+	// browser's to drop.
 	hand := seedPost(t, s, "saved-by-hand", "alice", testNow)
 	if updated, err := s.UpdateGeneratedContent(ctx, hand.Slug, hand.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || !updated {
 		t.Fatalf("write: updated=%v err=%v", updated, err)
 	}
 	edited := content
 	edited.Title = "성수동 카페 투어"
-	if saved, err := s.SaveContent(ctx, hand.Slug, hand.UserID, edited, 1, testNow); err != nil || !saved {
+	if saved, err := s.SaveContent(ctx, hand.Slug, hand.UserID, edited, 1, nil, testNow); err != nil || !saved {
 		t.Fatalf("manual save: saved=%v err=%v", saved, err)
 	}
 	afterSave, err := s.GetPost(ctx, hand.Slug)
@@ -936,5 +937,72 @@ func TestWriteAnnotationsRoundTripOutsideTheContent(t *testing.T) {
 	}
 	if afterSave.Content == nil || afterSave.Content.Title != edited.Title || !reflect.DeepEqual(afterSave.ContentNouns, annotations.Nouns) || !reflect.DeepEqual(afterSave.ReplacementCandidates, wantCandidates) {
 		t.Fatalf("a manual save moved nouns %v candidates %+v", afterSave.ContentNouns, afterSave.ReplacementCandidates)
+	}
+}
+
+// POST-79: a save that took candidates stores what is left in the same statement as the content;
+// one that took none keeps the column, and a stale revision writes neither.
+func TestSaveContentSpendsCandidatesInTheSameWrite(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStoreWithHandle(t)
+	p := seedPost(t, s, "spent", "alice", testNow)
+	content := post.PostContent{
+		Title: "비 온 뒤의 제주", Tags: []string{"제주 산책"},
+		Blocks: []post.Block{{Type: post.BlockText, Content: "비가 그치기를 기다렸다."}},
+	}
+	a := post.ReplacementCandidate{Surface: post.ReplacementSurfaceTitle, Index: 0, Source: "제주", Phrases: []string{"제주도"}}
+	b := post.ReplacementCandidate{Surface: post.ReplacementSurfaceTag, Index: 0, Source: "산책", Phrases: []string{"걷기"}}
+	c := post.ReplacementCandidate{Surface: post.ReplacementSurfaceBody, Index: 0, Source: "기다렸다", Phrases: []string{"기다리고 있었다"}}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, post.WriteAnnotations{Candidates: []post.ReplacementCandidate{a, b, c}}, testNow); err != nil || !updated {
+		t.Fatalf("write: updated=%v err=%v", updated, err)
+	}
+	read := func() post.Post {
+		t.Helper()
+		got, err := s.GetPost(ctx, p.Slug)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+
+	edited := content
+	edited.Title = "비 온 뒤의 제주도"
+	left := []post.ReplacementCandidate{b}
+	if saved, err := s.SaveContent(ctx, p.Slug, p.UserID, edited, 1, &left, testNow); err != nil || !saved {
+		t.Fatalf("take: saved=%v err=%v", saved, err)
+	}
+	if got := read(); got.ContentRevision != 2 || !reflect.DeepEqual(got.ReplacementCandidates, left) || got.Content.Title != edited.Title {
+		t.Fatalf("after the take: revision %d, candidates %+v", got.ContentRevision, got.ReplacementCandidates)
+	}
+
+	edited.Title = "비 온 뒤의 제주도 산책"
+	if saved, err := s.SaveContent(ctx, p.Slug, p.UserID, edited, 2, nil, testNow); err != nil || !saved {
+		t.Fatalf("plain save: saved=%v err=%v", saved, err)
+	}
+	if got := read(); !reflect.DeepEqual(got.ReplacementCandidates, left) {
+		t.Fatalf("a save with no takes changed the list: %+v", got.ReplacementCandidates)
+	}
+
+	none := []post.ReplacementCandidate{}
+	if saved, err := s.SaveContent(ctx, p.Slug, p.UserID, edited, 2, &none, testNow); err != nil || saved {
+		t.Fatalf("stale take: saved=%v err=%v", saved, err)
+	}
+	if got := read(); !reflect.DeepEqual(got.ReplacementCandidates, left) {
+		t.Fatalf("a stale take changed the list: %+v", got.ReplacementCandidates)
+	}
+
+	edited.Title = "비 온 뒤의 제주도 걷기"
+	if saved, err := s.SaveContent(ctx, p.Slug, p.UserID, edited, 3, &none, testNow); err != nil || !saved {
+		t.Fatalf("last take: saved=%v err=%v", saved, err)
+	}
+	if got := read(); got.ReplacementCandidates != nil {
+		t.Fatalf("an emptied list read back as %+v", got.ReplacementCandidates)
+	}
+	var stored sql.NullString
+	if err := handle.Reader.QueryRow("SELECT replacement_candidates FROM posts WHERE slug = ?", p.Slug).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored.Valid {
+		t.Fatalf("an emptied list is stored as %q, want NULL", stored.String)
 	}
 }

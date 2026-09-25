@@ -256,7 +256,10 @@ type Storage interface {
 // ContentStore is the progressive editor capability. It is separated from the base
 // drafting store so upload/sweeper collaborators do not acquire unrelated methods.
 type ContentStore interface {
-	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error)
+	// SaveContent writes the content and, when candidates is non-nil, the replacement candidates
+	// left after the save's takes (POST-79), in the same guarded statement; nil keeps the stored
+	// list, and an empty one is stored as NULL.
+	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, candidates *[]ReplacementCandidate, updatedAt time.Time) (bool, error)
 	// SaveGenerationOptions writes all five members in one guarded statement; the ticks arrive
 	// normalized, an empty set and a "" field are stored as NULL.
 	SaveGenerationOptions(ctx context.Context, slug, userID string, set GenerationOptionsSet, updatedAt time.Time) (bool, error)
