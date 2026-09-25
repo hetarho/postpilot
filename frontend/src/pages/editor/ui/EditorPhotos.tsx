@@ -1,4 +1,4 @@
-import type { PostDraft } from '@/entities/post'
+import { isPublished, type PostDraft } from '@/entities/post'
 import {
   PhotoDropZone,
   PhotoPicker,
@@ -13,13 +13,13 @@ import { AppFailureMessage, Notice } from '@/shared/ui'
 interface EditorPhotosProps {
   post: PostDraft | undefined
   ensureSlug: () => Promise<string>
-  /** A published post: its photos and clips are shown, and none is added or deleted (POST-86). */
-  locked?: boolean
 }
 
-/** The editor's photo slot: pick (or drop), watch them convert and upload, delete. */
-export function EditorPhotos({ post, ensureSlug, locked = false }: EditorPhotosProps) {
+/** The editor's photo slot: pick (or drop), watch them convert and upload, delete. A published
+ *  post's photos and clips are shown, and none is added or deleted (POST-86). */
+export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
   const slug = post?.slug
+  const published = post ? isPublished(post) : false
   const images = post?.images ?? []
   const videos = post?.videos ?? []
   const upload = useUploadPhotos({
@@ -40,13 +40,13 @@ export function EditorPhotos({ post, ensureSlug, locked = false }: EditorPhotosP
   return (
     <PhotoDropZone
       onFiles={(files) => void upload.addFiles(files)}
-      disabled={locked || upload.creatingPost}
+      disabled={published || upload.creatingPost}
     >
       <div data-slot="photos" className="mt-5 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <PhotoPicker
             onFiles={(files) => void upload.addFiles(files)}
-            disabled={locked || upload.creatingPost}
+            disabled={published || upload.creatingPost}
           />
           <UploadProgress
             items={upload.items}
@@ -72,7 +72,7 @@ export function EditorPhotos({ post, ensureSlug, locked = false }: EditorPhotosP
           deleteFailure={deleteFailure}
           onRetry={upload.retry}
           onDismiss={upload.dismiss}
-          readOnly={locked}
+          readOnly={published}
         />
         <SkippedList items={upload.items} onDismiss={upload.dismiss} />
       </div>

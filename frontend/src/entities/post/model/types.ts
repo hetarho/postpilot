@@ -24,7 +24,10 @@ export function isPostStatus(value: unknown): value is PostStatus {
 }
 
 /** The one question every published-post lock asks (POST-86): a published post takes no write
- *  but its address and the delete, so each screen that offers one reads this, not the literal. */
+ *  but its address and the delete, so each screen that offers one reads this, not the literal.
+ *  It is asked at the leaf: every component that holds the post asks it itself, and a control
+ *  that holds no post takes a generic `disabled` / `readOnly` from the nearest one that does. No
+ *  component threads a lock of its own down the tree. */
 export function isPublished(post: { status: string }): boolean {
   return post.status === 'published'
 }

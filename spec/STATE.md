@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T367 | The autosave owns the published lock, and every control reads the lock from the post it holds | ARCH | T355 T365 T366 | todo |
 | T368 | The editor page suites pin behavior, not wiring | ARCH | T355 T356 T363 T365 T367 | todo |
 | T370 | Quality reads the post it needs and nothing more, and TopNoun is gone | ARCH | T357 T364 | todo |
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
@@ -62,9 +61,11 @@
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T367 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T368 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T367 done; the autosave decides the published lock and owns ①'s text (a locked refusal takes the text back to the screen); DraftEditor has no lock masking and every editor component reads isPublished(post) itself; FE gates pass (p42)
+- 260925 T367 claimed (p42)
 - 260925 T366 done; the draft queue holds its voice, 템플릿 and target-language assignments as one record each, walked by one channel list; SendDraft takes one request and the handle one assign(channel, value); FE gates pass (p42)
 - 260925 T366 claimed (p42)
 - 260925 T365 done; the generation gates take one input whose members are all required; /ai-models/compare now refuses a published post with the lock's sentence; FE gates pass (p42)
@@ -83,5 +84,3 @@
 - 260925 T388 claimed (mw); T387 committed as ac3953ae; three-environment guides, NVIDIA candidate packaging and isolated diagnostics only; production GPU activation remains gated
 - 260925 T387 done (mw): CPU worker-only production dispatch, separate-process colocated/remote release and capacity preflight; parity, restart/reclaim/cancel/cleanup, API image, 28 release cases and all CI gates pass; T388 next
 - 260925 T387 claimed (mw); T386 committed as 4de3ce80; separate-process CPU release fixtures, capacity preflight and production worker-only dispatch
-- 260925 T386 done (mw): explicit private CPU/remote layouts, independent image pins, drain and version-aware env/config rollback; fixture failures, real image contracts and all CI gates pass; T387 next
-- 260925 T386 claimed (mw); T385 committed as 305ccc72; explicit deployment topology, private worker configuration and compatible image rollout/recovery only

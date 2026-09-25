@@ -1,12 +1,16 @@
-import { useLayoutEffect, useEffect, useRef, useState } from 'react'
-import { useSavePostDraft } from '@/entities/post'
+import { useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react'
+import { isPublished, useSavePostDraft, type PostStatus } from '@/entities/post'
 import { appFailureFromConnect, contentLanguageToProto, type ContentLanguage } from '@/shared/api'
 import {
   attachDraftQueue,
+  mergeAnswers,
+  peekPendingDraft,
   type DraftQueueHandle,
   type SaveState,
   type TemplateAnswerDraft,
 } from './draft-queue'
+
+const NO_ANSWERS: readonly TemplateAnswerDraft[] = []
 
 export interface UseAutosaveArgs {
   /** The post as the server last reported it, or undefined for a draft with no slug yet.
@@ -16,18 +20,17 @@ export interface UseAutosaveArgs {
         slug: string
         title: string
         memo: string
+        /** Decides the published lock (POST-86): the autosave reads it here, and nowhere else. */
+        status: PostStatus
         voice: { id: string }
         template: { id: string }
         targetLanguage: ContentLanguage
         templateAnswers: TemplateAnswerDraft[]
       }
     | undefined
-  /** What is in the inputs right now. */
-  title: string
-  memo: string
-  /** The answers to the selected template's data fields, in the order ① renders them. They ride
-   *  the memo's debounce because they are the same input (POST-62). */
-  answers: TemplateAnswerDraft[]
+  /** The selected template's fields over these answers, in ①'s order; the draft carries exactly
+   *  this (POST-62). Keep it stable per template, since it is a memo dependency. */
+  answerPatch: (answers: readonly TemplateAnswerDraft[]) => TemplateAnswerDraft[]
   /** The voice a draft with no post yet will be created in. Once the post exists its
    *  assignment changes only through `reassign` — never by this value moving — so a stale
    *  server value re-rendering the editor cannot undo a choice still in flight. */
@@ -41,22 +44,19 @@ export interface UseAutosaveArgs {
   onMinted?: (slug: string) => void
 }
 
-/** Saves the draft a beat after the user stops typing (PRD F-2 — no save button).
- *
- *  The hook is only the React end of it: the debounce, the retries and the in-flight
- *  bookkeeping live in the per-post queue (`draft-queue.ts`), which outlives this
- *  component on template. */
-export function useAutosave({
-  post,
-  title,
-  memo,
-  answers,
-  voiceId,
-  templateId,
-  targetLanguage,
-  onMinted,
-}: UseAutosaveArgs): {
+/** ①'s text as the autosave holds it, and the draft's save controls. */
+export interface Autosave {
   state: SaveState
+  /** The text ① shows: the user's, or the server's while the post is published. */
+  title: string
+  memo: string
+  /** The selected template's fields' answers, as the draft carries them (POST-62). */
+  answers: TemplateAnswerDraft[]
+  /** Each does nothing while the post is published. `setAnswers` takes ①'s fields as the user
+   *  left them, a whole patch by label. */
+  setTitle: (title: string) => void
+  setMemo: (memo: string) => void
+  setAnswers: (answers: TemplateAnswerDraft[]) => void
   /** The post's slug, creating the post first if it has none yet (see
    *  `DraftQueueHandle.mint`). For anything that needs a post to attach to — photos. */
   ensureSlug: () => Promise<string>
@@ -70,8 +70,49 @@ export function useAutosave({
    *  title save still in flight cannot carry the old assignment over a newer selection. */
   assignTemplate: (templateId: string) => Promise<void>
   assignTargetLanguage: (language: ContentLanguage) => Promise<void>
-} {
+}
+
+/** Saves the draft a beat after the user stops typing (PRD F-2 — no save button), and owns ①'s
+ *  text while it does.
+ *
+ *  The hook is only the React end of it: the debounce, the retries and the in-flight
+ *  bookkeeping live in the per-post queue (`draft-queue.ts`), which outlives this
+ *  component on template.
+ *
+ *  It decides the published lock (POST-86) itself: while the post is published it queues
+ *  nothing, shows the server's text and ignores edits. A save refused as published takes the
+ *  text back all the way to the screen, so nothing the lock refused is shown or queued again,
+ *  and a post that reopens saves again from the server's values. */
+export function useAutosave({
+  post,
+  answerPatch,
+  voiceId,
+  templateId,
+  targetLanguage,
+  onMinted,
+}: UseAutosaveArgs): Autosave {
   const slug = post?.slug
+  const locked = post ? isPublished(post) : false
+  // Text still queued for this post outranks what the server reported: it is what the
+  // previous editor was in the middle of saving when the mint moved the URL, so it is
+  // newer by exactly the characters typed during that round trip.
+  const [local, setLocal] = useState(() => {
+    const opening = post ? (peekPendingDraft(post.slug) ?? post) : undefined
+    return {
+      title: opening?.title ?? '',
+      memo: opening?.memo ?? '',
+      edits: NO_ANSWERS as readonly TemplateAnswerDraft[],
+    }
+  })
+  const stored = post?.templateAnswers
+  // The stored answers with the local edits laid over them; the server's alone while locked.
+  const source = useMemo(
+    () => (locked ? (stored ?? NO_ANSWERS) : mergeAnswers(stored ?? NO_ANSWERS, local.edits)),
+    [locked, stored, local.edits],
+  )
+  const answers = useMemo(() => answerPatch(source), [answerPatch, source])
+  const title = locked && post ? post.title : local.title
+  const memo = locked && post ? post.memo : local.memo
   const saveDraft = useSavePostDraft()
   const [state, setState] = useState<SaveState>('idle')
   const queueRef = useRef<DraftQueueHandle | undefined>(undefined)
@@ -81,7 +122,6 @@ export function useAutosave({
   const voiceRef = useRef(voiceId)
   const templateRef = useRef(templateId)
   const targetLanguageRef = useRef(targetLanguage)
-  const answersRef = useRef(answers)
 
   // Layout effects throughout, not passive ones. A passive effect runs after paint and can
   // be deferred past a `pagehide` or a `visibilitychange`, and the keystroke it had not
@@ -93,7 +133,6 @@ export function useAutosave({
     voiceRef.current = voiceId
     templateRef.current = templateId
     targetLanguageRef.current = targetLanguage
-    answersRef.current = answers
   })
 
   // Keyed by the slug alone, not by the post object: every successful save reseeds the
@@ -138,6 +177,12 @@ export function useAutosave({
       retry: (cause) => appFailureFromConnect(cause).reason !== 'POST_PUBLISHED_LOCKED',
       onState: setState,
       onMinted: (slug) => onMintedRef.current?.(slug),
+      // The post as it stands when the refusal lands is the pre-refetch one, whose title and memo
+      // are the server's: a publish changes neither.
+      onTakenBack: () => {
+        const current = postRef.current
+        setLocal({ title: current?.title ?? '', memo: current?.memo ?? '', edits: NO_ANSWERS })
+      },
     })
     queueRef.current = handle
     setState(handle.state())
@@ -154,10 +199,11 @@ export function useAutosave({
   // Declared after the attach above, so the queue exists by the time the first text
   // arrives.
   // The answers are compared by value, so a new array with the same contents on every render
-  // costs nothing but a comparison.
+  // costs nothing but a comparison. A published post queues nothing at all.
   useLayoutEffect(() => {
+    if (locked) return
     queueRef.current?.queue({ title, memo, answers })
-  }, [title, memo, answers])
+  }, [locked, title, memo, answers])
 
   // Only a draft with no post yet follows the picker (see `UseAutosaveArgs.voiceId`).
   useLayoutEffect(() => {
@@ -189,20 +235,41 @@ export function useAutosave({
     }
   }, [])
 
+  // A resolve means "the server holds it" in the queue's contract, so a locked assignment
+  // rejects rather than resolving without sending. No screen offers one: the controls are off.
+  const refuseLocked = () => Promise.reject(new Error('post is published'))
   return {
     state,
+    title,
+    memo,
+    answers,
+    setTitle: (next) => {
+      if (!locked) setLocal((current) => ({ ...current, title: next }))
+    },
+    setMemo: (next) => {
+      if (!locked) setLocal((current) => ({ ...current, memo: next }))
+    },
+    setAnswers: (next) => {
+      if (!locked) setLocal((current) => ({ ...current, edits: next }))
+    },
     ensureSlug: () =>
       queueRef.current?.mint() ?? Promise.reject(new Error('editor is not attached to a draft')),
     flush: () =>
       queueRef.current?.flush() ?? Promise.reject(new Error('editor is not attached to a draft')),
     reassign: (voiceId) =>
-      queueRef.current?.assign('voiceId', voiceId) ??
-      Promise.reject(new Error('editor is not attached to a draft')),
+      locked
+        ? refuseLocked()
+        : (queueRef.current?.assign('voiceId', voiceId) ??
+          Promise.reject(new Error('editor is not attached to a draft'))),
     assignTemplate: (templateId) =>
-      queueRef.current?.assign('templateId', templateId) ??
-      Promise.reject(new Error('editor is not attached to a draft')),
+      locked
+        ? refuseLocked()
+        : (queueRef.current?.assign('templateId', templateId) ??
+          Promise.reject(new Error('editor is not attached to a draft'))),
     assignTargetLanguage: (language) =>
-      queueRef.current?.assign('targetLanguage', language) ??
-      Promise.reject(new Error('editor is not attached to a draft')),
+      locked
+        ? refuseLocked()
+        : (queueRef.current?.assign('targetLanguage', language) ??
+          Promise.reject(new Error('editor is not attached to a draft'))),
   }
 }

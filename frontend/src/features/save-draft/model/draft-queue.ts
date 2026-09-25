@@ -203,6 +203,8 @@ interface Queue {
   retry: (cause: unknown) => boolean
   listener: ((state: SaveState) => void) | undefined
   onMinted: ((slug: string) => void) | undefined
+  /** Told when a refused save took the text back, so the attached editor can drop it too. */
+  onTakenBack: (() => void) | undefined
   /** Callers of `mint` waiting for the first save to land. On the queue, not the handle,
    *  so they survive the editor swap the mint itself causes. */
   mintWaiters: MintWaiter[]
@@ -259,9 +261,9 @@ function answersSettled(held: TemplateAnswerDraft[], saved: TemplateAnswerDraft[
 /** The baseline after a save: what the server held, with what this save carried laid over it.
  *  Replacing it outright would drop the labels this save did not carry, and the editor would
  *  then re-send them the next time its template made them visible again. */
-function mergeAnswers(
-  saved: TemplateAnswerDraft[],
-  sent: TemplateAnswerDraft[],
+export function mergeAnswers(
+  saved: readonly TemplateAnswerDraft[],
+  sent: readonly TemplateAnswerDraft[],
 ): TemplateAnswerDraft[] {
   const merged = saved.map((answer) => ({ ...answer }))
   for (const answer of sent) {
@@ -478,6 +480,9 @@ async function run(queue: Queue): Promise<void> {
       for (const channel of CHANNELS) takeBack(queue, channel, cause)
       clearTimers(queue)
       publish(queue)
+      // The text on screen is taken back with the queue's, so the editor never shows — or queues
+      // again — what the server refused.
+      queue.onTakenBack?.()
       rejectFlushes(queue, cause)
       collect(queue)
       return
@@ -534,6 +539,8 @@ export interface DraftQueueOptions extends Assignments {
   retry?: (cause: unknown) => boolean
   onState: (state: SaveState) => void
   onMinted: (slug: string) => void
+  /** Called once when a save refused as an answer (`retry` false) took the text back. */
+  onTakenBack?: () => void
 }
 
 function initialAssignment<K extends AssignmentChannel>(
@@ -578,6 +585,7 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
       retry: alwaysRetry,
       listener: undefined,
       onMinted: undefined,
+      onTakenBack: undefined,
       mintWaiters: [],
       flushWaiters: [],
     }
@@ -592,6 +600,7 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
   attached.retry = options.retry ?? alwaysRetry
   attached.listener = options.onState
   attached.onMinted = options.onMinted
+  attached.onTakenBack = options.onTakenBack
 
   return {
     state: () => stateOf(attached),
@@ -640,6 +649,7 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
     release: () => {
       attached.listener = undefined
       attached.onMinted = undefined
+      attached.onTakenBack = undefined
       collect(attached)
     },
 

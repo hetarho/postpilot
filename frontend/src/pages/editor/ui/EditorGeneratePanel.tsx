@@ -19,7 +19,6 @@ export function EditorGeneratePanel({
   answerFields,
   ensureSlug,
   job,
-  locked = false,
 }: {
   post: PostDraft
   ownerId: string
@@ -28,8 +27,6 @@ export function EditorGeneratePanel({
   answerFields: ReactNode
   ensureSlug: () => Promise<string>
   job?: GenerationJob
-  /** A published post: its material is shown and nothing in it is changed (POST-86). */
-  locked?: boolean
 }) {
   const { t } = useTranslation('posts')
   return (
@@ -37,7 +34,7 @@ export function EditorGeneratePanel({
       {titleField}
       {memoField}
       {answerFields}
-      <EditorPhotos post={post} ensureSlug={ensureSlug} locked={locked} />
+      <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 
       {post.pendingExperimentId && (!job || isTerminal(job)) && (

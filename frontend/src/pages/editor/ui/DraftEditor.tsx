@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { clsx } from 'clsx'
@@ -8,7 +8,7 @@ import { useSession } from '@/entities/session'
 import { useTemplates } from '@/entities/template'
 import { discardContentQueue, useCaretHandoff } from '@/features/edit-post-content'
 import { DeletePostButton } from '@/features/delete-post'
-import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
+import { discardDraftQueue, useAutosave } from '@/features/save-draft'
 import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
 import {
   TemplateAnswerFields,
@@ -62,69 +62,21 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const caretFields = useMemo(() => ({ title: titleRef, memo: memoRef }), [])
   const caret = useCaretHandoff(post?.slug, caretFields)
 
-  // Text still queued for this post outranks what the server reported: it is what the
-  // previous editor was in the middle of saving when the mint moved the URL, so it is
-  // newer by exactly the characters typed during that round trip.
-  const opening = post
-    ? (peekPendingDraft(post.slug) ?? { title: post.title, memo: post.memo })
-    : { title: '', memo: '' }
-  const [title, setTitle] = useState(opening.title)
-  const [memo, setMemo] = useState(opening.memo)
-
   const assignments = useDraftAssignments(post, defaultVoiceId)
   const { voiceId, templateId, targetLanguage } = assignments
 
-  // The template's data fields, as ① renders them. They are derived from the SELECTED template's
-  // body and the post's stored answers, with the local edits laid over the top — the queue owns
-  // durability, so this state only has to survive between keystrokes (POST-62).
+  // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
+  // fields over it (POST-62).
   const { templates } = useTemplates(ownerId)
   const selectedTemplate = templates.find((candidate) => candidate.id === templateId)
-  const [answerEdits, setAnswerEdits] = useState<PostTemplateAnswer[]>([])
-  const templateAnswers = post?.templateAnswers
-  const fields = useMemo(() => {
-    const merged = [...(templateAnswers ?? [])]
-    for (const edit of answerEdits) {
-      const at = merged.findIndex((answer) => answer.label === edit.label)
-      if (at === -1) merged.push(edit)
-      else merged[at] = edit
-    }
-    return answerFields(selectedTemplate, merged)
-  }, [selectedTemplate, templateAnswers, answerEdits])
-  // A stable identity per content, because the queue compares drafts by value and `useAutosave`
-  // holds this in a dependency array.
-  const answers = useMemo(() => toAnswerPatch(fields), [fields])
-
-  // A published post takes no write but its address and the delete (POST-86). While it is locked
-  // ① renders the server's material, and the server's material is also what the autosave is
-  // handed: the local state may still hold text the lock refused, and every refetch gives the
-  // answers a new identity, which would queue that text again. The server's text is what the
-  // queue already holds, so the lock queues nothing.
-  const locked = post ? isPublished(post) : false
-  const lockedFields = useMemo(
-    () => (locked && post ? answerFields(selectedTemplate, post.templateAnswers) : undefined),
-    [locked, post, selectedTemplate],
+  const answerPatch = useCallback(
+    (answers: readonly PostTemplateAnswer[]) =>
+      toAnswerPatch(answerFields(selectedTemplate, answers)),
+    [selectedTemplate],
   )
-  const lockedAnswers = useMemo(() => lockedFields && toAnswerPatch(lockedFields), [lockedFields])
-  const shownTitle = locked && post ? post.title : title
-  const shownMemo = locked && post ? post.memo : memo
-  // Reopening (clearing the URL: `published → finalized`) starts the fields again from the
-  // server's, not from text the lock refused. Adjusted during render, as `useSaveStatus` does,
-  // so no frame shows the refused text.
-  const [wasLocked, setWasLocked] = useState(locked)
-  if (wasLocked !== locked) {
-    setWasLocked(locked)
-    if (wasLocked && post) {
-      setTitle(post.title)
-      setMemo(post.memo)
-      setAnswerEdits([])
-    }
-  }
-
   const autosave = useAutosave({
     post,
-    title: shownTitle,
-    memo: shownMemo,
-    answers: lockedAnswers ?? answers,
+    answerPatch,
     voiceId,
     templateId,
     targetLanguage,
@@ -135,6 +87,12 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true })
     },
   })
+  // The patch carries every field the template declares, so reading it back gives the same fields.
+  const fields = useMemo(
+    () => answerFields(selectedTemplate, autosave.answers),
+    [selectedTemplate, autosave.answers],
+  )
+  const published = post ? isPublished(post) : false
 
   // The durable job is watched HERE, not inside the step panels: the page-top status region
   // reports it and the panels act on it, and one poll has to serve both ([I5]).
@@ -158,21 +116,28 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
 
   const titleField = (
     <TitleField
-      value={shownTitle}
-      onChange={setTitle}
+      value={autosave.title}
+      onChange={autosave.setTitle}
       fieldRef={titleRef}
       nextRef={memoRef}
-      readOnly={locked}
+      readOnly={published}
     />
   )
   const memoField = (
-    <MemoField value={shownMemo} onChange={setMemo} fieldRef={memoRef} readOnly={locked} />
+    <MemoField
+      value={autosave.memo}
+      onChange={autosave.setMemo}
+      fieldRef={memoRef}
+      readOnly={published}
+    />
   )
   const answerFieldsPanel = (
     <TemplateAnswerFields
-      fields={lockedFields ?? fields}
-      disabled={locked}
-      onChange={(label, change) => setAnswerEdits(toAnswerPatch(withAnswer(fields, label, change)))}
+      fields={fields}
+      disabled={published}
+      onChange={(label, change) =>
+        autosave.setAnswers(toAnswerPatch(withAnswer(fields, label, change)))
+      }
     />
   )
   const dockHeader = (
@@ -194,7 +159,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       }}
       refusal={briefRefusal}
       onBriefClosed={() => setBriefRefusal(undefined)}
-      locked={locked}
     />
   )
 
@@ -297,11 +261,10 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           dockHeader={dockHeader}
           onOpenBrief={openBriefFor}
           targetLength={brief.targetLength}
-          onTitleFinalized={setTitle}
+          onTitleFinalized={autosave.setTitle}
           beforeStart={autosave.flush}
           ensureSlug={autosave.ensureSlug}
           jobView={jobView}
-          locked={locked}
         />
       ) : (
         <>

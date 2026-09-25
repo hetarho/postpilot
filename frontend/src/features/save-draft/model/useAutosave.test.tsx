@@ -3,28 +3,30 @@ import { act, renderHook } from '@testing-library/react'
 import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
 import { type FakeDraftSave, type FakePostsOptions, createFakePostsTransport } from '@/test/posts'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { discardDraftQueues } from './draft-queue'
+import type { PostStatus } from '@/entities/post'
+import { discardDraftQueues, type TemplateAnswerDraft } from './draft-queue'
 import { useAutosave } from './useAutosave'
 
-interface Typed {
+/** One identity for every render, as `DraftEditor`'s memoized patch has: these cases are about the
+ *  text pipeline, and the data fields have their own file. */
+const NO_ANSWERS: TemplateAnswerDraft[] = []
+const NO_TEMPLATE = () => NO_ANSWERS
+
+interface Row {
+  slug: string
   title: string
   memo: string
+  status: PostStatus
+  voice: { id: string }
+  targetLanguage: 'ko' | 'en'
 }
 
-/** One identity for every render, as `DraftEditor`'s memoized answers have: a fresh array per
- *  render would re-run the queue effect on renders where nothing was typed. */
-const NO_ANSWERS: [] = []
+/** The post as the hook is handed it: every post here is 없음, whose half of the queue has its own
+ *  file. A fresh answers array each time, as `usePost` maps one per read. */
+const opened = (row: Row) => ({ ...row, template: { id: '' }, templateAnswers: [] })
 
 function setup(
-  post:
-    | {
-        slug: string
-        title: string
-        memo: string
-        voice: { id: string }
-        targetLanguage: 'ko' | 'en'
-      }
-    | undefined,
+  row: Row | undefined,
   backend: FakePostsOptions = {},
   initialTarget: 'ko' | 'en' = 'ko',
 ) {
@@ -32,28 +34,26 @@ function setup(
   const draftSaves: FakeDraftSave[] = []
   const transport = createFakePostsTransport({ calls, draftSaves, ...backend })
   const view = renderHook(
-    ({ title, memo }: Typed) =>
-      // These cases are about the text pipeline, so every post here is 없음. The 템플릿 half of
-      // the queue has its own file.
+    ({ post }: { post: ReturnType<typeof opened> | undefined }) =>
       useAutosave({
-        post: post && { ...post, template: { id: '' }, templateAnswers: [] },
-        title,
-        memo,
-        // These cases are about the text pipeline; the data fields have their own file.
-        answers: NO_ANSWERS,
-        voiceId: post?.voice.id ?? 'voice-default',
+        post,
+        answerPatch: NO_TEMPLATE,
+        voiceId: row?.voice.id ?? 'voice-default',
         templateId: '',
-        targetLanguage: post?.targetLanguage ?? initialTarget,
+        targetLanguage: row?.targetLanguage ?? initialTarget,
       }),
     {
       wrapper: withProviders(transport, createTestQueryClient()),
-      initialProps: { title: post?.title ?? '', memo: post?.memo ?? '', answers: [] },
+      initialProps: { post: row && opened(row) },
     },
   )
   return {
     ...view,
     draftSaves,
     saves: () => calls.filter((call) => call === 'SavePostDraft'),
+    /** A refetch: the same post read again, or with the status the server now reports. */
+    refetch: (status: PostStatus = row?.status ?? 'draft') =>
+      act(() => view.rerender({ post: row && opened({ ...row, status }) })),
   }
 }
 
@@ -68,6 +68,7 @@ const EXISTING = {
   slug: '20260820-jeju',
   title: '제주',
   memo: '첫날',
+  status: 'finalized' as const,
   voice: { id: 'voice-default', name: '기본 말투' },
   targetLanguage: 'ko' as const,
 }
@@ -91,9 +92,9 @@ afterEach(() => {
 
 describe('useAutosave', () => {
   it('sends a concrete locale-derived target on the first create request', async () => {
-    const { rerender, draftSaves } = setup(undefined, {}, 'en')
+    const { result, draftSaves } = setup(undefined, {}, 'en')
 
-    act(() => rerender({ title: 'First post', memo: '', answers: [] }))
+    act(() => result.current.setTitle('First post'))
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
     expect(draftSaves[0]).toMatchObject({
@@ -115,9 +116,9 @@ describe('useAutosave', () => {
   })
 
   it('saves a beat after the typing stops', async () => {
-    const { rerender, saves, result } = setup(EXISTING)
+    const { saves, result } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     expect(result.current.state).toBe('dirty')
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
@@ -130,9 +131,9 @@ describe('useAutosave', () => {
     ['the page is hidden', hidePage],
     ['the page is unloading', () => window.dispatchEvent(new Event('pagehide'))],
   ])('flushes the pending save when %s', async (_name, leave) => {
-    const { rerender, saves } = setup(EXISTING)
+    const { result, saves } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     await act(async () => {
       leave()
       await vi.advanceTimersByTimeAsync(0)
@@ -142,9 +143,9 @@ describe('useAutosave', () => {
   })
 
   it('flushes the pending save when the editor unmounts', async () => {
-    const { rerender, unmount, saves } = setup(EXISTING)
+    const { result, unmount, saves } = setup(EXISTING)
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     await act(async () => {
       unmount()
       await vi.advanceTimersByTimeAsync(0)
@@ -154,7 +155,7 @@ describe('useAutosave', () => {
   })
 
   it('reassigns through the queue and leaves later text saves without a voice', async () => {
-    const { result, rerender, draftSaves } = setup(EXISTING, {
+    const { result, draftSaves } = setup(EXISTING, {
       posts: [EXISTING],
       voices: [
         { id: 'voice-default', name: '기본 말투' },
@@ -173,7 +174,7 @@ describe('useAutosave', () => {
       },
     ])
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     await tick(AUTOSAVE_DEBOUNCE_MS)
     expect(draftSaves[1]).toEqual({
       slug: EXISTING.slug,
@@ -203,9 +204,9 @@ describe('useAutosave', () => {
   // A 200 carrying no post is not a confirmation. Trusting it would mark the text saved
   // and, for a draft with no slug yet, leave the next edit creating a second post.
   it('treats a response without a post as a failed save', async () => {
-    const { rerender, result } = setup(EXISTING, { saveReturnsNoPost: true })
+    const { result } = setup(EXISTING, { saveReturnsNoPost: true })
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
     expect(result.current.state).toBe('error')
@@ -214,12 +215,12 @@ describe('useAutosave', () => {
   // POST-86: a post published in another tab refuses every save the same way, so the text is
   // taken back rather than retried, and the line never reads 다시 시도 중 over it.
   it('takes a save refused as published back instead of retrying it', async () => {
-    const { rerender, saves, result } = setup(EXISTING, {
+    const { saves, result } = setup(EXISTING, {
       posts: [{ slug: EXISTING.slug, title: EXISTING.title, memo: EXISTING.memo }],
       publishOnDraftSave: EXISTING.slug,
     })
 
-    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    act(() => result.current.setTitle('제주 3일'))
     await tick(AUTOSAVE_DEBOUNCE_MS)
     expect(saves()).toHaveLength(1)
     expect(result.current.state).toBe('idle')
@@ -227,5 +228,65 @@ describe('useAutosave', () => {
     await tick(AUTOSAVE_RETRY_BASE_MS * 16)
     expect(saves()).toHaveLength(1)
     expect(result.current.state).toBe('idle')
+  })
+})
+
+// POST-86, review F25: the autosave decides the lock itself, from the post it is handed.
+describe('a published post', () => {
+  it('sends nothing for a published post, across edits and refetches', async () => {
+    const { result, saves, refetch } = setup({ ...EXISTING, status: 'published' })
+
+    act(() => result.current.setTitle('제주 3일'))
+    expect(result.current.title).toBe('제주')
+    refetch()
+    refetch()
+    await tick(10_000)
+    expect(saves()).toHaveLength(0)
+
+    await act(async () => {
+      await expect(result.current.assignTemplate('template-a')).rejects.toThrow()
+    })
+    expect(saves()).toHaveLength(0)
+  })
+
+  // T339's measured loop: the refused text must not come back with the refetch that reads the
+  // post published, or it is queued again.
+  it('never sends a text the lock refused a second time', async () => {
+    const { result, saves, refetch } = setup(EXISTING, {
+      posts: [EXISTING],
+      publishOnDraftSave: EXISTING.slug,
+    })
+
+    act(() => result.current.setTitle('제주 3일'))
+    await tick(AUTOSAVE_DEBOUNCE_MS)
+    expect(saves()).toHaveLength(1)
+    expect(result.current.state).toBe('idle')
+    // Taken back to the screen, not only in the queue.
+    expect(result.current.title).toBe('제주')
+
+    refetch('published')
+    refetch('published')
+    await tick(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(saves()).toHaveLength(1)
+  })
+
+  it('saves again from the server’s values once the post reopens', async () => {
+    const { result, saves, refetch } = setup(EXISTING, {
+      posts: [EXISTING],
+      publishOnDraftSave: EXISTING.slug,
+    })
+    act(() => result.current.setTitle('제주 3일'))
+    await tick(AUTOSAVE_DEBOUNCE_MS)
+    refetch('published')
+
+    refetch('finalized')
+    await tick(10_000)
+    expect(saves()).toHaveLength(1)
+    expect(result.current.title).toBe('제주')
+
+    act(() => result.current.setTitle('제주 4일'))
+    await tick(AUTOSAVE_DEBOUNCE_MS)
+    // Sent: the fake's row is still published, so it is refused again, but the editor saves.
+    expect(saves()).toHaveLength(2)
   })
 })

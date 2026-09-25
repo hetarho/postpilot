@@ -35,7 +35,6 @@ export function LifecycleSteps({
   beforeStart,
   ensureSlug,
   jobView,
-  locked,
 }: {
   post: PostDraft
   ownerId: string
@@ -56,8 +55,6 @@ export function LifecycleSteps({
   ensureSlug: () => Promise<string>
   /** The durable job, resolved by the page so the status region and these panels read one poll. */
   jobView: EditorJobView
-  /** The post is published, so ① shows its material without changing it (POST-86). */
-  locked: boolean
 }) {
   const { t } = useTranslation('posts')
   const generateRef = useRef<GenerationActionsHandle>(null)
@@ -103,7 +100,6 @@ export function LifecycleSteps({
       answerFields={answerFields}
       ensureSlug={ensureSlug}
       job={job}
-      locked={locked}
     />
   )
   const refinePanel = (

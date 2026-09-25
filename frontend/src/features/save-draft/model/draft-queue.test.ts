@@ -65,6 +65,7 @@ function attach(
     templateId?: string
     targetLanguage?: ContentLanguage
     retry?: (cause: unknown) => boolean
+    onTakenBack?: () => void
   } = {},
 ) {
   const states: SaveState[] = []
@@ -79,6 +80,7 @@ function attach(
     retry: options.retry,
     onState: (state) => states.push(state),
     onMinted: (slug) => minted.push(slug),
+    onTakenBack: options.onTakenBack,
   })
   return { handle, states, minted }
 }
@@ -626,6 +628,43 @@ function refusing(options: { errors?: Error[]; holds?: number } = {}) {
 }
 
 describe('a refusal that is an answer', () => {
+  // POST-86: the editor drops the refused text too, so it never shows or queues it again.
+  it('tells the attached editor its text was taken back', async () => {
+    const api = refusing()
+    const onTakenBack = vi.fn()
+    const { handle } = attach(api.send, {
+      slug: 'p',
+      saved: draft('제주'),
+      retry: api.retry,
+      onTakenBack,
+    })
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(onTakenBack).toHaveBeenCalledTimes(1)
+
+    // An outage is retried, never taken back.
+    const offline = refusing({ errors: [new Error('offline')] })
+    const told = vi.fn()
+    const other = attach(offline.send, {
+      slug: 'q',
+      saved: draft('부산'),
+      retry: offline.retry,
+      onTakenBack: told,
+    })
+    other.handle.queue(draft('부산 2일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS + AUTOSAVE_RETRY_BASE_MS)
+    expect(offline.sent.length).toBeGreaterThan(1)
+    expect(told).not.toHaveBeenCalled()
+
+    // A released editor is told nothing: a re-attached queue with no callback refuses quietly.
+    handle.release()
+    const again = attach(api.send, { slug: 'p', saved: draft('제주'), retry: api.retry })
+    again.handle.queue(draft('제주 4일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.sent).toHaveLength(2)
+    expect(onTakenBack).toHaveBeenCalledTimes(1)
+  })
+
   it('drops the text, reports no failure and schedules no retry', async () => {
     const api = refusing()
     const { handle, states } = attach(api.send, {

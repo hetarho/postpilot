@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import { isTerminal } from '@/entities/generation-job'
-import type { GenerationOptionsSet, PostDraft } from '@/entities/post'
+import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
@@ -37,9 +37,6 @@ export const EditorDockHeader = forwardRef<
      *  grows with every refused press. */
     refusal?: { mode: GenerationMode; count: number }
     onBriefClosed?: () => void
-    /** A published post (POST-86): every post write here is off, and none of these fields names
-     *  a reason — ① says it once, above its actions. */
-    locked?: boolean
   }
 >(function EditorDockHeader(
   {
@@ -56,10 +53,12 @@ export const EditorDockHeader = forwardRef<
     onBriefSaved,
     refusal,
     onBriefClosed,
-    locked = false,
   },
   briefRef,
 ) {
+  // Read from the post it holds: a published post (POST-86) takes no post write here, and none of
+  // these fields names a reason — ① says it once, above its actions.
+  const published = post ? isPublished(post) : false
   const jobRunning = Boolean(post?.activeJob && !isTerminal(post.activeJob))
   // Read as soon as the dock renders, so the rows are there when the brief opens; the language is
   // part of the read, since every rule text is rendered in it.
@@ -83,7 +82,7 @@ export const EditorDockHeader = forwardRef<
       videoCount={post?.videos.length ?? 0}
       refusal={refusal}
       onClose={onBriefClosed}
-      locked={locked}
+      locked={published}
       // The run options, one form saved by the brief's 저장 (POST-89), only for a saved post: a
       // draft has no slug to save against. The two numbers come from the brief's mirror, which is
       // also what 생성 sends; the other three from the post. A running job holds the numbers and
@@ -118,10 +117,10 @@ export const EditorDockHeader = forwardRef<
       ownerId={ownerId}
       value={voiceId}
       current={post?.voice}
-      blocked={locked || !post ? '' : reassignmentBlocker(post)}
+      blocked={published || !post ? '' : reassignmentBlocker(post)}
       confirm={Boolean(post)}
       onSelect={onVoiceSelect}
-      disabled={locked}
+      disabled={published}
       className="min-w-0 flex-1"
     />
   )
@@ -131,9 +130,9 @@ export const EditorDockHeader = forwardRef<
       ownerId={ownerId}
       value={templateId}
       current={post?.template}
-      jobRunning={!locked && Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+      jobRunning={!published && Boolean(post?.activeJob && !isTerminal(post.activeJob))}
       onSelect={onTemplateSelect}
-      disabled={locked}
+      disabled={published}
       className="min-w-0 flex-1"
     />
   )
