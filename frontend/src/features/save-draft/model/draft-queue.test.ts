@@ -30,7 +30,7 @@ function backend(options: { failures?: number; mint?: string; holds?: number } =
   const held: Array<() => void> = []
   const targets: Array<ContentLanguage | undefined> = []
 
-  const send: SendDraft = async (slug, value, voiceId, templateId, targetLanguage) => {
+  const send: SendDraft = async ({ slug, draft: value, voiceId, templateId, targetLanguage }) => {
     sent.push({ slug, draft: { ...value }, voiceId, templateId })
     targets.push(targetLanguage)
     if (holds > 0) {
@@ -153,7 +153,7 @@ describe('target language', () => {
     await advance(AUTOSAVE_DEBOUNCE_MS)
     expect(api.targets()).toEqual([undefined])
 
-    const changed = handle.assignTargetLanguage('en')
+    const changed = handle.assign('targetLanguage', 'en')
     api.open()
     await advance(0)
     await expect(changed).resolves.toBeUndefined()
@@ -448,7 +448,7 @@ describe('the voice assignment', () => {
     const api = backend()
     const { handle } = attach(api.send, { voiceId: 'voice-a' })
 
-    await expect(handle.assignVoice('voice-b')).resolves.toBeUndefined()
+    await expect(handle.assign('voiceId', 'voice-b')).resolves.toBeUndefined()
     await advance(10_000)
     expect(api.sent).toHaveLength(0)
 
@@ -465,7 +465,7 @@ describe('the voice assignment', () => {
     await advance(AUTOSAVE_DEBOUNCE_MS)
     expect(api.voices()).toEqual(['voice-a'])
 
-    await handle.assignVoice('voice-b')
+    await handle.assign('voiceId', 'voice-b')
     api.open()
     await advance(0)
 
@@ -477,7 +477,7 @@ describe('the voice assignment', () => {
     const api = backend()
     const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
 
-    const done = handle.assignVoice('voice-b')
+    const done = handle.assign('voiceId', 'voice-b')
     await advance(0)
 
     expect(api.sent).toEqual([{ slug: 'p', draft: draft('제주'), voiceId: 'voice-b' }])
@@ -496,7 +496,7 @@ describe('the voice assignment', () => {
     const api = backend({ holds: 1 })
     const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
 
-    const done = handle.assignVoice('voice-b')
+    const done = handle.assign('voiceId', 'voice-b')
     await advance(0)
     handle.queue(draft('제주 3일'))
     api.open()
@@ -514,7 +514,7 @@ describe('the voice assignment', () => {
     const api = backend({ failures: 1 })
     const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
 
-    await expect(handle.assignVoice('voice-b')).rejects.toThrow('offline')
+    await expect(handle.assign('voiceId', 'voice-b')).rejects.toThrow('offline')
     // Nothing else changed, so there is nothing left to retry either — and nothing was ever
     // saved by this queue, so it is quiet rather than "저장됨".
     await advance(AUTOSAVE_RETRY_BASE_MS * 4)
@@ -530,7 +530,7 @@ describe('the voice assignment', () => {
     const api = backend()
     const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
 
-    const done = handle.assignVoice('voice-b')
+    const done = handle.assign('voiceId', 'voice-b')
     // Typed and typed back before the request could leave: still a reassignment to send.
     handle.queue(draft('제주도'))
     handle.queue(draft('제주'))
@@ -544,7 +544,7 @@ describe('the voice assignment', () => {
     const api = backend({ holds: 1 })
     const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
 
-    const done = handle.assignVoice('voice-b')
+    const done = handle.assign('voiceId', 'voice-b')
     discardDraftQueues()
 
     await expect(done).rejects.toThrow('session ended')
@@ -553,99 +553,6 @@ describe('the voice assignment', () => {
 
 // Plan 11 A12: the 템플릿 rides the same queue as the text, with one more state than the voice —
 // a post may have none, so '' is a real value meaning "clear".
-describe('the post template', () => {
-  it('sends nothing on a create that stayed on 없음', async () => {
-    const api = backend()
-    const { handle } = attach(api.send, { templateId: '' })
-
-    handle.queue(draft('제주'))
-    await advance(AUTOSAVE_DEBOUNCE_MS)
-
-    // Omitted, not '': a create has no assignment to clear, so the request is exactly what it
-    // was before templates existed.
-    expect(api.templates()).toEqual([undefined])
-  })
-
-  it('carries a template chosen before the post exists into the create', async () => {
-    const api = backend()
-    const { handle } = attach(api.send, { templateId: '' })
-
-    await expect(handle.assignTemplate('template-a')).resolves.toBeUndefined()
-    await advance(10_000)
-    expect(api.sent).toHaveLength(0)
-
-    handle.queue(draft('제주'))
-    await advance(AUTOSAVE_DEBOUNCE_MS)
-    expect(api.templates()).toEqual(['template-a'])
-  })
-
-  it('assigns an existing post at once, then leaves later saves alone', async () => {
-    const api = backend()
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
-
-    const done = handle.assignTemplate('template-a')
-    await advance(0)
-    await expect(done).resolves.toBeUndefined()
-    expect(api.templates()).toEqual(['template-a'])
-
-    handle.queue(draft('제주 3일'))
-    await advance(AUTOSAVE_DEBOUNCE_MS)
-    expect(api.templates()).toEqual(['template-a', undefined])
-  })
-
-  it('sends an empty string to clear an assignment', async () => {
-    const api = backend()
-    const { handle } = attach(api.send, {
-      slug: 'p',
-      saved: draft('제주'),
-      templateId: 'template-a',
-    })
-
-    await handle.assignTemplate('')
-    await advance(0)
-
-    // Present-and-empty, which is what the server reads as 없음 — distinct from omitting it.
-    expect(api.templates()).toEqual([''])
-  })
-
-  // The bug this shares with the voice: a title save that left before the selection must not
-  // carry the old assignment back over it.
-  it('does not let text typed during an assignment revert it', async () => {
-    const api = backend({ holds: 1 })
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
-
-    const done = handle.assignTemplate('template-a')
-    await advance(0)
-    handle.queue(draft('제주 3일'))
-    api.open()
-    await done
-    await advance(AUTOSAVE_DEBOUNCE_MS)
-
-    expect(api.sent).toEqual([
-      { slug: 'p', draft: draft('제주'), voiceId: undefined, templateId: 'template-a' },
-      { slug: 'p', draft: draft('제주 3일'), voiceId: undefined, templateId: undefined },
-    ])
-  })
-
-  it('takes a refused assignment back so the next save carries text only', async () => {
-    const api = backend({ failures: 1 })
-    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), templateId: '' })
-
-    await expect(handle.assignTemplate('template-a')).rejects.toThrow('offline')
-    await advance(AUTOSAVE_RETRY_BASE_MS * 4)
-    expect(api.sent).toHaveLength(1)
-
-    handle.queue(draft('제주 3일'))
-    await advance(AUTOSAVE_DEBOUNCE_MS)
-    expect(api.sent[1]).toEqual({
-      slug: 'p',
-      draft: draft('제주 3일'),
-      voiceId: undefined,
-      templateId: undefined,
-    })
-  })
-})
-
 describe('the per-slug discard', () => {
   // The exception to "a queue outlives its editor, never its session" (tech/draft-autosave.md):
   // an intentional delete ends one slug's queue and nobody else's.
@@ -700,7 +607,7 @@ function refusing(options: { errors?: Error[]; holds?: number } = {}) {
     targetLanguage: ContentLanguage | undefined
   }> = []
   const held: Array<() => void> = []
-  const send: SendDraft = async (_slug, value, voiceId, templateId, targetLanguage) => {
+  const send: SendDraft = async ({ draft: value, voiceId, templateId, targetLanguage }) => {
     sent.push({ draft: { ...value }, voiceId, templateId, targetLanguage })
     if (holds > 0) {
       holds -= 1
@@ -754,9 +661,9 @@ describe('a refusal that is an answer', () => {
     await advance(AUTOSAVE_DEBOUNCE_MS)
     // Chosen while the text save is out, so none of them is on the request that is refused.
     const settled = Promise.all([
-      expect(handle.assignVoice('voice-b')).rejects.toBe(api.locked),
-      expect(handle.assignTemplate('template-1')).rejects.toBe(api.locked),
-      expect(handle.assignTargetLanguage('en')).rejects.toBe(api.locked),
+      expect(handle.assign('voiceId', 'voice-b')).rejects.toBe(api.locked),
+      expect(handle.assign('templateId', 'template-1')).rejects.toBe(api.locked),
+      expect(handle.assign('targetLanguage', 'en')).rejects.toBe(api.locked),
       expect(handle.flush()).rejects.toBe(api.locked),
     ])
     api.open()

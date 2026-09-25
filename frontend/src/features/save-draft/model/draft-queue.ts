@@ -5,7 +5,9 @@
 // four things at once — the text, and the voice, 템플릿 and target-language ASSIGNMENTS, each with
 // its own waiters, its own "what the server holds" baseline and its own taken-back-on-refusal
 // rule — and it re-keys itself mid-flight when the first save mints the slug. Folding that into
-// the shared machine would move post rules into `shared/lib` rather than share a machine.
+// the shared machine would move post rules into `shared/lib` rather than share a machine. The
+// three assignments share one shape, so they are one record each, walked by one channel list:
+// a new channel is a row of `RULES`, not a dozen hand-kept sites.
 // What it does share: `SaveState`, the `AUTOSAVE_*` timing and the state vocabulary.
 //
 // It lives here rather than inside the hook because the text belongs to the user, not to
@@ -45,28 +47,37 @@ export interface TemplateAnswerDraft {
   enabled: boolean
 }
 
+/** The assignments a draft is written WITH, keyed by the request's own member names. */
+export interface Assignments {
+  voiceId: string
+  templateId: string
+  targetLanguage: ContentLanguage
+}
+
+export type AssignmentChannel = keyof Assignments
+
+/** One save's request. An undefined assignment leaves the post's value alone. */
+export interface DraftRequest extends Partial<Assignments> {
+  /** Empty for a draft whose first save mints the post. */
+  slug: string
+  draft: Draft
+  /** Present on every create — a post cannot exist without a voice (spec/legacy/policy/posts.md)
+   *  — and on an existing post only while the assignment differs from what the server holds, so
+   *  an ordinary title save can never carry a stale voice over a newer one. */
+  voiceId?: string
+  /** The voice's mechanism with one more state, because a post may have none: '' clears it and
+   *  an id assigns it. On a create it is sent only when one was chosen — 없음 is the default and
+   *  the server never picks. */
+  templateId?: string
+  targetLanguage?: ContentLanguage
+}
+
 /** Performs one save and resolves with the post's slug.
  *
  *  Injected so this module knows nothing of React or of the transport. It must REJECT
  *  when the server did not confirm the post: a resolve is taken as proof the text landed,
- *  and for a draft with no slug yet, as proof the post now exists.
- *
- *  `voiceId` is the assignment to send WITH this save, or undefined to leave the post's
- *  voice alone. It is present on every create — a post cannot exist without a voice
- *  (spec/legacy/policy/posts.md) — and on an existing post only while the assignment differs from
- *  what the server holds, so an ordinary title save can never carry a stale voice over a
- *  newer one.
- *
- *  `templateId` is the same mechanism with one more state, because a post may have none:
- *  undefined leaves the assignment alone, '' clears it, and an id assigns it. On a create it
- *  is sent only when one was chosen — 없음 is the default and the server never picks. */
-export type SendDraft = (
-  slug: string,
-  draft: Draft,
-  voiceId: string | undefined,
-  templateId: string | undefined,
-  targetLanguage: ContentLanguage | undefined,
-) => Promise<string>
+ *  and for a draft with no slug yet, as proof the post now exists. */
+export type SendDraft = (request: DraftRequest) => Promise<string>
 
 export interface DraftQueueHandle {
   state: () => SaveState
@@ -85,19 +96,13 @@ export interface DraftQueueHandle {
    *  autosave has fired. Resolves once the create lands, however many retries that
    *  takes; rejects only if the session ends first. */
   mint: () => Promise<string>
-  /** Records the 템플릿 this draft is written for, '' for 없음. Same shape as `assignVoice`:
-   *  before the post exists the choice rides along with the create, and afterwards it is sent
-   *  at once so a delayed title save cannot revert a newer selection. */
-  assignTemplate: (templateId: string) => Promise<void>
-  /** Records the voice this draft is written in. For a draft with no post yet that is all
-   *  it does — the create carries it. For an existing post it is a reassignment: sent at
-   *  once, and the promise reports that one save's outcome. A refused reassignment is taken
-   *  back, so the retries that follow carry text only instead of failing forever on the
-   *  same answer. */
-  assignVoice: (voiceId: string) => Promise<void>
-  /** Records the language requested for the next full write. It is required on create and,
-   *  for an existing post, settles through this same serial queue as title and memo. */
-  assignTargetLanguage: (language: ContentLanguage) => Promise<void>
+  /** Records one assignment: the voice, the 템플릿 ('' for 없음) or the target language. For a
+   *  draft with no post yet that is all it does — the create carries it. For an existing post
+   *  it is sent at once, on its own request, so a delayed title save cannot revert a newer
+   *  choice, and the promise reports that one save's outcome. A refused assignment is taken
+   *  back, so the retries that follow carry text only instead of failing forever on the same
+   *  answer. */
+  assign: <K extends AssignmentChannel>(channel: K, value: Assignments[K]) => Promise<void>
 }
 
 interface MintWaiter {
@@ -110,16 +115,58 @@ interface FlushWaiter {
   reject: (error: Error) => void
 }
 
-interface VoiceWaiter extends FlushWaiter {
-  voiceId: string
+interface AssignmentWaiter<T> extends FlushWaiter {
+  value: T
 }
 
-interface TemplateWaiter extends FlushWaiter {
-  templateId: string
+/** One assignment: what the editor wants, what the server is known to hold, and the callers
+ *  waiting for the wanted value to land. */
+interface Assignment<T> {
+  wanted: T
+  saved: T | undefined
+  waiters: AssignmentWaiter<T>[]
 }
 
-interface TargetLanguageWaiter extends FlushWaiter {
-  targetLanguage: ContentLanguage
+type AssignmentRecords = { [K in AssignmentChannel]: Assignment<Assignments[K]> }
+
+/** What differs between the channels. `onCreate` is what a create carries; `unsaved` is what the
+ *  server holds before the post exists. */
+const RULES: {
+  [K in AssignmentChannel]: {
+    noun: string
+    onCreate: (wanted: Assignments[K]) => Assignments[K] | undefined
+    unsaved: Assignments[K] | undefined
+  }
+} = {
+  // Every create carries its voice; the server holds none until the post exists.
+  voiceId: { noun: 'voice', onCreate: (wanted) => wanted, unsaved: '' },
+  // On a create, 없음 sends nothing rather than an empty string: the create has no assignment to
+  // clear, and omitting it keeps the request identical to what it was before templates existed.
+  // On an existing post a dirty '' IS sent, because there it means "clear". '' is also what a
+  // draft with no post holds, so the rule needs no extra state.
+  templateId: { noun: 'template', onCreate: (wanted) => wanted || undefined, unsaved: '' },
+  targetLanguage: { noun: 'target language', onCreate: (wanted) => wanted, unsaved: undefined },
+}
+
+const CHANNELS = [
+  'voiceId',
+  'templateId',
+  'targetLanguage',
+] as const satisfies readonly AssignmentChannel[]
+
+// Every channel is in the list: a key of `Assignments` missing from CHANNELS fails to type here.
+const everyChannelListed: [Exclude<AssignmentChannel, (typeof CHANNELS)[number]>] extends [never]
+  ? true
+  : never = true
+void everyChannelListed
+
+/** Runs `fn` for each channel with its record, typed together — the one place the correlation
+ *  between a channel and its record's value type is asserted. */
+function each(
+  queue: Queue,
+  fn: <K extends AssignmentChannel>(channel: K, assignment: Assignment<Assignments[K]>) => void,
+): void {
+  for (const channel of CHANNELS) fn(channel, queue.assignments[channel] as never)
 }
 
 interface Queue {
@@ -134,18 +181,9 @@ interface Queue {
   sending: Draft | undefined
   /** The newest text the server is not known to hold. */
   pending: Draft | undefined
-  /** The voice the editor wants the post written in. */
-  voiceId: string
-  /** The voice the server is known to hold; empty until the post exists. */
-  savedVoiceId: string
-  /** The 템플릿 the editor wants, '' for 없음. */
-  templateId: string
-  /** The 템플릿 the server is known to hold. Empty means 없음 — which is also the value a post
-   *  starts at, so unlike the voice there is no "not known yet" state to distinguish. */
-  savedTemplateId: string
-  /** The target the editor wants and the target the server is known to hold. */
-  targetLanguage: ContentLanguage
-  savedTargetLanguage: ContentLanguage | undefined
+  /** The voice, 템플릿 and target language: each wanted value, its server baseline and its
+   *  waiters. */
+  assignments: AssignmentRecords
   /** True once a save has succeeded, so an untouched editor stays silent. */
   everSaved: boolean
   failed: boolean
@@ -169,10 +207,6 @@ interface Queue {
    *  so they survive the editor swap the mint itself causes. */
   mintWaiters: MintWaiter[]
   flushWaiters: FlushWaiter[]
-  /** Callers of `assignVoice` waiting for their reassignment to land. */
-  voiceWaiters: VoiceWaiter[]
-  templateWaiters: TemplateWaiter[]
-  targetLanguageWaiters: TargetLanguageWaiter[]
 }
 
 const queues = new Map<string, Queue>()
@@ -245,41 +279,34 @@ function wantsPost(queue: Queue): boolean {
   return !queue.slug && queue.mintWaiters.length > 0
 }
 
-/** True while the editor's assignment differs from what the server holds — a reassignment
- *  that has not landed. Like `wantsPost`, it means unchanged text is not a reason to stand
- *  down: the save still has something to carry. */
-function voiceDirty(queue: Queue): boolean {
-  return Boolean(queue.slug) && queue.voiceId !== queue.savedVoiceId
+/** True while the editor's assignment differs from what the server holds — one that has not
+ *  landed. Like `wantsPost`, it means unchanged text is not a reason to stand down: the save
+ *  still has something to carry. */
+function dirty(queue: Queue, channel: AssignmentChannel): boolean {
+  const assignment = queue.assignments[channel]
+  return Boolean(queue.slug) && assignment.wanted !== assignment.saved
 }
 
-/** What a request carries for the assignment — see `SendDraft`. */
-function voiceToSend(queue: Queue): string | undefined {
-  if (!queue.slug) return queue.voiceId
-  return voiceDirty(queue) ? queue.voiceId : undefined
+function anyDirty(queue: Queue): boolean {
+  return CHANNELS.some((channel) => dirty(queue, channel))
 }
 
-/** True while the editor's 템플릿 differs from what the server holds. */
-function templateDirty(queue: Queue): boolean {
-  return Boolean(queue.slug) && queue.templateId !== queue.savedTemplateId
+/** What a request carries for one assignment — see `DraftRequest`: the create's rule before the
+ *  post exists, and afterwards the value only while it is dirty. */
+function toSend<K extends AssignmentChannel>(queue: Queue, channel: K): Assignments[K] | undefined {
+  const assignment = queue.assignments[channel]
+  if (!queue.slug) return RULES[channel].onCreate(assignment.wanted)
+  return dirty(queue, channel) ? assignment.wanted : undefined
 }
 
-/** What a request carries for the 템플릿 — see `SendDraft`.
- *
- *  On a create, 없음 sends nothing rather than an empty string: the create has no assignment
- *  to clear, and omitting it keeps the request identical to what it was before templates
- *  existed. On an existing post a dirty '' IS sent, because there it means "clear". */
-function templateToSend(queue: Queue): string | undefined {
-  if (!queue.slug) return queue.templateId || undefined
-  return templateDirty(queue) ? queue.templateId : undefined
-}
-
-function targetLanguageDirty(queue: Queue): boolean {
-  return Boolean(queue.slug) && queue.targetLanguage !== queue.savedTargetLanguage
-}
-
-function targetLanguageToSend(queue: Queue): ContentLanguage | undefined {
-  if (!queue.slug) return queue.targetLanguage
-  return targetLanguageDirty(queue) ? queue.targetLanguage : undefined
+/** The assignments this save carries, and only those. */
+function carried(queue: Queue): Partial<Assignments> {
+  const out: Partial<Assignments> = {}
+  each(queue, (channel) => {
+    const value = toSend(queue, channel)
+    if (value !== undefined) out[channel] = value
+  })
+  return out
 }
 
 function stateOf(queue: Queue): SaveState {
@@ -307,60 +334,30 @@ function rejectFlushes(queue: Queue, cause: unknown): void {
   for (const waiter of waiters) waiter.reject(error)
 }
 
-/** Answers the reassignments that have landed. One still differing from what the server
- *  holds keeps waiting for the save that carries it — unless the editor has since chosen a
- *  third voice, in which case it will never land and says so. */
-function settleTemplateWaiters(queue: Queue): void {
-  const waiting: TemplateWaiter[] = []
-  for (const waiter of queue.templateWaiters) {
-    if (waiter.templateId === queue.savedTemplateId) waiter.resolve()
-    else if (waiter.templateId !== queue.templateId)
-      waiter.reject(new Error('template assignment superseded'))
-    else waiting.push(waiter)
-  }
-  queue.templateWaiters = waiting
+/** Answers the assignments that have landed. One still differing from what the server holds
+ *  keeps waiting for the save that carries it — unless the editor has since chosen a third
+ *  value, in which case it will never land and says so. */
+function settleAssignments(queue: Queue): void {
+  each(queue, (channel, assignment) => {
+    const waiting: typeof assignment.waiters = []
+    for (const waiter of assignment.waiters) {
+      if (waiter.value === assignment.saved) waiter.resolve()
+      else if (waiter.value !== assignment.wanted)
+        waiter.reject(new Error(`${RULES[channel].noun} assignment superseded`))
+      else waiting.push(waiter)
+    }
+    assignment.waiters = waiting
+  })
 }
 
-function rejectTemplateWaiters(queue: Queue, cause: unknown): void {
-  const error = cause instanceof Error ? cause : new Error('template assignment failed')
-  const waiters = queue.templateWaiters
-  queue.templateWaiters = []
-  for (const waiter of waiters) waiter.reject(error)
-}
-
-function settleTargetLanguageWaiters(queue: Queue): void {
-  const waiting: TargetLanguageWaiter[] = []
-  for (const waiter of queue.targetLanguageWaiters) {
-    if (waiter.targetLanguage === queue.savedTargetLanguage) waiter.resolve()
-    else if (waiter.targetLanguage !== queue.targetLanguage)
-      waiter.reject(new Error('target language assignment superseded'))
-    else waiting.push(waiter)
-  }
-  queue.targetLanguageWaiters = waiting
-}
-
-function rejectTargetLanguageWaiters(queue: Queue, cause: unknown): void {
-  const error = cause instanceof Error ? cause : new Error('target language assignment failed')
-  const waiters = queue.targetLanguageWaiters
-  queue.targetLanguageWaiters = []
-  for (const waiter of waiters) waiter.reject(error)
-}
-
-function settleVoiceWaiters(queue: Queue): void {
-  const waiting: VoiceWaiter[] = []
-  for (const waiter of queue.voiceWaiters) {
-    if (waiter.voiceId === queue.savedVoiceId) waiter.resolve()
-    else if (waiter.voiceId !== queue.voiceId)
-      waiter.reject(new Error('voice assignment superseded'))
-    else waiting.push(waiter)
-  }
-  queue.voiceWaiters = waiting
-}
-
-function rejectVoiceWaiters(queue: Queue, cause: unknown): void {
-  const error = cause instanceof Error ? cause : new Error('voice assignment failed')
-  const waiters = queue.voiceWaiters
-  queue.voiceWaiters = []
+/** Takes one assignment back to what the server holds and rejects its waiters with why. */
+function takeBack<K extends AssignmentChannel>(queue: Queue, channel: K, cause: unknown): void {
+  const assignment = queue.assignments[channel]
+  assignment.wanted = assignment.saved ?? assignment.wanted
+  const error =
+    cause instanceof Error ? cause : new Error(`${RULES[channel].noun} assignment failed`)
+  const waiters = assignment.waiters
+  assignment.waiters = []
   for (const waiter of waiters) waiter.reject(error)
 }
 
@@ -408,38 +405,31 @@ async function run(queue: Queue): Promise<void> {
   if (queue.inFlight || !queue.pending) return
 
   const sent = queue.pending
-  const sentVoice = voiceToSend(queue)
-  const sentTemplate = templateToSend(queue)
-  const sentTargetLanguage = targetLanguageToSend(queue)
+  const sentAssignments = carried(queue)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send(queue.slug, sent, sentVoice, sentTemplate, sentTargetLanguage)
+    const slug = await queue.send({ slug: queue.slug, draft: sent, ...sentAssignments })
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
     queue.attempts = 0
     queue.failed = false
     queue.saved = { ...sent, answers: mergeAnswers(queue.saved.answers, sent.answers) }
-    if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
-    if (sentTemplate !== undefined) queue.savedTemplateId = sentTemplate
-    if (sentTargetLanguage !== undefined) queue.savedTargetLanguage = sentTargetLanguage
+    each(queue, (channel, assignment) => {
+      const value = sentAssignments[channel]
+      if (value !== undefined) assignment.saved = value
+    })
     queue.everSaved = true
     const minted = !queue.slug && Boolean(slug)
     if (minted) rekey(queue, slug)
     // Only what actually went out is settled; anything typed during the round trip is
     // still pending — and so is a voice chosen during it.
-    if (
-      queue.pending &&
-      sameDraft(queue.pending, sent) &&
-      !voiceDirty(queue) &&
-      !templateDirty(queue) &&
-      !targetLanguageDirty(queue)
-    ) {
+    if (queue.pending && sameDraft(queue.pending, sent) && !anyDirty(queue)) {
       queue.pending = undefined
-    } else if (voiceDirty(queue) || templateDirty(queue) || targetLanguageDirty(queue)) {
+    } else if (anyDirty(queue)) {
       // An assignment does not wait for a debounce: it is an action, not a keystroke.
       queue.pending ??= { ...sent }
       queue.urgent = true
@@ -460,9 +450,7 @@ async function run(queue: Queue): Promise<void> {
     }
     queue.urgent = false
     settleFlushes(queue)
-    settleVoiceWaiters(queue)
-    settleTemplateWaiters(queue)
-    settleTargetLanguageWaiters(queue)
+    settleAssignments(queue)
   } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
     // nobody to catch it. The retry is what the user is actually promised.
@@ -470,25 +458,12 @@ async function run(queue: Queue): Promise<void> {
     queue.inFlight = false
     queue.sending = undefined
 
-    if (sentVoice !== undefined && queue.slug) {
-      // A refused reassignment is taken back rather than retried. Unlike a text save, the
-      // refusal is usually an answer — a busy post, a voice deleted meanwhile — and retrying
-      // it with every save would keep the title from ever landing again.
-      queue.voiceId = queue.savedVoiceId
-      rejectVoiceWaiters(queue, cause)
-    }
-
-    if (sentTemplate !== undefined && queue.slug) {
-      // Taken back for the same reason a refused reassignment is: the refusal is an answer
-      // (a template deleted meanwhile, a foreign id), and retrying it with every save would
-      // keep the title from ever landing again.
-      queue.templateId = queue.savedTemplateId
-      rejectTemplateWaiters(queue, cause)
-    }
-
-    if (sentTargetLanguage !== undefined && queue.slug) {
-      queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
-      rejectTargetLanguageWaiters(queue, cause)
+    if (queue.slug) {
+      // A refused assignment is taken back rather than retried. Unlike a text save, the refusal
+      // is usually an answer — a busy post, a voice or a template deleted meanwhile, a foreign
+      // id — and retrying it with every save would keep the title from ever landing again.
+      for (const channel of CHANNELS)
+        if (sentAssignments[channel] !== undefined) takeBack(queue, channel, cause)
     }
 
     if (queue.slug && !queue.retry(cause)) {
@@ -500,12 +475,7 @@ async function run(queue: Queue): Promise<void> {
       queue.failed = false
       queue.attempts = 0
       queue.urgent = false
-      queue.voiceId = queue.savedVoiceId
-      queue.templateId = queue.savedTemplateId
-      queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
-      rejectVoiceWaiters(queue, cause)
-      rejectTemplateWaiters(queue, cause)
-      rejectTargetLanguageWaiters(queue, cause)
+      for (const channel of CHANNELS) takeBack(queue, channel, cause)
       clearTimers(queue)
       publish(queue)
       rejectFlushes(queue, cause)
@@ -517,9 +487,7 @@ async function run(queue: Queue): Promise<void> {
       queue.pending &&
       sameDraft(queue.pending, queue.saved) &&
       !wantsPost(queue) &&
-      !voiceDirty(queue) &&
-      !templateDirty(queue) &&
-      !targetLanguageDirty(queue)
+      !anyDirty(queue)
     ) {
       // Typed back to what the server holds while this attempt was out — there is nothing
       // left to retry, and "다시 시도 중" would stand there forever.
@@ -551,26 +519,42 @@ async function run(queue: Queue): Promise<void> {
 
 const alwaysRetry = () => true
 
-export function attachDraftQueue(options: {
+/** An editor's attachment. Every assignment's baseline is required: a channel the caller forgets
+ *  does not compile, rather than starting from nothing. */
+export interface DraftQueueOptions extends Assignments {
   /** The post being written to, or undefined for a draft with no slug yet. */
   slug: string | undefined
   /** What the server holds, as this editor was told. Used only when there is no queue
-   *  yet: an existing one has watched every save and knows better. */
+   *  yet: an existing one has watched every save and knows better. The assignments are the
+   *  same: for a draft with no post yet, the values it will be created with. */
   saved: Draft
-  /** The voice the post is written in as this editor was told — or, for a draft with no
-   *  post yet, the one it will be created in. Same caveat as `saved`. */
-  voiceId: string
-  /** The 템플릿 the post is assigned to as this editor was told, '' for 없음. */
-  templateId: string
-  /** Concrete on both new and existing editors; a new draft sends it only when it is created. */
-  targetLanguage: ContentLanguage
   send: SendDraft
   /** Whether a refused save of an existing post is retried. Default: always, since most
    *  refusals are an outage the next attempt outlasts. False takes the text back instead. */
   retry?: (cause: unknown) => boolean
   onState: (state: SaveState) => void
   onMinted: (slug: string) => void
-}): DraftQueueHandle {
+}
+
+function initialAssignment<K extends AssignmentChannel>(
+  options: DraftQueueOptions,
+  channel: K,
+): Assignment<Assignments[K]> {
+  return {
+    wanted: options[channel],
+    saved: options.slug ? options[channel] : RULES[channel].unsaved,
+    waiters: [],
+  }
+}
+
+/** One record per channel, built from the list. */
+function initialAssignments(options: DraftQueueOptions): AssignmentRecords {
+  return Object.fromEntries(
+    CHANNELS.map((channel) => [channel, initialAssignment(options, channel)]),
+  ) as AssignmentRecords
+}
+
+export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
   const key = options.slug ?? newDraftKey()
   let queue = queues.get(key)
 
@@ -581,14 +565,7 @@ export function attachDraftQueue(options: {
       saved: options.saved,
       sending: undefined,
       pending: undefined,
-      voiceId: options.voiceId,
-      savedVoiceId: options.slug ? options.voiceId : '',
-      templateId: options.templateId,
-      // '' either way: an existing post with no template and a draft with no post both hold
-      // 없음, so the create's "send only when chosen" rule needs no extra state.
-      savedTemplateId: options.slug ? options.templateId : '',
-      targetLanguage: options.targetLanguage,
-      savedTargetLanguage: options.slug ? options.targetLanguage : undefined,
+      assignments: initialAssignments(options),
       everSaved: false,
       failed: false,
       discarded: false,
@@ -603,9 +580,6 @@ export function attachDraftQueue(options: {
       onMinted: undefined,
       mintWaiters: [],
       flushWaiters: [],
-      voiceWaiters: [],
-      templateWaiters: [],
-      targetLanguageWaiters: [],
     }
     queues.set(key, queue)
   }
@@ -629,9 +603,7 @@ export function attachDraftQueue(options: {
       if (
         sameDraft(draft, attached.sending ?? attached.saved) &&
         !wantsPost(attached) &&
-        !voiceDirty(attached) &&
-        !templateDirty(attached) &&
-        !targetLanguageDirty(attached)
+        !anyDirty(attached)
       ) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
         // screen with nothing to send would be a standing lie.
@@ -684,51 +656,20 @@ export function attachDraftQueue(options: {
       })
     },
 
-    assignTemplate: (templateId) => {
+    assign: (channel, value) => {
       if (attached.discarded) return Promise.reject(new Error('session ended'))
-      attached.templateId = templateId
+      const assignment = attached.assignments[channel]
+      assignment.wanted = value
       // Before the post exists the choice rides along with the create — including a create
       // already in flight, which `run` follows up the moment it lands.
-      if (!attached.slug || templateId === attached.savedTemplateId) return Promise.resolve()
-      // Nothing typed since the last save: the assignment still needs a request to ride on,
-      // so the newest known text is re-sent with it. This is what makes a delayed title save
-      // unable to revert a newer selection — the selection goes out on its own request.
+      if (!attached.slug || value === assignment.saved) return Promise.resolve()
+      // Nothing typed since the last save: the assignment still needs a request to ride on, so
+      // the newest known text is re-sent with it. This is what makes a delayed title save unable
+      // to revert a newer choice — the choice goes out on its own request.
       attached.pending ??= { ...(attached.sending ?? attached.saved) }
       publish(attached)
       return new Promise<void>((resolve, reject) => {
-        attached.templateWaiters.push({ templateId, resolve, reject })
-        sendNow(attached)
-      })
-    },
-
-    assignVoice: (voiceId) => {
-      if (attached.discarded) return Promise.reject(new Error('session ended'))
-      attached.voiceId = voiceId
-      // Before the post exists the choice simply rides along with the create — including a
-      // create already in flight, which `run` follows up the moment it lands.
-      if (!attached.slug || voiceId === attached.savedVoiceId) return Promise.resolve()
-      // Nothing typed since the last save: the reassignment still needs a request to ride
-      // on, so the newest known text is re-sent with it.
-      attached.pending ??= { ...(attached.sending ?? attached.saved) }
-      publish(attached)
-      return new Promise<void>((resolve, reject) => {
-        attached.voiceWaiters.push({ voiceId, resolve, reject })
-        sendNow(attached)
-      })
-    },
-
-    assignTargetLanguage: (targetLanguage) => {
-      if (attached.discarded) return Promise.reject(new Error('session ended'))
-      attached.targetLanguage = targetLanguage
-      // Selecting a target on /posts/new is local state only. If a create is already in
-      // flight, its response is followed by an immediate update carrying this newer choice.
-      if (!attached.slug || targetLanguage === attached.savedTargetLanguage) {
-        return Promise.resolve()
-      }
-      attached.pending ??= { ...(attached.sending ?? attached.saved) }
-      publish(attached)
-      return new Promise<void>((resolve, reject) => {
-        attached.targetLanguageWaiters.push({ targetLanguage, resolve, reject })
+        assignment.waiters.push({ value, resolve, reject })
         sendNow(attached)
       })
     },
@@ -778,10 +719,8 @@ function discardQueue(queue: Queue, reason: string): void {
   queue.mintWaiters = []
   for (const waiter of queue.flushWaiters) waiter.reject(new Error(reason))
   queue.flushWaiters = []
-  for (const waiter of queue.voiceWaiters) waiter.reject(new Error(reason))
-  queue.voiceWaiters = []
-  for (const waiter of queue.templateWaiters) waiter.reject(new Error(reason))
-  queue.templateWaiters = []
-  for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error(reason))
-  queue.targetLanguageWaiters = []
+  each(queue, (_channel, assignment) => {
+    for (const waiter of assignment.waiters) waiter.reject(new Error(reason))
+    assignment.waiters = []
+  })
 }

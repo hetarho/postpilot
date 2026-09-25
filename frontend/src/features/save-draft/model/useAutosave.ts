@@ -114,7 +114,7 @@ export function useAutosave({
       voiceId: opened?.voice.id ?? voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: async (slug, draft, voiceId, templateId, targetLanguage) => {
+      send: async ({ slug, draft, voiceId, templateId, targetLanguage }) => {
         const response = await sendRef.current({
           slug,
           title: draft.title,
@@ -161,15 +161,15 @@ export function useAutosave({
 
   // Only a draft with no post yet follows the picker (see `UseAutosaveArgs.voiceId`).
   useLayoutEffect(() => {
-    if (!postRef.current) void queueRef.current?.assignVoice(voiceId)
+    if (!postRef.current) void queueRef.current?.assign('voiceId', voiceId)
   }, [voiceId])
 
   useLayoutEffect(() => {
-    if (!postRef.current) void queueRef.current?.assignTemplate(templateId)
+    if (!postRef.current) void queueRef.current?.assign('templateId', templateId)
   }, [templateId])
 
   useLayoutEffect(() => {
-    if (!postRef.current) void queueRef.current?.assignTargetLanguage(targetLanguage)
+    if (!postRef.current) void queueRef.current?.assign('targetLanguage', targetLanguage)
   }, [targetLanguage])
 
   useEffect(() => {
@@ -196,13 +196,13 @@ export function useAutosave({
     flush: () =>
       queueRef.current?.flush() ?? Promise.reject(new Error('editor is not attached to a draft')),
     reassign: (voiceId) =>
-      queueRef.current?.assignVoice(voiceId) ??
+      queueRef.current?.assign('voiceId', voiceId) ??
       Promise.reject(new Error('editor is not attached to a draft')),
     assignTemplate: (templateId) =>
-      queueRef.current?.assignTemplate(templateId) ??
+      queueRef.current?.assign('templateId', templateId) ??
       Promise.reject(new Error('editor is not attached to a draft')),
     assignTargetLanguage: (language) =>
-      queueRef.current?.assignTargetLanguage(language) ??
+      queueRef.current?.assign('targetLanguage', language) ??
       Promise.reject(new Error('editor is not attached to a draft')),
   }
 }

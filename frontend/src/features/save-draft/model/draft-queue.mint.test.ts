@@ -22,13 +22,12 @@ describe('mint', () => {
 
     await expect(handle.mint()).resolves.toBe('20260828-untitled')
     // The create names its voice even though nothing else was typed (spec/legacy/policy/posts.md).
-    expect(send).toHaveBeenCalledWith(
-      '',
-      { title: '', memo: '', answers: [] },
-      'voice-a',
-      undefined,
-      'ko',
-    )
+    expect(send).toHaveBeenCalledWith({
+      slug: '',
+      draft: { title: '', memo: '', answers: [] },
+      voiceId: 'voice-a',
+      targetLanguage: 'ko',
+    })
     expect(onMinted).toHaveBeenCalledWith('20260828-untitled')
   })
 
@@ -48,13 +47,12 @@ describe('mint', () => {
 
     await expect(handle.mint()).resolves.toBe('20260828-jeju')
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith(
-      '',
-      { title: '제주', memo: '', answers: [] },
-      'voice-a',
-      undefined,
-      'ko',
-    )
+    expect(send).toHaveBeenCalledWith({
+      slug: '',
+      draft: { title: '제주', memo: '', answers: [] },
+      voiceId: 'voice-a',
+      targetLanguage: 'ko',
+    })
   })
 
   // An empty draft equals what the server "holds" for a new post, so without care a

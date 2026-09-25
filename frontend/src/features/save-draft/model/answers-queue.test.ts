@@ -12,7 +12,7 @@ function backend() {
   const sent: Draft[] = []
   return {
     sent,
-    send: async (_slug: string, payload: Draft) => {
+    send: async ({ draft: payload }: { draft: Draft }) => {
       sent.push({ ...payload, answers: payload.answers.map((answer) => ({ ...answer })) })
       return SLUG
     },
