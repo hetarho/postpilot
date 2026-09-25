@@ -292,3 +292,21 @@ func TestTypeRoleFloorsAndExactBadgeSize(t *testing.T) {
 		}
 	}
 }
+
+// A writer's own break is the only arrangement tried, so each of its lines is
+// bounded alone; an unbroken sentence needs only the lines' total.
+func TestStyleRuleHoldsTheLayoutsOwnArrangements(t *testing.T) {
+	rule := design.StyleRule{Lines: 2, Chars: 9}
+	for text, want := range map[string]bool{
+		"서까래 아래 원목 좌석이\n차분하게 놓였어요":   false, // 10 on the first line
+		"원목 좌석이\n차분하게 놓였어요":          true,
+		"서까래 아래 원목 좌석이 차분하게 놓였어요":    true,  // 18 unbroken, split anywhere
+		"서까래 아래 원목 좌석이 아주 차분하게 놓였어요": false, // 20 unbroken
+		"한 줄\n두 줄\n세 줄":              false,
+		"한 줄\n ":                     false,
+	} {
+		if got := rule.Holds(text); got != want {
+			t.Errorf("Holds(%q) = %v, want %v", text, got, want)
+		}
+	}
+}

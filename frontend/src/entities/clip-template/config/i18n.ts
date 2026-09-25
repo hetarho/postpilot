@@ -176,6 +176,8 @@ export const i18n = {
       },
       errors: {
         items_required: '“{{element}}”의 부족한 항목을 추가한 뒤 클립을 생성해 주세요.',
+        caption: '영상의 {{n}}번째 자막을 확인해 주세요.',
+        element: '영상 구성의 {{element}} 항목을 확인해 주세요.',
         items_required_count:
           '“{{element}}”에는 항목이 최소 {{min}}개 필요한데 지금 {{actual}}개예요. 항목을 추가한 뒤 클립을 생성해 주세요.',
         invalid_item_bounds:
@@ -390,6 +392,8 @@ export const i18n = {
       },
       errors: {
         items_required: 'Add the missing items in “{{element}}” before generating the clip.',
+        caption: 'Check caption {{n}} in the video.',
+        element: 'Check {{element}} in the video composition.',
         items_required_count:
           '“{{element}}” needs at least {{min}} item(s) but has {{actual}}. Add the missing items before generating the clip.',
         invalid_item_bounds:

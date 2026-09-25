@@ -237,6 +237,7 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 	used := map[string]bool{}
 	admitted := []clip.PortableText{}
 	maxChars := design.Caption().Lines * design.Caption().Chars
+	styles := input.Design.AllowedCaptionStyles()
 	for index, caption := range ordered {
 		id := clip.NarrationID(index + 1)
 		if caption.declaredID != "" {
@@ -265,13 +266,38 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			drop("unavailable_scoped_fact")
 			continue
 		}
+		// An absent choice is not a repair. Freeze the selection's default so
+		// a later render does not choose a different treatment for this caption.
+		style, styleFallback := caption.Style, false
+		if style == "" {
+			style = styles[0]
+		} else if !slices.Contains(styles, style) {
+			style, styleFallback = styles[0], true
+		}
+		rule, _ := design.CaptionRule(style)
+		// The writer only styled the template's words: a style too narrow for
+		// them gives way to the selection's first, as a face lacking a syllable
+		// does (CDS-84), rather than losing the template's caption.
+		if caption.authored && !rule.Holds(caption.Text) {
+			if first, _ := design.CaptionRule(styles[0]); first.Holds(caption.Text) {
+				style, rule, styleFallback = styles[0], first, true
+			}
+		}
+		// A written caption is bounded by the style it names (CLIP-118); a rapid
+		// phrase carries its own bound, and the template's words keep theirs.
+		bounded := func(value string) bool {
+			if pace == "rapid" || caption.authored {
+				return design.Chars(value) <= maxChars
+			}
+			return rule.Holds(value)
+		}
 		// The full sentence first, then the grounded shorter one: the same
 		// ladder a scene-bound caption answered, minus every item rule.
 		check := func(value string) string {
 			if strings.TrimSpace(value) == "" {
 				return "copy_omitted"
 			}
-			if design.Chars(value) > maxChars {
+			if !bounded(value) {
 				return "composition_generated_bounds"
 			}
 			// The template's own words are the owner's claim, not the writer's,
@@ -321,14 +347,7 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 		// it came from, because that is what the owner has to fix.
 		text := clip.NarrationCaption(clip.NarrationID(len(admitted)+1), chosen, start, end)
 		text.Authored = caption.authored
-		// An absent choice is not a repair. Freeze the selection's default so
-		// a later render does not choose a different treatment for this caption.
-		styles := input.Design.AllowedCaptionStyles()
-		style := caption.Style
-		if style == "" {
-			style = styles[0]
-		} else if !slices.Contains(styles, style) {
-			style = styles[0]
+		if styleFallback {
 			clip.AddPlanNotice(plan, "composition_caption_style", "", text.Resolved.Element.ID, "style_fallback")
 		}
 		text.Resolved.Element.Style = style

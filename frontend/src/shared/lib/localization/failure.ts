@@ -43,6 +43,19 @@ export function formatAppFailure(
       actual: failure.params.actual,
     })
   }
+  // A narration caption is the model's, not a template line's, so it carries no
+  // line to point at: say which caption instead, and never show a line 0.
+  if (failure.reason === 'CLIP_COMPOSITION_INVALID') {
+    const caption = /^narration-([1-9][0-9]*)$/.exec(failure.params.element_id ?? '')
+    if (caption) {
+      return i18next.getFixedT(locale, 'clips')('composition.errors.caption', { n: caption[1] })
+    }
+    if (failure.params.line === '0') {
+      return i18next.getFixedT(locale, 'clips')('composition.errors.element', {
+        element: failure.params.element_id,
+      })
+    }
+  }
   const translate = i18next.getFixedT(locale, 'errors') as unknown as (
     key: string,
     options: Readonly<Record<string, string>>,

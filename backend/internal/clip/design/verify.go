@@ -3,6 +3,7 @@ package design
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"unicode"
 )
 
@@ -18,6 +19,26 @@ func Chars(text string) int {
 		n++
 	}
 	return n
+}
+
+// Holds reports whether a caption's text can be set under this style's line
+// and character bound. A break the writer put in is the only arrangement the
+// layout tries, so each of its lines is bounded on its own; an unbroken
+// sentence may split at any grapheme, so it needs only the lines' total.
+func (r StyleRule) Holds(text string) bool {
+	lines := strings.Split(text, "\n")
+	if len(lines) > r.Lines {
+		return false
+	}
+	if len(lines) == 1 {
+		return Chars(text) <= r.Lines*r.Chars
+	}
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" || Chars(line) > r.Chars {
+			return false
+		}
+	}
+	return true
 }
 
 // Anchors in vertical order. The step between consecutive cuts is measured on

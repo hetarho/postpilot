@@ -3,6 +3,7 @@ package ai_test
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -179,5 +180,35 @@ func TestDeclaredCaptionsCarryTheirNarratedStyles(t *testing.T) {
 	captions := narrationOf(plan)
 	if len(captions) != 2 || captions[0].Resolved.Element.Style != "film" || captions[1].Resolved.Element.Style != "keynote" {
 		t.Fatal("declared captions lost their individual styles", captions)
+	}
+}
+
+// The template wrote this caption and the writer only styled it: a style too
+// narrow for the template's words gives way to the selection's first style,
+// and the template's caption is never dropped over the writer's choice.
+func TestAFixedCaptionTheNamedStyleCannotHoldTakesTheFirstStyle(t *testing.T) {
+	const long = "창가 자리에서 내려다보는 골목 풍경이 참 좋아요"
+	in := flowInput()
+	setNativeBody(&in, strings.Replace(declaredCaptionBody, `<value field="place"/> 다녀왔어요`, long, 1))
+	s, _, _ := newService(t, defaultFlow(), true)
+	flow, _, err := s.Flow(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	narration := clip.NarrationInput{PlanningInput: in, Flow: flow}
+	narration.Design.CaptionStyles = []string{"film", "keynote"}
+	fixed := declaredCaption("opening_line", "", 0, 5000)
+	fixed["style"] = "keynote"
+	plan, _, _ := narrate(t, narration, declaredResponse([]map[string]any{fixed}))
+	caption := narrationText(plan, long)
+	if caption == nil || caption.Resolved.Element.Style != "film" {
+		t.Fatalf("the template's caption was dropped or kept a style that cannot hold it: %+v %+v", caption, plan.Portable.Fallbacks)
+	}
+	found := false
+	for _, n := range clip.ActivePlanNotices(plan, narration.Design.RegionPresets()) {
+		found = found || n.Reason == "composition_caption_style" && n.Action == "style_fallback" && n.ElementID == caption.Resolved.Element.ID
+	}
+	if !found {
+		t.Fatal("the style change was not noticed on that caption", plan.Notices)
 	}
 }

@@ -103,7 +103,7 @@ func TestNarrationRequestCarriesTheResolvedFlowAndNothingToChangeIt(t *testing.T
 		"ABSOLUTE integer times on the output timeline",
 		"Captions never overlap one another",
 		"At most 100 captions",
-		"at most 2 lines of 11 characters each",
+		"max_line_chars characters each for the style it names",
 		"a rapid phrase is at most 14",
 		"at least 900 + 90 × characters ms",
 		"may play over footage it does not describe",
@@ -356,5 +356,58 @@ func TestNarrationStyleFallbackNeedsNoCorrectionCall(t *testing.T) {
 				t.Fatalf("style notices = %d, want %d", count, want)
 			}
 		})
+	}
+}
+
+// A caption is bounded by the style it names, not by the default: 이리데센트
+// holds 9 characters a line where 크게 강조 holds 11. The grounded shorter
+// sentence comes first, then no caption at all — never a refused clip.
+func TestNarrationCaptionFitsTheStyleItNames(t *testing.T) {
+	const text, short = "서까래 아래 원목 좌석이\n차분하게 놓였어요", "원목 테이블 배치"
+	named := func(style, shortText string) map[string]any {
+		caption := narrationCaption(text, 1000, 6000)
+		caption["style"], caption["short_text"] = style, shortText
+		return caption
+	}
+	in := narrationInput(t)
+	in.Design.CaptionStyles = []string{"bold", "iridescent"}
+	if rule, _ := design.CaptionRule("iridescent"); rule.Holds(text) || !rule.Holds(short) {
+		t.Fatal("the fixture no longer crosses 이리데센트's line bound", rule)
+	}
+
+	plan, _, _ := narrate(t, in, narrationResponse(named("iridescent", short)))
+	captions := narrationOf(plan)
+	if len(captions) != 1 || captions[0].Resolved.Text != short || captions[0].FallbackReason == "" || captions[0].Resolved.Element.Style != "iridescent" {
+		t.Fatalf("the named style's bound did not take the shorter sentence: %+v", captions)
+	}
+
+	plan, _, _ = narrate(t, in, narrationResponse(named("iridescent", ""), narrationCaption("다음 자막", 7000, 12000)))
+	captions = narrationOf(plan)
+	if len(captions) != 1 || captions[0].Resolved.Text != "다음 자막" || !hasReason(plan, "composition_generated_bounds") {
+		t.Fatalf("a caption its style cannot hold was kept or unexplained: %+v %+v", captions, plan.Portable.Fallbacks)
+	}
+
+	plan, _, _ = narrate(t, in, narrationResponse(named("bold", short)))
+	captions = narrationOf(plan)
+	if len(captions) != 1 || captions[0].Resolved.Text != text || captions[0].FallbackReason != "" {
+		t.Fatalf("a caption within its own style's bound was shortened: %+v", captions)
+	}
+}
+
+// The writer states each style's bound with the style, so it can choose the
+// words and the treatment together.
+func TestNarrationRequestStatesEachStylesBound(t *testing.T) {
+	in := narrationInput(t)
+	in.Design.CaptionStyles = []string{"bold", "iridescent"}
+	_, payload, _ := narrate(t, in, narrationResponse(narrationCaption("첫 장면입니다", 1000, 5000)))
+	for _, entry := range payload["allowed_caption_styles"].([]any) {
+		style := entry.(map[string]any)
+		rule, _ := design.CaptionRule(style["id"].(string))
+		if style["max_lines"] != float64(rule.Lines) || style["max_line_chars"] != float64(rule.Chars) {
+			t.Fatal("a style reached the writer without its own bound", style)
+		}
+	}
+	if _, ok := payload["caption_max_chars"]; ok {
+		t.Fatal("the request still states the default style's bound for every caption")
 	}
 }
