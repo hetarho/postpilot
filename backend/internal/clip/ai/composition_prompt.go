@@ -111,10 +111,10 @@ func generatedRegionSlots(presets composition.DesignSelection, body string, limi
 			continue
 		}
 		for i, row := range e.Rows {
-			if composition.RowKind(e, row) != "ai" || i >= len(preset.Slots) {
+			if composition.RowKind(e, row) != "ai" || i >= len(preset.Slots()) {
 				continue
 			}
-			role := preset.Slots[i].Type
+			role := preset.Slots()[i].Role
 			// The slot's own count, or the smaller one this row declares
 			// (CLIP-116); the parser has already refused a larger one.
 			chars := design.Type[role].Chars

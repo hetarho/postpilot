@@ -271,7 +271,7 @@ func attachRegionRows(presets composition.DesignSelection, doc *composition.Docu
 			continue
 		}
 		value, action := "", "removal"
-		if exists && i < len(entry.Rows) && i < len(preset.Slots) {
+		if exists && i < len(entry.Rows) && i < len(preset.Slots()) {
 			one := *out
 			one.Resolved.Element.Rows = nil
 			one.Resolved.Rows = nil
@@ -287,7 +287,7 @@ func attachRegionRows(presets composition.DesignSelection, doc *composition.Docu
 			if reason == "" {
 				// The slot's own count, or the smaller one this row declares
 				// (CLIP-116); the parser has already refused a larger one.
-				limit := design.Type[preset.Slots[i].Type].Chars
+				limit := design.Type[preset.Slots()[i].Role].Chars
 				if row.Chars > 0 && row.Chars < limit {
 					limit = row.Chars
 				}

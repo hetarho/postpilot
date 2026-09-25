@@ -13,3 +13,15 @@ export type {
   ClipRatioId,
   ClipRegionPresets,
 } from '../config/clip-design'
+export {
+  clipLayoutRegion,
+  clipRegionSlotBudget,
+  clipRegionSlotType,
+  clipRegionSlots,
+} from '../model/region-layout'
+export type {
+  ClipRegionKind,
+  ClipRegionLayout,
+  ClipRegionRatio,
+  ClipRegionSlotSpec,
+} from '../model/region-layout'

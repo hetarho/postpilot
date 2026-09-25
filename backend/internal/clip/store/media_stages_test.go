@@ -27,13 +27,13 @@ func mediaFixture(t *testing.T, limits clip.MediaStageLimits) (*clipapp.MediaSta
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := clip.MediaStageInput{ID: "stage", ParentJobID: "media-job", UserID: "alice", ProjectID: p.ID, ExpectedRevision: p.EditPlanRevision, Operation: clip.MediaRender, ContractVersion: 1, RendererVersion: "cpu-v1", AssetVersion: "assets-v1", Payload: `{"plan":1}`, Limits: limits}
+	in := clip.MediaStageInput{ID: "stage", ParentJobID: "media-job", UserID: "alice", ProjectID: p.ID, ExpectedRevision: p.EditPlanRevision, Operation: clip.MediaRender, ContractVersion: 1, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: `{"plan":1}`, Limits: limits}
 	in.InputDigest = clip.MediaPayloadDigest(in.Payload)
 	return queue, st, in, &now, d
 }
 
 func mediaProfile() clip.MediaWorkerProfile {
-	return clip.MediaWorkerProfile{WorkerID: "worker-1", Operation: clip.MediaRender, ContractVersion: 1, RendererVersion: "cpu-v1", AssetVersion: "assets-v1", Profile: "cpu", RuntimeManifest: `{"ffmpeg":"test-v1"}`}
+	return clip.MediaWorkerProfile{WorkerID: "worker-1", Operation: clip.MediaRender, ContractVersion: 1, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profile: "cpu", RuntimeManifest: `{"ffmpeg":"test-v1"}`}
 }
 
 func TestMediaStageCreationAndCompatibility(t *testing.T) {

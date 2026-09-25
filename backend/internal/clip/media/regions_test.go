@@ -54,17 +54,18 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 				canvas, _ := clip.ClipCanvas(ratio)
 				if err := a.WithWorkspace(t.Context(), "region", func(ws clip.MediaWorkspace) error {
 					visual := regionVisual(choice.kind, choice.rows...)
-					v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, ratio, visual, choice.kind, choice.id, regionPlacement(visual, choice.kind, choice.id))
+					v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, ratio, visual, choice.kind, choice.id, regionPlacement(visual, choice.kind, choice.id), choice.rows)
 					if err != nil {
 						return err
 					}
-					if err := design.VerifyRegion(choice.kind, choice.id, ratio, 0, true, choice.rows, v.manifest.Parts); err != nil {
+					if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, 0, len(choice.rows), true, v.manifest.Parts); err != nil {
 						return err
 					}
-					preset, _ := design.Region(choice.kind, choice.id)
+					block, _ := design.LayoutRegion(choice.kind, choice.id, ratio, choice.rows)
 					for i, line := range v.region.Lines {
-						if line.Y != design.RegionBaseline(preset, ratio, preset.Slots[i].Y) || line.Size != design.RegionType(preset.Slots[i], ratio).Size {
-							t.Fatal("changed baseline or size", line)
+						want := block.Slots[i].Lines[0]
+						if line.Y != want.Baseline || line.Size != want.Size {
+							t.Fatal("the drawn line left the block layout", line, want)
 						}
 					}
 					for _, part := range v.manifest.Parts {
@@ -87,7 +88,7 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 					for _, mutate := range []func(*design.Element){func(p *design.Element) { p.BaselineY++ }, func(p *design.Element) { p.Region.Y++ }, func(p *design.Element) { p.Fill = "#FF6B57" }} {
 						parts := slices.Clone(v.manifest.Parts)
 						mutate(&parts[0])
-						if err := design.VerifyRegion(choice.kind, choice.id, ratio, 0, true, choice.rows, parts); !errors.Is(err, design.ViolationRegion) {
+						if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, 0, len(choice.rows), true, parts); !errors.Is(err, design.ViolationRegion) {
 							t.Fatal("V20 accepted a changed preset", err)
 						}
 					}
@@ -111,43 +112,58 @@ func TestDeclaredRegionsUseTheProjectSelection(t *testing.T) {
 	plan := declaredPlan(t, `<clip version="1" intro="a" caption="bold" outro="b"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>오늘의 장면</row><row>남긴 기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>다시 만나자</row><row>오늘을 남겨요</row></text></clip>`, "vertical")
 	plan.IntroPreset, plan.OutroPreset = "a", "b"
 	layout := measuredDeclared(t, plan)
-	if len(layout.visuals) != 2 || layout.visuals[0].region.Lines[0].Y != 940 || layout.visuals[1].region.Lines[0].Y != 900 {
+	intro, _ := design.LayoutRegion("intro", "a", "vertical", []string{"오늘의 장면", "남긴 기록"})
+	outro, _ := design.LayoutRegion("outro", "b", "vertical", []string{"다시 만나자", "오늘을 남겨요"})
+	if len(layout.visuals) != 2 || layout.visuals[0].region.Lines[0].Y != intro.Slots[0].Lines[0].Baseline || layout.visuals[1].region.Lines[0].Y != outro.Slots[0].Lines[0].Baseline {
 		t.Fatal("document design selection was ignored", layout.elements())
 	}
 }
 
-func TestAuthoredAdmissionUsesSelectedRegionLimits(t *testing.T) {
+// A slot is bounded by its width, not a character count (CDS-86): nine
+// syllables shrink into intro A's headline, and only text too wide at the floor
+// even on two lines is refused before generation (CDS-77).
+func TestAuthoredAdmissionRefusesOnlyWhatCannotFit(t *testing.T) {
 	_, r := measured(t)
 	for _, intro := range []string{"a", "b"} {
-		body := `<clip version="1" intro="` + intro + `" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>하나둘셋넷다섯여섯</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-		err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: intro, OutroPreset: "e"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
-		if intro == "b" {
-			if err != nil {
-				t.Fatal(err)
+		for _, c := range []struct {
+			text string
+			fits bool
+		}{{"하나둘셋넷다섯여섯", true}, {strings.Repeat("하나둘셋넷", 5), false}} {
+			body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>` + c.text + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+			err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: intro, OutroPreset: "e"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
+			if c.fits {
+				if err != nil {
+					t.Fatal(intro, c.text, err)
+				}
+				continue
 			}
-		} else {
 			var problem *composition.Problem
 			if !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
-				t.Fatal("intro A admitted a ninth headline character", err)
+				t.Fatal("an unbreakable line wider than the floor was admitted", intro, err)
 			}
 		}
 	}
 }
 
-func TestRegionSlotsKeepTheirPositionsAndRefuseOverflow(t *testing.T) {
+// CDS-73 and CDS-87: an empty slot closes up with the gap before it while the
+// block keeps its rules and its centre; a line no slot holds is drawn by nobody;
+// a newline or a line too wide at the floor is refused.
+func TestRegionSlotsCloseUpAndRefuseOverflow(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
 	if err := a.WithWorkspace(t.Context(), "slots", func(ws clip.MediaWorkspace) error {
-		filled := regionVisual("outro", "점수", "", "오늘의 기록")
-		v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", filled, "outro", "e", regionPlacement(filled, "outro", "e"))
+		rows := []string{"점수", "", "오늘의 기록"}
+		filled := regionVisual("outro", rows...)
+		v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", filled, "outro", "e", regionPlacement(filled, "outro", "e"), rows)
 		if err != nil {
 			return err
 		}
-		if len(v.region.Lines) != 2 || v.region.Lines[0].Y != 836 || v.region.Lines[1].Y != 1110 || len(v.region.Rules) != 1 {
-			t.Fatal("empty slot reflowed", v.region)
+		block, _ := design.LayoutRegion("outro", "e", "vertical", rows)
+		if len(v.region.Lines) != 2 || v.region.Lines[0].Y != block.Slots[0].Lines[0].Baseline || v.region.Lines[1].Y != block.Slots[1].Lines[0].Baseline || len(v.region.Rules) != 1 {
+			t.Fatal("the empty slot did not close up around the block", v.region)
 		}
 		empty := regionVisual("outro", "", "", "")
-		v, err = r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", empty, "outro", "e", regionPlacement(empty, "outro", "e"))
+		v, err = r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", empty, "outro", "e", regionPlacement(empty, "outro", "e"), []string{"", "", ""})
 		if err != nil {
 			return err
 		}
@@ -157,7 +173,7 @@ func TestRegionSlotsKeepTheirPositionsAndRefuseOverflow(t *testing.T) {
 		// A line past the preset's last slot is drawn by nobody and refuses
 		// nothing; the notice for it is the plan's (CLIP-147).
 		surplus := regionVisual("intro", "첫째", "둘째", "셋째")
-		drawn, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", surplus, "intro", "b", regionPlacement(surplus, "intro", "b"))
+		drawn, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", surplus, "intro", "b", regionPlacement(surplus, "intro", "b"), []string{"첫째", "둘째"})
 		if err != nil {
 			return err
 		}
@@ -165,9 +181,9 @@ func TestRegionSlotsKeepTheirPositionsAndRefuseOverflow(t *testing.T) {
 		if len(drawn.region.Lines) != 2 || len(drawn.manifest.Parts) != 4 {
 			t.Fatal("the surplus line was drawn or the drawn ones were not", drawn.region.Lines, drawn.manifest.Parts)
 		}
-		for _, rows := range [][]string{{"한 줄\n두 줄"}, {"하나둘셋넷다섯여섯일"}} {
+		for _, rows := range [][]string{{"한 줄\n두 줄"}, {strings.Repeat("하나둘셋넷", 5)}} {
 			visual := regionVisual("intro", rows...)
-			_, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", visual, "intro", "b", regionPlacement(visual, "intro", "b"))
+			_, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", visual, "intro", "b", regionPlacement(visual, "intro", "b"), rows)
 			var problem *composition.Problem
 			if !errors.As(err, &problem) || problem.Reason != "copy_limit" || problem.ElementID != "owned-region" || problem.Line != 7 {
 				t.Fatalf("%v: %v", rows, err)
@@ -189,13 +205,14 @@ func TestTwoRegionEntriesFillConsecutiveSlots(t *testing.T) {
 	second.text.Resolved.InstanceID, second.text.Resolved.Element.ID = "second", "second"
 	placements := clip.RegionPlacements(clip.ResolvedElements([]clip.PortableText{first.text, second.text}), presets)
 	if err := a.WithWorkspace(t.Context(), "slots", func(ws clip.MediaWorkspace) error {
-		preset, _ := design.Region("intro", "b")
+		rows := clip.RegionRows(clip.ResolvedElements([]clip.PortableText{first.text, second.text}), presets, "intro")
+		block, _ := design.LayoutRegion("intro", "b", "vertical", rows)
 		for i, entry := range []declaredVisual{first, second} {
-			v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", entry, "intro", "b", placements[entry.text.Resolved.InstanceID])
+			v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", entry, "intro", "b", placements[entry.text.Resolved.InstanceID], rows)
 			if err != nil {
 				return err
 			}
-			if len(v.region.Lines) != 1 || v.region.Lines[0].Y != design.RegionBaseline(preset, "vertical", preset.Slots[i].Y) {
+			if len(v.region.Lines) != 1 || v.region.Lines[0].Y != block.Slots[i].Lines[0].Baseline {
 				t.Fatal("the entry did not land on its own slot", i, v.region.Lines)
 			}
 			if v.manifest.Parts[0].Slot != i+1 {
@@ -257,7 +274,7 @@ func TestAuthoredRegionAdmissionChecksOnlyFixedRows(t *testing.T) {
 		if err := r.ValidateAuthoredInput(t.Context(), in); err != nil {
 			t.Fatal(err)
 		}
-		in.Composition.Snapshot.Body = strings.Replace(body, "직접 입력", "하나둘셋넷다섯여섯일곱", 1)
+		in.Composition.Snapshot.Body = strings.Replace(body, "직접 입력", strings.Repeat("하나둘셋넷", 5), 1)
 		var problem *composition.Problem
 		if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
 			t.Fatal(err)

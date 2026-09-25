@@ -4,7 +4,7 @@
 # runtime is distroless/static (no shell, non-root) with the API, pinned static
 # media executables and the CA certs it needs for outbound TLS.
 
-ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
+ARG MEDIA_ASSET_DIGEST=dc1d7d12a71c5ad49785e8abcbd39f755ce51431e75e8c9e261710cb9a83e485
 
 FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS media-build
 COPY backend/build/media-tools.sh /build-media-tools.sh
@@ -40,7 +40,7 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
       org.postpilot.media.protocol="1" \
       org.postpilot.media.renderer="cpu-v1" \
-      org.postpilot.media.assets="assets-v1" \
+      org.postpilot.media.assets="assets-v2" \
       org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST
 WORKDIR /
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
@@ -162,7 +162,7 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
       org.opencontainers.image.title="Postpilot NVIDIA candidate worker" \
       org.postpilot.media.protocol="1" org.postpilot.media.renderer="cpu-v1" \
-      org.postpilot.media.assets="assets-v1" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
+      org.postpilot.media.assets="assets-v2" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
       org.postpilot.media.gpu-production-approved="false"
 COPY --from=media-worker-deployable /media-worker /media-worker

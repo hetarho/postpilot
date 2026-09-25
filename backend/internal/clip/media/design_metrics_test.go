@@ -50,7 +50,11 @@ func realMetricsRenderer(t *testing.T) *Rendering {
 		t.Fatal(err)
 	}
 	cfg := renderConfig(t)
-	cfg.FontPaths = bundledFontPaths(t)
+	// Inside the image the fonts sit where the image puts them; on a host run
+	// they are the repository's own files.
+	if _, err := os.Stat(cfg.FontPaths["wantedsans"]); err != nil {
+		cfg.FontPaths = bundledFontPaths(t)
+	}
 	r, err := NewRenderer(a, cfg)
 	if err != nil {
 		t.Fatal(err)

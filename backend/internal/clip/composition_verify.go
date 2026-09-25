@@ -35,6 +35,12 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	// region's earlier entries took, and the ones this preset cannot draw at
 	// all (CLIP-147).
 	v.placements = RegionPlacements(ResolvedElements(plan.Portable.Elements), v.selection)
+	// Every line of each region by slot: one block lays out from all of them
+	// (CDS-87), so each entry is checked against that shared layout.
+	v.regionRows = map[string][]string{}
+	for _, kind := range []string{"intro", "outro"} {
+		v.regionRows[kind] = RegionRows(ResolvedElements(plan.Portable.Elements), v.selection, kind)
+	}
 	if v.canvas, err = ClipCanvas(plan.Ratio); err != nil {
 		return err
 	}
@@ -76,6 +82,7 @@ type manifestVerifier struct {
 	limits     composition.Limits
 	selection  composition.DesignSelection
 	placements map[string]RegionPlacement
+	regionRows map[string][]string
 	canvas     Canvas
 	facts      []composition.Fact
 	// V18 on the whole timeline: a narration caption belongs to no cut, so its
@@ -195,16 +202,8 @@ func (v *manifestVerifier) verifyRegion(element CompositionElement, r compositio
 	if element.Role == "ending" {
 		kind = "outro"
 	}
-	rows := []string{}
-	for _, row := range r.Rows {
-		rows = append(rows, row.Text)
-	}
-	if len(rows) == 0 {
-		rows = []string{r.Text}
-	}
 	placement := v.placements[r.InstanceID]
-	rows = rows[:min(len(rows), max(0, placement.Drawn))]
-	if err := design.VerifyRegion(kind, RegionPresetID(v.selection, kind), v.plan.Ratio, placement.Offset, placement.Rules, rows, element.Parts); err != nil {
+	if err := design.VerifyRegion(kind, RegionPresetID(v.selection, kind), v.plan.Ratio, v.regionRows[kind], placement.Offset, placement.Drawn, placement.Rules, element.Parts); err != nil {
 		return "preset_mismatch"
 	}
 	return ""
@@ -231,6 +230,10 @@ func verifyElementParts(element CompositionElement, safe Region) string {
 		}
 		if part.FontSize > 0 {
 			minimum := design.MinTypeSize()
+			if part.Floor > 0 {
+				// A region slot's own floor (CDS-86), never under CDS-3.
+				minimum = max(part.Floor, minimum)
+			}
 			if part.TypeRole != "" {
 				role, known := design.Type[part.TypeRole]
 				if !known {

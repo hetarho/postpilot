@@ -11,7 +11,9 @@ import (
 	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
-func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection composition.DesignSelection, placement clip.RegionPlacement) (declaredVisual, error) {
+// elements is every resolved entry of the plan, which a region entry is laid
+// out among (CDS-87); other roles ignore it.
+func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection composition.DesignSelection, placement clip.RegionPlacement, elements []composition.ResolvedElement) (declaredVisual, error) {
 	e := visual.text.Resolved.Element
 	switch e.Role {
 	case "badge":
@@ -23,7 +25,8 @@ func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspa
 		if e.Role == "ending" {
 			kind = "outro"
 		}
-		return r.layoutDeclaredRegion(ctx, ws, canvas, ratio, visual, kind, clip.RegionPresetID(selection, kind), placement)
+		rows := clip.RegionRows(regionElements(elements, visual.text.Resolved), selection, kind)
+		return r.layoutDeclaredRegion(ctx, ws, canvas, ratio, visual, kind, clip.RegionPresetID(selection, kind), placement, rows)
 	default:
 		return visual, elementProblem(visual.text, "invalid_role")
 	}

@@ -126,7 +126,8 @@
       "weight": 800,
       "tracking": 0.04,
       "line_height": 1,
-      "chars": 6
+      "chars": 6,
+      "floor": 80
     },
     "headline": {
       "size": 96,
@@ -135,7 +136,8 @@
       "weight": 800,
       "tracking": -0.02,
       "line_height": 1.1,
-      "chars": 8
+      "chars": 8,
+      "floor": 60
     },
     "hook": {
       "size": 84,
@@ -144,7 +146,8 @@
       "weight": 800,
       "tracking": -0.02,
       "line_height": 1.15,
-      "chars": 9
+      "chars": 9,
+      "floor": 56
     },
     "title": {
       "size": 72,
@@ -153,7 +156,8 @@
       "weight": 800,
       "tracking": -0.02,
       "line_height": 1.2,
-      "chars": 11
+      "chars": 11,
+      "floor": 52
     },
     "body": {
       "size": 56,
@@ -162,7 +166,8 @@
       "weight": 700,
       "tracking": -0.01,
       "line_height": 1.3,
-      "chars": 14
+      "chars": 14,
+      "floor": 48
     },
     "caption": {
       "size": 44,
@@ -171,7 +176,8 @@
       "weight": 600,
       "tracking": 0,
       "line_height": 1.3,
-      "chars": 18
+      "chars": 18,
+      "floor": 40
     },
     "label": {
       "size": 36,
@@ -180,7 +186,8 @@
       "weight": 600,
       "tracking": 0.02,
       "line_height": 1.2,
-      "chars": 22
+      "chars": 22,
+      "floor": 34
     },
     "badge": {
       "size": 36,
@@ -189,7 +196,8 @@
       "weight": 800,
       "tracking": 0.02,
       "line_height": 1,
-      "chars": 0
+      "chars": 0,
+      "floor": 36
     }
   },
   "color": {
@@ -460,111 +468,88 @@
   "regions": {
     "intro": {
       "a": {
-        "slots": [
+        "anchor": { "kind": "centre", "y": 942 },
+        "items": [
           {
-            "type": "headline",
-            "y": 940,
-            "fill": "text_white",
-            "stroke": "text",
-            "shadow": "text"
+            "slot": { "role": "headline", "fill": "text_white", "stroke": "text", "shadow": "text" }
           },
+          { "gap": 48 },
           {
-            "type": "label",
-            "y": 1020,
-            "fill": "text_muted",
-            "stroke": "small",
-            "shadow": "text",
-            "tracking": 0.02
+            "slot": {
+              "role": "label",
+              "fill": "text_muted",
+              "stroke": "small",
+              "shadow": "text",
+              "tracking": 0.02
+            }
           }
-        ],
-        "rules": []
+        ]
       },
       "b": {
-        "slots": [
+        "anchor": { "kind": "centre", "y": 969 },
+        "items": [
+          { "rule": { "kind": "hair" } },
+          { "gap": 43 },
+          { "slot": { "role": "hook", "fill": "text_white", "stroke": "none", "shadow": "text" } },
+          { "gap": 46 },
+          { "rule": { "kind": "hair" } },
+          { "gap": 50 },
           {
-            "type": "hook",
-            "y": 960,
-            "fill": "text_white",
-            "stroke": "none",
-            "shadow": "text"
-          },
-          {
-            "type": "label",
-            "y": 1090,
-            "fill": "text_muted",
-            "stroke": "none",
-            "shadow": "text",
-            "tracking": 0.02
-          }
-        ],
-        "rules": [
-          {
-            "kind": "hair",
-            "y": 846
-          },
-          {
-            "kind": "hair",
-            "y": 1010
+            "slot": {
+              "role": "label",
+              "fill": "text_muted",
+              "stroke": "none",
+              "shadow": "text",
+              "tracking": 0.02
+            }
           }
         ]
       }
     },
     "outro": {
       "b": {
-        "slots": [
-          {
-            "type": "hook",
-            "y": 900,
-            "fill": "text_white",
-            "stroke": "none",
-            "shadow": "text"
-          },
-          {
-            "type": "body",
-            "y": 1040,
-            "fill": "text_white",
-            "stroke": "small",
-            "shadow": "text"
-          }
-        ],
-        "rules": [
-          {
-            "kind": "hair",
-            "y": 950
-          }
+        "anchor": { "kind": "centre", "y": 938 },
+        "items": [
+          { "slot": { "role": "hook", "fill": "text_white", "stroke": "none", "shadow": "text" } },
+          { "gap": 46 },
+          { "rule": { "kind": "hair" } },
+          { "gap": 44 },
+          { "slot": { "role": "body", "fill": "text_white", "stroke": "small", "shadow": "text" } }
         ]
       },
       "e": {
-        "slots": [
+        "anchor": { "kind": "centre", "y": 961 },
+        "items": [
           {
-            "type": "label",
-            "y": 836,
-            "fill": "text_muted",
-            "stroke": "small",
-            "shadow": "text",
-            "tracking": 0.08
+            "slot": {
+              "role": "label",
+              "fill": "text_muted",
+              "stroke": "small",
+              "shadow": "text",
+              "tracking": 0.08
+            }
           },
+          { "gap": 31 },
           {
-            "type": "display",
-            "y": 980,
-            "fill": "text_white",
-            "stroke": "text",
-            "shadow": "text",
-            "tracking": 0.04
+            "slot": {
+              "role": "display",
+              "fill": "text_white",
+              "stroke": "text",
+              "shadow": "text",
+              "tracking": 0.04
+            }
           },
+          { "gap": 42 },
+          { "rule": { "kind": "bar" } },
+          { "gap": 42 },
           {
-            "type": "caption",
-            "y": 1110,
-            "fill": "text_white",
-            "stroke": "small",
-            "shadow": "text",
-            "alpha": 0.8
-          }
-        ],
-        "rules": [
-          {
-            "kind": "bar",
-            "y": 1030
+            "slot": {
+              "role": "caption",
+              "fill": "text_white",
+              "stroke": "small",
+              "shadow": "text",
+              "alpha": 0.8
+            }
           }
         ]
       }

@@ -1,0 +1,1679 @@
+[
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "vertical",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 96,
+            "baseline": 939.6,
+            "width": 351.36
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 1022.112,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "vertical",
+    "rows": [
+      "연남동 숯불 한우 오마카세",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 숯불 한우 오마카세",
+            "size": 84,
+            "baseline": 934.848,
+            "width": 846.72
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 1016.664,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "vertical",
+    "rows": [
+      "연남동 골목에서 30년째 숯불 한우만 굽는 집",
+      ""
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목에서 30년째",
+            "size": 90,
+            "baseline": 928.14,
+            "width": 850.801
+          },
+          {
+            "text": "숯불 한우만 굽는 집",
+            "size": 90,
+            "baseline": 1027.14,
+            "width": 675
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "horizontal",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 96,
+            "baseline": 527.475,
+            "width": 351.36
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 609.987,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "horizontal",
+    "rows": [
+      "연남동 숯불 한우 오마카세",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 숯불 한우 오마카세",
+            "size": 95,
+            "baseline": 527.079,
+            "width": 957.6
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 609.533,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "horizontal",
+    "rows": [
+      "연남동 골목에서 30년째 숯불 한우만 굽는 집",
+      ""
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목에서 30년째",
+            "size": 96,
+            "baseline": 515.091,
+            "width": 907.521
+          },
+          {
+            "text": "숯불 한우만 굽는 집",
+            "size": 96,
+            "baseline": 620.691,
+            "width": 720
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "square",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 96,
+            "baseline": 527.475,
+            "width": 351.36
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 609.987,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "square",
+    "rows": [
+      "연남동 숯불 한우 오마카세",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 숯불 한우 오마카세",
+            "size": 94,
+            "baseline": 526.683,
+            "width": 947.52
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 609.079,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "a",
+    "ratio": "square",
+    "rows": [
+      "연남동 골목에서 30년째 숯불 한우만 굽는 집",
+      ""
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 60,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목에서 30년째",
+            "size": 96,
+            "baseline": 515.091,
+            "width": 907.521
+          },
+          {
+            "text": "숯불 한우만 굽는 집",
+            "size": 96,
+            "baseline": 620.691,
+            "width": 720
+          }
+        ]
+      }
+    ],
+    "rules": []
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 84,
+            "baseline": 959.348,
+            "width": 307.44
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 1091.164,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 842.948,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 1010.22,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "연남동 골목 30년 숯불 한우 구이",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목 30년 숯불 한우 구이",
+            "size": 67,
+            "baseline": 952.616,
+            "width": 846.434
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 1083.446,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 850.666,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 1002.502,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "",
+      "서울 연남동"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동",
+            "size": 36,
+            "baseline": 1031.528,
+            "width": 167.973
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 902.584,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 950.584,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 72,
+            "baseline": 530.659,
+            "width": 263.52
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 661.779,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 424.459,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 580.835,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "연남동 골목 30년 숯불 한우 구이",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목 30년 숯불 한우 구이",
+            "size": 72,
+            "baseline": 530.659,
+            "width": 909.6
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 661.779,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 424.459,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 580.835,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "",
+      "서울 연남동"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동",
+            "size": 36,
+            "baseline": 607.591,
+            "width": 167.973
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 478.647,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 526.647,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "해미 한우",
+      "서울 연남동 · 숯불 한우 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우",
+            "size": 76,
+            "baseline": 532.243,
+            "width": 278.16
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동 · 숯불 한우 구이",
+            "size": 36,
+            "baseline": 663.595,
+            "width": 407.66
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 422.643,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 582.651,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "연남동 골목 30년 숯불 한우 구이",
+      "서울 마포구 연남동 · 투뿔 한우 숯불 구이"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목 30년 숯불 한우 구이",
+            "size": 75,
+            "baseline": 531.847,
+            "width": 947.501
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 마포구 연남동 · 투뿔 한우 숯불 구이",
+            "size": 36,
+            "baseline": 663.141,
+            "width": 585.879
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 423.097,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 582.197,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "intro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "",
+      "서울 연남동"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "서울 연남동",
+            "size": 36,
+            "baseline": 607.591,
+            "width": 167.973
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 478.647,
+        "w": 520,
+        "h": 2
+      },
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 526.647,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "다시 가고 싶은 불판",
+      "자세한 후기는 블로그에"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 84,
+            "baseline": 899.728,
+            "width": 630
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "자세한 후기는 블로그에",
+            "size": 56,
+            "baseline": 1041.624,
+            "width": 504.95
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 950.6,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "연남동에서 다시 가고 싶은 불판 1순위",
+      "메뉴와 가격은 블로그 후기에 정리해 뒀어요"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 58,
+            "baseline": 891.712,
+            "width": 844.867
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "메뉴와 가격은 블로그 후기에 정리해 뒀어요",
+            "size": 51,
+            "baseline": 1028.08,
+            "width": 843.927
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 941.076,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "vertical",
+    "rows": [
+      "다시 가고 싶은 불판",
+      ""
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 84,
+            "baseline": 947.264,
+            "width": 630
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 998.136,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "다시 가고 싶은 불판",
+      "자세한 후기는 블로그에"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 72,
+            "baseline": 484.601,
+            "width": 540
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "자세한 후기는 블로그에",
+            "size": 56,
+            "baseline": 625.801,
+            "width": 504.95
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 534.777,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "연남동에서 다시 가고 싶은 불판 1순위",
+      "메뉴와 가격은 블로그 후기에 정리해 뒀어요"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 65,
+            "baseline": 481.829,
+            "width": 946.834
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "메뉴와 가격은 블로그 후기에 정리해 뒀어요",
+            "size": 56,
+            "baseline": 622.623,
+            "width": 926.664
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 531.599,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "horizontal",
+    "rows": [
+      "다시 가고 싶은 불판",
+      ""
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 72,
+            "baseline": 532.137,
+            "width": 540
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 700,
+        "y": 582.313,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "다시 가고 싶은 불판",
+      "자세한 후기는 블로그에"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 76,
+            "baseline": 486.185,
+            "width": 570
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "자세한 후기는 블로그에",
+            "size": 56,
+            "baseline": 627.617,
+            "width": 504.95
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 536.593,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "연남동에서 다시 가고 싶은 불판 1순위",
+      "메뉴와 가격은 블로그 후기에 정리해 뒀어요"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 65,
+            "baseline": 481.829,
+            "width": 946.834
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 48,
+        "over": false,
+        "lines": [
+          {
+            "text": "메뉴와 가격은 블로그 후기에 정리해 뒀어요",
+            "size": 56,
+            "baseline": 622.623,
+            "width": 926.664
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 531.599,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "b",
+    "ratio": "square",
+    "rows": [
+      "다시 가고 싶은 불판",
+      ""
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 56,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 76,
+            "baseline": 533.721,
+            "width": 570
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "hair",
+        "x": 280,
+        "y": 584.129,
+        "w": 520,
+        "h": 2
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "vertical",
+    "rows": [
+      "직접 먹어본 평점",
+      "4.8",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "직접 먹어본 평점",
+            "size": 36,
+            "baseline": 833.036,
+            "width": 258.446
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "4.8",
+            "size": 132,
+            "baseline": 980.124,
+            "width": 224.987
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 1113.156,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 1029.78,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "vertical",
+    "rows": [
+      "세 번 가 보고 매긴 솔직한 평점",
+      "해미 한우 연남 본점",
+      "연남동에서 다시 가고 싶은 불판 1순위"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "세 번 가 보고 매긴 솔직한 평점",
+            "size": 36,
+            "baseline": 845.294,
+            "width": 475.158
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우 연남 본점",
+            "size": 105,
+            "baseline": 969.432,
+            "width": 850.5
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 44,
+            "baseline": 1100.898,
+            "width": 644.423
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 1017.522,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "vertical",
+    "rows": [
+      "",
+      "연남동 골목 30년 해미 한우",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목",
+            "size": 131,
+            "baseline": 882.312,
+            "width": 631.42
+          },
+          {
+            "text": "30년 해미 한우",
+            "size": 131,
+            "baseline": 1013.312,
+            "width": 850.628
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 1146.286,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 1062.91,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "horizontal",
+    "rows": [
+      "직접 먹어본 평점",
+      "4.8",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "직접 먹어본 평점",
+            "size": 36,
+            "baseline": 412.599,
+            "width": 258.446
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "4.8",
+            "size": 132,
+            "baseline": 559.687,
+            "width": 224.987
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 692.719,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 880,
+        "y": 609.343,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "horizontal",
+    "rows": [
+      "세 번 가 보고 매긴 솔직한 평점",
+      "해미 한우 연남 본점",
+      "연남동에서 다시 가고 싶은 불판 1순위"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "세 번 가 보고 매긴 솔직한 평점",
+            "size": 36,
+            "baseline": 418.955,
+            "width": 475.158
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우 연남 본점",
+            "size": 118,
+            "baseline": 554.142,
+            "width": 955.8
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 44,
+            "baseline": 686.363,
+            "width": 644.423
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 880,
+        "y": 602.987,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "horizontal",
+    "rows": [
+      "",
+      "연남동 골목 30년 해미 한우",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 960,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목 30년 해미 한우",
+            "size": 82,
+            "baseline": 507.97,
+            "width": 952.294
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 638.103,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 880,
+        "y": 554.727,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "square",
+    "rows": [
+      "직접 먹어본 평점",
+      "4.8",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "직접 먹어본 평점",
+            "size": 36,
+            "baseline": 412.599,
+            "width": 258.446
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "4.8",
+            "size": 132,
+            "baseline": 559.687,
+            "width": 224.987
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 692.719,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 609.343,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "square",
+    "rows": [
+      "세 번 가 보고 매긴 솔직한 평점",
+      "해미 한우 연남 본점",
+      "연남동에서 다시 가고 싶은 불판 1순위"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 0,
+        "floor": 34,
+        "over": false,
+        "lines": [
+          {
+            "text": "세 번 가 보고 매긴 솔직한 평점",
+            "size": 36,
+            "baseline": 419.409,
+            "width": 475.158
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "해미 한우 연남 본점",
+            "size": 117,
+            "baseline": 553.747,
+            "width": 947.7
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동에서 다시 가고 싶은 불판 1순위",
+            "size": 44,
+            "baseline": 685.909,
+            "width": 644.423
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 602.533,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  },
+  {
+    "kind": "outro",
+    "id": "e",
+    "ratio": "square",
+    "rows": [
+      "",
+      "연남동 골목 30년 해미 한우",
+      "다시 가고 싶은 불판"
+    ],
+    "anchorX": 540,
+    "slots": [
+      {
+        "index": 1,
+        "floor": 80,
+        "over": false,
+        "lines": [
+          {
+            "text": "연남동 골목 30년 해미 한우",
+            "size": 81,
+            "baseline": 507.575,
+            "width": 940.681
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "floor": 40,
+        "over": false,
+        "lines": [
+          {
+            "text": "다시 가고 싶은 불판",
+            "size": 44,
+            "baseline": 637.648,
+            "width": 336.509
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "bar",
+        "x": 460,
+        "y": 554.272,
+        "w": 160,
+        "h": 6
+      }
+    ]
+  }
+]

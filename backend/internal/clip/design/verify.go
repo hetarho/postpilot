@@ -57,8 +57,11 @@ var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip"
 
 type Element struct {
 	Cut int
-	// Fixed region geometry carried alongside glyph bounds for V20.
+	// Region geometry carried alongside glyph bounds for V20: the slot and the
+	// line of it a copy part draws, and the floor its size may not go under.
 	Slot                             int
+	Line                             int     `json:",omitempty"`
+	Floor                            float64 `json:",omitempty"`
 	BaselineY, GlyphOffsetY, Opacity float64
 	Rule                             string
 	TypeRole                         string

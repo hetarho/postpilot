@@ -18,6 +18,7 @@ export function mediaAssetDigest(root = repoRoot) {
   visit(resolve(root, 'backend/assets/fonts'))
   visit(resolve(root, 'backend/internal/clip/overlay/presets'))
   files.push(resolve(root, 'backend/internal/clip/design/design.json'))
+  files.push(resolve(root, 'backend/internal/clip/design/metrics.json'))
   const hash = createHash('sha256')
   for (const path of files.sort()) {
     hash.update(relative(root, path).replaceAll('\\', '/')).update('\0')

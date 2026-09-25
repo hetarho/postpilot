@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CLIP_COMPOSITION_PREVIEW, CLIP_REGIONS } from '@/entities/clip-design/@x/clip-template'
+import { CLIP_COMPOSITION_PREVIEW, clipRegionSlots } from '@/entities/clip-design/@x/clip-template'
 import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
 import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
@@ -10,12 +10,7 @@ import { CompositionDesignFrame } from './CompositionDesignFrame'
  *  sample. A template names no preset (CLIP-14), so the id comes from the
  *  surface asking for the picture. */
 function sampleBody(kind: 'intro' | 'outro' | 'caption', preset: string) {
-  const slots =
-    kind === 'intro'
-      ? (CLIP_REGIONS.intro[preset as keyof typeof CLIP_REGIONS.intro]?.slots.length ?? 0)
-      : kind === 'outro'
-        ? (CLIP_REGIONS.outro[preset as keyof typeof CLIP_REGIONS.outro]?.slots.length ?? 0)
-        : 0
+  const slots = kind === 'caption' ? 0 : clipRegionSlots(kind, preset).length
   const role = kind === 'intro' ? 'hook' : 'ending'
   const rows = Array.from({ length: slots }, () => '<row kind="ai"/>').join('')
   const region = slots ? `<text id="sample" kind="ai" role="${role}">${rows}</text>` : ''

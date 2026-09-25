@@ -11,6 +11,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"slices"
 )
 
 //go:embed design.json
@@ -63,6 +64,8 @@ type TypeRole struct {
 	Tracking   float64 `json:"tracking"`
 	LineHeight float64 `json:"line_height"`
 	Chars      int     `json:"chars"`
+	// The size a region slot of this role may shrink to (CDS-19, CDS-86).
+	Floor float64 `json:"floor"`
 }
 type Paint struct {
 	Hex   string  `json:"hex"`
@@ -269,27 +272,10 @@ type RuleToken struct {
 	Height float64 `json:"h"`
 	Alpha  float64 `json:"alpha"`
 }
-type RegionSlot struct {
-	Type     string   `json:"type"`
-	Y        float64  `json:"y"`
-	Fill     string   `json:"fill"`
-	Alpha    *float64 `json:"alpha,omitempty"`
-	Tracking *float64 `json:"tracking,omitempty"`
-	Stroke   string   `json:"stroke"`
-	Shadow   string   `json:"shadow"`
-}
-type RegionRule struct {
-	Kind string  `json:"kind"`
-	Y    float64 `json:"y"`
-}
-type RegionPreset struct {
-	Slots []RegionSlot `json:"slots"`
-	Rules []RegionRule `json:"rules"`
-}
 type RegionTokens struct {
-	Intro   map[string]RegionPreset `json:"intro"`
-	Outro   map[string]RegionPreset `json:"outro"`
-	Caption map[string]StyleRule    `json:"caption"`
+	Intro   map[string]json.RawMessage `json:"intro"`
+	Outro   map[string]json.RawMessage `json:"outro"`
+	Caption map[string]StyleRule       `json:"caption"`
 }
 
 type system struct {
@@ -331,6 +317,14 @@ func parse() system {
 	var s system
 	if err := json.Unmarshal(data, &s); err != nil {
 		panic(fmt.Errorf("clip design system: %w", err))
+	}
+	for kind, choices := range map[string]map[string]json.RawMessage{"intro": s.Regions.Intro, "outro": s.Regions.Outro} {
+		for id, raw := range choices {
+			var preset RegionPreset
+			if err := json.Unmarshal(raw, &preset); err != nil {
+				panic(fmt.Errorf("clip design system: %s preset %s: %w", kind, id, err))
+			}
+		}
 	}
 	return s
 }
@@ -429,9 +423,10 @@ func Anchors(ratio string) (Anchor, bool) {
 	return l.Anchor, ok
 }
 
-// Region returns a template-selected intro or outro preset.
+// Region returns a project-selected intro or outro preset (CLIP-111). The
+// preset is decoded afresh per call, so a caller cannot mutate the embedded one.
 func Region(kind, id string) (RegionPreset, bool) {
-	var choices map[string]RegionPreset
+	var choices map[string]json.RawMessage
 	switch kind {
 	case "intro":
 		choices = loaded.Regions.Intro
@@ -440,20 +435,27 @@ func Region(kind, id string) (RegionPreset, bool) {
 	default:
 		return RegionPreset{}, false
 	}
-	value, ok := choices[id]
-	// A caller cannot mutate the embedded preset by editing a returned slice.
-	value.Slots = append([]RegionSlot(nil), value.Slots...)
-	for i := range value.Slots {
-		s := &value.Slots[i]
-		if s.Alpha != nil {
-			v := *s.Alpha
-			s.Alpha = &v
-		}
-		if s.Tracking != nil {
-			v := *s.Tracking
-			s.Tracking = &v
-		}
+	raw, ok := choices[id]
+	if !ok {
+		return RegionPreset{}, false
 	}
-	value.Rules = append([]RegionRule(nil), value.Rules...)
-	return value, ok
+	var preset RegionPreset
+	if err := json.Unmarshal(raw, &preset); err != nil {
+		return RegionPreset{}, false
+	}
+	return preset, true
+}
+
+// RegionIDs lists one region's preset ids.
+func RegionIDs(kind string) []string {
+	choices := loaded.Regions.Intro
+	if kind == "outro" {
+		choices = loaded.Regions.Outro
+	}
+	ids := make([]string, 0, len(choices))
+	for id := range choices {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	return ids
 }

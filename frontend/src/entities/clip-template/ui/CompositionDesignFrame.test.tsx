@@ -1,6 +1,11 @@
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
-import { CLIP_DESIGN, CLIP_REGIONS, CLIP_RULES } from '@/entities/clip-design/@x/clip-template'
+import {
+  CLIP_DESIGN,
+  CLIP_REGIONS,
+  clipLayoutRegion,
+} from '@/entities/clip-design/@x/clip-template'
+import fixture from '@/entities/clip-design/model/region-layouts.fixture.json'
 import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionDesignFrame } from './CompositionDesignFrame'
@@ -25,42 +30,37 @@ it.each(['vertical', 'horizontal', 'square'] as const)(
             presets={{ intro, outro }}
           />,
         )
-        const shape = CLIP_DESIGN.ratios[ratio],
-          scale = shape.canvas.height / CLIP_DESIGN.ratios.vertical.canvas.height
+        const rows = {
+          intro: ['첫 장면', '오늘의 기록'],
+          outro: outro === 'e' ? ['평가', '4.5', '다시 올 곳'] : ['평가', '4.5'],
+        }
         for (const [kind, id] of [
           ['intro', intro],
           ['outro', outro],
         ] as const) {
-          const preset = kind === 'intro' ? CLIP_REGIONS.intro[intro] : CLIP_REGIONS.outro[outro]
-          // CDS-79: the block keeps its 9:16 spacing and moves as one piece.
-          const ys = [...preset.slots.map((s) => s.y), ...preset.rules.map((r) => r.y)]
-          const centre = (Math.min(...ys) + Math.max(...ys)) / 2
-          const offset = centre * scale - centre
+          // CDS-86, CDS-87: the preview draws the renderer's own block layout.
+          const block = clipLayoutRegion(kind, id, ratio, rows[kind])!
           const group = view.container.querySelector(`[data-region="${kind}"]`)!
           expect(group.getAttribute('data-preset')).toBe(id)
-          const slots = group.querySelectorAll('text[data-slot]')
-          expect(slots).toHaveLength(preset.slots.length)
-          preset.slots.forEach((slot, i) => {
-            const type = CLIP_DESIGN.type[slot.type as keyof typeof CLIP_DESIGN.type]
-            expect(slots[i]).toHaveAttribute('y', String(slot.y + offset))
-            expect(slots[i]).toHaveAttribute(
-              'font-size',
-              String(slot.type === 'hook' ? shape.hook_size : type.size),
-            )
-            expect(slots[i]).toHaveAttribute(
+          const texts = group.querySelectorAll('text[data-slot]')
+          const lines = block.slots.flatMap((slot) => slot.lines.map((line) => ({ slot, line })))
+          expect(texts).toHaveLength(lines.length)
+          lines.forEach(({ slot, line }, i) => {
+            expect(texts[i]).toHaveAttribute('y', String(line.baseline))
+            expect(texts[i]).toHaveAttribute('font-size', String(line.size))
+            expect(texts[i]).toHaveAttribute(
               'font-family',
-              CLIP_DESIGN.faces[type.face as keyof typeof CLIP_DESIGN.faces],
+              CLIP_DESIGN.faces[slot.type.face as keyof typeof CLIP_DESIGN.faces],
             )
-            expect(slots[i]).toHaveAttribute('fill', CLIP_DESIGN.color.text_white.hex)
+            expect(texts[i]).toHaveAttribute('fill', CLIP_DESIGN.color.text_white.hex)
           })
-          expect(group.querySelectorAll('[data-rule]')).toHaveLength(preset.rules.length)
-          preset.rules.forEach((line, i) => {
-            const rule = CLIP_RULES[line.kind as keyof typeof CLIP_RULES]
-            const actual = group.querySelectorAll('[data-rule]')[i]
-            expect(actual).toHaveAttribute('y', String(line.y + offset))
-            expect(actual).toHaveAttribute('width', String(rule.w))
-            expect(actual).toHaveAttribute('height', String(rule.h))
-            expect(actual).toHaveAttribute('fill', CLIP_DESIGN.color.text_white.hex)
+          const painted = group.querySelectorAll('[data-rule]')
+          expect(painted).toHaveLength(block.rules.length)
+          block.rules.forEach((rule, i) => {
+            expect(painted[i]).toHaveAttribute('y', String(rule.box.y))
+            expect(painted[i]).toHaveAttribute('width', String(rule.box.width))
+            expect(painted[i]).toHaveAttribute('height', String(rule.box.height))
+            expect(painted[i]).toHaveAttribute('fill', CLIP_DESIGN.color.text_white.hex)
           })
           expect(group.querySelector('tspan')).toBeNull()
         }
@@ -100,8 +100,23 @@ it('moves an automatic caption to the alternative anchor around visible outro sl
     },
   })
   try {
+    // A wrapped outro B hook covers the caption's default anchor on 16:9 and
+    // leaves its alternative free; check that the layout really says so first.
+    const hook = '연남동 골목에서 다시 가고 싶은 숯불 한우 불판 맛집 1순위'
+    const block = clipLayoutRegion('outro', 'b', 'horizontal', [hook, ''])!
+    const shape = CLIP_DESIGN.ratios.horizontal
+    const captionHeight = 72 * 0.8 + CLIP_DESIGN.spacing.stroke_text
+    const covers = (anchor: number) =>
+      block.slots.some(
+        (s) =>
+          s.box.y < anchor + captionHeight / 2 &&
+          s.box.y + s.box.height > anchor - captionHeight / 2,
+      )
+    expect(block.slots[0].lines).toHaveLength(2)
+    expect(covers(shape.anchor.upper_mid)).toBe(true)
+    expect(covers(shape.anchor.lower_mid)).toBe(false)
     const document = parseClipComposition(
-      '<clip version="1" intro="b" caption="bold" outro="e"><text id="intro" role="hook" kind="fixed" basis="output-start"/><text id="outro" role="ending" kind="fixed" basis="output-end"><row>개인 점수</row><row>4.5</row></text><text id="caption" role="caption" kind="fixed" basis="whole">오늘의 한 끼</text></clip>',
+      `<clip version="1"><text id="outro" role="ending" kind="fixed" basis="output-end"><row>${hook}</row></text><text id="caption" role="caption" kind="fixed" basis="whole">오늘의 한 끼</text></clip>`,
     )
     const timeline = sampleClipComposition(document, 15000, () => '예시')
     const view = render(
@@ -111,6 +126,7 @@ it('moves an automatic caption to the alternative anchor around visible outro sl
         ratio="horizontal"
         label="Preview"
         sampleAI="문구"
+        presets={{ intro: 'b', outro: 'b' }}
       />,
     )
     expect(view.container.querySelector('[data-role="caption"]')).toHaveAttribute(
@@ -143,38 +159,44 @@ it('draws only the lines the chosen preset holds', () => {
   expect(group.querySelectorAll('text[data-slot]')).toHaveLength(2)
 })
 
-// CDS-79: the preview must land on the renderer's own baselines, not on its own
-// arithmetic. These are the y values the Go region goldens carry for the two
-// 1080-high canvases; 9:16 keeps the preset's authored values unchanged.
-it.each([
-  ['vertical', 'b', 'e', [846, 960, 1010, 1090], [836, 980, 1030, 1110]],
-  ['horizontal', 'b', 'e', [422.5, 536.5, 586.5, 666.5], [410.3125, 554.3125, 604.3125, 684.3125]],
-  ['square', 'b', 'e', [422.5, 536.5, 586.5, 666.5], [410.3125, 554.3125, 604.3125, 684.3125]],
-] as const)(
-  'places region parts on the renderer baselines (%s)',
-  (ratio, intro, outro, wantIntro, wantOutro) => {
+// CDS-79, CDS-86, CDS-87: the preview lands on the renderer's own baselines —
+// the Go layout of every preset, ratio and row set, written by the Go design
+// tests — not on arithmetic of its own.
+it('places region parts where the renderer lays them out', () => {
+  for (const c of fixture) {
+    const role = c.kind === 'intro' ? 'hook' : 'ending'
+    const rows = c.rows.map((row) => `<row>${row}</row>`).join('')
     const document = parseClipComposition(
-      `<clip version="1" intro="${intro}" caption="bold" outro="${outro}"><text id="opening" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>오늘의 기록</row></text><text id="closing" kind="fixed" role="ending" basis="output-end"><row>평가</row><row>4.5</row><row>다시 올 곳</row></text></clip>`,
+      `<clip version="1"><text id="region" kind="fixed" role="${role}">${rows}</text></clip>`,
     )
     const timeline = sampleClipComposition(document, 15000, () => '예시')
     const view = render(
       <CompositionDesignFrame
         document={document}
         entries={timeline.elements}
-        ratio={ratio}
+        ratio={c.ratio as 'vertical' | 'horizontal' | 'square'}
         label="Preview"
         sampleAI="문구"
+        presets={{
+          intro: c.kind === 'intro' ? (c.id as 'a' | 'b') : 'b',
+          outro: c.kind === 'outro' ? (c.id as 'b' | 'e') : 'e',
+        }}
       />,
     )
-    for (const [kind, want] of [
-      ['intro', wantIntro],
-      ['outro', wantOutro],
-    ] as const) {
-      const group = view.container.querySelector(`[data-region="${kind}"]`)!
-      const painted = [...group.querySelectorAll('text[data-slot], [data-rule]')]
-        .map((node) => Number(node.getAttribute('y')))
-        .sort((a, b) => a - b)
-      expect(painted).toEqual([...want].sort((a, b) => a - b))
-    }
-  },
-)
+    const group = view.container.querySelector(`[data-region="${c.kind}"]`)
+    const want = [
+      ...c.slots.flatMap((slot) => slot.lines.map((line) => line.baseline)),
+      ...c.rules.map((rule) => rule.y),
+    ]
+    const painted = [...(group?.querySelectorAll('text[data-slot], [data-rule]') ?? [])].map(
+      (node) => Number(node.getAttribute('y')),
+    )
+    expect(painted.length, JSON.stringify(c.rows)).toBe(want.length)
+    painted
+      .sort((a, b) => a - b)
+      .forEach((y, i) =>
+        expect(Math.abs(y - [...want].sort((a, b) => a - b)[i])).toBeLessThan(0.01),
+      )
+    view.unmount()
+  }
+})

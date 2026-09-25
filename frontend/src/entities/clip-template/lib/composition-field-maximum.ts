@@ -1,15 +1,12 @@
 import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_DESIGN,
-  CLIP_REGIONS,
+  clipRegionSlots,
 } from '@/entities/clip-design/@x/clip-template'
 import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
 import type { ClipComposition } from '../model/composition'
 
-const slots = (kind: 'intro' | 'outro', preset: string) =>
-  kind === 'intro'
-    ? (CLIP_REGIONS.intro[preset as keyof typeof CLIP_REGIONS.intro]?.slots ?? [])
-    : (CLIP_REGIONS.outro[preset as keyof typeof CLIP_REGIONS.outro]?.slots ?? [])
+const slots = (kind: 'intro' | 'outro', preset: string) => clipRegionSlots(kind, preset)
 
 /** The maximum ① holds an answer to. The parser's own number cannot count a
  *  region slot — which preset holds that line is the project's (CLIP-147) — so
@@ -32,7 +29,7 @@ export function clipFieldMaximum(
       const slot = preset[taken[kind] + i]
       if (!slot || (row.kind || element.kind) === 'ai') return
       if (!row.parts.some((part) => part.field === key)) return
-      const chars = CLIP_DESIGN.type[slot.type as keyof typeof CLIP_DESIGN.type]?.chars
+      const chars = CLIP_DESIGN.type[slot.role as keyof typeof CLIP_DESIGN.type]?.chars
       if (chars) max = Math.min(max, chars)
     })
     taken[kind] += element.rows.length || 1

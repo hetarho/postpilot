@@ -32,9 +32,26 @@ func regionBounds(visual declaredVisual) clip.Region {
 	return bounds
 }
 
-func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, kind, id string, placement clip.RegionPlacement) (declaredVisual, error) {
-	preset, ok := design.Region(kind, id)
-	if !ok {
+// regionElements is the region's resolved entries with this entry's own
+// current lines in place, so a retried alternative lays out as itself.
+func regionElements(elements []composition.ResolvedElement, current composition.ResolvedElement) []composition.ResolvedElement {
+	out := make([]composition.ResolvedElement, len(elements))
+	for i, e := range elements {
+		if e.InstanceID == current.InstanceID {
+			e = current
+		}
+		out[i] = e
+	}
+	return out
+}
+
+// layoutDeclaredRegion draws this entry's slots of one region block. The block
+// is laid out once from every line of the region (CDS-86, CDS-87), so a slot
+// that shrinks or wraps moves its neighbours whichever entry supplies them; the
+// entry draws only its own slots, and the one that paints the rules paints them
+// at the block's positions (CLIP-147).
+func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, kind, id string, placement clip.RegionPlacement, regionRows []string) (declaredVisual, error) {
+	if _, ok := design.Region(kind, id); !ok {
 		return visual, elementProblem(visual.text, "invalid_design")
 	}
 	rows := visual.text.Resolved.Rows
@@ -44,62 +61,90 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 	// The lines this entry's own slots can hold; the rest are drawn by nobody
 	// and noticed instead of refused (CLIP-147).
 	rows = rows[:min(len(rows), max(0, placement.Drawn))]
-	geometry, _ := design.Layout(ratio)
-	shadow := overlayShadow("text")
-	visual.region = overlay.RegionView{CopyView: overlay.CopyView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Shadow: &shadow}}
-	texts := make([]string, len(rows))
-	for i, row := range rows {
-		texts[i] = row.Text
+	for _, row := range rows {
 		if strings.ContainsAny(row.Text, "\r\n") {
 			return visual, elementProblem(visual.text, "copy_limit")
 		}
-		if strings.TrimSpace(row.Text) == "" {
+	}
+	block, err := design.LayoutRegion(kind, id, ratio, regionRows)
+	if err != nil {
+		return visual, elementProblem(visual.text, "invalid_design")
+	}
+	shadow := overlayShadow("text")
+	visual.region = overlay.RegionView{CopyView: overlay.CopyView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Shadow: &shadow}}
+	for i, row := range rows {
+		index := placement.Offset + i
+		slot, ok := block.Slot(index)
+		if !ok || strings.TrimSpace(row.Text) == "" {
 			continue
 		}
-		slot := preset.Slots[placement.Offset+i]
-		role := design.RegionType(slot, ratio)
-		bounds, err := r.roleBounds(ctx, ws, row.Text, role)
-		if err != nil {
-			return visual, declaredRoleError(visual.text, err)
-		}
-		baseline := design.RegionBaseline(preset, ratio, slot.Y)
-		box := clip.Region{X: geometry.Anchor.Center - bounds.Width/2, Y: baseline + bounds.Y, Width: bounds.Width, Height: bounds.Height}
-		if !inside(box, canvas.Safe) {
-			return visual, elementProblem(visual.text, "safe_area")
-		}
-		colour := design.Color[slot.Fill]
-		if slot.Alpha != nil {
-			colour.Alpha *= *slot.Alpha
-		}
-		line := overlayText(role, row.Text, box.X-bounds.X, baseline, colour.Hex, trimmed(colour.Alpha))
-		line.Stroke, line.StrokeOpacity = "none", "1"
-		if slot.Stroke == "text" || slot.Stroke == "small" {
-			line.Stroke, line.StrokeOpacity = paint("stroke_dark")
-			line.StrokeWidth = design.Spacing.StrokeText
-			if slot.Stroke == "small" {
-				line.StrokeWidth = design.Spacing.StrokeSmall
+		role := slot.Type
+		if slot.Over {
+			// Wider than its width at its floor, or a character the preset's
+			// face does not draw (CDS-77).
+			if !design.Covers(role.Face, role.Weight, row.Text) {
+				return visual, elementProblem(visual.text, "unsupported_glyph")
 			}
+			return visual, elementProblem(visual.text, "copy_limit")
 		}
-		line.Shadow = slot.Shadow != ""
-		visual.region.Lines = append(visual.region.Lines, line)
-		visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Slot: placement.Offset + i + 1, Text: row.Text, FontSize: role.Size, Fill: colour.Hex, Opacity: colour.Alpha, BaselineY: baseline, GlyphOffsetY: bounds.Y, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		fill, alpha := slot.Spec.Paint()
+		for k, line := range slot.Lines {
+			bounds, err := r.lineBounds(ctx, ws, line.Text, role)
+			if err != nil {
+				return visual, declaredRoleError(visual.text, err)
+			}
+			x := block.AnchorX - bounds.Width/2
+			if block.Align == "left" {
+				x = block.AnchorX
+			}
+			box := clip.Region{X: x, Y: line.Baseline + bounds.Y, Width: bounds.Width, Height: bounds.Height}
+			if !inside(box, canvas.Safe) {
+				return visual, elementProblem(visual.text, "safe_area")
+			}
+			text := overlayText(role, line.Text, box.X-bounds.X, line.Baseline, fill, trimmed(alpha))
+			text.Stroke, text.StrokeOpacity = "none", "1"
+			if slot.Spec.Stroke == "text" || slot.Spec.Stroke == "small" {
+				text.Stroke, text.StrokeOpacity = paint("stroke_dark")
+				text.StrokeWidth = design.Spacing.StrokeText
+				if slot.Spec.Stroke == "small" {
+					text.StrokeWidth = design.Spacing.StrokeSmall
+				}
+			}
+			text.Shadow = slot.Spec.Shadow != ""
+			visual.region.Lines = append(visual.region.Lines, text)
+			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Slot: index + 1, Line: k, Text: line.Text, FontSize: role.Size, Floor: role.Floor, Fill: fill, Opacity: alpha, BaselineY: line.Baseline, GlyphOffsetY: bounds.Y, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		}
 	}
 	// The preset's own rules are painted once for the region, by the first entry
 	// that has a line to paint (CDS-73, CLIP-147).
 	if placement.Rules && len(visual.region.Lines) > 0 {
-		for _, line := range preset.Rules {
-			rule := design.Rules[line.Kind]
-			box := clip.Region{X: geometry.Anchor.Center - rule.Width/2, Y: design.RegionBaseline(preset, ratio, line.Y), Width: rule.Width, Height: rule.Height}
-			visual.region.Rules = append(visual.region.Rules, overlayBox(box, 0, design.Color["text_white"].Hex, trimmed(rule.Alpha)))
-			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "plate", Rule: line.Kind, Fill: design.Color["text_white"].Hex, Opacity: rule.Alpha, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		white := design.Color["text_white"].Hex
+		for _, rule := range block.Rules {
+			box := clip.Region(rule.Box)
+			visual.region.Rules = append(visual.region.Rules, overlayBox(box, 0, white, trimmed(rule.Alpha)))
+			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "plate", Rule: rule.Kind, Fill: white, Opacity: rule.Alpha, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 		}
 	}
 	visual.manifest.Region = regionBounds(visual)
 	for _, part := range visual.manifest.Parts {
 		visual.manifest.Region = unionRegion(visual.manifest.Region, clip.Region(part.Region))
 	}
-	if err := design.VerifyRegion(kind, id, ratio, placement.Offset, placement.Rules, texts, visual.manifest.Parts); err != nil {
+	if err := design.VerifyRegion(kind, id, ratio, regionRows, placement.Offset, placement.Drawn, placement.Rules, visual.manifest.Parts); err != nil {
 		return visual, elementProblem(visual.text, "preset_mismatch")
 	}
 	return visual, nil
+}
+
+// lineBounds measures one fitted region line with the bundled face: the shaped
+// box at the line's size, for centring and the manifest. The fit itself was the
+// metrics table's (CDS-86), so no character count applies here.
+func (r *Rendering) lineBounds(ctx context.Context, ws clip.MediaWorkspace, text string, role design.TypeRole) (clip.Region, error) {
+	if err := r.checkCopy(text, role); err != nil {
+		return clip.Region{}, err
+	}
+	measured, err := r.measure(ctx, ws, []string{text}, role.Weight, role.Tracking, r.family(role))
+	if err != nil {
+		return clip.Region{}, err
+	}
+	return scaled(measured[text], role.Size/100), nil
 }

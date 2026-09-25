@@ -3,21 +3,17 @@ import {
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
   CLIP_REGIONS,
-  CLIP_RULES,
+  clipLayoutRegion,
+  clipRegionSlots,
 } from '@/entities/clip-design/@x/clip-template'
-import { type ClipRatioId, type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
+import {
+  type ClipRatioId,
+  type ClipRegionLayout,
+  type ClipRegionPresets,
+} from '@/entities/clip-design/@x/clip-template'
 import type { ClipComposition, ResolvedCompositionElement } from '../model/composition'
 
 type TypeName = keyof typeof CLIP_DESIGN.type
-type Slot = {
-  type: string
-  y: number
-  fill: string
-  alpha?: number
-  tracking?: number
-  stroke: string
-  shadow: string
-}
 type Metric = { x: number; y: number; width: number; height: number }
 type Line = {
   key: string
@@ -29,13 +25,17 @@ type Line = {
   stroke: number
   shadow: boolean
   slot?: number
+  /** A region line's face, weight and baseline come from the block layout. */
+  face?: string
+  weight?: number
+  baseline?: number
 }
 type Visual = {
   entry: ResolvedCompositionElement
   lines: Line[]
   kind?: 'intro' | 'outro'
-  slots?: readonly Slot[]
-  rules?: readonly { kind: string; y: number }[]
+  /** Whether this entry paints its region's rules: the first one with a line. */
+  rules?: boolean
 }
 
 /** Text is measured in the browser with the same bundled faces as export. The
@@ -123,72 +123,101 @@ export function CompositionDesignFrame({
   presets?: ClipRegionPresets
 }) {
   const shape = CLIP_DESIGN.ratios[ratio]
-  const scale = shape.canvas.height / CLIP_DESIGN.ratios.vertical.canvas.height
-  /** CDS-79: a region block keeps its 9:16 spacing on every ratio and moves as
-   * one piece — its centre, the midpoint of the preset's own y values, lands on
-   * the same fraction of canvas height. The renderer resolves every region y
-   * through the same offset, so the preview cannot drift from the export. */
-  const regionOffset = (v: Visual) => {
-    const ys = [...(v.slots ?? []).map((s) => s.y), ...(v.rules ?? []).map((r) => r.y)]
-    if (!ys.length) return 0
-    const centre = (Math.min(...ys) + Math.max(...ys)) / 2
-    return centre * scale - centre
-  }
   const shadowID = useId()
-  const visuals: Visual[] = entries.map((entry) => {
+  const kindOf = (e: ResolvedCompositionElement['element']) =>
+    e.role === 'hook' ? 'intro' : e.role === 'ending' ? 'outro' : undefined
+  const shown = (entry: ResolvedCompositionElement) => {
     const e = entry.element
-    const kind = e.role === 'hook' ? 'intro' : e.role === 'ending' ? 'outro' : undefined
-    const preset =
-      kind === 'intro'
-        ? CLIP_REGIONS.intro[presets.intro]
-        : kind === 'outro'
-          ? CLIP_REGIONS.outro[presets.outro]
-          : undefined
     const rows = entry.rows.length
       ? entry.rows
       : [{ role: e.role === 'info' ? 'caption' : '', text: entry.text }]
-    const lines = rows
+    return rows.map((row, i) => ({
+      role: row.role,
+      text: (e.rows[i]?.kind ?? e.kind) === 'ai' ? sampleAI : row.text,
+    }))
+  }
+  /** CLIP-147 and CDS-87: a region's entries fill its slots in order, and the block lays
+   *  out once from all of their lines, exactly as the renderer lays it out. */
+  const placement = new Map<string, { offset: number; drawn: number; rules: boolean }>()
+  const regionRows: Record<'intro' | 'outro', string[]> = {
+    intro: clipRegionSlots('intro', presets.intro).map(() => ''),
+    outro: clipRegionSlots('outro', presets.outro).map(() => ''),
+  }
+  const taken = { intro: 0, outro: 0 }
+  const ruled = { intro: false, outro: false }
+  for (const entry of entries) {
+    const kind = kindOf(entry.element)
+    if (!kind) continue
+    const rows = shown(entry)
+    const drawn = Math.max(0, Math.min(rows.length, regionRows[kind].length - taken[kind]))
+    const paints = rows.slice(0, drawn).some((row) => row.text.trim() !== '')
+    placement.set(entry.instanceId, { offset: taken[kind], drawn, rules: !ruled[kind] && paints })
+    if (paints) ruled[kind] = true
+    rows.slice(0, drawn).forEach((row, i) => (regionRows[kind][taken[kind] + i] = row.text))
+    taken[kind] += rows.length
+  }
+  const blocks: Record<'intro' | 'outro', ClipRegionLayout | undefined> = {
+    intro: clipLayoutRegion('intro', presets.intro, ratio, regionRows.intro),
+    outro: clipLayoutRegion('outro', presets.outro, ratio, regionRows.outro),
+  }
+  const visuals: Visual[] = entries.map((entry) => {
+    const e = entry.element
+    const kind = kindOf(e)
+    if (kind) {
+      const at = placement.get(entry.instanceId)!
+      const block = blocks[kind]
+      const lines: Line[] = []
+      for (let i = 0; i < at.drawn; i++) {
+        const slot = block?.slots.find((s) => s.index === at.offset + i)
+        if (!slot) continue
+        const colour = CLIP_DESIGN.color[slot.spec.fill as keyof typeof CLIP_DESIGN.color]
+        slot.lines.forEach((line, k) =>
+          lines.push({
+            key: `${entry.instanceId}/${i}/${k}`,
+            text: line.text,
+            type: slot.spec.role as TypeName,
+            size: line.size,
+            tracking: slot.type.tracking,
+            face: slot.type.face,
+            weight: slot.type.weight,
+            baseline: line.baseline,
+            alpha: colour.alpha * (slot.spec.alpha ?? 1),
+            stroke:
+              slot.spec.stroke === 'text'
+                ? CLIP_DESIGN.spacing.stroke_text
+                : slot.spec.stroke === 'small'
+                  ? CLIP_DESIGN.spacing.stroke_small
+                  : 0,
+            shadow: !!slot.spec.shadow,
+            slot: slot.index,
+          }),
+        )
+      }
+      return { entry, lines, kind, rules: at.rules }
+    }
+    const lines = shown(entry)
       .map((row, i) => {
-        const text = (e.rows[i]?.kind ?? e.kind) === 'ai' ? sampleAI : row.text
-        const slot: Slot | undefined = preset?.slots[i]
-        const type = (slot?.type ??
-          (e.role === 'badge'
-            ? 'badge'
-            : e.role === 'info'
-              ? row.role || 'caption'
-              : 'title')) as TypeName
-        const colour =
-          CLIP_DESIGN.color[
-            slot?.fill === 'text_muted' || (!kind && type === 'label') ? 'text_muted' : 'text_white'
-          ]
-        return typeLine(`${entry.instanceId}/${i}`, text, type, ratio, {
-          alpha: colour.alpha * (slot?.alpha ?? 1),
+        const type = (
+          e.role === 'badge' ? 'badge' : e.role === 'info' ? row.role || 'caption' : 'title'
+        ) as TypeName
+        const colour = CLIP_DESIGN.color[type === 'label' ? 'text_muted' : 'text_white']
+        return typeLine(`${entry.instanceId}/${i}`, row.text, type, ratio, {
+          alpha: colour.alpha,
           tracking:
-            slot?.tracking ??
-            (e.role === 'info' && type === 'label'
+            e.role === 'info' && type === 'label'
               ? CLIP_DESIGN.information.label_tracking
-              : CLIP_DESIGN.type[type].tracking),
-          stroke: kind
-            ? slot?.stroke === 'text'
-              ? CLIP_DESIGN.spacing.stroke_text
-              : slot?.stroke === 'small'
-                ? CLIP_DESIGN.spacing.stroke_small
-                : 0
-            : e.role === 'badge'
+              : CLIP_DESIGN.type[type].tracking,
+          stroke:
+            e.role === 'badge'
               ? 0
               : e.role === 'info'
                 ? CLIP_DESIGN.spacing.stroke_small
                 : CLIP_DESIGN.spacing.stroke_text,
-          shadow: kind ? !!slot?.shadow : e.role !== 'badge',
-          slot: kind ? i : undefined,
+          shadow: e.role !== 'badge',
         })
       })
-      // A line past the last slot of the chosen preset is drawn by nobody, here
-      // as in the render (CLIP-147).
-      .filter(
-        (line) => line.text.trim() !== '' && (!kind || line.slot! < (preset?.slots.length ?? 0)),
-      )
-    return { entry, lines, kind, slots: preset?.slots, rules: preset?.rules }
+      .filter((line) => line.text.trim() !== '')
+    return { entry, lines }
   })
   const lines = visuals.flatMap((v) => v.lines)
   const { ref, bounds } = useInkBounds(JSON.stringify(lines))
@@ -201,9 +230,11 @@ export function CompositionDesignFrame({
     }
   const props = (line: Line) => ({
     fontFamily:
-      CLIP_DESIGN.faces[CLIP_DESIGN.type[line.type].face as keyof typeof CLIP_DESIGN.faces],
+      CLIP_DESIGN.faces[
+        (line.face ?? CLIP_DESIGN.type[line.type].face) as keyof typeof CLIP_DESIGN.faces
+      ],
     fontSize: line.size,
-    fontWeight: CLIP_DESIGN.type[line.type].weight,
+    fontWeight: line.weight ?? CLIP_DESIGN.type[line.type].weight,
     letterSpacing: line.tracking * line.size,
     xmlSpace: 'preserve' as const,
   })
@@ -263,24 +294,11 @@ export function CompositionDesignFrame({
     headerX += box.width + CLIP_DESIGN.spacing.gap_stack
     headerCount++
   }
-  const occupiedRegions = visuals
-    .filter((v) => v.kind && v.lines.length)
-    .flatMap((v) => [
-      ...v.lines.map((line) => ({
-        x: shape.anchor.center - ink(line).width / 2,
-        y: v.slots![line.slot!].y + regionOffset(v) + ink(line).y,
-        width: ink(line).width,
-        height: ink(line).height,
-      })),
-      ...(v.rules ?? []).map((line) => {
-        const rule = CLIP_RULES[line.kind as keyof typeof CLIP_RULES]
-        return {
-          x: shape.anchor.center - rule.w / 2,
-          y: line.y + regionOffset(v),
-          width: rule.w,
-          height: rule.h,
-        }
-      }),
+  const occupiedRegions = (['intro', 'outro'] as const)
+    .filter((kind) => visuals.some((v) => v.kind === kind && v.lines.length))
+    .flatMap((kind) => [
+      ...(blocks[kind]?.slots ?? []).map((slot) => slot.box),
+      ...(blocks[kind]?.rules ?? []).map((rule) => rule.box),
     ])
   const captionAnchor = (v: Visual) => {
     const box = size(v),
@@ -297,11 +315,17 @@ export function CompositionDesignFrame({
       }) ?? CLIP_REGIONS.caption.bold.anchor
     )
   }
-  const paintedText = (line: Line, center: number, y: number, accented = false) => (
+  const paintedText = (
+    line: Line,
+    center: number,
+    y: number,
+    accented = false,
+    align: 'centre' | 'left' = 'centre',
+  ) => (
     <text
       key={line.key}
       {...props(line)}
-      x={center - ink(line).x - ink(line).width / 2}
+      x={align === 'left' ? center - ink(line).x : center - ink(line).x - ink(line).width / 2}
       y={y}
       data-slot={line.slot === undefined ? undefined : line.slot + 1}
       fill={CLIP_DESIGN.color.text_white.hex}
@@ -359,7 +383,8 @@ export function CompositionDesignFrame({
       {visuals.map((v) => {
         if (!v.lines.length) return null
         const e = v.entry.element
-        if (v.kind)
+        if (v.kind) {
+          const block = blocks[v.kind]
           return (
             <g
               key={v.entry.instanceId}
@@ -368,25 +393,24 @@ export function CompositionDesignFrame({
               data-preset={presets[v.kind]}
             >
               {v.lines.map((line) =>
-                paintedText(line, shape.anchor.center, v.slots![line.slot!].y + regionOffset(v)),
+                paintedText(line, block!.anchorX, line.baseline!, false, block!.align),
               )}
-              {v.rules?.map((r, i) => {
-                const rule = CLIP_RULES[r.kind as keyof typeof CLIP_RULES]
-                return (
+              {v.rules &&
+                block?.rules.map((r, i) => (
                   <rect
                     key={i}
                     data-rule={r.kind}
-                    x={shape.anchor.center - rule.w / 2}
-                    y={r.y + regionOffset(v)}
-                    width={rule.w}
-                    height={rule.h}
+                    x={r.box.x}
+                    y={r.box.y}
+                    width={r.box.width}
+                    height={r.box.height}
                     fill={CLIP_DESIGN.color.text_white.hex}
-                    fillOpacity={rule.alpha}
+                    fillOpacity={r.alpha}
                   />
-                )
-              })}
+                ))}
             </g>
           )
+        }
         const box = size(v)
         const pos =
           e.position === 'auto' ? (e.role === 'caption' ? captionAnchor(v) : 'header') : e.position

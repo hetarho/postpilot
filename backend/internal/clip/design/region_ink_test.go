@@ -3,7 +3,6 @@ package design_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"golang.org/x/image/font"
@@ -78,9 +77,22 @@ func ink(t *testing.T, faces inkFaces, text string, role design.TypeRole) (top, 
 	return top * scale, bottom * scale, width * scale
 }
 
-// CDS-79 regression: the 1:1 outro E block collapsed into itself when the
-// baselines were scaled by canvas height while the type kept its 9:16 size.
-// Measured with real ink, no two parts of one block may overlap on any ratio.
+// worstRow is the longest text of repeated words a slot still fits (CDS-86):
+// shrunk to its floor and, for the large roles, wrapped into two lines.
+func worstRow(spec design.SlotSpec, width float64) string {
+	text := "한글빵"
+	for {
+		next := text + " 한글빵"
+		if design.FitRegionSlot(spec, next, width).Over {
+			return text
+		}
+		text = next
+	}
+}
+
+// CDS-79 and CDS-87 regression: the 1:1 outro E block once collapsed into
+// itself. Measured with real ink at each slot's fitted worst case, no two parts
+// of one block may overlap on any ratio, and every part stays in the safe area.
 func TestRegionBlockPartsNeverOverlapOnAnyRatio(t *testing.T) {
 	faces := bundledFaces(t)
 	for _, choice := range []struct{ kind, id string }{{"intro", "a"}, {"intro", "b"}, {"outro", "b"}, {"outro", "e"}} {
@@ -88,25 +100,27 @@ func TestRegionBlockPartsNeverOverlapOnAnyRatio(t *testing.T) {
 		for _, ratio := range []string{"vertical", "horizontal", "square"} {
 			t.Run(choice.kind+"."+choice.id+"/"+ratio, func(t *testing.T) {
 				layout, _ := design.Layout(ratio)
+				var rows []string
+				for _, slot := range preset.Slots() {
+					rows = append(rows, worstRow(slot.Spec(ratio), layout.CopyMaxWidth))
+				}
+				block, err := design.LayoutRegion(choice.kind, choice.id, ratio, rows)
+				if err != nil || block.Over {
+					t.Fatal(err, block.Over)
+				}
 				type part struct {
 					name                     string
 					top, bottom, left, right float64
 				}
 				var parts []part
-				for _, slot := range preset.Slots {
-					role := design.RegionType(slot, ratio)
-					// A slot holds at most its type's CDS-20 characters, so the
-					// longest admissible line is the one that must still fit.
-					text := strings.Repeat("한글빵", role.Chars)
-					text = string([]rune(text)[:role.Chars])
-					top, bottom, width := ink(t, faces, text, role)
-					baseline := design.RegionBaseline(preset, ratio, slot.Y)
-					parts = append(parts, part{name: "slot " + slot.Type, top: baseline + top, bottom: baseline + bottom, left: layout.Anchor.Center - width/2, right: layout.Anchor.Center + width/2})
+				for _, slot := range block.Slots {
+					for _, line := range slot.Lines {
+						top, bottom, width := ink(t, faces, line.Text, slot.Type)
+						parts = append(parts, part{name: "slot " + slot.Spec.Role, top: line.Baseline + top, bottom: line.Baseline + bottom, left: block.AnchorX - width/2, right: block.AnchorX + width/2})
+					}
 				}
-				for _, line := range preset.Rules {
-					rule := design.Rules[line.Kind]
-					y := design.RegionBaseline(preset, ratio, line.Y)
-					parts = append(parts, part{name: "rule " + line.Kind, top: y, bottom: y + rule.Height, left: layout.Anchor.Center - rule.Width/2, right: layout.Anchor.Center + rule.Width/2})
+				for _, rule := range block.Rules {
+					parts = append(parts, part{name: "rule " + rule.Kind, top: rule.Box.Y, bottom: rule.Box.Y + rule.Box.Height, left: rule.Box.X, right: rule.Box.X + rule.Box.Width})
 				}
 				safe, _ := design.Safe(ratio)
 				for _, p := range parts {

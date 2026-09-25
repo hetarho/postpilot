@@ -26,14 +26,14 @@ func TestLayoutTakesTheRegionPresetFromTheProjectNotTheFrozenDocument(t *testing
 			if visual.text.Resolved.Element.Role != "hook" {
 				continue
 			}
-			if err := design.VerifyRegion("intro", chosen, "vertical", 0, true, []string{"안녕하세요"}, visual.manifest.Parts); err != nil {
+			if err := design.VerifyRegion("intro", chosen, "vertical", []string{"안녕하세요"}, 0, 1, true, visual.manifest.Parts); err != nil {
 				t.Fatal("the intro did not render in the preset the project chose", chosen, err)
 			}
 			other := "b"
 			if chosen == "b" {
 				other = "a"
 			}
-			if design.VerifyRegion("intro", other, "vertical", 0, true, []string{"안녕하세요"}, visual.manifest.Parts) == nil {
+			if design.VerifyRegion("intro", other, "vertical", []string{"안녕하세요"}, 0, 1, true, visual.manifest.Parts) == nil {
 				t.Fatal("both presets accepted the same geometry, so this proves nothing", chosen)
 			}
 		}

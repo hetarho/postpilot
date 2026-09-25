@@ -55,7 +55,7 @@ func RegionPlacements(elements []composition.ResolvedElement, presets compositio
 		}
 		slots := 0
 		if preset, ok := design.Region(kind, RegionPresetID(presets, kind)); ok {
-			slots = len(preset.Slots)
+			slots = len(preset.Slots())
 		}
 		placement := RegionPlacement{Offset: taken[kind], Drawn: max(0, min(regionLines(e), slots-taken[kind]))}
 		if !ruled[kind] && regionPaints(e, placement.Drawn) {
@@ -81,6 +81,43 @@ func regionPaints(e composition.ResolvedElement, drawn int) bool {
 		}
 	}
 	return false
+}
+
+// regionRowTexts is one entry's lines as text.
+func regionRowTexts(e composition.ResolvedElement) []string {
+	if len(e.Rows) == 0 {
+		return []string{e.Text}
+	}
+	rows := make([]string, len(e.Rows))
+	for i, row := range e.Rows {
+		rows[i] = row.Text
+	}
+	return rows
+}
+
+// RegionRows is every line one region's preset draws, by slot: the region's
+// entries in outline order, each in the slots RegionPlacements gives it, a slot
+// no entry reaches left empty. A region lays out as one block (CDS-87), so the
+// renderer and V20 both lay any one entry out from all of these.
+func RegionRows(elements []composition.ResolvedElement, presets composition.DesignSelection, kind string) []string {
+	preset, ok := design.Region(kind, RegionPresetID(presets, kind))
+	if !ok {
+		return nil
+	}
+	rows := make([]string, len(preset.Slots()))
+	placements := RegionPlacements(elements, presets)
+	for _, e := range elements {
+		if regionKind(e.Element.Role) != kind {
+			continue
+		}
+		p := placements[e.InstanceID]
+		for i, text := range regionRowTexts(e) {
+			if i < p.Drawn {
+				rows[p.Offset+i] = text
+			}
+		}
+	}
+	return rows
 }
 
 // RegionPresetID is the preset a region renders in: the project's selection, or

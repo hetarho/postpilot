@@ -56,6 +56,20 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 				// presets, so admission checks the layout the render will do
 				// (CLIP-147).
 				placements := clip.RegionPlacements(timeline.Elements, in.Design.RegionPresets())
+				// Every region entry with its generated rows blanked: the block the
+				// authored rows are checked in holds only what is known now.
+				authored := slices.Clone(timeline.Elements)
+				for k, element := range authored {
+					if element.Element.Role != "hook" && element.Element.Role != "ending" {
+						continue
+					}
+					authored[k].Rows = slices.Clone(element.Rows)
+					for i, row := range element.Element.Rows {
+						if composition.RowKind(element.Element, row) == "ai" && i < len(authored[k].Rows) {
+							authored[k].Rows[i].Text = ""
+						}
+					}
+				}
 				for _, element := range timeline.Elements {
 					region := element.Element.Role == "hook" || element.Element.Role == "ending"
 					if !region && element.Element.Kind != "fixed" {
@@ -71,7 +85,7 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 						}
 					}
 					if element.Element.Role != "caption" {
-						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets(), placements[element.InstanceID])
+						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets(), placements[element.InstanceID], authored)
 						if err != nil {
 							return err
 						}
