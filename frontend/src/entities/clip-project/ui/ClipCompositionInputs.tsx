@@ -6,7 +6,7 @@ import {
   type ClipComposition,
 } from '@/entities/clip-template/@x/clip-project'
 import { CLIP_DEFAULT_REGION_PRESETS } from '@/entities/clip-design/@x/clip-project'
-import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-project'
+import { type ClipRatioId, type ClipRegionPresets } from '@/entities/clip-design/@x/clip-project'
 import { Button, FieldCount, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
 import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'
@@ -15,13 +15,15 @@ import { boundedText } from '../lib/bounded-text'
 export function ClipCompositionInputFields({
   document,
   presets = CLIP_DEFAULT_REGION_PRESETS,
+  ratio = 'vertical',
   value: stored,
   onChange,
 }: {
   document: ClipComposition
-  /** The project's own presets, which decide how long an answer bound into an
-   *  intro or outro line may be (CLIP-117, CLIP-147). */
+  /** The project's own presets and ratio, which decide how long an answer bound
+   *  into an intro or outro line may be (CDS-86, CLIP-117, CLIP-147). */
   presets?: ClipRegionPresets
+  ratio?: ClipRatioId
   value: Inputs
   onChange: (value: Inputs) => void
 }) {
@@ -44,7 +46,12 @@ export function ClipCompositionInputFields({
         // parser's, narrowed by the region slots the project's own presets put
         // this answer in (CLIP-117). A field that reaches no bounded position
         // still has the grammar's own ceiling, so no field loses its counter.
-        const max = clipFieldMaximum(document, presets, f.group ? `${f.group}.${f.id}` : f.id)
+        const max = clipFieldMaximum(
+          document,
+          presets,
+          f.group ? `${f.group}.${f.id}` : f.id,
+          ratio,
+        )
         const count = compositionCharacters(text)
         // Only an answer stored before its template tightened this number can be
         // over it: nothing typed here gets past the bound.

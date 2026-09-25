@@ -168,12 +168,10 @@ describe('answers bounded by their field maximum', () => {
   })
 
   // CLIP-117 against CLIP-147: the parser cannot know which slot a region line
-  // lands in, so ① — which knows the project's presets — narrows the bound.
-  it('narrows a bound answer to the slot the project preset puts it in', () => {
-    const body =
-      '<clip version="1"><field id="place" label="상호"/>' +
-      '<text id="intro" kind="fixed" role="hook"><row kind="fixed"><value field="place"/></row></text></clip>'
-    const Field = ({ intro }: { intro: 'a' | 'b' }) => {
+  // lands in, so ① — which knows the project's presets and ratio — narrows the
+  // bound to the syllables that fit that slot at its floor (CDS-86).
+  it('narrows a bound answer to what fits the slot the project preset puts it in', () => {
+    const Field = ({ body, intro }: { body: string; intro: 'a' | 'b' }) => {
       const [value, setValue] = useState<ClipCompositionInputs>({
         ...emptyCompositionInputs(),
         values: { place: '' },
@@ -182,18 +180,30 @@ describe('answers bounded by their field maximum', () => {
         <ClipCompositionInputFields
           document={parseClipComposition(body)}
           presets={{ intro, outro: 'e' }}
+          ratio="vertical"
           value={value}
           onChange={setValue}
         />
       )
     }
-    // Intro A's first slot is 8 characters, intro B's is 9 (CDS-20).
-    const a = render(<Field intro="a" />)
-    fireEvent.change(screen.getByLabelText('상호'), { target: { value: '아홉글자를넣어봅니다' } })
-    expect((screen.getByLabelText('상호') as HTMLTextAreaElement).value).toHaveLength(8)
-    a.unmount()
-    render(<Field intro="b" />)
-    fireEvent.change(screen.getByLabelText('상호'), { target: { value: '아홉글자를넣어봅니다' } })
-    expect((screen.getByLabelText('상호') as HTMLTextAreaElement).value).toHaveLength(9)
+    const first =
+      '<clip version="1"><field id="place" label="상호"/>' +
+      '<text id="intro" kind="fixed" role="hook"><row kind="fixed"><value field="place"/></row></text></clip>'
+    const second =
+      '<clip version="1"><field id="place" label="상호"/>' +
+      '<text id="intro" kind="fixed" role="hook"><row kind="fixed">고정 제목</row><row kind="fixed"><value field="place"/></row></text></clip>'
+    const typed = '가'.repeat(40)
+    // Intro A's headline wraps into two lines of 16 at its 60 px floor, intro
+    // B's hook into two of 17 at 56 px, and intro A's one-line label holds 28.
+    for (const [body, intro, want] of [
+      [first, 'a', 32],
+      [first, 'b', 34],
+      [second, 'a', 28],
+    ] as const) {
+      const view = render(<Field body={body} intro={intro} />)
+      fireEvent.change(screen.getByLabelText('상호'), { target: { value: typed } })
+      expect((screen.getByLabelText('상호') as HTMLTextAreaElement).value).toHaveLength(want)
+      view.unmount()
+    }
   })
 })

@@ -327,3 +327,19 @@ func unionBounds(a, b Bounds) Bounds {
 	x1, y1 := math.Max(a.X+a.Width, b.X+b.Width), math.Max(a.Y+a.Height, b.Y+b.Height)
 	return Bounds{X: x0, Y: y0, Width: x1 - x0, Height: y1 - y0}
 }
+
+// RegionSlotAt is one preset slot's fit spec and the width it fits on a ratio
+// (CDS-86): what the writer is told and what its repair judges a row by.
+func RegionSlotAt(kind, id, ratio string, index int) (SlotSpec, float64, bool) {
+	preset, ok := Region(kind, id)
+	layout, known := Layout(ratio)
+	slots := preset.Slots()
+	if !ok || !known || index < 0 || index >= len(slots) {
+		return SlotSpec{}, 0, false
+	}
+	width := layout.CopyMaxWidth
+	if preset.Width > 0 {
+		width = preset.Width
+	}
+	return slots[index].Spec(ratio), width, true
+}

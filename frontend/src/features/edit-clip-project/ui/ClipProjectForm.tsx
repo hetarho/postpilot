@@ -299,6 +299,7 @@ export function ClipProjectForm({
                 intro: draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro,
                 outro: draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro,
               }}
+              ratio={draft.ratio}
               value={inputs}
               onChange={(inputs) => change('compositionInputs', inputs)}
             />

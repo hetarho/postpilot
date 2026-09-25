@@ -159,6 +159,8 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 	for _, entry := range clip.DeclaredCaptions(timeline) {
 		captionEntries[entry.Element.ID] = entry
 	}
+	// The slot each region entry's rows land in (CLIP-147).
+	placements := clip.RegionPlacements(timeline.Elements, input.Design.RegionPresets())
 	for _, resolved := range timeline.Elements {
 		declared[resolved.Element.ID] = true
 		if _, isCaption := captionEntries[resolved.Element.ID]; isCaption {
@@ -173,7 +175,7 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 		// grounded shorter row, then an empty row with its own notice.
 		slot, exists := slots[resolved.Element.ID]
 		entry := generatedJSON{ElementID: slot.ElementID, Rows: slot.Rows, ShortRows: slot.ShortRows, Observations: slot.Observations, Facts: slot.Facts}
-		attachRegionRows(input.Design.RegionPresets(), doc, portable.Inputs, entry, exists, clip.ItemBinding{}, evidence, &text, &plan, instructed)
+		attachRegionRows(input.Design.RegionPresets(), input.Ratio, placements[resolved.InstanceID].Offset, doc, portable.Inputs, entry, exists, clip.ItemBinding{}, evidence, &text, &plan, instructed)
 		if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 			portable.Elements = append(portable.Elements, text)
 		}

@@ -14,7 +14,7 @@ func copyKey(element, cut string) string { return element + "/" + cut }
 
 // instructed is whether the project carries an owner instruction, and travels
 // unread to the one check it changes (CLIP-122).
-func attachCompositionCopy(cfg Config, presets composition.DesignSelection, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan, instructed bool) error {
+func attachCompositionCopy(cfg Config, presets composition.DesignSelection, ratio string, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan, instructed bool) error {
 	declared, scopes := map[string]composition.Element{}, map[string]string{}
 	for _, element := range doc.Elements {
 		key := copyKey(element.ID, "")
@@ -70,6 +70,9 @@ func attachCompositionCopy(cfg Config, presets composition.DesignSelection, doc 
 		}
 	}
 	used := map[string]bool{}
+	// The slot each region entry's rows land in (CLIP-147): a row is bounded by
+	// that slot, not by the entry's own row index.
+	placements := clip.RegionPlacements(timeline.Elements, presets)
 	for _, resolved := range timeline.Elements {
 		key := copyKey(resolved.Element.ID, resolved.CutID)
 		text := clip.PortableText{Resolved: resolved, Scope: scopes[key], Accent: doc.Accent, Pace: doc.Pace}
@@ -78,7 +81,7 @@ func attachCompositionCopy(cfg Config, presets composition.DesignSelection, doc 
 		}
 		if region, _ := regionSelection(presets, resolved.Element); region != "" && len(resolved.Element.Rows) > 0 {
 			entry, exists := entries[key]
-			attachRegionRows(presets, doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner, instructed)
+			attachRegionRows(presets, ratio, placements[resolved.InstanceID].Offset, doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner, instructed)
 			if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 				plan.Elements = append(plan.Elements, text)
 			}
@@ -207,7 +210,7 @@ func boundGeneratedText(text *clip.PortableText, owner *clip.EditPlan) bool {
 		if e.Chars <= 0 || design.Chars(text.Resolved.Text) <= e.Chars {
 			return false
 		}
-		value, action := repairGeneratedSlot(text.Resolved.Text, text.Alternatives, e.Chars)
+		value, action := repairGeneratedText(text.Resolved.Text, text.Alternatives, e.Chars)
 		notice(action, e.ID)
 		text.Resolved.Text = value
 		return action == "removal"
@@ -226,7 +229,7 @@ func boundGeneratedText(text *clip.PortableText, owner *clip.EditPlan) bool {
 				alternatives = append(alternatives, clip.CopyAlternative{Text: candidate.Rows[i].Text})
 			}
 		}
-		value, action := repairGeneratedSlot(text.Resolved.Rows[i].Text, alternatives, row.Chars)
+		value, action := repairGeneratedText(text.Resolved.Rows[i].Text, alternatives, row.Chars)
 		notice(action, e.ID)
 		text.Resolved.Rows[i].Text = value
 		if action == "removal" {
@@ -258,10 +261,9 @@ func regionSelection(presets composition.DesignSelection, e composition.Element)
 
 // Ground and repair AI rows individually. A missing or malformed response can
 // empty generated slots, but can never replace their fixed neighbours.
-func attachRegionRows(presets composition.DesignSelection, doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
+func attachRegionRows(presets composition.DesignSelection, ratio string, offset int, doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
 	e := out.Resolved.Element
 	region, id := regionSelection(presets, e)
-	preset, _ := design.Region(region, id)
 	out.Resolved.Rows = slices.Clone(out.Resolved.Rows)
 	if generatesText(e) {
 		out.Evidence = nil
@@ -271,7 +273,8 @@ func attachRegionRows(presets composition.DesignSelection, doc *composition.Docu
 			continue
 		}
 		value, action := "", "removal"
-		if exists && i < len(entry.Rows) && i < len(preset.Slots()) {
+		spec, width, slotted := design.RegionSlotAt(region, id, ratio, offset+i)
+		if exists && i < len(entry.Rows) && slotted {
 			one := *out
 			one.Resolved.Element.Rows = nil
 			one.Resolved.Rows = nil
@@ -285,13 +288,9 @@ func attachRegionRows(presets composition.DesignSelection, doc *composition.Docu
 			}
 			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{}, instructed)
 			if reason == "" {
-				// The slot's own count, or the smaller one this row declares
+				// The slot's own fit, and the smaller bound this row declares
 				// (CLIP-116); the parser has already refused a larger one.
-				limit := design.Type[preset.Slots()[i].Role].Chars
-				if row.Chars > 0 && row.Chars < limit {
-					limit = row.Chars
-				}
-				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, limit)
+				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, spec, width, row.Chars)
 				if action == "" && one.FallbackReason != "" {
 					action = "repair"
 				}

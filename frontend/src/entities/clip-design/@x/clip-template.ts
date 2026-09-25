@@ -15,6 +15,7 @@ export type {
 } from '../config/clip-design'
 export {
   clipLayoutRegion,
+  clipRegionSlotAt,
   clipRegionSlotBudget,
   clipRegionSlotType,
   clipRegionSlots,

@@ -324,3 +324,20 @@ export function clipLayoutRegion(
   })
   return out
 }
+
+/** One preset slot's fit spec and the width it fits on a ratio (Go `RegionSlotAt`). */
+export function clipRegionSlotAt(
+  kind: ClipRegionKind,
+  id: string,
+  ratio: ClipRegionRatio,
+  index: number,
+): { spec: ClipSlotSpec; width: number } | undefined {
+  const preset = clipRegionPreset(kind, id)
+  const slot = clipRegionSlots(kind, id)[index]
+  if (!preset || !slot) return undefined
+  const type = clipRegionSlotType(slot, ratio)
+  return {
+    spec: { role: slot.role, ...type, lines: slot.lines ?? 0 },
+    width: preset.width && preset.width > 0 ? preset.width : design.ratios[ratio].copy_max_width,
+  }
+}
