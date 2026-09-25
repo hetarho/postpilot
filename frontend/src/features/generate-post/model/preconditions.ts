@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { ModelRef } from '@/entities/model-catalog'
@@ -56,18 +57,30 @@ export type GenerationPreconditions =
   | { ok: true; reason: ''; blocker?: undefined }
   | { ok: false; reason: string; blocker: GenerationBlocker }
 
+/** What every generation gate reads. Each member is required, and a value that may be absent is
+ *  `| undefined` rather than optional: a caller that leaves one out does not compile, instead of
+ *  passing the blocker it feeds (review F23). */
+export interface GenerationGateInput {
+  images: readonly Pick<PostImage, 'id'>[]
+  videos: readonly unknown[]
+  published: boolean
+  activeJob: Pick<GenerationJob, 'status'> | undefined
+  voice: Pick<VoiceRef, 'deleted'> | undefined
+  observe: GenerationModelSelection | undefined
+}
+
 /** Mirrors the server gate so an impossible generation never looks clickable. A published post
  *  comes first: it takes no write at all (POST-86), so nothing else about the run matters. Then
  *  the voice: a deleted voice refuses every machine result before any model is even asked about
  *  (spec/legacy/policy/generation.md). */
-function sharedPreconditions(
-  images: readonly Pick<PostImage, 'id'>[],
-  observeSelection: GenerationModelSelection | undefined,
-  activeJob: Pick<GenerationJob, 'status'> | undefined,
-  voice: Pick<VoiceRef, 'deleted'> | undefined,
-  videos: readonly unknown[] = [],
-  published = false,
-): GenerationPreconditions {
+function sharedPreconditions({
+  images,
+  videos,
+  published,
+  activeJob,
+  voice,
+  observe,
+}: GenerationGateInput): GenerationPreconditions {
   if (published)
     return {
       ok: false,
@@ -82,7 +95,7 @@ function sharedPreconditions(
       blocker: 'activeJob',
     }
   }
-  return observePreconditions(images.length, videos.length, observeSelection)
+  return observePreconditions(images.length, videos.length, observe)
 }
 
 /** Whether the observe model can watch this post's media. A post with none never observes. */
@@ -127,17 +140,11 @@ function observePreconditions(
 }
 
 export function ordinaryGenerationPreconditions(
-  images: readonly Pick<PostImage, 'id'>[],
-  observeSelection: GenerationModelSelection | undefined,
-  writeSelection: GenerationModelSelection | undefined,
-  activeJob: Pick<GenerationJob, 'status'> | undefined,
-  voice?: Pick<VoiceRef, 'deleted'>,
-  videos: readonly unknown[] = [],
-  published = false,
+  input: GenerationGateInput & { write: GenerationModelSelection | undefined },
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos, published)
+  const shared = sharedPreconditions(input)
   if (!shared.ok) return shared
-  if (!writeSelection)
+  if (!input.write)
     return {
       ok: false,
       reason: i18next.t('generation.blocked.write', { ns: 'posts' }),
@@ -147,18 +154,14 @@ export function ordinaryGenerationPreconditions(
 }
 
 export function comparisonGenerationPreconditions(
-  images: readonly Pick<PostImage, 'id'>[],
-  observeSelection: GenerationModelSelection | undefined,
-  writeSelectionA: GenerationModelSelection | undefined,
-  writeSelectionB: GenerationModelSelection | undefined,
-  activeJob: Pick<GenerationJob, 'status'> | undefined,
-  voice?: Pick<VoiceRef, 'deleted'>,
-  videos: readonly unknown[] = [],
-  published = false,
+  input: GenerationGateInput & {
+    writeA: GenerationModelSelection | undefined
+    writeB: GenerationModelSelection | undefined
+  },
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos, published)
+  const shared = sharedPreconditions(input)
   if (!shared.ok) return shared
-  return pairPreconditions(writeSelectionA, writeSelectionB)
+  return pairPreconditions(input.writeA, input.writeB)
 }
 
 function pairPreconditions(
@@ -182,7 +185,6 @@ function pairPreconditions(
     }
   return { ok: true, reason: '' }
 }
-import i18next from 'i18next'
 
 /** The two runs 글 생성 starts. */
 export type GenerationMode = 'generation' | 'comparison'

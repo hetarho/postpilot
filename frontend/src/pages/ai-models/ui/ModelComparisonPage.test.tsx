@@ -10,6 +10,7 @@ import type {
 } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
 import { renderAppAt } from '@/test/app'
+import { FAKE_PUBLISHED_URL } from '@/test/posts'
 
 const writeModels = [
   { providerId: 'openrouter', modelId: 'writer-a', label: 'Writer A' },
@@ -220,6 +221,40 @@ it('blocks posts with active work or an unresolved write experiment', async () =
 
   await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '결과 대기 글')
   expect(await screen.findByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).toBeInTheDocument()
+  expect(starts).toHaveLength(0)
+})
+
+// POST-86, review F23: a published post takes no write, so the lab offers no comparison on one,
+// and says why in the same sentence the editor does.
+it('keeps 비교 시작 disabled for a published post and says why', async () => {
+  const user = userEvent.setup()
+  const starts: FakeWriteExperimentStart[] = []
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: {
+      posts: [
+        {
+          slug: 'published-post',
+          title: '발행된 글',
+          status: 'published',
+          publishedUrl: FAKE_PUBLISHED_URL,
+        },
+      ],
+    },
+    providers: { models: writeModels, comparisonPairs: [writePair] },
+    experiments: { starts },
+  })
+
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '발행된 글')
+  expect(
+    await screen.findByText(
+      '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
+    ),
+  ).toBeInTheDocument()
+  const startButton = screen.getByRole('button', { name: '비교 시작' })
+  expect(startButton).toHaveAttribute('aria-disabled', 'true')
+  await user.click(startButton)
   expect(starts).toHaveLength(0)
 })
 

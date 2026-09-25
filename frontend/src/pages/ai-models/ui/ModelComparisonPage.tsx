@@ -10,7 +10,7 @@ import {
   useStageSelection,
 } from '@/entities/model-catalog'
 import { useStartModelExperiment, useStartWriteExperiment } from '@/entities/model-experiment'
-import { displayTitle, usePost, usePosts } from '@/entities/post'
+import { displayTitle, isPublished, usePost, usePosts } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { ModelPairForm } from '@/features/configure-model-pair'
@@ -249,17 +249,23 @@ function SelectedPostWriteComparison({
     pair?.candidateB && !pair.candidateB.missing ? pair.candidateB.ref : undefined,
   )
   const precondition = post
-    ? comparisonGenerationPreconditions(
-        post.images,
-        observeSelection,
+    ? comparisonGenerationPreconditions({
+        images: post.images,
+        videos: post.videos,
+        published: isPublished(post),
+        activeJob: post.activeJob,
+        voice: post.voice,
+        observe: observeSelection,
         writeA,
         writeB,
-        post.activeJob,
-        post.voice,
-      )
+      })
     : undefined
+  // A post with photos or clips observes, so the observe selection has to have answered first;
+  // otherwise its reason would flash while the selection is still loading.
   const modelPending =
-    pairPending || write.isPending || (Boolean(post?.images.length) && observe.isPending)
+    pairPending ||
+    write.isPending ||
+    (Boolean(post?.images.length || post?.videos.length) && observe.isPending)
   const reason =
     postPending || postFetching
       ? t('page.postChecking')

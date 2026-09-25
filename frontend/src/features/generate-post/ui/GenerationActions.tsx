@@ -66,25 +66,25 @@ export const GenerationActions = forwardRef<
 
   const { observe: observeSelection, write: writeSelection, writeA, writeB } = selections
   const published = isPublished(post)
-  const ordinary = ordinaryGenerationPreconditions(
-    post.images,
-    observeSelection,
-    writeSelection,
-    activeJob,
-    post.voice,
-    post.videos,
+  const ordinary = ordinaryGenerationPreconditions({
+    images: post.images,
+    videos: post.videos,
     published,
-  )
-  const ab = comparisonGenerationPreconditions(
-    post.images,
-    observeSelection,
+    activeJob,
+    voice: post.voice,
+    observe: observeSelection,
+    write: writeSelection,
+  })
+  const ab = comparisonGenerationPreconditions({
+    images: post.images,
+    videos: post.videos,
+    published,
+    activeJob,
+    voice: post.voice,
+    observe: observeSelection,
     writeA,
     writeB,
-    activeJob,
-    post.voice,
-    post.videos,
-    published,
-  )
+  })
   const pendingExperiment = Boolean(post.pendingExperimentId)
   // `modelPending` is load-bearing: `useStageSelection` reports `selected: null` for the whole
   // fetch, so without it every visit to 글 생성 would treat an unanswered catalog as a missing

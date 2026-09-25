@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T365 | Generation preconditions take one named input | ARCH | - | todo |
 | T366 | The draft queue's assignments are one record per channel | ARCH | T355 | todo |
 | T367 | The autosave owns the published lock, and every control reads the lock from the post it holds | ARCH | T355 T365 T366 | todo |
 | T368 | The editor page suites pin behavior, not wiring | ARCH | T355 T356 T363 T365 T367 | todo |
@@ -64,9 +63,11 @@
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T365 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T366 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T365 done; the generation gates take one input whose members are all required; /ai-models/compare now refuses a published post with the lock's sentence; FE gates pass (p42)
+- 260925 T365 claimed (p42)
 - 260925 T363 done; a take spends its candidate in the same content save (taken_candidates indices resolved at send time), so its mark never returns even where the phrase holds its source; BE and FE gates pass (p42)
 - 260925 T363 claimed (p42)
 - 260925 T358 done; photo and video deletes remove the guarded row before the object, a failed object delete left to the sweep; one FinalizedAtCurrentRevision rule, applied by the service to the row the snapshot read; BE gate passes (p42)
@@ -85,5 +86,3 @@
 - 260925 T386 claimed (mw); T385 committed as 305ccc72; explicit deployment topology, private worker configuration and compatible image rollout/recovery only
 - 260925 T385 done (mw): nonroot CPU worker image, complete watched dev stack and process-aware health; isolated CI, real startup/reload/rebuild recovery, API image smoke and CPU byte/frame parity pass; T386 next
 - 260925 T385 claimed (mw); T384 committed as 07f0d060; CPU execution images and complete local development stack only
-- 260925 T384 done (mw): durable wait/run/retry labels and pending cancellation; real stage transitions, reopen/polling, retained results/observations and all CI gates pass; T385 next
-- 260925 T384 claimed (mw); T383 committed as 41ef2e03; durable media progress and owner-facing failure/cancellation states only
