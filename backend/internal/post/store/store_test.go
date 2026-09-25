@@ -322,7 +322,7 @@ func TestListPostsNewestFirstAndScoped(t *testing.T) {
 	seedPost(t, s, "new", "alice", testNow)
 	seedPost(t, s, "theirs", "bob", testNow.Add(time.Hour))
 
-	got, err := s.ListPosts(ctx, "alice")
+	got, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil {
 		t.Fatalf("ListPosts: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestListPostsFallsBackToGeneratedTitle(t *testing.T) {
 	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
-	got, err := s.ListPosts(ctx, "alice")
+	got, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestListPostsCarriesContentTags(t *testing.T) {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
 
-	got, err := s.ListPosts(ctx, "alice")
+	got, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,7 +404,7 @@ func TestListPostsOrdersSubSecondTimestamps(t *testing.T) {
 	seedPost(t, s, "earlier", "alice", base.Add(500*time.Millisecond))
 	seedPost(t, s, "later", "alice", base.Add(513110616*time.Nanosecond))
 
-	got, err := s.ListPosts(ctx, "alice")
+	got, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil {
 		t.Fatalf("ListPosts: %v", err)
 	}

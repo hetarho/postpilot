@@ -2759,7 +2759,16 @@ func (x *GetPostResponse) GetPost() *Post {
 }
 
 type ListPostsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 0 answers every narrowed post at once, so a client that predates paging is unchanged;
+	// a larger value is clamped by the server (POST-90).
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Empty for the first page; otherwise a previous answer's next_page_token.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// The search, matched on the server against every owned post (POST-65, POST-91).
+	Query string `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	// A post status, or empty for every status (POST-66).
+	Status        string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2794,10 +2803,40 @@ func (*ListPostsRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{32}
 }
 
+func (x *ListPostsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPostsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListPostsRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *ListPostsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 type ListPostsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Newest first.
-	Posts         []*PostSummary `protobuf:"bytes,1,rep,name=posts,proto3" json:"posts,omitempty"`
+	Posts []*PostSummary `protobuf:"bytes,1,rep,name=posts,proto3" json:"posts,omitempty"`
+	// Empty when this answer holds the last narrowed post.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2837,6 +2876,13 @@ func (x *ListPostsResponse) GetPosts() []*PostSummary {
 		return x.Posts
 	}
 	return nil
+}
+
+func (x *ListPostsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type DeletePostRequest struct {
@@ -3554,10 +3600,16 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0eGetPostRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"9\n" +
 	"\x0fGetPostResponse\x12&\n" +
-	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\x12\n" +
-	"\x10ListPostsRequest\"D\n" +
+	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"|\n" +
+	"\x10ListPostsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x14\n" +
+	"\x05query\x18\x03 \x01(\tR\x05query\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\"l\n" +
 	"\x11ListPostsResponse\x12/\n" +
-	"\x05posts\x18\x01 \x03(\v2\x19.postpilot.v1.PostSummaryR\x05posts\"'\n" +
+	"\x05posts\x18\x01 \x03(\v2\x19.postpilot.v1.PostSummaryR\x05posts\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"'\n" +
 	"\x11DeletePostRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"\x14\n" +
 	"\x12DeletePostResponse\"\x80\x01\n" +

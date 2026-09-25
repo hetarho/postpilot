@@ -115,7 +115,7 @@ type PostCatalog interface {
 	CreatePost(ctx context.Context, p Post) error
 	GetPost(ctx context.Context, slug string) (Post, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
-	ListPosts(ctx context.Context, userID string) ([]Summary, error)
+	ListPosts(ctx context.Context, userID string, filter ListFilter) ([]Summary, error)
 	DeletePost(ctx context.Context, slug, userID string) (bool, error)
 }
 

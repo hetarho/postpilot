@@ -40,6 +40,7 @@ export const errors = {
     '네이버 블로그 글 주소만 저장할 수 있어요. blog.naver.com 또는 m.blog.naver.com 글 주소를 붙여 넣어 주세요.',
   POST_FIELD_NOT_FOUND: '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.',
   POST_QUALITY_RULE_INVALID: '품질 규칙 선택을 저장할 수 없어요. 다시 확인해 주세요.',
+  POST_LIST_REQUEST_INVALID: '글 목록을 불러오지 못했어요. 새로고침해 주세요.',
   POST_FILENAME_TAKEN: '같은 이름의 사진이 이미 있어요.',
   UPLOAD_INVALID: '업로드한 사진 정보를 확인해 주세요.',
   UPLOAD_NOT_FOUND: '업로드를 찾을 수 없어요.',

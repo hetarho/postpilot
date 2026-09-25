@@ -264,7 +264,7 @@ func TestDeletePostRemovesAPublishedPostAndStillWaitsForAnyJob(t *testing.T) {
 	if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, firstAddress); err != nil {
 		t.Fatal(err)
 	}
-	listed, err := svc.List(ctx, alice)
+	listed, err := listSummaries(svc.List(ctx, alice, ListQuery{}))
 	if err != nil || len(listed) != 1 || listed[0].Status != StatusPublished {
 		t.Fatalf("list = %+v, %v", listed, err)
 	}

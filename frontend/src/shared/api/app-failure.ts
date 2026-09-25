@@ -219,6 +219,8 @@ export const appFailureSpecs = {
   POST_PUBLISHED_URL_INVALID: {},
   POST_FIELD_NOT_FOUND: {},
   POST_QUALITY_RULE_INVALID: {},
+  // The list's paging and narrowing (POST r15): a request the browser never builds.
+  POST_LIST_REQUEST_INVALID: {},
   UPLOAD_VIDEO_UNSUPPORTED: {},
   UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},

@@ -52,15 +52,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T392 | ListPosts answers in pages and narrows on the server | POST ARCH | - | todo |
 | T393 | /posts loads more rows as its end nears and keeps them on return | POST ARCH | T392 | todo |
 
 ## next
-- implement-task T392 then T393: paged, server-narrowed ListPosts, then the incremental /posts list with scroll restoration (POST r15)
+- implement-task T393: the incremental /posts list on T392's paged ListPosts, list-end loading/retry and scroll restoration (POST r15)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T392 done (pg): ListPosts pages by a keyset token over the stored updated_at+slug, narrows query/status on the server over every owned post, reads json_extract title/tags only; page_size 0 stays unpaged; BE and FE gates green
+- 260925 T392 claimed (pg)
 - 260925 create-task POST done: r15 → T392 (paged ListPosts, server-side query/status, keyset token) and T393 (infinite /posts, list-end loading/retry, scroll restoration); POST tasked=15
 - 260925 create-task POST start (r15: POST-90..93)
 - 260925 update-ssot POST done: r15 adds POST-90..93 (incremental /posts at every width, owned-post-wide narrowing, list-end loading/retry, kept rows and scroll on return); no cross-SSOT references, no doing tasks affected
@@ -79,5 +80,3 @@
 - 260925 T373 claimed (p42)
 - 260925 T372 done; the title corpus reaches every title refusal (cross-area too_many_asks included) and a test fails when one goes missing; the drain harness runs the worker's registerJobs; template.Limits has one constructor with post.TargetLengthMin; BE and FE gates pass (p42)
 - 260925 T372 claimed (p42)
-- 260925 T370 done; quality reads one post row through post.Service.CurrentContent and names M2's run only when over band; Repetition.TopNoun and post_measurements.top_noun are gone (migration 0083); BE gate passes (p42)
-- 260925 T370 claimed (p42)

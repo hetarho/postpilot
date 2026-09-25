@@ -175,7 +175,7 @@ func TestAPublishedRowIsLearnableAndListed(t *testing.T) {
 	if err != nil || snapshot.ContentRevision != 1 || snapshot.Current.Title != "제주 3일" {
 		t.Fatalf("snapshot of a published row = %+v, %v", snapshot, err)
 	}
-	listed, err := s.ListPosts(ctx, "alice")
+	listed, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil || len(listed) != 1 || listed[0].Status != post.StatusPublished {
 		t.Fatalf("list = %+v, %v", listed, err)
 	}

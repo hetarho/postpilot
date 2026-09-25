@@ -105,6 +105,9 @@ var (
 	ErrInvalidTagCount      = errors.New("tag count out of range")
 	ErrNoMachineBaseline    = errors.New("post has no machine baseline to finalize")
 	ErrPostNotFinalized     = errors.New("post content is not finalized")
+	// ErrInvalidListRequest is a list request the browser never builds: a page token it was
+	// not handed, a status that is not one, or a negative page size.
+	ErrInvalidListRequest = errors.New("invalid post list request")
 	// ErrVoiceRequired: a create (or a present voice_id) arrived without a concrete voice.
 	// The server never substitutes the default — that choice belongs to the client's dropdown.
 	ErrVoiceRequired = errors.New("a voice is required")
@@ -455,6 +458,9 @@ type Summary struct {
 	// Tags of the current content revision (POST-65). The list narrows by them, and a post
 	// whose content has not been written yet simply carries none.
 	Tags []string
+	// Cursor is the row's position in the list order as the store holds it. It becomes the
+	// next page token and is never shown (POST-90).
+	Cursor ListCursor
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by

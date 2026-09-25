@@ -114,9 +114,23 @@ SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
 -- then say two things, and the composite foreign key's refusal would be lost.
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND status = 'published');
 
--- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id, template_id, target_language, content_language
-FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC;
+-- name: ListPostSummariesByUser :many
+-- One keyset page of the list (POST-90). The content is never read whole: the list shows its
+-- title only as the blank-title fallback and its tags only for the search, so two JSON paths
+-- are all it needs. The cursor is the stored updated_at string plus the slug, compared the same
+-- way the ORDER BY compares them, so a walk never repeats or skips a row. A row_limit of -1 is
+-- SQLite's "no limit", which the search asks for because its match runs in Go.
+SELECT slug, title, status, updated_at, voice_id, template_id, target_language, content_language,
+    json_extract(content, '$.title') AS content_title,
+    json_extract(content, '$.tags') AS content_tags
+FROM posts
+WHERE user_id = sqlc.arg(user_id)
+    AND (status = sqlc.arg(status) OR sqlc.arg(status) = '')
+    AND (updated_at < sqlc.arg(after_updated_at)
+        OR (updated_at = sqlc.arg(after_updated_at) AND slug < sqlc.arg(after_slug))
+        OR sqlc.arg(after_updated_at) = '')
+ORDER BY updated_at DESC, slug DESC
+LIMIT sqlc.arg(row_limit);
 
 -- name: ReassignPostVoice :execrows
 -- The reassignment keeps every byte of the post and drops only what belonged to the old

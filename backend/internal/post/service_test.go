@@ -205,7 +205,7 @@ func TestListIsScopedToTheCaller(t *testing.T) {
 	mustCreatePost(t, svc, alice, "Mine two")
 	mustCreatePost(t, svc, bob, "Theirs")
 
-	mine, err := svc.List(ctx, alice)
+	mine, err := listSummaries(svc.List(ctx, alice, ListQuery{}))
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestGetAndListPublishTheActiveJobThroughThePort(t *testing.T) {
 	if found.ActiveJob == nil || found.ActiveJob.ID != "job-1" {
 		t.Fatalf("Get active job = %+v", found.ActiveJob)
 	}
-	listed, err := svc.List(context.Background(), alice)
+	listed, err := listSummaries(svc.List(context.Background(), alice, ListQuery{}))
 	if err != nil {
 		t.Fatal(err)
 	}

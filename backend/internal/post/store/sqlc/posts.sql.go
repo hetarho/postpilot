@@ -298,42 +298,72 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 	return i, err
 }
 
-const listPostsByUser = `-- name: ListPostsByUser :many
-SELECT slug, title, content, status, updated_at, voice_id, template_id, target_language, content_language
-FROM posts WHERE user_id = ? ORDER BY updated_at DESC, slug DESC
+const listPostSummariesByUser = `-- name: ListPostSummariesByUser :many
+SELECT slug, title, status, updated_at, voice_id, template_id, target_language, content_language,
+    json_extract(content, '$.title') AS content_title,
+    json_extract(content, '$.tags') AS content_tags
+FROM posts
+WHERE user_id = ?1
+    AND (status = ?2 OR ?2 = '')
+    AND (updated_at < ?3
+        OR (updated_at = ?3 AND slug < ?4)
+        OR ?3 = '')
+ORDER BY updated_at DESC, slug DESC
+LIMIT ?5
 `
 
-type ListPostsByUserRow struct {
+type ListPostSummariesByUserParams struct {
+	UserID         string
+	Status         string
+	AfterUpdatedAt string
+	AfterSlug      string
+	RowLimit       int64
+}
+
+type ListPostSummariesByUserRow struct {
 	Slug            string
 	Title           string
-	Content         sql.NullString
 	Status          string
 	UpdatedAt       string
 	VoiceID         string
 	TemplateID      sql.NullString
 	TargetLanguage  string
 	ContentLanguage sql.NullString
+	ContentTitle    interface{}
+	ContentTags     interface{}
 }
 
-func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPostsByUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPostsByUser, userID)
+// One keyset page of the list (POST-90). The content is never read whole: the list shows its
+// title only as the blank-title fallback and its tags only for the search, so two JSON paths
+// are all it needs. The cursor is the stored updated_at string plus the slug, compared the same
+// way the ORDER BY compares them, so a walk never repeats or skips a row. A row_limit of -1 is
+// SQLite's "no limit", which the search asks for because its match runs in Go.
+func (q *Queries) ListPostSummariesByUser(ctx context.Context, arg ListPostSummariesByUserParams) ([]ListPostSummariesByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPostSummariesByUser,
+		arg.UserID,
+		arg.Status,
+		arg.AfterUpdatedAt,
+		arg.AfterSlug,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPostsByUserRow
+	var items []ListPostSummariesByUserRow
 	for rows.Next() {
-		var i ListPostsByUserRow
+		var i ListPostSummariesByUserRow
 		if err := rows.Scan(
 			&i.Slug,
 			&i.Title,
-			&i.Content,
 			&i.Status,
 			&i.UpdatedAt,
 			&i.VoiceID,
 			&i.TemplateID,
 			&i.TargetLanguage,
 			&i.ContentLanguage,
+			&i.ContentTitle,
+			&i.ContentTags,
 		); err != nil {
 			return nil, err
 		}

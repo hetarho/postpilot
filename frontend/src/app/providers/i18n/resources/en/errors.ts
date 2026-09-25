@@ -39,6 +39,7 @@ export const errors = {
     'Only a Naver Blog post address can be saved. Paste a post address on blog.naver.com or m.blog.naver.com.',
   POST_FIELD_NOT_FOUND: 'That category is not available. Pick one again.',
   POST_QUALITY_RULE_INVALID: 'The quality rules could not be saved. Check them and try again.',
+  POST_LIST_REQUEST_INVALID: 'The post list could not be loaded. Reload the page.',
   POST_FILENAME_TAKEN: 'A photo with that filename already exists.',
   UPLOAD_INVALID: 'Check the uploaded photo and try again.',
   UPLOAD_NOT_FOUND: 'Could not find the upload.',

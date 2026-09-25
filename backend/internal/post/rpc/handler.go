@@ -163,22 +163,27 @@ func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.
 	return connect.NewResponse(&postpilotv1.GetPostResponse{Post: toProtoPost(found)}), nil
 }
 
-func (h *Handler) ListPosts(ctx context.Context, _ *connect.Request[postpilotv1.ListPostsRequest]) (*connect.Response[postpilotv1.ListPostsResponse], error) {
+func (h *Handler) ListPosts(ctx context.Context, req *connect.Request[postpilotv1.ListPostsRequest]) (*connect.Response[postpilotv1.ListPostsResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	summaries, err := h.svc.List(ctx, userID)
+	page, err := h.svc.List(ctx, userID, post.ListQuery{
+		PageSize:  int(req.Msg.GetPageSize()),
+		PageToken: req.Msg.GetPageToken(),
+		Query:     req.Msg.GetQuery(),
+		Status:    req.Msg.GetStatus(),
+	})
 	if err != nil {
 		return nil, toConnectError("list posts", err)
 	}
 
-	posts := make([]*postpilotv1.PostSummary, 0, len(summaries))
-	for _, s := range summaries {
+	posts := make([]*postpilotv1.PostSummary, 0, len(page.Summaries))
+	for _, s := range page.Summaries {
 		posts = append(posts, toProtoSummary(s))
 	}
-	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts}), nil
+	return connect.NewResponse(&postpilotv1.ListPostsResponse{Posts: posts, NextPageToken: page.NextPageToken}), nil
 }
 
 // toProtoSummary is the list read model's half of the transport mapper (ARCH-7). It sits
@@ -347,6 +352,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has no machine baseline", postpilotv1.FailureReason_POST_MACHINE_BASELINE_REQUIRED, nil)
 	case errors.Is(err, post.ErrPostNotFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is not finalized", postpilotv1.FailureReason_POST_NOT_FINALIZED, nil)
+	case errors.Is(err, post.ErrInvalidListRequest):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post list request", postpilotv1.FailureReason_POST_LIST_REQUEST_INVALID, nil)
 	case errors.Is(err, post.ErrInvalidTagCount):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tag count out of range", postpilotv1.FailureReason_POST_TAG_COUNT_INVALID, nil)
 	case errors.Is(err, post.ErrInvalidContent):

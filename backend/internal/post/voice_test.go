@@ -71,7 +71,7 @@ func TestGetAndListProjectTheVoiceIncludingTombstones(t *testing.T) {
 	if err != nil || found.Voice.ID != aliceDeleted || found.Voice.Name != "옛 말투" || !found.Voice.Deleted {
 		t.Fatalf("tombstone projection = %+v err=%v", found.Voice, err)
 	}
-	listed, err := svc.List(ctx, alice)
+	listed, err := listSummaries(svc.List(ctx, alice, ListQuery{}))
 	if err != nil || len(listed) != 1 || listed[0].Voice.Name != "옛 말투" || !listed[0].Voice.Deleted {
 		t.Fatalf("list projection = %+v err=%v", listed, err)
 	}

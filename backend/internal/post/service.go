@@ -583,43 +583,6 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 	return found, nil
 }
 
-// List returns the caller's posts, newest first.
-func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
-	summaries, err := s.posts.ListPosts(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("list posts: %w", err)
-	}
-	if s.jobs != nil {
-		for i := range summaries {
-			summaries[i].ActiveJob, err = s.jobs.ActiveForPost(ctx, summaries[i].Slug)
-			if err != nil {
-				return nil, fmt.Errorf("load active job for %s: %w", summaries[i].Slug, err)
-			}
-		}
-	}
-	if s.experiments != nil {
-		for i := range summaries {
-			summaries[i].PendingExperimentID, err = s.experiments.PendingForPost(ctx, userID, summaries[i].Slug)
-			if err != nil {
-				return nil, fmt.Errorf("load pending experiment for %s: %w", summaries[i].Slug, err)
-			}
-		}
-	}
-	refs, err := s.voiceRefs(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	templateRefs, err := s.templateRefs(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	for i := range summaries {
-		summaries[i].Voice = projectVoice(refs, summaries[i].VoiceID)
-		summaries[i].Template = projectTemplate(templateRefs, summaries[i].TemplateID)
-	}
-	return summaries, nil
-}
-
 // DeletePost removes one owned post only after sensitive experiment payloads have been
 // scrubbed. The durable experiment metadata remains, and its FK is then set to NULL.
 func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {

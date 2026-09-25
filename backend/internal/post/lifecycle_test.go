@@ -97,7 +97,7 @@ func TestFinalizeCopiesContentTitleIntoThePost(t *testing.T) {
 	}
 	// The list read falls back to content.title only while the working title is empty, so a
 	// draft is still listed under its 가제 before the confirmation.
-	before, err := svc.List(ctx, alice)
+	before, err := listSummaries(svc.List(ctx, alice, ListQuery{}))
 	if err != nil || len(before) != 1 || before[0].Title != "가제" {
 		t.Fatalf("list before finalize = %+v err=%v", before, err)
 	}
@@ -115,7 +115,7 @@ func TestFinalizeCopiesContentTitleIntoThePost(t *testing.T) {
 	if finalized.ContentRevision != 1 || finalized.MachineBaselineRevision != 1 {
 		t.Fatalf("revision moved: %+v", finalized)
 	}
-	after, err := svc.List(ctx, alice)
+	after, err := listSummaries(svc.List(ctx, alice, ListQuery{}))
 	if err != nil || len(after) != 1 || after[0].Title != "모델이 지은 제목" {
 		t.Fatalf("list after finalize = %+v err=%v", after, err)
 	}

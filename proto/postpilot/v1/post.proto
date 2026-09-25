@@ -450,11 +450,23 @@ message GetPostResponse {
   Post post = 1;
 }
 
-message ListPostsRequest {}
+message ListPostsRequest {
+  // 0 answers every narrowed post at once, so a client that predates paging is unchanged;
+  // a larger value is clamped by the server (POST-90).
+  int32 page_size = 1;
+  // Empty for the first page; otherwise a previous answer's next_page_token.
+  string page_token = 2;
+  // The search, matched on the server against every owned post (POST-65, POST-91).
+  string query = 3;
+  // A post status, or empty for every status (POST-66).
+  string status = 4;
+}
 
 message ListPostsResponse {
   // Newest first.
   repeated PostSummary posts = 1;
+  // Empty when this answer holds the last narrowed post.
+  string next_page_token = 2;
 }
 
 message DeletePostRequest { string slug = 1; }

@@ -432,7 +432,9 @@ func (f *fakeStore) SlugExists(_ context.Context, slug string) (bool, error) {
 	return ok, nil
 }
 
-func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, error) {
+// ListPosts honours the filter the way the SQLite store does — the stored-string order, the
+// status, the keyset cursor and the limit — so service tests run against the real contract.
+func (f *fakeStore) ListPosts(_ context.Context, userID string, filter ListFilter) ([]Summary, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []Summary
@@ -440,14 +442,36 @@ func (f *fakeStore) ListPosts(_ context.Context, userID string) ([]Summary, erro
 		if p.UserID != userID {
 			continue
 		}
-		title := p.Title
-		if strings.TrimSpace(title) == "" && p.Content != nil {
-			title = p.Content.Title
+		if filter.Status != "" && p.Status != filter.Status {
+			continue
 		}
-		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, TemplateID: p.TemplateID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt, TargetLanguage: p.TargetLanguage, ContentLanguage: p.ContentLanguage})
+		title := p.Title
+		var tags []string
+		if p.Content != nil {
+			if strings.TrimSpace(title) == "" {
+				title = p.Content.Title
+			}
+			tags = p.Content.Tags
+		}
+		cursor := ListCursor{UpdatedAt: p.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000000000Z07:00"), Slug: p.Slug}
+		if filter.After != nil && !listCursorBefore(*filter.After, cursor) {
+			continue
+		}
+		out = append(out, Summary{Slug: p.Slug, VoiceID: p.VoiceID, TemplateID: p.TemplateID, Title: title, Status: p.Status, UpdatedAt: p.UpdatedAt, TargetLanguage: p.TargetLanguage, ContentLanguage: p.ContentLanguage, Tags: tags, Cursor: cursor})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
+	sort.Slice(out, func(i, j int) bool { return listCursorBefore(out[i].Cursor, out[j].Cursor) })
+	if filter.Limit >= 0 && len(out) > filter.Limit {
+		out = out[:filter.Limit]
+	}
 	return out, nil
+}
+
+// listCursorBefore reports whether b comes after a in the list order (updated_at DESC, slug DESC).
+func listCursorBefore(a, b ListCursor) bool {
+	if a.UpdatedAt != b.UpdatedAt {
+		return b.UpdatedAt < a.UpdatedAt
+	}
+	return b.Slug < a.Slug
 }
 
 func valueLanguage(value *Language) Language {

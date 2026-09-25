@@ -50,6 +50,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"published url", "save published url", post.ErrPublishedURLInvalid, connect.CodeInvalidArgument, "POST_PUBLISHED_URL_INVALID"},
 		{"field missing", "save draft", post.ErrFieldNotFound, connect.CodeNotFound, "POST_FIELD_NOT_FOUND"},
 		{"quality rule", "save post generation options", post.ErrQualityRuleInvalid, connect.CodeInvalidArgument, "POST_QUALITY_RULE_INVALID"},
+		{"list request", "list posts", post.ErrInvalidListRequest, connect.CodeInvalidArgument, "POST_LIST_REQUEST_INVALID"},
 	}
 
 	for _, test := range cases {

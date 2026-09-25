@@ -6,6 +6,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -438,8 +439,15 @@ func (s *Store) SlugExists(ctx context.Context, slug string) (bool, error) {
 	return taken, nil
 }
 
-func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, error) {
-	rows, err := s.read.ListPostsByUser(ctx, userID)
+// ListPosts reads one bounded run of the list (POST-90) without decoding a single content: the
+// blank-title fallback and the tags arrive as two JSON paths, which is all a row shows of it.
+func (s *Store) ListPosts(ctx context.Context, userID string, filter post.ListFilter) ([]post.Summary, error) {
+	params := sqlc.ListPostSummariesByUserParams{UserID: userID, Status: filter.Status, RowLimit: int64(filter.Limit)}
+	if filter.After != nil {
+		params.AfterUpdatedAt = filter.After.UpdatedAt
+		params.AfterSlug = filter.After.Slug
+	}
+	rows, err := s.read.ListPostSummariesByUser(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("select posts: %w", err)
 	}
@@ -450,23 +458,17 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 		if err != nil {
 			return nil, fmt.Errorf("post %s: %w", row.Slug, err)
 		}
-		// Decoded ONCE per row and used for both the blank-title fallback and the tags: the
-		// list reads every post the account owns, so a second unmarshal per row would double
-		// the JSON cost of the screen's one request.
-		var content *post.PostContent
-		if row.Content.Valid {
-			content, err = unmarshalContent(row.Content.String)
-			if err != nil {
-				return nil, fmt.Errorf("post %s: %w", row.Slug, err)
-			}
+		contentTitle, err := jsonText(row.ContentTitle)
+		if err != nil {
+			return nil, fmt.Errorf("post %s title: %w", row.Slug, err)
 		}
 		title := row.Title
-		if strings.TrimSpace(title) == "" && content != nil {
-			title = content.Title
+		if strings.TrimSpace(title) == "" {
+			title = contentTitle
 		}
-		var tags []string
-		if content != nil && len(content.Tags) > 0 {
-			tags = content.Tags
+		tags, err := contentTags(row.ContentTags)
+		if err != nil {
+			return nil, fmt.Errorf("post %s tags: %w", row.Slug, err)
 		}
 		summaries = append(summaries, post.Summary{
 			Slug:            row.Slug,
@@ -480,9 +482,43 @@ func (s *Store) ListPosts(ctx context.Context, userID string) ([]post.Summary, e
 			TargetLanguage:  post.Language(row.TargetLanguage),
 			ContentLanguage: nullableLanguage(row.ContentLanguage),
 			Tags:            tags,
+			Cursor:          post.ListCursor{UpdatedAt: row.UpdatedAt, Slug: row.Slug},
 		})
 	}
 	return summaries, nil
+}
+
+// jsonText reads a json_extract of a string path: NULL for a post with no content or no such
+// key, the text otherwise. sqlc cannot type an expression column, so the driver's value
+// arrives as it is.
+func jsonText(value any) (string, error) {
+	switch v := value.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return v, nil
+	case []byte:
+		return string(v), nil
+	default:
+		return "", fmt.Errorf("unexpected %T", value)
+	}
+}
+
+// contentTags reads a json_extract of the content's tags, which SQLite hands back as the
+// array's JSON text. An absent array is no tags, as a post not yet written has none.
+func contentTags(value any) ([]string, error) {
+	text, err := jsonText(value)
+	if err != nil || text == "" {
+		return nil, err
+	}
+	var tags []string
+	if err := json.Unmarshal([]byte(text), &tags); err != nil {
+		return nil, fmt.Errorf("decode tags: %w", err)
+	}
+	if len(tags) == 0 {
+		return nil, nil
+	}
+	return tags, nil
 }
 
 func (s *Store) DeletePost(ctx context.Context, slug, userID string) (bool, error) {
