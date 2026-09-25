@@ -32,6 +32,7 @@ export { applyReplacement, sameCandidate, spansAt, visibleSpans } from './model/
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
 export { usePosts } from './api/usePosts'
+export { usePostList, type PostListNarrowing } from './api/usePostList'
 export { useDeletePost } from './api/useDeletePost'
 export { useSavePostDraft, type PostDraftSave } from './api/useSavePostDraft'
 export { ContentRevisionConflictError, useSavePostContent } from './api/useSavePostContent'

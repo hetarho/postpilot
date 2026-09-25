@@ -115,12 +115,14 @@ export function postDetailQueriesKey(transport: Transport) {
   })
 }
 
+/** Matches every cached ListPosts — the whole-list read and each narrowing's pages alike. No
+ *  `input` and no cardinality is connect-query's filter for both the finite and the infinite
+ *  entries, so a verb that marks the list stale reaches `/posts` however far it has scrolled. */
 export function listPostsQueryKey(transport: Transport) {
   return createConnectQueryKey({
     schema: PostService.method.listPosts,
-    input: {},
     transport,
-    cardinality: 'finite',
+    cardinality: undefined,
   })
 }
 

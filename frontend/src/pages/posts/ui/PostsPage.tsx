@@ -5,14 +5,15 @@ import {
   displayTitle,
   isPostStatus,
   postStatusLabel,
-  usePosts,
+  usePostList,
   type PostListItem,
   type PostStatus,
 } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
-import { narrowPosts, PostListControls, type PostNarrowing } from '@/features/filter-posts'
+import { matchedTags, PostListControls, type PostNarrowing } from '@/features/filter-posts'
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
+import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatRelativeTime } from '@/shared/lib'
 import {
   ActionBar,
@@ -24,7 +25,9 @@ import {
   typographyStyles,
   type BadgeTone,
   pageStyles,
+  useNearViewport,
 } from '@/shared/ui'
+import { useSettledValue } from '../model/useSettledValue'
 
 /** The one status chip a row carries. Colour never travels alone (design-language §2.6): the tone
  *  only reinforces the label, so the label is chosen first and the tone follows it. */
@@ -56,15 +59,20 @@ function postStatusTone(status: string): BadgeTone {
 }
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,
- *  newest first and all of them; the search and the status filter narrow that one answer here in
- *  the browser (POST-65, POST-66), reading and writing the URL so the narrowing survives opening
- *  a post, coming back, a reload and a shared link (POST-67). */
+ *  newest first, a page at a time as the list's end nears the screen (POST-90), and it applies the
+ *  search and the status filter over every post the account owns (POST-91). The narrowing reads
+ *  and writes the URL so it survives opening a post, coming back, a reload and a shared link
+ *  (POST-67). */
 export function PostsPage() {
   const { t } = useTranslation(['posts', 'common'])
-  const { posts, isPending, isFetching, isError, refetch } = usePosts()
+  const narrowing: PostNarrowing = useSearch({ strict: false })
+  // The URL follows every keystroke; the request waits for the typing to stop. The status is one
+  // choice, not typing, so it is sent at once.
+  const settledQ = useSettledValue(narrowing.q ?? '', POSTS_SEARCH_DEBOUNCE_MS)
+  const list = usePostList({ q: settledQ, status: narrowing.status })
+  const { posts, isPending, isFetching, refetch } = list
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
-  const narrowing: PostNarrowing = useSearch({ strict: false })
   const navigate = useNavigate()
   // `replace`, not a push: a history entry per keystroke would make 뒤로 mean "one character
   // ago" instead of "the screen I came from". An emptied field drops the param rather than
@@ -75,8 +83,21 @@ export function PostsPage() {
       search: { q: next.q?.trim() === '' ? undefined : next.q, status: next.status },
       replace: true,
     })
-  const narrowed = narrowPosts(posts, narrowing)
-  const noMatch = !isPending && !isError && posts.length > 0 && narrowed.length === 0
+  const narrowed = posts.map((post) => ({ post, matchedTags: matchedTags(post, settledQ) }))
+  // The page-top notice is for a list with nothing to show; a page further down that fails keeps
+  // every row on screen and says so at the list's end instead (POST-92).
+  const isError = list.isError && posts.length === 0
+  const isNarrowed = settledQ.trim() !== '' || narrowing.status !== undefined
+  const isEmpty = !isPending && !isError && posts.length === 0
+  // An account with nothing to show under a narrowing is told about the narrowing, which offers the
+  // way back; the account's own emptiness is said once the narrowing is gone (POST-69).
+  const noMatch = isEmpty && isNarrowed
+  // The next page loads while the list's end is within a screen, one page at a time, and a failed
+  // page waits for 다시 시도 rather than retrying on every scroll.
+  const listEnd = useNearViewport<HTMLDivElement>(
+    list.fetchNextPage,
+    list.hasNextPage && !list.isFetchingNextPage && !list.isFetchNextPageError,
+  )
   const statusLabel = narrowing.status ? t(`list.filter.${narrowing.status}`, { ns: 'posts' }) : ''
   const noMatchText = narrowing.q?.trim()
     ? narrowing.status
@@ -133,7 +154,7 @@ export function PostsPage() {
 
       {/* One live region for both states, so finishing the load is a text change inside it rather
           than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (§9). */}
-      {!isError && (isPending || posts.length === 0) && (
+      {!isError && (isPending || (isEmpty && !isNarrowed)) && (
         <Typography
           variant="body"
           role="status"
@@ -237,6 +258,31 @@ export function PostsPage() {
           )
         })}
       </ul>
+
+      {/* The list's end, while there is more to load: what the observer watches, and ONE live region
+          whose text says a page is loading or that it failed, so the change is announced rather than
+          a node swapped in (§9). The retry asks for that page again and nothing else (POST-92). */}
+      {posts.length > 0 && list.hasNextPage && (
+        <div ref={listEnd} className="px-4 py-4 sm:px-6 lg:px-8">
+          <Typography variant="meta" role="status" className="text-content-tertiary">
+            {list.isFetchingNextPage
+              ? t('list.loadingMore', { ns: 'posts' })
+              : list.isFetchNextPageError
+                ? t('list.loadMoreFailed', { ns: 'posts' })
+                : ''}
+          </Typography>
+          {list.isFetchNextPageError && (
+            <Button
+              variant="ghost"
+              onClick={list.fetchNextPage}
+              pending={list.isFetchingNextPage}
+              className="mt-1 -ml-3"
+            >
+              {t('action.retry', { ns: 'common' })}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* ONE 새 글, in the same place the voice directory puts its own add action. It used to be
           two — a docked bar on the phone and a second copy beside the heading from `sm:` up — which

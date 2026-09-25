@@ -185,6 +185,19 @@ export interface FakePostRow {
   contentLanguage?: ContentLanguage | null
 }
 
+/** One ListPosts as the fake received it (POST-90, POST-91). */
+export interface FakeListRequest {
+  pageSize: number
+  pageToken: string
+  query: string
+  status: string
+}
+
+/** The server's normalization of the search, title and tags (backend `normalizeListText`). */
+function normalizeListText(value: string): string {
+  return value.trim().replace(/^#+/, '').replace(/\s+/g, ' ').toLocaleLowerCase()
+}
+
 export interface FakePostsOptions {
   /** The acting user's posts, in the order ListPosts should return them. */
   posts?: FakePostRow[]
@@ -194,6 +207,12 @@ export interface FakePostsOptions {
   foreign?: string[]
   /** Make ListPosts fail. */
   listFails?: boolean
+  /** Fail this many ListPosts calls that ask for a page after the first, then answer again. */
+  listPageFailures?: number
+  /** Every ListPosts as it arrived, so a test can count the pages and the searches sent. */
+  listRequests?: FakeListRequest[]
+  /** Holds every ListPosts that asks for a page after the first, until a test releases it. */
+  listPageGate?: Promise<void>
   /** Fail this many SavePostDraft calls before the first success. */
   failSaves?: number
   /** Answer SavePostDraft 200 with no post — a confirmation the client must not trust. */
@@ -335,6 +354,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   const { rpc } = router
   const { foreign = [], listFails, today = '20260828', calls } = options
   let failuresLeft = options.failSaves ?? 0
+  let listPageFailuresLeft = options.listPageFailures ?? 0
   let publishOnDraftSave = options.publishOnDraftSave
   // The fake clock a publish is stamped with: each one later than the last (POST-75).
   let publishSequence = 0
@@ -506,15 +526,49 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     })
   }
 
-  rpc(PostService.method.listPosts, () => {
+  // Pages, narrows and tokens the way the server does (POST-90, POST-91), over the rows in the
+  // order the test gave them. The token is the last answered slug: opaque to the client, as the
+  // server's is, and a page 0 answers everything, as the server's does.
+  rpc(PostService.method.listPosts, async (req) => {
     calls?.push('ListPosts')
+    options.listRequests?.push({
+      pageSize: req.pageSize,
+      pageToken: req.pageToken,
+      query: req.query,
+      status: req.status,
+    })
     if (listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (req.pageToken && options.listPageGate) await options.listPageGate
+    if (req.pageToken && listPageFailuresLeft > 0) {
+      listPageFailuresLeft -= 1
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    }
+    const query = normalizeListText(req.query)
+    const narrowed = [...rows.values()].filter((row) => {
+      if (req.status && row.status !== req.status) return false
+      if (query === '') return true
+      // The title as listed: the 가제, or the content's title when the 가제 is blank.
+      const title = row.title.trim() === '' ? (row.content?.title ?? '') : row.title
+      return [title, ...(row.content?.tags ?? [])].some((text) =>
+        normalizeListText(text).includes(query),
+      )
+    })
+    let start = 0
+    if (req.pageToken) {
+      const at = narrowed.findIndex((row) => row.slug === req.pageToken)
+      if (at < 0) throw connectAppError('POST_LIST_REQUEST_INVALID', Code.InvalidArgument)
+      start = at + 1
+    }
+    const size = Math.min(req.pageSize, 100)
+    const page = size > 0 ? narrowed.slice(start, start + size) : narrowed.slice(start)
+    const more = size > 0 && start + size < narrowed.length
     return create(ListPostsResponseSchema, {
       // The summary's tags are the content's, read out of the content the way the server
       // reads them rather than out of a column of their own (POST-65).
-      posts: [...rows.values()].map((row) =>
+      posts: page.map((row) =>
         create(PostSummarySchema, { ...row, tags: row.content?.tags ?? [] }),
       ),
+      nextPageToken: more ? (page.at(-1)?.slug ?? '') : '',
     })
   })
 

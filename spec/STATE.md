@@ -52,14 +52,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T393 | /posts loads more rows as its end nears and keeps them on return | POST ARCH | T392 | todo |
 
 ## next
-- implement-task T393: the incremental /posts list on T392's paged ListPosts, list-end loading/retry and scroll restoration (POST r15)
+- POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 note (pg): the dev API on 7678 still runs a 15 h old binary — every Air rebuild since T389..T391 exits at boot for want of MEDIA_WORKER_CREDENTIALS (the container predates .env.media.dev); `pnpm dev` recreates it
+- 260925 T393 done (pg): /posts reads server-narrowed pages, loads the next as its end comes within half a screen, reports list-end loading/failure with 다시 시도, and restores rows and scroll on return (router restoration now on for every screen, /posts keyed by address); FE gate green; verified in Chrome at 390 and 1280
+- 260925 T393 claimed (pg)
 - 260925 T392 done (pg): ListPosts pages by a keyset token over the stored updated_at+slug, narrows query/status on the server over every owned post, reads json_extract title/tags only; page_size 0 stays unpaged; BE and FE gates green
 - 260925 T392 claimed (pg)
 - 260925 create-task POST done: r15 → T392 (paged ListPosts, server-side query/status, keyset token) and T393 (infinite /posts, list-end loading/retry, scroll restoration); POST tasked=15
@@ -77,6 +79,3 @@
 - 260925 T375 done; the 38 per-control cases now live in their slices' tests (five new slice test files) and the editor page suites keep 74 cases; the T354..T375 review wave is complete; FE gates pass (p42)
 - 260925 T375 claimed (p42)
 - 260925 T373 done; entity indexes export no wire mapper (fakes map by member name), the draft save takes a domain PostDraftSave, an unknown 분야 or quality tick fails the read, and one exhaustive status split replaces the four chains; ESLint and arch pins guard it; FE gates pass (p42)
-- 260925 T373 claimed (p42)
-- 260925 T372 done; the title corpus reaches every title refusal (cross-area too_many_asks included) and a test fails when one goes missing; the drain harness runs the worker's registerJobs; template.Limits has one constructor with post.TargetLengthMin; BE and FE gates pass (p42)
-- 260925 T372 claimed (p42)

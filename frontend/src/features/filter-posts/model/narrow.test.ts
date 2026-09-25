@@ -1,5 +1,5 @@
 import type { PostListItem } from '@/entities/post'
-import { narrowPosts } from './narrow'
+import { matchedTags } from './narrow'
 
 function post(overrides: Partial<PostListItem> & { slug: string }): PostListItem {
   return {
@@ -17,100 +17,32 @@ function post(overrides: Partial<PostListItem> & { slug: string }): PostListItem
   }
 }
 
-const JEJU = post({ slug: 'jeju', title: '제주 3일', status: 'review', tags: ['제주', '카페'] })
-const BUSAN = post({ slug: 'busan', title: '부산 밥상', status: 'draft', tags: ['맛집'] })
-const SEOUL = post({ slug: 'seoul', title: 'Seoul Cafe Tour', status: 'finalized' })
-const POSTS = [JEJU, BUSAN, SEOUL]
+const JEJU = post({ slug: 'jeju', title: '제주 3일', tags: ['제주', '카페', '제주 카페'] })
 
-describe('narrowPosts', () => {
-  it('keeps every post in server order when nothing narrows', () => {
-    expect(narrowPosts(POSTS, {}).map((kept) => kept.post.slug)).toEqual(['jeju', 'busan', 'seoul'])
-    expect(narrowPosts(POSTS, { q: '   ' }).map((kept) => kept.post.slug)).toHaveLength(3)
+// The narrowing itself is the server's (POST-91, backend list_test.go); what stays here is naming
+// the tags a kept row matched, which has to normalize the same way the server's match did.
+describe('matchedTags', () => {
+  it('names nothing while nothing is searched', () => {
+    expect(matchedTags(JEJU, undefined)).toEqual([])
+    expect(matchedTags(JEJU, '   ')).toEqual([])
+    expect(matchedTags(JEJU, '#')).toEqual([])
   })
 
-  it('matches the title and reports no tag for a title hit', () => {
-    const kept = narrowPosts(POSTS, { q: '밥상' })
-
-    expect(kept).toHaveLength(1)
-    expect(kept[0].post.slug).toBe('busan')
-    expect(kept[0].matchedTags).toEqual([])
+  it('names only the tags that matched, in their order', () => {
+    expect(matchedTags(JEJU, '카페')).toEqual(['카페', '제주 카페'])
   })
 
-  it('matches a tag and names only the tags that matched', () => {
-    const kept = narrowPosts(POSTS, { q: '카페' })
-
-    expect(kept).toHaveLength(1)
-    expect(kept[0].post.slug).toBe('jeju')
-    expect(kept[0].matchedTags).toEqual(['카페'])
+  it('names no tag for a hit on the title alone', () => {
+    expect(matchedTags(JEJU, '3일')).toEqual([])
   })
 
-  it('reads a leading # as naming a tag rather than as part of it', () => {
-    expect(narrowPosts(POSTS, { q: '#맛집' }).map((kept) => kept.post.slug)).toEqual(['busan'])
+  it('reads a leading # as naming a tag', () => {
+    expect(matchedTags(JEJU, '#제주')).toEqual(['제주', '제주 카페'])
   })
 
   it('ignores case and surrounding or repeated whitespace', () => {
-    expect(narrowPosts(POSTS, { q: '  CAFE  ' }).map((kept) => kept.post.slug)).toEqual(['seoul'])
-    expect(narrowPosts(POSTS, { q: 'seoul   cafe' }).map((kept) => kept.post.slug)).toEqual([
-      'seoul',
-    ])
-  })
-
-  it('filters on the stored status', () => {
-    expect(narrowPosts(POSTS, { status: 'finalized' }).map((kept) => kept.post.slug)).toEqual([
-      'seoul',
-    ])
-  })
-
-  // 발행됨 is a status like the others (POST-66): it narrows to the published rows alone, and a
-  // finalized post is not one of them.
-  it('filters on the published status', () => {
-    const published = post({ slug: 'published', title: '성수 카페', status: 'published' })
-    const posts = [...POSTS, published]
-    expect(narrowPosts(posts, { status: 'published' }).map((kept) => kept.post.slug)).toEqual([
-      'published',
-    ])
-    expect(narrowPosts(posts, { status: 'finalized' }).map((kept) => kept.post.slug)).toEqual([
-      'seoul',
-    ])
-    expect(narrowPosts(posts, { q: '카페', status: 'published' }).map((k) => k.post.slug)).toEqual([
-      'published',
-    ])
-  })
-
-  // A generating draft is still a draft: the badge says AI 생성 중, the status does not (POST-66).
-  it('keeps a post with a running job under its own status', () => {
-    const generating = post({
-      slug: 'generating',
-      title: '생성 중',
-      status: 'draft',
-      activeJob: {
-        id: 'job-1',
-        kind: 'generate',
-        status: 'running',
-        stage: 'observe',
-        progressDone: 0,
-        progressTotal: 0,
-        failure: undefined,
-        postSlug: 'generating',
-        observeModel: undefined,
-        writeModel: undefined,
-        createdAt: '2026-08-28T11:00:00Z',
-        updatedAt: '2026-08-28T11:00:00Z',
-        targetLanguage: 'ko',
-      },
-    })
-
-    expect(narrowPosts([generating], { status: 'draft' })).toHaveLength(1)
-  })
-
-  it('composes the search and the filter as AND', () => {
-    expect(narrowPosts(POSTS, { q: '제주', status: 'draft' })).toEqual([])
-    expect(narrowPosts(POSTS, { q: '제주', status: 'review' }).map((k) => k.post.slug)).toEqual([
-      'jeju',
-    ])
-  })
-
-  it('matches nothing on a query no title or tag carries', () => {
-    expect(narrowPosts(POSTS, { q: '없는말' })).toEqual([])
+    const seoul = post({ slug: 'seoul', tags: ['Seoul Cafe'] })
+    expect(matchedTags(seoul, '  CAFE  ')).toEqual(['Seoul Cafe'])
+    expect(matchedTags(seoul, 'seoul   cafe')).toEqual(['Seoul Cafe'])
   })
 })

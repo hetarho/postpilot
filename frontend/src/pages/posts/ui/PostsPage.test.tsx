@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import type { FakePostsOptions } from '@/test/posts'
+import type { FakeListRequest, FakePostRow, FakePostsOptions } from '@/test/posts'
 
 const USER = { id: 'alice' }
 
@@ -323,5 +323,142 @@ describe('PostsPage', () => {
     expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
     expect(screen.getByLabelText('검색')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('전체')
+  })
+})
+
+describe('PostsPage paging (POST-90..92)', () => {
+  // jsdom has no IntersectionObserver. This one keeps every live observer so a test can say the
+  // list's end came within a screen, which is what the page listens to.
+  const live = new Set<(entries: Array<Partial<IntersectionObserverEntry>>) => void>()
+  beforeEach(() => {
+    live.clear()
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        private readonly callback: (entries: Array<Partial<IntersectionObserverEntry>>) => void
+        constructor(callback: (entries: Array<Partial<IntersectionObserverEntry>>) => void) {
+          this.callback = callback
+        }
+        observe() {
+          live.add(this.callback)
+        }
+        disconnect() {
+          live.delete(this.callback)
+        }
+      },
+    )
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  function reportNearEnd() {
+    act(() => {
+      for (const callback of [...live]) callback([{ isIntersecting: true }])
+    })
+  }
+
+  /** `count` posts, newest first, the last one titled `last` when given. */
+  function manyPosts(count: number, last?: Partial<FakePostRow>): FakePostRow[] {
+    return Array.from({ length: count }, (_, index) => ({
+      slug: `post-${String(index).padStart(2, '0')}`,
+      title: `글 ${index + 1}번`,
+      ...(index === count - 1 ? last : {}),
+    }))
+  }
+
+  const rowCount = () => screen.getAllByRole('link', { name: /글 \d+번|제주/ }).length
+
+  it('loads the first page, the next as the end nears, and nothing past the last', async () => {
+    const listRequests: FakeListRequest[] = []
+    renderList({ posts: manyPosts(25), listRequests })
+
+    await screen.findByRole('link', { name: /글 20번/ })
+    expect(rowCount()).toBe(20)
+    expect(listRequests).toEqual([{ pageSize: 20, pageToken: '', query: '', status: '' }])
+
+    reportNearEnd()
+    expect(await screen.findByRole('link', { name: /글 25번/ })).toBeInTheDocument()
+    expect(rowCount()).toBe(25)
+    expect(listRequests).toHaveLength(2)
+
+    // The last page came back with no token: the end is no longer watched, so nothing more is asked.
+    reportNearEnd()
+    await waitFor(() => expect(live.size).toBe(0))
+    expect(listRequests).toHaveLength(2)
+  })
+
+  it('says a page is loading at the list end while it is', async () => {
+    let release!: () => void
+    const listPageGate = new Promise<void>((resolve) => (release = resolve))
+    renderList({ posts: manyPosts(25), listPageGate })
+    await screen.findByRole('link', { name: /글 20번/ })
+
+    reportNearEnd()
+    expect(await screen.findByText('불러오는 중…')).toBeInTheDocument()
+
+    release()
+    expect(await screen.findByRole('link', { name: /글 25번/ })).toBeInTheDocument()
+    expect(screen.queryByText('불러오는 중…')).toBeNull()
+  })
+
+  // POST-92: the rows on screen are still right, so a failure further down keeps them.
+  it('keeps every row when the next page fails and retries only that page', async () => {
+    const user = userEvent.setup()
+    const listRequests: FakeListRequest[] = []
+    renderList({ posts: manyPosts(25), listPageFailures: 1, listRequests })
+    await screen.findByRole('link', { name: /글 20번/ })
+
+    reportNearEnd()
+    expect(await screen.findByText('더 불러오지 못했어요.')).toBeInTheDocument()
+    expect(rowCount()).toBe(20)
+    expect(screen.queryByText('목록을 불러오지 못했어요.')).toBeNull()
+    // A failed page waits for the button instead of retrying on every scroll.
+    expect(live.size).toBe(0)
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('link', { name: /글 25번/ })).toBeInTheDocument()
+    expect(screen.queryByText('더 불러오지 못했어요.')).toBeNull()
+    expect(listRequests.map((request) => request.pageToken === '')).toEqual([true, false, false])
+  })
+
+  // POST-91: the search reaches posts the list has not loaded.
+  it('finds a post that sits past the loaded rows', async () => {
+    const user = userEvent.setup()
+    renderList({ posts: manyPosts(25, { title: '제주 마지막', tags: ['여행'] }) })
+    await screen.findByRole('link', { name: /글 20번/ })
+    expect(screen.queryByRole('link', { name: /제주 마지막/ })).toBeNull()
+
+    await user.type(screen.getByLabelText('검색'), '제주')
+
+    expect(await screen.findByRole('link', { name: /제주 마지막/ })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('link', { name: /글 \d+번/ })).toBeNull())
+  })
+
+  it('sends a typed word once it settles, not a request per keystroke', async () => {
+    const user = userEvent.setup()
+    const listRequests: FakeListRequest[] = []
+    const { router } = renderList({ posts: manyPosts(3), listRequests })
+    await screen.findByRole('link', { name: /글 3번/ })
+
+    await user.type(screen.getByLabelText('검색'), '글 2번')
+
+    // The URL follows every keystroke (POST-67) …
+    expect(router.state.location.search).toEqual({ q: '글 2번' })
+    // … and the request waits for the typing to stop.
+    await screen.findByRole('link', { name: /글 2번/ })
+    await waitFor(() => expect(screen.queryByRole('link', { name: /글 3번/ })).toBeNull())
+    expect(listRequests.map((request) => request.query)).toEqual(['', '글 2번'])
+  })
+
+  // POST-69: a narrowing that matches nothing says so even on an empty account, and clearing it
+  // then says the account has no posts.
+  it('names the narrowing on an empty account and the emptiness once it is cleared', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts?q=제주', { user: USER, posts: {} })
+
+    expect(await screen.findByText(/"제주"에 맞는 글이 없어요/)).toBeInTheDocument()
+    expect(screen.queryByText(/아직 글이 없어요/)).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '초기화' }))
+    expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
   })
 })

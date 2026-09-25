@@ -2,6 +2,7 @@ import { createRouter } from '@tanstack/react-router'
 import { transport } from '@/shared/api'
 import { queryClient } from '../providers/query-client'
 import { RoutePending } from './RoutePending'
+import { scrollRestorationKey } from './scroll-restoration'
 import { accountRoutes } from './account'
 import { adminRoute, adminRoutes } from './admin'
 import { authRoutes } from './auth'
@@ -52,6 +53,8 @@ export const router = createRouter({
   routeTree,
   context: { queryClient, transport },
   defaultPendingComponent: RoutePending,
+  scrollRestoration: true,
+  getScrollRestorationKey: scrollRestorationKey,
 })
 
 // Register the router instance for type safety across the app (Link, useNavigate, …).

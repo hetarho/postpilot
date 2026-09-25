@@ -72,6 +72,20 @@ export const SAVE_STATUS_SETTLED_MS = 2_000
  *  domain that waits on a job reads this one interval. */
 export const POLL_INTERVAL_MS = 2_000
 
+/** `/posts` reads the list a page at a time (POST-90): enough rows to fill a desk screen and
+ *  more, so the next page is asked for before the reader reaches the end of this one. */
+export const POSTS_PAGE_SIZE = 20
+
+/** The quiet after the last keystroke before the search is sent (POST-91). The URL still follows
+ *  every keystroke (POST-67); only the request waits, so a typed word is one request, not one per
+ *  character. */
+export const POSTS_SEARCH_DEBOUNCE_MS = 250
+
+/** How long the loaded pages of a list outlive the screen (POST-93). An editing session routinely
+ *  outlasts the five-minute default, and without the pages the way back lands on the first page at
+ *  the top; bounded, because every settled search is an entry of its own. */
+export const POSTS_LIST_GC_MS = 30 * 60_000
+
 /** How long successful clipboard feedback remains visible. */
 export const COPY_FEEDBACK_MS = 1_500
 

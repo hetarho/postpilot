@@ -27,6 +27,8 @@ export const i18n = {
         both: '{{status}} 상태에서 "{{q}}"에 맞는 글이 없어요.',
       },
       reset: '초기화',
+      loadingMore: '불러오는 중…',
+      loadMoreFailed: '더 불러오지 못했어요.',
     },
   },
   en: {
@@ -53,6 +55,8 @@ export const i18n = {
         both: 'No {{status}} post matches "{{q}}".',
       },
       reset: 'Clear',
+      loadingMore: 'Loading more…',
+      loadMoreFailed: 'Could not load more.',
     },
   },
 } as const satisfies I18nFragment

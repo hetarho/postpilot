@@ -5,7 +5,9 @@ import { POLL_INTERVAL_MS } from '@/shared/config'
 import type { PostListItem } from '../model/types'
 import { toPostListItem } from './post-queries'
 
-/** The acting user's posts, newest first — the server decides the order (PRD F-8). */
+/** Every one of the acting user's posts at once, newest first — the server decides the order (PRD
+ *  F-8). This is the unpaged read (`{}` is page size 0) for a picker that needs them all; `/posts`
+ *  reads them a page at a time through `usePostList` (POST-90). */
 export function usePosts(): {
   posts: PostListItem[]
   isPending: boolean
