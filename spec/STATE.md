@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 8 | 8 | - | 0 |
-| QUOTA | 19 | 19 | - | 0 |
+| QUOTA | 20 | 20 | - | 0 |
 | POST | 15 | 15 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 12 | 12 | - | 0 |
@@ -37,6 +37,7 @@
 | BILL | 4 | 4 | - | 0 |
 | MEM | 3 | 3 | - | 2 |
 | QUAL | 4 | 4 | - | 0 |
+| GIFT | 2 | 2 | - | 0 |
 
 ## review
 | id | st |
@@ -52,13 +53,26 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T394 | voucher lot kind and expiring-first consumption order | QUOTA GIFT | - | todo |
+| T395 | voucher context, VoucherService and the vouchers table | GIFT QUOTA | T394 | todo |
+| T396 | public gift page and redemption | GIFT | T395 | todo |
+| T397 | admin vouchers tab: issue, list, copy, revoke | GIFT | T396 | todo |
 
 ## next
+- implement-task T394 → T395 → T396 → T397 (vouchers for the bank-transfer pilot: lot kind + burn order, voucher context, public gift page, admin tab)
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 create-task GIFT QUOTA done: GIFT r2 + QUOTA r20 → T394 (voucher lot kind, expiring-first order), T395 (voucher context/VoucherService/table), T396 (public /gift page, redeem, sign-in hand-back), T397 (admin vouchers tab); GIFT tasked=2, QUOTA tasked=20
+- 260925 create-task GIFT QUOTA start (GIFT r2 all, QUOTA r20: QUOTA-9✎ QUOTA-12✎ QUOTA-58+)
+- 260925 update-ssot QUAL dropped: no SSOT or code change; QUAL stays r4
+- 260925 update-ssot QUOTA done: r20 QUOTA-12✎ every expiring lot (monthly, voucher, expiring bonus) burns first by expiry, then bonus, then purchased; QUOTA-9✎ voucher redemption joins the credit paths; QUOTA-58+ voucher lot kind; GIFT r2 constraint points at it; no doing tasks affected
+- 260925 update-ssot QUAL start: 분야 phrases from the 네이버 검색 API are stored apart and used only for product-side judgment, never as LLM input or in LLM output (검색 API 특약 of 2026-09-07)
+- 260925 update-ssot QUOTA start: QUOTA-12 burn order moves to expiring-first and a `voucher` lot kind joins for GIFT
+- 260925 create-ssot GIFT done: r1 GIFT-1..15 (operator-issued vouchers of expiring credits, sold by bank transfer or given, redeemed once from a public gift link; revoke voids the unspent remainder); GIFT-11 needs QUOTA-12's burn order changed
+- 260925 create-ssot voucher start: 이용권 a recipient redeems from a gift link, issued by the operator for the bank-transfer pilot
 - 260925 note (pg): the dev API on 7678 still runs a 15 h old binary — every Air rebuild since T389..T391 exits at boot for want of MEDIA_WORKER_CREDENTIALS (the container predates .env.media.dev); `pnpm dev` recreates it
 - 260925 T393 done (pg): /posts reads server-narrowed pages, loads the next as its end comes within half a screen, reports list-end loading/failure with 다시 시도, and restores rows and scroll on return (router restoration now on for every screen, /posts keyed by address); FE gate green; verified in Chrome at 390 and 1280
 - 260925 T393 claimed (pg)
@@ -71,11 +85,3 @@
 - 260925 T391 done (mw): Deploy backend succeeded in 201s; separate parallel Verify media and CI are green, release logs confirm cached media tools, and DEPLOY.md records measured evidence
 - 260925 T391 production timing confirmed (mw): e933ea73 completed Deploy backend in 201s, API health is ok, and three independent Verify media jobs started afterward; remaining CI/media verification is monitored separately
 - 260925 T391 local verification passed (mw): 60 deployment tests, workflow lint, both prebuilt-image release layouts and all BE/FE/codegen/spec gates; delivery timing remains to be measured
-- 260925 T391 claimed (mw): restore fast deployment by separating long media checks, narrowing production serialization and reusing fixture build caches; preserve all media coverage and health/rollback gates
-- 260925 T390 done (mw): disposable MinIO/mc now build from pinned official source; both real release layouts, 51 deploy tests and all repository gates pass; T389 production rollout/CI and external health are confirmed
-- 260925 T390 claimed (mw): T389 is pushed and production rollout/CI passed; repair the previous run's MinIO fixture image pull failure before completing deployment smoke verification
-- 260925 T389 done (mw): first CPU deployment initializes missing worker.env and preserves credentials on retry, with a read-only SQLite backup before the forward-only swap; 48 deploy tests and all BE/FE/codegen/spec gates pass; no live deployment
-- 260925 T389 claimed (mw): fix missing worker.env during the first automated CPU VPS deployment; preserve established worker configuration and forward-only rollback protection
-- 260925 T375 done; the 38 per-control cases now live in their slices' tests (five new slice test files) and the editor page suites keep 74 cases; the T354..T375 review wave is complete; FE gates pass (p42)
-- 260925 T375 claimed (p42)
-- 260925 T373 done; entity indexes export no wire mapper (fakes map by member name), the draft save takes a domain PostDraftSave, an unknown 분야 or quality tick fails the read, and one exhaustive status split replaces the four chains; ESLint and arch pins guard it; FE gates pass (p42)
