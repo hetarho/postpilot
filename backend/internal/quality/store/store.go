@@ -49,7 +49,7 @@ func (s *Store) Measurement(ctx context.Context, userID, slug string) (quality.S
 		PostSlug: slug, UserID: row.UserID, Revision: row.ContentRevision, MeasureVersion: int(row.MeasureVersion),
 		Self: quality.Self{
 			Repetition: quality.Repetition{
-				Share: floatOf(row.RepetitionShare), TopNoun: row.TopNoun.String, TitleRelevance: floatOf(row.TitleRelevance),
+				Share: floatOf(row.RepetitionShare), TitleRelevance: floatOf(row.TitleRelevance),
 			},
 			Composition: quality.Composition{
 				CharCount: int(row.CharCount), PhotoCount: int(row.PhotoCount), DistinctBlockTypes: int(row.DistinctBlockTypes),
@@ -69,7 +69,6 @@ func (s *Store) SaveMeasurement(ctx context.Context, m quality.StoredMeasurement
 		DistinctBlockTypes: int64(m.Self.Composition.DistinctBlockTypes),
 		AvgSentenceLength:  nullFloat(m.Self.Composition.AvgSentenceLength),
 		RepetitionShare:    nullFloat(m.Self.Repetition.Share),
-		TopNoun:            sql.NullString{String: m.Self.Repetition.TopNoun, Valid: m.Self.Repetition.TopNoun != ""},
 		TitleRelevance:     nullFloat(m.Self.Repetition.TitleRelevance),
 		ComputedAt:         formatTime(m.ComputedAt),
 	})

@@ -13,7 +13,7 @@ import (
 const getPostMeasurement = `-- name: GetPostMeasurement :one
 
 SELECT user_id, content_revision, measure_version, char_count, photo_count, distinct_block_types,
-       avg_sentence_length, repetition_share, top_noun, title_relevance, computed_at
+       avg_sentence_length, repetition_share, title_relevance, computed_at
 FROM post_measurements
 WHERE post_slug = ? AND user_id = ?
 `
@@ -32,7 +32,6 @@ type GetPostMeasurementRow struct {
 	DistinctBlockTypes int64
 	AvgSentenceLength  sql.NullFloat64
 	RepetitionShare    sql.NullFloat64
-	TopNoun            sql.NullString
 	TitleRelevance     sql.NullFloat64
 	ComputedAt         string
 }
@@ -56,7 +55,6 @@ func (q *Queries) GetPostMeasurement(ctx context.Context, arg GetPostMeasurement
 		&i.DistinctBlockTypes,
 		&i.AvgSentenceLength,
 		&i.RepetitionShare,
-		&i.TopNoun,
 		&i.TitleRelevance,
 		&i.ComputedAt,
 	)
@@ -65,15 +63,15 @@ func (q *Queries) GetPostMeasurement(ctx context.Context, arg GetPostMeasurement
 
 const upsertPostMeasurement = `-- name: UpsertPostMeasurement :exec
 INSERT INTO post_measurements (post_slug, user_id, content_revision, measure_version, char_count,
-    photo_count, distinct_block_types, avg_sentence_length, repetition_share, top_noun,
-    title_relevance, computed_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    photo_count, distinct_block_types, avg_sentence_length, repetition_share, title_relevance,
+    computed_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(post_slug) DO UPDATE SET
     content_revision = excluded.content_revision, measure_version = excluded.measure_version,
     char_count = excluded.char_count, photo_count = excluded.photo_count,
     distinct_block_types = excluded.distinct_block_types,
     avg_sentence_length = excluded.avg_sentence_length,
-    repetition_share = excluded.repetition_share, top_noun = excluded.top_noun,
+    repetition_share = excluded.repetition_share,
     title_relevance = excluded.title_relevance, computed_at = excluded.computed_at
 WHERE post_measurements.user_id = excluded.user_id
 `
@@ -88,7 +86,6 @@ type UpsertPostMeasurementParams struct {
 	DistinctBlockTypes int64
 	AvgSentenceLength  sql.NullFloat64
 	RepetitionShare    sql.NullFloat64
-	TopNoun            sql.NullString
 	TitleRelevance     sql.NullFloat64
 	ComputedAt         string
 }
@@ -106,7 +103,6 @@ func (q *Queries) UpsertPostMeasurement(ctx context.Context, arg UpsertPostMeasu
 		arg.DistinctBlockTypes,
 		arg.AvgSentenceLength,
 		arg.RepetitionShare,
-		arg.TopNoun,
 		arg.TitleRelevance,
 		arg.ComputedAt,
 	)

@@ -202,15 +202,12 @@ func TestRepetitionShareAndTitleRelevance(t *testing.T) {
 	got := MeasureRepetition(s)
 	// Body occurrences: 감자탕 2, 을지로 1, 국물 1, 라면 0, 후기 0 — the top noun takes 2 of 4.
 	near(t, "share", got.Share, 0.5)
-	if got.TopNoun != "감자탕" {
-		t.Fatalf("top noun = %q", got.TopNoun)
-	}
 	// The title holds 감자탕, 을지로 and 후기; the body covers the first two.
 	near(t, "title relevance", got.TitleRelevance, 2.0/3)
 
 	// A noun the title holds and the body never uses: relevance is a real zero, the share absent.
 	absentBody := MeasureRepetition(sample("b", "라면 맛집", []string{"라면"}, "오늘은 쉬었다."))
-	if absentBody.Share != nil || absentBody.TopNoun != "" {
+	if absentBody.Share != nil {
 		t.Fatalf("share with no body occurrence = %v", deref(absentBody.Share))
 	}
 	near(t, "relevance with no body occurrence", absentBody.TitleRelevance, 0)

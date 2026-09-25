@@ -775,6 +775,8 @@ type fakeBlobs struct {
 	beforeDelete func(key string)
 	// failList makes List fail, so the sweep can be shown to delete nothing.
 	failList bool
+	// failPresign makes PresignGet fail, so a read can be shown to presign nothing.
+	failPresign bool
 }
 
 type fakeObject struct {
@@ -813,6 +815,9 @@ func (f *fakeBlobs) PresignPut(_ context.Context, key, contentType string, ttl t
 }
 
 func (f *fakeBlobs) PresignGet(_ context.Context, key string, ttl time.Duration) (string, error) {
+	if f.failPresign {
+		return "", fmt.Errorf("storage unavailable")
+	}
 	return fmt.Sprintf("https://storage.example/%s?get&ttl=%s", key, ttl), nil
 }
 

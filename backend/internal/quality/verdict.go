@@ -77,7 +77,8 @@ type AccountTitleSaturation struct {
 type AccountCrossPost struct {
 	Verdict Verdict
 	Median  *float64
-	Run     string
+	// Run is set only when OVER_BAND: the rule text is its one reader (QUAL-14).
+	Run string
 }
 
 type AccountRepetition struct {
@@ -158,7 +159,9 @@ func Aggregate(published []Sample, self []Self) Account {
 		}
 		median := Median(shares)
 		account.CrossPost = AccountCrossPost{Verdict: banded(median, crossPostOver), Median: median}
-		if median != nil {
+		// Only the over-band rule text reads the run, and finding it matches every post against
+		// the rest again: a within-band account never pays for it.
+		if account.CrossPost.Verdict == VerdictOverBand {
 			account.CrossPost.Run = namedRun(published)
 		}
 	} else {

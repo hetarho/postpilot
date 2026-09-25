@@ -19,7 +19,7 @@ import (
 type qualityPosts struct{ service *post.Service }
 
 func (a qualityPosts) Post(ctx context.Context, userID, slug string) (quality.PostSnapshot, error) {
-	found, err := a.service.Get(ctx, userID, slug)
+	found, err := a.service.CurrentContent(ctx, userID, slug)
 	switch {
 	case errors.Is(err, post.ErrNotFound), errors.Is(err, post.ErrForbidden):
 		return quality.PostSnapshot{}, quality.ErrPostNotFound
@@ -31,7 +31,7 @@ func (a qualityPosts) Post(ctx context.Context, userID, slug string) (quality.Po
 		return quality.PostSnapshot{}, fmt.Errorf("post %s has an unknown target language %q", slug, found.TargetLanguage)
 	}
 	snapshot := quality.PostSnapshot{
-		Slug: found.Slug, Revision: found.ContentRevision, TargetLanguage: target, Nouns: found.ContentNouns,
+		Slug: found.Slug, Revision: found.ContentRevision, TargetLanguage: target, Nouns: found.Nouns,
 	}
 	if snapshot.ContentLanguage, err = qualityContentLanguage(found.ContentLanguage); err != nil {
 		return quality.PostSnapshot{}, err

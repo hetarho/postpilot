@@ -244,11 +244,10 @@ func startIn(doc Document, tokens []string) int {
 }
 
 // Repetition is M3 for one post: the share of the body's noun occurrences taken by the most
-// frequent noun, that noun, and the share of the nouns the title contains that the body also
-// contains (QUAL-9). Each half is nil when it cannot be computed.
+// frequent noun, and the share of the nouns the title contains that the body also contains
+// (QUAL-9). Each half is nil when it cannot be computed. M3 names no noun (QUAL-43).
 type Repetition struct {
 	Share          *float64
-	TopNoun        string
 	TitleRelevance *float64
 }
 
@@ -275,14 +274,12 @@ func MeasureRepetition(s Sample) Repetition {
 	}
 	var result Repetition
 	if total > 0 {
-		top, topCount := "", -1
+		topCount := 0
 		for _, noun := range nouns {
-			if preferred(occurrences[noun], noun, topCount, top) {
-				top, topCount = noun, occurrences[noun]
-			}
+			topCount = max(topCount, occurrences[noun])
 		}
 		share := float64(topCount) / float64(total)
-		result.Share, result.TopNoun = &share, top
+		result.Share = &share
 	}
 	title := Tokens(s.Doc.Title)
 	inTitle, covered := 0, 0

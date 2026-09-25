@@ -58,7 +58,7 @@ func TestMeasurementRoundTripsAndStaysWithItsAccount(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
 	want := measurement(3, quality.Self{
-		Repetition: quality.Repetition{Share: ptr(0.25), TopNoun: "감자탕", TitleRelevance: ptr(2.0 / 3)},
+		Repetition: quality.Repetition{Share: ptr(0.25), TitleRelevance: ptr(2.0 / 3)},
 		Composition: quality.Composition{
 			CharCount: 812, PhotoCount: 4, DistinctBlockTypes: 3, AvgSentenceLength: ptr(31.5),
 		},
@@ -90,7 +90,7 @@ func TestUpsertReplacesTheRowForANewRevision(t *testing.T) {
 	ctx := context.Background()
 	s, handle := newStore(t)
 	if err := s.SaveMeasurement(ctx, measurement(1, quality.Self{
-		Repetition:  quality.Repetition{Share: ptr(0.5), TopNoun: "감자탕", TitleRelevance: ptr(1)},
+		Repetition:  quality.Repetition{Share: ptr(0.5), TitleRelevance: ptr(1)},
 		Composition: quality.Composition{CharCount: 100, DistinctBlockTypes: 2, AvgSentenceLength: ptr(20)},
 	})); err != nil {
 		t.Fatal(err)
@@ -105,11 +105,11 @@ func TestUpsertReplacesTheRowForANewRevision(t *testing.T) {
 		t.Fatalf("after the upsert = %+v, %v, %v\nwant %+v", got, found, err, next)
 	}
 	var rows, nulls int
-	if err := handle.Reader.QueryRow(`SELECT count(*), SUM(repetition_share IS NULL) + SUM(top_noun IS NULL) + SUM(title_relevance IS NULL) + SUM(avg_sentence_length IS NULL) FROM post_measurements`).Scan(&rows, &nulls); err != nil {
+	if err := handle.Reader.QueryRow(`SELECT count(*), SUM(repetition_share IS NULL) + SUM(title_relevance IS NULL) + SUM(avg_sentence_length IS NULL) FROM post_measurements`).Scan(&rows, &nulls); err != nil {
 		t.Fatal(err)
 	}
-	if rows != 1 || nulls != 4 {
-		t.Fatalf("rows = %d with %d NULLs, want one row with four", rows, nulls)
+	if rows != 1 || nulls != 3 {
+		t.Fatalf("rows = %d with %d NULLs, want one row with three", rows, nulls)
 	}
 }
 

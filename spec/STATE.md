@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T370 | Quality reads the post it needs and nothing more, and TopNoun is gone | ARCH | T357 T364 | todo |
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
@@ -60,9 +59,11 @@
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T370 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T372 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T370 done; quality reads one post row through post.Service.CurrentContent and names M2's run only when over band; Repetition.TopNoun and post_measurements.top_noun are gone (migration 0083); BE gate passes (p42)
+- 260925 T370 claimed (p42)
 - 260925 T368 done; EditorPage's cases are six step suites on shared helpers and row builders; duplicates of slice tests are gone and the lock wiring folds into the published cases; no page test reads a query key by position; FE gates pass (p42)
 - 260925 T368 claimed (p42)
 - 260925 T367 done; the autosave decides the published lock and owns ①'s text (a locked refusal takes the text back to the screen); DraftEditor has no lock masking and every editor component reads isPublished(post) itself; FE gates pass (p42)
@@ -81,5 +82,3 @@
 - 260925 T356 claimed (p42)
 - 260925 T355 done; the brief's five run options are one form saved by its 저장 as one whole-set SavePostGenerationOptions (field included); ① and /posts/new carry neither 분야 nor 기억 사용 and the draft queue's 분야 channel is gone; BE and FE gates pass (p42)
 - 260925 T355 claimed (p42)
-- 260925 T388 done (mw): three-environment guides, pinned NVIDIA candidate, explicit overrides/rollback and isolated diagnostics; CPU image/fixture parity, benchmark, 37 deploy tests and CI gates pass; real GPU activation remains unverified and pending
-- 260925 T388 claimed (mw); T387 committed as ac3953ae; three-environment guides, NVIDIA candidate packaging and isolated diagnostics only; production GPU activation remains gated

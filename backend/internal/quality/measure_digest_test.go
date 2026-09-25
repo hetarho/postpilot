@@ -22,7 +22,7 @@ var measureDigests = map[int]struct{ corpus, output string }{
 }
 
 // measuredSelf is the projection the digest covers: exactly the stored numbers the aggregate
-// reads. TopNoun is left out — nothing reads it (review F16).
+// reads.
 type measuredSelf struct {
 	Share              *float64 `json:"share"`
 	TitleRelevance     *float64 `json:"title_relevance"`

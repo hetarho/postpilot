@@ -332,6 +332,17 @@ type WriteAnnotations struct {
 	Candidates []ReplacementCandidate
 }
 
+// ContentSnapshot is one owned post's current content with what a reader that measures it needs
+// beside it, read from the post row alone.
+type ContentSnapshot struct {
+	Slug            string
+	ContentRevision int64
+	Content         *PostContent // nil before the first write
+	ContentLanguage *Language
+	TargetLanguage  Language
+	Nouns           []string
+}
+
 // PublishedPost is one published post as the quality context reads the account's window
 // (QUAL-39). A nil ContentLanguage is for the reader to interpret; post does not default it.
 type PublishedPost struct {

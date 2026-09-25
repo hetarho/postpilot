@@ -2,6 +2,7 @@ package quality
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -68,6 +69,39 @@ func TestAccountBelowMinimumIsNotAbsent(t *testing.T) {
 	short := []Sample{sample("a", "후기", nil, "짧은 글"), sample("b", "후기", nil, "짧은 글"), sample("c", "후기", nil, "짧은 글")}
 	if got := Aggregate(short, nil).CrossPost; got.Verdict != VerdictAbsent || got.Median != nil || got.Run != "" {
 		t.Fatalf("M2 with no computable share = %+v, want absent", got)
+	}
+}
+
+// words is n space-separated 어절 of its own, so a post padded with it shares no run by accident.
+func words(prefix string, n int) string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%s%d", prefix, i)
+	}
+	return strings.Join(out, " ")
+}
+
+// M2's run is read only by the over-band rule text, so a within-band account names none even
+// where two posts share one (review F8).
+func TestAWithinBandAccountNamesNoRun(t *testing.T) {
+	// A: a and b share sharedRun inside a hundred words of their own, and c shares nothing, so the
+	// median share is about 7% — within the band.
+	within := Aggregate([]Sample{
+		sample("a", "후기", nil, words("가", 100)+" "+sharedRun),
+		sample("b", "후기", nil, words("나", 100)+" "+sharedRun),
+		sample("c", "후기", nil, words("다", 100)),
+	}, nil)
+	if got := within.CrossPost; got.Verdict != VerdictWithinBand || got.Run != "" {
+		t.Fatalf("within band = %+v, %v; want within band with no run", got, deref(got.Median))
+	}
+	if named := within.Named(MetricCrossPostPhrases); named != "" {
+		t.Fatalf("a within-band account names %q", named)
+	}
+
+	// B: the same run shared widely enough to go over band is named.
+	over := Aggregate(sharing(), nil).CrossPost
+	if over.Verdict != VerdictOverBand || over.Run != sharedRun {
+		t.Fatalf("over band = %+v, want the shared run named", over)
 	}
 }
 
@@ -193,7 +227,7 @@ func TestPostCrossPostIsBelowMinimumWithFewerThanThreeOthers(t *testing.T) {
 
 	// M3 and M4 have no minimum: with no other post at all they are judged against the bands.
 	alone := JudgePost(draft, MeasureSelf(draft), nil)
-	if alone.Repetition.Verdict != VerdictOverBand || alone.Repetition.Repetition.TopNoun != "감자탕" {
+	if alone.Repetition.Verdict != VerdictOverBand {
 		t.Fatalf("M3 alone = %+v", alone.Repetition)
 	}
 	if alone.Composition.Verdict != VerdictOverBand || alone.Composition.Composition == nil || alone.Composition.Composition.DistinctBlockTypes != 1 {

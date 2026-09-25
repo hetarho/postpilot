@@ -373,6 +373,7 @@ var publishedLockExempt = map[string]string{
 	"LearningSnapshot":     "read",
 	"PublishedPosts":       "read",
 	"PostStatus":           "read",
+	"CurrentContent":       "read",
 	"DeletePost":           "POST-74 lets a published post be deleted",
 	"SavePublishedURL":     "POST-74: the address is the one thing a published post takes",
 }

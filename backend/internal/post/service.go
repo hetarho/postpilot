@@ -1119,6 +1119,20 @@ func (s *Service) PostStatus(ctx context.Context, userID, slug string) (string, 
 	return found.Status, nil
 }
 
+// CurrentContent returns one owned post's current content and languages from the post row alone:
+// no listing, presign, answers, job, experiment, voice or template read. It exists for a reader
+// that measures the content (quality) and must not pay for the screen's read, `Get`.
+func (s *Service) CurrentContent(ctx context.Context, userID, slug string) (ContentSnapshot, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return ContentSnapshot{}, err
+	}
+	return ContentSnapshot{
+		Slug: found.Slug, ContentRevision: found.ContentRevision, Content: found.Content,
+		ContentLanguage: found.ContentLanguage, TargetLanguage: found.TargetLanguage, Nouns: found.ContentNouns,
+	}, nil
+}
+
 func clonePostContent(content PostContent) PostContent {
 	cloned := content
 	cloned.Tags = append([]string(nil), content.Tags...)
