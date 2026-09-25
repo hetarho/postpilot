@@ -53,6 +53,7 @@ import {
 import { parseNaverBlogUrl, replacementSurfaceToProto } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
+import { POST_CONTENT_FIXTURE } from './fixtures/postContent'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -238,6 +239,31 @@ export interface FakePostsOptions {
 
 /** The address a publish from another tab records in `publishOnDraftSave`. */
 export const FAKE_PUBLISHED_URL = 'https://blog.naver.com/alice/1'
+
+/** A post finalized at its only revision, holding the shared fixture content. `canFinalize` is
+ *  explicit because a SavePostDraft answer reads it from the row rather than deriving it. */
+export function finalizedPostRow(row: FakePostRow & { slug: string }): FakePostRow {
+  return {
+    status: 'finalized',
+    content: POST_CONTENT_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+    finalizedRevision: 1n,
+    finalizedAt: '2026-08-20T12:00:00Z',
+    ...row,
+  }
+}
+
+/** A finalized post published at the fixture address (POST-73). */
+export function publishedPostRow(row: FakePostRow & { slug: string }): FakePostRow {
+  return finalizedPostRow({
+    status: 'published',
+    publishedUrl: FAKE_PUBLISHED_URL,
+    publishedAt: '2026-08-21T09:00:00Z',
+    ...row,
+  })
+}
 
 const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
 
