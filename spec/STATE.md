@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
 | T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
 | T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
 | T365 | Generation preconditions take one named input | ARCH | - | todo |
@@ -67,9 +66,11 @@
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T357 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T358 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T357 done; one writablePost guard for the published lock; SQL and Service default-deny tests make an unclassified write statement or exported method fail; photo and video deletes search posts by key; BE gate passes (p42)
+- 260925 T357 claimed (p42)
 - 260925 T356 done; InlinePopover walks its panel with Tab and leaves past either end (THEME-42); a hover-opened panel or tip closes alone on Escape; one focusable selector, one anchored-panel hook, one quality values/share helper; FE gates pass (p42)
 - 260925 T356 claimed (p42)
 - 260925 T355 done; the brief's five run options are one form saved by its 저장 as one whole-set SavePostGenerationOptions (field included); ① and /posts/new carry neither 분야 nor 기억 사용 and the draft queue's 분야 channel is gone; BE and FE gates pass (p42)
@@ -88,5 +89,3 @@
 - 260925 T383 claimed (mw); T382 committed; bounded media recovery, cancellation and artifact cleanup only
 - 260925 T382 done (mw): frozen remote render, replay-safe publication and source/revision fencing; two-worker crash/cancel races, isolated CI, CPU byte/frame parity and all 28 real release scenarios pass; T383 next
 - 260925 T382 claimed (mw); T381 committed as f6b22fe0; durable worker render publication only
-- 260925 T381 done (mw): atomic remote preparation handoff, verified inline artifacts and retained recovery; exact hold/call fault tests, ledger replay, isolated CI and real CPU/input smokes pass; T382 next
-- 260925 T371 done; five two-place values are each pinned to one source or one test: the URL length, the slot-token grammar (template owns it), the search page size (sent as display), the composition count and the replacement instruction's caps; BE and FE gates pass (p42)

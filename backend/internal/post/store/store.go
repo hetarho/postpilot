@@ -486,6 +486,8 @@ func (s *Store) DeletePost(ctx context.Context, slug, userID string) (bool, erro
 
 // --- images ---
 
+// CreateImage is for test seeding only; production inserts go through ConfirmUpload's guarded
+// transaction.
 func (s *Store) CreateImage(ctx context.Context, img post.Image) error {
 	err := s.write.CreateImage(ctx, sqlc.CreateImageParams{
 		ID:        img.ID,
@@ -568,6 +570,8 @@ func (s *Store) ImageKeyInUse(ctx context.Context, key string) (bool, error) {
 
 // --- videos ---
 
+// CreateVideo is for test seeding only; production inserts go through ConfirmVideoUpload's
+// guarded transaction.
 func (s *Store) CreateVideo(ctx context.Context, video post.Video) error {
 	if err := s.write.CreateVideo(ctx, createVideoParams(video)); err != nil {
 		if isUniqueViolation(err) {

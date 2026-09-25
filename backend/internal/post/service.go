@@ -198,13 +198,10 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		return s.Get(ctx, userID, created.Slug)
 	}
 
-	found, err := s.ownedPost(ctx, userID, slug)
-	if err != nil {
-		return Post{}, err
-	}
 	// Before any of the draft's writes: a published post is locked (POST-74), so the request
 	// changes nothing rather than whatever part of it happened to run first.
-	if err := refusePublished(found); err != nil {
+	found, err := s.writablePost(ctx, userID, slug)
+	if err != nil {
 		return Post{}, err
 	}
 	if voiceID != nil && *voiceID != found.VoiceID {
@@ -333,11 +330,8 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 	}
 	if !changed {
 		// Zero rows means another save already moved it; only a vanished post is an error.
-		current, err := s.ownedPost(ctx, found.UserID, found.Slug)
+		current, err := s.writablePost(ctx, found.UserID, found.Slug)
 		if err != nil {
-			return err
-		}
-		if err := refusePublished(current); err != nil {
 			return err
 		}
 		if current.VoiceID != target.ID {
@@ -734,11 +728,8 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 
 // SetObservations replaces the persisted contact sheet snapshot for one owned post.
 func (s *Service) SetObservations(ctx context.Context, userID, slug string, observations []Observation) error {
-	found, err := s.ownedPost(ctx, userID, slug)
+	found, err := s.writablePost(ctx, userID, slug)
 	if err != nil {
-		return err
-	}
-	if err := refusePublished(found); err != nil {
 		return err
 	}
 	if reflect.DeepEqual(found.Observations, observations) {
@@ -764,11 +755,8 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if !language.Valid() {
 		return ErrLanguageRequired
 	}
-	found, err := s.ownedPost(ctx, userID, slug)
+	found, err := s.writablePost(ctx, userID, slug)
 	if err != nil {
-		return err
-	}
-	if err := refusePublished(found); err != nil {
 		return err
 	}
 	next := WriteAnnotations{Nouns: found.ContentNouns, Candidates: found.ReplacementCandidates}
@@ -804,15 +792,13 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 		// The store predicate makes an identical review write atomic under concurrent
 		// retries. Re-read after a zero-row update so the loser succeeds without
 		// advancing the revision, while deletion/ownership changes remain errors.
-		current, loadErr := s.ownedPost(ctx, userID, slug)
-		if loadErr == nil && generatedAlready(current, content, language, next) {
-			return nil
-		}
-		if loadErr != nil {
-			return loadErr
-		}
-		if err := refusePublished(current); err != nil {
+		// generatedAlready requires review, so a published post is the lock either way.
+		current, err := s.writablePost(ctx, userID, slug)
+		if err != nil {
 			return err
+		}
+		if generatedAlready(current, content, language, next) {
+			return nil
 		}
 		return ErrNotFound
 	}
@@ -918,11 +904,8 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if set.Field != "" && !s.fields.Known(set.Field) {
 		return Post{}, ErrFieldNotFound
 	}
-	found, err := s.ownedPost(ctx, userID, slug)
+	found, err := s.writablePost(ctx, userID, slug)
 	if err != nil {
-		return Post{}, err
-	}
-	if err := refusePublished(found); err != nil {
 		return Post{}, err
 	}
 	if equalOptionalInt(found.TargetLength, set.TargetLength) && found.TagCount == set.TagCount && found.UseMemory == set.UseMemory &&
@@ -944,11 +927,8 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 }
 
 func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRevision int64) (Post, error) {
-	found, err := s.ownedPost(ctx, userID, slug)
+	found, err := s.writablePost(ctx, userID, slug)
 	if err != nil {
-		return Post{}, err
-	}
-	if err := refusePublished(found); err != nil {
 		return Post{}, err
 	}
 	if found.ContentRevision != expectedRevision {
@@ -1131,12 +1111,8 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 	if !kind.Valid() {
 		return Upload{}, "", "", fmt.Errorf("unknown attachment kind %q", kind)
 	}
-	found, err := s.ownedPost(ctx, userID, postSlug)
-	if err != nil {
-		return Upload{}, "", "", err
-	}
 	// Before anything is reserved or signed: a published post takes no new attachment.
-	if err := refusePublished(found); err != nil {
+	if _, err := s.writablePost(ctx, userID, postSlug); err != nil {
 		return Upload{}, "", "", err
 	}
 
@@ -1286,13 +1262,9 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 		}
 		return Attachment{}, fmt.Errorf("load upload: %w", err)
 	}
-	found, err := s.ownedPost(ctx, userID, upload.PostSlug)
-	if err != nil {
-		return Attachment{}, err
-	}
 	// Before the object is looked at or dropped: the upload row and its bytes stay for the
 	// sweep, so a retry after the address is cleared can still confirm them.
-	if err := refusePublished(found); err != nil {
+	if _, err := s.writablePost(ctx, userID, upload.PostSlug); err != nil {
 		return Attachment{}, err
 	}
 	// The KIND comes from the reservation, never from this request: a client cannot turn a
@@ -1448,12 +1420,9 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 		}
 		return fmt.Errorf("load image: %w", err)
 	}
-	found, err := s.ownedPost(ctx, userID, image.PostSlug)
-	if err != nil {
-		return err
-	}
 	// Before storage is touched: a published post's photos are locked with it.
-	if err := refusePublished(found); err != nil {
+	found, err := s.writablePost(ctx, userID, image.PostSlug)
+	if err != nil {
 		return err
 	}
 
@@ -1490,11 +1459,8 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 		}
 		return fmt.Errorf("load video: %w", err)
 	}
-	found, err := s.ownedPost(ctx, userID, video.PostSlug)
+	found, err := s.writablePost(ctx, userID, video.PostSlug)
 	if err != nil {
-		return err
-	}
-	if err := refusePublished(found); err != nil {
 		return err
 	}
 
@@ -1552,6 +1518,20 @@ func (s *Service) ownedPost(ctx context.Context, userID, slug string) (Post, err
 	return found, nil
 }
 
+// writablePost is every guarded write's first read: the caller's post, refused while it is
+// published (POST-74). SaveContent alone reads ownedPost and refuses later, because a stale
+// revision answers first and an identical save stays a no-op on a published post (POST-15).
+func (s *Service) writablePost(ctx context.Context, userID, slug string) (Post, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return Post{}, err
+	}
+	if err := refusePublished(found); err != nil {
+		return Post{}, err
+	}
+	return found, nil
+}
+
 // refusePublished is the lock (POST-74): a published post takes no write but its address's
 // and its own deletion, which never ask.
 func refusePublished(found Post) error {
@@ -1565,11 +1545,7 @@ func refusePublished(found Post) error {
 // error wins, a published post is the lock — a write that passed the check above and then lost
 // the race to a publish — and anything else is the write's ordinary miss, otherwise.
 func (s *Service) lockedOrGone(ctx context.Context, userID, slug string, otherwise error) error {
-	current, err := s.ownedPost(ctx, userID, slug)
-	if err != nil {
-		return err
-	}
-	if err := refusePublished(current); err != nil {
+	if _, err := s.writablePost(ctx, userID, slug); err != nil {
 		return err
 	}
 	return otherwise

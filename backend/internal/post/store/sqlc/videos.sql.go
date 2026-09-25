@@ -58,10 +58,10 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) error 
 }
 
 const deleteVideo = `-- name: DeleteVideo :execrows
-DELETE FROM videos WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published')
+DELETE FROM videos WHERE id = ? AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = videos.post_slug AND posts.status <> 'published')
 `
 
-// Locked with a published post, as a photo is.
+// Locked with a published post, as a photo is, and found by the post's key the same way.
 func (q *Queries) DeleteVideo(ctx context.Context, id string) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteVideo, id)
 	if err != nil {

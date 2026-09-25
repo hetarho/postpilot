@@ -124,6 +124,9 @@ type CreatePostParams struct {
 // A published post is locked (POST-74): every write to it but the address's and the delete
 // carries `status <> 'published'`, so a write that passed the service's check and then lost
 // the race to a publish matches zero rows instead of rewriting a post that is already live.
+// Two default-deny tests pin it: every write statement here is classified as guarded or
+// exempt (published_lock_store_test.go), and so is every exported Service method
+// (lifecycle_test.go).
 // target_length and tag_count are the template's seeds when the create names one, and NULL
 // otherwise: a post nobody gave a number to reads as natural length and the default count.
 // field is the blog field the create named, NULL for none.

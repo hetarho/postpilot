@@ -264,78 +264,166 @@ func lockedSnapshot(store *fakeStore, blobs *fakeBlobs, slug string) lockedState
 	return state
 }
 
-// POST-74: a published post refuses every write but its address's and its own deletion, and
-// the refusal comes before anything changes — the row, its updated_at, its answers, its
-// attachments, its pending uploads and the storage objects all stay as they were.
-func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
-	changed := PostContent{Title: "직접 수정", Blocks: []Block{{Type: BlockText, Content: "내 문장"}}}
-	length := 1200
-	english := LanguageEnglish
-	review := aliceReview
-	template := "template-review"
-	operations := map[string]func(*Service, publishedFixture) error{
-		"SavePostDraft title and memo": func(svc *Service, f publishedFixture) error {
+var (
+	lockedEdit     = PostContent{Title: "직접 수정", Blocks: []Block{{Type: BlockText, Content: "내 문장"}}}
+	lockedEnglish  = LanguageEnglish
+	lockedReview   = aliceReview
+	lockedTemplate = "template-review"
+)
+
+// publishedLockGuarded holds every exported Service method the published lock refuses (POST-74),
+// keyed by method name and then by case, each run against the published fixture.
+var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture) error{
+	"SaveDraft": {
+		"title and memo": func(svc *Service, f publishedFixture) error {
 			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "새 제목", Memo: "새 메모"})
 			return err
 		},
-		"SavePostDraft voice": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", VoiceID: &review})
+		"voice": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", VoiceID: &lockedReview})
 			return err
 		},
-		"SavePostDraft template": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TemplateID: &template})
+		"template": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TemplateID: &lockedTemplate})
 			return err
 		},
-		"SavePostDraft answers": func(svc *Service, f publishedFixture) error {
+		"answers": func(svc *Service, f publishedFixture) error {
 			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", Answers: []TemplateAnswer{{Label: "총평", Text: "흐렸다", Enabled: true}}})
 			return err
 		},
-		"SavePostDraft target language": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TargetLanguage: &english})
+		"target language": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TargetLanguage: &lockedEnglish})
 			return err
 		},
-		"a changed SavePostContent": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveContent(context.Background(), alice, f.slug, changed, f.revision)
+		"field": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", Field: fieldPtr("cafe")})
 			return err
 		},
-		"SavePostGenerationOptions": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, GenerationOptionsSet{TargetLength: &length, TagCount: 4})
+	},
+	"SetObservations": {
+		"a new contact sheet": func(svc *Service, f publishedFixture) error {
+			return svc.SetObservations(context.Background(), alice, f.slug, []Observation{{File: "IMG_1.jpg", Scene: "바다"}})
+		},
+	},
+	"SetGeneratedContent": {
+		"a machine write": func(svc *Service, f publishedFixture) error {
+			return svc.SetGeneratedContent(context.Background(), alice, f.slug, lockedEdit, LanguageKorean, nil)
+		},
+	},
+	"SaveContent": {
+		"a changed save": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveContent(context.Background(), alice, f.slug, lockedEdit, f.revision)
 			return err
 		},
-		"FinalizePost": func(svc *Service, f publishedFixture) error {
+	},
+	"SaveGenerationOptions": {
+		"the post's set with the length changed": func(svc *Service, f publishedFixture) error {
+			found, err := svc.Get(context.Background(), alice, f.slug)
+			if err != nil {
+				return err
+			}
+			set := found.GenerationOptions()
+			length := 1200
+			set.TargetLength = &length
+			_, err = svc.SaveGenerationOptions(context.Background(), alice, f.slug, set)
+			return err
+		},
+	},
+	"Finalize": {
+		"the current revision": func(svc *Service, f publishedFixture) error {
 			_, err := svc.Finalize(context.Background(), alice, f.slug, f.revision)
 			return err
 		},
-		"CreateUpload": func(svc *Service, f publishedFixture) error {
+	},
+	"CreateUpload": {
+		"a photo": func(svc *Service, f publishedFixture) error {
 			_, _, _, err := svc.CreateUpload(context.Background(), alice, f.slug, "IMG_3.jpg", AttachmentPhoto)
 			return err
 		},
-		"ConfirmUpload of a photo": func(svc *Service, f publishedFixture) error {
+	},
+	"ConfirmUpload": {
+		"a photo": func(svc *Service, f publishedFixture) error {
 			_, err := svc.ConfirmUpload(context.Background(), alice, f.photoUpload, 1024, 768, 0)
 			return err
 		},
-		"ConfirmUpload of a video": func(svc *Service, f publishedFixture) error {
+		"a video": func(svc *Service, f publishedFixture) error {
 			_, err := svc.ConfirmUpload(context.Background(), alice, f.videoUpload, 1920, 1080, 3000)
 			return err
 		},
-		"DeleteImage": func(svc *Service, f publishedFixture) error {
+	},
+	"DeleteImage": {
+		"a confirmed photo": func(svc *Service, f publishedFixture) error {
 			return svc.DeleteImage(context.Background(), alice, f.image)
 		},
-		"DeleteVideo": func(svc *Service, f publishedFixture) error {
+	},
+	"DeleteVideo": {
+		"a confirmed clip": func(svc *Service, f publishedFixture) error {
 			return svc.DeleteVideo(context.Background(), alice, f.video)
 		},
+	},
+}
+
+// publishedLockExempt is every exported Service method the lock deliberately lets through, with
+// why.
+var publishedLockExempt = map[string]string{
+	"SetTemplateDirectory": "wiring, not a post write",
+	"Get":                  "read",
+	"List":                 "read",
+	"AttachedImages":       "read",
+	"LearningSnapshot":     "read",
+	"PublishedPosts":       "read",
+	"PostStatus":           "read",
+	"DeletePost":           "POST-74 lets a published post be deleted",
+	"SavePublishedURL":     "POST-74: the address is the one thing a published post takes",
+}
+
+// POST-74, default-deny: an exported Service method nobody classified fails here, so a new write
+// cannot reach a published post by being forgotten.
+func TestEveryExportedServiceMethodIsClassifiedForThePublishedLock(t *testing.T) {
+	methods := reflect.TypeOf(&Service{})
+	for i := range methods.NumMethod() {
+		name := methods.Method(i).Name
+		cases, guarded := publishedLockGuarded[name]
+		_, exempt := publishedLockExempt[name]
+		switch {
+		case !guarded && !exempt:
+			t.Errorf("%s is an exported Service method the published lock does not classify: add it to publishedLockGuarded with a published-post case, or to publishedLockExempt with its reason (POST-74)", name)
+		case guarded && exempt:
+			t.Errorf("%s is both guarded and exempt", name)
+		case guarded && len(cases) == 0:
+			t.Errorf("%s is guarded but has no published-post case", name)
+		}
 	}
-	for name, operation := range operations {
-		t.Run(name, func(t *testing.T) {
-			svc, store, blobs, fixture := newPublishedFixture(t)
-			before := lockedSnapshot(store, blobs, fixture.slug)
-			if err := operation(svc, fixture); !errors.Is(err, ErrPostPublished) {
-				t.Fatalf("err = %v, want ErrPostPublished", err)
-			}
-			if after := lockedSnapshot(store, blobs, fixture.slug); !reflect.DeepEqual(after, before) {
-				t.Fatalf("a refused write changed something:\nbefore %+v\nafter  %+v", before, after)
-			}
-		})
+	for name := range publishedLockGuarded {
+		if _, ok := methods.MethodByName(name); !ok {
+			t.Errorf("publishedLockGuarded names %s, which is no longer an exported Service method", name)
+		}
+	}
+	for name := range publishedLockExempt {
+		if _, ok := methods.MethodByName(name); !ok {
+			t.Errorf("publishedLockExempt names %s, which is no longer an exported Service method", name)
+		}
+	}
+}
+
+// POST-74: a published post refuses every write but its address's and its own deletion, and
+// the refusal comes before anything changes — the row, its updated_at, its answers, its
+// attachments, its pending uploads and the storage objects all stay as they were. The table is
+// the one the default-deny test checks, so a guarded method has a case here.
+func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
+	for method, cases := range publishedLockGuarded {
+		for name, operation := range cases {
+			t.Run(method+" "+name, func(t *testing.T) {
+				svc, store, blobs, fixture := newPublishedFixture(t)
+				before := lockedSnapshot(store, blobs, fixture.slug)
+				if err := operation(svc, fixture); !errors.Is(err, ErrPostPublished) {
+					t.Fatalf("err = %v, want ErrPostPublished", err)
+				}
+				if after := lockedSnapshot(store, blobs, fixture.slug); !reflect.DeepEqual(after, before) {
+					t.Fatalf("a refused write changed something:\nbefore %+v\nafter  %+v", before, after)
+				}
+			})
+		}
 	}
 }
 

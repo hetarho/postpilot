@@ -14,8 +14,8 @@ SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width,
 FROM videos WHERE id = ?;
 
 -- name: DeleteVideo :execrows
--- Locked with a published post, as a photo is.
-DELETE FROM videos WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published');
+-- Locked with a published post, as a photo is, and found by the post's key the same way.
+DELETE FROM videos WHERE id = ? AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = videos.post_slug AND posts.status <> 'published');
 
 -- name: VideoFilenameTaken :one
 SELECT EXISTS (SELECT 1 FROM videos WHERE post_slug = ? AND filename = ?);
