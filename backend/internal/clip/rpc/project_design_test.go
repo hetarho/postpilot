@@ -70,11 +70,22 @@ func TestCreatingAClipWithNoTemplateCrossesTheWireAsNone(t *testing.T) {
 	if s.created.VideoTemplateID != "" || s.created.Composition == nil || s.created.Composition.Snapshot.TemplateID != "" {
 		t.Fatal("the boundary invented a template", s.created.VideoTemplateID, s.created.Composition)
 	}
-	// An unset selection is what the shared default looks like on the wire.
-	if s.created.IntroPreset != "" || s.created.OutroPreset != "" {
-		t.Fatal("the boundary invented a selection", s.created.IntroPreset, s.created.OutroPreset)
+	// A request that names no preset mints the new-project defaults as ids
+	// (CLIP-111).
+	if s.created.IntroPreset != "a" || s.created.OutroPreset != "b" {
+		t.Fatal("the new project did not store the defaults", s.created.IntroPreset, s.created.OutroPreset)
 	}
-	if presets := s.created.DesignSelection().RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
-		t.Fatal("the unset selection did not resolve to the defaults", presets)
+}
+
+// A stored empty id reaches ① as the presets it renders in, never as "unchosen"
+// that the form would draw as the new-project defaults (CLIP-111).
+func TestAnUnchosenSelectionCrossesTheWireAsWhatItRenders(t *testing.T) {
+	out := projectProto(clip.Project{ID: "old", Ratio: "vertical"})
+	if out.IntroPreset != "b" || out.OutroPreset != "e" {
+		t.Fatal(out.IntroPreset, out.OutroPreset)
+	}
+	out = projectProto(clip.Project{ID: "chosen", Ratio: "vertical", IntroPreset: "cover", OutroPreset: "stamp"})
+	if out.IntroPreset != "cover" || out.OutroPreset != "stamp" {
+		t.Fatal(out.IntroPreset, out.OutroPreset)
 	}
 }

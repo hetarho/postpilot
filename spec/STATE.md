@@ -54,11 +54,10 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T404 | New projects start at intro A and outro B; existing projects keep their presets | CLIP | - | todo |
-| T405 | ① picks intro and outro presets from the renderer's numbered slot drawings | CLIP CDS | T404 | todo |
+| T405 | ① picks intro and outro presets from the renderer's numbered slot drawings | CLIP CDS | - | todo |
 
 ## next
-- implement-task T404 → T405 (CDS r26, CLIP r45 region preset overhaul), one commit each
+- implement-task T405 (CDS r26, CLIP r45 region preset overhaul)
 - review/clip-narrate-failure-260926 is complete (T398, T399): a narration caption fits its named style and the tail trim keeps the 1.2 s cut floor; unmeasured: a rapid phrase in a hook-role style against the canvas width
 - GIFT r2 + QUOTA r20 are implemented (T394–T397): operator vouchers issued at /admin/vouchers, redeemed from the public /gift page; next ARCH edit adds `voucher` to ARCH-5's context list; BILL still carries the Toss placeholder and USD pricing (see payment research) before any card rollout
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
@@ -66,6 +65,8 @@
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260926 T404 done (rp): new projects store intro a / outro b (DefaultDesign) while an empty id anywhere it is stored keeps rendering b/e (UnchosenDesign) and migration 0086 writes b/e into every empty project row; ① receives resolved ids, FE preset types are design.json key unions and fall back through CLIP_DEFAULT_REGION_PRESETS; BE/FE gates green, gen:sql clean
+- 260926 T404 claimed (rp)
 - 260926 T403 done (rp): intro cover/serif/frame/outline/lower/sticker and outro credits/sidebar/chips/list/stamp drawn, verified and admitted per CDS-89..99 through overlay region-v2 (shapes, textPath arcs, one rotation group, radial scrim); decoration is manifest `plate` parts named by kind, V20 checks them and each part's turn; every entry of a block samples the block's text and only its owner draws the CDS-32 scrim; a left-set block's measure stops at the safe edge; assets-v3; BE/FE gates, host region smokes, pnpm smoke:media green
 - 260926 T403 claimed (rp)
 - 260926 T402 done (rp): the writer is told each generated region row's slot (role, size, floor, lines, max_syllables from RegionSlotBudget) by its CLIP-147 slot, the repair keeps a row that shrinks or wraps and replaces only an Over one, ① bounds a region-bound answer by the slot's syllable budget on the project ratio, slot notices no longer say one line; BE and FE gates green
@@ -84,5 +85,3 @@
 - 260926 T398 done (nf): narration captions are admitted against their named style's line bound (short text, then omission, never a refused clip), the writer is told each style's bound, and a narration refusal names the caption rather than line 0; BE and FE gates green
 - 260926 T398 claimed (nf)
 - 260926 create-task review/clip-narrate-failure-260926 done: F1 F2 → T398 (narration bound is the named style's, caption refusal names the caption), F3 → T399 (tail trim keeps the 1.2 s cut floor)
-- 260926 review clip-narrate-failure-260926: prod job b752f893 died at narrate on narration-2's style bound (copy_limit, line 0) and carried a 1 ms tail cut; the owner asked for the fixes
-- 260925 T397 done (gv): /admin/vouchers tab issues from presets or custom numbers (sold/given, message), copies the gift link, lists every voucher with sale/state/redeemer/remaining, revokes behind a confirm; FE gate green

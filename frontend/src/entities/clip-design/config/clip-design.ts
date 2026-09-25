@@ -22,11 +22,14 @@ export const CLIP_RULES = design.rule
 /** The default caption treatment's id (CDS-25). A project that selects no styles
  *  may use this one alone, so it is also what an unset style means (CLIP-142). */
 export const CLIP_DEFAULT_CAPTION_STYLE = 'bold'
-/** The presets a clip renders its intro and outro in when the project has chosen
- *  none (CLIP-139). A template carries no design at all, so every surface that
- *  draws a region without a project's selection draws these (CLIP-14). */
-export const CLIP_DEFAULT_REGION_PRESETS = { intro: 'b', outro: 'e' } as const
-export type ClipRegionPresets = { intro: 'a' | 'b'; outro: 'b' | 'e' }
+/** Every intro and outro preset the design system defines (CDS-70). */
+export type ClipIntroPresetId = keyof typeof design.regions.intro
+export type ClipOutroPresetId = keyof typeof design.regions.outro
+export type ClipRegionPresets = { intro: ClipIntroPresetId; outro: ClipOutroPresetId }
+/** The presets a new project starts in (CLIP-111). A template carries no design at
+ *  all, so every surface that draws a region without a project's selection draws
+ *  these (CLIP-14). */
+export const CLIP_DEFAULT_REGION_PRESETS: ClipRegionPresets = { intro: 'a', outro: 'b' }
 /** Every approved caption style, in the order the design spec names them. The
  *  set a project may actually assign from is its own selection (CLIP-142). */
 export type ClipCaptionStyleId = keyof typeof design.regions.caption

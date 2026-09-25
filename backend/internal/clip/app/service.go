@@ -262,9 +262,11 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	// The two presets and the allowed styles are the project's alone and start
-	// at the shared defaults whether or not a template was chosen: a template
-	// carries no design at all (CLIP-14, CLIP-139).
-	intro, outro, styles := "", "", []string(nil)
+	// at the new-project defaults whether or not a template was chosen: a
+	// template carries no design at all (CLIP-14, CLIP-139). The ids are stored,
+	// so a later change of defaults never restyles this project (CLIP-111).
+	defaults := composition.DefaultDesign()
+	intro, outro, styles := defaults.Intro, defaults.Outro, []string(nil)
 	if input.IntroPreset != nil {
 		intro = *input.IntroPreset
 	}
@@ -273,6 +275,12 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	}
 	if input.CaptionStyles != nil {
 		styles = *input.CaptionStyles
+	}
+	if intro == "" {
+		intro = defaults.Intro
+	}
+	if outro == "" {
+		outro = defaults.Outro
 	}
 	if !clip.ValidIntroPreset(intro) || !clip.ValidOutroPreset(outro) || !clip.ValidCaptionStyles(styles) {
 		return clip.Project{}, clip.ErrInvalid

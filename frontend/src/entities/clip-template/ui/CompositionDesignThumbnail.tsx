@@ -1,6 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { CLIP_COMPOSITION_PREVIEW, clipRegionSlots } from '@/entities/clip-design/@x/clip-template'
-import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
+import {
+  CLIP_COMPOSITION_PREVIEW,
+  CLIP_DEFAULT_REGION_PRESETS,
+  clipRegionSlots,
+  type ClipIntroPresetId,
+  type ClipOutroPresetId,
+  type ClipRegionPresets,
+} from '@/entities/clip-design/@x/clip-template'
 import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionDesignFrame } from './CompositionDesignFrame'
@@ -44,8 +50,8 @@ export function CompositionDesignThumbnail({
     t('composition.sampleShortAI'),
   )
   const presets: ClipRegionPresets = {
-    intro: kind === 'intro' ? (value as 'a' | 'b') : 'b',
-    outro: kind === 'outro' ? (value as 'b' | 'e') : 'e',
+    intro: kind === 'intro' ? (value as ClipIntroPresetId) : CLIP_DEFAULT_REGION_PRESETS.intro,
+    outro: kind === 'outro' ? (value as ClipOutroPresetId) : CLIP_DEFAULT_REGION_PRESETS.outro,
   }
   return (
     <div className="mx-auto mb-2 w-24" aria-hidden="true">

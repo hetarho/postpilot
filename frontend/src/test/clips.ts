@@ -39,7 +39,11 @@ import {
   type AppFailureReason,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
-import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/entities/clip-design'
+import {
+  CLIP_CAPTION_STYLES,
+  CLIP_DEFAULT_REGION_PRESETS,
+  CLIP_DESIGN,
+} from '@/entities/clip-design'
 import {
   clipPlanToProto,
   toClipEditingState,
@@ -454,14 +458,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       hideDisclosure: req.hideDisclosure,
       cta: req.cta as ClipProjectDraft['cta'],
       instruction: req.instruction,
-      // A template seeds none of the design: every project starts unset, which
-      // is the shared default (CLIP-14, CLIP-139).
-      ...(req.introPreset !== undefined
-        ? { introPreset: req.introPreset as ClipProjectDraft['introPreset'] }
-        : {}),
-      ...(req.outroPreset !== undefined
-        ? { outroPreset: req.outroPreset as ClipProjectDraft['outroPreset'] }
-        : {}),
+      // A template seeds none of the design: a request naming no preset starts
+      // at the new-project defaults, stored as ids (CLIP-14, CLIP-111, CLIP-139).
+      introPreset: (req.introPreset ||
+        CLIP_DEFAULT_REGION_PRESETS.intro) as ClipProjectDraft['introPreset'],
+      outroPreset: (req.outroPreset ||
+        CLIP_DEFAULT_REGION_PRESETS.outro) as ClipProjectDraft['outroPreset'],
       ...(req.allowedCaptionStyles
         ? { allowedCaptionStyles: [...req.allowedCaptionStyles.values] }
         : {}),

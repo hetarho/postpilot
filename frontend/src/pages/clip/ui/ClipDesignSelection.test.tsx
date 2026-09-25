@@ -49,10 +49,27 @@ describe('① chooses the design, the caption styles and an optional template', 
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0].videoTemplateId).toBe('')
-    // Nothing is selected, and nothing selected IS the shared default, which is
-    // what ① then offers (CLIP-139).
-    expect(writes[0].introPreset).toBeUndefined()
-    expect(writes[0].outroPreset).toBeUndefined()
+    // Nothing was chosen, so the new project stores intro A and outro B
+    // (CLIP-111, CLIP-139).
+    expect(writes[0].introPreset).toBe('a')
+    expect(writes[0].outroPreset).toBe('b')
+  })
+
+  it('shows an existing project in the presets it already renders in', async () => {
+    renderAppAt('/clips/project', {
+      user: { id: 'alice' },
+      clips: { templates: [template], projects: [project] },
+    })
+    const intro = await screen.findByRole('tablist', { name: '인트로 디자인' })
+    expect(within(intro).getByRole('tab', { name: /B 위아래 가로선/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    const outro = screen.getByRole('tablist', { name: '아웃트로 디자인' })
+    expect(within(outro).getByRole('tab', { name: /E 점수 강조/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
   })
 
   it('offers each style with its own drawing, says which are drawn frame by frame, and saves the selection', async () => {

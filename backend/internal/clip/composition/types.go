@@ -102,7 +102,15 @@ type Section struct {
 // frozen snapshot's leftover attributes are ignored (CLIP-144).
 type DesignSelection struct{ Intro, Caption, Outro string }
 
-func DefaultDesign() DesignSelection { return DesignSelection{Intro: "b", Caption: "bold", Outro: "e"} }
+// DefaultDesign is what a new project starts in (CLIP-111): intro A and outro B.
+func DefaultDesign() DesignSelection { return DesignSelection{Intro: "a", Caption: "bold", Outro: "b"} }
+
+// UnchosenDesign is what an empty preset id renders in wherever it is stored — a
+// project, a plan, a revision or a queued generation that never named one: intro
+// B and outro E, so nothing that exists changes its look (CLIP-111).
+func UnchosenDesign() DesignSelection {
+	return DesignSelection{Intro: "b", Caption: "bold", Outro: "e"}
+}
 
 // Entry is one position in the body's ordered outline (CLIP-112): the order an
 // entry stands in is the only position it declares. Kind is "stage" or "text"

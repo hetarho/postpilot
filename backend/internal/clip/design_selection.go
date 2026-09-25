@@ -25,10 +25,10 @@ func (p Project) DesignSelection() ProjectDesign {
 }
 
 // RegionPresets is what the intro and the outro render in: the selection where
-// the project made one, the shared defaults where it did not (CLIP-111). The
-// frozen template composition is never consulted for it.
+// one was made, and what an empty id has always rendered where it was not
+// (CLIP-111). The frozen template composition is never consulted for it.
 func (d ProjectDesign) RegionPresets() composition.DesignSelection {
-	selection := composition.DefaultDesign()
+	selection := composition.UnchosenDesign()
 	if d.IntroPreset != "" {
 		selection.Intro = d.IntroPreset
 	}
@@ -42,8 +42,8 @@ func (d ProjectDesign) RegionPresets() composition.DesignSelection {
 // selection, or the default style alone where it selected none (CLIP-142).
 func (d ProjectDesign) AllowedCaptionStyles() []string { return ResolvedCaptionStyles(d.CaptionStyles) }
 
-// An empty preset id is the shared default, which is where every project starts
-// and what an owner who has chosen nothing carries (CLIP-139).
+// An empty preset id is accepted and renders as composition.UnchosenDesign; a
+// new project is given composition.DefaultDesign's ids instead (CLIP-111).
 func ValidIntroPreset(id string) bool {
 	if id == "" {
 		return true

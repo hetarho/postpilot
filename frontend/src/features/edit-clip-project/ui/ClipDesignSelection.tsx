@@ -2,7 +2,11 @@ import { useTranslation } from 'react-i18next'
 import { CompositionDesignThumbnail } from '@/entities/clip-template'
 import { type ClipCaptionFragment, useClipCaptionStyleSamples } from '@/entities/clip-plan'
 import { type ClipProjectDraft } from '@/entities/clip-project'
-import { CLIP_CAPTION_STYLES, CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-design'
+import {
+  CLIP_CAPTION_STYLES,
+  CLIP_DEFAULT_CAPTION_STYLE,
+  CLIP_DEFAULT_REGION_PRESETS,
+} from '@/entities/clip-design'
 import { Checkbox, SegmentedControl, Typography } from '@/shared/ui'
 
 /** One style as the RENDERER draws it, scaled into the row (CDS-83). The
@@ -52,7 +56,7 @@ export function ClipDesignSelection({
       </Typography>
       <SegmentedControl
         ariaLabel={t('composition.design.intro')}
-        value={draft.introPreset || 'b'}
+        value={draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}
         options={(['a', 'b'] as const).map((value) => ({
           value,
           label: t(`composition.design.intro_${value}`),
@@ -65,7 +69,7 @@ export function ClipDesignSelection({
       </Typography>
       <SegmentedControl
         ariaLabel={t('composition.design.outro')}
-        value={draft.outroPreset || 'e'}
+        value={draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}
         options={(['b', 'e'] as const).map((value) => ({
           value,
           label: t(`composition.design.outro_${value}`),

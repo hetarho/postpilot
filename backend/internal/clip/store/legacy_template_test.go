@@ -121,12 +121,13 @@ func TestDesignFirstTemplateReadsAsAnOutlineAndSavesWithoutItsDesign(t *testing.
 	if err != nil || saved.CompositionBody != projection.CompositionBody {
 		t.Fatal("the converted body was refused on save", err)
 	}
-	// A project made from it takes none of the design the body used to name.
+	// A project made from it takes none of the design the body used to name:
+	// it starts at the new-project defaults (CLIP-111).
 	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "frozen", VideoTemplateID: legacy.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.IntroPreset != "" || p.OutroPreset != "" || len(p.CaptionStyles) != 0 || p.CaptionPace != "" || p.Accent != "" {
+	if p.IntroPreset != "a" || p.OutroPreset != "b" || len(p.CaptionStyles) != 0 || p.CaptionPace != "" || p.Accent != "" {
 		t.Fatal("the template seeded the project's design", p.IntroPreset, p.OutroPreset, p.CaptionStyles, p.CaptionPace, p.Accent)
 	}
 	if p.Composition == nil || p.Composition.Snapshot.Body != saved.CompositionBody {

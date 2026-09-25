@@ -1,7 +1,12 @@
 import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
-import type { ClipCTAId, ClipDisclosureId } from '@/entities/clip-design/@x/clip-project'
+import type {
+  ClipCTAId,
+  ClipDisclosureId,
+  ClipIntroPresetId,
+  ClipOutroPresetId,
+} from '@/entities/clip-design/@x/clip-project'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
 import type { ClipEditingState } from '@/entities/clip-plan/@x/clip-project'
 import type {
@@ -51,11 +56,11 @@ export interface ClipProjectDraft {
   captionPace?: '' | 'steady' | 'rapid'
   accent?: ClipAccent
   /** The rest of the design selection this clip renders with (CLIP-111,
-   *  CLIP-139): the presets the intro and the outro are drawn in. Empty is a
-   *  project minted before the selection moved onto it, which reads as the
-   *  shared defaults. */
-  introPreset?: '' | 'a' | 'b'
-  outroPreset?: '' | 'b' | 'e'
+   *  CLIP-139): the presets the intro and the outro are drawn in. The server
+   *  always answers with the ids a project renders in; empty is a draft that has
+   *  not chosen yet, which starts at the new-project defaults. */
+  introPreset?: '' | ClipIntroPresetId
+  outroPreset?: '' | ClipOutroPresetId
   /** The caption styles THIS clip may use (CLIP-142). An empty selection is not
    *  "unset": it resolves to the default style alone, in ② and in the render. */
   allowedCaptionStyles?: string[]

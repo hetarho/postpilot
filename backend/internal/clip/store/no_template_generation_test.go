@@ -35,12 +35,13 @@ func TestAClipIsMintedGeneratedAndRerenderedWithNoTemplate(t *testing.T) {
 	if p.Composition.Snapshot.Body != clip.EmptyCompositionBody() {
 		t.Fatal("the frozen document is not the empty one", p.Composition.Snapshot.Body)
 	}
-	// Nothing is selected, and nothing selected IS the shared default (CLIP-139).
-	if p.IntroPreset != "" || p.OutroPreset != "" || len(p.CaptionStyles) != 0 {
+	// Nothing was chosen, so it stores the new-project defaults (CLIP-111,
+	// CLIP-139) and renders them.
+	if p.IntroPreset != "a" || p.OutroPreset != "b" || len(p.CaptionStyles) != 0 {
 		t.Fatal("a project with no template invented a selection", p.IntroPreset, p.OutroPreset, p.CaptionStyles)
 	}
-	if presets := p.DesignSelection().RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
-		t.Fatal("the unset selection did not resolve to the defaults", presets)
+	if presets := p.DesignSelection().RegionPresets(); presets.Intro != "a" || presets.Outro != "b" {
+		t.Fatal("the new project does not render the defaults", presets)
 	}
 	// Admission has no declared structure to satisfy and no field to require,
 	// so the quote and the run go through untouched (CLIP-102).

@@ -4,6 +4,8 @@ export { CLIP_CTAS, CLIP_DEFAULT_REGION_PRESETS, CLIP_DISCLOSURES } from '../con
 export type {
   ClipCTAId,
   ClipDisclosureId,
+  ClipIntroPresetId,
+  ClipOutroPresetId,
   ClipRatioId,
   ClipRegionPresets,
 } from '../config/clip-design'

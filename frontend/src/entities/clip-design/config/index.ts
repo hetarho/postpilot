@@ -32,6 +32,8 @@ export {
 } from './clip-design'
 export type {
   ClipCaptionPace,
+  ClipIntroPresetId,
+  ClipOutroPresetId,
   ClipRegionPresets,
   ClipRatioId,
   ClipPresetId,

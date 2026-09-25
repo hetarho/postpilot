@@ -12,12 +12,12 @@ func designedBody(intro, outro string) string {
 		`<text id="outro" kind="fixed" role="ending"/></clip>`
 }
 
-// The design selection is the PROJECT's alone (CLIP-14, CLIP-139, CLIP-142):
-// every project starts at the shared defaults, template or no template, and may
-// change every one of them.
+// The design selection is the PROJECT's alone (CLIP-14, CLIP-111, CLIP-139,
+// CLIP-142): every new project stores intro A and outro B, template or no
+// template, and may change every one of them.
 func TestDesignSelectionStartsAtTheDefaultsAndIsOwnedByTheProject(t *testing.T) {
 	service, _, _ := setup(t)
-	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "디자인", Preset: "stay", Accent: "teal", CompositionBody: designedBody("a", "b")})
+	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "디자인", Preset: "stay", Accent: "teal", CompositionBody: designedBody("b", "e")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,13 +25,16 @@ func TestDesignSelectionStartsAtTheDefaultsAndIsOwnedByTheProject(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The template's body still names presets and the project takes none of
-	// them: an empty selection IS the shared default (CLIP-14).
-	if p.IntroPreset != "" || p.OutroPreset != "" || len(p.CaptionStyles) != 0 {
+	// The template's body names other presets and the project takes none of
+	// them: it stores the new-project defaults as ids, so a later change of
+	// defaults never restyles it (CLIP-14, CLIP-111).
+	if p.IntroPreset != "a" || p.OutroPreset != "b" || len(p.CaptionStyles) != 0 {
 		t.Fatal("a template seeded the project's design", p.IntroPreset, p.OutroPreset, p.CaptionStyles)
 	}
-	if presets := p.DesignSelection().RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
-		t.Fatal("the unset selection did not resolve to the shared defaults", presets)
+	// An empty id stored before the defaults moved keeps rendering what it
+	// always rendered.
+	if presets := (clip.ProjectDesign{}).RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
+		t.Fatal("an unset selection changed its look", presets)
 	}
 	if resolved := clip.ResolvedCaptionStyles(p.CaptionStyles); len(resolved) != 1 || resolved[0] != "bold" {
 		t.Fatal("the unset styles did not resolve to the default style", resolved)
@@ -73,7 +76,7 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if err != nil || before.Result == nil || before.EditPlanRevision != before.RenderedPlanRevision {
 		t.Fatal("the fixture has no rendered result to stale", err)
 	}
-	intro := "a"
+	intro := "cover"
 	after, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{IntroPreset: &intro})
 	if err != nil {
 		t.Fatal(err)
