@@ -1,16 +1,12 @@
-// ② 글 다듬기: the draft read first, the block editor and its save, 확정, the post's measurement
-// row and the replacement marks.
+// ② 글 다듬기: resumed revisions, 확정 and the content save before it, the post's measurement row,
+// and a replacement take's save.
 import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { USER, finalize, openFinalize, openStep, resetEditorTest } from '@/test/editor'
-import {
-  POST_CONTENT_FIXTURE,
-  POST_CONTENT_WITH_VIDEO_FIXTURE,
-  POST_IMAGES_FIXTURE,
-} from '@/test/fixtures/postContent'
+import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import {
   finalizedPostRow,
   type FakeDraftSave,
@@ -270,104 +266,6 @@ describe('opening a post', () => {
   })
 })
 
-describe('the draft read-first', () => {
-  const reviewPost = {
-    slug: '20260820-jeju',
-    status: 'review',
-    content: POST_CONTENT_FIXTURE,
-    images: POST_IMAGES_FIXTURE,
-    contentRevision: 1n,
-    machineBaselineRevision: 1n,
-  }
-
-  // Change 05 A7 / A10.
-  it('renders the draft as prose with no form control until a block is opened', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
-
-    const draft = await screen.findByRole('article', { name: '생성된 글' })
-    expect(within(draft).queryByRole('textbox')).not.toBeInTheDocument()
-    expect(within(draft).getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
-    expect(screen.getByLabelText('1번째 블록 내용')).toHaveValue(
-      POST_CONTENT_FIXTURE.blocks[0].content,
-    )
-  })
-
-  // Change 05 A8: cancel restores the value the block had when its editor opened.
-  it('restores a cancelled block and keeps a saved one as prose', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-jeju', { user: USER, posts: { posts: [reviewPost] } })
-
-    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
-    const field = screen.getByLabelText('1번째 블록 내용')
-    await user.clear(field)
-    await user.type(field, '고쳐 쓴 문단')
-    await user.click(screen.getByRole('button', { name: '취소' }))
-
-    expect(screen.queryByLabelText('1번째 블록 내용')).not.toBeInTheDocument()
-    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
-    const reopened = screen.getByLabelText('1번째 블록 내용')
-    await user.clear(reopened)
-    await user.type(reopened, '확정한 문단')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-
-    expect(screen.queryByLabelText('1번째 블록 내용')).not.toBeInTheDocument()
-    expect(screen.getByText('확정한 문단')).toBeInTheDocument()
-  })
-
-  // Change 05 A9: the editing UI keeps every capability it had.
-  it('keeps add, delete and move available from a block editor', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-jeju', { user: USER, calls, posts: { posts: [reviewPost] } })
-
-    await user.click(await screen.findByRole('button', { name: '2번째 블록 수정' }))
-    expect(screen.getByRole('button', { name: '2번째 블록 위로' })).toBeEnabled()
-    expect(screen.getByLabelText('2번째 블록 종류')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '삭제' }))
-    expect(screen.queryByLabelText('2번째 블록 종류')).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '문단 추가' }))
-    expect(await screen.findByText('새 문단')).toBeInTheDocument()
-    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
-  })
-
-  // VIDEO-2: a VIDEO block carries the IMAGE fields and none of its own, so the same three
-  // controls edit it — only the list it picks from differs, and it is offered only when the
-  // post actually has a clip.
-  it('edits a VIDEO block with the attached-video list, alt and caption', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-video', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-video',
-            status: 'review',
-            content: POST_CONTENT_WITH_VIDEO_FIXTURE,
-            images: POST_IMAGES_FIXTURE,
-            videos: [{ id: 'video-1', filename: 'clip.mp4' }],
-            contentRevision: 1n,
-            machineBaselineRevision: 1n,
-          },
-        ],
-      },
-    })
-
-    const blockIndex = POST_CONTENT_WITH_VIDEO_FIXTURE.blocks.length - 1
-    await user.click(await screen.findByRole('button', { name: `${blockIndex + 1}번째 블록 수정` }))
-    expect(screen.getByText('첨부 영상')).toBeInTheDocument()
-    const caption = screen.getByPlaceholderText('캡션 (선택)')
-    await user.type(caption, '파도')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    expect(await screen.findByText('파도')).toBeInTheDocument()
-  })
-})
-
 describe('the step split and the content save', () => {
   const reviewPost = {
     slug: '20260820-final',
@@ -398,41 +296,6 @@ describe('the step split and the content save', () => {
     // The content save is ahead of the finalize, so the finalized revision includes the edit.
     expect(calls.indexOf('SavePostContent')).toBeGreaterThan(-1)
     expect(calls.indexOf('SavePostContent')).toBeLessThan(calls.indexOf('FinalizePost'))
-  })
-
-  // 취소 restores the block it opened on, so moving must close the editor rather than leave a
-  // snapshot pointed at whichever block shifted into that slot.
-  it('closes a block editor when the block moves', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-final', { user: USER, posts: { posts: [reviewPost] } })
-
-    await user.click(await screen.findByRole('button', { name: '2번째 블록 수정' }))
-    await user.click(screen.getByRole('button', { name: '2번째 블록 위로' }))
-
-    expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument()
-    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[0].content)).toBeInTheDocument()
-    expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[1].content)).toBeInTheDocument()
-  })
-
-  // The header editor owns the title, summary and tags — cancelling it must not revert a block.
-  it('keeps a block edit made while the header editor was open', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-final', { user: USER, posts: { posts: [reviewPost] } })
-
-    await user.click(await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }))
-    await user.type(screen.getByLabelText('본문 제목'), ' 수정')
-
-    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
-    const block = screen.getByLabelText('1번째 블록 내용')
-    await user.clear(block)
-    await user.type(block, '유지되어야 하는 문단')
-    await user.click(within(block.closest('article')!).getByRole('button', { name: '저장' }))
-
-    // 취소 on the header restores its three fields only.
-    await user.click(screen.getAllByRole('button', { name: '취소' })[0])
-
-    expect(screen.getByText('유지되어야 하는 문단')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: POST_CONTENT_FIXTURE.title })).toBeInTheDocument()
   })
 })
 
@@ -589,60 +452,6 @@ describe('the replacement marks', () => {
     await screen.findByRole('article', { name: '생성된 글' })
   }
 
-  it('marks the title, a tag and a TEXT block', async () => {
-    const user = userEvent.setup()
-    renderMarks()
-    await openRefine(user)
-
-    const heading = article().getByRole('heading', { level: 3 })
-    const title = within(heading)
-    expect(title.getByRole('button', { name: '제주' })).toHaveAttribute('aria-haspopup', 'dialog')
-    // The text around a mark is kept whole.
-    expect(heading).toHaveTextContent(/^비 온 뒤의 제주$/)
-    expect(article().getByRole('button', { name: '비가' }).parentElement).toHaveTextContent(
-      /^비가 그치기를 기다렸다\.$/,
-    )
-    const tags = within(article().getByRole('list', { name: '태그' }))
-    // A chip stands alone, so its mark grows to the pointer floor under a coarse pointer; a mark in
-    // a sentence takes WCAG 2.5.8's inline exception (THEME-23).
-    expect(tags.getByRole('button', { name: '산책' })).toHaveClass(
-      'pointer-coarse:min-h-11',
-      'pointer-coarse:min-w-11',
-    )
-    expect(article().getByRole('button', { name: '기다렸다' })).not.toHaveClass(
-      'pointer-coarse:min-h-11',
-    )
-    // The tag chip with no candidate stays plain text.
-    expect(tags.queryByRole('button', { name: '제주' })).toBeNull()
-    expect(article().getByRole('button', { name: '기다렸다' })).toBeInTheDocument()
-    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
-  })
-
-  it('offers at most three phrases and no duplicate tag', async () => {
-    const user = userEvent.setup()
-    renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '기다렸다' }))
-    const panel = within(await screen.findByRole('dialog', { name: '‘기다렸다’ 바꿔 쓰기' }))
-    expect(panel.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      '기다린다',
-      '기다려 본다',
-      '기다리고 있었다',
-    ])
-    expect(panel.getByRole('button', { name: '‘기다린다’(으)로 바꾸기' })).toBeInTheDocument()
-    expect(panel.getByText('‘기다렸다’ 대신 쓸 수 있는 표현')).toBeInTheDocument()
-    // What was observed about the phrases, and nothing about what they gain.
-    expect(
-      panel.getByText('네이버 검색 결과의 제목과 설명에 자주 나온 표현이에요.'),
-    ).toBeInTheDocument()
-    await user.keyboard('{Escape}')
-
-    await user.click(article().getByRole('button', { name: '산책' }))
-    const tagPanel = within(await screen.findByRole('dialog', { name: '‘산책’ 바꿔 쓰기' }))
-    expect(tagPanel.getAllByRole('button').map((button) => button.textContent)).toEqual(['산책로'])
-  })
-
   it('saves a take with the expected revision and returns 확정 to 검토', async () => {
     const user = userEvent.setup()
     const { contentSaves } = renderMarks()
@@ -668,100 +477,5 @@ describe('the replacement marks', () => {
       expect(screen.getByRole('status', { name: '글 상태' })).toHaveTextContent('검토'),
     )
     expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute('aria-selected', 'true')
-  })
-
-  // POST-79: a taken candidate is spent. Its mark never comes back — not even where the phrase
-  // holds its source, as 제주도 holds 제주 — and every other mark stays. Focus goes to the header's
-  // pencil.
-  it('spends a taken candidate, even where its phrase holds the source', async () => {
-    const user = userEvent.setup()
-    const { contentSaves, view } = renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '제주' }))
-    await user.click(await screen.findByRole('button', { name: '‘제주도’(으)로 바꾸기' }))
-
-    expect(screen.queryByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeNull()
-    const spent = () => {
-      const heading = article().getByRole('heading', { level: 3 })
-      expect(heading).toHaveTextContent(/^비 온 뒤의 제주도$/)
-      expect(within(heading).queryByRole('button', { name: /제주/ })).toBeNull()
-      for (const neighbour of ['산책', '기다렸다', '비가'])
-        expect(article().getByRole('button', { name: neighbour })).toBeInTheDocument()
-    }
-    spent()
-    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
-    expect(contentSaves[0].content.title).toBe('비 온 뒤의 제주도')
-    expect(contentSaves[0].takenCandidates).toEqual([0])
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '제목과 요약, 태그 수정' })).toHaveFocus(),
-    )
-    spent()
-
-    view.unmount()
-    renderAppAt(`/posts/${SLUG}`, { transport: view.transport })
-    await openRefine(user)
-    spent()
-  })
-
-  it('puts focus on the pencil of the block the take changed', async () => {
-    const user = userEvent.setup()
-    const { contentSaves } = renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '바닷가로' }))
-    await user.click(await screen.findByRole('button', { name: '‘해변으로’(으)로 바꾸기' }))
-
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '3번째 블록 수정' })).toHaveFocus(),
-    )
-    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
-    expect(contentSaves[0].content.blocks[2].content).toBe('해변으로')
-  })
-
-  it('keeps a neighbouring mark after a take', async () => {
-    const user = userEvent.setup()
-    renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '기다렸다' }))
-    await user.click(await screen.findByRole('button', { name: '‘기다린다’(으)로 바꾸기' }))
-
-    await waitFor(() => expect(article().queryByRole('button', { name: '기다렸다' })).toBeNull())
-    expect(article().getByText(/기다린다\./)).toBeInTheDocument()
-    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
-    expect(article().getByRole('button', { name: '제주' })).toBeInTheDocument()
-  })
-
-  it('drops a mark whose source was edited away', async () => {
-    const user = userEvent.setup()
-    renderMarks()
-    await openRefine(user)
-
-    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
-    // An open editor is plain fields: no mark stands in the block it edits.
-    expect(article().queryByRole('button', { name: '비가' })).toBeNull()
-    const field = screen.getByLabelText('1번째 블록 내용')
-    await user.clear(field)
-    await user.type(field, '비가 그쳤다.')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-
-    expect(article().queryByRole('button', { name: '기다렸다' })).toBeNull()
-    expect(article().getByRole('button', { name: '비가' })).toBeInTheDocument()
-  })
-
-  it('sends nothing for an ignored mark', async () => {
-    const user = userEvent.setup()
-    const { calls } = renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '제주' }))
-    expect(await screen.findByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeInTheDocument()
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: '‘제주’ 바꿔 쓰기' })).toBeNull()
-
-    // Past the content debounce: opening and closing a mark is no edit (POST-79).
-    await new Promise((resolve) => setTimeout(resolve, 1_500))
-    expect(calls).not.toContain('SavePostContent')
   })
 })

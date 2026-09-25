@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { PostImage } from '@/entities/image'
 import type { UploadItem } from '../model/upload-batch'
 import { PhotoStrip } from './PhotoStrip'
 
@@ -119,5 +121,87 @@ describe('the strip with videos', () => {
       ],
     })
     expect(screen.getByText('올리는 중 42%')).toBeInTheDocument()
+  })
+})
+
+describe('the strip with photos', () => {
+  const photo = (id: string, viewUrl = `https://storage.test/posts/p/${id}.jpg`): PostImage => ({
+    id,
+    filename: `${id.toUpperCase()}.jpg`,
+    width: 1024,
+    height: 768,
+    bytes: 200_000,
+    viewUrl,
+  })
+
+  // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.
+  it('restores its photos in the strip from their view URLs', () => {
+    render(
+      <PhotoStrip
+        images={[photo('img_1', 'https://storage.test/posts/p/img-1.jpg?sig'), photo('img_2')]}
+        items={[]}
+        onDelete={() => {}}
+        onRetry={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+    expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toHaveAttribute(
+      'src',
+      'https://storage.test/posts/p/img-1.jpg?sig',
+    )
+    expect(screen.getByRole('img', { name: 'IMG_2.jpg' })).toBeInTheDocument()
+  })
+
+  // Deleting a photo is confirmed through the sheet: the × sits exactly where a thumb lands when
+  // flicking the strip sideways, and the delete is not undoable.
+  it('deletes a photo through the same confirmation', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn()
+    const first = photo('img_1')
+    render(
+      <PhotoStrip
+        images={[first, photo('img_2')]}
+        items={[]}
+        onDelete={onDelete}
+        onRetry={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 삭제' }))
+    await user.click(await screen.findByRole('button', { name: '삭제' }))
+    expect(onDelete).toHaveBeenCalledWith(first)
+  })
+
+  it('keeps a photo whose delete failed and says so', async () => {
+    const user = userEvent.setup()
+    const first = photo('img_1')
+    // The caller's delete fails: the strip is told which photo, and why.
+    function Failing() {
+      const [failedId, setFailedId] = useState<string>()
+      return (
+        <PhotoStrip
+          images={[first]}
+          items={[]}
+          onDelete={(image) => setFailedId(image.id)}
+          deleteFailedId={failedId}
+          deleteFailure={failedId ? { reason: 'NETWORK_UNAVAILABLE', params: {} } : undefined}
+          onRetry={() => {}}
+          onDismiss={() => {}}
+        />
+      )
+    }
+    render(<Failing />)
+
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 삭제' }))
+    await user.click(await screen.findByRole('button', { name: '삭제' }))
+
+    // The sheet stays open on failure and says so in place, so the retry is one tap away.
+    const failure = await screen.findByRole('alert')
+    expect(failure).toHaveTextContent('삭제하지 못했어요')
+    expect(failure).toHaveTextContent('네트워크에 연결할 수 없어요.')
+    expect(failure).not.toHaveTextContent('private backend prose')
+    await user.click(screen.getByRole('button', { name: '취소' }))
+    expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
 })

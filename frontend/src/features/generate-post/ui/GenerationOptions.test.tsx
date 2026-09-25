@@ -157,6 +157,54 @@ describe('GenerationOptions', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
   })
 
+  // A ticked checkbox over a blank number field is an invalid form nobody asked for: the range
+  // error renders under a control the user has not touched yet.
+  it('fills 목표 글자 수 with a usable default the moment the box is ticked', async () => {
+    const user = userEvent.setup()
+    renderOptions()
+    expect(screen.queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    const field = screen.getByLabelText('목표 글자 수')
+    expect(field).toHaveValue(1000)
+    expect(field).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+
+    // What the user typed outranks the default, so unticking and reticking never loses it.
+    await user.clear(field)
+    await user.type(field, '2400')
+    await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    expect(screen.getByLabelText('목표 글자 수')).toHaveValue(2400)
+  })
+
+  it('restores and explicitly clears a stored target length without starting generation', async () => {
+    const user = userEvent.setup()
+    const stored = {
+      targetLength: 1200,
+      tagCount: 6,
+      useMemory: true,
+      qualityRules: [],
+      field: '',
+    } as const
+    const { calls, optionSaves } = renderOptions(
+      { saved: stored },
+      { posts: [{ slug: 'post-a', targetLength: 1200, tagCount: 6, useMemory: true }] },
+    )
+    expect(screen.getByLabelText('목표 글자 수 사용')).toBeChecked()
+    expect(screen.getByLabelText('목표 글자 수')).toHaveValue(1200)
+    expect(calls).not.toContain('SavePostGenerationOptions')
+
+    await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // One whole set: natural length, and the post's other four as they stand.
+    await waitFor(() =>
+      expect(optionSaves).toEqual([{ slug: 'post-a', ...stored, targetLength: undefined }]),
+    )
+    expect(calls).not.toContain('StartGeneration')
+    expect(calls).not.toContain('StartWriteExperiment')
+  })
+
   it('greys the numbers while a job runs', () => {
     renderOptions({ jobRunning: true })
     expect(screen.getByLabelText('태그 개수')).toBeDisabled()

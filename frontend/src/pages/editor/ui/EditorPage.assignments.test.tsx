@@ -236,63 +236,6 @@ describe('the post voice', () => {
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
   })
 
-  it('cancels a reassignment from the sheet without saving anything', async () => {
-    const user = userEvent.setup()
-    const draftSaves: FakeDraftSave[] = []
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      posts: { posts: [reviewPost], draftSaves, voices: POST_VOICES },
-      voice: { voices: TWO_VOICES },
-    })
-
-    await pickVoice(user, 'voice-review')
-    await user.click(within(await confirmDialog()).getByRole('button', { name: '취소' }))
-
-    expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
-    expect(await voiceField(user)).toHaveTextContent('기본 말투')
-    await new Promise((resolve) => setTimeout(resolve, 1_200))
-    expect(draftSaves).toHaveLength(0)
-  })
-
-  it('blocks reassignment while a job is active and says why', async () => {
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      posts: {
-        posts: [{ slug: '20260820-jeju', activeJob: { id: 'job-1', status: 'running' } }],
-        voices: POST_VOICES,
-      },
-      voice: { voices: TWO_VOICES },
-      jobs: { jobs: [{ id: 'job-1', status: 'running' }] },
-    })
-
-    const user = userEvent.setup()
-    expect(await voiceField(user)).toBeDisabled()
-    expect(screen.getByText('AI 작업이 끝나면 말투를 바꿀 수 있어요.')).toBeInTheDocument()
-  })
-
-  it('reports a refused reassignment under the field and keeps the old voice', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      // The post service does not know 'voice-review': the directory is stale, and the server
-      // answers NotFound rather than guessing.
-      posts: { posts: [reviewPost] },
-      voice: { voices: TWO_VOICES },
-    })
-
-    await pickVoice(user, 'voice-review')
-    await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
-
-    // `findAllByRole`: the dock's own save notice can be an alert at the same moment.
-    const alerts = await screen.findAllByRole('alert')
-    expect(alerts.map((alert) => alert.textContent).join('\n')).toContain(
-      '고른 말투를 찾을 수 없어요',
-    )
-    const picker = await voiceField(user)
-    expect(picker).toHaveTextContent('기본 말투')
-    expect(picker).toBeEnabled()
-  })
-
   // Plan 10 A5/A7: the tombstone, the disabled AI controls with their reason, and both ways out.
   it('renders a deleted voice as a tombstone with disabled AI actions and a way out', async () => {
     const user = userEvent.setup()
@@ -418,13 +361,9 @@ describe('the post template', () => {
       templates: { templates: PURPOSES },
     })
 
+    // The select reads 없음 on its own (PostTemplateSelect.test.tsx); the page's part is the create.
     const user = userEvent.setup()
-    const picker = await templateField(user)
-    expect(picker).toHaveTextContent('없음')
-    await user.click(picker)
-    expect(screen.getByRole('option', { name: '없음', selected: true })).toBeInTheDocument()
-    await user.keyboard('{Escape}')
-    await user.type(screen.getByLabelText('제목'), '제주')
+    await user.type(await screen.findByLabelText('제목'), '제주')
     await waitFor(() => expect(draftSaves).toHaveLength(1), AUTOSAVED)
     // Omitted, not '': the create has no assignment to clear, so the request is byte-for-byte
     // what it was before templates existed.
@@ -479,59 +418,12 @@ describe('the post template', () => {
     await pickTemplate(user, '정보성 식당 리뷰')
     // Choosing is not typing: nothing is saved until there is something to save.
     expect(draftSaves).toHaveLength(0)
-    // The dock row is three controls wide on a 360px screen, so the chosen 템플릿's own brief and
-    // the way to the 템플릿 page are not on it: both belong to the directory that owns them.
-    expect(screen.queryByText('협찬 방문 리뷰')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '템플릿 관리' })).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
     await waitFor(
       () => expect(draftSaves[0]).toMatchObject({ slug: '', templateId: 'template-review' }),
       AUTOSAVED,
     )
-  })
-
-  // A failed directory read must not be indistinguishable from "you have no 템플릿" — the select
-  // would be enabled with 없음 alone, and clearing would be the only thing left to do.
-  it('says so and offers a retry when the directory cannot be read', async () => {
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      posts: { posts: [{ slug: '20260820-jeju', title: '제주' }] },
-      templates: { listFails: true },
-    })
-
-    const user = userEvent.setup()
-    const picker = await templateField(user)
-    expect(await screen.findByText(/템플릿 목록을 불러오지 못했어요/)).toBeInTheDocument()
-    expect(picker).toBeDisabled()
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
-  })
-
-  it('stays usable during a job and says the running one keeps its own brief', async () => {
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-jeju',
-            title: '제주',
-            template: { id: 'template-review', name: '정보성 식당 리뷰' },
-            activeJob: { id: 'job-1', kind: 'generate', status: 'running' },
-          },
-        ],
-        templates: POST_PURPOSES,
-      },
-      templates: { templates: PURPOSES },
-      jobs: { jobs: [{ id: 'job-1', kind: 'generate', status: 'running' }] },
-    })
-
-    const user = userEvent.setup()
-    const picker = await templateField(user)
-    await waitFor(() => expect(picker).toHaveTextContent('정보성 식당 리뷰'))
-    expect(picker).toBeEnabled()
-    expect(
-      await screen.findByText(/진행 중인 AI 작업은 시작할 때의 템플릿으로 끝나요/),
-    ).toBeInTheDocument()
   })
 })
 

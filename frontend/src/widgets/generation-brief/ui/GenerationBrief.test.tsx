@@ -254,6 +254,29 @@ describe('GenerationBrief', () => {
     expect(candidateA).toHaveTextContent('모델을 선택하세요')
   })
 
+  // A 생성 or A/B 비교 refused for its setup opens the brief on what that run waits for, marked the
+  // way a validation error is: here the pair, with the ordinary run's own field unmarked.
+  it('marks the pair a refused comparison is waiting on, and focuses its first candidate', async () => {
+    const user = userEvent.setup()
+    renderBrief({ refusal: { mode: 'comparison', count: 1 } })
+
+    const brief = await openBrief(user)
+    const PAIR = '작성 A/B 모델 두 개를 선택하세요.'
+    expect(within(brief).getByText(PAIR)).toBeInTheDocument()
+    expect(within(brief).queryByRole('link')).not.toBeInTheDocument()
+    for (const label of [/후보 A/, /후보 B/]) {
+      const candidate = await within(brief).findByRole('combobox', { name: label })
+      expect(candidate).toHaveAttribute('aria-invalid', 'true')
+      expect(candidate).toHaveAccessibleDescription(expect.stringContaining(PAIR))
+    }
+    expect(within(brief).getByRole('combobox', { name: /^작성 모델/ })).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    await waitFor(() =>
+      expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toHaveFocus(),
+    )
+  })
+
   // POST-81: the 발행 글 점검 rows sit after 목표 분량, one per metric in catalogue order, each in the
   // state the server judged.
   it('renders the four quality states after 목표 분량', async () => {

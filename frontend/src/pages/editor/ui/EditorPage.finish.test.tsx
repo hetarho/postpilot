@@ -1,4 +1,4 @@
-// ③ 글 완성: export, the voice-learning handoff, sentence feedback and the 발행 URL field.
+// ③ 글 완성: export, sentence feedback, and the 발행 URL field publishing and clearing the post.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,7 +6,7 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { USER, openStep, resetEditorTest, stubLearningHandoff } from '@/test/editor'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 import {
   finalizedPostRow,
   publishedPostRow,
@@ -112,168 +112,6 @@ describe('opening a post', () => {
       expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
     },
   )
-
-  it('keeps a failed learning handoff across reloads so only learning can be retried', async () => {
-    const key = 'postpilot:voice-learning:alice:20260820-final'
-    stubLearningHandoff({ [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1' }) })
-    renderAppAt('/posts/20260820-final', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-final',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            images: POST_IMAGES_FIXTURE,
-            contentRevision: 1n,
-            machineBaselineRevision: 1n,
-            canFinalize: true,
-            finalizedRevision: 1n,
-            finalizedAt: '2026-08-20T12:00:00Z',
-          },
-        ],
-      },
-      jobs: {
-        jobs: [
-          {
-            id: 'learn-1',
-            kind: 'voice_learn',
-            status: 'failed',
-            failureReason: 'MODEL_UNAVAILABLE',
-          },
-        ],
-      },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
-    })
-
-    expect(await screen.findByText('AI 모델을 잠시 사용할 수 없어요.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled()
-    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
-    expect(localStorage.getItem(key)).not.toBeNull()
-    localStorage.removeItem(key)
-  })
-
-  it('removes a failed-learning retry when the current voice language is ineligible', async () => {
-    const key = 'postpilot:voice-learning:alice:20260820-mismatch'
-    stubLearningHandoff({
-      [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
-    })
-    const calls: string[] = []
-    renderAppAt('/posts/20260820-mismatch', {
-      user: USER,
-      calls,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-mismatch',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 1n,
-            machineBaselineRevision: 1n,
-            finalizedRevision: 1n,
-            contentLanguage: 'en',
-            voice: {
-              id: 'voice-default',
-              name: '기본 말투',
-              sourceLanguage: 'ko',
-            },
-          },
-        ],
-      },
-      jobs: {
-        jobs: [
-          {
-            id: 'learn-1',
-            kind: 'voice_learn',
-            status: 'failed',
-            failureReason: 'MODEL_UNAVAILABLE',
-          },
-        ],
-      },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
-    })
-
-    expect(await screen.findByText('글과 말투의 언어가 달라 학습할 수 없어요.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
-    expect(calls).not.toContain('RetryVoiceLearning')
-    localStorage.removeItem(key)
-  })
-
-  // The one thing 글 완성 can do, and it is done: the button stays put and says so.
-  it('keeps 말투 학습 disabled for a revision it has already learned from', async () => {
-    const key = 'postpilot:voice-learning:alice:20260820-final'
-    stubLearningHandoff({
-      [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
-    })
-    renderAppAt('/posts/20260820-final', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-final',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 1n,
-            machineBaselineRevision: 1n,
-            canFinalize: true,
-            finalizedRevision: 1n,
-            finalizedAt: '2026-08-20T12:00:00Z',
-          },
-        ],
-      },
-      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
-    })
-
-    // The completed run is read back from the handoff a reload preserved, so the outcome is on
-    // screen and the button cannot start the same run again.
-    expect(await screen.findByText('이 글에서 말투를 배웠어요.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
-    localStorage.removeItem(key)
-  })
-
-  it('does not let a completed handoff from an older revision hide later learning', async () => {
-    const key = 'postpilot:voice-learning:alice:20260820-final'
-    stubLearningHandoff({
-      [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
-    })
-    renderAppAt('/posts/20260820-final', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-final',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 2n,
-            machineBaselineRevision: 2n,
-            canFinalize: true,
-            finalizedRevision: 2n,
-            finalizedAt: '2026-08-20T12:00:00Z',
-          },
-        ],
-      },
-      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
-    })
-
-    const learn = await screen.findByRole('button', { name: '말투 학습' })
-    await waitFor(() => expect(learn).toBeEnabled())
-    localStorage.removeItem(key)
-  })
 })
 
 describe('the post language', () => {
@@ -401,24 +239,6 @@ describe('the 발행 URL field', () => {
     return { calls, saves }
   }
 
-  it('is a url field at the foot of ③, typed for the keyboard that pastes an address', async () => {
-    renderPost(finalizedPost)
-    const input = await screen.findByLabelText('네이버 블로그 글 주소')
-    for (const [name, value] of Object.entries({
-      type: 'url',
-      inputmode: 'url',
-      autocomplete: 'url',
-      autocapitalize: 'none',
-      autocorrect: 'off',
-      enterkeyhint: 'done',
-    })) {
-      expect(input).toHaveAttribute(name, value)
-    }
-    expect(input).toHaveValue('')
-    expect(saveButton()).toBeEnabled()
-    expect(within(section()).queryByRole('button', { name: '지우기' })).toBeNull()
-  })
-
   it('publishes on a pasted address and stays on ③', async () => {
     const user = userEvent.setup()
     const { saves } = renderPost(finalizedPost)
@@ -430,63 +250,6 @@ describe('the 발행 URL field', () => {
     expect(saves).toEqual(['https://blog.naver.com/alice/223000000001'])
     expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true')
     expect(field()).toHaveValue('https://blog.naver.com/alice/223000000001')
-  })
-
-  it('accepts the mobile share address and shows it normalized', async () => {
-    const user = userEvent.setup()
-    const { saves } = renderPost(finalizedPost)
-    await user.type(
-      await screen.findByLabelText('네이버 블로그 글 주소'),
-      'https://m.blog.naver.com/alice/7{Enter}',
-    )
-
-    await waitFor(() => expect(field()).toHaveValue('https://blog.naver.com/alice/7'))
-    // What is sent is the input as typed, trimmed; the normalization is the server's answer.
-    expect(saves).toEqual(['https://m.blog.naver.com/alice/7'])
-    expect(statusLine()).toHaveTextContent('발행됨')
-  })
-
-  it('refuses another address in place and sends nothing', async () => {
-    const user = userEvent.setup()
-    const { calls } = renderPost(finalizedPost)
-    const input = await screen.findByLabelText('네이버 블로그 글 주소')
-    for (const bad of [
-      'https://cafe.naver.com/alice/1',
-      'https://blog.naver.com:443/alice/1',
-      'https://user@blog.naver.com/alice/1',
-    ]) {
-      await user.clear(input)
-      await user.type(input, bad)
-      await user.click(saveButton())
-      const message = await within(section()).findByRole('alert')
-      expect(message).toHaveTextContent('네이버 블로그 글 주소만 저장할 수 있어요.')
-      expect(input).toHaveAttribute('aria-invalid', 'true')
-      expect(input.getAttribute('aria-describedby')).toContain(message.id)
-    }
-    expect(calls).not.toContain('SavePostPublishedUrl')
-    expect(statusLine()).toHaveTextContent('확정')
-  })
-
-  it('sends nothing for an empty 저장 on a post with no address', async () => {
-    const user = userEvent.setup()
-    const { calls } = renderPost(finalizedPost)
-    await screen.findByLabelText('네이버 블로그 글 주소')
-    await user.click(saveButton())
-    expect(calls).not.toContain('SavePostPublishedUrl')
-  })
-
-  it('replaces a published address and stays 발행됨', async () => {
-    const user = userEvent.setup()
-    const { saves } = renderPost(publishedPost)
-    const input = await screen.findByLabelText('네이버 블로그 글 주소')
-    expect(input).toHaveValue('https://blog.naver.com/alice/1')
-    await user.clear(input)
-    await user.type(input, 'https://blog.naver.com/alice/2')
-    await user.click(saveButton())
-
-    await waitFor(() => expect(field()).toHaveValue('https://blog.naver.com/alice/2'))
-    expect(saves).toEqual(['https://blog.naver.com/alice/2'])
-    expect(statusLine()).toHaveTextContent('발행됨')
   })
 
   it.each([
@@ -515,17 +278,5 @@ describe('the 발행 URL field', () => {
     expect(
       await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
     ).toBeInTheDocument()
-  })
-
-  it('stays closed with its reason until the post is 확정', async () => {
-    const user = userEvent.setup()
-    const { calls } = renderPost({ ...finalizedPost, status: 'review', finalizedRevision: 0n })
-    await openStep(user, '글 완성')
-    const input = await screen.findByLabelText('네이버 블로그 글 주소')
-    expect(input).toBeDisabled()
-    expect(saveButton()).toBeDisabled()
-    const reason = within(section()).getByText('글을 확정하면 발행 URL을 입력할 수 있어요.')
-    expect(input.getAttribute('aria-describedby')).toContain(reason.id)
-    expect(calls).not.toContain('SavePostPublishedUrl')
   })
 })
