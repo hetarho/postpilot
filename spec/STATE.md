@@ -52,13 +52,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T391 | Separate fast backend deployment from long media verification | ARCH | T390 | doing@260925.mw |
 
 ## next
-- The media-worker wave T376..T388 and deployment follow-ups T389..T390 are complete; T389 CPU rollout and CI passed in production, and T390 removes unavailable fixture binaries through pinned source builds; future GPU host setup/migration remains operator-controlled
+- implement-task T391 to restore the sub-five-minute cached deployment target and isolate long media verification; T389 production CPU rollout passed and T390 fixture source builds are committed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T391 local verification passed (mw): 60 deployment tests, workflow lint, both prebuilt-image release layouts and all BE/FE/codegen/spec gates; delivery timing remains to be measured
+- 260925 T391 claimed (mw): restore fast deployment by separating long media checks, narrowing production serialization and reusing fixture build caches; preserve all media coverage and health/rollback gates
 - 260925 T390 done (mw): disposable MinIO/mc now build from pinned official source; both real release layouts, 51 deploy tests and all repository gates pass; T389 production rollout/CI and external health are confirmed
 - 260925 T390 claimed (mw): T389 is pushed and production rollout/CI passed; repair the previous run's MinIO fixture image pull failure before completing deployment smoke verification
 - 260925 T389 done (mw): first CPU deployment initializes missing worker.env and preserves credentials on retry, with a read-only SQLite backup before the forward-only swap; 48 deploy tests and all BE/FE/codegen/spec gates pass; no live deployment
@@ -77,5 +80,3 @@
 - 260925 T367 claimed (p42)
 - 260925 T366 done; the draft queue holds its voice, 템플릿 and target-language assignments as one record each, walked by one channel list; SendDraft takes one request and the handle one assign(channel, value); FE gates pass (p42)
 - 260925 T366 claimed (p42)
-- 260925 T365 done; the generation gates take one input whose members are all required; /ai-models/compare now refuses a published post with the lock's sentence; FE gates pass (p42)
-- 260925 T365 claimed (p42)

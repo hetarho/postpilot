@@ -97,6 +97,7 @@ class MediaComposeTest(unittest.TestCase):
         for step in steps:
             if 'ssh-action' in step.get('uses', ''):
                 self.assertEqual(step['with']['host'], '${{ secrets.SSH_HOST }}')
-        smoke = workflow['jobs']['smoke']['steps']
+        verification = yaml.safe_load((ROOT / '.github/workflows/media-verify.yml').read_text())
+        smoke = verification['jobs']['verify']['steps']
         self.assertTrue(any(s.get('with', {}).get('target') == 'media-worker-smoke' for s in smoke))
         self.assertTrue(any('docker run' in s.get('run', '') and 'postpilot-worker-smoke:ci' in s['run'] for s in smoke))

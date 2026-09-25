@@ -44,6 +44,20 @@ class ReleaseBudget(unittest.TestCase):
                 self.assertEqual(events.build.call_count, 1 if skip else 3)
                 self.assertEqual([c.args[0] for c in events.release.call_args_list], ['colocated', 'remote'])
 
+    def test_prebuilt_workflow_images_run_without_any_build(self):
+        with patch('sys.argv', ['media-release.py', '--skip-build', '--skip-storage-build']), patch.object(fixture, 'build') as build, patch.object(fixture, 'run') as docker, patch.object(fixture, 'fixture') as release:
+            fixture.main()
+            build.assert_not_called()
+            docker.assert_called_once_with('image', 'inspect', fixture.STORAGE_IMAGE)
+            self.assertEqual([c.args[0] for c in release.call_args_list], ['colocated', 'remote'])
+
+    def test_missing_prebuilt_storage_fails_before_resources_or_other_builds(self):
+        with patch('sys.argv', ['media-release.py', '--skip-storage-build']), patch.object(fixture, 'build') as build, patch.object(fixture, 'run', side_effect=RuntimeError('image missing')), patch.object(fixture, 'fixture') as release:
+            with self.assertRaisesRegex(RuntimeError, 'image missing'):
+                fixture.main()
+            build.assert_not_called()
+            release.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

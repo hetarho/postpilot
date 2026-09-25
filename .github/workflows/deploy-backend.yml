@@ -1,10 +1,8 @@
 # Backend deploy. The `build` job validates the production Compose file and BUILDS the
-# static image (validating the Dockerfile in CI), pushing to GHCR only when deploy is
-# enabled. The `rollout` job swaps the API over SSH and ROLLS BACK if the new image does
-# not come up healthy. The `smoke` job runs the real-binary media gates BESIDE the deploy
-# instead of ahead of it (ARCH-38): it still runs on this commit and still fails the run,
-# but it no longer withholds the image. develop→staging, main→production (one VPS, two
-# stacks).
+# static images, pushing to GHCR only when deploy is enabled. The `rollout` job
+# swaps the API/worker and restores compatible images if health checks fail.
+# Long media gates live in media-verify.yml (ARCH-38), with independent concurrency.
+# A cached deployment targets <5 minutes; media verification never holds its lock.
 #
 # DEPLOY_ENABLED (repo variable) gates the GHCR push + VPS rollout, so before the VPS
 # exists a push still validates compose + Dockerfile and the workflow stays green.
@@ -25,6 +23,7 @@ on:
       - 'docker-compose.prod.yml'
       - 'docker-compose.media.*.yml'
       - 'deploy/backend-rollout.sh'
+      - 'deploy/latest-rollout.sh'
       - 'deploy/media_rollout.py'
       - 'deploy/media/**'
       - 'deploy/*_test.py'
@@ -33,14 +32,12 @@ on:
       - 'scripts/media-release.py'
       - '.github/workflows/deploy-backend.yml'
 
-# Serialize deploys per environment (never roll two images at once).
-concurrency:
-  group: deploy-backend-${{ github.ref_name }}
-  cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: build-backend-${{ github.ref_name }}
+      cancel-in-progress: true
     permissions:
       contents: read
       packages: write
@@ -72,11 +69,8 @@ jobs:
           docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.remote.yml config --quiet --no-env-resolution
           docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution
 
-      - name: Verify rollout recovery and the deploy workflow's shape
-        run: |
-          python3 -m venv /tmp/postpilot-deploy-checks
-          /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt
-          /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v
+      # Rollout/workflow regression tests already run in CI's backend job. Keep
+      # that coverage there instead of running the same minute of tests twice.
 
       # Login only needed when we actually push (DEPLOY_ENABLED). GITHUB_TOKEN is automatic.
       - name: Log in to GHCR
@@ -97,19 +91,22 @@ jobs:
           # ARCH-38, TEMPORARY UNTIL CLOSED BETA. `deployable` is `production` minus the
           # two COPY lines that re-copy ffmpeg and ffprobe out of the smoke stages; those
           # stages touch neither file, so the pushed image is byte-for-byte the same and
-          # only layer ids differ. The smokes moved to the `smoke` job below. What stays
+          # only layer ids differ. Smokes run in media-verify.yml. What stays
           # in front of the image is the seconds-long ffmpeg tooling check (ARCH-39),
           # which `deployable` depends on.
-          # TO RESTORE THE BLOCKING GATE: delete this `target:` line (the default is the
-          # last stage, `production`) and give `rollout` below `needs: [build, smoke]`.
+          # At closed beta, restore an explicit pre-deploy media gate; the current
+          # post-deploy media-verify workflow intentionally follows ARCH-38.
           target: deployable
           build-args: SOURCE_REVISION=${{ github.sha }}
           push: ${{ vars.DEPLOY_ENABLED == 'true' }}
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:${{ env.ENV_NAME }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=backend-api
+            type=gha,scope=backend-worker
+            type=gha
+          cache-to: type=gha,scope=backend-api,mode=max
 
       - name: Build independent CPU worker image
         uses: docker/build-push-action@v6
@@ -122,53 +119,22 @@ jobs:
           tags: |
             ${{ env.MEDIA_WORKER_IMAGE }}:${{ github.sha }}
             ${{ env.MEDIA_WORKER_IMAGE }}:${{ env.ENV_NAME }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # The media and clip-input gates (ARCH-36) on this same commit. They were ~10 of the old
-  # 12 minutes; beside the deploy they cost the owner nothing to wait for, and the rollout
-  # keeps its health gate and rollback (ARCH-32) as the thing that protects production.
-  # `needs: build` is deliberate: it restores the cache that job exported instead of
-  # recompiling the builder stage (~170 s of Go), so this job pays only for its renders.
-  smoke:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      # Building `production` runs the smoke stages it depends on. Nothing is pushed —
-      # `build` already produced and tagged the image the rollout pulls. No `cache-to`
-      # either: `build` owns the export, and the smoke layers are invalidated by every
-      # source change anyway.
-      - name: Run the image smoke gates
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./backend/Dockerfile
-          target: production
-          push: false
-          cache-from: type=gha
-
-      - name: Build the CPU worker execution smoke
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./backend/Dockerfile
-          target: media-worker-smoke
-          load: true
-          tags: postpilot-worker-smoke:ci
-          cache-from: type=gha
-      - name: Run CPU worker parity, isolation and health
-        run: docker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci
-
-      - name: Run separate-process CPU release in both private layouts
-        run: python3 scripts/media-release.py
+          cache-from: |
+            type=gha,scope=backend-worker
+            type=gha,scope=backend-api
+            type=gha
+          cache-to: type=gha,scope=backend-worker,mode=max
 
   rollout:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    # Never cancel a live server swap. Build and media verification have other locks.
+    concurrency:
+      group: deploy-backend-${{ github.ref_name }}
+      cancel-in-progress: false
     # Skipped (not failed) until the VPS is ready: set repo variable DEPLOY_ENABLED=true
     # plus the SSH secrets and the API_ORIGIN / WEB_ORIGIN variables.
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
@@ -178,10 +144,16 @@ jobs:
       ENV_NAME: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Skip a superseded deployment while holding the rollout lock
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh deploy/latest-rollout.sh
 
       # The runtime definition must be on the VPS before rollout, and it must be THIS
       # commit's version — otherwise a compose change silently never reaches production.
       - name: Sync production Compose to VPS
+        if: steps.current.outputs.deploy == 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -191,6 +163,7 @@ jobs:
           target: '/srv/postpilot-${{ env.ENV_NAME }}'
 
       - name: Pull → swap → health gate → roll back on failure
+        if: steps.current.outputs.deploy == 'true'
         uses: appleboy/ssh-action@v1.2.0
         env:
           IMAGE_TAG: ${{ github.sha }}
@@ -211,6 +184,7 @@ jobs:
       # instead. This is the check that catches "login silently stops working": the session
       # cookie needs an exact-origin allow with credentials (PRD F-1).
       - name: Verify CORS preflight for the browser origin
+        if: steps.current.outputs.deploy == 'true'
         uses: appleboy/ssh-action@v1.2.0
         env:
           API_ORIGIN: ${{ vars.API_ORIGIN }}
@@ -248,6 +222,7 @@ jobs:
       # only the per-photo clipboard copy breaks, which is the kind of failure nothing else
       # reports (plan 08, DEPLOY.md §5). The rule itself lives in `deploy/r2-cors.json`.
       - name: Verify the R2 bucket allows a browser GET
+        if: steps.current.outputs.deploy == 'true'
         uses: appleboy/ssh-action@v1.2.0
         env:
           WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}

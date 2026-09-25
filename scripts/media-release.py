@@ -120,6 +120,7 @@ def fixture(layout, args):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-build',action='store_true',help='reuse API/worker images; still prepare pinned fixture storage')
+    parser.add_argument('--skip-storage-build',action='store_true',help='reuse the storage image explicitly built by the workflow')
     parser.add_argument('--layout',choices=['colocated','remote','both'],default='both')
     parser.add_argument('--api-image',default='postpilot:gate-media-release')
     parser.add_argument('--worker-image',default='postpilot:gate-media-release-worker')
@@ -137,7 +138,10 @@ def main():
     validate_budget(args)
     # Never rely on a developer's cached, no-longer-public MinIO image. Fail
     # before application builds or disposable resources if source build fails.
-    build('media-storage', STORAGE_IMAGE, 'deploy/media/fixture.Dockerfile')
+    if args.skip_storage_build:
+        run('image', 'inspect', STORAGE_IMAGE)
+    else:
+        build('media-storage', STORAGE_IMAGE, 'deploy/media/fixture.Dockerfile')
     if not args.skip_build:
         build('media-release-api',args.api_image);build('media-release-worker',args.worker_image)
     for layout in ('colocated','remote') if args.layout=='both' else (args.layout,):fixture(layout,args)

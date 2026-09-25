@@ -46,6 +46,27 @@ rollout  sync Compose/controller files to the API VPS (no SSH to a worker PC)
 verify   browser-origin API CORS and R2 GET preflight checks
 ```
 
+**일반적인 캐시 재사용 배포는 push부터 위 상태 검사 완료까지 5분 이내를 목표로 한다.**
+Actions의 `Deploy backend` 성공이 실제 배포 완료다. 긴 영상 검증은 성공한 배포의 정확한
+커밋 SHA로 별도 `Verify media` 워크플로에서 실행한다. 이미지 스모크·워커 검증·두 배치의
+릴리스 검증은 서로 병렬이고, 그 결과나 실행 시간이 다음 배포를 붙잡지 않는다.
+배포 컨트롤러·워크플로 회귀 테스트는 기존 `CI`에서 계속 실행한다.
+
+실제 서버를 바꾸는 `rollout`만 환경별로 잠그며 진행 중인 교체는 자동 취소하지 않는다.
+새 push가 오면 이전 빌드는 취소할 수 있고, 잠금을 얻은 오래된 실행도 더 최신 배포 요청이
+있으면 서버 변경을 건너뛴다. 문서만 바뀐 커밋은 새 배포 요청으로 취급하지 않는다.
+`Verify media`는 별도 잠금을 사용하고, 새 검증이 오면 이전 검증을 취소할 수 있다.
+
+캐시는 API·워커·검증용 저장소·릴리스 이미지별로 나눠 보관한다. 릴리스 검증의 이미지도
+같은 Buildx에서 캐시를 읽어 빌드한 뒤 `--skip-build --skip-storage-build`로 실행하므로
+다른 Docker 빌더에서 FFmpeg/MinIO를 다시 컴파일하지 않는다. 검증만 다시 실행하려면
+Actions → **Verify media → Run workflow**를 사용한다.
+
+GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 느린 레지스트리·네트워크는
+5분 목표를 넘길 수 있다. 5분이 지났다는 이유로 진행 중인 서버 교체를 강제 종료하지 않는다.
+시간을 확인할 때는 `Deploy backend`의 생성 시각부터 완료 시각까지를 측정하고,
+`Verify media`의 소요 시간은 별도로 본다. 검증 실패는 해당 워크플로에 실패로 남는다.
+
 - **마이그레이션 스텝이 따로 없는 건 의도다.** DB가 이 스택 볼륨 안의 SQLite 파일이라
   맞춰야 할 공용 서버가 없다. 마이그레이션은 API 바이너리에 embed되어 기동 시 돈다 —
   스키마가 그걸 읽는 코드와 어긋날 수 없다. 실패하면 프로세스가 죽고, `/health` 게이트가
