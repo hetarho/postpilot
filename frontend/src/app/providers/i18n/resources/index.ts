@@ -80,6 +80,10 @@ import { i18n as planI18n } from '@/entities/plan/config/i18n'
 import { i18n as plansI18n } from '@/pages/plans/config/i18n'
 import { gift as giftPageI18n } from '@/pages/gift/config/i18n'
 import { i18n as redeemVoucherI18n } from '@/features/redeem-voucher/config/i18n'
+import { vouchers as adminVouchersI18n } from '@/pages/admin/config/i18n'
+import { i18n as issueVoucherI18n } from '@/features/issue-voucher/config/i18n'
+import { i18n as revokeVoucherI18n } from '@/features/revoke-voucher/config/i18n'
+import { i18n as voucherEntityI18n } from '@/entities/voucher/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
@@ -185,6 +189,10 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   plansI18n,
   giftPageI18n,
   redeemVoucherI18n,
+  adminVouchersI18n,
+  issueVoucherI18n,
+  revokeVoucherI18n,
+  voucherEntityI18n,
   selectModelPlansI18n,
   blogFieldI18n,
   candidateComparisonI18n,
@@ -306,6 +314,10 @@ export const resources = {
       ...plansI18n.ko,
       ...giftPageI18n.ko,
       ...redeemVoucherI18n.ko,
+      ...adminVouchersI18n.ko,
+      ...issueVoucherI18n.ko,
+      ...revokeVoucherI18n.ko,
+      ...voucherEntityI18n.ko,
       ...selectModelPlansI18n.ko,
     },
     billing: {
@@ -419,6 +431,10 @@ export const resources = {
       ...plansI18n.en,
       ...giftPageI18n.en,
       ...redeemVoucherI18n.en,
+      ...adminVouchersI18n.en,
+      ...issueVoucherI18n.en,
+      ...revokeVoucherI18n.en,
+      ...voucherEntityI18n.en,
       ...selectModelPlansI18n.en,
     },
     billing: {
