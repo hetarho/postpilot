@@ -263,8 +263,13 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
-	if _, err = s.LearningSnapshot(ctx, "editable", "alice"); !errors.Is(err, post.ErrPostNotFinalized) {
+	// The store maps the row and judges nothing: the service applies the finalization rule to it.
+	unfinalized, err := s.LearningSnapshot(ctx, "editable", "alice")
+	if err != nil {
 		t.Fatalf("unfinalized snapshot err=%v", err)
+	}
+	if unfinalized.Status != "review" || unfinalized.FinalizedAtCurrentRevision() {
+		t.Fatalf("unfinalized snapshot = status %q, finalized at current %v", unfinalized.Status, unfinalized.FinalizedAtCurrentRevision())
 	}
 	if updated, err := s.Finalize(ctx, "editable", "alice", "machine 2", 3, testNow.Add(4*time.Minute)); err != nil || !updated {
 		t.Fatalf("second finalize: updated=%v err=%v", updated, err)

@@ -937,7 +937,9 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if found.Content == nil {
 		return Post{}, ErrNoMachineBaseline
 	}
-	if found.Status == StatusFinalized && found.FinalizedRevision == expectedRevision {
+	// Published is refused above and the revision is the expected one, so this is "already
+	// finalized at it".
+	if found.FinalizedAtCurrentRevision() {
 		return s.Get(ctx, userID, slug)
 	}
 	contentStore := s.content
@@ -966,8 +968,9 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	if err != nil {
 		return LearningSnapshot{}, err
 	}
-	// A published post is a finalized one with an address, so it stays learnable (POST-21).
-	if (found.Status != StatusFinalized && found.Status != StatusPublished) || found.FinalizedRevision != found.ContentRevision {
+	// First, so a draft with no content answers ErrPostNotFinalized rather than the store's
+	// ErrNoMachineBaseline. A published post stays learnable (POST-21).
+	if !found.FinalizedAtCurrentRevision() {
 		return LearningSnapshot{}, ErrPostNotFinalized
 	}
 	contentStore := s.content
@@ -977,6 +980,11 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	snapshot, err := contentStore.LearningSnapshot(ctx, slug, userID)
 	if err != nil {
 		return LearningSnapshot{}, err
+	}
+	// Again on the row actually read: a save landing between the two reads demotes the post, and
+	// learning never takes a revision nobody finalized.
+	if !snapshot.FinalizedAtCurrentRevision() {
+		return LearningSnapshot{}, ErrPostNotFinalized
 	}
 	// The post store owns content provenance but does not own the voice directory. Enrich the
 	// hand-off through the published directory projection so the voice context can enforce
@@ -1016,8 +1024,9 @@ func (s *Service) SavePublishedURL(ctx context.Context, userID, slug, raw string
 		return s.Get(ctx, userID, slug)
 	case address != "" && found.Status == StatusPublished && found.PublishedURL == address:
 		return s.Get(ctx, userID, slug)
-	case address != "" && found.Status != StatusPublished &&
-		(found.Status != StatusFinalized || found.FinalizedRevision != found.ContentRevision):
+	case address != "" && !found.FinalizedAtCurrentRevision():
+		// A published post always holds its finalized revision: PublishPost requires it and every
+		// content write carries the lock's predicate.
 		return Post{}, ErrPostNotFinalized
 	}
 	active, err := s.jobs.ActiveForPost(ctx, slug)
@@ -1409,9 +1418,10 @@ func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string)
 
 // DeleteImage removes the photo and its object.
 //
-// Storage first, then the row: the reverse order would drop the only reference to the
-// object if the delete failed, leaving bytes nobody can name. This way a failure leaves
-// a row whose object is gone, which the user can retry.
+// Row first, then the object. The row DELETE is the lock's guard (POST-74), so a publish that
+// lands first refuses the delete before storage is touched and the attachment stays whole. A
+// failed object delete after that leaves an unreferenced object, which the stray-object sweep
+// reclaims.
 func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error {
 	image, err := s.images.GetImage(ctx, imageID)
 	if err != nil {
@@ -1426,18 +1436,20 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 		return err
 	}
 
-	if err := s.blobs.Delete(ctx, image.Key); err != nil {
-		return fmt.Errorf("delete object: %w", err)
-	}
 	deleted, err := s.images.DeleteImage(ctx, imageID)
 	if err != nil {
 		return fmt.Errorf("delete image row: %w", err)
 	}
 	if !deleted {
-		// Already gone is the idempotent success it always was; published is the lock.
+		// Already gone is the idempotent success it always was, and the delete that removed the
+		// row owns its object; published is the lock.
 		if err := s.lockedOrGone(ctx, userID, image.PostSlug, nil); err != nil {
 			return err
 		}
+	} else if err := s.blobs.Delete(ctx, image.Key); err != nil {
+		// Not fatal: the row is gone, so a retry would find nothing to delete, and an object no
+		// row names is exactly what the stray-object sweep removes.
+		slog.WarnContext(ctx, "could not delete a removed photo's object; the stray-object sweep reclaims it", "key", image.Key, "err", err)
 	}
 	// The observation goes with the photo. Observations are paired to photos by FILENAME
 	// alone, and a filename is only taken while its photo is attached — so a leftover entry
@@ -1449,8 +1461,9 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	return nil
 }
 
-// DeleteVideo removes the video and its object, in the same order and for the same reason
-// DeleteImage does, and drops the observation entry the filename owned (VIDEO-12).
+// DeleteVideo removes the video and its object in DeleteImage's order — the guarded row first,
+// then the object, a failed object delete left to the sweep — and drops the observation entry
+// the filename owned (VIDEO-12).
 func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error {
 	video, err := s.videos.GetVideo(ctx, videoID)
 	if err != nil {
@@ -1464,9 +1477,6 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 		return err
 	}
 
-	if err := s.blobs.Delete(ctx, video.Key); err != nil {
-		return fmt.Errorf("delete object: %w", err)
-	}
 	deleted, err := s.videos.DeleteVideo(ctx, videoID)
 	if err != nil {
 		return fmt.Errorf("delete video row: %w", err)
@@ -1475,6 +1485,8 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 		if err := s.lockedOrGone(ctx, userID, video.PostSlug, nil); err != nil {
 			return err
 		}
+	} else if err := s.blobs.Delete(ctx, video.Key); err != nil {
+		slog.WarnContext(ctx, "could not delete a removed clip's object; the stray-object sweep reclaims it", "key", video.Key, "err", err)
 	}
 	if err := s.dropObservation(ctx, found, video.Filename); err != nil {
 		return err

@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
 | T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
 | T365 | Generation preconditions take one named input | ARCH | - | todo |
 | T366 | The draft queue's assignments are one record per channel | ARCH | T355 | todo |
@@ -66,9 +65,11 @@
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T358 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T363 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T358 done; photo and video deletes remove the guarded row before the object, a failed object delete left to the sweep; one FinalizedAtCurrentRevision rule, applied by the service to the row the snapshot read; BE gate passes (p42)
+- 260925 T358 claimed (p42)
 - 260925 T357 done; one writablePost guard for the published lock; SQL and Service default-deny tests make an unclassified write statement or exported method fail; photo and video deletes search posts by key; BE gate passes (p42)
 - 260925 T357 claimed (p42)
 - 260925 T356 done; InlinePopover walks its panel with Tab and leaves past either end (THEME-42); a hover-opened panel or tip closes alone on Escape; one focusable selector, one anchored-panel hook, one quality values/share helper; FE gates pass (p42)
@@ -87,5 +88,3 @@
 - 260925 T384 claimed (mw); T383 committed as 41ef2e03; durable media progress and owner-facing failure/cancellation states only
 - 260925 T383 done (mw): bounded recovery, cancellation acknowledgement, durable artifact cleanup and isolated worker workspaces; full CI, race checks, CPU parity and all 28 release scenarios pass; T384 next
 - 260925 T383 claimed (mw); T382 committed; bounded media recovery, cancellation and artifact cleanup only
-- 260925 T382 done (mw): frozen remote render, replay-safe publication and source/revision fencing; two-worker crash/cancel races, isolated CI, CPU byte/frame parity and all 28 real release scenarios pass; T383 next
-- 260925 T382 claimed (mw); T381 committed as f6b22fe0; durable worker render publication only

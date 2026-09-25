@@ -272,10 +272,10 @@ func TestConfirmVideoIsIdempotent(t *testing.T) {
 	}
 }
 
-// DeleteVideo removes the object BEFORE the row, and takes the filename's observation
-// entry with it (VIDEO-12) — a leftover entry would become eyesight for whatever is
-// uploaded under that name next.
-func TestDeleteVideoDropsTheObjectThenTheRowAndItsObservation(t *testing.T) {
+// DeleteVideo removes the guarded row BEFORE the object (F9), and takes the filename's
+// observation entry with it (VIDEO-12) — a leftover entry would become eyesight for whatever
+// is uploaded under that name next.
+func TestDeleteVideoDropsTheRowThenTheObjectAndItsObservation(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
@@ -288,8 +288,20 @@ func TestDeleteVideoDropsTheObjectThenTheRowAndItsObservation(t *testing.T) {
 		t.Fatalf("SetObservations: %v", err)
 	}
 
+	rowAtDelete := true
+	blobs.beforeDelete = func(key string) {
+		if key != video.Key {
+			return
+		}
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		_, rowAtDelete = store.videos[video.ID]
+	}
 	if err := svc.DeleteVideo(ctx, alice, video.ID); err != nil {
 		t.Fatalf("DeleteVideo: %v", err)
+	}
+	if rowAtDelete {
+		t.Error("storage was reached while the row still stood")
 	}
 	if blobs.has(video.Key) {
 		t.Error("the object survived the delete")

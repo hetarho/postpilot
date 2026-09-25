@@ -431,7 +431,7 @@ func TestGetMintsFreshViewURLs(t *testing.T) {
 
 // --- deletion ---
 
-// TestDeleteImage is job 03 A3: the row AND the object go.
+// TestDeleteImage is job 03 A3: the row AND the object go, the guarded row first (F9).
 func TestDeleteImage(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
@@ -443,6 +443,15 @@ func TestDeleteImage(t *testing.T) {
 		t.Fatalf("ConfirmUpload: %v", err)
 	}
 
+	rowAtDelete := true
+	blobs.beforeDelete = func(key string) {
+		if key != upload.Key {
+			return
+		}
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		_, rowAtDelete = store.images[upload.ID]
+	}
 	if err := svc.DeleteImage(ctx, alice, upload.ID); err != nil {
 		t.Fatalf("DeleteImage: %v", err)
 	}
@@ -451,6 +460,9 @@ func TestDeleteImage(t *testing.T) {
 	}
 	if _, err := store.GetImage(ctx, upload.ID); !errors.Is(err, ErrNotFound) {
 		t.Errorf("the image row survived the delete: %v", err)
+	}
+	if rowAtDelete {
+		t.Error("storage was reached while the row still stood")
 	}
 }
 
@@ -529,9 +541,10 @@ func TestDeleteImageOwnership(t *testing.T) {
 	}
 }
 
-// A failed storage delete must keep the row: the row is the only record of the key, so
-// dropping it would turn a retryable failure into bytes nobody can name.
-func TestDeleteImageKeepsTheRowWhenStorageFails(t *testing.T) {
+// A failed storage delete after the row is gone is not the user's to retry — the row it would
+// retry against is already gone — so it answers success, and the object, now unreferenced, is
+// exactly what the stray-object sweep reclaims.
+func TestDeleteImageLeavesAFailedObjectDeleteToTheSweep(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
@@ -543,11 +556,22 @@ func TestDeleteImageKeepsTheRowWhenStorageFails(t *testing.T) {
 	}
 
 	blobs.failDelete = true
-	if err := svc.DeleteImage(ctx, alice, upload.ID); err == nil {
-		t.Fatal("DeleteImage reported success while storage failed")
+	if err := svc.DeleteImage(ctx, alice, upload.ID); err != nil {
+		t.Fatalf("DeleteImage = %v, want success once the row is gone", err)
 	}
-	if _, err := store.GetImage(ctx, upload.ID); err != nil {
-		t.Errorf("the row was dropped even though the object is still there: %v", err)
+	if _, err := store.GetImage(ctx, upload.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("the row survived: %v", err)
+	}
+	if !blobs.has(upload.Key) {
+		t.Fatal("the object is gone although its delete failed")
+	}
+
+	blobs.failDelete = false
+	sweeper := NewSweeper(store, blobs, testMinAge)
+	sweeper.now = func() time.Time { return testNow.Add(testMinAge + time.Minute) }
+	sweeper.SweepOnce(ctx)
+	if blobs.has(upload.Key) {
+		t.Error("the sweep left the unreferenced object")
 	}
 }
 

@@ -335,22 +335,21 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 	if err != nil {
 		return post.LearningSnapshot{}, err
 	}
-	// A published post is a finalized one with an address, so it stays learnable (POST-21).
-	finalized := row.Status == post.StatusFinalized || row.Status == post.StatusPublished
-	if !finalized || !row.FinalizedRevision.Valid || row.FinalizedRevision.Int64 != row.ContentRevision || !row.FinalizedAt.Valid {
-		return post.LearningSnapshot{}, post.ErrPostNotFinalized
-	}
-	finalizedAt, err := parseTime(row.FinalizedAt.String)
-	if err != nil {
-		return post.LearningSnapshot{}, err
+	// Mapped, not judged: the service applies the finalization rule to this row. FinalizePost
+	// writes finalized_at with finalized_revision, so a row that passes the rule has it.
+	var finalizedAt time.Time
+	if row.FinalizedAt.Valid {
+		if finalizedAt, err = parseTime(row.FinalizedAt.String); err != nil {
+			return post.LearningSnapshot{}, err
+		}
 	}
 	contentLanguage, err := requiredLanguage(row.ContentLanguage)
 	if err != nil {
 		return post.LearningSnapshot{}, fmt.Errorf("post %s content language: %w", row.Slug, err)
 	}
 	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, VoiceID: row.VoiceID,
-		MachineBaselineVoiceID: row.MachineBaselineVoiceID.String, Current: *current,
-		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
+		MachineBaselineVoiceID: row.MachineBaselineVoiceID.String, Status: row.Status, Current: *current,
+		ContentRevision: row.ContentRevision, FinalizedRevision: row.FinalizedRevision.Int64, MachineBaseline: *baseline,
 		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
 		FinalizedAt: finalizedAt, UpdatedAt: updated, ContentLanguage: contentLanguage}, nil
 }

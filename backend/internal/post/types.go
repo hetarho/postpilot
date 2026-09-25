@@ -291,6 +291,12 @@ type Post struct {
 	PendingExperimentID string
 }
 
+// FinalizedAtCurrentRevision is whether the post's current revision is its finalized one — a
+// finalized post, or a published one, which is a finalized post with an address.
+func (p Post) FinalizedAtCurrentRevision() bool {
+	return finalizedAt(p.Status, p.FinalizedRevision, p.ContentRevision)
+}
+
 // ReplacementSurface is where a replacement candidate stands in the content (GEN-53).
 type ReplacementSurface string
 
@@ -338,14 +344,18 @@ type PublishedPost struct {
 }
 
 // LearningSnapshot is the post context's ownership-checked hand-off to voice. The
-// voice context never reads post tables and cannot mutate either snapshot.
+// voice context never reads post tables and cannot mutate either snapshot. Status and
+// FinalizedRevision are the row it was read from, so the service can apply the finalization
+// rule to that read rather than to an earlier one.
 type LearningSnapshot struct {
 	PostSlug               string
 	UserID                 string
 	VoiceID                string
 	MachineBaselineVoiceID string
+	Status                 string
 	Current                PostContent
 	ContentRevision        int64
+	FinalizedRevision      int64
 	MachineBaseline        PostContent
 	BaselineRevision       int64
 	TargetLength           *int
@@ -353,6 +363,17 @@ type LearningSnapshot struct {
 	UpdatedAt              time.Time
 	ContentLanguage        Language
 	VoiceSourceLanguage    Language
+}
+
+// FinalizedAtCurrentRevision is whether the snapshot's row holds a finalized current revision.
+func (s LearningSnapshot) FinalizedAtCurrentRevision() bool {
+	return finalizedAt(s.Status, s.FinalizedRevision, s.ContentRevision)
+}
+
+// finalizedAt is the one rule for "the current revision is the finalized one". A published
+// post is a finalized one with an address (POST-21, POST-73).
+func finalizedAt(status string, finalizedRevision, contentRevision int64) bool {
+	return (status == StatusFinalized || status == StatusPublished) && finalizedRevision == contentRevision
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.

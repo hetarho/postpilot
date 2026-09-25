@@ -28,6 +28,9 @@ type fakeStore struct {
 	// lock, so a test can publish the post after the service's check and before the write:
 	// the race the statements' own predicates and guards exist for.
 	beforeGuardedWrite func(slug string)
+	// beforeSnapshotRead runs first in LearningSnapshot, outside the lock, so a test can change
+	// the post between the service's own read and the snapshot's.
+	beforeSnapshotRead func(slug string)
 	// fieldAssignments counts AssignField calls, so a test can say a save named no 분야 write.
 	fieldAssignments int
 	// optionWrites counts SaveGenerationOptions calls, so a test can say one save was one write.
@@ -305,7 +308,15 @@ func (f *fakeStore) Finalize(_ context.Context, slug, userID, title string, expe
 	return true, nil
 }
 
+// LearningSnapshot mirrors the store: it maps the row and judges nothing, so the service's own
+// finalization rule is what refuses an unfinalized one.
 func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (LearningSnapshot, error) {
+	f.mu.Lock()
+	hook := f.beforeSnapshotRead
+	f.mu.Unlock()
+	if hook != nil {
+		hook(slug)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -315,19 +326,20 @@ func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (Le
 	if existing.UserID != userID {
 		return LearningSnapshot{}, ErrForbidden
 	}
-	if (existing.Status != StatusFinalized && existing.Status != StatusPublished) || existing.FinalizedRevision != existing.ContentRevision || existing.FinalizedAt == nil {
-		return LearningSnapshot{}, ErrPostNotFinalized
-	}
 	if existing.Content == nil || existing.MachineBaselineRevision <= 0 {
 		return LearningSnapshot{}, ErrNoMachineBaseline
 	}
-	return LearningSnapshot{
-		PostSlug: slug, UserID: userID, VoiceID: existing.VoiceID, MachineBaselineVoiceID: existing.MachineBaselineVoiceID, Current: *existing.Content,
-		ContentRevision: existing.ContentRevision, MachineBaseline: *existing.Content,
+	snapshot := LearningSnapshot{
+		PostSlug: slug, UserID: userID, VoiceID: existing.VoiceID, MachineBaselineVoiceID: existing.MachineBaselineVoiceID,
+		Status: existing.Status, Current: *existing.Content,
+		ContentRevision: existing.ContentRevision, FinalizedRevision: existing.FinalizedRevision, MachineBaseline: *existing.Content,
 		BaselineRevision: existing.MachineBaselineRevision, TargetLength: existing.TargetLength,
-		FinalizedAt: *existing.FinalizedAt, UpdatedAt: existing.UpdatedAt,
-		ContentLanguage: valueLanguage(existing.ContentLanguage),
-	}, nil
+		UpdatedAt: existing.UpdatedAt, ContentLanguage: valueLanguage(existing.ContentLanguage),
+	}
+	if existing.FinalizedAt != nil {
+		snapshot.FinalizedAt = *existing.FinalizedAt
+	}
+	return snapshot, nil
 }
 
 // PublishPost mirrors the store's guarded statement: a post whose current revision is its
@@ -339,8 +351,7 @@ func (f *fakeStore) PublishPost(_ context.Context, slug, userID, url string, pub
 	if !ok || existing.UserID != userID {
 		return false, nil
 	}
-	finalized := existing.Status == StatusFinalized && existing.FinalizedRevision == existing.ContentRevision
-	if !finalized && existing.Status != StatusPublished {
+	if !existing.FinalizedAtCurrentRevision() && existing.Status != StatusPublished {
 		return false, nil
 	}
 	existing.Status = StatusPublished
@@ -751,6 +762,9 @@ type fakeBlobs struct {
 
 	// failDelete makes every Delete fail, for the "storage is down" paths.
 	failDelete bool
+	// beforeDelete runs first in every Delete, outside the blobs' lock, so a test can read the
+	// store at the moment storage is reached.
+	beforeDelete func(key string)
 	// failList makes List fail, so the sweep can be shown to delete nothing.
 	failList bool
 }
@@ -805,6 +819,9 @@ func (f *fakeBlobs) Head(_ context.Context, key string) (ObjectHead, error) {
 }
 
 func (f *fakeBlobs) Delete(_ context.Context, key string) error {
+	if f.beforeDelete != nil {
+		f.beforeDelete(key)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.failDelete {

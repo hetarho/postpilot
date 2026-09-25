@@ -248,8 +248,10 @@ func TestLearningSnapshotReadsAPublishedPost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a published post refused learning: %v", err)
 	}
-	// Publishing restamps updated_at and nothing the learner reads besides.
+	// Publishing restamps updated_at and moves the row's status, which the service's rule reads
+	// and the learner does not; nothing the learner reads changes.
 	want.UpdatedAt, got.UpdatedAt = time.Time{}, time.Time{}
+	want.Status = StatusPublished
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("snapshot of the published post =\n%+v\nwant\n%+v", got, want)
 	}

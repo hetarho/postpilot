@@ -473,6 +473,25 @@ func TestDeletePostStillRemovesAPublishedPost(t *testing.T) {
 	}
 }
 
+// F13: the finalization rule judges the row the snapshot was read from. A save that demotes the
+// post between the service's own read and the snapshot's must not hand voice a revision nobody
+// finalized.
+func TestLearningSnapshotRefusesARevisionDemotedBetweenItsReads(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	finalized := finalizedPost(t, svc, alice)
+	store.beforeSnapshotRead = func(slug string) {
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		demoted := store.posts[slug]
+		demoted.Status = StatusReview
+		demoted.ContentRevision++
+		store.posts[slug] = demoted
+	}
+	if _, err := svc.LearningSnapshot(context.Background(), alice, finalized.Slug); !errors.Is(err, ErrPostNotFinalized) {
+		t.Fatalf("err = %v, want ErrPostNotFinalized", err)
+	}
+}
+
 // A write that passed the service's check and then lost the race to a publish is refused by
 // the store's own guard, and the answer names the lock rather than a missing post.
 func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
@@ -518,6 +537,40 @@ func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
 		}
 		if got := store.posts[finalized.Slug]; !reflect.DeepEqual(got, publish(before)) {
 			t.Fatalf("the losing insert changed the row: %+v", got)
+		}
+	})
+
+	// F9: the guarded row goes before the object, so a publish that lands in between leaves the
+	// attachment whole — its row and its bytes.
+	t.Run("a photo delete", func(t *testing.T) {
+		svc, store, blobs := newTestService(t)
+		finalized := finalizedPost(t, svc, alice)
+		image := attachPhoto(t, svc, blobs, finalized.Slug, "IMG_1.jpg")
+		race(store)
+		if err := svc.DeleteImage(context.Background(), alice, image.ID); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("err = %v, want ErrPostPublished", err)
+		}
+		if _, ok := store.images[image.ID]; !ok {
+			t.Fatal("the losing delete removed the photo's row")
+		}
+		if !blobs.has(image.Key) || len(blobs.deleted) != 0 {
+			t.Fatalf("the losing delete reached storage: has = %v, deleted = %v", blobs.has(image.Key), blobs.deleted)
+		}
+	})
+
+	t.Run("a video delete", func(t *testing.T) {
+		svc, store, blobs := newTestService(t)
+		finalized := finalizedPost(t, svc, alice)
+		video := mustAttachVideo(t, svc, blobs, alice, finalized.Slug, "clip.mp4", 5_000)
+		race(store)
+		if err := svc.DeleteVideo(context.Background(), alice, video.ID); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("err = %v, want ErrPostPublished", err)
+		}
+		if _, ok := store.videos[video.ID]; !ok {
+			t.Fatal("the losing delete removed the clip's row")
+		}
+		if !blobs.has(video.Key) || len(blobs.deleted) != 0 {
+			t.Fatalf("the losing delete reached storage: has = %v, deleted = %v", blobs.has(video.Key), blobs.deleted)
 		}
 	})
 }
