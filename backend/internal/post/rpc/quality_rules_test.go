@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"google.golang.org/protobuf/proto"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -171,7 +172,10 @@ func TestSavePostDraftFieldPresence(t *testing.T) {
 	}
 }
 
-func TestSavePostGenerationOptionsTicksPresence(t *testing.T) {
+// POST-89: the brief's run options are one whole set. Every member but target_length is
+// required, a request missing one or carrying a bad value is refused with nothing written, and
+// an absent length is natural length.
+func TestSavePostGenerationOptionsIsAWholeSet(t *testing.T) {
 	h := rpcService(t)
 	ctx := auth.WithUser(context.Background(), "alice")
 	created, err := h.SavePostDraft(ctx, draftRequest("", "제주", nil))
@@ -179,50 +183,78 @@ func TestSavePostGenerationOptionsTicksPresence(t *testing.T) {
 		t.Fatal(err)
 	}
 	slug := created.Msg.GetPost().GetSlug()
-	options := func(ticks *postpilotv1.QualityRuleTicks, tags *int32) (*postpilotv1.Post, error) {
-		res, err := h.SavePostGenerationOptions(ctx, connect.NewRequest(&postpilotv1.SavePostGenerationOptionsRequest{
-			Slug: slug, QualityRules: ticks, TagCount: tags,
-		}))
+	i32 := func(n int32) *int32 { return &n }
+	yes, no := true, false
+	cafe, none := postpilotv1.BlogField_BLOG_FIELD_CAFE, postpilotv1.BlogField_BLOG_FIELD_UNSPECIFIED
+	ticks := func(metrics ...postpilotv1.QualityMetric) *postpilotv1.QualityRuleTicks {
+		return &postpilotv1.QualityRuleTicks{Metrics: metrics}
+	}
+	save := func(req *postpilotv1.SavePostGenerationOptionsRequest) error {
+		req.Slug = slug
+		_, err := h.SavePostGenerationOptions(ctx, connect.NewRequest(req))
+		return err
+	}
+	read := func() *postpilotv1.Post {
+		got, err := h.GetPost(ctx, connect.NewRequest(&postpilotv1.GetPostRequest{Slug: slug}))
 		if err != nil {
-			return nil, err
+			t.Fatal(err)
 		}
-		return res.Msg.GetPost(), nil
-	}
-	count := func(n int32) *int32 { return &n }
-
-	ticked, err := options(&postpilotv1.QualityRuleTicks{Metrics: []postpilotv1.QualityMetric{
-		postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION,
-		postpilotv1.QualityMetric_QUALITY_METRIC_TITLE_SATURATION,
-		postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION,
-	}}, nil)
-	want := []postpilotv1.QualityMetric{
-		postpilotv1.QualityMetric_QUALITY_METRIC_TITLE_SATURATION, postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION,
-	}
-	if err != nil || !reflect.DeepEqual(ticked.GetQualityRules(), want) {
-		t.Fatalf("ticked = %v, %v", ticked.GetQualityRules(), err)
-	}
-	kept, err := options(nil, count(7))
-	if err != nil || !reflect.DeepEqual(kept.GetQualityRules(), want) || kept.GetTagCount() != 7 {
-		t.Fatalf("absent = %v with %d tags, %v", kept.GetQualityRules(), kept.GetTagCount(), err)
-	}
-	cleared, err := options(&postpilotv1.QualityRuleTicks{}, nil)
-	if err != nil || len(cleared.GetQualityRules()) != 0 {
-		t.Fatalf("empty = %v, %v", cleared.GetQualityRules(), err)
+		return got.Msg.GetPost()
 	}
 
-	for name, metric := range map[string]postpilotv1.QualityMetric{
-		"UNSPECIFIED":  postpilotv1.QualityMetric_QUALITY_METRIC_UNSPECIFIED,
-		"out of range": postpilotv1.QualityMetric(99),
+	if err := save(&postpilotv1.SavePostGenerationOptionsRequest{
+		TargetLength: i32(1500), TagCount: i32(7), UseMemory: &yes, Field: &cafe,
+		QualityRules: ticks(postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION, postpilotv1.QualityMetric_QUALITY_METRIC_TITLE_SATURATION, postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	full := read()
+	if want := []postpilotv1.QualityMetric{postpilotv1.QualityMetric_QUALITY_METRIC_TITLE_SATURATION, postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION}; full.GetTargetLength() != 1500 || full.GetTagCount() != 7 || !full.GetUseMemory() ||
+		!reflect.DeepEqual(full.GetQualityRules(), want) || full.GetField() != cafe {
+		t.Fatalf("saved = %+v", full)
+	}
+
+	refused := func(name string, req *postpilotv1.SavePostGenerationOptionsRequest, code connect.Code, reason string) {
+		t.Helper()
+		before := read()
+		err := save(req)
+		if connect.CodeOf(err) != code || postAppErrorDetail(t, err).GetReason() != reason {
+			t.Errorf("%s = %v, want %v %s", name, err, code, reason)
+		}
+		if after := read(); !proto.Equal(after, before) {
+			t.Errorf("%s: a refused save changed the post: %+v", name, after)
+		}
+	}
+	changed := func() *postpilotv1.SavePostGenerationOptionsRequest {
+		return &postpilotv1.SavePostGenerationOptionsRequest{TargetLength: i32(900), TagCount: i32(3), UseMemory: &no, QualityRules: ticks(), Field: &none}
+	}
+	for name, drop := range map[string]func(*postpilotv1.SavePostGenerationOptionsRequest){
+		"no tag_count":     func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.TagCount = nil },
+		"no use_memory":    func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.UseMemory = nil },
+		"no quality_rules": func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.QualityRules = nil },
+		"no field":         func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.Field = nil },
+		"target_length 0":  func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.TargetLength = i32(0) },
 	} {
-		_, err := options(&postpilotv1.QualityRuleTicks{Metrics: []postpilotv1.QualityMetric{
-			postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION, metric,
-		}}, count(9))
-		if connect.CodeOf(err) != connect.CodeInvalidArgument || postAppErrorDetail(t, err).GetReason() != "POST_QUALITY_RULE_INVALID" {
-			t.Fatalf("%s = %v", name, err)
-		}
+		req := changed()
+		drop(req)
+		refused(name, req, connect.CodeInvalidArgument, "POST_CONTENT_INVALID")
 	}
-	got, err := h.GetPost(ctx, connect.NewRequest(&postpilotv1.GetPostRequest{Slug: slug}))
-	if err != nil || got.Msg.GetPost().GetTagCount() != 7 || len(got.Msg.GetPost().GetQualityRules()) != 0 {
-		t.Fatalf("a refused save applied an option: %+v, %v", got.Msg.GetPost(), err)
+	for name, field := range map[string]postpilotv1.BlogField{"a number no build names": postpilotv1.BlogField(99), "a 분야 the product does not list": postpilotv1.BlogField_BLOG_FIELD_PETS} {
+		req := changed()
+		req.Field = &field
+		refused(name, req, connect.CodeNotFound, "POST_FIELD_NOT_FOUND")
+	}
+	for name, metric := range map[string]postpilotv1.QualityMetric{"tick UNSPECIFIED": postpilotv1.QualityMetric_QUALITY_METRIC_UNSPECIFIED, "tick 99": postpilotv1.QualityMetric(99)} {
+		req := changed()
+		req.QualityRules = ticks(postpilotv1.QualityMetric_QUALITY_METRIC_COMPOSITION, metric)
+		refused(name, req, connect.CodeInvalidArgument, "POST_QUALITY_RULE_INVALID")
+	}
+
+	// No target_length is natural length, no metrics clears the ticks, UNSPECIFIED is 없음.
+	if err := save(&postpilotv1.SavePostGenerationOptionsRequest{TagCount: i32(4), UseMemory: &no, QualityRules: ticks(), Field: &none}); err != nil {
+		t.Fatal(err)
+	}
+	if cleared := read(); cleared.TargetLength != nil || len(cleared.GetQualityRules()) != 0 || cleared.GetField() != none || cleared.GetTagCount() != 4 {
+		t.Fatalf("cleared = %+v", cleared)
 	}
 }

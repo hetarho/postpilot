@@ -2,11 +2,10 @@
 //
 // This one is NOT `shared/lib/autosave` (T266), and deliberately: the clip settings' queue and
 // the block editor's are a debounce around one payload, while this queue is a serial channel for
-// five things at once — the text, and the voice, 템플릿, 분야 and target-language ASSIGNMENTS,
-// each with its own waiters, its own "what the server holds" baseline and its own
-// taken-back-on-refusal rule — and it re-keys itself mid-flight when the first save mints the
-// slug. Folding that into the shared machine would move post rules into `shared/lib` rather than
-// share a machine.
+// four things at once — the text, and the voice, 템플릿 and target-language ASSIGNMENTS, each with
+// its own waiters, its own "what the server holds" baseline and its own taken-back-on-refusal
+// rule — and it re-keys itself mid-flight when the first save mints the slug. Folding that into
+// the shared machine would move post rules into `shared/lib` rather than share a machine.
 // What it does share: `SaveState`, the `AUTOSAVE_*` timing and the state vocabulary.
 //
 // It lives here rather than inside the hook because the text belongs to the user, not to
@@ -67,9 +66,6 @@ export type SendDraft = (
   voiceId: string | undefined,
   templateId: string | undefined,
   targetLanguage: ContentLanguage | undefined,
-  /** The 분야, the 템플릿's mechanism exactly: undefined keeps, '' clears, an id assigns; on a
-   *  create it is sent only when one was chosen (POST-82). */
-  fieldId?: string | undefined,
 ) => Promise<string>
 
 export interface DraftQueueHandle {
@@ -93,9 +89,6 @@ export interface DraftQueueHandle {
    *  before the post exists the choice rides along with the create, and afterwards it is sent
    *  at once so a delayed title save cannot revert a newer selection. */
   assignTemplate: (templateId: string) => Promise<void>
-  /** Records the post's 분야, '' for 없음, the 템플릿's shape: riding the create before the post
-   *  exists, sent at once afterwards, and taken back when refused (POST-82). */
-  assignField: (fieldId: string) => Promise<void>
   /** Records the voice this draft is written in. For a draft with no post yet that is all
    *  it does — the create carries it. For an existing post it is a reassignment: sent at
    *  once, and the promise reports that one save's outcome. A refused reassignment is taken
@@ -125,10 +118,6 @@ interface TemplateWaiter extends FlushWaiter {
   templateId: string
 }
 
-interface FieldWaiter extends FlushWaiter {
-  fieldId: string
-}
-
 interface TargetLanguageWaiter extends FlushWaiter {
   targetLanguage: ContentLanguage
 }
@@ -154,10 +143,6 @@ interface Queue {
   /** The 템플릿 the server is known to hold. Empty means 없음 — which is also the value a post
    *  starts at, so unlike the voice there is no "not known yet" state to distinguish. */
   savedTemplateId: string
-  /** The 분야 the editor wants, '' for 없음, and the one the server is known to hold — '' until
-   *  the post exists, like the 템플릿. */
-  fieldId: string
-  savedFieldId: string
   /** The target the editor wants and the target the server is known to hold. */
   targetLanguage: ContentLanguage
   savedTargetLanguage: ContentLanguage | undefined
@@ -187,7 +172,6 @@ interface Queue {
   /** Callers of `assignVoice` waiting for their reassignment to land. */
   voiceWaiters: VoiceWaiter[]
   templateWaiters: TemplateWaiter[]
-  fieldWaiters: FieldWaiter[]
   targetLanguageWaiters: TargetLanguageWaiter[]
 }
 
@@ -289,18 +273,6 @@ function templateToSend(queue: Queue): string | undefined {
   return templateDirty(queue) ? queue.templateId : undefined
 }
 
-/** True while the editor's 분야 differs from what the server holds. */
-function fieldDirty(queue: Queue): boolean {
-  return Boolean(queue.slug) && queue.fieldId !== queue.savedFieldId
-}
-
-/** What a request carries for the 분야, the 템플릿's rule: on a create 없음 sends nothing, and on
- *  an existing post the value goes only while it is dirty, where '' means clear. */
-function fieldToSend(queue: Queue): string | undefined {
-  if (!queue.slug) return queue.fieldId || undefined
-  return fieldDirty(queue) ? queue.fieldId : undefined
-}
-
 function targetLanguageDirty(queue: Queue): boolean {
   return Boolean(queue.slug) && queue.targetLanguage !== queue.savedTargetLanguage
 }
@@ -353,24 +325,6 @@ function rejectTemplateWaiters(queue: Queue, cause: unknown): void {
   const error = cause instanceof Error ? cause : new Error('template assignment failed')
   const waiters = queue.templateWaiters
   queue.templateWaiters = []
-  for (const waiter of waiters) waiter.reject(error)
-}
-
-function settleFieldWaiters(queue: Queue): void {
-  const waiting: FieldWaiter[] = []
-  for (const waiter of queue.fieldWaiters) {
-    if (waiter.fieldId === queue.savedFieldId) waiter.resolve()
-    else if (waiter.fieldId !== queue.fieldId)
-      waiter.reject(new Error('field assignment superseded'))
-    else waiting.push(waiter)
-  }
-  queue.fieldWaiters = waiting
-}
-
-function rejectFieldWaiters(queue: Queue, cause: unknown): void {
-  const error = cause instanceof Error ? cause : new Error('field assignment failed')
-  const waiters = queue.fieldWaiters
-  queue.fieldWaiters = []
   for (const waiter of waiters) waiter.reject(error)
 }
 
@@ -457,20 +411,12 @@ async function run(queue: Queue): Promise<void> {
   const sentVoice = voiceToSend(queue)
   const sentTemplate = templateToSend(queue)
   const sentTargetLanguage = targetLanguageToSend(queue)
-  const sentField = fieldToSend(queue)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send(
-      queue.slug,
-      sent,
-      sentVoice,
-      sentTemplate,
-      sentTargetLanguage,
-      sentField,
-    )
+    const slug = await queue.send(queue.slug, sent, sentVoice, sentTemplate, sentTargetLanguage)
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
@@ -479,7 +425,6 @@ async function run(queue: Queue): Promise<void> {
     queue.saved = { ...sent, answers: mergeAnswers(queue.saved.answers, sent.answers) }
     if (sentVoice !== undefined) queue.savedVoiceId = sentVoice
     if (sentTemplate !== undefined) queue.savedTemplateId = sentTemplate
-    if (sentField !== undefined) queue.savedFieldId = sentField
     if (sentTargetLanguage !== undefined) queue.savedTargetLanguage = sentTargetLanguage
     queue.everSaved = true
     const minted = !queue.slug && Boolean(slug)
@@ -491,16 +436,10 @@ async function run(queue: Queue): Promise<void> {
       sameDraft(queue.pending, sent) &&
       !voiceDirty(queue) &&
       !templateDirty(queue) &&
-      !fieldDirty(queue) &&
       !targetLanguageDirty(queue)
     ) {
       queue.pending = undefined
-    } else if (
-      voiceDirty(queue) ||
-      templateDirty(queue) ||
-      fieldDirty(queue) ||
-      targetLanguageDirty(queue)
-    ) {
+    } else if (voiceDirty(queue) || templateDirty(queue) || targetLanguageDirty(queue)) {
       // An assignment does not wait for a debounce: it is an action, not a keystroke.
       queue.pending ??= { ...sent }
       queue.urgent = true
@@ -523,7 +462,6 @@ async function run(queue: Queue): Promise<void> {
     settleFlushes(queue)
     settleVoiceWaiters(queue)
     settleTemplateWaiters(queue)
-    settleFieldWaiters(queue)
     settleTargetLanguageWaiters(queue)
   } catch (cause) {
     // Swallowed rather than rethrown: every caller is a timer or a teardown handler with
@@ -548,13 +486,6 @@ async function run(queue: Queue): Promise<void> {
       rejectTemplateWaiters(queue, cause)
     }
 
-    if (sentField !== undefined && queue.slug) {
-      // The 템플릿's rule: a refused 분야 is an answer (an unknown id, a published post), and
-      // retrying it with every save would keep the title from ever landing again.
-      queue.fieldId = queue.savedFieldId
-      rejectFieldWaiters(queue, cause)
-    }
-
     if (sentTargetLanguage !== undefined && queue.slug) {
       queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
       rejectTargetLanguageWaiters(queue, cause)
@@ -571,11 +502,9 @@ async function run(queue: Queue): Promise<void> {
       queue.urgent = false
       queue.voiceId = queue.savedVoiceId
       queue.templateId = queue.savedTemplateId
-      queue.fieldId = queue.savedFieldId
       queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
       rejectVoiceWaiters(queue, cause)
       rejectTemplateWaiters(queue, cause)
-      rejectFieldWaiters(queue, cause)
       rejectTargetLanguageWaiters(queue, cause)
       clearTimers(queue)
       publish(queue)
@@ -590,7 +519,6 @@ async function run(queue: Queue): Promise<void> {
       !wantsPost(queue) &&
       !voiceDirty(queue) &&
       !templateDirty(queue) &&
-      !fieldDirty(queue) &&
       !targetLanguageDirty(queue)
     ) {
       // Typed back to what the server holds while this attempt was out — there is nothing
@@ -634,8 +562,6 @@ export function attachDraftQueue(options: {
   voiceId: string
   /** The 템플릿 the post is assigned to as this editor was told, '' for 없음. */
   templateId: string
-  /** The post's 분야 as this editor was told, '' for 없음 — which is also what omitting it means. */
-  fieldId?: string
   /** Concrete on both new and existing editors; a new draft sends it only when it is created. */
   targetLanguage: ContentLanguage
   send: SendDraft
@@ -661,9 +587,6 @@ export function attachDraftQueue(options: {
       // '' either way: an existing post with no template and a draft with no post both hold
       // 없음, so the create's "send only when chosen" rule needs no extra state.
       savedTemplateId: options.slug ? options.templateId : '',
-      fieldId: options.fieldId ?? '',
-      // The same rule as the 템플릿: '' is 없음 both for a post with none and a draft with no post.
-      savedFieldId: options.slug ? (options.fieldId ?? '') : '',
       targetLanguage: options.targetLanguage,
       savedTargetLanguage: options.slug ? options.targetLanguage : undefined,
       everSaved: false,
@@ -682,7 +605,6 @@ export function attachDraftQueue(options: {
       flushWaiters: [],
       voiceWaiters: [],
       templateWaiters: [],
-      fieldWaiters: [],
       targetLanguageWaiters: [],
     }
     queues.set(key, queue)
@@ -709,7 +631,6 @@ export function attachDraftQueue(options: {
         !wantsPost(attached) &&
         !voiceDirty(attached) &&
         !templateDirty(attached) &&
-        !fieldDirty(attached) &&
         !targetLanguageDirty(attached)
       ) {
         // Typed back to what the server holds. Leaving "저장 대기 중" or "다시 시도 중" on
@@ -776,22 +697,6 @@ export function attachDraftQueue(options: {
       publish(attached)
       return new Promise<void>((resolve, reject) => {
         attached.templateWaiters.push({ templateId, resolve, reject })
-        sendNow(attached)
-      })
-    },
-
-    assignField: (fieldId) => {
-      if (attached.discarded) return Promise.reject(new Error('session ended'))
-      attached.fieldId = fieldId
-      // Before the post exists the choice rides along with the create — including a create
-      // already in flight, which `run` follows up the moment it lands.
-      if (!attached.slug || fieldId === attached.savedFieldId) return Promise.resolve()
-      // The assignment goes out on its own request, with the newest known text, so a delayed
-      // title save cannot revert a newer choice.
-      attached.pending ??= { ...(attached.sending ?? attached.saved) }
-      publish(attached)
-      return new Promise<void>((resolve, reject) => {
-        attached.fieldWaiters.push({ fieldId, resolve, reject })
         sendNow(attached)
       })
     },
@@ -877,8 +782,6 @@ function discardQueue(queue: Queue, reason: string): void {
   queue.voiceWaiters = []
   for (const waiter of queue.templateWaiters) waiter.reject(new Error(reason))
   queue.templateWaiters = []
-  for (const waiter of queue.fieldWaiters) waiter.reject(new Error(reason))
-  queue.fieldWaiters = []
   for (const waiter of queue.targetLanguageWaiters) waiter.reject(new Error(reason))
   queue.targetLanguageWaiters = []
 }

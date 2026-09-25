@@ -89,21 +89,31 @@ func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	// The ticks are present when the message is: an empty one clears them. A tick the enum does
-	// not name is refused before anything in the request is applied.
-	var qualityRules *[]string
-	if ticks := req.Msg.GetQualityRules(); ticks != nil {
-		ids := make([]string, 0, len(ticks.GetMetrics()))
-		for _, metric := range ticks.GetMetrics() {
-			id, ok := qualityRuleFromProto(metric)
-			if !ok {
-				return nil, toConnectError("save post generation options", post.ErrQualityRuleInvalid)
-			}
-			ids = append(ids, id)
-		}
-		qualityRules = &ids
+	m := req.Msg
+	// A whole set (POST-89): the domain set has no absence to express, so a request missing a
+	// member is malformed and refused at the edge with nothing written. Only target_length's
+	// absence is a value, natural length.
+	if m.TagCount == nil || m.UseMemory == nil || m.QualityRules == nil || m.Field == nil {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "incomplete generation options", postpilotv1.FailureReason_POST_CONTENT_INVALID, nil)
 	}
-	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount), req.Msg.UseMemory, qualityRules)
+	// Required; an empty message clears them. A tick the enum does not name is refused before
+	// anything in the request is applied.
+	ids := make([]string, 0, len(m.QualityRules.GetMetrics()))
+	for _, metric := range m.QualityRules.GetMetrics() {
+		id, ok := qualityRuleFromProto(metric)
+		if !ok {
+			return nil, toConnectError("save post generation options", post.ErrQualityRuleInvalid)
+		}
+		ids = append(ids, id)
+	}
+	field, ok := rpcserver.BlogFieldFromProto(*m.Field)
+	if !ok {
+		return nil, toConnectError("save post generation options", post.ErrFieldNotFound)
+	}
+	saved, err := h.svc.SaveGenerationOptions(ctx, userID, m.GetSlug(), post.GenerationOptionsSet{
+		TargetLength: optionalTargetLength(m.TargetLength), TagCount: int(*m.TagCount), UseMemory: *m.UseMemory,
+		QualityRules: ids, Field: field,
+	})
 	if err != nil {
 		return nil, toConnectError("save post generation options", err)
 	}

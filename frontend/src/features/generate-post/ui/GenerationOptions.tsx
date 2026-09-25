@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
 import {
-  type GenerationOptionValues,
+  type GenerationOptionsSet,
   POST_TAG_COUNT_MAX,
   POST_TAG_COUNT_MIN,
   POST_TARGET_LENGTH_DEFAULT,
@@ -21,57 +21,79 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
+import {
+  changedFrom,
+  draftFromSet,
+  lengthValid,
+  setFromDraft,
+  tagsValid,
+  type RunOptionsDraft,
+} from '../model/run-options-form'
 
-/** 목표 분량 and 태그 개수 — the parts of the writing brief that are validated numbers rather than
- *  choices, so they keep one explicit save while their neighbours in the brief apply on selection.
- *  The length is opt-in (unticked is natural length); the tag count is always a number (POST-63).
+type FormMember = Pick<GenerationOptionsSet, 'useMemory' | 'qualityRules' | 'field'>
+
+/** What the brief widget's controls read and change inside the form: the three run options that
+ *  are choices rather than numbers. `disabled` holds them on a published post and while the save
+ *  is out; `jobRunning` is for the one control a running job holds too (the ticks). */
+export interface RunOptionsForm {
+  values: FormMember
+  change: (patch: Partial<FormMember>) => void
+  disabled: boolean
+  jobRunning: boolean
+}
+
+/** The writing brief's run options as ONE form saved by its 저장 (POST-89): 목표 분량 and 태그 개수
+ *  here, then whatever the brief renders into `children` (발행 글 점검, 분야, 기억 사용). A tick, a
+ *  chip or a typed number sends nothing; 저장 sends the whole set in one request and closes the
+ *  brief once it lands, and closing without it discards the change. The form is seeded once, from
+ *  the saved set, so a refetch while the brief is open never throws away what the user typed.
  *
  *  It renders as a form BODY, with no surface of its own: the brief widget owns the overlay it
  *  sits in (`widgets/generation-brief`), and a popover inside a popover is not a shape. */
 export function GenerationOptions({
   slug,
-  targetLength,
-  tagCount,
-  disabled,
+  saved,
+  locked,
+  jobRunning,
   onSaved,
   onClose,
+  children,
 }: {
   slug: string
-  targetLength?: number
-  tagCount: number
-  disabled: boolean
-  onSaved: (values: GenerationOptionValues) => void
+  saved: GenerationOptionsSet
+  /** A published post (POST-86): the whole form and 저장 are held. */
+  locked: boolean
+  /** A job is running: the numbers and the ticks are held, 분야 and 기억 사용 stay usable. */
+  jobRunning: boolean
+  onSaved: (set: GenerationOptionsSet) => void
   /** Dismisses the surface this sits in, on 취소 and on a landed save. */
   onClose: () => void
+  children?: (form: RunOptionsForm) => ReactNode
 }) {
   const { t } = useTranslation(['posts', 'common'])
   const save = useGenerationOptions()
-  const [enabled, setEnabled] = useState(targetLength !== undefined)
-  const [value, setValue] = useState(targetLength?.toString() ?? '')
-  const [tags, setTags] = useState(String(tagCount))
-  const parsed = Number(value)
-  const lengthValid =
-    !enabled ||
-    (Number.isInteger(parsed) &&
-      parsed >= POST_TARGET_LENGTH_MIN &&
-      parsed <= POST_TARGET_LENGTH_MAX)
-  const parsedTags = Number(tags)
-  const tagsValid =
-    tags !== '' &&
-    Number.isInteger(parsedTags) &&
-    parsedTags >= POST_TAG_COUNT_MIN &&
-    parsedTags <= POST_TAG_COUNT_MAX
-  const valid = lengthValid && tagsValid
+  const [draft, setDraft] = useState<RunOptionsDraft>(() => draftFromSet(saved))
+  const pending = save.isPending
+  const update = (patch: Partial<RunOptionsDraft>) =>
+    setDraft((current) => ({ ...current, ...patch }))
+  const lengthOk = lengthValid(draft)
+  const tagsOk = tagsValid(draft)
+  const canSave = !locked && !pending && changedFrom(draft, saved)
+  const numbersDisabled = locked || jobRunning || pending
+  const form: RunOptionsForm = {
+    values: { useMemory: draft.useMemory, qualityRules: draft.qualityRules, field: draft.field },
+    change: update,
+    disabled: locked || pending,
+    jobRunning,
+  }
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault()
-        if (!valid) return
-        const next: GenerationOptionValues = {
-          targetLength: enabled ? parsed : undefined,
-          tagCount: parsedTags,
-        }
+        // The same condition as the button's, so Enter cannot send a second request.
+        if (!canSave) return
+        const next = setFromDraft(draft)
         void save
           .save(slug, next)
           .then(() => {
@@ -88,20 +110,23 @@ export function GenerationOptions({
         })}
       >
         <Checkbox
-          checked={enabled}
-          disabled={disabled}
+          checked={draft.lengthOn}
+          disabled={numbersDisabled}
           // Ticking the box reveals the field with a usable number ALREADY in it. Revealing an
           // empty one puts a range error under a control nobody has touched yet, and asks the
           // user to invent a character count before they have any reason to have one. A value
           // they typed earlier outranks the default, so unticking and reticking never loses it.
           onChange={(event) => {
-            setEnabled(event.target.checked)
-            if (event.target.checked && !value) setValue(String(POST_TARGET_LENGTH_DEFAULT))
+            const on = event.target.checked
+            update({
+              lengthOn: on,
+              length: on && !draft.length ? String(POST_TARGET_LENGTH_DEFAULT) : draft.length,
+            })
           }}
         />
         {t('generation.options.useTarget', { ns: 'posts' })}
       </label>
-      {enabled && (
+      {draft.lengthOn && (
         <div className="mt-3">
           <FieldLabel htmlFor={`generation-target-${slug}`}>
             {t('generation.options.target', { ns: 'posts' })}
@@ -111,13 +136,13 @@ export function GenerationOptions({
             type="number"
             min={POST_TARGET_LENGTH_MIN}
             max={POST_TARGET_LENGTH_MAX}
-            value={value}
-            disabled={disabled}
-            onChange={(event) => setValue(event.target.value)}
-            aria-invalid={!lengthValid || undefined}
+            value={draft.length}
+            disabled={numbersDisabled}
+            onChange={(event) => update({ length: event.target.value })}
+            aria-invalid={!lengthOk || undefined}
             className="mt-1"
           />
-          {!lengthValid && (
+          {!lengthOk && (
             <FieldMessage className="mt-1">
               {t('generation.options.range', {
                 ns: 'posts',
@@ -139,13 +164,13 @@ export function GenerationOptions({
           type="number"
           min={POST_TAG_COUNT_MIN}
           max={POST_TAG_COUNT_MAX}
-          value={tags}
-          disabled={disabled}
-          onChange={(event) => setTags(event.target.value)}
-          aria-invalid={!tagsValid || undefined}
+          value={draft.tags}
+          disabled={numbersDisabled}
+          onChange={(event) => update({ tags: event.target.value })}
+          aria-invalid={!tagsOk || undefined}
           className="mt-1"
         />
-        {!tagsValid && (
+        {!tagsOk && (
           <FieldMessage className="mt-1">
             {t('generation.options.tagCountRange', {
               ns: 'posts',
@@ -155,6 +180,7 @@ export function GenerationOptions({
           </FieldMessage>
         )}
       </div>
+      {children && <div className="mt-4 grid grid-cols-1 gap-4 *:min-w-0">{children(form)}</div>}
       {save.error && (
         <Notice tone="danger" role="alert" className="mt-2">
           <AppFailureMessage failure={appFailureFromConnect(save.error)} />
@@ -164,12 +190,7 @@ export function GenerationOptions({
         <Button type="button" variant="ghost" onClick={onClose}>
           {t('action.cancel', { ns: 'common' })}
         </Button>
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={disabled || !valid}
-          pending={save.isPending}
-        >
+        <Button type="submit" variant="secondary" disabled={!canSave} pending={pending}>
           {t('action.save', { ns: 'common' })}
         </Button>
       </div>

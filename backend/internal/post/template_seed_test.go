@@ -45,7 +45,7 @@ func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 
 	// The author types over the seeded values, and the template is not consulted again.
 	typed := 1200
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil, nil); err != nil {
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength, s.TagCount = &typed, 3 })); err != nil {
 		t.Fatal(err)
 	}
 	kept, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2", Memo: created.Memo})
@@ -89,7 +89,7 @@ func TestOnlyAnAssignmentSeeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	typed := 1200
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil, nil); err != nil {
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength, s.TagCount = &typed, 3 })); err != nil {
 		t.Fatal(err)
 	}
 

@@ -9,7 +9,6 @@ import { useTemplates } from '@/entities/template'
 import { discardContentQueue, useCaretHandoff } from '@/features/edit-post-content'
 import { DeletePostButton } from '@/features/delete-post'
 import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
-import { PostFieldSelect } from '@/features/select-post-field'
 import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
 import {
   TemplateAnswerFields,
@@ -73,7 +72,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const [memo, setMemo] = useState(opening.memo)
 
   const assignments = useDraftAssignments(post, defaultVoiceId)
-  const { voiceId, templateId, fieldId, targetLanguage } = assignments
+  const { voiceId, templateId, targetLanguage } = assignments
 
   // The template's data fields, as ① renders them. They are derived from the SELECTED template's
   // body and the post's stored answers, with the local edits laid over the top — the queue owns
@@ -128,7 +127,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
     answers: lockedAnswers ?? answers,
     voiceId,
     templateId,
-    fieldId,
     targetLanguage,
     onMinted: (slug) => {
       caret.stash(slug)
@@ -177,16 +175,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       onChange={(label, change) => setAnswerEdits(toAnswerPatch(withAnswer(fields, label, change)))}
     />
   )
-  // The 분야 is ①'s field, not the brief's: it is what the post is about, and the brief stays the
-  // generation options (POST-51's stated exception). A published post's lock is T339's one reason.
-  const fieldPicker = (
-    <PostFieldSelect
-      value={fieldId}
-      disabled={locked}
-      onSelect={post ? autosave.assignField : assignments.setFieldId}
-    />
-  )
-
   const dockHeader = (
     <EditorDockHeader
       ref={briefRef}
@@ -200,9 +188,9 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       onVoiceSelect={post ? autosave.reassign : assignments.setVoiceId}
       onTemplateSelect={post ? autosave.assignTemplate : assignments.setTemplateId}
       onTargetLanguageSelect={post ? autosave.assignTargetLanguage : assignments.setTargetLanguage}
-      onBriefSaved={(values) => {
-        brief.setTargetLength(values.targetLength)
-        brief.setTagCount(values.tagCount)
+      onBriefSaved={(set) => {
+        brief.setTargetLength(set.targetLength)
+        brief.setTagCount(set.tagCount)
       }}
       refusal={briefRefusal}
       onBriefClosed={() => setBriefRefusal(undefined)}
@@ -306,7 +294,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           titleField={titleField}
           memoField={memoField}
           answerFields={answerFieldsPanel}
-          fieldPicker={fieldPicker}
           dockHeader={dockHeader}
           onOpenBrief={openBriefFor}
           targetLength={brief.targetLength}
@@ -322,8 +309,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {titleField}
           {memoField}
           {answerFieldsPanel}
-          {/* Before the photos, and with no 기억 사용 to share its row: that needs a slug. */}
-          <div className="mt-6">{fieldPicker}</div>
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           <EditorVoiceWarning ownerId={ownerId} voice={assignments.voice} />
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the

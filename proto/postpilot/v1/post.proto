@@ -322,9 +322,8 @@ message ReobserveSelection {
   repeated string files = 1;
 }
 
-// The quality rules ticked on the writing brief (POST-81). A MESSAGE for ReobserveSelection's
-// reason: presence is the contract. Absent keeps the saved ticks, present replaces them, and
-// present with no `metrics` clears them.
+// The quality rules ticked on the writing brief (POST-81). A MESSAGE so presence is visible:
+// SavePostGenerationOptions requires it, and present with no metrics clears the ticks.
 message QualityRuleTicks {
   repeated QualityMetric metrics = 1;
 }
@@ -383,8 +382,10 @@ message SavePostDraftRequest {
   // changes nothing, and nothing here ever deletes an answer. Clearing one is an empty
   // `text`, which the enqueue reads the same way it reads a switched-off field.
   repeated TemplateAnswer template_answers = 7;
-  // Presence decides the meaning, as for template_id: absent keeps the stored 분야 (what
-  // ordinary autosave sends), UNSPECIFIED clears it to 없음, and any other value assigns it.
+  // Kept for tabs built before the brief saved the 분야 (POST-89); the editor now sends it in
+  // SavePostGenerationOptions and never here. Presence decides the meaning, as for
+  // template_id: absent keeps the stored 분야, UNSPECIFIED clears it to 없음, and any other
+  // value assigns it.
   optional BlogField field = 8;
 }
 
@@ -401,19 +402,25 @@ message SavePostContentRequest {
 
 message SavePostContentResponse { Post post = 1; }
 
+// The writing brief's run options, saved together by its 저장 (POST-89). A whole set: every
+// member names the next value. tag_count, use_memory, quality_rules and field are required,
+// and a request missing one is refused (POST_CONTENT_INVALID) with nothing written, so no save
+// can keep a stale member or drop one it forgot. target_length is the one member whose absence
+// is a value: natural length (POST-20), always meant, since the brief sends its whole form.
 message SavePostGenerationOptionsRequest {
   string slug = 1;
+  // Absent is natural length; a present value must be positive (POST_CONTENT_INVALID).
   optional int32 target_length = 2;
-  // Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
-  // The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
+  // Required; 1–10 (POST_TAG_COUNT_INVALID).
   optional int32 tag_count = 3;
-  // Presence-aware like tag_count: absent keeps the stored flag, a value replaces it. It is
-  // a generation option, so it rides this save rather than the draft's — and it changes no
-  // status, revision, baseline or learning eligibility (MEM-18, POST-71).
+  // Required (MEM-18, POST-71).
   optional bool use_memory = 4;
-  // Message presence decides (see QualityRuleTicks): absent keeps the saved ticks, present
-  // replaces them, and present and empty clears them.
+  // Required. Present with no metrics clears the ticks; a metric the enum does not name is
+  // POST_QUALITY_RULE_INVALID.
   QualityRuleTicks quality_rules = 5;
+  // Required. UNSPECIFIED is 없음; a number this build does not name, or a 분야 the product does
+  // not list, is POST_FIELD_NOT_FOUND (POST-82).
+  optional BlogField field = 6;
 }
 message SavePostGenerationOptionsResponse { Post post = 1; }
 

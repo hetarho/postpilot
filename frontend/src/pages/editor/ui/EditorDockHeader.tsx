@@ -1,8 +1,7 @@
 import { forwardRef } from 'react'
 import { isTerminal } from '@/entities/generation-job'
-import type { PostDraft } from '@/entities/post'
+import type { GenerationOptionsSet, PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
-import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import type { GenerationMode } from '@/features/generate-post'
@@ -33,7 +32,7 @@ export const EditorDockHeader = forwardRef<
     onVoiceSelect: (id: string) => void
     onTemplateSelect: (id: string) => void
     onTargetLanguageSelect: (language: ContentLanguage) => void
-    onBriefSaved: (values: { targetLength?: number; tagCount: number }) => void
+    onBriefSaved: (set: GenerationOptionsSet) => void
     /** The run a press was refused for, which the brief marks the missing fields of; `count`
      *  grows with every refused press. */
     refusal?: { mode: GenerationMode; count: number }
@@ -85,33 +84,26 @@ export const EditorDockHeader = forwardRef<
       refusal={refusal}
       onClose={onBriefClosed}
       locked={locked}
+      // The run options, one form saved by the brief's 저장 (POST-89), only for a saved post: a
+      // draft has no slug to save against. The two numbers come from the brief's mirror, which is
+      // also what 생성 sends; the other three from the post. A running job holds the numbers and
+      // the ticks, which it has already frozen; 분야 and 기억 사용 are read at the next enqueue.
       options={
         post
           ? {
+              ownerId,
               slug: post.slug,
-              targetLength,
-              tagCount,
-              // The length and the tag count are the fields in the brief a running job has already
-              // frozen; the others are still worth changing for the NEXT run, which is why only
-              // these grey.
-              disabled: jobRunning,
+              saved: {
+                targetLength,
+                tagCount,
+                useMemory: post.useMemory,
+                qualityRules: post.qualityRules,
+                field: post.field,
+              },
+              jobRunning,
               onSaved: onBriefSaved,
             }
           : undefined
-      }
-      // Only for a saved post: a draft has no slug to tick against (POST-81). A running job or the
-      // publish lock holds the boxes, with no reason of their own — ① says it once.
-      qualityRules={
-        post ? (
-          <QualityRuleChoices
-            ownerId={ownerId}
-            slug={post.slug}
-            targetLanguage={targetLanguage}
-            ticked={post.qualityRules}
-            targetLength={targetLength}
-            disabled={jobRunning || locked}
-          />
-        ) : undefined
       }
     />
   )

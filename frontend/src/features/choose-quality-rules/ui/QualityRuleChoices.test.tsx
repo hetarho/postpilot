@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { QualityMetricId } from '@/entities/quality'
 import { Popover } from '@/shared/ui'
-import type { FakePostsOptions } from '@/test/posts'
 import type { FakeQualityReading } from '@/test/quality'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import { QualityRuleChoices } from './QualityRuleChoices'
@@ -53,57 +52,76 @@ const READINGS: FakeQualityReading[] = [
   },
 ]
 
+/** The form the rows report into: it holds the set and records every report, the way the brief's
+ *  run-options form does (POST-89). */
+function Harness({
+  initial,
+  targetLanguage = 'ko',
+  disabled,
+  reported,
+}: {
+  initial: QualityMetricId[]
+  targetLanguage?: 'ko' | 'en'
+  disabled: boolean
+  reported: QualityMetricId[][]
+}) {
+  const [value, setValue] = useState(initial)
+  return (
+    <QualityRuleChoices
+      ownerId="alice"
+      slug="post"
+      targetLanguage={targetLanguage}
+      value={value}
+      onChange={(next) => {
+        reported.push(next)
+        setValue(next)
+      }}
+      disabled={disabled}
+    />
+  )
+}
+
 function renderChoices(
   props: { ticked?: QualityMetricId[]; disabled?: boolean } = {},
   backend: {
-    posts?: Partial<FakePostsOptions>
     readings?: FakeQualityReading[]
     accountFails?: boolean
     wrap?: (ui: ReactNode) => ReactNode
   } = {},
 ) {
   const calls: string[] = []
-  const qualityRuleSaves: NonNullable<FakePostsOptions['qualityRuleSaves']> = []
-  const generationOptionSaves: Array<number | undefined> = []
+  const reported: QualityMetricId[][] = []
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
     calls,
-    posts: {
-      posts: [{ slug: 'post', targetLength: 1500 }],
-      qualityRuleSaves,
-      generationOptionSaves,
-      ...backend.posts,
-    },
+    posts: { posts: [{ slug: 'post', targetLength: 1500 }] },
     quality: {
       accounts: { post: backend.readings ?? READINGS },
       accountFails: backend.accountFails,
     },
   })
-  const ui = (
-    <QualityRuleChoices
-      ownerId="alice"
-      slug="post"
-      targetLanguage="ko"
-      ticked={props.ticked ?? []}
-      targetLength={1500}
+  const harness = (targetLanguage: 'ko' | 'en' = 'ko') => (
+    <Harness
+      initial={props.ticked ?? []}
+      targetLanguage={targetLanguage}
       disabled={props.disabled ?? false}
+      reported={reported}
     />
   )
+  const ui = harness()
   const view = render(backend.wrap ? backend.wrap(ui) : ui, {
     wrapper: withProviders(transport, createTestQueryClient()),
   })
-  return { calls, qualityRuleSaves, generationOptionSaves, view }
+  return { calls, reported, view, harness }
 }
 
 const m1Box = () => screen.findByRole('checkbox', { name: /^제목 도배율 42%/ })
 const saves = (calls: string[]) => calls.filter((call) => call === 'SavePostGenerationOptions')
 
 describe('the brief quality rows', () => {
-  it('saves a tick at once with the whole set and the current length', async () => {
+  it('reports a tick as the whole next set, in catalogue order, and saves nothing', async () => {
     const user = userEvent.setup()
-    const { qualityRuleSaves, generationOptionSaves } = renderChoices({
-      ticked: ['cross_post_phrases'],
-    })
+    const { calls, reported } = renderChoices({ ticked: ['cross_post_phrases'] })
 
     const box = await m1Box()
     expect(box).not.toBeChecked()
@@ -111,53 +129,34 @@ describe('the brief quality rows', () => {
     await user.click(box)
 
     expect(box).toBeChecked()
-    // The whole set in catalogue order, whatever was pressed first, and the brief's length so
-    // the tick cannot clear it.
-    await waitFor(() =>
-      expect(qualityRuleSaves).toEqual([['title_saturation', 'cross_post_phrases']]),
-    )
-    expect(generationOptionSaves).toEqual([1500])
+    // The whole set in catalogue order, whatever was pressed first; the brief's 저장 sends it.
+    expect(reported).toEqual([['title_saturation', 'cross_post_phrases']])
+    expect(saves(calls)).toEqual([])
   })
 
-  it('unticks', async () => {
+  it('reports an untick', async () => {
     const user = userEvent.setup()
-    const { qualityRuleSaves } = renderChoices({ ticked: ['title_saturation'] })
+    const { reported } = renderChoices({ ticked: ['title_saturation'] })
 
     const box = await m1Box()
     expect(box).toBeChecked()
     await user.click(box)
 
     expect(box).not.toBeChecked()
-    // Present with none, which is what clears the saved set.
-    await waitFor(() => expect(qualityRuleSaves).toEqual([[]]))
-  })
-
-  it('puts a refused tick back and says so', async () => {
-    const user = userEvent.setup()
-    renderChoices({}, { posts: { optionSaveFails: true } })
-
-    const box = await m1Box()
-    await user.click(box)
-
-    expect(
-      await screen.findByText('설정을 저장하지 못했어요. 다시 눌러 주세요.'),
-    ).toBeInTheDocument()
-    expect(box).not.toBeChecked()
+    expect(reported).toEqual([[]])
   })
 
   // R23: a stored tick whose metric is no longer over band has no box, and it stays in the set;
   // the server ignores it until the metric crosses again.
-  it('keeps a stored within-band tick in the next save', async () => {
+  it('keeps a stored within-band tick in the set it reports', async () => {
     const user = userEvent.setup()
-    const { qualityRuleSaves } = renderChoices({ ticked: ['in_post_repetition'] })
+    const { reported } = renderChoices({ ticked: ['in_post_repetition'] })
 
     expect(await screen.findByText(/반복 5%/)).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /글 안 반복/ })).toBeNull()
     await user.click(await m1Box())
 
-    await waitFor(() =>
-      expect(qualityRuleSaves).toEqual([['title_saturation', 'in_post_repetition']]),
-    )
+    expect(reported).toEqual([['title_saturation', 'in_post_repetition']])
   })
 
   // QUAL-13, QUAL-14: the tip says what is counted and why the row appeared, then quotes the
@@ -217,20 +216,11 @@ describe('the brief quality rows', () => {
 
   // The rule texts are rendered in the post's target language, so a switch is a new read.
   it('reads the aggregate again when the target language changes', async () => {
-    const { calls, view } = renderChoices()
+    const { calls, view, harness } = renderChoices()
     await m1Box()
     expect(calls.filter((call) => call === 'GetAccountQuality')).toHaveLength(1)
 
-    view.rerender(
-      <QualityRuleChoices
-        ownerId="alice"
-        slug="post"
-        targetLanguage="en"
-        ticked={[]}
-        targetLength={1500}
-        disabled={false}
-      />,
-    )
+    view.rerender(harness('en'))
     await waitFor(() =>
       expect(calls.filter((call) => call === 'GetAccountQuality')).toHaveLength(2),
     )

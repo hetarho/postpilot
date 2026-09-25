@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 )
 
@@ -29,6 +30,8 @@ type fakeStore struct {
 	beforeGuardedWrite func(slug string)
 	// fieldAssignments counts AssignField calls, so a test can say a save named no 분야 write.
 	fieldAssignments int
+	// optionWrites counts SaveGenerationOptions calls, so a test can say one save was one write.
+	optionWrites int
 }
 
 // guarded runs the race hook for one guarded write.
@@ -260,21 +263,23 @@ func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content 
 	return true, nil
 }
 
-func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, qualityRules []string, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, set GenerationOptionsSet, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.optionWrites++
 	existing, ok := f.posts[slug]
 	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
-	existing.TargetLength = targetLength
-	existing.TagCount = tagCount
-	existing.UseMemory = useMemory
+	existing.TargetLength = set.TargetLength
+	existing.TagCount = set.TagCount
+	existing.UseMemory = set.UseMemory
+	existing.Field = set.Field
 	// NULL for none, like the column: an empty set reads back as nil.
 	existing.QualityRules = nil
-	if len(qualityRules) > 0 {
-		existing.QualityRules = append([]string(nil), qualityRules...)
+	if len(set.QualityRules) > 0 {
+		existing.QualityRules = append([]string(nil), set.QualityRules...)
 	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
@@ -831,4 +836,17 @@ func nilIfEmpty(values []string) []string {
 		return nil
 	}
 	return append([]string(nil), values...)
+}
+
+// optionsSet is the post's stored run options with change applied: a whole-set save overwrites
+// all five, so a test that means one member sends the rest as they stand (POST-89).
+func optionsSet(t *testing.T, svc *Service, userID, slug string, change func(*GenerationOptionsSet)) GenerationOptionsSet {
+	t.Helper()
+	found, err := svc.Get(context.Background(), userID, slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := found.GenerationOptions()
+	change(&set)
+	return set
 }

@@ -513,7 +513,7 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 }
 
 const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, updated_at = ?
+UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, field = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published'
 `
 
@@ -522,20 +522,22 @@ type SavePostGenerationOptionsParams struct {
 	TagCount     sql.NullInt64
 	UseMemory    int64
 	QualityRules sql.NullString
+	Field        sql.NullString
 	UpdatedAt    string
 	Slug         string
 	UserID       string
 }
 
-// use_memory and the quality ticks ride this save rather than the draft's: they are options of
-// the RUN, and like the two numbers beside them they change no status, revision or baseline
-// (MEM-18, POST-82). quality_rules is JSON, NULL for none.
+// The writing brief's run options, written as one set (POST-89): every column is the next value.
+// They are options of the RUN, so they change no status, revision or baseline (MEM-18, POST-82).
+// quality_rules is JSON, NULL for none; field is the blog field, NULL for none.
 func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGenerationOptionsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostGenerationOptions,
 		arg.TargetLength,
 		arg.TagCount,
 		arg.UseMemory,
 		arg.QualityRules,
+		arg.Field,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

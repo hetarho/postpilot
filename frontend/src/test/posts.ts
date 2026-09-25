@@ -109,6 +109,17 @@ export interface FakeDraftSave {
   templateAnswers: Array<{ label: string; text: string; enabled: boolean }>
 }
 
+/** One SavePostGenerationOptions as it arrived: every member undefined when absent, which only an
+ *  old tab's partial save leaves out (POST-89). `field` is recorded like `FakeDraftSave.field`. */
+export interface FakeOptionsSave {
+  slug: string
+  targetLength: number | undefined
+  tagCount: number | undefined
+  useMemory: boolean | undefined
+  qualityRules: QualityMetricId[] | undefined
+  field: string | undefined
+}
+
 /** One clip on a fake post. Only the fields a test actually varies; the rest are filled with
  *  the same defaults the server would produce. */
 export interface FakeVideoRow {
@@ -193,26 +204,19 @@ export interface FakePostsOptions {
   today?: string
   /** Records every procedure the transport was asked for. */
   calls?: string[]
-  /** Records target-length option saves, including an explicit clear as undefined. */
-  generationOptionSaves?: Array<number | undefined>
-  /** Every SavePostGenerationOptions' `use_memory`, so a test can prove the checkbox autosaves
-   *  the flag — and that an ordinary option save carries none (MEM-18). */
-  memoryOptionSaves?: Array<boolean | undefined>
-  /** Refuse every option save, so the checkbox's failure path is testable. */
+  /** Every SavePostGenerationOptions as it arrived, so a test can prove one 저장 was one request
+   *  carrying the whole set (POST-89). */
+  optionSaves?: FakeOptionsSave[]
+  /** Holds SavePostGenerationOptions in flight, after it is recorded, until a test releases it. */
+  optionSaveGate?: Promise<void>
+  /** Refuse every option save, so the form's failure path is testable. */
   optionSaveFails?: boolean
-  /** Every SavePostGenerationOptions' tick set as sent, undefined when the member was absent. */
-  qualityRuleSaves?: Array<QualityMetricId[] | undefined>
-  /** Every SavePostGenerationOptions' tag count as sent, undefined when absent. */
-  tagCountSaves?: Array<number | undefined>
   /** The voices a post may be assigned to. Omitted, only `DEFAULT_POST_VOICE` exists. */
   voices?: FakePostVoice[]
   /** The 템플릿 a post may be assigned to. Omitted, the account has none. */
   templates?: FakePostTemplate[]
   /** Records every SavePostDraft's slug and assignment presence. */
   draftSaves?: FakeDraftSave[]
-  /** Refuse every SavePostDraft that carries a 분야 as POST_FIELD_NOT_FOUND, the way an id a
-   *  server does not know is answered, so a refused pick is testable. */
-  refuseField?: boolean
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
   /** Every SavePostContent as it arrived: slug, the revision it expected and the content. */
@@ -531,7 +535,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // does not know is 404 before anything is written.
     let field = existing?.field ?? ProtoBlogField.UNSPECIFIED
     if (req.field !== undefined) {
-      if (options.refuseField || blogFieldFromProto(req.field) === undefined)
+      if (blogFieldFromProto(req.field) === undefined)
         throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
       field = req.field
     }
@@ -662,26 +666,43 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     return create(SavePostContentResponseSchema, { post: toProto(row) })
   })
 
-  rpc(PostService.method.savePostGenerationOptions, (req) => {
+  rpc(PostService.method.savePostGenerationOptions, async (req) => {
     calls?.push('SavePostGenerationOptions')
-    if (options.optionSaveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    options.generationOptionSaves?.push(req.targetLength)
-    options.memoryOptionSaves?.push(req.useMemory)
-    options.tagCountSaves?.push(req.tagCount)
     const ticks = req.qualityRules?.metrics.map(qualityMetricFromProto)
-    options.qualityRuleSaves?.push(ticks?.filter((id): id is QualityMetricId => id !== undefined))
+    options.optionSaves?.push({
+      slug: req.slug,
+      targetLength: req.targetLength,
+      tagCount: req.tagCount,
+      useMemory: req.useMemory,
+      qualityRules: ticks?.filter((id): id is QualityMetricId => id !== undefined),
+      field:
+        req.field === undefined ? undefined : (blogFieldFromProto(req.field) ?? `?${req.field}`),
+    })
+    await options.optionSaveGate
+    if (options.optionSaveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     refuseIfPublished(row)
-    // Validated before anything is written, like the server: an unknown metric changes nothing.
+    // A whole set, like the server: a request missing a member is refused before anything is
+    // written (POST-89). Only the length's absence is a value, natural length.
+    if (
+      req.tagCount === undefined ||
+      req.useMemory === undefined ||
+      req.qualityRules === undefined ||
+      req.field === undefined
+    )
+      throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
+    // Validated before anything is written: an unknown metric or 분야 changes nothing.
     if (ticks?.some((id) => id === undefined))
       throw connectAppError('POST_QUALITY_RULE_INVALID', Code.InvalidArgument)
+    if (blogFieldFromProto(req.field) === undefined)
+      throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
     row.targetLength = req.targetLength
-    // Presence-aware like the server: absent keeps the stored count.
-    if (req.tagCount !== undefined) row.tagCount = req.tagCount
-    if (req.useMemory !== undefined) row.useMemory = req.useMemory
-    // Present replaces the whole set, deduplicated, and present with none clears it.
-    if (req.qualityRules !== undefined) row.qualityRules = [...new Set(req.qualityRules.metrics)]
+    row.tagCount = req.tagCount
+    row.useMemory = req.useMemory
+    // Deduplicated; present with none clears the ticks.
+    row.qualityRules = [...new Set(req.qualityRules.metrics)]
+    row.field = req.field
     return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
   })
 

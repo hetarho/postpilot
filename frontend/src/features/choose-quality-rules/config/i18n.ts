@@ -12,7 +12,6 @@ export const i18n = {
       source: 'PostPilot에 저장된 발행 글에서 센 값이에요.',
       explain: '{{metric}} 설명',
       adds: '체크하면 다음 생성에 이 규칙이 더해져요:',
-      saveFailed: '설정을 저장하지 못했어요. 다시 눌러 주세요.',
       loading: '발행 글을 세는 중이에요.',
       failed: '발행 글 점검을 불러오지 못했어요.',
       values: {
@@ -55,7 +54,6 @@ export const i18n = {
       source: 'Counted from the published posts PostPilot holds.',
       explain: 'About {{metric}}',
       adds: 'Ticking it adds this rule to the next generation:',
-      saveFailed: 'Couldn’t save that. Please press it again.',
       loading: 'Counting your published posts…',
       failed: 'Couldn’t load the published post check.',
       values: {

@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGenerationOptions } from '@/entities/post'
 import {
   QUALITY_METRICS,
   absentValueLabel,
@@ -15,26 +13,19 @@ import {
   type QualityValues,
 } from '@/entities/quality'
 import type { ContentLanguage } from '@/shared/api'
-import {
-  Badge,
-  Button,
-  Checkbox,
-  FieldMessage,
-  Toggletip,
-  Typography,
-  typographyStyles,
-} from '@/shared/ui'
+import { Badge, Button, Checkbox, Toggletip, Typography, typographyStyles } from '@/shared/ui'
 
 interface QualityRuleChoicesProps {
   ownerId: string
   slug: string
   /** The post's target language: each rule text is rendered in it, so it keys the read. */
   targetLanguage: ContentLanguage
-  /** The ticks the post has saved, in catalogue order. */
-  ticked: readonly QualityMetricId[]
-  /** The brief's current length, resent with every tick so a tick cannot clear it. */
-  targetLength?: number
-  /** A running job or a published post: the boxes hold still, and the tips stay readable. */
+  /** The ticks the form holds, in catalogue order. */
+  value: readonly QualityMetricId[]
+  /** Reports the whole next set; the brief's 저장 saves it with the rest (POST-89). */
+  onChange: (next: QualityMetricId[]) => void
+  /** A running job, a published post or a save in flight: the boxes hold still, and the tips
+   *  stay readable. */
   disabled: boolean
 }
 
@@ -51,42 +42,29 @@ const share = (value: number | undefined) =>
 const measure = (value: number | undefined) =>
   value === undefined ? absentValueLabel() : formatMeasure(value)
 
-/** ①'s rows over the account's 발행됨 posts, one per metric in its four states (POST-81). Only an
- *  over-band row offers a tick, which adds that metric's rule text to the next run; the enqueue
- *  reads the saved ticks, so nothing here touches a start request. The client mirrors no number
- *  and judges nothing: every value, edge and verdict is the server's. */
+/** The brief's rows over the account's 발행됨 posts, one per metric in its four states (POST-81).
+ *  Only an over-band row offers a tick, which adds that metric's rule text to the next run. The
+ *  rows are a control of the run-options form: a tick reports the next set and saves nothing, and
+ *  the enqueue reads what the brief's 저장 saved. The client mirrors no number and judges nothing:
+ *  every value, edge and verdict is the server's. */
 export function QualityRuleChoices({
   ownerId,
   slug,
   targetLanguage,
-  ticked,
-  targetLength,
+  value,
+  onChange,
   disabled,
 }: QualityRuleChoicesProps) {
   const { t } = useTranslation(['posts', 'common'])
   const { quality, isError, isFetching, refetch } = useAccountQuality(ownerId, slug, targetLanguage)
-  const options = useGenerationOptions()
-  // The press is answered at once and the post stays the truth: a refused save puts the boxes
-  // back to what the post says (the UseMemoriesField rule).
-  const [optimistic, setOptimistic] = useState<QualityMetricId[] | null>(null)
-  const [failed, setFailed] = useState(false)
-  const current = optimistic ?? ticked
 
-  const toggle = async (metric: QualityMetricId, on: boolean) => {
-    const chosen = new Set(current)
+  const toggle = (metric: QualityMetricId, on: boolean) => {
+    const chosen = new Set(value)
     if (on) chosen.add(metric)
     else chosen.delete(metric)
     // The whole set, in catalogue order: a stored tick with no box now is kept, and the server
     // ignores it while its metric is within band.
-    const next = QUALITY_METRICS.filter((id) => chosen.has(id))
-    setFailed(false)
-    setOptimistic(next)
-    try {
-      await options.saveQualityRules(slug, next, targetLength)
-    } catch {
-      setOptimistic(null)
-      setFailed(true)
-    }
+    onChange(QUALITY_METRICS.filter((id) => chosen.has(id)))
   }
 
   // The value(s) a row shows beside the name. M4's three context values are ②'s, not the brief's.
@@ -181,9 +159,9 @@ export function QualityRuleChoices({
             })}
           >
             <Checkbox
-              checked={current.includes(id)}
-              disabled={disabled || options.isPending}
-              onChange={(event) => void toggle(id, event.target.checked)}
+              checked={value.includes(id)}
+              disabled={disabled}
+              onChange={(event) => toggle(id, event.target.checked)}
             />
             <span className="min-w-0 break-words">
               {name} {values(reading)}
@@ -230,11 +208,6 @@ export function QualityRuleChoices({
           <Typography variant="meta" as="p" className="text-content-secondary mt-2">
             {bandsAreOwnLine()} {t('qualityRules.source', { ns: 'posts' })}
           </Typography>
-          {failed && (
-            <FieldMessage className="mt-2">
-              {t('qualityRules.saveFailed', { ns: 'posts' })}
-            </FieldMessage>
-          )}
         </>
       ) : isError ? (
         <Typography variant="meta" as="p" className="text-content-secondary mt-2">

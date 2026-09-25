@@ -229,7 +229,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	seedPost(t, s, "editable", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
 	target1400 := 1400
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, 4, false, nil, testNow); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", post.GenerationOptionsSet{TargetLength: &target1400, TagCount: 4}, testNow); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
@@ -243,7 +243,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
 	}
 	target1500 := 1500
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, 7, false, nil, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", post.GenerationOptionsSet{TargetLength: &target1500, TagCount: 7}, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("option update: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "editable", "alice", "machine", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
@@ -753,13 +753,13 @@ func TestFieldAndTicksRoundTrip(t *testing.T) {
 		t.Fatalf("created = %q %q, %v", got.Field, got.QualityRules, err)
 	}
 	ticks := []string{post.QualityRuleTitleSaturation, post.QualityRuleComposition}
-	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", nil, 4, false, ticks, testNow.Add(time.Minute)); err != nil || !ok {
+	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", post.GenerationOptionsSet{TagCount: 4, QualityRules: ticks, Field: "cafe"}, testNow.Add(time.Minute)); err != nil || !ok {
 		t.Fatalf("save ticks: %v, %v", ok, err)
 	}
 	if got, _ := s.GetPost(ctx, "p"); !reflect.DeepEqual(got.QualityRules, ticks) {
 		t.Fatalf("ticks = %q", got.QualityRules)
 	}
-	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", nil, 4, false, []string{}, testNow.Add(2*time.Minute)); err != nil || !ok {
+	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", post.GenerationOptionsSet{TagCount: 4, QualityRules: []string{}, Field: "cafe"}, testNow.Add(2*time.Minute)); err != nil || !ok {
 		t.Fatalf("clear ticks: %v, %v", ok, err)
 	}
 	var isNull bool
@@ -774,6 +774,18 @@ func TestFieldAndTicksRoundTrip(t *testing.T) {
 	}
 	if got, _ := s.GetPost(ctx, "p"); got.Field != "" {
 		t.Fatalf("cleared field reads %q", got.Field)
+	}
+	// The brief's options save writes the 분야 too, and "" stores NULL (POST-89).
+	cafe := "cafe"
+	if ok, err := s.AssignField(ctx, "p", "alice", &cafe, testNow.Add(4*time.Minute)); err != nil || !ok {
+		t.Fatalf("assign field: %v, %v", ok, err)
+	}
+	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", post.GenerationOptionsSet{TagCount: 4}, testNow.Add(5*time.Minute)); err != nil || !ok {
+		t.Fatalf("options clear field: %v, %v", ok, err)
+	}
+	var fieldNull bool
+	if err := handle.Reader.QueryRow(`SELECT field IS NULL FROM posts WHERE slug = 'p'`).Scan(&fieldNull); err != nil || !fieldNull {
+		t.Fatalf("an options save's empty field stored NULL = %v, %v", fieldNull, err)
 	}
 }
 

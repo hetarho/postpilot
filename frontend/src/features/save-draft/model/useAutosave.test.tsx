@@ -23,7 +23,6 @@ function setup(
         memo: string
         voice: { id: string }
         targetLanguage: 'ko' | 'en'
-        field?: string
       }
     | undefined,
   backend: FakePostsOptions = {},
@@ -183,18 +182,6 @@ describe('useAutosave', () => {
       templateAnswers: [],
       targetLanguage: undefined,
     })
-  })
-
-  // POST-82: an opened post's 분야 is what the server holds, whatever the caller's own value says,
-  // so 없음 on a post that has one is a clear rather than no change.
-  it('takes an opened post’s own 분야 as what the server holds', async () => {
-    const { result, draftSaves } = setup(
-      { ...EXISTING, field: 'cafe' },
-      { posts: [{ ...EXISTING, field: 'cafe' }] },
-    )
-
-    await act(() => result.current.assignField(''))
-    expect(draftSaves.map((save) => save.field)).toEqual([''])
   })
 
   it('reports a refused reassignment to the caller', async () => {

@@ -1716,9 +1716,8 @@ func (x *ReobserveSelection) GetFiles() []string {
 	return nil
 }
 
-// The quality rules ticked on the writing brief (POST-81). A MESSAGE for ReobserveSelection's
-// reason: presence is the contract. Absent keeps the saved ticks, present replaces them, and
-// present with no `metrics` clears them.
+// The quality rules ticked on the writing brief (POST-81). A MESSAGE so presence is visible:
+// SavePostGenerationOptions requires it, and present with no metrics clears the ticks.
 type QualityRuleTicks struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Metrics       []QualityMetric        `protobuf:"varint,1,rep,packed,name=metrics,proto3,enum=postpilot.v1.QualityMetric" json:"metrics,omitempty"`
@@ -2083,8 +2082,10 @@ type SavePostDraftRequest struct {
 	// changes nothing, and nothing here ever deletes an answer. Clearing one is an empty
 	// `text`, which the enqueue reads the same way it reads a switched-off field.
 	TemplateAnswers []*TemplateAnswer `protobuf:"bytes,7,rep,name=template_answers,json=templateAnswers,proto3" json:"template_answers,omitempty"`
-	// Presence decides the meaning, as for template_id: absent keeps the stored 분야 (what
-	// ordinary autosave sends), UNSPECIFIED clears it to 없음, and any other value assigns it.
+	// Kept for tabs built before the brief saved the 분야 (POST-89); the editor now sends it in
+	// SavePostGenerationOptions and never here. Presence decides the meaning, as for
+	// template_id: absent keeps the stored 분야, UNSPECIFIED clears it to 없음, and any other
+	// value assigns it.
 	Field         *BlogField `protobuf:"varint,8,opt,name=field,proto3,enum=postpilot.v1.BlogField,oneof" json:"field,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2324,20 +2325,26 @@ func (x *SavePostContentResponse) GetPost() *Post {
 	return nil
 }
 
+// The writing brief's run options, saved together by its 저장 (POST-89). A whole set: every
+// member names the next value. tag_count, use_memory, quality_rules and field are required,
+// and a request missing one is refused (POST_CONTENT_INVALID) with nothing written, so no save
+// can keep a stale member or drop one it forgot. target_length is the one member whose absence
+// is a value: natural length (POST-20), always meant, since the brief sends its whole form.
 type SavePostGenerationOptionsRequest struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Slug         string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
-	TargetLength *int32                 `protobuf:"varint,2,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
-	// Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
-	// The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Slug  string                 `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
+	// Absent is natural length; a present value must be positive (POST_CONTENT_INVALID).
+	TargetLength *int32 `protobuf:"varint,2,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	// Required; 1–10 (POST_TAG_COUNT_INVALID).
 	TagCount *int32 `protobuf:"varint,3,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
-	// Presence-aware like tag_count: absent keeps the stored flag, a value replaces it. It is
-	// a generation option, so it rides this save rather than the draft's — and it changes no
-	// status, revision, baseline or learning eligibility (MEM-18, POST-71).
+	// Required (MEM-18, POST-71).
 	UseMemory *bool `protobuf:"varint,4,opt,name=use_memory,json=useMemory,proto3,oneof" json:"use_memory,omitempty"`
-	// Message presence decides (see QualityRuleTicks): absent keeps the saved ticks, present
-	// replaces them, and present and empty clears them.
-	QualityRules  *QualityRuleTicks `protobuf:"bytes,5,opt,name=quality_rules,json=qualityRules,proto3" json:"quality_rules,omitempty"`
+	// Required. Present with no metrics clears the ticks; a metric the enum does not name is
+	// POST_QUALITY_RULE_INVALID.
+	QualityRules *QualityRuleTicks `protobuf:"bytes,5,opt,name=quality_rules,json=qualityRules,proto3" json:"quality_rules,omitempty"`
+	// Required. UNSPECIFIED is 없음; a number this build does not name, or a 분야 the product does
+	// not list, is POST_FIELD_NOT_FOUND (POST-82).
+	Field         *BlogField `protobuf:"varint,6,opt,name=field,proto3,enum=postpilot.v1.BlogField,oneof" json:"field,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2405,6 +2412,13 @@ func (x *SavePostGenerationOptionsRequest) GetQualityRules() *QualityRuleTicks {
 		return x.QualityRules
 	}
 	return nil
+}
+
+func (x *SavePostGenerationOptionsRequest) GetField() BlogField {
+	if x != nil && x.Field != nil {
+		return *x.Field
+	}
+	return BlogField_BLOG_FIELD_UNSPECIFIED
 }
 
 type SavePostGenerationOptionsResponse struct {
@@ -3498,18 +3512,20 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\acontent\x18\x02 \x01(\v2\x19.postpilot.v1.PostContentR\acontent\x12+\n" +
 	"\x11expected_revision\x18\x03 \x01(\x03R\x10expectedRevisionJ\x04\b\x04\x10\x05\"A\n" +
 	"\x17SavePostContentResponse\x12&\n" +
-	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\x9a\x02\n" +
+	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xd8\x02\n" +
 	" SavePostGenerationOptionsRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12(\n" +
 	"\rtarget_length\x18\x02 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
 	"\ttag_count\x18\x03 \x01(\x05H\x01R\btagCount\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"use_memory\x18\x04 \x01(\bH\x02R\tuseMemory\x88\x01\x01\x12C\n" +
-	"\rquality_rules\x18\x05 \x01(\v2\x1e.postpilot.v1.QualityRuleTicksR\fqualityRulesB\x10\n" +
+	"\rquality_rules\x18\x05 \x01(\v2\x1e.postpilot.v1.QualityRuleTicksR\fqualityRules\x122\n" +
+	"\x05field\x18\x06 \x01(\x0e2\x17.postpilot.v1.BlogFieldH\x03R\x05field\x88\x01\x01B\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
 	"_tag_countB\r\n" +
-	"\v_use_memory\"K\n" +
+	"\v_use_memoryB\b\n" +
+	"\x06_field\"K\n" +
 	"!SavePostGenerationOptionsResponse\x12&\n" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"V\n" +
 	"\x13FinalizePostRequest\x12\x12\n" +
@@ -3714,49 +3730,50 @@ var file_postpilot_v1_post_proto_depIdxs = []int32{
 	7,  // 37: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
 	10, // 38: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
 	18, // 39: postpilot.v1.SavePostGenerationOptionsRequest.quality_rules:type_name -> postpilot.v1.QualityRuleTicks
-	10, // 40: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
-	10, // 41: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
-	10, // 42: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
-	10, // 43: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
-	13, // 44: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
-	1,  // 45: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
-	11, // 46: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
-	12, // 47: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
-	24, // 48: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
-	26, // 49: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
-	28, // 50: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
-	30, // 51: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
-	32, // 52: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
-	34, // 53: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
-	36, // 54: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
-	38, // 55: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
-	40, // 56: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
-	42, // 57: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
-	44, // 58: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
-	46, // 59: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
-	19, // 60: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	21, // 61: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	15, // 62: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	25, // 63: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	27, // 64: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
-	29, // 65: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
-	31, // 66: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
-	33, // 67: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
-	35, // 68: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	37, // 69: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	39, // 70: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
-	41, // 71: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	43, // 72: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	45, // 73: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	47, // 74: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
-	20, // 75: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	22, // 76: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	16, // 77: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	63, // [63:78] is the sub-list for method output_type
-	48, // [48:63] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	2,  // 40: postpilot.v1.SavePostGenerationOptionsRequest.field:type_name -> postpilot.v1.BlogField
+	10, // 41: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
+	10, // 42: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
+	10, // 43: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
+	10, // 44: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
+	13, // 45: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
+	1,  // 46: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
+	11, // 47: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
+	12, // 48: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
+	24, // 49: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
+	26, // 50: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
+	28, // 51: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
+	30, // 52: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
+	32, // 53: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
+	34, // 54: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
+	36, // 55: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
+	38, // 56: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
+	40, // 57: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
+	42, // 58: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
+	44, // 59: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
+	46, // 60: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
+	19, // 61: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	21, // 62: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	15, // 63: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	25, // 64: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	27, // 65: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
+	29, // 66: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
+	31, // 67: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
+	33, // 68: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
+	35, // 69: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	37, // 70: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	39, // 71: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	41, // 72: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	43, // 73: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	45, // 74: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	47, // 75: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
+	20, // 76: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	22, // 77: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	16, // 78: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	64, // [64:79] is the sub-list for method output_type
+	49, // [49:64] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_post_proto_init() }

@@ -1,60 +1,28 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { qualityMetricToProto, type QualityMetricId } from '@/entities/quality/@x/post'
+import { blogFieldToProto } from '@/entities/blog-field/@x/post'
+import { qualityMetricToProto } from '@/entities/quality/@x/post'
 import { PostService } from '@/shared/api'
+import type { GenerationOptionsSet } from '../model/types'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
-/** The two per-post run options that are validated numbers rather than choices (POST-20, POST-63).
- *  `targetLength` undefined means natural length; `tagCount` is always a number. */
-export interface GenerationOptionValues {
-  targetLength?: number
-  tagCount: number
-}
-
+/** The writing brief's one save (POST-89). One request carries the whole set — natural length as
+ *  an absent `targetLength`, 없음 as a present UNSPECIFIED `field` — so no save can keep a stale
+ *  member or drop one it forgot. */
 export function useGenerationOptions() {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(PostService.method.savePostGenerationOptions)
   return {
     ...mutation,
-    save: async (slug: string, values: GenerationOptionValues) => {
+    save: async (slug: string, set: GenerationOptionsSet) => {
       const response = await mutation.mutateAsync({
         slug,
-        targetLength: values.targetLength,
-        tagCount: values.tagCount,
-      })
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, slug) }),
-        queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) }),
-      ])
-      return response
-    },
-    /** The memory opt-in (MEM-18, POST-71). It changes no status, revision or baseline, which is
-     *  why it autosaves on the toggle. `targetLength` rides along because it is the one member this
-     *  call does not read by presence: absent, the server stores natural length (POST-20), and the
-     *  toggle would clear 목표 글자 수. It is required, so no caller can forget it; `undefined` is
-     *  natural length. The tag count stays absent, which keeps it. */
-    saveUseMemory: async (slug: string, useMemory: boolean, targetLength: number | undefined) => {
-      const response = await mutation.mutateAsync({ slug, useMemory, targetLength })
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, slug) }),
-        queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) }),
-      ])
-      return response
-    },
-    /** The whole tick set, replacing the saved one (POST-81). `targetLength` rides along because
-     *  it is the one member this call does not read by presence: absent, the server stores natural
-     *  length, and a tick would clear 목표 글자 수. The tag count and the memory flag stay absent,
-     *  which keeps them. */
-    saveQualityRules: async (
-      slug: string,
-      metrics: readonly QualityMetricId[],
-      targetLength: number | undefined,
-    ) => {
-      const response = await mutation.mutateAsync({
-        slug,
-        targetLength,
-        qualityRules: { metrics: metrics.map(qualityMetricToProto) },
+        targetLength: set.targetLength,
+        tagCount: set.tagCount,
+        useMemory: set.useMemory,
+        qualityRules: { metrics: set.qualityRules.map(qualityMetricToProto) },
+        field: blogFieldToProto(set.field),
       })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, slug) }),

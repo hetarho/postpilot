@@ -35,38 +35,41 @@ func TestNormalizeQualityRules(t *testing.T) {
 	}
 }
 
-// POST-81: absent keeps the ticks, present replaces them, present and empty clears them, and a
-// set equal to the stored one in another order is the no-op the other options already are.
+// POST-81: the ticks in the next set replace them, an empty set clears them, and a set equal to
+// the stored one in another order is the no-op the other options already are.
 func TestTicksSaveKeepClearAndCollapse(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
 	clock := testNow
 	svc.now = func() time.Time { clock = clock.Add(time.Minute); return clock }
 	created := mustCreatePost(t, svc, alice, "제주")
-	ticks := func(ids ...string) *[]string { return &ids }
+	ticks := func(ids ...string) GenerationOptionsSet {
+		return optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.QualityRules = ids })
+	}
 
-	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, nil, ticks(QualityRuleComposition, QualityRuleTitleSaturation, QualityRuleComposition))
+	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, ticks(QualityRuleComposition, QualityRuleTitleSaturation, QualityRuleComposition))
 	if want := []string{QualityRuleTitleSaturation, QualityRuleComposition}; err != nil || !reflect.DeepEqual(saved.QualityRules, want) {
 		t.Fatalf("ticked = %q, %v; want %q", saved.QualityRules, err, want)
 	}
-	kept, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, nil, nil)
+	// The same ticks in the next set keep them.
+	kept, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) {}))
 	if err != nil || !reflect.DeepEqual(kept.QualityRules, saved.QualityRules) {
-		t.Fatalf("absent = %q, %v", kept.QualityRules, err)
+		t.Fatalf("kept = %q, %v", kept.QualityRules, err)
 	}
 
 	stamp := store.posts[created.Slug].UpdatedAt
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, nil, ticks(QualityRuleComposition, QualityRuleTitleSaturation)); err != nil {
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, ticks(QualityRuleComposition, QualityRuleTitleSaturation)); err != nil {
 		t.Fatal(err)
 	}
 	if !store.posts[created.Slug].UpdatedAt.Equal(stamp) {
 		t.Fatal("the same set in another order was written again")
 	}
 
-	replaced, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, nil, ticks(QualityRuleInPostRepetition))
+	replaced, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, ticks(QualityRuleInPostRepetition))
 	if err != nil || !reflect.DeepEqual(replaced.QualityRules, []string{QualityRuleInPostRepetition}) {
 		t.Fatalf("replaced = %q, %v", replaced.QualityRules, err)
 	}
-	cleared, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, nil, ticks())
+	cleared, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, ticks())
 	if err != nil || cleared.QualityRules != nil {
 		t.Fatalf("cleared = %q, %v", cleared.QualityRules, err)
 	}
@@ -78,9 +81,9 @@ func TestAnUnknownTickIsRefusedAndNothingLands(t *testing.T) {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "제주")
 	before := store.posts[created.Slug]
-	length, count, memory := 1200, 7, true
-	bad := []string{QualityRuleTitleSaturation, "score"}
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &length, &count, &memory, &bad); !errors.Is(err, ErrQualityRuleInvalid) {
+	length := 1200
+	bad := GenerationOptionsSet{TargetLength: &length, TagCount: 7, UseMemory: true, QualityRules: []string{QualityRuleTitleSaturation, "score"}}
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, bad); !errors.Is(err, ErrQualityRuleInvalid) {
 		t.Fatalf("err = %v, want ErrQualityRuleInvalid", err)
 	}
 	if after := store.posts[created.Slug]; !reflect.DeepEqual(after, before) {
@@ -96,7 +99,9 @@ func TestTicksAreAnOptionSave(t *testing.T) {
 	finalized := finalizedPost(t, svc, alice)
 	before := store.posts[finalized.Slug]
 	ticks := []string{QualityRuleTitleSaturation}
-	saved, err := svc.SaveGenerationOptions(ctx, alice, finalized.Slug, before.TargetLength, nil, nil, &ticks)
+	set := before.GenerationOptions()
+	set.QualityRules = ticks
+	saved, err := svc.SaveGenerationOptions(ctx, alice, finalized.Slug, set)
 	if err != nil || !reflect.DeepEqual(saved.QualityRules, ticks) {
 		t.Fatalf("ticks = %q, %v", saved.QualityRules, err)
 	}
@@ -107,22 +112,5 @@ func TestTicksAreAnOptionSave(t *testing.T) {
 	}
 	if _, err := svc.LearningSnapshot(ctx, alice, finalized.Slug); err != nil {
 		t.Fatalf("the post stopped being learnable: %v", err)
-	}
-}
-
-func TestATickSaveOnAPublishedPostIsLocked(t *testing.T) {
-	svc, store, _ := newTestService(t)
-	ctx := context.Background()
-	finalized := finalizedPost(t, svc, alice)
-	if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, firstAddress); err != nil {
-		t.Fatal(err)
-	}
-	before := store.posts[finalized.Slug]
-	ticks := []string{QualityRuleComposition}
-	if _, err := svc.SaveGenerationOptions(ctx, alice, finalized.Slug, nil, nil, nil, &ticks); !errors.Is(err, ErrPostPublished) {
-		t.Fatalf("err = %v, want ErrPostPublished", err)
-	}
-	if after := store.posts[finalized.Slug]; !reflect.DeepEqual(after, before) {
-		t.Fatalf("the lock let the ticks through: %+v", after)
 	}
 }

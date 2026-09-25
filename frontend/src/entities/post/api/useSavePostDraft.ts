@@ -53,9 +53,9 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
   // unset one is a real answer (없음). A `if (saved.template)` guard would make a clear
   // invisible until the next GetPost.
   post.template = saved.template ? clone(TemplateRefSchema, saved.template) : undefined
-  // Unconditional too: the response always reports the current 분야, and UNSPECIFIED is 없음, so
-  // a guard would hide a clear until the next GetPost (POST-82).
-  post.field = saved.field
+  // The 분야 is the brief's options save's now (POST-89), like the two numbers above: an ordinary
+  // autosave answers with the 분야 the row held when it was read, and installing that would roll
+  // back an options save that landed while it was out.
   // Unconditional for the same reason: the response always reports the post's whole answer
   // set, and a save that cleared one has to be visible before the next GetPost (POST-62).
   post.templateAnswers = saved.templateAnswers.map((answer) => clone(TemplateAnswerSchema, answer))

@@ -47,10 +47,10 @@ UPDATE posts SET content = ?, content_revision = content_revision + 1,
 WHERE slug = ? AND user_id = ? AND content_revision = ? AND status <> 'published';
 
 -- name: SavePostGenerationOptions :execrows
--- use_memory and the quality ticks ride this save rather than the draft's: they are options of
--- the RUN, and like the two numbers beside them they change no status, revision or baseline
--- (MEM-18, POST-82). quality_rules is JSON, NULL for none.
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, updated_at = ?
+-- The writing brief's run options, written as one set (POST-89): every column is the next value.
+-- They are options of the RUN, so they change no status, revision or baseline (MEM-18, POST-82).
+-- quality_rules is JSON, NULL for none; field is the blog field, NULL for none.
+UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, field = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published';
 
 -- Finalizing also copies the confirmed AI title into posts.title (spec/legacy/policy/posts.md). ONE

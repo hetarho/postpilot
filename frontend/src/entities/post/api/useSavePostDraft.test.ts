@@ -149,23 +149,19 @@ describe('applying a draft save response', () => {
     expect(moved.canFinalize).toBe(false)
   })
 
-  // POST-82: the response always reports the post's current 분야, and UNSPECIFIED is 없음 — so a
-  // guard on it would keep a clear invisible until the next GetPost.
-  it('takes the 분야 from every save, a clear included', () => {
-    const cachedWith = (field: ProtoBlogField) =>
-      create(GetPostResponseSchema, { post: create(PostSchema, { slug: 'post', field }) })
+  // POST-89: the 분야 is the brief's options save's, like the two numbers. A draft save answers
+  // with whatever 분야 the row held when it was read, so installing it could roll an options save
+  // back.
+  it('leaves the cached 분야 alone, like the other run options', () => {
+    const cached = create(GetPostResponseSchema, {
+      post: create(PostSchema, { slug: 'post', field: ProtoBlogField.CAFE }),
+    })
 
-    const assigned = applyingSavedDraft(
-      create(PostSchema, { slug: 'post', field: ProtoBlogField.CAFE }),
-      cachedWith(ProtoBlogField.UNSPECIFIED),
-    )
-    expect(assigned.field).toBe(ProtoBlogField.CAFE)
-
-    const cleared = applyingSavedDraft(
+    const saved = applyingSavedDraft(
       create(PostSchema, { slug: 'post', field: ProtoBlogField.UNSPECIFIED }),
-      cachedWith(ProtoBlogField.CAFE),
+      cached,
     )
-    expect(cleared.field).toBe(ProtoBlogField.UNSPECIFIED)
+    expect(saved.field).toBe(ProtoBlogField.CAFE)
   })
 
   it('uses the full response when a newly minted post has no cache entry yet', () => {

@@ -1,5 +1,11 @@
 export * from './config'
-export type { PostDraft, PostListItem, PostStatus, PostTemplateAnswer } from './model/types'
+export type {
+  GenerationOptionsSet,
+  PostDraft,
+  PostListItem,
+  PostStatus,
+  PostTemplateAnswer,
+} from './model/types'
 export {
   POST_STATUSES,
   displayTitle,
@@ -31,7 +37,6 @@ export { ContentRevisionConflictError, useSavePostContent } from './api/useSaveP
 export { useFinalizePost } from './api/useFinalizePost'
 export { useSavePublishedUrl } from './api/useSavePublishedUrl'
 export { parseNaverBlogUrl } from './model/published-url'
-export type { GenerationOptionValues } from './api/useGenerationOptions'
 export { useGenerationOptions } from './api/useGenerationOptions'
 export { usePostImagesCache } from './api/usePostImagesCache'
 export { useRefreshPostImages } from './api/useRefreshPostImages'

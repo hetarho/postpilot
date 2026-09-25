@@ -1,9 +1,10 @@
-import { forwardRef, type ReactNode } from 'react'
+import { forwardRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import type { ContentLanguage } from '@/shared/api'
 import { CandidatePairSelect } from '@/features/configure-model-pair'
-import { type GenerationOptionValues } from '@/entities/post'
+import type { GenerationOptionsSet } from '@/entities/post'
+import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import {
   GenerationOptions,
   useBriefIssues,
@@ -11,7 +12,9 @@ import {
   type GenerationMode,
 } from '@/features/generate-post'
 import { StageModelSelect } from '@/features/select-model'
+import { PostFieldSelect } from '@/features/select-post-field'
 import { PostLanguageSelect } from '@/features/select-post-language'
+import { UseMemoriesField } from '@/features/use-post-memories'
 import { Popover, Typography, type PopoverHandle } from '@/shared/ui'
 
 /** The brief's model fields in the order they are drawn, which is the order focus looks for the
@@ -36,24 +39,25 @@ interface GenerationBriefProps {
   /** A published post (POST-86): the post's own 글 언어 and options are shown and not changed.
    *  The model selects stay usable — they are the account's settings, not the post's. */
   locked?: boolean
-  /** Absent for a draft with no post yet: the options have no slug to save against. */
+  /** The run-options form. Absent for a draft with no post yet: the form has no slug to save
+   *  against, and appears after the draft's first save (POST-89). */
   options?: {
+    ownerId: string
     slug: string
-    targetLength?: number
-    tagCount: number
-    disabled: boolean
-    onSaved: (values: GenerationOptionValues) => void
+    saved: GenerationOptionsSet
+    /** A running job holds the numbers and the ticks; 분야 and 기억 사용 stay usable. */
+    jobRunning: boolean
+    onSaved: (set: GenerationOptionsSet) => void
   }
-  /** The 발행 글 점검 rows, under 목표 분량. A slot, so the page decides when they exist: a draft
-   *  with no post yet has none (POST-81). */
-  qualityRules?: ReactNode
 }
 
 /** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
- *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량 · 태그 개수 · 발행 글 점검.
+ *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어, each saving on its own, then the run options —
+ *  목표 분량 · 태그 개수 · 발행 글 점검 · 분야 · 기억 사용 — as ONE form saved by its 저장, and
+ *  discarded by any close without it (POST-89).
  *
- *  It is a WIDGET because it composes four different `features/*` slices and a feature may not
- *  import a sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
+ *  It is a WIDGET because it composes several `features/*` slices and a feature may not import a
+ *  sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
  *  each assignment still rides the draft autosave queue that lives above the step panels: an
  *  assignment made here cannot be lost to a step change any more than a title edit can.
  *
@@ -75,11 +79,14 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       onClose,
       locked = false,
       options,
-      qualityRules,
     },
     ref,
   ) {
     const { t } = useTranslation(['posts', 'common'])
+    // Every opening mounts a fresh run-options form, seeded from the saved set: bumped on every
+    // close, so a change the brief closed without is gone, including a reopen during a phone
+    // sheet's exit, while the sheet keeps its content mounted.
+    const [opening, setOpening] = useState(0)
     const label = t('generation.brief.title', { ns: 'posts' })
     // Read live: a field the user fixes here stops being marked the moment its save lands.
     const issues = useBriefIssues(refusal?.mode, photoCount, videoCount)
@@ -111,7 +118,10 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         align="end"
         phone="sheet"
         className="shrink-0"
-        onClose={onClose}
+        onClose={() => {
+          setOpening((count) => count + 1)
+          onClose?.()
+        }}
       >
         {(close) => (
           // `grid-cols-1` and not a bare `grid`: an IMPLICIT column is `auto`, which is floored at
@@ -154,17 +164,39 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
                   {t('generation.brief.length', { ns: 'posts' })}
                 </Typography>
                 <GenerationOptions
-                  key={`${options.slug}-${options.targetLength ?? 'natural'}-${options.tagCount}`}
+                  key={opening}
                   slug={options.slug}
-                  targetLength={options.targetLength}
-                  tagCount={options.tagCount}
-                  disabled={locked || options.disabled}
+                  saved={options.saved}
+                  locked={locked}
+                  jobRunning={options.jobRunning}
                   onSaved={options.onSaved}
                   onClose={close}
-                />
+                >
+                  {(form) => (
+                    <>
+                      <QualityRuleChoices
+                        ownerId={options.ownerId}
+                        slug={options.slug}
+                        targetLanguage={targetLanguage}
+                        value={form.values.qualityRules}
+                        onChange={(qualityRules) => form.change({ qualityRules })}
+                        disabled={form.disabled || form.jobRunning}
+                      />
+                      <PostFieldSelect
+                        value={form.values.field}
+                        onChange={(field) => form.change({ field })}
+                        disabled={form.disabled}
+                      />
+                      <UseMemoriesField
+                        checked={form.values.useMemory}
+                        onChange={(useMemory) => form.change({ useMemory })}
+                        disabled={form.disabled}
+                      />
+                    </>
+                  )}
+                </GenerationOptions>
               </div>
             )}
-            {qualityRules}
           </div>
         )}
       </Popover>

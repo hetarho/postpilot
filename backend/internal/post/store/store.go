@@ -279,18 +279,18 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	return n == 1, nil
 }
 
-func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, qualityRules []string, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, set post.GenerationOptionsSet, updatedAt time.Time) (bool, error) {
 	memory := int64(0)
-	if useMemory {
+	if set.UseMemory {
 		memory = 1
 	}
-	rules, err := marshalQualityRules(qualityRules)
+	rules, err := marshalQualityRules(set.QualityRules)
 	if err != nil {
 		return false, err
 	}
 	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
-		TargetLength: optionalInt64(targetLength), TagCount: sql.NullInt64{Int64: int64(tagCount), Valid: true},
-		UseMemory: memory, QualityRules: rules,
+		TargetLength: optionalInt64(set.TargetLength), TagCount: sql.NullInt64{Int64: int64(set.TagCount), Valid: true},
+		UseMemory: memory, QualityRules: rules, Field: optionalText(set.Field),
 		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {

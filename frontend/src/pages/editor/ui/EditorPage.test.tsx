@@ -17,6 +17,7 @@ import type { FakeGenerationStart } from '@/test/jobs'
 import {
   FAKE_STORAGE_ORIGIN,
   type FakeDraftSave,
+  type FakeOptionsSave,
   type FakePostRow,
   type FakePostsOptions,
 } from '@/test/posts'
@@ -832,7 +833,7 @@ describe('opening a post', () => {
       },
     })
     const brief = await openBrief(user)
-    await user.click(within(brief).getByRole('checkbox'))
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
     // The box arrives with the default already in it, so this is a replacement, not an entry.
     await user.clear(within(brief).getByLabelText('목표 글자 수'))
     await user.type(within(brief).getByLabelText('목표 글자 수'), '750')
@@ -868,7 +869,7 @@ describe('opening a post', () => {
     const brief = await openBrief(user)
     expect(within(brief).queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
 
-    await user.click(within(brief).getByRole('checkbox'))
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
     const field = within(brief).getByLabelText('목표 글자 수')
     expect(field).toHaveValue(1000)
     expect(field).not.toHaveAttribute('aria-invalid')
@@ -877,79 +878,46 @@ describe('opening a post', () => {
     // What the user typed outranks the default, so unticking and reticking never loses it.
     await user.clear(field)
     await user.type(field, '2400')
-    await user.click(within(brief).getByRole('checkbox'))
-    await user.click(within(brief).getByRole('checkbox'))
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
     expect(within(brief).getByLabelText('목표 글자 수')).toHaveValue(2400)
   })
 
   it('restores and explicitly clears a stored target length without starting generation', async () => {
     const calls: string[] = []
-    const generationOptionSaves: Array<number | undefined> = []
+    const optionSaves: FakeOptionsSave[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-memo', {
       user: USER,
       calls,
       posts: {
-        posts: [{ slug: '20260820-memo', targetLength: 1200 }],
-        generationOptionSaves,
+        posts: [{ slug: '20260820-memo', targetLength: 1200, tagCount: 6, useMemory: true }],
+        optionSaves,
       },
     })
 
     const dialog = await openBrief(user)
-    expect(within(dialog).getByRole('checkbox')).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: '목표 글자 수 사용' })).toBeChecked()
     expect(within(dialog).getByLabelText('목표 글자 수')).toHaveValue(1200)
     expect(calls).not.toContain('SavePostGenerationOptions')
 
-    await user.click(within(dialog).getByRole('checkbox'))
+    await user.click(within(dialog).getByRole('checkbox', { name: '목표 글자 수 사용' }))
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(generationOptionSaves).toEqual([undefined]))
+    // One whole set: natural length, and the post's other four as they stand.
+    await waitFor(() =>
+      expect(optionSaves).toEqual([
+        {
+          slug: '20260820-memo',
+          targetLength: undefined,
+          tagCount: 6,
+          useMemory: true,
+          qualityRules: [],
+          field: '',
+        },
+      ]),
+    )
     expect(calls).not.toContain('StartGeneration')
     expect(calls).not.toContain('StartWriteExperiment')
-  })
-
-  // POST-20 and MEM-18: ticking 기억 사용 is an option save of its own, and it resends the post's
-  // 목표 글자 수, so the number the brief saved survives the refetch that follows the toggle.
-  it('keeps 목표 글자 수 when 기억 사용 is ticked after it', async () => {
-    const calls: string[] = []
-    const generationOptionSaves: Array<number | undefined> = []
-    const memoryOptionSaves: Array<boolean | undefined> = []
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-memo', {
-      user: USER,
-      calls,
-      posts: {
-        calls,
-        posts: [{ slug: '20260820-memo' }],
-        generationOptionSaves,
-        memoryOptionSaves,
-      },
-    })
-
-    const brief = await openBrief(user)
-    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
-    await user.clear(within(brief).getByLabelText('목표 글자 수'))
-    await user.type(within(brief).getByLabelText('목표 글자 수'), '1500')
-    await user.click(within(brief).getByRole('button', { name: '저장' }))
-    // The brief closes once its save and the refetch behind it have landed.
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: BRIEF_TRIGGER })).toHaveAttribute(
-        'aria-expanded',
-        'false',
-      ),
-    )
-    expect(generationOptionSaves).toEqual([1500])
-
-    const reads = () => calls.filter((call) => call === 'GetPost').length
-    const before = reads()
-    await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
-    await waitFor(() => expect(memoryOptionSaves).toEqual([undefined, true]))
-    expect(generationOptionSaves).toEqual([1500, 1500])
-    await waitFor(() => expect(reads()).toBeGreaterThan(before))
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeEnabled())
-
-    const reopened = await openBrief(user)
-    expect(within(reopened).getByLabelText('목표 글자 수')).toHaveValue(1500)
-    expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeChecked()
   })
 
   // A8 (client half): 확정 copies the AI title into `posts.title`, and the editor still holds the
@@ -2815,10 +2783,21 @@ describe('the template data fields in ①', () => {
   })
 })
 
-// POST-82: ① picks the post's 분야 — the 템플릿's mechanism on the draft queue, placed with the
-// post's own material rather than in the brief (POST-51's stated exception, POST-54).
-describe('the post 분야', () => {
-  const AUTOSAVED = { timeout: 4_000 }
+/** The account's M1 over band, so the brief's quality rows offer a tick. */
+const OVER: FakeQualityReading[] = [
+  {
+    metric: 'title_saturation',
+    verdict: 'over_band',
+    minimum: 10,
+    publishedCount: 12,
+    ruleText: '제목마다 “성수 카페”를 반복하지 마세요.',
+    values: { share: 0.42, shareWarnAbove: 0.3 },
+  },
+]
+
+// POST-89: 분야 and 기억 사용 are run options, so they live in the writing brief with the other
+// three and save together by its 저장 — none of them is ①'s material (POST-54).
+describe('the brief run options', () => {
   const SLUG = '20260301-jeju'
   const WITH_FIELDS = [
     {
@@ -2830,18 +2809,16 @@ describe('the post 분야', () => {
   const POST_TEMPLATES = [{ id: 'template-review', name: '정보성 식당 리뷰' }]
   const following = (first: Node, second: Node) =>
     Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+  const m1 = () => screen.findByRole('checkbox', { name: /^제목 도배율 42%/ })
+  const briefClosed = () =>
+    waitFor(() =>
+      expect(screen.getByRole('button', { name: BRIEF_TRIGGER })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      ),
+    )
 
-  const fieldPicker = () => screen.findByRole('button', { name: /^분야 / })
-  async function pickField(user: ReturnType<typeof userEvent.setup>, name: string) {
-    const picker = await fieldPicker()
-    await waitFor(() => expect(picker).toBeEnabled())
-    await user.click(picker)
-    const chips = await screen.findByRole('group', { name: '분야' })
-    await user.click(within(chips).getByRole('button', { name }))
-    return picker
-  }
-
-  it('sits between the data fields and 기억 사용', async () => {
+  it('keeps 분야 and 기억 사용 out of ①, after the quality rows in the brief', async () => {
     const user = userEvent.setup()
     renderAppAt(`/posts/${SLUG}`, {
       user: USER,
@@ -2856,152 +2833,105 @@ describe('the post 분야', () => {
         templates: POST_TEMPLATES,
       },
       templates: { templates: WITH_FIELDS },
+      quality: { accounts: { [SLUG]: OVER } },
     })
 
-    const lastAnswer = await screen.findByLabelText('총평 별점')
-    // A post with no 분야 reads 없음, under a label a sighted user can read.
-    const picker = await screen.findByRole('button', { name: '분야 없음' })
-    expect(screen.getByText('분야', { selector: 'label' })).not.toHaveClass('sr-only')
-    // It carries its name and nothing else (owner decision 2026-09-25).
-    expect(picker).not.toHaveAccessibleDescription()
-    const memories = screen.getByRole('checkbox', { name: '기억 사용' })
-    expect(following(lastAnswer, picker)).toBe(true)
-    expect(following(picker, memories)).toBe(true)
+    // ① holds the post's material, and 분야 and 기억 사용 are not part of it.
+    expect(await screen.findByLabelText('총평 별점')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '분야' })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: '기억 사용' })).toBeNull()
 
-    // It is ①'s field, so the writing brief holds no 분야 of its own.
     const brief = await openBrief(user)
-    expect(within(brief).queryByRole('button', { name: /^분야/ })).toBeNull()
+    const tags = within(brief).getByLabelText('태그 개수')
+    const quality = await within(brief).findByText('발행 글 점검')
+    const field = within(brief).getByRole('group', { name: '분야' })
+    const memory = within(brief).getByRole('checkbox', { name: '기억 사용' })
+    const save = within(brief).getByRole('button', { name: '저장' })
+    expect(following(tags, quality)).toBe(true)
+    expect(following(quality, field)).toBe(true)
+    expect(following(field, memory)).toBe(true)
+    expect(following(memory, save)).toBe(true)
   })
 
-  it('autosaves a pick on a saved post and keeps it across a reload', async () => {
+  it('saves the brief’s run options together and keeps them across a reload', async () => {
     const user = userEvent.setup()
-    const draftSaves: FakeDraftSave[] = []
+    const calls: string[] = []
+    const optionSaves: FakeOptionsSave[] = []
     const first = renderAppAt(`/posts/${SLUG}`, {
       user: USER,
-      posts: { draftSaves, posts: [{ slug: SLUG, title: '제주' }] },
+      calls,
+      posts: { calls, optionSaves, posts: [{ slug: SLUG, title: '제주' }] },
+      quality: { accounts: { [SLUG]: OVER } },
     })
 
-    const picker = await pickField(user, '카페')
-    await waitFor(() => expect(draftSaves).toHaveLength(1))
-    expect(draftSaves[0]).toMatchObject({ slug: SLUG, field: 'cafe' })
-    await waitFor(() => expect(picker).toHaveAccessibleName('분야 카페'))
-    await waitFor(() => expect(picker).toBeEnabled())
+    const brief = await openBrief(user)
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
+    await user.clear(within(brief).getByLabelText('목표 글자 수'))
+    await user.type(within(brief).getByLabelText('목표 글자 수'), '1500')
+    await user.click(await m1())
+    await user.click(within(brief).getByRole('button', { name: '카페' }))
+    await user.click(within(brief).getByRole('checkbox', { name: '기억 사용' }))
+    // Every change so far is the form's: nothing has been sent.
+    expect(calls).not.toContain('SavePostGenerationOptions')
 
-    // The title save that follows is text alone.
-    await user.type(screen.getByLabelText('제목'), ' 여행')
-    await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
-    expect(draftSaves[1].field).toBeUndefined()
+    await user.click(within(brief).getByRole('button', { name: '저장' }))
+    await briefClosed()
+    expect(optionSaves).toEqual([
+      {
+        slug: SLUG,
+        targetLength: 1500,
+        tagCount: 4,
+        useMemory: true,
+        qualityRules: ['title_saturation'],
+        field: 'cafe',
+      },
+    ])
+
+    const shows = async () => {
+      const reopened = await openBrief(user)
+      expect(within(reopened).getByLabelText('목표 글자 수')).toHaveValue(1500)
+      expect(await m1()).toBeChecked()
+      expect(within(reopened).getByRole('button', { name: '카페' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(within(reopened).getByRole('checkbox', { name: '기억 사용' })).toBeChecked()
+    }
+    await shows()
 
     first.unmount()
     renderAppAt(`/posts/${SLUG}`, { transport: first.transport })
-    expect(await screen.findByRole('button', { name: '분야 카페' })).toBeInTheDocument()
+    await shows()
+    expect(optionSaves).toHaveLength(1)
   })
 
-  it('carries a 분야 chosen on /posts/new into the create', async () => {
+  it('offers no run options before the first save, and the create carries no 분야', async () => {
     const user = userEvent.setup()
+    const calls: string[] = []
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/new', {
       user: USER,
-      posts: { draftSaves, templates: POST_TEMPLATES },
-      templates: { templates: WITH_FIELDS },
+      posts: { draftSaves },
+      quality: { calls, accounts: { [SLUG]: OVER } },
     })
 
-    // After the data fields and before the photos, with no 기억 사용 to sit above: that needs a slug.
-    const template = await templateField(user)
-    await waitFor(() => expect(template).toBeEnabled())
-    await user.click(template)
-    await user.click(await screen.findByRole('option', { name: '정보성 식당 리뷰' }))
-    const lastAnswer = await screen.findByLabelText('총평 별점')
-    const picker = await fieldPicker()
-    expect(following(lastAnswer, picker)).toBe(true)
-    expect(following(picker, screen.getByLabelText('사진·영상 추가'))).toBe(true)
+    expect(await screen.findByLabelText('제목')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '분야' })).toBeNull()
     expect(screen.queryByRole('checkbox', { name: '기억 사용' })).toBeNull()
 
-    await pickField(user, '맛집')
-    // A choice is not a keystroke: nothing is saved until there is something to save.
-    expect(draftSaves).toHaveLength(0)
-    expect(picker).toHaveAccessibleName('분야 맛집')
+    const brief = await openBrief(user)
+    expect(await within(brief).findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
+    expect(within(brief).queryByRole('checkbox', { name: '목표 글자 수 사용' })).toBeNull()
+    expect(within(brief).queryByLabelText('태그 개수')).toBeNull()
+    expect(within(brief).queryByText('발행 글 점검')).toBeNull()
+    expect(within(brief).queryByRole('group', { name: '분야' })).toBeNull()
+    expect(within(brief).queryByRole('checkbox', { name: '기억 사용' })).toBeNull()
+    expect(calls.filter((call) => call === 'GetAccountQuality')).toHaveLength(0)
+    await user.keyboard('{Escape}')
 
     await user.type(screen.getByLabelText('제목'), '리뷰 글')
-    await waitFor(
-      () => expect(draftSaves[0]).toMatchObject({ slug: '', field: 'restaurant' }),
-      AUTOSAVED,
-    )
-    expect(await screen.findByRole('button', { name: '분야 맛집' })).toBeInTheDocument()
-  })
-
-  it('clears with 없음', async () => {
-    const user = userEvent.setup()
-    const draftSaves: FakeDraftSave[] = []
-    renderAppAt(`/posts/${SLUG}`, {
-      user: USER,
-      posts: { draftSaves, posts: [{ slug: SLUG, title: '제주', field: 'cafe' }] },
-    })
-
-    const picker = await screen.findByRole('button', { name: '분야 카페' })
-    await pickField(user, '없음')
-    // A present UNSPECIFIED, which is what clears it — distinct from omitting the field.
-    await waitFor(() => expect(draftSaves).toHaveLength(1))
-    expect(draftSaves[0]).toMatchObject({ slug: SLUG, field: '' })
-    await waitFor(() => expect(picker).toHaveAccessibleName('분야 없음'))
-  })
-
-  it('takes a refused pick back and says why', async () => {
-    const user = userEvent.setup()
-    const draftSaves: FakeDraftSave[] = []
-    renderAppAt(`/posts/${SLUG}`, {
-      user: USER,
-      posts: { draftSaves, refuseField: true, posts: [{ slug: SLUG, title: '제주' }] },
-    })
-
-    const picker = await pickField(user, '카페')
-    const why = '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.'
-    expect(await screen.findByText(why)).toBeInTheDocument()
-    // Nothing landed, so the picker still shows what the server holds.
-    await waitFor(() => expect(picker).toBeEnabled())
-    expect(picker).toHaveAccessibleName('분야 없음')
-    expect(picker).toHaveAccessibleDescription(expect.stringContaining(why))
-
-    // The next title save carries text only, so the refused pick is not retried with every save.
-    await user.type(screen.getByLabelText('제목'), ' 여행')
-    await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
-    expect(draftSaves.map((save) => save.field)).toEqual(['cafe', undefined])
-  })
-
-  it('is disabled on a published post', async () => {
-    const user = userEvent.setup()
-    renderAppAt(`/posts/${SLUG}`, {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: SLUG,
-            title: '제주',
-            status: 'published',
-            field: 'cafe',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 1n,
-            machineBaselineRevision: 1n,
-            canFinalize: true,
-            finalizedRevision: 1n,
-            finalizedAt: '2026-08-20T12:00:00Z',
-            publishedUrl: 'https://blog.naver.com/alice/1',
-            publishedAt: '2026-08-21T09:00:00Z',
-          },
-        ],
-      },
-    })
-
-    await openStep(user, '글 생성')
-    const picker = await screen.findByRole('button', { name: '분야 카페' })
-    expect(picker).toBeDisabled()
-    // T339's one sentence is the reason (POST-86); the picker adds none of its own.
-    expect(
-      screen.getAllByText(
-        '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
-      ),
-    ).toHaveLength(1)
-    expect(picker).not.toHaveAccessibleDescription()
+    await waitFor(() => expect(draftSaves).toHaveLength(1), { timeout: 4_000 })
+    expect(draftSaves[0]).toMatchObject({ slug: '', field: undefined })
   })
 })
 
@@ -3154,31 +3084,19 @@ describe('the post measurement row', () => {
 // ticks autosave per post, where the next run's enqueue reads them.
 describe('the brief quality rows', () => {
   const SLUG = '20260901-seongsu'
-  const OVER: FakeQualityReading[] = [
-    {
-      metric: 'title_saturation',
-      verdict: 'over_band',
-      minimum: 10,
-      publishedCount: 12,
-      ruleText: '제목마다 “성수 카페”를 반복하지 마세요.',
-      values: { share: 0.42, shareWarnAbove: 0.3 },
-    },
-  ]
   const m1 = () => screen.findByRole('checkbox', { name: /^제목 도배율 42%/ })
   const reads = (calls: string[]) => calls.filter((call) => call === 'GetAccountQuality').length
 
   it('saves a tick and keeps it across a reload', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    const qualityRuleSaves: NonNullable<FakePostsOptions['qualityRuleSaves']> = []
-    const generationOptionSaves: Array<number | undefined> = []
+    const optionSaves: FakeOptionsSave[] = []
     const first = renderAppAt(`/posts/${SLUG}`, {
       user: USER,
       calls,
       posts: {
         calls,
-        qualityRuleSaves,
-        generationOptionSaves,
+        optionSaves,
         posts: [{ slug: SLUG, title: '성수 카페', targetLength: 1800 }],
       },
       quality: { accounts: { [SLUG]: OVER } },
@@ -3187,13 +3105,23 @@ describe('the brief quality rows', () => {
     // Read as soon as the dock renders, before anyone opens the brief.
     await screen.findByRole('tab', { name: '글 생성' })
     await waitFor(() => expect(reads(calls)).toBe(1))
-    await openBrief(user)
+    const brief = await openBrief(user)
     const box = await m1()
     expect(box).not.toBeChecked()
     await user.click(box)
-    await waitFor(() => expect(qualityRuleSaves).toEqual([['title_saturation']]))
-    // The post's 목표 글자 수 rides along, so the tick cannot clear it.
-    expect(generationOptionSaves).toEqual([1800])
+    await user.click(within(brief).getByRole('button', { name: '저장' }))
+    await waitFor(() =>
+      expect(optionSaves).toEqual([
+        {
+          slug: SLUG,
+          targetLength: 1800,
+          tagCount: 4,
+          useMemory: false,
+          qualityRules: ['title_saturation'],
+          field: '',
+        },
+      ]),
+    )
     // The start requests carry nothing new: the enqueue reads the saved ticks (T344).
     expect(calls).not.toContain('StartGeneration')
 
@@ -3230,21 +3158,6 @@ describe('the brief quality rows', () => {
         .map((query) => query.queryKey[5])
       expect(shown).toEqual(['en'])
     })
-  })
-
-  it('omits the rows on /posts/new', async () => {
-    const user = userEvent.setup()
-    const calls: string[] = []
-    renderAppAt('/posts/new', {
-      user: USER,
-      calls,
-      quality: { calls, accounts: { [SLUG]: OVER } },
-    })
-
-    await openBrief(user)
-    expect(await screen.findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
-    expect(screen.queryByText('발행 글 점검')).toBeNull()
-    expect(reads(calls)).toBe(0)
   })
 
   it('refetches the aggregate after a URL save', async () => {
@@ -3742,7 +3655,6 @@ describe('a published post', () => {
     expect(await screen.findByLabelText('방문일')).toBeDisabled()
     expect(screen.getByLabelText('방문일')).toHaveValue('9월 20일')
     expect(screen.getByRole('switch', { name: '총평 별점 넣기' })).toBeDisabled()
-    expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeDisabled()
     // The picker's two file inputs, each labelled by its button-styled label.
     expect(screen.getByLabelText('사진·영상 추가')).toBeDisabled()
     expect(screen.getByLabelText('촬영')).toBeDisabled()
@@ -3771,6 +3683,12 @@ describe('a published post', () => {
     expect(within(brief).getByRole('combobox', { name: /^글 언어/ })).toBeDisabled()
     expect(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' })).toBeDisabled()
     expect(within(brief).getByLabelText('태그 개수')).toBeDisabled()
+    expect(within(brief).getByRole('checkbox', { name: '기억 사용' })).toBeDisabled()
+    for (const chip of within(within(brief).getByRole('group', { name: '분야' })).getAllByRole(
+      'button',
+    ))
+      expect(chip).toBeDisabled()
+    expect(within(brief).getByRole('button', { name: '저장' })).toBeDisabled()
 
     // Past the debounce: still nothing sent.
     await new Promise((resolve) => setTimeout(resolve, 1_500))

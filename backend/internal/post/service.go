@@ -146,6 +146,9 @@ func (s *Service) SetTemplateDirectory(directory TemplateDirectory) {
 // none: nil preserves, a present empty string clears, and a present non-empty value assigns.
 // It is validated before anything else is written, so a bad id applies nothing at all. The
 // 분야 follows the same rule for the same reason.
+//
+// The 분야 is still accepted here for tabs built before POST-89; the editor saves it with the
+// brief's run options now (SaveGenerationOptions).
 func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) (Post, error) {
 	slug, title, memo := save.Slug, save.Title, save.Memo
 	voiceID, templateID, targetLanguage := save.VoiceID, save.TemplateID, save.TargetLanguage
@@ -875,28 +878,45 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	return s.Get(ctx, userID, slug)
 }
 
-// SaveGenerationOptions replaces the target length (nil clears it to natural length) and,
-// when tagCount, useMemory or qualityRules is present, that option; an absent one keeps what is
-// stored (POST-63, POST-71, POST-81). The presence rules differ because the fields do: the
-// length has a real "none", the count and the flag never do, so absence there can only mean
-// "not this time"; a present empty tick set clears the ticks.
-//
-// None of them touches status, revision, baseline or learning eligibility: they are options of
-// the next RUN, not edits of the post (MEM-18, POST-82).
-func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int, useMemory *bool, qualityRules *[]string) (Post, error) {
-	if targetLength != nil && *targetLength <= 0 {
+// GenerationOptionsSet is the writing brief's run options, saved together (POST-89). Every
+// member is the next value. TargetLength nil is natural length. QualityRules may come in any
+// order; the service normalizes them. Field "" is 없음.
+type GenerationOptionsSet struct {
+	TargetLength *int
+	TagCount     int
+	UseMemory    bool
+	QualityRules []string
+	Field        string
+}
+
+// GenerationOptions is the post's stored set, the ticks copied.
+func (p Post) GenerationOptions() GenerationOptionsSet {
+	return GenerationOptionsSet{
+		TargetLength: p.TargetLength, TagCount: p.TagCount, UseMemory: p.UseMemory,
+		QualityRules: slices.Clone(p.QualityRules), Field: p.Field,
+	}
+}
+
+// SaveGenerationOptions saves the writing brief's run options as one unit: every member is
+// validated first, then one guarded statement writes all five, so no save can keep a stale
+// member or drop one it forgot (POST-89). None of it touches status, revision, baseline or
+// learning eligibility: they are options of the next RUN, not edits of the post (MEM-18,
+// POST-82). The 분야 rides this statement rather than AssignField, which stays SaveDraft's for
+// tabs that still send it.
+func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, set GenerationOptionsSet) (Post, error) {
+	if set.TargetLength != nil && *set.TargetLength <= 0 {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
 	}
-	if tagCount != nil && !TagCountRange.Allows(*tagCount) {
+	if !TagCountRange.Allows(set.TagCount) {
 		return Post{}, ErrInvalidTagCount
 	}
-	var ticks []string
-	if qualityRules != nil {
-		normalized, err := NormalizeQualityRules(*qualityRules)
-		if err != nil {
-			return Post{}, err
-		}
-		ticks = normalized
+	ticks, err := NormalizeQualityRules(set.QualityRules)
+	if err != nil {
+		return Post{}, err
+	}
+	set.QualityRules = ticks
+	if set.Field != "" && !s.fields.Known(set.Field) {
+		return Post{}, ErrFieldNotFound
 	}
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
@@ -905,27 +925,15 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if err := refusePublished(found); err != nil {
 		return Post{}, err
 	}
-	nextTagCount := found.TagCount
-	if tagCount != nil {
-		nextTagCount = *tagCount
-	}
-	nextUseMemory := found.UseMemory
-	if useMemory != nil {
-		nextUseMemory = *useMemory
-	}
-	nextRules := found.QualityRules
-	if qualityRules != nil {
-		nextRules = ticks
-	}
-	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount && nextUseMemory == found.UseMemory &&
-		slices.Equal(nextRules, found.QualityRules) {
+	if equalOptionalInt(found.TargetLength, set.TargetLength) && found.TagCount == set.TagCount && found.UseMemory == set.UseMemory &&
+		slices.Equal(found.QualityRules, set.QualityRules) && found.Field == set.Field {
 		return s.Get(ctx, userID, slug)
 	}
 	contentStore := s.content
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, nextUseMemory, nextRules, s.now())
+	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, set, s.now())
 	if err != nil {
 		return Post{}, err
 	}

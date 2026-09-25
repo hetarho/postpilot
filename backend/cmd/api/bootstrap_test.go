@@ -294,7 +294,9 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 
 	// The author types over both. The template still says 1800/7 and must not win.
 	typed := 1200
-	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3), nil, nil); err != nil {
+	set := saved.GenerationOptions()
+	set.TargetLength, set.TagCount = &typed, 3
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, set); err != nil {
 		t.Fatal(err)
 	}
 	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
@@ -555,8 +557,10 @@ func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ticks := []string{post.QualityRuleComposition, post.QualityRuleTitleSaturation}
-	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, nil, nil, nil, &ticks); err != nil {
+	// A whole set: the post's own members as they stand, the 분야 restaurant included, with the ticks.
+	set := saved.GenerationOptions()
+	set.QualityRules = []string{post.QualityRuleComposition, post.QualityRuleTitleSaturation}
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, set); err != nil {
 		t.Fatal(err)
 	}
 

@@ -15,7 +15,7 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 		t.Fatal(err)
 	}
 	target := 900
-	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &target, nil, nil, nil)
+	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &target }))
 	if err != nil || withOption.ContentRevision != 1 || withOption.Status != StatusReview {
 		t.Fatalf("option changed lifecycle: %+v err=%v", withOption, err)
 	}
@@ -299,7 +299,7 @@ func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
 			return err
 		},
 		"SavePostGenerationOptions": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, &length, nil, nil, nil)
+			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, GenerationOptionsSet{TargetLength: &length, TagCount: 4})
 			return err
 		},
 		"FinalizePost": func(svc *Service, f publishedFixture) error {

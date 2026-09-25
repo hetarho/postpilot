@@ -107,7 +107,7 @@ func TestEveryGuardedStatementRefusesAPublishedPost(t *testing.T) {
 			return s.SaveContent(context.Background(), "p", "alice", other, 1, later)
 		},
 		"SavePostGenerationOptions": func(s *store.Store) (bool, error) {
-			return s.SaveGenerationOptions(context.Background(), "p", "alice", &length, 5, true, nil, later)
+			return s.SaveGenerationOptions(context.Background(), "p", "alice", post.GenerationOptionsSet{TargetLength: &length, TagCount: 5, UseMemory: true, Field: "cafe"}, later)
 		},
 		"FinalizePost": func(s *store.Store) (bool, error) {
 			return s.Finalize(context.Background(), "p", "alice", "제주 3일", 1, later)

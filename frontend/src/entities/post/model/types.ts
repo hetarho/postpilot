@@ -94,6 +94,16 @@ export interface PostDraft {
   contentLanguage: ContentLanguage | undefined
 }
 
+/** The writing brief's run options, saved together (POST-89): `targetLength` undefined is
+ *  natural length, `field` '' is 없음. */
+export interface GenerationOptionsSet {
+  targetLength?: number
+  tagCount: number
+  useMemory: boolean
+  qualityRules: readonly QualityMetricId[]
+  field: BlogFieldChoice
+}
+
 /** One row of the post list (PRD F-8). */
 export interface PostListItem {
   slug: string
