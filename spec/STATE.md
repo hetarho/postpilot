@@ -20,7 +20,7 @@
 | ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 14 | 14 | - | 0 |
+| POST | 15 | 14 | POST-90+ POST-91+ POST-92+ POST-93+ | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 12 | 12 | - | 0 |
 | MODEL | 17 | 17 | - | 0 |
@@ -54,11 +54,13 @@
 |---|---|---|---|---|
 
 ## next
-- T391 is complete: production deployment e933ea73 finished in 3m21s; CI and all three independent media gates passed, with no media lock delaying a later rollout; T376..T390 remain complete
+- create-task POST for r15: incremental /posts loading with server-side search and status filter (POST-90..93)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 update-ssot POST done: r15 adds POST-90..93 (incremental /posts at every width, owned-post-wide narrowing, list-end loading/retry, kept rows and scroll on return); no cross-SSOT references, no doing tasks affected
+- 260925 update-ssot POST start: /posts list moves to incremental loading with server-side search and status filter
 - 260925 T391 done (mw): Deploy backend succeeded in 201s; separate parallel Verify media and CI are green, release logs confirm cached media tools, and DEPLOY.md records measured evidence
 - 260925 T391 production timing confirmed (mw): e933ea73 completed Deploy backend in 201s, API health is ok, and three independent Verify media jobs started afterward; remaining CI/media verification is monitored separately
 - 260925 T391 local verification passed (mw): 60 deployment tests, workflow lint, both prebuilt-image release layouts and all BE/FE/codegen/spec gates; delivery timing remains to be measured
@@ -77,5 +79,3 @@
 - 260925 T370 claimed (p42)
 - 260925 T368 done; EditorPage's cases are six step suites on shared helpers and row builders; duplicates of slice tests are gone and the lock wiring folds into the published cases; no page test reads a query key by position; FE gates pass (p42)
 - 260925 T368 claimed (p42)
-- 260925 T367 done; the autosave decides the published lock and owns ①'s text (a locked refusal takes the text back to the screen); DraftEditor has no lock masking and every editor component reads isPublished(post) itself; FE gates pass (p42)
-- 260925 T367 claimed (p42)
