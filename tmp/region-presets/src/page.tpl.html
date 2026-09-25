@@ -1,0 +1,686 @@
+<title>인트로·아웃트로 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root {
+  --ground: #E9EAEC;
+  --surface: #FFFFFF;
+  --ink: #15171B;
+  --muted: #5B616A;
+  --line: #D3D6DB;
+  --accent: #D9483A;
+  --accent-ink: #FFFFFF;
+  --accent-soft: rgba(217, 72, 58, 0.10);
+  --current: #8C5E0C;
+  --current-soft: rgba(140, 94, 12, 0.10);
+  --bad: #C8322F;
+  --hi-bg: #FFF4CC;
+  --hi-line: #E5B432;
+  --hi-ring: rgba(229, 180, 50, 0.28);
+  --hi-strong: #F4C430;
+  --hi-ink: #2E2200;
+  --shade: rgba(10, 11, 13, 0.88);
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #111215; --surface: #1A1C20; --ink: #ECEDEF; --muted: #9CA2AA; --line: #2B2E34;
+    --accent: #FF7A66; --accent-ink: #1A0C09; --accent-soft: rgba(255, 122, 102, 0.14);
+    --current: #E3A94A; --current-soft: rgba(227, 169, 74, 0.14); --bad: #FF6B63;
+    --hi-bg: rgba(244, 196, 48, 0.12); --hi-line: #D9A92E; --hi-ring: rgba(244, 196, 48, 0.20); --hi-strong: #F4C430; --hi-ink: #231A00;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #111215; --surface: #1A1C20; --ink: #ECEDEF; --muted: #9CA2AA; --line: #2B2E34;
+  --accent: #FF7A66; --accent-ink: #1A0C09; --accent-soft: rgba(255, 122, 102, 0.14);
+  --current: #E3A94A; --current-soft: rgba(227, 169, 74, 0.14); --bad: #FF6B63;
+  --hi-bg: rgba(244, 196, 48, 0.12); --hi-line: #D9A92E; --hi-ring: rgba(244, 196, 48, 0.20); --hi-strong: #F4C430; --hi-ink: #231A00;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6; word-break: keep-all; }
+.wrap { max-width: 1480px; margin: 0 auto; padding-inline: 24px; }
+@media (max-width: 600px) { .wrap { padding-inline: 16px; } }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ground); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 20px; padding-block: 12px; flex-wrap: wrap; }
+.bar h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.bar nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; font-weight: 500; padding: 4px 10px; border-radius: 6px; }
+.bar nav a:hover, .bar nav a:focus-visible { color: var(--ink); background: var(--surface); outline: none; }
+.progress { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.left { font-size: 14px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--hi-strong); color: var(--hi-ink); }
+.left.clear { background: var(--accent-soft); color: var(--accent); }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 14px; font-weight: 500; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+section { padding-block: 48px 8px; scroll-margin-top: 64px; }
+.lede { max-width: 70ch; }
+h2 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -0.02em; text-wrap: balance; }
+h3 { font-size: 18px; margin: 36px 0 4px; letter-spacing: -0.01em; }
+p { margin: 0 0 12px; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.principle { display: inline-block; margin-top: 4px; padding: 8px 14px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+.rule-steps { margin: 16px 0 0; padding-left: 1.3em; max-width: 74ch; }
+.rule-steps li { margin-bottom: 6px; }
+
+/* 결정 블록 */
+.decision {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 12px;
+  padding: 16px 18px 18px; margin-top: 18px; scroll-margin-top: 96px;
+}
+.decision.pending { background: var(--hi-bg); border-color: var(--hi-line); box-shadow: 0 0 0 4px var(--hi-ring); }
+.decision.na { background: transparent; border-style: dashed; }
+.decision.na .opts { opacity: 0.45; pointer-events: none; }
+.dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dhead h4 { margin: 0; font-size: 16.5px; letter-spacing: -0.01em; }
+.chip { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+.chip.pending { background: var(--hi-strong); color: var(--hi-ink); }
+.chip.done { background: var(--accent-soft); color: var(--accent); }
+.chip.na { border: 1px solid var(--line); color: var(--muted); font-weight: 500; }
+.ddesc { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; max-width: 78ch; }
+.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; margin-top: 12px; }
+.opt {
+  text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; min-width: 0;
+}
+.decision.pending .opt { border-color: var(--hi-line); }
+.opt:hover { border-color: var(--muted); }
+.opt .l { font-weight: 700; font-size: 14.5px; line-height: 1.35; }
+.opt .s { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.opt .rec { align-self: flex-start; font-size: 11px; font-weight: 700; padding: 0 7px; border-radius: 999px; border: 1px solid currentColor; color: var(--accent); margin-top: 2px; }
+.opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.opt[aria-pressed="true"] .s, .opt[aria-pressed="true"] .rec { color: inherit; opacity: 0.9; }
+.opt[aria-pressed="true"] .l::before { content: "✓ "; }
+.hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+/* 비교 격자 */
+.matrix-scroll { overflow-x: auto; margin-top: 14px; padding-bottom: 6px; }
+.matrix { display: grid; grid-template-columns: minmax(200px, 250px) repeat(4, minmax(140px, 210px)); gap: 14px 16px; min-width: 820px; }
+.matrix .colhead { font-size: 13px; color: var(--muted); align-self: end; line-height: 1.4; }
+.matrix .colhead b { color: var(--ink); font-family: var(--mono); font-weight: 500; }
+.matrix .rowhead { padding-top: 6px; }
+.matrix .rowhead .t { font-weight: 700; font-size: 15px; line-height: 1.35; }
+.matrix .rowhead .d { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 4px; }
+.matrix .rowhead.chosen .t { color: var(--accent); }
+.matrix .rowhead.chosen .t::before { content: "✓ "; }
+.cell { display: flex; flex-direction: column; gap: 6px; }
+.frame { display: block; width: 100%; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 9 / 16; }
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cell.bad .frame { box-shadow: 0 0 0 3px var(--bad); }
+.cell .note { font-size: 12.5px; font-family: var(--mono); font-weight: 500; color: var(--muted); line-height: 1.35; }
+.cell.bad .note { color: var(--bad); }
+
+.table-scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+tbody tr:last-child td { border-bottom: 0; }
+th { color: var(--muted); font-weight: 500; font-size: 13px; }
+td.num, th.num { text-align: right; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td .up { color: var(--accent); }
+
+/* 시안 카드 */
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 6px 12px; font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+.seg.small button { padding: 3px 9px; font-size: 12.5px; }
+.grid { display: grid; gap: 30px 20px; margin-top: 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
+@media (max-width: 520px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; } }
+.grid.pending .pick { border-color: var(--hi-line); background: var(--hi-bg); }
+.card { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card.picked .frame { box-shadow: 0 0 0 4px var(--accent); }
+.card .head { display: flex; align-items: baseline; gap: 8px; }
+.card .id { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.card .name { font-weight: 700; font-size: 16px; line-height: 1.35; }
+.card .desc { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.slots li { display: flex; gap: 8px; }
+.slots .n { font-family: var(--mono); color: var(--muted); min-width: 1.4em; }
+.slots .px { font-family: var(--mono); color: var(--muted); margin-left: auto; }
+.card .where { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.now { border-color: transparent; background: var(--current-soft); color: var(--current); font-weight: 700; }
+.tag.spec { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.card .foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pick { margin-left: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 12px; font-size: 13.5px; font-weight: 700; }
+.pick[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pick[aria-pressed="true"]::before { content: "✓ "; }
+
+.facts { display: grid; gap: 8px; max-width: 80ch; margin: 14px 0 0; padding-left: 1.2em; color: var(--muted); font-size: 14px; }
+
+/* 프롬프트 */
+.prompt { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.prompt .top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.prompt .top b { font-size: 15px; }
+.prompt .top .state { font-size: 13px; color: var(--muted); }
+.prompt .top .btn { margin-left: auto; }
+.prompt pre { white-space: pre-wrap; word-break: keep-all; margin: 0; padding: 16px 18px; font-family: var(--sans); font-size: 14px; line-height: 1.7; }
+.prompt pre .todo { background: var(--hi-strong); color: var(--hi-ink); border-radius: 4px; padding: 0 4px; font-weight: 700; }
+footer { padding-block: 40px 56px; color: var(--muted); font-size: 13px; }
+
+.viewer { position: fixed; inset: 0; z-index: 50; background: var(--shade); display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+.viewer .top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #fff; flex-wrap: wrap; }
+.viewer .top .title { font-weight: 700; flex: 1; min-width: 0; }
+.viewer .top .btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); color: #fff; }
+.viewer .seg { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.25); }
+.viewer .seg button { color: rgba(255,255,255,0.75); }
+.viewer .seg button + button { border-left-color: rgba(255,255,255,0.25); }
+.viewer .seg button[aria-pressed="true"] { background: #fff; color: #111; }
+.viewer .stage { flex: 1; min-height: 0; overflow: auto; display: flex; padding: 0 16px 16px; }
+.viewer .stage img { margin: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.viewer.full .stage img { max-width: none; max-height: none; }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <h1>인트로·아웃트로 시안</h1>
+    <nav aria-label="섹션">
+      <a href="#fit">폭 맞춤</a>
+      <a href="#intro">인트로</a>
+      <a href="#outro">아웃트로</a>
+      <a href="#elements">디자인 요소</a>
+      <a href="#prompt">프롬프트</a>
+    </nav>
+    <div class="progress">
+      <span class="left" id="leftCount">남은 결정 —</span>
+      <button class="btn" id="nextBtn" type="button">다음 결정으로</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="fit">
+    <div class="lede">
+      <h2>글자 수 한도 대신 폭에 맞춰 줄이기</h2>
+      <p class="muted">모든 예시는 9:16 세로 영상(1080×1920) 한 화면이에요. 지금은 역할마다 글자 수가 박혀 있어요(헤드라인 8자, 디스플레이 6자). 856px 글줄 폭(하늘색 점선)을 넘지 않는 선에서 글자 크기를 줄이는 방식을 비교했어요. 노란 칸이 정하실 곳이고, 누른 것은 ✓로 남아요. 다시 누르면 취소돼요.</p>
+    </div>
+
+    <h3>크기를 정하는 방식</h3>
+    <p class="muted">인트로 A(헤드라인 96px + 라벨)에 첫 줄 길이만 바꿔 넣었어요. 빨간 테두리는 저장 불가나 가독성 문제예요.</p>
+    <div class="matrix-scroll"><div class="matrix" id="sizeMatrix"></div></div>
+    <div class="decision" data-key="size" id="dec-size"></div>
+
+    <h3>줄어들 때 세로 배치</h3>
+    <p class="muted">아웃트로 E(라벨 · 디스플레이 132px · 바 · 캡션)에서 가운데 줄만 길어질 때예요. 크기는 ⑤ 규칙(하한 80px)으로 맞췄어요.</p>
+    <div class="matrix-scroll"><div class="matrix" id="vertMatrix"></div></div>
+    <div class="decision" data-key="vert" id="dec-vert"></div>
+
+    <h3>한 줄에 들어가는 한글 글자 수 <span class="muted">(공백 제외, 856px)</span></h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>역할</th><th class="num">기본 크기</th><th class="num">지금 한도</th><th class="num">기본 크기에서 실제로</th><th class="num">⑤ 하한 크기</th><th class="num">하한에서</th><th class="num">두 줄 허용 시</th></tr></thead>
+        <tbody>
+          <tr><td>display</td><td class="num">132px</td><td class="num">6</td><td class="num">7</td><td class="num">80px</td><td class="num"><span class="up">11</span></td><td class="num">22</td></tr>
+          <tr><td>headline</td><td class="num">96px</td><td class="num">8</td><td class="num">10</td><td class="num">60px</td><td class="num"><span class="up">16</span></td><td class="num">32</td></tr>
+          <tr><td>hook</td><td class="num">84px</td><td class="num">9</td><td class="num">11</td><td class="num">56px</td><td class="num"><span class="up">17</span></td><td class="num">34</td></tr>
+          <tr><td>title</td><td class="num">72px</td><td class="num">11</td><td class="num">13</td><td class="num">52px</td><td class="num"><span class="up">19</span></td><td class="num">38</td></tr>
+          <tr><td>body</td><td class="num">56px</td><td class="num">14</td><td class="num">17</td><td class="num">48px</td><td class="num"><span class="up">20</span></td><td class="num">—</td></tr>
+          <tr><td>caption</td><td class="num">44px</td><td class="num">18</td><td class="num">22</td><td class="num">40px</td><td class="num"><span class="up">24</span></td><td class="num">—</td></tr>
+          <tr><td>label</td><td class="num">36px</td><td class="num">22</td><td class="num">26</td><td class="num">34px</td><td class="num"><span class="up">28</span></td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:10px">작은 글자는 최소 크기 규칙(CDS-3) 때문에 거의 못 줄여서 늘어나는 폭이 작아요.</p>
+  </section>
+
+  <section id="intro">
+    <div class="lede">
+      <h2>인트로 — 현재 2종 + 신규 10종</h2>
+      <p class="principle">프리셋은 슬롯마다 글자 크기와 위치만 정해요. 무엇을 쓸지는 템플릿 문구가 순서대로 채워요.</p>
+      <p class="muted" style="margin-top:12px">접시 장면(3.0초 프레임) 위에서 그렸어요. '슬롯 구조'로 바꾸면 문구 대신 슬롯 번호만 보여요. 그림을 누르면 원본 크기로 보여요.</p>
+    </div>
+    <div class="decision" data-key="intro" id="dec-intro"></div>
+    <div class="toolbar">
+      <span class="muted">모든 카드</span>
+      <div class="seg" role="group" aria-label="인트로 보기" data-scope="intro">
+        <button type="button" data-view="short" aria-pressed="true">짧은 문구</button>
+        <button type="button" data-view="long" aria-pressed="false">긴 문구</button>
+        <button type="button" data-view="slots" aria-pressed="false">슬롯 구조</button>
+      </div>
+    </div>
+    <div class="grid" id="introGrid"></div>
+    <div class="decision" data-key="introDefault" id="dec-introDefault"></div>
+  </section>
+
+  <section id="outro">
+    <div class="lede">
+      <h2>아웃트로 — 현재 2종 + 신규 10종</h2>
+      <p class="muted">불판 장면(11.9초 프레임) 위에서 그렸어요. 흰 재가 깔려 가장 읽기 어려운 배경이라 일부러 골랐어요.</p>
+    </div>
+    <div class="decision" data-key="outro" id="dec-outro"></div>
+    <div class="toolbar">
+      <span class="muted">모든 카드</span>
+      <div class="seg" role="group" aria-label="아웃트로 보기" data-scope="outro">
+        <button type="button" data-view="short" aria-pressed="true">짧은 문구</button>
+        <button type="button" data-view="long" aria-pressed="false">긴 문구</button>
+        <button type="button" data-view="slots" aria-pressed="false">슬롯 구조</button>
+      </div>
+    </div>
+    <div class="grid" id="outroGrid"></div>
+    <div class="decision" data-key="outroDefault" id="dec-outroDefault"></div>
+  </section>
+
+  <section id="elements">
+    <div class="lede">
+      <h2>디자인 요소</h2>
+      <p class="muted">고른 시안에 따라 정할 것이 달라져요. 그 요소를 쓰는 시안을 고르지 않았으면 '해당 없음'으로 흐리게 남아요.</p>
+    </div>
+    <div class="decision" data-key="scrim" id="dec-scrim"></div>
+    <div class="decision" data-key="deco" id="dec-deco"></div>
+    <div class="decision" data-key="plate" id="dec-plate"></div>
+    <div class="decision" data-key="serif" id="dec-serif"></div>
+    <div class="decision" data-key="jua" id="dec-jua"></div>
+    <ul class="facts">
+      <li>새 시안을 넣으려면 인트로·아웃트로를 두 종류씩으로 정해 둔 조항(CDS-22·CDS-70)을 바꿔야 해요.</li>
+      <li>슬롯이 2~6개로 다양해요. 템플릿 문구가 슬롯보다 적으면 남는 슬롯은 비우고, 많으면 넘치는 줄은 알림과 함께 빠져요(CLIP-147).</li>
+      <li>이 이미지는 파이썬으로 따로 배치한 시안이에요. 적용하려면 Go 렌더러와 검증기를 고쳐야 해요.</li>
+    </ul>
+  </section>
+
+  <section id="prompt">
+    <div class="lede">
+      <h2>Claude에게 보낼 프롬프트</h2>
+      <p class="muted">위에서 누를 때마다 바로 바뀌어요. 아직 안 정한 항목은 노란 '미정'으로 들어가요.</p>
+    </div>
+    <div class="decision" data-key="next" id="dec-next"></div>
+    <div class="prompt">
+      <div class="top">
+        <b>프롬프트</b>
+        <span class="state" id="promptState"></span>
+        <button class="btn primary" id="copyBtn" type="button">복사</button>
+      </div>
+      <pre id="promptText"></pre>
+    </div>
+    <p class="hint">고른 내용은 이 브라우저에만 저장돼요. 복사해서 Claude Code에 붙여 주세요.</p>
+    <p><button class="btn" id="resetBtn" type="button">모든 선택 지우기</button></p>
+  </section>
+</main>
+
+<footer class="wrap">번들 폰트(Paperlogy · Wanted Sans · 나눔명조 · 주아)와 resvg 0.48.1로 렌더. 배경은 tmp/footage/vertical.mp4, 생성기는 tmp/region-presets/.</footer>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+  <div class="top">
+    <span class="title" id="viewerTitle"></span>
+    <div class="seg small" role="group" aria-label="보기" id="viewerSeg" hidden>
+      <button type="button" data-view="short" aria-pressed="true">짧은 문구</button>
+      <button type="button" data-view="long" aria-pressed="false">긴 문구</button>
+      <button type="button" data-view="slots" aria-pressed="false">슬롯 구조</button>
+    </div>
+    <button class="btn" id="viewerZoom" type="button">원본 크기</button>
+    <button class="btn" id="viewerClose" type="button">닫기</button>
+  </div>
+  <div class="stage"><img id="viewerImg" alt=""></div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const PAGE_URL = "https://claude.ai/artifact/ST7v4fB3QXqA7pMMXM6L9k";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const thumb = n => "img/thumb/" + n + ".jpg";
+const full = n => "img/full/" + n + ".jpg";
+const label = p => p.id.length > 1 ? p.id.slice(1) : p.id;
+const named = p => label(p) + " " + p.title;
+
+// ---------------------------------------------------------------- 선택 상태
+const KEY = "region-preset-decisions-v3";
+const BLANK = { size: null, vert: null, intro: {}, outro: {}, introDefault: null, outroDefault: null,
+                scrim: null, deco: null, plate: null, serif: null, jua: null, next: null };
+let S = JSON.parse(JSON.stringify(BLANK));
+try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+const OPTS = {
+  size: [
+    { v: "5", l: "⑤ 축소 → 하한 → 두 줄", s: "한 줄에서 하한까지 줄이고, 그 아래면 어절로 두 줄", rec: true,
+      p: "⑤ 축소 → 하한 → 두 줄 — 한 줄에서 하한(display 80 · headline 60 · hook 56 · title 52 · body 48 · caption 40 · label 34)까지 연속 축소, 그 아래면 큰 글자만 어절에서 두 줄로 나눠 다시 맞춘다" },
+    { v: "1", l: "① 한 줄 연속 축소", s: "하한 없음 — 19자면 50px까지 작아진다", p: "① 한 줄 연속 축소 — 하한 없이 폭에 닿는 만큼 줄인다" },
+    { v: "2", l: "② 단계 축소", s: "96·84·72·64·56·48 중 들어가는 단계", p: "② 단계 축소 — 96·84·72·64·56·48 중 들어가는 가장 큰 단계" },
+    { v: "3", l: "③ 자간 먼저 조이기", s: "−0.06em까지 좁힌 뒤 축소", p: "③ 자간 먼저 — −0.06em까지 좁힌 뒤 축소, 하한에서 두 줄" },
+    { v: "4", l: "④ 두 줄 먼저", s: "넘치면 크기 유지하고 바로 두 줄", p: "④ 두 줄 먼저 — 넘치면 크기를 두고 바로 두 줄, 그래도 넘치면 축소" },
+  ],
+  vert: [
+    { v: "stack", l: "B. 간격 유지", s: "슬롯 사이 간격 고정, 블록 가운데만 지킨다", rec: true, p: "B 간격 유지 — 슬롯 사이 잉크 간격을 고정하고 블록 가운데만 지킨다" },
+    { v: "baseline", l: "A. 기준선 고정", s: "슬롯마다 y가 그대로 — 두 줄이면 위 슬롯과 겹친다", p: "A 기준선 고정 — 슬롯마다 기준선 y를 그대로 둔다" },
+  ],
+  scrim: [
+    { v: "bright", l: "밝은 화면에서만", s: "자막 스크림처럼 블록 뒤 밝기를 재서 밝을 때만 깐다", rec: true, p: "밝은 화면에서만 — 블록 뒤 밝기를 재서 밝을 때만 은은한 원형 어둠을 깐다" },
+    { v: "always", l: "항상", s: "모든 인트로·아웃트로 블록 뒤에 깐다", p: "항상 — 모든 블록 뒤에 은은한 원형 어둠을 깐다" },
+    { v: "none", l: "넣지 않음", s: "지금 제품처럼 외곽선·그림자만", p: "넣지 않음 — 지금처럼 외곽선과 그림자만" },
+  ],
+  deco: [
+    { v: "keep", l: "선·바·테두리 허용", s: "내용을 정하지 않는 중립 장식은 프리셋이 그린다", rec: true, p: "허용 — 가는 선·바·테두리·브래킷·점·작은 네모처럼 내용을 정하지 않는 장식은 프리셋이 그린다" },
+    { v: "none", l: "글자만", s: "프리셋은 글자 크기와 위치 말고 아무것도 그리지 않는다", p: "글자만 — 프리셋은 글자 크기와 위치 말고 아무것도 그리지 않는다" },
+  ],
+  plate: [
+    { v: "allow", l: "허용", s: "판·띠를 쓰는 시안을 그대로 쓴다", p: "허용" },
+    { v: "drop", l: "빼기", s: "판·띠 없이 글자와 외곽선만", p: "빼기 — 판·띠 없이 글자와 외곽선만" },
+  ],
+  serif: [
+    { v: "allow", l: "허용", s: "인트로·아웃트로에 나눔명조를 쓴다", p: "허용" },
+    { v: "drop", l: "빼기", s: "명조 시안은 Paperlogy로 바꾼다", p: "빼기 — 명조 시안은 Paperlogy로 바꾼다" },
+  ],
+  jua: [
+    { v: "allow", l: "허용", s: "주아에 없는 글자는 저장 전에 짚는다", p: "허용 — 주아에 없는 글자는 저장 전에 짚는다" },
+    { v: "drop", l: "빼기", s: "주아 시안은 Paperlogy로 바꾼다", p: "빼기 — 주아 시안은 Paperlogy로 바꾼다" },
+  ],
+  next: [
+    { v: "build", l: "구현까지", s: "스펙 → 태스크 → 구현 → 검증", rec: true, p: "스펙(CDS·CLIP)을 고치고 태스크로 나눠서 구현까지 해줘." },
+    { v: "tasks", l: "스펙 + 태스크", s: "구현은 아직 하지 않는다", p: "스펙(CDS·CLIP)을 고치고 태스크로 나눠줘. 구현은 아직 하지 마." },
+    { v: "spec", l: "스펙만", s: "태스크와 구현은 아직", p: "스펙(CDS·CLIP)만 고쳐줘. 태스크와 구현은 아직 하지 마." },
+  ],
+};
+const PLATE_USERS = ["intro-i10", "outro-o02", "outro-o05"];
+const SERIF_USERS = ["intro-i03", "outro-o04"];
+const JUA_USERS = ["intro-i10"];
+const byKey = {};
+DATA.intro.forEach(p => { byKey["intro-" + p.id] = p; });
+DATA.outro.forEach(p => { byKey["outro-" + p.id] = p; });
+const picked = kind => DATA[kind].filter(p => S[kind][p.id]);
+const usedBy = keys => keys.filter(k => { const [kind, id] = k.split("-"); return S[kind] && S[kind][id]; });
+const who = keys => keys.map(k => (k.startsWith("intro") ? "인트로 " : "아웃트로 ") + label(byKey[k])).join(", ");
+
+const DEC = {
+  size: { title: "크기 정하는 방식을 고르세요" },
+  vert: { title: "세로 배치를 고르세요" },
+  intro: { title: "채택할 인트로를 고르세요", desc: "아래 카드의 '채택'을 누르세요. 여러 개 고를 수 있고, 다시 누르면 취소돼요." },
+  introDefault: { title: "기본 인트로", desc: "새 프로젝트가 처음 쓰는 인트로예요. 고른 것 중에서 정해요." },
+  outro: { title: "채택할 아웃트로를 고르세요", desc: "아래 카드의 '채택'을 누르세요. 여러 개 고를 수 있고, 다시 누르면 취소돼요." },
+  outroDefault: { title: "기본 아웃트로", desc: "새 프로젝트가 처음 쓰는 아웃트로예요. 고른 것 중에서 정해요." },
+  scrim: { title: "원형 스크림", desc: "밝은 화면에서 가는 선이 묻혀서 시안은 가운데 블록 뒤에 은은한 원형 어둠을 깔았어요. 지금 제품의 인트로·아웃트로에는 없는 요소예요." },
+  deco: { title: "중립 장식", desc: "가는 선·바·테두리·브래킷·점·작은 네모는 내용을 정하지 않아서 남겨 뒀어요. 이것도 빼면 프리셋은 글자 크기와 위치만 남아요." },
+  plate: { title: "어두운 판·띠", desc: "예전 개정(CDS r16)에서 뺀 요소예요." },
+  serif: { title: "나눔명조", desc: "인트로·아웃트로에 새로 들어가는 서체예요." },
+  jua: { title: "주아", desc: "한글을 2,367자만 담은 서체예요." },
+  next: { title: "다음 단계", desc: "프롬프트 마지막 줄에 들어가요." },
+};
+const ORDER = ["size", "vert", "intro", "introDefault", "outro", "outroDefault", "scrim", "deco", "plate", "serif", "jua", "next"];
+
+function effectiveDefault(kind) {
+  const list = picked(kind);
+  if (!list.length) return null;
+  if (list.length === 1) return list[0];
+  return list.find(p => p.id === S[kind + "Default"]) || null;
+}
+
+function status(key) {
+  if (key === "intro" || key === "outro") return picked(key).length ? "done" : "pending";
+  if (key === "introDefault" || key === "outroDefault") {
+    const kind = key.replace("Default", "");
+    if (!picked(kind).length) return "na";
+    return effectiveDefault(kind) ? "done" : "pending";
+  }
+  if (key === "plate") return usedBy(PLATE_USERS).length && S.deco !== "none" ? (S.plate ? "done" : "pending") : "na";
+  if (key === "serif") return usedBy(SERIF_USERS).length ? (S.serif ? "done" : "pending") : "na";
+  if (key === "jua") return usedBy(JUA_USERS).length ? (S.jua ? "done" : "pending") : "na";
+  return S[key] ? "done" : "pending";
+}
+
+function naText(key) {
+  if (key === "introDefault") return "인트로를 먼저 고르세요. 하나만 고르면 그게 기본값이에요.";
+  if (key === "outroDefault") return "아웃트로를 먼저 고르세요. 하나만 고르면 그게 기본값이에요.";
+  if (key === "plate") return S.deco === "none" ? "중립 장식에서 '글자만'을 골라서 해당 없어요." : "판·띠를 쓰는 시안(인트로 10, 아웃트로 02·05)을 고르면 정해요.";
+  if (key === "serif") return "명조를 쓰는 시안(인트로 03, 아웃트로 04)을 고르면 정해요.";
+  if (key === "jua") return "주아를 쓰는 시안(인트로 10)을 고르면 정해요.";
+  return "";
+}
+
+// ---------------------------------------------------------------- 결정 블록
+function optionsFor(key) {
+  if (key === "introDefault" || key === "outroDefault") {
+    const kind = key.replace("Default", "");
+    return picked(kind).map(p => ({ v: p.id, l: named(p), s: p.desc }));
+  }
+  return OPTS[key] || [];
+}
+
+function renderDecision(key) {
+  const el = document.getElementById("dec-" + key);
+  const st = status(key);
+  el.className = "decision " + st;
+  const d = DEC[key];
+  let chip = { pending: "결정 필요", done: "선택함", na: "해당 없음" }[st];
+  if ((key === "intro" || key === "outro") && st === "done") chip = picked(key).length + "개 선택함";
+  let desc = d.desc || "";
+  if (st === "na") desc = naText(key);
+  else if (key === "plate") desc += " 해당 시안: " + who(usedBy(PLATE_USERS)) + ".";
+  else if (key === "serif") desc += " 해당 시안: " + who(usedBy(SERIF_USERS)) + ".";
+  else if (key === "jua") desc += " 해당 시안: " + who(usedBy(JUA_USERS)) + ".";
+  let html = '<div class="dhead"><h4>' + esc(d.title) + '</h4><span class="chip ' + st + '">' + chip + '</span></div>' +
+    (desc ? '<p class="ddesc">' + esc(desc) + '</p>' : "");
+  if (key === "intro" || key === "outro") {
+    const list = picked(key);
+    if (list.length) html += '<p class="ddesc">고른 것: <b>' + esc(list.map(named).join(", ")) + '</b></p>';
+  } else {
+    const opts = optionsFor(key);
+    const auto = (key === "introDefault" || key === "outroDefault") && picked(key.replace("Default", "")).length === 1;
+    const current = auto ? opts[0].v : S[key];
+    if (opts.length) {
+      html += '<div class="opts">' + opts.map(o =>
+        '<button type="button" class="opt" data-v="' + esc(o.v) + '" aria-pressed="' + (current === o.v ? "true" : "false") + '">' +
+        '<span class="l">' + esc(o.l) + '</span>' + (o.s ? '<span class="s">' + esc(o.s) + '</span>' : "") +
+        (o.rec ? '<span class="rec">추천</span>' : "") + '</button>').join("") + '</div>';
+      if (auto) html += '<p class="hint">하나만 골라서 자동으로 기본값이에요.</p>';
+    }
+  }
+  el.innerHTML = html;
+  el.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => {
+    const v = b.dataset.v;
+    S[key] = S[key] === v ? null : v;
+    save(); refresh();
+    const again = document.querySelector('#dec-' + key + ' .opt[data-v="' + CSS.escape(v) + '"]');
+    if (again) again.focus();
+  }));
+}
+
+// ---------------------------------------------------------------- 비교 격자
+function matrix(el, m, key) {
+  const vals = key === "size" ? ["fixed", "1", "2", "3", "4", "5"] : ["fixed", "baseline", "stack"];
+  let html = '<div></div>' + m.heads.map((h, i) =>
+    '<div class="colhead"><b>' + esc(h) + '</b><br>' + esc(m.texts[i]) + '</div>').join("");
+  m.rows.forEach((r, ri) => {
+    html += '<div class="rowhead" data-v="' + vals[ri] + '"><div class="t">' + esc(r.title) + '</div><div class="d">' + r.desc.map(esc).join("<br>") + '</div></div>';
+    r.cells.forEach((c, ci) => {
+      html += '<div class="cell' + (c.bad ? " bad" : "") + '"><button class="frame" type="button" data-full="' + c.name + '" data-title="' + esc(r.title + " · " + m.heads[ci]) + '">' +
+        '<img src="' + thumb(c.name) + '" alt="' + esc(r.title + ", " + m.texts[ci]) + '" width="480" height="853" loading="lazy"></button>' +
+        '<span class="note">' + esc(c.note) + '</span></div>';
+    });
+  });
+  el.innerHTML = html;
+  el.querySelectorAll(".frame").forEach(b => b.addEventListener("click", () => openViewer({ single: b.dataset.full, title: b.dataset.title })));
+}
+matrix(document.getElementById("sizeMatrix"), DATA.fit.size, "size");
+matrix(document.getElementById("vertMatrix"), DATA.fit.vert, "vert");
+
+// ---------------------------------------------------------------- 시안 카드
+const cards = { intro: [], outro: [] };
+function card(kind, p) {
+  const key = kind + "-" + p.id;
+  const el = document.createElement("article");
+  el.className = "card";
+  el.innerHTML =
+    '<button class="frame" type="button" aria-label="' + esc(p.title) + ' 크게 보기"><img alt="" width="480" height="853" loading="lazy"></button>' +
+    '<div class="head"><span class="id">' + label(p) + '</span><span class="name">' + esc(p.title) + '</span></div>' +
+    '<div class="desc">' + esc(p.desc) + '</div>' +
+    '<ol class="slots">' + p.slots.map((s, i) => '<li><span class="n">' + (i + 1) + '</span><span>' + esc(s[0]) + '</span><span class="px">' + s[1] + 'px</span></li>').join("") + '</ol>' +
+    '<div class="where">' + esc(p.where) + '</div>' +
+    (p.tags.length ? '<div class="tags">' + p.tags.map(t => '<span class="tag ' + t[0] + '">' + esc(t[1]) + '</span>').join("") + '</div>' : "") +
+    '<div class="foot"><div class="seg small" role="group" aria-label="' + esc(p.title) + ' 보기">' +
+      '<button type="button" data-view="short">짧은</button><button type="button" data-view="long">긴</button><button type="button" data-view="slots">슬롯</button></div>' +
+      '<button class="pick" type="button" id="pick-' + key + '" aria-pressed="false">채택</button></div>';
+  const img = el.querySelector(".frame img");
+  const segBtns = el.querySelectorAll(".foot .seg button");
+  const obj = { el, p, kind, key, view: "short" };
+  obj.set = v => {
+    obj.view = v;
+    img.src = thumb(key + "-" + v);
+    img.alt = p.title + " — " + ({ short: "짧은 문구", long: "긴 문구", slots: "슬롯 구조" }[v]);
+    segBtns.forEach(b => b.setAttribute("aria-pressed", b.dataset.view === v ? "true" : "false"));
+  };
+  segBtns.forEach(b => b.addEventListener("click", () => obj.set(b.dataset.view)));
+  el.querySelector(".frame").addEventListener("click", () => openViewer({ card: obj }));
+  const btn = el.querySelector(".pick");
+  obj.sync = () => {
+    const on = !!S[kind][p.id];
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = on ? "채택함" : "채택";
+    el.classList.toggle("picked", on);
+  };
+  btn.addEventListener("click", () => {
+    if (S[kind][p.id]) {
+      delete S[kind][p.id];
+      if (S[kind + "Default"] === p.id) S[kind + "Default"] = null;
+    } else S[kind][p.id] = 1;
+    save(); refresh();
+  });
+  obj.set("short");
+  cards[kind].push(obj);
+  return el;
+}
+DATA.intro.forEach(p => document.getElementById("introGrid").appendChild(card("intro", p)));
+DATA.outro.forEach(p => document.getElementById("outroGrid").appendChild(card("outro", p)));
+document.querySelectorAll(".toolbar .seg").forEach(seg => {
+  seg.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    cards[seg.dataset.scope].forEach(c => c.set(b.dataset.view));
+  }));
+});
+
+// ---------------------------------------------------------------- 프롬프트
+const TODO = "\u0000미정\u0001";
+function pick(key) { const o = (OPTS[key] || []).find(x => x.v === S[key]); return o ? o.p : TODO; }
+function buildPrompt() {
+  const L = [];
+  L.push("클립 인트로·아웃트로 개편을 아래처럼 정했어.");
+  L.push("시안: " + PAGE_URL + " · 생성기: tmp/region-presets/ (슬롯 정의는 src/presets.py, 폭 맞춤은 src/lib.py의 fit)");
+  L.push("");
+  L.push("원칙");
+  L.push("- 프리셋은 슬롯마다 글자 크기와 위치만 정한다. 화면의 글자는 템플릿 문구가 슬롯 순서대로 채우고, 모자라면 그 슬롯은 비운다. 고정 문구·문구 이어 붙이기·뜻이 담긴 아이콘은 없다.");
+  L.push("- 글자 수 한도(CDS-20·CDS-77) 대신 856px 글줄 폭에 맞춰 글자 크기를 줄인다.");
+  L.push("");
+  L.push("제목 폭 맞춤");
+  L.push("- 크기: " + pick("size"));
+  L.push("- 세로 배치: " + pick("vert"));
+  L.push("");
+  for (const kind of ["intro", "outro"]) {
+    const list = picked(kind);
+    const def = effectiveDefault(kind);
+    L.push(kind === "intro" ? "인트로" : "아웃트로");
+    L.push("- 채택: " + (list.length ? list.map(named).join(", ") : TODO));
+    if (list.length) L.push("- 기본값: " + (def ? named(def) : TODO));
+    const dropped = DATA[kind].filter(p => (p.id === "A" || p.id === "B" || p.id === "E") && !S[kind][p.id]);
+    if (list.length && dropped.length) L.push("- 빼는 현재 프리셋: " + dropped.map(named).join(", "));
+    L.push("");
+  }
+  L.push("디자인 요소");
+  L.push("- 원형 스크림: " + pick("scrim"));
+  L.push("- 중립 장식: " + pick("deco"));
+  if (status("plate") !== "na") L.push("- 어두운 판·띠 (" + who(usedBy(PLATE_USERS)) + "): " + pick("plate"));
+  if (status("serif") !== "na") L.push("- 나눔명조 (" + who(usedBy(SERIF_USERS)) + "): " + pick("serif"));
+  if (status("jua") !== "na") L.push("- 주아 (" + who(usedBy(JUA_USERS)) + "): " + pick("jua"));
+  L.push("- 인트로·아웃트로를 두 종류씩으로 정한 조항(CDS-22·CDS-70)은 채택한 수에 맞춰 바꾼다.");
+  L.push("");
+  L.push("다음 단계");
+  L.push("- " + pick("next"));
+  const text = L.join("\n");
+  if (text.includes(TODO)) L.push("", "미정인 항목은 추천안을 붙여 나한테 먼저 물어봐.");
+  return L.join("\n");
+}
+
+function pending() { return ORDER.filter(k => status(k) === "pending"); }
+
+function refresh() {
+  ORDER.forEach(renderDecision);
+  cards.intro.concat(cards.outro).forEach(c => c.sync());
+  document.getElementById("introGrid").classList.toggle("pending", status("intro") === "pending");
+  document.getElementById("outroGrid").classList.toggle("pending", status("outro") === "pending");
+  document.querySelectorAll("#sizeMatrix .rowhead").forEach(r => r.classList.toggle("chosen", r.dataset.v === S.size));
+  document.querySelectorAll("#vertMatrix .rowhead").forEach(r => r.classList.toggle("chosen", r.dataset.v === S.vert));
+  const left = pending();
+  const lc = document.getElementById("leftCount");
+  lc.textContent = left.length ? "남은 결정 " + left.length + "개" : "모두 정했어요";
+  lc.classList.toggle("clear", !left.length);
+  document.getElementById("nextBtn").textContent = left.length ? "다음 결정으로" : "프롬프트 보기";
+  const text = buildPrompt();
+  const pre = document.getElementById("promptText");
+  pre.innerHTML = esc(text).replace(/\u0000미정\u0001/g, '<span class="todo">미정</span>');
+  document.getElementById("promptState").textContent = left.length ? "미정 " + left.length + "개" : "모두 정해졌어요";
+}
+
+document.getElementById("nextBtn").addEventListener("click", () => {
+  const left = pending();
+  const target = left.length ? document.getElementById("dec-" + left[0]) : document.getElementById("prompt");
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+  const first = target.querySelector(".opt, .pick");
+  if (left[0] === "intro" || left[0] === "outro") {
+    const b = document.querySelector("#" + left[0] + "Grid .pick");
+    if (b) setTimeout(() => b.focus({ preventScroll: true }), 300);
+  } else if (first) setTimeout(() => first.focus({ preventScroll: true }), 300);
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  S = JSON.parse(JSON.stringify(BLANK)); save(); refresh();
+});
+
+const copyBtn = document.getElementById("copyBtn");
+copyBtn.addEventListener("click", () => {
+  const text = buildPrompt().replace(/\u0000미정\u0001/g, "미정");
+  const done = msg => { copyBtn.textContent = msg; setTimeout(() => { copyBtn.textContent = "복사"; }, 2200); };
+  const fallback = () => {
+    const range = document.createRange(); range.selectNodeContents(document.getElementById("promptText"));
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    done("선택됨 — 직접 복사하세요");
+  };
+  try { navigator.clipboard.writeText(text).then(() => done("복사했어요"), fallback); } catch (e) { fallback(); }
+});
+
+// ---------------------------------------------------------------- 크게 보기
+const viewer = document.getElementById("viewer");
+const vImg = document.getElementById("viewerImg");
+const vZoom = document.getElementById("viewerZoom");
+const vSeg = document.getElementById("viewerSeg");
+let lastFocus = null, current = null;
+function showView(v) {
+  const c = current.card;
+  vImg.src = full(c.key + "-" + v);
+  vImg.alt = c.p.title;
+  vSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === v ? "true" : "false"));
+  c.set(v);
+}
+function openViewer(o) {
+  lastFocus = document.activeElement;
+  current = o;
+  viewer.classList.remove("full"); vZoom.textContent = "원본 크기";
+  if (o.card) {
+    document.getElementById("viewerTitle").textContent = (o.card.kind === "intro" ? "인트로 " : "아웃트로 ") + named(o.card.p);
+    vSeg.hidden = false;
+    showView(o.card.view);
+  } else {
+    document.getElementById("viewerTitle").textContent = o.title;
+    vSeg.hidden = true;
+    vImg.src = full(o.single); vImg.alt = o.title;
+  }
+  viewer.hidden = false;
+  document.getElementById("viewerClose").focus();
+}
+function closeViewer() { viewer.hidden = true; vImg.removeAttribute("src"); if (lastFocus) lastFocus.focus(); }
+vSeg.querySelectorAll("button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+document.getElementById("viewerClose").addEventListener("click", closeViewer);
+vZoom.addEventListener("click", () => { const f = viewer.classList.toggle("full"); vZoom.textContent = f ? "화면에 맞추기" : "원본 크기"; });
+viewer.addEventListener("click", e => { if (e.target.classList.contains("stage")) closeViewer(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !viewer.hidden) closeViewer(); });
+
+refresh();
+</script>

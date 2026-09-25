@@ -33,6 +33,11 @@ tmp/footage/*.mp4
 tmp/footage/*.jpg
 tmp/footage/*.png
 
+# Region preset mock-up output (the generator itself is tracked)
+tmp/region-presets/out/
+tmp/region-presets/bg/
+tmp/region-presets/src/.measure-cache.json
+
 # Release QA render output (the harness itself is tracked)
 tmp/release-qa/clips/*.mp4
 
