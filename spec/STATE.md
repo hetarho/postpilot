@@ -32,8 +32,8 @@
 | THEME | 18 | 15 | THEME-19✎ | 0 |
 | MKT | 6 | 6 | - | 0 |
 | VIDEO | 3 | 3 | - | 0 |
-| CLIP | 44 | 40 | CLIP-13✎ CLIP-163+ | 2 |
-| CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
+| CLIP | 45 | 40 | CLIP-13✎ CLIP-163+ CLIP-111✎ CLIP-116✎ CLIP-165+ | 2 |
+| CDS | 26 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ CDS-86..99+ CDS-9✎ CDS-14✎ CDS-20✎ CDS-22✎ CDS-32✎ CDS-44✎ CDS-52✎ CDS-70✎ CDS-71✎ CDS-72✎ CDS-73✎ CDS-75✎ CDS-76✎ CDS-77✎ CDS-79✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 3 | 3 | - | 2 |
 | QUAL | 4 | 4 | - | 0 |
@@ -56,6 +56,7 @@
 |---|---|---|---|---|
 
 ## next
+- create-task CDS CLIP (CDS r26, CLIP r45): intro/outro presets fit their slots by width and stack by gaps, 8 intro / 7 outro presets with new-project defaults A/B, radial scrim, ① numbered slot drawings; CDS r24–r25 and CLIP r41–r44 deltas stay pending beside them
 - review/clip-narrate-failure-260926 is complete (T398, T399): a narration caption fits its named style and the tail trim keeps the 1.2 s cut floor; unmeasured: a rapid phrase in a hook-role style against the canvas width
 - GIFT r2 + QUOTA r20 are implemented (T394–T397): operator vouchers issued at /admin/vouchers, redeemed from the public /gift page; next ARCH edit adds `voucher` to ARCH-5's context list; BILL still carries the Toss placeholder and USD pricing (see payment research) before any card rollout
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
@@ -63,6 +64,8 @@
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260926 update-ssot CDS CLIP done (rp): CDS r26 — region slots fit their width (shrink to a role floor, then two lines for display/headline/hook/title) instead of CDS-20 counts, blocks stack by fixed ink gaps around their anchor, presets fix size and position only (CDS-88), intro 8 / outro 7 presets (CDS-89..99), radial scrim for centred blocks; CLIP r45 — CLIP-111 lists and new-project defaults A/B with existing projects keeping theirs, CLIP-116 region limit is width, CLIP-165 ① shows numbered slot drawings; no doing tasks affected
+- 260926 update-ssot CDS CLIP start (rp): intro/outro presets fix only slot size and position; titles fit the 856 px measure by shrinking to a floor then wrapping instead of per-role character counts; intro 8 / outro 7 presets with project defaults A and B; waiting on hc's uncommitted CDS/CLIP cleanup before editing
 - 260926 T399 done (nf): the tail trim stops each cut at the 1.2 s cut floor and falls back to the overlap floor only for an overrun the floors cannot absorb; the multi-source pin moved 15760→15630; BE gate green
 - 260926 T399 claimed (nf)
 - 260926 T398 done (nf): narration captions are admitted against their named style's line bound (short text, then omission, never a refused clip), the writer is told each style's bound, and a narration refusal names the caption rather than line 0; BE and FE gates green
@@ -81,5 +84,3 @@
 - 260925 create-task GIFT QUOTA start (GIFT r2 all, QUOTA r20: QUOTA-9✎ QUOTA-12✎ QUOTA-58+)
 - 260925 update-ssot QUAL dropped: no SSOT or code change; QUAL stays r4
 - 260925 update-ssot QUOTA done: r20 QUOTA-12✎ every expiring lot (monthly, voucher, expiring bonus) burns first by expiry, then bonus, then purchased; QUOTA-9✎ voucher redemption joins the credit paths; QUOTA-58+ voucher lot kind; GIFT r2 constraint points at it; no doing tasks affected
-- 260925 update-ssot QUAL start: 분야 phrases from the 네이버 검색 API are stored apart and used only for product-side judgment, never as LLM input or in LLM output (검색 API 특약 of 2026-09-07)
-- 260925 update-ssot QUOTA start: QUOTA-12 burn order moves to expiring-first and a `voucher` lot kind joins for GIFT
