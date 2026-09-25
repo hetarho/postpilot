@@ -268,6 +268,13 @@ enum FailureReason {
   // a list request the browser never builds: a page token it was not handed, a status that is
   // not one, or a negative page size (POST-90, POST-91)
   POST_LIST_REQUEST_INVALID = 243;
+  // Operator vouchers and their gift links (GIFT): an issue outside the bounds, a token that
+  // names no voucher, and the three states a gift link can no longer be redeemed in.
+  VOUCHER_INVALID = 244;
+  VOUCHER_NOT_FOUND = 245;
+  VOUCHER_REDEEMED = 246;
+  VOUCHER_EXPIRED = 247;
+  VOUCHER_REVOKED = 248;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

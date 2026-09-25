@@ -118,6 +118,14 @@ sql:
         omit_unused_structs: true
   - engine: "sqlite"
     schema: "internal/platform/db/migrations"
+    queries: "internal/voucher/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/voucher/store/sqlc"
+        omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
     queries: "internal/quality/store/queries"
     gen:
       go:

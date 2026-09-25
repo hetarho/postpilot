@@ -26,6 +26,8 @@ const unauthenticatedMessage = "unauthenticated"
 //     401 to an already-expired session and leave that HttpOnly cookie sitting in the
 //     browser until it aged out on its own — revoking a dead session is a no-op anyway.
 //   - Ping, the wire test the frontend runs before any account exists.
+//   - GetVoucher, because the gift page is read before the visitor has an account (GIFT-8).
+//     It is a read and not throttled: a gift link carries 256 bits, far past enumeration.
 //
 // Everything else is closed by default: a new service is protected the moment it is
 // mounted, with no change here.
@@ -39,6 +41,7 @@ var publicProcedures = map[string]bool{
 	postpilotv1connect.AuthServiceSignInWithGoogleProcedure:     true,
 	postpilotv1connect.AuthServiceLogoutProcedure:               true,
 	postpilotv1connect.HealthServicePingProcedure:               true,
+	postpilotv1connect.VoucherServiceGetVoucherProcedure:        true,
 }
 
 // throttledProcedures is the public write subset that consumes one per-IP attempt
@@ -64,6 +67,12 @@ var masterProcedures = map[string]bool{
 	postpilotv1connect.AdminServiceListUsersProcedure:         true,
 	postpilotv1connect.AdminServiceSetUserPlanProcedure:       true,
 	postpilotv1connect.AdminServiceSetEstimatorComboProcedure: true,
+
+	// Vouchers hand out credits, so issuing, listing and revoking them sit with the tier
+	// assignment (GIFT-2). Redeeming one is any account's.
+	postpilotv1connect.VoucherServiceIssueVoucherProcedure:  true,
+	postpilotv1connect.VoucherServiceListVouchersProcedure:  true,
+	postpilotv1connect.VoucherServiceRevokeVoucherProcedure: true,
 
 	// Curating the model catalog decides what every account may spend money on, so it sits
 	// with the tier assignment rather than with the per-account model choice ProviderService

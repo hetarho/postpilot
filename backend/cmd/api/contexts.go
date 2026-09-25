@@ -41,6 +41,8 @@ import (
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
+	"github.com/postpilot/backend/internal/voucher"
+	voucherstore "github.com/postpilot/backend/internal/voucher/store"
 )
 
 // contexts is every bounded context the server runs, constructed once in dependency
@@ -57,6 +59,8 @@ type contexts struct {
 	billingStore *billingstore.Store
 	payments     billing.Provider
 	billing      *billing.Service
+
+	voucher *voucher.Service
 
 	post        *post.Service
 	quality     *quality.Service
@@ -158,6 +162,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		c.billingStore, c.payments, exchangeRates, billingCredits{c.ledger}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
 	)
+	voucherStore := voucherstore.New(handle.Writer, handle.Reader)
+	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
+		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}
+	})
+	c.voucher = voucher.NewService(voucherStore, voucherCredits{c.ledger})
 	c.metered = meteredRegistry{Registry: registry, ledger: c.ledger}
 	// The curation surface's evidence, joined HERE rather than by a query inside the catalog:
 	// usage_events belongs to the ledger, and a context reading another's tables is the one

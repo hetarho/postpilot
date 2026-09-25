@@ -321,3 +321,72 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 		t.Error("an incomplete request reached the assigner")
 	}
 }
+
+// GIFT-2, GIFT-8: the gift page reads a voucher before the visitor has an account, redeeming
+// needs a session, and issuing, listing and revoking are the operator's. An unimplemented
+// handler behind the real interceptor tells the three apart: reaching it means the gate let
+// the call through.
+func TestVoucherServiceGates(t *testing.T) {
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
+	for id, tier := range map[string]plan.Plan{"alice": plan.Free, "root": plan.Master} {
+		if err := svc.CreateUser(context.Background(), id, "s3cret", tier); err != nil {
+			t.Fatalf("seed %s: %v", id, err)
+		}
+	}
+	interceptor := connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), ""))
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
+	mux.Handle(postpilotv1connect.NewVoucherServiceHandler(postpilotv1connect.UnimplementedVoucherServiceHandler{}, interceptor))
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+	authClient := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+	vouchers := postpilotv1connect.NewVoucherServiceClient(server.Client(), server.URL)
+
+	if _, err := vouchers.GetVoucher(context.Background(), connect.NewRequest(&postpilotv1.GetVoucherRequest{Token: "t"})); connect.CodeOf(err) != connect.CodeUnimplemented {
+		t.Fatalf("anonymous GetVoucher = %v, want the handler reached", err)
+	}
+	redeem := func(cookie string) error {
+		request := connect.NewRequest(&postpilotv1.RedeemVoucherRequest{Token: "t"})
+		if cookie != "" {
+			request.Header().Set("Cookie", cookie)
+		}
+		_, err := vouchers.RedeemVoucher(context.Background(), request)
+		return err
+	}
+	if err := redeem(""); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("anonymous RedeemVoucher = %v, want unauthenticated", err)
+	}
+	free := loginAs(t, authClient, "alice")
+	if err := redeem(free); connect.CodeOf(err) != connect.CodeUnimplemented {
+		t.Fatalf("free RedeemVoucher = %v, want the handler reached", err)
+	}
+
+	master := loginAs(t, authClient, "root")
+	for name, call := range map[string]func(string) error{
+		"IssueVoucher": func(cookie string) error {
+			_, err := vouchers.IssueVoucher(context.Background(), withCookie(&postpilotv1.IssueVoucherRequest{}, cookie))
+			return err
+		},
+		"ListVouchers": func(cookie string) error {
+			_, err := vouchers.ListVouchers(context.Background(), withCookie(&postpilotv1.ListVouchersRequest{}, cookie))
+			return err
+		},
+		"RevokeVoucher": func(cookie string) error {
+			_, err := vouchers.RevokeVoucher(context.Background(), withCookie(&postpilotv1.RevokeVoucherRequest{}, cookie))
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := call(free)
+			if connect.CodeOf(err) != connect.CodePermissionDenied {
+				t.Fatalf("as free = %v, want permission_denied", err)
+			}
+			if detail := authAppErrorDetail(t, err); detail.GetReason() != plan.ReasonMasterOnly {
+				t.Errorf("reason = %q, want %q", detail.GetReason(), plan.ReasonMasterOnly)
+			}
+			if err := call(master); connect.CodeOf(err) != connect.CodeUnimplemented {
+				t.Errorf("as master = %v, want the handler reached", err)
+			}
+		})
+	}
+}

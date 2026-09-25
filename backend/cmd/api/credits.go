@@ -16,6 +16,7 @@ import (
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/usage"
+	"github.com/postpilot/backend/internal/voucher"
 )
 
 type usageAnchors struct {
@@ -204,6 +205,30 @@ func parseRegistryRef(ref string) llm.ModelRef {
 		return llm.ModelRef{}
 	}
 	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}
+}
+
+// voucherCredits is the ledger as the voucher context asks for it (QUOTA-58). It translates
+// the ledger's standing type into the voucher's own, so the voucher package imports no ledger.
+type voucherCredits struct{ ledger *usage.Service }
+
+func (c voucherCredits) OpenVoucherLot(ctx context.Context, userID string, credits int, expiresAt time.Time) (string, error) {
+	return c.ledger.OpenVoucherLot(ctx, userID, credits, expiresAt)
+}
+
+func (c voucherCredits) ExpireVoucherLot(ctx context.Context, lotID string, at time.Time) error {
+	return c.ledger.ExpireVoucherLot(ctx, lotID, at)
+}
+
+func (c voucherCredits) VoucherLotStandings(ctx context.Context, lotIDs []string, at time.Time) (map[string]voucher.LotStanding, error) {
+	standings, err := c.ledger.VoucherLotStandings(ctx, lotIDs, at)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]voucher.LotStanding, len(standings))
+	for id, standing := range standings {
+		out[id] = voucher.LotStanding{Remaining: standing.Remaining, ExpiresAt: standing.ExpiresAt}
+	}
+	return out, nil
 }
 
 // billingCredits is the ledger as the billing context asks for it. The only thing it adds is

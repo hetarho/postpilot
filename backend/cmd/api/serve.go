@@ -33,6 +33,7 @@ import (
 	qualityrpc "github.com/postpilot/backend/internal/quality/rpc"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
+	voucherrpc "github.com/postpilot/backend/internal/voucher/rpc"
 )
 
 // serve assembles the Connect server over the contexts, starts the sweepers and the
@@ -128,6 +129,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewBillingServiceHandler(billingrpc.NewHandler(c.billing), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewVoucherServiceHandler(voucherrpc.NewHandler(c.voucher), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(c.auth, comboAssigner{catalog: catalog}), opts...)

@@ -221,6 +221,11 @@ export const appFailureSpecs = {
   POST_QUALITY_RULE_INVALID: {},
   // The list's paging and narrowing (POST r15): a request the browser never builds.
   POST_LIST_REQUEST_INVALID: {},
+  VOUCHER_INVALID: {},
+  VOUCHER_NOT_FOUND: {},
+  VOUCHER_REDEEMED: {},
+  VOUCHER_EXPIRED: {},
+  VOUCHER_REVOKED: {},
   UPLOAD_VIDEO_UNSUPPORTED: {},
   UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},

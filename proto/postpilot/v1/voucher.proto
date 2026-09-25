@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+import "postpilot/v1/plan.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// VoucherService is the operator's vouchers (GIFT): credits that expire a set number of days
+// after redemption, sold by bank transfer or given, each delivered as a one-time gift link.
+//
+// GetVoucher is public, because the gift page is read before the visitor has an account;
+// RedeemVoucher needs a session; issuing, listing and revoking are master-only.
+service VoucherService {
+  // GetVoucher reads what a gift link holds. It reveals the credits, validity, message,
+  // state and link expiry only — never who issued it, what was paid, or who redeemed it.
+  rpc GetVoucher(GetVoucherRequest) returns (GetVoucherResponse) {}
+  // RedeemVoucher opens the voucher's credits for the caller, once.
+  rpc RedeemVoucher(RedeemVoucherRequest) returns (RedeemVoucherResponse) {}
+  rpc IssueVoucher(IssueVoucherRequest) returns (IssueVoucherResponse) {}
+  rpc ListVouchers(ListVouchersRequest) returns (ListVouchersResponse) {}
+  // RevokeVoucher stops an unredeemed link, or voids a redeemed voucher's unspent credits.
+  rpc RevokeVoucher(RevokeVoucherRequest) returns (RevokeVoucherResponse) {}
+}
+
+// A voucher's state is derived at read time: revoked wins, then redeemed, then an
+// unredeemed link past its expiry.
+enum VoucherState {
+  VOUCHER_STATE_UNSPECIFIED = 0;
+  VOUCHER_STATE_REDEEMABLE = 1;
+  VOUCHER_STATE_REDEEMED = 2;
+  VOUCHER_STATE_EXPIRED = 3;
+  VOUCHER_STATE_REVOKED = 4;
+}
+
+// What a sold voucher was paid, as the operator entered it. A given voucher has none.
+message VoucherSale {
+  int64 amount_krw = 1;
+  string payer_name = 2;
+}
+
+// A voucher as the operator's list sees it. Instants are RFC3339; empty means absent.
+message Voucher {
+  string id = 1;
+  int32 credits = 2;
+  int32 validity_days = 3;
+  VoucherSale sale = 4;
+  string message = 5;
+  VoucherState state = 6;
+  string issued_at = 7;
+  string link_expires_at = 8;
+  // The redeeming account's id, which is its login id or email.
+  string redeemed_by = 9;
+  string redeemed_at = 10;
+  // What the redeemed lot still holds; zero before redemption, after revocation, and once
+  // the credits have lapsed.
+  int32 remaining_credits = 11;
+  string credits_expire_at = 12;
+  // The gift link's secret, present only while the voucher is redeemable.
+  string token = 13;
+}
+
+// One issue preset: a paid rung's monthly grant for a fixed number of days.
+message VoucherPreset {
+  Plan plan = 1;
+  int32 credits = 2;
+  int32 validity_days = 3;
+}
+
+message GetVoucherRequest {
+  string token = 1;
+}
+
+message GetVoucherResponse {
+  int32 credits = 1;
+  int32 validity_days = 2;
+  string message = 3;
+  VoucherState state = 4;
+  string link_expires_at = 5;
+}
+
+message RedeemVoucherRequest {
+  string token = 1;
+}
+
+message RedeemVoucherResponse {
+  int32 credits = 1;
+  string credits_expire_at = 2;
+}
+
+message IssueVoucherRequest {
+  int32 credits = 1;
+  int32 validity_days = 2;
+  // Absent for a given voucher.
+  VoucherSale sale = 3;
+  string message = 4;
+}
+
+message IssueVoucherResponse {
+  Voucher voucher = 1;
+}
+
+message ListVouchersRequest {}
+
+message ListVouchersResponse {
+  // Newest first.
+  repeated Voucher vouchers = 1;
+  repeated VoucherPreset presets = 2;
+}
+
+message RevokeVoucherRequest {
+  string id = 1;
+}
+
+message RevokeVoucherResponse {
+  Voucher voucher = 1;
+}

@@ -276,6 +276,13 @@ const (
 	// a list request the browser never builds: a page token it was not handed, a status that is
 	// not one, or a negative page size (POST-90, POST-91)
 	FailureReason_POST_LIST_REQUEST_INVALID FailureReason = 243
+	// Operator vouchers and their gift links (GIFT): an issue outside the bounds, a token that
+	// names no voucher, and the three states a gift link can no longer be redeemed in.
+	FailureReason_VOUCHER_INVALID   FailureReason = 244
+	FailureReason_VOUCHER_NOT_FOUND FailureReason = 245
+	FailureReason_VOUCHER_REDEEMED  FailureReason = 246
+	FailureReason_VOUCHER_EXPIRED   FailureReason = 247
+	FailureReason_VOUCHER_REVOKED   FailureReason = 248
 )
 
 // Enum value maps for FailureReason.
@@ -504,6 +511,11 @@ var (
 		241: "CLIP_MEDIA_RETRY_EXHAUSTED",
 		242: "CLIP_MEDIA_TIMEOUT",
 		243: "POST_LIST_REQUEST_INVALID",
+		244: "VOUCHER_INVALID",
+		245: "VOUCHER_NOT_FOUND",
+		246: "VOUCHER_REDEEMED",
+		247: "VOUCHER_EXPIRED",
+		248: "VOUCHER_REVOKED",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -729,6 +741,11 @@ var (
 		"CLIP_MEDIA_RETRY_EXHAUSTED":                 241,
 		"CLIP_MEDIA_TIMEOUT":                         242,
 		"POST_LIST_REQUEST_INVALID":                  243,
+		"VOUCHER_INVALID":                            244,
+		"VOUCHER_NOT_FOUND":                          245,
+		"VOUCHER_REDEEMED":                           246,
+		"VOUCHER_EXPIRED":                            247,
+		"VOUCHER_REVOKED":                            248,
 	}
 )
 
@@ -899,7 +916,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf84\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe95\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1125,7 +1142,12 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x16CLIP_MEDIA_UNAVAILABLE\x10\xf0\x01\x12\x1f\n" +
 	"\x1aCLIP_MEDIA_RETRY_EXHAUSTED\x10\xf1\x01\x12\x17\n" +
 	"\x12CLIP_MEDIA_TIMEOUT\x10\xf2\x01\x12\x1e\n" +
-	"\x19POST_LIST_REQUEST_INVALID\x10\xf3\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALIDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x19POST_LIST_REQUEST_INVALID\x10\xf3\x01\x12\x14\n" +
+	"\x0fVOUCHER_INVALID\x10\xf4\x01\x12\x16\n" +
+	"\x11VOUCHER_NOT_FOUND\x10\xf5\x01\x12\x15\n" +
+	"\x10VOUCHER_REDEEMED\x10\xf6\x01\x12\x14\n" +
+	"\x0fVOUCHER_EXPIRED\x10\xf7\x01\x12\x14\n" +
+	"\x0fVOUCHER_REVOKED\x10\xf8\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALIDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once
