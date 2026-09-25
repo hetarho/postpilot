@@ -45,13 +45,14 @@ function rowStatus(
 
 /** 초안 · 검토 · 확정 sat in one grey and were indistinguishable at a glance. Draft stays neutral
  *  (nothing has happened yet), review takes the accent (the user is mid-way), finalized takes
- *  success (done). Published is a done state too, and its label is what tells it from 확정: the
- *  label carries the meaning on its own (§2.6, THEME-29). */
+ *  the tinted success (done writing). Published in the same tint read as 확정 at a glance, so the
+ *  post that is finished for good takes the solid `done` plane; the label still carries the
+ *  meaning on its own (§2.6, THEME-29). */
 const STATUS_TONE: Record<PostStatus, BadgeTone> = {
   draft: 'neutral',
   review: 'accent',
   finalized: 'success',
-  published: 'success',
+  published: 'done',
 }
 
 function postStatusTone(status: string): BadgeTone {

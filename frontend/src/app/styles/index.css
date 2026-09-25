@@ -372,6 +372,12 @@
      the semantic weight of a notice tone. */
   --badge-accent-bg: var(--intent-accent-subtle);
   --badge-accent-fg: var(--intent-accent);
+  /* a chip for a state that is finished for good — a post that is 발행됨. 확정 already wears the
+     tinted success chip, so the finished state takes the solid success plane: the stronger fill is
+     what tells the two apart at a glance, and the label still carries the meaning. White on
+     green-600 is 5.09:1 in Day, green-950 on green-300 10.87:1 in Night. */
+  --badge-done-bg: var(--intent-success);
+  --badge-done-fg: var(--intent-on-success);
   --notice-danger-bg: var(--intent-danger-subtle);
   --notice-danger-fg: var(--intent-danger);
   --notice-success-bg: var(--intent-success-subtle);
@@ -786,6 +792,8 @@
   --color-badge-neutral-fg: var(--badge-neutral-fg);
   --color-badge-accent-bg: var(--badge-accent-bg);
   --color-badge-accent-fg: var(--badge-accent-fg);
+  --color-badge-done-bg: var(--badge-done-bg);
+  --color-badge-done-fg: var(--badge-done-fg);
   --color-meter-track: var(--meter-track);
   --color-meter-fill: var(--meter-fill);
   --color-slider-track: var(--slider-track);

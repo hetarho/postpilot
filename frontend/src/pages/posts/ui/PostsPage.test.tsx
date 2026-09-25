@@ -201,13 +201,16 @@ describe('PostsPage', () => {
     ],
   }
 
-  // Published is a done state like 확정, and its label is what tells the two apart (THEME-29).
-  it('wears 발행됨 on a published row', async () => {
+  // Published is finished for good: its label tells it from 확정 (THEME-29), and its chip takes the
+  // solid plane where 확정 keeps the tint, so the two do not read alike at a glance.
+  it('wears 발행됨 on a published row, on a stronger chip than 확정', async () => {
     renderList(WITH_PUBLISHED)
 
     expect(await screen.findByRole('link', { name: /성수 카페/ })).toHaveTextContent('발행됨')
     expect(screen.getByRole('link', { name: /서울 산책/ })).toHaveTextContent('확정')
     expect(screen.getByRole('link', { name: /서울 산책/ })).not.toHaveTextContent('발행됨')
+    expect(screen.getByText('발행됨', { selector: 'span' })).toHaveClass('bg-badge-done-bg')
+    expect(screen.getByText('확정', { selector: 'span' })).toHaveClass('bg-notice-success-bg')
   })
 
   // POST-66: the filter offers every status in lifecycle order, and 발행됨 narrows to it alone.
