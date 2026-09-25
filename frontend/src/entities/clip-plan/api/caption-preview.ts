@@ -7,6 +7,7 @@ import {
   ClipPlanService,
   GetClipCaptionPreviewRequestSchema,
   GetClipCaptionStyleSamplesRequestSchema,
+  GetClipRegionPresetSamplesRequestSchema,
   type ProtoGetClipCaptionPreviewResponse,
 } from '@/shared/api'
 import type { ClipEditPlan } from '../model/edit-plan'
@@ -139,6 +140,51 @@ export function useClipCaptionStyleSamples(projectId: string | undefined, enable
           style: c.style,
           representativeFrame: c.representativeFrame,
         })),
+      }
+    },
+  })
+}
+
+/** One intro or outro preset as the renderer draws it, every slot holding the
+ *  label with its outline number (CLIP-165). `svg` is a `<g>` in canvas
+ *  coordinates, so it is shown on the whole canvas at its true place. */
+export interface ClipRegionPresetSample {
+  preset: string
+  svg: string
+  box: ClipCanvasBox
+}
+export interface ClipRegionPresetSamples {
+  ratio: string
+  canvas: ClipCanvasBox
+  intro: ClipRegionPresetSample[]
+  outro: ClipRegionPresetSample[]
+}
+
+/** Every intro and outro preset drawn once by the renderer on the project's ratio,
+ *  numbered with the caller's own `slotLabel` (it holds `{n}`), so the drawing is
+ *  the renderer's and its words are the browser's language (CLIP-165). */
+export function useClipRegionPresetSamples(projectId: string | undefined, slotLabel: string) {
+  const transport = useTransport()
+  return useQuery<ClipRegionPresetSamples>({
+    queryKey: ['clip-region-preset-samples', transport, projectId, slotLabel],
+    enabled: !!projectId,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const value = await createClient(ClipPlanService, transport).getClipRegionPresetSamples(
+        create(GetClipRegionPresetSamplesRequestSchema, { projectId, slotLabel }),
+        { signal },
+      )
+      const sample = (s: (typeof value.intro)[number]) => ({
+        preset: s.preset,
+        svg: s.svg,
+        box: box(s.box),
+      })
+      return {
+        ratio: value.ratio,
+        canvas: box(value.canvas),
+        intro: value.intro.map(sample),
+        outro: value.outro.map(sample),
       }
     },
   })

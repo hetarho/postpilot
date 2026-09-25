@@ -55,21 +55,54 @@ describe('① chooses the design, the caption styles and an optional template', 
     expect(writes[0].outroPreset).toBe('b')
   })
 
-  it('shows an existing project in the presets it already renders in', async () => {
+  it('shows an existing project in the presets it already renders in, drawn by the renderer', async () => {
+    const labels: string[] = []
     renderAppAt('/clips/project', {
       user: { id: 'alice' },
-      clips: { templates: [template], projects: [project] },
+      clips: { templates: [template], projects: [project], regionSampleLabels: labels },
     })
-    const intro = await screen.findByRole('tablist', { name: '인트로 디자인' })
-    expect(within(intro).getByRole('tab', { name: /B 위아래 가로선/ })).toHaveAttribute(
-      'aria-selected',
+    const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+    const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
+    // Every preset of each region is offered (CLIP-111, CDS-70).
+    expect(within(intro).getAllByRole('radio')).toHaveLength(8)
+    expect(within(outro).getAllByRole('radio')).toHaveLength(7)
+    expect(within(intro).getByRole('radio', { name: 'B 위아래 가로선' })).toHaveAttribute(
+      'aria-checked',
       'true',
     )
-    const outro = screen.getByRole('tablist', { name: '아웃트로 디자인' })
-    expect(within(outro).getByRole('tab', { name: /E 점수 강조/ })).toHaveAttribute(
-      'aria-selected',
+    expect(within(outro).getByRole('radio', { name: 'E 점수 강조' })).toHaveAttribute(
+      'aria-checked',
       'true',
     )
+    expect(within(outro).getByRole('radio', { name: '원형 도장' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
+    // Each tile is the renderer's drawing of that preset, numbered with ①'s own
+    // label (CLIP-165).
+    await waitFor(() =>
+      expect(intro.querySelector('svg [data-preset="intro-sticker"]')).toBeInTheDocument(),
+    )
+    expect(outro.querySelector('svg [data-preset="outro-stamp"]')).toHaveTextContent('슬롯 1')
+    expect(labels).toContain('슬롯 {n}')
+  })
+
+  it('still lets the owner choose when the drawings fail', async () => {
+    const user = userEvent.setup()
+    const writes: ClipProjectDraft[] = []
+    renderAppAt('/clips/project', {
+      user: { id: 'alice' },
+      clips: {
+        templates: [template],
+        projects: [project],
+        projectWrites: writes,
+        regionSamplesFail: true,
+      },
+    })
+    const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+    expect(intro.querySelector('svg')).not.toBeInTheDocument()
+    await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
+    await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('cover'), { timeout: 4000 })
   })
 
   it('offers each style with its own drawing, says which are drawn frame by frame, and saves the selection', async () => {
@@ -107,16 +140,28 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
-    const intro = await screen.findByRole('tablist', { name: '인트로 디자인' })
-    expect(within(intro).getByRole('tab', { name: /위아래 가로선|B/ })).toHaveAttribute(
-      'aria-selected',
+    const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+    await user.click(within(intro).getByRole('radio', { name: 'A 크기만' }))
+    await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('a'), { timeout: 4000 })
+    expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+      'aria-checked',
       'true',
     )
-    await user.click(within(intro).getAllByRole('tab')[0])
-    await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('a'), { timeout: 4000 })
-    const outro = screen.getByRole('tablist', { name: '아웃트로 디자인' })
-    await user.click(within(outro).getAllByRole('tab')[0])
-    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('b'), { timeout: 4000 })
+    // Only the chosen tile is a tab stop, and the arrows move focus and the
+    // choice together.
+    expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute('tabindex', '0')
+    expect(within(intro).getByRole('radio', { name: '주아 스티커' })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    )
+    await user.keyboard('{ArrowRight}')
+    await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('b'), { timeout: 4000 })
+    expect(within(intro).getByRole('radio', { name: 'B 위아래 가로선' })).toHaveFocus()
+    await user.keyboard('{ArrowLeft}{ArrowLeft}')
+    await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('sticker'), { timeout: 4000 })
+    const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
+    await user.click(within(outro).getByRole('radio', { name: '칩 줄' }))
+    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('chips'), { timeout: 4000 })
   })
 
   it('takes no design from a template and keeps its own on either side of the choice', async () => {
@@ -127,9 +172,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
     // The project's own selection, made before any template is chosen.
-    const outro = await screen.findByRole('tablist', { name: '아웃트로 디자인' })
-    await user.click(within(outro).getAllByRole('tab')[1])
-    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('e'), { timeout: 4000 })
+    const outro = await screen.findByRole('radiogroup', { name: '아웃트로 디자인' })
+    await user.click(within(outro).getByRole('radio', { name: '원형 도장' }))
+    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('stamp'), { timeout: 4000 })
     // Choosing a template changes what the clip collects, not how it looks
     // (CLIP-14, CLIP-139).
     const picker = screen.getByRole('combobox', { name: /^영상 템플릿/ })
@@ -138,7 +183,7 @@ describe('① chooses the design, the caption styles and an optional template', 
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('template')
-        expect(last?.outroPreset).toBe('e')
+        expect(last?.outroPreset).toBe('stamp')
         // The project's own values, untouched by the template that names others.
         expect(last?.introPreset).toBe('b')
         expect(last?.allowedCaptionStyles).toEqual([])
@@ -153,9 +198,13 @@ describe('① chooses the design, the caption styles and an optional template', 
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('')
-        expect(last?.outroPreset).toBe('e')
+        expect(last?.outroPreset).toBe('stamp')
       },
       { timeout: 4000 },
+    )
+    expect(within(outro).getByRole('radio', { name: '원형 도장' })).toHaveAttribute(
+      'aria-checked',
+      'true',
     )
   })
 })

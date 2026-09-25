@@ -159,3 +159,45 @@ func TestPreviewLimitIncludesJSONBase64AndManifest(t *testing.T) {
 		t.Fatal("bounded response refused")
 	}
 }
+
+func (previewRPCRenderer) RegionPresetSamples(_ context.Context, ratio, label string) ([]clip.RegionPresetSample, []clip.RegionPresetSample, error) {
+	sample := func(id string) clip.RegionPresetSample {
+		return clip.RegionPresetSample{Preset: id, SVG: "<g>" + ratio + " " + label + "</g>", Box: clip.Region{X: 100, Y: 800, Width: 880, Height: 300}}
+	}
+	return []clip.RegionPresetSample{sample("a"), sample("cover")}, []clip.RegionPresetSample{sample("b")}, nil
+}
+
+// ① asks for the preset drawings with its own slot label; the project lends its
+// ratio and owner only, and a label without a place for the number is refused
+// (CLIP-165).
+func TestRegionPresetSamplesRPCIsOwnerScopedAndTakesTheCallersLabel(t *testing.T) {
+	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "square"}}
+	projects := testProjects(store)
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
+	h := NewHandler(projects).WithGeneration(clipapp.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps()), nil)
+	body := &v1.GetClipRegionPresetSamplesRequest{ProjectId: "owned", SlotLabel: "슬롯 {n}"}
+	if _, err := h.GetClipRegionPresetSamples(t.Context(), connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatal(err)
+	}
+	if _, err := h.GetClipRegionPresetSamples(auth.WithUser(t.Context(), "bob"), connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal(err)
+	}
+	ctx := auth.WithUser(t.Context(), "alice")
+	for _, label := range []string{"슬롯", "", "아주 긴 슬롯 이름입니다 {n}", "슬롯\n{n}"} {
+		bad := &v1.GetClipRegionPresetSamplesRequest{ProjectId: "owned", SlotLabel: label}
+		if _, err := h.GetClipRegionPresetSamples(ctx, connect.NewRequest(bad)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("%q: %v", label, err)
+		}
+	}
+	out, err := h.GetClipRegionPresetSamples(ctx, connect.NewRequest(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := out.Msg
+	if m.Ratio != "square" || m.Canvas.GetWidth() != 1080 || m.Canvas.GetHeight() != 1080 || out.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatal(m, out.Header())
+	}
+	if len(m.Intro) != 2 || m.Intro[1].Preset != "cover" || m.Intro[0].Svg != "<g>square 슬롯 {n}</g>" || m.Intro[0].Box.GetWidth() != 880 || len(m.Outro) != 1 || m.Outro[0].Preset != "b" {
+		t.Fatal(m.Intro, m.Outro)
+	}
+}

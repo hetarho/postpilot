@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_plan.proto.
  */
 export const file_postpilot_v1_clip_plan: GenFile = /*@__PURE__*/
-  fileDesc("Chxwb3N0cGlsb3QvdjEvY2xpcF9wbGFuLnByb3RvEgxwb3N0cGlsb3QudjEicgoXU2F2ZUNsaXBFZGl0UGxhblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIoCgRwbGFuGAMgASgLMhoucG9zdHBpbG90LnYxLkNsaXBFZGl0UGxhbiJGChhTYXZlQ2xpcEVkaXRQbGFuUmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCJ3ChxHZXRDbGlwQ2FwdGlvblByZXZpZXdSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUSKAoEcGxhbhgDIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4iwAEKHUdldENsaXBDYXB0aW9uUHJldmlld1Jlc3BvbnNlEg0KBXJhdGlvGAEgASgJEisKBmNhbnZhcxgCIAEoCzIbLnBvc3RwaWxvdC52MS5DbGlwQ2FudmFzQm94Ei4KCXNhZmVfYXJlYRgDIAEoCzIbLnBvc3RwaWxvdC52MS5DbGlwQ2FudmFzQm94EjMKCGNhcHRpb25zGAQgAygLMiEucG9zdHBpbG90LnYxLkNsaXBDYXB0aW9uRnJhZ21lbnQiNwohR2V0Q2xpcENhcHRpb25TdHlsZVNhbXBsZXNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkilAEKIkdldENsaXBDYXB0aW9uU3R5bGVTYW1wbGVzUmVzcG9uc2USDQoFcmF0aW8YASABKAkSKwoGY2FudmFzGAIgASgLMhsucG9zdHBpbG90LnYxLkNsaXBDYW52YXNCb3gSMgoHc2FtcGxlcxgDIAMoCzIhLnBvc3RwaWxvdC52MS5DbGlwQ2FwdGlvbkZyYWdtZW50IqsBChhRdW90ZUNsaXBSZXZpc2lvblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIPCgdyZXF1ZXN0GAIgASgJEg4KBnRhcmdldBgDIAEoCRItCg1vYnNlcnZlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAUgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIsACChlRdW90ZUNsaXBSZXZpc2lvblJlc3BvbnNlEhAKCHF1b3RlX2lkGAEgASgJEhMKC21heF9jcmVkaXRzGAIgASgFEhIKCmV4cGlyZXNfYXQYAyABKAkSMgoMcHJpY2VkX2NhbGxzGAQgAygLMhwucG9zdHBpbG90LnYxLkNsaXBQcmljZWRDYWxsEkEKE2NhbmNlbGxhdGlvbl9wb2xpY3kYBSABKAsyJC5wb3N0cGlsb3QudjEuQ2xpcENhbmNlbGxhdGlvblBvbGljeRIYChByZXNwb25zZV9yZXRyaWVzGAYgASgFEhUKDXBsYW5fcmV2aXNpb24YByABKAUSQAoRc2VxdWVuY2VfY2FwdGlvbnMYCCABKAsyJS5wb3N0cGlsb3QudjEuQ2xpcFNlcXVlbmNlQ2FwdGlvbkNvc3QingIKGFN0YXJ0Q2xpcFJldmlzaW9uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEg8KB3JlcXVlc3QYAiABKAkSDgoGdGFyZ2V0GAMgASgJEi0KDW9ic2VydmVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBSABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEAoIcXVvdGVfaWQYBiABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYByABKAVIAIgBARIjChtjYW5jZWxsYXRpb25fcG9saWN5X3ZlcnNpb24YCCABKAVCFwoVX2FwcHJvdmVkX21heF9jcmVkaXRzIisKGVN0YXJ0Q2xpcFJldmlzaW9uUmVzcG9uc2USDgoGam9iX2lkGAEgASgJMr4ECg9DbGlwUGxhblNlcnZpY2USYwoQU2F2ZUNsaXBFZGl0UGxhbhIlLnBvc3RwaWxvdC52MS5TYXZlQ2xpcEVkaXRQbGFuUmVxdWVzdBomLnBvc3RwaWxvdC52MS5TYXZlQ2xpcEVkaXRQbGFuUmVzcG9uc2UiABJyChVHZXRDbGlwQ2FwdGlvblByZXZpZXcSKi5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcHRpb25QcmV2aWV3UmVxdWVzdBorLnBvc3RwaWxvdC52MS5HZXRDbGlwQ2FwdGlvblByZXZpZXdSZXNwb25zZSIAEoEBChpHZXRDbGlwQ2FwdGlvblN0eWxlU2FtcGxlcxIvLnBvc3RwaWxvdC52MS5HZXRDbGlwQ2FwdGlvblN0eWxlU2FtcGxlc1JlcXVlc3QaMC5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcHRpb25TdHlsZVNhbXBsZXNSZXNwb25zZSIAEmYKEVF1b3RlQ2xpcFJldmlzaW9uEiYucG9zdHBpbG90LnYxLlF1b3RlQ2xpcFJldmlzaW9uUmVxdWVzdBonLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBSZXZpc2lvblJlc3BvbnNlIgASZgoRU3RhcnRDbGlwUmV2aXNpb24SJi5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmV2aXNpb25SZXF1ZXN0GicucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJldmlzaW9uUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_clip, file_postpilot_v1_provider]);
+  fileDesc("Chxwb3N0cGlsb3QvdjEvY2xpcF9wbGFuLnByb3RvEgxwb3N0cGlsb3QudjEicgoXU2F2ZUNsaXBFZGl0UGxhblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIoCgRwbGFuGAMgASgLMhoucG9zdHBpbG90LnYxLkNsaXBFZGl0UGxhbiJGChhTYXZlQ2xpcEVkaXRQbGFuUmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCJ3ChxHZXRDbGlwQ2FwdGlvblByZXZpZXdSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUSKAoEcGxhbhgDIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4iwAEKHUdldENsaXBDYXB0aW9uUHJldmlld1Jlc3BvbnNlEg0KBXJhdGlvGAEgASgJEisKBmNhbnZhcxgCIAEoCzIbLnBvc3RwaWxvdC52MS5DbGlwQ2FudmFzQm94Ei4KCXNhZmVfYXJlYRgDIAEoCzIbLnBvc3RwaWxvdC52MS5DbGlwQ2FudmFzQm94EjMKCGNhcHRpb25zGAQgAygLMiEucG9zdHBpbG90LnYxLkNsaXBDYXB0aW9uRnJhZ21lbnQiNwohR2V0Q2xpcENhcHRpb25TdHlsZVNhbXBsZXNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkilAEKIkdldENsaXBDYXB0aW9uU3R5bGVTYW1wbGVzUmVzcG9uc2USDQoFcmF0aW8YASABKAkSKwoGY2FudmFzGAIgASgLMhsucG9zdHBpbG90LnYxLkNsaXBDYW52YXNCb3gSMgoHc2FtcGxlcxgDIAMoCzIhLnBvc3RwaWxvdC52MS5DbGlwQ2FwdGlvbkZyYWdtZW50IksKIUdldENsaXBSZWdpb25QcmVzZXRTYW1wbGVzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhIKCnNsb3RfbGFiZWwYAiABKAkiygEKIkdldENsaXBSZWdpb25QcmVzZXRTYW1wbGVzUmVzcG9uc2USDQoFcmF0aW8YASABKAkSKwoGY2FudmFzGAIgASgLMhsucG9zdHBpbG90LnYxLkNsaXBDYW52YXNCb3gSMwoFaW50cm8YAyADKAsyJC5wb3N0cGlsb3QudjEuQ2xpcFJlZ2lvblByZXNldFNhbXBsZRIzCgVvdXRybxgEIAMoCzIkLnBvc3RwaWxvdC52MS5DbGlwUmVnaW9uUHJlc2V0U2FtcGxlIl8KFkNsaXBSZWdpb25QcmVzZXRTYW1wbGUSDgoGcHJlc2V0GAEgASgJEgsKA3N2ZxgCIAEoCRIoCgNib3gYAyABKAsyGy5wb3N0cGlsb3QudjEuQ2xpcENhbnZhc0JveCKrAQoYUXVvdGVDbGlwUmV2aXNpb25SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDwoHcmVxdWVzdBgCIAEoCRIOCgZ0YXJnZXQYAyABKAkSLQoNb2JzZXJ2ZV9tb2RlbBgEIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIrCgt3cml0ZV9tb2RlbBgFIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiLAAgoZUXVvdGVDbGlwUmV2aXNpb25SZXNwb25zZRIQCghxdW90ZV9pZBgBIAEoCRITCgttYXhfY3JlZGl0cxgCIAEoBRISCgpleHBpcmVzX2F0GAMgASgJEjIKDHByaWNlZF9jYWxscxgEIAMoCzIcLnBvc3RwaWxvdC52MS5DbGlwUHJpY2VkQ2FsbBJBChNjYW5jZWxsYXRpb25fcG9saWN5GAUgASgLMiQucG9zdHBpbG90LnYxLkNsaXBDYW5jZWxsYXRpb25Qb2xpY3kSGAoQcmVzcG9uc2VfcmV0cmllcxgGIAEoBRIVCg1wbGFuX3JldmlzaW9uGAcgASgFEkAKEXNlcXVlbmNlX2NhcHRpb25zGAggASgLMiUucG9zdHBpbG90LnYxLkNsaXBTZXF1ZW5jZUNhcHRpb25Db3N0Ip4CChhTdGFydENsaXBSZXZpc2lvblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIPCgdyZXF1ZXN0GAIgASgJEg4KBnRhcmdldBgDIAEoCRItCg1vYnNlcnZlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAUgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhAKCHF1b3RlX2lkGAYgASgJEiEKFGFwcHJvdmVkX21heF9jcmVkaXRzGAcgASgFSACIAQESIwobY2FuY2VsbGF0aW9uX3BvbGljeV92ZXJzaW9uGAggASgFQhcKFV9hcHByb3ZlZF9tYXhfY3JlZGl0cyIrChlTdGFydENsaXBSZXZpc2lvblJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCTLCBQoPQ2xpcFBsYW5TZXJ2aWNlEmMKEFNhdmVDbGlwRWRpdFBsYW4SJS5wb3N0cGlsb3QudjEuU2F2ZUNsaXBFZGl0UGxhblJlcXVlc3QaJi5wb3N0cGlsb3QudjEuU2F2ZUNsaXBFZGl0UGxhblJlc3BvbnNlIgAScgoVR2V0Q2xpcENhcHRpb25QcmV2aWV3EioucG9zdHBpbG90LnYxLkdldENsaXBDYXB0aW9uUHJldmlld1JlcXVlc3QaKy5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcHRpb25QcmV2aWV3UmVzcG9uc2UiABKBAQoaR2V0Q2xpcENhcHRpb25TdHlsZVNhbXBsZXMSLy5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcHRpb25TdHlsZVNhbXBsZXNSZXF1ZXN0GjAucG9zdHBpbG90LnYxLkdldENsaXBDYXB0aW9uU3R5bGVTYW1wbGVzUmVzcG9uc2UiABKBAQoaR2V0Q2xpcFJlZ2lvblByZXNldFNhbXBsZXMSLy5wb3N0cGlsb3QudjEuR2V0Q2xpcFJlZ2lvblByZXNldFNhbXBsZXNSZXF1ZXN0GjAucG9zdHBpbG90LnYxLkdldENsaXBSZWdpb25QcmVzZXRTYW1wbGVzUmVzcG9uc2UiABJmChFRdW90ZUNsaXBSZXZpc2lvbhImLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBSZXZpc2lvblJlcXVlc3QaJy5wb3N0cGlsb3QudjEuUXVvdGVDbGlwUmV2aXNpb25SZXNwb25zZSIAEmYKEVN0YXJ0Q2xpcFJldmlzaW9uEiYucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJldmlzaW9uUmVxdWVzdBonLnBvc3RwaWxvdC52MS5TdGFydENsaXBSZXZpc2lvblJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip, file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.SaveClipEditPlanRequest
@@ -179,6 +179,99 @@ export const GetClipCaptionStyleSamplesResponseSchema: GenMessage<GetClipCaption
   messageDesc(file_postpilot_v1_clip_plan, 5);
 
 /**
+ * Every intro and outro preset drawn by the renderer on the project's ratio,
+ * each slot filled with `slot_label` numbered in outline order (CLIP-165,
+ * CDS-88). The label is the caller's, in its own language, and must hold `{n}`
+ * where the number goes; it is at most 16 characters.
+ *
+ * @generated from message postpilot.v1.GetClipRegionPresetSamplesRequest
+ */
+export type GetClipRegionPresetSamplesRequest = Message<"postpilot.v1.GetClipRegionPresetSamplesRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string slot_label = 2;
+   */
+  slotLabel: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetClipRegionPresetSamplesRequest.
+ * Use `create(GetClipRegionPresetSamplesRequestSchema)` to create a new message.
+ */
+export const GetClipRegionPresetSamplesRequestSchema: GenMessage<GetClipRegionPresetSamplesRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_plan, 6);
+
+/**
+ * @generated from message postpilot.v1.GetClipRegionPresetSamplesResponse
+ */
+export type GetClipRegionPresetSamplesResponse = Message<"postpilot.v1.GetClipRegionPresetSamplesResponse"> & {
+  /**
+   * @generated from field: string ratio = 1;
+   */
+  ratio: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipCanvasBox canvas = 2;
+   */
+  canvas?: ClipCanvasBox | undefined;
+
+  /**
+   * In the order a surface offers them. A preset whose face cannot draw the
+   * label is left out, so the surface shows it by name alone.
+   *
+   * @generated from field: repeated postpilot.v1.ClipRegionPresetSample intro = 3;
+   */
+  intro: ClipRegionPresetSample[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.ClipRegionPresetSample outro = 4;
+   */
+  outro: ClipRegionPresetSample[];
+};
+
+/**
+ * Describes the message postpilot.v1.GetClipRegionPresetSamplesResponse.
+ * Use `create(GetClipRegionPresetSamplesResponseSchema)` to create a new message.
+ */
+export const GetClipRegionPresetSamplesResponseSchema: GenMessage<GetClipRegionPresetSamplesResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_plan, 7);
+
+/**
+ * One preset's drawing: a `<g>` in canvas coordinates holding the whole region
+ * block with its `<defs>`, every id prefixed with the preset's own, and the
+ * block's bounds on the canvas.
+ *
+ * @generated from message postpilot.v1.ClipRegionPresetSample
+ */
+export type ClipRegionPresetSample = Message<"postpilot.v1.ClipRegionPresetSample"> & {
+  /**
+   * @generated from field: string preset = 1;
+   */
+  preset: string;
+
+  /**
+   * @generated from field: string svg = 2;
+   */
+  svg: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipCanvasBox box = 3;
+   */
+  box?: ClipCanvasBox | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipRegionPresetSample.
+ * Use `create(ClipRegionPresetSampleSchema)` to create a new message.
+ */
+export const ClipRegionPresetSampleSchema: GenMessage<ClipRegionPresetSample> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_plan, 8);
+
+/**
  * The expected revision is the plan revision the owner was looking at, or 0
  * before a plan exists. The fingerprint pins the exact file the choice was made
  * about, so a replaced source never inherits a decision made about another one.
@@ -225,7 +318,7 @@ export type QuoteClipRevisionRequest = Message<"postpilot.v1.QuoteClipRevisionRe
  * Use `create(QuoteClipRevisionRequestSchema)` to create a new message.
  */
 export const QuoteClipRevisionRequestSchema: GenMessage<QuoteClipRevisionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_plan, 6);
+  messageDesc(file_postpilot_v1_clip_plan, 9);
 
 /**
  * @generated from message postpilot.v1.QuoteClipRevisionResponse
@@ -279,7 +372,7 @@ export type QuoteClipRevisionResponse = Message<"postpilot.v1.QuoteClipRevisionR
  * Use `create(QuoteClipRevisionResponseSchema)` to create a new message.
  */
 export const QuoteClipRevisionResponseSchema: GenMessage<QuoteClipRevisionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_plan, 7);
+  messageDesc(file_postpilot_v1_clip_plan, 10);
 
 /**
  * @generated from message postpilot.v1.StartClipRevisionRequest
@@ -331,7 +424,7 @@ export type StartClipRevisionRequest = Message<"postpilot.v1.StartClipRevisionRe
  * Use `create(StartClipRevisionRequestSchema)` to create a new message.
  */
 export const StartClipRevisionRequestSchema: GenMessage<StartClipRevisionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_plan, 8);
+  messageDesc(file_postpilot_v1_clip_plan, 11);
 
 /**
  * @generated from message postpilot.v1.StartClipRevisionResponse
@@ -348,7 +441,7 @@ export type StartClipRevisionResponse = Message<"postpilot.v1.StartClipRevisionR
  * Use `create(StartClipRevisionResponseSchema)` to create a new message.
  */
 export const StartClipRevisionResponseSchema: GenMessage<StartClipRevisionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_plan, 9);
+  messageDesc(file_postpilot_v1_clip_plan, 12);
 
 /**
  * The edit plan ② works on: saving a correction, drawing its captions, and asking for the
@@ -386,6 +479,17 @@ export const ClipPlanService: GenService<{
     methodKind: "unary";
     input: typeof GetClipCaptionStyleSamplesRequestSchema;
     output: typeof GetClipCaptionStyleSamplesResponseSchema;
+  },
+  /**
+   * Read-only: every intro and outro preset drawn once with its slots numbered,
+   * so ① shows which entry lands where before the owner chooses (CLIP-165).
+   *
+   * @generated from rpc postpilot.v1.ClipPlanService.GetClipRegionPresetSamples
+   */
+  getClipRegionPresetSamples: {
+    methodKind: "unary";
+    input: typeof GetClipRegionPresetSamplesRequestSchema;
+    output: typeof GetClipRegionPresetSamplesResponseSchema;
   },
   /**
    * The single charged action of step ②: one written revision of the saved

@@ -21,6 +21,7 @@ import {
   CreateClipProjectResponseSchema,
   GetClipCaptionPreviewResponseSchema,
   GetClipCaptionStyleSamplesResponseSchema,
+  GetClipRegionPresetSamplesResponseSchema,
   UpdateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
   CreateClipSourceBatchResponseSchema,
@@ -163,6 +164,10 @@ export interface FakeClipsOptions {
     selectedStyles: number
   }
   captionSamplesFail?: boolean
+  /** GetClipRegionPresetSamples fails, so ① shows the presets by name alone. */
+  regionSamplesFail?: boolean
+  /** Every slot label ① asked the region samples for. */
+  regionSampleLabels?: string[]
   /** Holds UpdateClipProject open until the test releases it, so an assertion can run WHILE the
    *  settings autosave is in flight. */
   projectSaveGate?: () => Promise<unknown>
@@ -421,6 +426,28 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
             text.ownerStyle || text.style,
           ),
         })),
+    })
+  })
+  /** Every intro and outro preset drawn once. The fake writes each slot's numbered label into a
+   *  tagged group, not the preset's drawing: what a test can check is that ① offers every preset,
+   *  sends its own label and saves the choice — the drawing is pinned by the Go contract. */
+  router.rpc(ClipPlanService.method.getClipRegionPresetSamples, (req) => {
+    options.calls?.push('GetClipRegionPresetSamples')
+    options.regionSampleLabels?.push(req.slotLabel)
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (options.regionSamplesFail) throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
+    const samples = (kind: 'intro' | 'outro') =>
+      Object.keys(CLIP_DESIGN.regions[kind]).map((preset) => ({
+        preset,
+        svg: `<g data-preset="${kind}-${preset}"><text>${req.slotLabel.replace('{n}', '1')}</text></g>`,
+        box: { x: 100, y: 800, width: 880, height: 300 },
+      }))
+    return create(GetClipRegionPresetSamplesResponseSchema, {
+      ratio: p.ratio,
+      canvas: { x: 0, y: 0, width: 1080, height: 1920 },
+      intro: samples('intro'),
+      outro: samples('outro'),
     })
   })
   /** Every approved style drawn once. The fake draws a box, not the style: what a test can check

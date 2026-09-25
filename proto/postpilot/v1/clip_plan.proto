@@ -15,6 +15,9 @@ service ClipPlanService {
   // Read-only: every approved caption style drawn once, so ① can offer the set
   // by its own look. No plan, no selection and no footage of this project.
   rpc GetClipCaptionStyleSamples(GetClipCaptionStyleSamplesRequest) returns (GetClipCaptionStyleSamplesResponse) {}
+  // Read-only: every intro and outro preset drawn once with its slots numbered,
+  // so ① shows which entry lands where before the owner chooses (CLIP-165).
+  rpc GetClipRegionPresetSamples(GetClipRegionPresetSamplesRequest) returns (GetClipRegionPresetSamplesResponse) {}
   // The single charged action of step ②: one written revision of the saved
   // plan, priced for the writing calls its target needs.
   rpc QuoteClipRevision(QuoteClipRevisionRequest) returns (QuoteClipRevisionResponse) {}
@@ -55,6 +58,33 @@ message GetClipCaptionStyleSamplesResponse {
   // and `style` are both that style's own id, and `representative_frame` says
   // the style draws a frame at a time (CDS-81).
   repeated ClipCaptionFragment samples = 3;
+}
+
+// Every intro and outro preset drawn by the renderer on the project's ratio,
+// each slot filled with `slot_label` numbered in outline order (CLIP-165,
+// CDS-88). The label is the caller's, in its own language, and must hold `{n}`
+// where the number goes; it is at most 16 characters.
+message GetClipRegionPresetSamplesRequest {
+  string project_id = 1;
+  string slot_label = 2;
+}
+
+message GetClipRegionPresetSamplesResponse {
+  string ratio = 1;
+  ClipCanvasBox canvas = 2;
+  // In the order a surface offers them. A preset whose face cannot draw the
+  // label is left out, so the surface shows it by name alone.
+  repeated ClipRegionPresetSample intro = 3;
+  repeated ClipRegionPresetSample outro = 4;
+}
+
+// One preset's drawing: a `<g>` in canvas coordinates holding the whole region
+// block with its `<defs>`, every id prefixed with the preset's own, and the
+// block's bounds on the canvas.
+message ClipRegionPresetSample {
+  string preset = 1;
+  string svg = 2;
+  ClipCanvasBox box = 3;
 }
 
 // The expected revision is the plan revision the owner was looking at, or 0

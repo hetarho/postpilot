@@ -52,5 +52,3 @@ export type {
   ResolvedCompositionElement,
   CompositionLimits,
 } from './model/composition'
-
-export { CompositionDesignThumbnail } from './ui/CompositionDesignThumbnail'

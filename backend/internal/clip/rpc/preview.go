@@ -184,3 +184,36 @@ func (h *Handler) GetClipCaptionStyleSamples(ctx context.Context, req *connect.R
 	response.Header().Set("Cache-Control", "private, no-store")
 	return response, nil
 }
+
+// GetClipRegionPresetSamples hands ① every intro and outro preset drawn by the
+// renderer with its slots numbered by the caller's label (CLIP-165). Like the
+// style samples it carries nothing of this project but its ratio.
+func (h *Handler) GetClipRegionPresetSamples(ctx context.Context, req *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !clip.ValidSlotLabel(req.Msg.SlotLabel) {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPreviewUnavailable)
+	}
+	result, err := h.generation.RegionPresetSamples(ctx, user, req.Msg.ProjectId, req.Msg.SlotLabel)
+	if err != nil {
+		return nil, previewConnectError(err)
+	}
+	out := &v1.GetClipRegionPresetSamplesResponse{
+		Ratio:  result.Ratio,
+		Canvas: &v1.ClipCanvasBox{Width: float64(result.Canvas.Width), Height: float64(result.Canvas.Height)},
+	}
+	for _, sample := range result.Intro {
+		out.Intro = append(out.Intro, &v1.ClipRegionPresetSample{Preset: sample.Preset, Svg: sample.SVG, Box: canvasBox(sample.Box)})
+	}
+	for _, sample := range result.Outro {
+		out.Outro = append(out.Outro, &v1.ClipRegionPresetSample{Preset: sample.Preset, Svg: sample.SVG, Box: canvasBox(sample.Box)})
+	}
+	response := connect.NewResponse(out)
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}

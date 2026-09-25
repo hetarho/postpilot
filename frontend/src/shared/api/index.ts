@@ -49,6 +49,8 @@ export {
   GetClipCaptionPreviewResponseSchema,
   GetClipCaptionStyleSamplesRequestSchema,
   GetClipCaptionStyleSamplesResponseSchema,
+  GetClipRegionPresetSamplesRequestSchema,
+  GetClipRegionPresetSamplesResponseSchema,
   QuoteClipRevisionResponseSchema,
   SaveClipEditPlanResponseSchema,
   StartClipRevisionResponseSchema,

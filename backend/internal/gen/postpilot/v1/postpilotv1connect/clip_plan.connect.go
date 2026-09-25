@@ -42,6 +42,9 @@ const (
 	// ClipPlanServiceGetClipCaptionStyleSamplesProcedure is the fully-qualified name of the
 	// ClipPlanService's GetClipCaptionStyleSamples RPC.
 	ClipPlanServiceGetClipCaptionStyleSamplesProcedure = "/postpilot.v1.ClipPlanService/GetClipCaptionStyleSamples"
+	// ClipPlanServiceGetClipRegionPresetSamplesProcedure is the fully-qualified name of the
+	// ClipPlanService's GetClipRegionPresetSamples RPC.
+	ClipPlanServiceGetClipRegionPresetSamplesProcedure = "/postpilot.v1.ClipPlanService/GetClipRegionPresetSamples"
 	// ClipPlanServiceQuoteClipRevisionProcedure is the fully-qualified name of the ClipPlanService's
 	// QuoteClipRevision RPC.
 	ClipPlanServiceQuoteClipRevisionProcedure = "/postpilot.v1.ClipPlanService/QuoteClipRevision"
@@ -59,6 +62,9 @@ type ClipPlanServiceClient interface {
 	// Read-only: every approved caption style drawn once, so ① can offer the set
 	// by its own look. No plan, no selection and no footage of this project.
 	GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error)
+	// Read-only: every intro and outro preset drawn once with its slots numbered,
+	// so ① shows which entry lands where before the owner chooses (CLIP-165).
+	GetClipRegionPresetSamples(context.Context, *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error)
 	// The single charged action of step ②: one written revision of the saved
 	// plan, priced for the writing calls its target needs.
 	QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error)
@@ -94,6 +100,12 @@ func NewClipPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(clipPlanServiceMethods.ByName("GetClipCaptionStyleSamples")),
 			connect.WithClientOptions(opts...),
 		),
+		getClipRegionPresetSamples: connect.NewClient[v1.GetClipRegionPresetSamplesRequest, v1.GetClipRegionPresetSamplesResponse](
+			httpClient,
+			baseURL+ClipPlanServiceGetClipRegionPresetSamplesProcedure,
+			connect.WithSchema(clipPlanServiceMethods.ByName("GetClipRegionPresetSamples")),
+			connect.WithClientOptions(opts...),
+		),
 		quoteClipRevision: connect.NewClient[v1.QuoteClipRevisionRequest, v1.QuoteClipRevisionResponse](
 			httpClient,
 			baseURL+ClipPlanServiceQuoteClipRevisionProcedure,
@@ -114,6 +126,7 @@ type clipPlanServiceClient struct {
 	saveClipEditPlan           *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
 	getClipCaptionPreview      *connect.Client[v1.GetClipCaptionPreviewRequest, v1.GetClipCaptionPreviewResponse]
 	getClipCaptionStyleSamples *connect.Client[v1.GetClipCaptionStyleSamplesRequest, v1.GetClipCaptionStyleSamplesResponse]
+	getClipRegionPresetSamples *connect.Client[v1.GetClipRegionPresetSamplesRequest, v1.GetClipRegionPresetSamplesResponse]
 	quoteClipRevision          *connect.Client[v1.QuoteClipRevisionRequest, v1.QuoteClipRevisionResponse]
 	startClipRevision          *connect.Client[v1.StartClipRevisionRequest, v1.StartClipRevisionResponse]
 }
@@ -131,6 +144,11 @@ func (c *clipPlanServiceClient) GetClipCaptionPreview(ctx context.Context, req *
 // GetClipCaptionStyleSamples calls postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples.
 func (c *clipPlanServiceClient) GetClipCaptionStyleSamples(ctx context.Context, req *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
 	return c.getClipCaptionStyleSamples.CallUnary(ctx, req)
+}
+
+// GetClipRegionPresetSamples calls postpilot.v1.ClipPlanService.GetClipRegionPresetSamples.
+func (c *clipPlanServiceClient) GetClipRegionPresetSamples(ctx context.Context, req *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error) {
+	return c.getClipRegionPresetSamples.CallUnary(ctx, req)
 }
 
 // QuoteClipRevision calls postpilot.v1.ClipPlanService.QuoteClipRevision.
@@ -152,6 +170,9 @@ type ClipPlanServiceHandler interface {
 	// Read-only: every approved caption style drawn once, so ① can offer the set
 	// by its own look. No plan, no selection and no footage of this project.
 	GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error)
+	// Read-only: every intro and outro preset drawn once with its slots numbered,
+	// so ① shows which entry lands where before the owner chooses (CLIP-165).
+	GetClipRegionPresetSamples(context.Context, *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error)
 	// The single charged action of step ②: one written revision of the saved
 	// plan, priced for the writing calls its target needs.
 	QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error)
@@ -183,6 +204,12 @@ func NewClipPlanServiceHandler(svc ClipPlanServiceHandler, opts ...connect.Handl
 		connect.WithSchema(clipPlanServiceMethods.ByName("GetClipCaptionStyleSamples")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipPlanServiceGetClipRegionPresetSamplesHandler := connect.NewUnaryHandler(
+		ClipPlanServiceGetClipRegionPresetSamplesProcedure,
+		svc.GetClipRegionPresetSamples,
+		connect.WithSchema(clipPlanServiceMethods.ByName("GetClipRegionPresetSamples")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipPlanServiceQuoteClipRevisionHandler := connect.NewUnaryHandler(
 		ClipPlanServiceQuoteClipRevisionProcedure,
 		svc.QuoteClipRevision,
@@ -203,6 +230,8 @@ func NewClipPlanServiceHandler(svc ClipPlanServiceHandler, opts ...connect.Handl
 			clipPlanServiceGetClipCaptionPreviewHandler.ServeHTTP(w, r)
 		case ClipPlanServiceGetClipCaptionStyleSamplesProcedure:
 			clipPlanServiceGetClipCaptionStyleSamplesHandler.ServeHTTP(w, r)
+		case ClipPlanServiceGetClipRegionPresetSamplesProcedure:
+			clipPlanServiceGetClipRegionPresetSamplesHandler.ServeHTTP(w, r)
 		case ClipPlanServiceQuoteClipRevisionProcedure:
 			clipPlanServiceQuoteClipRevisionHandler.ServeHTTP(w, r)
 		case ClipPlanServiceStartClipRevisionProcedure:
@@ -226,6 +255,10 @@ func (UnimplementedClipPlanServiceHandler) GetClipCaptionPreview(context.Context
 
 func (UnimplementedClipPlanServiceHandler) GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples is not implemented"))
+}
+
+func (UnimplementedClipPlanServiceHandler) GetClipRegionPresetSamples(context.Context, *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipPlanService.GetClipRegionPresetSamples is not implemented"))
 }
 
 func (UnimplementedClipPlanServiceHandler) QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error) {

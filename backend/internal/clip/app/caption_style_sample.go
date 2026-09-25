@@ -50,3 +50,38 @@ func (s *GenerationService) CaptionStyleSamples(ctx context.Context, user, id st
 	}
 	return clip.CaptionPreview{Ratio: plan.Ratio, Canvas: canvas, Fragments: fragments}, nil
 }
+
+// RegionPresetSamples draws every intro and outro preset on the project's ratio
+// with its slots numbered by the caller's label (CLIP-165), so ① shows which
+// entry lands where by the renderer's own drawing. Like the style samples it
+// asks the project for its ratio and owner only, and shares the preview's owner
+// lock and timeout.
+func (s *GenerationService) RegionPresetSamples(ctx context.Context, user, id, label string) (clip.RegionPresetSamples, error) {
+	if !clip.ValidSlotLabel(label) {
+		return clip.RegionPresetSamples{}, clip.ErrInvalid
+	}
+	p, err := s.projects.store.GetProject(ctx, user, id)
+	if err != nil {
+		return clip.RegionPresetSamples{}, err
+	}
+	cfg := s.cfg.Preview
+	sampler, ok := s.renderer.(clip.RegionPresetSampler)
+	if !ok || cfg.Timeout <= 0 {
+		return clip.RegionPresetSamples{}, clip.ErrPreviewUnavailable
+	}
+	canvas, err := clip.ClipCanvas(p.Ratio)
+	if err != nil {
+		return clip.RegionPresetSamples{}, err
+	}
+	if _, loaded := s.previewOwners.LoadOrStore(user, struct{}{}); loaded {
+		return clip.RegionPresetSamples{}, clip.ErrPreviewBusy
+	}
+	defer s.previewOwners.Delete(user)
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	defer cancel()
+	intro, outro, err := sampler.RegionPresetSamples(ctx, p.Ratio, label)
+	if err != nil {
+		return clip.RegionPresetSamples{}, err
+	}
+	return clip.RegionPresetSamples{Ratio: p.Ratio, Canvas: canvas, Intro: intro, Outro: outro}, nil
+}

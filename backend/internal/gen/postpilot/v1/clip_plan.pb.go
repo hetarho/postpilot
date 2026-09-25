@@ -368,6 +368,195 @@ func (x *GetClipCaptionStyleSamplesResponse) GetSamples() []*ClipCaptionFragment
 	return nil
 }
 
+// Every intro and outro preset drawn by the renderer on the project's ratio,
+// each slot filled with `slot_label` numbered in outline order (CLIP-165,
+// CDS-88). The label is the caller's, in its own language, and must hold `{n}`
+// where the number goes; it is at most 16 characters.
+type GetClipRegionPresetSamplesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	SlotLabel     string                 `protobuf:"bytes,2,opt,name=slot_label,json=slotLabel,proto3" json:"slot_label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetClipRegionPresetSamplesRequest) Reset() {
+	*x = GetClipRegionPresetSamplesRequest{}
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClipRegionPresetSamplesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClipRegionPresetSamplesRequest) ProtoMessage() {}
+
+func (x *GetClipRegionPresetSamplesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClipRegionPresetSamplesRequest.ProtoReflect.Descriptor instead.
+func (*GetClipRegionPresetSamplesRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetClipRegionPresetSamplesRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetClipRegionPresetSamplesRequest) GetSlotLabel() string {
+	if x != nil {
+		return x.SlotLabel
+	}
+	return ""
+}
+
+type GetClipRegionPresetSamplesResponse struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Ratio  string                 `protobuf:"bytes,1,opt,name=ratio,proto3" json:"ratio,omitempty"`
+	Canvas *ClipCanvasBox         `protobuf:"bytes,2,opt,name=canvas,proto3" json:"canvas,omitempty"`
+	// In the order a surface offers them. A preset whose face cannot draw the
+	// label is left out, so the surface shows it by name alone.
+	Intro         []*ClipRegionPresetSample `protobuf:"bytes,3,rep,name=intro,proto3" json:"intro,omitempty"`
+	Outro         []*ClipRegionPresetSample `protobuf:"bytes,4,rep,name=outro,proto3" json:"outro,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetClipRegionPresetSamplesResponse) Reset() {
+	*x = GetClipRegionPresetSamplesResponse{}
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClipRegionPresetSamplesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClipRegionPresetSamplesResponse) ProtoMessage() {}
+
+func (x *GetClipRegionPresetSamplesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClipRegionPresetSamplesResponse.ProtoReflect.Descriptor instead.
+func (*GetClipRegionPresetSamplesResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetClipRegionPresetSamplesResponse) GetRatio() string {
+	if x != nil {
+		return x.Ratio
+	}
+	return ""
+}
+
+func (x *GetClipRegionPresetSamplesResponse) GetCanvas() *ClipCanvasBox {
+	if x != nil {
+		return x.Canvas
+	}
+	return nil
+}
+
+func (x *GetClipRegionPresetSamplesResponse) GetIntro() []*ClipRegionPresetSample {
+	if x != nil {
+		return x.Intro
+	}
+	return nil
+}
+
+func (x *GetClipRegionPresetSamplesResponse) GetOutro() []*ClipRegionPresetSample {
+	if x != nil {
+		return x.Outro
+	}
+	return nil
+}
+
+// One preset's drawing: a `<g>` in canvas coordinates holding the whole region
+// block with its `<defs>`, every id prefixed with the preset's own, and the
+// block's bounds on the canvas.
+type ClipRegionPresetSample struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Preset        string                 `protobuf:"bytes,1,opt,name=preset,proto3" json:"preset,omitempty"`
+	Svg           string                 `protobuf:"bytes,2,opt,name=svg,proto3" json:"svg,omitempty"`
+	Box           *ClipCanvasBox         `protobuf:"bytes,3,opt,name=box,proto3" json:"box,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipRegionPresetSample) Reset() {
+	*x = ClipRegionPresetSample{}
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipRegionPresetSample) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipRegionPresetSample) ProtoMessage() {}
+
+func (x *ClipRegionPresetSample) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipRegionPresetSample.ProtoReflect.Descriptor instead.
+func (*ClipRegionPresetSample) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ClipRegionPresetSample) GetPreset() string {
+	if x != nil {
+		return x.Preset
+	}
+	return ""
+}
+
+func (x *ClipRegionPresetSample) GetSvg() string {
+	if x != nil {
+		return x.Svg
+	}
+	return ""
+}
+
+func (x *ClipRegionPresetSample) GetBox() *ClipCanvasBox {
+	if x != nil {
+		return x.Box
+	}
+	return nil
+}
+
 // The expected revision is the plan revision the owner was looking at, or 0
 // before a plan exists. The fingerprint pins the exact file the choice was made
 // about, so a replaced source never inherits a decision made about another one.
@@ -391,7 +580,7 @@ type QuoteClipRevisionRequest struct {
 
 func (x *QuoteClipRevisionRequest) Reset() {
 	*x = QuoteClipRevisionRequest{}
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +592,7 @@ func (x *QuoteClipRevisionRequest) String() string {
 func (*QuoteClipRevisionRequest) ProtoMessage() {}
 
 func (x *QuoteClipRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +605,7 @@ func (x *QuoteClipRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuoteClipRevisionRequest.ProtoReflect.Descriptor instead.
 func (*QuoteClipRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *QuoteClipRevisionRequest) GetProjectId() string {
@@ -471,7 +660,7 @@ type QuoteClipRevisionResponse struct {
 
 func (x *QuoteClipRevisionResponse) Reset() {
 	*x = QuoteClipRevisionResponse{}
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -483,7 +672,7 @@ func (x *QuoteClipRevisionResponse) String() string {
 func (*QuoteClipRevisionResponse) ProtoMessage() {}
 
 func (x *QuoteClipRevisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -496,7 +685,7 @@ func (x *QuoteClipRevisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuoteClipRevisionResponse.ProtoReflect.Descriptor instead.
 func (*QuoteClipRevisionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *QuoteClipRevisionResponse) GetQuoteId() string {
@@ -571,7 +760,7 @@ type StartClipRevisionRequest struct {
 
 func (x *StartClipRevisionRequest) Reset() {
 	*x = StartClipRevisionRequest{}
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +772,7 @@ func (x *StartClipRevisionRequest) String() string {
 func (*StartClipRevisionRequest) ProtoMessage() {}
 
 func (x *StartClipRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,7 +785,7 @@ func (x *StartClipRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartClipRevisionRequest.ProtoReflect.Descriptor instead.
 func (*StartClipRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *StartClipRevisionRequest) GetProjectId() string {
@@ -664,7 +853,7 @@ type StartClipRevisionResponse struct {
 
 func (x *StartClipRevisionResponse) Reset() {
 	*x = StartClipRevisionResponse{}
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[9]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -676,7 +865,7 @@ func (x *StartClipRevisionResponse) String() string {
 func (*StartClipRevisionResponse) ProtoMessage() {}
 
 func (x *StartClipRevisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[9]
+	mi := &file_postpilot_v1_clip_plan_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -689,7 +878,7 @@ func (x *StartClipRevisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartClipRevisionResponse.ProtoReflect.Descriptor instead.
 func (*StartClipRevisionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_clip_plan_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StartClipRevisionResponse) GetJobId() string {
@@ -727,7 +916,21 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\"GetClipCaptionStyleSamplesResponse\x12\x14\n" +
 	"\x05ratio\x18\x01 \x01(\tR\x05ratio\x123\n" +
 	"\x06canvas\x18\x02 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x06canvas\x12;\n" +
-	"\asamples\x18\x03 \x03(\v2!.postpilot.v1.ClipCaptionFragmentR\asamples\"\xe1\x01\n" +
+	"\asamples\x18\x03 \x03(\v2!.postpilot.v1.ClipCaptionFragmentR\asamples\"a\n" +
+	"!GetClipRegionPresetSamplesRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1d\n" +
+	"\n" +
+	"slot_label\x18\x02 \x01(\tR\tslotLabel\"\xe7\x01\n" +
+	"\"GetClipRegionPresetSamplesResponse\x12\x14\n" +
+	"\x05ratio\x18\x01 \x01(\tR\x05ratio\x123\n" +
+	"\x06canvas\x18\x02 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x06canvas\x12:\n" +
+	"\x05intro\x18\x03 \x03(\v2$.postpilot.v1.ClipRegionPresetSampleR\x05intro\x12:\n" +
+	"\x05outro\x18\x04 \x03(\v2$.postpilot.v1.ClipRegionPresetSampleR\x05outro\"q\n" +
+	"\x16ClipRegionPresetSample\x12\x16\n" +
+	"\x06preset\x18\x01 \x01(\tR\x06preset\x12\x10\n" +
+	"\x03svg\x18\x02 \x01(\tR\x03svg\x12-\n" +
+	"\x03box\x18\x03 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x03box\"\xe1\x01\n" +
 	"\x18QuoteClipRevisionRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
@@ -760,11 +963,12 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x1bcancellation_policy_version\x18\b \x01(\x05R\x19cancellationPolicyVersionB\x17\n" +
 	"\x15_approved_max_credits\"2\n" +
 	"\x19StartClipRevisionResponse\x12\x15\n" +
-	"\x06job_id\x18\x01 \x01(\tR\x05jobId2\xbe\x04\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId2\xc2\x05\n" +
 	"\x0fClipPlanService\x12c\n" +
 	"\x10SaveClipEditPlan\x12%.postpilot.v1.SaveClipEditPlanRequest\x1a&.postpilot.v1.SaveClipEditPlanResponse\"\x00\x12r\n" +
 	"\x15GetClipCaptionPreview\x12*.postpilot.v1.GetClipCaptionPreviewRequest\x1a+.postpilot.v1.GetClipCaptionPreviewResponse\"\x00\x12\x81\x01\n" +
-	"\x1aGetClipCaptionStyleSamples\x12/.postpilot.v1.GetClipCaptionStyleSamplesRequest\x1a0.postpilot.v1.GetClipCaptionStyleSamplesResponse\"\x00\x12f\n" +
+	"\x1aGetClipCaptionStyleSamples\x12/.postpilot.v1.GetClipCaptionStyleSamplesRequest\x1a0.postpilot.v1.GetClipCaptionStyleSamplesResponse\"\x00\x12\x81\x01\n" +
+	"\x1aGetClipRegionPresetSamples\x12/.postpilot.v1.GetClipRegionPresetSamplesRequest\x1a0.postpilot.v1.GetClipRegionPresetSamplesResponse\"\x00\x12f\n" +
 	"\x11QuoteClipRevision\x12&.postpilot.v1.QuoteClipRevisionRequest\x1a'.postpilot.v1.QuoteClipRevisionResponse\"\x00\x12f\n" +
 	"\x11StartClipRevision\x12&.postpilot.v1.StartClipRevisionRequest\x1a'.postpilot.v1.StartClipRevisionResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
@@ -780,7 +984,7 @@ func file_postpilot_v1_clip_plan_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_plan_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_postpilot_v1_clip_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_postpilot_v1_clip_plan_proto_goTypes = []any{
 	(*SaveClipEditPlanRequest)(nil),            // 0: postpilot.v1.SaveClipEditPlanRequest
 	(*SaveClipEditPlanResponse)(nil),           // 1: postpilot.v1.SaveClipEditPlanResponse
@@ -788,50 +992,59 @@ var file_postpilot_v1_clip_plan_proto_goTypes = []any{
 	(*GetClipCaptionPreviewResponse)(nil),      // 3: postpilot.v1.GetClipCaptionPreviewResponse
 	(*GetClipCaptionStyleSamplesRequest)(nil),  // 4: postpilot.v1.GetClipCaptionStyleSamplesRequest
 	(*GetClipCaptionStyleSamplesResponse)(nil), // 5: postpilot.v1.GetClipCaptionStyleSamplesResponse
-	(*QuoteClipRevisionRequest)(nil),           // 6: postpilot.v1.QuoteClipRevisionRequest
-	(*QuoteClipRevisionResponse)(nil),          // 7: postpilot.v1.QuoteClipRevisionResponse
-	(*StartClipRevisionRequest)(nil),           // 8: postpilot.v1.StartClipRevisionRequest
-	(*StartClipRevisionResponse)(nil),          // 9: postpilot.v1.StartClipRevisionResponse
-	(*ClipEditPlan)(nil),                       // 10: postpilot.v1.ClipEditPlan
-	(*ClipProject)(nil),                        // 11: postpilot.v1.ClipProject
-	(*ClipCanvasBox)(nil),                      // 12: postpilot.v1.ClipCanvasBox
-	(*ClipCaptionFragment)(nil),                // 13: postpilot.v1.ClipCaptionFragment
-	(*ModelRef)(nil),                           // 14: postpilot.v1.ModelRef
-	(*ClipPricedCall)(nil),                     // 15: postpilot.v1.ClipPricedCall
-	(*ClipCancellationPolicy)(nil),             // 16: postpilot.v1.ClipCancellationPolicy
-	(*ClipSequenceCaptionCost)(nil),            // 17: postpilot.v1.ClipSequenceCaptionCost
+	(*GetClipRegionPresetSamplesRequest)(nil),  // 6: postpilot.v1.GetClipRegionPresetSamplesRequest
+	(*GetClipRegionPresetSamplesResponse)(nil), // 7: postpilot.v1.GetClipRegionPresetSamplesResponse
+	(*ClipRegionPresetSample)(nil),             // 8: postpilot.v1.ClipRegionPresetSample
+	(*QuoteClipRevisionRequest)(nil),           // 9: postpilot.v1.QuoteClipRevisionRequest
+	(*QuoteClipRevisionResponse)(nil),          // 10: postpilot.v1.QuoteClipRevisionResponse
+	(*StartClipRevisionRequest)(nil),           // 11: postpilot.v1.StartClipRevisionRequest
+	(*StartClipRevisionResponse)(nil),          // 12: postpilot.v1.StartClipRevisionResponse
+	(*ClipEditPlan)(nil),                       // 13: postpilot.v1.ClipEditPlan
+	(*ClipProject)(nil),                        // 14: postpilot.v1.ClipProject
+	(*ClipCanvasBox)(nil),                      // 15: postpilot.v1.ClipCanvasBox
+	(*ClipCaptionFragment)(nil),                // 16: postpilot.v1.ClipCaptionFragment
+	(*ModelRef)(nil),                           // 17: postpilot.v1.ModelRef
+	(*ClipPricedCall)(nil),                     // 18: postpilot.v1.ClipPricedCall
+	(*ClipCancellationPolicy)(nil),             // 19: postpilot.v1.ClipCancellationPolicy
+	(*ClipSequenceCaptionCost)(nil),            // 20: postpilot.v1.ClipSequenceCaptionCost
 }
 var file_postpilot_v1_clip_plan_proto_depIdxs = []int32{
-	10, // 0: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	11, // 1: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
-	10, // 2: postpilot.v1.GetClipCaptionPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	12, // 3: postpilot.v1.GetClipCaptionPreviewResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
-	12, // 4: postpilot.v1.GetClipCaptionPreviewResponse.safe_area:type_name -> postpilot.v1.ClipCanvasBox
-	13, // 5: postpilot.v1.GetClipCaptionPreviewResponse.captions:type_name -> postpilot.v1.ClipCaptionFragment
-	12, // 6: postpilot.v1.GetClipCaptionStyleSamplesResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
-	13, // 7: postpilot.v1.GetClipCaptionStyleSamplesResponse.samples:type_name -> postpilot.v1.ClipCaptionFragment
-	14, // 8: postpilot.v1.QuoteClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	14, // 9: postpilot.v1.QuoteClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	15, // 10: postpilot.v1.QuoteClipRevisionResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
-	16, // 11: postpilot.v1.QuoteClipRevisionResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
-	17, // 12: postpilot.v1.QuoteClipRevisionResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
-	14, // 13: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	14, // 14: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	0,  // 15: postpilot.v1.ClipPlanService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
-	2,  // 16: postpilot.v1.ClipPlanService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
-	4,  // 17: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
-	6,  // 18: postpilot.v1.ClipPlanService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
-	8,  // 19: postpilot.v1.ClipPlanService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
-	1,  // 20: postpilot.v1.ClipPlanService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
-	3,  // 21: postpilot.v1.ClipPlanService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
-	5,  // 22: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
-	7,  // 23: postpilot.v1.ClipPlanService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
-	9,  // 24: postpilot.v1.ClipPlanService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
-	20, // [20:25] is the sub-list for method output_type
-	15, // [15:20] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	13, // 0: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	14, // 1: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
+	13, // 2: postpilot.v1.GetClipCaptionPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	15, // 3: postpilot.v1.GetClipCaptionPreviewResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
+	15, // 4: postpilot.v1.GetClipCaptionPreviewResponse.safe_area:type_name -> postpilot.v1.ClipCanvasBox
+	16, // 5: postpilot.v1.GetClipCaptionPreviewResponse.captions:type_name -> postpilot.v1.ClipCaptionFragment
+	15, // 6: postpilot.v1.GetClipCaptionStyleSamplesResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
+	16, // 7: postpilot.v1.GetClipCaptionStyleSamplesResponse.samples:type_name -> postpilot.v1.ClipCaptionFragment
+	15, // 8: postpilot.v1.GetClipRegionPresetSamplesResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
+	8,  // 9: postpilot.v1.GetClipRegionPresetSamplesResponse.intro:type_name -> postpilot.v1.ClipRegionPresetSample
+	8,  // 10: postpilot.v1.GetClipRegionPresetSamplesResponse.outro:type_name -> postpilot.v1.ClipRegionPresetSample
+	15, // 11: postpilot.v1.ClipRegionPresetSample.box:type_name -> postpilot.v1.ClipCanvasBox
+	17, // 12: postpilot.v1.QuoteClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	17, // 13: postpilot.v1.QuoteClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	18, // 14: postpilot.v1.QuoteClipRevisionResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
+	19, // 15: postpilot.v1.QuoteClipRevisionResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
+	20, // 16: postpilot.v1.QuoteClipRevisionResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
+	17, // 17: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	17, // 18: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	0,  // 19: postpilot.v1.ClipPlanService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
+	2,  // 20: postpilot.v1.ClipPlanService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
+	4,  // 21: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
+	6,  // 22: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:input_type -> postpilot.v1.GetClipRegionPresetSamplesRequest
+	9,  // 23: postpilot.v1.ClipPlanService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
+	11, // 24: postpilot.v1.ClipPlanService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
+	1,  // 25: postpilot.v1.ClipPlanService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
+	3,  // 26: postpilot.v1.ClipPlanService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
+	5,  // 27: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
+	7,  // 28: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:output_type -> postpilot.v1.GetClipRegionPresetSamplesResponse
+	10, // 29: postpilot.v1.ClipPlanService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
+	12, // 30: postpilot.v1.ClipPlanService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
+	25, // [25:31] is the sub-list for method output_type
+	19, // [19:25] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_plan_proto_init() }
@@ -841,14 +1054,14 @@ func file_postpilot_v1_clip_plan_proto_init() {
 	}
 	file_postpilot_v1_clip_proto_init()
 	file_postpilot_v1_provider_proto_init()
-	file_postpilot_v1_clip_plan_proto_msgTypes[8].OneofWrappers = []any{}
+	file_postpilot_v1_clip_plan_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_plan_proto_rawDesc), len(file_postpilot_v1_clip_plan_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

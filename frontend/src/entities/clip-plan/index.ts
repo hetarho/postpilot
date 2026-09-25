@@ -1,7 +1,15 @@
 /** The edit plan: cuts, captions, the timeline they are edited on, and the revision requests
  *  that ask for a new one. */
-export { useClipCaptionPreview, useClipCaptionStyleSamples } from './api/caption-preview'
-export type { ClipCanvasBox, ClipCaptionFragment } from './api/caption-preview'
+export {
+  useClipCaptionPreview,
+  useClipCaptionStyleSamples,
+  useClipRegionPresetSamples,
+} from './api/caption-preview'
+export type {
+  ClipCanvasBox,
+  ClipCaptionFragment,
+  ClipRegionPresetSample,
+} from './api/caption-preview'
 export { clipPlanToProto, toClipEditingState } from './api/edit-plan'
 export {
   CLIP_PLAYBACK_RATES,

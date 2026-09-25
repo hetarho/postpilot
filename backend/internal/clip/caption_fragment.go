@@ -1,6 +1,10 @@
 package clip
 
-import "context"
+import (
+	"context"
+	"strings"
+	"unicode/utf8"
+)
 
 // CaptionFragment is one caption exactly as the RENDERER draws it, moved to the
 // origin (CDS-83). The editor places it with one transform, so dragging a
@@ -34,4 +38,32 @@ type CaptionPreview struct {
 
 type CaptionFragmenter interface {
 	CaptionFragments(context.Context, EditPlan, []RenderSource) ([]CaptionFragment, error)
+}
+
+// RegionPresetSample is one intro or outro preset drawn by the renderer with
+// every slot filled by a numbered label (CLIP-165): a `<g>` in canvas
+// coordinates, its ids prefixed with the preset's own, and the block's bounds.
+type RegionPresetSample struct {
+	Preset string
+	SVG    string
+	Box    Region
+}
+
+type RegionPresetSamples struct {
+	Ratio        string
+	Canvas       Canvas
+	Intro, Outro []RegionPresetSample
+}
+
+type RegionPresetSampler interface {
+	RegionPresetSamples(ctx context.Context, ratio, slotLabel string) (intro, outro []RegionPresetSample, err error)
+}
+
+// SlotLabelLimit bounds the label a region sample numbers its slots with.
+const SlotLabelLimit = 16
+
+// ValidSlotLabel is a one-line label of at most SlotLabelLimit characters that
+// says where the slot number goes with `{n}`.
+func ValidSlotLabel(label string) bool {
+	return strings.Contains(label, "{n}") && utf8.RuneCountInString(label) <= SlotLabelLimit && !strings.ContainsAny(label, "\r\n") && utf8.ValidString(label)
 }
