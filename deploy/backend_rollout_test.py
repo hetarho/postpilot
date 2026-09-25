@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sqlite3
+import re
 import subprocess
 import tempfile
 import unittest
@@ -121,6 +123,145 @@ class RolloutTest(unittest.TestCase):
         self.assertFalse(any('up' in e['args'] or e['args'][0] == 'stop' for e in events))
         self.assertEqual((self.stack / '.env').read_text(), self.original)
         self.assertEqual((self.stack / 'worker.env').read_text(), self.worker_original)
+
+    def uninitialized(self):
+        self.original = re.sub(r'^MEDIA_(?:TOPOLOGY|WORKER_CREDENTIALS)=.*\n', '', self.original, flags=re.M)
+        self.original += 'OPENROUTER_API_KEY=fixture-private-provider\n'
+        self.write_env()
+        (self.stack / 'worker.env').unlink()
+        (self.stack / 'running').write_text(json.dumps({'api': 'ghcr.io/hetarho/postpilot-api:' + PREVIOUS}))
+
+    def prepared_worker(self):
+        return dict(line.split('=', 1) for line in (self.stack / 'worker.env').read_text().splitlines()
+                    if line and not line.startswith('#'))
+
+    def api_credentials(self):
+        raw = re.search(r'^MEDIA_WORKER_CREDENTIALS=(.*)$', (self.stack / '.env').read_text(), re.M)[1]
+        return json.loads(raw.strip("'"))
+
+    def test_missing_worker_env_initializes_cpu_and_backs_up_live_wal_database(self):
+        self.uninitialized()
+        (self.stack / 'data').mkdir()
+        database = self.stack / 'data/postpilot.db'
+        with sqlite3.connect(database) as live:
+            live.execute('PRAGMA journal_mode=WAL')
+            live.execute('CREATE TABLE fixture (value TEXT)')
+            live.execute("INSERT INTO fixture VALUES ('committed WAL content')")
+            live.commit()
+            self.assertTrue(Path(str(database) + '-wal').exists())
+            result, events = self.run_rollout('legacy_previous', '--init-worker')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            backup = self.stack / '.deploy/worker-init-before/database.sqlite3'
+            with sqlite3.connect(backup) as saved:
+                self.assertEqual(saved.execute('SELECT value FROM fixture').fetchall(), [('committed WAL content',)])
+            self.assertEqual(live.execute('SELECT value FROM fixture').fetchall(), [('committed WAL content',)])
+        worker = self.prepared_worker()
+        self.assertEqual(worker['MEDIA_WORKER_VARIANT'], 'cpu')
+        self.assertEqual(worker['MEDIA_ACCEL'], 'cpu')
+        self.assertEqual(worker['MEDIA_API_URL'], 'http://api:9000')
+        self.assertEqual(worker['MEDIA_WORKER_IMAGE_TAG'], TARGET)
+        self.assertEqual(self.api_credentials()[worker['MEDIA_WORKER_ID']], worker['MEDIA_WORKER_TOKEN'])
+        self.assertEqual(len(base64.urlsafe_b64decode(worker['MEDIA_WORKER_TOKEN'] + '=')), 32)
+        self.assertNotIn(worker['MEDIA_WORKER_TOKEN'], result.stdout + result.stderr + json.dumps(events))
+        self.assertNotIn('fixture-private-provider', (self.stack / 'worker.env').read_text())
+        self.assertIn("TEST_SETTING='literal value # unchanged'", (self.stack / '.env').read_text())
+        for name in ['.env', 'worker.env', '.deploy/worker-init-before/database.sqlite3']:
+            self.assertEqual((self.stack / name).stat().st_mode & 0o777, 0o600)
+        self.assertEqual((self.stack / '.deploy/worker-init-before/.env').read_text(), self.original)
+        self.assertEqual([e['args'][-1] for e in events if 'up' in e['args']], ['api', 'media-worker'])
+
+    def test_initial_failure_can_retry_without_rotating_credentials_or_booting_legacy(self):
+        self.uninitialized()
+        result, events = self.run_rollout('bootstrap_failure', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('rollback rejected', result.stderr)
+        self.assertTrue(all(e['images'][e['args'][-1]].endswith(TARGET) for e in events if 'up' in e['args']))
+        before = self.prepared_worker()
+        result, _ = self.run_rollout('success', '--init-worker')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.prepared_worker(), before)
+        self.assertTrue((self.stack / '.deploy/last-good').exists())
+
+    def test_retry_after_api_credentials_but_before_worker_file_reuses_token(self):
+        self.uninitialized()
+        result, _ = self.run_rollout('pull_failure', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        before = self.prepared_worker()
+        (self.stack / 'worker.env').unlink()
+        result, _ = self.run_rollout('legacy_previous', '--init-worker')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.prepared_worker()['MEDIA_WORKER_TOKEN'], before['MEDIA_WORKER_TOKEN'])
+        self.assertEqual((self.stack / '.deploy/worker-init-before/.env').read_text(), self.original)
+
+    def test_initialization_preserves_preconfigured_worker_credentials(self):
+        (self.stack / 'worker.env').unlink()
+        result, _ = self.run_rollout('success', '--init-worker')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.api_credentials()['test-cpu'], TOKEN)
+        self.assertEqual(len(self.api_credentials()), 2)
+
+    def test_initialization_leaves_existing_worker_settings_and_rollback_floor_intact(self):
+        result, events = self.run_rollout('legacy_previous', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('rollback floor', result.stderr)
+        self.assert_no_swap(events)
+        self.assertFalse((self.stack / '.deploy/worker-init-before').exists())
+
+    def test_automatic_bootstrap_ends_after_first_healthy_deployment(self):
+        self.uninitialized()
+        result, _ = self.run_rollout('legacy_previous', '--init-worker')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.environment.update(IMAGE_TAG='4'*40, MEDIA_WORKER_IMAGE_TAG='4'*40,
+                                ROLLOUT_TARGET='4'*40, ROLLOUT_PREVIOUS=TARGET)
+        (self.stack / 'events').unlink()
+        result, events = self.run_rollout('legacy_previous', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('rollback floor', result.stderr)
+        self.assertFalse(any('up' in e['args'] or e['args'][0]=='stop' for e in events))
+
+    def test_deleted_worker_file_in_established_stack_is_not_regenerated(self):
+        result, _ = self.run_rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (self.stack / 'worker.env').unlink()
+        before = (self.stack / '.env').read_text()
+        result, _ = self.run_rollout('success', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('established deployment', result.stderr)
+        self.assertFalse((self.stack / 'worker.env').exists())
+        self.assertEqual((self.stack / '.env').read_text(), before)
+
+    def test_remote_initialization_is_not_guessed(self):
+        self.remote()
+        (self.stack / 'worker.env').unlink()
+        result, events = self.run_rollout('success', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('remote worker.env explicitly', result.stderr)
+        self.assertEqual((self.stack / '.env').read_text(), self.original)
+        self.assertFalse((self.stack / 'worker.env').exists())
+        self.assertFalse(events)
+
+    def test_failed_database_backup_keeps_existing_api_running(self):
+        self.uninitialized()
+        (self.stack / 'data').mkdir()
+        database = self.stack / 'data/postpilot.db'
+        database.write_bytes(b'not a SQLite database')
+        result, events = self.run_rollout('legacy_previous', '--init-worker')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('SQLite backup failed', result.stderr)
+        self.assertFalse(any('up' in e['args'] or e['args'][0]=='stop' for e in events))
+        self.assertEqual(database.read_bytes(), b'not a SQLite database')
+        self.assertFalse((self.stack / '.deploy/worker-init-before/database.sqlite3').exists())
+        self.assertFalse(list((self.stack / '.deploy/worker-init-before').glob('.database-*')))
+
+    def test_initialization_cannot_change_check_drain_or_rollback(self):
+        self.uninitialized()
+        for action in ['--check', '--drain', '--rollback']:
+            result, events = self.run_rollout('success', '--init-worker', action)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('only supported for an ordinary API rollout', result.stderr)
+            self.assertEqual((self.stack / '.env').read_text(), self.original)
+            self.assertFalse((self.stack / 'worker.env').exists())
+            self.assertFalse(events)
 
     def test_cpu_to_candidate_rollback_restores_cpu_without_device_override(self):
         result, _ = self.run_rollout()

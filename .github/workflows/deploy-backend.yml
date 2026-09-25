@@ -204,7 +204,7 @@ jobs:
           script: |
             set -eu
             cd "/srv/postpilot-${ENV_NAME}"
-            sh deploy/backend-rollout.sh
+            sh deploy/backend-rollout.sh --init-worker
 
       # Separate from the rollout on purpose: a CORS mismatch is a stack .env problem, not
       # a bad image, so rolling the image back would not fix it — it must fail loudly

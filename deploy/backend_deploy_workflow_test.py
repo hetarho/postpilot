@@ -41,6 +41,14 @@ class SmokeGateSurvives(unittest.TestCase):
             if (step.get("with") or {}).get("target") == GATED_TARGET
         ]
 
+    def test_rollout_initializes_the_default_worker_explicitly(self):
+        steps = self.jobs['rollout']['steps']
+        scripts = [step.get('with', {}).get('script', '') for step in steps]
+        self.assertTrue(any('sh deploy/backend-rollout.sh --init-worker' in script for script in scripts))
+        self.assertFalse(any('sh deploy/backend-rollout.sh --bootstrap' in script for script in scripts))
+        synced = [step.get('with', {}).get('source', '') for step in steps]
+        self.assertTrue(any('deploy/media/worker.env.example' in source for source in synced))
+
     def test_some_job_builds_the_gated_target(self):
         self.assertTrue(
             self.gating,

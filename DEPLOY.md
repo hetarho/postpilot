@@ -456,7 +456,7 @@ verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 �
 
 **GPU 후보 이미지에서도 실제 사용자 작업은 현재 CPU로 실행한다.** `cpu`와 `auto`는 CPU 프로필을 사용하고, `nvenc`는 승인되지 않은 프로필이므로 시작을 거부한다. [8.7의 격리 진단](#media-gpu-diagnostics)은 실행할 수 있지만, GPU 자동 선택·장애 후 CPU 전환은 CLIP-163 품질/시간 검증과 다음 구현 이후에 활성화한다.
 
-지원 호스트는 **Linux + Docker Engine + Compose 2.24 이상**, Python 3, `curl`, GHCR pull 권한이다. Windows/WSL2와 친구 PC의 실제 OS/GPU는 검증하지 않았다. API/워커 이미지 태그는 **게시된 40자리 commit SHA**이고 서로 다른 SHA여도 프로토콜·렌더러·에셋 계약이 같아야 한다. `<api-sha>`, `<worker-sha>`, `<candidate-sha>`, `<token>`, `<api-domain>`, `<vps>.<tailnet>.ts.net`은 모두 실제 값으로 바꿀 자리다. GPU 후보는 별도 수동 워크플로 `media-nvidia-candidate.yml`에서 게시하며, CPU 배포는 그 완료를 기다리지 않는다.
+지원 호스트는 **Linux + Docker Engine + Compose 2.24 이상**, Python 3.9 이상(최초 자동 전환에는 표준 `sqlite3` 모듈 포함), `curl`, GHCR pull 권한이다. Windows/WSL2와 친구 PC의 실제 OS/GPU는 검증하지 않았다. API/워커 이미지 태그는 **게시된 40자리 commit SHA**이고 서로 다른 SHA여도 프로토콜·렌더러·에셋 계약이 같아야 한다. `<api-sha>`, `<worker-sha>`, `<candidate-sha>`, `<token>`, `<api-domain>`, `<vps>.<tailnet>.ts.net`은 모두 실제 값으로 바꿀 자리다. GPU 후보는 별도 수동 워크플로 `media-nvidia-candidate.yml`에서 게시하며, CPU 배포는 그 완료를 기다리지 않는다.
 
 처음 설치하는 API 호스트는 §4–5의 Caddy/edge/DB 소유권/스토리지/메일 설정을 먼저 완료한다. API 전체 env 예제는 [`.env.production.example`](.env.production.example)이며, 기존 VPS에서는 기존 값을 보존하고 아래 배치 설정만 추가한다. API 이미지에는 미리보기·편집안 검증용 미디어 도구도 계속 포함된다.
 
@@ -470,7 +470,7 @@ MEDIA_WORKER_CREDENTIALS={"prod-cpu-1":"<token>"}
 MEDIA_STORAGE_ENDPOINT=
 ```
 
-아래는 워커의 **전체 env 예제**다. `deploy/media/worker.env.example`에서 복사해 스택 디렉터리의 `worker.env`로 둔다. GPU/원격 절차에서는 명시한 값만 바꾼다. API의 `.env`, DB, R2 키, 모델·결제 키를 PC로 복사하지 않는다. VPS에도 `worker.env`를 남겨 워커 이미지 호환성을 검사한다.
+아래는 워커의 **전체 env 예제**다. 기존 CPU VPS의 첫 자동 배포에서는 이 파일과 토큰을 자동으로 준비한다. 직접 설정하거나 GPU/원격 구성을 준비할 때는 `deploy/media/worker.env.example`에서 복사해 스택 디렉터리의 `worker.env`로 둔다. GPU/원격 절차에서는 명시한 값만 바꾼다. API의 `.env`, DB, R2 키, 모델·결제 키를 PC로 복사하지 않는다. VPS에도 `worker.env`를 남겨 워커 이미지 호환성을 검사한다.
 
 ```dotenv
 MEDIA_WORKER_IMAGE_TAG=<worker-sha>
@@ -500,9 +500,23 @@ CLIP_DECODE_THREADS=2
 
 VPS `/srv/postpilot-prod`에 root의 prod/colocated/remote/nvidia Compose 파일, `deploy/backend-rollout.sh`, `deploy/media_rollout.py`, `deploy/media_preflight.py`, `deploy/media/worker.env.example`을 저장소와 같은 상대 경로로 둔다. 배포 워크플로가 이 파일들을 동기화한다. 첫 수동 배포 전에는 같은 revision의 파일을 먼저 복사한다. 공유 Caddy는 `/srv/edge`에 그대로 둔다.
 
-8.1의 `.env`와 `worker.env` 값을 사용한다. API와 워커는 비공개 `media` bridge로 연결되며 `http://api:9000`은 컨테이너 내부 주소다. 워커 포트는 공개하지 않고 Caddy는 API의 8080으로만 연결한다. 기존 `data/`와 소유권을 보존한다.
+API의 기존 `.env`는 유지한다. GitHub Actions는 `--init-worker`를 명시해, `worker.env`가 없는 최초 colocated CPU 배포에서만 8.1의 기본 워커 설정과 무작위 토큰을 만든다. API credential 목록에 새 워커를 추가하며 기존 항목·다른 env 값은 보존한다. 이미 `worker.env`가 있으면 해당 설정을 그대로 사용한다. API와 워커는 비공개 `media` bridge로 연결되며 `http://api:9000`은 컨테이너 내부 주소다. 워커 포트는 공개하지 않고 Caddy는 API의 8080으로만 연결한다. 기존 `data/`와 소유권을 보존한다.
 
-**처음 워커 구조로 올릴 때:** 신규 요청을 잠시 중지하고 기존 처리 완료 → 일관된 SQLite 백업과 이전 설정 보관 → 아래 점검/배포 순서다. 이전 API에 `rollback-safe=1` 라벨이 없으면 이 첫 전환은 구버전 이미지로 돌아갈 수 없다.
+**기존 VPS의 첫 자동 전환:** 배포 workflow가 `sh deploy/backend-rollout.sh --init-worker`를 실행한다. `worker.env`를 수동 생성하거나 GitHub Secret에 워커 토큰을 추가할 필요가 없다. 프로젝트별 ID와 32바이트 무작위 토큰을 생성하고 `.env`/`worker.env`에 0600 권한으로 저장한다. 원본 설정은 `.deploy/worker-init-before`에 보관한다. API credential 기록 직후 배포가 중단돼도 같은 토큰으로 재시도한다.
+
+지원 버전으로 되돌릴 수 없는 첫 전환에서는 컨테이너 교체 전에 기존 bind-mounted SQLite DB의 일관된 백업을 `.deploy/worker-init-before/database.sqlite3`에 만든다. [Python SQLite backup API](https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.backup)를 사용해 원본을 read-only로 열며 WAL에 commit된 내용도 포함한다. 60초 제한·파일 접근·용량·무결성 검사 실패 시 기존 서비스는 교체하지 않는다. 새 설치라 DB 파일이 아직 없으면 백업할 데이터가 없다고 기록한다. 백업은 해당 시점의 사본이며 이후 쓰기까지 포함하는 실시간 복제나 자동 DB 복구가 아니다.
+
+초기화 기록이 있고 아직 `last-good`가 없는 이 첫 CPU 전환에만 구버전 rollback 제한을 넘어 앞으로 배포한다. 첫 성공 이후에는 원래의 계약/rollback 검사를 적용한다. 첫 배포가 실패하면 같은 설정으로 재실행할 수 있으며, 마이그레이션 이후 구 API를 다시 부팅하지 않는다. `--init-worker`는 remote/GPU 구성을 추측하지 않고, 이미 정상 배포한 스택에서 지워진 worker.env도 새 토큰으로 덮어 만들지 않는다. 후자는 `.deploy/last-good`의 비공개 설정으로 복구한다.
+
+수동 실행도 같은 경로를 사용할 수 있다. 서버 용량 점검은 8.6을 먼저 따른다.
+
+```bash
+cd /srv/postpilot-prod
+IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
+  API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --init-worker
+```
+
+**직접 worker.env를 준비한 첫 전환:** 8.1의 값을 채운 뒤 신규 요청을 잠시 중지하고 기존 처리 완료 → 일관된 SQLite 백업과 이전 설정 보관 → 아래 점검/배포 순서를 사용한다. 이 경로는 기존의 명시적인 `--bootstrap` 절차다. 이전 API에 `rollback-safe=1` 라벨이 없으면 구버전 이미지로 돌아갈 수 없다. `--init-worker`는 `--check`, `--drain`, `--rollback`과 함께 사용하지 않는다.
 
 ```bash
 cd /srv/postpilot-prod

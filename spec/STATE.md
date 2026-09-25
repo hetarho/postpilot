@@ -54,11 +54,13 @@
 |---|---|---|---|---|
 
 ## next
-- The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
+- The media-worker wave T376..T388 and the T389 first-deployment regression fix are complete; CPU separation, both layouts, three-environment guides/isolated NVIDIA diagnostics and automatic initial CPU worker configuration are verified; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T389 done (mw): first CPU deployment initializes missing worker.env and preserves credentials on retry, with a read-only SQLite backup before the forward-only swap; 48 deploy tests and all BE/FE/codegen/spec gates pass; no live deployment
+- 260925 T389 claimed (mw): fix missing worker.env during the first automated CPU VPS deployment; preserve established worker configuration and forward-only rollback protection
 - 260925 T375 done; the 38 per-control cases now live in their slices' tests (five new slice test files) and the editor page suites keep 74 cases; the T354..T375 review wave is complete; FE gates pass (p42)
 - 260925 T375 claimed (p42)
 - 260925 T373 done; entity indexes export no wire mapper (fakes map by member name), the draft save takes a domain PostDraftSave, an unknown 분야 or quality tick fails the read, and one exhaustive status split replaces the four chains; ESLint and arch pins guard it; FE gates pass (p42)
@@ -77,5 +79,3 @@
 - 260925 T365 claimed (p42)
 - 260925 T363 done; a take spends its candidate in the same content save (taken_candidates indices resolved at send time), so its mark never returns even where the phrase holds its source; BE and FE gates pass (p42)
 - 260925 T363 claimed (p42)
-- 260925 T358 done; photo and video deletes remove the guarded row before the object, a failed object delete left to the sweep; one FinalizedAtCurrentRevision rule, applied by the service to the row the snapshot read; BE gate passes (p42)
-- 260925 T358 claimed (p42)

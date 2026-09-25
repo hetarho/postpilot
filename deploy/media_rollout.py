@@ -13,11 +13,14 @@ import math
 import os
 from pathlib import Path
 import re
+import secrets
+import sqlite3
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 from urllib.parse import urlsplit
 
 API_IMAGE = 'ghcr.io/hetarho/postpilot-api'
@@ -30,6 +33,10 @@ TOOLS = {'CLIP_WORK_ROOT', 'CLIP_WORK_STALE_AGE', 'CLIP_MEDIA_TIMEOUT',
          'CLIP_FONT_PATH', 'CLIP_FONT_PAPERLOGY_PATH', 'CLIP_FONT_JUA_PATH',
          'CLIP_FONT_NANUM_MYEONGJO_PATH', 'CLIP_FONT_NANUM_MYEONGJO_BOLD_PATH',
          'CLIP_ENCODE_THREADS', 'CLIP_DECODE_THREADS'}
+CONTROL_ENV = {'IMAGE_TAG', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_TOPOLOGY', 'MEDIA_WORKER_VARIANT',
+               'COMPOSE_FILE', 'COMPOSE_PROFILES', 'COMPOSE_ENV_FILES'}
+INIT_SNAPSHOT = Path('.deploy/worker-init-before')
+
 WORKER_KEYS = TOOLS | {'MEDIA_WORKER_VARIANT', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_API_URL', 'MEDIA_WORKER_ID',
     'MEDIA_WORKER_TOKEN', 'MEDIA_ACCEL', 'MEDIA_WORKER_CONCURRENCY', 'MEDIA_WORKER_CPUS',
     'MEDIA_WORKER_MEMORY', 'MEDIA_DRAIN_TIMEOUT', 'MEDIA_STOP_TIMEOUT'}
@@ -90,8 +97,7 @@ class Stack:
             raise RolloutError('worker.env contains an unsupported setting or application secret')
         keys = set().union(*(env_keys(Path(p)) for p in self.env_files))
         self.environment = {k: v for k, v in os.environ.items()
-                            if k not in keys | {'IMAGE_TAG', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_TOPOLOGY',
-                                               'MEDIA_WORKER_VARIANT', 'COMPOSE_FILE', 'COMPOSE_PROFILES', 'COMPOSE_ENV_FILES'}}
+                            if k not in keys | CONTROL_ENV}
         self.prefix = ['docker', 'compose']
         for name in self.env_files:
             self.prefix += ['--env-file', name]
@@ -359,7 +365,118 @@ def prune_images(protected):
                     command(['docker', 'image', 'rm', ref])
 
 
+def env_setting(source, key, value):
+    # Only generated scalars/quoted JSON enter this writer. Preserve all other
+    # lines, including comments, provider values and existing dotenv quoting.
+    pattern = rf'^[ \t]*(?:export[ \t]+)?{re.escape(key)}[ \t]*=.*$'
+    line = key + '=' + value
+    if re.search(pattern, source, re.M):
+        return re.sub(pattern, lambda _: line, source, flags=re.M)
+    return source.rstrip('\n') + '\n' + line + '\n'
+
+
+def initialize_colocated_worker():
+    """Opt-in first deployment only. A retry never rotates a prepared token."""
+    if Path('worker.env').exists() or Path('worker.env').is_symlink():
+        return
+    if Path('.deploy/last-good').exists():
+        raise RolloutError('worker.env is missing from an established deployment; recover its private configuration from .deploy/last-good')
+    check_private_file(Path('.env'))
+    keys = env_keys(Path('.env'))
+    environment = {k: v for k, v in os.environ.items() if k not in keys | CONTROL_ENV}
+    raw = command(['docker', 'compose', '--env-file', '.env', '-f', 'docker-compose.prod.yml',
+                   'config', '--format', 'json'], env=environment, capture=True)
+    config = json.loads(raw)
+    values = config['services']['api']['environment']
+    if values.get('MEDIA_TOPOLOGY') not in (None, '', 'colocated'):
+        raise RolloutError('automatic worker initialization requires colocated CPU placement; prepare remote worker.env explicitly')
+    if values.get('MEDIA_WORKER_VARIANT') not in (None, '', 'cpu') or values.get('MEDIA_ACCEL') not in (None, '', 'cpu', 'auto'):
+        raise RolloutError('automatic worker initialization does not select GPU configuration')
+    identity = config['name'][:100] + '-cpu-1'
+    if not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', identity):
+        raise RolloutError('invalid deployment name for a worker identity')
+    try:
+        credentials = json.loads(values.get('MEDIA_WORKER_CREDENTIALS') or '{}')
+        if not isinstance(credentials, dict) or any(
+            not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', k) or not isinstance(v, str) or
+            not re.fullmatch(r'[A-Za-z0-9_-]+', v) for k, v in credentials.items()
+        ):
+            raise ValueError()
+    except (ValueError, TypeError):
+        raise RolloutError('MEDIA_WORKER_CREDENTIALS must contain valid worker identities and tokens') from None
+    credentials.setdefault(identity, secrets.token_urlsafe(32))
+    template = Path(__file__).with_name('media').joinpath('worker.env.example').read_text()
+    settings = {'MEDIA_WORKER_IMAGE_TAG': immutable_tag(os.environ.get('MEDIA_WORKER_IMAGE_TAG')),
+                'MEDIA_WORKER_VARIANT': 'cpu', 'MEDIA_API_URL': 'http://api:9000',
+                'MEDIA_WORKER_ID': identity, 'MEDIA_WORKER_TOKEN': credentials[identity], 'MEDIA_ACCEL': 'cpu'}
+    for key, value in settings.items():
+        template = env_setting(template, key, value)
+    if not INIT_SNAPSHOT.exists():
+        staging = Path('.deploy/worker-init-next')
+        shutil.rmtree(staging, ignore_errors=True)
+        save_snapshot(staging, {name: Path(name).read_bytes() for name in ['.env', 'docker-compose.prod.yml']}, {})
+        staging.rename(INIT_SNAPSHOT)
+    api = Path('.env').read_text()
+    api = env_setting(api, 'MEDIA_TOPOLOGY', 'colocated')
+    api = env_setting(api, 'MEDIA_WORKER_CREDENTIALS', "'" + json.dumps(credentials, separators=(',', ':')) + "'")
+    # Publish API credentials first: a crash before worker.env reuses this identity.
+    atomic_write(Path('.env'), api.encode())
+    atomic_write(Path('worker.env'), template.encode())
+    Path('worker.env').chmod(0o600)
+    print('initialized private colocated CPU worker settings; original config retained in .deploy/worker-init-before')
+
+
+def backup_initial_database(stack):
+    """Consistent pre-migration copy; never restore or write to the API DB."""
+    destination = INIT_SNAPSHOT / 'database.sqlite3'
+    if destination.exists():
+        check_private_file(destination)
+        return
+    api = stack.config['services']['api']
+    database = Path(os.path.normpath('/' + (api['environment'].get('DB_PATH') or 'data/postpilot.db').lstrip('/')))
+    source = None
+    for volume in api.get('volumes', []):
+        if volume['type'] == 'bind' and database.is_relative_to(volume['target']):
+            source = Path(volume['source']) / database.relative_to(volume['target'])
+            break
+    if source is None:
+        raise RolloutError('automatic first upgrade needs a bind-mounted SQLite DB; use the documented manual bootstrap for other storage')
+    try:
+        info = source.stat()
+    except FileNotFoundError:
+        print('initial deployment has no existing SQLite file to back up')
+        return
+    if not stat.S_ISREG(info.st_mode):
+        raise RolloutError('initial SQLite backup requires a regular database file')
+    deadline = time.monotonic() + 60
+
+    def progress(_status, _remaining, _total):
+        if time.monotonic() >= deadline:
+            raise RolloutError('initial SQLite backup exceeded 60 seconds; services were not changed')
+
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=INIT_SNAPSHOT, prefix='.database-', delete=False) as file:
+            temporary = Path(file.name)
+        with contextlib.closing(sqlite3.connect(source.resolve().as_uri() + '?mode=ro', uri=True, timeout=5)) as original:
+            with contextlib.closing(sqlite3.connect(temporary)) as copy:
+                original.backup(copy, pages=128, progress=progress, sleep=0.05)
+                copy.set_progress_handler(lambda: int(time.monotonic() >= deadline), 10000)
+                if copy.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
+                    raise RolloutError('initial SQLite backup failed its integrity check; services were not changed')
+        temporary.chmod(0o600)
+        temporary.replace(destination)
+    except (OSError, sqlite3.Error) as error:
+        raise RolloutError('initial SQLite backup failed; services were not changed; check DB read access and backup disk space') from error
+    finally:
+        if temporary:
+            temporary.unlink(missing_ok=True)
+    print('consistent SQLite backup retained in .deploy/worker-init-before/database.sqlite3')
+
+
 def rollout(args):
+    if args.init_worker:
+        initialize_colocated_worker()
     good_dir = Path('.deploy/last-good')
     if args.rollback:
         previous = saved_snapshot(good_dir)
@@ -375,6 +492,9 @@ def rollout(args):
             return
         current = stack.snapshot()
         previous = saved_snapshot(good_dir) or current
+    automatic_bootstrap = args.init_worker and INIT_SNAPSHOT.exists() and not good_dir.exists()
+    if automatic_bootstrap and (stack.topology != 'colocated' or stack.variant != 'cpu'):
+        raise RolloutError('pending automatic initialization is only valid for colocated CPU deployment')
     changed = False
     try:
         if args.rollback:
@@ -393,7 +513,7 @@ def rollout(args):
             command(['docker', 'pull', stack.worker_image])
         contract = validate_images(stack)
         rollback_images = rollback_ready(args.role, previous)
-        if not rollback_images and not args.bootstrap:
+        if not rollback_images and not (args.bootstrap or automatic_bootstrap):
             raise RolloutError('previous images are below the compatible rollback floor; first upgrade requires the documented --bootstrap maintenance procedure')
         if args.role == 'worker':
             status_probe(stack)
@@ -402,6 +522,8 @@ def rollout(args):
             print('configuration and image contracts verified; no service changed; ' +
                   ('supported rollback verified' if rollback_images else 'legacy rollback unavailable (--bootstrap)'))
             return
+        if automatic_bootstrap and not rollback_images:
+            backup_initial_database(stack)
         if not rollback_images and not Path('.deploy/bootstrap-before').exists():
             save_snapshot(Path('.deploy/bootstrap-before'), current, {})
         changed = True
@@ -451,7 +573,10 @@ def main():
     action.add_argument('--drain', action='store_true')
     action.add_argument('--rollback', action='store_true')
     parser.add_argument('--bootstrap', action='store_true', help='first forward-only upgrade during operator maintenance')
+    parser.add_argument('--init-worker', action='store_true', help='initialize an absent default CPU worker and its first forward-only deployment')
     args = parser.parse_args()
+    if args.init_worker and (args.role != 'api' or args.check or args.drain or args.rollback):
+        parser.error('--init-worker is only supported for an ordinary API rollout')
     os.umask(0o077)
     Path('.deploy').mkdir(mode=0o700, exist_ok=True)
     Path('.deploy').chmod(0o700)
