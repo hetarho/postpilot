@@ -3,17 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useStartGeneration, type GenerationJob } from '@/entities/generation-job'
 import { useStartWriteExperiment } from '@/entities/model-experiment'
 import { isPublished, type PostDraft } from '@/entities/post'
-import {
-  sameRef,
-  useModelSetup,
-  useSelectionSavePending,
-  useStageSelection,
-} from '@/entities/model-catalog'
+import { useSelectionSavePending } from '@/entities/model-catalog'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
   AppFailureMessage,
   Button,
-  ExplainedButton,
   FieldMessage,
   Notice,
   Typography,
@@ -24,8 +18,10 @@ import {
   comparisonGenerationPreconditions,
   isSetupBlocker,
   ordinaryGenerationPreconditions,
-  type GenerationModelSelection,
+  type GenerationMode,
+  type GenerationPreconditions,
 } from '../model/preconditions'
+import { useGenerationSelections } from '../model/useBriefIssues'
 import { ReobservePicker } from './ReobservePicker'
 
 export interface GenerationActionsHandle {
@@ -47,19 +43,18 @@ export const GenerationActions = forwardRef<
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
-    /** Opens the writing brief, which is where the active 관찰/작성 모델 are chosen. Supplied by
-     *  `pages/editor`, which owns the brief's open state — a feature may not import the widget
+    /** Opens the writing brief — where the 관찰/작성 모델 and the A/B pair are chosen — for a press
+     *  of `mode` that its setup refused, so the brief can mark what that run is missing. Supplied
+     *  by `pages/editor`, which owns the brief's open state — a feature may not import the widget
      *  that composes its siblings (ARCHITECTURE §3). */
-    onOpenBrief?: () => void
+    onOpenBrief: (mode: GenerationMode) => void
   }
 >(function GenerationActions(
   { post, targetLength, activeJob, jobPending = false, onStarted, beforeStart, onOpenBrief },
   ref,
 ) {
   const { t } = useTranslation('posts')
-  const observe = useStageSelection('observe')
-  const write = useStageSelection('write')
-  const setup = useModelSetup()
+  const selections = useGenerationSelections()
   const selectionSaving = useSelectionSavePending()
   const generation = useStartGeneration()
   const comparison = useStartWriteExperiment()
@@ -69,11 +64,7 @@ export const GenerationActions = forwardRef<
   // picker for both actions, and the answer only means something together with the action.
   const [picking, setPicking] = useState<'generation' | 'comparison' | ''>('')
 
-  const observeSelection = resolveSelection(observe.models, observe.selected)
-  const writeSelection = resolveSelection(write.models, write.selected)
-  const pair = setup.pairs.find((value) => value.stage === 'write')
-  const writeA = resolveSelection(write.models, pair?.candidateA?.ref ?? null)
-  const writeB = resolveSelection(write.models, pair?.candidateB?.ref ?? null)
+  const { observe: observeSelection, write: writeSelection, writeA, writeB } = selections
   const published = isPublished(post)
   const ordinary = ordinaryGenerationPreconditions(
     post.images,
@@ -95,7 +86,10 @@ export const GenerationActions = forwardRef<
     published,
   )
   const pendingExperiment = Boolean(post.pendingExperimentId)
-  const modelPending = observe.isPending || write.isPending || setup.isPending || selectionSaving
+  // `modelPending` is load-bearing: `useStageSelection` reports `selected: null` for the whole
+  // fetch, so without it every visit to 글 생성 would treat an unanswered catalog as a missing
+  // model and send the press to the brief.
+  const modelPending = selections.isPending || selectionSaving
   const busy = jobPending || Boolean(preparing) || generation.isPending || comparison.isPending
   const sharedDisabled = modelPending || busy || pendingExperiment
 
@@ -169,9 +163,17 @@ export const GenerationActions = forwardRef<
   )
 
   const start = useCallback(
-    async (mode: 'generation' | 'comparison') => {
+    async (mode: GenerationMode) => {
       const precondition = mode === 'generation' ? ordinary : ab
-      if (sharedDisabled || !precondition.ok) return
+      if (sharedDisabled) return
+      // A model the run needs is not chosen, or cannot watch this post's media. The press is not
+      // refused in place: it opens the brief with that field marked, which is where the fix is
+      // (owner decision 2026-09-25).
+      if (refusedForSetup(precondition)) {
+        onOpenBrief(mode)
+        return
+      }
+      if (!precondition.ok) return
       if (mode === 'generation' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
       // A post with observations worth reusing decides what to re-observe first; one with
@@ -185,6 +187,7 @@ export const GenerationActions = forwardRef<
     [
       ab,
       enqueue,
+      onOpenBrief,
       ordinary,
       post.images,
       post.observations,
@@ -205,72 +208,6 @@ export const GenerationActions = forwardRef<
     [start],
   )
 
-  // Nothing this step can start yet, and the only reason is that the models have never been
-  // chosen. Two dead buttons are not an empty state (§7): the bar drops them and offers the way to
-  // the surface every missing piece is chosen on, which is now the brief for all of them — the
-  // active selections and the A/B pair alike. Any other blocker (a job in flight, a deleted voice,
-  // a selection still loading) keeps the ordinary disabled buttons, because waiting IS the answer,
-  // and so does a caller that gave no way to open the brief.
-  const needsBrief =
-    !modelPending &&
-    !busy &&
-    !pendingExperiment &&
-    Boolean(onOpenBrief) &&
-    isSetupBlocker(ordinary.blocker) &&
-    isSetupBlocker(ab.blocker)
-
-  // A refusal is written ONLY when it names something the user has to CHOOSE. The purely temporal
-  // ones — a job in flight, a selection still saving or loading — are not written here at all:
-  // the page-top status line already says a job or a save is running, and repeating it under the
-  // buttons said the same thing twice in two grammars (change 15). Nor is a pending A/B result:
-  // both buttons are disabled through `sharedDisabled` and the A/B 결과 확인 link below IS the way
-  // out, so a sentence above it would only be a second copy of the link's own instruction.
-  //
-  // `!modelPending` is load-bearing: `useStageSelection` reports `selected: null` for the whole
-  // fetch, so without it every visit to 글 생성 asserts that no model is chosen before the
-  // catalog has answered — a refusal that is not true yet.
-  const generateSetup = !modelPending && isSetupBlocker(ordinary.blocker) ? ordinary.reason : ''
-  const compareSetup = !modelPending && isSetupBlocker(ab.blocker) ? ab.reason : ''
-
-  // Only 생성's refusal is a line under the row. A/B 비교 is the occasional second opinion, so its
-  // own reason is the disabled button's tooltip rather than a second sentence every visit reads
-  // (owner decision 2026-09-24). The line is bare when both are refused for the same reason — it
-  // then speaks for both — and names 생성 otherwise, so it is never read as A/B 비교's.
-  const generateLine = (className?: string) =>
-    generateSetup && (
-      <Typography variant="label" as="p" role="status" className={className}>
-        {generateSetup === compareSetup
-          ? generateSetup
-          : t('generation.generateReason', {
-              reason: generateSetup,
-              // This value is another catalog sentence, never user or model data. Avoid
-              // double-escaping its slash into visible `&#x2F;` while global interpolation
-              // escaping remains enabled for untrusted values.
-              interpolation: { escapeValue: false },
-            })}
-      </Typography>
-    )
-
-  if (needsBrief) {
-    return (
-      <div className="grid gap-3">
-        {/* ONE statement of what is missing, above the ONE control that answers it. Both actions
-            are refused for a setup reason here by construction (`needsBrief`), and two sentences
-            over a single button is the duplication this surface exists to avoid. */}
-        {(generateSetup || compareSetup) && (
-          <Typography variant="label" as="p" role="status">
-            {generateSetup || compareSetup}
-          </Typography>
-        )}
-        <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
-          <Button variant="secondary" onClick={onOpenBrief}>
-            {t('generation.setup.brief')}
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div>
       {/* The one place ① says why it is locked (POST-86): both actions are refused for it, and no
@@ -289,28 +226,27 @@ export const GenerationActions = forwardRef<
           full-size targets here. From `sm:` up the pair right-aligns at its natural width, where a
           stretched CTA would only be a wide box with a two-character label in the middle. */}
       <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
-        <ExplainedButton
+        {/* A refusal for the SETUP leaves the button live: pressing it is how the user is taken to
+            the brief with the missing field marked, and nothing is written under the row. Every
+            other refusal — a job running, a deleted voice, a pending A/B result, a published
+            post — keeps it disabled, because no field fixes those. */}
+        <Button
           variant="secondary"
-          disabled={sharedDisabled || !ab.ok}
-          // Only while the choice is the one thing in the way: a pending A/B result, a start in
-          // flight or a selection still loading keeps it an ordinary disabled button, whose
-          // answer is the 결과 확인 link or the status line, not a model to choose.
-          reason={sharedDisabled ? '' : compareSetup}
+          disabled={sharedDisabled || (!ab.ok && !refusedForSetup(ab))}
           pending={preparing === 'comparison' || comparison.isPending}
           onClick={() => void start('comparison')}
         >
           {t('generation.compare')}
-        </ExplainedButton>
+        </Button>
         <Button
           variant="cta"
-          disabled={sharedDisabled || !ordinary.ok}
+          disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}
           pending={preparing === 'generation' || generation.isPending}
           onClick={() => void start('generation')}
         >
           {t('generation.generate')}
         </Button>
       </div>
-      {ordinary.blocker !== 'published' && generateLine('mt-2')}
       {pendingExperiment && (
         <a
           href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
@@ -348,18 +284,7 @@ export const GenerationActions = forwardRef<
   )
 })
 
-function resolveSelection(
-  models: ReturnType<typeof useStageSelection>['models'],
-  selected: ReturnType<typeof useStageSelection>['selected'],
-): GenerationModelSelection | undefined {
-  if (!selected) return undefined
-  const model = models.find((candidate) => sameRef(candidate.ref, selected))
-  return model
-    ? {
-        ref: selected,
-        vision: model.vision,
-        videoInput: model.videoInput,
-        signedVideoUrl: model.signedVideoUrl,
-      }
-    : undefined
+/** Refused only because a brief field is missing or cannot serve this post. */
+function refusedForSetup(precondition: GenerationPreconditions): boolean {
+  return !precondition.ok && isSetupBlocker(precondition.blocker)
 }

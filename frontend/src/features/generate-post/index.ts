@@ -7,5 +7,12 @@ export {
   ordinaryGenerationPreconditions,
   comparisonGenerationPreconditions,
 } from './model/preconditions'
-export type { GenerationModelSelection, GenerationPreconditions } from './model/preconditions'
+export type {
+  BriefField,
+  BriefIssues,
+  GenerationMode,
+  GenerationModelSelection,
+  GenerationPreconditions,
+} from './model/preconditions'
+export { useBriefIssues } from './model/useBriefIssues'
 export { useBriefMirror } from './model/useBriefMirror'

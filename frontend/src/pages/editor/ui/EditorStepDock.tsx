@@ -1,7 +1,11 @@
 import type { ReactNode, RefObject } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import { GenerationActions, type GenerationActionsHandle } from '@/features/generate-post'
+import {
+  GenerationActions,
+  type GenerationActionsHandle,
+  type GenerationMode,
+} from '@/features/generate-post'
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import type { useVoiceLearning } from '@/features/finalize-post'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
@@ -49,7 +53,8 @@ export function EditorStepDock({
   generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
   beforeStart: () => Promise<void>
-  onOpenBrief: () => void
+  /** Opens the writing brief marking what a `mode` press was refused for. */
+  onOpenBrief: (mode: GenerationMode) => void
   onTitleFinalized: (title: string) => void
   onStepChange: (step: EditorStep) => void
 }) {

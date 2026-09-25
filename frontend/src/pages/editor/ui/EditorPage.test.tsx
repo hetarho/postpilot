@@ -525,22 +525,30 @@ describe('opening a post', () => {
     const generate = await screen.findByRole('button', { name: '생성' })
     const compare = screen.getByRole('button', { name: 'A/B 비교' })
     await waitFor(() => expect(generate).toBeEnabled())
-    // The reason is the disabled button's tooltip, not a line under the row (owner 2026-09-24).
+    // Nothing is said under the row, and the button stays live: pressing it is the way to the
+    // fix (owner decision 2026-09-25).
     const PAIR = '작성 A/B 모델 두 개를 선택하세요.'
-    expect(compare).toHaveAttribute('aria-disabled', 'true')
-    expect(compare).toHaveAccessibleDescription(PAIR)
-    expect(screen.queryByText(PAIR, { ignore: '.sr-only' })).toBeNull()
-    // A press shows it: a thumb has no hover to rest on.
-    await user.click(compare)
-    expect(await screen.findByText(PAIR, { ignore: '.sr-only' })).toBeInTheDocument()
+    expect(compare).toBeEnabled()
+    expect(screen.queryByText(PAIR)).toBeNull()
 
-    // The pair the button is waiting on is set in the brief itself now, so the fix is two
-    // dropdowns away rather than a page away.
-    const brief = await openBrief(user)
+    // The press opens the brief on the pair, marked the way a validation error is, and starts
+    // nothing. The fix is two dropdowns away rather than a page away.
+    await user.click(compare)
+    const brief = await screen.findByRole('dialog', { name: '글쓰기 옵션' })
+    expect(within(brief).getByText(PAIR)).toBeInTheDocument()
     expect(within(brief).queryByRole('link')).not.toBeInTheDocument()
     for (const label of [/후보 A/, /후보 B/]) {
-      expect(await screen.findByRole('combobox', { name: label })).toBeInTheDocument()
+      const candidate = within(brief).getByRole('combobox', { name: label })
+      expect(candidate).toHaveAttribute('aria-invalid', 'true')
+      expect(candidate).toHaveAccessibleDescription(expect.stringContaining(PAIR))
     }
+    // The ordinary run is not what was refused, so its own field carries no mark.
+    expect(within(brief).getByRole('combobox', { name: /^작성 모델/ })).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    await waitFor(() =>
+      expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toHaveFocus(),
+    )
   })
 
   it('sends the active writer only for ordinary generation', async () => {
@@ -981,7 +989,7 @@ describe('opening a post', () => {
     // the list row is read from (A8/A9).
     await user.type(screen.getByLabelText('메모'), '뒷이야기')
     await waitFor(() => expect(draftSaves).toHaveLength(1), { timeout: 4_000 })
-    await user.click(screen.getByRole('link', { name: '← 글 목록' }))
+    await user.click(screen.getByRole('link', { name: '글 목록' }))
     expect(
       await screen.findByRole('link', { name: new RegExp(POST_CONTENT_FIXTURE.title) }),
     ).toBeInTheDocument()
@@ -1712,28 +1720,44 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByLabelText('글 작업')).not.toBeInTheDocument()
   })
 
-  // A step that cannot start anything offers the way to set it up, not two dead buttons.
-  it('replaces ①’s actions with the route to model setup when nothing is chosen', async () => {
+  // A step whose models were never chosen keeps its two actions: a press is what takes the user to
+  // the brief, with what that run is missing marked there (owner decision 2026-09-25).
+  it('opens the brief on the missing model when a press finds nothing chosen', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ ...reviewPost, status: 'draft', images: [] }] },
     })
 
+    const WRITE = '활성 작성 모델을 선택하세요.'
     const dock = await screen.findByLabelText('글 작업')
-    // ONE statement of what is missing, over the ONE control that answers it. Two sentences in two
-    // grammars above a single button is what change 15 removed.
-    expect(await within(dock).findByText('활성 작성 모델을 선택하세요.')).toBeInTheDocument()
-    expect(within(dock).queryByText(/^생성:/)).not.toBeInTheDocument()
-    expect(within(dock).queryByText(/^A\/B 비교:/)).not.toBeInTheDocument()
-    expect(within(dock).queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
-    expect(within(dock).queryByRole('button', { name: 'A/B 비교' })).not.toBeInTheDocument()
-
-    // ONE way out, because there is one surface: the active 작성 모델 and the A/B pair are both
-    // set in the brief now, so the bar no longer offers a second route to the AI 모델 page.
+    const generate = await within(dock).findByRole('button', { name: '생성' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    expect(within(dock).getByRole('button', { name: 'A/B 비교' })).toBeEnabled()
+    // Nothing is written under the row, and there is no second route out of the bar.
+    expect(within(dock).queryByText(WRITE)).not.toBeInTheDocument()
     expect(within(dock).queryByRole('link')).not.toBeInTheDocument()
-    await user.click(within(dock).getByRole('button', { name: '글쓰기 옵션에서 모델 선택' }))
-    expect(await screen.findByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
+
+    await user.click(generate)
+    const brief = await screen.findByRole('dialog', { name: '글쓰기 옵션' })
+    const writer = within(brief).getByRole('combobox', { name: /^작성 모델/ })
+    expect(within(brief).getByText(WRITE)).toBeInTheDocument()
+    expect(writer).toHaveAttribute('aria-invalid', 'true')
+    expect(writer).toHaveAccessibleDescription(expect.stringContaining(WRITE))
+    // It shakes once, and focus lands on it.
+    expect(writer.closest('.animate-shake')).not.toBeNull()
+    await waitFor(() => expect(writer).toHaveFocus())
+    // A post with no photo needs no observe model, and 생성 asks nothing of the A/B pair.
+    expect(within(brief).getByRole('combobox', { name: /^관찰 모델/ })).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    expect(within(brief).queryByText('작성 A/B 모델 두 개를 선택하세요.')).toBeNull()
+
+    // The marks answer that press: closed and reopened from its own glyph, the brief is plain.
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '글쓰기 옵션' })).toBeNull())
+    const reopened = await openBrief(user)
+    expect(within(reopened).queryByText(WRITE)).toBeNull()
   })
 
   // The memo is what 글 생성 works from, so it lives there rather than above every step.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { deletedVoiceAIReason } from '@/entities/voice'
 import {
+  briefIssues,
   comparisonGenerationPreconditions,
   isSetupBlocker,
   ordinaryGenerationPreconditions,
@@ -294,5 +295,36 @@ describe('a published post', () => {
       comparisonGenerationPreconditions([], undefined, text, textB, running, undefined, [], false)
         .blocker,
     ).toBe('activeJob')
+  })
+})
+
+// A refused press opens the brief with EVERY field its run is missing marked, in that field's own
+// words, so one visit fixes them all.
+describe('briefIssues', () => {
+  it('marks every field 생성 is missing, and nothing of the pair', () => {
+    expect(briefIssues('generation', 1, 0, undefined, undefined, undefined, undefined)).toEqual({
+      observe: '관찰 모델을 선택하세요.',
+      write: '활성 작성 모델을 선택하세요.',
+    })
+  })
+
+  it('marks the pair for A/B 비교, and nothing of the active writer', () => {
+    expect(briefIssues('comparison', 0, 0, undefined, undefined, text, undefined)).toEqual({
+      pair: '작성 A/B 모델 두 개를 선택하세요.',
+    })
+    expect(briefIssues('comparison', 0, 0, undefined, undefined, text, text)).toEqual({
+      pair: '서로 다른 작성 모델을 선택하세요.',
+    })
+  })
+
+  it('asks nothing of the observe model for a post with no media', () => {
+    expect(briefIssues('generation', 0, 0, undefined, text, undefined, undefined)).toEqual({})
+  })
+
+  it('marks an observe model that cannot see the photos', () => {
+    expect(briefIssues('generation', 1, 0, text, text, undefined, undefined)).toEqual({
+      observe: '사진을 볼 수 있는 관찰 모델을 선택하세요.',
+    })
+    expect(briefIssues('generation', 1, 0, vision, text, undefined, undefined)).toEqual({})
   })
 })

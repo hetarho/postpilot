@@ -4,7 +4,7 @@ import { hasContent, useRefreshPostImages, type PostDraft } from '@/entities/pos
 import { voiceContentLanguageMismatch } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
 import { useVoiceLearning } from '@/features/finalize-post'
-import type { GenerationActionsHandle } from '@/features/generate-post'
+import type { GenerationActionsHandle, GenerationMode } from '@/features/generate-post'
 import type { BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { editorStepLabel, type EditorStep } from '../model/steps'
@@ -50,7 +50,8 @@ export function LifecycleSteps({
   /** The post's 분야, rendered under the data fields and above 기억 사용 (POST-54). */
   fieldPicker: ReactNode
   dockHeader: ReactNode
-  onOpenBrief: () => void
+  /** Opens the writing brief marking what a `mode` press was refused for. */
+  onOpenBrief: (mode: GenerationMode) => void
   targetLength?: number
   /** Re-seeds the editor's local 가제 with what 확정 wrote into `posts.title`. */
   onTitleFinalized: (title: string) => void

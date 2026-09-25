@@ -7,7 +7,7 @@ import {
   type PostDraft,
 } from '@/entities/post'
 import { formatAppFailure } from '@/shared/lib'
-import { Button, FieldLabel, FieldMessage, TextField, Typography } from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, TextField, Toggletip, Typography } from '@/shared/ui'
 
 /** ③'s foot (POST-54): the post's Naver Blog address, pasted to publish it, replaced by pasting
  *  another, cleared to reopen it (POST-73, POST-75). It opens once the post is 확정 (POST-87).
@@ -79,7 +79,14 @@ function PublishedUrlForm({ post }: { post: PostDraft }) {
           {t('publishedUrl.notFinalized', { ns: 'posts' })}
         </Typography>
       )}
-      <FieldLabel htmlFor={`${id}-url`}>{t('publishedUrl.label', { ns: 'posts' })}</FieldLabel>
+      {/* What the address does is behind the ⓘ rather than a standing line under the field
+          (owner decision 2026-09-25); it stays the field's description for a screen reader. */}
+      <div className="flex items-center gap-1">
+        <FieldLabel htmlFor={`${id}-url`}>{t('publishedUrl.label', { ns: 'posts' })}</FieldLabel>
+        <Toggletip label={t('publishedUrl.explain', { ns: 'posts' })} className="-my-2">
+          {t('publishedUrl.help', { ns: 'posts' })}
+        </Toggletip>
+      </div>
       <TextField
         id={`${id}-url`}
         type="url"
@@ -101,9 +108,9 @@ function PublishedUrlForm({ post }: { post: PostDraft }) {
         }}
         className="mt-1"
       />
-      <Typography variant="meta" as="p" id={helpId} className="text-content-secondary mt-1">
+      <span id={helpId} className="sr-only">
         {t('publishedUrl.help', { ns: 'posts' })}
-      </Typography>
+      </span>
       {error && (
         <FieldMessage id={errorId} role="alert" className="mt-2">
           {error}

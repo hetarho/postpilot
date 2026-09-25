@@ -610,6 +610,12 @@
      the first frame through the delay a staggered ladder hands each rung, so a later rung is
      absent rather than visible-then-jumping while it waits. */
   --animate-rise: rise var(--duration-slow) var(--ease-emphasized) both;
+  /* A field a refused action is waiting on: one short shake, so the eye lands on it (owner
+     decision 2026-09-25). It waits one `duration-slow` first — exactly a phone sheet's rise — so
+     the field shakes in place rather than while the sheet carrying it is still sliding up, and
+     `both` holds it still through that wait. It moves on `transform` alone, and the global
+     reduced-motion rule leaves it still. */
+  --animate-shake: shake var(--duration-slow) var(--ease-standard) var(--duration-slow) both;
 
   @keyframes scrim-in {
     from {
@@ -681,6 +687,20 @@
     from {
       opacity: 0;
       transform: translateY(0.75rem);
+    }
+  }
+  @keyframes shake {
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(5px);
+    }
+    60% {
+      transform: translateX(-4px);
+    }
+    80% {
+      transform: translateX(2px);
     }
   }
   @keyframes progress-sweep {

@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { clsx } from 'clsx'
+import { ArrowLeft } from 'lucide-react'
 import { isPublished, type PostDraft, type PostTemplateAnswer } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useTemplates } from '@/entities/template'
@@ -8,7 +10,7 @@ import { discardContentQueue, useCaretHandoff } from '@/features/edit-post-conte
 import { DeletePostButton } from '@/features/delete-post'
 import { discardDraftQueue, peekPendingDraft, useAutosave } from '@/features/save-draft'
 import { PostFieldSelect } from '@/features/select-post-field'
-import { useBriefMirror } from '@/features/generate-post'
+import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
 import {
   TemplateAnswerFields,
   answerFields,
@@ -148,6 +150,13 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // them from another layer, so the screen they both hang off owns the values.
   const brief = useBriefMirror(post)
   const briefRef = useRef<PopoverHandle>(null)
+  // The run a press of 생성 or A/B 비교 was refused for, while the brief that press opened is up:
+  // the brief marks what that run is missing. The count restarts the marked fields' shake.
+  const [briefRefusal, setBriefRefusal] = useState<{ mode: GenerationMode; count: number }>()
+  const openBriefFor = (mode: GenerationMode) => {
+    setBriefRefusal((previous) => ({ mode, count: (previous?.count ?? 0) + 1 }))
+    briefRef.current?.open()
+  }
 
   const titleField = (
     <TitleField
@@ -195,6 +204,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         brief.setTargetLength(values.targetLength)
         brief.setTagCount(values.tagCount)
       }}
+      refusal={briefRefusal}
+      onBriefClosed={() => setBriefRefusal(undefined)}
       locked={locked}
     />
   )
@@ -214,26 +225,35 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           rather than crushing the way out beside it (§8.5). The Korean refusal copy is over 40
           characters, which is more than a 360px row can hold beside anything. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest this was pixel-identical
-            to ordinary copy and the only thing marking it as the way out was a `hover:` colour no
-            touchscreen ever matches (§6). */}
+        {/* The word is underlined: `link-fg` resolves to `content-secondary`, so at rest an
+            un-underlined way out is pixel-identical to ordinary copy and the only thing marking it
+            was a `hover:` colour no touchscreen ever matches (§6). On a phone a post's row also
+            holds the step bar and the delete, so the glyph stands for the word there, as it does
+            in the clip workspace; the name stays the word at every width. `/posts/new` has neither
+            neighbour and keeps the word. */}
         <Link
           to="/posts"
+          aria-label={t('editor.backToList')}
           className={typographyStyles({
             variant: 'label',
-            className:
-              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 shrink-0 items-center underline',
+            className: clsx(
+              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1',
+              post && 'justify-center sm:justify-start',
+            ),
           })}
         >
-          {t('editor.backToList')}
+          <ArrowLeft aria-hidden="true" className="size-5" />
+          <span className={post ? 'hidden underline sm:inline' : 'underline'}>
+            {t('editor.backToList')}
+          </span>
         </Link>
 
         {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar.
             Drawn as stations — 글 생성 › 글 다듬기 › 글 완성, the current one told by colour — rather
             than as a row of pills, which read as three more buttons parked in the chrome (THEME-39).
-            Its three names are longer than the clip workspace's 생성 · 수정 · 완성 and cannot share a
-            360px row with the two 44px targets, so below `sm:` the bar takes a line of its own and
-            joins the row only once there is width for it. */}
+            It shares the row with the way out and the delete at every width, between their two
+            44px glyphs on a phone (owner decision 2026-09-25): a line of its own spent a whole row
+            of the screen's top on three words. */}
         {post && (
           <SegmentedControl
             value={step}
@@ -242,7 +262,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
             ariaLabel={t('editor.stepAria')}
             controls={STEP_PANEL_ID}
             variant="steps"
-            className="order-last w-full sm:order-none sm:w-auto sm:min-w-0 sm:flex-1"
+            className="min-w-0 flex-1"
           />
         )}
 
@@ -288,7 +308,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           answerFields={answerFieldsPanel}
           fieldPicker={fieldPicker}
           dockHeader={dockHeader}
-          onOpenBrief={() => briefRef.current?.open()}
+          onOpenBrief={openBriefFor}
           targetLength={brief.targetLength}
           onTitleFinalized={setTitle}
           beforeStart={autosave.flush}

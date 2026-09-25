@@ -36,6 +36,7 @@ export function StageModelSelect({
   disabled = false,
   requireVideoInput = false,
   availability,
+  error,
 }: {
   stage: StageName
   className?: string
@@ -47,6 +48,10 @@ export function StageModelSelect({
    *  saved choice the verdict refuses stays selected and says why under the field, and
    *  nothing can be picked while the verdict is loading or failed. */
   availability?: ModelAvailability
+  /** What a refused run needs of this field, said as a validation error is: in the error colour
+   *  under the field, with the field marked invalid (THEME-29 — the field itself never turns
+   *  red). Absent or '' is nothing to say. */
+  error?: string
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -62,6 +67,7 @@ export function StageModelSelect({
   const saveErrorId = `${id}-save-error`
   const unavailableId = `${id}-unavailable`
   const availabilityId = `${id}-availability`
+  const issueId = `${id}-issue`
   const availabilityNote =
     availability?.kind === 'loading'
       ? t('availability.loading')
@@ -71,6 +77,7 @@ export function StageModelSelect({
           ? selectedVerdict.reason || t('availability.unresolved')
           : ''
   const describedBy = [
+    error && issueId,
     isError && loadErrorId,
     save.failure && saveErrorId,
     unavailable && unavailableId,
@@ -116,7 +123,7 @@ export function StageModelSelect({
         value={value}
         options={options}
         disabled={disabled || isPending || save.isPending}
-        aria-invalid={isError || Boolean(save.failure) || undefined}
+        aria-invalid={isError || Boolean(save.failure) || Boolean(error) || undefined}
         aria-describedby={describedBy || undefined}
         onChange={(next) => {
           const chosen = models.find((model) => refKey(model.ref) === next)
@@ -132,6 +139,11 @@ export function StageModelSelect({
         }}
         className="mt-1"
       />
+      {error && (
+        <FieldMessage id={issueId} role="alert" className="mt-1 break-words">
+          {error}
+        </FieldMessage>
+      )}
       {/* Visible, not sr-only: the control greys out for the 1–3s a SaveSelection takes on mobile
           data, and a touch user watching the field it just closed over is exactly who needs the
           cause (§6). The region stays mounted so it announces when it fills, and `empty:hidden`

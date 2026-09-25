@@ -5,6 +5,7 @@ import { usePrefetchAccountQuality } from '@/entities/quality'
 import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
+import type { GenerationMode } from '@/features/generate-post'
 import type { ContentLanguage } from '@/shared/api'
 import type { PopoverHandle } from '@/shared/ui'
 import { GenerationBrief } from '@/widgets/generation-brief'
@@ -33,6 +34,10 @@ export const EditorDockHeader = forwardRef<
     onTemplateSelect: (id: string) => void
     onTargetLanguageSelect: (language: ContentLanguage) => void
     onBriefSaved: (values: { targetLength?: number; tagCount: number }) => void
+    /** The run a press was refused for, which the brief marks the missing fields of; `count`
+     *  grows with every refused press. */
+    refusal?: { mode: GenerationMode; count: number }
+    onBriefClosed?: () => void
     /** A published post (POST-86): every post write here is off, and none of these fields names
      *  a reason — ① says it once, above its actions. */
     locked?: boolean
@@ -50,6 +55,8 @@ export const EditorDockHeader = forwardRef<
     onTemplateSelect,
     onTargetLanguageSelect,
     onBriefSaved,
+    refusal,
+    onBriefClosed,
     locked = false,
   },
   briefRef,
@@ -62,8 +69,8 @@ export const EditorDockHeader = forwardRef<
   // Everything the next AI run is given, in one surface. Every callback goes through the autosave
   // queue for an existing post, and through local state for a draft the server has not created.
   //
-  // The ref is how 글 생성's empty state offers a way IN: with no active 작성 모델 chosen there is
-  // nothing to press in the bar, and this surface is the answer.
+  // The ref is how 글 생성 opens it for a press its setup refused, with `refusal` naming the run
+  // whose missing fields it marks.
   const briefPanel = (
     <GenerationBrief
       ref={briefRef}
@@ -74,6 +81,9 @@ export const EditorDockHeader = forwardRef<
       }
       onTargetLanguageSelect={onTargetLanguageSelect}
       photoCount={post?.images.length ?? 0}
+      videoCount={post?.videos.length ?? 0}
+      refusal={refusal}
+      onClose={onBriefClosed}
       locked={locked}
       options={
         post

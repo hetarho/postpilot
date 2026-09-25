@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { remainingChars, TEMPLATE_LIMITS } from '@/entities/template'
-import { FieldCount, FieldLabel, Switch, Textarea, Typography } from '@/shared/ui'
+import { FieldCount, FieldLabel, Switch, Textarea, Toggletip, Typography } from '@/shared/ui'
 import type { AnswerField } from '../model/answers'
 
 /** The selected template's data fields, under ①'s memo (POST-54, POST-62).
@@ -29,12 +29,16 @@ export function TemplateAnswerFields({
 
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-6">
-      <Typography variant="fieldTitle" as="h3" id={`${id}-heading`}>
-        {t('editor.answers.heading')}
-      </Typography>
-      <Typography variant="meta" as="p">
-        {t('editor.answers.help')}
-      </Typography>
+      {/* What the fields are for is behind the ⓘ rather than a standing line under the heading
+          (owner decision 2026-09-25). */}
+      <div className="flex items-center gap-1">
+        <Typography variant="fieldTitle" as="h3" id={`${id}-heading`}>
+          {t('editor.answers.heading')}
+        </Typography>
+        <Toggletip label={t('editor.answers.explain')} className="-my-2">
+          {t('editor.answers.help')}
+        </Toggletip>
+      </div>
 
       {fields.map((field) => {
         const fieldId = `${id}-${field.label}`

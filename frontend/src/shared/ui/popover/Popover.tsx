@@ -50,9 +50,13 @@ export const Popover = forwardRef<
      *  points at, a name that wears the current value (`"<label> <value>"`, the way a `Listbox`
      *  is named) and the ids of its help and error. The panel keeps `label` as its name. */
     triggerAttributes?: { id?: string; 'aria-label'?: string; 'aria-describedby'?: string }
-    /** The panel's content. A control inside it marked `data-autofocus` takes focus on open, so a
-     *  set of choices opens on the current one; otherwise the first focusable control does. */
+    /** The panel's content. The element marked `data-autofocus` — a control, or a wrapper whose
+     *  first control is meant — takes focus on open, so a set of choices opens on the current one
+     *  and a form on the field it is waiting for; otherwise the first focusable control does. */
     children: (close: () => void) => ReactNode
+    /** The surface closed, by any path: a choice inside it, an outside press, Escape, the trigger
+     *  or the sheet's own close. */
+    onClose?: () => void
     disabled?: boolean
     /** Above remains the action-bar default; compact header controls explicitly open below. */
     placement?: 'above' | 'below'
@@ -76,6 +80,7 @@ export const Popover = forwardRef<
     triggerClassName,
     triggerAttributes,
     children,
+    onClose,
     disabled = false,
     placement = 'above',
     align = 'end',
@@ -96,9 +101,17 @@ export const Popover = forwardRef<
   // regardless of whether CSS is painting it.
   const asSheet = phone === 'sheet' && !wide
 
+  // The latest `onClose`, read by the document listeners below without re-registering them on
+  // every render of a caller that passes an inline callback.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   // A press outside the panel lets focus go where that press sends it.
   const dismiss = () => {
     setOpen(false)
+    onCloseRef.current?.()
   }
 
   // Closing from inside — a choice made, an action taken — unmounts the control that held focus,
@@ -106,6 +119,7 @@ export const Popover = forwardRef<
   const close = () => {
     const focusWasInside = Boolean(panelRef.current?.contains(document.activeElement))
     setOpen(false)
+    onCloseRef.current?.()
     if (focusWasInside) queueMicrotask(() => triggerRef.current?.focus({ preventScroll: true }))
   }
 
@@ -153,8 +167,11 @@ export const Popover = forwardRef<
     const focusableElements = () =>
       Array.from(panelRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
     queueMicrotask(() => {
+      const marked = panelRef.current?.querySelector<HTMLElement>('[data-autofocus]')
       const firstElement =
-        panelRef.current?.querySelector<HTMLElement>('[data-autofocus]') ?? focusableElements()[0]
+        (marked?.matches(focusableSelector)
+          ? marked
+          : marked?.querySelector<HTMLElement>(focusableSelector)) ?? focusableElements()[0]
       if (firstElement) firstElement.focus()
       else panelRef.current?.focus()
     })
@@ -228,7 +245,7 @@ export const Popover = forwardRef<
       pending={triggerPending}
       className={triggerClassName}
       {...triggerAttributes}
-      onClick={() => setOpen((value) => !value)}
+      onClick={() => (open ? dismiss() : setOpen(true))}
     >
       {triggerLabel ?? t('popover.options')}
     </Button>

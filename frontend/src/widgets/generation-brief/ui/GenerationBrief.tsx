@@ -4,10 +4,19 @@ import { Settings } from 'lucide-react'
 import type { ContentLanguage } from '@/shared/api'
 import { CandidatePairSelect } from '@/features/configure-model-pair'
 import { type GenerationOptionValues } from '@/entities/post'
-import { GenerationOptions } from '@/features/generate-post'
+import {
+  GenerationOptions,
+  useBriefIssues,
+  type BriefField,
+  type GenerationMode,
+} from '@/features/generate-post'
 import { StageModelSelect } from '@/features/select-model'
 import { PostLanguageSelect } from '@/features/select-post-language'
 import { Popover, Typography, type PopoverHandle } from '@/shared/ui'
+
+/** The brief's model fields in the order they are drawn, which is the order focus looks for the
+ *  first one a refused press is waiting on. */
+const BRIEF_FIELDS: readonly BriefField[] = ['observe', 'write', 'pair']
 
 interface GenerationBriefProps {
   targetLanguage: ContentLanguage
@@ -16,6 +25,14 @@ interface GenerationBriefProps {
   onTargetLanguageSelect: (language: ContentLanguage) => Promise<void> | void
   /** Decides whether the observe model is optional — a post with no photo never observes. */
   photoCount: number
+  /** With `photoCount`, what the observe model has to be able to watch. */
+  videoCount?: number
+  /** The run a press of 생성 or A/B 비교 was refused for, whose missing fields this marks: a red
+   *  message under each and one shake, with focus on the first. `count` grows with every refused
+   *  press, so pressing again shakes again. */
+  refusal?: { mode: GenerationMode; count: number }
+  /** The brief closed, by any path: the marks were the answer to that press, not a standing state. */
+  onClose?: () => void
   /** A published post (POST-86): the post's own 글 언어 and options are shown and not changed.
    *  The model selects stay usable — they are the account's settings, not the post's. */
   locked?: boolean
@@ -53,6 +70,9 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       frozenLanguage,
       onTargetLanguageSelect,
       photoCount,
+      videoCount = 0,
+      refusal,
+      onClose,
       locked = false,
       options,
       qualityRules,
@@ -61,6 +81,21 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
   ) {
     const { t } = useTranslation(['posts', 'common'])
     const label = t('generation.brief.title', { ns: 'posts' })
+    // Read live: a field the user fixes here stops being marked the moment its save lands.
+    const issues = useBriefIssues(refusal?.mode, photoCount, videoCount)
+    const firstIssue = BRIEF_FIELDS.find((field) => issues[field])
+    // A marked field shakes once as the brief opens on it and takes the focus, so the eye and the
+    // keyboard both land on what the refused press is waiting for (owner decision 2026-09-25).
+    // Keyed by the press, so a second refused press replays the shake.
+    const marked = (field: BriefField, content: ReactNode) => (
+      <div
+        key={`${field}-${refusal?.count ?? 0}`}
+        data-autofocus={firstIssue === field || undefined}
+        className={issues[field] ? 'animate-shake' : undefined}
+      >
+        {content}
+      </div>
+    )
 
     return (
       <Popover
@@ -76,6 +111,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         align="end"
         phone="sheet"
         className="shrink-0"
+        onClose={onClose}
       >
         {(close) => (
           // `grid-cols-1` and not a bare `grid`: an IMPLICIT column is `auto`, which is floored at
@@ -85,19 +121,26 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
           // instead, which is what the fields are already built to do: each one truncates or wraps
           // inside its own well.
           <div className="grid grid-cols-1 gap-4 *:min-w-0">
-            <div>
-              <StageModelSelect stage="observe" optional={photoCount === 0} />
-              {photoCount === 0 && (
-                <Typography variant="body" as="p" className="text-content-secondary mt-1">
-                  {t('editor.noPhotoModel', { ns: 'posts' })}
-                </Typography>
-              )}
-            </div>
-            <StageModelSelect stage="write" />
+            {marked(
+              'observe',
+              <>
+                <StageModelSelect
+                  stage="observe"
+                  optional={photoCount === 0}
+                  error={issues.observe}
+                />
+                {photoCount === 0 && (
+                  <Typography variant="body" as="p" className="text-content-secondary mt-1">
+                    {t('editor.noPhotoModel', { ns: 'posts' })}
+                  </Typography>
+                )}
+              </>,
+            )}
+            {marked('write', <StageModelSelect stage="write" error={issues.write} />)}
             {/* Directly under the model the ordinary run uses, because that is the comparison the
                 A/B pair is: the same step, run twice. The link to the AI 모델 page this replaced
                 asked the user to leave the draft to make a two-dropdown choice. */}
-            <CandidatePairSelect stage="write" />
+            {marked('pair', <CandidatePairSelect stage="write" error={issues.pair} />)}
             <PostLanguageSelect
               value={targetLanguage}
               contentLanguage={contentLanguage}

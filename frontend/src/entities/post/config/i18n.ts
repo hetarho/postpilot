@@ -50,12 +50,13 @@ export const i18n = {
     editor: {
       answers: {
         heading: '템플릿 입력란',
+        explain: '템플릿 입력란 설명',
         help: '템플릿이 요구하는 내용이에요. 여기 적은 사실만 사용해서 글을 써요.',
         include: '{{title}} 넣기',
         excluded: '이 칸은 글에서 빠져요.',
       },
       steps: { generate: '글 생성', refine: '글 다듬기', finish: '글 완성' },
-      backToList: '← 글 목록',
+      backToList: '글 목록',
       backToListPlain: '글 목록으로',
       stepAria: '글 단계',
       statusAria: '글 상태',
@@ -121,10 +122,6 @@ export const i18n = {
       },
       compare: 'A/B 비교',
       generate: '생성',
-      setup: {
-        brief: '글쓰기 옵션에서 모델 선택',
-      },
-      generateReason: '생성: {{reason}}',
       reviewResult: 'A/B 결과 확인',
       saveFailed: '글을 저장하지 못했어요.',
       brief: {
@@ -210,12 +207,13 @@ export const i18n = {
     editor: {
       answers: {
         heading: 'Template fields',
+        explain: 'About template fields',
         help: 'What this template asks for. The post states only the facts you put here.',
         include: 'Include {{title}}',
         excluded: 'This field is left out of the post.',
       },
       steps: { generate: 'Generate', refine: 'Refine', finish: 'Finish' },
-      backToList: '← Posts',
+      backToList: 'Posts',
       backToListPlain: 'Back to posts',
       stepAria: 'Post steps',
       statusAria: 'Post status',
@@ -282,10 +280,6 @@ export const i18n = {
       },
       compare: 'A/B compare',
       generate: 'Generate',
-      setup: {
-        brief: 'Choose models in writing options',
-      },
-      generateReason: 'Generate: {{reason}}',
       reviewResult: 'Review A/B result',
       saveFailed: 'Could not save the post.',
       brief: {

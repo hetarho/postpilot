@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
+import { Trash2 } from 'lucide-react'
 import { displayTitle, useDeletePost, type PostDraft } from '@/entities/post'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
@@ -47,8 +48,16 @@ export function DeletePostButton({
 
   return (
     <>
-      <Button variant="danger" disabled={remove.isPending} onClick={() => setConfirming(true)}>
-        {t('editor.delete.trigger', { ns: 'posts' })}
+      {/* The glyph carries it on a phone, where the row also holds the step bar, as in the clip
+          workspace; the word comes back from `sm:`. The name is the word at every width. */}
+      <Button
+        variant="danger"
+        aria-label={t('editor.delete.trigger', { ns: 'posts' })}
+        disabled={remove.isPending}
+        onClick={() => setConfirming(true)}
+      >
+        <Trash2 aria-hidden="true" className="size-5" />
+        <span className="hidden sm:inline">{t('editor.delete.trigger', { ns: 'posts' })}</span>
       </Button>
       {/* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
           instead of squeezing the row it was pressed from (design-language §4.3 — feedback

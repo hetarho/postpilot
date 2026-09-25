@@ -13,6 +13,7 @@ function setup(signedVideoUrl: boolean) {
   const starts: FakeGenerationStart[] = []
   const comparisons: FakeWriteExperimentStart[] = []
   const beforeStart = vi.fn(async () => {})
+  const onOpenBrief = vi.fn()
   const observe = { providerId: 'p', modelId: 'watcher' }
   const write = { providerId: 'p', modelId: 'writer' }
   const writeB = { providerId: 'p', modelId: 'writer-b' }
@@ -57,25 +58,29 @@ function setup(signedVideoUrl: boolean) {
       }}
       onStarted={vi.fn()}
       beforeStart={beforeStart}
+      onOpenBrief={onOpenBrief}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
-  return { starts, comparisons, beforeStart, observe }
+  return { starts, comparisons, beforeStart, onOpenBrief, observe }
 }
 
-it('explains URL incompatibility and refuses both actions before saving', async () => {
+// A refusal for the setup is not said under the row: the press opens the brief for its own run,
+// where the field that cannot serve the post is marked.
+it('sends a press its setup refused to the brief, before saving anything', async () => {
   const user = userEvent.setup()
-  const { starts, comparisons, beforeStart } = setup(false)
-  // One bare line speaks for both, since both are refused for the same reason.
-  expect(await screen.findByRole('status')).toHaveTextContent('영상 링크')
-  const generate = screen.getByRole('button', { name: '생성' })
-  expect(generate).toBeDisabled()
-  await user.click(generate)
-  // A/B 비교 says its own reason as a tooltip, so it stays reachable rather than natively disabled.
-  const compare = screen.getByRole('button', { name: 'A/B 비교' })
-  expect(compare).toHaveAttribute('aria-disabled', 'true')
-  expect(compare).toHaveAccessibleDescription(expect.stringContaining('영상 링크'))
-  await user.click(compare)
+  const { starts, comparisons, beforeStart, onOpenBrief } = setup(false)
+  for (const [name, mode] of [
+    ['생성', 'generation'],
+    ['A/B 비교', 'comparison'],
+  ] as const) {
+    const button = screen.getByRole('button', { name })
+    await waitFor(() => expect(button).toBeEnabled())
+    await user.click(button)
+    expect(onOpenBrief).toHaveBeenLastCalledWith(mode)
+  }
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByText(/영상 링크/)).toBeNull()
   expect(beforeStart).not.toHaveBeenCalled()
   expect(starts).toHaveLength(0)
   expect(comparisons).toHaveLength(0)
@@ -85,7 +90,7 @@ it.each(['생성', 'A/B 비교'])(
   'sends the observation model for a video-only %s request',
   async (name) => {
     const user = userEvent.setup()
-    const { starts, comparisons, beforeStart, observe } = setup(true)
+    const { starts, comparisons, beforeStart, onOpenBrief, observe } = setup(true)
     const button = screen.getByRole('button', { name })
     await waitFor(() => expect(button).toBeEnabled())
     await user.click(button)
@@ -93,6 +98,7 @@ it.each(['생성', 'A/B 비교'])(
     await waitFor(() => expect(requests).toHaveLength(1))
     expect(requests[0].observeModel).toEqual(observe)
     expect(beforeStart).toHaveBeenCalledTimes(1)
+    expect(onOpenBrief).not.toHaveBeenCalled()
     // A comparison started here writes the post the editor is on, so its verdict applies.
     if (name !== '생성') expect(comparisons[0].origin).toBe(ExperimentOrigin.EDITOR)
   },

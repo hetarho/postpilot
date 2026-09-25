@@ -12,7 +12,14 @@ import {
   useModelSetup,
   useSaveComparisonPair,
 } from '@/entities/model-catalog'
-import { AppFailureMessage, FieldLabel, Listbox, Typography, type ListboxOption } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  FieldLabel,
+  FieldMessage,
+  Listbox,
+  Typography,
+  type ListboxOption,
+} from '@/shared/ui'
 
 /** The A/B pair for one stage, as TWO dropdowns side by side, saved the moment both name a
  *  different model.
@@ -29,9 +36,13 @@ import { AppFailureMessage, FieldLabel, Listbox, Typography, type ListboxOption 
 export function CandidatePairSelect({
   stage,
   className,
+  error,
 }: {
   stage: StageName
   className?: string
+  /** What a refused A/B run needs of the pair, in the error colour under the two fields; the
+   *  candidate that is empty — or both, when they name one model — is marked invalid. */
+  error?: string
 }) {
   const { models, isPending, isError } = useModels()
   const { pairs } = useModelSetup()
@@ -52,6 +63,7 @@ export function CandidatePairSelect({
       disabled={isPending || isError}
       savePair={savePair}
       className={className}
+      error={error}
     />
   )
 }
@@ -64,6 +76,7 @@ function CandidatePairFields({
   disabled,
   savePair,
   className,
+  error,
 }: {
   stage: StageName
   savedA: string
@@ -72,8 +85,10 @@ function CandidatePairFields({
   disabled: boolean
   savePair: ReturnType<typeof useSaveComparisonPair>
   className?: string
+  error?: string
 }) {
   const { t } = useTranslation('models')
+  const issueId = useId()
   const [a, setA] = useState(savedA)
   const [b, setB] = useState(savedB)
   const find = (key: string): ModelRef | undefined =>
@@ -135,6 +150,8 @@ function CandidatePairFields({
           options={optionsExcept(a, b)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
+          invalid={Boolean(error) && (!a || a === b)}
+          describedBy={error ? issueId : undefined}
           onChange={(next) => commit(next, b)}
         />
         <CandidateField
@@ -143,9 +160,16 @@ function CandidatePairFields({
           options={optionsExcept(b, a)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
+          invalid={Boolean(error) && (!b || a === b)}
+          describedBy={error ? issueId : undefined}
           onChange={(next) => commit(a, next)}
         />
       </div>
+      {error && (
+        <FieldMessage id={issueId} role="alert" className="mt-1 break-words">
+          {error}
+        </FieldMessage>
+      )}
       {/* Mounted while idle so it announces when it fills, and out of the layout until it does. */}
       <Typography
         variant="body"
@@ -175,11 +199,15 @@ function CandidateField({
   options,
   placeholder,
   disabled,
+  invalid,
+  describedBy,
   onChange,
 }: {
   label: string
   value: string
   options: ListboxOption<string>[]
+  invalid: boolean
+  describedBy?: string
   /** Shown for a candidate that has never been set. It is the field's EMPTY STATE, not a listed
    *  choice — see the option list above for why the difference matters here. */
   placeholder: string
@@ -201,6 +229,8 @@ function CandidateField({
         options={options}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         onChange={onChange}
       />
     </div>
