@@ -188,17 +188,32 @@ func repairTransitions(plan *clip.EditPlan) {
 }
 
 // Trim an otherwise feasible overrun at the tail; surviving words remain exact.
+// No cut is trimmed under CDS's cut floor while an earlier cut can still give
+// the time: a sliver of footage stays in the plan, shown in ② and counted, yet
+// plays as nothing. Only an overrun those floors cannot absorb falls back to the
+// transitions' own floor, because validatePlan refuses a plan over its target.
 func trimGeneratedOverrun(plan *clip.EditPlan, target int) {
+	total := trimTail(plan, target, int(math.Round(design.Timing.CutMinS*1000)))
+	if total > target {
+		total = trimTail(plan, target, 1)
+	}
+	plan.DurationMS = total
+}
+
+// trimTail walks the cuts from the last, taking from each what it holds above
+// minimum and above the transitions it overlaps, and returns the new total.
+func trimTail(plan *clip.EditPlan, target, minimum int) int {
 	total := -plan.TransitionTotal()
 	for _, c := range plan.Cuts {
 		total += c.OutputDurationMS()
 	}
 	for i := len(plan.Cuts) - 1; i >= 0 && total > target; i-- {
 		c := &plan.Cuts[i]
-		floor := max(1, c.TransitionMS+1)
+		floor := c.TransitionMS + 1
 		if i+1 < len(plan.Cuts) {
 			floor += plan.Cuts[i+1].TransitionMS
 		}
+		floor = max(floor, minimum)
 		amount := min(total-target, max(0, c.OutputDurationMS()-floor))
 		if amount == 0 {
 			continue
@@ -218,7 +233,7 @@ func trimGeneratedOverrun(plan *clip.EditPlan, target int) {
 			total += cut.OutputDurationMS()
 		}
 	}
-	plan.DurationMS = total
+	return total
 }
 
 // Timing repair can leave an otherwise valid generated caption too short to

@@ -54,16 +54,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T399 | the tail trim never leaves a sliver cut | ARCH | - | todo |
 
 ## next
-- T399 (tail trim keeps the 1.2 s cut floor) is next; T398 fixed the 260925 narrate failure (review/clip-narrate-failure-260926)
+- review/clip-narrate-failure-260926 is complete (T398, T399): a narration caption fits its named style and the tail trim keeps the 1.2 s cut floor; unmeasured: a rapid phrase in a hook-role style against the canvas width
 - GIFT r2 + QUOTA r20 are implemented (T394–T397): operator vouchers issued at /admin/vouchers, redeemed from the public /gift page; next ARCH edit adds `voucher` to ARCH-5's context list; BILL still carries the Toss placeholder and USD pricing (see payment research) before any card rollout
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260926 T399 done (nf): the tail trim stops each cut at the 1.2 s cut floor and falls back to the overlap floor only for an overrun the floors cannot absorb; the multi-source pin moved 15760→15630; BE gate green
+- 260926 T399 claimed (nf)
 - 260926 T398 done (nf): narration captions are admitted against their named style's line bound (short text, then omission, never a refused clip), the writer is told each style's bound, and a narration refusal names the caption rather than line 0; BE and FE gates green
 - 260926 T398 claimed (nf)
 - 260926 create-task review/clip-narrate-failure-260926 done: F1 F2 → T398 (narration bound is the named style's, caption refusal names the caption), F3 → T399 (tail trim keeps the 1.2 s cut floor)
@@ -82,4 +83,3 @@
 - 260925 update-ssot QUOTA done: r20 QUOTA-12✎ every expiring lot (monthly, voucher, expiring bonus) burns first by expiry, then bonus, then purchased; QUOTA-9✎ voucher redemption joins the credit paths; QUOTA-58+ voucher lot kind; GIFT r2 constraint points at it; no doing tasks affected
 - 260925 update-ssot QUAL start: 분야 phrases from the 네이버 검색 API are stored apart and used only for product-side judgment, never as LLM input or in LLM output (검색 API 특약 of 2026-09-07)
 - 260925 update-ssot QUOTA start: QUOTA-12 burn order moves to expiring-first and a `voucher` lot kind joins for GIFT
-- 260925 create-ssot GIFT done: r1 GIFT-1..15 (operator-issued vouchers of expiring credits, sold by bank transfer or given, redeemed once from a public gift link; revoke voids the unspent remainder); GIFT-11 needs QUOTA-12's burn order changed

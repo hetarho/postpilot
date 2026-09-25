@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -103,5 +104,61 @@ func TestNarrowingOutcomeTable(t *testing.T) {
 				t.Fatal("repair rewrote text")
 			}
 		})
+	}
+}
+
+// F3 of review/clip-narrate-failure-260926: bringing an overrun flow to its
+// target stops a cut at CDS's cut floor and takes the rest from the cut
+// before it. A 1 ms tail cut is kept, shown in ② and counted, yet plays as
+// nothing.
+func TestTailTrimStopsEachCutAtTheCutFloor(t *testing.T) {
+	flow := func(lengths ...int) clip.EditPlan {
+		plan := clip.EditPlan{}
+		for i, ms := range lengths {
+			id := strconv.Itoa(i)
+			plan.Cuts = append(plan.Cuts, clip.Cut{ID: id, SourceID: id, StartMS: 1000, EndMS: 1000 + ms})
+		}
+		return plan
+	}
+	lengths := func(plan clip.EditPlan) []int {
+		out := []int{}
+		for _, c := range plan.Cuts {
+			out = append(out, c.OutputDurationMS())
+		}
+		return out
+	}
+	trimmed := func(plan clip.EditPlan, cut string) bool {
+		for _, n := range plan.Notices {
+			if n.Reason == "plan_target_duration" && n.CutID == cut {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 4 s over: the tail gives only what its floor spares, the cut before it
+	// the rest.
+	plan := flow(5000, 4000, 3000)
+	trimGeneratedOverrun(&plan, 8000)
+	if got := lengths(plan); !slices.Equal(got, []int{5000, 1800, 1200}) || plan.DurationMS != 8000 {
+		t.Fatalf("lengths %v, duration %d", got, plan.DurationMS)
+	}
+	if !trimmed(plan, "1") || !trimmed(plan, "2") || trimmed(plan, "0") {
+		t.Fatal("each trimmed cut carries its own notice, and only those", plan.Notices)
+	}
+
+	// A cut already under the floor is neither trimmed nor lengthened.
+	plan = flow(5000, 4000, 800)
+	trimGeneratedOverrun(&plan, 8000)
+	if got := lengths(plan); !slices.Equal(got, []int{5000, 2200, 800}) || plan.DurationMS != 8000 {
+		t.Fatalf("lengths %v, duration %d", got, plan.DurationMS)
+	}
+
+	// Every cut at its floor and still over: the target is reached on the
+	// transitions' own floor, because validatePlan refuses an overrun.
+	plan = flow(2000, 2000, 2000)
+	trimGeneratedOverrun(&plan, 3000)
+	if got := lengths(plan); !slices.Equal(got, []int{1200, 1200, 600}) || plan.DurationMS != 3000 {
+		t.Fatalf("lengths %v, duration %d", got, plan.DurationMS)
 	}
 }

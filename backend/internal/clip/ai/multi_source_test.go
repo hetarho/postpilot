@@ -87,7 +87,10 @@ func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 		s, models, captions := newService(t, raw(wire), structured)
 		in.Policy = testPolicy("write")
 		got, usage, err := s.Plan(t.Context(), testRef(), in)
-		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15760 || !hasNotice(got, "plan_target_duration") || got.Ratio != in.Ratio {
+		// 16400 ms pulled back to 15000 stops the last cut at CDS's 1200 ms floor
+		// and takes the other 400 ms from the cut before it; the last cut then
+		// extends to earn its copy's exposure.
+		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15630 || !hasNotice(got, "plan_target_duration") || got.Ratio != in.Ratio {
 			t.Fatalf("multi-source plan: %+v %v", got, err)
 		}
 		// One paid call, and at most one measurement per candidate anchor: the
