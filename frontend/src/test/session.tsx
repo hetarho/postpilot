@@ -36,6 +36,7 @@ import { type FakeClipsOptions, registerClipService } from './clips'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
 import { type FakePlansOptions, registerPlanServices } from './plans'
 import { type FakeBillingOptions, registerBillingService } from './billing'
+import { type FakeVoucherOptions, registerVoucherService } from './vouchers'
 import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
@@ -96,6 +97,8 @@ export interface FakeAuthOptions {
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
   billing?: FakeBillingOptions
+  /** Operator vouchers and their gift links. Present by default with none. */
+  vouchers?: FakeVoucherOptions
   /** The operator's model catalog. Present by default with nothing curated and nothing
    *  offered, so a routing test that lands on /admin/models reads an empty catalog rather
    *  than an "unimplemented" error. */
@@ -282,6 +285,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerQualityService(router, { calls, ...options.quality })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerBillingService(router, { calls, ...options.billing })
+    registerVoucherService(router, { calls, ...options.vouchers })
     registerModelCatalogService(router, { calls, ...options.modelCatalog })
   })
 

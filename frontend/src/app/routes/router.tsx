@@ -8,6 +8,7 @@ import { adminRoute, adminRoutes } from './admin'
 import { authRoutes } from './auth'
 import { billingRoutes } from './billing'
 import { clipRoutes } from './clips'
+import { giftRoutes } from './gift'
 import { marketingRoutes } from './marketing'
 import { modelGroupRoute, modelRoutes } from './models'
 import { postRoutes } from './posts'
@@ -31,6 +32,7 @@ export type { RouterContext } from './tree'
 export const routeTree = rootRoute.addChildren([
   ...authRoutes,
   ...marketingRoutes,
+  ...giftRoutes,
   authenticatedRoute.addChildren([
     indexRoute,
     writingGroupRoute.addChildren([

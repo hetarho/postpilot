@@ -78,6 +78,8 @@ import { i18n as modelExperimentI18n } from '@/pages/model-experiment/config/i18
 import { i18n as modelLeaderboardI18n } from '@/widgets/model-leaderboard/config/i18n'
 import { i18n as planI18n } from '@/entities/plan/config/i18n'
 import { i18n as plansI18n } from '@/pages/plans/config/i18n'
+import { gift as giftPageI18n } from '@/pages/gift/config/i18n'
+import { i18n as redeemVoucherI18n } from '@/features/redeem-voucher/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
@@ -181,6 +183,8 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   creditBadgeI18n,
   planI18n,
   plansI18n,
+  giftPageI18n,
+  redeemVoucherI18n,
   selectModelPlansI18n,
   blogFieldI18n,
   candidateComparisonI18n,
@@ -300,6 +304,8 @@ export const resources = {
       ...creditBadgeI18n.ko,
       ...planI18n.ko,
       ...plansI18n.ko,
+      ...giftPageI18n.ko,
+      ...redeemVoucherI18n.ko,
       ...selectModelPlansI18n.ko,
     },
     billing: {
@@ -411,6 +417,8 @@ export const resources = {
       ...creditBadgeI18n.en,
       ...planI18n.en,
       ...plansI18n.en,
+      ...giftPageI18n.en,
+      ...redeemVoucherI18n.en,
       ...selectModelPlansI18n.en,
     },
     billing: {

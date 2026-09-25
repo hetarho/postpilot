@@ -165,6 +165,23 @@ export type {
   SubscribeResponse,
 } from './gen/postpilot/v1/billing_pb'
 export { HealthService, PingResponseSchema } from './gen/postpilot/v1/health_pb'
+export { VoucherService, VoucherState as ProtoVoucherState } from './gen/postpilot/v1/voucher_pb'
+export {
+  GetVoucherResponseSchema,
+  IssueVoucherResponseSchema,
+  ListVouchersResponseSchema,
+  RedeemVoucherResponseSchema,
+  RevokeVoucherResponseSchema,
+  VoucherPresetSchema,
+  VoucherSchema,
+} from './gen/postpilot/v1/voucher_pb'
+export type {
+  GetVoucherResponse,
+  ListVouchersResponse,
+  RedeemVoucherResponse,
+  Voucher as ProtoVoucher,
+  VoucherPreset as ProtoVoucherPreset,
+} from './gen/postpilot/v1/voucher_pb'
 export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1/plan_pb'
 export {
   GetMyPlanResponseSchema,

@@ -53,16 +53,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T396 | public gift page and redemption | GIFT | T395 | todo |
 | T397 | admin vouchers tab: issue, list, copy, revoke | GIFT | T396 | todo |
 
 ## next
-- implement-task T396 → T397 (vouchers for the bank-transfer pilot: public gift page, admin tab); T394 landed the voucher lot kind and order, T395 the voucher context and VoucherService
+- implement-task T397 (admin vouchers tab); T394–T396 landed the voucher lot kind and order, VoucherService and the public /gift page
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T396 done (gv): public /gift/$token page (GetVoucher view, 받기 for a session, log in/sign up with redirect otherwise), pending gift in localStorage handed back by the authenticated layout; strings under plans (gift.*, redeemVoucher.*); FE gate green
+- 260925 T396 claimed (gv)
 - 260925 T395 done (gv): voucher context + VoucherService (GetVoucher public, RedeemVoucher session, Issue/List/Revoke master), vouchers table 0085, VOUCHER_* reasons 244..248 with FE copy; BE/FE/codegen gates green
 - 260925 T395 claimed (gv)
 - 260925 T394 done (gv): voucher lot kind (0084), expiring-first consumption order, OpenVoucherLot/ExpireVoucherLot/VoucherLotStandings in usage, 이용권 label in the account menu; BE/FE/codegen gates green; T395 impl notes now name VoucherLotStandings
@@ -81,5 +82,3 @@
 - 260925 T392 done (pg): ListPosts pages by a keyset token over the stored updated_at+slug, narrows query/status on the server over every owned post, reads json_extract title/tags only; page_size 0 stays unpaged; BE and FE gates green
 - 260925 T392 claimed (pg)
 - 260925 create-task POST done: r15 → T392 (paged ListPosts, server-side query/status, keyset token) and T393 (infinite /posts, list-end loading/retry, scroll restoration); POST tasked=15
-- 260925 create-task POST start (r15: POST-90..93)
-- 260925 update-ssot POST done: r15 adds POST-90..93 (incremental /posts at every width, owned-post-wide narrowing, list-end loading/retry, kept rows and scroll on return); no cross-SSOT references, no doing tasks affected

@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { Link, Outlet, useMatches, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useSession } from '@/entities/session'
+import { takePendingGift } from '@/features/redeem-voucher'
 import { Button, CollapsibleRail, Logo, Menu, PromoStage, useRailToggle } from '@/shared/ui'
 import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
@@ -38,6 +40,13 @@ export function AuthenticatedLayout() {
   const { t } = useTranslation('nav')
   const { user } = useSession()
   const navigate = useNavigate()
+  // A gift link opened before signing in waits in browser storage (GIFT-8): the first signed-in
+  // screen hands the visitor back to it, even after the email-verification detour lost the
+  // login redirect. Once, and only while it is fresh.
+  useEffect(() => {
+    const token = takePendingGift()
+    if (token) void navigate({ to: '/gift/$token', params: { token }, replace: true })
+  }, [navigate])
   const rail = useRailToggle()
   const routeIds = useMatches({ select: (matches) => matches.map((m) => m.routeId) })
   const current = currentDestination(routeIds)

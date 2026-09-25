@@ -37,6 +37,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/clips/$clipId',
     '/clips/new',
     '/forgot-password',
+    '/gift/$token',
     '/guidelines',
     '/login',
     '/login/google/callback',
