@@ -466,6 +466,15 @@ remote networks. The fixture registry is explicitly synthetic; production `/api`
 contains no fixture control routes. A restart loses API memory, and the worker
 has no SQLite mount or shared work directory.
 
+The disposable storage image is built from fixed upstream MinIO and mc source
+revisions in `deploy/media/fixture.Dockerfile`; upstream community container and
+binary downloads are no longer assumed available. The
+[upstream source-build instructions](https://github.com/minio/minio#install-from-source)
+are used with pinned Go module versions and digest-pinned build/runtime bases.
+This image is local to the fixture, contains the upstream licenses/source links,
+and is never pushed or used by production. Storage is prepared before the API and
+worker fixture builds, including when `--skip-build` reuses those application images.
+
 The fixture caps API+driver at 256MiB/1CPU and the worker at 512MiB/1CPU, leaving
 256MiB of the historical 1GiB envelope for other colocated services. Private MinIO
 and the test network relay are separately capped infrastructure outside that

@@ -12,8 +12,7 @@ import time
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-MINIO = 'minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e'
-MC = 'minio/mc@sha256:aead63c77f9db9107f1696fb08ecb0faeda23729cde94b0f663edf4fe09728e3'
+STORAGE_IMAGE = 'postpilot:gate-media-storage'
 
 def run(*args, check=True):
     p = subprocess.run(['docker', *args], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
@@ -21,8 +20,14 @@ def run(*args, check=True):
         raise RuntimeError(p.stdout[-6000:])
     return p.stdout.strip()
 
-def build(target, tag):
-    subprocess.run(['docker', 'build', '--target', target, '-t', tag, '-f', 'backend/Dockerfile', '.'], cwd=ROOT, check=True, timeout=1800)
+def build(target, tag, dockerfile='backend/Dockerfile'):
+    subprocess.run(['docker', 'build', '--target', target, '-t', tag, '-f', dockerfile, '.'], cwd=ROOT, check=True, timeout=1800)
+
+def validate_budget(args):
+    if args.api_mib + args.worker_mib + args.reserve_mib > args.envelope_mib:
+        raise RuntimeError('insufficient envelope: API + worker + cohost reserve exceeds memory')
+    if args.api_cpus + args.worker_cpus > args.envelope_cpus:
+        raise RuntimeError('insufficient CPU envelope: API + worker exceeds selected total')
 
 def request(port, method='GET'):
     req = urllib.request.Request(f'http://127.0.0.1:{port}/control', method=method)
@@ -37,10 +42,7 @@ def fixture(layout, args):
     samples = {api: {'memory_peak': 0, 'disk_bytes': 0}, worker: {'memory_peak': 0, 'disk_bytes': 0}}
     # 768MiB execution + 256MiB stated cohost reserve, two CPUs total. MinIO
     # stands in for external R2; the network relay is separately reported infra.
-    if args.api_mib + args.worker_mib + args.reserve_mib > args.envelope_mib:
-        raise RuntimeError('insufficient envelope: API + worker + cohost reserve exceeds memory')
-    if args.api_cpus + args.worker_cpus > args.envelope_cpus:
-        raise RuntimeError('insufficient CPU envelope: API + worker exceeds selected total')
+    validate_budget(args)
     token = secrets.token_urlsafe(32)
     def launch(name, image, options, command=()):
         containers.append(name)
@@ -53,12 +55,12 @@ def fixture(layout, args):
     try:
         for net in (private, remote) if layout=='remote' else (private,):
             run('network','create',*(['--internal'] if net==remote else []),net);networks.append(net)
-        launch(store,MINIO,['--network',private,'--network-alias','minio','--memory','256m','--cpus','.5','-e','MINIO_ROOT_USER=fixture','-e','MINIO_ROOT_PASSWORD=fixture-only-password'],['server','/data'])
+        launch(store,STORAGE_IMAGE,['--network',private,'--network-alias','minio','--memory','256m','--cpus','.5','-e','MINIO_ROOT_USER=fixture','-e','MINIO_ROOT_PASSWORD=fixture-only-password'],['server','/data'])
         # Name the init utility too, so a CLI timeout cannot leave an unowned container.
         initializer=prefix+'-init';containers.append(initializer)
         # mc performs private bucket initialization with explicit, disposable keys.
         for _ in range(40):
-            result=run('run','--rm','--name',initializer,'--label','postpilot.disposable-media-release='+prefix,'--network',private,'--entrypoint','/bin/sh',MC,'-c','mc alias set fixture http://minio:9000 fixture fixture-only-password && mc mb --ignore-existing fixture/release && mc anonymous set none fixture/release',check=False)
+            result=run('run','--rm','--name',initializer,'--label','postpilot.disposable-media-release='+prefix,'--network',private,'--entrypoint','/bin/sh',STORAGE_IMAGE,'-c','mc alias set fixture http://minio:9000 fixture fixture-only-password && mc mb --ignore-existing fixture/release && mc anonymous set none fixture/release',check=False)
             if 'Access permission' in result: break
             time.sleep(.5)
         else: raise RuntimeError('private MinIO initialization failed: '+result)
@@ -117,7 +119,7 @@ def fixture(layout, args):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--skip-build',action='store_true')
+    parser.add_argument('--skip-build',action='store_true',help='reuse API/worker images; still prepare pinned fixture storage')
     parser.add_argument('--layout',choices=['colocated','remote','both'],default='both')
     parser.add_argument('--api-image',default='postpilot:gate-media-release')
     parser.add_argument('--worker-image',default='postpilot:gate-media-release-worker')
@@ -132,6 +134,10 @@ def main():
     args=parser.parse_args()
     if min(args.api_mib,args.worker_mib,args.reserve_mib,args.envelope_mib,args.timeout)<=0:parser.error('budgets must be positive')
     if any(not math.isfinite(v) or v<=0 for v in (args.api_cpus,args.worker_cpus,args.envelope_cpus)):parser.error('CPU budgets must be finite and positive')
+    validate_budget(args)
+    # Never rely on a developer's cached, no-longer-public MinIO image. Fail
+    # before application builds or disposable resources if source build fails.
+    build('media-storage', STORAGE_IMAGE, 'deploy/media/fixture.Dockerfile')
     if not args.skip_build:
         build('media-release-api',args.api_image);build('media-release-worker',args.worker_image)
     for layout in ('colocated','remote') if args.layout=='both' else (args.layout,):fixture(layout,args)
