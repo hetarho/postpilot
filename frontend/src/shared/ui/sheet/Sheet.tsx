@@ -2,16 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
 
 /** Sheets stack: a confirmation opened from inside a sheet sits on top of it. Escape must dismiss
  *  ONE overlay — the topmost — so every open sheet registers here and only the last one acts. */
 const openSheets: object[] = []
-
-/** Everything Tab can actually reach. `[tabindex="-1"]` is deliberately excluded: a listbox's
- *  options are programmatic focus targets, and counting one as the panel's last control lets Tab
- *  escape the modal entirely. */
-const focusableSelector =
-  'a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
 
 interface SheetProps {
   open: boolean
@@ -86,9 +81,9 @@ export function Sheet({
     // state already is; anything else starts on the panel itself.
     const marked = panel.current?.querySelector<HTMLElement>('[data-autofocus]')
     ;(
-      (marked?.matches(focusableSelector)
+      (marked?.matches(FOCUSABLE_SELECTOR)
         ? marked
-        : marked?.querySelector<HTMLElement>(focusableSelector)) ?? panel.current
+        : marked?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)) ?? panel.current
     )?.focus()
 
     // Touch scrolling is not a Tab key: without this, dragging anywhere on the scrim scrolls the
@@ -138,7 +133,7 @@ export function Sheet({
         return
       }
       if (event.key !== 'Tab' || !panel.current) return
-      const controls = [...panel.current.querySelectorAll<HTMLElement>(focusableSelector)]
+      const controls = focusablesIn(panel.current)
       if (controls.length === 0) return
       const first = controls[0]
       const last = controls[controls.length - 1]

@@ -58,3 +58,12 @@ export interface PostMeasurement {
   contentRevision: bigint
   readings: QualityReading[]
 }
+
+/** A reading's values when they are the named metric's, narrowed to that metric's shape. */
+export function qualityValuesOf<M extends QualityMetricId>(
+  reading: QualityReading,
+  metric: M,
+): Extract<QualityValues, { metric: M }> | undefined {
+  const values = reading.values
+  return values?.metric === metric ? (values as Extract<QualityValues, { metric: M }>) : undefined
+}

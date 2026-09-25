@@ -31,6 +31,28 @@ function Sentence({ onChoose = () => undefined }: { onChoose?: () => void }) {
   )
 }
 
+/** A mark whose panel holds three controls, between two page controls (THEME-42). */
+function ThreePhrases() {
+  return (
+    <p>
+      <button>앞 컨트롤</button>{' '}
+      <InlinePopover
+        label="바꿔 쓸 표현"
+        panel={() => (
+          <>
+            <button>솔직한 방문기</button>
+            <button>방문 후기</button>
+            <button>내돈내산 후기</button>
+          </>
+        )}
+      >
+        솔직 후기
+      </InlinePopover>{' '}
+      <button>다음 컨트롤</button>
+    </p>
+  )
+}
+
 /** The default `setup.ts` stub matches only reduced motion, so hover opens nothing. These cases
  *  stand in a mouse or trackpad, the way Popover's `sm:` case stands in a wide screen. */
 async function withFineHover(run: () => Promise<void>) {
@@ -203,6 +225,107 @@ describe('InlinePopover', () => {
     await user.tab()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다음 컨트롤' })).toHaveFocus()
+  })
+
+  // THEME-42: every control in the panel is reachable, and Tab leaves past either end.
+  it('walks every control in the panel with Tab and leaves past the last onto the next page control', async () => {
+    const user = userEvent.setup()
+    render(<ThreePhrases />)
+    await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+    const panelOpen = () => screen.queryByRole('dialog', { name: '바꿔 쓸 표현' }) !== null
+    await waitFor(() => expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus())
+
+    await user.tab()
+    expect(screen.getByRole('button', { name: '방문 후기' })).toHaveFocus()
+    expect(panelOpen()).toBe(true)
+    await user.tab()
+    expect(screen.getByRole('button', { name: '내돈내산 후기' })).toHaveFocus()
+    expect(panelOpen()).toBe(true)
+    await user.tab()
+    expect(screen.getByRole('button', { name: '다음 컨트롤' })).toHaveFocus()
+    expect(panelOpen()).toBe(false)
+  })
+
+  it('walks back with Shift+Tab and leaves past the first onto its trigger', async () => {
+    const user = userEvent.setup()
+    render(<ThreePhrases />)
+    await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+    const panelOpen = () => screen.queryByRole('dialog', { name: '바꿔 쓸 표현' }) !== null
+    await waitFor(() => expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus())
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '내돈내산 후기' })).toHaveFocus()
+
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: '방문 후기' })).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus()
+    expect(panelOpen()).toBe(true)
+    // Onto the mark the user opened, not past it.
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: '솔직 후기' })).toHaveFocus()
+    expect(panelOpen()).toBe(false)
+  })
+
+  // A popover's trap counts focus outside its own panel as a reason to wrap; inside this panel it
+  // must not move focus at all.
+  it('keeps Tab inside the panel when it is open inside a popover', async () => {
+    const user = userEvent.setup()
+    render(<Popover label="글쓰기 옵션">{() => <ThreePhrases />}</Popover>)
+    await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
+    await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus())
+
+    await user.tab()
+    expect(screen.getByRole('button', { name: '방문 후기' })).toHaveFocus()
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '다음 컨트롤' })).toHaveFocus()
+    expect(screen.queryByRole('dialog', { name: '바꿔 쓸 표현' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
+  })
+
+  it('keeps Tab inside the panel when it is open inside a sheet', async () => {
+    const user = userEvent.setup()
+    render(
+      <Sheet open label="글 설정" onClose={() => undefined}>
+        <ThreePhrases />
+      </Sheet>,
+    )
+    await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus())
+
+    await user.tab()
+    expect(screen.getByRole('button', { name: '방문 후기' })).toHaveFocus()
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('button', { name: '다음 컨트롤' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '솔직한 방문기' })).toHaveFocus())
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: '솔직 후기' })).toHaveFocus()
+  })
+
+  // THEME-32, THEME-30: a rest moves no focus, so Escape reaches the document first; it must close
+  // the hover panel and nothing around it.
+  it('closes a hover-opened panel on Escape without moving focus, and only it inside a popover', async () => {
+    await withFineHover(async () => {
+      const user = userEvent.setup()
+      render(<Popover label="글쓰기 옵션">{() => <ThreePhrases />}</Popover>)
+      await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
+      const before = screen.getByRole('button', { name: '앞 컨트롤' })
+      await waitFor(() => expect(before).toHaveFocus())
+
+      await user.hover(screen.getByRole('button', { name: '솔직 후기' }))
+      expect(screen.getByRole('dialog', { name: '바꿔 쓸 표현' })).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog', { name: '바꿔 쓸 표현' })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
+      expect(before).toHaveFocus()
+
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog', { name: '글쓰기 옵션' })).not.toBeInTheDocument()
+    })
   })
 
   it('closes once a scroll carries its trigger off screen, returning focus it held', async () => {

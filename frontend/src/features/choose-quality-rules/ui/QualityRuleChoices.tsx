@@ -6,11 +6,12 @@ import {
   belowMinimumLine,
   formatMeasure,
   formatShare,
+  formatShareOrAbsent,
   qualityMetricName,
+  qualityValuesOf,
   useAccountQuality,
   type QualityMetricId,
   type QualityReading,
-  type QualityValues,
 } from '@/entities/quality'
 import type { ContentLanguage } from '@/shared/api'
 import { Badge, Button, Checkbox, Toggletip, Typography, typographyStyles } from '@/shared/ui'
@@ -29,16 +30,6 @@ interface QualityRuleChoicesProps {
   disabled: boolean
 }
 
-function valuesOf<M extends QualityMetricId>(
-  reading: QualityReading,
-  metric: M,
-): Extract<QualityValues, { metric: M }> | undefined {
-  const values = reading.values
-  return values?.metric === metric ? (values as Extract<QualityValues, { metric: M }>) : undefined
-}
-
-const share = (value: number | undefined) =>
-  value === undefined ? absentValueLabel() : formatShare(value)
 const measure = (value: number | undefined) =>
   value === undefined ? absentValueLabel() : formatMeasure(value)
 
@@ -71,23 +62,26 @@ export function QualityRuleChoices({
   const values = (reading: QualityReading): string => {
     switch (reading.metric) {
       case 'title_saturation':
-        return share(valuesOf(reading, 'title_saturation')?.share)
+        return formatShareOrAbsent(qualityValuesOf(reading, 'title_saturation')?.share)
       case 'cross_post_phrases':
-        return share(valuesOf(reading, 'cross_post_phrases')?.share)
+        return formatShareOrAbsent(qualityValuesOf(reading, 'cross_post_phrases')?.share)
       case 'in_post_repetition': {
-        const found = valuesOf(reading, 'in_post_repetition')
+        const found = qualityValuesOf(reading, 'in_post_repetition')
         return [
           t('qualityRules.values.repetition', {
             ns: 'posts',
-            value: share(found?.repetitionShare),
+            value: formatShareOrAbsent(found?.repetitionShare),
           }),
-          t('qualityRules.values.relevance', { ns: 'posts', value: share(found?.titleRelevance) }),
+          t('qualityRules.values.relevance', {
+            ns: 'posts',
+            value: formatShareOrAbsent(found?.titleRelevance),
+          }),
         ].join(' · ')
       }
       case 'composition':
         return t('qualityRules.values.blockTypes', {
           ns: 'posts',
-          value: measure(valuesOf(reading, 'composition')?.distinctBlockTypes),
+          value: measure(qualityValuesOf(reading, 'composition')?.distinctBlockTypes),
         })
     }
   }
@@ -99,30 +93,30 @@ export function QualityRuleChoices({
     const why = (() => {
       switch (reading.metric) {
         case 'title_saturation': {
-          const found = valuesOf(reading, 'title_saturation')
+          const found = qualityValuesOf(reading, 'title_saturation')
           return t('qualityRules.why.title_saturation', {
             ns: 'posts',
             count,
-            value: share(found?.share),
+            value: formatShareOrAbsent(found?.share),
             edge: found ? formatShare(found.shareWarnAbove) : absentValueLabel(),
           })
         }
         case 'cross_post_phrases': {
-          const found = valuesOf(reading, 'cross_post_phrases')
+          const found = qualityValuesOf(reading, 'cross_post_phrases')
           return t('qualityRules.why.cross_post_phrases', {
             ns: 'posts',
             count,
-            value: share(found?.share),
+            value: formatShareOrAbsent(found?.share),
             edge: found ? formatShare(found.shareWarnAbove) : absentValueLabel(),
           })
         }
         case 'in_post_repetition': {
-          const found = valuesOf(reading, 'in_post_repetition')
+          const found = qualityValuesOf(reading, 'in_post_repetition')
           return t('qualityRules.why.in_post_repetition', {
             ns: 'posts',
             count,
-            repetition: share(found?.repetitionShare),
-            relevance: share(found?.titleRelevance),
+            repetition: formatShareOrAbsent(found?.repetitionShare),
+            relevance: formatShareOrAbsent(found?.titleRelevance),
             repetitionEdge: found
               ? formatShare(found.repetitionShareWarnAbove)
               : absentValueLabel(),
@@ -130,7 +124,7 @@ export function QualityRuleChoices({
           })
         }
         case 'composition': {
-          const found = valuesOf(reading, 'composition')
+          const found = qualityValuesOf(reading, 'composition')
           return t('qualityRules.why.composition', {
             ns: 'posts',
             count,

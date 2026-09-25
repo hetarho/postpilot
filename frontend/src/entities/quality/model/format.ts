@@ -35,3 +35,8 @@ export function bandsAreOwnLine(): string {
 export function absentValueLabel(): string {
   return i18next.t('quality.absent', { ns: 'posts' })
 }
+
+/** A share, or 측정할 수 없어요 for one the server could not compute (QUAL-40). */
+export function formatShareOrAbsent(value: number | undefined): string {
+  return value === undefined ? absentValueLabel() : formatShare(value)
+}

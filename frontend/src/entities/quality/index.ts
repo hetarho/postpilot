@@ -6,13 +6,14 @@ export type {
   QualityValues,
   QualityVerdict,
 } from './model/types'
-export { QUALITY_METRICS } from './model/types'
+export { QUALITY_METRICS, qualityValuesOf } from './model/types'
 export {
   absentValueLabel,
   bandsAreOwnLine,
   belowMinimumLine,
   formatMeasure,
   formatShare,
+  formatShareOrAbsent,
   qualityMetricName,
 } from './model/format'
 export {

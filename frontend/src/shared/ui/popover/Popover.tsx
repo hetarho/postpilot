@@ -17,9 +17,7 @@ import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from '../media-query/useMediaQuery'
 import { ANCHORED_PANEL_ATTRIBUTE } from '../anchored-panel/useAnchoredPanel'
-
-const focusableSelector =
-  'a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
+import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
 
 /** Opens the surface from elsewhere on the page. The editor's generation empty state offers a way
  *  into the writing brief it is blocked on, and an imperative handle keeps the popover's own state
@@ -164,14 +162,13 @@ export const Popover = forwardRef<
 
   useEffect(() => {
     if (!open || asSheet) return
-    const focusableElements = () =>
-      Array.from(panelRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
+    const focusableElements = () => focusablesIn(panelRef.current)
     queueMicrotask(() => {
       const marked = panelRef.current?.querySelector<HTMLElement>('[data-autofocus]')
       const firstElement =
-        (marked?.matches(focusableSelector)
+        (marked?.matches(FOCUSABLE_SELECTOR)
           ? marked
-          : marked?.querySelector<HTMLElement>(focusableSelector)) ?? focusableElements()[0]
+          : marked?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)) ?? focusableElements()[0]
       if (firstElement) firstElement.focus()
       else panelRef.current?.focus()
     })

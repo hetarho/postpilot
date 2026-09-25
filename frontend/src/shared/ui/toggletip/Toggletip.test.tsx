@@ -120,6 +120,28 @@ describe('Toggletip', () => {
     expect(screen.queryByRole('dialog', { name: '글쓰기 옵션' })).not.toBeInTheDocument()
   })
 
+  // THEME-32, THEME-30: a rest moves no focus, so Escape reaches the document first; it must close
+  // the tip and nothing around it.
+  it('closes a hover-opened tip on Escape without moving focus, and only it inside a popover', async () => {
+    await withFineHover(async () => {
+      const user = userEvent.setup()
+      render(<Popover label="글쓰기 옵션">{() => <Row />}</Popover>)
+      await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
+      const box = screen.getByRole('checkbox', { name: '반복 줄이기' })
+      await waitFor(() => expect(box).toHaveFocus())
+
+      await user.hover(screen.getByRole('button', { name: '반복 줄이기 설명' }))
+      expect(bubble()).not.toBeNull()
+      await user.keyboard('{Escape}')
+      expect(bubble()).toBeNull()
+      expect(screen.getByRole('dialog', { name: '글쓰기 옵션' })).toBeInTheDocument()
+      expect(box).toHaveFocus()
+
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog', { name: '글쓰기 옵션' })).not.toBeInTheDocument()
+    })
+  })
+
   it('closes only itself on Escape inside a sheet', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

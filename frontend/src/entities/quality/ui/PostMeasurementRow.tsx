@@ -10,9 +10,15 @@ import {
   belowMinimumLine,
   formatMeasure,
   formatShare,
+  formatShareOrAbsent,
   qualityMetricName,
 } from '../model/format'
-import type { QualityMetricId, QualityReading, QualityValues, QualityVerdict } from '../model/types'
+import {
+  qualityValuesOf,
+  type QualityMetricId,
+  type QualityReading,
+  type QualityVerdict,
+} from '../model/types'
 
 /** The three metrics a post has numbers of its own for. M1 is the account's alone and appears only
  *  in ①'s brief (QUAL-36), so a reading of it is never drawn here. */
@@ -35,14 +41,6 @@ interface ValueLine {
 
 type ValueName = keyof (typeof i18n)['ko']['quality']['value']
 
-function valuesOf<M extends QualityMetricId>(
-  reading: QualityReading,
-  metric: M,
-): Extract<QualityValues, { metric: M }> | undefined {
-  const values = reading.values
-  return values?.metric === metric ? (values as Extract<QualityValues, { metric: M }>) : undefined
-}
-
 export function PostMeasurementRow({
   ownerId,
   slug,
@@ -63,8 +61,6 @@ export function PostMeasurementRow({
   const headingId = useId()
   const { measurement, isError, refetch, isFetching } = usePostMeasurement(ownerId, slug, revision)
 
-  const share = (value: number | undefined) =>
-    value === undefined ? absentValueLabel() : formatShare(value)
   const amount = (key: 'chars' | 'photos' | 'types', value: number | undefined) =>
     value === undefined
       ? absentValueLabel()
@@ -84,35 +80,35 @@ export function PostMeasurementRow({
 
   const LINES: Record<PostMetricId, (reading: QualityReading) => ValueLine[]> = {
     cross_post_phrases: (reading) => {
-      const values = valuesOf(reading, 'cross_post_phrases')
+      const values = qualityValuesOf(reading, 'cross_post_phrases')
       return [
         {
           key: 'share',
           name: name('sharedWithPublished'),
-          value: share(values?.share),
+          value: formatShareOrAbsent(values?.share),
           band: values && band('atMost', formatShare(values.shareWarnAbove)),
         },
       ]
     },
     in_post_repetition: (reading) => {
-      const values = valuesOf(reading, 'in_post_repetition')
+      const values = qualityValuesOf(reading, 'in_post_repetition')
       return [
         {
           key: 'repetition',
           name: name('topNounShare'),
-          value: share(values?.repetitionShare),
+          value: formatShareOrAbsent(values?.repetitionShare),
           band: values && band('atMost', formatShare(values.repetitionShareWarnAbove)),
         },
         {
           key: 'relevance',
           name: name('titleNounsInBody'),
-          value: share(values?.titleRelevance),
+          value: formatShareOrAbsent(values?.titleRelevance),
           band: values && band('atLeast', formatShare(values.titleRelevanceWarnBelow)),
         },
       ]
     },
     composition: (reading) => {
-      const values = valuesOf(reading, 'composition')
+      const values = qualityValuesOf(reading, 'composition')
       return [
         { key: 'chars', name: name('charCount'), value: amount('chars', values?.charCount) },
         { key: 'photos', name: name('photoCount'), value: amount('photos', values?.photoCount) },
