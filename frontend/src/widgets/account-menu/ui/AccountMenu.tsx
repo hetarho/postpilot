@@ -190,9 +190,14 @@ function AccountPanel({
   )
 }
 
-/** Which label names a lot. A lookup rather than a ternary because there are three kinds
- *  now (QUOTA-12) and a ternary would silently call a purchase a bonus. */
-const LOT_LABEL = { monthly: 'Monthly', bonus: 'Bonus', purchased: 'Purchased' } as const
+/** Which label names a lot. A lookup rather than a ternary because there are four kinds
+ *  (QUOTA-12, QUOTA-58) and a ternary would silently call a purchase a bonus. */
+const LOT_LABEL = {
+  monthly: 'Monthly',
+  bonus: 'Bonus',
+  purchased: 'Purchased',
+  voucher: 'Voucher',
+} as const
 
 /** The balance and the lots behind it.
  *

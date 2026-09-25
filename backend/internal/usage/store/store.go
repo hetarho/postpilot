@@ -218,6 +218,36 @@ func (s *Store) UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]
 	return ids, nil
 }
 
+func (s *Store) ExpireVoucherLot(ctx context.Context, lotID string, at time.Time) (bool, error) {
+	instant := sql.NullString{String: formatTime(at), Valid: true}
+	rows, err := s.write.ExpireVoucherLot(ctx, sqlc.ExpireVoucherLotParams{
+		ExpiresAt: instant, ID: lotID, ExpiresAt_2: instant,
+	})
+	if err != nil {
+		return false, fmt.Errorf("expire voucher credit lot: %w", err)
+	}
+	return rows > 0, nil
+}
+
+func (s *Store) VoucherLots(ctx context.Context, lotIDs []string) ([]usage.Lot, error) {
+	if len(lotIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := s.read.VoucherLots(ctx, lotIDs)
+	if err != nil {
+		return nil, fmt.Errorf("read voucher credit lots: %w", err)
+	}
+	lots := make([]usage.Lot, 0, len(rows))
+	for _, row := range rows {
+		lot, err := toLot(row)
+		if err != nil {
+			return nil, err
+		}
+		lots = append(lots, lot)
+	}
+	return lots, nil
+}
+
 func (s *Store) RestoreLot(ctx context.Context, lotID string, credits int) (bool, error) {
 	rows, err := s.write.RestoreLot(ctx, sqlc.RestoreLotParams{
 		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),

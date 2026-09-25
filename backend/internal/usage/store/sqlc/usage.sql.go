@@ -146,6 +146,30 @@ func (q *Queries) ExpireMonthlyLotsExcept(ctx context.Context, arg ExpireMonthly
 	return err
 }
 
+const expireVoucherLot = `-- name: ExpireVoucherLot :execrows
+UPDATE credit_lots SET expires_at = ?
+WHERE id = ? AND kind = 'voucher' AND expires_at > ?
+`
+
+type ExpireVoucherLotParams struct {
+	ExpiresAt   sql.NullString
+	ID          string
+	ExpiresAt_2 sql.NullString
+}
+
+// A revoked voucher's lot (QUOTA-58). Voiding moves the expiry to the revocation instant
+// instead of zeroing `remaining`: RefundToLot adds back into any lot up to its grant, so a
+// zeroed lot would take back the unused part of a hold that was open when the voucher was
+// revoked. Expiry is read-time, so a refund landing after it counts toward nothing, and the
+// remainder stays on the row as history.
+func (q *Queries) ExpireVoucherLot(ctx context.Context, arg ExpireVoucherLotParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, expireVoucherLot, arg.ExpiresAt, arg.ID, arg.ExpiresAt_2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const holdDebitsForJob = `-- name: HoldDebitsForJob :many
 SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid
 `
@@ -346,8 +370,8 @@ FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
   AND (expires_at IS NULL OR expires_at > ?)
-ORDER BY CASE kind WHEN 'monthly' THEN 0 WHEN 'bonus' THEN 1 ELSE 2 END,
-         expires_at IS NULL, expires_at, created_at, id
+ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE 0 END,
+         expires_at, created_at, id
 `
 
 type LotsInConsumptionOrderParams struct {
@@ -358,14 +382,15 @@ type LotsInConsumptionOrderParams struct {
 // Queries for the usage context. sqlc compiles these into internal/usage/store/sqlc;
 // internal/usage/store maps the generated rows to domain types.
 // The one ordering the balance is ever read in, and the only reader of the product rule
-// behind it (QUOTA-12): KIND first (monthly, then bonus, then purchased) and only then
-// soonest expiry, non-expiring last, oldest first.
+// behind it (QUOTA-12): every lot that carries an expiry first (monthly, voucher and an
+// expiring bonus alike) by soonest expiry, then the never-expiring bonus lots, then the
+// purchased ones; ties go to the oldest.
 //
-// Kind leads because a purchased credit was paid for and must be the last to burn. Expiry
-// order alone used to produce that by accident, resting on the signup bonus happening to be
-// the older of two never-expiring lots; a lot bought before a bonus was granted would have
-// inverted it. The rank is spelled here rather than passed in from Go because this query is
-// the rule's only reader.
+// Expiry leads because a credit that can lapse must burn before one that cannot: a voucher
+// spent after a never-expiring bonus would run out its clock unspent. Purchased still comes
+// last because a paid credit must be the last to burn, and it never expires anyway. The
+// rank is spelled here rather than passed in from Go because this query is the rule's only
+// reader.
 //
 // Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
 // so one multi-byte character shifts it and generates SQL that will not parse.
@@ -712,4 +737,54 @@ func (q *Queries) VoidUntouchedLot(ctx context.Context, id string) (int64, error
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const voucherLots = `-- name: VoucherLots :many
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+FROM credit_lots
+WHERE id IN (/*SLICE:ids*/?)
+  AND kind = 'voucher'
+`
+
+// Where each of these voucher lots stands, in one statement on the read pool. The operator's
+// voucher list is its only reader, and the answer decides nothing but what a row shows.
+func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]CreditLot, error) {
+	query := voucherLots
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CreditLot
+	for rows.Next() {
+		var i CreditLot
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Kind,
+			&i.Granted,
+			&i.Remaining,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

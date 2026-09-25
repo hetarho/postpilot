@@ -45,7 +45,8 @@ func (f *fakeStore) LotsInConsumptionOrder(_ context.Context, userID string, now
 		}
 		out = append(out, lot)
 	}
-	// expiry ascending, NULLs last, then creation — the ORDER BY the query spells out.
+	// every expiring lot by expiry, then never-expiring bonus, then purchased, then
+	// creation — the ORDER BY the query spells out (QUOTA-12).
 	for i := 1; i < len(out); i++ {
 		for j := i; j > 0 && lotBefore(out[j], out[j-1]); j-- {
 			out[j], out[j-1] = out[j-1], out[j]
@@ -55,6 +56,9 @@ func (f *fakeStore) LotsInConsumptionOrder(_ context.Context, userID string, now
 }
 
 func lotBefore(a, b Lot) bool {
+	if rankA, rankB := consumptionRank(a), consumptionRank(b); rankA != rankB {
+		return rankA < rankB
+	}
 	switch {
 	case a.ExpiresAt == nil && b.ExpiresAt == nil:
 		return a.CreatedAt.Before(b.CreatedAt)
@@ -67,6 +71,43 @@ func lotBefore(a, b Lot) bool {
 	default:
 		return a.ExpiresAt.Before(*b.ExpiresAt)
 	}
+}
+
+func consumptionRank(lot Lot) int {
+	switch {
+	case lot.Kind == LotPurchased:
+		return 2
+	case lot.ExpiresAt == nil:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func (f *fakeStore) ExpireVoucherLot(_ context.Context, lotID string, at time.Time) (bool, error) {
+	for i := range f.lots {
+		lot := &f.lots[i]
+		if lot.ID == lotID && lot.Kind == LotVoucher && lot.ExpiresAt != nil && lot.ExpiresAt.After(at) {
+			moved := at
+			lot.ExpiresAt = &moved
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (f *fakeStore) VoucherLots(_ context.Context, lotIDs []string) ([]Lot, error) {
+	wanted := map[string]bool{}
+	for _, id := range lotIDs {
+		wanted[id] = true
+	}
+	var out []Lot
+	for _, lot := range f.lots {
+		if wanted[lot.ID] && lot.Kind == LotVoucher {
+			out = append(out, lot)
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeStore) ActiveMonthlyLot(_ context.Context, userID string, now time.Time) (Lot, bool, error) {
@@ -1051,5 +1092,42 @@ func TestBalanceReportsItsLotsAndUnlimitedForMaster(t *testing.T) {
 	}
 	if !master.Unlimited || len(master.Lots) != 0 {
 		t.Errorf("master balance = %+v, want unlimited with no lots", master)
+	}
+}
+
+// QUOTA-58: a redemption opens one expiring voucher lot and refuses a lot it could not
+// describe — no account, no credits, or no expiry.
+func TestOpenVoucherLotOpensOneExpiringVoucherLot(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 25, 3, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	expires := now.Add(30 * 24 * time.Hour)
+
+	id, err := svc.OpenVoucherLot(ctx, "alice", 1150, expires)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.lots) != 1 {
+		t.Fatalf("lots = %+v, want one", store.lots)
+	}
+	lot := store.lots[0]
+	if lot.ID != id || !strings.HasPrefix(id, "voucher:") || lot.Kind != LotVoucher ||
+		lot.Granted != 1150 || lot.Remaining != 1150 || lot.ExpiresAt == nil || !lot.ExpiresAt.Equal(expires) {
+		t.Fatalf("voucher lot = %+v", lot)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		user    string
+		credits int
+		expires time.Time
+	}{
+		{"no account", "", 10, expires},
+		{"no credits", "alice", 0, expires},
+		{"no expiry", "alice", 10, time.Time{}},
+	} {
+		if _, err := svc.OpenVoucherLot(ctx, tc.user, tc.credits, tc.expires); err == nil {
+			t.Errorf("%s: opened a voucher lot", tc.name)
+		}
 	}
 }

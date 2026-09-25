@@ -53,18 +53,19 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T394 | voucher lot kind and expiring-first consumption order | QUOTA GIFT | - | todo |
 | T395 | voucher context, VoucherService and the vouchers table | GIFT QUOTA | T394 | todo |
 | T396 | public gift page and redemption | GIFT | T395 | todo |
 | T397 | admin vouchers tab: issue, list, copy, revoke | GIFT | T396 | todo |
 
 ## next
-- implement-task T394 → T395 → T396 → T397 (vouchers for the bank-transfer pilot: lot kind + burn order, voucher context, public gift page, admin tab)
+- implement-task T395 → T396 → T397 (vouchers for the bank-transfer pilot: voucher context, public gift page, admin tab); T394 landed the voucher lot kind and the expiring-first order
 - POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T394 done (gv): voucher lot kind (0084), expiring-first consumption order, OpenVoucherLot/ExpireVoucherLot/VoucherLotStandings in usage, 이용권 label in the account menu; BE/FE/codegen gates green; T395 impl notes now name VoucherLotStandings
+- 260925 T394 claimed (gv)
 - 260925 create-task GIFT QUOTA done: GIFT r2 + QUOTA r20 → T394 (voucher lot kind, expiring-first order), T395 (voucher context/VoucherService/table), T396 (public /gift page, redeem, sign-in hand-back), T397 (admin vouchers tab); GIFT tasked=2, QUOTA tasked=20
 - 260925 create-task GIFT QUOTA start (GIFT r2 all, QUOTA r20: QUOTA-9✎ QUOTA-12✎ QUOTA-58+)
 - 260925 update-ssot QUAL dropped: no SSOT or code change; QUAL stays r4
@@ -83,5 +84,3 @@
 - 260925 update-ssot POST done: r15 adds POST-90..93 (incremental /posts at every width, owned-post-wide narrowing, list-end loading/retry, kept rows and scroll on return); no cross-SSOT references, no doing tasks affected
 - 260925 update-ssot POST start: /posts list moves to incremental loading with server-side search and status filter
 - 260925 T391 done (mw): Deploy backend succeeded in 201s; separate parallel Verify media and CI are green, release logs confirm cached media tools, and DEPLOY.md records measured evidence
-- 260925 T391 production timing confirmed (mw): e933ea73 completed Deploy backend in 201s, API health is ok, and three independent Verify media jobs started afterward; remaining CI/media verification is monitored separately
-- 260925 T391 local verification passed (mw): 60 deployment tests, workflow lint, both prebuilt-image release layouts and all BE/FE/codegen/spec gates; delivery timing remains to be measured

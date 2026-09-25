@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -291,22 +292,25 @@ func TestALotCannotBeSpentBelowZero(t *testing.T) {
 	}
 }
 
-// QUOTA-12 in the case expiry order alone got wrong: a purchased lot that is OLDER than the
-// bonus beside it. Ordering by expiry with NULLs last would then fall through to creation
-// and spend the paid credits first.
-func TestConsumptionWalksLotsByKindBeforeExpiry(t *testing.T) {
+// QUOTA-12: every lot that carries an expiry burns first by soonest expiry, whatever its
+// kind; then the never-expiring bonus; purchased last even when it is the oldest lot. The
+// voucher expires before the monthly lot here, so it goes first, and the expiring bonus goes
+// before the monthly lot and before the never-expiring bonus.
+func TestConsumptionSpendsExpiringLotsFirstAndPurchasedLast(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
 	ctx := context.Background()
 	now := time.Now().UTC()
 
-	soon := now.Add(24 * time.Hour)
-	later := now.Add(7 * 24 * time.Hour)
-	insertLot(t, handle, "purchased", "alice", "purchased", 10, nil, now.Add(-72*time.Hour))
-	insertLot(t, handle, "bonus", "alice", "bonus", 10, nil, now.Add(-48*time.Hour))
-	insertLot(t, handle, "monthly-b", "alice", "monthly", 10, &later, now.Add(-24*time.Hour))
-	insertLot(t, handle, "monthly-a", "alice", "monthly", 10, &soon, now.Add(-12*time.Hour))
+	day := now.Add(24 * time.Hour)
+	threeDays := now.Add(3 * 24 * time.Hour)
+	week := now.Add(7 * 24 * time.Hour)
+	insertLot(t, handle, "purchased", "alice", "purchased", 10, nil, now.Add(-96*time.Hour))
+	insertLot(t, handle, "bonus", "alice", "bonus", 10, nil, now.Add(-72*time.Hour))
+	insertLot(t, handle, "monthly", "alice", "monthly", 10, &week, now.Add(-48*time.Hour))
+	insertLot(t, handle, "bonus-expiring", "alice", "bonus", 10, &threeDays, now.Add(-24*time.Hour))
+	insertLot(t, handle, "voucher", "alice", "voucher", 10, &day, now.Add(-12*time.Hour))
 
-	// Five holds at oneCallHold each: both monthly lots and half of the bonus.
+	// Five holds at oneCallHold each: the voucher, the expiring bonus and half the month.
 	for i := range 5 {
 		if err := svc.Hold(ctx, holdFor(fmt.Sprintf("job-%d", i))); err != nil {
 			t.Fatalf("hold %d: %v", i, err)
@@ -317,9 +321,10 @@ func TestConsumptionWalksLotsByKindBeforeExpiry(t *testing.T) {
 		lot  string
 		want int
 	}{
-		{"monthly-a", 0},
-		{"monthly-b", 0},
-		{"bonus", 5},
+		{"voucher", 0},
+		{"bonus-expiring", 0},
+		{"monthly", 5},
+		{"bonus", 10},
 		{"purchased", 10},
 	} {
 		if _, remaining := lotRemaining(t, handle, tc.lot); remaining != tc.want {
@@ -329,19 +334,141 @@ func TestConsumptionWalksLotsByKindBeforeExpiry(t *testing.T) {
 }
 
 // The schema is the only thing that can refuse a kind the product does not have.
-func TestCreditLotKindIsOneOfThree(t *testing.T) {
+func TestCreditLotKindIsOneOfFour(t *testing.T) {
 	_, handle := newServiceWithDB(t)
 	now := time.Now().UTC()
 
 	insertLot(t, handle, "m", "alice", "monthly", 1, &now, now)
 	insertLot(t, handle, "b", "alice", "bonus", 1, nil, now)
 	insertLot(t, handle, "p", "alice", "purchased", 1, nil, now)
+	insertLot(t, handle, "v", "alice", "voucher", 1, &now, now)
 
 	_, err := handle.Writer.ExecContext(context.Background(),
 		`INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
 		 VALUES ('g', 'alice', 'gift', 1, 1, NULL, ?)`, now.Format(time.RFC3339Nano))
 	if err == nil {
-		t.Fatal("a fourth lot kind was accepted")
+		t.Fatal("a fifth lot kind was accepted")
+	}
+}
+
+// QUOTA-58: a redemption opens one expiring voucher lot the balance counts and the hold
+// spends before the monthly grant that expires later.
+func TestOpenVoucherLotCountsTowardTheBalance(t *testing.T) {
+	svc, handle := newServiceWithDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	week := now.Add(7 * 24 * time.Hour)
+	insertLot(t, handle, "monthly", "alice", "monthly", 10, &week, now.Add(-time.Hour))
+
+	lotID, err := svc.OpenVoucherLot(ctx, "alice", 20, now.Add(24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kind string
+	var expires sql.NullString
+	if err := handle.Reader.QueryRow(
+		"SELECT kind, expires_at FROM credit_lots WHERE id = ?", lotID,
+	).Scan(&kind, &expires); err != nil {
+		t.Fatal(err)
+	}
+	if kind != "voucher" || !expires.Valid {
+		t.Fatalf("voucher lot = %s %v, want an expiring voucher lot", kind, expires)
+	}
+	balance, err := svc.BalanceFor(ctx, "alice", plan.Free)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Credits != 30 {
+		t.Fatalf("balance = %d, want 30", balance.Credits)
+	}
+	if err := svc.Hold(ctx, holdFor("job")); err != nil {
+		t.Fatal(err)
+	}
+	if _, remaining := lotRemaining(t, handle, lotID); remaining != 20-oneCallHold {
+		t.Fatalf("voucher remaining = %d, want %d", remaining, 20-oneCallHold)
+	}
+}
+
+// A revoked voucher's credits stop counting at once and stay gone even when a hold that was
+// open on them settles afterwards and returns its unused part to the same lot.
+func TestExpiredVoucherLotIgnoresALateRefund(t *testing.T) {
+	svc, handle := newServiceWithDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	week := now.Add(7 * 24 * time.Hour)
+	day := now.Add(24 * time.Hour)
+	insertLot(t, handle, "monthly", "alice", "monthly", 10, &week, now.Add(-time.Hour))
+	insertLot(t, handle, "voucher", "alice", "voucher", 10, &day, now.Add(-time.Minute))
+
+	if err := svc.Hold(ctx, holdFor("job")); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ExpireVoucherLot(ctx, "voucher", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	// Settling with no recorded call charges the base alone and refunds the rest of the
+	// hold into the voucher lot, which has already expired.
+	if err := svc.Settle(ctx, "job", usage.OutcomeSucceeded); err != nil {
+		t.Fatal(err)
+	}
+
+	balance, err := svc.BalanceFor(ctx, "alice", plan.Free)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Credits != 10 {
+		t.Fatalf("balance = %d, want only the monthly 10", balance.Credits)
+	}
+	if _, remaining := lotRemaining(t, handle, "voucher"); remaining <= 10-oneCallHold {
+		t.Fatalf("voucher remaining = %d, want the refund kept on the row as history", remaining)
+	}
+}
+
+// ExpireVoucherLot moves only a voucher lot and only earlier; the standings read reports what
+// each voucher lot still holds and when it expires.
+func TestExpireVoucherLotAndStandings(t *testing.T) {
+	svc, handle := newServiceWithDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	day := now.Add(24 * time.Hour)
+	past := now.Add(-time.Hour)
+	insertLot(t, handle, "active", "alice", "voucher", 10, &day, now.Add(-2*time.Hour))
+	insertLot(t, handle, "lapsed", "alice", "voucher", 10, &past, now.Add(-2*time.Hour))
+	insertLot(t, handle, "bonus", "alice", "bonus", 10, &day, now.Add(-2*time.Hour))
+
+	if err := svc.ExpireVoucherLot(ctx, "lapsed", now); err != nil {
+		t.Fatalf("expiring an already lapsed voucher lot: %v", err)
+	}
+	for _, id := range []string{"bonus", "missing"} {
+		if err := svc.ExpireVoucherLot(ctx, id, now); !errors.Is(err, usage.ErrLotNotFound) {
+			t.Fatalf("expire %s = %v, want ErrLotNotFound", id, err)
+		}
+	}
+
+	standings, err := svc.VoucherLotStandings(ctx, []string{"active", "lapsed", "bonus"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(standings) != 2 {
+		t.Fatalf("standings = %+v, want the two voucher lots", standings)
+	}
+	if got := standings["active"]; got.Remaining != 10 || got.ExpiresAt.Sub(day).Abs() > time.Millisecond {
+		t.Fatalf("active = %+v", got)
+	}
+	if got := standings["lapsed"]; got.Remaining != 0 {
+		t.Fatalf("lapsed = %+v, want nothing left", got)
+	}
+
+	revokedAt := now.Add(time.Minute)
+	if err := svc.ExpireVoucherLot(ctx, "active", revokedAt); err != nil {
+		t.Fatal(err)
+	}
+	after, err := svc.VoucherLotStandings(ctx, []string{"active"}, revokedAt.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := after["active"]; got.Remaining != 0 || got.ExpiresAt.After(revokedAt) {
+		t.Fatalf("active after revoke = %+v, want expired at %v", got, revokedAt)
 	}
 }
 

@@ -42,7 +42,7 @@ export function planFromProto(plan: ProtoPlan): PlanName | undefined {
 /** An unknown lot kind is read as a bonus: the distinction is a label, and a grant that
  *  cannot be named is still a grant the account holds. */
 function toLot(kind: string): CreditLot['kind'] {
-  if (kind === 'monthly' || kind === 'purchased') return kind
+  if (kind === 'monthly' || kind === 'purchased' || kind === 'voucher') return kind
   return 'bonus'
 }
 

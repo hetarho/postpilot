@@ -33,6 +33,7 @@ type Service struct {
 	tx        WriteScope
 	lots      LotLedger
 	purchases PurchasedLotLedger
+	vouchers  VoucherLotLedger
 	charges   SpendLedger
 	holds     HoldLedger
 	models    Models
@@ -67,7 +68,7 @@ func NewService(store Storage, models Models, maxCompletionTokens int64, anchors
 		approved[kind] = true
 	}
 	return &Service{
-		tx: store, lots: store, purchases: store, charges: store, holds: store,
+		tx: store, lots: store, purchases: store, vouchers: store, charges: store, holds: store,
 		models: models, anchors: anchors, approvedKinds: approved,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
@@ -179,6 +180,74 @@ func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits i
 		return "", err
 	}
 	return id, nil
+}
+
+// OpenVoucherLot is the credit half of a voucher redemption (QUOTA-58): one lot of the
+// voucher's credits that expires at the given instant.
+func (s *Service) OpenVoucherLot(ctx context.Context, userID string, credits int, expiresAt time.Time) (string, error) {
+	if userID == "" || credits <= 0 || expiresAt.IsZero() {
+		return "", errors.New("open voucher lot: user, positive credits and an expiry are required")
+	}
+	id := "voucher:" + s.newID()
+	expires := expiresAt
+	err := s.lots.InsertLot(ctx, Lot{
+		ID: id, UserID: userID, Kind: LotVoucher, Granted: credits, Remaining: credits,
+		ExpiresAt: &expires, CreatedAt: s.now(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+// ExpireVoucherLot is the credit half of revoking a redeemed voucher: its unspent remainder
+// stops counting at `at`, and what was already spent stays spent (QUOTA-58). A lot that has
+// already expired by then is left as it is; an id that is not a voucher lot is refused.
+func (s *Service) ExpireVoucherLot(ctx context.Context, lotID string, at time.Time) error {
+	moved, err := s.vouchers.ExpireVoucherLot(ctx, lotID, at)
+	if err != nil || moved {
+		return err
+	}
+	lots, err := s.vouchers.VoucherLots(ctx, []string{lotID})
+	if err != nil {
+		return err
+	}
+	if len(lots) == 0 {
+		return ErrLotNotFound
+	}
+	return nil
+}
+
+// VoucherLotStanding is where one voucher lot stands at an instant: what it still holds,
+// which is zero once it has expired, and when it expires or expired.
+type VoucherLotStanding struct {
+	Remaining int
+	ExpiresAt time.Time
+}
+
+// VoucherLotStandings answers, for each of the given voucher lots, what it still holds at
+// `at` and when it expires. It is the plural read behind the operator's voucher list, on the
+// read pool; an id the answer omits is absent or not a voucher lot.
+func (s *Service) VoucherLotStandings(ctx context.Context, lotIDs []string, at time.Time) (map[string]VoucherLotStanding, error) {
+	if len(lotIDs) == 0 {
+		return nil, nil
+	}
+	lots, err := s.vouchers.VoucherLots(ctx, lotIDs)
+	if err != nil {
+		return nil, err
+	}
+	standings := make(map[string]VoucherLotStanding, len(lots))
+	for _, lot := range lots {
+		standing := VoucherLotStanding{Remaining: lot.Remaining}
+		if lot.ExpiresAt != nil {
+			standing.ExpiresAt = *lot.ExpiresAt
+		}
+		if lot.Expired(at) {
+			standing.Remaining = 0
+		}
+		standings[lot.ID] = standing
+	}
+	return standings, nil
 }
 
 func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {

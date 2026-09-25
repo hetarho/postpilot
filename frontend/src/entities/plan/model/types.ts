@@ -23,10 +23,11 @@ export function planLabel(plan: PlanName | undefined): string {
  *  operator tier, not something anyone is offered. */
 export const OFFERED_PLANS = ['free', 'basic', 'pro', 'max'] as const
 
-/** One grant of credits. Consumption walks lots by kind first — monthly, then bonus, then
- *  purchased — and only then by expiry, which is the order they are rendered in. */
+/** One grant of credits. Consumption spends every expiring lot first by expiry — monthly,
+ *  voucher and an expiring bonus alike — then never-expiring bonus, then purchased (QUOTA-12),
+ *  which is the order the server sends and the order they are rendered in. */
 export interface CreditLot {
-  kind: 'monthly' | 'bonus' | 'purchased'
+  kind: 'monthly' | 'bonus' | 'purchased' | 'voucher'
   granted: number
   remaining: number
   /** RFC3339, or empty for a grant that does not expire. */

@@ -69,11 +69,12 @@ describe('AccountMenu', () => {
       plans: {
         plan: ProtoPlan.FREE,
         balance: {
-          credits: 62,
+          credits: 962,
           unlimited: false,
           monthlyGrant: 50,
           renewsAt: '2026-09-30T15:00:00Z',
           lots: [
+            { kind: 'voucher', granted: 1150, remaining: 800, expiresAt: '2026-09-28T15:00:00Z' },
             { kind: 'monthly', granted: 50, remaining: 12, expiresAt: '2026-09-30T15:00:00Z' },
             { kind: 'bonus', granted: 50, remaining: 50 },
             { kind: 'purchased', granted: 100, remaining: 100 },
@@ -96,13 +97,16 @@ describe('AccountMenu', () => {
     expect(tier.parentElement).toHaveClass('justify-between')
     expect(within(tier.parentElement as HTMLElement).getByText('alice')).toBeInTheDocument()
 
-    expect(await within(panel).findByText('62 크레딧')).toBeInTheDocument()
+    expect(await within(panel).findByText('962 크레딧')).toBeInTheDocument()
     // The lots behind the total: one lapses at the boundary, one does not, and a single
     // number cannot say that.
     expect(within(panel).getByText('12 / 50 크레딧')).toBeInTheDocument()
     expect(within(panel).getByText('50 / 50 크레딧')).toBeInTheDocument()
-    // Three kinds now (QUOTA-12), and a purchased lot must not be labelled as a bonus.
+    // Four kinds now (QUOTA-12, QUOTA-58): neither a purchase nor a voucher may be labelled
+    // as a bonus.
     expect(within(panel).getByText('100 / 100 크레딧')).toBeInTheDocument()
+    expect(within(panel).getByText('800 / 1150 크레딧')).toBeInTheDocument()
+    expect(within(panel).getByText(/^이용권 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^월 정기 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^보너스 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^구매 ·/)).toBeInTheDocument()
@@ -114,7 +118,7 @@ describe('AccountMenu', () => {
 
     // The meter is never the only signal: it carries its own figure as text.
     const meter = within(panel).getByRole('meter')
-    expect(meter).toHaveAttribute('aria-valuetext', '62 크레딧')
+    expect(meter).toHaveAttribute('aria-valuetext', '962 크레딧')
   })
 
   // An unlimited account is stated, not drawn as an empty bar that reads as "none left".

@@ -43,11 +43,12 @@ enum Plan {
   PLAN_PRO = 5;
 }
 
-// One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
-// ones last, which is why a client can render the order it will be spent in without
-// knowing the rule.
+// One grant of credits. Lots arrive in the order they are spent (QUOTA-12): every expiring
+// lot by expiry ascending, then never-expiring bonus, then purchased — which is why a client
+// can render that order without knowing the rule.
 message CreditLot {
-  // "monthly" or "bonus". A display distinction: the balance itself does not care.
+  // "monthly", "bonus", "purchased" or "voucher". A display distinction: the balance itself
+  // does not care.
   string kind = 1;
   int32 granted = 2;
   int32 remaining = 3;

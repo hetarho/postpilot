@@ -86,12 +86,13 @@ func (Plan) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{0}
 }
 
-// One grant of credits. Consumption walks lots by expiry ascending with the non-expiring
-// ones last, which is why a client can render the order it will be spent in without
-// knowing the rule.
+// One grant of credits. Lots arrive in the order they are spent (QUOTA-12): every expiring
+// lot by expiry ascending, then never-expiring bonus, then purchased — which is why a client
+// can render that order without knowing the rule.
 type CreditLot struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// "monthly" or "bonus". A display distinction: the balance itself does not care.
+	// "monthly", "bonus", "purchased" or "voucher". A display distinction: the balance itself
+	// does not care.
 	Kind      string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	Granted   int32  `protobuf:"varint,2,opt,name=granted,proto3" json:"granted,omitempty"`
 	Remaining int32  `protobuf:"varint,3,opt,name=remaining,proto3" json:"remaining,omitempty"`

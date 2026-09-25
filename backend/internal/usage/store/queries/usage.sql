@@ -3,14 +3,15 @@
 
 -- name: LotsInConsumptionOrder :many
 -- The one ordering the balance is ever read in, and the only reader of the product rule
--- behind it (QUOTA-12): KIND first (monthly, then bonus, then purchased) and only then
--- soonest expiry, non-expiring last, oldest first.
+-- behind it (QUOTA-12): every lot that carries an expiry first (monthly, voucher and an
+-- expiring bonus alike) by soonest expiry, then the never-expiring bonus lots, then the
+-- purchased ones; ties go to the oldest.
 --
--- Kind leads because a purchased credit was paid for and must be the last to burn. Expiry
--- order alone used to produce that by accident, resting on the signup bonus happening to be
--- the older of two never-expiring lots; a lot bought before a bonus was granted would have
--- inverted it. The rank is spelled here rather than passed in from Go because this query is
--- the rule's only reader.
+-- Expiry leads because a credit that can lapse must burn before one that cannot: a voucher
+-- spent after a never-expiring bonus would run out its clock unspent. Purchased still comes
+-- last because a paid credit must be the last to burn, and it never expires anyway. The
+-- rank is spelled here rather than passed in from Go because this query is the rule's only
+-- reader.
 --
 -- Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
 -- so one multi-byte character shifts it and generates SQL that will not parse.
@@ -19,8 +20,8 @@ FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
   AND (expires_at IS NULL OR expires_at > ?)
-ORDER BY CASE kind WHEN 'monthly' THEN 0 WHEN 'bonus' THEN 1 ELSE 2 END,
-         expires_at IS NULL, expires_at, created_at, id;
+ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE 0 END,
+         expires_at, created_at, id;
 
 -- name: ActiveMonthlyLot :one
 SELECT id, user_id, kind, granted, remaining, expires_at, created_at
@@ -60,6 +61,23 @@ WHERE id IN (sqlc.slice('ids'))
   AND kind = 'purchased'
   AND granted > 0
   AND remaining = granted;
+
+-- name: ExpireVoucherLot :execrows
+-- A revoked voucher's lot (QUOTA-58). Voiding moves the expiry to the revocation instant
+-- instead of zeroing `remaining`: RefundToLot adds back into any lot up to its grant, so a
+-- zeroed lot would take back the unused part of a hold that was open when the voucher was
+-- revoked. Expiry is read-time, so a refund landing after it counts toward nothing, and the
+-- remainder stays on the row as history.
+UPDATE credit_lots SET expires_at = ?
+WHERE id = ? AND kind = 'voucher' AND expires_at > ?;
+
+-- name: VoucherLots :many
+-- Where each of these voucher lots stands, in one statement on the read pool. The operator's
+-- voucher list is its only reader, and the answer decides nothing but what a row shows.
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+FROM credit_lots
+WHERE id IN (sqlc.slice('ids'))
+  AND kind = 'voucher';
 
 -- name: RestoreLot :execrows
 UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;

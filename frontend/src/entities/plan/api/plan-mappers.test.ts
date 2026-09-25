@@ -22,6 +22,36 @@ describe('toMyPlan offers', () => {
   })
 })
 
+describe('toMyPlan lots', () => {
+  // QUOTA-58: a voucher lot keeps its own kind; only a kind the client has never heard of
+  // falls back to a bonus.
+  it('keeps each known kind and reads an unknown one as a bonus', () => {
+    const myPlan = toMyPlan(
+      create(GetMyPlanResponseSchema, {
+        plan: ProtoPlan.FREE,
+        balance: {
+          credits: 40,
+          lots: [
+            { kind: 'voucher', granted: 10, remaining: 10, expiresAt: '2026-10-01T00:00:00Z' },
+            { kind: 'monthly', granted: 10, remaining: 10, expiresAt: '2026-10-02T00:00:00Z' },
+            { kind: 'bonus', granted: 10, remaining: 10 },
+            { kind: 'purchased', granted: 10, remaining: 10 },
+            { kind: 'gift', granted: 1, remaining: 1 },
+          ],
+        },
+      }),
+    )
+
+    expect(myPlan?.balance.lots.map((lot) => lot.kind)).toEqual([
+      'voucher',
+      'monthly',
+      'bonus',
+      'purchased',
+      'bonus',
+    ])
+  })
+})
+
 describe('toMyPlan estimator combos', () => {
   it('carries every rate a client multiplies', () => {
     const myPlan = toMyPlan(

@@ -20,9 +20,9 @@ type WriteScope interface {
 
 // LotLedger is the grants an account holds and the order they are spent in.
 type LotLedger interface {
-	// LotsInConsumptionOrder returns the account's unexpired lots, ordered by expiry
-	// ascending with the non-expiring ones last. That single ordering is what makes the
-	// monthly grant spend before a bonus without a second rule.
+	// LotsInConsumptionOrder returns the account's unexpired lots in the order they are
+	// spent (QUOTA-12): every expiring lot by expiry ascending, then never-expiring bonus,
+	// then purchased.
 	LotsInConsumptionOrder(ctx context.Context, userID string, now time.Time) ([]Lot, error)
 	// ActiveMonthlyLot is the account's current monthly grant, if it has one that has not
 	// expired. Its expiry IS the account's renewal instant — a separate stored column
@@ -55,6 +55,17 @@ type PurchasedLotLedger interface {
 	// a write — that is what LotUntouched's writer read is for.
 	UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error)
 	RestoreLot(ctx context.Context, lotID string, credits int) (bool, error)
+}
+
+// VoucherLotLedger is what a voucher's revocation and the operator's voucher list need about
+// the lot a redemption opened (QUOTA-58).
+type VoucherLotLedger interface {
+	// ExpireVoucherLot moves a voucher lot's expiry to `at` when it would otherwise run
+	// later, and reports whether it did.
+	ExpireVoucherLot(ctx context.Context, lotID string, at time.Time) (bool, error)
+	// VoucherLots returns the voucher lots among the given ids, on the read pool. It is for
+	// a screen deciding what to render, never for an answer about to decide a write.
+	VoucherLots(ctx context.Context, lotIDs []string) ([]Lot, error)
 }
 
 // SpendLedger is a call charged to an account and the evidence kept of it.
@@ -95,6 +106,7 @@ type Storage interface {
 	WriteScope
 	LotLedger
 	PurchasedLotLedger
+	VoucherLotLedger
 	SpendLedger
 	HoldLedger
 }
