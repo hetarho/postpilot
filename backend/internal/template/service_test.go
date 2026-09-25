@@ -17,13 +17,14 @@ const okBody = `<write>인트로</write>
 </repeat>`
 
 func testLimits() Limits {
-	return Limits{
+	return NewLimits(Ceilings{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: fixtureParseOptions.PhotoRowMax,
 		AskLabelMaxChars: 40, AskMaxPerBody: fixtureParseOptions.AskMaxPerBody,
-		// The POST option's bounds: the length has a floor and no ceiling, the tag count both.
-		TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-	}
+	},
+		// The POST option's bounds, explicit: this package never imports post. The length has a
+		// floor and no ceiling, the tag count both.
+		NumberBounds{TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10})
 }
 
 // fakeStore is the persistence port. It keeps ownership the way the real SQL does — every

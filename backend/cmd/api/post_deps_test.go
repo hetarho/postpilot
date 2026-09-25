@@ -6,8 +6,18 @@ import (
 
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/voice"
 )
+
+// testTemplateLimits is the template limits every cmd/api test builds its template service with,
+// through the same constructor and number bounds the command uses.
+func testTemplateLimits() template.Limits {
+	return template.NewLimits(template.Ceilings{
+		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
+		MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4, AskLabelMaxChars: 40, AskMaxPerBody: 10,
+	}, postNumberBounds())
+}
 
 func testPostLimits() post.Limits {
 	return post.Limits{PutTTL: time.Minute, GetTTL: time.Minute, MaxImageBytes: 1 << 20, MaxPhotos: 30, AnswerLabelMax: 40, AnswerValueMax: 500}

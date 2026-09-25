@@ -923,7 +923,7 @@ func (p Post) GenerationOptions() GenerationOptionsSet {
 // POST-82). The 분야 rides this statement rather than AssignField, which stays SaveDraft's for
 // tabs that still send it.
 func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, set GenerationOptionsSet) (Post, error) {
-	if set.TargetLength != nil && *set.TargetLength <= 0 {
+	if set.TargetLength != nil && *set.TargetLength < TargetLengthMin {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
 	}
 	if !TagCountRange.Allows(set.TagCount) {

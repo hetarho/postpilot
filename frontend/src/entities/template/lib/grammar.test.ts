@@ -143,7 +143,7 @@ describe('template grammar against the shared fixtures', () => {
  *
  *  The hand-written fixtures above pin the rules anyone thought to write down. This pins the
  *  shapes nobody did — the combinations a mistake in either implementation actually falls into.
- *  Regenerate with `go test ./internal/template/ -run TestRegenerateCorpus`. */
+ *  Regenerate with `TEMPLATE_CORPUS_REGEN=1 go test ./internal/template/ -run TestCorpus`. */
 interface CorpusCase {
   body: string
   ok: boolean

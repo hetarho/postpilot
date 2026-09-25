@@ -266,12 +266,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
@@ -342,12 +337,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
@@ -475,12 +465,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
@@ -682,12 +667,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	guidelineSvc := guideline.NewService(
@@ -800,12 +780,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDepsWithLinks(voiceSvc, lateLinks{&guidelineSvc}))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	// Two pending candidates allowed, so the bound is reachable in a test without 50 rows.
@@ -995,12 +970,7 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
-			AskLabelMaxChars: 40, AskMaxPerBody: 10,
-			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-		},
+		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)

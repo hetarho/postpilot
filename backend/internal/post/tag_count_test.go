@@ -3,6 +3,7 @@ package post
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -69,5 +70,28 @@ func TestSaveGenerationOptionsUseMemory(t *testing.T) {
 	cleared, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.UseMemory = false }))
 	if err != nil || cleared.UseMemory {
 		t.Fatalf("the option could not be turned off: %+v, %v", cleared.UseMemory, err)
+	}
+}
+
+// The length's floor is TargetLengthMin, the one number template reads for the length it may
+// seed (TEMPLATE-47): one below is refused with nothing written, and the floor itself is stored.
+func TestSaveGenerationOptionsRefusesATargetLengthBelowTargetLengthMinAndAcceptsIt(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "Length")
+
+	below := TargetLengthMin - 1
+	before := store.posts[created.Slug]
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &below })); !errors.Is(err, ErrInvalidContent) {
+		t.Fatalf("length %d: err = %v, want ErrInvalidContent", below, err)
+	}
+	if after := store.posts[created.Slug]; !reflect.DeepEqual(after, before) {
+		t.Fatalf("a refused length changed the row: %+v", after)
+	}
+
+	floor := TargetLengthMin
+	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &floor }))
+	if err != nil || saved.TargetLength == nil || *saved.TargetLength != TargetLengthMin {
+		t.Fatalf("length %d = %+v, %v; want it stored", floor, saved.TargetLength, err)
 	}
 }

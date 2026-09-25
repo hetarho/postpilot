@@ -190,6 +190,35 @@ const ThrottleSweepInterval = time.Minute
 // The durable next_grant_at column and the boot pass cover process restarts.
 const BillingTickInterval = 10 * time.Minute
 
+// TemplateCeilings are the template field ceilings, counted in Unicode scalar values like the
+// voice sample minimum. They are env-owned rather than constants because a template that is too
+// short to be useful is a per-account editorial judgement, not a product rule. The struct is
+// field-for-field identical to template.Ceilings, so the composition root converts one into
+// the other and a field added to either stops both builds.
+//
+// MaxPerAccount and MaxRepeatExpansion stay server-side: the first is a storage guard, and the
+// second bounds how large one expanded template may grow before it reaches a provider, which
+// the frontend cannot know because it depends on how many photos the post carries.
+type TemplateCeilings struct {
+	NameMaxChars        int
+	DescriptionMaxChars int
+	BodyMaxChars        int
+	// TitleAreaMaxChars bounds a template's title area (TMPL-50). A title is one line of a
+	// post, so its source is bounded like a short field rather than like the body.
+	TitleAreaMaxChars  int
+	MaxPerAccount      int
+	MaxRepeatExpansion int
+	// PhotoRowMax is the largest `count` a photo position may carry — how many photos stand
+	// side by side in one row (TEMPLATE-38). It is env because the browser mirrors it as
+	// VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
+	PhotoRowMax int
+	// The data-field ceilings (TEMPLATE-43): a field's title and how many fields one body may
+	// declare. Both are mirrored in the browser — the title as a live counter, the count as the
+	// refusal the builder states — so they are env on both sides like PhotoRowMax.
+	AskLabelMaxChars int
+	AskMaxPerBody    int
+}
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	MediaInternalAddr      string
@@ -314,33 +343,13 @@ type Config struct {
 	ExperimentContentRetention time.Duration
 	// ExperimentSweepInterval is how often terminal experiment content is purged.
 	ExperimentSweepInterval time.Duration
-	// Template field ceilings, counted in Unicode scalar values like the voice sample
-	// minimum. They are env-owned rather than constants because a template that is too
-	// short to be useful is a per-account editorial judgement, not a product rule.
-	//
-	// TemplateMaxPerAccount and TemplateMaxRepeatExpansion stay server-side: the first is
-	// a storage guard, and the second bounds how large one expanded template may grow
-	// before it reaches a provider, which the frontend cannot know because it depends on
-	// how many photos the post carries.
-	TemplateNameMaxChars        int
-	TemplateDescriptionMaxChars int
-	TemplateBodyMaxChars        int
-	TemplateMaxPerAccount       int
-	TemplateMaxRepeatExpansion  int
-	// TemplatePhotoRowMax is the largest `count` a photo position may carry — how many
-	// photos stand side by side in one row (TEMPLATE-38). It is env because the browser
-	// mirrors it as VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
-	TemplatePhotoRowMax int
-	// The data-field ceilings (TEMPLATE-43): a field's title, one answer's text, and how
-	// many fields one body may declare. All three are mirrored in the browser — the title
-	// and the answer as live counters, the count as the refusal the builder states — so
-	// they are env on both sides like TemplatePhotoRowMax.
-	TemplateAskLabelMaxChars int
+	// Template holds the template field ceilings (TEMPLATE_*), which the composition root
+	// converts into template.Ceilings.
+	Template TemplateCeilings
+	// TemplateAskValueMaxChars bounds one data-field answer's text (TEMPLATE-43). Only post
+	// reads it, so it stays beside the ceilings rather than in them; the browser mirrors it as
+	// a live counter.
 	TemplateAskValueMaxChars int
-	TemplateAskMaxPerBody    int
-	// TemplateTitleAreaMaxChars bounds a template's title area (TMPL-50). A title is one line
-	// of a post, so its source is bounded like a short field rather than like the body.
-	TemplateTitleAreaMaxChars int
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -514,37 +523,37 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateNameMaxChars = templateName
+	cfg.Template.NameMaxChars = templateName
 	templateDescription, err := positiveInt("TEMPLATE_DESCRIPTION_MAX_CHARS", "200")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateDescriptionMaxChars = templateDescription
+	cfg.Template.DescriptionMaxChars = templateDescription
 	templateBody, err := positiveInt("TEMPLATE_BODY_MAX_CHARS", "4000")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateBodyMaxChars = templateBody
+	cfg.Template.BodyMaxChars = templateBody
 	templateCap, err := positiveInt("TEMPLATE_MAX_PER_ACCOUNT", "50")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateMaxPerAccount = templateCap
+	cfg.Template.MaxPerAccount = templateCap
 	templateExpansion, err := positiveInt("TEMPLATE_MAX_REPEAT_EXPANSION", "40")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateMaxRepeatExpansion = templateExpansion
+	cfg.Template.MaxRepeatExpansion = templateExpansion
 	templatePhotoRow, err := positiveInt("TEMPLATE_PHOTO_ROW_MAX", "4")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplatePhotoRowMax = templatePhotoRow
+	cfg.Template.PhotoRowMax = templatePhotoRow
 	templateAskLabel, err := positiveInt("TEMPLATE_ASK_LABEL_MAX_CHARS", "40")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateAskLabelMaxChars = templateAskLabel
+	cfg.Template.AskLabelMaxChars = templateAskLabel
 	templateAskValue, err := positiveInt("TEMPLATE_ASK_VALUE_MAX_CHARS", "500")
 	if err != nil {
 		return nil, err
@@ -554,12 +563,12 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateAskMaxPerBody = templateAskCount
+	cfg.Template.AskMaxPerBody = templateAskCount
 	templateTitleArea, err := positiveInt("TEMPLATE_TITLE_AREA_MAX_CHARS", "200")
 	if err != nil {
 		return nil, err
 	}
-	cfg.TemplateTitleAreaMaxChars = templateTitleArea
+	cfg.Template.TitleAreaMaxChars = templateTitleArea
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

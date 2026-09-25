@@ -91,10 +91,7 @@ type Limits struct {
 	AskLabelMaxChars int
 	AskMaxPerBody    int
 	// TargetLengthMin and TagCountMin/Max bound the two generation numbers a template may
-	// author (TEMPLATE-47). They are the POST option's bounds, passed in rather than owned
-	// here: the number is a SEED for that option, and a template able to store one the post
-	// refuses would make an assignment fail at a place the user never typed anything. The
-	// length has a floor and no ceiling, exactly as the post's own option does.
+	// author (TEMPLATE-47); see NumberBounds for why they are passed in.
 	TargetLengthMin int
 	TagCountMin     int
 	TagCountMax     int

@@ -18,6 +18,7 @@ import (
 	modelcatalogstore "github.com/postpilot/backend/internal/modelcatalog/store"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/post"
 )
 
 // TestBuildContextsWiresEveryRequiredCollaborator constructs the whole graph the server
@@ -77,6 +78,11 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		if (f.Kind() == reflect.Pointer || f.Kind() == reflect.Interface || f.Kind() == reflect.Func) && f.IsNil() {
 			t.Errorf("contexts.%s is nil after buildContexts", name)
 		}
+	}
+	// Template's number bounds are post's own (TEMPLATE-47), handed over by the command.
+	if limits := app.template.Limits(); limits.TargetLengthMin != post.TargetLengthMin ||
+		limits.TagCountMin != post.TagCountRange.Min || limits.TagCountMax != post.TagCountRange.Max {
+		t.Fatalf("template limits = %+v, want post's target-length floor and tag-count range", limits)
 	}
 	registerJobs(app)
 	got := handlers(app)

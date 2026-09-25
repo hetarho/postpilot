@@ -215,8 +215,8 @@ func TestLoadDefaults(t *testing.T) {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
 	}
 	// Four photos side by side is the ceiling a 360 px phone can still show (TEMPLATE-38).
-	if cfg.TemplatePhotoRowMax != 4 {
-		t.Errorf("TemplatePhotoRowMax = %d, want 4", cfg.TemplatePhotoRowMax)
+	if cfg.Template.PhotoRowMax != 4 {
+		t.Errorf("Template.PhotoRowMax = %d, want 4", cfg.Template.PhotoRowMax)
 	}
 	// A8: the cap is deployment-resolvable, with 8192 as its default.
 	if cfg.LLMMaxTokensDefault != 8192 {
@@ -292,8 +292,8 @@ func TestLoadTemplatePhotoRowMax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.TemplatePhotoRowMax != 6 {
-		t.Fatalf("TemplatePhotoRowMax = %d, want 6", cfg.TemplatePhotoRowMax)
+	if cfg.Template.PhotoRowMax != 6 {
+		t.Fatalf("Template.PhotoRowMax = %d, want 6", cfg.Template.PhotoRowMax)
 	}
 	for _, bad := range []string{"nope", "0", "-1", "2.5"} {
 		t.Setenv("TEMPLATE_PHOTO_ROW_MAX", bad)
@@ -605,8 +605,8 @@ func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.TemplateNameMaxChars != 40 || cfg.TemplateDescriptionMaxChars != 200 || cfg.TemplateBodyMaxChars != 4000 ||
-		cfg.TemplateMaxPerAccount != 50 || cfg.TemplateMaxRepeatExpansion != 40 || cfg.TemplateTitleAreaMaxChars != 200 {
+	if cfg.Template.NameMaxChars != 40 || cfg.Template.DescriptionMaxChars != 200 || cfg.Template.BodyMaxChars != 4000 ||
+		cfg.Template.MaxPerAccount != 50 || cfg.Template.MaxRepeatExpansion != 40 || cfg.Template.TitleAreaMaxChars != 200 {
 		t.Fatalf("template limit defaults = %+v", cfg)
 	}
 

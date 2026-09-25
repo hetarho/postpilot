@@ -209,11 +209,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
-	templateSvc := template.NewService(templatestore.New(handle.Writer, handle.Reader), template.Limits{
-		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-		MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4, AskLabelMaxChars: 40, AskMaxPerBody: 10,
-		TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
-	})
+	templateSvc := template.NewService(templatestore.New(handle.Writer, handle.Reader), testTemplateLimits())
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
@@ -236,19 +232,10 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 			QualityRules: generationQuality{service: qualitySvc}, FieldPhrases: generationFieldPhrases{service: qualitySvc},
 		},
 	)
-	queue.Register(job.KindGenerate, func(ctx context.Context, found job.Job, progress job.Progress) error {
-		run, err := generateJob(found)
-		if err != nil {
-			return err
-		}
-		return generationSvc.Generate(ctx, run, generation.Progress(progress))
-	})
-	queue.Register(job.KindRevise, func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return generationSvc.Revise(ctx, generation.RevisionJob{
-			UserID: found.UserID, PostSlug: found.Subject(post.JobSubject), VoiceID: found.Subject(voice.JobSubject),
-			WriteModel: found.WriteModel, Payload: found.Payload,
-		}, generation.Progress(progress))
-	})
+	// The worker's own handlers, not a copy (review F17): a mapping change in registerJobs is what
+	// this harness runs. Only the generate and revise kinds are ever enqueued here, so the other
+	// contexts registerJobs captures can stay nil.
+	registerJobs(&contexts{jobs: queue, generation: generationSvc})
 	workerCtx, stop := context.WithCancel(ctx)
 	t.Cleanup(stop)
 	go queue.Run(workerCtx)

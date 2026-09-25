@@ -176,7 +176,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL,
 			MaxImageBytes: cfg.MaxImageBytes, MaxPhotos: cfg.MaxPhotosPerPost,
 			MaxVideos: cfg.MaxVideosPerPost, MaxVideoBytes: cfg.MaxVideoBytes, MaxVideoSeconds: cfg.MaxVideoSeconds,
-			AnswerLabelMax: cfg.TemplateAskLabelMaxChars, AnswerValueMax: cfg.TemplateAskValueMaxChars,
+			AnswerLabelMax: cfg.Template.AskLabelMaxChars, AnswerValueMax: cfg.TemplateAskValueMaxChars,
 		},
 		post.Deps{
 			Jobs:          postJobFinder{queue: c.jobs},
@@ -236,24 +236,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		return nil, fmt.Errorf("clip generation initialization: %w", err)
 	}
 
-	c.template = template.NewService(
-		templatestore.New(handle.Writer, handle.Reader),
-		template.Limits{
-			NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
-			BodyMaxChars: cfg.TemplateBodyMaxChars, TitleAreaMaxChars: cfg.TemplateTitleAreaMaxChars,
-			MaxPerAccount:      cfg.TemplateMaxPerAccount,
-			MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
-			PhotoRowMax:        cfg.TemplatePhotoRowMax,
-			AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,
-			AskMaxPerBody:      cfg.TemplateAskMaxPerBody,
-			// The two generation numbers are bounded by the POST option they seed, not by a
-			// template limit of their own (TEMPLATE-6): a template must not be able to store a
-			// number the post would refuse.
-			TargetLengthMin: 1,
-			TagCountMin:     post.TagCountRange.Min,
-			TagCountMax:     post.TagCountRange.Max,
-		},
-	)
+	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
 
 	c.guideline = guideline.NewService(
@@ -358,4 +341,19 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.voice.SetExperimentGuard(voiceExperiments{service: c.experiment})
 	c.experiment.SetVoiceDirectory(experimentVoices{service: c.voice})
 	return c, nil
+}
+
+// templateLimits is the template context's limits: the operator-set ceilings from config and the
+// POST bounds its numbers seed.
+func templateLimits(cfg *config.Config) template.Limits {
+	return template.NewLimits(template.Ceilings(cfg.Template), postNumberBounds())
+}
+
+// postNumberBounds are the two generation numbers' bounds, taken from the POST option they seed
+// rather than from a template limit of their own (TEMPLATE-6): a template must not be able to
+// store a number the post would refuse.
+func postNumberBounds() template.NumberBounds {
+	return template.NumberBounds{
+		TargetLengthMin: post.TargetLengthMin, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
+	}
 }

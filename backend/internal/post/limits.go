@@ -7,6 +7,10 @@ package post
 // mirrors the three as POST_TAG_COUNT_DEFAULT / _MIN / _MAX.
 var TagCountRange = TagCount{Default: 4, Min: 1, Max: 10}
 
+// TargetLengthMin is the smallest 목표 글자 수 an option save accepts; the length has no ceiling
+// (POST-63). Template reads it too, for the length a template may seed (TEMPLATE-47).
+const TargetLengthMin = 1
+
 // TagCount is a tag-count range with the value an unset post reads as.
 type TagCount struct {
 	Default, Min, Max int

@@ -90,20 +90,12 @@ func run(ctx context.Context) error {
 		Media: media{store: clipstore.New(handle.Writer, handle.Reader)},
 		Templates: templates{svc: template.NewService(
 			templatestore.New(handle.Writer, handle.Reader),
-			// The limits cmd/api builds the context with, so the fixture is held to the same
-			// ceilings a real save is.
-			template.Limits{
-				NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
-				BodyMaxChars: cfg.TemplateBodyMaxChars, TitleAreaMaxChars: cfg.TemplateTitleAreaMaxChars,
-				MaxPerAccount:      cfg.TemplateMaxPerAccount,
-				MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
-				PhotoRowMax:        cfg.TemplatePhotoRowMax,
-				AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,
-				AskMaxPerBody:      cfg.TemplateAskMaxPerBody,
-				TargetLengthMin:    1,
-				TagCountMin:        post.TagCountRange.Min,
-				TagCountMax:        post.TagCountRange.Max,
-			},
+			// cmd/api's templateLimits, so the fixture is held to the same ceilings a real save is.
+			// Every value is named, not a literal: a zero bound added later fails NewService's
+			// check at seed start, which main_test.go catches.
+			template.NewLimits(template.Ceilings(cfg.Template), template.NumberBounds{
+				TargetLengthMin: post.TargetLengthMin, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
+			}),
 		)},
 		PhraseLists: phraseLists{store: qualitystore.New(handle.Writer, handle.Reader)},
 		Now:         time.Now,
