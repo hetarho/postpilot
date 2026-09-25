@@ -52,14 +52,15 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T391 | Separate fast backend deployment from long media verification | ARCH | T390 | doing@260925.mw |
 
 ## next
-- implement-task T391 to restore the sub-five-minute cached deployment target and isolate long media verification; T389 production CPU rollout passed and T390 fixture source builds are committed
+- T391 is complete: production deployment e933ea73 finished in 3m21s; CI and all three independent media gates passed, with no media lock delaying a later rollout; T376..T390 remain complete
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T391 done (mw): Deploy backend succeeded in 201s; separate parallel Verify media and CI are green, release logs confirm cached media tools, and DEPLOY.md records measured evidence
+- 260925 T391 production timing confirmed (mw): e933ea73 completed Deploy backend in 201s, API health is ok, and three independent Verify media jobs started afterward; remaining CI/media verification is monitored separately
 - 260925 T391 local verification passed (mw): 60 deployment tests, workflow lint, both prebuilt-image release layouts and all BE/FE/codegen/spec gates; delivery timing remains to be measured
 - 260925 T391 claimed (mw): restore fast deployment by separating long media checks, narrowing production serialization and reusing fixture build caches; preserve all media coverage and health/rollback gates
 - 260925 T390 done (mw): disposable MinIO/mc now build from pinned official source; both real release layouts, 51 deploy tests and all repository gates pass; T389 production rollout/CI and external health are confirmed
@@ -78,5 +79,3 @@
 - 260925 T368 claimed (p42)
 - 260925 T367 done; the autosave decides the published lock and owns ①'s text (a locked refusal takes the text back to the screen); DraftEditor has no lock masking and every editor component reads isPublished(post) itself; FE gates pass (p42)
 - 260925 T367 claimed (p42)
-- 260925 T366 done; the draft queue holds its voice, 템플릿 and target-language assignments as one record each, walked by one channel list; SendDraft takes one request and the handle one assign(channel, value); FE gates pass (p42)
-- 260925 T366 claimed (p42)
