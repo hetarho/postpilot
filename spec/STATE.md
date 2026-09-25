@@ -20,7 +20,7 @@
 | ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 15 | 14 | POST-90+ POST-91+ POST-92+ POST-93+ | 0 |
+| POST | 15 | 15 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 12 | 12 | - | 0 |
 | MODEL | 17 | 17 | - | 0 |
@@ -52,13 +52,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T392 | ListPosts answers in pages and narrows on the server | POST ARCH | - | todo |
+| T393 | /posts loads more rows as its end nears and keeps them on return | POST ARCH | T392 | todo |
 
 ## next
-- create-task POST for r15: incremental /posts loading with server-side search and status filter (POST-90..93)
+- implement-task T392 then T393: paged, server-narrowed ListPosts, then the incremental /posts list with scroll restoration (POST r15)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 create-task POST done: r15 → T392 (paged ListPosts, server-side query/status, keyset token) and T393 (infinite /posts, list-end loading/retry, scroll restoration); POST tasked=15
+- 260925 create-task POST start (r15: POST-90..93)
 - 260925 update-ssot POST done: r15 adds POST-90..93 (incremental /posts at every width, owned-post-wide narrowing, list-end loading/retry, kept rows and scroll on return); no cross-SSOT references, no doing tasks affected
 - 260925 update-ssot POST start: /posts list moves to incremental loading with server-side search and status filter
 - 260925 T391 done (mw): Deploy backend succeeded in 201s; separate parallel Verify media and CI are green, release logs confirm cached media tools, and DEPLOY.md records measured evidence
@@ -77,5 +81,3 @@
 - 260925 T372 claimed (p42)
 - 260925 T370 done; quality reads one post row through post.Service.CurrentContent and names M2's run only when over band; Repetition.TopNoun and post_measurements.top_noun are gone (migration 0083); BE gate passes (p42)
 - 260925 T370 claimed (p42)
-- 260925 T368 done; EditorPage's cases are six step suites on shared helpers and row builders; duplicates of slice tests are gone and the lock wiring folds into the published cases; no page test reads a query key by position; FE gates pass (p42)
-- 260925 T368 claimed (p42)
