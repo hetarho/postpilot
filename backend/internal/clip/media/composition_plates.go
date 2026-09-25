@@ -29,7 +29,7 @@ func (r *Rendering) sampleDeclaredGrounds(ctx context.Context, ws clip.MediaWork
 		default:
 			continue
 		}
-		bounds := regionBounds(visuals[i])
+		bounds := sampledBounds(visuals[i])
 		if bounds.Width <= 0 || bounds.Height <= 0 {
 			continue
 		}
@@ -231,6 +231,10 @@ func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspa
 // slot fills remain their declared white/alpha so V20 can verify them unchanged.
 func applyDeclaredGround(canvas clip.Canvas, visual *declaredVisual) {
 	if !visual.ground.Sampled() {
+		return
+	}
+	if visual.block != nil {
+		applyRegionGround(canvas, visual)
 		return
 	}
 	visual.manifest.Parts = slices.DeleteFunc(slices.Clone(visual.manifest.Parts), func(p design.Element) bool { return p.Kind == "scrim" })

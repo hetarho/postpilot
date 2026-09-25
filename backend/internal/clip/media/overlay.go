@@ -138,9 +138,8 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for _, binding := range []string{"furniture", "region", "info"} {
-		kind, _, _ := strings.Cut(binding, ".")
-		if _, err := catalog.Render(binding, overlayProbe(kind+"-v1")); err != nil {
+	for binding, view := range map[string]string{"furniture": "furniture-v1", "region": "region-v2", "info": "info-v1"} {
+		if _, err := catalog.Render(binding, overlayProbe(view)); err != nil {
 			return nil, err
 		}
 	}
@@ -160,8 +159,16 @@ func overlayProbe(view string) any {
 		return overlayProbe("copy-v1").(overlay.CopyView)
 	case "furniture-v1":
 		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
-	default:
+	case "region-v1":
 		return overlay.RegionView{CopyView: overlayProbe("copy-v1").(overlay.CopyView), Rules: []overlay.Box{box}}
+	default:
+		shapes := []overlay.Shape{{Box: box, Stroke: "#FFFFFF", StrokeOpacity: "1", StrokeWidth: 2, Shadow: true}, {Box: box, Circle: true, Stroke: "none", StrokeOpacity: "1"}}
+		arcs := []overlay.ArcText{{Text: text, ID: "arc0", Path: "M 0 100 A 100 100 0 0 1 200 100"}}
+		v := overlayProbe("region-v1").(overlay.RegionView)
+		v.Radial = &overlay.Radial{RX: 1, RY: 1, Fill: "#000000", From: "0.5", Mid: "0.3", MidAt: "0.55", To: "0"}
+		v.Shapes, v.Arcs = shapes, arcs
+		v.Turn = &overlay.Turn{Deg: -4, Rules: v.Rules, Shapes: shapes, Lines: v.Lines, Arcs: []overlay.ArcText{{Text: text, ID: "arc1", Path: arcs[0].Path}}}
+		return v
 	}
 }
 

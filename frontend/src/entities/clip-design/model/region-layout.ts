@@ -30,14 +30,29 @@ export type ClipRegionSlotSpec = {
   stroke: string
   shadow: string
   lines?: number
+  stroke_width?: number
+  outline?: number
+  width?: number
+  place?: string
+  decor?: {
+    flank?: { w: number; gap: number }
+    dot?: { r: number; gap: number }
+    frame?: { pad_h: number }
+    plate?: { pad_h: number }
+  }
 }
 type RegionItem =
   | { slot: ClipRegionSlotSpec }
   | { rule: { kind: string; w?: number; alpha?: number } }
   | { gap: number }
+  | { chips: { pill: { pad_h: number }; slots: ClipRegionSlotSpec[] } }
+  | { list: { square: { size: number; gap: number }; slots: ClipRegionSlotSpec[] } }
 type RegionPreset = {
   anchor: { kind: string; y?: number; x?: string; inset?: number }
   width?: number
+  rotate?: number
+  side_bar?: unknown
+  stamp?: { arc_len: number }
   items: RegionItem[]
 }
 
@@ -156,8 +171,77 @@ export function clipRegionPreset(kind: ClipRegionKind, id: string): RegionPreset
   return choices[id]
 }
 
+/** The preset's slots in outline order, a chip row's or list's slots in place. */
 export function clipRegionSlots(kind: ClipRegionKind, id: string): ClipRegionSlotSpec[] {
-  return (clipRegionPreset(kind, id)?.items ?? []).flatMap((it) => ('slot' in it ? [it.slot] : []))
+  return (clipRegionPreset(kind, id)?.items ?? []).flatMap((it) =>
+    'slot' in it ? [it.slot] : 'chips' in it ? it.chips.slots : 'list' in it ? it.list.slots : [],
+  )
+}
+
+/** The preset's own measure; a left-set block's stops at the safe area's right edge
+ *  (CDS-9, CDS-79). */
+function presetMeasure(preset: RegionPreset, ratio: ClipRegionRatio) {
+  const layout = design.ratios[ratio]
+  let w = preset.width && preset.width > 0 ? preset.width : layout.copy_max_width
+  if (preset.anchor.x === 'left') {
+    w = Math.min(
+      w,
+      layout.safe.x + layout.safe.width - layout.anchor.left - (preset.anchor.inset ?? 0),
+    )
+  }
+  return w
+}
+
+/** The width slot `index` fits and whether it is held to one line (Go `SlotWidth`):
+ *  the slot's own measure or the preset's, less what its decoration or group takes. */
+function slotWidth(preset: RegionPreset, ratio: ClipRegionRatio, index: number) {
+  const measure = presetMeasure(preset, ratio)
+  let i = 0
+  for (const it of preset.items) {
+    if ('slot' in it) {
+      if (i++ !== index) continue
+      const slot = it.slot
+      if (preset.stamp && (slot.place === 'upper' || slot.place === 'lower')) {
+        return { width: preset.stamp.arc_len, one: true }
+      }
+      let w = slot.width && slot.width > 0 ? slot.width : measure
+      const d = slot.decor
+      if (d?.flank) w -= 2 * (d.flank.w + d.flank.gap)
+      else if (d?.dot) w -= 2 * d.dot.r + d.dot.gap
+      else if (d?.frame) w -= 2 * d.frame.pad_h
+      else if (d?.plate) w -= 2 * d.plate.pad_h
+      return { width: w, one: false }
+    }
+    if ('chips' in it || 'list' in it) {
+      const count = 'chips' in it ? it.chips.slots.length : it.list.slots.length
+      if (index < i + count) {
+        const w =
+          'chips' in it
+            ? measure - 2 * it.chips.pill.pad_h
+            : measure - it.list.square.size - it.list.square.gap
+        return { width: w, one: true }
+      }
+      i += count
+    }
+  }
+  return { width: measure, one: false }
+}
+
+/** Whether this port draws the preset: slots, rules and gaps with plain paint. Rotation,
+ *  groups, stamps, bars and slot decoration are the renderer's alone. */
+function portable(preset: RegionPreset) {
+  return (
+    !preset.rotate &&
+    !preset.side_bar &&
+    !preset.stamp &&
+    preset.items.every(
+      (it) =>
+        !('chips' in it) &&
+        !('list' in it) &&
+        (!('slot' in it) ||
+          (!it.slot.decor && !it.slot.outline && !it.slot.stroke_width && !it.slot.width)),
+    )
+  )
 }
 
 /** The slot's effective type on a ratio (CDS-19, CDS-46). */
@@ -200,7 +284,8 @@ export type ClipRegionLayout = {
   over: boolean
 }
 
-/** One region block laid out for its rows, indexed by slot (Go `LayoutRegion`). */
+/** One region block laid out for its rows, indexed by slot (Go `LayoutRegion`), or
+ *  undefined for a preset only the renderer draws. */
 export function clipLayoutRegion(
   kind: ClipRegionKind,
   id: string,
@@ -209,9 +294,9 @@ export function clipLayoutRegion(
 ): ClipRegionLayout | undefined {
   const preset = clipRegionPreset(kind, id)
   const layout = design.ratios[ratio]
-  if (!preset || !layout) return undefined
+  if (!preset || !layout || !portable(preset)) return undefined
   const out: ClipRegionLayout = {
-    width: preset.width && preset.width > 0 ? preset.width : layout.copy_max_width,
+    width: presetMeasure(preset, ratio),
     align: preset.anchor.x === 'left' ? 'left' : 'centre',
     anchorX:
       preset.anchor.x === 'left'
@@ -273,7 +358,7 @@ export function clipLayoutRegion(
       pending = 0
       drawn = true
       out.over = out.over || fit.over
-    } else {
+    } else if ('rule' in it) {
       const token = design.rule[it.rule.kind as keyof typeof design.rule]
       const w = it.rule.w && it.rule.w > 0 ? it.rule.w : token.w
       steps.push({
@@ -336,8 +421,6 @@ export function clipRegionSlotAt(
   const slot = clipRegionSlots(kind, id)[index]
   if (!preset || !slot) return undefined
   const type = clipRegionSlotType(slot, ratio)
-  return {
-    spec: { role: slot.role, ...type, lines: slot.lines ?? 0 },
-    width: preset.width && preset.width > 0 ? preset.width : design.ratios[ratio].copy_max_width,
-  }
+  const { width, one } = slotWidth(preset, ratio, index)
+  return { spec: { role: slot.role, ...type, lines: one ? 1 : (slot.lines ?? 0) }, width }
 }

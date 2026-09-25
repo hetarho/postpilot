@@ -4,7 +4,7 @@
 
 Preparation and final rendering use an execution-only `cmd/media-worker` process.
 The API keeps SQLite, authorization, planning, providers, credits and publication.
-Workers pull authenticated protocol 1 leases (`cpu-v1`, `assets-v2`), use short-lived
+Workers pull authenticated protocol 1 leases (`cpu-v1`, `assets-v3`), use short-lived
 private object grants and return measured immutable receipts. No shared DB or work
 directory is required. API restart preserves valid leases and accepted handoffs;
 retries cannot replay an uncertain paid provider call. Cancellation and revision

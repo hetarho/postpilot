@@ -256,7 +256,7 @@ func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
 	for _, visual := range layout.visuals {
 		t.Run(visual.manifest.Role, func(t *testing.T) {
-			bounds := regionBounds(visual)
+			bounds := sampledBounds(visual)
 			banded := image.NewRGBA(image.Rect(0, 0, canvas.Width, canvas.Height))
 			for y := 0; y < canvas.Height; y++ {
 				for x := 0; x < canvas.Width; x++ {

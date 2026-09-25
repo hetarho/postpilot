@@ -10,7 +10,7 @@ import (
 const (
 	MediaContractVersion = 1
 	MediaRendererVersion = "cpu-v1"
-	MediaAssetVersion    = "assets-v2"
+	MediaAssetVersion    = "assets-v3"
 	MediaCPUProfile      = "cpu"
 	MediaRequestMaxBytes = 4 << 20
 	MediaUnaryTimeout    = 10 * time.Second

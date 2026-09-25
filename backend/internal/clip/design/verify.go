@@ -59,9 +59,11 @@ type Element struct {
 	Cut int
 	// Region geometry carried alongside glyph bounds for V20: the slot and the
 	// line of it a copy part draws, and the floor its size may not go under.
-	Slot                             int
-	Line                             int     `json:",omitempty"`
-	Floor                            float64 `json:",omitempty"`
+	Slot  int
+	Line  int     `json:",omitempty"`
+	Floor float64 `json:",omitempty"`
+	// Degrees the part is turned about its block's centre (CDS-94, CDS-99).
+	Rotate                           float64 `json:",omitempty"`
 	BaselineY, GlyphOffsetY, Opacity float64
 	Rule                             string
 	TypeRole                         string

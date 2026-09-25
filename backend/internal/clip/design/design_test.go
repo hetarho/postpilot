@@ -163,6 +163,7 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 	scrim := map[string]design.ScrimPaint{
 		"top":    {Hex: "#000000", From: 0.45, To: 0},
 		"bottom": {Hex: "#000000", From: 0, To: 0.55},
+		"radial": {Hex: "#000000", From: 0.5, Mid: 0.3, MidAt: 0.55, To: 0},
 	}
 	if !reflect.DeepEqual(design.Scrim, scrim) {
 		t.Fatalf("scrims %+v", design.Scrim)

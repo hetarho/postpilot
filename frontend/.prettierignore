@@ -7,3 +7,4 @@ src/shared/api/gen/
 # Written by the Go design tests (UPDATE_REGION_LAYOUTS=1) and compared byte for byte with
 # backend/internal/clip/design/testdata, so it keeps the encoder's own formatting.
 src/entities/clip-design/model/region-layouts.fixture.json
+src/entities/clip-design/model/region-slots.fixture.json

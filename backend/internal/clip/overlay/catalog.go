@@ -31,6 +31,16 @@ const (
 	maxOutputBytes  = 2 << 20
 )
 
+// views are the view versions a binding kind accepts. A region-v1 asset still
+// loads and draws the lines and rules it knows; region-v2 adds the decoration,
+// arcs, radial scrim and rotation later presets draw.
+var views = map[string][]string{
+	"copy":      {"copy-v1"},
+	"furniture": {"furniture-v1"},
+	"region":    {"region-v1", "region-v2"},
+	"info":      {"info-v1"},
+}
+
 var identifier = regexp.MustCompile(`^[a-z][a-z0-9-]{0,63}$`)
 
 type Preset struct {
@@ -131,7 +141,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		if err := decode(data, &p); err != nil {
 			return nil, fmt.Errorf("overlay preset %s: %w", dir.Name(), err)
 		}
-		if p.ID != dir.Name() || !slices.Contains([]string{"copy-v1", "furniture-v1", "region-v1", "info-v1"}, p.View) || p.Template != "overlay.svg" {
+		if p.ID != dir.Name() || !slices.Contains([]string{"copy-v1", "furniture-v1", "region-v1", "region-v2", "info-v1"}, p.View) || p.Template != "overlay.svg" {
 			return nil, fmt.Errorf("unsupported overlay preset contract: %s", dir.Name())
 		}
 		data, err = read(path.Join(dir.Name(), p.Template))
@@ -150,7 +160,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 			return nil, fmt.Errorf("overlay binding %s names missing preset %s", binding, id)
 		}
 		kind, _, _ := strings.Cut(binding, ".")
-		if !identifier.MatchString(strings.ReplaceAll(binding, ".", "-")) || p.info.View != kind+"-v1" {
+		if !identifier.MatchString(strings.ReplaceAll(binding, ".", "-")) || !slices.Contains(views[kind], p.info.View) {
 			return nil, fmt.Errorf("overlay binding %s has incompatible view", binding)
 		}
 	}

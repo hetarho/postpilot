@@ -17,7 +17,50 @@ import (
 const (
 	layoutFixture       = "testdata/region-layouts.json"
 	layoutFixtureMirror = "../../../../frontend/src/entities/clip-design/model/region-layouts.fixture.json"
+	slotFixture         = "testdata/region-slots.json"
+	slotFixtureMirror   = "../../../../frontend/src/entities/clip-design/model/region-slots.fixture.json"
 )
+
+// fixtureSlotAt is one preset slot's fit spec and width on a ratio, which the
+// template editor's field budgets read through the port (CLIP-116).
+type fixtureSlotAt struct {
+	Kind   string  `json:"kind"`
+	ID     string  `json:"id"`
+	Ratio  string  `json:"ratio"`
+	Index  int     `json:"index"`
+	Role   string  `json:"role"`
+	Size   float64 `json:"size"`
+	Floor  float64 `json:"floor"`
+	Lines  int     `json:"lines"`
+	Width  float64 `json:"width"`
+	Budget int     `json:"budget"`
+}
+
+func regionSlotFixture(t *testing.T) []byte {
+	t.Helper()
+	var out []fixtureSlotAt
+	for _, kind := range []string{"intro", "outro"} {
+		for _, id := range design.RegionIDs(kind) {
+			preset, _ := design.Region(kind, id)
+			for _, ratio := range []string{"vertical", "horizontal", "square"} {
+				for i := range preset.Slots() {
+					spec, width, ok := design.RegionSlotAt(kind, id, ratio, i)
+					if !ok {
+						t.Fatal(kind, id, i)
+					}
+					out = append(out, fixtureSlotAt{Kind: kind, ID: id, Ratio: ratio, Index: i, Role: spec.Role, Size: spec.Size, Floor: spec.Floor, Lines: spec.MaxLines(), Width: r3(width), Budget: design.RegionSlotBudget(spec, width)})
+				}
+			}
+		}
+	}
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
+}
 
 type fixtureLine struct {
 	Text     string  `json:"text"`
@@ -93,21 +136,22 @@ func regionLayoutFixture(t *testing.T) []byte {
 }
 
 func TestRegionLayoutFixtureIsCurrent(t *testing.T) {
-	want := regionLayoutFixture(t)
-	if os.Getenv("UPDATE_REGION_LAYOUTS") == "1" {
-		for _, path := range []string{layoutFixture, layoutFixtureMirror} {
-			if err := os.WriteFile(path, want, 0o644); err != nil {
-				t.Fatal(err)
+	for paths, want := range map[[2]string][]byte{{layoutFixture, layoutFixtureMirror}: regionLayoutFixture(t), {slotFixture, slotFixtureMirror}: regionSlotFixture(t)} {
+		if os.Getenv("UPDATE_REGION_LAYOUTS") == "1" {
+			for _, path := range paths {
+				if err := os.WriteFile(path, want, 0o644); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
-	}
-	for _, path := range []string{layoutFixture, layoutFixtureMirror} {
-		got, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(got, want) {
-			t.Fatalf("%s is stale; re-record with UPDATE_REGION_LAYOUTS=1", path)
+		for _, path := range paths {
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Fatalf("%s is stale; re-record with UPDATE_REGION_LAYOUTS=1", path)
+			}
 		}
 	}
 }

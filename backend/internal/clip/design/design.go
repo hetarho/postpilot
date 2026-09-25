@@ -82,6 +82,9 @@ type ScrimPaint struct {
 	Hex  string  `json:"hex"`
 	From float64 `json:"from"`
 	To   float64 `json:"to"`
+	// A radial scrim's middle stop (CDS-14): its opacity and where it stands.
+	Mid   float64 `json:"mid"`
+	MidAt float64 `json:"mid_at"`
 }
 type Pad struct {
 	V float64 `json:"v"`
@@ -321,7 +324,10 @@ func parse() system {
 	for kind, choices := range map[string]map[string]json.RawMessage{"intro": s.Regions.Intro, "outro": s.Regions.Outro} {
 		for id, raw := range choices {
 			var preset RegionPreset
-			if err := json.Unmarshal(raw, &preset); err != nil {
+			if err := strictJSON(raw, &preset); err != nil {
+				panic(fmt.Errorf("clip design system: %s preset %s: %w", kind, id, err))
+			}
+			if err := preset.validate(s); err != nil {
 				panic(fmt.Errorf("clip design system: %s preset %s: %w", kind, id, err))
 			}
 		}

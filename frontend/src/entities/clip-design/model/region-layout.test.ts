@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import fixture from './region-layouts.fixture.json'
+import slotFixture from './region-slots.fixture.json'
 import {
   clipFitRegionSlot,
   clipLayoutRegion,
+  clipRegionSlotAt,
   clipRegionSlotBudget,
+  clipRegionSlots,
   type ClipRegionKind,
   type ClipRegionRatio,
 } from './region-layout'
@@ -70,5 +73,41 @@ describe('the region layout port', () => {
     ).toHaveLength(2)
     expect(clipFitRegionSlot(headline, '하나둘셋넷'.repeat(5), 856).over).toBe(true)
     expect(clipRegionSlotBudget(headline, 856)).toBeGreaterThanOrEqual(30)
+  })
+
+  it('gives every preset slot the Go fit spec and width, group slots included (CLIP-116)', () => {
+    expect(slotFixture.length).toBeGreaterThan(100)
+    for (const c of slotFixture) {
+      const at = clipRegionSlotAt(
+        c.kind as ClipRegionKind,
+        c.id,
+        c.ratio as ClipRegionRatio,
+        c.index,
+      )
+      const name = `${c.kind}.${c.id} ${c.ratio} slot ${c.index}`
+      expect(at, name).toBeDefined()
+      expect([at!.spec.role, at!.spec.size, at!.spec.floor], name).toEqual([
+        c.role,
+        c.size,
+        c.floor,
+      ])
+      expect(clipRegionSlotBudget(at!.spec, at!.width), `${name} budget`).toBe(c.budget)
+      expect(close(at!.width, c.width), `${name} width`).toBe(true)
+    }
+    expect(clipRegionSlots('outro', 'chips')).toHaveLength(6)
+  })
+
+  it('leaves the presets it cannot draw to the renderer', () => {
+    for (const [kind, id] of [
+      ['intro', 'sticker'],
+      ['intro', 'serif'],
+      ['outro', 'stamp'],
+      ['outro', 'chips'],
+    ] as const) {
+      expect(clipLayoutRegion(kind, id, 'vertical', ['한우', '연남동']), id).toBeUndefined()
+    }
+    expect(
+      clipLayoutRegion('intro', 'cover', 'vertical', ['가이드', '성수동', '서울']),
+    ).toBeDefined()
   })
 })

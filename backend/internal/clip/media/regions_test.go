@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"os"
+	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -38,19 +42,36 @@ func regionPlacement(v declaredVisual, kind, id string) clip.RegionPlacement {
 	return clip.RegionPlacements([]composition.ResolvedElement{v.text.Resolved}, presets)[v.text.Resolved.InstanceID]
 }
 
+// regionSamples is one realistic filling of every preset's slots.
+var regionSamples = []struct {
+	kind, id string
+	rows     []string
+}{
+	{"intro", "a", []string{"오늘의 장면", "직접 남긴 기록"}},
+	{"intro", "b", []string{"오늘의 장면", "직접 남긴 기록"}},
+	{"intro", "cover", []string{"성수 로컬 가이드", "성수동 골목 곱창집", "서울 성동구 · 저녁 영업"}},
+	{"intro", "serif", []string{"이번 주의 식탁", "연남동 숯불 한우", "서울 마포구 연남동"}},
+	{"intro", "frame", []string{"해미 한우", "서울 연남동 · 숯불 구이"}},
+	{"intro", "outline", []string{"한우", "연남동 숯불 구이", "서울 마포구"}},
+	{"intro", "lower", []string{"오늘의 기록", "연남동 골목 한우집", "서울 마포구 연남동"}},
+	{"intro", "sticker", []string{"여기 진짜 맛집", "연남동 숯불 한우"}},
+	{"outro", "b", []string{"다시 만나자", "오늘의 기록을 남겨요"}},
+	{"outro", "e", []string{"오늘의 점수", "9.5", "다시 보고 싶은 장면"}},
+	{"outro", "credits", []string{"오늘의 한 끼", "해미 한우", "서울 마포구 연남동", "매일 11시부터 22시까지"}},
+	{"outro", "sidebar", []string{"다시 가고 싶은 집", "메뉴와 가격은 블로그에", "해미 한우 연남점"}},
+	{"outro", "chips", []string{"이런 분께 추천해요", "데이트", "회식", "혼밥", "주차 가능", "예약 필수"}},
+	{"outro", "list", []string{"오늘의 정리", "숯불 향이 진한 한우", "두 명이면 5만 원대", "주말 저녁은 예약 필수"}},
+	{"outro", "stamp", []string{"해미 한우 · 연남동", "다시 올 집", "2026 오늘의 기록", "자세한 후기는 블로그에"}},
+}
+
+// roundedCorner is any rectangle drawn with a non-zero corner radius.
+var roundedCorner = regexp.MustCompile(`rx="([0-9.]+)"`)
+
 func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 	t.Helper()
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
-		for _, choice := range []struct {
-			kind, id string
-			rows     []string
-		}{
-			{"intro", "a", []string{"오늘의 장면", "직접 남긴 기록"}},
-			{"intro", "b", []string{"오늘의 장면", "직접 남긴 기록"}},
-			{"outro", "b", []string{"다시 만나자", "오늘의 기록을 남겨요"}},
-			{"outro", "e", []string{"오늘의 점수", "9.5", "다시 보고 싶은 장면"}},
-		} {
-			t.Run(ratio+"/"+choice.kind+choice.id, func(t *testing.T) {
+		for _, choice := range regionSamples {
+			t.Run(ratio+"/"+choice.kind+"-"+choice.id, func(t *testing.T) {
 				canvas, _ := clip.ClipCanvas(ratio)
 				if err := a.WithWorkspace(t.Context(), "region", func(ws clip.MediaWorkspace) error {
 					visual := regionVisual(choice.kind, choice.rows...)
@@ -62,34 +83,57 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 						return err
 					}
 					block, _ := design.LayoutRegion(choice.kind, choice.id, ratio, choice.rows)
-					for i, line := range v.region.Lines {
-						want := block.Slots[i].Lines[0]
-						if line.Y != want.Baseline || line.Size != want.Size {
-							t.Fatal("the drawn line left the block layout", line, want)
-						}
+					want, drawn := 0, len(v.region.Lines)+len(v.region.Arcs)
+					for _, slot := range block.Slots {
+						want += len(slot.Lines)
+					}
+					if v.region.Turn != nil {
+						drawn += len(v.region.Turn.Lines) + len(v.region.Turn.Arcs)
+					}
+					if drawn != want || want == 0 {
+						t.Fatal("the drawn lines left the block layout", drawn, want)
 					}
 					for _, part := range v.manifest.Parts {
 						if !inside(clip.Region(part.Region), canvas.Safe) || part.FontSize > 0 && part.FontSize < design.MinTypeSize() {
 							t.Fatal("unsafe part", part)
+						}
+						if part.Kind == "copy" && part.Fill != design.Color["text_white"].Hex {
+							t.Fatal("a region line is not white", part)
 						}
 					}
 					body, err := r.declaredSVG(canvas, v)
 					if err != nil {
 						return err
 					}
-					if strings.Contains(body, design.Accent["coral"]) || strings.Contains(body, `rx=`) {
-						t.Fatal("region acquired an accent or rounded plate", body)
+					// White type only, and a rounded corner only on a pill, a
+					// plate or a list square (CDS-88).
+					if strings.Contains(body, design.Accent["coral"]) {
+						t.Fatal("region acquired an accent", body)
+					}
+					rounded := slices.ContainsFunc(block.Shapes, func(s design.RegionShape) bool { return s.Radius > 0 && !s.Circle })
+					for _, m := range roundedCorner.FindAllStringSubmatch(body, -1) {
+						if m[1] != "0.000" && !rounded {
+							t.Fatal("region acquired a rounded plate", body)
+						}
 					}
 					if raster {
+						if dir := os.Getenv("CLIP_REGION_DUMP"); dir != "" {
+							_ = os.WriteFile(filepath.Join(dir, fmt.Sprintf("%s-%s-%s.svg", choice.kind, choice.id, ratio)), []byte(body), 0o644)
+						}
 						_, err = r.rasterize(t.Context(), ws, canvas, body, "region-proof")
 						return err
 					}
 					golden(t, fmt.Sprintf("region-%s-%s-%s.svg", choice.kind, choice.id, ratio), body)
-					for _, mutate := range []func(*design.Element){func(p *design.Element) { p.BaselineY++ }, func(p *design.Element) { p.Region.Y++ }, func(p *design.Element) { p.Fill = "#FF6B57" }} {
-						parts := slices.Clone(v.manifest.Parts)
-						mutate(&parts[0])
-						if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, 0, len(choice.rows), true, parts); !errors.Is(err, design.ViolationRegion) {
-							t.Fatal("V20 accepted a changed preset", err)
+					for m, mutate := range []func(*design.Element){func(p *design.Element) { p.Region.Y++ }, func(p *design.Element) { p.Fill = "#FF6B57" }, func(p *design.Element) { p.Rotate += 3 }, func(p *design.Element) { p.BaselineY++ }} {
+						for i := range v.manifest.Parts {
+							if m == 3 && v.manifest.Parts[i].Kind != "copy" {
+								continue
+							}
+							parts := slices.Clone(v.manifest.Parts)
+							mutate(&parts[i])
+							if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, 0, len(choice.rows), true, parts); !errors.Is(err, design.ViolationRegion) {
+								t.Fatal("V20 accepted a changed preset", i, parts[i], err)
+							}
 						}
 					}
 					return nil
@@ -101,8 +145,49 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 	}
 }
 
+// regionMeasured measures each text at the metrics table's own advance width
+// (CDS-86) with Hangul ink from 80 % of the size above the baseline to 2 %
+// below it, so every preset — edge-anchored ones included — lands where the
+// fit put it.
+func regionMeasured(t *testing.T) (*Adapter, *Rendering) {
+	t.Helper()
+	faces := map[string]string{}
+	for key, family := range design.Faces {
+		faces[family] = key
+	}
+	attr := func(tag, name string) string {
+		_, rest, _ := strings.Cut(tag, name+`="`)
+		value, _, _ := strings.Cut(rest, `"`)
+		return value
+	}
+	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		if !slices.Contains(c.Args, "--query-all") {
+			svg, err := os.ReadFile(c.Args[len(c.Args)-2])
+			if err != nil {
+				return nil, err
+			}
+			return nil, os.WriteFile(c.Args[len(c.Args)-1], svg, 0600)
+		}
+		data, err := os.ReadFile(c.Args[len(c.Args)-1])
+		if err != nil {
+			return nil, err
+		}
+		out := ""
+		for i, part := range strings.Split(string(data), `id="m`)[1:] {
+			tag, rest, _ := strings.Cut(part, ">")
+			text, _, _ := strings.Cut(rest, "</text>")
+			weight, _ := strconv.Atoi(attr(tag, "font-weight"))
+			tracking, _ := strconv.ParseFloat(attr(tag, "letter-spacing"), 64)
+			width := design.TextWidth(faces[attr(tag, "font-family")], weight, tracking/100, 100, html.UnescapeString(text))
+			out += fmt.Sprintf("m%d,1,120,%.3f,82\n", i, width)
+		}
+		return []byte(out), nil
+	}})
+	return a, testRenderer(t, a)
+}
+
 func TestRegionPresetsOnEveryRatio(t *testing.T) {
-	a, r := measured(t)
+	a, r := regionMeasured(t)
 	checkRegionPresets(t, a, r, false)
 }
 
@@ -279,5 +364,131 @@ func TestAuthoredRegionAdmissionChecksOnlyFixedRows(t *testing.T) {
 		if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
 			t.Fatal(err)
 		}
+	}
+}
+
+// CDS-32 and CDS-44: a block on a bright ground takes its own scrim — an
+// ellipse 1360 px wide and 560 px taller than a centred block, or its edge's
+// band reaching 150 px past an edge-anchored one — drawn once, by the entry
+// that paints the block's decoration, and a line's background reads through the
+// scrim and any fill under it.
+func TestRegionBlocksTakeTheirOwnScrim(t *testing.T) {
+	a, r := regionMeasured(t)
+	canvas, _ := clip.ClipCanvas("vertical")
+	bright := Luminance{Mean: .95, R: 1, G: 1, B: 1, Frames: []float64{.95, .95, .95}}
+	if err := a.WithWorkspace(t.Context(), "scrim", func(ws clip.MediaWorkspace) error {
+		for _, c := range []struct {
+			kind, id string
+			rows     []string
+		}{
+			{"intro", "a", []string{"오늘의 장면", "직접 남긴 기록"}},
+			{"intro", "cover", []string{"성수 가이드", "성수동 곱창집", "서울 성동구"}},
+			{"outro", "sidebar", []string{"다시 갈 집", "메뉴는 블로그에", "해미 한우"}},
+			{"intro", "sticker", []string{"여기 진짜 맛집", "연남동 한우"}},
+		} {
+			visual := regionVisual(c.kind, c.rows...)
+			v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", visual, c.kind, c.id, regionPlacement(visual, c.kind, c.id), c.rows)
+			if err != nil {
+				return err
+			}
+			block, _ := design.LayoutRegion(c.kind, c.id, "vertical", c.rows)
+			v.ground = bright
+			applyDeclaredGround(canvas, &v)
+			var scrims []design.Element
+			for _, p := range v.manifest.Parts {
+				if p.Kind == "scrim" {
+					scrims = append(scrims, p)
+				}
+			}
+			if len(scrims) != 1 || scrims[0].StartMS != v.manifest.StartMS || scrims[0].EndMS != v.manifest.EndMS {
+				t.Fatal(c.id, "the block's scrim is not one part on its interval", scrims)
+			}
+			b := block.Bounds
+			switch block.Scrim {
+			case "radial":
+				e := v.region.Radial
+				if e == nil || v.region.Scrim != nil || e.RX != 680 || e.RY != (b.Height+560)/2 || e.CX != b.X+b.Width/2 || e.CY != b.Y+b.Height/2 {
+					t.Fatal(c.id, "centred block took no ellipse", e)
+				}
+			case "top":
+				if s := v.region.Scrim; s == nil || v.region.Radial != nil || s.Y != 0 || s.Height != b.Y+b.Height+150 {
+					t.Fatal(c.id, "top block took no top band", s)
+				}
+			case "bottom":
+				if s := v.region.Scrim; s == nil || s.Y != b.Y-150 || s.Y+s.Height != float64(canvas.Height) {
+					t.Fatal(c.id, "bottom block took no bottom band", s)
+				}
+			}
+			if p := scrims[0].Region; p.X < 0 || p.Y < 0 || p.X+p.Width > float64(canvas.Width) || p.Y+p.Height > float64(canvas.Height) {
+				t.Fatal(c.id, "the scrim part leaves the canvas", p)
+			}
+			if c.id == "sticker" {
+				// The label stands on the dark plate, so it reads against the
+				// plate over the scrim, not against the bright frame.
+				label := v.manifest.Parts[slices.IndexFunc(v.manifest.Parts, func(p design.Element) bool { return p.Kind == "copy" && p.Slot == 2 })]
+				if label.ContrastNotice || label.Background == bright.Hex() {
+					t.Fatal("the plate was not under the label", label)
+				}
+			}
+			// The same ground on a dark frame takes no scrim at all.
+			v.ground = Luminance{Mean: .05, R: .05, G: .05, B: .05, Frames: []float64{.05, .05, .05}}
+			applyDeclaredGround(canvas, &v)
+			if v.region.Scrim != nil || v.region.Radial != nil || slices.ContainsFunc(v.manifest.Parts, func(p design.Element) bool { return p.Kind == "scrim" }) {
+				t.Fatal(c.id, "a dark ground kept the scrim")
+			}
+		}
+		// Two entries of one block: only the owner draws the scrim, and the
+		// other's lines still read through it.
+		presets := composition.DesignSelection{Intro: "a", Outro: "e"}
+		first, second := regionVisual("intro", "성수 곱창"), regionVisual("intro", "성수동")
+		second.text.Resolved.InstanceID, second.text.Resolved.Element.ID = "second", "second"
+		elements := clip.ResolvedElements([]clip.PortableText{first.text, second.text})
+		placements := clip.RegionPlacements(elements, presets)
+		rows := clip.RegionRows(elements, presets, "intro")
+		for i, entry := range []declaredVisual{first, second} {
+			v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", entry, "intro", "a", placements[entry.text.Resolved.InstanceID], rows)
+			if err != nil {
+				return err
+			}
+			if sampledBounds(v) != v.block.text {
+				t.Fatal("an entry samples its own lines rather than its block", i)
+			}
+			v.ground = bright
+			applyDeclaredGround(canvas, &v)
+			if (v.region.Radial != nil) != (i == 0) {
+				t.Fatal("the scrim was drawn by the wrong entry", i)
+			}
+			for _, p := range v.manifest.Parts {
+				if p.Kind == "copy" && p.Background == bright.Hex() {
+					t.Fatal("a line read the bright frame through no scrim", i, p)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// CDS-84 and CDS-77: an authored slot holding a character its preset's face
+// lacks is identified by entry before generation, not substituted.
+func TestAuthoredRegionMissingGlyphIsRefusedByEntry(t *testing.T) {
+	_, r := regionMeasured(t)
+	missing := ""
+	for c := rune(0xAC00); c <= 0xD7A3; c++ {
+		if !design.Covers("jua", 400, string(c)) && design.Covers("paperlogy", 800, string(c)) {
+			missing = string(c)
+			break
+		}
+	}
+	body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>맛집 ` + missing + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+	in := clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: "sticker", OutroPreset: "b"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}
+	var problem *composition.Problem
+	if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "unsupported_glyph" {
+		t.Fatal(err)
+	}
+	in.Design.IntroPreset = "a"
+	if err := r.ValidateAuthoredInput(t.Context(), in); err != nil {
+		t.Fatal("Paperlogy draws the syllable, so intro A admits it", err)
 	}
 }

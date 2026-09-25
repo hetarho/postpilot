@@ -21,7 +21,9 @@ type declaredVisual struct {
 	furniture furniture
 	info      overlay.CopyView
 	ground    Luminance
-	cues      []declaredVisual
+	// The region block an intro or outro entry belongs to (CDS-32, CDS-44).
+	block *regionBlock
+	cues  []declaredVisual
 	// The caption's own style could not set one of its syllables, so it was
 	// drawn in the default style instead (CDS-84). Recorded as a notice once
 	// the whole layout is settled.
