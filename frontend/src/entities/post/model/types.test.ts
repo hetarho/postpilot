@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   POST_STATUSES,
   displayTitle,
+  isFinalizedOrLater,
   isPostStatus,
   isPublished,
+  isUnfinalized,
   postStatusLabel,
   untitledTitle,
 } from './types'
@@ -63,4 +65,19 @@ describe('the status union', () => {
   it('calls only a published post published', () => {
     expect(POST_STATUSES.filter((status) => isPublished({ status }))).toEqual(['published'])
   })
+})
+
+// F27: one exhaustive table decides the lifecycle halves, so the screens that ask "still being
+// written?" or "확정 or past it?" cannot disagree about a status.
+it('splits every status into exactly one lifecycle half, and an unknown one into neither', () => {
+  for (const status of POST_STATUSES) {
+    expect(isUnfinalized({ status }) !== isFinalizedOrLater({ status }), status).toBe(true)
+  }
+  expect(POST_STATUSES.filter((status) => isUnfinalized({ status }))).toEqual(['draft', 'review'])
+  expect(POST_STATUSES.filter((status) => isFinalizedOrLater({ status }))).toEqual([
+    'finalized',
+    'published',
+  ])
+  expect(isUnfinalized({ status: 'archived' })).toBe(false)
+  expect(isFinalizedOrLater({ status: 'archived' })).toBe(false)
 })

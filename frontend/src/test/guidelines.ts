@@ -11,13 +11,14 @@ import {
   ListGuidelineCandidatesResponseSchema,
   ListGuidelinesResponseSchema,
   ProtoGuidelineScope,
-  type ProtoBlogField,
+  ProtoBlogField,
   UpdateGuidelinePresetResponseSchema,
   UpdateGuidelineResponseSchema,
 } from '@/shared/api'
-import { blogFieldFromProto, blogFieldToProto, type BlogFieldId } from '@/entities/blog-field'
+import { BLOG_FIELD_IDS, type BlogFieldId } from '@/entities/blog-field'
 import { GUIDELINE_TEXT_MAX_CHARS } from '@/entities/guideline'
 import { connectAppError } from './app-error'
+import { fromWire, toWire } from './wire-enum'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -132,7 +133,7 @@ function scopeKind(
           ? fields.length > 0 && templateIds.length === 0
           : false
   if (!valid) throw connectAppError('GUIDELINE_SCOPE_INVALID', Code.InvalidArgument)
-  if (fields.some((field) => !blogFieldFromProto(field)))
+  if (fields.some((field) => !fromWire(ProtoBlogField, field, BLOG_FIELD_IDS)))
     throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
   return scope === ProtoGuidelineScope.GLOBAL
     ? 'global'
@@ -143,8 +144,8 @@ function scopeKind(
 
 function toFieldIds(fields: ProtoBlogField[]): BlogFieldId[] {
   return fields
-    .map(blogFieldFromProto)
-    .filter((field): field is BlogFieldId => field !== undefined && field !== '')
+    .map((field) => fromWire(ProtoBlogField, field, BLOG_FIELD_IDS))
+    .filter((field): field is BlogFieldId => field !== undefined)
 }
 
 export function registerGuidelineService(
@@ -174,7 +175,7 @@ export function registerGuidelineService(
       text: row.text,
       scope: row.wireScope ?? SCOPE_TO_PROTO[row.scope],
       templates: row.templates,
-      fields: row.fields.map(blogFieldToProto),
+      fields: row.fields.map((field) => toWire(ProtoBlogField, field)),
       createdAt: DEFAULT_AT,
       updatedAt: DEFAULT_AT,
     })
@@ -200,7 +201,7 @@ export function registerGuidelineService(
     create(GuidelinePresetSchema, {
       text: FAKE_GUIDELINE_PRESET_TEXT,
       enabled: preset.enabled,
-      fields: preset.fields.map(blogFieldToProto),
+      fields: preset.fields.map((field) => toWire(ProtoBlogField, field)),
     })
 
   // Candidates (change 26). Declared before the create handler because a create is also an

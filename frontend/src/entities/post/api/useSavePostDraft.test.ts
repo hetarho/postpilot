@@ -4,6 +4,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
+  contentLanguageToProto,
   GenerationJobSchema,
   GetPostResponseSchema,
   ImageSchema,
@@ -13,6 +14,7 @@ import {
   PostSchema,
   PostService,
   ProtoBlogField,
+  SavePostDraftResponseSchema,
   TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
@@ -193,7 +195,9 @@ async function refusedDraftSave(cause: ConnectError, slug: string) {
   const view = renderHook(() => useSavePostDraft(), {
     wrapper: withProviders(transport, queryClient),
   })
-  await view.result.current.mutateAsync({ slug, title: '제주' }).catch(() => undefined)
+  await view.result.current
+    .save({ slug, title: '제주', memo: '', templateAnswers: [] })
+    .catch(() => undefined)
   return {
     post: () => queryClient.getQueryState(postKey)?.isInvalidated,
     list: () => queryClient.getQueryState(listKey)?.isInvalidated,
@@ -225,4 +229,43 @@ describe('a draft save refused because the post is published', () => {
     )
     expect(create.post()).toBe(false)
   })
+})
+
+// ARCH-17: the entity owns the wire. A save names the language as its enum, an assignment only
+// when the caller gives one, and never a 분야 — this build saves that with the brief (POST-89).
+it('maps the draft to the wire: the language as its enum, an assignment only when given, and never a 분야', async () => {
+  const sent: Array<{
+    slug: string
+    voiceId?: string
+    templateId?: string
+    targetLanguage?: number
+    field?: number
+  }> = []
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.savePostDraft, (req) => {
+      sent.push(req)
+      return create(SavePostDraftResponseSchema, {
+        post: create(PostSchema, { slug: req.slug || '20260925-new' }),
+      })
+    })
+  })
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const view = renderHook(() => useSavePostDraft(), {
+    wrapper: withProviders(transport, queryClient),
+  })
+  const base = { title: '제주', memo: '', templateAnswers: [] }
+
+  await expect(view.result.current.save({ ...base, slug: '', targetLanguage: 'en' })).resolves.toBe(
+    '20260925-new',
+  )
+  await expect(view.result.current.save({ ...base, slug: 'post' })).resolves.toBe('post')
+  await view.result.current.save({ ...base, slug: 'post', templateId: '' })
+
+  expect(sent[0].targetLanguage).toBe(contentLanguageToProto('en'))
+  expect(sent[0].targetLanguage).not.toBeUndefined()
+  expect(sent[1].voiceId).toBeUndefined()
+  expect(sent[1].templateId).toBeUndefined()
+  expect(sent[1].targetLanguage).toBeUndefined()
+  expect(sent[2].templateId).toBe('')
+  for (const request of sent) expect(request.field).toBeUndefined()
 })

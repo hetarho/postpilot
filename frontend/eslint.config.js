@@ -105,6 +105,12 @@ export default defineConfig([
           message:
             'proto 서비스·메시지 스키마 이름은 shared/api와 entities/*/api에만 있어야 해요. 엔티티가 도메인 타입으로 바꿔서 내보내세요 (ARCH-17).',
         },
+        {
+          selector:
+            'ImportDeclaration[source.value=/^@\\/entities\\//] > ImportSpecifier[imported.name=/(ToProto|FromProto)$/]',
+          message:
+            '엔티티의 wire 매퍼는 엔티티 안에서만 써요. 엔티티가 도메인 값을 받는 훅을 내보내게 하세요 (ARCH-17).',
+        },
       ],
     },
   },

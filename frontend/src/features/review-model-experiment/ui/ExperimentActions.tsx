@@ -6,7 +6,7 @@ import {
   useExperimentActions,
   useExperimentOwnerRefresh,
 } from '@/entities/model-experiment'
-import { usePost } from '@/entities/post'
+import { isUnfinalized, usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import type { CandidateBadges } from '@/entities/model-experiment'
@@ -63,7 +63,7 @@ export function ExperimentActions({
   const { post, isPending: postPending } = usePost(experiment.postSlug, {
     enabled: offersContent && experiment.status === 'decided' && !experiment.appliedAt,
   })
-  const postWritable = Boolean(post && (post.status === 'draft' || post.status === 'review'))
+  const postWritable = Boolean(post && isUnfinalized(post))
   if (!hasExperimentActions(experiment)) return null
   return (
     <div className="grid gap-3">

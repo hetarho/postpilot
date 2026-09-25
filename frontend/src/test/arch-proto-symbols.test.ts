@@ -8,8 +8,10 @@ import { describe, expect, it } from 'vitest'
  *  The rule is: a proto service descriptor, a message schema and `@connectrpc/connect-query` are
  *  named only in `shared/api` and `entities/<noun>/api`. Pages, widgets and features consume the hooks
  *  and domain types an entity exports, so a proto rename stops at one directory and a message
- *  rename at one entity. ESLint enforces it per file; this test states it once over the whole
- *  tree — since T262 with no exception left in it. */
+ *  rename at one entity. The same holds for an entity's wire mappers (`*ToProto`, `*FromProto`):
+ *  the entity maps inside itself and hands out hooks that take domain values. ESLint enforces it
+ *  per file; this test states it once over the whole tree — since T262 with no exception left in
+ *  it. */
 
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const LAYERS = ['pages', 'widgets', 'features']
@@ -60,6 +62,16 @@ describe('ARCH-17: proto symbols stop at entities', () => {
       const source = readFileSync(path.join(src, file), 'utf8')
       return importedNames(source, '@/shared/api')
         .filter((name) => PROTO_SYMBOL.test(name))
+        .map((name) => `${file}: ${name}`)
+    })
+    expect(offenders).toEqual([])
+  })
+
+  it('imports no entity wire mapper into a page, widget or feature', () => {
+    const offenders = files.flatMap((file) => {
+      const source = readFileSync(path.join(src, file), 'utf8')
+      return importedNames(source, '@/entities/[a-z-]+')
+        .filter((name) => /(ToProto|FromProto)$/.test(name))
         .map((name) => `${file}: ${name}`)
     })
     expect(offenders).toEqual([])

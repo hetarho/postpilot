@@ -52,15 +52,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
 
 ## next
 - The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T373 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T375 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T373 done; entity indexes export no wire mapper (fakes map by member name), the draft save takes a domain PostDraftSave, an unknown 분야 or quality tick fails the read, and one exhaustive status split replaces the four chains; ESLint and arch pins guard it; FE gates pass (p42)
+- 260925 T373 claimed (p42)
 - 260925 T372 done; the title corpus reaches every title refusal (cross-area too_many_asks included) and a test fails when one goes missing; the drain harness runs the worker's registerJobs; template.Limits has one constructor with post.TargetLengthMin; BE and FE gates pass (p42)
 - 260925 T372 claimed (p42)
 - 260925 T370 done; quality reads one post row through post.Service.CurrentContent and names M2's run only when over band; Repetition.TopNoun and post_measurements.top_noun are gone (migration 0083); BE gate passes (p42)
@@ -79,5 +80,3 @@
 - 260925 T358 claimed (p42)
 - 260925 T357 done; one writablePost guard for the published lock; SQL and Service default-deny tests make an unclassified write statement or exported method fail; photo and video deletes search posts by key; BE gate passes (p42)
 - 260925 T357 claimed (p42)
-- 260925 T356 done; InlinePopover walks its panel with Tab and leaves past either end (THEME-42); a hover-opened panel or tip closes alone on Escape; one focusable selector, one anchored-panel hook, one quality values/share helper; FE gates pass (p42)
-- 260925 T356 claimed (p42)

@@ -40,23 +40,36 @@ describe('the guideline scope mirror', () => {
 })
 
 describe('a guideline on the wire', () => {
-  it('reads a 분야 guideline’s set, dropping anything that names no 분야', () => {
+  it('reads a 분야 guideline’s set', () => {
     const guideline = toGuideline(
       create(GuidelineSchema, {
         id: 'g',
         text: '가격을 지어내지 않기',
         scope: ProtoGuidelineScope.FIELDS,
-        fields: [
-          ProtoBlogField.CAFE,
-          ProtoBlogField.UNSPECIFIED,
-          9_999 as ProtoBlogField,
-          ProtoBlogField.RESTAURANT,
-        ],
+        fields: [ProtoBlogField.CAFE, ProtoBlogField.RESTAURANT],
       }),
     )
     expect(guideline.scope).toBe('fields')
     expect(guideline.fields).toEqual(['cafe', 'restaurant'])
     expect(guideline.templates).toEqual([])
+  })
+
+  // ARCH-3: dropping an entry would let the next whole-set save erase it on the server, so a 분야
+  // this build cannot name fails the read — and so does 없음, which the server never puts in a set.
+  it.each([
+    ['a number this build does not know', 9_999 as ProtoBlogField],
+    ['UNSPECIFIED', ProtoBlogField.UNSPECIFIED],
+  ])('refuses a set with a 분야 this build does not know: %s', (_name, field) => {
+    expect(() =>
+      toGuideline(
+        create(GuidelineSchema, {
+          id: 'g',
+          text: '가격을 지어내지 않기',
+          scope: ProtoGuidelineScope.FIELDS,
+          fields: [ProtoBlogField.CAFE, field],
+        }),
+      ),
+    ).toThrow()
   })
 
   it('reads the other scopes with no 분야', () => {
@@ -82,13 +95,13 @@ describe('a guideline on the wire', () => {
 
 // GUIDE-29: the preset rides every list read, and its absence is a malformed read, not an empty one.
 describe('the guideline preset on the wire', () => {
-  it('maps the text, the switch and the 분야, dropping anything that names no 분야', () => {
+  it('maps the text, the switch and the 분야', () => {
     expect(
       toGuidelinePreset(
         create(GuidelinePresetSchema, {
           text: '[분야 상위 글 문구]\n원문에 없는 내용은 쓰지 않는다.',
           enabled: true,
-          fields: [ProtoBlogField.RESTAURANT, ProtoBlogField.UNSPECIFIED, 9_999 as ProtoBlogField],
+          fields: [ProtoBlogField.RESTAURANT],
         }),
       ),
     ).toEqual({
@@ -96,6 +109,21 @@ describe('the guideline preset on the wire', () => {
       enabled: true,
       fields: ['restaurant'],
     })
+  })
+
+  it.each([
+    ['a number this build does not know', 9_999 as ProtoBlogField],
+    ['UNSPECIFIED', ProtoBlogField.UNSPECIFIED],
+  ])('refuses a set with a 분야 this build does not know: %s', (_name, field) => {
+    expect(() =>
+      toGuidelinePreset(
+        create(GuidelinePresetSchema, {
+          text: '',
+          enabled: true,
+          fields: [ProtoBlogField.RESTAURANT, field],
+        }),
+      ),
+    ).toThrow()
   })
 
   it('refuses a list read that carries no preset', () => {

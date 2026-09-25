@@ -15,7 +15,6 @@ import {
   applyReplacement,
   blockWith,
   copyPostContent,
-  isPublished,
   newBlock,
   postContentWith,
   sameCandidate,
@@ -92,15 +91,13 @@ export const BlockEditor = forwardRef<
   // here, at render, so a take or an edit that moves a source away drops its mark at once.
   const spans = useMemo(
     () =>
-      isPublished(post)
-        ? []
-        : visibleSpans(
-            content,
-            post.replacementCandidates.filter(
-              (candidate) => !spent.some((taken) => sameCandidate(taken, candidate)),
-            ),
-          ),
-    [content, post, spent],
+      visibleSpans(
+        content,
+        post.replacementCandidates.filter(
+          (candidate) => !spent.some((taken) => sameCandidate(taken, candidate)),
+        ),
+      ),
+    [content, post.replacementCandidates, spent],
   )
   // Every pencil, so focus can land on the one that held a taken mark: the mark itself is gone the
   // moment its source is (THEME-33).

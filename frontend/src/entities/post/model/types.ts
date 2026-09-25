@@ -32,6 +32,26 @@ export function isPublished(post: { status: string }): boolean {
   return post.status === 'published'
 }
 
+/** Which half of the lifecycle each status is in: still being written (open) or 확정 and after
+ *  (closed). A Record, so a status added to `PostStatus` fails typecheck until it is placed. */
+const PHASE: Record<PostStatus, 'open' | 'closed'> = {
+  draft: 'open',
+  review: 'open',
+  finalized: 'closed',
+  published: 'closed',
+}
+
+/** A post not yet 확정 — a draft or one in review. An unknown status is in neither half. */
+export function isUnfinalized(post: { status: string }): boolean {
+  return isPostStatus(post.status) && PHASE[post.status] === 'open'
+}
+
+/** A post 확정 or past it — finalized, or published, which is a finalized post with an address
+ *  (POST-21). An unknown status is in neither half. */
+export function isFinalizedOrLater(post: { status: string }): boolean {
+  return isPostStatus(post.status) && PHASE[post.status] === 'closed'
+}
+
 /** One answer a post gives to a data field its template declared. `enabled` off means "I have
  *  nothing for this": the text is kept and the enqueue drops the whole block. */
 export interface PostTemplateAnswer {

@@ -42,17 +42,16 @@ import {
   VoiceRefSchema,
   contentLanguageFromProto,
   contentLanguageToProto,
+  ProtoQualityMetric,
+  ProtoReplacementSurface,
   type ContentLanguage,
 } from '@/shared/api'
-import { blogFieldFromProto, blogFieldToProto, isBlogFieldId } from '@/entities/blog-field'
-import {
-  qualityMetricFromProto,
-  qualityMetricToProto,
-  type QualityMetricId,
-} from '@/entities/quality'
-import { parseNaverBlogUrl, replacementSurfaceToProto } from '@/entities/post'
+import { BLOG_FIELD_IDS, isBlogFieldId } from '@/entities/blog-field'
+import { QUALITY_METRICS, type QualityMetricId } from '@/entities/quality'
+import { parseNaverBlogUrl } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
+import { fromWire, toWire } from './wire-enum'
 import { POST_CONTENT_FIXTURE } from './fixtures/postContent'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -295,7 +294,7 @@ type Row = {
   targetLength?: number
   tagCount: number
   useMemory: boolean
-  qualityRules: ReturnType<typeof qualityMetricToProto>[]
+  qualityRules: ProtoQualityMetric[]
   finalizedRevision: bigint
   finalizedAt: string
   publishedUrl: string
@@ -308,7 +307,22 @@ type Row = {
 function fixtureField(id: string | undefined): ProtoBlogField {
   if (!id) return ProtoBlogField.UNSPECIFIED
   if (!isBlogFieldId(id)) throw new Error(`fake post: unknown 분야 ${id}`)
-  return blogFieldToProto(id)
+  return toWire(ProtoBlogField, id)
+}
+
+/** A 분야 as a save carried it: '' for a present UNSPECIFIED — the clear — and otherwise the id,
+ *  or `?<n>` for a number no id names. */
+function recordedField(value: ProtoBlogField): string {
+  if (value === ProtoBlogField.UNSPECIFIED) return ''
+  return fromWire(ProtoBlogField, value, BLOG_FIELD_IDS) ?? `?${value}`
+}
+
+/** Whether a 분야 number is one the server knows: UNSPECIFIED (없음) or a listed 분야. */
+function knownField(value: ProtoBlogField): boolean {
+  return (
+    value === ProtoBlogField.UNSPECIFIED ||
+    fromWire(ProtoBlogField, value, BLOG_FIELD_IDS) !== undefined
+  )
 }
 
 /** Like the server (T334): a published post takes no write but its address and the delete. */
@@ -428,7 +442,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       replacementCandidates: (row.replacementCandidates ?? []).map((candidate) =>
         create(ReplacementCandidateSchema, {
           ...candidate,
-          surface: replacementSurfaceToProto(candidate.surface),
+          surface: toWire(ProtoReplacementSurface, candidate.surface),
         }),
       ),
       observations: row.observations ?? [],
@@ -441,7 +455,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       // The real server always fills it (POST-63): a row never saved with one is the default.
       tagCount: row.tagCount ?? 4,
       useMemory: row.useMemory ?? false,
-      qualityRules: (row.qualityRules ?? []).map(qualityMetricToProto),
+      qualityRules: (row.qualityRules ?? []).map((id) => toWire(ProtoQualityMetric, id)),
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
       publishedUrl: row.publishedUrl ?? '',
@@ -531,8 +545,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       })),
       targetLanguage:
         req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
-      field:
-        req.field === undefined ? undefined : (blogFieldFromProto(req.field) ?? `?${req.field}`),
+      field: req.field === undefined ? undefined : recordedField(req.field),
     })
     if (failuresLeft > 0) {
       failuresLeft -= 1
@@ -567,8 +580,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // does not know is 404 before anything is written.
     let field = existing?.field ?? ProtoBlogField.UNSPECIFIED
     if (req.field !== undefined) {
-      if (blogFieldFromProto(req.field) === undefined)
-        throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
+      if (!knownField(req.field)) throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
       field = req.field
     }
     // What the assignment seeds, resolved before anything is written: only an assignment that
@@ -710,15 +722,16 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.savePostGenerationOptions, async (req) => {
     calls?.push('SavePostGenerationOptions')
-    const ticks = req.qualityRules?.metrics.map(qualityMetricFromProto)
+    const ticks = req.qualityRules?.metrics.map((value) =>
+      fromWire(ProtoQualityMetric, value, QUALITY_METRICS),
+    )
     options.optionSaves?.push({
       slug: req.slug,
       targetLength: req.targetLength,
       tagCount: req.tagCount,
       useMemory: req.useMemory,
       qualityRules: ticks?.filter((id): id is QualityMetricId => id !== undefined),
-      field:
-        req.field === undefined ? undefined : (blogFieldFromProto(req.field) ?? `?${req.field}`),
+      field: req.field === undefined ? undefined : recordedField(req.field),
     })
     await options.optionSaveGate
     if (options.optionSaveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
@@ -737,8 +750,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // Validated before anything is written: an unknown metric or 분야 changes nothing.
     if (ticks?.some((id) => id === undefined))
       throw connectAppError('POST_QUALITY_RULE_INVALID', Code.InvalidArgument)
-    if (blogFieldFromProto(req.field) === undefined)
-      throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
+    if (!knownField(req.field)) throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
     row.targetLength = req.targetLength
     row.tagCount = req.tagCount
     row.useMemory = req.useMemory

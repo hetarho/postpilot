@@ -1,8 +1,8 @@
 // Query keys and the proto→domain mappers for the guideline entity.
 import type { Transport } from '@connectrpc/connect'
 import {
-  blogFieldFromProto,
   blogFieldToProto,
+  requireBlogFieldId,
   type BlogFieldId,
 } from '@/entities/blog-field/@x/guideline'
 import {
@@ -47,11 +47,11 @@ function toTemplateRef(ref: ProtoGuidelineTemplateRef) {
   return { id: ref.id, name: ref.name }
 }
 
-/** Neither 없음 nor a number this build does not know names a 분야, so neither is listed. */
+/** Every entry names a 분야: 없음 or a number this build does not know fails the read (ARCH-3),
+ *  and the page shows its load failure with a retry, as for an unknown scope. Dropping one would
+ *  have the next whole-set save erase it on the server. */
 function toFieldIds(fields: readonly ProtoBlogField[]): BlogFieldId[] {
-  return fields
-    .map(blogFieldFromProto)
-    .filter((field): field is BlogFieldId => field !== undefined && field !== '')
+  return fields.map(requireBlogFieldId)
 }
 
 /** The server always sends the preset, so an absent one is a malformed read: it throws, and the

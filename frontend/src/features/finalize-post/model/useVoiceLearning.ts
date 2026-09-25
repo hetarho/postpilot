@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import { useMemo, useState } from 'react'
 import { isTerminal, useJob, type GenerationJob } from '@/entities/generation-job'
 import { useStageSelection } from '@/entities/model-catalog'
-import { isPublished, usePostQueryKey, type PostDraft } from '@/entities/post'
+import { isFinalizedOrLater, usePostQueryKey, type PostDraft } from '@/entities/post'
 import {
   deletedVoiceAIReason,
   useVoiceLearningActions,
@@ -94,9 +94,7 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   // The server refuses learning unless the exact revision on screen is the finalized one
   // (policy/voice.md), so the button says so rather than offering a call that would fail. Publishing
   // keeps the finalized revision, so a published post learns as a finalized one does (POST-21).
-  const finalizedNow =
-    (post.status === 'finalized' || isPublished(post)) &&
-    post.finalizedRevision === post.contentRevision
+  const finalizedNow = isFinalizedOrLater(post) && post.finalizedRevision === post.contentRevision
 
   const learn = async (revision = post.contentRevision) => {
     if (!analyze.selected) return

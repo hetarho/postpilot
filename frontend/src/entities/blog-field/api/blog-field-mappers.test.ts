@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { ProtoBlogField } from '@/shared/api'
 import { BLOG_FIELD_IDS, NO_BLOG_FIELD } from '../model/blog-field'
-import { blogFieldFromProto, blogFieldToProto } from './blog-field-mappers'
+import {
+  blogFieldFromProto,
+  blogFieldToProto,
+  requireBlogField,
+  requireBlogFieldId,
+} from './blog-field-mappers'
 
 describe('the 분야 wire mapping', () => {
   // One list on both sides. A 분야 added to the contract without an id here would read as
@@ -39,5 +44,16 @@ describe('the 분야 wire mapping', () => {
 
   it('drops a wire value this build does not know rather than inventing one', () => {
     expect(blogFieldFromProto(9_999 as ProtoBlogField)).toBeUndefined()
+  })
+
+  // ARCH-3: a read fails on a 분야 it cannot name rather than guessing 없음; a set that must name a
+  // 분야 also fails on 없음, which the server never puts in one.
+  it('refuses on a read what it cannot name', () => {
+    expect(() => requireBlogField(9_999 as ProtoBlogField)).toThrow('unsupported blog field enum')
+    expect(requireBlogField(ProtoBlogField.UNSPECIFIED)).toBe(NO_BLOG_FIELD)
+    expect(requireBlogField(ProtoBlogField.CAFE)).toBe('cafe')
+    expect(() => requireBlogFieldId(9_999 as ProtoBlogField)).toThrow('unsupported blog field enum')
+    expect(() => requireBlogFieldId(ProtoBlogField.UNSPECIFIED)).toThrow()
+    expect(requireBlogFieldId(ProtoBlogField.CAFE)).toBe('cafe')
   })
 })

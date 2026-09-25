@@ -2,7 +2,7 @@
 import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey, useTransport } from '@connectrpc/connect-query'
-import { blogFieldFromProto } from '@/entities/blog-field/@x/post'
+import { requireBlogField } from '@/entities/blog-field/@x/post'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
@@ -16,9 +16,16 @@ import {
   requireContentLanguage,
   type Post,
   type PostSummary,
+  type ProtoQualityMetric,
 } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
 import { toReplacementCandidates } from './replacement-mappers'
+
+function requireQualityRule(value: ProtoQualityMetric): QualityMetricId {
+  const id = qualityMetricFromProto(value)
+  if (!id) throw new Error(`unsupported quality metric enum: ${String(value)}`)
+  return id
+}
 
 export function toPostDraft(post: Post): PostDraft {
   return {
@@ -30,7 +37,7 @@ export function toPostDraft(post: Post): PostDraft {
     updatedAt: post.updatedAt,
     voice: toVoiceRef(post.voice),
     template: toTemplateRef(post.template),
-    field: blogFieldFromProto(post.field) ?? '',
+    field: requireBlogField(post.field),
     // Plain data, and deliberately not filtered against the current template here: which
     // labels are shown is the write screen's business, and dropping the rest would lose an
     // answer typed under a template the post is about to be assigned again (POST-62).
@@ -53,11 +60,10 @@ export function toPostDraft(post: Post): PostDraft {
     targetLength: post.targetLength,
     tagCount: post.tagCount ?? POST_TAG_COUNT_DEFAULT,
     useMemory: post.useMemory,
-    // A metric a newer server adds names no row this build can show, so it is dropped rather
-    // than guessed (ARCH-3).
-    qualityRules: post.qualityRules
-      .map(qualityMetricFromProto)
-      .filter((id): id is QualityMetricId => id !== undefined),
+    // A metric a newer server adds fails the read rather than being dropped (ARCH-3): every
+    // 저장 of the brief resends the whole tick set (POST-89), so a dropped tick would be erased on
+    // the server by the next save of any run option.
+    qualityRules: post.qualityRules.map(requireQualityRule),
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
     publishedUrl: post.publishedUrl,

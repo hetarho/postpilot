@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   isPublished,
+  isUnfinalized,
   parseNaverBlogUrl,
   useSavePublishedUrl,
   type PostDraft,
@@ -40,7 +41,7 @@ function PublishedUrlForm({ post }: { post: PostDraft }) {
   const [localError, setLocalError] = useState('')
   const published = isPublished(post)
   // A busy post is the server's to refuse (POST_BUSY); only the lifecycle closes the field here.
-  const closed = post.status === 'draft' || post.status === 'review'
+  const closed = isUnfinalized(post)
   const error = localError || (saving.failure ? formatAppFailure(saving.failure) : '')
 
   const send = async (url: string) => {

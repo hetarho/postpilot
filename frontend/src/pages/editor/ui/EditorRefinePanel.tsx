@@ -61,18 +61,15 @@ export function EditorRefinePanel({
           ref={editorRef}
           post={post}
           onContentChange={onContentChange}
-          // This post's own M2, M3 and M4 (QUAL-36), read at the revision on screen. Never on a
-          // published post, which has no editor here anyway (POST-86).
+          // This post's own M2, M3 and M4 (QUAL-36), read at the revision on screen.
           beforeArticle={
-            !isPublished(post) && (
-              <PostMeasurementRow
-                ownerId={ownerId}
-                slug={post.slug}
-                revision={post.contentRevision}
-                contentLanguage={post.contentLanguage}
-                className="mt-4"
-              />
-            )
+            <PostMeasurementRow
+              ownerId={ownerId}
+              slug={post.slug}
+              revision={post.contentRevision}
+              contentLanguage={post.contentLanguage}
+              className="mt-4"
+            />
           }
         />
       )}

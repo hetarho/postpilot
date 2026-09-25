@@ -10,7 +10,9 @@ export {
   POST_STATUSES,
   displayTitle,
   isPostStatus,
+  isFinalizedOrLater,
   isPublished,
+  isUnfinalized,
   postStatusLabel,
   untitledTitle,
 } from './model/types'
@@ -27,12 +29,11 @@ export {
 export { BlockList } from './ui/BlockList'
 export type { ReplacementCandidate, ReplacementSpan, TextAt } from './model/replacements'
 export { applyReplacement, sameCandidate, spansAt, visibleSpans } from './model/replacements'
-export { replacementSurfaceToProto } from './api/replacement-mappers'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
 export { usePosts } from './api/usePosts'
 export { useDeletePost } from './api/useDeletePost'
-export { useSavePostDraft } from './api/useSavePostDraft'
+export { useSavePostDraft, type PostDraftSave } from './api/useSavePostDraft'
 export { ContentRevisionConflictError, useSavePostContent } from './api/useSavePostContent'
 export { useFinalizePost } from './api/useFinalizePost'
 export { useSavePublishedUrl } from './api/useSavePublishedUrl'

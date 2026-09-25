@@ -1,6 +1,6 @@
 import { useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react'
 import { isPublished, useSavePostDraft, type PostStatus } from '@/entities/post'
-import { appFailureFromConnect, contentLanguageToProto, type ContentLanguage } from '@/shared/api'
+import { appFailureFromConnect, type ContentLanguage } from '@/shared/api'
 import {
   attachDraftQueue,
   mergeAnswers,
@@ -116,7 +116,7 @@ export function useAutosave({
   const saveDraft = useSavePostDraft()
   const [state, setState] = useState<SaveState>('idle')
   const queueRef = useRef<DraftQueueHandle | undefined>(undefined)
-  const sendRef = useRef(saveDraft.mutateAsync)
+  const sendRef = useRef(saveDraft.save)
   const onMintedRef = useRef(onMinted)
   const postRef = useRef(post)
   const voiceRef = useRef(voiceId)
@@ -127,7 +127,7 @@ export function useAutosave({
   // be deferred past a `pagehide` or a `visibilitychange`, and the keystroke it had not
   // recorded yet is exactly the one that would be lost.
   useLayoutEffect(() => {
-    sendRef.current = saveDraft.mutateAsync
+    sendRef.current = saveDraft.save
     onMintedRef.current = onMinted
     postRef.current = post
     voiceRef.current = voiceId
@@ -153,8 +153,8 @@ export function useAutosave({
       voiceId: opened?.voice.id ?? voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: async ({ slug, draft, voiceId, templateId, targetLanguage }) => {
-        const response = await sendRef.current({
+      send: ({ slug, draft, voiceId, templateId, targetLanguage }) =>
+        sendRef.current({
           slug,
           title: draft.title,
           memo: draft.memo,
@@ -163,15 +163,8 @@ export function useAutosave({
           templateAnswers: draft.answers,
           voiceId,
           templateId,
-          targetLanguage:
-            targetLanguage === undefined ? undefined : contentLanguageToProto(targetLanguage),
-        })
-        // A 200 carrying no post is not a confirmation. Taking it as one would mark the
-        // text saved, and for a draft with no slug yet would leave the next edit creating
-        // a second post.
-        if (!response.post?.slug) throw new Error('SavePostDraft returned no post')
-        return response.post.slug
-      },
+          targetLanguage,
+        }),
       // A post published in another tab refuses every save the same way (POST-86), so the text is
       // taken back rather than retried, and the post's refetch re-renders ① locked.
       retry: (cause) => appFailureFromConnect(cause).reason !== 'POST_PUBLISHED_LOCKED',

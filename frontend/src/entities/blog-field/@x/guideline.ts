@@ -2,4 +2,4 @@
 // set of 분야, so the scope control lists the catalogue and the mappers carry the set on the wire.
 export type { BlogFieldId } from '../model/blog-field'
 export { BLOG_FIELD_IDS, blogFieldLabelKey } from '../model/blog-field'
-export { blogFieldFromProto, blogFieldToProto } from '../api/blog-field-mappers'
+export { blogFieldToProto, requireBlogFieldId } from '../api/blog-field-mappers'

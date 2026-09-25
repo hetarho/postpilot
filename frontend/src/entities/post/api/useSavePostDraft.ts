@@ -3,6 +3,8 @@ import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   appFailureFromConnect,
+  contentLanguageToProto,
+  type ContentLanguage,
   type GetPostResponse,
   GetPostResponseSchema,
   type Post,
@@ -65,12 +67,26 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
 /** Create-or-update for a draft: an empty slug creates the post and returns the minted
  *  one (spec/legacy/policy/posts.md). This is the autosave endpoint, so it is called about once
  *  a second while someone types. */
-export function useSavePostDraft() {
+/** One draft save, in the editor's terms. An assignment member left undefined leaves the post's
+ *  value alone; '' clears a 템플릿. There is no 분야 member: this build saves the 분야 with the
+ *  brief's run options (POST-89), so no autosave can carry one. */
+export interface PostDraftSave {
+  /** Empty for the save that creates the post. */
+  slug: string
+  title: string
+  memo: string
+  templateAnswers: readonly { label: string; text: string; enabled: boolean }[]
+  voiceId?: string
+  templateId?: string
+  targetLanguage?: ContentLanguage
+}
+
+export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<string> } {
   const queryClient = useQueryClient()
   // The transport the hooks are mounted on — the same one the keys must be built from.
   const transport = useTransport()
 
-  return useMutation(PostService.method.savePostDraft, {
+  const mutation = useMutation(PostService.method.savePostDraft, {
     onSuccess: (data) => {
       const post = data.post
       if (!post) return
@@ -100,4 +116,26 @@ export function useSavePostDraft() {
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
     },
   })
+
+  return {
+    /** Resolves with the saved post's slug. */
+    save: async (draft) => {
+      const response = await mutation.mutateAsync({
+        slug: draft.slug,
+        title: draft.title,
+        memo: draft.memo,
+        templateAnswers: draft.templateAnswers.map((answer) => ({ ...answer })),
+        voiceId: draft.voiceId,
+        templateId: draft.templateId,
+        targetLanguage:
+          draft.targetLanguage === undefined
+            ? undefined
+            : contentLanguageToProto(draft.targetLanguage),
+      })
+      // A 200 carrying no post is not a confirmation. Taking it as one would mark the text
+      // saved, and for a draft with no slug yet would leave the next edit creating a second post.
+      if (!response.post?.slug) throw new Error('SavePostDraft returned no post')
+      return response.post.slug
+    },
+  }
 }

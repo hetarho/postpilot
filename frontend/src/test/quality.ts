@@ -9,14 +9,12 @@ import {
   QualityReadingSchema,
   QualityService,
   QualityTitleSaturationSchema,
+  ProtoQualityMetric,
+  ProtoQualityVerdict,
 } from '@/shared/api'
-import {
-  qualityMetricToProto,
-  qualityVerdictToProto,
-  type QualityMetricId,
-  type QualityVerdict,
-} from '@/entities/quality'
+import type { QualityMetricId, QualityVerdict } from '@/entities/quality'
 import { connectAppError } from './app-error'
+import { toWire } from './wire-enum'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -78,8 +76,8 @@ function valuesOf(reading: FakeQualityReading): ReadingInit['values'] {
 
 export function toFakeProtoReading(reading: FakeQualityReading) {
   return create(QualityReadingSchema, {
-    metric: qualityMetricToProto(reading.metric),
-    verdict: qualityVerdictToProto(reading.verdict),
+    metric: toWire(ProtoQualityMetric, reading.metric),
+    verdict: toWire(ProtoQualityVerdict, reading.verdict),
     minimum: reading.minimum ?? 0,
     publishedCount: reading.publishedCount ?? 0,
     ruleText: reading.ruleText ?? '',
