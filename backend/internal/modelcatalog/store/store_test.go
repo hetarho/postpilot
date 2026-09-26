@@ -45,7 +45,7 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 		if !row.Listed {
 			t.Errorf("%s: listed=%v, want listed", row.ModelID, row.Listed)
 		}
-		// Change 20's interview decision: every purpose starts EMPTY. No seeded model is
+		// Every purpose starts EMPTY. No seeded model is
 		// registered anywhere until an operator checks it on a purpose tab.
 		if len(row.Purposes) != 0 {
 			t.Errorf("%s is seeded with purposes %v, want none", row.ModelID, row.Purposes)
@@ -56,7 +56,7 @@ func TestMigration_SeedsTheShippedCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("claude-sonnet-5 is not seeded")
 	}
-	// Change 24's A4: migration 0021 CLEARS every override rather than copying it onto the
+	// Migration 0021 CLEARS every override rather than copying it onto the
 	// five registrations, so even the one shipped `unset` is gone and the model resolves to
 	// the code-owned stage policy. Carrying today's values forward would have propagated a
 	// blanket `minimal` — the setting measured breaking observation on 2026-09-03.
@@ -103,7 +103,7 @@ func TestUpsertAndGet_RoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The effort is no longer a catalog_models column: an Upsert carries only the snapshot
-	// and availability halves, and a registration carries the curation (change 24).
+	// and availability halves, and a registration carries the curation (MODEL-7).
 	if got.Label != "New 1" || len(got.Reasoning) != 0 ||
 		got.ContextTokens != 4096 || got.InputUSDPerMillion != "1.25" || !got.ImageOutput || got.VideoOutput || !got.Listed {
 		t.Fatalf("round trip = %+v", got)

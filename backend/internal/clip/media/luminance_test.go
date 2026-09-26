@@ -124,7 +124,7 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 	}
 
 	// A bright ground under a BOTTOM copy: the scrim darkens it, and the stroke
-	// CDS-26 gives 형광펜 is what the white text is actually read against, so the
+	// CDS-25 gives 크게 강조 is what the white text is actually read against, so the
 	// pairing clears V3 on footage as bright as a white frame.
 	bright := Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
 	copyAt := func(y float64) clip.Region { return clip.Region{X: 300, Y: y, Width: 400, Height: 110} }
@@ -142,7 +142,7 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 	if ratio, _ := design.Contrast(white, naked); ratio >= design.Luma.ContrastMin {
 		t.Fatalf("an unstroked style on a white frame is not legible: %.2f:1 (%s)", ratio, naked)
 	}
-	// A plated style is never sampled at all (CDS-16), so it never gets here;
+	// A plated style is never sampled at all (CDS-44), so it never gets here;
 	// asked anyway, it reads the ground it was given rather than inventing one.
 	if got := bright.Background(canvas, clean, "bottom", copyAt(1270)); got == "" {
 		t.Fatal("a ground is always a colour")

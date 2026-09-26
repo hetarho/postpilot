@@ -490,7 +490,7 @@ func TestGoogleSignInRefusesAbsentOrUnverifiedEmail(t *testing.T) {
 	}
 }
 
-// TestLoginFailuresAreIdentical is plan 01 AC3: an unknown id and a wrong password
+// TestLoginFailuresAreIdentical pins AUTH-8 and AUTH-9: an unknown id and a wrong password
 // must be indistinguishable in what they return AND in the work they do.
 func TestLoginFailuresAreIdentical(t *testing.T) {
 	svc, _ := newTestService(t, time.Now())
@@ -1191,7 +1191,7 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("tampered by one character", func(t *testing.T) {
-		// Plan 01 AC2 — the stored value is a hash, so a single flipped byte misses.
+		// AUTH-10 — the stored value is a hash, so a single flipped byte misses.
 		tampered := flipFirstChar(raw)
 		if tampered == raw {
 			t.Fatal("could not tamper with the token")
@@ -1242,7 +1242,7 @@ func TestLogoutRevokesServerSide(t *testing.T) {
 		t.Fatalf("Logout: %v", err)
 	}
 
-	// Plan 01 AC6 — replaying the cookie must fail, not merely be un-sent.
+	// AUTH-13 — replaying the cookie must fail, not merely be un-sent.
 	if _, err := svc.Authenticate(context.Background(), raw); !errors.Is(err, ErrNoSession) {
 		t.Errorf("replayed cookie after logout: %v, want ErrNoSession", err)
 	}

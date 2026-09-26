@@ -14,7 +14,7 @@ func newTestSweeper(store SweepLedger, blobs ObjectStore) *Sweeper {
 	return s
 }
 
-// TestSweepExpiredUploads is job 03 A4: an upload whose confirm never arrived is
+// TestSweepExpiredUploads pins POST-40: an upload whose confirm never arrived is
 // removed with its object.
 func TestSweepExpiredUploads(t *testing.T) {
 	ctx := context.Background()

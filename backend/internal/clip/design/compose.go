@@ -58,10 +58,9 @@ func SelectAnchor(candidates []Candidate, subject Bounds, placed []Element, read
 			near = append(near, i)
 		}
 	}
-	// The one-step rule is a PREFERENCE, not a veto. CDS-40's own run guard can
-	// demand a style whose anchors are three steps from the last cut's — 메모 at
-	// TOP to 깔끔하게 at BOTTOM — and dropping the copy to obey the step would
-	// lose the sentence to a rule about the eye. A style change is itself a
+	// The one-step rule is a PREFERENCE, not a veto: a style whose anchors are
+	// three steps from the last cut's — 메모 at TOP to 깔끔하게 at BOTTOM — would
+	// otherwise lose its sentence to a rule about the eye. A style change is itself a
 	// deliberate visual change, which is why V13 measures the step only between
 	// consecutive cuts that share a style.
 	if len(near) > 0 {
@@ -189,7 +188,7 @@ func Transitions(scenes []string) []int {
 }
 
 // CutBounds is CDS-37's TARGET range for one cut, in milliseconds: the template
-// preset's own range where it names one (CDS-50), the shared 1.2–6.0 s where it
+// preset's own range where it names one, the shared 1.2–6.0 s where it
 // does not, and a food close-up capped at 4.0 s either way. These are editing
 // rhythm, not correctness: the compiler aims at them wherever the approved
 // timeline still allows and never refuses a plan for missing them (r3).

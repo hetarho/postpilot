@@ -164,7 +164,7 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p clip.Te
 		return clip.VideoTemplate{}, clip.ErrInvalid
 	}
 	// The empty preset is readable but never writable: a template that names one
-	// must name one of the five (CDS-50).
+	// must name one of the five.
 	if p.Preset != nil && !clip.ValidPreset(*p.Preset) {
 		return clip.VideoTemplate{}, clip.ErrInvalid
 	}

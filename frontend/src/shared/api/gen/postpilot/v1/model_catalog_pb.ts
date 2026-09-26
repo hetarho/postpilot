@@ -340,7 +340,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
    * The reasoning override for the PURPOSE this listing was for, or "" for none. "unset"
    * deliberately omits the wire key and keeps the provider's own behavior.
    *
-   * Purpose-scoped since change 24: it used to be one value for the whole model while the
+   * Purpose-scoped (MODEL-7): it used to be one value for the whole model while the
    * code-owned policy it overrides is per stage, so lowering the effort for writing silently
    * changed photo observation.
    *
@@ -400,7 +400,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
   reasoningSpend?: ReasoningSpend | undefined;
 
   /**
-   * What the source publishes about this model's reasoning (change 27). EVERY ZERO HERE
+   * What the source publishes about this model's reasoning (MODEL-18, MODEL-21). EVERY ZERO HERE
    * MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule an unpublished price follows.
    *
    * reasons: the source carries a reasoning object for this model at all. False means the
@@ -437,7 +437,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
 
   /**
    * The provider receives the effort STRING itself, rather than a token budget OpenRouter
-   * derived from it. Nothing consumes it yet; change 29 needs it to size a budget safely.
+   * derived from it. The write and revision budgets read it for their headroom (MODEL-46).
    *
    * @generated from field: bool reasoning_native_effort = 24;
    */
@@ -445,7 +445,7 @@ export type CatalogEntry = Message<"postpilot.v1.CatalogEntry"> & {
 
   /**
    * The source offers a reasoning token budget for this model. Recorded and displayed only —
-   * this change surfaces no input for it.
+   * nothing offers an input for it.
    *
    * @generated from field: bool reasoning_max_tokens = 25;
    */
@@ -653,7 +653,7 @@ export type SetModelPurposeRequest = Message<"postpilot.v1.SetModelPurposeReques
   /**
    * true registers, false deregisters. Deregistering keeps the curated row — the operator's
    * curation returns intact on re-registration — but not the effort override, which lives
-   * on the registration itself since change 24 and goes with it.
+   * on the registration itself (MODEL-7) and goes with it.
    *
    * @generated from field: bool registered = 3;
    */
@@ -707,7 +707,7 @@ export type UpdateModelRequest = Message<"postpilot.v1.UpdateModelRequest"> & {
    * UI convention.
    *
    * Refused when the model's published `reasoning_efforts` does not contain the value, and
-   * `none` is refused when `reasoning_mandatory` (change 27). A model whose list the source
+   * `none` is refused when `reasoning_mandatory` (MODEL-21). A model whose list the source
    * does not publish still accepts all eight — absence is unknown, not "supports nothing".
    *
    * Carried here rather than on SetModelPurposeRequest because registering and setting an
@@ -801,7 +801,7 @@ export const ModelPurposeSchema: GenEnum<ModelPurpose> = /*@__PURE__*/
   enumDesc(file_postpilot_v1_model_catalog, 0);
 
 /**
- * model_catalog.proto is the OPERATOR's half of the model story (plan 18, change 20):
+ * model_catalog.proto is the OPERATOR's half of the model story (MODEL-13):
  * which of the provider's models this installation offers, and FOR WHICH PURPOSES —
  * photo-analysis, style-analysis, writing, image-generation, video-generation.
  * ProviderService is the user's half — what each stage may pick, and what they last picked.

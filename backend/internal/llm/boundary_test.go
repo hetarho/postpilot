@@ -23,7 +23,7 @@ var forbidden = []string{
 	"google.golang.org/genai",
 }
 
-// TestNothingAboveThePortImportsAnAdapter is plan 04's acceptance criterion 10: the
+// TestNothingAboveThePortImportsAnAdapter pins MODEL-1: the
 // provider abstraction is a boundary, not a preference. It asks the Go toolchain for
 // the real dependency closure rather than grepping imports, so an indirect leak
 // (context → helper → adapter) is caught too.

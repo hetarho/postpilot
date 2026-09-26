@@ -11,7 +11,7 @@
 -- last_seen_at) are only ever written from a successful upstream read. updated_at tracks
 -- the first group alone, so a refresh does not make every row look freshly curated.
 --
--- reasoning_efforts is a JSON array in one column rather than a child table (change 27). It
+-- reasoning_efforts is a JSON array in one column rather than a child table (MODEL-18). It
 -- is read whole, written whole, never joined and never queried by element; and the source's
 -- descending order is meaningful, which a set of rows would not preserve without an index
 -- column. JSON rather than a delimiter because the column's whole claim is that it holds

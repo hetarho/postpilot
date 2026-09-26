@@ -81,7 +81,7 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 // It keeps its NAME and SIGNATURE: the experiment context's ApplyWinner port, the
 // confirmStyleguide confirmation and the ApplyWinnerOutput RPC all still call exactly this.
 // What changed is where the winning analysis lands. It used to be written into a free-text
-// `styleguide` column; that column is gone (change 16), so the winner is applied the way an
+// `styleguide` column; that column is gone (VOICE-6), so the winner is applied the way an
 // analysis run applies its own result — as a published structured profile version whose
 // lexical description IS the winning analysis, with the account's manual overrides and its
 // earned rules carried onto it, mirroring analyze_handler.

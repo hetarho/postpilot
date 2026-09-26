@@ -232,7 +232,7 @@ func TestFetch_RejectsAnUnparseableBody(t *testing.T) {
 var _ modelcatalog.Upstream = (*openrouter.Client)(nil)
 
 // The reasoning fixture uses the real shapes measured against the live endpoint on
-// 2026-09-05 (change 27): a model that publishes a list, one mandatory model, one that
+// 2026-09-05 (MODEL-18): a model that publishes a list, one mandatory model, one that
 // reasons but publishes no list, and one carrying no `reasoning` object at all.
 const reasoningDocument = `{"data":[
   {"id":"deepseek/deepseek-v4-pro-0813","name":"DeepSeek: V4 Pro","created":1788000001,

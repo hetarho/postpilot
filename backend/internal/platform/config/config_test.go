@@ -154,7 +154,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ObserveBatchSize != 4 {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
 	}
-	// Four photos side by side is the ceiling a 360 px phone can still show (TEMPLATE-38).
+	// Four photos side by side is the ceiling a 360 px phone can still show (TMPL-38).
 	if cfg.Template.PhotoRowMax != 4 {
 		t.Errorf("Template.PhotoRowMax = %d, want 4", cfg.Template.PhotoRowMax)
 	}
@@ -169,8 +169,8 @@ func TestLoadDefaults(t *testing.T) {
 	if got, want := cfg.LLMCompletionBudget.Observation(), 4*observeBudgetPerPhoto; got != want {
 		t.Errorf("observation budget = %d, want %d for a batch of 4", got, want)
 	}
-	// Job 23 raised the effective write budget to 8,192 to stop write-stage truncation. A
-	// post that requests no length must still be sent exactly that.
+	// The effective write budget was raised to 8,192 to stop write-stage truncation (GEN-22).
+	// A post that requests no length must still be sent exactly that.
 	if got := cfg.LLMCompletionBudget.Write(nil, false); got != 8192 {
 		t.Errorf("no-target write budget = %d, want the configured fallback 8192", got)
 	}
@@ -425,7 +425,7 @@ func TestLoadObserveBatchSize(t *testing.T) {
 	}
 }
 
-// TestRequireObjectStorage is job 03 A10: the server must refuse to start without a
+// TestRequireObjectStorage: the server must refuse to start without a
 // bucket, naming what is missing.
 func TestRequireObjectStorage(t *testing.T) {
 	full := func() *Config {

@@ -114,7 +114,7 @@ type SpacingTokens struct {
 	UnderlineMark Underline `json:"underline_mark"`
 }
 
-// One copy style (CDS-22..26). Plate is empty for an unplated style, AnchorAlt is
+// One copy style (CDS-25, CDS-80). Plate is empty for an unplated style, AnchorAlt is
 // empty where CDS states no alternative anchor for it, and Stroke and Shadow name
 // a spacing/shadow token rather than repeating its number.
 type StyleRule struct {
@@ -153,10 +153,10 @@ func (s StyleRule) Role() TypeRole { return Type[s.Type] }
 // face to the string that finds it.
 func FontFamily(face string) string { return Faces[face] }
 
-// One category preset (CDS-50). Its values live in configuration, never in code
+// One category preset. Its values live in configuration, never in code
 // (CDS-51), and every preset shares the badge, the two cards and normalisation.
 type Preset struct {
-	// The category the hook card shows on its chip (CDS-28, CDS-50). Korean and
+	// The category the hook card shows on its chip. Korean and
 	// code-owned, like the disclosure phrases.
 	Label     string         `json:"label"`
 	Hook      string         `json:"hook"`

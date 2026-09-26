@@ -15,9 +15,9 @@ import (
 // only for an explicitly accepted change to that fixed prompt; ordinary template work must
 // remain byte-identical to this baseline.
 //
-// Change 25 regenerated them exactly once: the fixed output-language line named 용도 /
-// "purpose", a concept that no longer exists. Every byte-identity rule below is stated
-// relative to that new baseline, the way plan 16's grounding constraint did.
+// The 용도 → 템플릿 rename regenerated them exactly once: the fixed output-language line named
+// 용도 / "purpose", a concept that no longer exists. Every byte-identity rule below is stated
+// relative to that new baseline, the way the grounding constraint (GUIDE-16) did.
 func loadGolden(t *testing.T, name string) (system, user string) {
 	t.Helper()
 	raw, err := os.ReadFile("testdata/" + name)
@@ -398,7 +398,7 @@ func TestTheEnqueuePassesTheFrozenAttachmentOrderToTheRender(t *testing.T) {
 
 // The post's answers ride the same seam as its attachment order, and for the same reason: the
 // freeze has to see exactly what the author had typed when the run started, so the render is
-// handed them once and no handler ever reads one (TEMPLATE-45, POST-62).
+// handed them once and no handler ever reads one (TMPL-45, POST-62).
 func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {
 	ctx := context.Background()
 	briefs := &fakeTemplateBriefs{brief: *testBrief()}

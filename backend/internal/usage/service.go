@@ -711,7 +711,7 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 //
 // A successful call is always recorded, even when the provider reported nothing: the row
 // is the evidence the call happened. A FAILED call is recorded only when it reported
-// usage — job 23 preserves that, and those tokens were bought — because a call that never
+// usage (QUOTA-21), since those tokens were bought — because a call that never
 // reached a model has nothing to account for.
 // `stage` is the stage the CALL named for itself, in the llm boundary's stable form. It is
 // preferred over StageFor because it is a fact rather than an inference: StageFor could only

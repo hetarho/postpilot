@@ -3352,7 +3352,8 @@ type ClipEditPlan struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	DurationMs int32                  `protobuf:"varint,1,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
 	Cuts       []*ClipEditCut         `protobuf:"bytes,2,rep,name=cuts,proto3" json:"cuts,omitempty"`
-	// The opening card's one sentence (CDS-28). Empty renders no hook card.
+	// A legacy plan's opening sentence, drawn as the first line of its intro
+	// block (CDS-70). Empty draws no intro block.
 	Hook              string                  `protobuf:"bytes,3,opt,name=hook,proto3" json:"hook,omitempty"`
 	NativeComposition bool                    `protobuf:"varint,4,opt,name=native_composition,json=nativeComposition,proto3" json:"native_composition,omitempty"`
 	Elements          []*ClipEditableText     `protobuf:"bytes,5,rep,name=elements,proto3" json:"elements,omitempty"`

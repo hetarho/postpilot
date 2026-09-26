@@ -92,7 +92,7 @@ type SourceModel struct {
 	//
 	// Per stage rather than per model because the policy it overrides is per stage: one
 	// value for the whole model erased that distinction, so lowering the effort for writing
-	// silently changed photo observation (change 24).
+	// silently changed photo observation (MODEL-7).
 	Reasoning map[string]ReasoningEffort
 	// ReasoningEfforts is the model's recorded native vocabulary. NativeEffort distinguishes
 	// models whose provider consumes the effort string directly and therefore need completion
@@ -247,7 +247,7 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 	// Exactly one, not at least one: the curated catalog has no provider dimension — every
 	// row is served by the registered endpoint — so a second entry would have models
 	// attributed to it that nobody chose. Adding a genuinely different vendor is a design
-	// change (plan 18 non-goals), and this is where it announces itself.
+	// change (MODEL-10), and this is where it announces itself.
 	if len(file.Providers) != 1 {
 		return nil, fmt.Errorf("exactly one provider must be declared, found %d", len(file.Providers))
 	}

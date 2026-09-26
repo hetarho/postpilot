@@ -208,7 +208,7 @@ type ModelInfo struct {
 	// unaffordable start whatever the client rendered — and unlike the plan floor it
 	// replaces, it is temporary: the same model is affordable again after a renewal.
 	Affordable bool `protobuf:"varint,14,opt,name=affordable,proto3" json:"affordable,omitempty"`
-	// The stages this model is registered to serve (change 20): each stage's picker lists
+	// The stages this model is registered to serve (MODEL-14): each stage's picker lists
 	// exactly its members — the client never re-derives stage fitness from capability flags.
 	Stages []Stage `protobuf:"varint,15,rep,packed,name=stages,proto3,enum=postpilot.v1.Stage" json:"stages,omitempty"`
 	// The operator's grade for this model AT EACH STAGE, for the stages that have one

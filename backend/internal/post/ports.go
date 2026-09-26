@@ -90,7 +90,7 @@ type ExperimentContentPurger interface {
 }
 
 // GuidelineCandidateDetacher drops the post link from any guideline candidate that named a
-// post being deleted (change 26). Only the link goes: a candidate is a receipt for something
+// post being deleted (GUIDE-13). Only the link goes: a candidate is a receipt for something
 // the user wrote, and nothing references its origin, so the text stays reviewable without it.
 type GuidelineCandidateDetacher interface {
 	DetachPost(ctx context.Context, userID, postSlug string) error
@@ -137,7 +137,7 @@ type DraftWriter interface {
 	// finalization, and it is allowed in every status.
 	//
 	// It also seeds the post's two generation options from the template being assigned
-	// (TEMPLATE-48), in the same statement: a nil member of seed is a number that template has
+	// (TMPL-48), in the same statement: a nil member of seed is a number that template has
 	// no opinion about and leaves the post's own value alone.
 	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error)
 	// AssignField sets or clears (nil or "") the post's 분야. Like the template it writes that
@@ -146,7 +146,7 @@ type DraftWriter interface {
 	AssignField(ctx context.Context, slug, userID string, field *string, updatedAt time.Time) (bool, error)
 }
 
-// TemplateAnswers is the post's answers to its template's data fields (TEMPLATE-43).
+// TemplateAnswers is the post's answers to its template's data fields (TMPL-43).
 type TemplateAnswers interface {
 	// UpsertTemplateAnswers writes one row per answer in ONE transaction, keyed by label.
 	// It never deletes: clearing an answer is an empty Text, which the enqueue reads the way

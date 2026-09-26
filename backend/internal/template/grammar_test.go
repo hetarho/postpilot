@@ -8,7 +8,7 @@ import (
 )
 
 // The fixture shape is shared with the frontend parser. Both suites read the SAME file, so a
-// grammar rule cannot land on one side only (spec/legacy/tech/post-template-grammar.md §4).
+// grammar rule cannot land on one side only (TMPL-20).
 type fixtureNode struct {
 	T        string        `json:"t"`
 	Raw      string        `json:"raw"`
@@ -106,7 +106,7 @@ func TestParseAgainstSharedFixtures(t *testing.T) {
 			assertNodes(t, title, tc.TitleNodes, "titleNodes")
 			assertNodes(t, nodes, tc.Nodes, "")
 			// Every accepted area must serialize back byte-for-byte: this is the round-trip
-			// guarantee the builder's 원문 toggle rests on (change 25 AC8).
+			// guarantee the builder's 원문 toggle rests on (TMPL-19).
 			if round := Serialize(title); round != tc.TitleArea {
 				t.Fatalf("round trip changed the title area:\n got %q\nwant %q", round, tc.TitleArea)
 			}

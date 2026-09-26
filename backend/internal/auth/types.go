@@ -76,7 +76,7 @@ type Session struct {
 }
 
 // Expired reports whether the session is past its fixed lifetime. Sessions do not
-// slide: the PRD fixes the window at 30 days from login (plan 01, Non-goals).
+// slide: the PRD fixes the window at 30 days from login (AUTH-11).
 func (s Session) Expired(now time.Time) bool { return !now.Before(s.ExpiresAt) }
 
 // LinkPurpose is the closed set enforced again by auth_links' CHECK constraint.

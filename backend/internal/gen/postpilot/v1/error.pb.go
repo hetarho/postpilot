@@ -779,7 +779,7 @@ func (FailureReason) EnumDescriptor() ([]byte, []int) {
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
 // identifier; params contains only display-safe values allowlisted by that reason.
 //
-// Plan enforcement (plan 17) rides this same detail rather than a message string:
+// Plan enforcement (QUOTA-18, AUTH-18) rides this same detail rather than a message string:
 //   - resource_exhausted · `INSUFFICIENT_CREDITS`
 //     params: required, balance (integer credits), renews_at (RFC3339)
 //   - permission_denied  · `MASTER_ONLY`   params: none

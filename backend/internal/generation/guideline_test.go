@@ -83,8 +83,8 @@ func TestGuidelinesFollowTheTemplateSectionWhenThePostHasOne(t *testing.T) {
 	if templateAt < 0 || guidelineAt < templateAt {
 		t.Fatalf("guideline section at %d, template section at %d", guidelineAt, templateAt)
 	}
-	// A6: the template section's bytes are identical with and without guidelines, so plan 11's
-	// acceptance criteria keep holding.
+	// The template section's bytes are identical with and without guidelines, so the template
+	// section's own guarantees keep holding.
 	if got := strings.TrimPrefix(both, withTemplate); !strings.HasPrefix(got, "\n\n[작문 지침]") {
 		t.Fatalf("appended section = %q", got)
 	}
@@ -165,11 +165,12 @@ func TestGroundingConstraintIsInEveryWriteAndRevisePrompt(t *testing.T) {
 	if !strings.Contains(revise, koreanGroundingReviseScope) || strings.Contains(revise, koreanGroundingWriteScope) {
 		t.Error("the revise prompt carries the wrong grounding scope clause")
 	}
-	// [I3]: observation stays a photo-facts pass and gains nothing from this plan.
+	// [I3]: observation stays a photo-facts pass and gains nothing from the grounding constraint.
 	if strings.Contains(ObservePrompt, koreanGrounding) {
 		t.Fatal("the observe prompt gained the grounding constraint")
 	}
-	// It is grounding only: the stylistic floor stays change 10's section, not restated here.
+	// It is grounding only: the stylistic floor stays the naturalness baseline (GEN-17), not
+	// restated here.
 	if strings.Contains(NaturalnessBaseline, koreanGrounding) || strings.Contains(koreanGrounding, "기준선") {
 		t.Fatal("the grounding line and the naturalness baseline overlap")
 	}

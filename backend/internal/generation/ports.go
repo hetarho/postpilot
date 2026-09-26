@@ -41,7 +41,7 @@ type RuleWriter interface {
 }
 
 // VersionSampleWriter records what a voice profile version PRODUCED, so a version can be read
-// before it is adopted (change 16).
+// before it is adopted (VOICE-29).
 //
 // It is declared here, and called from here, because of the direction of the dependency: the
 // machine baseline belongs to the post context and the profile version belongs to the voice
@@ -109,7 +109,7 @@ type MemoriesForPrompt interface {
 }
 
 // GuidelineCandidates records a completed revision's instruction so the correction accrues
-// instead of vanishing with the tab (change 26). Declared here beside GuidelinesForPrompt
+// instead of vanishing with the tab (GUIDE-7). Declared here beside GuidelinesForPrompt
 // for the same reason: the generation context must not learn the guideline context's tables.
 //
 // A candidate is the user's own sentence, recorded verbatim — nothing on either side of this

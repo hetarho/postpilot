@@ -626,7 +626,7 @@ type CatalogEntry struct {
 	// The reasoning override for the PURPOSE this listing was for, or "" for none. "unset"
 	// deliberately omits the wire key and keeps the provider's own behavior.
 	//
-	// Purpose-scoped since change 24: it used to be one value for the whole model while the
+	// Purpose-scoped (MODEL-7): it used to be one value for the whole model while the
 	// code-owned policy it overrides is per stage, so lowering the effort for writing silently
 	// changed photo observation.
 	ReasoningEffort string `protobuf:"bytes,14,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"`
@@ -652,7 +652,7 @@ type CatalogEntry struct {
 	// values it accepts (the fields below), so this is corroboration rather than the only
 	// signal — a declared list is what the model takes, and this is what it did.
 	ReasoningSpend *ReasoningSpend `protobuf:"bytes,19,opt,name=reasoning_spend,json=reasoningSpend,proto3,oneof" json:"reasoning_spend,omitempty"`
-	// What the source publishes about this model's reasoning (change 27). EVERY ZERO HERE
+	// What the source publishes about this model's reasoning (MODEL-18, MODEL-21). EVERY ZERO HERE
 	// MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule an unpublished price follows.
 	//
 	// reasons: the source carries a reasoning object for this model at all. False means the
@@ -669,10 +669,10 @@ type CatalogEntry struct {
 	// Reasoning cannot be turned off: `none` must never be offered or sent.
 	ReasoningMandatory bool `protobuf:"varint,23,opt,name=reasoning_mandatory,json=reasoningMandatory,proto3" json:"reasoning_mandatory,omitempty"`
 	// The provider receives the effort STRING itself, rather than a token budget OpenRouter
-	// derived from it. Nothing consumes it yet; change 29 needs it to size a budget safely.
+	// derived from it. The write and revision budgets read it for their headroom (MODEL-46).
 	ReasoningNativeEffort bool `protobuf:"varint,24,opt,name=reasoning_native_effort,json=reasoningNativeEffort,proto3" json:"reasoning_native_effort,omitempty"`
 	// The source offers a reasoning token budget for this model. Recorded and displayed only —
-	// this change surfaces no input for it.
+	// nothing offers an input for it.
 	ReasoningMaxTokens bool `protobuf:"varint,25,opt,name=reasoning_max_tokens,json=reasoningMaxTokens,proto3" json:"reasoning_max_tokens,omitempty"`
 	// reasoning_effort above is no longer in this model's published list — a revised model, a
 	// replaced slug. A WARNING for the row and nothing more: the value is kept and still sent,
@@ -1195,7 +1195,7 @@ type SetModelPurposeRequest struct {
 	Purpose string `protobuf:"bytes,2,opt,name=purpose,proto3" json:"purpose,omitempty"`
 	// true registers, false deregisters. Deregistering keeps the curated row — the operator's
 	// curation returns intact on re-registration — but not the effort override, which lives
-	// on the registration itself since change 24 and goes with it.
+	// on the registration itself (MODEL-7) and goes with it.
 	Registered    bool `protobuf:"varint,3,opt,name=registered,proto3" json:"registered,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1307,7 +1307,7 @@ type UpdateModelRequest struct {
 	// UI convention.
 	//
 	// Refused when the model's published `reasoning_efforts` does not contain the value, and
-	// `none` is refused when `reasoning_mandatory` (change 27). A model whose list the source
+	// `none` is refused when `reasoning_mandatory` (MODEL-21). A model whose list the source
 	// does not publish still accepts all eight — absence is unknown, not "supports nothing".
 	//
 	// Carried here rather than on SetModelPurposeRequest because registering and setting an

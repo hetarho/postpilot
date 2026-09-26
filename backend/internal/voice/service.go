@@ -435,7 +435,7 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 }
 
 // RecordVersionSample copies the raw AI output of a post into the voice's CURRENT head
-// version, so that version can be read before it is adopted (change 16). It is called by the
+// version, so that version can be read before it is adopted (VOICE-29). It is called by the
 // generation context after a machine baseline is written — the only context that depends on
 // both post and voice, and therefore the only one allowed to join them.
 //
@@ -443,12 +443,12 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 // snapshot rather than adding a second one. A voice with no published version yet records
 // nothing instead of inventing version 0, and a deleted voice records nothing at all.
 //
-// The version is the head AT COMPLETION, which is what change 16 A1 asks for and not the same
-// thing as the version the prompt was built from: a profile published while the provider was
-// working moves the head, and this output is then filed under that newer version. The window is
-// the length of one provider call. Closing it would mean freezing the profile version into the
-// generation payload and carrying it back out through the write path, which is a contract this
-// change did not open.
+// The version is the head AT COMPLETION, which is not the same thing as the version the
+// prompt was built from: a profile published while the provider was working moves the head,
+// and this output is then filed under that newer version. The window is the length of one
+// provider call. Closing it would mean freezing the profile version into the generation
+// payload and carrying it back out through the write path, which is a contract not opened
+// here.
 //
 // `content` is opaque text. Nothing here parses it.
 func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, content string) error {

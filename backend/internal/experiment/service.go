@@ -622,7 +622,7 @@ func (s *Service) resolveForStage(stage Stage, ref ModelRef) (Model, error) {
 		return Model{}, ErrModelRequired
 	}
 	model, ok := s.catalog.Resolve(ref)
-	// Membership in the stage's template (change 20) replaced the observe-needs-vision check:
+	// Membership in the stage's purpose (MODEL-16) replaced the observe-needs-vision check:
 	// the registration gate already required vision, and a deregistered model must be as
 	// unusable for an experiment as it is in the picker.
 	if !ok || !model.Enabled || !slices.Contains(model.Stages, string(stage)) {

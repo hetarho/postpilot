@@ -72,7 +72,7 @@ const catalogFetchTimeout = 15 * time.Second
 // observation, a style analysis) passes its own through LLMCompletionBudget.
 //
 // It is only the DEFAULT: `LLM_MAX_TOKENS_DEFAULT` resolves it, so an installation that has
-// measured its own models can move it without a code edit (change 24).
+// measured its own models can move it without a code edit (ARCH-21).
 const llmMaxTokensDefaultFallback = "8192"
 
 // The per-stage completion budget policy. Reasoning and visible output share one budget, so
@@ -121,7 +121,7 @@ type LLMCompletionBudget struct {
 	Observe int
 	// WriteFloor is the smallest writing budget — the configured fallback, so a post that
 	// requested no length is sent exactly what every call was sent before this policy
-	// existed. Job 23 raised that to 8,192 to stop write-stage truncation, and this must
+	// existed. It was raised to 8,192 to stop write-stage truncation (GEN-22), and this must
 	// never quietly walk it back.
 	WriteFloor int
 	// WritePerChar scales the writing budget by the post's requested character count.
@@ -209,10 +209,10 @@ type TemplateCeilings struct {
 	MaxPerAccount      int
 	MaxRepeatExpansion int
 	// PhotoRowMax is the largest `count` a photo position may carry — how many photos stand
-	// side by side in one row (TEMPLATE-38). It is env because the browser mirrors it as
+	// side by side in one row (TMPL-38). It is env because the browser mirrors it as
 	// VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
 	PhotoRowMax int
-	// The data-field ceilings (TEMPLATE-43): a field's title and how many fields one body may
+	// The data-field ceilings (TMPL-43): a field's title and how many fields one body may
 	// declare. Both are mirrored in the browser — the title as a live counter, the count as the
 	// refusal the builder states — so they are env on both sides like PhotoRowMax.
 	AskLabelMaxChars int
@@ -308,7 +308,7 @@ type Config struct {
 
 	// ProvidersConfig is the path of providers.yaml — the provider connection (PRD §6.4).
 	// The file names the env var the API key is read from; it never holds a key itself, and
-	// it no longer lists models (those are curated rows, plan 18).
+	// it no longer lists models (those are curated rows, MODEL-10).
 	ProvidersConfig string
 	// CatalogTTL is how long one read of the provider's own model list is served from
 	// memory. Only the operator's curation screen reaches that list at all.
@@ -334,7 +334,7 @@ type Config struct {
 	// Template holds the template field ceilings (TEMPLATE_*), which the composition root
 	// converts into template.Ceilings.
 	Template TemplateCeilings
-	// TemplateAskValueMaxChars bounds one data-field answer's text (TEMPLATE-43). Only post
+	// TemplateAskValueMaxChars bounds one data-field answer's text (TMPL-43). Only post
 	// reads it, so it stays beside the ceilings rather than in them; the browser mirrors it as
 	// a live counter.
 	TemplateAskValueMaxChars int

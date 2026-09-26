@@ -45,7 +45,7 @@ type Service struct {
 	templates      TemplateDirectory
 	fields         FieldDirectory
 
-	// answerLabelMax and answerValueMax bound one data-field answer (TEMPLATE-43). Zero
+	// answerLabelMax and answerValueMax bound one data-field answer (TMPL-43). Zero
 	// refuses every non-empty answer, which is the safe direction for a server whose config
 	// did not supply them — the same rule the video ceilings follow.
 	answerLabelMax int
@@ -66,7 +66,7 @@ type Limits struct {
 	MaxVideos       int
 	MaxVideoBytes   int64
 	MaxVideoSeconds int
-	// AnswerLabelMax and AnswerValueMax bound one data-field answer (TEMPLATE-43).
+	// AnswerLabelMax and AnswerValueMax bound one data-field answer (TMPL-43).
 	AnswerLabelMax, AnswerValueMax int
 }
 
@@ -210,7 +210,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		}
 	}
 	if templateID != nil && targetTemplate.ID != found.TemplateID {
-		// The seeds ride on the assignment's own statement (TEMPLATE-48): a template with an
+		// The seeds ride on the assignment's own statement (TMPL-48): a template with an
 		// opinion overwrites that option, one without leaves the post's value alone, and
 		// clearing to 없음 seeds nothing at all.
 		assigned, err := s.drafts.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now())
@@ -389,7 +389,7 @@ func (s *Service) voiceRefs(ctx context.Context, userID string) (map[string]Voic
 // is refused here, before any other part of the request is applied.
 //
 // It answers with the whole ref rather than the id because the assignment SEEDS the post's
-// two generation options from it (TEMPLATE-48), and the directory it already reads is where
+// two generation options from it (TMPL-48), and the directory it already reads is where
 // those numbers are: looking them up again afterwards would be a second read of a row that
 // could have changed in between.
 func (s *Service) assignableTemplate(ctx context.Context, userID string, templateID *string) (TemplateRef, error) {
@@ -482,7 +482,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID s
 			TemplateID: assigned.ID,
 			Field:      field,
 			// Seeded by the template this post is created with, exactly as a later assignment
-			// seeds it (TEMPLATE-48). A template with no opinion leaves both unset, which is
+			// seeds it (TMPL-48). A template with no opinion leaves both unset, which is
 			// natural length and the default count.
 			TargetLength:   assigned.TargetLength,
 			TagCount:       seededTagCount(assigned.TagCount),
@@ -897,7 +897,7 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	// The confirmed AI title becomes the post's title (spec/legacy/policy/posts.md). An untitled
+	// The confirmed AI title becomes the post's title (POST-17). An untitled
 	// generation leaves the user's working title in place rather than blanking the list row, and
 	// the slug is not re-minted: a post keeps the URL it was created with.
 	title := strings.TrimSpace(found.Content.Title)

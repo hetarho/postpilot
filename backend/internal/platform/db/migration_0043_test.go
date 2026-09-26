@@ -11,7 +11,7 @@ import (
 
 // 0043 gives a template a target length and a tag count without inventing either: a template
 // written before this migration had no opinion about them, and NULL is exactly how that
-// reads afterwards (TEMPLATE-47). A backfilled 1000 would make every existing template start
+// reads afterwards (TMPL-47). A backfilled 1000 would make every existing template start
 // overwriting the posts it is assigned to.
 func TestMigration0043LeavesExistingTemplatesWithoutNumbers(t *testing.T) {
 	handle := openTemp(t)

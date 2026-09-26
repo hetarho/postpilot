@@ -120,7 +120,7 @@ func (s *Service) Lookup(modelID string) (llm.SourceModel, bool) {
 // network hiccuped.
 // `purpose` is the tab being listed: it selects which effort each entry reports and which
 // stage's spend signal is attached, so the evidence and the control the operator sees belong
-// to the tab they are looking at (change 24). An empty purpose reports neither.
+// to the tab they are looking at (MODEL-7). An empty purpose reports neither.
 func (s *Service) Browse(ctx context.Context, refresh bool, purpose Purpose) (Browse, error) {
 	var (
 		snapshot   Snapshot
@@ -279,7 +279,7 @@ func (s *Service) SetPurpose(ctx context.Context, modelID string, purpose Purpos
 	}
 	if offered {
 		// The reasoning capability is part of the same upstream snapshot as the flags and the
-		// pricing, so a register refreshes it exactly as it refreshes those (change 27).
+		// pricing, so a register refreshes it exactly as it refreshes those (MODEL-20).
 		row = rowFromCandidate(existing, hasRow, candidate, now)
 	}
 	if !purpose.EligibleFor(row) {
@@ -369,7 +369,7 @@ func stagesOf(row Model) []string {
 //
 // The purpose is required and must be one the model is REGISTERED to: an effort on a purpose
 // the model serves to nobody would be a stored decision with no effect, and the control only
-// appears once registered. That was a UI rule; it is a server rule now (change 24).
+// appears once registered. That was a UI rule; it is a server rule now.
 func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Model, error) {
 	if _, err := ParsePurpose(string(patch.Purpose)); err != nil {
 		return Model{}, err
@@ -386,7 +386,7 @@ func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Mode
 			return Model{}, err
 		}
 	}
-	// Then the model rule (change 27): an effort outside a model's published list, or `none`
+	// Then the model rule (MODEL-21): an effort outside a model's published list, or `none`
 	// on a model that cannot turn reasoning off, is refused. A model whose list the source
 	// does not publish keeps accepting all eight — absence is unknown, not "supports
 	// nothing". The frontend's option filtering is an affordance; this is the contract.

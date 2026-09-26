@@ -169,7 +169,7 @@ type Profile struct {
 	VoiceID string
 	Voice   Voice
 	// Rules is the refine step's "save as rule" text. It is no longer editable and no longer
-	// reaches any RPC (change 16); the only writer is AppendRule and the only reader is the
+	// reaches any RPC (VOICE-6); the only writer is AppendRule and the only reader is the
 	// prompt projection.
 	Rules       string
 	UpdatedAt   time.Time
@@ -308,13 +308,13 @@ type ProfileVersion struct {
 	RestoredFromVersion int64
 	CreatedAt           time.Time
 	// HasSample says whether this version can be PREVIEWED, without the list carrying every
-	// post body the voice ever produced (change 16). The snapshot itself is fetched per
+	// post body the voice ever produced (VOICE-29). The snapshot itself is fetched per
 	// version, on open.
 	HasSample bool
 }
 
 // VersionSample is a copy of the raw AI output of the last post generated under one profile
-// version — the material that lets a version be read before it is adopted (change 16).
+// version — the material that lets a version be read before it is adopted (VOICE-29).
 //
 // Content is OPAQUE TEXT here and everywhere inside this context. Voice records what a profile
 // version produced; it does not learn the shape of a post's content, so nothing in this package

@@ -46,7 +46,7 @@ func TestMigration0037WidensTheStageCheckWithoutLosingAssetsOrIndexes(t *testing
 		t.Fatal(err)
 	}
 
-	// The stage PUB-13 r4 added is storable, and the ones around it still are.
+	// The stage migration 0037 added is storable, and the ones around it still are.
 	for _, stage := range []string{"uploading_photos", "filling_settings", "committing"} {
 		if _, err := d.Writer.Exec("UPDATE publish_jobs SET stage=? WHERE id='job-1'", stage); err != nil {
 			t.Fatalf("stage %q was refused: %v", stage, err)

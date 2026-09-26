@@ -132,7 +132,7 @@ export type ModelInfo = Message<"postpilot.v1.ModelInfo"> & {
   affordable: boolean;
 
   /**
-   * The stages this model is registered to serve (change 20): each stage's picker lists
+   * The stages this model is registered to serve (MODEL-14): each stage's picker lists
    * exactly its members — the client never re-derives stage fitness from capability flags.
    *
    * @generated from field: repeated postpilot.v1.Stage stages = 15;

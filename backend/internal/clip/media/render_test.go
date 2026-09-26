@@ -78,8 +78,8 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 	if _, values, err := copyCandidates("same\nsame", 2); err != nil || len(values) != 1 {
 		t.Fatalf("duplicate line measurement: %v %v", values, err)
 	}
-	// 메모 and 형광펜 are exactly one line (CDS-24, CDS-26): a second one is
-	// refused outright rather than wrapped away.
+	// A one-line limit refuses a second line outright rather than wrapping it
+	// away.
 	if _, _, err := copyCandidates("one\ntwo", 1); !errors.Is(err, clip.ErrCopyTooLong) {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 				t.Fatalf("%s/%s is not set in its own face: want %s", ratio, style, want)
 			}
 			// A plated style paints its plate and no stroke; an unplated one the
-			// reverse, with the drop shadow (CDS-23..26).
+			// reverse, with the drop shadow (CDS-25).
 			plate := strings.Contains(svg, `fill="`+design.Color[rule.Plate].Hex+`" fill-opacity=`)
 			if (rule.Plate != "") != plate {
 				t.Fatalf("%s/%s plate=%v", ratio, style, plate)

@@ -265,14 +265,14 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 }
 
 // AdmittedSection is one section a project's own answers admit, with the number
-// of instances those answers give it (CLIP-103).
+// of instances those answers give it.
 type AdmittedSection struct {
 	ID, Scope, Repeat string
 	Instances         int
 }
 
 // AdmittedSections is every section a project's answers actually admit, in
-// document order (CLIP-103). A section repeating a declared group takes one
+// document order. A section repeating a declared group takes one
 // instance per item the answers hold, so a group the answers left empty admits
 // none and drops out; a section repeating `scenes` is bound to no item and
 // takes the grammar's own cut ceiling; every other section takes one. A blank

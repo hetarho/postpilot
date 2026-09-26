@@ -309,10 +309,10 @@ func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 	}
 }
 
-// The number of section instances a project admits comes from its own answers
-// (CLIP-103): a repeated group gives one per item it holds, an unanswered group
-// gives none however much prose describes it, a section bound to no group gives
-// one, and `scenes` repetition is bound to no item at all.
+// The number of section instances a project admits comes from its own answers:
+// a repeated group gives one per item it holds, an unanswered group gives none
+// however much prose describes it, a section bound to no group gives one, and
+// `scenes` repetition is bound to no item at all.
 func TestAdmittedSectionsCountTheAnswersNotTheProse(t *testing.T) {
 	l := clip.DefaultCompositionLimits()
 	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="메뉴" required="true"/></group><group id="extra"><field id="note" label="메모"/></group><guide>두 묶음을 모두 길게 설명한다.</guide><scene id="opening" scope="scene"/><repeat for="menu"><scene id="dish" scope="item"/></repeat><repeat for="extra"><scene id="note" scope="item"/></repeat><repeat for="scenes"><scene id="loose" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`

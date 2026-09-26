@@ -82,9 +82,9 @@ func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int, limits compos
 }
 
 // admittedSections states the sections this project's own answers admit, so the
-// writer's bound follows the answers rather than the template's authored prose
-// (CLIP-103). A section the answers leave empty is absent, not zeroed: there is
-// nothing for the writer to describe there.
+// writer's bound follows the answers rather than the template's authored prose.
+// A section the answers leave empty is absent, not zeroed: there is nothing for
+// the writer to describe there.
 func admittedSections(in clip.PlanningInput, limits composition.Limits) []map[string]any {
 	out := []map[string]any{}
 	doc, problem := composition.ReadStored(in.Composition.Snapshot.Body, limits)

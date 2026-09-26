@@ -60,7 +60,7 @@ func (h *Handler) UpdateTemplate(ctx context.Context, req *connect.Request[postp
 	// Presence is the edit unit: a field the request did not carry is never named by any
 	// statement, so two fields edited from two tabs cannot overwrite each other.
 	//
-	// The two generation numbers are the exception (TEMPLATE-8): they travel as one pair that
+	// The two generation numbers are the exception (TMPL-8): they travel as one pair that
 	// is always written, an absent member meaning "no opinion" rather than "not part of this
 	// edit", because the template screen holds both and sends both on every save.
 	patch := template.Patch{

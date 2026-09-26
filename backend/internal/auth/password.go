@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// argon2id cost parameters (plan 01). They are encoded into every hash, so raising
+// argon2id cost parameters (AUTH-6). They are encoded into every hash, so raising
 // them later only affects newly written hashes — existing ones keep verifying against
 // the parameters they were created with, with no schema change and no forced reset.
 const (

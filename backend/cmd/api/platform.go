@@ -60,7 +60,7 @@ func (p *platform) load(ctx context.Context) error {
 	}
 
 	// The registry is loaded after the database because its models are curated rows now,
-	// not yaml entries (plan 18). What the yaml still decides — how to reach the provider —
+	// not yaml entries (MODEL-10). What the yaml still decides — how to reach the provider —
 	// keeps the same posture as a migration: a file that does not validate must not serve,
 	// and this still runs before the listener exists, so the deploy's /health gate rolls
 	// back. A missing API key is NOT that: the models come up disabled instead.

@@ -195,7 +195,7 @@ func (h *voiceHarness) addSample(t *testing.T, user, voiceID, id, label, body st
 
 func longSample(char string) string { return strings.Repeat(char, voice.SampleMinChars) }
 
-// --- directory (plan 10 A2–A6) ---
+// --- directory (VOICE-4, VOICE-10..VOICE-14) ---
 
 func TestBootstrapIsIdempotentAndRepairsAMissingDefault(t *testing.T) {
 	h := newVoiceHarness(t)
@@ -396,7 +396,7 @@ func TestDeleteRefusesVoiceWithPublishableWork(t *testing.T) {
 	}
 }
 
-// --- isolation (plan 10 A10, A11, A15) ---
+// --- isolation (VOICE-3, VOICE-15) ---
 
 func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	h := newVoiceHarness(t)
@@ -481,7 +481,7 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	}
 }
 
-// --- samples and analysis (plan 03, now per voice) ---
+// --- samples and analysis (VOICE-20..VOICE-25), per voice ---
 
 func TestAddSampleValidatesBeforeWritingAndReturnsActiveJob(t *testing.T) {
 	h := newVoiceHarness(t)
@@ -564,7 +564,7 @@ func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing
 		t.Fatal(err)
 	}
 	// It is applied as a PUBLISHED STRUCTURED VERSION now, whose lexical description is the
-	// winning analysis (change 16). The "save as rule" text is untouched by it.
+	// winning analysis (VOICE-25). The "save as rule" text is untouched by it.
 	profile, err = h.store.GetProfile(context.Background(), "alice", alice)
 	if err != nil || profile.Structured.Version == 0 || profile.Structured.Lexical.Description.Value != first || profile.Rules != "hand rule" {
 		t.Fatalf("winner apply did not publish a structured version: %+v err=%v", profile, err)
@@ -706,7 +706,7 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 	}
 	profile, _ = h.store.GetProfile(context.Background(), "alice", alice)
 	// The analysis text lands in the published structured version's lexical description, once
-	// (change 16); the "save as rule" text is never touched by an analysis.
+	// (VOICE-25); the "save as rule" text is never touched by an analysis.
 	if profile.Structured.Lexical.Description.Value != h.models.response || profile.Rules != "keep this rule" || len(progress) != 2 {
 		t.Fatalf("successful analysis = profile=%+v progress=%+v", profile, progress)
 	}
@@ -715,7 +715,7 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 	}
 }
 
-// policy/providers.md requires analyze to send no reasoning effort. That rule lives in one
+// MODEL-9 and GEN-22 require analyze to send no reasoning effort. That rule lives in one
 // place only — the absence of a stage value on the request — so it is asserted against the
 // request the provider receives rather than against a config field.
 func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {

@@ -38,9 +38,9 @@ func conformant() design.Manifest {
 	return m
 }
 
-// The hook card over the first cut: its plate, its category chip and its two
-// lines, none of which carries a copy style — the design system typesets them
-// itself (CDS-28).
+// A legacy plan's hook card over the first cut: its plate, its category chip and
+// its two lines, none of which carries a copy style — the design system
+// typesets them itself.
 func card() design.Manifest {
 	m := design.Manifest{{
 		Cut: 0, Kind: "card", Text: "hook", Region: design.Bounds{X: 144, Y: 640, Width: 792, Height: 300},
@@ -221,7 +221,7 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			return append(m, c...)
 		}},
 		// A card covers the footage, so nothing of another layer may show under
-		// it: not a caption (CDS-28's "no copy under it") and not a chip.
+		// it: not a caption and not a chip.
 		"copy under a card": {design.ViolationOverlap, func(m design.Manifest) design.Manifest {
 			c := card()
 			c[0].Region = m[1].Region
@@ -251,10 +251,9 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 	}
 }
 
-// CDS-40's run rule asks a fourth consecutive use to alternate between 깔끔하게
-// and 메모. A template that approved only one of the two gave the composer no
-// alternate, so the run is the owner's choice and the verifier lets it through;
-// with both approved, or with nothing said, the run is still a defect.
+// No run rule limits how often one caption style repeats: the narration names
+// each caption's style from the project's allowed set (CDS-66, CLIP-142), so six
+// consecutive uses of one style verify.
 func TestCaptionHasNoFrequencyLimit(t *testing.T) {
 	m := conformant()
 	run := design.Manifest{m[0]}

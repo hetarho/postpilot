@@ -54,15 +54,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T411 | Backend, proto and build docs cite current spec decisions instead of deleted docs and IDs | ARCH | T410 | todo |
-| T412 | Frontend, styles and lint scripts cite current spec decisions instead of deleted docs and IDs | ARCH THEME | T407 | todo |
+| T412 | Frontend, styles and lint scripts cite current spec decisions instead of deleted docs and IDs | ARCH THEME | T407 | doing@260926.hc |
 
 ## next
-- implement-task T411; T412 is unblocked
+- implement-task T412 is in progress
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
-- Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank
+- Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result)
 
 ## log
+- 260926 T411 done (hc): backend, proto and RENDER.md cite current decisions: 13 legacy doc paths → TMPL-17..22/TMPL-2, POST-17, MODEL-9+GEN-22; 90 retired CDS/CLIP/PUB ids → current ids or dropped (TestPresetsMatchCDS50 → TestCategoryPresetsKeepTheirValues); ~180 job/plan/change refs → current ids; 74 TEMPLATE-n/BILLING-n → TMPL-n/BILL-n; RENDER.md draws the intro/outro regions (CDS-70); comment-only, migrations untouched; the task result lists clip code still implementing retired decisions; BE gates green, gen:proto and gen:sql clean
+- 260926 T411 T412 claimed (hc)
 - 260926 T410 done (hc): no phrase batch, Naver search client or phrase config remain: internal/naversearch, quality batch/phrases/stopwords, the PhraseLists/BlogSearch ports, Field.Query, the phrase config and env keys, and the devseed/seed phrase list are deleted; migration 0089 drops field_phrase_lists (Down restores 0077's DDL empty); quality/boundary_test pins QUAL-47 over every module package (migrations aside) and drops the guideline/naversearch entries; a cmd/api boot test serves /health with the retired settings set and no quality goroutine or phrase log; BE gates green, gen:sql and gen:proto clean
 - 260926 T410 claimed (hc)
 - 260926 T409 done (hc): the guideline preset is gone: ListGuidelines answers the owner's guidelines alone and ForPrompt returns their ordered texts ([]string, no forRevision) with nothing appended; UpdateGuidelinePreset and its messages are deleted and ListGuidelinesResponse reserves 2/"preset"; migration 0088 drops guideline_preset_fields and guideline_presets (Down restores 0078's DDL empty); BE/FE gates green, gen:proto and gen:sql clean
@@ -81,5 +82,3 @@
 - 260926 T405 claimed (rp)
 - 260926 T404 done (rp): new projects store intro a / outro b (DefaultDesign) while an empty id anywhere it is stored keeps rendering b/e (UnchosenDesign) and migration 0086 writes b/e into every empty project row; ① receives resolved ids, FE preset types are design.json key unions and fall back through CLIP_DEFAULT_REGION_PRESETS; BE/FE gates green, gen:sql clean
 - 260926 T404 claimed (rp)
-- 260926 T403 done (rp): intro cover/serif/frame/outline/lower/sticker and outro credits/sidebar/chips/list/stamp drawn, verified and admitted per CDS-89..99 through overlay region-v2 (shapes, textPath arcs, one rotation group, radial scrim); decoration is manifest `plate` parts named by kind, V20 checks them and each part's turn; every entry of a block samples the block's text and only its owner draws the CDS-32 scrim; a left-set block's measure stops at the safe edge; assets-v3; BE/FE gates, host region smokes, pnpm smoke:media green
-- 260926 T403 claimed (rp)

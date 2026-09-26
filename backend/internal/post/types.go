@@ -206,7 +206,7 @@ type VoiceRef struct {
 type TemplateRef struct {
 	ID   string
 	Name string
-	// The two generation numbers the template authored (TEMPLATE-47). nil is "no opinion":
+	// The two generation numbers the template authored (TMPL-47). nil is "no opinion":
 	// assigning this template then leaves the post's own option alone. They are read here
 	// only to SEED an assignment - nothing projects them onto a read model, and no prompt
 	// ever sees a template's number.
@@ -215,7 +215,7 @@ type TemplateRef struct {
 }
 
 // TemplateNumbers is what an assignment seeds. A nil member is a number the template has no
-// opinion about, which keeps the post's own value (TEMPLATE-48).
+// opinion about, which keeps the post's own value (TMPL-48).
 type TemplateNumbers struct {
 	TargetLength *int
 	TagCount     *int

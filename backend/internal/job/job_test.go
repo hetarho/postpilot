@@ -211,7 +211,7 @@ func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 	}
 }
 
-// Plan 10 A14: voice-owned work is guarded per (voice, kind), so two voices of one account
+// GEN-31: voice-owned work is guarded per (voice, kind), so two voices of one account
 // analyze concurrently while one voice still attaches to its active job; the frozen voice
 // is projected back, and any job frozen to a voice makes that voice busy for deletion.
 func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
@@ -915,7 +915,7 @@ func TestStatedCallCountsReachTheGate(t *testing.T) {
 	}
 }
 
-// Change 21: a generation that reuses every stored observation makes ZERO observation calls,
+// GEN-29: a generation that reuses every stored observation makes ZERO observation calls,
 // so the hold must not price one. The observe model stays on the job — the handler needs it to
 // tell a reuse-everything run apart from a zero-photo one — which is why the count says so.
 func TestAZeroStatedCountHoldsNoCallForThatModel(t *testing.T) {

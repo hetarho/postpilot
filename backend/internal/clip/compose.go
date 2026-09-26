@@ -156,7 +156,7 @@ func Compose(
 		return out, decision, nil
 	}
 	text, out.EndMS, decision.Fallback = fitted, end, fallback
-	// The style's own line and character limits (CDS-20, CDS-23..26) are the
+	// The style's own line and character limits (CDS-20, CDS-25) are the
 	// second thing short_text is for: a sentence past them is shortened, not
 	// regenerated — the credit ceiling counted every planned call, so there is
 	// no second call to make (CLIP-19, QUOTA-45).
@@ -258,8 +258,8 @@ func secondCopy(cut Cut, written Written, accent string, measure func(Caption) (
 // sentence that states a number. Anything over the design system's own ceiling
 // is a sentence rather than a number and is refused.
 //
-// In practice it is almost always the short alternative: CDS-39 reads a number
-// FIRST, so a sentence carrying one is classified NUM and is never the
+// In practice it is almost always the short alternative: the classifier reads a
+// number FIRST, so a sentence carrying one is classified NUM and is never the
 // description CDS-43 splits. The clause walk is what answers for a sentence the
 // classifier reads as a description anyway.
 func numericClause(text string, written Written) string {

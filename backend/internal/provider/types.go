@@ -94,7 +94,7 @@ var (
 	// ErrModelDisabled: the model exists but its provider has no key — it cannot be
 	// selected, the same rule the dropdown enforces.
 	ErrModelDisabled = errors.New("model disabled")
-	// ErrModelUnsuitable: the model is not registered to this stage's purpose (change 20).
+	// ErrModelUnsuitable: the model is not registered to this stage's purpose (MODEL-25).
 	ErrModelUnsuitable        = errors.New("model unsuitable for stage")
 	ErrDuplicateCandidates    = errors.New("comparison candidates must differ")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
@@ -175,7 +175,7 @@ func (e *SetRefusal) All() []string {
 func (e *SetRefusal) Empty() bool { return len(e.All()) == 0 }
 
 // Suitable reports whether a model can serve a stage: pure membership in the stages the
-// catalog registered it for (change 20). Capability fitness — observe needing vision — is
+// catalog registered it for (MODEL-14). Capability fitness — observe needing vision — is
 // enforced upstream at registration, so no flag is re-derived here.
 func Suitable(stage Stage, info llm.ModelInfo) bool {
 	return info.ServesStage(string(stage))

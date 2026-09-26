@@ -43,7 +43,7 @@ func TestMintSlug(t *testing.T) {
 	}
 }
 
-// TestMintSlugCollision is plan 02 AC10: same title, same day, serial suffix.
+// TestMintSlugCollision pins POST-2: same title, same day, serial suffix.
 func TestMintSlugCollision(t *testing.T) {
 	first := MintSlug("20260301", "성산", never)
 	if first != "20260301-성산" {

@@ -7,7 +7,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
-// WCAG 2.1's own reference points, then the promises CDS-16 and CDS-25 make with
+// WCAG 2.1's own reference points, then the promises CDS-44 and CDS-25 make with
 // them: they are the reason the tokens are the values they are, so they are
 // asserted rather than assumed.
 func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
@@ -42,8 +42,8 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 		t.Fatalf("nothing over a colour is that colour: %s", got)
 	}
 
-	// CDS-16: a plated element needs no sampling, because the plate over even a
-	// WHITE frame keeps its text above the 4.5:1 floor.
+	// CDS-44 samples unplated text only: a plated element needs none, because the
+	// plate over even a WHITE frame keeps its text above CDS-3's 4.5:1 floor.
 	for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 		if rule.Plate == "" {
 			continue
@@ -60,8 +60,8 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 		}
 	}
 	// CDS-25: one word may take the accent on a DARK ground, which is the only
-	// ground that leaves the accent legible. The category chip is the same
-	// pairing the other way round: ink on the accent (CDS-28).
+	// ground that leaves the accent legible. A legacy plan's category chip is the
+	// same pairing the other way round: ink on the accent.
 	for name, hex := range design.Accent {
 		if hex == "" {
 			continue
@@ -70,7 +70,7 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 		if !ok || ratio < design.Luma.ContrastMin {
 			t.Fatalf("accent %s on ink is %.2f:1", name, ratio)
 		}
-		// CDS-28 asks for #111 on the chip, not the slightly lighter text.ink:
+		// The chip takes #111, not the slightly lighter text.ink:
 		// #1A1A1A on violet is 4.40:1 and would fail V3.
 		if ink, _ := design.Contrast(design.Color["badge_ad"].Hex, hex); ink < design.Luma.ContrastMin {
 			t.Fatalf("ink on accent %s is %.2f:1", name, ink)

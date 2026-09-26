@@ -28,7 +28,7 @@ func newTemplateAwareService(t *testing.T) (*Service, *fakeStore) {
 	return svc, store
 }
 
-// Plan 11 A3: the field has three meanings, and only presence tells them apart.
+// POST-26: the field has three meanings, and only presence tells them apart.
 func TestSaveDraftAssignsClearsOrPreservesTheTemplate(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newTemplateAwareService(t)
@@ -64,7 +64,7 @@ func TestSaveDraftAssignsClearsOrPreservesTheTemplate(t *testing.T) {
 	}
 }
 
-// Plan 11 A3: an unknown or foreign id is refused and NOTHING else in the request lands —
+// POST-26: an unknown or foreign id is refused and NOTHING else in the request lands —
 // not the title, not the memo, not a create.
 func TestSaveDraftRejectsAnUnknownOrForeignTemplateAndAppliesNothingElse(t *testing.T) {
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestSaveDraftRejectsAnUnknownOrForeignTemplateAndAppliesNothingElse(t *test
 	}
 }
 
-// Plan 11 A3: a template is never learned from, so assignment costs the post nothing — unlike
+// TMPL-10: a template is never learned from, so assignment costs the post nothing — unlike
 // a voice reassignment, which withdraws the machine baseline.
 func TestAssigningATemplateTouchesNoContentOrFinalizationState(t *testing.T) {
 	ctx := context.Background()
@@ -128,7 +128,7 @@ func TestAssigningATemplateTouchesNoContentOrFinalizationState(t *testing.T) {
 	}
 }
 
-// Plan 11 A12: the list badge needs the name, and a template deleted since is projected as
+// The list badge needs the name, and a template deleted since is projected as
 // absent rather than as a dangling id with no label.
 func TestGetAndListProjectTheTemplateName(t *testing.T) {
 	ctx := context.Background()

@@ -20,7 +20,7 @@ import (
 
 // invalidCredentialsMessage is the single text every login failure returns. It is a
 // fixed string, not a formatted one, so an unknown id and a wrong password are
-// byte-identical on the wire (plan 01 AC3).
+// byte-identical on the wire (AUTH-8).
 const invalidCredentialsMessage = "invalid credentials"
 
 // Handler implements postpilotv1connect.AuthServiceHandler.

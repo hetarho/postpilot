@@ -1740,7 +1740,8 @@ export type ClipEditPlan = Message<"postpilot.v1.ClipEditPlan"> & {
   cuts: ClipEditCut[];
 
   /**
-   * The opening card's one sentence (CDS-28). Empty renders no hook card.
+   * A legacy plan's opening sentence, drawn as the first line of its intro
+   * block (CDS-70). Empty draws no intro block.
    *
    * @generated from field: string hook = 3;
    */

@@ -54,7 +54,7 @@ func openTemp(t *testing.T) *DB {
 	return handle
 }
 
-// TestOpenAppliesPragmas is job 01 A11: WAL and exactly one write connection.
+// TestOpenAppliesPragmas pins ARCH-10: WAL and exactly one write connection.
 func TestOpenAppliesPragmas(t *testing.T) {
 	handle := openTemp(t)
 
@@ -483,8 +483,8 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	}
 	// 0017 dropped `styleguide` and kept `rules`. What 0007 has to preserve is therefore only
 	// the rules text — the analysis text a live voice depends on lives in its structured
-	// profile's lexical description from change 16 onward, and no migration preserves the
-	// column it used to sit in.
+	// profile's lexical description (VOICE-25), and no migration preserves the column it used
+	// to sit in.
 	var gotRules string
 	if err := handle.Reader.QueryRow(`SELECT rules FROM voice_profiles WHERE user_id='alice'`).Scan(&gotRules); err != nil || gotRules != rules {
 		t.Fatalf("legacy rules changed: %q err=%v", gotRules, err)
@@ -514,8 +514,8 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('voice_profiles') WHERE name='current_version'`).Scan(&currentVersionColumns); err != nil || currentVersionColumns != 0 {
 		t.Fatalf("down retained current_version: %d err=%v", currentVersionColumns, err)
 	}
-	// Rolling back past 0017 brings the styleguide column back EMPTY, by design: change 16
-	// decided that no migration preserves that text. The rules text still round-trips.
+	// Rolling back past 0017 brings the styleguide column back EMPTY, by design: no migration
+	// preserves that text. The rules text still round-trips.
 	var downStyle string
 	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&downStyle, &gotRules); err != nil || downStyle != "" || gotRules != rules {
 		t.Fatalf("down lost legacy rules: %q / %q err=%v", downStyle, gotRules, err)
@@ -613,7 +613,7 @@ func TestMigration0008PreservesTargetsAndAddsFinalizationProgress(t *testing.T) 
 	}
 }
 
-// TestMigrateFailurePropagates is plan 01 AC8's mechanism: a broken migration must
+// TestMigrateFailurePropagates is ARCH-10's mechanism: a broken migration must
 // return an error so cmd/api can exit non-zero before the listener starts, which is
 // what lets the deploy's /health gate roll back ([I7]).
 func TestMigrateFailurePropagates(t *testing.T) {
@@ -644,7 +644,7 @@ func TestOpenRejectsUnusablePath(t *testing.T) {
 	}
 }
 
-// TestMigration0009PartitionsVoicesAndRollsBack is plan 10 A1: an existing account keeps
+// TestMigration0009PartitionsVoicesAndRollsBack: an existing account keeps
 // exactly what it had, now owned by one default voice, and the rollback refuses as soon as a
 // second voice exists — collapsing two voices would have to pick which history survives.
 func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
@@ -741,7 +741,7 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	}
 
 	// The rules text, the snapshot and the revisions are byte-identical. `styleguide` is not
-	// checked because 0017 drops it (change 16).
+	// checked because 0017 drops it.
 	var gotRules, gotSnapshot string
 	var corpus, current int
 	if err := handle.Reader.QueryRow(`SELECT rules,corpus_version,current_version FROM voice_profiles WHERE voice_id=?`, aliceVoice).Scan(&gotRules, &corpus, &current); err != nil {
@@ -838,7 +838,7 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 	if _, err := provider.Down(ctx); err != nil {
 		t.Fatalf("rollback of a single-voice database failed: %v", err)
 	}
-	// Same as 0007's rollback: the styleguide column comes back empty on purpose (change 16),
+	// Same as 0007's rollback: the styleguide column comes back empty on purpose,
 	// while the rules text round-trips through every rebuild.
 	var rolledStyle string
 	if err := handle.Reader.QueryRow(`SELECT styleguide,rules FROM voice_profiles WHERE user_id='alice'`).Scan(&rolledStyle, &gotRules); err != nil || rolledStyle != "" || gotRules != rules {
@@ -1087,10 +1087,11 @@ func TestMigration0022ReplacesPurposesWithTemplates(t *testing.T) {
 	}
 }
 
-// A14: the MODEL-STAGE purposes are a different concept from the retired post purpose — the
-// five registration targets of plans 04/18 and changes 20/24. Job 53 renames a great many
-// things spelled "purpose", so this pins the ones that must NOT move. A find-and-replace that
-// went one directory too far fails here rather than in production.
+// The MODEL-STAGE purposes are a different concept from the retired post purpose — the five
+// registration targets of MODEL-13. The post-purpose → template rename that migration 0022
+// belongs to touched a great many things spelled "purpose", so this pins the ones that must
+// NOT move. A find-and-replace that went one directory too far fails here rather than in
+// production.
 func TestMigration0022LeavesTheModelCatalogPurposesAlone(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
@@ -1329,7 +1330,7 @@ func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) 
 		}
 	}
 	// Rolling down past 14 also unwinds 0022, whose down restores the retired aggregate's
-	// SHAPE and not its rows (change 25 chose a destructive migration). So the assertion here
+	// SHAPE and not its rows (the migration is destructive by choice). So the assertion here
 	// is that the scope target still EXISTS to be scoped to, not that the data came back.
 	if err := handle.Reader.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='purposes'`).Scan(&rows); err != nil || rows != 1 {
 		t.Fatalf("rollback left no scope target table: count=%d err=%v", rows, err)
@@ -1524,7 +1525,7 @@ func TestMigration0019CreatesCreditLotsAndWidensTheLadder(t *testing.T) {
 	}
 }
 
-// Job 54 A13: migration 0023 creates the candidate table and nothing else. It seeds nothing
+// GUIDE-4: migration 0023 creates the candidate table and nothing else. It seeds nothing
 // and backfills nothing — there is no revision history to reconstruct — so an existing
 // account reads as having no candidates, and every guideline it holds is untouched.
 func TestMigration0023CreatesGuidelineCandidatesWithoutTouchingGuidelines(t *testing.T) {
@@ -1611,7 +1612,7 @@ func TestMigration0023CreatesGuidelineCandidatesWithoutTouchingGuidelines(t *tes
 	}
 }
 
-// Job 55 A1: migration 0024 adds the six reasoning columns to catalog_models, and their
+// MODEL-21: migration 0024 adds the six reasoning columns to catalog_models, and their
 // defaults make every existing row read as UNKNOWN — which is what it is until the next
 // refresh. Nothing is backfilled and no curation is disturbed.
 func TestMigration0024AddsCatalogReasoningColumnsAsUnknown(t *testing.T) {
@@ -1646,8 +1647,8 @@ func TestMigration0024AddsCatalogReasoningColumnsAsUnknown(t *testing.T) {
 	).Scan(&lists); err != nil || lists != 0 {
 		t.Fatalf("0024 backfilled an effort list: count=%d err=%v", lists, err)
 	}
-	// The per-purpose override column change 24 added is untouched: this change constrains
-	// the value, it does not move it.
+	// The per-purpose override column (MODEL-7) is untouched: the published capability
+	// constrains the value (MODEL-21), it does not move it.
 	var override int
 	if err := handle.Reader.QueryRow(
 		`SELECT count(*) FROM pragma_table_info('catalog_model_purposes') WHERE name='reasoning_effort'`,

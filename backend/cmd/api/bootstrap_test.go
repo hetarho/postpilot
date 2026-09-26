@@ -199,7 +199,7 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 	}
 }
 
-// Plan 10 A2: a new account cannot create a post until the adduser bootstrap has given it
+// VOICE-4: a new account cannot create a post until the adduser bootstrap has given it
 // an active default voice, and rerunning the bootstrap never duplicates that voice.
 func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "bootstrap.db"))
@@ -240,9 +240,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	}
 }
 
-// Plan 11 A4/A7: the composition root is the ONLY place the post's template id crosses into
-// generation, and every prompt hangs off it. This walks the real adapters end to end — a post
-// TEMPLATE-47: a template's own numbers are SEEDS and nothing more. What a run freezes is
+// TMPL-47: a template's own numbers are SEEDS and nothing more. What a run freezes is
 // the POST's option, so a value the author typed over the seed is what reaches generation —
 // the template is never consulted again, here or anywhere downstream.
 func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
@@ -314,6 +312,8 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 
 func intPtr(value int) *int { return &value }
 
+// GEN-15: the composition root is the ONLY place the post's template id crosses into
+// generation, and every prompt hangs off it. This walks the real adapters end to end — a post
 // saved with a 템플릿, read back through generationPosts, resolved through generationTemplates —
 // because both contexts' own tests inject the id into a fake and so cannot see it dropped here.
 func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testing.T) {
@@ -561,7 +561,7 @@ func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
 	}
 }
 
-// Plan 13 A13: the composition root must enrich the post-owned content provenance with
+// VOICE-34: the composition root must enrich the post-owned content provenance with
 // the voice-owned source language before handing a finalized snapshot to voice. Context
 // tests exercise each side with fakes; this regression walks the real stores and adapter
 // so neither language can be silently dropped at the seam.
@@ -640,11 +640,11 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	}
 }
 
-// Plan 16 A4/A8: the composition root is the ONLY place a post's template id reaches the
+// GUIDE-17: the composition root is the ONLY place a post's template id reaches the
 // guideline context, and the whole prompt section hangs off it. This walks the real adapters
 // end to end — a template and two guidelines created through their own services, a post saved
 // with that 템플릿, read back through generationPosts, resolved through generationGuidelines,
-// rendered by the real prompt builder. The job 22 review caught this seam silently dropping a
+// rendered by the real prompt builder. A review once caught this seam silently dropping a
 // field, and only a real-wiring test prevents a repeat.
 func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline.db"))
@@ -751,9 +751,10 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 }
 
-// Change 26 through the real adapters and the real store: recording rides the generation
-// context's port, review reads the guideline context, and approval is the create. This is the
-// only place the two contexts meet, so it is where the seam is worth proving.
+// Guideline candidates (GUIDE-7, GUIDE-11) through the real adapters and the real store:
+// recording rides the generation context's port, review reads the guideline context, and
+// approval is the create. This is the only place the two contexts meet, so it is where the
+// seam is worth proving.
 func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-candidate.db"))
 	if err != nil {

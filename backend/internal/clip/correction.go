@@ -46,7 +46,8 @@ type CorrectionPlan struct {
 	Elements          []CorrectionText
 	DurationMS        int
 	Cuts              []CorrectionCut
-	// The opening card's sentence (CDS-28). Part of the approved composition, so
+	// A legacy plan's opening sentence, the first line of its intro block
+	// (CDS-70). Part of the approved composition, so
 	// unlike the disclosure and the facts it IS stored with the plan.
 	Hook string
 }

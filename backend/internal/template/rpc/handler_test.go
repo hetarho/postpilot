@@ -144,7 +144,7 @@ func TestCreateAndUpdateCarryPresenceRatherThanZeroes(t *testing.T) {
 		t.Fatalf("update: %v", err)
 	}
 	// Presence is the edit unit: the fields the request did not carry are not in the patch,
-	// while the two generation numbers always travel as one pair (TEMPLATE-8).
+	// while the two generation numbers always travel as one pair (TMPL-8).
 	if store.patch.Name == nil || *store.patch.Name != "여행 2" {
 		t.Fatalf("patch name = %+v", store.patch.Name)
 	}

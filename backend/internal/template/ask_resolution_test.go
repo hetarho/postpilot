@@ -24,7 +24,7 @@ func renderAsks(t *testing.T, body string, filenames []string, answers []Answer)
 	return rendered
 }
 
-// The guarantee TEMPLATE-45 buys: an off, blank or unanswered field leaves a body byte for
+// The guarantee TMPL-45 buys: an off, blank or unanswered field leaves a body byte for
 // byte identical to the same template with that node deleted from the source. Nothing names
 // the field, and nothing leaves a gap where it was.
 func TestAnUnusableFieldRendersAsIfItWereNotInTheBody(t *testing.T) {

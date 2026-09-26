@@ -7,9 +7,10 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
-// CDS-50: five presets, each fixing hook tone, style mix, chip priority, default
-// CTA, cut rhythm and default accent. CDS-51 keeps the values in configuration.
-func TestPresetsMatchCDS50(t *testing.T) {
+// Five category presets, each fixing hook tone, style mix, chip priority,
+// default CTA, cut rhythm and default accent, with the values kept in
+// configuration.
+func TestCategoryPresetsKeepTheirValues(t *testing.T) {
 	want := map[string]design.Preset{
 		"restaurant": {Label: "음식점", Hook: "fact", Chips: []string{"위치", "가격", "메뉴"}, CTA: "place", Accent: "coral",
 			Styles: map[string]int{"clean": 50, "mark": 25, "memo": 20, "bold": 5}, CutMinS: 2.5, CutMaxS: 4, Rhythm: "cut"},
@@ -42,7 +43,8 @@ func TestPresetsMatchCDS50(t *testing.T) {
 		if _, ok := design.Accent[p.Accent]; !ok {
 			t.Fatalf("%s names an unknown accent %q", id, p.Accent)
 		}
-		// CDS-30 fixes the chip vocabulary, and CDS-37 the cut range.
+		// A chip names a reserved fact, and a preset's cut range stays inside
+		// CDS-37's 1.2–6.0 s.
 		for _, chip := range p.Chips {
 			if _, ok := design.Fact.Prompts[chip]; !ok {
 				t.Fatalf("%s names an unknown chip %q", id, chip)
@@ -54,7 +56,7 @@ func TestPresetsMatchCDS50(t *testing.T) {
 	}
 }
 
-// CDS-31 and CDS-29: five disclosure phrases and three CTAs, code-owned.
+// Five disclosure phrases and three CTAs, code-owned.
 func TestDisclosureAndCTAPhrases(t *testing.T) {
 	if !reflect.DeepEqual(design.Disclosure, map[string]string{
 		"ad": "광고", "sponsored": "협찬", "provided": "제품 제공",
@@ -79,8 +81,8 @@ func TestDisclosureAndCTAPhrases(t *testing.T) {
 	}
 }
 
-// CDS-1 and CDS-30: the reserved labels, the CDS-1 minimum and the seed a preset
-// puts in front of the owner.
+// The reserved labels, the legacy fact minimum and the seed a preset puts in
+// front of the owner.
 func TestReservedFactsAndPresetSeed(t *testing.T) {
 	if !reflect.DeepEqual(design.Fact.Labels, []string{"상호", "위치", "가격", "메뉴", "영업", "평점"}) {
 		t.Fatalf("reserved labels %v", design.Fact.Labels)

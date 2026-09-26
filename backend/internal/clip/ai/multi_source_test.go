@@ -173,7 +173,7 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 	}
 }
 
-// A chip outside CDS-30's vocabulary is dropped, never a reason to refuse the
+// A chip outside the reserved-fact vocabulary is dropped, never a reason to refuse the
 // plan: the renderer places nothing for it, so a paid retry would change
 // nothing on screen. The prompt offers exactly the labels the parser keeps.
 func TestUnknownChipLabelsAreDroppedNotRefused(t *testing.T) {

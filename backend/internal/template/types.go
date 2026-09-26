@@ -7,7 +7,7 @@
 // enqueues work or calls a provider ([I5]). Voice decides how sentences sound and a
 // guideline decides what to avoid; a template decides the skeleton.
 //
-// The grammar this package parses is specified in spec/legacy/tech/post-template-grammar.md. Its
+// The grammar this package parses is specified by TMPL-17..TMPL-20 (spec/ssot/TMPL.md). Its
 // Go parser and the frontend's TypeScript parser are tested against one shared fixture file
 // under testdata/grammar, which is what keeps two implementations of one grammar honest.
 package template
@@ -38,7 +38,7 @@ var (
 )
 
 // NumberOutOfRangeError is a generation number a template may not hold. The bounds are the
-// POST option's own (TEMPLATE-6): a template's number only ever lands in a post's option, so
+// POST option's own (TMPL-6): a template's number only ever lands in a post's option, so
 // one the post would refuse must not be storable here either.
 //
 // Max 0 means the product sets no ceiling - the target length is any positive number
@@ -80,18 +80,18 @@ type Limits struct {
 	TitleAreaMaxChars   int
 	MaxPerAccount       int
 	MaxRepeatExpansion  int
-	// PhotoRowMax is the largest `count` a photo position may carry (TEMPLATE-38). It bounds
+	// PhotoRowMax is the largest `count` a photo position may carry (TMPL-38). It bounds
 	// a row's width rather than a total: four thumbnails is what still reads on a 360 px
 	// phone, and the browser mirrors the same number.
 	PhotoRowMax int
 	// AskLabelMaxChars bounds a data field's title and AskMaxPerBody how many one body may
-	// declare (TEMPLATE-43). The title is bounded like a name rather than like prose: it is
+	// declare (TMPL-43). The title is bounded like a name rather than like prose: it is
 	// a question the write screen puts over a textarea, and a form long enough to push the
 	// memo off a phone costs more than the invented sentence it prevents.
 	AskLabelMaxChars int
 	AskMaxPerBody    int
 	// TargetLengthMin and TagCountMin/Max bound the two generation numbers a template may
-	// author (TEMPLATE-47); see NumberBounds for why they are passed in.
+	// author (TMPL-47); see NumberBounds for why they are passed in.
 	TargetLengthMin int
 	TagCountMin     int
 	TagCountMax     int
@@ -120,7 +120,7 @@ type Template struct {
 	// single source of truth for the title's shape exactly as Body is for the body's (TMPL-2).
 	TitleArea string
 	// TargetLength and TagCount are what the posts this template shapes usually want
-	// (TEMPLATE-47). nil is "no opinion": assigning the template then leaves the post's own
+	// (TMPL-47). nil is "no opinion": assigning the template then leaves the post's own
 	// option alone. Neither ever reaches a prompt - they are seeds for the post's options and
 	// a run keeps freezing the post's values.
 	TargetLength *int
@@ -138,7 +138,7 @@ type Patch struct {
 	Body        *string
 	// TitleArea present and empty clears the title form, like Description (TMPL-8).
 	TitleArea *string
-	// The two numbers break the presence rule on purpose (TEMPLATE-8): Numbers present means
+	// The two numbers break the presence rule on purpose (TMPL-8): Numbers present means
 	// "write both", each member nil meaning no opinion, because the template screen holds
 	// both and sends both on every save. A second meaning for an absent number would only
 	// give an unset one two ways to be written.
@@ -167,7 +167,7 @@ func (p Patch) empty() bool {
 
 // Answer is what one post supplies for one data field, handed in by the caller at enqueue.
 //
-// Off and blank are ONE case here (TEMPLATE-45): the switch says "I have nothing for this"
+// Off and blank are ONE case here (TMPL-45): the switch says "I have nothing for this"
 // and a field left empty says the same thing, so both drop the whole position rather than
 // asking the model to write a section it has no facts for.
 type Answer struct {
@@ -207,13 +207,13 @@ type Rendered struct {
 	// Rows records what each photo position actually bound, in body order — one entry per
 	// position that bound at least one photo, iterations of a repeat included. It is frozen
 	// beside the body so the author's row intent survives to whatever finally carries a row
-	// downstream (→TEMPLATE-39); the rendered body itself stays n adjacent single-photo
-	// tokens in the meantime (TEMPLATE-40).
+	// downstream (→TMPL-39); the rendered body itself stays n adjacent single-photo
+	// tokens in the meantime (TMPL-40).
 	Rows []PhotoRow
 	// Facts are the data fields this render resolved, the title area's first and then the
 	// body's, each in document order (TMPL-55). Empty means the template declared none or
 	// every one of them was off or blank — which is the same thing to everything downstream
-	// (TEMPLATE-45).
+	// (TMPL-45).
 	Facts []Fact
 }
 

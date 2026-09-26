@@ -97,7 +97,7 @@ const masterOnlyMessage = "this procedure requires the master plan"
 //
 // It is a full connect.Interceptor rather than a connect.UnaryInterceptorFunc because
 // that helper leaves WrapStreamingHandler as a pass-through — the first streaming
-// procedure added later (the generation job queue, plan 05) would ship unauthenticated
+// procedure added later (the generation job queue) would ship unauthenticated
 // with nothing here to notice.
 type Interceptor struct {
 	svc            *auth.Service

@@ -327,7 +327,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 				return clip.EditPlan{}, outputError("output_field_type")
 			}
 		}
-		// A chip is one of CDS-30's reserved labels and at most two show at
+		// A chip is one of the reserved fact labels and at most two show at
 		// once. A label outside that vocabulary (the model naming 상호, say,
 		// which the hook card already carries) is dropped, not refused: the
 		// renderer would place nothing for it, so refusing the whole plan

@@ -151,45 +151,52 @@ as soon as the overlay pass that read them is encoded, so a long sequence never
 sits beside the output it helped make. Every frame is a pure function of the
 plan and the frame index, so one plan delivers one clip byte for byte.
 
-## Cards, scrims and brightness
+## Regions, scrims and brightness
 
-Two cards frame the clip, each its own PNG plate on the same overlay chain as a
-copy, so their timing reuses the fade filters and nothing else moves. Both are
-`ink.900s` α0.88 at `radius.card` 24 with 40 px padding and `shadow.card`, and
-both draw only the owner's answers and the preset's own phrases — never model
-text, except the hook sentence itself.
+Two region blocks frame the clip — the intro over the output's start and the
+outro over its end — each drawn in the preset its project selected (CDS-70) from
+the template's own intro and outro entries, as many lines as that preset has
+slots (CLIP-147). Each block is its own PNG plate on the same overlay chain as a
+caption, so its timing reuses the fade filters and nothing else moves. Every word
+a block draws is an outline entry's; the preset adds only its fixed slots, rules
+and neutral decoration (CDS-88), and region text stays white, never taking the
+accent (CDS-15).
 
-- hook card (CDS-28) — over the FIRST cut, 0 to 1500 ms, present from frame 0
-  with a 200 ms fade-out. It stacks the preset's category chip (`t.label` on an
-  accent α1.0 pill with `#111` ink), the hook (`t.hook` 84 on 9:16, 72 on 16:9,
-  76 on 1:1, broken into at most two lines of nine at a word boundary) and the
-  상호 answer (`t.body` `text.muted`). The original audio dips 6 dB for the
-  card's own window. No hook sentence or no 상호 means no card at all: the first
-  frame stays real footage for the thumbnail either way.
-- ending card (CDS-29) — over the LAST cut from end − 2500 ms, 200 ms fade-in and
-  no fade-out. It stacks the 상호 answer, the 위치 answer (`t.label`
-  `text.muted`), one 가격 or 메뉴 answer when given (`t.caption`, with the
-  preset's price note) and the resolved CTA phrase in the accent. A project
-  without 상호 renders no card and the manifest says so by carrying none.
+- intro — the first 2.5 s of the output unless ② moved it (CLIP-66), present
+  from frame 0 with a 200 ms fade-out. Retained source audio dips 6 dB for the
+  block's own interval (CDS-35). A legacy plan's hook sentence becomes the first
+  line of its intro block, beside the 상호 answer.
+- outro — the last 3 s of the output unless ② moved it, with a 200 ms fade-in
+  and no fade-out.
 
-Per ratio the card is centred on the shared copy grid: 9:16 x 96–888
-(midpoint 492), centred y 840 (hook) and y 1040 (ending); 16:9 width 1120
-centred at (960, 540); 1:1 width 880 centred at (540, 540)/(540, 560).
-The padded text band stays inside the safe area. The compiler can use the card
-regions to select a free caption anchor; any remaining overlap is advisory.
+A block is laid out once from every line of its region (`design.LayoutRegion`):
+each slot fits its width by size down to its floor, and only a display,
+headline, hook or title slot wraps, at the word boundary (CDS-86); slots and
+rules stack with fixed ink-to-ink gaps around the block's anchor (CDS-87); an
+empty slot is dropped with the gap before it and its own decoration, and a block
+whose every slot is empty draws nothing (CDS-73). A line the preset has no slot
+for is omitted with a notice (CLIP-147). On 16:9 and 1:1 a block keeps its 9:16
+sizes, gaps and decoration: a centred block's centre and an edge-anchored
+block's top edge keep their fraction of canvas height, a bottom edge sits on the
+ratio's BOTTOM anchor and a left-set block starts at its LEFT anchor (CDS-79).
+Every block stays inside the ratio's safe area (CDS-2). Automatic caption
+placement drops a candidate that overlaps a region block, so the caption yields
+to it (CDS-38); any remaining overlap is advisory (CDS-56).
 
 Disclosure and information now share a top edge (80 on 9:16, 112 on the other
 ratios) and a row height derived from font sizes and padding. Each text role is
 measured with its own weight and tracking, including a shortened value after
 truncation. The SVG adapter centres the actual glyph bounds vertically and
-accounts for the left bearing. Chips reserve the badge width and one stack gap
-before fitting a value, including long disclosure phrases. Vertical cards and
-centred captions use the same x 492 midpoint between LEFT 96 and RIGHT 888.
+accounts for the left bearing. A legacy plan's chips reserve the badge width and
+one stack gap before fitting a value, including long disclosure phrases.
+Centred text on 9:16 stands on x 540, midway between LEFT 96 and RIGHT 984
+(CDS-12).
 
-Brightness sampling exists for the two unplated styles only (CDS-16, CDS-44). A
-plated element needs none: `ink.900` at α0.72 under white text stays above the
-floor even over a white frame. For `bold` and `mark` the renderer takes the
-first, middle and last frame of the copy window from the cut's own source —
+Brightness sampling covers every unplated text — the caption and both region
+blocks (CDS-44). A plated element needs none: `ink.900` at α0.72 under white
+text stays above CDS-3's floor even over a white frame. For an unplated caption
+the renderer takes the first, middle and last frame of the copy window from the
+cut's own source —
 `ffmpeg -ss <cut start + offset> -frames:v 1 -vf <the render's own cover chain>`
 to PNG — inside the SAME source callback that renders the cut, so no second
 download happens. The frames are decoded with `image/png` and averaged in Go
@@ -201,16 +208,18 @@ colour and `σ` its deviation across the three frames. `L ≥ 0.6` or `σ ≥ 0.
 adds `scrim.top` (0, 40, 1080, 310) or `scrim.bottom` (0, 1040, 1080, 380) —
 260/200 on the other two ratios — at the copy's own anchor, riding the copy's own
 plate so it shares its window and both fades. `L ≥ 0.6` also turns 크게 강조's
-accent word white; 형광펜's accent is the marker stroke behind white text, so it
-is left alone — whitening it would paint white on white. A scrim is never placed
-under a plated element, and the verifier refuses one that is.
+accent word white. A region block samples its whole text as one, so every entry
+of the block reaches one scrim decision: a centred block takes `scrim.radial`,
+an edge-anchored one its edge's linear scrim, and only the block's owner entry
+paints it (CDS-32). A scrim is never placed under a plated element, and the
+verifier refuses one that is.
 
 V3 is that sample's own check: every text is measured against its EFFECTIVE
 background at WCAG 2.1's 4.5:1. For a plated element that is the plate over the
-sampled or assumed ground; for a card line the card; for the category chip the
-accent pill. For an unplated style it is the `stroke.dark` α0.85 outline CDS-25
-and CDS-26 give it, composited over the scrim-washed footage — the stroke is the
-mechanism those styles use, and it holds white text at 13.2:1 over a white frame
+sampled or assumed ground; for a region line the scrim and any plate, pill or
+ring fill under it. For an unplated style it is the `stroke.dark` α0.85 outline
+CDS-25 gives it, composited over the scrim-washed footage — the stroke is the
+mechanism that style uses, and it holds white text at 13.2:1 over a white frame
 where the bare footage would be 1:1. A pairing still under the floor is rung 1
 of the repair ladder below — 깔끔하게 at the same anchor where that style may
 stand, else at its own — when the compiler chose the style (a plan that still
@@ -337,11 +346,12 @@ system typeset itself.
 The three safe areas and every placement number come from one embedded
 configuration file, `internal/clip/design/design.json`, which the frontend mirrors
 byte for byte; nothing here is a literal. 9:16 uses the design
-bounds (64, 40, 856, 1380), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
+bounds (64, 40, 952, 1380), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
 936). A caption resolves one of four vertical anchors (top, upper_mid, lower_mid,
 bottom) and one alignment (center, left, right) to a plate region, and a region
 that would leave the safe area by any pixel is refused rather than nudged — 9:16's
-safe area is deliberately off-centre; captions now follow its shared content grid. An
+safe area keeps equal left and right insets (CDS-9, CDS-78) and captions follow
+its shared content grid. An
 AI avoid region chooses among those same four anchors. Source
 focal points drive cover-cropping, never stretch-to-fit. Times are integer ms until
 the binary boundary.
@@ -359,7 +369,7 @@ captions of one cut apart; a plan stored before this is read back as the one cop
 it was (stored version 3).
 
 The compiler never asks the model for a second sentence: it lifts the number out
-of the words it already has. CDS-39 reads a number FIRST, so a sentence that
+of the words it already has. The classifier reads a number FIRST, so a sentence that
 states one is classified `NUM` and is never the description CDS-43 splits — in
 practice the second copy is the `short_text` the model wrote beside the
 description, and the clause walk is the fallback for a sentence the classifier

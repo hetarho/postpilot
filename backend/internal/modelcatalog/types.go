@@ -40,7 +40,7 @@ var (
 	ErrInvalidLevel = errors.New("invalid model level")
 )
 
-// Purpose is one use the product puts a model to. Registration is per purpose (change 20):
+// Purpose is one use the product puts a model to. Registration is per purpose (MODEL-14):
 // the same model may serve several, and each user-facing stage lists only the models
 // registered to ITS purpose. The two generation purposes are curated ahead of the features
 // that will consume them — nothing outside the operator screen reads them yet.
@@ -177,7 +177,7 @@ type Model struct {
 	// Reasoning is the operator's override PER REGISTRATION, keyed by purpose. It is a
 	// property of "this model doing this task", not of the model: the code-owned policy it
 	// overrides is per stage, and the right effort is a measurement of a model against a
-	// task (change 24). A purpose absent from the map, or present as Unspecified, defers to
+	// task (MODEL-7). A purpose absent from the map, or present as Unspecified, defers to
 	// the stage policy. An unregistered purpose has no effort to carry, which is consistent
 	// — a model serves it to nobody.
 	Reasoning map[Purpose]llm.ReasoningEffort
@@ -226,9 +226,9 @@ type Candidate struct {
 	SourceCreatedAt int64
 }
 
-// ReasoningCapability is what the source publishes about one model's reasoning (change 27).
+// ReasoningCapability is what the source publishes about one model's reasoning (MODEL-18).
 // It exists so the operator chooses an effort from what the model actually accepts, instead
-// of from the same eight values for every model.
+// of from the same eight values for every model (MODEL-21).
 //
 // EVERY FIELD'S ZERO MEANS "UNKNOWN", NOT "SUPPORTS NOTHING" — the same rule the pricing
 // snapshot already follows. An empty Efforts list is a model whose accepted values the
@@ -247,11 +247,11 @@ type ReasoningCapability struct {
 	// Mandatory: reasoning cannot be turned off, so `none` must never be offered or sent.
 	Mandatory bool
 	// NativeEffort: the provider receives the effort STRING itself, rather than a token
-	// budget OpenRouter derived from it. Nothing here consumes it; change 29 needs it to
-	// size a completion budget safely.
+	// budget OpenRouter derived from it. Nothing in this package consumes it; the write and
+	// revision budgets read it for their headroom (MODEL-46).
 	NativeEffort bool
 	// MaxTokens: the source offers a reasoning token budget for this model. Recorded and
-	// displayed only — this change surfaces no input for it.
+	// displayed only — nothing offers an input for it.
 	MaxTokens bool
 }
 
@@ -329,7 +329,7 @@ type Entry struct {
 	Purposes []Purpose
 	// Reasoning is the effort for the PURPOSE being listed, not the model's. The browse list
 	// is read one purpose tab at a time, so the evidence and the control shown on a tab
-	// belong to that tab (change 24).
+	// belong to that tab (MODEL-7).
 	Reasoning llm.ReasoningEffort
 	// Level is the level for the PURPOSE being listed, on the same terms as Reasoning: the
 	// browse list is read one tab at a time, and a level belongs to the tab it was set on.
@@ -411,7 +411,7 @@ type Browse struct {
 // changed, which is what lets two operators edit different fields of one model without
 // overwriting each other. Purpose registration is not a patch — it has its own write
 // (SetPurpose) — and an effort may only be set for a purpose the model is registered to,
-// which is a server rule rather than a UI convention (change 24).
+// which is a server rule rather than a UI convention.
 type Patch struct {
 	Purpose   Purpose
 	Reasoning *llm.ReasoningEffort

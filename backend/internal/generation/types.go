@@ -135,13 +135,13 @@ type TemplateBrief struct {
 	Slots []TemplateSlot
 	// Rows is what each photo position bound, in body order. Frozen with the body and read
 	// by nothing yet: the interim contract renders a row as consecutive single-photo IMAGE
-	// blocks (TEMPLATE-40), and this is where the author's row intent waits for whatever
-	// finally carries it downstream (→TEMPLATE-39).
+	// blocks (TMPL-40), and this is where the author's row intent waits for whatever
+	// finally carries it downstream (→TMPL-39).
 	Rows []TemplatePhotoRow
 	// Facts are the data fields the freeze resolved, in body order — the values already
 	// substituted into Body and fenced there. It is carried beside the body so the prompt
 	// builder can tell whether this brief holds any fact at all without re-parsing it, which
-	// is what decides one legend line (TEMPLATE-45, TEMPLATE-46).
+	// is what decides one legend line (TMPL-45, TMPL-46).
 	Facts []TemplateFact
 	// TitleArea is the rendered title form, empty when the template authored none (TMPL-50).
 	// The experiment snapshot marshals the brief by field name, so omitempty is what keeps
@@ -200,7 +200,7 @@ type PostInput struct {
 	QualityRules []string
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
-	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).
+	// handler ever reads one: the payload already carries the result (POST-62, TMPL-45).
 	TemplateAnswers []TemplateAnswer
 	Title           string
 	Memo            string

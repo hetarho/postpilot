@@ -16,7 +16,7 @@ func okContent() llm.Response {
 	return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}
 }
 
-// Plan 10 A7: every AI start refuses a post whose voice is deleted before any queue or
+// POST-25: every AI start refuses a post whose voice is deleted before any queue or
 // provider work, and a save-as-rule never lands in a tombstone.
 func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: deletedVoice, Content: revisionContent("body")}}
@@ -63,7 +63,7 @@ func TestStartsFreezeThePostVoiceIntoTheJob(t *testing.T) {
 	}
 }
 
-// Plan 10 A9/A14: a queued job whose post has since been reassigned or whose voice has since
+// VOICE-50: a queued job whose post has since been reassigned or whose voice has since
 // been deleted fails before the provider call, and the prompt only ever reads the post's
 // current voice.
 func TestHandlersRecheckTheFrozenVoiceBeforeProviderCalls(t *testing.T) {
@@ -119,7 +119,7 @@ func TestRevisionDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 	}
 }
 
-// Plan 10 A10: two voices with contradictory profiles each receive only their own
+// ARCH-34 [I4]: two voices with contradictory profiles each receive only their own
 // projection, through generation and through five repeated revisions.
 func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 	casual := VoiceRef{ID: "voice-casual", Name: "일상"}

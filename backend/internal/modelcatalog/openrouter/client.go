@@ -122,8 +122,8 @@ type modelDocument struct {
 		Mandatory bool     `json:"mandatory"`
 		Supported []string `json:"supported_efforts"`
 		Default   string   `json:"default_effort"`
-		// DefaultEnabled is read but deliberately not persisted: it is display context
-		// change 27 does not scope.
+		// DefaultEnabled is read but deliberately not persisted (MODEL-18): it is display
+		// context only.
 		DefaultEnabled  bool `json:"default_enabled"`
 		SupportsMaxToks bool `json:"supports_max_tokens"`
 	} `json:"reasoning"`

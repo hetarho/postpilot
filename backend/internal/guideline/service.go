@@ -279,7 +279,7 @@ func (s *Service) validText(value string) (string, error) {
 // validScope normalizes a scope and proves it: the kind, then both sets trimmed and collapsed
 // in first-seen order, then the shape, then that every id exists. A `templates` scope must name
 // at least one template and a `fields` scope at least one 분야, at creation and on every scope
-// update: only a template deletion may leave a templates set empty (plan 16 invariant 2). The
+// update: only a template deletion may leave a templates set empty (GUIDE-5). The
 // normalized patch carries the other kind's set as nil.
 func (s *Service) validScope(ctx context.Context, userID string, patch ScopePatch) (ScopePatch, error) {
 	if !patch.Scope.Valid() {

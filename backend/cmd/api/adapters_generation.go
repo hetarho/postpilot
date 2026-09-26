@@ -198,8 +198,8 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		UseMemory: found.UseMemory,
 		Images:    make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
-		// was write-only from this context's point of view before change 21, which is why
-		// every retry re-paid for eyesight the post already had.
+		// was write-only from this context's point of view before observations could be reused
+		// (GEN-8), which is why every retry re-paid for eyesight the post already had.
 		Observations: make([]generation.Observation, 0, len(found.Observations)),
 		// The post's own answers to the template's data fields. Like TemplateID they are
 		// read here and resolved only by the enqueue, through the template context's port.

@@ -43,7 +43,7 @@ type ClaimCorpusVersionParams struct {
 }
 
 // The concurrency guard, and nothing else. It used to write the analysis text into a
-// `styleguide` column; that column is gone (change 16) and the analysis text now reaches the
+// `styleguide` column; that column is gone (VOICE-6) and the analysis text now reaches the
 // profile only through the structured version this claim gates. Zero rows means the corpus
 // moved while the provider was working, so the finished analysis is stale and must not publish.
 func (q *Queries) ClaimCorpusVersion(ctx context.Context, arg ClaimCorpusVersionParams) (int64, error) {
@@ -1433,7 +1433,7 @@ type ListProfileVersionsRow struct {
 }
 
 // `has_sample` rather than the snapshot itself: the list must be able to say whether a version
-// can be previewed without carrying every post body it ever produced (change 16).
+// can be previewed without carrying every post body it ever produced (VOICE-29).
 func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersionsParams) ([]ListProfileVersionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProfileVersions, arg.VoiceID, arg.UserID)
 	if err != nil {

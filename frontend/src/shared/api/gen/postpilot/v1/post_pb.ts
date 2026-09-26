@@ -34,7 +34,7 @@ export const file_postpilot_v1_post: GenFile = /*@__PURE__*/
  */
 export type BlockSlot = Message<"postpilot.v1.BlockSlot"> & {
   /**
-   * photo | place | link (spec/legacy/tech/post-template-grammar.md §2).
+   * photo | place | link (TMPL-18).
    *
    * @generated from field: string kind = 1;
    */
@@ -921,7 +921,7 @@ export const StartRevisionResponseSchema: GenMessage<StartRevisionResponse> = /*
   messageDesc(file_postpilot_v1_post, 17);
 
 /**
- * One answer a post gives to a data field its template declared (POST-62, TEMPLATE-43).
+ * One answer a post gives to a data field its template declared (POST-62, TMPL-43).
  *
  * `label` is the field's title AND its key: a template rename or a swap leaves the answer
  * where it was rather than destroying what someone typed, and an answer whose label the

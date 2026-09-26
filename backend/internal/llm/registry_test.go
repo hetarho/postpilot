@@ -180,7 +180,7 @@ func TestParse_DelistedModelIsDisabledWithReason(t *testing.T) {
 	}
 }
 
-// AC2: an unset key disables every model with the exact reason. It outranks a delisting,
+// MODEL-11: an unset key disables every model with the exact reason. It outranks a delisting,
 // which is the narrower problem.
 func TestParse_MissingKeyDisablesProviderWithReason(t *testing.T) {
 	reg, err := llm.Parse([]byte(goodYAML), env(nil), adaptersWith(&fakeProvider{}), twoModels(), opts)
@@ -212,7 +212,7 @@ func TestParse_KeylessProviderIsEnabled(t *testing.T) {
 	}
 }
 
-// AC1 / A9: a broken file is refused with a clear error — including a leftover models list,
+// MODEL-10: a broken file is refused with a clear error — including a leftover models list,
 // which a stack mounting an old override would otherwise serve silently.
 func TestParse_RejectsBrokenConfigs(t *testing.T) {
 	cases := map[string]struct {
@@ -313,7 +313,7 @@ func TestLoad_UnreadableFile(t *testing.T) {
 	}
 }
 
-// AC9: capability refusals happen before any network call, from the curated flags.
+// MODEL-5: capability refusals happen before any network call, from the curated flags.
 func TestResolve_RefusesUnsupportedBeforeCalling(t *testing.T) {
 	p := &fakeProvider{}
 	reg, err := llm.Parse([]byte(goodYAML), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(p), twoModels(), opts)

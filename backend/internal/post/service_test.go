@@ -83,7 +83,7 @@ func mustCreatePost(t *testing.T, svc *Service, userID, title string) Post {
 
 // --- drafts ---
 
-// TestSaveDraftCreatesThenUpdates is job 03 A9: the first save mints the slug, later
+// TestSaveDraftCreatesThenUpdates pins POST-4: the first save mints the slug, later
 // saves with that slug are idempotent updates.
 func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 	svc, _, _ := newTestService(t)
@@ -117,7 +117,7 @@ func TestSaveDraftCreatesThenUpdates(t *testing.T) {
 	}
 }
 
-// TestSaveDraftKeepsTheSlugOnRetitle is the second half of plan 02 AC10. The slug is
+// TestSaveDraftKeepsTheSlugOnRetitle pins POST-1. The slug is
 // the primary key AND part of every object key, so renaming it would orphan the photos.
 func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	svc, _, _ := newTestService(t)
@@ -135,7 +135,7 @@ func TestSaveDraftKeepsTheSlugOnRetitle(t *testing.T) {
 	}
 }
 
-// TestSaveDraftCollidesOnTitleAndDay is plan 02 AC10's first half, end to end.
+// TestSaveDraftCollidesOnTitleAndDay pins POST-2's collision suffix, end to end.
 func TestSaveDraftCollidesOnTitleAndDay(t *testing.T) {
 	svc, _, _ := newTestService(t)
 
@@ -168,7 +168,7 @@ func TestSaveDraftCollidesAcrossUsers(t *testing.T) {
 
 // --- ownership ---
 
-// TestOwnership is job 03 A6 / plan 02 AC9.
+// TestOwnership pins POST-3.
 func TestOwnership(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	ctx := context.Background()
@@ -250,7 +250,7 @@ func TestGetAndListPublishTheActiveJobThroughThePort(t *testing.T) {
 
 // --- uploads ---
 
-// TestUploadHandshake is job 03 A1 + A2: no bytes touch the API, and the image row
+// TestUploadHandshake pins POST-34: no bytes touch the API, and the image row
 // appears only after storage confirms the object.
 func TestUploadHandshake(t *testing.T) {
 	svc, store, blobs := newTestService(t)
@@ -310,7 +310,7 @@ func TestUploadHandshake(t *testing.T) {
 	}
 }
 
-// TestConfirmWithoutTheObject is job 03 A1's negative: a confirm for an object that
+// TestConfirmWithoutTheObject pins POST-35's negative: a confirm for an object that
 // never landed must not create a photo.
 func TestConfirmWithoutTheObject(t *testing.T) {
 	svc, store, _ := newTestService(t)
@@ -351,7 +351,7 @@ func TestConfirmSomeoneElsesUpload(t *testing.T) {
 	}
 }
 
-// TestDuplicateFilename is job 03 A8. The filename is how the model and the exporters
+// TestDuplicateFilename pins POST-36. The filename is how the model and the exporters
 // refer to a photo, so two photos cannot share one within a post.
 func TestDuplicateFilename(t *testing.T) {
 	svc, _, blobs := newTestService(t)
@@ -395,7 +395,7 @@ func TestDuplicateFilename(t *testing.T) {
 
 // --- reading ---
 
-// TestGetMintsFreshViewURLs is job 03 A5's server half: a URL per read, never stored.
+// TestGetMintsFreshViewURLs pins POST-38's server half: a URL per read, never stored.
 func TestGetMintsFreshViewURLs(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
@@ -431,7 +431,7 @@ func TestGetMintsFreshViewURLs(t *testing.T) {
 
 // --- deletion ---
 
-// TestDeleteImage is job 03 A3: the row AND the object go, the guarded row first (F9).
+// TestDeleteImage: the row AND the object go, the guarded row first (F9).
 func TestDeleteImage(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
@@ -466,9 +466,9 @@ func TestDeleteImage(t *testing.T) {
 	}
 }
 
-// Change 21 made a stale observation dangerous: a run may now REUSE a stored entry instead of
-// re-observing, entries are paired to photos by filename alone, and a filename is free to be
-// taken again once its photo is gone. So the entry goes with the photo.
+// Observation reuse (GEN-8) made a stale observation dangerous: a run may now REUSE a stored
+// entry instead of re-observing, entries are paired to photos by filename alone, and a filename
+// is free to be taken again once its photo is gone. So the entry goes with the photo (GEN-12).
 func TestDeleteImageDropsItsObservationAndKeepsTheRest(t *testing.T) {
 	svc, _, blobs := newTestService(t)
 	ctx := context.Background()
@@ -595,7 +595,7 @@ func (d *recordingCandidateDetacher) DetachPost(_ context.Context, userID, slug 
 	return d.err
 }
 
-// Change 26: deleting a post drops the link its candidates named — after the row is gone, so a
+// GUIDE-13: deleting a post drops the link its candidates named — after the row is gone, so a
 // post that survives a failure never reads as deleted from the candidate list.
 func TestDeletePostDetachesGuidelineCandidateLinks(t *testing.T) {
 	svc, _, _ := newTestService(t)

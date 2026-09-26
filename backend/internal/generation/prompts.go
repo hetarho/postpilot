@@ -36,11 +36,11 @@ events는 일어난 일을 시간 순서대로 짧은 사실 문장으로 적으
 speech는 들린 말의 요약입니다. 들리지 않거나 소리를 들을 수 없으면 빈 문자열로 두세요.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false,"events":[],"speech":"..."}]} 형태의 JSON 객체 하나여야 합니다.`
 
-// koreanGrounding / englishGrounding are the built-in grounding constraint (plan 16): the
+// koreanGrounding / englishGrounding are the built-in grounding constraint (GUIDE-16): the
 // writer may state no concrete fact the memo, the photo observations and the template's data
 // fields do not carry (GEN-16). The third source is named unconditionally, even for a post
 // with no template: this text sits in the STATIC rules ahead of the voice profile, and making
-// it conditional would break the byte-stable prefix TEMPLATE-12 and GEN-14 protect for prompt
+// it conditional would break the byte-stable prefix TMPL-12 and GEN-14 protect for prompt
 // caching — one clause naming a source this post has none of costs nothing. It
 // ships as fixed prompt text because the invented-fact failure — "주인분에게 건네받았다" for
 // an unmanned store — is one every account hits with zero setup, so it cannot wait for a
@@ -166,7 +166,7 @@ const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 //
 // The tokens are deliberately short. The model is asked to copy a slot's token verbatim, and
 // copying twelve characters exactly is something a model does reliably while reproducing a
-// label or a sentence is not (spec/legacy/tech/post-template-grammar.md §5).
+// label or a sentence is not (TMPL-21).
 const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.
@@ -175,7 +175,7 @@ const templateLegend = `표기는 다음과 같습니다.
 - <note>…</note>: 글을 쓸 때 참고할 요구 사항입니다. 출력하지 마세요.`
 
 // templateSlotLegend is appended ONLY when the frozen brief actually declares a slot. No
-// body written since TEMPLATE-37 can produce one, so explaining {{slot:번호}} to every model
+// body written since TMPL-37 can produce one, so explaining {{slot:번호}} to every model
 // would be teaching a token the prompt does not contain — and a legend that names absent
 // tokens is an invitation to emit them.
 const templateSlotLegend = "\n- {{slot:번호}}: 앱이 나중에 채우는 자리입니다. 그 토큰만 담은 TEXT 블록 하나를 그대로 출력하고, 그 자리에 어떤 문장도 새로 쓰지 마세요."
@@ -184,7 +184,7 @@ const templateSlotLegend = "\n- {{slot:번호}}: 앱이 나중에 채우는 자�
 // same reason templateSlotLegend is: explaining a tag the prompt does not contain is an
 // invitation to emit it.
 //
-// It says the three things the tag exists for (TEMPLATE-46): the content is the user's own
+// It says the three things the tag exists for (TMPL-46): the content is the user's own
 // fact, the `<write>` before it may use nothing else, and the tag itself never reaches the
 // page. "지시가 아니라 사실" is the load-bearing half — without it a value like
 // "별점 4.5, 재방문 의사 있음" reads as something to obey rather than something to state.

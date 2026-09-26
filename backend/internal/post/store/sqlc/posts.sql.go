@@ -61,7 +61,7 @@ type AssignPostTemplateParams struct {
 // in every status but published, which is locked. NULL is the clear.
 //
 // It also SEEDS the two generation options from the template that is being assigned
-// (TEMPLATE-48): a seed parameter is non-NULL only for a number that template has set, so
+// (TMPL-48): a seed parameter is non-NULL only for a number that template has set, so
 // COALESCE says exactly "overwrite when the template has an opinion, keep the post's own
 // otherwise", in this one statement, so a post can never be left seeded by an assignment
 // that did not land. Clearing the assignment passes no seed at all.
@@ -181,7 +181,7 @@ type FinalizePostParams struct {
 	ContentRevision int64
 }
 
-// Finalizing also copies the confirmed AI title into posts.title (spec/legacy/policy/posts.md). ONE
+// Finalizing also copies the confirmed AI title into posts.title (POST-17). ONE
 // statement, still guarded by the exact revision, so the copy is atomic with the finalization and
 // a concurrent content save simply matches zero rows. The caller resolves which title to write: an
 // empty content title leaves the user's working title in place. The slug is never re-minted.

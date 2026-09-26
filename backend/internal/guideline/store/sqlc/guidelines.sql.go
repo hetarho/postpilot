@@ -44,7 +44,7 @@ type CandidateByTextParams struct {
 	Text   string
 }
 
-// Guideline candidates (change 26). A candidate is one completed revision's instruction,
+// Guideline candidates (GUIDE-7). A candidate is one completed revision's instruction,
 // recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
 // stop the same instruction from being recorded again, so nothing here deletes one.
 func (q *Queries) CandidateByText(ctx context.Context, arg CandidateByTextParams) (GuidelineCandidate, error) {

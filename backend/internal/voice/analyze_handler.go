@@ -65,7 +65,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		}
 		// The guard, and only the guard: it used to be a write of `styleguide` that happened
 		// to be conditional. False means a sample changed while the provider was working, so
-		// this analysis describes a corpus the voice has already moved past (change 16).
+		// this analysis describes a corpus the voice has already moved past (VOICE-22).
 		stored, err := s.profiles.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
 		if err != nil {
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)

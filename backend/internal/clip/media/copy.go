@@ -313,8 +313,8 @@ func copyInsets(style design.StyleRule) (left, right, vertical float64) {
 	return left + inset, style.Padding.H + inset, style.Padding.V + inset
 }
 
-// Where the keyword starts on the line that holds it, measured rather than
-// estimated (CDS-26). The measured string is the line UP TO AND INCLUDING the
+// Where the accent keyword (CDS-25) starts on the line that holds it, measured
+// rather than estimated. The measured string is the line UP TO AND INCLUDING the
 // keyword, never the prefix alone: a prefix can be a single space, which has an
 // advance but no ink box, and resvg reports boxes, not advances.
 func keywordOn(lines []string, keyword string, bounds map[string]clip.Region, factor float64) keywordSpan {
@@ -488,7 +488,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 
 // One measurement pass covers every candidate line and, when the copy names a
 // keyword, the prefix that precedes it on each line that holds it: its advance
-// is where the highlight starts (CDS-26), never an estimated width.
+// is where the accent or highlight starts, never an estimated width.
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
 	caption := captionStyle(c.Style)
 	style := caption.Rule()
@@ -577,7 +577,7 @@ func keywordValues(candidates [][]string, keyword string) []string {
 	return out
 }
 
-// The disclosure badge (CDS-31) and legacy information pairs (CDS-30).
+// The disclosure badge (CDS-31) and legacy information pairs.
 // Plans with information are routed through the sampled composition renderer.
 type chip struct {
 	Label, Value             string
@@ -633,7 +633,7 @@ func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, c
 func furnitureKey(role, value string) string { return role + "\x00" + value }
 
 // placeFurniture puts the disclosure badge at its ratio's fixed corner and
-// stacks at most two chips from the priority it was given (CDS-30, CDS-31).
+// stacks at most two chips from the priority it was given (CDS-31).
 func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string, bounds map[string]clip.Region) (furniture, error) {
 	out := furniture{BadgeText: phrase}
 	l, ok := design.Layout(ratio)
@@ -696,7 +696,8 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 	return out, nil
 }
 
-// CDS-30 shows at most two chips at once, and CDS-31 fixes the badge's padding.
+// A legacy plan shows at most two chips at once, and CDS-31 fixes the badge's
+// padding.
 const maxChips = 2
 
 func scaled(r clip.Region, factor float64) clip.Region {

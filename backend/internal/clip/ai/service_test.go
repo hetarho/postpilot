@@ -311,8 +311,8 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if result.TransitionTotal() != 0 {
 		t.Fatalf("invented a transition inside one scene: %+v", result.Cuts)
 	}
-	// The legacy recorded response named no style or position; its default chose
-	// both from the scene and the sentence (CDS-39, CDS-40).
+	// The legacy recorded response named no style or position; it takes the
+	// default style at its default anchor (CDS-25, CDS-38).
 	if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Anchor != "upper_mid" || cut.FirstCopy().Align != "center" {
 		t.Fatalf("placement was not the design system's: %+v %+v", cut.FirstCopy(), result.Decisions)
 	}
@@ -371,7 +371,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Align != "center" || cut.FirstCopy().Anchor != "upper_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
 			t.Fatalf("%+v", cut)
 		}
-		// 메모 has two candidate anchors (CDS-24), so the selector measures the
+		// 크게 강조 has two candidate anchors (CDS-38), so the selector measures the
 		// plate at both and at neither more, and the composition is verified
 		// exactly once before the plan is returned (CDS-52).
 		if c.calls != 2*len(got.Cuts) || c.fixed != len(got.Cuts) || c.layouts != 1 {

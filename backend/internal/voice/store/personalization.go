@@ -51,7 +51,7 @@ func (s *Store) ListProfileVersions(ctx context.Context, userID, voiceID string)
 			return nil, err
 		}
 		// The LEFT JOIN carries presence only: the list says whether a version CAN be
-		// previewed, and the snapshot itself is fetched per version on open (change 16).
+		// previewed, and the snapshot itself is fetched per version on open (VOICE-29).
 		item.HasSample = row.SampleVersion.Valid
 		out = append(out, item)
 	}

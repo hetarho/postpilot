@@ -25,7 +25,7 @@ func furnitureBounds(answers map[string]string, labels []string) map[string]clip
 
 // The badge's right edge and top are the ratio's own (CDS-31: 984/80 on 9:16,
 // 1824/112 on 16:9 and 1016/112 on 1:1), and the chip stack starts at the ratio's
-// chip origin, stacked on 9:16 and 1:1 and two across on 16:9 (CDS-30, CDS-47).
+// chip origin, stacked on 9:16 and 1:1 and two across on 16:9.
 func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 	answers := map[string]string{"위치": "서울 연남동", "가격": "9,900원", "메뉴": "김밥"}
 	labels := []string{"위치", "가격", "메뉴"}
@@ -40,7 +40,7 @@ func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 		if f.Badge.X+f.Badge.Width != badge[0] || f.Chips[0].Region.Y != badge[1] || f.Badge.Height != 68 || f.Badge.Y+f.Badge.Height/2 != badge[1]+f.Chips[0].Region.Height/2 {
 			t.Fatalf("%s badge at %+v want right %v top %v", ratio, f.Badge, badge[0], badge[1])
 		}
-		// CDS-30 shows at most two chips at once, in the priority it was given.
+		// A legacy plan shows at most two chips at once, in the priority it was given.
 		if len(f.Chips) != 2 || f.Chips[0].Label != "위치" || f.Chips[1].Label != "가격" {
 			t.Fatalf("%s chips %+v", ratio, f.Chips)
 		}
@@ -100,7 +100,7 @@ func TestLongInformationValueRefusesTruncation(t *testing.T) {
 }
 
 // 평점 shows only from the owner's own input, and a fact with no answer shows no
-// chip at all (CDS-30).
+// chip at all.
 func TestChipsOnlyFromAnswersThatExist(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
 	answers := map[string]string{"가격": "9,900원", "평점": "  "}
@@ -138,7 +138,7 @@ func TestPlanChipLabelsFollowThePresetPriority(t *testing.T) {
 	if got := plan.ChipLabels(clip.Cut{EndMS: 4000}); len(got) != 0 {
 		t.Fatalf("labels = %v", got)
 	}
-	// A cut too short to hold a chip for 2.0 s carries none (CDS-30).
+	// A cut too short to hold a chip for 2.0 s carries none.
 	short := long
 	short.EndMS = int(design.Timing.ChipMinS*1000) - 1
 	if got := plan.ChipLabels(short); len(got) != 0 {

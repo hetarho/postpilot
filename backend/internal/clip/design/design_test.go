@@ -191,7 +191,7 @@ func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 	if design.Motion != (design.MotionTokens{InMS: 180, InDY: 12, OutMS: 120, Ease: [4]float64{0.22, 1, 0.36, 1}}) {
 		t.Fatal("motion", design.Motion)
 	}
-	// CDS-41, CDS-37, CDS-28, CDS-29, CDS-5.
+	// CDS-41, CDS-37, CLIP-66, CDS-5.
 	if design.Timing != (design.TimingTokens{SubMinBaseMS: 900, SubMinPerCharMS: 90, CutMinS: 1.2, CutMaxS: 6, CutMaxFoodS: 4, IntroDefaultS: 2.5, OutroDefaultS: 3, BadgeMinHeadS: 3, BadgeMinTailS: 3, ChipMinS: 2, CopyLeadMS: 120, SubExtendMS: 240, SubOccupancyMin: 0.6}) {
 		t.Fatal("timing", design.Timing)
 	}
@@ -203,7 +203,7 @@ func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 	if design.Audio != (design.AudioTokens{Loudnorm: design.Loudnorm{I: -16, TP: -1.5, LRA: 11}, CrossfadeMS: 60, HookDipDB: -6}) {
 		t.Fatal("audio", design.Audio)
 	}
-	// CDS-44 and CDS-16's 4.5:1 floor, which V3 gates every pairing on.
+	// CDS-44 and CDS-3's 4.5:1 floor, which V3 gates every pairing on.
 	if design.Luma != (design.LumaTokens{ScrimThreshold: 0.6, SigmaThreshold: 0.25, ContrastMin: 4.5}) {
 		t.Fatal("luma", design.Luma)
 	}

@@ -217,7 +217,7 @@ func (s *Service) validDescription(value string) (string, error) {
 }
 
 // validNumbers bounds the two generation numbers against the POST option's own limits. nil
-// is valid on both and is what "no opinion" writes (TEMPLATE-47): the assignment then leaves
+// is valid on both and is what "no opinion" writes (TMPL-47): the assignment then leaves
 // the post's value alone rather than clearing it.
 func (s *Service) validNumbers(numbers Numbers) error {
 	if value := numbers.TargetLength; value != nil {
@@ -274,7 +274,7 @@ func (s *Service) validShape(titleArea, body string) error {
 	if err != nil {
 		return err
 	}
-	// A data field's TITLE is bounded here rather than by a parse reason: TEMPLATE-20's
+	// A data field's TITLE is bounded here rather than by a parse reason: TMPL-20's
 	// reason list is the grammar's, and a configured ceiling inside it would make the shared
 	// fixture depend on the deployment. It refuses like any other over-long field, which is
 	// a message the editor already renders.

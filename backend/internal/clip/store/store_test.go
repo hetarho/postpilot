@@ -266,7 +266,7 @@ func TestPresetDisclosureAndCTARoundTrip(t *testing.T) {
 			t.Fatalf("invalid preset accepted: %+v %v", patch, err)
 		}
 	}
-	// A template must name a preset at creation (CDS-50).
+	// A template must name a preset at creation.
 	uncategorised := recipe()
 	uncategorised.Name, uncategorised.Preset = "무분류", ""
 	if _, err := s.CreateTemplate(ctx, "alice", uncategorised); !errors.Is(err, clip.ErrInvalid) {

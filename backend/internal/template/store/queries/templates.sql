@@ -46,7 +46,7 @@ UPDATE templates SET body = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 UPDATE templates SET title_area = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 
 -- The two generation numbers are the exception to the rule above: they are written TOGETHER
--- on every edit, absence meaning "no opinion" rather than "not part of this edit" (TEMPLATE-8).
+-- on every edit, absence meaning "no opinion" rather than "not part of this edit" (TMPL-8).
 -- The template screen is the only place either is authored and it always holds both, so a
 -- presence rule here would only give an unset number two ways to be written.
 

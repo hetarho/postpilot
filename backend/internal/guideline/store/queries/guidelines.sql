@@ -102,7 +102,7 @@ WHERE g.user_id = ?
   )
 ORDER BY CASE g.scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, g.created_at, g.id;
 
--- Guideline candidates (change 26). A candidate is one completed revision's instruction,
+-- Guideline candidates (GUIDE-7). A candidate is one completed revision's instruction,
 -- recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
 -- stop the same instruction from being recorded again, so nothing here deletes one.
 

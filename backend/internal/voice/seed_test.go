@@ -17,7 +17,7 @@ func describedVoice(description string) *voice.VoiceSeed {
 	return &voice.VoiceSeed{Description: description, AnalyzeModel: analyzeRef}
 }
 
-// --- creation (change 14 A6, A7, A12, A13) ---
+// --- creation (VOICE-11) ---
 
 func TestCreateVoiceWithoutADescriptionStartsNoWork(t *testing.T) {
 	h := newVoiceHarness(t)
@@ -86,7 +86,7 @@ func TestCreateVoiceRefusesABadDescriptionBeforeInsertingAnything(t *testing.T) 
 	}
 }
 
-// --- the seeding run (change 14 A8, A9, A10, A11, A14) ---
+// --- the seeding run (VOICE-17, VOICE-18, VOICE-19) ---
 
 func TestSeedPublishesAFirstProfileWithNoMeasurements(t *testing.T) {
 	h := newVoiceHarness(t)
@@ -120,7 +120,7 @@ func TestSeedPublishesAFirstProfileWithNoMeasurements(t *testing.T) {
 	}
 
 	// The analysis text reaches the profile through the published structured version and
-	// nowhere else now (change 16): there is no free-text column left to write it into.
+	// nowhere else now (VOICE-25): there is no free-text column left to write it into.
 	versions, err := h.store.ListProfileVersions(ctx, "alice", created.ID)
 	if err != nil || len(versions) != 1 {
 		t.Fatalf("versions = %+v err=%v", versions, err)

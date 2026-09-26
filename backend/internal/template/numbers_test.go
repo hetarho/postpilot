@@ -8,7 +8,7 @@ import (
 
 func ptr(value int) *int { return &value }
 
-// TEMPLATE-6: the bounds are the POST option's own. A template must not be able to store a
+// TMPL-6: the bounds are the POST option's own. A template must not be able to store a
 // number the post would refuse, because nobody would be typing anything when the assignment
 // tried to seed it.
 func TestNumbersAreBoundedByThePostOptionsRules(t *testing.T) {

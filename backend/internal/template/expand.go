@@ -8,14 +8,14 @@ import (
 
 // Copy tokens. A slot becomes a short token the model is asked to reproduce verbatim rather
 // than a label or a sentence: copying twelve characters exactly is something a model does
-// reliably, while reproducing prose is not (spec/legacy/tech/post-template-grammar.md §5).
+// reliably, while reproducing prose is not (TMPL-21, TMPL-22).
 const (
 	slotTokenPrefix  = "{{slot:"
 	photoTokenPrefix = "{{photo:"
 	tokenSuffix      = "}}"
 )
 
-// factOpenPrefix … factClose fence one data field's value as DATA (TEMPLATE-46). It is a
+// factOpenPrefix … factClose fence one data field's value as DATA (TMPL-46). It is a
 // sibling tag rather than an attribute on `<write>` or a line inside it: the legend has to be
 // able to say "never output this tag", and an attribute would put user text where the model
 // reads structure.
@@ -50,13 +50,13 @@ func PhotoToken(filename string) string { return photoTokenPrefix + filename + t
 // the model was asked for.
 //
 // The photos are consumed ONCE, in attachment order, across every photo position in body
-// order (TEMPLATE-21): each position takes the next `count` unbound photos, a repeat runs
+// order (TMPL-21): each position takes the next `count` unbound photos, a repeat runs
 // as many iterations as its positions need to exhaust what is left, and a position with
 // nothing left renders nothing. Zero photos drops every repeat block whole — including its
 // literals — because a section that exists to describe photos has nothing to say about none.
 func Render(name string, nodes []Node, filenames []string, maxIterations int, answers []Answer) (Rendered, error) {
 	// Resolution runs FIRST: a dropped field must not be counted by the expansion bound, and
-	// the body the bound prices has to be the body that gets rendered (TEMPLATE-45).
+	// the body the bound prices has to be the body that gets rendered (TMPL-45).
 	nodes = resolveAsks(nodes, answers)
 	if err := checkExpansion(nodes, len(filenames), maxIterations); err != nil {
 		return Rendered{}, err
@@ -97,7 +97,7 @@ func RenderTemplate(name string, title, body []Node, filenames []string, maxIter
 // resolveAsks replaces every data field with what the post actually answered, and REMOVES the
 // node of a field that is off, blank or unanswered.
 //
-// Removing the node rather than emptying it is the whole guarantee (TEMPLATE-45): the frozen
+// Removing the node rather than emptying it is the whole guarantee (TMPL-45): the frozen
 // body then neither names the field nor leaves a gap, so a template with the field off
 // produces a byte-identical prompt to one that never carried it. The value is carried on the
 // node itself — a resolved ask keeps its Label and holds the ANSWER in Text — so rendering
@@ -241,7 +241,7 @@ func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
 //
 // The verbatim flavor IS literal text on the page, so it renders as exactly that. The write
 // flavor renders the author's instruction as an ordinary `<write>` plus the value fenced as
-// fact beside it — the value is authored fact and never an instruction (TEMPLATE-46).
+// fact beside it — the value is authored fact and never an instruction (TMPL-46).
 func renderAsk(out *strings.Builder, state *renderState, node Node) {
 	label := Decode(node.Label)
 	value := strings.TrimSpace(state.answers[label].Text)
@@ -268,7 +268,7 @@ func renderAsk(out *strings.Builder, state *renderState, node Node) {
 // renderSlot binds a photo position and writes its tokens, or numbers a legacy place/link
 // position. A position's tokens are ADJACENT — joined by a single newline — which is how the
 // interim contract says "these photos stand in one row" while every one of them is still an
-// ordinary single-photo IMAGE block (TEMPLATE-40).
+// ordinary single-photo IMAGE block (TMPL-40).
 func renderSlot(out *strings.Builder, state *renderState, node Node) {
 	if node.SlotKind != SlotPhoto {
 		state.slots = append(state.slots, Slot{Kind: node.SlotKind, Label: Decode(node.Label)})

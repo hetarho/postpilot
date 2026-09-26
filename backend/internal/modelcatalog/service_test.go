@@ -768,7 +768,7 @@ func TestProviderSlugOf(t *testing.T) {
 	}
 }
 
-// --- reasoning capability (change 27) ---
+// --- reasoning capability (MODEL-18, MODEL-21, MODEL-22) ---
 
 func reasoningCapable(efforts []string, mandatory bool) modelcatalog.ReasoningCapability {
 	return modelcatalog.ReasoningCapability{

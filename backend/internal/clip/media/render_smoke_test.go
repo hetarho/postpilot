@@ -119,7 +119,7 @@ func TestRenderSmoke(t *testing.T) {
 		// Every style, rasterized by the real resvg against the real font, is
 		// checked in pixels: a plated style paints its plate token and its accent
 		// where CDS puts it, an unplated one paints the stroke instead, and
-		// 형광펜's highlight sits where the measured advance puts it (CDS-23..26).
+		// 형광펜's highlight sits where the measured advance puts it (CDS-25).
 		amber := design.Accent["amber"]
 		for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 			c := clip.Copy{Text: "가격 9900원", Keyword: "9900원", Style: style, Anchor: rule.Anchor, Align: rule.Align, Accent: "amber"}
@@ -258,7 +258,7 @@ func TestRenderSmoke(t *testing.T) {
 					sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: infos[id]})
 				}
 				// Every clip carries its disclosure badge, and the first cut
-				// carries the chips its facts earn (CDS-5, CDS-30).
+				// carries the chips its facts earn (CDS-5).
 				// Fixed region presets have their own real-font smoke matrix.
 				// The second cut joins with a hard cut and the third fades, so
 				// one render exercises both boundaries CDS-36 admits and the
@@ -400,8 +400,8 @@ func TestRenderSmoke(t *testing.T) {
 							return err
 						}
 						// Only the lower half: the disclosure badge and the chips
-						// are on screen for the WHOLE clip by design (CDS-5,
-						// CDS-30) and both sit at the top, so counting them
+						// are on screen for the WHOLE clip by design (CDS-5)
+						// and both sit at the top, so counting them
 						// would say nothing about the caption's own window.
 						bright := 0
 						for y := frame.Bounds().Dy() / 2; y < frame.Bounds().Dy(); y += 2 {

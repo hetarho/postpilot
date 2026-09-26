@@ -50,7 +50,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 			t.Errorf("contexts.%s is nil after buildContexts", name)
 		}
 	}
-	// Template's number bounds are post's own (TEMPLATE-47), handed over by the command.
+	// Template's number bounds are post's own (TMPL-47), handed over by the command.
 	if limits := app.template.Limits(); limits.TargetLengthMin != post.TargetLengthMin ||
 		limits.TagCountMin != post.TagCountRange.Min || limits.TagCountMax != post.TagCountRange.Max {
 		t.Fatalf("template limits = %+v, want post's target-length floor and tag-count range", limits)

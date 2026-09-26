@@ -511,9 +511,8 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		client.Transport = h.aborted
 		h.client = newReleaseClipClient(&client, rpcServer.URL)
 	}
-	// The reserved labels a clip's own chips and cards read (CDS-30, CDS-28).
-	// Two of them plus a campaign type are what the approval gate requires
-	// before a credit is reserved (CDS-1, CDS-5).
+	// The reserved labels a legacy recipe's chips and cards read. The project
+	// answers two of them and names a campaign type.
 	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{
 		{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"},
 	}}

@@ -949,7 +949,7 @@ func TestRecordCallKeepsFailedCallsWithReportedUsage(t *testing.T) {
 		t.Fatalf("events = %+v, want none for a failure with no usage", store.events)
 	}
 
-	// A failure the provider still billed is the case job 23 preserves usage for.
+	// A failure the provider still billed is the case QUOTA-21 preserves usage for.
 	if err := svc.RecordCall(ctx, ref, "", llm.Usage{PromptTokens: 12, CostMicrousd: 4, CostReported: true}, errors.New("provider failed")); err != nil {
 		t.Fatal(err)
 	}

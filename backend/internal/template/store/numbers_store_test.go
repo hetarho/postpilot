@@ -9,7 +9,7 @@ import (
 
 func number(value int) *int { return &value }
 
-// TEMPLATE-47: the two numbers round-trip as authored, and NULL stays NULL — a template
+// TMPL-47: the two numbers round-trip as authored, and NULL stays NULL — a template
 // nobody gave a number to must not read back as one asking for zero characters.
 func TestNumbersRoundTripAndUnsetStaysUnset(t *testing.T) {
 	s, _ := newStore(t)
@@ -52,7 +52,7 @@ func TestNumbersRoundTripAndUnsetStaysUnset(t *testing.T) {
 	}
 }
 
-// TEMPLATE-8: the pair is written together, so unticking a number on the screen writes NULL
+// TMPL-8: the pair is written together, so unticking a number on the screen writes NULL
 // back — while a patch that carries no pair at all leaves both columns alone.
 func TestUpdateWritesBothNumbersAndCanUnsetThem(t *testing.T) {
 	s, _ := newStore(t)

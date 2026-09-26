@@ -35,8 +35,8 @@ export type Template = Message<"postpilot.v1.Template"> & {
   description: string;
 
   /**
-   * The template body in the grammar of spec/legacy/tech/post-template-grammar.md. This string is
-   * the single source of truth: the builder parses and re-serializes it byte-for-byte, and
+   * The template body in the grammar of TMPL-17..TMPL-20. This string is
+   * the single source of truth (TMPL-2): the builder parses and re-serializes it byte-for-byte, and
    * the write/revise prompts receive it after repeat expansion.
    *
    * @generated from field: string body = 4;
@@ -62,7 +62,7 @@ export type Template = Message<"postpilot.v1.Template"> & {
   updatedAt: string;
 
   /**
-   * What the posts this template shapes usually want (TEMPLATE-47). Both are unset when the
+   * What the posts this template shapes usually want (TMPL-47). Both are unset when the
    * template has no opinion about them, and both are SEEDS: assigning the template copies a
    * set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
    * freezing the post's values.
@@ -242,7 +242,7 @@ export type UpdateTemplateRequest = Message<"postpilot.v1.UpdateTemplateRequest"
   /**
    * The two numbers are the exception to the presence rule above: absent means 값 없음 and
    * clears the stored one, because the template screen holds both and sends both on every
-   * save (TEMPLATE-8). A second meaning for absence would only give an unset number two
+   * save (TMPL-8). A second meaning for absence would only give an unset number two
    * ways to be written.
    *
    * @generated from field: optional int32 target_length = 5;

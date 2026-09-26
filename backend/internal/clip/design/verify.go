@@ -145,8 +145,8 @@ const (
 // An element belongs to a caption exactly when it carries a copy style: the
 // line, the plate, the bar or dot, the highlight and the scrim the compiler
 // placed for one written sentence. The badge, the chips and the two cards are
-// the design system's own furniture — they carry no style, never move (CDS-31,
-// CDS-30, CDS-28) and are not measured against a style's limits.
+// the design system's own furniture — they carry no style, never move (CDS-31)
+// and are not measured against a style's limits.
 func caption(e Element) bool { return e.Style != "" }
 
 // MinTypeSize is the smallest size anything in the type scale may be set at:
@@ -229,7 +229,7 @@ func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 		}
 		// The badge never moves, a chip does not settle and a card only fades:
 		// only a caption's own elements carry the two permitted motions (CDS-31,
-		// CDS-30, CDS-28, CDS-4).
+		// CDS-4).
 		if !caption(e) {
 			if e.InMS != 0 || e.OutMS != 0 || e.DY != 0 {
 				return at(ViolationMotion, e)

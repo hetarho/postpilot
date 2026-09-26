@@ -479,9 +479,9 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var content any
 	if videoCount == 1 && wire.MaxTokens == 8192 {
-		// The observation contract of CDS-39: the scene type, whether the footage
-		// already carries readable text and the principal subject's own box are
-		// what the design system reads to place a caption (T105).
+		// The observation contract: the scene type, whether the footage already
+		// carries readable text and the principal subject's own box are what the
+		// design system reads to place a caption (CDS-38, T105).
 		content = map[string]any{"source_id": metadata["source_id"], "chunk_index": metadata["chunk_index"], "segments": []any{map[string]any{
 			"start_ms": 0, "end_ms": metadata["chunk_duration_ms"], "event": "synthetic scene",
 			"action": "the pattern moves steadily", "motion": "slow horizontal drift",

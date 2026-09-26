@@ -7,7 +7,7 @@ import (
 
 // Store is the persistence this context needs. catalog_models is global rather than
 // per-account: what an installation offers is an operator decision; affordability against
-// a balance is what differentiates who may run it (plan 17).
+// a balance is what differentiates who may run it (QUOTA-19).
 type Store interface {
 	List(ctx context.Context) ([]Model, error)
 	Get(ctx context.Context, modelID string) (Model, error)

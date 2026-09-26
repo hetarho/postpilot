@@ -105,7 +105,7 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 }
 
 // An upgrade's span counts the running month as whole and prices it at a twelfth of the
-// annual price (BILLING-18): counting only completed windows made an upgrade inside the last
+// annual price (BILL-18): counting only completed windows made an upgrade inside the last
 // month free and charged a fresh term for eleven of the twelve windows it grants.
 func TestUpgradeChargesTheMonthsStillToRunAtTheTermsOwnUnitPrice(t *testing.T) {
 	ctx := context.Background()

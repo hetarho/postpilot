@@ -586,7 +586,7 @@ func TestCreatePostDuplicateSlug(t *testing.T) {
 	}
 }
 
-// Plan 10 A8 at the SQL level: one UPDATE moves the post and withdraws the old voice's
+// POST-24 at the SQL level: one UPDATE moves the post and withdraws the old voice's
 // baseline/eligibility, and it is owner-scoped and a no-op for the same voice.
 func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	ctx := context.Background()

@@ -27,8 +27,8 @@ message Template {
   // What posts of this kind are for. May be empty; it is management copy and never reaches
   // a prompt.
   string description = 3;
-  // The template body in the grammar of spec/legacy/tech/post-template-grammar.md. This string is
-  // the single source of truth: the builder parses and re-serializes it byte-for-byte, and
+  // The template body in the grammar of TMPL-17..TMPL-20. This string is
+  // the single source of truth (TMPL-2): the builder parses and re-serializes it byte-for-byte, and
   // the write/revise prompts receive it after repeat expansion.
   string body = 4;
   // Posts currently referencing it. Shown before a delete, which detaches rather than
@@ -36,7 +36,7 @@ message Template {
   int32 post_count = 5;
   string created_at = 6;
   string updated_at = 7;
-  // What the posts this template shapes usually want (TEMPLATE-47). Both are unset when the
+  // What the posts this template shapes usually want (TMPL-47). Both are unset when the
   // template has no opinion about them, and both are SEEDS: assigning the template copies a
   // set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
   // freezing the post's values.
@@ -82,7 +82,7 @@ message UpdateTemplateRequest {
   optional string body = 4;
   // The two numbers are the exception to the presence rule above: absent means 값 없음 and
   // clears the stored one, because the template screen holds both and sends both on every
-  // save (TEMPLATE-8). A second meaning for absence would only give an unset number two
+  // save (TMPL-8). A second meaning for absence would only give an unset number two
   // ways to be written.
   optional int32 target_length = 5;
   optional int32 tag_count = 6;

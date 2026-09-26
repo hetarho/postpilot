@@ -18,7 +18,7 @@ func (s *Service) ProfileForPromptForTopic(ctx context.Context, userID, voiceID,
 		return "", nil, "", false, err
 	}
 	// Earned rules FIRST now: the free-text position ahead of them is gone with the section
-	// that owned it (change 16), and what remains of ManualRules is the refine step's
+	// that owned it (VOICE-6), and what remains of ManualRules is the refine step's
 	// "save as rule" text.
 	rules := projection.ActiveRules
 	if projection.ManualRules != "" {
@@ -128,7 +128,7 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 	}
 	// ONE representation, injected ONCE. The analysis text reaches the model through the
 	// structured profile's lexical description and nowhere else; the `[Legacy manual guidance]`
-	// append that repeated the very same text under its own header is gone (change 16).
+	// append that repeated the very same text under its own header is gone (VOICE-6).
 	style := renderStructuredProfileForLanguage(profile.Structured, voice.SourceLanguage)
 	// An empty voice is now exactly "nothing to learn from and nothing published": no samples,
 	// no authored sources, no structured version.

@@ -99,7 +99,7 @@ func newService(store *fakeStore) *provider.Service {
 	}, fakeCredits{})
 }
 
-// Stage membership comes from purpose registration (change 20): a text model is registered
+// Stage membership comes from purpose registration (MODEL-14): a text model is registered
 // to writing/style-analysis, a vision model to photo-analysis as well.
 var (
 	allStages  = []string{"observe", "write", "analyze"}
@@ -189,7 +189,7 @@ func TestObserveNeedsARegisteredModel(t *testing.T) {
 	}
 }
 
-// AC5: a saved model that left the registry is reported missing once and cleared.
+// MODEL-24: a saved model that left the registry is reported missing once and cleared.
 func TestGetSelections_MarksAndClearsVanishedModels(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{
 		"observe": {Stage: provider.StageObserve, Ref: seeing},
@@ -235,7 +235,7 @@ func TestSaveSelection_Rules(t *testing.T) {
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageWrite, gone); !errors.Is(err, provider.ErrModelNotRegistered) {
 		t.Errorf("unregistered = %v", err)
 	}
-	// AC2: a disabled model cannot be selected, not even by a hand-made request.
+	// MODEL-25: a disabled model cannot be selected, not even by a hand-made request.
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageWrite, disabled); !errors.Is(err, provider.ErrModelDisabled) {
 		t.Errorf("disabled = %v", err)
 	}
@@ -302,7 +302,7 @@ func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
 	}
 }
 
-// A10 (plan 18): the set's models are curated data now, so a shipped set can name one an
+// MODEL-25: the set's models are curated data now, so a shipped set can name one an
 // operator has since retired or disabled. The refusal names every offending ref at once,
 // grouped by cause — discovering them one apply at a time would be nine round trips.
 func TestRecommendationRefusalNamesEveryOffendingRef(t *testing.T) {

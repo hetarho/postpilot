@@ -425,7 +425,7 @@ func TestNewServiceRejectsNonPositiveLimits(t *testing.T) {
 	NewService(newFakeStore(), testFields, Limits{TextMaxChars: 0, MaxPerAccount: 1}, 2)
 }
 
-// --- candidates (change 26) ---
+// --- candidates (GUIDE-7..GUIDE-13) ---
 
 func TestRecordCandidateStoresTheInstructionVerbatimAtTheRevisionBound(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
@@ -525,7 +525,7 @@ func TestCreateCarriesTheCandidateApproval(t *testing.T) {
 }
 
 // A refused create must approve nothing: the candidate has to stay pending so the user can
-// shorten it and try again (change 26's bound split).
+// shorten it and try again (GUIDE-9's bound split).
 func TestCreateRefusedByTheTextBoundApprovesNothing(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
 	_, err := svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "c1")

@@ -41,7 +41,7 @@ type ReasoningPolicy struct {
 // strength changes generation behaviour rather than deployment topology
 // (ARCH-21). A model-level registry override still wins.
 //
-// Analyze has no field on purpose: policy/providers.md requires it to send no
+// Analyze has no field on purpose: MODEL-9 and GEN-22 require it to send no
 // effort, and a request that carries no stage value already sends none
 // (registry.go forwards only a resolved effort). Adding the field back would be
 // a second place for one rule to live, which is how it previously came to be
@@ -541,7 +541,7 @@ func frozenVoice(post PostInput, jobVoiceID string) (string, error) {
 }
 
 // modelEnabled requires stage membership, not mere registry presence: a ref arrives here
-// straight from the client, so the per-template registration (change 20) is enforced at
+// straight from the client, so the per-purpose registration (MODEL-16) is enforced at
 // this boundary too, not only in the picker.
 func modelEnabled(models LLM, ref llm.ModelRef, stage string) bool {
 	info, ok := models.Resolve(ref)

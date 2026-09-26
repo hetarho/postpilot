@@ -60,7 +60,7 @@ WHERE voice_id = ? AND user_id = ?;
 
 -- name: ClaimCorpusVersion :execrows
 -- The concurrency guard, and nothing else. It used to write the analysis text into a
--- `styleguide` column; that column is gone (change 16) and the analysis text now reaches the
+-- `styleguide` column; that column is gone (VOICE-6) and the analysis text now reaches the
 -- profile only through the structured version this claim gates. Zero rows means the corpus
 -- moved while the provider was working, so the finished analysis is stale and must not publish.
 UPDATE voice_profiles
@@ -130,7 +130,7 @@ SELECT id, user_id, voice_id, version, snapshot, origin, restored_from_version, 
 
 -- name: ListProfileVersions :many
 -- `has_sample` rather than the snapshot itself: the list must be able to say whether a version
--- can be previewed without carrying every post body it ever produced (change 16).
+-- can be previewed without carrying every post body it ever produced (VOICE-29).
 SELECT v.id, v.user_id, v.voice_id, v.version, v.snapshot, v.origin, v.restored_from_version, v.created_at,
        s.version AS sample_version
 FROM voice_profile_versions v

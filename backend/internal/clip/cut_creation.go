@@ -73,7 +73,7 @@ func ObservedCutFocal(scene Segment) Point {
 // ownerItemBinding re-derives the group and item a NEW cut belongs to from the
 // owner's own associations, never from anything the client asserted. Exactly one
 // answer binds it; none or several leave it unassigned, because an uncertain
-// association is not an association (CLIP-62).
+// association is not an association (CLIP-123).
 func ownerItemBinding(associations []SourceAssociation, sourceID, fingerprint string, startMS, endMS int) (string, string) {
 	group, item := "", ""
 	for _, a := range associations {

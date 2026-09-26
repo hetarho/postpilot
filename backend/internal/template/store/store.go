@@ -167,7 +167,7 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch template.Pa
 		touched = true
 	}
 	// The two numbers are written TOGETHER, absence meaning no opinion rather than "not part
-	// of this edit" (TEMPLATE-8): the template screen holds both and sends both.
+	// of this edit" (TMPL-8): the template screen holds both and sends both.
 	if patch.Numbers != nil {
 		n, err := q.UpdateTemplateNumbers(ctx, sqlc.UpdateTemplateNumbersParams{
 			TargetLength: nullNumber(patch.Numbers.TargetLength),

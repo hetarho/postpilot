@@ -74,7 +74,7 @@ message ModelInfo {
   // unaffordable start whatever the client rendered — and unlike the plan floor it
   // replaces, it is temporary: the same model is affordable again after a renewal.
   bool affordable = 14;
-  // The stages this model is registered to serve (change 20): each stage's picker lists
+  // The stages this model is registered to serve (MODEL-14): each stage's picker lists
   // exactly its members — the client never re-derives stage fitness from capability flags.
   repeated Stage stages = 15;
   // The operator's grade for this model AT EACH STAGE, for the stages that have one

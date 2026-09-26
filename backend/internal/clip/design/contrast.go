@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// WCAG 2.1's contrast arithmetic, which V3 gates every pairing on (CDS-16,
+// WCAG 2.1's contrast arithmetic, which V3 gates every pairing on (CDS-3,
 // CDS-52). It lives here, beside the tokens it reads, so the verifier needs no
 // dependency to answer a contrast question and the renderer and the verifier
 // cannot disagree about a ratio.

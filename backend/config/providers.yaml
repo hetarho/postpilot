@@ -1,7 +1,7 @@
 # The provider connection (PRD §6.4). This file says how to REACH the model endpoint and
 # which versioned recommendation sets exist. It no longer lists models: the usable-model
 # catalog is curated data in `catalog_models`, browsed live from OpenRouter and enabled by
-# an operator on /admin/models (plan 18). Connection is a file; models are rows.
+# an operator on /admin/models (MODEL-10). Connection is a file; models are rows.
 #
 # The file is validated at boot and a broken entry stops the API from starting, the same
 # posture as a bad migration. A leftover `models:` list is rejected by the strict parser
@@ -27,7 +27,7 @@ providers:
     api_key_env: OPENROUTER_API_KEY
     reasoning_format: openrouter
 
-# Opt-in versioned pairings (plan 09). Never applied automatically. The refs name curated
+# Opt-in versioned pairings (MODEL-26). Never applied automatically. The refs name curated
 # models, so whether a set can be applied is decided when a user applies it — against the
 # catalog as it is then — not at boot.
 recommendation_sets:

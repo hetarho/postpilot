@@ -74,7 +74,7 @@ func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Se
 	return postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL), server
 }
 
-// TestLoginSetCookieAttributes is plan 01 AC7 + AC10: the exact attribute set, and a
+// TestLoginSetCookieAttributes pins AUTH-12: the exact attribute set, and a
 // Max-Age that matches the session lifetime the server stamped into the row.
 func TestLoginSetCookieAttributes(t *testing.T) {
 	for _, rememberMe := range []bool{false, true} {
@@ -104,7 +104,7 @@ func TestLoginSetCookieAttributes(t *testing.T) {
 				t.Error("the cookie carries a Domain attribute — it must stay host-only")
 			}
 
-			// Plan 01 AC4 (server half): the token is in the header and nowhere else.
+			// AUTH-32 (server half): the token is in the header and nowhere else.
 			if res.Msg.GetUser().GetId() != "alice" {
 				t.Errorf("user id = %q, want alice", res.Msg.GetUser().GetId())
 			}
@@ -269,7 +269,7 @@ func TestLockedAccountIsWireIdenticalToWrongPassword(t *testing.T) {
 	}
 }
 
-// TestInterceptorGuardsEveryProcedure is plan 01 AC1: no cookie means 401 on anything
+// TestInterceptorGuardsEveryProcedure pins AUTH-16: no cookie means 401 on anything
 // but Login, and a valid cookie gets through.
 func TestInterceptorGuardsEveryProcedure(t *testing.T) {
 	client, _ := newServer(t)
@@ -472,7 +472,7 @@ func TestUnverifiedCorrectPasswordIsWireIdenticalToWrongPassword(t *testing.T) {
 	}
 }
 
-// TestInterceptorRejectsTamperedCookie is plan 01 AC2 at the transport level.
+// TestInterceptorRejectsTamperedCookie pins AUTH-16 at the transport level.
 func TestInterceptorRejectsTamperedCookie(t *testing.T) {
 	client, _ := newServer(t)
 	cookie := login(t, client)
@@ -486,7 +486,7 @@ func TestInterceptorRejectsTamperedCookie(t *testing.T) {
 
 // TestInterceptorCoversStreamingHandlers guards the gap connect.UnaryInterceptorFunc
 // leaves: its WrapStreamingHandler is a pass-through, so a streaming procedure added
-// later (the generation job queue, plan 05) would ship with no session check at all.
+// later (the generation job queue) would ship with no session check at all.
 func TestInterceptorCoversStreamingHandlers(t *testing.T) {
 	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
 	interceptor := authrpc.NewInterceptor(svc, auth.NewThrottle(), "")
@@ -548,7 +548,7 @@ func TestLogoutWithoutASessionStillClearsTheCookie(t *testing.T) {
 	}
 }
 
-// TestLogoutRevokesAndClears is plan 01 AC6: replaying the same cookie after logout
+// TestLogoutRevokesAndClears pins AUTH-13: replaying the same cookie after logout
 // fails server-side, so a stolen copy is worthless.
 func TestLogoutRevokesAndClears(t *testing.T) {
 	client, _ := newServer(t)

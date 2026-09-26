@@ -82,7 +82,7 @@ func TestGetMeCarriesTheTier(t *testing.T) {
 	}
 }
 
-// A1 (plan 18): curating the model catalog decides what every account may spend money on,
+// MODEL-13: curating the model catalog decides what every account may spend money on,
 // so the whole service sits behind the same gate as the tier assignment — enforced here,
 // whatever the client rendered.
 func TestModelCatalogIsMasterOnly(t *testing.T) {

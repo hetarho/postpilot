@@ -213,13 +213,13 @@ func lineContaining(prompt, needle string) string {
 }
 
 // The pre-naturalness goldens are the baseline the fixed-text additions are stated against:
-// job 36's stylistic section, job 35's grounding line, T041's write-only naming line, T287's
-// write-only altitude line, and T324's write-only title, tag and nouns lines with the nouns
+// the stylistic section (GEN-17), the grounding line (GEN-16), T041's write-only naming line,
+// T287's write-only altitude line, and T324's write-only title, tag and nouns lines with the nouns
 // member of the answer shape.
 // Removing exactly those additions leaves the legacy bytes, which keeps each delta checkable.
 //
-// Change 25 renamed the concept the fixed output-language line names (용도 → 템플릿) in BOTH
-// the current and the legacy goldens, so this check still sees exactly two additions rather
+// The rename of the concept the fixed output-language line names (용도 → 템플릿) landed in
+// BOTH the current and the legacy goldens, so this check still sees exactly two additions rather
 // than reading a rename as a third one.
 func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 	for _, pair := range []struct {

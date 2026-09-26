@@ -69,7 +69,7 @@ const (
 	ChargeMultiplier = 3
 
 	// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
-	// payment method (BILLING-10, QUOTA-9). The usage context persists it; billing decides
+	// payment method (BILL-10, QUOTA-9). The usage context persists it; billing decides
 	// when the account qualifies.
 	PaymentMethodBonusCredits = 100
 	// CreditsPerUSDCent is the at-par top-up rule: one dollar buys 100 credits.

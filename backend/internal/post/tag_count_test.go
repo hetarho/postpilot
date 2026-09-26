@@ -74,7 +74,7 @@ func TestSaveGenerationOptionsUseMemory(t *testing.T) {
 }
 
 // The length's floor is TargetLengthMin, the one number template reads for the length it may
-// seed (TEMPLATE-47): one below is refused with nothing written, and the floor itself is stored.
+// seed (TMPL-47): one below is refused with nothing written, and the floor itself is stored.
 func TestSaveGenerationOptionsRefusesATargetLengthBelowTargetLengthMinAndAcceptsIt(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()

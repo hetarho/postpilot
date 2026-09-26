@@ -55,7 +55,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		Title:          p.Title,
 		Memo:           p.Memo,
 		TargetLanguage: string(p.TargetLanguage),
-		// The template's seeds, or NULL when the create named none (TEMPLATE-48). A zero tag
+		// The template's seeds, or NULL when the create named none (TMPL-48). A zero tag
 		// count is "nobody named one" here, never a post asking for no tags.
 		TargetLength: optionalInt64(p.TargetLength),
 		TagCount:     createTagCount(p.TagCount),

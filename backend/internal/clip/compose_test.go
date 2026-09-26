@@ -107,7 +107,7 @@ func TestComposeGroundingFallback(t *testing.T) {
 }
 
 // A sentence past its style's own character limit is shortened, not regenerated
-// (CDS-20, CDS-23..26) — there is no second paid call to make.
+// (CDS-20, CDS-25) — there is no second paid call to make.
 func TestComposeShortensPastAStyleLimit(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
 	fits := func(clip.Caption) (clip.Region, bool, error) {
@@ -171,7 +171,7 @@ func TestCompilerPlacesTheSecondCopyOnlyWhenCDS43Allows(t *testing.T) {
 	}
 	answers := []clip.Answer{{Label: "가격", Text: "9,900원"}, {Label: "상호", Text: "연남 김밥"}}
 	long := clip.Cut{ID: "long", EndMS: 6000}
-	// CDS-39 reads a number FIRST, so a sentence that states one is never DESC:
+	// The classifier reads a number FIRST, so a sentence that states one is never DESC:
 	// the number CDS-43 splits out is the short alternative the model wrote
 	// beside the description.
 	written := clip.Written{Text: "조용한 골목을 걸었어요", ShortText: "9900원", Answers: answers}

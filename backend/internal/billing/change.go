@@ -202,7 +202,7 @@ func (s *Service) quoteChangeAt(ctx context.Context, subscription Subscription, 
 	if term == TermAnnual {
 		// An annual term's two-month discount belongs to the term, not to the tier, so the
 		// unit is a twelfth of the annual price rather than the monthly list price
-		// (BILLING-18). The span's total comes from the annual difference instead of a
+		// (BILL-18). The span's total comes from the annual difference instead of a
 		// rounded per-month figure: that keeps an upgrade on the term's first day exactly
 		// the difference between the two annual prices, and accumulates no drift.
 		annualDifference := PriceCents(tier, TermAnnual) - PriceCents(subscription.Tier, TermAnnual)
@@ -220,7 +220,7 @@ func (s *Service) quoteChangeAt(ctx context.Context, subscription Subscription, 
 // The running month counts because the account is spending that window's credits at the new
 // tier's size the moment the upgrade lands (QUOTA-35). Counting only completed windows made
 // an upgrade inside the last month free and charged a fresh annual term for eleven of the
-// twelve windows it grants (BILLING-18).
+// twelve windows it grants (BILL-18).
 func monthsStillToRun(anchor, termEnd, now time.Time) int {
 	months := 1
 	for boundary := plan.NextRenewal(anchor, now); boundary.Before(termEnd); boundary = plan.NextRenewal(anchor, boundary) {

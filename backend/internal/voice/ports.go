@@ -38,11 +38,11 @@ type ProfileStore interface {
 	GetProfile(ctx context.Context, userID, voiceID string) (Profile, error)
 	// ClaimCorpusVersion is the concurrency guard a finished analysis has to win before it may
 	// publish. False means a sample changed while the provider was working, so the analysis
-	// describes a corpus the voice has already moved past. It writes no text: change 16
-	// removed the styleguide column the guard used to piggyback on.
+	// describes a corpus the voice has already moved past. It writes no text (VOICE-22): the
+	// styleguide column the guard used to piggyback on is gone.
 	ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error)
 	// SetRules is reachable only from AppendRule, which is the refine step's "save as rule"
-	// checkbox. There is no editor and no RPC for this value any more (change 16).
+	// checkbox. There is no editor and no RPC for this value any more (VOICE-6).
 	SetRules(ctx context.Context, userID, voiceID, rules string, now time.Time) error
 }
 
@@ -57,10 +57,10 @@ type SampleStore interface {
 	CountSamples(ctx context.Context, userID, voiceID string) (int, error)
 }
 
-// VersionSampleStore is the per-version generation snapshot (change 16): what a profile
+// VersionSampleStore is the per-version generation snapshot (VOICE-29): what a profile
 // version produced, kept as opaque text.
 type VersionSampleStore interface {
-	// The per-version generation snapshot (change 16). `content` is OPAQUE TEXT to this
+	// The per-version generation snapshot (VOICE-29). `content` is OPAQUE TEXT to this
 	// context: voice records what a profile version produced without learning the shape of a
 	// post's content. One row per (voice, version) — a later generation replaces it.
 	UpsertVersionSample(ctx context.Context, sample VersionSample) error
@@ -174,7 +174,7 @@ type Models interface {
 }
 
 // PersonalizationModels answers whether a client-supplied ref may run for a stage — the
-// same per-purpose membership the pickers enforce (change 20).
+// same per-purpose membership the pickers enforce (MODEL-16).
 type PersonalizationModels interface {
 	ModelEnabled(ref llm.ModelRef, stage string) bool
 }

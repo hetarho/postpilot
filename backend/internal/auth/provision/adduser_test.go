@@ -54,7 +54,7 @@ func runWithStdin(t *testing.T, dbPath, stdin string, first string, rest ...any)
 	return Run(context.Background(), settings(dbPath), args, bootstraps...)
 }
 
-// TestRunCreatesAccountOnAFreshVolume is job 01 A10's precondition: adduser must work
+// TestRunCreatesAccountOnAFreshVolume: adduser must work
 // against a database that does not exist yet, because provisioning the first account
 // is the first thing an operator does after a deploy.
 // settings is what the composition root hands these commands in production; the tests hand
@@ -86,7 +86,7 @@ func TestRunCreatesAccountOnAFreshVolume(t *testing.T) {
 	}
 }
 
-// TestRunDuplicateID is plan 01 AC5: a duplicate id is refused with a clear message.
+// TestRunDuplicateID pins AUTH-2: a duplicate id is refused with a clear message.
 func TestRunDuplicateID(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "postpilot.db")
 

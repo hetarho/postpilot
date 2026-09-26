@@ -200,7 +200,7 @@ func TestInstructionAdmitsExperienceButNeverAFigure(t *testing.T) {
 
 // A whole-source binding made before generation reaches every cut taken from
 // that source, whether observation names no subject or several, while a source
-// the owner left unbound keeps today's automatic behaviour (CLIP-123, CLIP-62).
+// the owner left unbound keeps today's automatic behaviour (CLIP-123).
 func TestWholeSourceBindingReachesEveryCutAndLeavesOthersAutomatic(t *testing.T) {
 	inputs, analyses, cut := bindingFixture()
 	whole := clip.SourceAssociation{GroupID: "menu", ItemID: "cheese", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 10000}

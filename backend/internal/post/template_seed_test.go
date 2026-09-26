@@ -27,7 +27,7 @@ func newSeedingService(t *testing.T) (*Service, *fakeStore) {
 	return svc, store
 }
 
-// TEMPLATE-48: assigning a template copies the numbers it HAS set onto the post's own
+// TMPL-48: assigning a template copies the numbers it HAS set onto the post's own
 // options, and leaves the post's value alone for a number it has no opinion about.
 func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 	ctx := context.Background()

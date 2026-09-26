@@ -17,7 +17,7 @@ import (
 // What it deliberately does NOT do is verify the result against the template. Literal
 // fidelity, section order and heading levels are not checked, and no drift fails a run or
 // triggers a retry: a generation that came back usable is never thrown away over a
-// punctuation difference (change 25 AC10). A slot, on the other hand, cannot be allowed to
+// punctuation difference (GEN-3). A slot, on the other hand, cannot be allowed to
 // go missing — it is the one thing in the post that a person still has to act on, and a
 // silently dropped one is a post that looks finished and is not.
 func ApplyTemplateSlots(content PostContent, brief *TemplateBrief) PostContent {

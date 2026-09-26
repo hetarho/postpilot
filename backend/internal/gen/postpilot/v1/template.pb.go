@@ -28,8 +28,8 @@ type Template struct {
 	// What posts of this kind are for. May be empty; it is management copy and never reaches
 	// a prompt.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// The template body in the grammar of spec/legacy/tech/post-template-grammar.md. This string is
-	// the single source of truth: the builder parses and re-serializes it byte-for-byte, and
+	// The template body in the grammar of TMPL-17..TMPL-20. This string is
+	// the single source of truth (TMPL-2): the builder parses and re-serializes it byte-for-byte, and
 	// the write/revise prompts receive it after repeat expansion.
 	Body string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 	// Posts currently referencing it. Shown before a delete, which detaches rather than
@@ -37,7 +37,7 @@ type Template struct {
 	PostCount int32  `protobuf:"varint,5,opt,name=post_count,json=postCount,proto3" json:"post_count,omitempty"`
 	CreatedAt string `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt string `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// What the posts this template shapes usually want (TEMPLATE-47). Both are unset when the
+	// What the posts this template shapes usually want (TMPL-47). Both are unset when the
 	// template has no opinion about them, and both are SEEDS: assigning the template copies a
 	// set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
 	// freezing the post's values.
@@ -426,7 +426,7 @@ type UpdateTemplateRequest struct {
 	Body        *string                `protobuf:"bytes,4,opt,name=body,proto3,oneof" json:"body,omitempty"`
 	// The two numbers are the exception to the presence rule above: absent means 값 없음 and
 	// clears the stored one, because the template screen holds both and sends both on every
-	// save (TEMPLATE-8). A second meaning for absence would only give an unset number two
+	// save (TMPL-8). A second meaning for absence would only give an unset number two
 	// ways to be written.
 	TargetLength *int32 `protobuf:"varint,5,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
 	TagCount     *int32 `protobuf:"varint,6,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`

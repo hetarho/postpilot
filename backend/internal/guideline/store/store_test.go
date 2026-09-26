@@ -441,7 +441,7 @@ func TestDeleteRemovesOnlyItsOwnLinks(t *testing.T) {
 	}
 }
 
-// --- candidates (change 26) ---
+// --- candidates (GUIDE-7..GUIDE-13) ---
 
 func newCandidate(id, userID, text, postSlug string, at time.Time) guideline.Candidate {
 	return guideline.Candidate{

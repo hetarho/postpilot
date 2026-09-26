@@ -9,10 +9,11 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-// Change 16 drops voice_profiles.styleguide. A voice analysed before change 02 and never
-// re-analysed since has its WHOLE profile in that text and no published structured version, so
-// dropping the column would silently reduce a trained voice to an empty one. 0017 publishes the
-// version such a voice never had, and leaves every already-versioned voice alone.
+// Migration 0017 drops voice_profiles.styleguide. A voice analysed before structured profiles
+// existed and never re-analysed since has its WHOLE profile in that text and no published
+// structured version, so dropping the column would silently reduce a trained voice to an empty
+// one. 0017 publishes the version such a voice never had, and leaves every already-versioned
+// voice alone.
 func TestMigration0017RescuesAPreStructuredStyleguide(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()

@@ -646,7 +646,7 @@ func (c *composed) resolve(canvas clip.Canvas) {
 
 // copyLayer resolves and rasterizes one cut's copy plate. A plated style asks
 // nothing of the footage — ink at α ≥ 0.72 under white text stays above the
-// floor even over a white frame (CDS-16) — and is drawn straight away. An
+// floor even over a white frame (CDS-3) — and is drawn straight away. An
 // unplated one samples the three frames CDS-44 names under the copy first: the
 // ground decides whether a scrim appears, whether the accent word turns white,
 // and what contrast V3 then measures. A pairing still under the floor puts the

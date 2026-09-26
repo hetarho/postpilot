@@ -223,7 +223,7 @@ func TestGetUserUnknown(t *testing.T) {
 	}
 }
 
-// TestCreateUserDuplicate is plan 01 AC5's server half: the driver's UNIQUE violation
+// TestCreateUserDuplicate pins AUTH-2's server half: the driver's UNIQUE violation
 // must arrive as a domain error the operator command can explain.
 func TestCreateUserDuplicate(t *testing.T) {
 	ctx := context.Background()

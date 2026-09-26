@@ -14,7 +14,7 @@ type Ceilings struct {
 	AskMaxPerBody       int
 }
 
-// NumberBounds are the POST option range a template's two generation numbers seed (TEMPLATE-47),
+// NumberBounds are the POST option range a template's two generation numbers seed (TMPL-47),
 // passed in and not owned here: the number is a SEED for that option, and a template able to
 // store one the post refuses would make an assignment fail at a place the user never typed
 // anything. The length has a floor and no ceiling, exactly as the post's own option does.

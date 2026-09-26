@@ -23,7 +23,7 @@ type Segment struct {
 	Action, Motion string
 	Subjects       []string
 	Focal          Point
-	// What the segment shows (CDS-40's rows), whether legible footage text fills
+	// What the segment shows, whether legible footage text fills
 	// the frame (CDS-38), and the ONE principal subject box in normalized source
 	// coordinates — zero-size when the frame has none. The box replaced a
 	// keep-out region because CDS-38 needs the subject's own AREA for its 15 %
@@ -100,7 +100,7 @@ type PlanningInput struct {
 	Policy           llm.CallPolicy
 	// The campaign type the badge shows and the closing CTA, already resolved
 	// against the template's preset, so the composer and the cards read one
-	// place (CDS-29, CDS-31). The preset itself rides Template.
+	// place (CDS-31). The preset itself rides Template.
 	Disclosure, CTA string
 	HideDisclosure  bool
 	// The project's own instruction (CLIP-121), empty when none was written.

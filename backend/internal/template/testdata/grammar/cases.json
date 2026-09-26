@@ -12,7 +12,7 @@
     "value must be plain ASCII digits after trimming the shared blank set: `+2` and `2.0` are",
     "invalid_count in both parsers rather than coerced, because Go's and JavaScript's number",
     "parsers disagree about exactly those forms.",
-    "See spec/legacy/tech/post-template-grammar.md.",
+    "See TMPL-17..TMPL-20 in spec/ssot/TMPL.md.",
     "`askMaxPerBody` is the data-field ceiling BOTH harnesses parse with, deliberately smaller than",
     "the deployment's TEMPLATE_ASK_MAX_PER_BODY so a too_many_asks case stays short. An ask's `text`",
     "is empty for the verbatim flavor — the self-closing form, the empty element and a blank one all",

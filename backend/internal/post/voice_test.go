@@ -15,7 +15,7 @@ func (f fakePendingExperiments) PendingForPost(_ context.Context, _, slug string
 	return f[slug], nil
 }
 
-// Plan 10 A4: a create names exactly one owned active voice, and the server never picks one.
+// POST-23: a create names exactly one owned active voice, and the server never picks one.
 func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
@@ -57,7 +57,7 @@ func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 	}()
 }
 
-// Plan 10 A5/A7: read models carry the voice's name and tombstone state, so a post whose
+// POST-25: read models carry the voice's name and tombstone state, so a post whose
 // voice was deleted still renders and exports.
 func TestGetAndListProjectTheVoiceIncludingTombstones(t *testing.T) {
 	svc, store, _ := newTestService(t)
@@ -81,7 +81,7 @@ func TestGetAndListProjectTheVoiceIncludingTombstones(t *testing.T) {
 	}
 }
 
-// Plan 10 A8: reassignment keeps the canonical post/finalization and withdraws the old
+// POST-24: reassignment keeps the canonical post/finalization and withdraws the old
 // voice's machine baseline, which is what removes learn eligibility.
 func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 	svc, store, _ := newTestService(t)

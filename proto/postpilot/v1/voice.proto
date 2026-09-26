@@ -133,7 +133,7 @@ message VoiceProfile {
   // can never become detached from the voice they describe.
   Voice voice = 10;
   // 1, 2 and 7 were the free-text styleguide, the free-text rules, and the two of them joined
-  // for display. Change 16 removed that whole path: the profile is the structured profile, its
+  // for display. That whole path is gone (VOICE-6): the profile is the structured profile, its
   // earned rules and its sample excerpts, injected once. Reserved, never reused.
   reserved 1, 2, 7;
   string updated_at = 3;

@@ -49,7 +49,7 @@ func TestValidateEditPlan(t *testing.T) {
 	}
 }
 
-// CDS-20 and CDS-23..26 bound the lines and characters per style, and CDS-41 the
+// CDS-20 and CDS-25 bound the lines and characters per style, and CDS-41 the
 // exposure a copy of that length earns. Each case names the code it must return.
 func TestCopyLimitsAndExposurePerStyle(t *testing.T) {
 	cfg := clip.DefaultRenderConfig(clip.Environment{})

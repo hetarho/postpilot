@@ -28,7 +28,7 @@ type Caption struct {
 	// Empty preserves legacy sentence timing; rapid uses explicit phrase windows.
 	Pace                               string
 	Text, Anchor, Align, Style, Accent string
-	// The one word 크게 강조 colours and 형광펜 highlights (CDS-25, CDS-26). A
+	// The one word 크게 강조 colours and 형광펜 highlights (CDS-25). A
 	// substring of Text, chosen by the planner or the owner; empty means none.
 	// It is a field rather than a marker inside Text because Text must stay
 	// exactly what the owner approved, down to the byte.
@@ -61,7 +61,7 @@ type Cut struct {
 	// a description and then the number it leads to, never both on screen at
 	// once. A cut whose copy the composer dropped carries none.
 	Copies []Copy
-	// Reserved fact labels whose chips belong on this cut (CDS-30), at most two
+	// Reserved fact labels whose chips belong on this cut, at most two
 	// at a time. Part of the approved composition, so it is stored with it.
 	Chips  []string
 	Volume *float64 // nil keeps original audio; explicit zero mutes it
@@ -151,16 +151,17 @@ type EditPlan struct {
 	// it: the disclosure the badge shows and the facts a chip reads. They are
 	// filled from the PROJECT at render time, so the badge is always the owner's
 	// current campaign type and a plan stored before presets existed still
-	// renders (CDS-31, CDS-30).
+	// renders (CDS-31).
 	Disclosure string
 	Facts      []Answer
-	// The template's category preset, which fixes the chip priority (CDS-50).
+	// The template's category preset, which fixes the chip priority.
 	Preset string
-	// The opening card's title, written by the model under CDS-42 and rendered
-	// by the hook card; empty when it could not be grounded.
+	// A legacy plan's opening title, written by the model under CDS-42 and
+	// drawn as the first line of its intro block (CDS-70); empty when it could
+	// not be grounded.
 	Hook string
 	// The closing call to action, already resolved against the preset, and the
-	// project accent both cards paint with (CDS-29, CLIP-14).
+	// project accent (CLIP-14).
 	CTA, Accent string
 	// The project's caption pace (CLIP-139), a render input like Accent beside
 	// it: empty is not chosen, and the frozen document's own value stands.
@@ -274,8 +275,9 @@ func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && 
 // coordinate or an original-audio gain.
 func Normalized(v float64) bool { return normalized(v) }
 
-// RetiredCopyStyles are the style names CDS-23, CDS-24, CDS-26 and CDS-58
-// retired. Nothing writes one; a stored plan that carries one is read.
+// RetiredCopyStyles are the style names the approved set (CDS-80) no longer
+// carries, the siblings of CDS-25's 크게 강조. Nothing writes one; a stored plan
+// that carries one is read.
 var RetiredCopyStyles = []string{"clean", "memo", "mark", "simple"}
 
 func ValidCopy(c Copy, maxRunes int) bool {
@@ -432,7 +434,7 @@ func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, acce
 }
 
 // ChipLabels is the subset of a cut's chips that names a reserved fact and has
-// an answer, in the template preset's own priority (CDS-30, CDS-50).
+// an answer, in the template preset's own priority.
 func (p EditPlan) ChipLabels(c Cut) []string {
 	answers := map[string]string{}
 	for _, a := range p.Facts {
@@ -440,7 +442,7 @@ func (p EditPlan) ChipLabels(c Cut) []string {
 	}
 	out := []string{}
 	// A chip is shown for the whole cut it belongs to and for at least 2.0 s, so
-	// a shorter cut carries none rather than flashing one (CDS-30).
+	// a shorter cut carries none rather than flashing one.
 	if c.OutputDurationMS() < int(design.Timing.ChipMinS*1000) {
 		return out
 	}
@@ -457,7 +459,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 	if _, err := ClipCanvas(plan.Ratio); err != nil {
 		return planViolation("plan_ratio")
 	}
-	// Two lines of nine, which is what the hook card sets (CDS-28).
+	// Two lines of nine, the limit a legacy plan's hook sentence was written to.
 	if design.Chars(plan.Hook) > 2*design.Type["hook"].Chars || strings.Count(plan.Hook, "\n") > 1 {
 		return planViolation("plan_hook")
 	}
@@ -544,7 +546,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			}
 		}
 		// A chip names one of the five reserved facts, and at most two show at
-		// once (CDS-30).
+		// once.
 		if len(c.Chips) > 2 {
 			return planViolation("plan_chip_count")
 		}
@@ -570,7 +572,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 				return planViolation("plan_copy_sequence")
 			}
 			previousEnd = captionEnd
-			// The style's own line and character limits (CDS-20, CDS-23..26) and
+			// The style's own line and character limits (CDS-20, CDS-25) and
 			// the exposure its length earns (CDS-41). An empty copy is a cut with
 			// no text, not a copy that breaks them.
 			style := design.Caption()
@@ -596,7 +598,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			if captionEnd-captionStart < minimum {
 				return planViolation("plan_copy_exposure")
 			}
-			// The accent word must be in the text it accents (CDS-25, CDS-26).
+			// The accent word must be in the text it accents (CDS-25).
 			if copy.Keyword != "" && !strings.Contains(copy.Text, copy.Keyword) {
 				return planViolation("plan_copy_keyword")
 			}

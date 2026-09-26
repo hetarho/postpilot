@@ -10,8 +10,7 @@ import (
 //
 // Login verifies against it when the login id does not exist, so the "no such account"
 // path costs one real argon2id derivation — the same as "wrong password". Without it,
-// a caller could enumerate valid ids by timing alone, which is the only enumeration
-// defense this two-user tool has (no rate limiting, plan 01 Non-goals).
+// a caller could enumerate valid ids by timing alone (AUTH-9).
 //
 // It is derived at first use rather than pasted in as a constant: a literal would
 // freeze today's cost parameters, so the day argonTime/argonMemoryKiB are raised the

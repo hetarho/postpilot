@@ -68,7 +68,7 @@ func (a postTemplates) Templates(ctx context.Context, userID string) ([]post.Tem
 	out := make([]post.TemplateRef, 0, len(templates))
 	for _, p := range templates {
 		// The two generation numbers travel with the ref because an assignment seeds the post's
-		// own options from them (TEMPLATE-48). Nothing else reads them: no prompt, payload or
+		// own options from them (TMPL-48). Nothing else reads them: no prompt, payload or
 		// read model ever sees a template's number.
 		out = append(out, post.TemplateRef{
 			ID: p.ID, Name: p.Name, TargetLength: p.TargetLength, TagCount: p.TagCount,

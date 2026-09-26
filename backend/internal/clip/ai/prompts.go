@@ -72,7 +72,7 @@ func BuildPlanPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limit
 		answers = append(answers, map[string]string{"label": a.Label, "text": a.Text})
 	}
 	analyses := planObservationPayload(in.Analyses, false)
-	// The chip vocabulary is CDS-30's, read from the design tables so the prompt
+	// The chip vocabulary is the reserved facts', read from the design tables so the prompt
 	// can never offer the model a label the parser will not accept.
 	system := strings.ReplaceAll(planPrompt, "{{chips}}", strings.Join(design.Fact.Chips, " · ")) + responseContract + string(planSchema)
 	return system, promptJSON(map[string]any{

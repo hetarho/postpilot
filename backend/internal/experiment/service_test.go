@@ -565,7 +565,7 @@ func (v fakeVoices) ActiveVoice(_ context.Context, _, voiceID string) error {
 	return nil
 }
 
-// Plan 10 A13: an analyze comparison names one active voice, freezes it on the experiment
+// VOICE-49: an analyze comparison names one active voice, freezes it on the experiment
 // and its job, keeps the voice undeletable while publishable, and refuses to start or retry
 // once the voice is gone.
 func TestAnalyzeExperimentIsFrozenToOneActiveVoice(t *testing.T) {

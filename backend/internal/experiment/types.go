@@ -239,7 +239,7 @@ type Model struct {
 	Label   string
 	Vision  bool
 	Enabled bool
-	// Stages this model is registered to serve (change 20), in the same strings Stage uses.
+	// Stages this model is registered to serve (MODEL-14), in the same strings Stage uses.
 	Stages              []string
 	InputUSDPerMillion  string
 	OutputUSDPerMillion string

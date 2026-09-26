@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// NodeKind is one of the grammar's six constructs (spec/legacy/tech/post-template-grammar.md §2).
+// NodeKind is one of the grammar's six constructs (TMPL-18).
 type NodeKind string
 
 const (
@@ -17,9 +17,9 @@ const (
 	NodeNote    NodeKind = "note"
 	NodeRepeat  NodeKind = "repeat"
 	// NodeAsk is a position whose facts the POST's author supplies rather than the model
-	// inventing them (TEMPLATE-43). Its Label is the title the write screen shows over the
+	// inventing them (TMPL-43). Its Label is the title the write screen shows over the
 	// field; a blank element is the verbatim flavor and a text-holding one is the write
-	// flavor. Nothing here resolves it — that happens at the freeze (TEMPLATE-45).
+	// flavor. Nothing here resolves it — that happens at the freeze (TMPL-45).
 	NodeAsk NodeKind = "ask"
 )
 
@@ -52,7 +52,7 @@ type Node struct {
 	Text     string   // write · note · ask (empty on an ask means the verbatim flavor)
 	SlotKind SlotKind // slot
 	Label    string   // slot · ask
-	// Count is how many photos a photo position holds side by side (TEMPLATE-38). It is 1
+	// Count is how many photos a photo position holds side by side (TMPL-38). It is 1
 	// when the attribute is absent and 0 on every node that is not a photo slot, so a
 	// non-zero Count always means "this position binds this many photos".
 	Count    int
@@ -98,7 +98,7 @@ const (
 	// 1 … PhotoRowMax. It is its own reason rather than malformed_tag because the attribute
 	// parsed fine — it is the VALUE the author has to go fix.
 	ReasonInvalidCount = "invalid_count"
-	// The three ways an `ask` can be wrong (TEMPLATE-20). ReasonAskInRepeat is its own
+	// The three ways an `ask` can be wrong (TMPL-20). ReasonAskInRepeat is its own
 	// reason rather than unknown_tag because the tag is real and it is the PLACE that is
 	// wrong: how many fields a template asks for must not depend on how many photos this
 	// post happens to carry.
@@ -204,7 +204,7 @@ func inArea(err error, area string) error {
 }
 
 // checkAsks enforces the two template-WIDE rules a single tag cannot see: labels are unique
-// and there are at most maxPerBody of them (TEMPLATE-43), across the title area and the body
+// and there are at most maxPerBody of them (TMPL-43), across the title area and the body
 // together, title first (TMPL-20).
 //
 // One pass in document order, duplicate before count on the same node: a duplicate names the
@@ -475,7 +475,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 }
 
 // slotCount resolves a photo position's row size. An absent attribute is one photo, which
-// is what every body written before TEMPLATE-38 means.
+// is what every body written before TMPL-38 means.
 //
 // The value must be plain ASCII digits after trimming: `+2` and `2.0` are refused rather
 // than coerced, because the TypeScript parser reads the same bodies and the two languages'

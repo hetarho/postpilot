@@ -89,7 +89,7 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 			Reasoning: s.reasoning.Observe,
 			// The stage this call is FOR, which is what lets the registry resolve the
 			// operator's override for photo analysis rather than for writing — one run
-			// observes at one effort and writes at another (change 24).
+			// observes at one effort and writes at another (MODEL-7).
 			Stage:     llm.StageNameObserve,
 			MaxTokens: s.budget.Observation(),
 		}

@@ -99,7 +99,7 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// The profile no longer carries a styleguide or a rules string at all (change 16, A9):
+		// The profile no longer carries a styleguide or a rules string at all (VOICE-6):
 		// what it reports is the structured profile, its samples and its voice.
 		if got := response.Msg.GetProfile(); got.GetVoice().GetId() != voices[userID] || !got.GetVoice().GetIsDefault() {
 			t.Fatalf("%s received foreign profile: %+v", userID, got)

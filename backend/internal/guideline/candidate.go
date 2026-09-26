@@ -26,7 +26,7 @@ func (s CandidateStatus) Valid() bool {
 // CandidateTextMaxChars is the bound a candidate is STORED at: the revision instruction
 // bound, not the guideline bound. Refusing a long instruction at recording time would lose
 // exactly the most specific corrections, so the guideline bound is enforced at approval,
-// where the user can shorten the text with a live counter (change 26).
+// where the user can shorten the text with a live counter (GUIDE-9).
 //
 // It is code rather than config for the same reason the revision bound is: the two must not
 // be able to drift apart, since a candidate is only ever a copy of one instruction.
@@ -76,7 +76,7 @@ const (
 // exact text (empty when there is none), whether a guideline already holds it, and how many
 // pending candidates the account holds.
 //
-// An approved or dismissed candidate is a Skip, not a Count: change 26 groups it with the
+// An approved or dismissed candidate is a Skip, not a Count: GUIDE-10 groups it with the
 // saved-guideline case — an instruction the user already ruled on records nothing and
 // revives nothing, and a count nobody can see would be the only difference.
 func DecideRecording(existing CandidateStatus, existingGuideline bool, pendingHeld, maxPending int) CandidateRecording {

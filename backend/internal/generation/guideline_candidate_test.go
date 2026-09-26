@@ -148,7 +148,7 @@ func TestRecordingAddsNoProviderCallAndNoEnqueue(t *testing.T) {
 // A4/[I4]: recording changes no prompt byte. The same revision is run twice over the same
 // input — once with the recorder wired and once without — and the two provider requests must
 // be identical. This is the test that keeps the feature on the right side of the boundary
-// plan 16 drew: a candidate is recorded, never learned, and never injected.
+// GUIDE-18 draws: a candidate is recorded, never learned, and never injected.
 func TestRecordingChangesNoPromptByte(t *testing.T) {
 	const instruction = "여기 너무 광고 같아"
 	run := func(recorder GuidelineCandidates) llm.Request {

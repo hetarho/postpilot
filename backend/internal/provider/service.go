@@ -99,8 +99,8 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 		info, ok := s.catalog.Lookup(selections[i].Ref)
 		// A model deregistered from this stage's purpose is as gone as one deleted: the
 		// dropdown no longer lists it, so the choice is cleared the same way. This is also
-		// the machinery that absorbs change 20's empty cutover — every pre-cutover
-		// selection lands here on its next read, with no bespoke migration clearing.
+		// the machinery (MODEL-24) that absorbed the empty per-purpose cutover — every
+		// pre-cutover selection lands here on its next read, with no bespoke migration clearing.
 		if ok && Suitable(selections[i].Stage, info) {
 			continue
 		}

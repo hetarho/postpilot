@@ -304,14 +304,14 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// Retrieval happens at enqueue and only for a post that opted in; the memory
 			// context never learns that generation exists (MEM-19).
 			Memories: generationMemories{service: c.memory},
-			// A completed revision records what the user asked for as a candidate (change 26).
+			// A completed revision records what the user asked for as a candidate (GEN-42).
 			// This adapter is the only place the two contexts meet in that direction, and
 			// nothing crosses it but the account, the post and the user's own sentence.
 			Candidates: generationCandidates{service: c.guideline},
 			// The ticked rule texts are read at enqueue, for a write only; the quality context
 			// never learns that generation exists (ARCH-7).
 			QualityRules: generationQuality{service: c.quality},
-			// The per-version generation snapshot (change 16). Generation is the only context
+			// The per-version generation snapshot (VOICE-29). Generation is the only context
 			// that depends on both post and voice, so it is the only one that may join a
 			// machine baseline to the profile version that produced it.
 			Samples: generationVersionSamples{service: c.voice},
@@ -350,7 +350,7 @@ func templateLimits(cfg *config.Config) template.Limits {
 }
 
 // postNumberBounds are the two generation numbers' bounds, taken from the POST option they seed
-// rather than from a template limit of their own (TEMPLATE-6): a template must not be able to
+// rather than from a template limit of their own (TMPL-6): a template must not be able to
 // store a number the post would refuse.
 func postNumberBounds() template.NumberBounds {
 	return template.NumberBounds{

@@ -326,7 +326,7 @@ func TestComplete_AbsentCostStaysUnreportedAndInvalidCostFails(t *testing.T) {
 	}
 }
 
-// AC8: a 429 is ErrRateLimited with the provider's message intact.
+// MODEL-4: a 429 is ErrRateLimited with the provider's message intact.
 func TestComplete_RateLimitKeepsTheProviderMessage(t *testing.T) {
 	client, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -596,9 +596,9 @@ func TestReasoningTokensParseOnBothShapes(t *testing.T) {
 	}
 }
 
-// A15 regression: the request body's reasoning object carries an effort and NOTHING else —
+// MODEL-8: the request body's reasoning object carries an effort and NOTHING else —
 // `reasoning.exclude` has never been sent and must stay unsent (it would suppress the
-// provider's own reasoning report, which is the signal change 24 exists to record) — and the
+// provider's own reasoning report, which is the signal the ledger records, QUOTA-21) — and the
 // nested object still appears only for a provider that opted into the dialect.
 func TestReasoningBodyCarriesOnlyAnEffortAndOnlyWithTheFormat(t *testing.T) {
 	for _, test := range []struct {
