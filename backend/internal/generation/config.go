@@ -8,13 +8,6 @@ const (
 	// WriteNounsMax bounds the write answer's nouns (GEN-55). The parser enforces it; the
 	// schema's maxItems and the prompt's number only ask the provider for the same.
 	WriteNounsMax = 40
-	// ReplacementSpansMax and ReplacementPhrasesMax bound the write answer's replacement
-	// candidates (GEN-54): an offer the author cannot read through is not an offer.
-	ReplacementSpansMax   = 20
-	ReplacementPhrasesMax = 3
-	// FieldPhrasesMax is how many of the 분야 list's phrases a write freezes, from the top of
-	// its rank order (GEN-48).
-	FieldPhrasesMax = 30
 )
 
 // resolveTagCount is the one place an absent tag count becomes the default (GEN-46): a

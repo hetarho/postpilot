@@ -87,8 +87,8 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// The frozen template's slots are re-applied: a revision that dropped a reserved position
 	// gets it back, in the same place, without the request having mentioned it.
 	filtered := ApplyTemplateSlots(FilterAttachments(*content, currentPhotos, currentVideos), decodeTemplate(payload.Template))
-	// nil keeps the post's nouns and candidates: a revision has no nouns answer and no phrase list
-	// (GEN-55, GEN-57), so what the last generation said stands.
+	// nil keeps the post's nouns: a revision has no nouns answer (GEN-55), so what the last
+	// generation said stands.
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}

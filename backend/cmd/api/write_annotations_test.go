@@ -26,23 +26,17 @@ var writeAnnotationsAnswer = generation.WriteAnswer{
 		Blocks: []generation.Block{{Type: generation.BlockText, Content: "성수 카페에 갔다."}},
 	},
 	Nouns: []string{"성수", "카페"},
-	Replacements: []generation.Replacement{
-		{Surface: generation.ReplacementTitle, Index: 0, Source: "성수 카페", Phrases: []string{"분위기 좋은 카페"}},
-		{Surface: generation.ReplacementTag, Index: 0, Source: "성수", Phrases: []string{"성수동"}},
-	},
 }
 
-// A lab candidate's output carries the answer's annotations, so the winner brings its own once it
-// is applied.
-func TestCandidateOutputCarriesNounsAndReplacements(t *testing.T) {
+// A lab candidate's output carries the answer's nouns, so the winner brings its own once it is
+// applied (GEN-55).
+func TestCandidateOutputCarriesTheNouns(t *testing.T) {
 	encoded, err := json.Marshal(toOutputPost(writeAnnotationsAnswer))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, member := range []string{`"nouns":["성수","카페"]`, `"replacements":[{"surface":"title","index":0,"source":"성수 카페","phrases":["분위기 좋은 카페"]}`} {
-		if !strings.Contains(string(encoded), member) {
-			t.Fatalf("output %s lacks %s", encoded, member)
-		}
+	if !strings.Contains(string(encoded), `"nouns":["성수","카페"]`) {
+		t.Fatalf("output %s lacks the nouns", encoded)
 	}
 	var value outputPost
 	if err := json.Unmarshal(encoded, &value); err != nil {
@@ -52,34 +46,46 @@ func TestCandidateOutputCarriesNounsAndReplacements(t *testing.T) {
 		t.Fatalf("round trip = %+v", got)
 	}
 
-	// A noun-less, phrase-less candidate keeps the bytes it had before annotations existed.
+	// A noun-less candidate keeps the bytes it had before annotations existed.
 	plain, err := json.Marshal(toOutputPost(generation.WriteAnswer{Content: writeAnnotationsAnswer.Content}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(plain), `"nouns"`) || strings.Contains(string(plain), `"replacements"`) {
+	if strings.Contains(string(plain), `"nouns"`) {
 		t.Fatalf("a plain candidate grew members: %s", plain)
 	}
 }
 
-// An output recorded before annotations existed decodes as none, and applying it clears.
+// An output recorded before annotations existed decodes as none, and applying it clears. One
+// recorded while writes offered replacement candidates decodes exactly as the same output
+// without its "replacements" member: the retired key is ignored, never converted.
 func TestALegacyCandidateOutputDecodesAsNone(t *testing.T) {
 	legacy := `{"title":"옛 후보","summary":"s","tags":["a"],"blocks":[{"type":"TEXT","content":"본문","level":0,"file":"","alt":"","caption":"","items":null}]}`
-	var value outputPost
-	if err := json.Unmarshal([]byte(legacy), &value); err != nil {
-		t.Fatal(err)
+	decode := func(raw string) generation.WriteAnswer {
+		t.Helper()
+		var value outputPost
+		if err := json.Unmarshal([]byte(raw), &value); err != nil {
+			t.Fatal(err)
+		}
+		return fromOutputPost(value)
 	}
-	answer := fromOutputPost(value)
-	if answer.Content.Title != "옛 후보" || answer.Nouns != nil || answer.Replacements != nil {
+	answer := decode(legacy)
+	if answer.Content.Title != "옛 후보" || answer.Nouns != nil {
 		t.Fatalf("legacy output = %+v", answer)
 	}
-	if annotations := answer.Annotations(); annotations == nil || annotations.Nouns != nil || annotations.Replacements != nil {
+	if annotations := answer.Annotations(); annotations == nil || annotations.Nouns != nil {
 		t.Fatalf("a legacy winner hands %+v, want a non-nil none", annotations)
+	}
+
+	withNouns := strings.TrimSuffix(legacy, "}") + `,"nouns":["후보"]}`
+	withReplacements := strings.TrimSuffix(withNouns, "}") + `,"replacements":[{"surface":"title","index":0,"source":"옛 후보","phrases":["새 후보"]}]}`
+	if got, want := decode(withReplacements), decode(withNouns); !reflect.DeepEqual(got, want) {
+		t.Fatalf("an output with replacements decoded as %+v, want %+v", got, want)
 	}
 }
 
-// Through the adapter into the real post store: the annotations land beside the content, in
-// columns of their own, and a nil (a revision) keeps them.
+// Through the adapter into the real post store: the nouns land beside the content, in a column
+// of their own, and a nil (a revision) keeps them.
 func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "annotations.db"))
 	if err != nil {
@@ -112,28 +118,24 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	if err := adapter.SetGeneratedContent(ctx, "alice", saved.Slug, writeAnnotationsAnswer.Content, generation.LanguageKorean, writeAnnotationsAnswer.Annotations()); err != nil {
 		t.Fatal(err)
 	}
-	wantCandidates := []post.ReplacementCandidate{
-		{Surface: post.ReplacementSurfaceTitle, Index: 0, Source: "성수 카페", Phrases: []string{"분위기 좋은 카페"}},
-		{Surface: post.ReplacementSurfaceTag, Index: 0, Source: "성수", Phrases: []string{"성수동"}},
-	}
 	got, err := postSvc.Get(ctx, "alice", saved.Slug)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(got.ContentNouns, []string{"성수", "카페"}) || !reflect.DeepEqual(got.ReplacementCandidates, wantCandidates) {
-		t.Fatalf("stored nouns %v candidates %+v", got.ContentNouns, got.ReplacementCandidates)
+	if !reflect.DeepEqual(got.ContentNouns, []string{"성수", "카페"}) {
+		t.Fatalf("stored nouns %v", got.ContentNouns)
 	}
 	var content, baseline string
 	if err := handle.Reader.QueryRow("SELECT content, machine_baseline FROM posts WHERE slug = ?", saved.Slug).Scan(&content, &baseline); err != nil {
 		t.Fatal(err)
 	}
 	for name, value := range map[string]string{"content": content, "machine_baseline": baseline} {
-		if strings.Contains(value, `"nouns"`) || strings.Contains(value, `"replacements"`) {
+		if strings.Contains(value, `"nouns"`) {
 			t.Errorf("%s carries the annotations: %s", name, value)
 		}
 	}
 
-	// A revision hands nil: the content moves and the annotations stand.
+	// A revision hands nil: the content moves and the nouns stand.
 	revised := writeAnnotationsAnswer.Content
 	revised.Blocks = []generation.Block{{Type: generation.BlockText, Content: "고쳐 쓴 문장."}}
 	if err := adapter.SetGeneratedContent(ctx, "alice", saved.Slug, revised, generation.LanguageKorean, nil); err != nil {
@@ -143,13 +145,7 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kept.ContentRevision != got.ContentRevision+1 || !reflect.DeepEqual(kept.ReplacementCandidates, wantCandidates) || !reflect.DeepEqual(kept.ContentNouns, got.ContentNouns) {
-		t.Fatalf("after a revision: revision %d nouns %v candidates %+v", kept.ContentRevision, kept.ContentNouns, kept.ReplacementCandidates)
-	}
-
-	// A surface post does not know is an error, never a guess.
-	unknown := &generation.WriteAnnotations{Replacements: []generation.Replacement{{Surface: "summary", Source: "s", Phrases: []string{"p"}}}}
-	if err := adapter.SetGeneratedContent(ctx, "alice", saved.Slug, revised, generation.LanguageKorean, unknown); err == nil {
-		t.Fatal("an unknown surface was stored")
+	if kept.ContentRevision != got.ContentRevision+1 || !reflect.DeepEqual(kept.ContentNouns, got.ContentNouns) {
+		t.Fatalf("after a revision: revision %d nouns %v", kept.ContentRevision, kept.ContentNouns)
 	}
 }

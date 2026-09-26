@@ -44,7 +44,6 @@ func fullSnapshotFixture() snapshotFixture {
 			Guidelines:      []string{"CCTV를 언급하지 않기"},
 			UseMemory:       true,
 			QualityRules:    []string{"제목에 같은 말을 되풀이하지 않는다"},
-			FieldPhrases:    []string{"분위기 좋은 카페"},
 			TemplateAnswers: []TemplateAnswer{{Label: "가게 이름", Text: "을지로 노포", Enabled: true}},
 			Title:           "가제", Memo: "메모",
 			Images: []Image{
@@ -199,4 +198,26 @@ func readSnapshotGolden(t *testing.T, name string) string {
 		t.Fatal(err)
 	}
 	return strings.TrimSuffix(string(raw), "\n")
+}
+
+// A write snapshot frozen while writes froze 분야 phrases decodes exactly as the same snapshot
+// without them: the retired member is ignored, never converted (GEN-18).
+func TestALegacySnapshotWithFieldPhrasesDecodesAsWithout(t *testing.T) {
+	current := readSnapshotGolden(t, "write_snapshot_full.golden")
+	const rules = `"quality_rules":["제목에 같은 말을 되풀이하지 않는다"],`
+	if !strings.Contains(current, rules) {
+		t.Fatalf("the full golden lost its rules member: %s", current)
+	}
+	legacy := strings.Replace(current, rules, rules+`"field_phrases":["분위기 좋은 카페"],`, 1)
+	want, err := decodeWriteSnapshot([]byte(current))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := decodeWriteSnapshot([]byte(legacy))
+	if err != nil {
+		t.Fatalf("a snapshot carrying field_phrases was refused: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("legacy snapshot decoded as\n %+v\nwant %+v", got, want)
+	}
 }

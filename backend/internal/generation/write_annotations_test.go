@@ -8,15 +8,13 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// An answer whose nouns and title span the validator keeps against the frozen phrase list.
+// An answer with nouns, plus a replacements member a model may still send: the write answer
+// carries nouns only (GEN-55), so the parse ignores it.
 const annotatedAnswer = `{"title":"성수 카페 투어","summary":"s","tags":["성수"],"nouns":["성수","카페"],
 	"blocks":[{"type":"TEXT","content":"성수 카페에 갔다."}],
 	"replacements":[{"surface":"title","index":0,"source":"성수 카페","phrases":["분위기 좋은 카페"]}]}`
 
-var (
-	annotatedNouns        = []string{"성수", "카페"}
-	annotatedReplacements = []Replacement{{Surface: ReplacementTitle, Index: 0, Source: "성수 카페", Phrases: []string{"분위기 좋은 카페"}}}
-)
+var annotatedNouns = []string{"성수", "카페"}
 
 func annotatingModels(text string) *fakeModels {
 	models := newFakeModels()
@@ -26,62 +24,49 @@ func annotatingModels(text string) *fakeModels {
 	return models
 }
 
-// The frozen phrase list the validator keeps the title span against.
-var annotatedPhrases = []string{"분위기 좋은 카페"}
-
-// listedPhrases is a phrase port answering one fixed list, for the paths that freeze through it.
-type listedPhrases []string
-
-func (l listedPhrases) For(context.Context, string) ([]string, error) { return l, nil }
-
-// phrasedPost is a post with a 분야, so the snapshot freezes its list through the port.
-func phrasedPost() *fakePosts {
+// annotatedPost is a post with a 분야, which plays no part in the write (GEN-14).
+func annotatedPost() *fakePosts {
 	return &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "메모", Field: "cafe",
 	}}
 }
 
-func phrasedService(posts *fakePosts, models *fakeModels) *Service {
-	deps := testDeps()
-	deps.FieldPhrases = listedPhrases(annotatedPhrases)
-	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
+func annotatedService(posts *fakePosts, models *fakeModels) *Service {
+	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 }
 
-// GEN-53, GEN-55: a generation hands the post the write's nouns and candidates beside its content.
+// GEN-55: a generation hands the post the write's nouns beside its content, and nothing else.
 func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
-	posts := phrasedPost()
-	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
-	// The phrases arrive frozen in the job, as Start froze them.
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{FieldPhrases: annotatedPhrases}})}, func(string, int, int) {}); err != nil {
+	posts := annotatedPost()
+	svc := annotatedService(posts, annotatingModels(annotatedAnswer))
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{})}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
-	if len(posts.annotations) != 1 || posts.annotations[0] == nil {
+	if len(posts.annotations) != 1 {
 		t.Fatalf("annotations = %+v", posts.annotations)
 	}
-	got := posts.annotations[0]
-	if !reflect.DeepEqual(got.Nouns, annotatedNouns) || !reflect.DeepEqual(got.Replacements, annotatedReplacements) {
+	if got := posts.annotations[0]; !reflect.DeepEqual(got, &WriteAnnotations{Nouns: annotatedNouns}) {
 		t.Fatalf("the post was handed %+v", got)
 	}
 }
 
-// GEN-48: a write with no frozen phrases offers no candidates, and it still hands the post an
-// answer — non-nil, with none — so the last generation's candidates are cleared, not kept.
-func TestAPhraselessWriteClearsCandidates(t *testing.T) {
-	posts := phrasedPost()
-	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
+// GEN-55: a write whose answer names no nouns still hands the post an answer — non-nil, with
+// none — so the last generation's nouns are cleared, not kept.
+func TestANounlessWriteClearsTheNouns(t *testing.T) {
+	posts := annotatedPost()
+	svc := annotatedService(posts, annotatingModels(okContent().Text))
 	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.annotations) != 1 || posts.annotations[0] == nil {
-		t.Fatalf("a phrase-less write handed %+v, want a non-nil answer", posts.annotations)
+		t.Fatalf("a noun-less write handed %+v, want a non-nil answer", posts.annotations)
 	}
-	if got := posts.annotations[0]; got.Replacements != nil || !reflect.DeepEqual(got.Nouns, annotatedNouns) {
-		t.Fatalf("a phrase-less write handed %+v", got)
+	if got := posts.annotations[0]; got.Nouns != nil {
+		t.Fatalf("a noun-less write handed %+v", got)
 	}
 }
 
-// GEN-55, GEN-57: a revision has no nouns answer and no phrase list, so it keeps what the post
-// holds by handing nil.
+// GEN-55: a revision has no nouns answer, so it keeps what the post holds by handing nil.
 func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body"), Field: "cafe",
@@ -98,10 +83,10 @@ func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 	}
 }
 
-// A write-experiment candidate returns its whole answer, so a winner can carry its own.
+// A write-experiment candidate returns its whole answer, so a winner can carry its own nouns.
 func TestRunWriteCandidateReturnsTheAnswer(t *testing.T) {
-	posts := phrasedPost()
-	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
+	posts := annotatedPost()
+	svc := annotatedService(posts, annotatingModels(annotatedAnswer))
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +99,7 @@ func TestRunWriteCandidateReturnsTheAnswer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if answer.Content.Title != "성수 카페 투어" || !reflect.DeepEqual(answer.Nouns, annotatedNouns) || !reflect.DeepEqual(answer.Replacements, annotatedReplacements) {
+	if answer.Content.Title != "성수 카페 투어" || !reflect.DeepEqual(answer.Nouns, annotatedNouns) {
 		t.Fatalf("candidate answer = %+v", answer)
 	}
 	if len(posts.contents) != 0 {
@@ -125,14 +110,14 @@ func TestRunWriteCandidateReturnsTheAnswer(t *testing.T) {
 // GEN-4: an applied winner's annotations replace the post's; one recorded before they existed
 // carries none, and applying it clears them.
 func TestApplyWriteWinnerForwardsTheWinnersAnnotations(t *testing.T) {
-	posts := phrasedPost()
-	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
+	posts := annotatedPost()
+	svc := annotatedService(posts, annotatingModels(annotatedAnswer))
 	snapshot, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	content := PostContent{Title: "성수 카페 투어", Blocks: []Block{{Type: BlockText, Content: "성수 카페에 갔다."}}}
-	winner := WriteAnswer{Content: content, Nouns: annotatedNouns, Replacements: annotatedReplacements}
+	winner := WriteAnswer{Content: content, Nouns: annotatedNouns}
 	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", winner, snapshot); err != nil {
 		t.Fatal(err)
 	}
@@ -143,10 +128,10 @@ func TestApplyWriteWinnerForwardsTheWinnersAnnotations(t *testing.T) {
 	if len(posts.annotations) != 2 || posts.annotations[0] == nil || posts.annotations[1] == nil {
 		t.Fatalf("annotations = %+v", posts.annotations)
 	}
-	if got := posts.annotations[0]; !reflect.DeepEqual(got.Nouns, annotatedNouns) || !reflect.DeepEqual(got.Replacements, annotatedReplacements) {
+	if got := posts.annotations[0]; !reflect.DeepEqual(got.Nouns, annotatedNouns) {
 		t.Fatalf("the winner handed %+v", got)
 	}
-	if got := posts.annotations[1]; got.Nouns != nil || got.Replacements != nil {
+	if got := posts.annotations[1]; got.Nouns != nil {
 		t.Fatalf("a legacy winner handed %+v, want none", got)
 	}
 }

@@ -29,7 +29,7 @@ func filledGenerationOptions() generationOptions {
 			Rows:      []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}},
 			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
 			TitleArea: "<ask>가게 이름</ask> 다녀온 날",
-		}, Guidelines: []string{"CCTV를 언급하지 않기"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}, FieldPhrases: []string{"분위기 좋은 카페"}},
+		}, Guidelines: []string{"CCTV를 언급하지 않기"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
 	}
 }
 
@@ -139,7 +139,6 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	deps.Guidelines = &fakeGuidelines{texts: testGuidelines()}
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: []string{"제목에 같은 말을 되풀이하지 않는다"}}
-	deps.FieldPhrases = &recordingPhrases{answer: []string{"분위기 좋은 카페"}}
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 
@@ -169,5 +168,25 @@ func TestAPayloadDecodesItsLanguageOrRefusesIt(t *testing.T) {
 	}
 	if posts.reads != 0 {
 		t.Fatal("the run read the post before refusing its payload")
+	}
+}
+
+// A generate payload queued while writes froze 분야 phrases decodes exactly as the same payload
+// without them: the retired member is ignored, never converted (GEN-5, GEN-30).
+func TestALegacyPayloadWithFieldPhrasesDecodesAsWithout(t *testing.T) {
+	const current = `{"target_language":"en","tag_count":5,"guidelines":["CCTV를 언급하지 않기"],` +
+		`"quality_rules":["제목에 같은 말을 되풀이하지 않는다"],"observe_files":null}`
+	const legacy = `{"target_language":"en","tag_count":5,"guidelines":["CCTV를 언급하지 않기"],` +
+		`"quality_rules":["제목에 같은 말을 되풀이하지 않는다"],"field_phrases":["분위기 좋은 카페"],"observe_files":null}`
+	want, err := decodeGenerationPayload([]byte(current))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := decodeGenerationPayload([]byte(legacy))
+	if err != nil {
+		t.Fatalf("a payload carrying field_phrases was refused: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("legacy payload decoded as\n %+v\nwant %+v", got, want)
 	}
 }

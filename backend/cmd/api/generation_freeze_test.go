@@ -185,7 +185,6 @@ type drainHarness struct {
 	posts      *post.Service
 	guidelines *guideline.Service
 	generation *generation.Service
-	quality    *qualitystore.Store
 	voiceID    string
 	waitDone   func(id string)
 }
@@ -229,7 +228,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 			Experiments: freezeExperiments{}, Templates: generationTemplates{service: templateSvc},
 			Guidelines: generationGuidelines{service: guidelineSvc}, Memories: freezeMemories{},
 			Candidates: freezeCandidates{}, Samples: freezeSamples{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute,
-			QualityRules: generationQuality{service: qualitySvc}, FieldPhrases: generationFieldPhrases{service: qualitySvc},
+			QualityRules: generationQuality{service: qualitySvc},
 		},
 	)
 	// The worker's own handlers, not a copy (review F17): a mapping change in registerJobs is what
@@ -261,7 +260,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	}
 	return &drainHarness{
 		ctx: ctx, handle: handle, posts: postSvc, guidelines: guidelineSvc, generation: generationSvc,
-		quality: qualityStore, voiceID: defaultVoice.ID, waitDone: waitDone,
+		voiceID: defaultVoice.ID, waitDone: waitDone,
 	}
 }
 
@@ -294,59 +293,6 @@ func TestANativeEffortStartDrainsWithReasoningHeadroom(t *testing.T) {
 	h.waitDone(id)
 	if got, want := models.last().MaxTokens, testCompletionBudget().Write(nil, true); got != want {
 		t.Fatalf("the drained write asked for %d tokens, want %d (the headroom the hold priced)", got, want)
-	}
-}
-
-// GEN-48, GUIDE-30, GEN-57 end to end on the real stores and adapters: a post in 분야 restaurant,
-// with a stored list and the preset on for restaurant, writes with the phrase section and the
-// preset line; its revision carries neither.
-func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
-	models := &recordingModels{}
-	h := newDrainHarness(t, models)
-	ctx, qualityStore, guidelineSvc, generationSvc, waitDone := h.ctx, h.quality, h.guidelines, h.generation, h.waitDone
-
-	// Phrases the model's content never says, so the revise prompt, which quotes the content,
-	// cannot carry them by accident.
-	listed := []string{"웨이팅 필수 맛집", "줄 서는 식당"}
-	refreshed := time.Now()
-	if err := qualityStore.ReplacePhraseList(ctx, quality.PhraseList{Field: "restaurant", Phrases: listed, CorpusSize: 120, RefreshedAt: &refreshed, NextRefreshAt: refreshed.Add(24 * time.Hour)}); err != nil {
-		t.Fatal(err)
-	}
-	on, restaurant := true, []string{"restaurant"}
-	if _, err := guidelineSvc.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &restaurant}); err != nil {
-		t.Fatal(err)
-	}
-	saved := h.draft(t, "restaurant")
-
-	writer := llm.ModelRef{ProviderID: "p", ModelID: "writer"}.String()
-
-	id, err := generationSvc.Start(ctx, generation.StartRequest{UserID: "alice", PostSlug: saved.Slug, WriteModel: writer})
-	if err != nil {
-		t.Fatal(err)
-	}
-	waitDone(id)
-	written := models.last()
-	user := written.Messages[0].Parts[0].Text
-	for _, want := range append([]string{generation.FieldPhrasesHeading}, listed...) {
-		if !strings.Contains(user, want) {
-			t.Errorf("the write's per-post half lacks %q", want)
-		}
-	}
-	if !strings.Contains(written.System, guideline.PresetText) {
-		t.Errorf("the write's system prompt lacks the preset line:\n%s", written.System)
-	}
-
-	revision, err := generationSvc.StartRevision(ctx, generation.StartRevisionRequest{UserID: "alice", PostSlug: saved.Slug, Instruction: "조금 더 짧게", WriteModel: writer})
-	if err != nil {
-		t.Fatal(err)
-	}
-	waitDone(revision)
-	revised := models.last()
-	prompt := revised.System + "\n" + revised.Messages[0].Parts[0].Text
-	for _, never := range append([]string{generation.FieldPhrasesHeading, guideline.PresetText}, listed...) {
-		if strings.Contains(prompt, never) {
-			t.Errorf("the revise prompt carries %q", never)
-		}
 	}
 }
 

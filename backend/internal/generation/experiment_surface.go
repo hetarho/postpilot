@@ -38,7 +38,7 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	}
 	post.TargetLength = cloneOptionalInt(targetLength)
 	// Frozen here, once, for the whole comparison, through the very freeze Start makes: brief,
-	// 지침, 기억, ticked rules and 분야 phrases (GEN-18, MEM-19, MODEL-30). Both candidates then
+	// 지침, 기억 and ticked rules (GEN-18, MEM-19, MODEL-30). Both candidates then
 	// read one identical set out of this snapshot, so their prompts differ only by model ref —
 	// and a different set is a different frozen input, a different hash. It runs before the
 	// post's own observations are dropped below, because the memory key reads them (MEM-7).
@@ -137,7 +137,7 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 }
 
 // RunWriteCandidate returns the candidate's whole answer, so the winner, once applied, carries
-// its own nouns and replacement candidates into the post.
+// its own nouns into the post.
 func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.ModelRef) (WriteAnswer, CandidateUsage, error) {
 	snapshot, err := decodeWriteSnapshot(raw)
 	if err != nil {

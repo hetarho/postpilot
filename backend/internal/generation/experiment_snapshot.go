@@ -61,7 +61,6 @@ type snapshotPost struct {
 	UseMemory         bool                  `json:"UseMemory"`
 	Memories          []string              `json:"Memories"`
 	QualityRules      []string              `json:"quality_rules,omitempty"`
-	FieldPhrases      []string              `json:"field_phrases,omitempty"`
 	TemplateAnswers   []snapshotAnswer      `json:"TemplateAnswers"`
 	Title             string                `json:"Title"`
 	Memo              string                `json:"Memo"`
@@ -282,7 +281,7 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		Voice:      snapshotVoice{ID: post.Voice.ID, Name: post.Voice.Name, Deleted: post.Voice.Deleted, SourceLanguage: string(post.Voice.SourceLanguage)},
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
 		Guidelines: copyTexts(post.Guidelines), UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
-		QualityRules: copyTexts(post.QualityRules), FieldPhrases: copyTexts(post.FieldPhrases),
+		QualityRules: copyTexts(post.QualityRules),
 		TemplateAnswers: mapSlice(post.TemplateAnswers, func(a TemplateAnswer) snapshotAnswer {
 			return snapshotAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
 		}),
@@ -310,7 +309,7 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		Voice:      VoiceRef{ID: wire.Voice.ID, Name: wire.Voice.Name, Deleted: wire.Voice.Deleted, SourceLanguage: Language(wire.Voice.SourceLanguage)},
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
 		Guidelines: copyTexts(wire.Guidelines), UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
-		QualityRules: copyTexts(wire.QualityRules), FieldPhrases: copyTexts(wire.FieldPhrases),
+		QualityRules: copyTexts(wire.QualityRules),
 		TemplateAnswers: mapSlice(wire.TemplateAnswers, func(a snapshotAnswer) TemplateAnswer {
 			return TemplateAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
 		}),

@@ -119,19 +119,18 @@ func phraseRows(t *testing.T, reader *sql.DB) []phraseRow {
 
 // seedShape is what a seed wrote, without the ids and clock readings a rerun renews.
 type seedShape struct {
-	Statuses   map[string]int // "account/status" → posts
-	Nouns      int            // posts carrying nouns
-	Fields     map[string]int // account → posts carrying daily_life
-	Candidates map[string]int // account → posts carrying candidates
-	Templates  []string       // "account" per template with a title area
-	Phrases    []string       // the phrase lists' fields
+	Statuses  map[string]int // "account/status" → posts
+	Nouns     int            // posts carrying nouns
+	Fields    map[string]int // account → posts carrying daily_life
+	Templates []string       // "account" per template with a title area
+	Phrases   []string       // the phrase lists' fields
 }
 
 // checkSeed asserts every fixture invariant the database can show and returns its shape.
 func checkSeed(t *testing.T, reader *sql.DB) seedShape {
 	t.Helper()
 	ctx := context.Background()
-	shape := seedShape{Statuses: map[string]int{}, Fields: map[string]int{}, Candidates: map[string]int{}}
+	shape := seedShape{Statuses: map[string]int{}, Fields: map[string]int{}}
 	scan := func(query string, each func(*sql.Rows) error) {
 		t.Helper()
 		rows, err := reader.QueryContext(ctx, query)
@@ -213,35 +212,6 @@ func checkSeed(t *testing.T, reader *sql.DB) seedShape {
 		}
 		return nil
 	})
-
-	// GEN-53: three candidates exactly on pro's and master's review posts.
-	scan("SELECT user_id, status, replacement_candidates FROM posts WHERE replacement_candidates IS NOT NULL", func(rows *sql.Rows) error {
-		var user, status, encoded string
-		if err := rows.Scan(&user, &status, &encoded); err != nil {
-			return err
-		}
-		var candidates []struct {
-			Surface string `json:"surface"`
-		}
-		if err := json.Unmarshal([]byte(encoded), &candidates); err != nil {
-			return err
-		}
-		if status != "review" || (user != "pro" && user != "master") || len(candidates) != 3 {
-			t.Errorf("a %s post of %s carries %d candidates", status, user, len(candidates))
-		}
-		var surfaces []string
-		for _, candidate := range candidates {
-			surfaces = append(surfaces, candidate.Surface)
-		}
-		if strings.Join(surfaces, ",") != "title,tag,body" {
-			t.Errorf("a post of %s stores candidates on %v, want title, tag and body", user, surfaces)
-		}
-		shape.Candidates[user]++
-		return nil
-	})
-	if shape.Candidates["pro"] != 2 || shape.Candidates["master"] != 4 {
-		t.Errorf("candidates on %v, want every review post of pro and master", shape.Candidates)
-	}
 
 	// TMPL-50: master's one template, on master's first draft and nowhere else.
 	var templateID string

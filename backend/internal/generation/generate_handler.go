@@ -29,9 +29,9 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		return err
 	}
 	// Generation options are frozen when the job is enqueued — language, length, tag count,
-	// template, 지침, 기억, rules, phrases and the write budget's headroom alike. A later edit
-	// must not change the prompt of work that is already waiting in the queue, and none of them
-	// is ever resolved afresh here (MEM-19, GEN-48, GEN-51).
+	// template, 지침, 기억, rules and the write budget's headroom alike. A later edit must not
+	// change the prompt of work that is already waiting in the queue, and none of them is ever
+	// resolved afresh here (GEN-5, GEN-30, MEM-19, GEN-51).
 	post = options.onto(post)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
@@ -81,8 +81,8 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return err
 	}
-	// The answer's annotations replace the post's, a phrase-less write's included: its nil
-	// replacements clear the candidates the last generation offered (GEN-48).
+	// The answer's annotations replace the post's, a noun-less write's included: its nil nouns
+	// clear the ones the last generation stored (GEN-55).
 	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations()); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}

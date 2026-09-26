@@ -421,6 +421,13 @@ func TestMigration0077IsIdempotent(t *testing.T) {
 		t.Fatalf("goose_db_version rows = %d then %d, 77 applied %d times", versions, again, applied)
 	}
 	for _, name := range postColumns0077 {
+		// 0087 drops the replacement candidates again; the other five stay.
+		if name == "replacement_candidates" {
+			if hasColumn0077(t, handle, "posts", name) {
+				t.Errorf("a fresh install still has posts.%s", name)
+			}
+			continue
+		}
 		if !hasColumn0077(t, handle, "posts", name) {
 			t.Errorf("a fresh install has no posts.%s", name)
 		}

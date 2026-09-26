@@ -1,8 +1,7 @@
 package guideline
 
-// presetPhraseHeading is a literal copy of the phrase section's heading in the write prompt
-// (generation.FieldPhrasesHeading). This context may not import generation (ARCH-7), so
-// cmd/api pins the copy with a test: renaming either side changes both.
+// presetPhraseHeading is the heading of the phrase section the preset line names. The write
+// prompt no longer carries that section, and generation no longer freezes the line.
 const presetPhraseHeading = "[분야 상위 글 문구]"
 
 // PresetText is the 상위 노출 단어 사용 preset's line (GUIDE-30): a product constant, never a

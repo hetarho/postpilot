@@ -398,54 +398,42 @@ func TestEveryEntryPointAsksWithThePostsFieldAndItsRevisionFlag(t *testing.T) {
 	}
 }
 
-// GUIDE-40, QUAL-41: the preset's line rides only with frozen phrases. A post whose 분야 froze
-// none keeps every owner guideline, 분야-scoped ones included, and loses only the preset line —
-// in Start's payload and in the comparison snapshot alike. With phrases it is appended last. A
-// revision never carries it, even when the guideline port hands one back.
-func TestThePresetLineRidesOnlyWithFrozenPhrases(t *testing.T) {
+// GEN-14, GEN-18: a write freezes the owner's guideline texts alone. The guideline port still
+// hands back the preset's line for a post with a 분야, and neither Start's payload, the comparison
+// snapshot nor a revision carries it.
+func TestThePresetLineIsNeverFrozen(t *testing.T) {
 	ctx := context.Background()
-	for name, phrases := range map[string][]string{"no phrases": nil, "phrases": {"성수 카페"}} {
-		posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Field: "cafe", Content: revisionContent("body")}}
-		guidelines := &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
-		deps := testDeps()
-		deps.Guidelines = guidelines
-		deps.FieldPhrases = &recordingPhrases{answer: phrases}
-		jobs := &fakeJobs{id: "job"}
-		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
-		want := testGuidelines()
-		if phrases != nil {
-			want = append(testGuidelines(), "PRESET")
-		}
-		if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
-			t.Fatal(err)
-		}
-		if got := jobs.frozen(t, 0).Guidelines; !reflect.DeepEqual(got, want) {
-			t.Errorf("%s: Start froze %q, want %q", name, got, want)
-		}
-		raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		snapshot, err := decodeWriteSnapshot(raw)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := snapshot.Post.Guidelines; !reflect.DeepEqual(got, want) {
-			t.Errorf("%s: the snapshot froze %q, want %q", name, got, want)
-		}
-		if phrases == nil {
-			continue
-		}
-		if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "짧게", WriteModel: writeRef.String()}); err != nil {
-			t.Fatal(err)
-		}
-		revision, err := parseRevisionPayload(jobs.payloads[0])
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(revision.Guidelines, testGuidelines()) {
-			t.Errorf("the revision froze %q, want the owner texts only", revision.Guidelines)
-		}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Field: "cafe", Content: revisionContent("body")}}
+	deps := testDeps()
+	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
+	jobs := &fakeJobs{id: "job"}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := jobs.frozen(t, 0).Guidelines; !reflect.DeepEqual(got, testGuidelines()) {
+		t.Errorf("Start froze %q, want the owner texts only", got)
+	}
+	raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := decodeWriteSnapshot(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := snapshot.Post.Guidelines; !reflect.DeepEqual(got, testGuidelines()) {
+		t.Errorf("the snapshot froze %q, want the owner texts only", got)
+	}
+	if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "짧게", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	revision, err := parseRevisionPayload(jobs.payloads[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(revision.Guidelines, testGuidelines()) {
+		t.Errorf("the revision froze %q, want the owner texts only", revision.Guidelines)
 	}
 }
 
@@ -464,7 +452,6 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: testQualityRules()}
-	deps.FieldPhrases = &recordingPhrases{answer: []string{"성수 카페"}}
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
@@ -481,7 +468,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	frozen := jobs.frozen(t, 0).writeMaterial
 	compared := writeMaterial{
 		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines, Memories: snapshot.Post.Memories,
-		QualityRules: snapshot.Post.QualityRules, FieldPhrases: snapshot.Post.FieldPhrases,
+		QualityRules: snapshot.Post.QualityRules,
 	}
 	requireNoZero(t, "frozen", reflect.ValueOf(frozen))
 	if !reflect.DeepEqual(frozen, compared) {

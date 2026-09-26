@@ -249,14 +249,10 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	if err != nil {
 		return false, err
 	}
-	candidates, err := marshalCandidates(annotations.Candidates)
-	if err != nil {
-		return false, err
-	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
 		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
 		ContentLanguage: sql.NullString{String: string(language), Valid: true},
-		ContentNouns:    nouns, ReplacementCandidates: candidates, UpdatedAt: formatTime(updatedAt),
+		ContentNouns:    nouns, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -265,20 +261,13 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	return n > 0, nil
 }
 
-func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, candidates *[]post.ReplacementCandidate, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveContent(ctx context.Context, slug, userID string, content post.PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
 	encoded, err := marshalContent(content)
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
-	var remaining sql.NullString
-	if candidates != nil {
-		if remaining, err = marshalCandidates(*candidates); err != nil {
-			return false, fmt.Errorf("encode replacement candidates: %w", err)
-		}
-	}
 	n, err := s.write.SavePostContent(ctx, sqlc.SavePostContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, SpendCandidate: candidates != nil,
-		ReplacementCandidates: remaining, UpdatedAt: formatTime(updatedAt),
+		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
 	})
 	if err != nil {
@@ -946,10 +935,6 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
-	candidates, err := unmarshalCandidates(row.ReplacementCandidates)
-	if err != nil {
-		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
-	}
 	qualityRules, err := unmarshalQualityRules(row.QualityRules)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
@@ -988,7 +973,6 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		PublishedURL:            row.PublishedUrl.String,
 		PublishedAt:             publishedAt,
 		ContentNouns:            nouns,
-		ReplacementCandidates:   candidates,
 		Field:                   row.Field.String,
 		QualityRules:            qualityRules,
 		Observations:            observations,

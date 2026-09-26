@@ -348,39 +348,6 @@ func memorySection(memories []string) string {
 	return out.String()
 }
 
-// FieldPhrasesHeading opens the frozen 분야 phrase list in the per-post half (GEN-48). It is
-// exported because the guideline preset names this heading in its own text, and a test pins the
-// two equal: renaming either one is a change to both.
-const FieldPhrasesHeading = "[분야 상위 글 문구]"
-
-// fieldPhrasesObservation says what the list is, as an observation and nothing more (QUAL-21):
-// where the phrases were seen, never what using them would improve. It also says the list is not
-// a source of facts (GEN-16) and not an instruction to use its phrases; the one substitution rule
-// lives in the guideline section, in the product's preset line.
-const fieldPhrasesObservation = "위 문구는 이 글의 분야로 네이버 블로그를 검색했을 때 상위 결과의 제목과 요약에 자주 나온 표현입니다. 이 목록은 사실의 출처가 아니므로 메모, 사진 관찰, 템플릿 입력란에 없는 내용을 이 문구 때문에 쓰지 마세요. 문구를 글에 넣으라는 지시도 아닙니다."
-
-// replacementsInstruction asks for the candidate spans beside the content (GEN-48, GEN-53): the
-// author sees them on ② and nothing is replaced unless they choose to.
-// Its two numbers are the validation's own caps (GEN-54), so the instruction cannot ask for more
-// than the server keeps.
-var replacementsInstruction = fmt.Sprintf("제목, 태그, 본문 블록에서 위 문구 가운데 하나와 같은 대상을 가리키는 표현이 있으면 그 자리를 JSON의 replacements 배열에 적으세요. 각 항목의 surface는 title, tag, body 중 하나, index는 tags나 blocks에서 0부터 센 위치(제목은 0), source는 그 자리에 쓴 표현 그대로, phrases는 바꿔 쓸 수 있는 위 문구 1~%d개를 그대로 옮긴 것이며 source 자체는 넣지 않습니다. 항목은 최대 %d개이고, 없으면 빈 배열로 두세요. replacements 때문에 title, tags, blocks를 바꾸지 마세요.", ReplacementPhrasesMax, ReplacementSpansMax)
-
-// fieldPhrasesSection renders the frozen phrases once in the per-post half, between the memo and
-// the memories (GEN-14). Like the memories it is per-post material rather than the stable
-// prefix, and an empty list writes nothing, so a post with no 분야 is byte-identical to today's.
-func fieldPhrasesSection(phrases []string) string {
-	if len(phrases) == 0 {
-		return ""
-	}
-	var out strings.Builder
-	out.WriteString(FieldPhrasesHeading)
-	for _, phrase := range phrases {
-		fmt.Fprintf(&out, "\n- %s", phrase)
-	}
-	fmt.Fprintf(&out, "\n%s\n%s\n", fieldPhrasesObservation, replacementsInstruction)
-	return out.String()
-}
-
 // BuildWritePrompt preserves the legacy Korean call surface for prompt goldens and
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
@@ -419,8 +386,6 @@ type WritePromptInput struct {
 	// QualityRules are the frozen ticked rule texts (GEN-51), empty for a run that ticked none;
 	// they open the per-post half, never the stable prefix (GEN-14).
 	QualityRules []string
-	// FieldPhrases is the frozen 분야 phrase list (GEN-48), empty for a post with none.
-	FieldPhrases []string
 }
 
 // BuildWritePromptForLanguage builds the write pass's system and user prompts from one input.
@@ -452,10 +417,9 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	writeGuidelinesSection(&stable, input.Guidelines)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
-	// The phrase and memory sections sit between the memo and the attachments, in that order,
-	// and each renders to the empty string when it has nothing — which is what keeps a post
-	// with neither byte-identical.
-	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, fieldPhrasesSection(input.FieldPhrases), memorySection(input.Memories), photoMaterial)
+	// The memory section sits between the memo and the attachments and renders to the empty
+	// string when it has nothing — which is what keeps a post without it byte-identical.
+	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), photoMaterial)
 	return stable.String(), perPost
 }
 

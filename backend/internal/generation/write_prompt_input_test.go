@@ -24,7 +24,6 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 		"Guidelines":   func(in *WritePromptInput) { in.Guidelines = testGuidelines() },
 		"Memories":     func(in *WritePromptInput) { in.Memories = testMemories() },
 		"QualityRules": func(in *WritePromptInput) { in.QualityRules = testQualityRules() },
-		"FieldPhrases": func(in *WritePromptInput) { in.FieldPhrases = []string{"성수 카페"} },
 	}
 	baseSystem, baseUser := BuildWritePromptForLanguage(base)
 	members := reflect.TypeOf(WritePromptInput{})

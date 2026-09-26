@@ -711,9 +711,9 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 // SetGeneratedContent atomically replaces canonical content and moves the post to review.
 //
 // annotations is what the write said beside the content. nil keeps what the post holds — a
-// revision has no nouns answer and no phrase list (GEN-55, GEN-57) — and non-nil replaces both,
-// where empty clears. The presence is the pointer, never a slice's nil-ness: a write that
-// returned no nouns must still clear the last generation's.
+// revision has no nouns answer (GEN-55) — and non-nil replaces it, where empty clears. The
+// presence is the pointer, never a slice's nil-ness: a write that returned no nouns must still
+// clear the last generation's.
 func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language, annotations *WriteAnnotations) error {
 	if !language.Valid() {
 		return ErrLanguageRequired
@@ -722,16 +722,9 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err != nil {
 		return err
 	}
-	next := WriteAnnotations{Nouns: found.ContentNouns, Candidates: found.ReplacementCandidates}
+	next := WriteAnnotations{Nouns: found.ContentNouns}
 	if annotations != nil {
 		next = *annotations
-	}
-	// The bounds are generation's (GEN-54); what post owns is that a span names a surface it has
-	// and a position that can exist.
-	for _, candidate := range next.Candidates {
-		if !candidate.Surface.Valid() || candidate.Index < 0 {
-			return &InvalidContentError{Reason: "replacement candidate"}
-		}
 	}
 	if generatedAlready(found, content, language, next) {
 		return nil
@@ -770,38 +763,24 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 
 // generatedAlready is whether the post already holds exactly this machine write: the same
 // content in the same language, as its current machine baseline, with the same annotations. An
-// identical content with different nouns or candidates is a new write. nil and empty compare
-// equal, since both mean none.
+// identical content with different nouns is a new write. nil and empty compare equal, since
+// both mean none.
 func generatedAlready(p Post, content PostContent, language Language, annotations WriteAnnotations) bool {
 	return p.Status == StatusReview && p.MachineBaselineRevision == p.ContentRevision &&
 		p.Content != nil && p.ContentLanguage != nil && *p.ContentLanguage == language &&
 		reflect.DeepEqual(*p.Content, content) &&
-		slices.Equal(p.ContentNouns, annotations.Nouns) &&
-		slices.EqualFunc(p.ReplacementCandidates, annotations.Candidates, equalCandidate)
-}
-
-func equalCandidate(a, b ReplacementCandidate) bool {
-	return a.Surface == b.Surface && a.Index == b.Index && a.Source == b.Source && slices.Equal(a.Phrases, b.Phrases)
+		slices.Equal(p.ContentNouns, annotations.Nouns)
 }
 
 // SaveContent optimistically saves only canonical content. The machine baseline is
 // intentionally absent from the store operation and remains immutable.
-//
-// taken names the replacement candidates this save's edits took, as indices into the post's
-// list at expectedRevision (POST-79): each is spent in the same write as the content, so its
-// mark never returns, and the rest keep theirs. Nothing records that the words came from a
-// suggestion (POST-80).
-func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64, taken []int) (Post, error) {
+func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64) (Post, error) {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
 		return Post{}, err
 	}
 	if found.ContentRevision != expectedRevision {
 		return Post{}, ErrStaleContentRevision
-	}
-	remaining, err := spendCandidates(found.ReplacementCandidates, taken)
-	if err != nil {
-		return Post{}, err
 	}
 	// The identical save stays a no-op on every post, a published one included (POST-15): it
 	// writes nothing, so there is nothing for the lock to refuse.
@@ -826,7 +805,7 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, remaining, s.now())
+	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, s.now())
 	if err != nil {
 		return Post{}, err
 	}
@@ -834,30 +813,6 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrStaleContentRevision)
 	}
 	return s.Get(ctx, userID, slug)
-}
-
-// spendCandidates is the list a save leaves once its takes are removed, in the original order:
-// nil when it took none, which keeps the stored list. An index outside the list, or one named
-// twice, is a malformed request — a client resolves indices against the list at the revision it
-// sends, and dedupes them.
-func spendCandidates(candidates []ReplacementCandidate, taken []int) (*[]ReplacementCandidate, error) {
-	if len(taken) == 0 {
-		return nil, nil
-	}
-	spent := make(map[int]bool, len(taken))
-	for _, index := range taken {
-		if index < 0 || index >= len(candidates) || spent[index] {
-			return nil, &InvalidContentError{Reason: "taken candidates must name distinct entries of the post's list"}
-		}
-		spent[index] = true
-	}
-	remaining := make([]ReplacementCandidate, 0, len(candidates)-len(taken))
-	for i, candidate := range candidates {
-		if !spent[i] {
-			remaining = append(remaining, candidate)
-		}
-	}
-	return &remaining, nil
 }
 
 // GenerationOptionsSet is the writing brief's run options, saved together (POST-89). Every

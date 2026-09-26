@@ -56,22 +56,18 @@ type PostContent struct {
 type WriteAnswer struct {
 	Content PostContent
 	Nouns   []string
-	// Replacements are the spans the pass offered listed 분야 phrases for, validated against the
-	// final content (GEN-53); none unless the run froze phrases.
-	Replacements []Replacement
 }
 
-// WriteAnnotations is what a write hands the post beside its content: its nouns and its
-// replacement candidates. Handed as a pointer, where nil keeps what the post holds.
+// WriteAnnotations is what a write hands the post beside its content: its nouns. Handed as a
+// pointer, where nil keeps what the post holds.
 type WriteAnnotations struct {
-	Nouns        []string
-	Replacements []Replacement
+	Nouns []string
 }
 
 // Annotations is this answer's, always non-nil: a write replaces what the last one said, and
-// a write with no nouns or no candidates clears them rather than keeping stale ones (GEN-48).
+// a write with no nouns clears them rather than keeping stale ones (GEN-55).
 func (a WriteAnswer) Annotations() *WriteAnnotations {
-	return &WriteAnnotations{Nouns: a.Nouns, Replacements: a.Replacements}
+	return &WriteAnnotations{Nouns: a.Nouns}
 }
 
 type Observation struct {
@@ -202,9 +198,6 @@ type PostInput struct {
 	// QualityRules is the frozen text of each quality rule the owner ticked, already rendered
 	// in the target language, in the order the write prompt lists them (GEN-51).
 	QualityRules []string
-	// FieldPhrases is the frozen phrase list of the post's 분야 (GEN-48), empty for a post with
-	// no 분야 or one whose list is still empty.
-	FieldPhrases []string
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
 	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).
@@ -229,8 +222,8 @@ type PostInput struct {
 	// and a delayed execution use the same completion budget even if curation changes.
 	WriteNativeEffort bool
 	// Field and QualityRuleIDs are the post's 분야 and its quality ticks, read at enqueue as
-	// inputs to resolve and never frozen themselves: the frozen guideline texts, phrases and
-	// rule texts they resolve into carry the run's identity, so the snapshot's wire struct
+	// inputs to resolve and never frozen themselves: the frozen guideline texts and rule texts
+	// they resolve into carry the run's identity, so the snapshot's wire struct
 	// (experiment_snapshot.go) has no member for them.
 	Field          string
 	QualityRuleIDs []string

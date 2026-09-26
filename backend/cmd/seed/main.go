@@ -219,10 +219,6 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	}
 
 	content := mapContent(article.Title, *article.Content)
-	candidates, err := mapCandidates(article.Content.Replacements)
-	if err != nil {
-		return err
-	}
 	// The fixture's own guard. ValidateContent is the rule the editor and the generation
 	// pipeline both apply, and applying it here means a malformed fixture fails the seed
 	// instead of producing a post no screen can render. A seeded post has no attachments,
@@ -230,9 +226,9 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	if err := post.ValidateContent(content, nil, nil); err != nil {
 		return err
 	}
-	// The nouns and candidates a write returns beside its content, stored apart from it the way
-	// a real write stores them; no candidates is written as NULL (GEN-53, GEN-55).
-	annotations := post.WriteAnnotations{Nouns: article.Content.Nouns, Candidates: candidates}
+	// The nouns a write returns beside its content, stored apart from it the way a real write
+	// stores them (GEN-55).
+	annotations := post.WriteAnnotations{Nouns: article.Content.Nouns}
 	written, err := p.store.UpdateGeneratedContent(ctx, slug, article.UserID, content, language, annotations, article.CreatedAt)
 	if err != nil {
 		return err
@@ -276,29 +272,6 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 		return fmt.Errorf("publish %q was refused", slug)
 	}
 	return nil
-}
-
-// mapCandidates spells each fixture candidate the drafting context's way. The surface mapping
-// is closed: an unknown spelling fails the seed, as an unknown status would.
-func mapCandidates(replacements []devseed.Replacement) ([]post.ReplacementCandidate, error) {
-	candidates := make([]post.ReplacementCandidate, 0, len(replacements))
-	for _, replacement := range replacements {
-		var surface post.ReplacementSurface
-		switch replacement.Surface {
-		case devseed.SurfaceTitle:
-			surface = post.ReplacementSurfaceTitle
-		case devseed.SurfaceTag:
-			surface = post.ReplacementSurfaceTag
-		case devseed.SurfaceBody:
-			surface = post.ReplacementSurfaceBody
-		default:
-			return nil, fmt.Errorf("unknown replacement surface %q", replacement.Surface)
-		}
-		candidates = append(candidates, post.ReplacementCandidate{
-			Surface: surface, Index: replacement.Index, Source: replacement.Source, Phrases: replacement.Phrases,
-		})
-	}
-	return candidates, nil
 }
 
 // mintSlug asks the post context for the slug its own rule produces, so a seeded post's

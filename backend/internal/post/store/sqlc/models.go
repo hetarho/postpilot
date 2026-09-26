@@ -46,7 +46,6 @@ type Post struct {
 	PublishedAt             sql.NullString
 	Field                   sql.NullString
 	ContentNouns            sql.NullString
-	ReplacementCandidates   sql.NullString
 	QualityRules            sql.NullString
 }
 

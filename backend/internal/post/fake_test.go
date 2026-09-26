@@ -3,7 +3,6 @@ package post
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -120,18 +119,14 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 		return false, nil
 	}
 	// The statement's idempotence group: an identical content with identical annotations is
-	// no write; different nouns or candidates are.
+	// no write; different nouns are.
 	if generatedAlready(existing, content, language, annotations) {
 		return false, nil
 	}
 	existing.Content = &content
 	existing.ContentLanguage = &language
-	// NULL for none, as the columns store it.
+	// NULL for none, as the column stores it.
 	existing.ContentNouns = nilIfEmpty(annotations.Nouns)
-	existing.ReplacementCandidates = nil
-	if len(annotations.Candidates) > 0 {
-		existing.ReplacementCandidates = append([]ReplacementCandidate(nil), annotations.Candidates...)
-	}
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
 	existing.MachineBaselineVoiceID = existing.VoiceID
@@ -249,20 +244,13 @@ func (f *fakeStore) AssignField(_ context.Context, slug, userID string, field *s
 	return true, nil
 }
 
-func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, candidates *[]ReplacementCandidate, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
 	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || f.publishedLocked(slug) {
 		return false, nil
-	}
-	// The statement's CASE: a save that took candidates stores what is left, NULL for none.
-	if candidates != nil {
-		existing.ReplacementCandidates = nil
-		if len(*candidates) > 0 {
-			existing.ReplacementCandidates = slices.Clone(*candidates)
-		}
 	}
 	existing.Content = &content
 	existing.ContentRevision++

@@ -42,13 +42,6 @@ func (a generationQuality) RulesFor(ctx context.Context, userID, slug string, ti
 	return a.service.RulesFor(ctx, userID, slug, ticked, lang)
 }
 
-// generationFieldPhrases hands generation a 분야's phrase list in rank order.
-type generationFieldPhrases struct{ service *quality.Service }
-
-func (a generationFieldPhrases) For(ctx context.Context, field string) ([]string, error) {
-	return a.service.PhrasesFor(ctx, field)
-}
-
 type generationGuidelines struct{ service *guideline.Service }
 
 func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) (generation.GuidelineTexts, error) {
@@ -284,43 +277,16 @@ func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug s
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
 		})
 	}
-	mapped, err := postAnnotations(annotations)
-	if err != nil {
-		return err
-	}
-	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value, post.Language(language), mapped))
+	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value, post.Language(language), postAnnotations(annotations)))
 }
 
-// postAnnotations hands the post a write's annotations. nil stays nil, which keeps what the post
-// holds; a surface generation names that post does not is an error rather than a guess.
-func postAnnotations(annotations *generation.WriteAnnotations) (*post.WriteAnnotations, error) {
+// postAnnotations hands the post a write's nouns. nil stays nil, which keeps what the post
+// holds.
+func postAnnotations(annotations *generation.WriteAnnotations) *post.WriteAnnotations {
 	if annotations == nil {
-		return nil, nil
+		return nil
 	}
-	out := &post.WriteAnnotations{Nouns: append([]string(nil), annotations.Nouns...)}
-	for _, replacement := range annotations.Replacements {
-		surface, ok := postReplacementSurface(replacement.Surface)
-		if !ok {
-			return nil, fmt.Errorf("unknown replacement surface %q", replacement.Surface)
-		}
-		out.Candidates = append(out.Candidates, post.ReplacementCandidate{
-			Surface: surface, Index: replacement.Index, Source: replacement.Source,
-			Phrases: append([]string(nil), replacement.Phrases...),
-		})
-	}
-	return out, nil
-}
-
-func postReplacementSurface(surface generation.ReplacementSurface) (post.ReplacementSurface, bool) {
-	switch surface {
-	case generation.ReplacementTitle:
-		return post.ReplacementSurfaceTitle, true
-	case generation.ReplacementTag:
-		return post.ReplacementSurfaceTag, true
-	case generation.ReplacementBody:
-		return post.ReplacementSurfaceBody, true
-	}
-	return "", false
+	return &post.WriteAnnotations{Nouns: append([]string(nil), annotations.Nouns...)}
 }
 
 func generationPostError(err error) error {

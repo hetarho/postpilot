@@ -12,9 +12,8 @@ import (
 // attachment: a filename is unique across both, so an IMAGE block naming a video is the
 // wrong block type rather than an unknown file, and the message has to be able to say so.
 // canonicalTag is a tag's identity: runs of whitespace collapsed to one space, leading '#'s
-// dropped, case kept. Whitespace is unicode.IsSpace (what Fields and TrimSpace use); the browser
-// spells that set out to mark replacement spans, and testdata/tag_identity/cases.json pins the
-// two equal.
+// dropped, case kept. Whitespace is unicode.IsSpace (what Fields and TrimSpace use), and
+// testdata/tag_identity/cases.json pins the rule.
 func canonicalTag(tag string) string {
 	return strings.TrimSpace(strings.TrimLeft(strings.Join(strings.Fields(tag), " "), "#"))
 }

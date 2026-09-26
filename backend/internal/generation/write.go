@@ -28,7 +28,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		Language: post.TargetLanguage, Profile: profile, Observations: observations,
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
-		Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules, FieldPhrases: post.FieldPhrases,
+		Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
 	})
 	request := llm.Request{
 		System:    system,
@@ -39,9 +39,6 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	}
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = WriteAnswerSchema()
-		if len(post.FieldPhrases) > 0 {
-			request.JSONSchema = WriteAnswerReplacementsSchema()
-		}
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -55,13 +52,6 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// Slot resolution runs LAST, after the attachment filter: a slot block carries no file,
 	// so filtering first keeps that pass unaware of templates entirely.
 	answer.Content = ApplyTemplateSlots(FilterAttachments(answer.Content, photos, videos), post.Template)
-	// Judged against the FINAL content, which is what gets stored: an index names what stands
-	// there now. A run that froze no phrases asked for none, so whatever came back is ignored.
-	if len(post.FieldPhrases) > 0 {
-		answer.Replacements = ValidateReplacements(answer.Replacements, answer.Content, post.FieldPhrases)
-	} else {
-		answer.Replacements = nil
-	}
 	return *answer, response.Usage, nil
 }
 

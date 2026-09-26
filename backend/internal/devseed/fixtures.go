@@ -2,7 +2,6 @@ package devseed
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
@@ -27,14 +26,6 @@ const (
 // FieldDailyLife is the 분야 two accounts' posts carry, in devseed's spelling of the quality
 // context's id. The adapter checks it against that context's catalogue.
 const FieldDailyLife = "daily_life"
-
-// Replacement surfaces a fixture candidate names, mapped to the drafting context's at the
-// adapter like the statuses are.
-const (
-	SurfaceTitle = "title"
-	SurfaceTag   = "tag"
-	SurfaceBody  = "body"
-)
 
 // Account is one seeded login and the shape of what sits behind it.
 //
@@ -71,7 +62,7 @@ func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized + a.Pub
 // The published posts are what the quality surfaces read (QUAL-2): `master`'s eleven meet
 // every metric's minimum, so each row can be judged, while `pro`'s two leave most of them
 // below it, so the minimum line shows. Both carry 일상·생각, the 분야 the seeded phrase list is
-// for, so their review posts can show replacement marks.
+// for.
 var Fixtures = []Account{
 	{LoginID: "free", Plan: plan.Free, Drafts: 0, Reviews: 0, Finalized: 0, Published: 0},
 	{LoginID: "base", Plan: plan.Basic, Drafts: 2, Reviews: 1, Finalized: 0, Published: 0},
@@ -112,19 +103,9 @@ type Content struct {
 	Summary string
 	Tags    []string
 	Blocks  []Block
-	// Nouns and Replacements are what a write run returns beside the content, not part of
-	// it, so the adapter stores them apart from the content itself (GEN-53, GEN-55).
-	Nouns        []string
-	Replacements []Replacement
-}
-
-// Replacement is one span a write offered phrases for: where it stands (a surface and an
-// index into it), the text standing there, and the phrases it may be replaced with.
-type Replacement struct {
-	Surface string
-	Index   int
-	Source  string
-	Phrases []string
+	// Nouns are what a write run returns beside the content, not part of it, so the adapter
+	// stores them apart from the content itself (GEN-55).
+	Nouns []string
 }
 
 // PhraseListFixture is one 분야's phrase list as a seed installs it.
@@ -392,11 +373,6 @@ func (a Account) article(voiceID, status string, index, offset int, now time.Tim
 		},
 		Nouns: source.nouns,
 	}
-	// A review post is the one ② edits, so it is the one whose marks can be taken; the phrases
-	// they offer are only there for a post with the list's 분야 (GEN-53).
-	if status == StatusReview && a.Field == PhraseList.Field {
-		article.Content.Replacements = replacements(*article.Content)
-	}
 	if status == StatusPublished {
 		// A Naver post number of the real shape, distinct per post; published three hours
 		// after it was written, which is still in the past for the newest of them.
@@ -404,36 +380,4 @@ func (a Account) article(voiceID, status string, index, offset int, now time.Tim
 		article.PublishedAt = article.CreatedAt.Add(3 * time.Hour)
 	}
 	return article
-}
-
-// replacements offers one candidate per surface, each derived from the content itself so it
-// stands where it says whatever topic lands on the post: the title's first 어절, the first tag,
-// and the first two 어절 of the first TEXT block.
-func replacements(content Content) []Replacement {
-	title := firstWords(content.Title, 1)
-	body := firstWords(content.Blocks[1].Content, 2)
-	return []Replacement{
-		{Surface: SurfaceTitle, Index: 0, Source: title, Phrases: offered(title)},
-		{Surface: SurfaceTag, Index: 0, Source: content.Tags[0], Phrases: offered(content.Tags[0])},
-		{Surface: SurfaceBody, Index: 1, Source: body, Phrases: offered(body)},
-	}
-}
-
-func firstWords(text string, n int) string {
-	return strings.Join(strings.Fields(text)[:n], " ")
-}
-
-// offered is the first two phrases of the list that differ from source: a write never offers
-// a span its own text.
-func offered(source string) []string {
-	phrases := make([]string, 0, 2)
-	for _, phrase := range PhraseList.Phrases {
-		if phrase != source {
-			phrases = append(phrases, phrase)
-		}
-		if len(phrases) == 2 {
-			break
-		}
-	}
-	return phrases
 }

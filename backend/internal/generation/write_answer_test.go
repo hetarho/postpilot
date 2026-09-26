@@ -160,38 +160,25 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 	}
 }
 
-// The parse only shapes the candidates: judging them against the content is ValidateReplacements'
-// job. A member that is not an array is none, a malformed item is dropped alone, and neither can
-// fail the write.
-func TestParseWriteAnswerShapesReplacements(t *testing.T) {
-	const content = `"title":"성수 카페","summary":"요약","tags":["카페"],"nouns":[],"blocks":[{"type":"TEXT","content":"성수동 카페"}]`
-	for name, test := range map[string]struct {
-		member string
-		want   []Replacement
-	}{
-		"missing":      {member: ``},
-		"null":         {member: `,"replacements":null`},
-		"not an array": {member: `,"replacements":{"surface":"title"}`},
-		"items kept in model order, malformed ones dropped alone": {
-			member: `,"replacements":[
-				{"surface":"body","index":0,"source":"성수동 카페","phrases":["분위기 좋은 카페"]},
-				{"surface":"title","index":0,"source":"카페"},
-				{"surface":"tag","index":"0","source":"카페","phrases":["디저트 맛집"]},
-				{"surface":"tag","index":0,"source":null,"phrases":["디저트 맛집"]},
-				"not an object",
-				{"surface":"tag","index":0,"source":"카페","phrases":["디저트 맛집","솔직 후기"],"extra":true}]`,
-			want: []Replacement{
-				{Surface: ReplacementBody, Index: 0, Source: "성수동 카페", Phrases: []string{"분위기 좋은 카페"}},
-				{Surface: ReplacementTag, Index: 0, Source: "카페", Phrases: []string{"디저트 맛집", "솔직 후기"}},
-			},
-		},
+// GEN-55: the write answer is the content and its nouns. A replacements member a model still
+// sends parses to exactly the answer without it, and never fails the write.
+func TestParseWriteAnswerIgnoresAReplacementsMember(t *testing.T) {
+	const content = `"title":"성수 카페","summary":"요약","tags":["카페"],"nouns":["성수","카페"],"blocks":[{"type":"TEXT","content":"성수동 카페"}]`
+	want, err := ParseWriteAnswer("{"+content+"}", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, member := range map[string]string{
+		"null":         `,"replacements":null`,
+		"not an array": `,"replacements":{"surface":"title"}`,
+		"items":        `,"replacements":[{"surface":"body","index":0,"source":"성수동 카페","phrases":["분위기 좋은 카페"]}]`,
 	} {
-		answer, err := ParseWriteAnswer("{"+content+test.member+"}", 4)
+		got, err := ParseWriteAnswer("{"+content+member+"}", 4)
 		if err != nil {
-			t.Fatalf("%s: the write failed over its replacements: %v", name, err)
+			t.Fatalf("%s: the write failed over a replacements member: %v", name, err)
 		}
-		if !reflect.DeepEqual(answer.Replacements, test.want) {
-			t.Errorf("%s: replacements = %+v, want %+v", name, answer.Replacements, test.want)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: answer = %+v, want %+v", name, got, want)
 		}
 	}
 }

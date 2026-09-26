@@ -21,8 +21,8 @@ type VideoLinker interface {
 type Posts interface {
 	AttachedImages(ctx context.Context, userID, slug string) (PostInput, error)
 	SetObservations(ctx context.Context, userID, slug string, observations []Observation) error
-	// SetGeneratedContent stores a machine write. annotations nil keeps the post's nouns and
-	// candidates (a revision); non-nil replaces both, where empty clears.
+	// SetGeneratedContent stores a machine write. annotations nil keeps the post's nouns (a
+	// revision); non-nil replaces them, where empty clears.
 	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language, annotations *WriteAnnotations) error
 }
 
@@ -98,8 +98,8 @@ type GuidelinesForPrompt interface {
 }
 
 // GuidelineTexts is what the guideline context resolves for one post. Preset is "" unless the
-// preset is on for the post's 분야 and this is not a revision; the write keeps it only when the
-// 분야's phrases froze (GUIDE-40), and appends it last (GUIDE-14, GUIDE-37).
+// preset is on for the post's 분야 and this is not a revision; no write or revision freezes it,
+// only Owner (GEN-14).
 type GuidelineTexts struct {
 	Owner  []string
 	Preset string
@@ -136,10 +136,4 @@ type Progress func(stage string, done, total int)
 // (ARCH-7).
 type QualityRulesForPrompt interface {
 	RulesFor(ctx context.Context, userID, slug string, ticked []string, language Language) ([]string, error)
-}
-
-// FieldPhrasesForPrompt is the quality context's published 분야 phrase list, consumed only at
-// enqueue, in the list's own rank order (GEN-48). An empty or missing list is none (QUAL-41).
-type FieldPhrasesForPrompt interface {
-	For(ctx context.Context, field string) ([]string, error)
 }

@@ -66,12 +66,10 @@ type generationPayload struct {
 	// is what a payload written before memories existed decodes as — and also what a post
 	// with the option off freezes, so the two are one state on the wire (MEM-19).
 	Memories []string `json:"memories,omitempty"`
-	// The ticked rule texts still over band and the 분야's first phrases, frozen at enqueue
-	// (GEN-51, GEN-48). Absent is none, which is what a payload written before them decodes as
-	// and what a post with nothing ticked and no list freezes, so that post's payload is
-	// byte-identical to the one it wrote before.
+	// The ticked rule texts still over band, frozen at enqueue (GEN-51). Absent is none, which
+	// is what a payload written before them decodes as and what a post with nothing ticked
+	// freezes, so that post's payload is byte-identical to the one it wrote before.
 	QualityRules []string `json:"quality_rules,omitempty"`
-	FieldPhrases []string `json:"field_phrases,omitempty"`
 	// The photos this run observes, frozen at enqueue. A POINTER, and deliberately without
 	// `omitempty`: the three states are absent (a job queued before this contract — observe
 	// everything), present-and-empty (observe nothing), and present-with-names. A plain
@@ -95,8 +93,8 @@ type generationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
 	TagCount       int
-	// writeMaterial is what freezeWriteMaterial resolved: the brief, 지침, 기억, rules and
-	// phrases, the same set a write comparison freezes.
+	// writeMaterial is what freezeWriteMaterial resolved: the brief, 지침, 기억 and rules,
+	// the same set a write comparison freezes.
 	writeMaterial
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
 	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
@@ -118,7 +116,6 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		Guidelines:        cloneTexts(options.Guidelines),
 		Memories:          cloneTexts(options.Memories),
 		QualityRules:      cloneTexts(options.QualityRules),
-		FieldPhrases:      cloneTexts(options.FieldPhrases),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
@@ -158,7 +155,6 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 			Guidelines:   cloneTexts(payload.Guidelines),
 			Memories:     cloneTexts(payload.Memories),
 			QualityRules: cloneTexts(payload.QualityRules),
-			FieldPhrases: cloneTexts(payload.FieldPhrases),
 		},
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),

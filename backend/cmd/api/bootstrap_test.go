@@ -1078,11 +1078,3 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 		t.Fatalf("after deleting the 분야 guideline: %+v, want %q and the preset line", got, want)
 	}
 }
-
-// The preset binds the phrase section by its heading, and guideline may not import generation,
-// so the heading is copied: this pins the copy to the original.
-func TestPresetTextNamesThePhraseSectionHeading(t *testing.T) {
-	if !strings.Contains(guideline.PresetText, generation.FieldPhrasesHeading) {
-		t.Fatalf("PresetText %q does not name the phrase section %q", guideline.PresetText, generation.FieldPhrasesHeading)
-	}
-}

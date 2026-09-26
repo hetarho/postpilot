@@ -1,8 +1,8 @@
 {
   "_comment": [
     "The tag identity post.ValidateContent applies (canonicalTag): whitespace runs collapsed, leading '#'s dropped, case kept.",
-    "Whitespace is Go's unicode.IsSpace set. Read by backend/internal/post/content_edit_test.go and by",
-    "frontend/src/entities/post/model/replacements.test.ts. \"canonical\": \"\" means the tag is refused as empty."
+    "Whitespace is Go's unicode.IsSpace set. Read by backend/internal/post/content_edit_test.go.",
+    "\"canonical\": \"\" means the tag is refused as empty."
   ],
   "cases": [
     {

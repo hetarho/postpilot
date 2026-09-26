@@ -28,7 +28,6 @@ type Service struct {
 	videos       VideoLinker
 	videoURLTTL  time.Duration
 	qualityRules QualityRulesForPrompt
-	fieldPhrases FieldPhrasesForPrompt
 	reasoning    ReasoningPolicy
 	budget       CompletionBudget
 }
@@ -81,10 +80,9 @@ type Deps struct {
 	Memories MemoriesForPrompt
 	// Candidates records what a completed revision asked for.
 	Candidates GuidelineCandidates
-	// QualityRules renders the ticked rules still over band, and FieldPhrases reads the 분야
-	// phrase list; both are read once at enqueue, for a write only (GEN-51, GEN-48).
+	// QualityRules renders the ticked rules still over band, read once at enqueue, for a
+	// write only (GEN-51).
 	QualityRules QualityRulesForPrompt
-	FieldPhrases FieldPhrasesForPrompt
 	// Samples is the voice context's per-version snapshot recorder.
 	Samples VersionSampleWriter
 	// Videos mints the signed link a video reaches a model through (VIDEO-10); the
@@ -103,7 +101,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos, "quality rules": deps.QualityRules, "field phrases": deps.FieldPhrases} {
+	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos, "quality rules": deps.QualityRules} {
 		if dep == nil {
 			panic("generation: " + name + " collaborator is required")
 		}
@@ -113,7 +111,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	}
 	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
 		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
-		qualityRules: deps.QualityRules, fieldPhrases: deps.FieldPhrases}
+		qualityRules: deps.QualityRules}
 }
 
 // recordVersionSample copies what a run produced into the voice's current head version. It is
@@ -414,15 +412,14 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevis
 	return texts, nil
 }
 
-// writeMaterial is a write's frozen material: the brief, the 지침, the 기억, the ticked rule
-// texts and the 분야 phrases. freezeWriteMaterial is the one place it is resolved, for the
-// ordinary generate and the write comparison alike (GEN-15, GEN-18, MEM-19).
+// writeMaterial is a write's frozen material: the brief, the 지침, the 기억 and the ticked
+// rule texts. freezeWriteMaterial is the one place it is resolved, for the ordinary generate
+// and the write comparison alike (GEN-15, GEN-18, MEM-19).
 type writeMaterial struct {
 	Template     *TemplateBrief
 	Guidelines   []string
 	Memories     []string
 	QualityRules []string
-	FieldPhrases []string
 }
 
 // onto lays the material over the post as-is: the values are freshly resolved or decoded, and
@@ -432,15 +429,13 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 	post.Guidelines = m.Guidelines
 	post.Memories = m.Memories
 	post.QualityRules = m.QualityRules
-	post.FieldPhrases = m.FieldPhrases
 	return post
 }
 
 // freezeWriteMaterial resolves everything a write freezes, once. Start and SnapshotWriteInput
 // both call it, so a comparison can never freeze less than the run it compares — the drop that
-// left a comparison of a post with 기억 사용 on without its memories. The preset's line rides
-// only with frozen phrases (GUIDE-40, QUAL-41): without them it would point the writer at a
-// phrase section the prompt does not carry. It stays last (GUIDE-14, GUIDE-37).
+// left a comparison of a post with 기억 사용 on without its memories. The 지침 are the owner's
+// texts alone (GEN-14, GEN-18).
 func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writeMaterial, error) {
 	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
@@ -458,15 +453,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	phrases, err := s.freezeFieldPhrases(ctx, post)
-	if err != nil {
-		return writeMaterial{}, err
-	}
-	guidelines := texts.Owner
-	if texts.Preset != "" && len(phrases) > 0 {
-		guidelines = append(guidelines[:len(guidelines):len(guidelines)], texts.Preset)
-	}
-	return writeMaterial{Template: brief, Guidelines: guidelines, Memories: memories, QualityRules: rules, FieldPhrases: phrases}, nil
+	return writeMaterial{Template: brief, Guidelines: texts.Owner, Memories: memories, QualityRules: rules}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.
@@ -482,24 +469,6 @@ func (s *Service) freezeQualityRules(ctx context.Context, post PostInput) ([]str
 		return nil, fmt.Errorf("load quality rules: %w", err)
 	}
 	return cloneTexts(texts), nil
-}
-
-// freezeFieldPhrases reads the post's 분야 list once, at enqueue, and keeps its first
-// FieldPhrasesMax in rank order (GEN-48). A post with no 분야 never reaches the quality context,
-// and an empty or missing list is none, exactly like no 분야 (QUAL-41). The 상위 노출 단어 사용
-// preset plays no part here: it is a guideline line, frozen by freezeGuidelines (GUIDE-31).
-func (s *Service) freezeFieldPhrases(ctx context.Context, post PostInput) ([]string, error) {
-	if post.Field == "" {
-		return nil, nil
-	}
-	phrases, err := s.fieldPhrases.For(ctx, post.Field)
-	if err != nil {
-		return nil, fmt.Errorf("load field phrases: %w", err)
-	}
-	if len(phrases) > FieldPhrasesMax {
-		phrases = phrases[:FieldPhrasesMax]
-	}
-	return cloneTexts(phrases), nil
 }
 
 // freezeMemories retrieves the post's memories once, at enqueue, and only when the post
