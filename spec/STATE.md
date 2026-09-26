@@ -54,7 +54,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T406 | The composition preview draws every intro and outro preset as the renderer lays it out | CLIP CDS | - | doing@260926.rp |
 | T407 | The frontend drops ②'s replacement marks and the 상위 노출 단어 사용 preset row | POST GUIDE | - | todo |
 | T408 | Generation stops freezing 분야 phrases and posts stop carrying replacement candidates | GEN POST | T407 | todo |
 | T409 | The 상위 노출 단어 사용 guideline preset leaves the backend and the guideline proto | GUIDE GEN | T408 | todo |
@@ -68,6 +67,7 @@
 - Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width
 
 ## log
+- 260926 T406 done (rp): the TS port mirrors Go LayoutRegion for all 15 presets (decoration, chips, list, stamp arcs, rotation) against a 135-case fixture; CompositionDesignFrame draws shapes, textPath arcs, outline text and the turn group; the template preview offers intro/outro presets (preview only); checked in Chrome; FE/BE gates green
 - 260926 create-task QUAL GEN GUIDE POST done (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 → T407 (FE marks + preset row) → T408 (frozen phrases, candidates, post.proto, drop column) → T409 (preset, guideline.proto, drop tables) → T410 (phrase batch, naversearch, config, drop table); T411/T412 cite current spec in BE/FE code; T400–T405 restored to tasks/done after deletion at done
 - 260926 create-task QUAL GEN GUIDE POST start (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 (분야 phrase feature removal) + stale spec citations in code
 - 260926 T406 claimed (rp)
@@ -87,4 +87,3 @@
 - 260926 finding (rp): Paperlogy maps all 11,172 syllables in its cmap but draws 8,392 of them empty (e.g. 갂), so media faceCoverage (cmap-based) passes them and a Paperlogy caption with such a syllable renders it blank instead of falling back under CDS-84; the new metrics table already excludes them for region slots
 - 260926 T400 claimed (rp)
 - 260926 create-task CDS CLIP done (rp): CDS r26 + CLIP r45 → T400 (metrics table + width fit), T401 (gap stack layout for A/B/B/E across renderer, V20, admission and FE preview), T402 (writer budgets, repair and answer limits by width), T403 (11 presets, decoration, region scrim), T404 (defaults A/B, existing projects keep b/e), T405 (① radiogroup of renderer-drawn slot drawings); CDS r24 and CLIP-13✎ CLIP-163+ stay pending
-- 260926 create-task CDS CLIP start (rp): CDS r26 + CLIP r45 region preset overhaul; checking whether CDS r24 (Wanted Sans) and CLIP-13✎ still need code

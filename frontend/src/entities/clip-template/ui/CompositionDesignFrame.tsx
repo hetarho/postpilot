@@ -8,8 +8,10 @@ import {
 } from '@/entities/clip-design/@x/clip-template'
 import {
   type ClipRatioId,
+  type ClipRegionArc,
   type ClipRegionLayout,
   type ClipRegionPresets,
+  type ClipRegionShape,
 } from '@/entities/clip-design/@x/clip-template'
 import type { ClipComposition, ResolvedCompositionElement } from '../model/composition'
 
@@ -25,17 +27,29 @@ type Line = {
   stroke: number
   shadow: boolean
   slot?: number
-  /** A region line's face, weight and baseline come from the block layout. */
+  /** A region line's face, weight, baseline and place come from the block layout:
+   *  `x` is its centre or, left-aligned, its left edge (CDS-87). */
   face?: string
   weight?: number
   baseline?: number
+  x?: number
+  align?: 'centre' | 'left'
+  /** Set along a stamp ring (CDS-99), and turned with its block (CDS-94). */
+  arc?: ClipRegionArc
+  rotated?: boolean
+  /** Drawn as a white outline of this width with no fill (CDS-92). */
+  outline?: number
 }
 type Visual = {
   entry: ResolvedCompositionElement
   lines: Line[]
   kind?: 'intro' | 'outro'
-  /** Whether this entry paints its region's rules: the first one with a line. */
+  /** Whether this entry paints its region's rules and block decoration: the first
+   *  one with a line (CLIP-147, CDS-73). */
   rules?: boolean
+  /** The decoration this entry draws: its own slots', and the block's when it paints
+   *  the rules (CDS-88). */
+  shapes?: ClipRegionShape[]
 }
 
 /** Text is measured in the browser with the same bundled faces as export. The
@@ -167,10 +181,18 @@ export function CompositionDesignFrame({
       const at = placement.get(entry.instanceId)!
       const block = blocks[kind]
       const lines: Line[] = []
+      const shapes: ClipRegionShape[] = []
       for (let i = 0; i < at.drawn; i++) {
-        const slot = block?.slots.find((s) => s.index === at.offset + i)
+        const index = at.offset + i
+        const slot = block?.slots.find((s) => s.index === index)
         if (!slot) continue
         const colour = CLIP_DESIGN.color[slot.spec.fill as keyof typeof CLIP_DESIGN.color]
+        const token =
+          slot.spec.stroke === 'text'
+            ? CLIP_DESIGN.spacing.stroke_text
+            : slot.spec.stroke === 'small'
+              ? CLIP_DESIGN.spacing.stroke_small
+              : 0
         slot.lines.forEach((line, k) =>
           lines.push({
             key: `${entry.instanceId}/${i}/${k}`,
@@ -181,19 +203,21 @@ export function CompositionDesignFrame({
             face: slot.type.face,
             weight: slot.type.weight,
             baseline: line.baseline,
+            x: line.x,
+            align: line.align,
+            arc: line.arc,
+            rotated: line.rotated,
+            outline: slot.spec.outline ?? 0,
             alpha: colour.alpha * (slot.spec.alpha ?? 1),
-            stroke:
-              slot.spec.stroke === 'text'
-                ? CLIP_DESIGN.spacing.stroke_text
-                : slot.spec.stroke === 'small'
-                  ? CLIP_DESIGN.spacing.stroke_small
-                  : 0,
+            stroke: token && (slot.spec.stroke_width || token),
             shadow: !!slot.spec.shadow,
             slot: slot.index,
           }),
         )
+        shapes.push(...(block?.shapes.filter((s) => s.slot === index) ?? []))
       }
-      return { entry, lines, kind, rules: at.rules }
+      if (at.rules && lines.length) shapes.push(...(block?.shapes.filter((s) => s.slot < 0) ?? []))
+      return { entry, lines, kind, rules: at.rules, shapes }
     }
     const lines = shown(entry)
       .map((row, i) => {
@@ -299,6 +323,7 @@ export function CompositionDesignFrame({
     .flatMap((kind) => [
       ...(blocks[kind]?.slots ?? []).map((slot) => slot.box),
       ...(blocks[kind]?.rules ?? []).map((rule) => rule.box),
+      ...(blocks[kind]?.shapes ?? []).map((shape) => shape.box),
     ])
   const captionAnchor = (v: Visual) => {
     const box = size(v),
@@ -315,6 +340,84 @@ export function CompositionDesignFrame({
       }) ?? CLIP_REGIONS.caption.bold.anchor
     )
   }
+  /** A line's paint as region-v2 draws it: a white outline with no fill (CDS-92), or
+   *  the fill under `stroke.dark` at its own width (CDS-94). */
+  const paint = (line: Line) =>
+    line.outline
+      ? {
+          fill: 'none',
+          stroke: CLIP_DESIGN.color.text_white.hex,
+          strokeOpacity: line.alpha,
+          strokeWidth: line.outline,
+        }
+      : {
+          fill: CLIP_DESIGN.color.text_white.hex,
+          fillOpacity: line.alpha,
+          stroke: line.stroke ? CLIP_DESIGN.color.stroke_dark.hex : 'none',
+          strokeOpacity: CLIP_DESIGN.color.stroke_dark.alpha,
+          strokeWidth: line.stroke,
+        }
+  /** One piece of neutral decoration (CDS-88): a rectangle, rounded by its radius, or
+   *  a circle, filled and/or stroked. */
+  const shapeElement = (s: ClipRegionShape, key: string) => {
+    const common = {
+      'data-shape': s.kind,
+      fill: s.fill || 'none',
+      fillOpacity: s.fill ? s.fillAlpha : undefined,
+      stroke: s.stroke || 'none',
+      strokeOpacity: s.stroke ? s.strokeAlpha : undefined,
+      strokeWidth: s.stroke ? s.strokeWidth : undefined,
+      filter: s.shadow ? `url(#${shadowID})` : undefined,
+    }
+    return s.circle ? (
+      <circle
+        key={key}
+        cx={s.box.x + s.box.width / 2}
+        cy={s.box.y + s.box.height / 2}
+        r={s.radius}
+        {...common}
+      />
+    ) : (
+      <rect
+        key={key}
+        x={s.box.x}
+        y={s.box.y}
+        width={s.box.width}
+        height={s.box.height}
+        rx={s.radius || undefined}
+        {...common}
+      />
+    )
+  }
+  /** A line set along its stamp ring: left to right over the top, or under it so the
+   *  glyphs stand upright (CDS-99). */
+  const arcText = (line: Line, kind: 'intro' | 'outro') => {
+    const a = line.arc!
+    const id = `${shadowID}-${kind}-arc${line.slot}`
+    return (
+      <g key={line.key}>
+        <defs>
+          <path
+            id={id}
+            d={`M ${a.cx - a.r} ${a.cy} A ${a.r} ${a.r} 0 0 ${a.lower ? 0 : 1} ${a.cx + a.r} ${a.cy}`}
+          />
+        </defs>
+        <text
+          {...props(line)}
+          {...paint(line)}
+          data-slot={line.slot === undefined ? undefined : line.slot + 1}
+          textAnchor="middle"
+          strokeLinejoin="round"
+          paintOrder="stroke fill"
+          filter={line.shadow ? `url(#${shadowID})` : undefined}
+        >
+          <textPath href={`#${id}`} startOffset="50%">
+            {line.text}
+          </textPath>
+        </text>
+      </g>
+    )
+  }
   const paintedText = (
     line: Line,
     center: number,
@@ -328,11 +431,7 @@ export function CompositionDesignFrame({
       x={align === 'left' ? center - ink(line).x : center - ink(line).x - ink(line).width / 2}
       y={y}
       data-slot={line.slot === undefined ? undefined : line.slot + 1}
-      fill={CLIP_DESIGN.color.text_white.hex}
-      fillOpacity={line.alpha}
-      stroke={line.stroke ? CLIP_DESIGN.color.stroke_dark.hex : 'none'}
-      strokeOpacity={CLIP_DESIGN.color.stroke_dark.alpha}
-      strokeWidth={line.stroke}
+      {...paint(line)}
       strokeLinejoin="round"
       paintOrder="stroke fill"
       filter={line.shadow ? `url(#${shadowID})` : undefined}
@@ -384,21 +483,16 @@ export function CompositionDesignFrame({
         if (!v.lines.length) return null
         const e = v.entry.element
         if (v.kind) {
-          const block = blocks[v.kind]
-          return (
-            <g
-              key={v.entry.instanceId}
-              data-element={e.id}
-              data-region={v.kind}
-              data-preset={presets[v.kind]}
-            >
-              {v.lines.map((line) =>
-                paintedText(line, block!.anchorX, line.baseline!, false, block!.align),
-              )}
-              {v.rules &&
-                block?.rules.map((r, i) => (
+          const block = blocks[v.kind]!
+          const kind = v.kind
+          const turned = block.rotate.deg !== 0
+          // region-v2's order: rules, decoration, lines, arcs; the turned parts in one
+          // group about the block's centre (CDS-94, CDS-99).
+          const parts = (rotated: boolean) => [
+            ...(v.rules && rotated === turned
+              ? block.rules.map((r, i) => (
                   <rect
-                    key={i}
+                    key={`rule-${i}`}
                     data-rule={r.kind}
                     x={r.box.x}
                     y={r.box.y}
@@ -407,7 +501,35 @@ export function CompositionDesignFrame({
                     fill={CLIP_DESIGN.color.text_white.hex}
                     fillOpacity={r.alpha}
                   />
-                ))}
+                ))
+              : []),
+            ...(v.shapes ?? [])
+              .map((shape, i) => ({ shape, i }))
+              .filter(({ shape }) => shape.rotated === rotated)
+              .map(({ shape, i }) => shapeElement(shape, `shape-${i}`)),
+            ...v.lines
+              .filter((line) => !line.arc && !!line.rotated === rotated)
+              .map((line) => paintedText(line, line.x!, line.baseline!, false, line.align)),
+            ...v.lines
+              .filter((line) => line.arc && !!line.rotated === rotated)
+              .map((line) => arcText(line, kind)),
+          ]
+          return (
+            <g
+              key={v.entry.instanceId}
+              data-element={e.id}
+              data-region={v.kind}
+              data-preset={presets[v.kind]}
+            >
+              {parts(false)}
+              {turned && (
+                <g
+                  data-turn={block.rotate.deg}
+                  transform={`rotate(${block.rotate.deg} ${block.rotate.cx} ${block.rotate.cy})`}
+                >
+                  {parts(true)}
+                </g>
+              )}
             </g>
           )
         }

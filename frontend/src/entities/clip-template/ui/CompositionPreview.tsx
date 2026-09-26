@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_COMPOSITION_PREVIEW,
+  CLIP_DEFAULT_REGION_PRESETS,
+  CLIP_REGIONS,
 } from '@/entities/clip-design/@x/clip-template'
-import { type ClipRatioId } from '@/entities/clip-design/@x/clip-template'
+import { type ClipRatioId, type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
 import { Slider, Typography } from '@/shared/ui'
 import {
   CompositionProblem,
@@ -15,11 +17,17 @@ import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionSelect } from './CompositionFields'
 import { CompositionDesignFrame } from './CompositionDesignFrame'
 
+const INTRO_IDS = Object.keys(CLIP_REGIONS.intro) as ClipRegionPresets['intro'][]
+const OUTRO_IDS = Object.keys(CLIP_REGIONS.outro) as ClipRegionPresets['outro'][]
+
 export function CompositionPreview({ document }: { document: ClipComposition }) {
   const { t } = useTranslation('clips')
   const [duration, setDuration] = useState<number>(CLIP_COMPOSITION_PREVIEW.durationMs)
   const [time, setTime] = useState(0)
   const [ratio, setRatio] = useState<ClipRatioId>('vertical')
+  // A template carries no design (CLIP-14): these only choose what this preview
+  // draws the outline in, starting at a new project's presets, and are never saved.
+  const [presets, setPresets] = useState<ClipRegionPresets>(CLIP_DEFAULT_REGION_PRESETS)
   let timeline: CompositionTimeline | undefined, error: CompositionProblem | undefined
   try {
     timeline = sampleClipComposition(
@@ -49,6 +57,24 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
           label: t(`ratio.${value}`),
         }))}
         onChange={(value) => setRatio(value as ClipRatioId)}
+      />
+      <CompositionSelect
+        label={t('composition.design.intro')}
+        value={presets.intro}
+        options={INTRO_IDS.map((value) => ({
+          value,
+          label: t(`composition.design.intro_${value}`),
+        }))}
+        onChange={(value) => setPresets({ ...presets, intro: value as ClipRegionPresets['intro'] })}
+      />
+      <CompositionSelect
+        label={t('composition.design.outro')}
+        value={presets.outro}
+        options={OUTRO_IDS.map((value) => ({
+          value,
+          label: t(`composition.design.outro_${value}`),
+        }))}
+        onChange={(value) => setPresets({ ...presets, outro: value as ClipRegionPresets['outro'] })}
       />
       <Slider
         label={t('composition.sampleDuration')}
@@ -83,6 +109,7 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
             ratio={ratio}
             label={t('composition.sampleFrame')}
             sampleAI={t('composition.sampleShortAI')}
+            presets={presets}
           />
           <ul className="space-y-2">
             {active.map((entry) => (

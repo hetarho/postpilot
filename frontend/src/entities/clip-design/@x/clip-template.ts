@@ -21,8 +21,10 @@ export {
   clipRegionSlots,
 } from '../model/region-layout'
 export type {
+  ClipRegionArc,
   ClipRegionKind,
   ClipRegionLayout,
+  ClipRegionShape,
   ClipRegionRatio,
   ClipRegionSlotSpec,
 } from '../model/region-layout'
