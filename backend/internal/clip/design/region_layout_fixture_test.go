@@ -135,6 +135,10 @@ func regionLayoutFixture(t *testing.T) []byte {
 	return out.Bytes()
 }
 
+// The two copies stay byte-identical, but numbers are matched within one r3
+// step: arm64 fuses the layout's multiply-adds and amd64 does not, so a value
+// sitting on a rounding boundary records one step apart on a Mac and on CI.
+// The frontend port compares at 0.01, well above that step.
 func TestRegionLayoutFixtureIsCurrent(t *testing.T) {
 	for paths, want := range map[[2]string][]byte{{layoutFixture, layoutFixtureMirror}: regionLayoutFixture(t), {slotFixture, slotFixtureMirror}: regionSlotFixture(t)} {
 		if os.Getenv("UPDATE_REGION_LAYOUTS") == "1" {
@@ -144,14 +148,58 @@ func TestRegionLayoutFixtureIsCurrent(t *testing.T) {
 				}
 			}
 		}
+		var recorded []byte
 		for _, path := range paths {
 			got, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.Equal(got, want) {
-				t.Fatalf("%s is stale; re-record with UPDATE_REGION_LAYOUTS=1", path)
+			if recorded != nil && !bytes.Equal(got, recorded) {
+				t.Fatalf("%s differs from %s; re-record with UPDATE_REGION_LAYOUTS=1", path, paths[0])
+			}
+			recorded = got
+		}
+		var got, laid any
+		if err := json.Unmarshal(recorded, &got); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(want, &laid); err != nil {
+			t.Fatal(err)
+		}
+		if !sameFixture(got, laid) {
+			t.Fatalf("%s is stale; re-record with UPDATE_REGION_LAYOUTS=1", paths[0])
+		}
+	}
+}
+
+func sameFixture(got, want any) bool {
+	switch w := want.(type) {
+	case float64:
+		g, ok := got.(float64)
+		return ok && math.Abs(g-w) < 0.0015
+	case []any:
+		g, ok := got.([]any)
+		if !ok || len(g) != len(w) {
+			return false
+		}
+		for i := range w {
+			if !sameFixture(g[i], w[i]) {
+				return false
 			}
 		}
+		return true
+	case map[string]any:
+		g, ok := got.(map[string]any)
+		if !ok || len(g) != len(w) {
+			return false
+		}
+		for k, v := range w {
+			if gv, ok := g[k]; !ok || !sameFixture(gv, v) {
+				return false
+			}
+		}
+		return true
+	default:
+		return got == want
 	}
 }
