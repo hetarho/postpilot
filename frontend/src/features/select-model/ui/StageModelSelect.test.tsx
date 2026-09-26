@@ -91,7 +91,7 @@ describe('StageModelSelect levels (T095/MODEL-44)', () => {
 })
 
 describe('StageModelSelect', () => {
-  // AC7: no default — the placeholder is selected and nothing was saved.
+  // MODEL-23: no default — the placeholder is selected and nothing was saved.
   it('starts empty for a fresh account', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
@@ -105,7 +105,7 @@ describe('StageModelSelect', () => {
     expect(calls).not.toContain('SaveSelection')
   })
 
-  // AC3: observe lists vision models only, with badges.
+  // MODEL-14, MODEL-15: observe lists vision models only, with badges.
   it('lists only vision models for observe and badges what each can do', async () => {
     const user = userEvent.setup()
     renderSelect('observe')
@@ -118,7 +118,7 @@ describe('StageModelSelect', () => {
     ).toHaveAttribute('aria-disabled', 'true')
   })
 
-  // AC2: a provider without a key is greyed with the exact reason and cannot be picked.
+  // MODEL-11: a provider without a key is greyed with the exact reason and cannot be picked.
   it('greys a model whose provider has no key, with the reason', async () => {
     const user = userEvent.setup()
     renderSelect('write')
@@ -129,7 +129,7 @@ describe('StageModelSelect', () => {
     expect(option).toHaveTextContent('API key not configured')
   })
 
-  // AC4 (client half): picking saves, and the choice is shown at once.
+  // MODEL-25, client half: picking saves, and the choice is shown at once.
   it('saves a pick and shows it as selected', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
@@ -174,7 +174,7 @@ describe('StageModelSelect', () => {
     },
   )
 
-  // AC5: a vanished model is shown greyed with the reason and counts as unselected.
+  // MODEL-24: a vanished model is shown greyed with the reason and counts as unselected.
   it('shows a vanished saved model greyed with the reason and treats the stage as unselected', async () => {
     const user = userEvent.setup()
     renderSelect('write', {

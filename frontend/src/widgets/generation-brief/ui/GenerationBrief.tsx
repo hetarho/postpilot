@@ -57,7 +57,7 @@ interface GenerationBriefProps {
  *  discarded by any close without it (POST-89).
  *
  *  It is a WIDGET because it composes several `features/*` slices and a feature may not import a
- *  sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
+ *  sibling feature (ARCH-13). Every callback is supplied by `pages/editor`, so
  *  each assignment still rides the draft autosave queue that lives above the step panels: an
  *  assignment made here cannot be lost to a step change any more than a title edit can.
  *

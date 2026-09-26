@@ -38,7 +38,7 @@ interface SegmentedControlProps<T extends string> {
 }
 
 /** The primitive for a bounded switch or a tab row. A slice never hand-rolls `role="tablist"`
- *  (design-language §1.1, §7).
+ *  (THEME-10, THEME-29).
  *
  *  It scrolls horizontally rather than crushing or wrapping its labels: a Korean option set
  *  outgrows the width long before an English one does — four format names alone measure ~380px
@@ -81,7 +81,7 @@ export function SegmentedControl<T extends string>({
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
       // `overscroll-x-contain`: a swipe that reaches the end of the strip must not chain to the
-      // page or to the browser's back gesture (§4.4).
+      // page or to the browser's back gesture (THEME-25).
       className={twMerge(
         clsx(
           steps
@@ -114,7 +114,7 @@ export function SegmentedControl<T extends string>({
             }
             onClick={() => onChange(option.value)}
             // No `focus-visible:ring-*` here: the global `:focus-visible` outline in
-            // app/styles/index.css is the app's one focus indicator (§9), and a second ring stacked
+            // app/styles/index.css is the app's one focus indicator (THEME-33), and a second ring stacked
             // inside a `p-1` container paints across the neighbouring tabs.
             className={twMerge(
               steps

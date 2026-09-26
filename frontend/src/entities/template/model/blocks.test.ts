@@ -52,7 +52,7 @@ describe('builder blocks', () => {
     ]
 
     const body = toBody(blocks)
-    // parse → blocks → serialize is the identity for anything this editor wrote (AC8).
+    // parse → blocks → serialize is the identity for anything this editor wrote (TMPL-19).
     expect(toBody(read(body))).toBe(body)
     // And the shape survives, not just the bytes.
     expect(read(body).map((block) => block.kind)).toEqual([
@@ -76,7 +76,7 @@ describe('builder blocks', () => {
     expect(toBody(read(body))).toBe(body)
   })
 
-  // TEMPLATE-37: the position is retired, but a body that has one must not become unreadable.
+  // TMPL-37: the position is retired, but a body that has one must not become unreadable.
   // It opens as FIXED TEXT carrying its label, and the next save writes it back as literal text.
   it('reads a stored place or link position as fixed text carrying its label', () => {
     const blocks = read(
@@ -200,7 +200,7 @@ describe('the collapsed outline', () => {
   })
 
   // One photo reads as a photo; more than one has to say they stand side by side, which is the
-  // whole point of the count (TEMPLATE-38).
+  // whole point of the count (TMPL-38).
   it('picks the summary key by whether the photos stand side by side', () => {
     expect(photoSummaryKey(1)).toBe('composition.summary.photo')
     expect(photoSummaryKey(2)).toBe('composition.summary.photoRow')

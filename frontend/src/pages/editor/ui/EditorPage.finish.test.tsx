@@ -167,7 +167,7 @@ describe('the post language', () => {
   })
 })
 
-// Change 16 A14: the server requires a COMPLETED voice-learning event before it accepts sentence
+// VOICE-41: the server requires a COMPLETED voice-learning event before it accepts sentence
 // feedback, and a post on 글 다듬기 is in `review` — never finalized, never learned. The control
 // therefore moved to 글 완성 and is gated on the same condition the server enforces.
 describe('sentence feedback', () => {

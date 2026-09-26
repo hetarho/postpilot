@@ -25,7 +25,7 @@ export function MemoField({
       </FieldLabel>
       {/* `autoGrow` with a small `rows`: at 16 rows the memo was a 364px box scrolling inside
           itself, which swallowed every vertical swipe that landed on it and left the 16px gutters
-          as the only place to scroll the page (§4.4). The well appearance owns the §3.1 input
+          as the only place to scroll the page (THEME-25). The well appearance owns the THEME-20 input
           size, so the focused field remains at least 16px on a phone. */}
       <Textarea
         id="post-memo"

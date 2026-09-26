@@ -31,7 +31,7 @@ function renderTemplate(path: string, templates: FakeTemplatesOptions = {}, call
 }
 
 describe('the template screen', () => {
-  // TEMPLATE-37: a stored place or link position opens as 고정 문구 rather than making the
+  // TMPL-37: a stored place or link position opens as 고정 문구 rather than making the
   // composition unreadable — and reading it is NOT an edit. The editor emits nothing until the
   // user changes something, so the body stays byte-identical and 저장 stays disabled; the
   // migration to literal text rides the next real save.
@@ -80,7 +80,7 @@ describe('the template screen', () => {
 
     await waitFor(() => expect(updates).toHaveLength(1))
     // Every field present in ONE call: they are one decision now, not three saves. The two
-    // generation numbers ride along unset, which is 의견 없음 (TEMPLATE-8).
+    // generation numbers ride along unset, which is 의견 없음 (TMPL-8).
     expect(updates[0]).toEqual({
       id: 'template-review',
       name: '정보성 식당 리뷰 2편',
@@ -284,7 +284,7 @@ describe('the template screen', () => {
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 
-  // TEMPLATE-42: import IS pasting. What the AI wrote is what gets stored — byte for byte, outer
+  // TMPL-42: import IS pasting. What the AI wrote is what gets stored — byte for byte, outer
   // whitespace and all — and the save carries the identical string.
   it('saves a pasted body byte for byte', async () => {
     const user = userEvent.setup()
@@ -304,7 +304,7 @@ describe('the template screen', () => {
     expect(updates[0].body).toBe('  <write>붙여넣은 본문</write>\n')
   })
 
-  // TEMPLATE-30 / TEMPLATE-7: a body that does not parse cannot be saved from EITHER mode, and
+  // TMPL-30, TMPL-7: a body that does not parse cannot be saved from EITHER mode, and
   // editing the name does not buy a way past it.
   it('refuses to save an unparsable body even after the name is edited', async () => {
     const user = userEvent.setup()
@@ -327,7 +327,7 @@ describe('the template screen', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
   })
 
-  // TEMPLATE-30: the unreadable state now has a way to FIX rather than only a way to discard.
+  // TMPL-30: the unreadable state now has a way to FIX rather than only a way to discard.
   it('sends 원문에서 고치기 to the source with the caret in the text and the error shown', async () => {
     const user = userEvent.setup()
     renderTemplate('/templates/template-broken', {
@@ -355,14 +355,14 @@ describe('the template screen', () => {
     expect(screen.getByLabelText('원문')).toHaveValue(REVIEW.body)
 
     await user.click(screen.getByRole('tab', { name: '블록' }))
-    // The outline is seeded from the same body, retired position included (TEMPLATE-37).
+    // The outline is seeded from the same body, retired position included (TMPL-37).
     expect(screen.getByText('네이버 지도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
 
 describe('a template whose rows ask the post for data', () => {
-  // TEMPLATE-44: the flip is an edit of that block like any other, so it opens 저장 by itself —
+  // TMPL-44: the flip is an edit of that block like any other, so it opens 저장 by itself —
   // nothing else about the row has to change for the template to have become a different one.
   it('opens 저장 on the flip alone', async () => {
     const user = userEvent.setup()

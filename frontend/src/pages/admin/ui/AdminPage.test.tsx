@@ -77,7 +77,7 @@ describe('the admin screen', () => {
     expect(screen.queryByRole('heading', { name: '운영 관리' })).not.toBeInTheDocument()
   })
 
-  // A1 (plan 18): the model catalog is the second tab of the same frame, reached from the row
+  // MODEL-28: the model catalog is the second tab of the same frame, reached from the row
   // rather than from a second entry point in the header.
   it('moves to the model tab from the tab row', async () => {
     const user = userEvent.setup()

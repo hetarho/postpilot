@@ -42,7 +42,7 @@ export async function finalize(user: ReturnType<typeof userEvent.setup>, action 
 }
 
 /** The writing brief — 관찰/작성 모델, 작성 A/B 후보, 목표 언어, 목표 분량 — lives behind ONE trigger
- *  in the dock (change 12), so a test that drives any of them opens it first. 말투 and 템플릿 are the
+ *  in the dock (POST-51), so a test that drives any of them opens it first. 말투 and 템플릿 are the
  *  exceptions and ride the dock's own row; see `dockField` below. */
 export const BRIEF_TRIGGER = /^(글쓰기 옵션|Writing options)$/
 const GENERATE_STEP = /^(글 생성|Generate)$/

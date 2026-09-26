@@ -53,7 +53,7 @@ async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('the voice directory', () => {
-  // Plan 10 A16 + change 14 A1–A3: a list of rows, tombstones folded away, no form on the page.
+  // VOICE-52: a list of rows, tombstones folded away, no form on the page.
   it('lists the active voices as one-target rows and folds the tombstones away', async () => {
     const calls: string[] = []
     renderDirectory({}, calls)
@@ -100,7 +100,7 @@ describe('the voice directory', () => {
     expect(screen.queryByRole('button', { name: '리뷰 이름 바꾸기' })).not.toBeInTheDocument()
   })
 
-  // Change 14 A6: the sheet creates exactly as before when no description is given.
+  // VOICE-11: the sheet creates exactly as before when no description is given.
   it('creates a voice from the sheet, starts no job, and lands on the new voice', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -119,7 +119,7 @@ describe('the voice directory', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  // Change 14 A7: a described create carries the description and the analyze ref, and the run
+  // VOICE-11, VOICE-53: a described create carries the description and the analyze ref, and the run
   // it starts is visible on the voice it lands on.
   it('sends the description with the analyze model and shows the seeding run', async () => {
     const user = userEvent.setup()
@@ -222,7 +222,7 @@ describe('the voice directory', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  // Plan 10 A4 + change 14 A4: one default at a time, switched from the row itself.
+  // VOICE-12, VOICE-52: one default at a time, switched from the row itself.
   it('moves the default badge when another voice is set as default from its row', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -248,7 +248,7 @@ describe('the voice directory', () => {
     ).not.toBeInTheDocument()
   })
 
-  // Plan 10 A5: a soft delete after confirmation; the default offers no delete at all.
+  // VOICE-13, VOICE-53: a soft delete after confirmation; the default offers no delete at all.
   it('soft-deletes after confirmation and keeps the voice in the tombstone group', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -284,7 +284,7 @@ describe('the voice directory', () => {
     expect((await section('사용 중')).getByRole('link', { name: '리뷰' })).toBeInTheDocument()
   })
 
-  // Plan 10 A6: restore re-lists the voice without touching the default.
+  // VOICE-14: restore re-lists the voice without touching the default.
   it('restores a deleted voice into the active list without changing the default', async () => {
     const user = userEvent.setup()
     const calls: string[] = []

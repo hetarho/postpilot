@@ -61,7 +61,7 @@ export interface DraftRequest extends Partial<Assignments> {
   /** Empty for a draft whose first save mints the post. */
   slug: string
   draft: Draft
-  /** Present on every create — a post cannot exist without a voice (spec/legacy/policy/posts.md)
+  /** Present on every create — a post cannot exist without a voice (POST-23)
    *  — and on an existing post only while the assignment differs from what the server holds, so
    *  an ordinary title save can never carry a stale voice over a newer one. */
   voiceId?: string
@@ -218,7 +218,7 @@ let newDraftSequence = 0
 /** A draft with no slug yet gets a key of its own rather than a shared one: two "새 글"
  *  editors in the same tab are two different drafts, and one must not be able to clear or
  *  claim the other's unfinished save. Every real slug is `YYYYMMDD-…`
- *  (spec/legacy/policy/posts.md), so this prefix cannot collide with one. */
+ *  (POST-2), so this prefix cannot collide with one. */
 function newDraftKey(): string {
   newDraftSequence += 1
   return `new:${newDraftSequence}`

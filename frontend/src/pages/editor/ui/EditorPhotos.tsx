@@ -54,8 +54,8 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
             creatingPost={upload.creatingPost}
           />
         </div>
-        {/* The §2.6 notice contract, through the primitive: this was an inlined copy of it at 12px,
-          and explanatory copy the user has to act on is never metadata-sized (§3). */}
+        {/* The THEME-18 notice contract, through the primitive: this was an inlined copy of it at 12px,
+          and explanatory copy the user has to act on is never metadata-sized (THEME-19). */}
         {upload.createFailure && (
           <Notice tone="danger" role="alert">
             <AppFailureMessage failure={upload.createFailure} />

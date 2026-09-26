@@ -67,7 +67,7 @@ export interface FakeVoiceOptions {
   /** Returned from the second profile read, simulating a completed analysis. */
   /** The analysis the profile publishes on the read AFTER the first one — the shape a resumed
    *  analysis has when its job is already done. It lands in the structured profile's lexical
-   *  description, which is where an analysis lives now (change 16). */
+   *  description, which is where an analysis lives now (VOICE-25). */
   analysisAfterAnalysis?: string
   samples?: FakeVoiceSampleRow[]
   addJobId?: string

@@ -1,7 +1,7 @@
 import { useMutation } from '@connectrpc/connect-query'
 import { PostService } from '@/shared/api'
 
-/** Removes a photo — the row and the object (spec/legacy/policy/uploads.md).
+/** Removes a photo — the row and the object (POST-39).
  *
  *  Only the call. Which post's cache to update is the post entity's knowledge, so the
  *  caller (the feature) pairs this with `usePostImagesCache` rather than this hook

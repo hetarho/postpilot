@@ -83,7 +83,7 @@ export function ExportPanel({
   // derivations below is what drops that stale confirmation.
   const [copied, setCopied] = useState<{ target: CopyTarget; value?: string }>()
   // Which control's copy fell back to manual selection, so its hint renders beside that control
-  // rather than somewhere the user is not looking (§4.3). On the Naver tab this also REVEALS the
+  // rather than somewhere the user is not looking (THEME-24). On the Naver tab this also REVEALS the
   // raw marker text: its default view is the rendered post, and a selection needs a text field.
   // The VALUE that fell back is stored with it, so the fallback dissolves by derivation the moment
   // the content no longer matches what was selected — no effect resetting state over a prop. The
@@ -120,7 +120,7 @@ export function ExportPanel({
   )
   const output = outputs[format]
   // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
-  // rather than mounting an empty control (§7).
+  // rather than mounting an empty control (THEME-29).
   const hashtags = toHashtags(content.tags)
   const unfilled = unfilledSlotCount(content)
   // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
@@ -340,7 +340,7 @@ export function ExportPanel({
         {t('export.title')}
       </Typography>
       {/* Unfilled template positions WARN, they do not gate: the app cannot invent a map link,
-          and blocking the copy over one would leave the user with no way out (change 25 AC9). */}
+          and blocking the copy over one would leave the user with no way out (TMPL-23). */}
       {unfilled > 0 && (
         <Notice tone="info" role="status" className="mt-3">
           <span>
@@ -377,7 +377,7 @@ export function ExportPanel({
             <FieldLabel htmlFor="export-title">{t('export.naverTitle')}</FieldLabel>
             <div className="mt-2 flex items-center gap-2">
               {/* `min-w-0` on the field, `shrink-0` on the button: the title is a server string
-                  and must be the thing that gives way, never the control beside it (§8.5). */}
+                  and must be the thing that gives way, never the control beside it (THEME-32). */}
               <TextField
                 id="export-title"
                 ref={titleRef}
@@ -407,13 +407,13 @@ export function ExportPanel({
         {/* Outside the `naver` branch on purpose: the site HTML and the Markdown front matter
             embed their tags as markup, and a ready-to-paste string is a different artifact worth
             having on every tab. Mounted only when there is something to paste — an empty tag list
-            gets no field and no label (§7). Field order reads title → tags → output. */}
+            gets no field and no label (THEME-29). Field order reads title → tags → output. */}
         {hashtags && (
           <div className="mt-4">
             <FieldLabel htmlFor="export-tags">{t('export.tags')}</FieldLabel>
             <div className="mt-2 flex items-center gap-2">
               {/* `min-w-0` on the field, `shrink-0` on the button, exactly as the title above:
-                  the tags are model output and must be the thing that gives way (§8.5). */}
+                  the tags are model output and must be the thing that gives way (THEME-32). */}
               <TextField
                 id="export-tags"
                 ref={tagsRef}
@@ -444,13 +444,13 @@ export function ExportPanel({
 
         {/* The copy action sits ABOVE the output, not after it. This panel renders inside the
             editor, which already docks its own bar, and two docked bars in one scroller stick to
-            the same offset and paint over each other — so §4.3's other option applies: put the
+            the same offset and paint over each other — so THEME-24's other option applies: put the
             action where the user already is. Above the field it shares a screen with the format
             tabs and the first lines of the result, which is what the user checks before copying;
             after an autoGrow field it would be a whole post's length away. */}
         <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
           {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
-              pressed it, and it was also the only signal that anything had happened (§6). */}
+              pressed it, and it was also the only signal that anything had happened (THEME-28). */}
           {/* `outputRef.current` is naturally null while the Naver tab shows the preview and the
               live field on every other state — including a Naver retry from the revealed field. */}
           <Button
@@ -462,7 +462,7 @@ export function ExportPanel({
             {t('action.copy', { ns: 'common' })}
           </Button>
           {/* Always mounted, never conditionally inserted: a live region that first appears WITH
-              its text already in it is not announced (§9). */}
+              its text already in it is not announced (THEME-33). */}
           <Typography variant="body" as="p" role="status" className="text-content-tertiary min-h-5">
             {outputStatus}
           </Typography>
@@ -475,9 +475,9 @@ export function ExportPanel({
             </FieldLabel>
             {/* A Korean post runs to ~58 lines at this width. A fixed 18-row box scrolled
                 internally, so every vertical swipe that landed on it moved the output instead of
-                the page and the only place left to scroll was the 16px gutter (§4.4) — it grows
+                the page and the only place left to scroll was the 16px gutter (THEME-25) — it grows
                 instead. No mono face: Tailwind's stock mono stack carries no Hangul, so every
-                glyph fell back (§3). */}
+                glyph fell back (THEME-19). */}
             <Textarea
               id="export-output"
               ref={outputRef}
@@ -490,7 +490,7 @@ export function ExportPanel({
             />
           </>
         ) : (
-          /* The Naver preview IS the post (change 18): what SmartEditor gets is plain text with
+          /* The Naver preview IS the post (EXPORT-9): what SmartEditor gets is plain text with
              `사진_<n>_…_사진` markers, but what the human reads here is the rendering they are about to
              publish — photos inline at their marker positions, each carrying its own copy. The
              header is suppressed because the body copy does not paste it; the title has its own
@@ -561,7 +561,7 @@ export function ExportPanel({
  *  control of its own (EXPORT-24), because the marker in the pasted text carries neither.
  *
  *  It reports its own state under its own photo rather than in one shared line, because "which
- *  photo failed" is the only useful part of the message (§4.3). */
+ *  photo failed" is the only useful part of the message (THEME-24). */
 function PreviewPhoto({
   file,
   alt,

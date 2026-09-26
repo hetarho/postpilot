@@ -57,7 +57,7 @@ export function VoicesPage() {
             <Typography variant="title" id="active-voices-heading">
               {t('page.active', { ns: 'voices' })}
             </Typography>
-            {/* Rows are full-bleed against the page gutter, so the list cancels it (§4.2). */}
+            {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
             <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
               {active.map((voice) => (
                 <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
@@ -92,7 +92,7 @@ export function VoicesPage() {
           {/* One instance at every width, not a phone bar plus a desktop copy: the trigger owns
               the sheet's open state, and two of them would be two overlays waiting to be opened.
               It docks at every width — `mt-auto` puts it below a short list, `sticky` keeps it
-              there once the list is long enough to scroll (§4.3, THEME-24). Above the phone the
+              there once the list is long enough to scroll (THEME-24). Above the phone the
               bar narrows to its trigger and sits against the right edge, so the action stays
               full-bleed only where the thumb needs it. */}
           <ActionBar
@@ -111,16 +111,16 @@ export function VoicesPage() {
 /** One voice, one target. The link stretches over the whole row through its `::after`, so the
  *  padding, the badges and the empty space all navigate, while the lifecycle controls paint above
  *  that layer and act without navigating — a row is one target, not a row with buttons inside it
- *  (§4.1), and nothing interactive is nested inside the anchor. */
+ *  (THEME-23), and nothing interactive is nested inside the anchor. */
 function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   const { t } = useTranslation('common')
   return (
     // `min-h-16`, not the list row's usual `min-h-11`, and `py-2` rather than `py-3`: the
-    // lifecycle controls keep the 44px touch floor (§4.1), so a row that carries them is 44 + its
+    // lifecycle controls keep the 44px touch floor (THEME-23), so a row that carries them is 44 + its
     // padding tall while the default voice — the one row that offers neither, since the server
     // refuses both for it — stayed at 44. The list was one short row among tall ones. The floor is
     // now set by the tallest thing a row can hold, so every row is 64px and the controls sit
-    // inside it instead of stretching it (§4.2).
+    // inside it instead of stretching it (THEME-23).
     <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
       <Link
         to="/voices/$voiceId"

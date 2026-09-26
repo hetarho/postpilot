@@ -24,7 +24,6 @@ afterEach(() => {
 })
 
 describe('opening a post', () => {
-  // A2 (title/memo half of plan 02 AC11).
   it('restores the title and the memo', async () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -73,7 +72,7 @@ describe('opening a post', () => {
     )
   })
 
-  // A5. Someone else's slug is 403, not 404 (spec/legacy/policy/posts.md).
+  // Someone else's slug is 403, not 404 (POST-3).
   it('reports a slug that belongs to someone else as theirs, not as missing', async () => {
     renderAppAt('/posts/20260101-hers', {
       user: USER,
@@ -98,7 +97,7 @@ describe('opening a post', () => {
 // invisible to them and every `waitFor` would spin on a clock nothing advances. The
 // debounce window itself is covered by features/save-draft's own tests.
 describe('the delete control', () => {
-  // Job 40 A1: an existing post can be deleted from its own editor.
+  // POST-27: an existing post can be deleted from its own editor.
   it('offers the delete trigger on a saved post', async () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -138,7 +137,7 @@ describe('a new draft', () => {
     expect(screen.getByLabelText('제목')).toHaveFocus()
   })
 
-  // Job 05 A2/A4 through the editor: the first photo of a new draft creates the post,
+  // POST-7, POST-34 through the editor: the first photo of a new draft creates the post,
   // then CreateUpload → PUT to the storage host → ConfirmUpload, and the photo lands in
   // the strip of the editor the mint navigation mounted.
   it('creates the post on the first photo, uploads it straight to storage, and shows it', async () => {
@@ -190,7 +189,7 @@ describe('a new draft', () => {
     )
   })
 
-  // Job 05 A1: a pick with nothing to upload is reported and creates no post.
+  // POST-7: a pick with nothing to upload is reported and creates no post.
   it('lists a pick made only of skipped files without creating a post', async () => {
     const calls: string[] = []
     // The input's `accept` would hide an .exe in a real picker too; some pickers ignore
@@ -236,7 +235,7 @@ describe('the editor lifecycle steps', () => {
     machineBaselineRevision: 1n,
   }
 
-  // Change 05 A1. The mapping is pages/editor/model/steps.test.ts and useDraftSteps.test.ts; one
+  // POST-44. The mapping is pages/editor/model/steps.test.ts and useDraftSteps.test.ts; one
   // row pins that the page follows it, and 'published' is "lands on 글 완성…".
   it.each([['review', '글 다듬기']])('opens a %s post on %s', async (status, label) => {
     renderAppAt('/posts/20260820-jeju', {
@@ -248,7 +247,7 @@ describe('the editor lifecycle steps', () => {
     await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
   })
 
-  // Change 05 A2 / A3: each step renders its own panel and none of the others'.
+  // POST-54: each step renders its own panel and none of the others'.
   it('scopes the generation controls, the block surface, and finalize to their own steps', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
@@ -286,7 +285,7 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
   })
 
-  // Change 05 A4: a step with no work yet says so and offers the way to the step that produces it.
+  // POST-44: a step with no work yet says so and offers the way to the step that produces it.
   it('opens an empty step without touching the post', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
@@ -312,8 +311,8 @@ describe('the editor lifecycle steps', () => {
     expect(calls).not.toContain('SavePostContent')
   })
 
-  // Change 05 A6: steps are panels, so a save started before a step change still completes.
-  // The 가제 now belongs to 글 생성 alone (change 12), so this also proves that unmounting the
+  // POST-44: steps are panels, so a save started before a step change still completes.
+  // The 가제 now belongs to 글 생성 alone (POST-50), so this also proves that unmounting the
   // FIELD cannot strand the queued save — the value and its queue live above the panels.
   it('completes a title save started before the step changed', async () => {
     const calls: string[] = []
@@ -335,9 +334,9 @@ describe('the editor lifecycle steps', () => {
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일 여행기')
   })
 
-  // A10/A14, amending change 05 A11: ① and ② both always dock — 생성 ends the first step and
+  // POST-47, POST-57: ① and ② both always dock — 생성 ends the first step and
   // 확정 the second — while ③ still docks only when there is something to report. There is
-  // exactly ONE bar in the scroller on every step (§4.3).
+  // exactly ONE bar in the scroller on every step (THEME-24).
   it('docks the step-ending actions on ① and ②, and nothing on a quiet ③', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
@@ -452,7 +451,7 @@ describe('the editor lifecycle steps', () => {
   })
 })
 
-// Change 15: everything the editor has to SAY about its own state is one 2px bar plus one line at
+// POST-45: everything the editor has to SAY about its own state is one 2px bar plus one line at
 // the top of the page, and the dock below it holds only controls and the reason one is refused.
 describe('the editor status region', () => {
   const statusLine = () => screen.getByRole('status', { name: '글 상태' })

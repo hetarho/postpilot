@@ -36,7 +36,7 @@ export interface BlockEditorHandle {
   content: () => PostContent
 }
 
-/** The draft, read first. `BlockList` renders it as prose — the reading view plan 06 specified —
+/** The draft, read first. `BlockList` renders it as prose — the reading view POST-55 specifies —
  *  and each block carries one edit control that swaps just that block for the controls it has
  *  always had.
  *
@@ -113,7 +113,7 @@ export const BlockEditor = forwardRef<
       )}
       {!valid && <FieldMessage className="mt-2">{t('edit.emptyBlock')}</FieldMessage>}
       {/* Unfilled template positions are stated here and never gate: the app cannot invent a
-          map link, and the reading view below shows WHERE each one is (change 25 AC9). */}
+          map link, and the reading view below shows WHERE each one is (TMPL-23). */}
       {unfilled > 0 && (
         <Typography variant="body" role="status" className="text-content-secondary mt-2">
           {tTemplates('slot.pending', { count: unfilled })}
@@ -245,7 +245,7 @@ function BlockControls({
         </FieldLabel>
         {/* A `Listbox`, not a `SegmentedControl`: five Korean type names measure past 320px inside
             a card that already carries the move/delete row, and the fifth option only exists when
-            the post has photos — so the switch would change width as well as content (§7). */}
+            the post has photos — so the switch would change width as well as content (THEME-29). */}
         <Listbox<BlockType>
           id={`block-type-${index}`}
           aria-labelledby={`block-type-label-${index}`}

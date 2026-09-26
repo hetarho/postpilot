@@ -71,7 +71,7 @@ export function PhotoStrip({
       {failed.length > 0 && (
         // The page-level signal for a lost upload. The per-tile message is 400px off the right
         // edge of a 360px screen behind a horizontal scroll nobody performs, so without this the
-        // batch just quietly ends up one photo short (§4.3).
+        // batch just quietly ends up one photo short (THEME-24).
         <Notice tone="danger" role="alert">
           <span className="min-w-0">
             {t('upload.failedCount', { ns: 'posts', count: failed.length })}
@@ -91,10 +91,10 @@ export function PhotoStrip({
           )}
         </Notice>
       )}
-      {/* The strip runs to both screen edges on a phone (§4) and snaps, so a flick parks a whole
+      {/* The strip runs to both screen edges on a phone (THEME-22) and snaps, so a flick parks a whole
           tile at the gutter instead of slicing the third one at the page's `px-4` — a clipped
           tile reads as a layout bug, not as "there is more". `overscroll-x-contain` keeps a flick
-          that runs out of strip from chaining to the page (§8.2). */}
+          that runs out of strip from chaining to the page (THEME-31). */}
       <ul
         className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0"
         aria-label={t('upload.photosAria', { ns: 'posts' })}
@@ -169,7 +169,7 @@ export function PhotoStrip({
                   )}
                   {/* One full-width action per tile. Two 44px targets side by side inside a 128px
                       square shrink to ~45px and break their Korean labels mid-word, and stacked
-                      they do not fit under the reason at all (§4.1) — so the tile keeps the
+                      they do not fit under the reason at all (THEME-23) — so the tile keeps the
                       action that is always valid and the retry lives in the notice above. */}
                   <Button
                     variant="ghost"
@@ -195,8 +195,8 @@ export function PhotoStrip({
         ))}
       </ul>
       {(confirming || confirmingVideo) && (
-        // Deleting a photo takes the object with it (spec/legacy/policy/uploads.md) and the converted
-        // copy is already gone, so there is nothing to undo — §7 confirms exactly this through
+        // Deleting a photo takes the object with it (POST-39) and the converted
+        // copy is already gone, so there is nothing to undo — THEME-29 confirms exactly this through
         // the sheet. It also takes the failure out of the tile: a scrim on a 128px square has no
         // room for a way out, and the sheet already has 취소 beside the retry.
         <Dialog
@@ -212,7 +212,7 @@ export function PhotoStrip({
           onClose={closeConfirm}
         >
           {/* The filename comes from the server, so it breaks inside the sheet rather than
-              widening it (§3.2). */}
+              widening it (THEME-21). */}
           {t('upload.deleteDescription', { ns: 'posts', filename: confirmingName })}
           {deleteFailed && (
             <Notice tone="danger" role="alert" className="mt-3">

@@ -70,7 +70,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     ratio: value.ratio as ClipRatio,
     targetDurationMs: value.targetDurationMs,
     // An empty campaign type is a clip still being set up; generation refuses
-    // one (CDS-5). An empty CTA means the template preset's (CDS-29).
+    // one (CDS-5). An empty CTA means the template preset's.
     disclosure: value.disclosure as ClipProject['disclosure'],
     hideDisclosure: value.hideDisclosure,
     cta: value.cta as ClipProject['cta'],

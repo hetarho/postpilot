@@ -18,7 +18,7 @@ export function Editable({
   className,
   readOnly = false,
 }: {
-  /** The pencil's accessible name. An icon-only button has no other name (§9), and it has to name
+  /** The pencil's accessible name. An icon-only button has no other name (THEME-33), and it has to name
    *  the field, since a screen full of pencils named "수정" identifies nothing. */
   editLabel: string
   edit: (exit: () => void) => ReactNode

@@ -16,7 +16,7 @@ import { AppFailureMessage, Button, Notice, Spinner, Typography } from '@/shared
  *  choice behind a confirmation dialog: the user pressed 복원, read a sentence about snapshots,
  *  and confirmed without ever seeing what the version would make the AI write. Now opening a
  *  version shows the raw AI output of the last post it produced, and `이 버전으로 변경` lives
- *  inside that surface — the preview IS the confirmation, so the dialog is gone (change 16).
+ *  inside that surface — the preview IS the confirmation, so the dialog is gone (VOICE-30).
  *
  *  Adopting a version still publishes a NEW head and destroys no history, exactly as 복원 did. */
 export function VoiceVersionHistory({

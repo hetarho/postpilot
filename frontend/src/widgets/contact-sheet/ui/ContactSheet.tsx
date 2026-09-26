@@ -59,7 +59,7 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
 
       {/* One horizontal snap carousel on a phone: eight photos as full-width cards was eight
           screenfuls of vertical scrolling to reach the last observation. A horizontal strip is
-          §4.4's deliberate exception — it does not compete with the page's vertical scroll — and
+          THEME-25's deliberate exception — it does not compete with the page's vertical scroll — and
           `overscroll-x-contain` keeps a swipe that reaches the end off the browser's back gesture.
           The card is deliberately narrower than the strip so a SLIVER of the next one shows: a
           phone has no hover and no scrollbar, so the sliver is the only thing that says the strip
@@ -269,7 +269,7 @@ function ObservationField({ label, value }: { label: string; value: string }) {
         {label}
       </Typography>
       {/* The body role, not the meta one: the section's own copy tells the user to read this, and
-          the value is a model-supplied string, so it also breaks rather than overflowing (§3.2). */}
+          the value is a model-supplied string, so it also breaks rather than overflowing (THEME-21). */}
       <Typography variant="body" as="dd" className="text-content-secondary mt-0.5 break-words">
         {value || t('observation.none')}
       </Typography>

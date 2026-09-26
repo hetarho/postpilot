@@ -206,7 +206,7 @@ export function voiceVersionSampleQueryKey(
   return ['voice-version-sample', transport, ownerId, voiceId, version.toString()] as const
 }
 
-// Every key carries the account AND the voice (tech/multi-voice-partitioning.md): two voices of one
+// Every key carries the account AND the voice (VOICE-56): two voices of one
 // account are different aggregates that may contradict each other, and an account switch on the
 // same device must never read the previous account's entry. The directory itself is per account.
 export function voicesQueryKey(transport: Transport, ownerId: string) {

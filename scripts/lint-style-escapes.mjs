@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails when frontend code escapes the design tokens (spec/legacy/tech/design-language.md §2, §3).
+// Fails when frontend code escapes the design tokens (THEME-11, THEME-15, THEME-19, THEME-29).
 //
 // Four escapes are caught:
 //   1. A Tailwind STOCK colour utility (`bg-gray-100`, `text-red-400`, `border-zinc-800/50`).
@@ -10,16 +10,16 @@
 //   3. A raw colour literal (`#fff`, `rgb(…)`, `oklch(…)`, `hsl(…)`) or an arbitrary colour
 //      utility (`bg-[#…]`, `text-[oklch(…)]`) anywhere under frontend/src except the token file.
 //   4. An ad-hoc TYPE utility — a text size, font weight/family, tracking, or leading — in a
-//      non-test `.tsx` outside `shared/ui`. The §3 type roles live in the Typography primitive
+//      non-test `.tsx` outside `shared/ui`. The THEME-19 type roles live in the Typography primitive
 //      (`shared/ui/typography`); a raw recipe in a slice is hierarchy drift by construction.
 //      Alignment/wrapping utilities (`text-center`, `text-balance`, …) are not type and pass.
 //   5. A native `<select>` element in any non-test `.tsx` outside the generated client. The OS
 //      draws its open option list, so it cannot wear the app's surfaces and it leaves the design
-//      system the moment it opens (§7, owner decision 2026-08-31). `shared/ui/listbox` is the
+//      system the moment it opens (THEME-29, owner decision 2026-08-31). `shared/ui/listbox` is the
 //      app-drawn replacement; a bounded 2–5 switch is a `SegmentedControl`.
 //
 // A line that is not UI colour/type at all — a canvas compositing fill, a test fixture, a control
-// state the §3 roles do not model — opts out with an inline `// style-escape: <why>` pragma on
+// state the THEME-19 roles do not model — opts out with an inline `// style-escape: <why>` pragma on
 // the same line. The reason is mandatory and is what a reviewer reads.
 //
 // Usage: node scripts/lint-style-escapes.mjs           (wired as `pnpm lint:style`)
@@ -74,7 +74,7 @@ const RETIRED_UTILITY = new RegExp(
 const RAW_COLOUR = /(?<![\w-])(?:#[0-9a-fA-F]{3,8}\b|(?:rgba?|hsla?|oklch|oklab|color)\()/g
 const ARBITRARY_COLOUR_UTILITY =
   /(?:bg|text|border|ring|outline|shadow|fill|stroke)-\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\()/g
-// Sizes, weights/families, tracking, leading — the §3 recipe vocabulary. The open named forms
+// Sizes, weights/families, tracking, leading — the THEME-19 recipe vocabulary. The open named forms
 // catch Tailwind theme extensions (`text-display`, `font-brand`, `tracking-display`, …); the
 // negative lookahead keeps alignment/wrap and the project's semantic colour roles out. Arbitrary
 // text sizes recognise numeric lengths, CSS size keywords and math spellings while colour
@@ -285,11 +285,11 @@ if (findings.length) {
   console.error(
     '\nUse a functional role (bg-button-cta-bg, text-notice-danger-fg) or a compositional',
     'foundation (bg-surface-base, text-content-secondary). Roles are defined in',
-    'frontend/src/app/styles/index.css; the rules are in spec/legacy/tech/design-language.md §2.',
+    'frontend/src/app/styles/index.css; the rules are THEME-11 and THEME-15 in spec/ssot/THEME.md.',
     '\nFor an ad-hoc type utility, render the text through shared/ui Typography (or',
-    'typographyStyles for a self-semantic element) — the type roles are design-language §3.',
+    'typographyStyles for a self-semantic element) — the type roles are THEME-19.',
     '\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5',
-    'switch) — the OS-drawn option list is design-language §7.',
+    'switch) — THEME-29 bans the OS-drawn option list.',
   )
   process.exit(1)
 }

@@ -24,7 +24,7 @@ const model = (
 })
 
 describe('filterForStage', () => {
-  // Change 20: a stage lists exactly its purpose's registrations. `generation-only`
+  // MODEL-14: a stage lists exactly its purpose's registrations. `generation-only`
   // mirrors a model registered only to image/video generation — no stage lists it.
   const models = [
     model('free', ['observe', 'write', 'analyze']),

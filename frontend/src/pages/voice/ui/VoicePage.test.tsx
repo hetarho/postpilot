@@ -24,7 +24,7 @@ const DEFAULT = '/voices/voice-default'
 afterEach(() => initializeI18n('ko'))
 
 describe('the 프로필 tab', () => {
-  // Change 04 A1, now under one voice: the layout names the voice, the tab keeps its title.
+  // VOICE-54: the layout names the voice, the tab keeps its title.
   it('renders the profile and none of the other tabs’ panels', async () => {
     renderAppAt(DEFAULT, { user: { id: 'alice' }, voice: { structured: LEARNED } })
 
@@ -37,7 +37,7 @@ describe('the 프로필 tab', () => {
     expect(screen.queryByText('학습 샘플')).not.toBeInTheDocument()
   })
 
-  // Change 04 A4: the three detail lists belong to the tabs that display them.
+  // VOICE-54: the three detail lists belong to the tabs that display them.
   it('issues no version, confirmation or validation request on mount', async () => {
     const calls: string[] = []
     renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { structured: LEARNED } })
@@ -49,7 +49,7 @@ describe('the 프로필 tab', () => {
     expect(calls).not.toContain('ListVoiceProfileValidations')
   })
 
-  // Change 04 A11, frontend half: an axis the analysis never answered is not a measurement.
+  // VOICE-27, frontend half: an axis the analysis never answered is not a measurement.
   it('shows an unanswered axis as 알 수 없음 rather than 0', async () => {
     renderAppAt(DEFAULT, { user: { id: 'alice' }, voice: { structured: LEARNED } })
 
@@ -111,7 +111,7 @@ describe('the 프로필 tab', () => {
     expect(unknown.nextElementSibling).not.toHaveTextContent('99')
   })
 
-  // Plan 10 A2: another voice of the same account is genuinely empty.
+  // VOICE-10: another voice of the same account is genuinely empty.
   it('shows a second voice as empty even while the default has learned', async () => {
     renderAppAt('/voices/voice-review', {
       user: { id: 'alice' },
@@ -153,7 +153,7 @@ describe('the 프로필 tab', () => {
 })
 
 describe('the voice tab row', () => {
-  // Change 04 A2 / A3.
+  // VOICE-54.
   it('gives every tab an address under the voice and marks the current one', async () => {
     const { router } = renderAppAt(DEFAULT, { user: { id: 'alice' } })
 
@@ -168,7 +168,7 @@ describe('the voice tab row', () => {
       `${DEFAULT}/validations`,
     ])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
-    // Change 04 A5, the mechanical half: the row scrolls instead of wrapping or crushing its five
+    // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its five
     // Korean labels, and every tab keeps the 44px floor.
     expect(screen.getByRole('navigation', { name: '말투 설정' })).toHaveClass('overflow-x-auto')
     tabs.forEach((tab) => {
@@ -255,7 +255,7 @@ describe('localized durable voice records', () => {
 })
 
 describe('the legacy /voice address', () => {
-  // Plan 10: old links resolve the server default; nothing is created on the way.
+  // VOICE-54: old links resolve the server default; nothing is created on the way.
   it.each([
     ['/voice', DEFAULT],
     ['/voice/rules', `${DEFAULT}/rules`],
@@ -332,11 +332,11 @@ describe('the 기존 글 가져오기 tab', () => {
     })
 
     // The analysis lands in the structured profile's lexical description now — there is no
-    // free-text styleguide field left for it to appear in (change 16).
+    // free-text styleguide field left for it to appear in (VOICE-25).
     await waitFor(() => expect(screen.getByText(/~다를 자주 사용/)).toBeInTheDocument())
   })
 
-  // Change 16 A9: the 이전 수동 안내 section and both of its editors are gone from every tab.
+  // VOICE-6: the 이전 수동 안내 section and both of its editors are gone from every tab.
   it('offers no free-text guidance editors anywhere on the voice screens', async () => {
     renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
     await screen.findByLabelText('내가 쓴 글')
@@ -345,14 +345,14 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.queryByLabelText('추가 규칙')).not.toBeInTheDocument()
   })
 
-  // Change 16 A7: the paste form's first field says what it is.
+  // VOICE-54: the paste form's first field says what it is.
   it('labels the imported piece 제목 and keeps it optional', async () => {
     renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
     expect(await screen.findByLabelText('제목 (선택)')).toBeInTheDocument()
     expect(screen.queryByLabelText('라벨 (선택)')).not.toBeInTheDocument()
   })
 
-  // Change 16 A4/A5/A6: a version is READ before it is taken, and the preview is the confirmation.
+  // VOICE-30: a version is READ before it is taken, and the preview is the confirmation.
   it('opens a version, previews what it wrote, and adopts it without a dialog', async () => {
     const calls: string[] = []
     renderAppAt(`${DEFAULT}/versions`, {
@@ -396,7 +396,7 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByText('이 버전으로 쓴 글이 아직 없어요.')).toBeInTheDocument()
   })
 
-  // Change 14 A7: the tab a described create lands on reports the seeding run.
+  // VOICE-53: the tab a described create lands on reports the seeding run.
   it('shows the seeding run started by a described creation', async () => {
     const calls: string[] = []
     renderAppAt(DEFAULT, {
@@ -422,7 +422,7 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.getByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
   })
 
-  // Change 14 A11: a failed seed leaves a usable voice and says why, on that same tab.
+  // VOICE-19: a failed seed leaves a usable voice and says why, on that same tab.
   it('reports a failed seed without losing the voice', async () => {
     renderAppAt(DEFAULT, {
       user: { id: 'alice' },
@@ -445,7 +445,7 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
   })
 
-  // Change 14 A5: renaming lives on the voice, not on the directory row that leads here.
+  // VOICE-54: renaming lives on the voice, not on the directory row that leads here.
   it('renames the voice from its own screen', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -464,7 +464,7 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
   })
 
-  // Change 14 A5: a tombstone stays renameable, which is how a restore conflict is resolved.
+  // VOICE-54: a tombstone stays renameable, which is how a restore conflict is resolved.
   it('keeps a deleted voice renameable', async () => {
     renderAppAt('/voices/voice-old', {
       user: { id: 'alice' },
@@ -479,7 +479,7 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByRole('button', { name: '옛 말투 이름 바꾸기' })).toBeInTheDocument()
   })
 
-  // Plan 10 A5/A7: a tombstone is readable, and the import is refused before the paste.
+  // VOICE-15, VOICE-54: a tombstone is readable, and the import is refused before the paste.
   it('shows a deleted voice as a tombstone and blocks importing into it', async () => {
     renderAppAt('/voices/voice-old/import', {
       user: { id: 'alice' },

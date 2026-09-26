@@ -13,8 +13,8 @@ import { CatalogModelRow } from './CatalogModelRow'
  *  rows near the viewport exist at any moment.
  *
  *  It virtualizes the WINDOW rather than a scroll container of its own. A nested
- *  `overflow-y-auto` would steal every vertical swipe that lands in it, which design-language
- *  §4.4 forbids on a phone; the page stays the one scroller and the list only reserves its
+ *  `overflow-y-auto` would steal every vertical swipe that lands in it, which THEME-25
+ *  forbids on a phone; the page stays the one scroller and the list only reserves its
  *  height. `scrollMargin` is what makes that work: the list starts partway down the page, so the
  *  virtualizer has to be told where its own top edge sits in the document.
  *

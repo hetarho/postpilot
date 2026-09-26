@@ -17,7 +17,7 @@ export type { SaveStatusState }
  *  came down, so the one status line could never get round to the post's own status. The settle
  *  lives HERE rather than in the queue on template — the queue's state machine is what autosave
  *  correctness is tested against, and "how long a word stays on screen" is not part of it
- *  (tech/draft-autosave.md).
+ *  (POST-9).
  *
  *  Every state change re-arms the timer, so a save that follows a settled one is announced again. */
 export function useSaveStatus(state: SaveState): { state: SaveStatusState; label: string } {

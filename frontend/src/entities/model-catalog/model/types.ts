@@ -29,7 +29,7 @@ export interface CatalogModel {
   signedVideoUrl?: boolean
   inlineStaticVideo?: boolean
   structuredOutput: boolean
-  /** The stages this model is registered to serve (change 20). Each stage's picker lists
+  /** The stages this model is registered to serve (MODEL-14). Each stage's picker lists
    *  exactly its members — fitness is never re-derived from capability flags here. */
   stages: readonly StageName[]
   /** The operator's grade PER STAGE (MODEL-57), for the stages that have one. A stage
@@ -85,7 +85,7 @@ export interface RecommendationSet {
 export type ReasoningEffortName =
   '' | 'unset' | 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
-/** The full effort vocabulary. Since change 27 it is the **fallback** for a model whose
+/** The full effort vocabulary. Under MODEL-21 it is the **fallback** for a model whose
  *  accepted values the source does not publish — not the whole truth. A model that does
  *  publish a list is offered exactly that list. */
 export const REASONING_EFFORTS: readonly ReasoningEffortName[] = [
@@ -133,7 +133,7 @@ export interface AdminCatalogEntry {
    *  the operator, never an action: the model is served disabled-with-reason to users. */
   listed: boolean
   /** The override for the PURPOSE this listing was read for, not for the model. The same
-   *  model shows its own value on every tab (change 24). */
+   *  model shows its own value on every tab (MODEL-7). */
   reasoningEffort: ReasoningEffortName
   /** The operator's grade for the PURPOSE this listing was read for (MODEL-57), '' while
    *  they have not set one. Per registration for the same reason the effort is: the same
@@ -143,7 +143,7 @@ export interface AdminCatalogEntry {
    *  or undefined when nothing has been recorded — which renders as nothing rather than as a
    *  zero that would read as a measurement. */
   reasoningSpend?: ReasoningSpend
-  /** What the source publishes about this model's reasoning (change 27). Every falsy value
+  /** What the source publishes about this model's reasoning (MODEL-21). Every falsy value
    *  here means **unknown**, never "supports nothing" — the same rule an unpublished price
    *  follows. */
   reasoning: ReasoningCapability
@@ -166,7 +166,7 @@ export interface ReasoningCapability {
   /** Reasoning cannot be turned off: `none` is never offered. */
   mandatory: boolean
   /** The provider takes the effort string itself rather than a budget derived from it.
-   *  Nothing renders it yet; change 29 consumes it. */
+   *  Nothing renders it; the server's budget headroom reads it (MODEL-46). */
   nativeEffort: boolean
   /** The source offers a reasoning token budget for this model. Recorded and displayed
    *  only — this change surfaces no input for it. */
@@ -274,7 +274,7 @@ export function isModelPurpose(value: string): value is ModelPurpose {
   return (MODEL_PURPOSES as readonly string[]).includes(value)
 }
 
-/** A stage lists exactly the models registered to its purpose (change 20) — observe's old
+/** A stage lists exactly the models registered to its purpose (MODEL-14) — observe's old
  *  vision-only rule is subsumed, because photo-analysis registration already requires
  *  vision. Disabled models stay in the list — greyed, with the reason — rather than
  *  vanishing, so the user learns why a model is unavailable.

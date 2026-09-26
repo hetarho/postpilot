@@ -26,7 +26,7 @@ const STATUS_TONES: Record<CandidateStatusName, BadgeTone> = {
 
 /** The panels only. The A/B switch is docked by the page instead: it is pressed on every pass of
  *  the comparison, so it belongs in the same thumb band as the buttons that commit it, not pinned
- *  to the top edge ~700px away from the resting thumb (design-language §4.3). */
+ *  to the top edge ~700px away from the resting thumb (THEME-24). */
 export function CandidateComparison({ experiment, activeCandidateId }: CandidateComparisonProps) {
   const { t } = useTranslation('posts')
   const sides = useMemo(() => candidateSides(experiment.candidates), [experiment.candidates])
@@ -38,11 +38,11 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
             key={candidate.id}
             aria-label={t('comparison.candidate', { label })}
             // The panel is NOT its own scroll container. A phone screen has one scroller, the
-            // document (§4.4), and the inner one lost the reader's place on every switch because
+            // document (THEME-25), and the inner one lost the reader's place on every switch because
             // `hidden` resets its scrollTop — paragraph-by-paragraph comparison, the whole point of
             // the screen, was impossible. The card is a `md:` treatment for the same reason: below
             // that only one panel is on screen, so a raised box around it frames the entire page
-            // and costs two Korean characters per line of gutter (§1.4).
+            // and costs two Korean characters per line of gutter (THEME-13).
             className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
           >
             <div className="flex min-h-11 items-center justify-between gap-2">
@@ -103,7 +103,7 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
                 {block.content}
               </Typography>
             ) : block.type === 3 ? (
-              // `break-words`: the filename comes from the server (§3.2).
+              // `break-words`: the filename comes from the server (THEME-21).
               <Typography
                 key={index}
                 variant="body"
@@ -167,7 +167,7 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
 /** Once the blind is lifted, both models' identity and accounting sit in ONE band below the
  *  panels. Inside the panels they could only ever be read one at a time below `md:`, at the very
  *  bottom of a post-length column — so comparing the two costs, the payoff of the whole exercise,
- *  meant memorising one number and switching (design-language §4.3). */
+ *  meant memorising one number and switching (THEME-24). */
 function RevealBand({ sides }: { sides: CandidateSide[] }) {
   const { t } = useTranslation(['posts', 'models'])
   return (
@@ -184,7 +184,7 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
           </dt>
           <dd className="mt-1">
             {/* The label role, not the metadata one: after the reveal this is the most important
-                content on the screen (§3). */}
+                content on the screen (THEME-19). */}
             <Typography variant="label" as="p">
               {usageLine(candidate, t)}
             </Typography>

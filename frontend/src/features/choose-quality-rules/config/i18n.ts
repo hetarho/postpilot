@@ -1,9 +1,10 @@
 import type { I18nFragment } from '@/shared/lib'
 
 /** This slice's share of the `posts` namespace (ARCH-16), under its own key group. Every line says
- *  what was counted in the published posts PostPilot holds, never what ticking improves (QUAL-19,
- *  QUAL-21), and the published count is stated as the account's, not as the posts a metric read.
- *  The plural pairs exist in both languages so the two key sets stay equal. */
+ *  what was counted in the published posts PostPilot holds, never what ticking improves (QUAL-6,
+ *  and the QUAL constraint against implying an exposure gain), and the published count is stated
+ *  as the account's, not as the posts a metric read. The plural pairs exist in both languages so
+ *  the two key sets stay equal. */
 export const i18n = {
   namespace: 'posts',
   ko: {

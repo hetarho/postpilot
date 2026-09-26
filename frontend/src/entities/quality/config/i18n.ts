@@ -2,8 +2,9 @@ import type { I18nFragment } from '@/shared/lib'
 
 /** This slice's share of the `posts` namespace (ARCH-16), under its own key group. A value line
  *  counts this post's own text, and M2's names the account's published posts as PostPilot stores
- *  them: nothing here promises exposure (QUAL constraints) or implies a Naver post was read
- *  (QUAL-19). The plural pairs exist in both languages so the two key sets stay equal. */
+ *  them: each band is named as the product's own (QUAL-6), and nothing here promises exposure
+ *  (QUAL constraints) or implies a Naver post was read. The plural pairs exist in both languages
+ *  so the two key sets stay equal. */
 export const i18n = {
   namespace: 'posts',
   ko: {

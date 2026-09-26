@@ -7,7 +7,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
   /** Shows the pending state in place. The label keeps its space so the button does not resize
-   *  under the thumb (design-language §6); callers should NOT also swap their own label. */
+   *  under the thumb (THEME-28); callers should NOT also swap their own label. */
   pending?: boolean
 }
 

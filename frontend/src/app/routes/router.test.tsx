@@ -24,7 +24,7 @@ function createBrokenTransport() {
 }
 
 describe('session guard', () => {
-  // Job 02 A2 / plan 01 AC9.
+  // AUTH-24, AUTH-27.
   it('sends an unauthenticated visit to /login, remembering where it was going', async () => {
     const { router } = renderAppAt('/posts')
 
@@ -60,7 +60,7 @@ describe('session guard', () => {
   })
 })
 
-// Job 04 A7: the post list is the app's home now that the scaffold ping page is gone.
+// POST-43: the post list is the app's home now that the scaffold ping page is gone.
 describe('the app home', () => {
   it('sends / to the post list', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
@@ -71,7 +71,7 @@ describe('the app home', () => {
 })
 
 describe('login screen', () => {
-  // Job 02 A2, second half: the originally requested route loads after login.
+  // AUTH-27, second half: the originally requested route loads after login.
   it('returns to the route the guard blocked', async () => {
     const user = userEvent.setup()
     const posts = { posts: [{ slug: '20260820-jeju', title: '제주 3일' }] }
@@ -86,7 +86,7 @@ describe('login screen', () => {
     expect(await screen.findByDisplayValue('제주 3일')).toBeInTheDocument()
   })
 
-  // Job 02 A6.
+  // AUTH-8.
   it('says the same thing for every failure', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/login', { loginFails: true })
@@ -183,7 +183,7 @@ describe('logout', () => {
     await user.click(await screen.findByRole('button', { name: '내 계정' }))
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
 
-    // The failure renders where the user is looking — inside the still-open popover (§4.3).
+    // The failure renders where the user is looking — inside the still-open popover (THEME-24).
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('로그아웃하지 못했어요')
     expect(screen.getByRole('dialog', { name: '내 계정' })).toContainElement(alert)
@@ -215,7 +215,7 @@ describe('logout', () => {
     expect(saves()).toBe(afterLogout)
   }, 15_000)
 
-  // Job 02 A5.
+  // AUTH-13.
   it('ends the session and lands on /login', async () => {
     const user = userEvent.setup()
     const { router, transport, queryClient } = renderAppAt('/posts', {
@@ -235,7 +235,7 @@ describe('logout', () => {
   })
 })
 
-// Plan 11 A11/A12: 용도 is a top-level destination beside 말투, reachable from the nav.
+// TMPL-24: 용도 is a top-level destination beside 말투, reachable from the nav.
 describe('the template management route', () => {
   it('mounts /templates and offers it in the navigation after 말투', async () => {
     renderAppAt('/templates', { user: { id: 'alice' } })
@@ -251,7 +251,7 @@ describe('the template management route', () => {
   })
 })
 
-// Plan 15 A1–A3/A14/A15: /about is PUBLIC — a direct child of the root route, with no guard, no
+// MKT-1: /about is PUBLIC — a direct child of the root route, with no guard, no
 // session probe, and no network of any kind. These mount the real tree at /about, so a stray
 // beforeLoad or a query inside the page would show up as a Connect call in the log.
 describe('the public About route', () => {
@@ -339,7 +339,7 @@ describe('the public About route', () => {
   })
 })
 
-// Plan 15 A5–A7/A15: /about consumes the SHIPPED locale and theme runtimes rather than forking
+// MKT-7: /about consumes the SHIPPED locale and theme runtimes rather than forking
 // either one, so switching either from the public header behaves exactly as it does in the app.
 describe('About consumes the shared locale and theme runtimes', () => {
   it('switches the whole page between locales without moving the URL or calling anything', async () => {
@@ -380,7 +380,7 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// Plan 16 A14: 지침 is a top-level destination after 용도, reachable from the nav.
+// GUIDE-20: 지침 is a top-level destination after 용도, reachable from the nav.
 describe('the guideline management route', () => {
   it('mounts /guidelines and offers it in the navigation after 용도', async () => {
     renderAppAt('/guidelines', { user: { id: 'alice' } })
@@ -391,7 +391,7 @@ describe('the guideline management route', () => {
   })
 })
 
-// Job 31: every screen outside the login → posts → editor core is now fetched when its route
+// Every screen outside the login → posts → editor core is now fetched when its route
 // is first entered. These mount the app DIRECTLY at each address — createMemoryHistory starts
 // there with no prior navigation, which is what a deep link or a refresh does — so a lazy
 // boundary that only resolves via in-app navigation would fail here.
@@ -650,7 +650,7 @@ describe('theme preferences in the real route tree', () => {
   })
 })
 
-// Job 32 A3/A17: this table mirrors every concrete path registered in routeTree. The pathless
+// This table mirrors every concrete path registered in routeTree. The pathless
 // authenticated layout is exercised by every signed-in row; `/voices/$voiceId` is represented by
 // its index and all five child paths; the two redirect-only registrations assert their landing
 // paths. Running the same real route tree in both locales catches a catalog key that exists but is

@@ -14,7 +14,7 @@ export function invalidateGuidelines(
   ownerId: string,
 ): void {
   void queryClient.invalidateQueries({ queryKey: guidelinesQueryKey(transport, ownerId) })
-  // The candidate list too: a create is also an approval (change 26), which moves a row out of
+  // The candidate list too: a create is also an approval (GUIDE-11), which moves a row out of
   // the 후보 section — and the create the revision dialog runs is the same call.
   void queryClient.invalidateQueries({ queryKey: guidelineCandidatesQueryKey(transport, ownerId) })
 }

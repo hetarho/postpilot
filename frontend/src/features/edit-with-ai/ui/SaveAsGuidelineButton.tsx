@@ -22,15 +22,15 @@ import {
  *
  *  It is an explicit user save of user-authored text, not learning: the dialog seeds the
  *  instruction and the user edits it before saving (a raw "무인 매장이니까 주인 얘기 빼줘" is
- *  usually generalized first), and no model or job can reach this path (plan 16 non-goals).
+ *  usually generalized first), and no model or job can reach this path (GUIDE-18).
  *
  *  The template option comes from the ALREADY-LOADED post, so opening this dialog issues no query
  *  and starts nothing ([I5]).
  *
- *  Unchanged by change 26, and deliberately so: this stays the immediate path for a user who
- *  already knows the rule. Saving here also approves the candidate the completed revision
- *  recorded — the server matches it by text in the create's own transaction — which is why the
- *  instruction saved from this dialog never afterwards appears in the 후보 section. */
+ *  Unchanged by the candidate queue (GUIDE-7), and deliberately so: this stays the immediate path
+ *  for a user who already knows the rule. Saving here also approves the candidate the completed
+ *  revision recorded — the server matches it by text in the create's own transaction — which is
+ *  why the instruction saved from this dialog never afterwards appears in the 후보 section. */
 export function SaveAsGuidelineButton({
   ownerId,
   instruction,

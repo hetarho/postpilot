@@ -1,4 +1,4 @@
-/** The template grammar, client side (spec/legacy/tech/post-template-grammar.md).
+/** The template grammar, client side (TMPL-17..TMPL-20).
  *
  *  This is a second implementation of one grammar — the authoritative parser is Go, in
  *  `backend/internal/template`. It exists because the builder has to parse and re-serialize
@@ -241,7 +241,7 @@ function checkAsks(
 }
 
 /** The body's data fields in body order, as the write screen needs them: a title to put over a
- *  textarea and which flavor the answer feeds (TEMPLATE-43).
+ *  textarea and which flavor the answer feeds (TMPL-43).
  *
  *  It never throws and never reports a parse failure — ① is not where a broken template is
  *  fixed, so a body that does not parse simply asks for nothing. */

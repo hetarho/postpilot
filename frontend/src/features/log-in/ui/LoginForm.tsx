@@ -69,7 +69,7 @@ export function LoginForm({ rememberMe, onRememberMeChange, onSuccess }: LoginFo
         autoComplete="username"
         // iOS defaults an <input type="text"> to `autocapitalize="sentences"`, so `hrlee`
         // is submitted as `Hrlee` and the server answers with the one generic failure it is
-        // required to give — a silent loop the user cannot explain (design-language §7).
+        // required to give — a silent loop the user cannot explain (THEME-29).
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
@@ -122,8 +122,8 @@ export function LoginForm({ rememberMe, onRememberMeChange, onSuccess }: LoginFo
         </FieldLabel>
       </div>
 
-      {/* Under the fields it describes and ABOVE the button, not after it (design-language §7,
-            §4.3). Below the button it was both the lowest thing on the keyboard-covered screen and
+      {/* Under the fields it describes and ABOVE the button, not after it (THEME-29,
+            THEME-24). Below the button it was both the lowest thing on the keyboard-covered screen and
             a ~32px insertion that shifted the whole form the instant the thumb lifted off 로그인. */}
       {login.failure && (
         <Typography
@@ -138,7 +138,7 @@ export function LoginForm({ rememberMe, onRememberMeChange, onSuccess }: LoginFo
       )}
 
       {/* `pending`, not a label swap: 로그인 → 확인 중… resizes the target under the thumb that
-            just pressed it (§6). */}
+            just pressed it (THEME-28). */}
       <Button type="submit" variant="cta" pending={login.isPending} className="mt-4 w-full sm:mt-6">
         {t('login.submit', { ns: 'auth' })}
       </Button>

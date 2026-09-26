@@ -21,13 +21,13 @@ import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-vi
  *  Both controls act on the active tab's purpose only — the same model shows its own state
  *  and its own effort on every tab, and the purposes it is registered to elsewhere are listed
  *  so a cross-purpose registration is visible without switching tabs. A card, because these
- *  controls act on one object and must read apart from the next model's (design-language
- *  §1.4).
+ *  controls act on one object and must read apart from the next model's
+ *  (THEME-13).
  *
  *  The reasoning Listbox appears once the model is registered to THIS purpose AND the source
  *  says the model reasons: the effort is a property of the registration, and the server
  *  refuses one for a purpose the model does not serve. Its options are the model's own
- *  published list where there is one (change 27), so the operator cannot pick a value the
+ *  published list where there is one (MODEL-21), so the operator cannot pick a value the
  *  model does not take. Beside it sits what the model actually spent at this stage — a
  *  declared list says what the model accepts, and the measurement says what it did with it:
  *  an unhonored effort behaves like sending none, and reasoning runs to the cap.
@@ -181,7 +181,7 @@ export function CatalogModelRow({
               )}
             </div>
           )}
-          {/* Beside the control it acts on, not in a panel of its own (§4.3): the number and
+          {/* Beside the control it acts on, not in a panel of its own (THEME-24): the number and
               the decision it argues for have to be readable in one glance. */}
           <ReasoningSpendSignal spend={entry.reasoningSpend} />
         </div>
@@ -210,7 +210,7 @@ function ReasoningSpendSignal({ spend }: { spend: ReasoningSpend | undefined }) 
   const { t } = useTranslation('models')
   if (!spend || spend.calls <= 0n) return null
   const share = reasoningShare(spend)
-  // The tone reinforces the words, never replaces them (§2.6): the sentence names the share
+  // The tone reinforces the words, never replaces them (THEME-18): the sentence names the share
   // and the call count either way.
   const heavy = share >= 0.5
   return (

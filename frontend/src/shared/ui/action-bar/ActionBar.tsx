@@ -31,9 +31,9 @@ const DOCK_STYLES: Record<ActionBarDock, string> = {
 }
 
 /** Docks a view's committing actions in the thumb's band instead of leaving them wherever the
- *  document flow put them (design-language §4.3). Lifted out of
+ *  document flow put them (THEME-24). Lifted out of
  *  `features/review-model-experiment`, which hand-rolled this shape — the second slice needing it
- *  is what §1.1 says makes it a primitive.
+ *  is what THEME-10 says makes it a primitive.
  *
  *  It FLOATS clear of whatever is below it: a step above the phone tab bar (`bottom-dock-nav`),
  *  and a step above the viewport edge from `sm:` up where that bar does not exist. Resting on

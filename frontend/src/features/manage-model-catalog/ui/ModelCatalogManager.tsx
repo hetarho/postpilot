@@ -29,7 +29,7 @@ import { CatalogModelList } from './CatalogModelList'
 import { CatalogDocumentPanel } from './CatalogDocumentPanel'
 
 /** The operator's model curation surface: browse what the provider offers, narrow it, and check
- *  the models this installation will let its accounts use — PER PURPOSE (change 20). Each tab
+ *  the models this installation will let its accounts use — PER PURPOSE (MODEL-13). Each tab
  *  registers models for one purpose only, and force-filters its candidates to what that
  *  purpose's capability gate would accept, so the checkbox never offers what the server
  *  refuses.

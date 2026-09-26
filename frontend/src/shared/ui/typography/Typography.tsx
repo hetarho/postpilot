@@ -26,7 +26,7 @@ type TypographyProps<E extends ElementType> = {
   className?: string
 } & Omit<ComponentPropsWithoutRef<E>, 'as' | 'className'>
 
-/** The §3 type roles as the one text component (design-language §3). Every piece of slice text —
+/** The THEME-19 type roles as the one text component. Every piece of slice text —
  *  heading, prose, label, metadata — renders through this (or through `typographyStyles` when an
  *  element must keep its own component), never through ad-hoc `text-*`/`font-*` composition. */
 export function Typography<E extends ElementType = 'p'>({

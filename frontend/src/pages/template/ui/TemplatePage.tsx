@@ -47,14 +47,14 @@ import {
  *  ONE DRAFT, ONE SAVE. The three fields used to save independently the moment each was confirmed,
  *  which is why a template had no screen at all: every row had to carry a whole editor. Here they
  *  are one value that leaves together, so the composition can be rearranged for as long as it
- *  takes without half of it reaching the server (change 30).
+ *  takes without half of it reaching the server (TMPL-25).
  *
  *  Composition only, like every other page: the fields come from `shared/ui`, the composition
  *  editor from `entities/template`, and the two writes from the features that own them. */
 export function TemplatePage() {
   // `strict: false` because ONE component serves both routes: `/templates/new` has no param, and
   // asking for it strictly there would throw rather than mean "a template that does not exist
-  // yet". Creating and editing are the same screen (change 30), so they are the same component.
+  // yet". Creating and editing are the same screen (TMPL-25), so they are the same component.
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
   const { t } = useTranslation(['templates', 'common'])
   const { user } = useSession()
@@ -135,7 +135,7 @@ interface Draft {
   /** The 제목 형식 (TMPL-50): '' is none, and the AI writes the title. */
   titleArea: string
   /** `undefined` is 의견 없음 — this template says nothing about that number, and assigning it
-   *  leaves the post's own option alone (TEMPLATE-47). */
+   *  leaves the post's own option alone (TMPL-47). */
   targetLength?: number
   tagCount?: number
 }
@@ -180,7 +180,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   const { t } = useTranslation(['templates', 'common'])
   const navigate = useNavigate()
   const [draft, setDraft] = useState<Draft>(() => draftOf(stored))
-  // The two generation numbers are part of the same one draft (TEMPLATE-49), kept as their own
+  // The two generation numbers are part of the same one draft (TMPL-49), kept as their own
   // editing state because a ticked field can hold text that is not yet a number.
   const [lengthField, setLengthField] = useState<NumberDraft>(() =>
     numberDraftOf(stored?.targetLength),
@@ -196,7 +196,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   const [saved, setSaved] = useState(false)
   // Which way the composition is being edited. Two renderings of ONE field, never both at once:
   // the builder reseeds its rows from the body on mount, which is the same "value from outside"
-  // path a refetch takes (TEMPLATE-29), so switching needs no synchronisation of its own.
+  // path a refetch takes (TMPL-29), so switching needs no synchronisation of its own.
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
   // Set only by 원문에서 고치기, to the area that failed: arriving there by the user's own choice
   // of the tab should not steal the caret, but arriving there to fix a parse error should put it
@@ -208,7 +208,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // The name and the description are user prose and are trimmed. The BODY is not: it is the
   // canonical serialization of the composition, and trimming it would make a stored body with
   // significant outer bytes read as dirty on open and be rewritten on save — which is exactly
-  // the byte-identity change 30 A11 forbids.
+  // what TMPL-8 forbids.
   const trimmed: Draft = {
     name: draft.name.trim(),
     description: draft.description.trim(),
@@ -232,14 +232,14 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // Parsed ONCE, here, as the one document the two areas are (TMPL-50): the save gate and the
   // error each area shows are the same answer, so they cannot disagree. The builder emits only
   // text that parses, so this changes nothing for a builder-only flow — it is what makes "a
-  // template that does not parse cannot be saved from EITHER mode" true (TEMPLATE-30,
-  // TEMPLATE-7), and what catches a failure only the two areas together have.
+  // template that does not parse cannot be saved from EITHER mode" true (TMPL-30,
+  // TMPL-7), and what catches a failure only the two areas together have.
   const parsed = parseTemplate(trimmed.titleArea, trimmed.body, TEMPLATE_PARSE_OPTIONS)
   const failureIn = (area: TemplateArea) =>
     !parsed.ok && parsed.failure.area === area ? parsed.failure : null
   // Two rows asking under one title, in either area. A composition leaves such a row OUT of its
   // text, so the draft parses and nothing here would otherwise notice — and saving would
-  // silently drop the row the author is looking at (TEMPLATE-44). One flag per area, each setter
+  // silently drop the row the author is looking at (TMPL-44). One flag per area, each setter
   // handed over as is: a stable reference, so neither composition re-reports on every render.
   const [titleAskConflict, setTitleAskConflict] = useState(false)
   const [bodyAskConflict, setBodyAskConflict] = useState(false)
@@ -464,7 +464,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
       </div>
 
       {/* The state this screen has to report goes in one place, above the control that produced
-          it, so a refusal is read where the thumb already is (design-language §4.3). */}
+          it, so a refusal is read where the thumb already is (THEME-24). */}
       {failed && <FieldMessage className="mt-auto pt-6">{errorMessage}</FieldMessage>}
       {saved && !failed && (
         <Typography variant="meta" as="p" role="status" className="mt-auto pt-6">
@@ -473,7 +473,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
       )}
 
       {/* Docked at every width, not only on the phone: the distance between the composition and
-          the control that commits it is there on a desk too (§4.3). */}
+          the control that commits it is there on a desk too (THEME-24). */}
       <ActionBar
         ariaLabel={t('screen.saveDockAria', { ns: 'templates' })}
         className={failed || saved ? undefined : 'mt-auto'}
@@ -532,7 +532,7 @@ function NameField({
 }
 
 /** One of the template's two generation numbers: a 사용 tick and, when it is on, a number field
- *  (TEMPLATE-49). Unticked is 의견 없음 — assigning this template then leaves the post's own
+ *  (TMPL-49). Unticked is 의견 없음 — assigning this template then leaves the post's own
  *  option alone, which is why the tick is not a "0" and cannot be one. */
 function NumberField({
   id,

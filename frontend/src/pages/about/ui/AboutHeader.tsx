@@ -4,17 +4,17 @@ import { buttonStyles, Logo } from '@/shared/ui'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 /** The public header: wordmark, the way in, and the shared preferences — ONE row at every width
- *  (MARKETING-11).
+ *  (MKT-11).
  *
  *  It used to stack on a phone, the wordmark over a centred pair of Get started and Login, which
  *  left the wordmark flush against the top edge and two controls reading as two buttons. Now the
  *  bar is the same shape the app's own header has: the wordmark at the gutter, the controls
  *  viewport-side, everything centred in the bar's height. The quiet Login link lives in the hero
- *  under the access sentence (MARKETING-6), where a returning visitor is already reading about
+ *  under the access sentence (MKT-6), where a returning visitor is already reading about
  *  the account path, so the header carries exactly one action.
  *
  *  Sticky because Get started is this page's ONE filled CTA and the page is long — one repeated
- *  at the bottom would be the second one MARKETING-6 forbids, so the single one stays reachable
+ *  at the bottom would be the second one MKT-6 forbids, so the single one stays reachable
  *  instead. `pt-safe-t` is what a notched phone in landscape needs on its leading edge.
  *
  *  The wordmark is a step smaller on a phone than in the app: at 320px the row holds the mark,

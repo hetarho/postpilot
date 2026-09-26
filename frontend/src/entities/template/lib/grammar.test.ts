@@ -17,7 +17,7 @@ import {
 // test-only need, and copying the fixture into the frontend would defeat the point of it.
 
 /** The SAME fixture file the Go parser's suite reads. Two implementations of one grammar stay
- *  honest only if a new rule has one place to land (spec/legacy/tech/post-template-grammar.md §4). */
+ *  honest only if a new rule has one place to land (TMPL-20). */
 interface FixtureNode {
   t: string
   raw?: string
@@ -120,7 +120,7 @@ describe('template grammar against the shared fixtures', () => {
       expectNodes(result.titleNodes, testCase.titleNodes ?? [], 'titleNodes')
       expectNodes(result.nodes, testCase.nodes ?? [], 'nodes')
       // Every accepted area must serialize back byte for byte: this is the round-trip
-      // guarantee the builder's source toggle rests on (change 25 AC8).
+      // guarantee the builder's source toggle rests on (TMPL-19).
       expect(serialize(result.titleNodes)).toBe(titleArea)
       expect(serialize(result.nodes)).toBe(testCase.body)
     })
@@ -235,7 +235,7 @@ describe('the TypeScript parser agrees with the Go parser', () => {
   })
 })
 
-/** What the write screen reads off a body (TEMPLATE-43). It is the one place ① learns which
+/** What the write screen reads off a body (TMPL-43). It is the one place ① learns which
  *  fields exist, so it has to answer for a body nobody can fix from there. */
 describe('the data fields a body asks for', () => {
   it('lists them in body order with the flavor each one feeds', () => {

@@ -10,7 +10,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Job 02 A3 / plan 01 AC4: the session cookie is HttpOnly and cross-origin, so it is
+// AUTH-22: the session cookie is HttpOnly and cross-origin, so it is
 // sent only because the request opts in. A Transport exposes none of its options, so
 // this flag is assertable only on the fetch wrapper itself.
 describe('credentialedFetch', () => {

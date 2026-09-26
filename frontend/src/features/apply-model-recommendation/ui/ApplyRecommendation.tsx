@@ -11,14 +11,14 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
   // offering the button would only produce a refusal the user cannot act on from here.
   const blocked = unaffordableRefs(recommendation, models)
   return (
-    // No card: this is the whole content of a page section, and §1.4 excludes a section from the
+    // No card: this is the whole content of a page section, and THEME-13 excludes a section from the
     // card contract. On a 360px phone its padding cost 32px of a 328px column in the one region
-    // §0 says content should be largest, and pushed everything below it further from the thumb.
+    // THEME-8 says content should be largest, and pushed everything below it further from the thumb.
     <div>
       <Typography variant="label" as="p" className="text-content-primary">
         {recommendation.label}
       </Typography>
-      {/* `break-words`: the set id is a server-supplied slug (§3.2). */}
+      {/* `break-words`: the set id is a server-supplied slug (THEME-21). */}
       <Typography variant="body" as="p" className="text-content-secondary mt-1 break-words">
         <Typography variant="meta" as="span" mono>
           {recommendation.id}
@@ -48,7 +48,7 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
       {/* Everything this action rewrites — the active model and the A/B selects for all three
           stages — is 400–900px further down the page, off-screen on any phone. Without a
           confirmation beside the button the only visible result of a successful apply is the
-          spinner going away, which reads exactly like a failure (§4.3). */}
+          spinner going away, which reads exactly like a failure (THEME-24). */}
       {mutation.isSuccess && (
         <Notice tone="success" role="status" className="mt-2">
           {t('recommendation.applied')}

@@ -27,7 +27,7 @@ function renderTemplate(path: string, options: FakeTemplatesOptions = {}) {
   })
 }
 
-/** TEMPLATE-49: the two numbers are authored on the template screen, behind their own 사용 tick,
+/** TMPL-49: the two numbers are authored on the template screen, behind their own 사용 tick,
  *  as part of the one draft behind the one 저장. */
 describe("a template's generation numbers", () => {
   it('opens a stored template with both numbers ticked and shown', async () => {
@@ -120,7 +120,7 @@ describe("a template's generation numbers", () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 
-  // TEMPLATE-49: the numbers are not part of the body, so the composition never shows them.
+  // TMPL-49: the numbers are not part of the body, so the composition never shows them.
   it('keeps the numbers out of the composition and the source view', async () => {
     const user = userEvent.setup()
     renderTemplate('/templates/template-review')

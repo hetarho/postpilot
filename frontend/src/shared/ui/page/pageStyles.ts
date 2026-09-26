@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-/** How wide a screen's content column is allowed to grow (design-language §4.5).
+/** How wide a screen's content column is allowed to grow (THEME-26).
  *
  *  The name says what the screen IS, not how many pixels it gets — a page picks its kind once and
  *  the desk width follows from it, so widening the shell later is one edit here rather than
@@ -18,7 +18,7 @@ export type PageWidth =
   | 'board'
 
 /** Unprefixed is the phone, and it carries NO cap — 360px is narrower than the smallest of these,
- *  so a cap there is a number that can only ever be wrong later (§1.5: delete every prefixed class
+ *  so a cap there is a number that can only ever be wrong later (THEME-14: delete every prefixed class
  *  and what is left must still be a finished screen). `sm:` is the laptop column the app already
  *  had, and `lg:` is the desk, where the sidebar has taken the chrome out of the content's way and
  *  the column can finally use the room. */
@@ -45,7 +45,7 @@ export function pageStyles({
   width?: PageWidth
   /** `false` for a screen whose list rows run edge to edge: the gutter then lives on each block
    *  instead, so a pressed row reaches the column's edge rather than stopping 16px short and
-   *  reading as a card (§4.2). */
+   *  reading as a card (THEME-23). */
   gutters?: boolean
   className?: string
 } = {}) {

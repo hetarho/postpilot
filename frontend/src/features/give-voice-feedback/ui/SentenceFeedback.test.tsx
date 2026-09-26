@@ -46,7 +46,7 @@ describe('SentenceFeedback', () => {
     const { sentenceFeedback, view } = renderFeedback(`${FIRST} ${SECOND}`)
     await userEvent.click(screen.getByRole('button', { name: '문장 의견' }))
     // The sentence is chosen from a vertical list of full-width rows, not a `Listbox`: with a
-    // whole sentence as a trigger label the sheet gained a horizontal scroll (change 16).
+    // whole sentence as a trigger label the sheet gained a horizontal scroll (VOICE-41).
     await userEvent.click(await screen.findByRole('radio', { name: SECOND, checked: false }))
 
     // A later edit appends a sentence but leaves the chosen one in place.

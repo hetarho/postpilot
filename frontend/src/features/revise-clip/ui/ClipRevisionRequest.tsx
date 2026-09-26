@@ -158,7 +158,7 @@ export function ClipRevisionRequest({
             </Popover>
           </div>
           {/* The counter only once there is something to count: the dock stands over the
-              timeline the whole time, so an idle row is height taken from it (§0). */}
+              timeline the whole time, so an idle row is height taken from it (THEME-8). */}
           {request && (
             <Typography variant="meta" as="p" id="clip-revision-count">
               {t('revision.count', { used, max: CLIP_PROJECT_LIMITS.instruction })}

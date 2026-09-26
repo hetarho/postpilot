@@ -13,12 +13,12 @@ import { GenerationBrief } from '@/widgets/generation-brief'
  *
  *  Both selects ride the dock's own surface beside the brief rather than inside it: each is
  *  chosen per draft and each silently changes what comes out of a run, so they are the parts of
- *  the brief that must be readable — and changeable — without opening anything (policy/posts.md).
+ *  the brief that must be readable — and changeable — without opening anything (POST-51).
  *  Neither shows a caption; each trigger reads its own value.
  *
  *  `items-start` so the glyph stays level with the two listboxes when either field grows a hint
  *  or an error underneath it; `min-w-0` on both so a long voice or template name truncates inside
- *  its own trigger instead of pushing the glyph off a 320px screen (§8.5). */
+ *  its own trigger instead of pushing the glyph off a 320px screen (THEME-32). */
 export const EditorDockHeader = forwardRef<
   PopoverHandle,
   {
@@ -110,7 +110,7 @@ export const EditorDockHeader = forwardRef<
   // The 말투 and the 템플릿 ride the dock's own surface beside the brief's glyph, not inside it:
   // both are chosen per draft and both silently change what comes out of a run, so they are the
   // parts of the brief that must be readable — and changeable — without opening anything
-  // (policy/posts.md). Neither shows a caption; each trigger reads its own value, and the labels
+  // (POST-51). Neither shows a caption; each trigger reads its own value, and the labels
   // stay `sr-only` inside the two features.
   const voiceSelect = (
     <PostVoiceSelect
@@ -139,7 +139,7 @@ export const EditorDockHeader = forwardRef<
 
   // `items-start` so the glyph stays level with the two listboxes when either field grows a hint
   // or an error underneath it; `min-w-0` on both so a long voice or template name truncates inside
-  // its own trigger instead of pushing the glyph off a 320px screen (§8.5). The two fields share
+  // its own trigger instead of pushing the glyph off a 320px screen (THEME-32). The two fields share
   // the row evenly, which is also what took the voice trigger down from full width.
   const dockHeader = (
     <div className="flex items-start gap-2">

@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge'
  *  It is a `role="meter"` and not a progress bar: progress moves toward completion, while this
  *  reports a level within a range that resets. The figures beside the label are the primary
  *  reading — the bar only makes "nearly full" visible at a glance, so colour is never the only
- *  signal (design-language §2.6).
+ *  signal (THEME-18).
  *
  *  An unlimited allowance (`max` of 0) renders the label and figures with no bar at all: an empty
  *  track next to "unlimited" reads as "none left". */

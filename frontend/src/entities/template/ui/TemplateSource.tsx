@@ -33,11 +33,11 @@ interface TemplateSourceProps {
   className?: string
 }
 
-/** The template body as text — the one surface where this app's grammar is visible (TEMPLATE-26).
+/** The template body as text — the one surface where this app's grammar is visible (TMPL-26).
  *
  *  It exists for two things the builder cannot do: reading a body that does not parse, and
  *  IMPORTING one. A body written by an outside AI from the format guide is pasted here byte for
- *  byte — no trim, no normalization, on input or on save (TEMPLATE-42, TEMPLATE-8, TEMPLATE-19) —
+ *  byte — no trim, no normalization, on input or on save (TMPL-42, TMPL-8, TMPL-19) —
  *  and switching back to 블록 reseeds the outline from what was pasted.
  *
  *  It is a controlled input over one of the template's own fields, like `TemplateComposition`, so
@@ -206,7 +206,7 @@ function BodySource({
       </Typography>
 
       {/* The guide is readable without copying it: a clipboard the browser refuses is exactly
-          when a user needs to select it by hand (TEMPLATE-41). */}
+          when a user needs to select it by hand (TMPL-41). */}
       <details
         open={guideOpen}
         onToggle={(event) => setGuideOpen(event.currentTarget.open)}

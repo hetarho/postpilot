@@ -64,7 +64,7 @@ describe('opening a post', () => {
     })
 
     // The stage is NAMED on the page-top status line and its numbers are the bar's value —
-    // never spelled out as prose in the dock (change 15).
+    // never spelled out as prose in the dock (POST-46).
     expect(await screen.findByText('사진 관찰 중')).toBeInTheDocument()
     const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
     expect(bar).toHaveAttribute('aria-valuenow', '2')
@@ -183,7 +183,7 @@ describe('opening a post', () => {
     ])
   })
 
-  // Change 21: a post that has already been observed decides what to re-observe BEFORE the
+  // GEN-8: a post that has already been observed decides what to re-observe BEFORE the
   // enqueue, and confirming the picker untouched reuses everything.
   it('routes generation through the re-observation picker and freezes the confirmed set', async () => {
     const starts: FakeGenerationStart[] = []

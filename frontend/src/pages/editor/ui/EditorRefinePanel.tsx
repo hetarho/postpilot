@@ -52,7 +52,7 @@ export function EditorRefinePanel({
       {/* 문장 의견 is NOT here. The server requires a completed voice-learning event for the
           post before it will accept feedback, and a post on this step is in `review` — never
           finalized, never learned — so the control failed on the ordinary path every time. It
-          lives on 글 완성 now, behind the same condition the server enforces (change 16). */}
+          lives on 글 완성 now, behind the same condition the server enforces (VOICE-41). */}
       {isPublished(post) ? (
         <BlockList content={result} images={post.images} videos={post.videos} />
       ) : (

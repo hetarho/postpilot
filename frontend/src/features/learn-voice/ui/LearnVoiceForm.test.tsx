@@ -82,7 +82,7 @@ describe('LearnVoiceForm', () => {
     expect(screen.getByRole('button', { name: '학습' })).toBeDisabled()
   })
 
-  // The gate is a PUBLISHED profile version now, not a free-text column (change 16).
+  // The gate is a PUBLISHED profile version now, not a free-text column (VOICE-25).
   it('asks before replacing an existing analysis', async () => {
     const { calls } = renderForm({
       profile: {

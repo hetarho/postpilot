@@ -5,7 +5,7 @@ import type { TemplateRef } from '../model/types'
  *
  *  Renders nothing at all when the post has none: 없음 is the default, so a label on every
  *  unassigned row would be noise on the majority of the list. `min-w-0 truncate` because the
- *  name is user text in a flex row (design-language §8.5). */
+ *  name is user text in a flex row (THEME-32). */
 export function TemplateRefLabel({
   template,
   className,

@@ -3,7 +3,7 @@ import { twMerge } from 'tailwind-merge'
 
 /** A two-state switch: ON means this row's value comes from OUTSIDE the text (THEME-29). It is
  *  deliberately not a `Checkbox` — a checkbox says "selected", and 데이터 받기 says "the post's
- *  author fills this in" (TEMPLATE-44).
+ *  author fills this in" (TMPL-44).
  *
  *  The native input is kept and made transparent over a drawn track, exactly as `Checkbox` does
  *  it: it is the control, with all of its keyboard and assistive-technology behaviour, plus

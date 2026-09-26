@@ -64,7 +64,7 @@ const COPY = {
 } as const
 
 /** The shipped ladder, copied from `backend/internal/plan`'s grant table. A divergence
- *  between this table and the page is a copy bug — the whole point of A17 (MARKETING-5) — so
+ *  between this table and the page is a copy bug — the whole point of MKT-5 — so
  *  the test states the numbers rather than reading them from anywhere. */
 const PLANS = [
   { name: 'Free', credits: /\b50\b/, price: /무료|Free/ },
@@ -123,7 +123,7 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     expect(outputRegion).not.toHaveTextContent(/자동 발행|Automated Naver publishing|paired Mac/)
   })
 
-  // A17 / MARKETING-5: the tier values equal the shipped grant table and are presented as the
+  // MKT-5: the tier values equal the shipped grant table and are presented as the
   // same promotional cards `/plans` shows; master is operator-only prose, and the purchase path
   // is named without adding a second commercial control to this public explainer.
   it('presents exactly the shipped plan ladder as cards with no purchase affordance', async () => {
@@ -143,7 +143,7 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
         true,
       )
     })
-    // The same code-owned recommended rung `/plans` marks, and only that one (MARKETING-15).
+    // The same code-owned recommended rung `/plans` marks, and only that one (MKT-15).
     expect(plans.getAllByText(copy.recommended)).toHaveLength(1)
     expect(within(cards[2]).getByText(copy.recommended)).toBeInTheDocument()
     // No estimate: it needs the operator's priced combos, which a visitor never reads.
@@ -160,8 +160,8 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(PLANS.length)
   })
 
-  // A17 again, as a claim rather than a layout: the section may only say what a plan
-  // actually decides (MARKETING-4, MARKETING-5). This case fails on the sentence, not on
+  // MKT-5 again, as a claim rather than a layout: the section may only say what a plan
+  // actually decides (MKT-4). This case fails on the sentence, not on
   // where it sits, so re-introducing "so many jobs a day" is caught wherever it is written.
   it('claims nothing about a plan beyond its monthly grant', async () => {
     render()
@@ -172,7 +172,7 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     }
   })
 
-  // MARKETING-6/16: Get started is the one filled CTA and the header's only action; Login is a
+  // MKT-6, MKT-16: Get started is the one filled CTA and the header's only action; Login is a
   // quiet link in the hero and alone carries the blocked destination. The explanation itself
   // still collects nothing.
   it('offers one signup CTA, a quiet login link, and no form or third-party asset', async () => {

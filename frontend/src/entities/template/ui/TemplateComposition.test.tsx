@@ -41,7 +41,7 @@ const REVIEW =
   '<repeat each="photo">\n<slot kind="photo"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
   '<write>총평 및 재방문 의사</write>'
 
-/** A body from before the place and link positions were retired (TEMPLATE-37). */
+/** A body from before the place and link positions were retired (TMPL-37). */
 const LEGACY =
   '<write>인트로를 씁니다</write>\n<slot kind="place" label="네이버 지도"/>\n<slot kind="link"/>'
 
@@ -93,7 +93,7 @@ describe('the composition editor', () => {
     expect(body()).toContain('지도는 맨 아래')
   })
 
-  // TEMPLATE-38: a photo position carries how many photos stand side by side, edited with a
+  // TMPL-38: a photo position carries how many photos stand side by side, edited with a
   // stepper because the values are single digits inside a hard range.
   it('edits a photo row count with a stepper bounded by the configured ceiling', async () => {
     const user = userEvent.setup()
@@ -123,7 +123,7 @@ describe('the composition editor', () => {
     expect(screen.getByRole('button', { name: '늘리기' })).toBeDisabled()
   })
 
-  // TEMPLATE-37: the position is retired, but a stored one must not make the body unreadable.
+  // TMPL-37: the position is retired, but a stored one must not make the body unreadable.
   // It opens as 고정 문구 carrying its label, and the save writes it back as literal text.
   it('opens a stored place or link position as fixed text', async () => {
     const user = userEvent.setup()
@@ -291,7 +291,7 @@ describe('the composition editor', () => {
     expect(screen.getByRole('group', { name: '블록 추가' })).toBeInTheDocument()
   })
 
-  // TEMPLATE-30: an unreadable body now has a way to FIX as well as a way to discard, and the
+  // TMPL-30: an unreadable body now has a way to FIX as well as a way to discard, and the
   // fix comes first — it keeps what the author wrote.
   it('offers to fix an unreadable body in the source before offering to clear it', async () => {
     const user = userEvent.setup()
@@ -405,7 +405,7 @@ describe('데이터 받기', () => {
     render(<Editor initial={initial} />)
     expect(rows()).toHaveLength(3)
     // Touching a row re-emits the whole body: what the builder writes back is byte-identical to
-    // what it read (TEMPLATE-29).
+    // what it read (TMPL-29).
     await userEvent.click(toggle(0))
     expect(body()).toBe(initial)
     expect(summaries()[1]).toContain('방문일')

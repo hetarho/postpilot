@@ -7,7 +7,7 @@ export type ButtonSize = 'default' | 'compact' | 'icon'
 // Every variant carries an `active:` treatment. Tailwind compiles `hover:` to
 // `@media (hover: hover)`, so a variant whose only fill lives behind `hover:` emits CSS a
 // touchscreen never matches — it is invisible on the device this product is for
-// (design-language §6). `danger` additionally takes a resting plane on a coarse pointer, because
+// (THEME-28). `danger` additionally takes a resting plane on a coarse pointer, because
 // a destructive action that renders as bare red text does not read as a control at all.
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   cta: 'bg-button-cta-bg text-button-cta-fg hover:bg-button-cta-bg-hover active:bg-button-cta-bg-active',
@@ -31,7 +31,7 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
  *  layout blown up. The primitive carries both values so no slice ever sizes a control.
  *
  *  Horizontal padding is a function of the height the control actually has, not of the padding
- *  that was written (design-language §4.2). The height floor overrides the computed height, so a
+ *  that was written (THEME-23). The height floor overrides the computed height, so a
  *  `py-2` control ends up with ~10–12px of effective vertical padding. Pairing that with `px-3`
  *  gives a 1:1 box, and because text is far wider than it is tall a 1:1 control always reads
  *  squat. `px-4` restores the ~2:1 ratio; the committing action takes one step more so it is also
@@ -44,7 +44,7 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
  *  shorter box is a phone-only saving. */
 function sizeStyles(size: ButtonSize, variant: ButtonVariant): string {
   if (size === 'icon') return 'size-10 pointer-coarse:size-11 shrink-0 p-0'
-  // 32px against a 20px line box leaves 6px of effective vertical padding, so `px-4` keeps §4.2's
+  // 32px against a 20px line box leaves 6px of effective vertical padding, so `px-4` keeps THEME-23's
   // 2 : 1 ratio rather than turning the shorter control into a square one.
   if (size === 'compact') return 'min-h-8 pointer-coarse:min-h-9 px-4'
   return variant === 'cta'

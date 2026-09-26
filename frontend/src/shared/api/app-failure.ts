@@ -211,7 +211,7 @@ export const appFailureSpecs = {
   POST_VIDEO_LIMIT: {},
   POST_PHOTO_LIMIT: {},
   // A data-field answer the client should have bounded itself: the write screen counts both
-  // halves down, so these only appear when something bypassed it (TEMPLATE-43).
+  // halves down, so these only appear when something bypassed it (TMPL-43).
   POST_TEMPLATE_ANSWER_TOO_LONG: { required: ['max'], optional: ['field', 'actual'] },
   POST_TEMPLATE_ANSWER_INVALID: {},
   // 발행됨 and 분야 (POST r11, QUAL r3). None carries a param: each copy is fixed text.
@@ -264,7 +264,7 @@ export const appFailureSpecs = {
   MODEL_OUTPUT_INVALID: {},
   MODEL_OUTPUT_TRUNCATED: {},
   NETWORK_UNAVAILABLE: {},
-  // Plan enforcement (plan 17). The two budget axes carry micro-USD integers and the count
+  // Plan enforcement (QUOTA-18, QUOTA-25). The two budget axes carry micro-USD integers and the count
   // axis carries a plain count; both are rendered through the catalogs' formatters, so the
   // server never has to guess the reader's currency or timezone.
   INSUFFICIENT_CREDITS: { required: ['required', 'balance', 'renews_at'] },

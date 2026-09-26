@@ -44,7 +44,7 @@ interface ListboxProps<T> {
   'aria-invalid'?: boolean
 }
 
-/** The app-drawn replacement for the native select element (design-language §7, owner decision
+/** The app-drawn replacement for the native select element (THEME-29, owner decision
  *  2026-08-31). The OS draws a native select's open option list, so it can wear neither the app's
  *  surfaces nor its type roles and it visibly leaves the design system the moment it opens.
  *
@@ -204,7 +204,7 @@ export function Listbox<T>({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={onTriggerKeyDown}
         // The field well the native select wore, minus the native control. `px-4` against the
-        // ~12px the 44px floor produces is the §4.2 ratio; the type is the `input` role (§3.1).
+        // ~12px the 44px floor produces is the THEME-23 ratio; the type is the `input` role (THEME-20).
         className="bg-field-bg text-field-fg hover:bg-field-bg-hover focus:bg-field-bg-focus disabled:text-content-disabled flex min-h-10 w-full items-center gap-2 rounded-md px-4 py-2 text-left text-base disabled:opacity-50 sm:text-sm pointer-coarse:min-h-11"
       >
         <span
@@ -231,9 +231,9 @@ export function Listbox<T>({
             onKeyDown={onPanelKeyDown}
             // `bg-surface-overlay`, NOT `surface-highest`: that is the token `Sheet`'s own panel
             // wears, so an open list inside a sheet was the same colour as the plane behind it
-            // with only a shadow between them (§2.1). The sixth surface step exists for this.
+            // with only a shadow between them (THEME-17). The sixth surface step exists for this.
             //
-            // An overlay with its own bounds is §4.4's dropdown/sheet exception, so this one
+            // An overlay with its own bounds is THEME-25's dropdown/sheet exception, so this one
             // nested scroller is allowed: a forty-model catalog otherwise pushes the page past
             // the field it belongs to. Its ceiling and its position are the measured ones set
             // above, not tokens — see that effect.
@@ -269,7 +269,7 @@ export function Listbox<T>({
                 >
                   {/* Wraps rather than truncating: an option's label carries the badges and the
                       reason a model cannot be chosen, and the open panel is the one place there is
-                      room to read them (§7). */}
+                      room to read them (THEME-29). */}
                   <span className="min-w-0 flex-1 break-words">{option.label}</span>
                   {/* The unchecked check keeps its box so labels align and the panel width is
                       stable as the value moves. */}

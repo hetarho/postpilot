@@ -47,7 +47,7 @@ function photoMarker(contentLanguage: ContentLanguage, number: number, caption: 
  *  where that selection would stop. `맥북(M4)` folds to `맥북_M4`; a caption of nothing but
  *  emoji folds to the empty string, which is why the caller falls back to the bare marker.
  *
- *  The Unicode classes need the `u` flag. The build targets modern browsers only (ARCH-12), so
+ *  The Unicode classes need the `u` flag. The build targets modern browsers only, so
  *  there is no polyfill and no hand-kept list of punctuation to fall out of date. */
 function foldCaption(caption: string): string {
   return caption

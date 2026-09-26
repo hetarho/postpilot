@@ -84,7 +84,7 @@ describe('content save queue', () => {
   })
 
   // The delete path's counterpart to the session-wide discard: one slug's queue ends, and
-  // the other slugs keep retrying (tech/draft-autosave.md).
+  // the other slugs keep retrying (POST-12).
   it('discards one slug and leaves every other slug retrying', async () => {
     vi.useFakeTimers()
     const send = vi.fn().mockRejectedValue(new Error('offline'))

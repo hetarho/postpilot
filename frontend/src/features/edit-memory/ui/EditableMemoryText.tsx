@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { remainingMemoryChars } from '@/entities/memory'
 import { Button, Editable, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 
-/** A memory's text, read first and edited on request (design-language: read first).
+/** A memory's text, read first and edited on request (THEME-29: `Editable`).
  *
  *  `save` sends only the text, which is what makes this edit safe under a concurrent facet
  *  change. A refused save keeps edit mode open with the draft intact — the refusal a text edit

@@ -101,7 +101,7 @@ describe('generationPreconditions', () => {
     ).toBe(true)
   })
 
-  // spec/legacy/policy/generation.md: a deleted voice refuses every machine result, whatever the models.
+  // GEN-25: a deleted voice refuses every machine result, whatever the models.
   it('refuses a deleted voice before anything else', () => {
     const deleted = { deleted: true }
     expect(

@@ -61,8 +61,8 @@
 }
 
 /*
- * The colour system has THREE LAYERS. The rules this file carries are written up in
- * spec/legacy/tech/design-language.md; this header only says how the layers fit together.
+ * The colour system has THREE LAYERS. The rules this file carries are THEME-15 in
+ * spec/ssot/THEME.md; this header only says how the layers fit together.
  *
  * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, on ONE shared lightness
  * scale (50 ≈ near white … 950 ≈ deep ground); mauve adds intermediate stops where five close
@@ -353,7 +353,7 @@
   /* navigation and rows */
   --link-fg: var(--content-secondary);
   --link-fg-hover: var(--content-primary);
-  /* The destination the user is on. It takes the ACCENT — a selected state is exactly what §18
+  /* The destination the user is on. It takes the ACCENT — a selected state is exactly what THEME-18
      keeps accent for — because one surface step apart from the four rows beside it was not
      legible at a glance in either theme (THEME-38). Never colour alone: the weight and, on a
      rail, the plane step carry it too. Every plane a current row can sit on clears AA with it —
@@ -396,7 +396,7 @@
   /* a usage meter: how much of a bounded allowance is spent. The track is a surface step so the
      bar reads as a recess rather than a bordered box, and the fill borrows the accent because a
      quota is the user's own progress through a window, not a warning. Colour is never the only
-     signal — every meter renders its used/limit figures beside it (design-language §2.6). */
+     signal — every meter renders its used/limit figures beside it (THEME-18). */
   --meter-track: var(--surface-recessed);
   --meter-fill: var(--intent-accent);
 
@@ -476,13 +476,13 @@
   --container-tabs: 38rem;
 
   /* Safe area and shell metrics as SPACING tokens, so edge-anchored chrome can be padded with
-     ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values §1.2 forbids.
-     env() resolves at use time and is 0 until index.html sets viewport-fit=cover — design-language
-     §8.1. --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
+     ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values THEME-11 forbids.
+     env() resolves at use time and is 0 until index.html sets viewport-fit=cover (THEME-31).
+     --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
   /* The sticky top bar's desk height, and the sidebar that hangs from
      its bottom edge. Three files offset past that bar — the sidebar, the editor's status bar, the
      models page's stage switch — and a `16` repeated in three places is a number that drifts.
-     `dvh`, not `vh`, for the same reason the sheet uses it (§8.1). */
+     `dvh`, not `vh`, for the same reason the sheet uses it (THEME-31). */
   --spacing-header: 4rem;
   --spacing-sidebar: calc(100dvh - var(--spacing-header));
   /* The two chrome rows, each stated once so the offset tokens below can be composed from them
@@ -521,7 +521,7 @@
   --spacing-sheet-b: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   /* How tall an autoGrow field in a FORM may get before it becomes its own bounded scroller.
      Roughly half a small phone's viewport: past this the control that commits the field would be
-     off-screen from the caret, which §4.3 forbids. The editor's bare fields are not capped — there
+     off-screen from the caret, which THEME-24 forbids. The editor's bare fields are not capped — there
      the page is the paper. */
   --spacing-field: 20rem;
 
@@ -533,25 +533,25 @@
   --spacing-focus-gutter: 0.25rem;
 
   /* A page-top progress bar's track. Deliberately hairline: it reports a running job at the edge
-     of the screen without taking a row from the content (§4.3). */
+     of the screen without taking a row from the content (THEME-24). */
   --spacing-progress-bar: 0.125rem;
 
   /* A bottom sheet's ceiling. `dvh`, not `vh`: only the dynamic unit tracks the mobile URL bar,
-     so a `vh`-sized sheet is clipped on every phone — design-language §8.1. */
+     so a `vh`-sized sheet is clipped on every phone — THEME-31. */
   --spacing-sheet: 85dvh;
 
   /* An open listbox panel has NO token ceiling: a dropdown anchored to a docked bar and one
      anchored to a field at the top of the page have completely different room, and a single
      `dvh` number opens the first one straight off the bottom edge. `shared/ui/listbox` measures
-     the gap it actually has (LISTBOX_* in shared/config) — the §4.4 dropdown exception, bounded
+     the gap it actually has (LISTBOX_* in shared/config) — the THEME-25 dropdown exception, bounded
      by the viewport rather than by a guess. */
 
   /* A carousel card's share of the strip. Under 100% ON PURPOSE: the visible sliver of the next
      card is what tells the user the strip scrolls sideways at all, since a phone has no hover and
-     no scrollbar to say so (§4.4, §8.4). */
+     no scrollbar to say so (THEME-25, THEME-32). */
   --spacing-carousel-card: 85%;
 
-  /* Overlay motion (§6). A bottom sheet ARRIVES from the edge it is docked to, which is the one
+  /* Overlay motion (THEME-28). A bottom sheet ARRIVES from the edge it is docked to, which is the one
      thing that says it came from below rather than appearing over the page, so it rides
      `ease-emphasized` at `duration-slow`; it leaves on the standard ease, because a dismissal
      should not draw attention to itself. From `md:` up the same overlay is a centred dialog and
@@ -843,9 +843,9 @@ body,
 }
 
 html {
-  /* The document is the app's one scroller (design-language §4.4). Without `contain`, Chrome for
+  /* The document is the app's one scroller (THEME-25). Without `contain`, Chrome for
      Android fires pull-to-refresh on any downward swipe at scrollTop 0 — which reloads the SPA and
-     discards whatever autosave has not flushed. The editor opens at scrollTop 0. §8.2. */
+     discards whatever autosave has not flushed. The editor opens at scrollTop 0. THEME-31. */
   overscroll-behavior-y: contain;
 }
 
@@ -855,7 +855,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 
-  /* Korean line breaking, set once for the whole app — design-language §3.2. `keep-all` stops a
+  /* Korean line breaking, set once for the whole app — THEME-21. `keep-all` stops a
      break falling between two Hangul syllables ('비교합/니다'); `anywhere` is its inseparable
      partner, so an unbreakable Latin run (a model id, a slug, a provider error URL) still breaks
      rather than pushing the page into horizontal scroll. Never `break-all` — it excludes CJK. */
@@ -864,7 +864,7 @@ body {
 }
 
 /* A tap is a tap: no 300ms wait for a double-tap-to-zoom that this layout never needs, and no
-   grey flash rectangle on top of the `active:` plane every control already carries. §8.4. */
+   grey flash rectangle on top of the `active:` plane every control already carries. THEME-32. */
 a,
 button,
 label,

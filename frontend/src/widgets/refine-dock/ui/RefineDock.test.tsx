@@ -87,7 +87,7 @@ describe('RefineDock', () => {
     }
   })
 
-  // A13/§8.3: the keyboard covers the bottom ~40%, so it may hide a control but never the reason
+  // THEME-31: the keyboard covers the bottom ~40%, so it may hide a control but never the reason
   // that control is disabled — inside the surface the choice is made on, as well as in the row.
   it('offers both ways out inside 확정하기, each under the reason it is refused for', async () => {
     const user = userEvent.setup()

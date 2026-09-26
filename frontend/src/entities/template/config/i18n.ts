@@ -40,7 +40,7 @@ export const i18n = {
         repeat: '사진마다 되풀이',
       },
     },
-    // The one surface where this app's grammar is visible (TEMPLATE-26).
+    // The one surface where this app's grammar is visible (TMPL-26).
     source: {
       label: '원문',
       titleAreaLabel: '제목 원문',
@@ -95,7 +95,7 @@ export const i18n = {
         note: 'AI에게만 하는 말',
         noteHelp: 'AI만 읽고 글에는 안 나옵니다',
       },
-      // What an unlabelled legacy 자리 is called once it is read as 고정 문구 (TEMPLATE-37).
+      // What an unlabelled legacy 자리 is called once it is read as 고정 문구 (TMPL-37).
       legacy: {
         place: '지도',
         link: '링크',
@@ -190,7 +190,7 @@ export const i18n = {
         repeat: 'Once per photo',
       },
     },
-    // The one surface where this app's grammar is visible (TEMPLATE-26).
+    // The one surface where this app's grammar is visible (TMPL-26).
     source: {
       label: 'Source',
       titleAreaLabel: 'Title source',
@@ -245,7 +245,7 @@ Send the body only — no explanation and no code fence. Write it in the languag
         note: 'Note to AI',
         noteHelp: 'Only AI reads it; it never appears in the post',
       },
-      // What an unlabelled legacy position is called once it is read as fixed text (TEMPLATE-37).
+      // What an unlabelled legacy position is called once it is read as fixed text (TMPL-37).
       legacy: {
         place: 'Map',
         link: 'Link',

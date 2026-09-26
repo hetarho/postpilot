@@ -160,7 +160,7 @@ function featuredRank(slug: string): number {
   return index === -1 ? FEATURED_MODEL_PROVIDERS.length : index
 }
 
-/** The effort values the control offers for one model (change 27).
+/** The effort values the control offers for one model (MODEL-21).
  *
  *  The model's own published list when it has one, and the full eight otherwise — a source
  *  that publishes no list is not a model that refuses every value, so the fallback is the

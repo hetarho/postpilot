@@ -50,7 +50,7 @@ export function ModelHistoryPage() {
                     {/* `min-w-0` is what makes `truncate` work: a slug is `YYYYMMDD-` plus up to 60
                       runes of the title, so a spaceless Korean one is ~420px of max-content in a
                       312px row and would otherwise crush the status chip to a column of single
-                      syllables (§8.5). */}
+                      syllables (THEME-32). */}
                     <span className="min-w-0 truncate">
                       {item.postSlug || voiceName(item.voiceId) || stageLabel(item.stage)}
                     </span>
@@ -69,7 +69,7 @@ export function ModelHistoryPage() {
 }
 
 /** The row's status chip. The tone reinforces the label and never replaces it, so nothing is
- *  carried by colour alone (§2.6). */
+ *  carried by colour alone (THEME-18). */
 const STATUS_TONES: Record<ExperimentStatusName, BadgeTone> = {
   queued: 'neutral',
   running: 'info',

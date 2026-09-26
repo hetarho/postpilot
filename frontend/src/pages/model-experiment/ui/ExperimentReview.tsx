@@ -45,7 +45,7 @@ export function ExperimentReview({
       </Typography>
       {/* Desktop-only: on a phone this static instruction costs ~90px — four lines of the candidate
           text the screen exists to show — every single visit, and the A/B switch plus the 후보 A/B
-          headings already carry what it says (§0). */}
+          headings already carry what it says (THEME-8). */}
       <Typography variant="body" className="text-content-secondary mt-2 hidden sm:block">
         {t('experiment.description', { ns: 'models' })}
       </Typography>
@@ -118,8 +118,8 @@ function Placeholder({ children, backLink }: { children: ReactNode; backLink: Re
       {backLink}
       {/* One live region for both the loading and the failed copy: the two branches swap the text
           inside this same node, so the failure is announced as a change instead of silently
-          replacing the pending state, which was never announced at all (§9). `py-10` keeps the
-          retry button and return link within reach on a tall phone (§4.3). */}
+          replacing the pending state, which was never announced at all (THEME-33). `py-10` keeps the
+          retry button and return link within reach on a tall phone (THEME-24). */}
       <Typography variant="body" as="div" role="status" className="text-content-tertiary mt-4">
         {children}
       </Typography>

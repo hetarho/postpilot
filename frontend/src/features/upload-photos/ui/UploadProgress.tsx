@@ -31,7 +31,7 @@ export function UploadProgress({ items, completed, creatingPost }: UploadProgres
   else if (completed > 0) label = t('upload.progress.completed', { count: completed })
 
   // `role="status"` already implies `aria-live="polite"`; declaring both made every file
-  // transition a doubled announcement that queues ahead of the user's own gestures (§9).
+  // transition a doubled announcement that queues ahead of the user's own gestures (THEME-33).
   return (
     <Typography variant="body" as="p" role="status" className="text-content-tertiary min-w-0">
       {label}

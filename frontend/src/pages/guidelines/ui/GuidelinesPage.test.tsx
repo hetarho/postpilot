@@ -522,7 +522,7 @@ describe('the 분야 scope', () => {
   })
 })
 
-/** The 후보 section (change 26). Every row is one instruction a completed revision recorded
+/** The 후보 section (GUIDE-22). Every row is one instruction a completed revision recorded
  *  verbatim; nothing here is learned, and nothing reaches a prompt until it is approved. */
 describe('the guideline candidate section', () => {
   const CANDIDATES = [

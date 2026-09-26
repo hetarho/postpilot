@@ -38,7 +38,7 @@ export interface ClipRecipe {
 
   accent: ClipAccent
   /** One of the five category presets. Empty is only ever a template written
-   *  before presets existed; a save must name one (CDS-50). */
+   *  before presets existed; a save must name one. */
   preset: ClipPreset | ''
 }
 export interface ClipTemplate extends ClipRecipe {

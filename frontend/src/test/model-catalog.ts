@@ -49,7 +49,7 @@ export interface FakeCatalogEntry {
   minPlan?: ProtoPlan
   listed?: boolean
   /** The effort PER PURPOSE, keyed by purpose slug — the server stores it on the
-   *  registration, and each purpose tab shows and edits only its own (change 24). */
+   *  registration, and each purpose tab shows and edits only its own (MODEL-7). */
   reasoningEffort?: Record<string, string>
   /** The operator's grade PER PURPOSE, keyed by purpose slug — like the effort, it lives on
    *  the registration and each tab shows only its own (MODEL-57). */
@@ -66,7 +66,7 @@ export interface FakeCatalogEntry {
     }
   >
   sourceCreatedAt?: bigint
-  /** What the source publishes about this model's reasoning (change 27). Omitted means a
+  /** What the source publishes about this model's reasoning (MODEL-21). Omitted means a
    *  model that reasons but whose accepted values the source does not list — the common
    *  shape, and the one that keeps the control offering all eight values. */
   reasoning?: {
@@ -399,8 +399,8 @@ export function registerModelCatalogService(
     // The server refuses an effort for a purpose the model does not serve; the fake holds the
     // same rule so a test cannot pass against a looser server than the real one. The reason
     // is generic on purpose: like MODEL_PURPOSE_INELIGIBLE, this refusal is unreachable
-    // through the operator UI — the control appears only once registered — so change 24 left
-    // the normalized reason set alone rather than adding copy for it.
+    // through the operator UI — the control appears only once registered — so the
+    // normalized reason set stays as it is rather than adding copy for it.
     const target = entries.find((entry) => entry.modelId === req.modelId)
     if (!target || !(target.purposes ?? []).includes(req.purpose)) {
       throw connectAppError('UNKNOWN_FAILURE', Code.FailedPrecondition)

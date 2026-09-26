@@ -43,7 +43,7 @@ export function PostLanguageSelect({
       <FieldLabel id={labelId} htmlFor={id}>
         {t('editor.language.label', { ns: 'posts' })}
       </FieldLabel>
-      {/* A `Listbox` even though two fixed options would also fit a `SegmentedControl` (§7): this
+      {/* A `Listbox` even though two fixed options would also fit a `SegmentedControl` (THEME-29): this
           field sits in the 글쓰기 옵션 brief, and the five controls there read as ONE brief only
           while they wear the same field well. */}
       <Listbox<ContentLanguage>

@@ -46,12 +46,12 @@ import {
  *
  *  It lives in the ENTITY rather than in a feature because it performs no mutation — it is a
  *  controlled input over one of the template's own fields, and the shape of a block is the
- *  entity's business, not a page's (ARCHITECTURE §3.1).
+ *  entity's business, not a page's (TMPL-33).
  *
  *  THE BODY IS THE SINGLE SOURCE OF TRUTH: rows are parsed from it and serialized back on every
  *  edit, so there is no second representation to keep in step. The grammar string itself is never
- *  rendered anywhere (change 30 A9), and a body the parser cannot read is neither guessed at nor
- *  silently dropped — it says so, and offers to start over.
+ *  rendered here — only `원문` shows it (TMPL-26) — and a body the parser cannot read is neither
+ *  guessed at nor silently dropped — it says so, and offers to start over.
  *
  *  ONE ROW IS ONE BLOCK, collapsed, so the list reads as the outline of the post rather than as a
  *  stack of labelled inputs. At most one row is open at a time: the outline is the thing worth
@@ -77,7 +77,7 @@ export function TemplateComposition({
   /** Two rows are asking under one title. Such a row is left OUT of the emitted body — the
    *  parser refuses a body with a repeated title, and the builder must never emit one it cannot
    *  read back — so the caller has to refuse 저장 or the row would be silently dropped from a
-   *  saved template (TEMPLATE-44). */
+   *  saved template (TMPL-44). */
   onAskConflict?: (conflicted: boolean) => void
   /** Which of the template's two texts this edits (TMPL-50). The title area takes only AI가 쓰는
    *  글 and 고정 문구, on one line, joined by spaces. */
@@ -117,7 +117,7 @@ const NO_TITLES: ReadonlySet<string> = new Set()
 
 /** A body from before the builder existed, one written by an outside AI, or one edited elsewhere.
  *  The composition cannot be shown, and inventing a structure the author did not write would be
- *  worse than saying so — so it says so and offers TWO ways out (TEMPLATE-30): fix the text where
+ *  worse than saying so — so it says so and offers TWO ways out (TMPL-30): fix the text where
  *  the parse error actually is, or empty the composition and start again.
  *
  *  The order is deliberate. Fixing keeps what the author wrote and is what a pasted body usually
@@ -273,7 +273,7 @@ function Composition({
       />
 
       {/* A surface step rather than a border, and NO nested scroller: the page scrolls this
-          (design-language §1.3, §4.4). */}
+          (THEME-12, THEME-25). */}
       <div className="bg-surface-recessed mt-2 rounded-lg px-2">
         {blocks.length === 0 ? (
           <Typography variant="body" className="text-content-tertiary block px-2 py-6 text-center">
@@ -335,7 +335,7 @@ interface RowContext {
   onTouch: (blockId: string) => void
   /** Inside a 사진마다 반복, where a row may not ask for data: how many fields a template asks
    *  for is the template's own answer and must not depend on this post's photo count
-   *  (TEMPLATE-43). The switch is shown DISABLED with its reason rather than hidden — a control
+   *  (TMPL-43). The switch is shown DISABLED with its reason rather than hidden — a control
    *  that silently disappears in a nested list reads as a bug. */
   nested: boolean
   /** Titles more than one row asks under, so the offending rows can say so in place. */
@@ -405,8 +405,8 @@ function AddToolbar({
   const { t } = useTranslation('templates')
   const title = area === 'title_area'
   // Five buttons, named for what the reader gets rather than for what the grammar calls it,
-  // in the order a post is usually built (TEMPLATE-36). The place and link positions are gone:
-  // a thing the author fills in later is fixed text in their own words (TEMPLATE-37). A title
+  // in the order a post is usually built (TMPL-36). The place and link positions are gone:
+  // a thing the author fills in later is fixed text in their own words (TMPL-37). A title
   // takes only the two that are words (TMPL-50).
   const kinds: readonly PaletteKind[] = title
     ? TITLE_AREA_PALETTE
@@ -457,12 +457,12 @@ function AddToolbar({
 
 /** Where the next block lands, drawn in the list itself. Without it one toolbar would be worse
  *  than the two entry points it replaces: 추가 would put a block somewhere the user has to go and
- *  find afterwards (change 30 A7). */
+ *  find afterwards (TMPL-27). */
 function InsertionPoint() {
   const { t } = useTranslation('templates')
   return (
     <p role="status" className="flex min-h-8 items-center gap-2">
-      {/* A hairline between two things is one of the four cases §1.3 allows a rule in. */}
+      {/* A hairline between two things is one of the four cases THEME-12 allows a rule in. */}
       <span aria-hidden="true" className="bg-divider h-px flex-1" />
       <Badge tone="accent">{t('composition.insertHere')}</Badge>
       <span aria-hidden="true" className="bg-divider h-px flex-1" />
@@ -472,7 +472,7 @@ function InsertionPoint() {
 
 /** One block: a collapsed line that reads as part of the outline, expanding in place to its own
  *  fields. The whole line is the toggle, so the row is one target rather than a row with a small
- *  button in it (design-language §4.1); the delete lives in the expanded panel, because a
+ *  button in it (THEME-23); the delete lives in the expanded panel, because a
  *  destructive control on every collapsed row would take the width the summary needs at 360px. */
 function BlockRow({
   block,
@@ -489,7 +489,7 @@ function BlockRow({
   const id = useId()
   const open = context.openId === block.id
   // A photo row's summary is the only one the UI FORMATS: it is a count, not text the author
-  // typed, and it has to say whether the photos stand side by side (TEMPLATE-38).
+  // typed, and it has to say whether the photos stand side by side (TMPL-38).
   const summary =
     block.kind === 'photo'
       ? t(photoSummaryKey(block.count), { count: block.count })
@@ -508,7 +508,7 @@ function BlockRow({
           {t(`builder.palette.${blockKindKey(block)}`)}
         </Badge>
         {/* The row keeps its KIND and adds the mark: what it contributes to the post has not
-            changed, only where its words come from (TEMPLATE-44). */}
+            changed, only where its words come from (TMPL-44). */}
         {asksForData(block) && <Badge tone="accent">{t('builder.block.asksForData')}</Badge>}
         <span
           className={typographyStyles({
@@ -610,7 +610,7 @@ function BlockFields({
           <AskFields block={block} context={context} onChange={onChange} />
           {/* A 고정 문구 that asks for data has no text of ITS own left — what the post's author
               types takes its place, so the title is this row's whole authored content
-              (TEMPLATE-44). The text is kept underneath, which is what makes turning the switch
+              (TMPL-44). The text is kept underneath, which is what makes turning the switch
               back off restore it. */}
           {!asksForData(block) && (
             <Field
@@ -642,7 +642,7 @@ function BlockFields({
       return (
         <Typography variant="meta" as="p">
           {/* How many photos ONE iteration takes is the thing a repeat's author has to know
-              once a position inside it can hold a row (TEMPLATE-38). */}
+              once a position inside it can hold a row (TMPL-38). */}
           {t('composition.repeatHelp', { count: repeatPhotoCount(block) })}
         </Typography>
       )

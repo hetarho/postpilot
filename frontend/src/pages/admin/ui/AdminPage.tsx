@@ -4,7 +4,7 @@ import { UserPlanSelect } from '@/features/manage-users'
 import { formatDate } from '@/shared/lib'
 import { Notice, Typography } from '@/shared/ui'
 
-/** The operator's account list (plan 17), now the 계정 관리 tab of `/admin`. Composition only:
+/** The operator's account list (QUOTA-25), now the 계정 관리 tab of `/admin`. Composition only:
  *  the tier control is its own feature, and every refusal is the server's — this tab is reachable
  *  only for `master`, but the two admin procedures are refused there too, so a direct visit by
  *  anyone else simply cannot read. The page title and the tab row belong to `AdminLayout`. */
@@ -38,7 +38,7 @@ export function AdminPage() {
         <ul className="mt-8 grid gap-4">
           {accounts.map((account) => (
             // A row per account rather than a table: at 320px a three-column table would either
-            // scroll sideways or crush the id, and each row is one unit anyway (§1.4).
+            // scroll sideways or crush the id, and each row is one unit anyway (THEME-13).
             <li key={account.id} className="bg-surface-raised rounded-md p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <Typography variant="label" mono className="text-content-primary min-w-0 break-all">

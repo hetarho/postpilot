@@ -77,7 +77,7 @@ export const CLIP_ACCENT_HEX = design.accent
 /** The voice CDS-42 refuses: emoji and these tokens. */
 export const CLIP_VOICE = design.voice
 /** The type scale itself, for the two texts that answer to a role rather than to
- *  a copy style: the hook card's sentence and its category chip (CDS-28). */
+ *  a copy style: the hook card's sentence and its category chip. */
 export const CLIP_TYPE = design.type
 
 export type ClipCaptionPace = 'steady' | 'rapid'

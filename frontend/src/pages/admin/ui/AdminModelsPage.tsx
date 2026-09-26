@@ -1,6 +1,6 @@
 import { ModelCatalogManager } from '@/features/manage-model-catalog'
 
-/** The 모델 관리 tab of `/admin` (plan 18). Composition only: the surface is one feature, and
+/** The 모델 관리 tab of `/admin` (MODEL-28). Composition only: the surface is one feature, and
  *  the page title and tab row belong to `AdminLayout`. The estimator combos that used to follow
  *  the catalog here have their own tab (`AdminEstimatorPage`). */
 export function AdminModelsPage() {

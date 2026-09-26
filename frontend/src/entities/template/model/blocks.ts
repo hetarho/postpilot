@@ -12,8 +12,8 @@ import {
  *
  *  This is a VIEW over the body, not a second source of truth. `toBody` serializes it and the
  *  body is what gets saved; `fromBody` reads it back. The pair round-trips byte for byte for
- *  anything the builder produced, which is what change 25 AC8 asks for — and it is the only
- *  way a body is authored, since the grammar itself is never shown to anyone (change 30). */
+ *  anything the builder produced, which is what TMPL-19 asks for — and it is how a body is
+ *  authored everywhere but `원문`, the one place the grammar is shown (TMPL-26). */
 export type BuilderBlock =
   | { id: string; kind: 'write'; text: string; ask?: string }
   | { id: string; kind: 'text'; text: string; ask?: string }
@@ -21,7 +21,7 @@ export type BuilderBlock =
   | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'repeat'; children: BuilderBlock[] }
 
-/** 데이터 받기 on a row: `ask` holds the TITLE the post's author is asked under (TEMPLATE-44).
+/** 데이터 받기 on a row: `ask` holds the TITLE the post's author is asked under (TMPL-44).
  *  It rides the two rows whose text a post can decide — an AI가 쓰는 글 keeps its instruction
  *  beside the title, and a 고정 문구's own text is replaced by what the author types, so the
  *  title IS that row's authored content.
@@ -30,7 +30,7 @@ export type BuilderBlock =
  *  that asks and whose title is not typed yet. Deriving the switch from "the title says
  *  something" would collapse the field the moment someone cleared it to retype it, and an empty
  *  title simply keeps the row out of the body the way an empty `<write>` already does. */
-/** The two rows whose text a post can decide: an AI가 쓰는 글 and a 고정 문구 (TEMPLATE-44). A
+/** The two rows whose text a post can decide: an AI가 쓰는 글 and a 고정 문구 (TMPL-44). A
  *  사진 holds an attachment and an AI에게만 하는 말 reaches no reader, so neither can ask. */
 export type AskableBlock = Extract<BuilderBlock, { kind: 'write' | 'text' }>
 
@@ -46,7 +46,7 @@ export function asksForData(block: BuilderBlock): boolean {
 
 /** What a person actually picks from the palette — and, since the retirement of the place and
  *  link positions, the whole vocabulary of blocks there is. A thing the author fills in later
- *  is written as fixed text in their own words (TEMPLATE-37), so the builder authors no slot
+ *  is written as fixed text in their own words (TMPL-37), so the builder authors no slot
  *  at all; a stored one is READ as fixed text on the way in. */
 export type PaletteKind = 'write' | 'text' | 'photo' | 'repeat' | 'note'
 
@@ -175,7 +175,7 @@ function fromNodes(
         break
       case 'ask': {
         // The flavor decides which ROW it is: an instruction makes it an AI가 쓰는 글 row, an
-        // empty element a 고정 문구 row whose text the post's author supplies (TEMPLATE-43).
+        // empty element a 고정 문구 row whose text the post's author supplies (TMPL-43).
         const ask = decodeText(node.label ?? '')
         const text = decodeText(node.text ?? '')
         blocks.push(
@@ -191,7 +191,7 @@ function fromNodes(
           break
         }
         // A stored place or link position becomes a FIXED TEXT row carrying its label
-        // (TEMPLATE-37): the position is retired, but a body that has one must not become
+        // (TMPL-37): the position is retired, but a body that has one must not become
         // unreadable, and the label is what the author already wrote there. The next save
         // writes it back as literal text.
         const fallback = node.slotKind === 'link' ? legacyNames.link : legacyNames.place
@@ -271,7 +271,7 @@ export function isCompleteBlock(block: BuilderBlock): boolean {
 
 /** The body a block list contributes, incomplete rows omitted — and a row whose data-field
  *  title collides with an earlier one, because the parser refuses such a body outright and the
- *  builder must never emit one it cannot read back (TEMPLATE-29). The row stays in the editor
+ *  builder must never emit one it cannot read back (TMPL-29). The row stays in the editor
  *  saying why it is not in the template yet, and 저장 is refused while it is.
  *
  *  `taken` is the titles another area already asks under — the title area's, for a body (TMPL-55:
@@ -304,7 +304,7 @@ export function blockKindKey(block: BuilderBlock): PaletteKind {
 
 /** How many photos ONE iteration of a repeat takes: the sum of its photo positions' counts.
  *  It is what the repeat's help line states, and it is the same arithmetic the server expands
- *  with (TEMPLATE-21). */
+ *  with (TMPL-21). */
 export function repeatPhotoCount(block: BuilderBlock): number {
   if (block.kind !== 'repeat') return 0
   return block.children.reduce(
@@ -317,7 +317,7 @@ export function repeatPhotoCount(block: BuilderBlock): number {
  *
  *  Never the grammar. The composition is read as an outline of the post, so what a row shows is
  *  what would end up on the page — a `<write>`'s instruction, a literal's prose, a slot's label —
- *  and never the tags that carry them (change 30 A9).
+ *  and never the tags that carry them (TMPL-26).
  *
  *  Newlines collapse to spaces because the row is one line: a literal holding a paragraph break
  *  would otherwise silently render as one line with a gap in it. A block with nothing typed yet
@@ -326,7 +326,7 @@ export function repeatPhotoCount(block: BuilderBlock): number {
 export function blockSummary(block: BuilderBlock): string {
   // A row that asks the post's author for its data reads as the QUESTION it will ask: that is
   // the row's identity in the outline, and a 고정 문구 row has no text of its own left
-  // (TEMPLATE-44). The instruction stays in the expanded panel.
+  // (TMPL-44). The instruction stays in the expanded panel.
   const ask = askTitle(block)
   if (ask !== '') return ask
   switch (block.kind) {
@@ -354,7 +354,7 @@ export function photoSummaryKey(
 
 /** Which titles more than one row asks under. The parser refuses such a body outright
  *  (`duplicate_ask_label`), so the editor has to be able to say WHICH two collided — a refusal
- *  naming a line number cannot point at a row (TEMPLATE-44).
+ *  naming a line number cannot point at a row (TMPL-44).
  *
  *  `taken` counts as already seen, so a row asking under a title another area uses collides on
  *  its first use. */
@@ -424,7 +424,7 @@ export function endPosition(blocks: readonly BuilderBlock[]): Position {
 
 /** The position a row leaves behind once it is touched: directly after it, and INSIDE its repeat
  *  when it is a child of one. This is what makes one toolbar unambiguous — the user's last action
- *  is what says where the next block belongs (change 30 A7).
+ *  is what says where the next block belongs (TMPL-27).
  *
  *  Touching the repeat's own row aims INSIDE it rather than after it: a repeat exists to hold
  *  children, so the block that follows selecting one is almost always its first child. */

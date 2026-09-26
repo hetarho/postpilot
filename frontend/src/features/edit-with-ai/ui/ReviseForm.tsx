@@ -37,7 +37,7 @@ interface ReviseFormProps {
   /** Rendered at the top-right of the row's own heading. `widgets/refine-dock` puts 확정하기 there:
    *  the step's way OUT belongs beside the name of the loop it leaves, not underneath the field
    *  that continues it. A slot rather than an import, because a feature may not reach a sibling
-   *  feature (ARCHITECTURE §3). */
+   *  feature (ARCH-13). */
   action?: ReactNode
 }
 
@@ -48,13 +48,13 @@ export interface ReviseFormHandle {
 /** Replaces the current canonical content through one durable `revise` job.
  *
  *  It is the body of 글 다듬기's dock (`widgets/refine-dock`) and renders no surface of its own: a
- *  4,000px draft used to put this form past the end of the page, which is exactly where §4.3 says
+ *  4,000px draft used to put this form past the end of the page, which is exactly where THEME-24 says
  *  a committing action may not live. It DOES render the row's heading, with the step's way out
  *  (확정하기) in the `action` slot beside it.
  *
  *  Its SECONDARY controls — the counter, 규칙으로 저장 and 지침으로 저장 — collapse while the field
  *  is empty and unfocused. The dock is over the draft the whole time, so the row that is not being
- *  used is height taken from the thing the screen is for (§0). They come back on focus, on the
+ *  used is height taken from the thing the screen is for (THEME-8). They come back on focus, on the
  *  first character, and for as long as a revision is running or has failed, because that is when
  *  their state is worth reading. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
@@ -166,7 +166,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           the user can read.
           `fieldTitle`, not `title`: this is a field's name standing beside the step's way out, not
           a second step heading, so it is smaller than the step title and heavier than a caption
-          (§3). The action slot takes the ROW'S whole remaining width — 확정하기 is two words, and
+          (THEME-19). The action slot takes the ROW'S whole remaining width — 확정하기 is two words, and
           at its natural size it read as an afterthought next to the label instead of as the
           thing that ends the step. */}
       <div className="flex items-center justify-between gap-3">
@@ -181,7 +181,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         {action}
       </div>
       {/* Validation and failure sit ABOVE the controls, so the keyboard covering the bottom ~40%
-          of the screen hides at most a button and never the reason it is disabled (§8.3). */}
+          of the screen hides at most a button and never the reason it is disabled (THEME-31). */}
       {blocker && (
         <Typography variant="body" role="status" className="text-content-secondary">
           {blocker}
@@ -211,7 +211,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         <div className="flex items-end gap-2">
           {/* A textarea, not a single-line field: at 360px one line shows ~20 of the 500 permitted
             Hangul, so an ordinary instruction scrolled its own beginning out of sight while it was
-            being typed. `autoGrow` keeps it out of the page's scroll (§4.4); Return inserts a line
+            being typed. `autoGrow` keeps it out of the page's scroll (THEME-25); Return inserts a line
             instead of submitting, which is why `enterKeyHint` is the plain one — the send button
             beside it is how the instruction is committed. */}
           <Textarea

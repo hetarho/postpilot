@@ -157,7 +157,7 @@ it('does not offer it after a completed generate job', async () => {
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 })
 
-// Plan 16 A11: the capture appears only once a revision has FINISHED — the instruction is worth
+// GUIDE-21: the capture appears only once a revision has FINISHED — the instruction is worth
 // saving as a rule after the user has seen what it did.
 it('offers 지침으로 저장 only after a completed revision', async () => {
   const user = userEvent.setup()
@@ -218,7 +218,7 @@ it('does not offer it after a failed revision', async () => {
   expect(screen.queryByRole('button', { name: '지침으로 저장' })).not.toBeInTheDocument()
 })
 
-// Plan 16 A11: the dialog is seeded with the instruction, editable before saving, and offers 전역
+// GUIDE-21: the dialog is seeded with the instruction, editable before saving, and offers 전역
 // by default plus the post's template when it has one.
 it('seeds the dialog with the instruction and saves it scoped to the post template', async () => {
   const user = userEvent.setup()

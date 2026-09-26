@@ -12,7 +12,7 @@ import { ProgressBar, Typography } from '@/shared/ui'
 import { observingVideo } from '../model/steps'
 
 /** The editor's ONE status surface: everything the page has to SAY about its own state, at the top
- *  of the page, and nowhere else (change 15). The docked bar below it holds controls and the reason
+ *  of the page, and nowhere else (POST-45). The docked bar below it holds controls and the reason
  *  a control is refused — nothing that is merely true.
  *
  *  It is two mounts rather than one element because the two halves need different boxes. The BAR

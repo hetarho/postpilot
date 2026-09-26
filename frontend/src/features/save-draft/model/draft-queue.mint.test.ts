@@ -21,7 +21,7 @@ describe('mint', () => {
     })
 
     await expect(handle.mint()).resolves.toBe('20260828-untitled')
-    // The create names its voice even though nothing else was typed (spec/legacy/policy/posts.md).
+    // The create names its voice even though nothing else was typed (POST-8).
     expect(send).toHaveBeenCalledWith({
       slug: '',
       draft: { title: '', memo: '', answers: [] },

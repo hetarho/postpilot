@@ -63,7 +63,7 @@ export const Popover = forwardRef<
     align?: 'start' | 'end'
     /** `sheet` swaps the panel for a full-bleed bottom sheet below `sm:`. A 288px panel opening
      *  over the draft is a desktop shape borrowed by a phone; a long brief needs the whole screen
-     *  and its own scroller (design-language §7). */
+     *  and its own scroller (THEME-29). */
     phone?: 'popover' | 'sheet'
     /** On the popover's ROOT, so a caller can make the trigger share a flex row. */
     className?: string
@@ -259,7 +259,7 @@ export const Popover = forwardRef<
           header={
             /* A visible way out, beside the name of what is open: on a phone the scrim is a
                narrow strip above a full-bleed sheet, and Escape is not a gesture a touch user
-               has (§7). */
+               has (THEME-29). */
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 id={headingId} className="min-w-0 truncate text-lg font-semibold tracking-tight">
                 {label}
@@ -287,7 +287,7 @@ export const Popover = forwardRef<
           tabIndex={-1}
           aria-label={label}
           // The panel is its own scroller, so it owes the focus ring the same clear space the
-          // sheet's body does (§9). Its `p-4` already exceeds the ring's 4px on every side, so
+          // sheet's body does (THEME-33). Its `p-4` already exceeds the ring's 4px on every side, so
           // the gutter is satisfied by the padding it has and nothing is reserved on top of it.
           //
           // `overflow-x-hidden` is not decoration. A scroll container resolves BOTH axes away

@@ -61,7 +61,7 @@ describe('applying a draft save response', () => {
     expect(applied.activeJob?.id).toBe('job-new')
   })
 
-  // TEMPLATE-48: an assignment SEEDS the post's two generation options, so those values are
+  // TMPL-48: an assignment SEEDS the post's two generation options, so those values are
   // this mutation's to settle — but only on the save that changed the assignment. An ordinary
   // autosave carries whatever the row held when its request was built.
   it('takes the seeded numbers only when the save changed the template', () => {

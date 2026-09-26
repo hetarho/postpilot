@@ -31,7 +31,7 @@ export function LocaleMenu() {
         onChange={(locale) => void onChange(locale)}
         triggerIcon={<Languages aria-hidden="true" className="size-4" />}
       />
-      {/* Mounted before it speaks (§4.3): a live region inserted with its text announces nothing. */}
+      {/* Mounted before it speaks (THEME-24): a live region inserted with its text announces nothing. */}
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {announcement}
       </span>

@@ -26,7 +26,7 @@ import {
 } from '@/shared/ui'
 import { pageStyles } from '@/shared/ui'
 
-/** The one status chip a row carries. Colour never travels alone (§2.6): the tone only reinforces
+/** The one status chip a row carries. Colour never travels alone (THEME-18): the tone only reinforces
  *  the label, so the label is chosen first and the tone follows it.
  *
  *  A running attempt and a failed one are things the JOB says, and they outrank the project's own
@@ -89,7 +89,7 @@ export function ClipsPage() {
 
   return (
     // The page gutter lives on each block rather than on `main`, so the rows can run edge to edge:
-    // a pressed row that stops 16px short of the screen edge reads as a card (§4.2).
+    // a pressed row that stops 16px short of the screen edge reads as a card (THEME-23).
     <main
       className={pageStyles({
         width: 'wide',

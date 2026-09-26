@@ -2,13 +2,13 @@ import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FieldLabel, Textarea, Typography, typographyStyles } from '@/shared/ui'
 
-/** The 가제 belongs to 글 생성 alone (policy/posts.md). From 글 다듬기 on there is exactly one
+/** The 가제 belongs to 글 생성 alone (POST-50). From 글 다듬기 on there is exactly one
  *  title on the screen and it is `content.title`, edited through the block editor's header — two
  *  title fields side by side is a question the user cannot answer.
  *
  *  A textarea, not an input: a Korean title fits ~14 characters across a 360px screen at the
  *  display size, and a single-line input would scroll the rest of it out of a field that has no
- *  well to show it scrolled (§0 — the title is one of the largest things on the screen, so it
+ *  well to show it scrolled (THEME-8 — the title is one of the largest things on the screen, so it
  *  wraps instead). Its value and its autosave stay in `DraftEditor`, so unmounting it on another
  *  step cannot strand a queued save. */
 export function TitleField({
@@ -59,8 +59,8 @@ export function TitleField({
         enterKeyHint="next"
         autoCapitalize="off"
         autoComplete="off"
-        // The bare editor's caller owns the field's type (§7): the title wears the display role —
-        // the post title is the largest thing on the screen (§0).
+        // The bare editor's caller owns the field's type (THEME-29): the title wears the display role —
+        // the post title is the largest thing on the screen (THEME-8).
         className={typographyStyles({ variant: 'display', className: 'mt-4' })}
       />
     </>

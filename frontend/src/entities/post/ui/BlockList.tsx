@@ -71,10 +71,10 @@ export function BlockList({
           </Typography>
           {/* `break-words` on every model-supplied string in this article: the global rule keeps the
             page from scrolling sideways, the local class keeps the box from being the one that
-            overflows (design-language §3.2). A model routinely writes a bare URL or a model id. */}
+            overflows (THEME-21). A model routinely writes a bare URL or a model id. */}
           {/* The bare editor title is the screen's one `display`. This generated article title is
               a nested reading section, so it keeps heading semantics without competing with the
-              page title for the top visual role (design-language §3 / Job 38 A10). */}
+              page title for the top visual role (THEME-19). */}
           <Typography variant="title" as="h3" className="mt-1 break-words">
             {content.title}
           </Typography>
@@ -105,9 +105,9 @@ export function BlockList({
           const key = blockKey(block, index)
           switch (block.type) {
             case BlockType.TEXT:
-              // An unfilled template slot rides on a TEXT block (spec/legacy/tech/post-template-grammar
-              // §7). It renders as the position it reserves rather than as its own content —
-              // the content is the copy token, which is machinery and not prose.
+              // An unfilled template slot rides on a TEXT block (TMPL-22). It renders as the
+              // position it reserves rather than as its own content — the content is the copy
+              // token, which is machinery and not prose.
               if (block.slot)
                 return wrap(block, index, <SlotRow key={key} label={block.slot.label} />)
               return wrap(
@@ -144,8 +144,8 @@ export function BlockList({
                   {/* Not the photo strip's `Thumbnail`: that tile is a fixed 128px square with
                       `object-cover`, so in the finished draft the photo the post exists for
                       rendered at a third of the column with the top and bottom of a portrait shot
-                      cropped away (design-language §0). Here it fills the column at its own
-                      aspect ratio, which `width`/`height` reserve before the pixels land (§8.6). */}
+                      cropped away (THEME-8). Here it fills the column at its own
+                      aspect ratio, which `width`/`height` reserve before the pixels land (THEME-32). */}
                   {image.viewUrl ? (
                     <img
                       src={image.viewUrl}
@@ -241,8 +241,8 @@ export function BlockList({
 }
 
 /** One position a template reserved and nobody has filled yet. A stepped surface rather than a
- *  border or a card: it is one line inside a flowing article, and §1.3/§1.4 both point away from
- *  drawing a box around it. The label is the template author's own words. */
+ *  border or a card: it is one line inside a flowing article, and THEME-12 and THEME-13 both
+ *  point away from drawing a box around it. The label is the template author's own words. */
 function SlotRow({ label }: { label: string }) {
   const { t } = useTranslation(['templates', 'posts'])
   return (

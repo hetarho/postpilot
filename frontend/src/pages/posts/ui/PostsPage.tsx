@@ -29,7 +29,7 @@ import {
 } from '@/shared/ui'
 import { useSettledValue } from '../model/useSettledValue'
 
-/** The one status chip a row carries. Colour never travels alone (design-language §2.6): the tone
+/** The one status chip a row carries. Colour never travels alone (THEME-18): the tone
  *  only reinforces the label, so the label is chosen first and the tone follows it. */
 function rowStatus(
   post: PostListItem,
@@ -47,7 +47,7 @@ function rowStatus(
  *  (nothing has happened yet), review takes the accent (the user is mid-way), finalized takes
  *  the tinted success (done writing). Published in the same tint read as 확정 at a glance, so the
  *  post that is finished for good takes the solid `done` plane; the label still carries the
- *  meaning on its own (§2.6, THEME-29). */
+ *  meaning on its own (THEME-18, THEME-29). */
 const STATUS_TONE: Record<PostStatus, BadgeTone> = {
   draft: 'neutral',
   review: 'accent',
@@ -109,7 +109,7 @@ export function PostsPage() {
   return (
     // The page gutter lives on each block rather than on `main`, so the list rows can run edge to
     // edge: a pressed row that stops 16px short of the screen edge reads as a card, and a row inset
-    // deeper than the page's own rhythm reads as a mistake (design-language §4.2).
+    // deeper than the page's own rhythm reads as a mistake (THEME-23).
     <main
       className={pageStyles({
         width: 'wide',
@@ -141,7 +141,7 @@ export function PostsPage() {
           <span>{t('list.loadFailed', { ns: 'posts' })}</span>
           {/* `isFetching`, not `isPending`: react-query keeps `status: 'error'` across a refetch of
               an errored query, so without it the notice does not move a pixel for the several
-              seconds a retry takes on cellular and the user taps it again and again (§6). */}
+              seconds a retry takes on cellular and the user taps it again and again (THEME-28). */}
           <Button
             variant="ghost"
             onClick={refetch}
@@ -154,7 +154,7 @@ export function PostsPage() {
       )}
 
       {/* One live region for both states, so finishing the load is a text change inside it rather
-          than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (§9). */}
+          than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (THEME-33). */}
       {!isError && (isPending || (isEmpty && !isNarrowed)) && (
         <Typography
           variant="body"
@@ -192,7 +192,7 @@ export function PostsPage() {
           // AI 결과 확인 the cut point moved row to row, so the list read as a ragged column of
           // half-titles. The voice sits between the status and the time as metadata: which voice a post is in
           // is the one thing this list newly has to say, and a tombstone must say so on the row
-          // itself (spec/legacy/policy/posts.md) — the name gives way before the badge or the time do.
+          // itself (POST-25) — the name gives way before the badge or the time do.
           const content = (
             <>
               <Typography
@@ -262,7 +262,7 @@ export function PostsPage() {
 
       {/* The list's end, while there is more to load: what the observer watches, and ONE live region
           whose text says a page is loading or that it failed, so the change is announced rather than
-          a node swapped in (§9). The retry asks for that page again and nothing else (POST-92). */}
+          a node swapped in (THEME-33). The retry asks for that page again and nothing else (POST-92). */}
       {posts.length > 0 && list.hasNextPage && (
         <div ref={listEnd} className="px-4 py-4 sm:px-6 lg:px-8">
           <Typography variant="meta" role="status" className="text-content-tertiary">
@@ -290,7 +290,7 @@ export function PostsPage() {
           is two links to the same route in the DOM and two things to keep in step for a button
           that is never ambiguous about what it does. It docks in the thumb's band on a phone: in
           the top-right corner it was ~820px above the bottom edge of a 430x932 phone, a re-grip
-          away from the one action this screen exists for (§4.3), and above the empty state that
+          away from the one action this screen exists for (THEME-24), and above the empty state that
           points at it. `mt-auto` puts it at the bottom of a SHORT list; `sticky` keeps it there
           once the list is long enough to scroll — at EVERY width, because a desk list scrolls too
           and the button went with it (THEME-24). Above the phone it shrinks to the width of the

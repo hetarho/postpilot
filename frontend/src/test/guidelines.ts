@@ -66,7 +66,7 @@ export interface FakeGuidelinesOptions {
   refuseFields?: boolean
   calls?: string[]
   /** Records every UpdateGuideline exactly as it arrived, so a test can prove a text edit
-   *  carried no scope and a scope patch carried no text (spec/legacy/policy/guidelines.md). */
+   *  carried no scope and a scope patch carried no text (GUIDE-6). */
   updates?: Array<{
     id: string
     text: string | undefined
@@ -178,7 +178,7 @@ export function registerGuidelineService(
     ]
   }
 
-  // Candidates (change 26). Declared before the create handler because a create is also an
+  // Candidates (GUIDE-7). Declared before the create handler because a create is also an
   // approval: the server marks the candidate in the same transaction, so the fake must too.
   const candidates = new Map<string, FakeGuidelineCandidateRow>()
   for (const candidate of options.candidates ?? []) candidates.set(candidate.id, candidate)

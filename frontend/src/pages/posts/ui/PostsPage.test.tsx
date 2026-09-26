@@ -74,7 +74,7 @@ describe('PostsPage', () => {
     )
   })
 
-  // Plan 10 A5: a row names its voice, and a deleted one says so in words.
+  // POST-25: a row names its voice, and a deleted one says so in words.
   it("names each row's voice and marks a deleted one as a tombstone", async () => {
     renderList({
       posts: [
@@ -91,7 +91,7 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /옛 글/ })).toHaveTextContent('삭제된 말투 · 옛 말투')
   })
 
-  // Plan 11 A12: an assigned row names its 템플릿 beside the voice; an unassigned one says
+  // TMPL-32: an assigned row names its 템플릿 beside the voice; an unassigned one says
   // nothing at all, since 없음 is the majority of the list.
   it("names an assigned row's template and leaves an unassigned row alone", async () => {
     renderList({

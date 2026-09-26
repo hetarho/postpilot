@@ -11,7 +11,7 @@ export interface CandidateSide {
  *
  *  It lives with the entity rather than with the comparison widget because three layers need
  *  the same answer: the widget labels its panels A and B, the page docks the A/B switch in the
- *  thumb band (design-language §4.3), and the verdict sheet names the two candidates without
+ *  thumb band (THEME-24), and the verdict sheet names the two candidates without
  *  revealing which model either one is. */
 export function candidateSides(candidates: readonly ExperimentCandidate[]): CandidateSide[] {
   return [...candidates]

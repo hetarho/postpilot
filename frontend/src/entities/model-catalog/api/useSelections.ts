@@ -62,7 +62,7 @@ export interface StageSelectionState {
 /** What a stage has chosen, resolved against the catalog.
  *
  *  `selected` is null until the user picks a usable model — the callers of the
- *  generation and analysis actions block on exactly that (plan 04 AC7: no default
+ *  generation and analysis actions block on exactly that (MODEL-23: no default
  *  pairing, [I3]). A saved choice that has vanished from the registry, whose provider
  *  lost its key, or that was deregistered from the stage's purpose is not usable: it
  *  comes back as `unavailable` with the reason, for the dropdown to grey out.

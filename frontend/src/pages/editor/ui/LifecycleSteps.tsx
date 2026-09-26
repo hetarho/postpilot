@@ -90,7 +90,7 @@ export function LifecycleSteps({
   )
   // 제목 · 메모 · 사진 · the voice caveat · the contact sheet. Everything that DESCRIBES the next
   // AI run left this panel for the one brief surface in the dock, so what is left is the post's
-  // own material (change 12).
+  // own material (POST-51).
   const generatePanel = (
     <EditorGeneratePanel
       post={post}
@@ -154,7 +154,7 @@ export function LifecycleSteps({
           is kept is the part a screen reader has no other way to get.
 
           Mounted at all times and outside the dock's own existence test, so a bar with nothing
-          visible to say is still not rendered (§0). A live region inserted with its text already
+          visible to say is still not rendered (THEME-8). A live region inserted with its text already
           inside announces nothing, which is exactly right: this speaks on the transition to
           `done` and stays silent for a job that was already finished when the editor mounted. */}
       <p className="sr-only" role="status">

@@ -54,7 +54,7 @@ export function EditableGuidelineScope({
 }
 
 /** The scope as the list states it. Colour is never the only signal: the orphaned state says so
- *  in words, and its help line explains what to do about it (design-language §9). */
+ *  in words, and its help line explains what to do about it (THEME-33). */
 export function GuidelineScopeBadges({
   guideline,
 }: {

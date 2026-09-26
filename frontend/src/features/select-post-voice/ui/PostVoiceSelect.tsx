@@ -30,7 +30,7 @@ interface PostVoiceSelectProps {
   className?: string
 }
 
-/** The required voice of a post: an app-drawn listbox wearing the field well (design-language §7),
+/** The required voice of a post: an app-drawn listbox wearing the field well (THEME-29),
  *  listing only the voices a post may be assigned to.
  *
  *  It rides the editor dock's own row, sharing it with the 용도 field and the writing brief's

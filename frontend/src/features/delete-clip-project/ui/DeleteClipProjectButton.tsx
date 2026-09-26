@@ -61,7 +61,7 @@ export function DeleteClipProjectButton({
         <span className="hidden sm:inline">{t('project.delete')}</span>
       </Button>
       {/* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
-          instead of squeezing the row it was pressed from (§4.3). */}
+          instead of squeezing the row it was pressed from (THEME-24). */}
       {remove.isError && (
         <div role="alert" className="w-full">
           <AppFailureMessage failure={appFailureFromConnect(remove.error)} />

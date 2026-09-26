@@ -16,16 +16,16 @@ export interface SortableItem {
  *  and the list would stop reading as a list. */
 export type SortableDensity = 'comfortable' | 'compact'
 
-/** A vertical list whose rows can be reordered (design-language §1.1 — a reorderable list has
+/** A vertical list whose rows can be reordered (THEME-10 — a reorderable list has
  *  no product noun in its name, so it is a primitive and not one slice's private control).
  *
  *  It offers BOTH ways deliberately. Pointer drag is what people expect from a builder, but
  *  HTML5 drag events do not fire on touch, and the base breakpoint here is a 360px phone
- *  (§1.5) — so the move buttons are not a fallback for keyboard users, they are the only way
+ *  (THEME-14) — so the move buttons are not a fallback for keyboard users, they are the only way
  *  the primary device can reorder at all. Neither is hidden behind the other.
  *
  *  Rows carry no background of their own, so a `divide-divider` hairline separates them: one
- *  of the four cases §1.3 allows a border in. The drag-over row steps to `surface-raised`
+ *  of the four cases THEME-12 allows a border in. The drag-over row steps to `surface-raised`
  *  instead of drawing an insertion rule. */
 export function SortableList({
   items,

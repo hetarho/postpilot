@@ -16,7 +16,7 @@ import { Button, Dialog, FieldLabel, FieldMessage, Textarea, Typography } from '
 /** 승인 — turns a recorded candidate into a saved guideline through the standard create.
  *
  *  There is no Approve procedure: the create already owns the text bound, the account cap and
- *  every refusal an approval needs, so this is the same call the create form makes (change 26).
+ *  every refusal an approval needs, so this is the same call the create form makes (GUIDE-11).
  *  The candidate is marked approved server-side in the same transaction.
  *
  *  Scope is asked HERE and nowhere earlier. A candidate carries none — that is what lets recording

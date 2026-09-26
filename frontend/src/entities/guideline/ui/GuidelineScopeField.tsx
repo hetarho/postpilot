@@ -15,7 +15,7 @@ import { GuidelineFieldPicker } from './GuidelineFieldPicker'
  *  refuses mixes two kinds' sets or leaves a narrowed kind with none (GUIDE-5), so the control can
  *  never hold a mixed one. The pickers are checkbox lists rather than a native multi-select — a
  *  multiple-choice select needs ctrl-click on a desktop and is close to unusable on a phone
- *  (design-language §1.1).
+ *  (THEME-10).
  */
 export function GuidelineScopeField({
   ownerId,

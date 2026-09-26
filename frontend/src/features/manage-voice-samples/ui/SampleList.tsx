@@ -22,7 +22,7 @@ export function SampleList({
   // The sample the confirmation sheet is open for. `window.confirm` is not an option for a
   // delete the user repeats while pruning a profile: mobile Chrome and Safari offer to suppress
   // further dialogs on the page, after which every confirm returns false and 삭제 becomes a
-  // silent no-op (§7).
+  // silent no-op (THEME-29).
   const [confirming, setConfirming] = useState<VoiceSample | null>(null)
 
   const remove = async (sample: VoiceSample) => {
@@ -89,7 +89,7 @@ export function SampleList({
         }}
       >
         {/* The label is stored text the user pasted, so it breaks inside the sheet rather than
-            widening it (§3.2). */}
+            widening it (THEME-21). */}
         {t('samples.deleteDescription', { ns: 'voices', label: confirming?.label ?? '' })}
       </Dialog>
     </section>

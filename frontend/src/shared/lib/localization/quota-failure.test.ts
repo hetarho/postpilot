@@ -5,7 +5,7 @@ import { formatAppFailure } from './failure'
 
 afterEach(() => initializeI18n('ko'))
 
-// Change 19 A6: a credit refusal is rendered from its typed detail, never from the server's
+// QUOTA-18, LANG-21: a credit refusal is rendered from its typed detail, never from the server's
 // own message — and the machine values it carries (integer credits, an RFC3339 instant) are
 // turned into the reader's own notation here, not guessed at by the server.
 describe('credit refusals', () => {

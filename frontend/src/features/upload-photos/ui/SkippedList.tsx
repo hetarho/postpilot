@@ -22,7 +22,7 @@ export function SkippedList({
         {t('upload.skipped')}
       </Typography>
       {/* A hairline between rows instead of a 4px gap: the rows have no background of their own
-          (§1.3), and 4px put two 44px dismiss boxes under the same thumb (§4.1). */}
+          (THEME-12), and 4px put two 44px dismiss boxes under the same thumb (THEME-23). */}
       <ul className="divide-divider mt-1 flex flex-col divide-y">
         {skipped.map((item) => (
           <li key={item.id} className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 py-2">
@@ -40,7 +40,7 @@ export function SkippedList({
             {/* The reason takes its own line. `shrink-0` on a flex item pins it at its
                 max-content width, and the extension reason is one unbroken 425px line at 360px:
                 it pushed the whole document — title, memo, generate button — into horizontal
-                scroll and crushed the filename beside it to zero (§8.5). */}
+                scroll and crushed the filename beside it to zero (THEME-32). */}
             <Typography variant="body" as="span" className="text-content-tertiary w-full">
               {item.reason && skipReasonLabel(item.reason)}
             </Typography>

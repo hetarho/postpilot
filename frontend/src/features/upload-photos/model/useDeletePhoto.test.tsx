@@ -5,7 +5,7 @@ import { createFakePostsTransport } from '@/test/posts'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { useDeletePhoto } from './useDeletePhoto'
 
-// Job 05 A5 (plan 02 AC6, browser half): a delete calls DeleteImage, and the cached post loses the
+// POST-39, browser half: a delete calls DeleteImage, and the cached post loses the
 // photo so the strip drops it without a refetch.
 it('deletes a photo through DeleteImage', async () => {
   const calls: string[] = []

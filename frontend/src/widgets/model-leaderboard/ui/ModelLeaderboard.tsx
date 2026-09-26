@@ -30,7 +30,7 @@ export function ModelLeaderboard({
       {entries.map((entry) => (
         <li
           key={`${entry.model.providerId}/${entry.model.modelId}`}
-          // Three columns at the BASE breakpoint, not from `sm:` (§1.5). Stacked, an entry was
+          // Three columns at the BASE breakpoint, not from `sm:` (THEME-14). Stacked, an entry was
           // ~192px tall and put the two values a leaderboard exists to show — the rank and the
           // rating — ~100px apart with the metrics wedged between them. At 360px '#10' and
           // 'Elo 1516' cost ~90px together, which leaves the label and its badges room to wrap.
@@ -44,7 +44,7 @@ export function ModelLeaderboard({
               {/* `min-w-0`: without it a flex item's automatic minimum size is its min-content
                   width, and `truncate` sets `white-space: nowrap` — so min-content is the ENTIRE
                   label and the ellipsis can never fire. A model registered without a label falls
-                  back to its id, which overflows the page into horizontal scroll (§8.5). */}
+                  back to its id, which overflows the page into horizontal scroll (THEME-32). */}
               <Typography variant="label" className="text-content-primary min-w-0 truncate">
                 {entry.modelLabel || t('unavailable')}
               </Typography>

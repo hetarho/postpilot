@@ -68,10 +68,10 @@ export function LearnVoiceForm({
     if (disabled || !selected) return
     // Re-analysis replaces an analysis the voice already published, so it is confirmed —
     // through the sheet, never `window.confirm`: a mobile browser offers to suppress that dialog
-    // after a repeat, and from then on it returns false and 학습 is a silent no-op (§7). The sheet
+    // after a repeat, and from then on it returns false and 학습 is a silent no-op (THEME-29). The sheet
     // also renders inside the page, so the keyboard does not slam shut and reflow the viewport.
     // The gate is the PUBLISHED VERSION now: the free-text styleguide it used to read is gone
-    // (change 16), and a voice with a version is exactly a voice with an analysis to replace.
+    // (VOICE-25), and a voice with a version is exactly a voice with an analysis to replace.
     if (profile.structured.version > 0n) {
       setConfirmOverwrite(true)
       return
@@ -90,7 +90,7 @@ export function LearnVoiceForm({
           placeholder={t('learn.labelPlaceholder')}
           // A short free-text name, so nothing to autofill and nothing to auto-capitalise. The
           // return key says 다음 rather than the 이동 that implicit submission renders — that key
-          // does nothing until the body below is long enough, with no way to say so (§7).
+          // does nothing until the body below is long enough, with no way to say so (THEME-29).
           autoComplete="off"
           autoCapitalize="off"
           autoCorrect="off"
@@ -111,7 +111,7 @@ export function LearnVoiceForm({
           onChange={(event) => setBody(event.target.value)}
           placeholder={t('learn.bodyPlaceholder')}
           // A pasted article is always longer than any fixed box; growing keeps the page the one
-          // scroller and leaves the CTA directly under the end of the text (§4.4).
+          // scroller and leaves the CTA directly under the end of the text (THEME-25).
           rows={6}
           autoGrow
           aria-invalid={addSample.isError || undefined}
@@ -121,7 +121,7 @@ export function LearnVoiceForm({
         {/* Under the field, not above it. This is the only explanation for the disabled 학습
             button, and above the textarea it scrolls off the top as soon as the user is typing
             past the first few lines — a validation message behind the keyboard has not been
-            shown (§4.3). */}
+            shown (THEME-24). */}
         <div id={bodyHintId} className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <Typography variant="meta" className="shrink-0">
             {t('learn.count', { count: chars, min: VOICE_SAMPLE_MIN_CHARS })}

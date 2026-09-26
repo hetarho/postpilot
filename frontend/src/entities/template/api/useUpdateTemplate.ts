@@ -42,13 +42,13 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
         name: fields.name.trim(),
         description: fields.description.trim(),
         // NOT trimmed: the body is the canonical serialization of the composition, and trimming
-        // it here would rewrite a stored body that carries significant outer bytes (change 30 A11).
+        // it here would rewrite a stored body that carries significant outer bytes (TMPL-8).
         body: fields.body,
         // Always present and never trimmed, for the body's reason; a present `''` clears the area.
         titleArea: fields.titleArea,
         // Both numbers go out on every save, absence meaning 의견 없음 rather than "not part of
         // this edit": this screen is the only place either is authored and it always holds both,
-        // so unticking one has to be able to clear it (TEMPLATE-8).
+        // so unticking one has to be able to clear it (TMPL-8).
         targetLength: fields.targetLength,
         tagCount: fields.tagCount,
       }),

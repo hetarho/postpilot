@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { ActionBar } from '@/shared/ui'
 
 /** The editor's docked bar. It holds the one thing a phone could not otherwise reach — the step's
- *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page (§4.3) — the
+ *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page (THEME-24) — the
  *  brief and the assignments that decide what that action does, and the reason the action is
  *  refused. Nothing that is merely TRUE: the save state, the job's progress and the post's status
- *  all moved to the page-top status region (`EditorStatus`, change 15).
+ *  all moved to the page-top status region (`EditorStatus`, POST-45).
  *
  *  It is mounted as the LAST child of `main` on template: a `sticky bottom-*` box is only pinned
  *  while its containing block still extends below it, so anywhere earlier in the flow it would
@@ -21,7 +21,7 @@ export function EditorDock({
   children?: ReactNode
 }) {
   const { t } = useTranslation('posts')
-  // A bar holding neither a control nor a refusal is not chrome (§0). Now that no status line
+  // A bar holding neither a control nor a refusal is not chrome (THEME-8). Now that no status line
   // lives here, that is the whole test.
   if (!children && !header) return null
   return (

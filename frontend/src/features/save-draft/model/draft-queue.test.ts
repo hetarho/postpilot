@@ -433,7 +433,7 @@ describe('the first save of a new draft', () => {
 })
 
 describe('the voice assignment', () => {
-  // spec/legacy/policy/posts.md: a create always names its voice; an ordinary edit leaves it alone.
+  // POST-8: a create always names its voice; an ordinary edit leaves it alone.
   it('sends the voice with the create and not with an unchanged edit', async () => {
     const api = backend({ mint: '20260828-제주' })
     const { handle } = attach(api.send, { voiceId: 'voice-a' })
@@ -553,10 +553,10 @@ describe('the voice assignment', () => {
   })
 })
 
-// Plan 11 A12: the 템플릿 rides the same queue as the text, with one more state than the voice —
+// TMPL-32: the 템플릿 rides the same queue as the text, with one more state than the voice —
 // a post may have none, so '' is a real value meaning "clear".
 describe('the per-slug discard', () => {
-  // The exception to "a queue outlives its editor, never its session" (tech/draft-autosave.md):
+  // The exception to "a queue outlives its editor, never its session" (POST-12):
   // an intentional delete ends one slug's queue and nobody else's.
   it('stops the deleted slug retrying and leaves every other slug alone', async () => {
     // Never succeeds, so a queue that is still alive still holds its pending text.

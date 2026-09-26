@@ -1,6 +1,6 @@
 // Shared fake ProviderService for tests.
 //
-// It models the server rules the frontend depends on (spec/legacy/policy/providers.md): a saved
+// It models the server rules the frontend depends on (MODEL-24, MODEL-25): a saved
 // model that is not registered comes back `missing` once and is cleared, and a disabled
 // or unregistered model cannot be saved.
 import { Code, createRouterTransport } from '@connectrpc/connect'
@@ -38,7 +38,7 @@ export interface FakeModel {
   structuredOutput?: boolean
   /** The reason the model is disabled; undefined means enabled. */
   disabledReason?: string
-  /** The stages the model is registered to serve (change 20). Defaults to what the old
+  /** The stages the model is registered to serve (MODEL-14). Defaults to what the old
    *  global enablement produced — write/analyze for everyone, observe when `vision` — so a
    *  test that says nothing about purposes keeps its registry. */
   stages?: Stage[]

@@ -196,7 +196,7 @@ it('sends the active writer only for ordinary generation', async () => {
   expect(calls).not.toContain('StartWriteExperiment')
 })
 
-// Change 21: a post that has been observed decides what to re-observe BEFORE the enqueue, and the
+// GEN-8: a post that has been observed decides what to re-observe BEFORE the enqueue, and the
 // picker confirmed untouched reuses everything — EMPTY, not absent, which would mean "observe all".
 it('sends an EMPTY frozen set when the picker is confirmed untouched', async () => {
   const user = userEvent.setup()
@@ -248,7 +248,7 @@ it('keeps 생성 disabled while an A/B result is pending', async () => {
   expect(starts).toHaveLength(0)
 })
 
-// A1/A10: nothing to reuse means no picker, exactly as before change 21.
+// GEN-8: nothing to reuse means no picker.
 it('starts directly when the post has photos but no stored observation', async () => {
   const user = userEvent.setup()
   const { starts } = renderActions({ images: POST_IMAGES_FIXTURE })

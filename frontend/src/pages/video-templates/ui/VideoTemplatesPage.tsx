@@ -59,7 +59,7 @@ export function VideoTemplatesPage() {
               <Typography variant="title" id="video-templates-heading">
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
-              {/* Rows are full-bleed against the page gutter, so the list cancels it (§4.2). */}
+              {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
               <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
                 {templates.map((template) => (
                   <TemplateRow key={template.id} ownerId={ownerId} template={template} />
@@ -103,12 +103,12 @@ function EmptyState() {
 
 /** One template, one target. The link stretches over the whole row through its `::after`, so the
  *  padding and the empty space navigate too, while the delete paints above that layer and acts
- *  without navigating — a row is one target, not a row with a button inside it (§4.1). */
+ *  without navigating — a row is one target, not a row with a button inside it (THEME-23). */
 function TemplateRow({ ownerId, template }: { ownerId: string; template: ClipTemplate }) {
   const { t } = useTranslation('clips')
   return (
     // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
-    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (§4.2).
+    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (THEME-23).
     <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
       <Link
         to="/video-templates/$templateId"

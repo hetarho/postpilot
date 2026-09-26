@@ -36,7 +36,7 @@ describe('filterFile', () => {
     })
   })
 
-  // A1 (plan AC2): an executable, or anything not on either list, never uploads.
+  // POST-31: an executable, or anything not on either list, never uploads.
   it('skips an executable and any extension not on the list, with the reason', () => {
     expect(filterFile({ name: 'setup.exe', size: 10 }, none)).toEqual({
       kind: 'skipped',
@@ -52,7 +52,7 @@ describe('filterFile', () => {
     })
   })
 
-  // A3 (plan AC4): the cap is on the original, at selection.
+  // POST-31: the cap is on the original, at selection.
   it('skips a file over the cap and accepts one under it', () => {
     expect(filterFile({ name: 'big.heic', size: (UPLOAD_MAX_FILE_MB + 1) * MB }, none)).toEqual({
       kind: 'skipped',

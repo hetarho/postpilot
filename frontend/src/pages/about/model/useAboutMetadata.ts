@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { activeLocale, applyDocumentMetadata, type Locale } from '@/shared/lib'
 
 /** `/about`'s canonical path. Fixed rather than read from the router: the canonical URL of the
- *  marketing page is a content decision, and a locale change must not move it (plan 15 — no
+ *  marketing page is a content decision, and a locale change must not move it (MKT-7 — no
  *  locale-prefixed URLs). */
 const ABOUT_PATH = '/about'
 

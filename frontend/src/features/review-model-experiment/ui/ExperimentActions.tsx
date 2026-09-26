@@ -43,7 +43,7 @@ export function ExperimentActions({
   // `useExperimentActions` reports one `isPending` for all six mutations, so the button the thumb
   // actually pressed has to be remembered here — otherwise the whole bar spins at once. Without a
   // pending state at all, a tap on a cellular connection only dropped the button to 50% opacity,
-  // which is not feedback on a device with no hover, and the user fired the mutation twice (§6).
+  // which is not feedback on a device with no hover, and the user fired the mutation twice (THEME-28).
   const [pressed, setPressed] = useState('')
   const run = (name: string, action: () => Promise<unknown>) => {
     setPressed(name)
@@ -69,10 +69,10 @@ export function ExperimentActions({
     <div className="grid gap-3">
       {/* Full-width targets on a phone: three Korean labels measure ~410px against the 296px the
           bar has at 360px, so a wrapping row became two right-aligned rows of ambiguous targets
-          8px apart (§4.1). One row per action is the default; the write decision's two committing
+          8px apart (THEME-23). One row per action is the default; the write decision's two committing
           actions pair off into a single row of their own below, because three stacked rows of
           chrome hide the draft the decision is about. From `sm:` up everything collapses back
-          into the desktop row. The CTA is the last child in every status (§4). */}
+          into the desktop row. The CTA is the last child in every status (THEME-22). */}
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
         {(experiment.status === 'partial' || experiment.status === 'failed') && (
           <Button
@@ -159,7 +159,7 @@ export function ExperimentActions({
         {canChoose && commits && (
           /* The write decision is the one status that offers TWO committing actions, and stacking
              both full-width put 100px of dock over the draft they are about. Side by side on the
-             phone — the plain apply left, the one that also moves the active model right (§4) —
+             phone — the plain apply left, the one that also moves the active model right (THEME-22) —
              halves that; `sm:contents` dissolves the pair back into the desktop row. 결과 적용하고
              활성 모델로 변경 wraps to two lines in a 146px column, which the tighter line box the
              Button primitive carries keeps inside the 44px floor. */
@@ -204,7 +204,7 @@ export function ExperimentActions({
           )}
       </div>
       {/* The outcome renders inside the dock, right under the button that was pressed — a result
-          reported 1,000px up the page has not been shown (§4.3). */}
+          reported 1,000px up the page has not been shown (THEME-24). */}
       {actions.failure && (
         <Notice tone="danger" role="alert">
           <AppFailureMessage failure={actions.failure} />

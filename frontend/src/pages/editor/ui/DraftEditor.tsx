@@ -38,7 +38,7 @@ interface DraftEditorProps {
   post?: PostDraft
   /** The voice a draft with no post yet starts in — the account's default, resolved by the
    *  route before this mounts, so the first save always carries a concrete id
-   *  (spec/legacy/policy/posts.md). Ignored for an existing post, whose voice is its own. */
+   *  (POST-23). Ignored for an existing post, whose voice is its own. */
   defaultVoiceId?: string
 }
 
@@ -55,7 +55,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const ownerId = user?.id ?? ''
   // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at the
   // display size, and a single-line input would scroll the rest of it out of a field that has no
-  // well to show it scrolled (design-language §0 — the title is one of the largest things on the
+  // well to show it scrolled (THEME-8 — the title is one of the largest things on the
   // screen, so it wraps instead).
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const memoRef = useRef<HTMLTextAreaElement>(null)
@@ -174,12 +174,12 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       {/* ONE row holding the way out, the step bar and the delete, the way the clip workspace's
           top row does (CLIP-37) — so the two detail screens present their lifecycle identically.
           `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
-          rather than crushing the way out beside it (§8.5). The Korean refusal copy is over 40
+          rather than crushing the way out beside it (THEME-32). The Korean refusal copy is over 40
           characters, which is more than a 360px row can hold beside anything. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* The word is underlined: `link-fg` resolves to `content-secondary`, so at rest an
             un-underlined way out is pixel-identical to ordinary copy and the only thing marking it
-            was a `hover:` colour no touchscreen ever matches (§6). On a phone a post's row also
+            was a `hover:` colour no touchscreen ever matches (THEME-28). On a phone a post's row also
             holds the step bar and the delete, so the glyph stands for the word there, as it does
             in the clip workspace; the name stays the word at every width. `/posts/new` has neither
             neighbour and keeps the word. */}
@@ -222,7 +222,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {/* A queue outlives its editor, so a retry left running would keep saving a slug the
                 server no longer has and report that failure for a post the user destroyed on
-                template (tech/draft-autosave.md). Discarded before the navigation unmounts the
+                template (POST-12). Discarded before the navigation unmounts the
                 editor, and only for this slug. */}
             <DeletePostButton
               post={post}
@@ -235,7 +235,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         )}
 
         {/* The editor's ONE state indicator. It replaced the status badge that stood here: the
-            row may not carry two of them (change 15). Mounted for `/posts/new` as well, which
+            row may not carry two of them (POST-45). Mounted for `/posts/new` as well, which
             has no status of its own but does have an autosave that can fail — and no save
             button anywhere to fall back on (PRD F-2). It takes the row's last line whole, so a
             message never competes with the step names for width. */}

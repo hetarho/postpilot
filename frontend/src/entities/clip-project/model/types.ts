@@ -22,7 +22,7 @@ import { emptyCompositionInputs, validCompositionInputs } from './composition-in
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 /** The five campaign types and three CTAs, read from the design system: the
- *  phrases are code-owned and only these ids ever travel (CDS-29, CDS-31). */
+ *  phrases are code-owned and only these ids ever travel (CDS-31). */
 import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/entities/clip-design/@x/clip-project'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export type ClipRenderKind = 'server' | 'browser'
@@ -45,7 +45,7 @@ export interface ClipProjectDraft {
    *  clip is being set up; generation refuses it (CDS-5, CDS-31). */
   disclosure: ClipDisclosureId | ''
   hideDisclosure?: boolean
-  /** The closing call to action, or empty for the template preset's (CDS-29). */
+  /** The closing call to action, or empty for the template preset's. */
   cta: ClipCTAId | ''
   /** The owner's own instruction for this clip (CLIP-121). Optional, and an
    *  empty string is indistinguishable from never having written one. */

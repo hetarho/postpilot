@@ -9,7 +9,7 @@ import type { ClipProjectDraft } from '@/entities/clip-project'
  *  repeat does NOT retry, because a clip whose generation is running is refused with `CLIP_BUSY`
  *  until that job ends and a retry loop would only spend requests saying so.
  *
- *  Module level for the same reason the post's draft queue is (tech/draft-autosave.md), and here
+ *  Module level for the same reason the post's draft queue is (POST-6), and here
  *  for one more: ① is a step PANEL, so the settings form unmounts the moment the owner looks at
  *  ② or ③. A debounce living in the component would take the last keystrokes with it. */
 export type SendClipDraft = (draft: ClipProjectDraft) => Promise<void>

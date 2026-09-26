@@ -3,7 +3,7 @@ import { pageStyles } from './pageStyles'
 
 describe('pageStyles', () => {
   it('caps nothing on a phone: every width and gutter it sets is prefixed or full-bleed', () => {
-    // design-language §1.5's test, mechanised: strip every breakpoint-prefixed class and what is
+    // THEME-14's test, mechanised: strip every breakpoint-prefixed class and what is
     // left must still be a finished screen — a full-width column with the phone's own gutter.
     for (const width of ['prose', 'wide', 'board'] as const) {
       const unprefixed = pageStyles({ width })

@@ -20,20 +20,20 @@ export interface TabLink {
 
 /** A tab row whose tabs are ADDRESSES. `SegmentedControl` is the same shape driven by `onChange`,
  *  so it cannot give a tab a back button, a bookmark, or a modifier-click — a set of routed
- *  panels needs real links (design-language §1.1 corollary).
+ *  panels needs real links (THEME-10 corollary).
  *
  *  It is a `nav` of links, not `role="tablist"`: the ARIA tab pattern describes panels swapped in
  *  place, and announcing navigation as tab selection would tell a screen reader the page stayed
- *  put when the address changed. The current tab is marked `aria-current="page"` (§9).
+ *  put when the address changed. The current tab is marked `aria-current="page"` (THEME-33).
  *
  *  Text-only rows scroll horizontally rather than wrapping or crushing their labels: five Korean
  *  labels outgrow 328px of content long before their English equivalents would, and a clipped tab
  *  looks like a feature that does not exist. When every item carries an `icon`, the row instead
- *  switches shape with its own width (`@container`, §1.5): below `@tabs` (38rem) each tab stacks
+ *  switches shape with its own width (`@container`, THEME-14): below `@tabs` (38rem) each tab stacks
  *  its icon over a compact caption and the five share
  *  the row evenly, so nothing is off-screen on a phone; from `@tabs` up it is today's text row.
  *  `overscroll-x-contain` keeps a swipe that reaches the end of the scrolling variant from
- *  chaining to the page or the browser's back gesture (§4.4). */
+ *  chaining to the page or the browser's back gesture (THEME-25). */
 export function TabLinks({
   items,
   ariaLabel,
@@ -65,7 +65,7 @@ export function TabLinks({
           // the first tab marked current on all of the others.
           activeOptions={{ exact: item.exact ?? true }}
           // `px-4` pays for the height floor: it sets only the height, and '말투' is two Hangul at
-          // 14px — a 28px-wide target without the padding (§4.1, §4.2). 40px under a mouse, 44
+          // 14px — a 28px-wide target without the padding (THEME-23). 40px under a mouse, 44
           // under a thumb (THEME-23).
           className={clsx(
             'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active inline-flex min-h-10 flex-1 items-center justify-center rounded-sm text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',

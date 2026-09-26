@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <!-- viewport-fit=cover makes env(safe-area-inset-*) non-zero, which the safe-b/nav spacing
          tokens in app/styles/index.css depend on. No user-scalable/maximum-scale: they are a
-         WCAG 1.4.4 failure on Android and are ignored on iOS. See design-language §8.1. -->
+         WCAG 1.4.4 failure on Android and are ignored on iOS. See THEME-31. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Static/no-JS fallback is night. The synchronous theme bootstrap replaces data-theme,
          color-scheme, and both meta values from one effective-theme snapshot before React renders.
-         These theme-color values are the header's surface-raised plane (design-language §2.5). -->
+         These theme-color values are the header's surface-raised plane (THEME-5). -->
     <meta name="theme-color" content="#28272c" data-day="#fcfbfe" data-night="#28272c" />
     <meta name="color-scheme" content="dark" />
     <!-- The ONLY metadata a client that does not run JS ever sees — on /about as much as on

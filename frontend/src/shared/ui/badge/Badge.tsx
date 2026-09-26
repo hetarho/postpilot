@@ -2,7 +2,7 @@ import { forwardRef, type HTMLAttributes } from 'react'
 import { twMerge } from 'tailwind-merge'
 
 /** Neutral by default; a STATUS chip takes the tone that matches its meaning. Colour is never the
- *  only signal — the chip always carries its text label too (design-language §2.6, §7). `done` is
+ *  only signal — the chip always carries its text label too (THEME-18, THEME-29). `done` is
  *  the solid success plane for a state finished for good, set apart from the tinted `success`. */
 export type BadgeTone = 'neutral' | 'accent' | 'danger' | 'success' | 'done' | 'warning' | 'info'
 
@@ -30,7 +30,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(function Badge(
       className={twMerge(
         // `shrink-0 whitespace-nowrap`: a badge in a flex row must never be the thing that gives
         // way, and a two-syllable Korean label must never break across two lines. `px-2 py-0.5` is
-        // the §4.2 ratio for a box this small.
+        // the THEME-23 ratio for a box this small.
         'inline-flex shrink-0 items-center rounded-sm px-2 py-0.5 text-xs font-medium whitespace-nowrap',
         TONE_STYLES[tone],
         className,

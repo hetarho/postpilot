@@ -10,8 +10,8 @@ import type { EditorJobView } from '../model/useEditorJob'
 
 /** A FAILURE, and only a failure. It stays in the dock while the job's progress moved to the
  *  page-top bar, because a failure carries a retry: something the user can act on is a control,
- *  not a status (change 15). Its presence is also what decides whether the bar exists at all on
- *  글 완성 — a bar holding nothing is chrome with nothing to say (§0).
+ *  not a status (POST-47). Its presence is also what decides whether the bar exists at all on
+ *  글 완성 — a bar holding nothing is chrome with nothing to say (THEME-8).
  *
  *  The RETRY is offered only on the step that owns the job, because that is where the control it
  *  calls is mounted. */

@@ -16,7 +16,7 @@ import { TextField } from '../field/TextField'
  *  the one value that is narrowing.
  *
  *  A primitive rather than a copy per list: the post directory and the clip directory reach for
- *  the same shape, and a second slice needing it is what §1.1 says makes it one (THEME-10). It
+ *  the same shape, and a second slice needing it is what THEME-10 says makes it one. It
  *  knows no product noun — the caller supplies its own copy and its own filter values. */
 export function ListControls<T extends string>({
   searchLabel,

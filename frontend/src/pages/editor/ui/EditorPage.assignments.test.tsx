@@ -106,7 +106,7 @@ describe('the post voice', () => {
     canFinalize: true,
   }
 
-  // Plan 10 A4: the picker opens on the default and the create names it.
+  // POST-23: the picker opens on the default and the create names it.
   it('starts a new draft in the default voice and sends its id with the first save', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
@@ -168,7 +168,7 @@ describe('the post voice', () => {
     expect(await voiceField(user)).toHaveTextContent('리뷰')
   })
 
-  // Plan 10 A8: reassignment is confirmed, preserves the content, and clears learn eligibility.
+  // POST-24: reassignment is confirmed, preserves the content, and clears learn eligibility.
   it('reassigns an existing post after confirmation and clears its learn eligibility', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
@@ -236,7 +236,7 @@ describe('the post voice', () => {
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
   })
 
-  // Plan 10 A5/A7: the tombstone, the disabled AI controls with their reason, and both ways out.
+  // POST-25: the tombstone, the disabled AI controls with their reason, and both ways out.
   it('renders a deleted voice as a tombstone with disabled AI actions and a way out', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -270,7 +270,7 @@ describe('the post voice', () => {
     expect(picker).toHaveTextContent('삭제된 말투 · 옛 말투')
     // The refusal is said ONCE, by the surface that carries the way out: 글 생성's tombstone
     // warning offers 복원, so the dock only disables the action rather than re-writing the reason
-    // under it (change 15).
+    // under it (POST-48).
     await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeDisabled())
     expect(
       screen.queryByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
@@ -333,7 +333,7 @@ describe('the post voice', () => {
   })
 })
 
-// Plan 11 A12: 템플릿 is optional, defaults to 없음, and rides the same draft queue as the text.
+// TMPL-32: 템플릿 is optional, defaults to 없음, and rides the same draft queue as the text.
 describe('the post template', () => {
   const AUTOSAVED = { timeout: 4_000 }
   const PURPOSES = [
@@ -370,7 +370,7 @@ describe('the post template', () => {
     expect(draftSaves[0].templateId).toBeUndefined()
   })
 
-  // TEMPLATE-48: picking a template seeds the post's two generation options, and the screen
+  // TMPL-48: picking a template seeds the post's two generation options, and the screen
   // shows the seeded values at once — on the response the picker already awaits, with no
   // second call and nothing saying a template wrote them.
   it('shows the numbers a picked template seeded', async () => {

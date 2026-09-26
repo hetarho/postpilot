@@ -31,7 +31,7 @@ function Source({ initial = '' }: { initial?: string }) {
 const body = () => screen.getByTestId('body').textContent ?? ''
 
 describe('the source editor', () => {
-  // TEMPLATE-42/8/19: what is pasted is what is stored. No trim, no normalization, on input or
+  // TMPL-42, TMPL-8, TMPL-19: what is pasted is what is stored. No trim, no normalization, on input or
   // on the way out — an outside AI's body has to survive this field byte for byte.
   it('keeps what is typed byte for byte, outer whitespace included', async () => {
     const user = userEvent.setup()
@@ -79,7 +79,7 @@ describe('the source editor', () => {
     expect(await screen.findByText('복사했어요')).toBeInTheDocument()
   })
 
-  // TEMPLATE-41: the guide is the thing an outside AI is handed, so copying it is the point.
+  // TMPL-41: the guide is the thing an outside AI is handed, so copying it is the point.
   it('copies the format guide and confirms it', async () => {
     const user = userEvent.setup()
     const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)

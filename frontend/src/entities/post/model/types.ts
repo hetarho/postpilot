@@ -67,10 +67,10 @@ export interface PostDraft {
   createdAt: string
   updatedAt: string
   /** The voice the post is written in. Always present — a post cannot exist without one — and
-   *  still named after the voice is deleted (spec/legacy/policy/posts.md). */
+   *  still named after the voice is deleted (POST-25). */
   voice: VoiceRef
   /** The 템플릿 the post is written for, or an empty ref for 없음. Optional by design: unlike the
-   *  voice, the server never picks one (spec/legacy/policy/templates.md). */
+   *  voice, the server never picks one (POST-26). */
   template: TemplateRef
   /** The post's 분야, '' for 없음 (POST-82). A number a newer server adds reads as 없음: it is
    *  not one this build can offer or show. */

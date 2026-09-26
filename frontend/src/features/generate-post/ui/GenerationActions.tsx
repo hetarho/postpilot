@@ -46,7 +46,7 @@ export const GenerationActions = forwardRef<
     /** Opens the writing brief — where the 관찰/작성 모델 and the A/B pair are chosen — for a press
      *  of `mode` that its setup refused, so the brief can mark what that run is missing. Supplied
      *  by `pages/editor`, which owns the brief's open state — a feature may not import the widget
-     *  that composes its siblings (ARCHITECTURE §3). */
+     *  that composes its siblings (ARCH-13). */
     onOpenBrief: (mode: GenerationMode) => void
   }
 >(function GenerationActions(
@@ -218,7 +218,7 @@ export const GenerationActions = forwardRef<
         </Typography>
       )}
       {/* ONE row on a phone, 3 : 7: A/B 비교 left, 생성 — the committing action — right, which is
-          both the §4 emphasis order and the side the thumb of a right-handed one-handed grip
+          both the THEME-22 emphasis order and the side the thumb of a right-handed one-handed grip
           reaches first. Not halves: an ordinary generation is what this step is FOR and an A/B
           comparison is the occasional second opinion, so the emphasis is in the width as well as
           in the variant (owner decision 2026-09-02). The writing brief no longer shares this row;

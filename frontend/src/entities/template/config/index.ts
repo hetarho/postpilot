@@ -34,7 +34,7 @@ export const TEMPLATE_TITLE_AREA_MAX_CHARS = positiveIntEnv(
  *  would refuse on save, so the two numbers have to be raised together. */
 export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(ENV_LIMIT_OVERRIDES.templatePhotoRowMax, 4)
 
-/** The data-field ceilings (TEMPLATE-43): a field's title, one answer's text, and how many
+/** The data-field ceilings (TMPL-43): a field's title, one answer's text, and how many
  *  fields one body may declare. The first two are live counters and the third is a refusal the
  *  builder states before the server has to; the backend stays authoritative on all three. */
 export const TEMPLATE_ASK_LABEL_MAX_CHARS = positiveIntEnv(

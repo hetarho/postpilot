@@ -77,7 +77,7 @@ export function ProfileField({
         </Badge>
       </div>
       {/* `break-words`: a Korean description has no spaces to break at, so without it a long value
-          pushes the grid column wider than the screen (§3.2). */}
+          pushes the grid column wider than the screen (THEME-21). */}
       <Typography variant="body" className="mt-1 break-words">
         {value.unknown || value.value.trim() === '' ? (
           <span className="text-content-tertiary">{t('profile.unknown', { ns: 'voices' })}</span>
@@ -125,7 +125,7 @@ function ProfileFieldEditor({
         onChange={(event) => setDraft(event.target.value)}
         aria-invalid={errorMessage ? true : undefined}
         aria-describedby={errorMessage ? errorId : undefined}
-        // Capped per §4.4's in-form rule: past the cap the field scrolls itself rather than pushing
+        // Capped per THEME-25's in-form rule: past the cap the field scrolls itself rather than pushing
         // 저장 off the screen the caret is on.
         className="max-h-field mt-1"
       />

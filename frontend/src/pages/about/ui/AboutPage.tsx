@@ -9,22 +9,22 @@ import { PUBLIC_LADDER } from '../model/ladder'
 import { useAboutMetadata } from '../model/useAboutMetadata'
 import { AboutHeader } from './AboutHeader'
 
-/** The public explanation of Postpilot (plan 15). Composition and copy keys only.
+/** The public explanation of Postpilot (MKT-11). Composition and copy keys only.
  *
  *  It reads nothing and writes nothing: no session probe, no query, no mutation, no provider call
  *  ([I5]) — which is also why it is a direct child of the root route rather than of the
  *  authenticated layout. The plans section is the same promotional ladder `/plans` shows, fed
- *  from a static code-owned table rather than a `GetMyPlan` read (MARKETING-5): a visitor with
+ *  from a static code-owned table rather than a `GetMyPlan` read (MKT-5): a visitor with
  *  no account has no plan to read, and the ladder is a product fact, not this visitor's state.
  *
  *  Sections are separated by spacing and one surface step, never by bordered card stacks
- *  (design-language §1.3/§1.4) — the plan cards being the one promotional exception (THEME-37). */
+ *  (THEME-12, THEME-13) — the plan cards being the one promotional exception (THEME-37). */
 export function AboutPage() {
   const { t } = useTranslation('marketing')
   useAboutMetadata()
   // Handed straight back to /login so a detour through this page does not cost the visitor the
   // destination their session expired on. Filtered here as well as there: an off-site value must
-  // never survive a round trip through a public page (MARKETING-2).
+  // never survive a round trip through a public page (MKT-2).
   const { redirect } = useSearch({ from: '/about' })
   const carried = isInAppPath(redirect) ? redirect : undefined
 
@@ -43,7 +43,7 @@ export function AboutPage() {
             {t('hero.access')}
           </Typography>
           {/* The quiet way in for someone who already has an account, where the account path is
-              being explained rather than as a second control in the header (MARKETING-6). A bare
+              being explained rather than as a second control in the header (MKT-6). A bare
               text link keeps its 44px box at every pointer — nothing visible is oversized. */}
           <Typography
             variant="body"
@@ -137,9 +137,9 @@ export function AboutPage() {
           <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
             {t('plans.body')}
           </Typography>
-          {/* The same promotional cards `/plans` shows, on their stage (THEME-37, MARKETING-5):
+          {/* The same promotional cards `/plans` shows, on their stage (THEME-37, MKT-5):
               static figures, the code-owned recommended mark, no action on any card — plans are
-              presented here, never sold (MARKETING-6). The section title is this page's `h2`, so
+              presented here, never sold (MKT-6). The section title is this page's `h2`, so
               the tier names take `h3`. */}
           <PromoStage className="mt-5 px-2 py-3 sm:px-6 sm:py-6">
             <PlanLadder offers={PUBLIC_LADDER} headingLevel="h3" />
@@ -170,7 +170,7 @@ export function AboutPage() {
           </ul>
         </Section>
       </main>
-      {/* Identity only. No second CTA, no contact collection, no legal claim (plan 15). */}
+      {/* Identity only. No second CTA, no contact collection, no legal claim (MKT-4, MKT-6). */}
       {/* `pb-8 mb-safe-b`, not `pb-8 pb-safe-b`: two padding utilities on the same side collide and
           the later one in the emitted CSS wins, which would resolve the footer's bottom padding to
           the bare inset — 0 on every desktop browser (app/styles/index.css). Margin adds instead. */}

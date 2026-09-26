@@ -107,7 +107,7 @@ export interface StructuredVoiceProfile {
   feedback: VoiceFeedback[]
 }
 
-/** One of an account's writing voices (spec/legacy/policy/voice.md). A voice owns exactly one profile and
+/** One of an account's writing voices (VOICE-1). A voice owns exactly one profile and
  *  every row that can change it. Deleting one leaves a tombstone rather than a hole: the posts
  *  written in it still name it, so `deleted` travels with the voice everywhere it is shown. */
 export interface Voice {
@@ -146,7 +146,7 @@ export interface VoiceVersion {
   restoredFromVersion: bigint
   createdAt: string
   /** Whether this version carries a generation snapshot that can be previewed. Presence only —
-   *  the snapshot is fetched per version, when the row is opened (change 16). */
+   *  the snapshot is fetched per version, when the row is opened (VOICE-30). */
   hasSample: boolean
 }
 
@@ -216,7 +216,7 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
 }
 
 // An empty profile is now exactly "nothing to learn from and nothing published": the free-text
-// styleguide that used to count as content is gone (change 16).
+// styleguide that used to count as content is gone (VOICE-6).
 export function isEmptyProfile(
   profile: Pick<VoiceProfile, 'structured' | 'samples' | 'finalizedSourceCount'>,
 ): boolean {

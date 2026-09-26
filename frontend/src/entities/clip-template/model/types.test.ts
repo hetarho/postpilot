@@ -5,7 +5,7 @@ const valid = (): ClipRecipe => ({
   ...emptyClipRecipe(),
   name: '영상',
   // A template names its category preset, which fixes chip priority, the
-  // default CTA and the default accent (CDS-50).
+  // default CTA and the default accent.
   preset: 'restaurant',
   informationFields: [{ label: '장소', prompt: '어디인가요?' }],
 })

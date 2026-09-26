@@ -105,7 +105,7 @@ it('requires and sends the explicit active observe model for a post with photos'
   )
 })
 
-// A8 (model-lab half): the write comparison's second entry point (change 06) goes through the
+// The model-lab half: the write comparison's second entry point (MODEL-31) goes through the
 // same re-observation picker with the same reuse contract as the editor's.
 it('routes a model-lab comparison through the re-observation picker', async () => {
   const user = userEvent.setup()
@@ -269,7 +269,7 @@ const twoVoices = [
   { id: 'voice-review', name: '리뷰' },
 ]
 
-// Plan 10 A13: an analyze comparison names one voice — initialized to the default.
+// MODEL-31: an analyze comparison names one voice — initialized to the default.
 it('starts an analyze comparison for the default voice unless another is chosen', async () => {
   const user = userEvent.setup()
   const analyzeStarts: FakeAnalyzeExperimentStart[] = []

@@ -2,8 +2,8 @@
 //
 // It models the server rules the frontend actually depends on: an empty slug mints one
 // (`YYYYMMDD-title`, serial suffix on collision), someone else's slug is 403 and a missing
-// one is 404 (spec/legacy/policy/posts.md); an upload is a CreateUpload → ConfirmUpload pair
-// and a confirmed filename is taken (spec/legacy/policy/uploads.md). Everything else is kept as
+// one is 404 (POST-2, POST-3); an upload is a CreateUpload → ConfirmUpload pair
+// and a confirmed filename is taken (POST-34, POST-36). Everything else is kept as
 // thin as possible.
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
@@ -83,14 +83,14 @@ export const DEFAULT_POST_VOICE: FakePostVoice = {
 export interface FakePostTemplate {
   id: string
   name: string
-  /** What this template seeds onto a post it is assigned to (TEMPLATE-48). Absent is 의견 없음:
+  /** What this template seeds onto a post it is assigned to (TMPL-48). Absent is 의견 없음:
    *  the assignment then leaves the post's own option alone. */
   targetLength?: number
   tagCount?: number
 }
 
 /** One SavePostDraft as the server saw its assignments: present on a create or a change,
- *  absent on an ordinary edit (spec/legacy/policy/posts.md, spec/legacy/policy/templates.md). An empty
+ *  absent on an ordinary edit (POST-24, POST-26). An empty
  *  `templateId` is a real value — it clears the assignment. */
 export interface FakeDraftSave {
   slug: string
@@ -605,7 +605,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_TARGET_LANGUAGE_REQUIRED', Code.InvalidArgument)
     if (req.targetLanguage !== undefined && !requestedTarget)
       throw connectAppError('POST_TARGET_LANGUAGE_UNSUPPORTED', Code.InvalidArgument)
-    // The server's assignment rules (spec/legacy/policy/posts.md): a create names its voice, an edit
+    // The server's assignment rules (POST-23, POST-24): a create names its voice, an edit
     // that omits it preserves it, and a different present value reassigns — refused while a job
     // or an undecided A/B result could still write a baseline for the old voice.
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
@@ -620,7 +620,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     }
     // What the assignment seeds, resolved before anything is written: only an assignment that
     // CHANGES the template seeds, and only for the numbers that template has an opinion about
-    // (TEMPLATE-48).
+    // (TMPL-48).
     let seededLength = existing?.targetLength
     let seededTags = existing?.tagCount ?? 4
     if (req.templateId !== undefined) {
@@ -796,7 +796,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     row.finalizedRevision = row.contentRevision
     row.finalizedAt = DEFAULT_UPDATED_AT
     // Like the server: the confirmed content's title becomes the post's title, and an untitled
-    // generation leaves the working title in place (spec/legacy/policy/posts.md).
+    // generation leaves the working title in place (POST-17).
     row.title = row.content.title.trim() || row.title
     return create(FinalizePostResponseSchema, { post: toProto(row) })
   })

@@ -26,7 +26,7 @@ export interface Guideline {
   updatedAt: string
 }
 
-/** A recorded revision instruction awaiting review (change 26). It is a receipt for something the
+/** A recorded revision instruction awaiting review (GUIDE-7). It is a receipt for something the
  *  user typed — nothing rewrites, summarizes, generalizes or ranks it, and it reaches no prompt
  *  until it is approved as a guideline.
  *

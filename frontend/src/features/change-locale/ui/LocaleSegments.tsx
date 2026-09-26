@@ -33,7 +33,7 @@ export function LocaleSegments({ size }: { size?: 'default' | 'compact' }) {
         ]}
         onChange={(locale) => void onChange(locale)}
       />
-      {/* Mounted before it speaks (§4.3): a live region inserted with its text announces nothing. */}
+      {/* Mounted before it speaks (THEME-24): a live region inserted with its text announces nothing. */}
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {announcement}
       </span>

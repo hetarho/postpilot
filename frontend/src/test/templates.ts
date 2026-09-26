@@ -19,7 +19,7 @@ export interface FakeTemplateRow {
   body?: string
   /** The title form (TMPL-50). Absent is none, `''`. */
   titleArea?: string
-  /** The two generation numbers a template may author. Absent is 의견 없음 (TEMPLATE-47). */
+  /** The two generation numbers a template may author. Absent is 의견 없음 (TMPL-47). */
   targetLength?: number
   tagCount?: number
   /** Posts currently assigned to it, as the server's projection reports. */
@@ -33,7 +33,7 @@ export interface FakeTemplatesOptions {
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** Records every UpdateTemplate exactly as it arrived, so a test can prove that an edit of
-   *  one field carried ONLY that field (spec/legacy/policy/templates.md). */
+   *  one field carried ONLY that field (TMPL-8). */
   updates?: Array<{
     id: string
     name: string | undefined
@@ -165,7 +165,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
     // Present and empty clears it; absent leaves it alone (TMPL-8).
     if (req.titleArea !== undefined) row.titleArea = req.titleArea.trim()
     // The two numbers are written TOGETHER on every save, like the server: absence is 의견 없음
-    // and clears the stored one (TEMPLATE-8).
+    // and clears the stored one (TMPL-8).
     row.targetLength = req.targetLength
     row.tagCount = req.tagCount
     return create(UpdateTemplateResponseSchema, { template: toProto(row) })

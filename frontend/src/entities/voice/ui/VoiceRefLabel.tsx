@@ -4,8 +4,8 @@ import { Badge } from '@/shared/ui'
 import { voiceRefLabel, type VoiceRef } from '../model/types'
 
 /** The voice a post is written in, as text. A tombstone says so in words — `삭제된 말투 · {name}` —
- *  rather than in colour, so the state survives a monochrome screen and a screen reader (§2.6).
- *  `min-w-0 truncate` because a voice name is user text in a flex row (§8.5). */
+ *  rather than in colour, so the state survives a monochrome screen and a screen reader (THEME-18).
+ *  `min-w-0 truncate` because a voice name is user text in a flex row (THEME-32). */
 export function VoiceRefLabel({
   voice,
   className,

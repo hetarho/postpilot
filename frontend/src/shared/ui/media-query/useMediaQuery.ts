@@ -20,7 +20,7 @@ export const FINE_HOVER_MEDIA_QUERY = '(hover: hover) and (pointer: fine)'
 
 /** Subscribes to a media query, re-rendering when it starts or stops matching. Reports `false`
  *  wherever `matchMedia` is absent, so a component's phone shape is the fallback — the base
- *  breakpoint IS the design (design-language §1.5). */
+ *  breakpoint IS the design (THEME-14). */
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {

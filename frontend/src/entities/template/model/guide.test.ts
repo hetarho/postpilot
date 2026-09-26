@@ -12,7 +12,7 @@ import { GUIDE_EXAMPLE_BODY, formatGuide } from './guide'
 afterEach(() => initializeI18n('ko'))
 
 /** The six constructs a person authors today, as the guide has to teach them. Derived from the
- *  grammar rather than from the guide's prose (TEMPLATE-41): when TEMPLATE-18 changes, this list
+ *  grammar rather than from the guide's prose (TMPL-41): when TMPL-18 changes, this list
  *  and the shared fixture both fail until the guide follows. */
 const CONSTRUCTS = [
   '<write>',
@@ -28,11 +28,11 @@ const CONSTRUCTS = [
 ]
 
 /** Retired in r2 and never taught again: a guide that mentioned one would have an outside AI
- *  write a body this app parses but the builder immediately rewrites (TEMPLATE-37).
+ *  write a body this app parses but the builder immediately rewrites (TMPL-37).
  *
- *  The retired attribute is the SLOT's `label`, which is what TEMPLATE-18 retired along with the
+ *  The retired attribute is the SLOT's `label`, which is what TMPL-18 retired along with the
  *  place and link kinds — not the word, which `ask` now carries as a live attribute of a live
- *  construct (TEMPLATE-43). So the check is scoped to where a retired label could appear. */
+ *  construct (TMPL-43). So the check is scoped to where a retired label could appear. */
 const RETIRED = ['place', 'link', '<slot kind="place', '<slot kind="link', 'label="이름']
 
 describe.each(['ko', 'en'] as const)('the format guide in %s', (language) => {

@@ -17,8 +17,8 @@ const GLYPH_STROKE = {
  *  plane standing in for the dot of the i.
  *
  *  Inline SVG rather than an `<img src="/logo.svg">` on purpose: only inline markup can take
- *  `currentColor` and the `brand-*` utilities, so the logo re-skins with the theme (design-language
- *  §2.4) instead of freezing one palette into a file that will be wrong the day the day/night
+ *  `currentColor` and the `brand-*` utilities, so the logo re-skins with the theme
+ *  (THEME-15) instead of freezing one palette into a file that will be wrong the day the day/night
  *  switcher lands. It also costs no request and cannot flash in late above the fold.
  *
  *  The viewBox is trimmed to the ink (plus ~14 units so the round terminals and the descender are

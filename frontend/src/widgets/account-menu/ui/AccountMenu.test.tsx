@@ -58,7 +58,7 @@ describe('AccountMenu', () => {
     expect(logout.querySelector('svg.lucide-log-out')).not.toBeNull()
   })
 
-  // Change 19 A10: the shell shows the tier, and every number behind it comes from
+  // QUOTA-8, QUOTA-27: the shell shows the tier, and every number behind it comes from
   // GetMyPlan — nothing about a grant is known to the client until the server says it.
   it('renders the lots behind the balance the shell already read', async () => {
     const user = userEvent.setup()

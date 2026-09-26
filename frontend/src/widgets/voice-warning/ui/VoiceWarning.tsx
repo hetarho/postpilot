@@ -19,13 +19,13 @@ export function VoiceWarning({
     <aside>
       <Notice tone="warning">
         {/* `w-full` drops the link onto its own line instead of leaving it inline at the end of
-            the third wrapped row, where it was an ~84 × 20 target (§4.1). */}
+            the third wrapped row, where it was an ~84 × 20 target (THEME-23). */}
         <span className="w-full min-w-0">{t('warning.empty')}</span>
         {/* The one thing to press in this box used to be its greyest, smallest text: `link-fg`
             resolves to `content-secondary` against the notice's gold. As a ghost button it takes
             the 44px floor with its own horizontal padding, and the notice's own foreground keeps
-            it inside the §2.6 contract. The underline is its resting affordance — ghost has no
-            fill until it is pressed, and there is no hover on a phone (§6). */}
+            it inside the THEME-18 contract. The underline is its resting affordance — ghost has no
+            fill until it is pressed, and there is no hover on a phone (THEME-28). */}
         <Link
           to="/voices/$voiceId"
           params={{ voiceId }}

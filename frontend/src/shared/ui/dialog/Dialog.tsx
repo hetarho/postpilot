@@ -16,7 +16,7 @@ interface DialogProps {
 
 /** `Sheet` with the confirm shape fixed on top: one title, one explanation, cancel and confirm.
  *  A destructive or irreversible action is confirmed through this and never through
- *  `window.confirm`, which mobile browsers let the user suppress permanently (design-language §7).
+ *  `window.confirm`, which mobile browsers let the user suppress permanently (THEME-29).
  *  Everything about the overlay itself — the phone bottom sheet, the focus trap, the scroll lock —
  *  belongs to `Sheet`; reach for that one directly when the content is not a confirmation. */
 export function Dialog({

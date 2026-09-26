@@ -185,7 +185,7 @@ export interface ClipEditPlan {
   elements?: ClipEditableText[]
   durationMs: number
   cuts: ClipEditCut[]
-  /** The opening card's one sentence (CDS-28). Empty renders no hook card. */
+  /** The opening card's one sentence. Empty renders no hook card. */
   hook: string
 }
 export interface RetainedClipSource {
@@ -459,13 +459,13 @@ function copyWindow(cut: ClipEditCut, index: number) {
   const end = whole ? cutOutputMs(cut) - lead : copy.endMs
   return { start, end, length: end - start }
 }
-/** The style's own line and character limits (CDS-20, CDS-23..26). */
+/** The style's own line and character limits (CDS-20, CDS-25). */
 function withinCaptionLimits(text: string): boolean {
   const rule = clipCaption()
   const lines = text.split('\n')
   return lines.length <= rule.lines && lines.every((line) => copyChars(line) <= rule.chars)
 }
-/** The hook card's sentence: two lines of nine at most (CDS-28), grounded in the
+/** The hook card's sentence: two lines of nine at most (CDS-20), grounded in the
  *  owner's own answers (CDS-42). A hook the field refuses would be dropped by
  *  the compiler rather than shown, so it is refused here where it is typed. */
 export function withinHookLimits(hook: string): boolean {
@@ -496,7 +496,7 @@ export function groundedInAnswers(
 }
 
 /** Every copy that actually shows, in clip order: a cut's second copy follows
- *  its first, and CDS-38's step and CDS-40's run are read over that sequence. */
+ *  its first, and CDS-38's step and the four-in-a-row style run are read over that sequence. */
 function placedCopies(cuts: readonly ClipEditCut[]) {
   return cuts.flatMap((cut, i) =>
     cut.copies.flatMap((copy, j) => (copy.text.trim() === '' ? [] : [{ cut: i, index: j, copy }])),

@@ -33,7 +33,7 @@ interface PostTemplateSelectProps {
   className?: string
 }
 
-/** The optional 템플릿 of a post: an app-drawn listbox wearing the field well (design-language §7),
+/** The optional 템플릿 of a post: an app-drawn listbox wearing the field well (THEME-29),
  *  defaulting to 없음, beside the required voice select on the editor dock's own row.
  *
  *  Like its neighbour it carries no VISIBLE label — three columns on a 360px screen have no width

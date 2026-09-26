@@ -23,7 +23,7 @@ import {
 
 /** The per-stage model dropdown (PRD §3.3, §6.4, F-4).
  *
- *  Lists the models registered to the stage's purpose (change 20; observe's vision
+ *  Lists the models registered to the stage's purpose (MODEL-14; observe's vision
  *  requirement is enforced at registration), with a disabled model greyed and its reason
  *  shown, a vanished saved choice greyed
  *  and its reason given under the field, and no pre-selection: until the user picks, the stage is
@@ -88,7 +88,7 @@ export function StageModelSelect({
 
   const options: ListboxOption<string>[] = [
     { value: '', label: t('select') },
-    // An option's text is the CHOICE, not the explanation (§7). This entry is the field's current
+    // An option's text is the CHOICE, not the explanation (THEME-29). This entry is the field's current
     // value, so its whole string has to fit the CLOSED trigger — ~284px at 360px, which a
     // `provider/model` path alone already fills, and the trigger truncates. The reason therefore
     // goes in the message slot under the field, where it cannot be cut off.
@@ -146,7 +146,7 @@ export function StageModelSelect({
       )}
       {/* Visible, not sr-only: the control greys out for the 1–3s a SaveSelection takes on mobile
           data, and a touch user watching the field it just closed over is exactly who needs the
-          cause (§6). The region stays mounted so it announces when it fills, and `empty:hidden`
+          cause (THEME-28). The region stays mounted so it announces when it fills, and `empty:hidden`
           keeps it out of the layout while it is idle. */}
       <Typography
         variant="body"

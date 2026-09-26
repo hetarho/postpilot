@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge'
  *  It is a `role="progressbar"` and not the existing `Meter`: a meter reports a level within a
  *  range that resets and always renders its figures as the primary reading, while this moves once
  *  toward completion and then goes away. The figures are deliberately absent — the words beside
- *  the bar name the stage, and the numbers are the bar (design-language §4.3).
+ *  the bar name the stage, and the numbers are the bar (THEME-24).
  *
  *  A stage that reports no ratio takes the SAME track in an indeterminate state rather than a
  *  different control, so the place on the screen that means "something is running" never moves.

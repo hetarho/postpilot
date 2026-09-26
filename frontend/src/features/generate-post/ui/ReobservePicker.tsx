@@ -138,7 +138,7 @@ export function ReobservePicker({
       </div>
 
       {/* Rows, not cards: they are peers in a list and carry no surface of their own, so the
-          hairline is the §1.3 divider exception rather than a plane change per photo. */}
+          hairline is the THEME-12 divider exception rather than a plane change per photo. */}
       <ul className="divide-divider mt-4 divide-y">
         {rows.map((row) => (
           <PhotoRow
@@ -234,7 +234,7 @@ function PhotoRow({
       <Checkbox
         className="mt-1"
         checked={checked}
-        // A forced photo states its reason above and cannot be cleared (§7): the run must not
+        // A forced photo states its reason above and cannot be cleared (THEME-29): the run must not
         // write from a photo nothing has ever looked at, and the server enforces the same rule.
         disabled={disabled || row.forced}
         aria-label={t('generation.reobserve.observeAgain', { filename: row.filename })}

@@ -52,7 +52,7 @@ function expectNoGrammar() {
 
 /** The grammar is the contract between the builder and the WRITE PROMPT, and r3 gives it exactly
  *  ONE place to be visible: 원문. Everywhere else — the list, the builder with every row open, the
- *  unreadable state before the user asks to fix it — it stays internal (TEMPLATE-26, TEMPLATE-30).
+ *  unreadable state before the user asks to fix it — it stays internal (TMPL-26, TMPL-30).
  *
  *  The assertions are on what is RENDERED rather than on the absence of a component, so a source
  *  view re-appearing anywhere else fails here. */

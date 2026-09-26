@@ -14,7 +14,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-/** The account's 템플릿 (plan 11): a list, and the one action that adds to it. Composition only —
+/** The account's 템플릿 (TMPL-24): a list, and the one action that adds to it. Composition only —
  *  every action is its own feature, and a row is the way into one template.
  *
  *  Editing lives on the template's own screen, so this list carries nothing but the list (change
@@ -61,7 +61,7 @@ export function TemplatesPage() {
               <Typography variant="title" id="templates-heading">
                 {t('page.saved', { ns: 'templates' })}
               </Typography>
-              {/* Rows are full-bleed against the page gutter, so the list cancels it (§4.2). */}
+              {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
               <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
                 {templates.map((template) => (
                   <TemplateRow key={template.id} ownerId={ownerId} template={template} />
@@ -71,7 +71,7 @@ export function TemplatesPage() {
           )}
 
           {/* One instance, docked at every width: the thumb is why it is full-bleed on a phone,
-              and a list that scrolls is why it stays docked above one (§4.3, THEME-24). */}
+              and a list that scrolls is why it stays docked above one (THEME-24). */}
           <ActionBar
             dock="list"
             ariaLabel={t('page.newDockAria', { ns: 'templates' })}
@@ -89,7 +89,7 @@ export function TemplatesPage() {
 
 /** Plain language and no example. The grammar is what the write prompt reads, not something the
  *  user authors in — so the empty state says what a template is FOR and lets the composition
- *  editor teach its own vocabulary (change 30). It creates nothing: there are no shipped presets. */
+ *  editor teach its own vocabulary (TMPL-24). It creates nothing: there are no shipped presets. */
 function EmptyState() {
   const { t } = useTranslation('templates')
   return (
@@ -106,12 +106,12 @@ function EmptyState() {
 
 /** One template, one target. The link stretches over the whole row through its `::after`, so the
  *  padding and the empty space navigate too, while the delete paints above that layer and acts
- *  without navigating — a row is one target, not a row with a button inside it (§4.1). */
+ *  without navigating — a row is one target, not a row with a button inside it (THEME-23). */
 function TemplateRow({ ownerId, template }: { ownerId: string; template: Template }) {
   const { t } = useTranslation('templates')
   return (
     // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
-    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (§4.2).
+    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (THEME-23).
     <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
       <Link
         to="/templates/$templateId"

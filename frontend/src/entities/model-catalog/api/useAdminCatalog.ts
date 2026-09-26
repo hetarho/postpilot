@@ -25,7 +25,7 @@ const EMPTY: CatalogBrowse = {
  *
  *  `purpose` is the tab being read: the server reports each entry's effort for THAT purpose
  *  and attaches that stage's spend signal, so the control and the evidence beside it belong
- *  to the tab the operator is looking at (change 24). It is part of the query key, so
+ *  to the tab the operator is looking at (MODEL-28). It is part of the query key, so
  *  switching tabs is a different read rather than a re-render of the previous tab's answer. */
 export function useAdminCatalog(purpose: ModelPurpose): {
   catalog: CatalogBrowse

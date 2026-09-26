@@ -35,7 +35,7 @@ function modelNames() {
 }
 
 describe('the model catalog tab', () => {
-  // A2 (plan 18) + change 20: featured vendors first in the configured order, then the rest
+  // MODEL-28: featured vendors first in the configured order, then the rest
   // alphabetically, newest model first inside a vendor — on a tab whose gate admits them all.
   it('orders featured providers first and the newest model first within one', async () => {
     const user = userEvent.setup()
@@ -52,7 +52,7 @@ describe('the model catalog tab', () => {
     ])
   })
 
-  // Change 20 A1/A2: the five purpose tabs are one screen; the photo tab is capability-forced
+  // MODEL-13, MODEL-15: the five purpose tabs are one screen; the photo tab is capability-forced
   // to vision models, and a registration made on one tab does not check the box on another.
   it('force-filters each purpose tab and keeps registrations per purpose', async () => {
     const user = userEvent.setup()
@@ -107,7 +107,7 @@ describe('the model catalog tab', () => {
     expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
   })
 
-  // Change 20 A2: a tab whose gate admits nothing explains itself instead of erroring.
+  // MODEL-15: a tab whose gate admits nothing explains itself instead of erroring.
   it('explains an empty purpose tab instead of erroring', async () => {
     const user = userEvent.setup()
     renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
@@ -191,7 +191,7 @@ describe('the model catalog tab', () => {
     expect(calls.filter((call) => call.startsWith('ListCatalog')).length).toBe(before)
   })
 
-  // A11 (plan 18) + A1/A3 (change 24): the override round-trips through the same edit, "stage
+  // MODEL-7, MODEL-28: the override round-trips through the same edit, "stage
   // default" is a real choice rather than an absent one, and the edit names the PURPOSE it
   // applies to.
   it('sets and clears the reasoning override on a registered model', async () => {
@@ -305,7 +305,7 @@ describe('the model catalog tab', () => {
       screen.queryByText(/설정한 강도를 이 모델이 따르지 않을 수 있어요/),
     ).not.toBeInTheDocument()
 
-    // The writing stage is the 09-03 shape, and the tone is reinforced by words (§2.6).
+    // The writing stage is the 09-03 shape, and the tone is reinforced by words (THEME-18).
     await user.click(screen.getByRole('tab', { name: '글 작성' }))
     expect(
       await screen.findByText('완성 토큰의 99%가 추론에 쓰였어요 (3회 기준)'),
@@ -448,7 +448,7 @@ describe('the model catalog tab', () => {
     )
   })
 
-  // A7 (plan 18): an unreadable provider catalog degrades to curated rows and says so, rather
+  // MODEL-20: an unreadable provider catalog degrades to curated rows and says so, rather
   // than looking like an empty catalog.
   it('degrades to curated rows when the provider catalog cannot be read', async () => {
     renderAppAt('/admin/models', {
@@ -485,7 +485,7 @@ describe('the model catalog tab', () => {
     await waitFor(() => expect(calls).toContain('ListCatalog:refresh:photo-analysis'))
   })
 
-  // --- the effort control is bounded by the source (change 27) ---
+  // --- the effort control is bounded by the source (MODEL-21) ---
 
   // A3, against a real model: deepseek/deepseek-v4-pro-0813 accepts max·high·low and not
   // medium, and is disable-able yet lists no `none` — so the app's own "turn it off" value
@@ -647,7 +647,7 @@ describe('the model catalog tab', () => {
     expect(screen.getAllByRole('option')).toHaveLength(9)
   })
 
-  // A1 (plan 17): the tab is master-only, redirected rather than refused — the account has a
+  // QUOTA-25: the tab is master-only, redirected rather than refused — the account has a
   // session.
   it('sends a non-operator back to the app', async () => {
     renderAppAt('/admin/models', {

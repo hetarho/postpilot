@@ -11,7 +11,7 @@ import { twMerge } from 'tailwind-merge'
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   appearance?: 'well' | 'bare'
   /** Grow with the value instead of scrolling inside a fixed box. `rows` becomes the minimum.
-   *  A phone screen has ONE scroller (design-language §4.4): a fixed-`rows` textarea holding more
+   *  A phone screen has ONE scroller (THEME-25): a fixed-`rows` textarea holding more
    *  text than it shows swallows every vertical swipe that lands on it, and on a `w-full` field
    *  the only place left to scroll the page is the 16px gutter. */
   autoGrow?: boolean
@@ -41,7 +41,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     node.style.height = 'auto'
     node.style.height = `${node.scrollHeight}px`
     // A caller may cap the growth with `max-h-*` — a long generated styleguide would otherwise put
-    // the button that saves it thousands of pixels past the caret (§4.3). Once the cap clamps the
+    // the button that saves it thousands of pixels past the caret (THEME-24). Once the cap clamps the
     // box, the field has to scroll again, so the overflow is decided from the measurement rather
     // than hard-coded: uncapped it stays hidden, capped it becomes the field's own bounded scroller.
     node.style.overflowY = node.scrollHeight > node.clientHeight ? 'auto' : 'hidden'

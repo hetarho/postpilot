@@ -21,7 +21,7 @@ export function DeletePostButton({
   post: Pick<PostDraft, 'slug' | 'title'>
   /** Run after the server confirms the delete and BEFORE the navigation unmounts this. The
    *  autosave queues are what has to be stopped here, and they belong to sibling feature
-   *  slices this one may not import (ARCHITECTURE §3.1), so the page supplies the call. */
+   *  slices this one may not import (ARCH-13), so the page supplies the call. */
   onDeleted?: () => void
 }) {
   const { t } = useTranslation(['posts', 'common'])
@@ -60,7 +60,7 @@ export function DeletePostButton({
         <span className="hidden sm:inline">{t('editor.delete.trigger', { ns: 'posts' })}</span>
       </Button>
       {/* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
-          instead of squeezing the row it was pressed from (design-language §4.3 — feedback
+          instead of squeezing the row it was pressed from (THEME-24 — feedback
           renders where the user is looking). */}
       {remove.isError && (
         <FieldMessage className="w-full">

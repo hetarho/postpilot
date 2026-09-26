@@ -3,7 +3,7 @@ import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
 
 /** Below the memo, not above it: three wrapped lines of undismissable warning at the top of the
  *  editor pushed the writing field a fifth of a 640px screen down, for every user who has not
- *  trained a profile yet — and chrome is small, quiet and at the edges (§0). It still sits above
+ *  trained a profile yet — and chrome is small, quiet and at the edges (THEME-8). It still sits above
  *  글 생성, which is what it is a caveat about.
  *
  *  A deleted voice is the other caveat, and the louder one: nothing AI will run until it is

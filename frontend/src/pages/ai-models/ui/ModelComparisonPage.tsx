@@ -49,7 +49,7 @@ export function ModelComparisonPage() {
   const pair = setup.pairs.find((item) => item.stage === stage)
   // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
   // explicitly — initialized to the default, never guessed by the server
-  // (spec/legacy/policy/model-experiments.md). A choice that has since been deleted falls back to the
+  // (MODEL-31). A choice that has since been deleted falls back to the
   // default rather than to a request the server would refuse.
   const voiceId =
     (activeVoices.some((voice) => voice.id === chosenVoiceId) ? chosenVoiceId : '') ||
@@ -57,7 +57,7 @@ export function ModelComparisonPage() {
     ''
   // What the CTA is still waiting for, in the user's words. `pair` comes from the server, so
   // choosing A and B in the form above is not enough — the combination has to have been SAVED,
-  // and a greyed button two screens down cannot say that on its own (§4.3).
+  // and a greyed button two screens down cannot say that on its own (THEME-24).
   const unmet = [
     !pair?.candidateA || !pair.candidateB ? t('page.requirement.pair', { ns: 'models' }) : '',
     stage === 'observe' && !postSlug ? t('page.requirement.photoPost', { ns: 'models' }) : '',
@@ -282,7 +282,7 @@ function SelectedPostWriteComparison({
                 : ''
   const canStart = Boolean(post) && !reason && !start.isPending
 
-  // The model lab is the write comparison's second entry point (change 06), so it goes through
+  // The model lab is the write comparison's second entry point (MODEL-31), so it goes through
   // the same picker with the same reuse contract. `usePost` already holds the observations.
   const [picking, setPicking] = useState(false)
 

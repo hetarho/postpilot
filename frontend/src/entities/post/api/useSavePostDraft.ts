@@ -25,7 +25,7 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  field remains owned by GetPost or its focused mutation patch.
  *
  *  A reassignment is the one save that also moves the machine baseline: the server clears
- *  it in the same write (spec/legacy/policy/posts.md), and it refuses to reassign while a job could
+ *  it in the same write (POST-24), and it refuses to reassign while a job could
  *  advance that baseline, so mirroring the cleared fields cannot roll a job's result back. */
 export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefined): Post {
   if (!cached?.post) return saved
@@ -42,7 +42,7 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
     post.voice = clone(VoiceRefSchema, saved.voice)
   }
   // An ASSIGNMENT seeds the post's two generation options from the template it assigns
-  // (TEMPLATE-48), so the values that come back with it are the ones this mutation settled.
+  // (TMPL-48), so the values that come back with it are the ones this mutation settled.
   // Only then: an ordinary autosave of title and memo carries whatever the row held when the
   // request was built, and installing that would roll back an options save that landed while
   // it was in flight. Compared BEFORE `post.template` is overwritten below, or it always
@@ -65,7 +65,7 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
 }
 
 /** Create-or-update for a draft: an empty slug creates the post and returns the minted
- *  one (spec/legacy/policy/posts.md). This is the autosave endpoint, so it is called about once
+ *  one (POST-4). This is the autosave endpoint, so it is called about once
  *  a second while someone types. */
 /** One draft save, in the editor's terms. An assignment member left undefined leaves the post's
  *  value alone; '' clears a 템플릿. There is no 분야 member: this build saves the 분야 with the

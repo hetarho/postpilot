@@ -49,7 +49,7 @@ export function FinalizeActions({
   const finalize = useFinalizePost()
   const [preparing, setPreparing] = useState<FinalizeMode | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
-  // The status is the state (policy/posts.md): a content save after a finalize returns the post
+  // The status is the state (POST-13): a content save after a finalize returns the post
   // to `review`, so this comes back on its own when the user edits again. A published post is past
   // 확정 and takes no finalize (POST-86), so it gets the same road onward.
   const finalized = isFinalizedOrLater(post)
@@ -112,14 +112,14 @@ export function FinalizeActions({
       align="end"
       phone="sheet"
       // It FILLS the heading row's remaining width rather than shrinking to its two words: this is
-      // the step's way out, and the row exists to hold it beside the field's name (§4.2).
+      // the step's way out, and the row exists to hold it beside the field's name (THEME-23).
       className="flex-1"
       triggerClassName="w-full"
     >
       {(close) => (
         <div className="grid gap-4">
           {/* Every reason and every failure renders ABOVE the action it explains, so the software
-              keyboard hides at most a button and never why it is disabled (§8.3). */}
+              keyboard hides at most a button and never why it is disabled (THEME-31). */}
           {finalize.error && (
             <Notice tone="danger" role="alert">
               <AppFailureMessage failure={appFailureFromConnect(finalize.error)} />

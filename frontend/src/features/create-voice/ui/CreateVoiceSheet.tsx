@@ -203,7 +203,7 @@ function CreateVoicePanel({ ownerId, onClose }: { ownerId: string; onClose: () =
         {/* In flow after the last field, NOT in the sheet's pinned footer: the panel is anchored
             to the layout viewport, which the software keyboard does not resize, so a pinned
             footer sits behind the keyboard exactly while these fields are being typed into
-            (design-language §8.3). */}
+            (THEME-31). */}
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button variant="ghost" disabled={create.isPending} onClick={onClose}>
             {t('action.cancel', { ns: 'common' })}

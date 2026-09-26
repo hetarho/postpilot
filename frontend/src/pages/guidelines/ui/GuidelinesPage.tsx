@@ -30,7 +30,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-/** The account's 작문 지침 (plan 16). Composition only — every action is its own feature.
+/** The account's 작문 지침 (GUIDE-20). Composition only — every action is its own feature.
  *
  *  Nothing on this screen calls a model or enqueues a job: a guideline is authored text, and
  *  reading, editing or deleting one is a plain CRUD round trip ([I5]). The list is rendered in the
@@ -286,7 +286,7 @@ function CandidateRow({
 }
 
 /** The worked example is copy, not a row: nothing here creates a guideline the user did not
- *  author (plan 16 — no seeded library, no inference). */
+ *  author (GUIDE-18, GUIDE-19 — no seeded library, no inference). */
 function EmptyState() {
   const { t } = useTranslation('guidelines')
   return (

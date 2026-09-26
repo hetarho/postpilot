@@ -46,7 +46,7 @@ describe('the draft read-first', () => {
     machineBaselineRevision: 1n,
   }
 
-  // Change 05 A7 / A10.
+  // POST-55.
   it('renders the draft as prose with no form control until a block is opened', async () => {
     const user = userEvent.setup()
     renderEditor(reviewPost)
@@ -61,7 +61,7 @@ describe('the draft read-first', () => {
     )
   })
 
-  // Change 05 A8: cancel restores the value the block had when its editor opened.
+  // POST-55: cancel restores the value the block had when its editor opened.
   it('restores a cancelled block and keeps a saved one as prose', async () => {
     const user = userEvent.setup()
     renderEditor(reviewPost)
@@ -85,7 +85,7 @@ describe('the draft read-first', () => {
     expect(screen.getByText('확정한 문단')).toBeInTheDocument()
   })
 
-  // Change 05 A9: the editing UI keeps every capability it had.
+  // The editing UI keeps every capability it had.
   it('keeps add, delete and move available from a block editor', async () => {
     const user = userEvent.setup()
     const { calls } = renderEditor(reviewPost)

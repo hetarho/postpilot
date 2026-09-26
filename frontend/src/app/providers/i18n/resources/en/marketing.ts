@@ -1,4 +1,4 @@
-/** The public `/about` surface (plan 15). English half of the parity-checked catalog — same key
+/** The public `/about` surface (MKT-7). English half of the parity-checked catalog — same key
  *  topology, same interpolation, same meaning as `ko/marketing.ts`, which carries the claim rules. */
 export const marketing = {
   metadata: {

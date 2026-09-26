@@ -42,7 +42,7 @@ const CLIP_KINDS = new Set(['generate_clip', 'render_clip', 'revise_clip'])
 
 /** WHICH STAGE is running, and nothing else. The numbers are the progress bar's value
  *  (`progressRatio`), so spelling them out here would print the same fact twice in two
- *  grammars — and in a container sized for a warning (change 15).
+ *  grammars — and in a container sized for a warning (POST-46).
  *
  *  An unrecognized or not-yet-set stage is a running job like any other, so it takes the generic
  *  running label rather than announcing that nothing has happened yet. This is also why a voice

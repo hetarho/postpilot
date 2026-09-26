@@ -6,7 +6,7 @@ import { typographyStyles } from './typographyStyles'
 afterEach(cleanup)
 
 describe('Typography', () => {
-  it('renders each variant with its §3 recipe and semantic default element', () => {
+  it('renders each variant with its THEME-19 recipe and semantic default element', () => {
     render(
       <>
         <Typography variant="display">Page title</Typography>

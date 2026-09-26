@@ -11,7 +11,7 @@ import {
 } from '../config'
 import type { ParseOptions } from '../lib/grammar'
 
-/** A reusable 템플릿 brief (spec/legacy/policy/templates.md): what a kind of post is for and how that
+/** A reusable 템플릿 brief (TMPL-1): what a kind of post is for and how that
  *  kind must be written. Authored text only — nothing here is learned or inferred, and the
  *  voice profile is untouched by it. */
 export interface Template {
@@ -22,7 +22,7 @@ export interface Template {
   body: string
   /** The title form in the body's grammar (TMPL-50); `''` is none, which leaves the title to the model. */
   titleArea: string
-  /** What the posts this template shapes usually want (TEMPLATE-47). `undefined` is 의견 없음:
+  /** What the posts this template shapes usually want (TMPL-47). `undefined` is 의견 없음:
    *  assigning the template then leaves the post's own option alone. Neither reaches a prompt —
    *  they are seeds for the post's two options, and a run freezes what the POST holds. */
   targetLength?: number
@@ -47,7 +47,7 @@ export const TEMPLATE_LIMITS = {
   description: TEMPLATE_DESCRIPTION_MAX_CHARS,
   body: TEMPLATE_BODY_MAX_CHARS,
   titleArea: TEMPLATE_TITLE_AREA_MAX_CHARS,
-  /** A data field's title, and one post's answer to it (TEMPLATE-43). */
+  /** A data field's title, and one post's answer to it (TMPL-43). */
   askLabel: TEMPLATE_ASK_LABEL_MAX_CHARS,
   askValue: TEMPLATE_ASK_VALUE_MAX_CHARS,
 } as const

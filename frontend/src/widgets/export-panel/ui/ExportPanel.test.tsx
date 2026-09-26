@@ -84,11 +84,12 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(fetchSpy).not.toHaveBeenCalled()
 })
 
-// ── The tag copy field (change 22) ────────────────────────────────────────────────────────────
+// ── The tag copy field (EXPORT-20) ────────────────────────────────────────────────────────────
 //
-// Plan 08 omits tags from the Naver and Tistory bodies because those platforms have their own tag
-// box, and then showed them nowhere at all. The field is the surface, not a format change: all
-// four outputs stay byte-identical, which the converter assertions above and below still hold.
+// The Naver and Tistory bodies omit tags because those platforms have their own tag box, so
+// without this field the panel showed them nowhere at all. The field is the surface, not a format
+// change: all four outputs stay byte-identical, which the converter assertions above and below
+// still hold.
 
 it('offers the tags as a ready-to-paste string on every format tab', async () => {
   const user = userEvent.setup()
@@ -238,7 +239,7 @@ it('does not confirm a tag copy against the title field', async () => {
   expect(screen.queryByText('제목이 복사됐어요')).not.toBeInTheDocument()
 })
 
-// ── The rendered Naver preview (change 18) ────────────────────────────────────────────────────
+// ── The rendered Naver preview (EXPORT-9) ─────────────────────────────────────────────────────
 //
 // The Naver tab shows the POST, not the wire text: the `사진_<n>_…_사진` markers exist only in
 // what the copy button puts on the clipboard, and each photo renders inline at its marker
@@ -456,7 +457,7 @@ it('ignores a stale clipboard rejection after the format changes', async () => {
   expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
 })
 
-// ── The photo copy (change 17, presentation moved inline by change 18) ─────────────────────────
+// ── The photo copy (EXPORT-12) ─────────────────────────
 //
 // The clipboard PAYLOAD SHAPE is the part that must never regress: SmartEditor ONE accepts
 // exactly one `ClipboardItem` carrying `image/png` and nothing else. jsdom has neither

@@ -42,7 +42,7 @@ const GLYPH = { primary: 'size-5 shrink-0', group: 'size-4 shrink-0' } as const
 const FOLDED = 'group relative flex size-11 items-center justify-center rounded-md'
 
 /** The name a folded row cannot show, drawn by the app rather than left to the browser's own
- *  `title` (design-language §7: no OS-drawn surface). It appears beside the glyph on hover and on
+ *  `title` (THEME-29: no OS-drawn surface). It appears beside the glyph on hover and on
  *  keyboard focus, is `aria-hidden` because the link already carries the same string as its
  *  accessible name, and takes no pointer events so it can never sit between the pointer and the
  *  destination it names. */

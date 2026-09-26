@@ -67,7 +67,7 @@ export function Slider({
         aria-valuetext={valueText}
         onChange={(event) => onChange(Number(event.target.value))}
         // The thumb and track are drawn by the platform from these two roles, and the 44px
-        // floor is met by the control's own height rather than by the visible bar (§4.1).
+        // floor is met by the control's own height rather than by the visible bar (THEME-23).
         className={twMerge(
           'accent-slider-thumb bg-slider-track h-11 w-full cursor-pointer appearance-auto rounded-full',
           label && 'mt-2',

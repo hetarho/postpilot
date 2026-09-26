@@ -7,7 +7,7 @@ import { Typography } from '@/shared/ui'
  *
  * `icons` is the header pair on a surface with no account behind it — login, signup, `/about` —
  * where each preference is its own icon-triggered app-drawn menu and no open state is ever
- * OS-native (design-language §7).
+ * OS-native (THEME-29).
  *
  * `rows` is the same two preferences inside the account panel, where the authenticated shell now
  * keeps them (owner decision 2026-09-22): a signed-in person has one place for everything about

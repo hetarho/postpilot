@@ -35,11 +35,11 @@ interface RefineDockProps {
  *  out is made where there is room to explain the difference.
  *
  *  It is a WIDGET because it composes two sibling `features/*` slices — `edit-with-ai` and
- *  `finalize-post` — and a feature may not import a sibling (ARCHITECTURE §3). The composition is
+ *  `finalize-post` — and a feature may not import a sibling (ARCH-13). The composition is
  *  a SLOT: the finalize control is handed to the revise form as its heading action.
  *
  *  Each surface renders its own blockers, validation and failures directly above its own controls
- *  (§8.3): the keyboard covers roughly the bottom 40% of the screen, so it may hide a control but
+ *  (THEME-31): the keyboard covers roughly the bottom 40% of the screen, so it may hide a control but
  *  never the reason that control is disabled. */
 export const RefineDock = forwardRef<ReviseFormHandle, RefineDockProps>(function RefineDock(
   {

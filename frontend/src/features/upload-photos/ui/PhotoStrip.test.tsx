@@ -134,7 +134,7 @@ describe('the strip with photos', () => {
     viewUrl,
   })
 
-  // Job 05 A6 (plan 02 AC11, photos half): the strip is rebuilt from the view URLs.
+  // POST-38: the strip is rebuilt from the view URLs.
   it('restores its photos in the strip from their view URLs', () => {
     render(
       <PhotoStrip

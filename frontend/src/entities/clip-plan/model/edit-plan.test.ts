@@ -43,7 +43,7 @@ it('immutably edits every field, reorders/deletes and recalculates transition ov
       text: '정확한 <문구>',
       startMs: 200,
       endMs: 3000,
-      // 메모 sits LEFT at the top or the bottom (CDS-24); anywhere else is
+      // 메모 sits LEFT at the top or the bottom; anywhere else is
       // a placement the verifier refuses.
       anchor: 'bottom',
       align: 'left',
@@ -211,12 +211,12 @@ it('checks caption limits and exposure without retired frequency guards', () => 
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(true)
   stepped[1] = cut({ id: 'b' }, { anchor: 'lower_mid' })
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
-  // At most two chips, from the reserved labels (CDS-30).
+  // At most two chips, from the reserved labels.
   expect(check([cut({ id: 'a', chips: ['위치', '가격'] })]).cuts[0]!.chips).toBe(false)
   expect(check([cut({ id: 'a', chips: ['위치', '가격', '메뉴'] })]).cuts[0]!.chips).toBe(true)
   expect(check([cut({ id: 'a', chips: ['주차'] })]).cuts[0]!.chips).toBe(true)
 
-  // CDS-40's per-clip guards: 크게 강조 twice, and no style four in a row.
+  // The per-clip guards: 크게 강조 twice, and no style four in a row.
   const bolds = ['a', 'b', 'c'].map((id, i) =>
     cut({ id }, { style: 'bold', anchor: i === 0 ? 'upper_mid' : 'upper_mid', align: 'center' }),
   )
@@ -236,7 +236,7 @@ it('checks caption limits and exposure without retired frequency guards', () => 
   ).toBe(false)
 })
 
-/** The hook card's own sentence (CDS-28, CDS-42). The field refuses what the
+/** The hook card's own sentence (CDS-20, CDS-42). The field refuses what the
  *  compiler would drop, so the owner sees why rather than losing the card. */
 it("holds the hook to two lines of nine, grounded in the owner's answers", () => {
   const state = clipEditingFixture(),

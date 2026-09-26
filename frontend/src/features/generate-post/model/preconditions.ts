@@ -72,7 +72,7 @@ export interface GenerationGateInput {
 /** Mirrors the server gate so an impossible generation never looks clickable. A published post
  *  comes first: it takes no write at all (POST-86), so nothing else about the run matters. Then
  *  the voice: a deleted voice refuses every machine result before any model is even asked about
- *  (spec/legacy/policy/generation.md). */
+ *  (GEN-25). */
 function sharedPreconditions({
   images,
   videos,

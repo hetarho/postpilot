@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-/** The §3 type roles (design-language). `input` is deliberately absent: the 16px phone floor
+/** The THEME-19 type roles. `input` is deliberately absent: the 16px phone floor
  *  belongs to the field primitives, and exposing it here would invite callers to size fields. */
 export type TypographyVariant =
   | 'promoDisplay'
@@ -14,7 +14,7 @@ export type TypographyVariant =
   | 'meta'
   | 'eyebrow'
 
-/** The one place the §3 recipes exist. Slices never compose raw size/weight/tracking utilities —
+/** The one place the THEME-19 recipes exist. Slices never compose raw size/weight/tracking utilities —
  *  `pnpm lint:style` rejects them outside shared/ui — so hierarchy cannot drift per call site. */
 const VARIANT_STYLES: Record<TypographyVariant, string> = {
   /* The one figure a PROMOTIONAL surface leads with — a plan's price (THEME-37). Larger than the

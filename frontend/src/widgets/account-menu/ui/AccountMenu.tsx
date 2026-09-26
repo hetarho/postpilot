@@ -62,7 +62,7 @@ export function AccountMenu({
  *  it rests at the 36px menu-row floor under a mouse and 44px under a thumb (THEME-23). `-mx-3` widens the strip 12px into the panel's padding on each side so the label
  *  stays aligned with the identity block above while the plane under the pointer reaches almost
  *  to the panel's edge, the way a menu row does. Type comes from the `label` role and colour from
- *  the link tokens (design-language §3, §9). */
+ *  the link tokens (THEME-19, THEME-33). */
 const rowStyles = typographyStyles({
   variant: 'label',
   className:
@@ -95,7 +95,7 @@ function MenuRow({
  *  `onLoggedOut` — the shell owns the session cache drop and the navigation, and awaiting the
  *  mutation first is what keeps the guard from reading a stale session. A FAILED logout leaves
  *  the cookie valid, so the popover stays open and says so where the user is already looking
- *  (design-language §4.3) instead of pretending the session ended. */
+ *  (THEME-24) instead of pretending the session ended. */
 function AccountPanel({
   close,
   onLoggedOut,

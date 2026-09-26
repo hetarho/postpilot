@@ -1,10 +1,9 @@
-/** The public `/about` surface (plan 15). Every visible label, accessible name and metadata
+/** The public `/about` surface (MKT-7). Every visible label, accessible name and metadata
  *  string lives here so the page composes keys rather than one language.
  *
- *  Claim discipline (spec/legacy/policy/public-marketing.md): every sentence here must be true of
- *  SHIPPED behavior. The plan numbers below mirror the code-owned limits table in
- *  `backend/internal/plan`
- *    (spec/legacy/policy/plans.md). Changing the ladder means changing this copy in the same change. */
+ *  Claim discipline (MKT-4): every sentence here must be true of SHIPPED behavior. The plan
+ *  numbers below mirror the code-owned limits table in `backend/internal/plan` (MKT-5, QUOTA-7).
+ *  Changing the ladder means changing this copy in the same change. */
 export const marketing = {
   metadata: {
     title: 'Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기',

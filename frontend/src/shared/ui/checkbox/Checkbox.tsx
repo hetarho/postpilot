@@ -3,7 +3,7 @@ import { Check } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 
 /** A 20px box with a real 44px hit area. The PRIMITIVE owes the touch target, not the caller
- *  (design-language §4.1): a bare 20x20 input is 21% of the area a thumb needs, and relying on
+ *  (THEME-23): a bare 20x20 input is 21% of the area a thumb needs, and relying on
  *  every future call site to remember a 44px wrapper is how the rule gets lost.
  *
  *  The native input is kept — it is the control, with all of its keyboard and assistive-technology

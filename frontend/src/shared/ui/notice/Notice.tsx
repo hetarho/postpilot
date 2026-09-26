@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import { twMerge } from 'tailwind-merge'
 
-/** An inline block of feedback on the page — the §2.6 notice contract, made a primitive because
+/** An inline block of feedback on the page — the THEME-18 notice contract, made a primitive because
  *  eight slices were inlining the same `bg-notice-*-bg text-notice-*-fg rounded-md px-3 py-2`
- *  string (§1.1).
+ *  string (THEME-10).
  *
  *  Colour never travels alone: a notice always renders its explanatory text, and the tone only
- *  reinforces what the words already say. `px-4 py-3` is the §4.2 ratio for a text block rather
+ *  reinforces what the words already say. `px-4 py-3` is the THEME-23 ratio for a text block rather
  *  than a control. */
 export type NoticeTone = 'danger' | 'success' | 'warning' | 'info'
 
@@ -26,7 +26,7 @@ export function Notice({
   tone: NoticeTone
   children: ReactNode
   /** `alert` for something that went wrong and interrupts, `status` for progress and confirmation.
-   *  Always pass one when the notice appears in response to an action (§9). */
+   *  Always pass one when the notice appears in response to an action (THEME-33). */
   role?: 'alert' | 'status'
   className?: string
 }) {

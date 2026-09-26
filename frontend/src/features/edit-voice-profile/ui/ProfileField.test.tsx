@@ -27,7 +27,7 @@ function renderField(value: VoiceValue = ANALYZED, voice: FakeVoiceOptions = {})
 }
 
 describe('ProfileField', () => {
-  // Change 04 A6.
+  // VOICE-28: a field is read first.
   it('reads as text until its edit control is pressed', async () => {
     renderField()
 
@@ -39,7 +39,7 @@ describe('ProfileField', () => {
     expect(screen.getByRole('textbox')).toHaveValue('담백한 어휘')
   })
 
-  // Change 04 A7, second half.
+  // VOICE-28.
   it('discards the draft and restores the published value on 취소', async () => {
     const user = userEvent.setup()
     renderField()
@@ -56,7 +56,7 @@ describe('ProfileField', () => {
     expect(screen.getByRole('textbox')).toHaveValue('담백한 어휘')
   })
 
-  // Change 04 A7, third half: a rejected save must never cost the owner their text.
+  // VOICE-28: a rejected save must never cost the owner their text.
   it('stays in edit mode with the draft intact when the save is rejected', async () => {
     const user = userEvent.setup()
     const { calls } = renderField(ANALYZED, { overrideFails: true })
@@ -71,7 +71,7 @@ describe('ProfileField', () => {
     expect(screen.getByRole('textbox')).toHaveValue('새 설명')
   })
 
-  // Change 04 A8.
+  // VOICE-28: 직접 설정 해제 only when the source is manual.
   it('offers 직접 설정 해제 only for a manually set field', async () => {
     const user = userEvent.setup()
     renderField()

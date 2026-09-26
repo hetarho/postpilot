@@ -11,7 +11,7 @@ import { AppFailureMessage, SegmentedControl, Typography } from '@/shared/ui'
 
 /** The operator's per-account tier control.
  *
- *  A bounded switch of three tiers, so every rung is on screen at once (design-language §7): an
+ *  A bounded switch of three tiers, so every rung is on screen at once (THEME-29): an
  *  operator scanning a list of accounts is comparing tiers, and a closed dropdown hides the two
  *  they are comparing against.
  *

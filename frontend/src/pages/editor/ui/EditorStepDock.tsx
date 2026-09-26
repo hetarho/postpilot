@@ -15,7 +15,7 @@ import type { EditorJobView } from '../model/useEditorJob'
 import { EditorDock } from './EditorDock'
 
 /** ① and ② both always dock: 생성 ends the first step and 확정 ends the second, and the draft
- *  between them is routinely thousands of pixels tall (§4.3). ③ docks only when the job has
+ *  between them is routinely thousands of pixels tall (THEME-24). ③ docks only when the job has
  *  something to report. There is exactly ONE ActionBar in this scroller either way. */
 export function EditorStepDock({
   post,

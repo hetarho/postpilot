@@ -75,7 +75,7 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   const active = Boolean(job && !isTerminal(job))
   const learned = current && job?.status === 'done'
 
-  // Mirrors the server's two voice gates on learning (tech/multi-voice-partitioning.md): a
+  // Mirrors the server's two voice gates on learning (VOICE-34): a
   // deleted voice cannot receive evidence, and a baseline written under another voice — a post
   // reassigned since generation — must not be read as a correction of the new one. Finalizing
   // itself stays available: it is a content boundary, not a profile mutation.
@@ -92,7 +92,7 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
           : ''
   const canLearn = !blocked && Boolean(analyze.selected) && !active && !learned
   // The server refuses learning unless the exact revision on screen is the finalized one
-  // (policy/voice.md), so the button says so rather than offering a call that would fail. Publishing
+  // (VOICE-33), so the button says so rather than offering a call that would fail. Publishing
   // keeps the finalized revision, so a published post learns as a finalized one does (POST-21).
   const finalizedNow = isFinalizedOrLater(post) && post.finalizedRevision === post.contentRevision
 

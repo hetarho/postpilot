@@ -31,7 +31,7 @@ export function Thumbnail({ src, alt, width, height, children, dimmed, onError }
           // `viewUrl` is the full 1024px-long-edge JPEG, and only about two and a half tiles of
           // the strip are on screen at 360px. Without these the editor pulls every photo of the
           // post at full size on mount, over the same cellular link the batch is still uploading
-          // on (design-language §8.6).
+          // on (THEME-32).
           loading="lazy"
           decoding="async"
           onError={onError}

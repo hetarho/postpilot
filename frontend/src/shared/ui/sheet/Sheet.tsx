@@ -25,16 +25,16 @@ interface SheetProps {
 }
 
 /** The overlay for ARBITRARY content, and the mechanics every overlay in the app owes
- *  (design-language §7): portalled, scrim-dismissed, focus-trapped, focus-returned, `Escape`
+ *  (THEME-29): portalled, scrim-dismissed, focus-trapped, focus-returned, `Escape`
  *  closes, and the body scroll is locked while it is open.
  *
  *  On a phone this is a BOTTOM SHEET, not a centred dialog nudged downwards: the switch is at
- *  `md:`, not `sm:`, because §1.5 makes 768px the SHAPE breakpoint — a 640px landscape phone still
+ *  `md:`, not `sm:`, because THEME-14 makes 768px the SHAPE breakpoint — a 640px landscape phone still
  *  has a coarse pointer and a keyboard covering 40% of the screen. Full-bleed to the bottom edge,
  *  rounded on the free side only, safe-area padded, with its own body as the one thing that
  *  scrolls so a pinned footer stays reachable.
  *
- *  It also RISES from that bottom edge and sinks back into it (§6, owner decision 2026-09-02).
+ *  It also RISES from that bottom edge and sinks back into it (THEME-28, owner decision 2026-09-02).
  *  The arrival is free — the panel animates as it mounts — but the departure is not: React would
  *  unmount the node the instant `open` went false, and CSS cannot animate something that is gone.
  *  So the panel outlives `open` by exactly one animation, and `animationend` unmounts it.
@@ -87,7 +87,7 @@ export function Sheet({
     )?.focus()
 
     // Touch scrolling is not a Tab key: without this, dragging anywhere on the scrim scrolls the
-    // page underneath the sheet, and the user lands somewhere else when it closes (§7).
+    // page underneath the sheet, and the user lands somewhere else when it closes (THEME-29).
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
@@ -192,7 +192,7 @@ export function Sheet({
         {/* `p-focus-gutter -m-focus-gutter`: the body is the sheet's one scroller, and a scroll
             container resolves BOTH axes away from `visible` — so a `w-full` field flush against
             this scrollport had the left and right edges of its focus ring cut away the moment it
-            took focus (§9). The padding reserves the ring's 4px and the equal negative margin
+            took focus (THEME-33). The padding reserves the ring's 4px and the equal negative margin
             gives it back to the layout, so every control inside sits exactly where it did. */}
         <div
           className={twMerge(
