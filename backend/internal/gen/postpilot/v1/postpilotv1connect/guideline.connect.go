@@ -45,9 +45,6 @@ const (
 	// GuidelineServiceDeleteGuidelineProcedure is the fully-qualified name of the GuidelineService's
 	// DeleteGuideline RPC.
 	GuidelineServiceDeleteGuidelineProcedure = "/postpilot.v1.GuidelineService/DeleteGuideline"
-	// GuidelineServiceUpdateGuidelinePresetProcedure is the fully-qualified name of the
-	// GuidelineService's UpdateGuidelinePreset RPC.
-	GuidelineServiceUpdateGuidelinePresetProcedure = "/postpilot.v1.GuidelineService/UpdateGuidelinePreset"
 	// GuidelineServiceListGuidelineCandidatesProcedure is the fully-qualified name of the
 	// GuidelineService's ListGuidelineCandidates RPC.
 	GuidelineServiceListGuidelineCandidatesProcedure = "/postpilot.v1.GuidelineService/ListGuidelineCandidates"
@@ -62,8 +59,6 @@ type GuidelineServiceClient interface {
 	CreateGuideline(context.Context, *connect.Request[v1.CreateGuidelineRequest]) (*connect.Response[v1.CreateGuidelineResponse], error)
 	UpdateGuideline(context.Context, *connect.Request[v1.UpdateGuidelineRequest]) (*connect.Response[v1.UpdateGuidelineResponse], error)
 	DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error)
-	// Switches the product-owned 상위 노출 단어 사용 preset and sets its 적용할 분야 (GUIDE-29).
-	UpdateGuidelinePreset(context.Context, *connect.Request[v1.UpdateGuidelinePresetRequest]) (*connect.Response[v1.UpdateGuidelinePresetResponse], error)
 	// The candidate review surface. A candidate is a completed revision's instruction,
 	// recorded verbatim — never learned, never generalized, and never injected into a
 	// prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
@@ -107,12 +102,6 @@ func NewGuidelineServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(guidelineServiceMethods.ByName("DeleteGuideline")),
 			connect.WithClientOptions(opts...),
 		),
-		updateGuidelinePreset: connect.NewClient[v1.UpdateGuidelinePresetRequest, v1.UpdateGuidelinePresetResponse](
-			httpClient,
-			baseURL+GuidelineServiceUpdateGuidelinePresetProcedure,
-			connect.WithSchema(guidelineServiceMethods.ByName("UpdateGuidelinePreset")),
-			connect.WithClientOptions(opts...),
-		),
 		listGuidelineCandidates: connect.NewClient[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse](
 			httpClient,
 			baseURL+GuidelineServiceListGuidelineCandidatesProcedure,
@@ -134,7 +123,6 @@ type guidelineServiceClient struct {
 	createGuideline           *connect.Client[v1.CreateGuidelineRequest, v1.CreateGuidelineResponse]
 	updateGuideline           *connect.Client[v1.UpdateGuidelineRequest, v1.UpdateGuidelineResponse]
 	deleteGuideline           *connect.Client[v1.DeleteGuidelineRequest, v1.DeleteGuidelineResponse]
-	updateGuidelinePreset     *connect.Client[v1.UpdateGuidelinePresetRequest, v1.UpdateGuidelinePresetResponse]
 	listGuidelineCandidates   *connect.Client[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse]
 	dismissGuidelineCandidate *connect.Client[v1.DismissGuidelineCandidateRequest, v1.DismissGuidelineCandidateResponse]
 }
@@ -159,11 +147,6 @@ func (c *guidelineServiceClient) DeleteGuideline(ctx context.Context, req *conne
 	return c.deleteGuideline.CallUnary(ctx, req)
 }
 
-// UpdateGuidelinePreset calls postpilot.v1.GuidelineService.UpdateGuidelinePreset.
-func (c *guidelineServiceClient) UpdateGuidelinePreset(ctx context.Context, req *connect.Request[v1.UpdateGuidelinePresetRequest]) (*connect.Response[v1.UpdateGuidelinePresetResponse], error) {
-	return c.updateGuidelinePreset.CallUnary(ctx, req)
-}
-
 // ListGuidelineCandidates calls postpilot.v1.GuidelineService.ListGuidelineCandidates.
 func (c *guidelineServiceClient) ListGuidelineCandidates(ctx context.Context, req *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error) {
 	return c.listGuidelineCandidates.CallUnary(ctx, req)
@@ -180,8 +163,6 @@ type GuidelineServiceHandler interface {
 	CreateGuideline(context.Context, *connect.Request[v1.CreateGuidelineRequest]) (*connect.Response[v1.CreateGuidelineResponse], error)
 	UpdateGuideline(context.Context, *connect.Request[v1.UpdateGuidelineRequest]) (*connect.Response[v1.UpdateGuidelineResponse], error)
 	DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error)
-	// Switches the product-owned 상위 노출 단어 사용 preset and sets its 적용할 분야 (GUIDE-29).
-	UpdateGuidelinePreset(context.Context, *connect.Request[v1.UpdateGuidelinePresetRequest]) (*connect.Response[v1.UpdateGuidelinePresetResponse], error)
 	// The candidate review surface. A candidate is a completed revision's instruction,
 	// recorded verbatim — never learned, never generalized, and never injected into a
 	// prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
@@ -221,12 +202,6 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 		connect.WithSchema(guidelineServiceMethods.ByName("DeleteGuideline")),
 		connect.WithHandlerOptions(opts...),
 	)
-	guidelineServiceUpdateGuidelinePresetHandler := connect.NewUnaryHandler(
-		GuidelineServiceUpdateGuidelinePresetProcedure,
-		svc.UpdateGuidelinePreset,
-		connect.WithSchema(guidelineServiceMethods.ByName("UpdateGuidelinePreset")),
-		connect.WithHandlerOptions(opts...),
-	)
 	guidelineServiceListGuidelineCandidatesHandler := connect.NewUnaryHandler(
 		GuidelineServiceListGuidelineCandidatesProcedure,
 		svc.ListGuidelineCandidates,
@@ -249,8 +224,6 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 			guidelineServiceUpdateGuidelineHandler.ServeHTTP(w, r)
 		case GuidelineServiceDeleteGuidelineProcedure:
 			guidelineServiceDeleteGuidelineHandler.ServeHTTP(w, r)
-		case GuidelineServiceUpdateGuidelinePresetProcedure:
-			guidelineServiceUpdateGuidelinePresetHandler.ServeHTTP(w, r)
 		case GuidelineServiceListGuidelineCandidatesProcedure:
 			guidelineServiceListGuidelineCandidatesHandler.ServeHTTP(w, r)
 		case GuidelineServiceDismissGuidelineCandidateProcedure:
@@ -278,10 +251,6 @@ func (UnimplementedGuidelineServiceHandler) UpdateGuideline(context.Context, *co
 
 func (UnimplementedGuidelineServiceHandler) DeleteGuideline(context.Context, *connect.Request[v1.DeleteGuidelineRequest]) (*connect.Response[v1.DeleteGuidelineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.DeleteGuideline is not implemented"))
-}
-
-func (UnimplementedGuidelineServiceHandler) UpdateGuidelinePreset(context.Context, *connect.Request[v1.UpdateGuidelinePresetRequest]) (*connect.Response[v1.UpdateGuidelinePresetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.UpdateGuidelinePreset is not implemented"))
 }
 
 func (UnimplementedGuidelineServiceHandler) ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error) {

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/guideline.proto.
  */
 export const file_postpilot_v1_guideline: GenFile = /*@__PURE__*/
-  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiMAoUR3VpZGVsaW5lVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSLaAQoJR3VpZGVsaW5lEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSKwoFc2NvcGUYAyABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSNQoJdGVtcGxhdGVzGAQgAygLMiIucG9zdHBpbG90LnYxLkd1aWRlbGluZVRlbXBsYXRlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRInCgZmaWVsZHMYByADKA4yFy5wb3N0cGlsb3QudjEuQmxvZ0ZpZWxkIlkKD0d1aWRlbGluZVByZXNldBIMCgR0ZXh0GAEgASgJEg8KB2VuYWJsZWQYAiABKAgSJwoGZmllbGRzGAMgAygOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZCIXChVMaXN0R3VpZGVsaW5lc1JlcXVlc3QidAoWTGlzdEd1aWRlbGluZXNSZXNwb25zZRIrCgpndWlkZWxpbmVzGAEgAygLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZRItCgZwcmVzZXQYAiABKAsyHS5wb3N0cGlsb3QudjEuR3VpZGVsaW5lUHJlc2V0IsgBChZDcmVhdGVHdWlkZWxpbmVSZXF1ZXN0EgwKBHRleHQYASABKAkSKwoFc2NvcGUYAiABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSFAoMdGVtcGxhdGVfaWRzGAMgAygJEh4KEWZyb21fY2FuZGlkYXRlX2lkGAQgASgJSACIAQESJwoGZmllbGRzGAUgAygOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZEIUChJfZnJvbV9jYW5kaWRhdGVfaWQiRQoXQ3JlYXRlR3VpZGVsaW5lUmVzcG9uc2USKgoJZ3VpZGVsaW5lGAEgASgLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSKBAQoTR3VpZGVsaW5lU2NvcGVQYXRjaBIrCgVzY29wZRgBIAEoDjIcLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZRIUCgx0ZW1wbGF0ZV9pZHMYAiADKAkSJwoGZmllbGRzGAMgAygOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZCJyChZVcGRhdGVHdWlkZWxpbmVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBHRleHQYAiABKAlIAIgBARIwCgVzY29wZRgDIAEoCzIhLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZVBhdGNoQgcKBV90ZXh0IkUKF1VwZGF0ZUd1aWRlbGluZVJlc3BvbnNlEioKCWd1aWRlbGluZRgBIAEoCzIXLnBvc3RwaWxvdC52MS5HdWlkZWxpbmUiJAoWRGVsZXRlR3VpZGVsaW5lUmVxdWVzdBIKCgJpZBgBIAEoCSIZChdEZWxldGVHdWlkZWxpbmVSZXNwb25zZSJAChVHdWlkZWxpbmVQcmVzZXRGaWVsZHMSJwoGZmllbGRzGAEgAygOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZCJ1ChxVcGRhdGVHdWlkZWxpbmVQcmVzZXRSZXF1ZXN0EhQKB2VuYWJsZWQYASABKAhIAIgBARIzCgZmaWVsZHMYAiABKAsyIy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lUHJlc2V0RmllbGRzQgoKCF9lbmFibGVkIk4KHVVwZGF0ZUd1aWRlbGluZVByZXNldFJlc3BvbnNlEi0KBnByZXNldBgBIAEoCzIdLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVQcmVzZXQigwEKEkd1aWRlbGluZUNhbmRpZGF0ZRIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEhEKCXBvc3Rfc2x1ZxgDIAEoCRITCgtvY2N1cnJlbmNlcxgEIAEoBRIVCg1maXJzdF9zZWVuX2F0GAUgASgJEhQKDGxhc3Rfc2Vlbl9hdBgGIAEoCSIgCh5MaXN0R3VpZGVsaW5lQ2FuZGlkYXRlc1JlcXVlc3QiawofTGlzdEd1aWRlbGluZUNhbmRpZGF0ZXNSZXNwb25zZRI0CgpjYW5kaWRhdGVzGAEgAygLMiAucG9zdHBpbG90LnYxLkd1aWRlbGluZUNhbmRpZGF0ZRISCgpxdWV1ZV9mdWxsGAIgASgIIi4KIERpc21pc3NHdWlkZWxpbmVDYW5kaWRhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIiMKIURpc21pc3NHdWlkZWxpbmVDYW5kaWRhdGVSZXNwb25zZSqIAQoOR3VpZGVsaW5lU2NvcGUSHwobR1VJREVMSU5FX1NDT1BFX1VOU1BFQ0lGSUVEEAASGgoWR1VJREVMSU5FX1NDT1BFX0dMT0JBTBABEh0KGUdVSURFTElORV9TQ09QRV9URU1QTEFURVMQAhIaChZHVUlERUxJTkVfU0NPUEVfRklFTERTEAMyhQYKEEd1aWRlbGluZVNlcnZpY2USXQoOTGlzdEd1aWRlbGluZXMSIy5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZXNSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkxpc3RHdWlkZWxpbmVzUmVzcG9uc2UiABJgCg9DcmVhdGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuQ3JlYXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5DcmVhdGVHdWlkZWxpbmVSZXNwb25zZSIAEmAKD1VwZGF0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5VcGRhdGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlVwZGF0ZUd1aWRlbGluZVJlc3BvbnNlIgASYAoPRGVsZXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLkRlbGV0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuRGVsZXRlR3VpZGVsaW5lUmVzcG9uc2UiABJyChVVcGRhdGVHdWlkZWxpbmVQcmVzZXQSKi5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUHJlc2V0UmVxdWVzdBorLnBvc3RwaWxvdC52MS5VcGRhdGVHdWlkZWxpbmVQcmVzZXRSZXNwb25zZSIAEngKF0xpc3RHdWlkZWxpbmVDYW5kaWRhdGVzEiwucG9zdHBpbG90LnYxLkxpc3RHdWlkZWxpbmVDYW5kaWRhdGVzUmVxdWVzdBotLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lQ2FuZGlkYXRlc1Jlc3BvbnNlIgASfgoZRGlzbWlzc0d1aWRlbGluZUNhbmRpZGF0ZRIuLnBvc3RwaWxvdC52MS5EaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVxdWVzdBovLnBvc3RwaWxvdC52MS5EaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_post]);
+  fileDesc("Chxwb3N0cGlsb3QvdjEvZ3VpZGVsaW5lLnByb3RvEgxwb3N0cGlsb3QudjEiMAoUR3VpZGVsaW5lVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSLaAQoJR3VpZGVsaW5lEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSKwoFc2NvcGUYAyABKA4yHC5wb3N0cGlsb3QudjEuR3VpZGVsaW5lU2NvcGUSNQoJdGVtcGxhdGVzGAQgAygLMiIucG9zdHBpbG90LnYxLkd1aWRlbGluZVRlbXBsYXRlUmVmEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRInCgZmaWVsZHMYByADKA4yFy5wb3N0cGlsb3QudjEuQmxvZ0ZpZWxkIhcKFUxpc3RHdWlkZWxpbmVzUmVxdWVzdCJTChZMaXN0R3VpZGVsaW5lc1Jlc3BvbnNlEisKCmd1aWRlbGluZXMYASADKAsyFy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lSgQIAhADUgZwcmVzZXQiyAEKFkNyZWF0ZUd1aWRlbGluZVJlcXVlc3QSDAoEdGV4dBgBIAEoCRIrCgVzY29wZRgCIAEoDjIcLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVTY29wZRIUCgx0ZW1wbGF0ZV9pZHMYAyADKAkSHgoRZnJvbV9jYW5kaWRhdGVfaWQYBCABKAlIAIgBARInCgZmaWVsZHMYBSADKA4yFy5wb3N0cGlsb3QudjEuQmxvZ0ZpZWxkQhQKEl9mcm9tX2NhbmRpZGF0ZV9pZCJFChdDcmVhdGVHdWlkZWxpbmVSZXNwb25zZRIqCglndWlkZWxpbmUYASABKAsyFy5wb3N0cGlsb3QudjEuR3VpZGVsaW5lIoEBChNHdWlkZWxpbmVTY29wZVBhdGNoEisKBXNjb3BlGAEgASgOMhwucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlEhQKDHRlbXBsYXRlX2lkcxgCIAMoCRInCgZmaWVsZHMYAyADKA4yFy5wb3N0cGlsb3QudjEuQmxvZ0ZpZWxkInIKFlVwZGF0ZUd1aWRlbGluZVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEjAKBXNjb3BlGAMgASgLMiEucG9zdHBpbG90LnYxLkd1aWRlbGluZVNjb3BlUGF0Y2hCBwoFX3RleHQiRQoXVXBkYXRlR3VpZGVsaW5lUmVzcG9uc2USKgoJZ3VpZGVsaW5lGAEgASgLMhcucG9zdHBpbG90LnYxLkd1aWRlbGluZSIkChZEZWxldGVHdWlkZWxpbmVSZXF1ZXN0EgoKAmlkGAEgASgJIhkKF0RlbGV0ZUd1aWRlbGluZVJlc3BvbnNlIoMBChJHdWlkZWxpbmVDYW5kaWRhdGUSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIRCglwb3N0X3NsdWcYAyABKAkSEwoLb2NjdXJyZW5jZXMYBCABKAUSFQoNZmlyc3Rfc2Vlbl9hdBgFIAEoCRIUCgxsYXN0X3NlZW5fYXQYBiABKAkiIAoeTGlzdEd1aWRlbGluZUNhbmRpZGF0ZXNSZXF1ZXN0ImsKH0xpc3RHdWlkZWxpbmVDYW5kaWRhdGVzUmVzcG9uc2USNAoKY2FuZGlkYXRlcxgBIAMoCzIgLnBvc3RwaWxvdC52MS5HdWlkZWxpbmVDYW5kaWRhdGUSEgoKcXVldWVfZnVsbBgCIAEoCCIuCiBEaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVxdWVzdBIKCgJpZBgBIAEoCSIjCiFEaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlUmVzcG9uc2UqiAEKDkd1aWRlbGluZVNjb3BlEh8KG0dVSURFTElORV9TQ09QRV9VTlNQRUNJRklFRBAAEhoKFkdVSURFTElORV9TQ09QRV9HTE9CQUwQARIdChlHVUlERUxJTkVfU0NPUEVfVEVNUExBVEVTEAISGgoWR1VJREVMSU5FX1NDT1BFX0ZJRUxEUxADMpEFChBHdWlkZWxpbmVTZXJ2aWNlEl0KDkxpc3RHdWlkZWxpbmVzEiMucG9zdHBpbG90LnYxLkxpc3RHdWlkZWxpbmVzUmVxdWVzdBokLnBvc3RwaWxvdC52MS5MaXN0R3VpZGVsaW5lc1Jlc3BvbnNlIgASYAoPQ3JlYXRlR3VpZGVsaW5lEiQucG9zdHBpbG90LnYxLkNyZWF0ZUd1aWRlbGluZVJlcXVlc3QaJS5wb3N0cGlsb3QudjEuQ3JlYXRlR3VpZGVsaW5lUmVzcG9uc2UiABJgCg9VcGRhdGVHdWlkZWxpbmUSJC5wb3N0cGlsb3QudjEuVXBkYXRlR3VpZGVsaW5lUmVxdWVzdBolLnBvc3RwaWxvdC52MS5VcGRhdGVHdWlkZWxpbmVSZXNwb25zZSIAEmAKD0RlbGV0ZUd1aWRlbGluZRIkLnBvc3RwaWxvdC52MS5EZWxldGVHdWlkZWxpbmVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkRlbGV0ZUd1aWRlbGluZVJlc3BvbnNlIgASeAoXTGlzdEd1aWRlbGluZUNhbmRpZGF0ZXMSLC5wb3N0cGlsb3QudjEuTGlzdEd1aWRlbGluZUNhbmRpZGF0ZXNSZXF1ZXN0Gi0ucG9zdHBpbG90LnYxLkxpc3RHdWlkZWxpbmVDYW5kaWRhdGVzUmVzcG9uc2UiABJ+ChlEaXNtaXNzR3VpZGVsaW5lQ2FuZGlkYXRlEi4ucG9zdHBpbG90LnYxLkRpc21pc3NHdWlkZWxpbmVDYW5kaWRhdGVSZXF1ZXN0Gi8ucG9zdHBpbG90LnYxLkRpc21pc3NHdWlkZWxpbmVDYW5kaWRhdGVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_post]);
 
 /**
  * A template a guideline is scoped to, projected by name for the management screen. It is a
@@ -94,36 +94,6 @@ export const GuidelineSchema: GenMessage<Guideline> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_guideline, 1);
 
 /**
- * The one product-owned guideline, 상위 노출 단어 사용 (GUIDE-29). Its multi-select 적용할 분야
- * IS its `fields` scope, so there is no second selector meaning the same thing.
- *
- * @generated from message postpilot.v1.GuidelinePreset
- */
-export type GuidelinePreset = Message<"postpilot.v1.GuidelinePreset"> & {
-  /**
-   * @generated from field: string text = 1;
-   */
-  text: string;
-
-  /**
-   * @generated from field: bool enabled = 2;
-   */
-  enabled: boolean;
-
-  /**
-   * @generated from field: repeated postpilot.v1.BlogField fields = 3;
-   */
-  fields: BlogField[];
-};
-
-/**
- * Describes the message postpilot.v1.GuidelinePreset.
- * Use `create(GuidelinePresetSchema)` to create a new message.
- */
-export const GuidelinePresetSchema: GenMessage<GuidelinePreset> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 2);
-
-/**
  * @generated from message postpilot.v1.ListGuidelinesRequest
  */
 export type ListGuidelinesRequest = Message<"postpilot.v1.ListGuidelinesRequest"> & {
@@ -134,26 +104,19 @@ export type ListGuidelinesRequest = Message<"postpilot.v1.ListGuidelinesRequest"
  * Use `create(ListGuidelinesRequestSchema)` to create a new message.
  */
 export const ListGuidelinesRequestSchema: GenMessage<ListGuidelinesRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 3);
+  messageDesc(file_postpilot_v1_guideline, 2);
 
 /**
  * @generated from message postpilot.v1.ListGuidelinesResponse
  */
 export type ListGuidelinesResponse = Message<"postpilot.v1.ListGuidelinesResponse"> & {
   /**
-   * In injection order: the global group first, then the scoped group, each by creation
-   * time — exactly the order the writer will see them in.
+   * The owner's guidelines alone, in injection order: the global group, then the template
+   * group, then the 분야 group, each by creation time — exactly the order the writer sees.
    *
    * @generated from field: repeated postpilot.v1.Guideline guidelines = 1;
    */
   guidelines: Guideline[];
-
-  /**
-   * Shown as a fixed row above the owner's own guidelines.
-   *
-   * @generated from field: postpilot.v1.GuidelinePreset preset = 2;
-   */
-  preset?: GuidelinePreset | undefined;
 };
 
 /**
@@ -161,7 +124,7 @@ export type ListGuidelinesResponse = Message<"postpilot.v1.ListGuidelinesRespons
  * Use `create(ListGuidelinesResponseSchema)` to create a new message.
  */
 export const ListGuidelinesResponseSchema: GenMessage<ListGuidelinesResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 4);
+  messageDesc(file_postpilot_v1_guideline, 3);
 
 /**
  * @generated from message postpilot.v1.CreateGuidelineRequest
@@ -206,7 +169,7 @@ export type CreateGuidelineRequest = Message<"postpilot.v1.CreateGuidelineReques
  * Use `create(CreateGuidelineRequestSchema)` to create a new message.
  */
 export const CreateGuidelineRequestSchema: GenMessage<CreateGuidelineRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 5);
+  messageDesc(file_postpilot_v1_guideline, 4);
 
 /**
  * @generated from message postpilot.v1.CreateGuidelineResponse
@@ -223,7 +186,7 @@ export type CreateGuidelineResponse = Message<"postpilot.v1.CreateGuidelineRespo
  * Use `create(CreateGuidelineResponseSchema)` to create a new message.
  */
 export const CreateGuidelineResponseSchema: GenMessage<CreateGuidelineResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 6);
+  messageDesc(file_postpilot_v1_guideline, 5);
 
 /**
  * The whole scope as one value. Its message presence in UpdateGuidelineRequest is what
@@ -254,7 +217,7 @@ export type GuidelineScopePatch = Message<"postpilot.v1.GuidelineScopePatch"> & 
  * Use `create(GuidelineScopePatchSchema)` to create a new message.
  */
 export const GuidelineScopePatchSchema: GenMessage<GuidelineScopePatch> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 7);
+  messageDesc(file_postpilot_v1_guideline, 6);
 
 /**
  * @generated from message postpilot.v1.UpdateGuidelineRequest
@@ -281,7 +244,7 @@ export type UpdateGuidelineRequest = Message<"postpilot.v1.UpdateGuidelineReques
  * Use `create(UpdateGuidelineRequestSchema)` to create a new message.
  */
 export const UpdateGuidelineRequestSchema: GenMessage<UpdateGuidelineRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 8);
+  messageDesc(file_postpilot_v1_guideline, 7);
 
 /**
  * @generated from message postpilot.v1.UpdateGuidelineResponse
@@ -298,7 +261,7 @@ export type UpdateGuidelineResponse = Message<"postpilot.v1.UpdateGuidelineRespo
  * Use `create(UpdateGuidelineResponseSchema)` to create a new message.
  */
 export const UpdateGuidelineResponseSchema: GenMessage<UpdateGuidelineResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 9);
+  messageDesc(file_postpilot_v1_guideline, 8);
 
 /**
  * @generated from message postpilot.v1.DeleteGuidelineRequest
@@ -315,7 +278,7 @@ export type DeleteGuidelineRequest = Message<"postpilot.v1.DeleteGuidelineReques
  * Use `create(DeleteGuidelineRequestSchema)` to create a new message.
  */
 export const DeleteGuidelineRequestSchema: GenMessage<DeleteGuidelineRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 10);
+  messageDesc(file_postpilot_v1_guideline, 9);
 
 /**
  * Empty: nothing references a guideline, so a delete detaches nothing and has nothing to
@@ -331,69 +294,7 @@ export type DeleteGuidelineResponse = Message<"postpilot.v1.DeleteGuidelineRespo
  * Use `create(DeleteGuidelineResponseSchema)` to create a new message.
  */
 export const DeleteGuidelineResponseSchema: GenMessage<DeleteGuidelineResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 11);
-
-/**
- * The preset's 분야 set as one value, whose message presence is what tells "leave the set
- * alone" from "replace it", as GuidelineScopePatch does for a scope.
- *
- * @generated from message postpilot.v1.GuidelinePresetFields
- */
-export type GuidelinePresetFields = Message<"postpilot.v1.GuidelinePresetFields"> & {
-  /**
-   * @generated from field: repeated postpilot.v1.BlogField fields = 1;
-   */
-  fields: BlogField[];
-};
-
-/**
- * Describes the message postpilot.v1.GuidelinePresetFields.
- * Use `create(GuidelinePresetFieldsSchema)` to create a new message.
- */
-export const GuidelinePresetFieldsSchema: GenMessage<GuidelinePresetFields> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 12);
-
-/**
- * Presence is the edit unit: an absent `enabled` keeps the switch, and an absent `fields`
- * keeps the set.
- *
- * @generated from message postpilot.v1.UpdateGuidelinePresetRequest
- */
-export type UpdateGuidelinePresetRequest = Message<"postpilot.v1.UpdateGuidelinePresetRequest"> & {
-  /**
-   * @generated from field: optional bool enabled = 1;
-   */
-  enabled?: boolean | undefined;
-
-  /**
-   * @generated from field: postpilot.v1.GuidelinePresetFields fields = 2;
-   */
-  fields?: GuidelinePresetFields | undefined;
-};
-
-/**
- * Describes the message postpilot.v1.UpdateGuidelinePresetRequest.
- * Use `create(UpdateGuidelinePresetRequestSchema)` to create a new message.
- */
-export const UpdateGuidelinePresetRequestSchema: GenMessage<UpdateGuidelinePresetRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 13);
-
-/**
- * @generated from message postpilot.v1.UpdateGuidelinePresetResponse
- */
-export type UpdateGuidelinePresetResponse = Message<"postpilot.v1.UpdateGuidelinePresetResponse"> & {
-  /**
-   * @generated from field: postpilot.v1.GuidelinePreset preset = 1;
-   */
-  preset?: GuidelinePreset | undefined;
-};
-
-/**
- * Describes the message postpilot.v1.UpdateGuidelinePresetResponse.
- * Use `create(UpdateGuidelinePresetResponseSchema)` to create a new message.
- */
-export const UpdateGuidelinePresetResponseSchema: GenMessage<UpdateGuidelinePresetResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 14);
+  messageDesc(file_postpilot_v1_guideline, 10);
 
 /**
  * A recorded revision instruction awaiting review. It carries NO scope by design: scope is
@@ -449,7 +350,7 @@ export type GuidelineCandidate = Message<"postpilot.v1.GuidelineCandidate"> & {
  * Use `create(GuidelineCandidateSchema)` to create a new message.
  */
 export const GuidelineCandidateSchema: GenMessage<GuidelineCandidate> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 15);
+  messageDesc(file_postpilot_v1_guideline, 11);
 
 /**
  * @generated from message postpilot.v1.ListGuidelineCandidatesRequest
@@ -462,7 +363,7 @@ export type ListGuidelineCandidatesRequest = Message<"postpilot.v1.ListGuideline
  * Use `create(ListGuidelineCandidatesRequestSchema)` to create a new message.
  */
 export const ListGuidelineCandidatesRequestSchema: GenMessage<ListGuidelineCandidatesRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 16);
+  messageDesc(file_postpilot_v1_guideline, 12);
 
 /**
  * @generated from message postpilot.v1.ListGuidelineCandidatesResponse
@@ -491,7 +392,7 @@ export type ListGuidelineCandidatesResponse = Message<"postpilot.v1.ListGuidelin
  * Use `create(ListGuidelineCandidatesResponseSchema)` to create a new message.
  */
 export const ListGuidelineCandidatesResponseSchema: GenMessage<ListGuidelineCandidatesResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 17);
+  messageDesc(file_postpilot_v1_guideline, 13);
 
 /**
  * @generated from message postpilot.v1.DismissGuidelineCandidateRequest
@@ -508,7 +409,7 @@ export type DismissGuidelineCandidateRequest = Message<"postpilot.v1.DismissGuid
  * Use `create(DismissGuidelineCandidateRequestSchema)` to create a new message.
  */
 export const DismissGuidelineCandidateRequestSchema: GenMessage<DismissGuidelineCandidateRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 18);
+  messageDesc(file_postpilot_v1_guideline, 14);
 
 /**
  * Empty: a dismissal marks the row rather than deleting it — the row is what keeps the
@@ -524,7 +425,7 @@ export type DismissGuidelineCandidateResponse = Message<"postpilot.v1.DismissGui
  * Use `create(DismissGuidelineCandidateResponseSchema)` to create a new message.
  */
 export const DismissGuidelineCandidateResponseSchema: GenMessage<DismissGuidelineCandidateResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_guideline, 19);
+  messageDesc(file_postpilot_v1_guideline, 15);
 
 /**
  * @generated from enum postpilot.v1.GuidelineScope
@@ -608,16 +509,6 @@ export const GuidelineService: GenService<{
     methodKind: "unary";
     input: typeof DeleteGuidelineRequestSchema;
     output: typeof DeleteGuidelineResponseSchema;
-  },
-  /**
-   * Switches the product-owned 상위 노출 단어 사용 preset and sets its 적용할 분야 (GUIDE-29).
-   *
-   * @generated from rpc postpilot.v1.GuidelineService.UpdateGuidelinePreset
-   */
-  updateGuidelinePreset: {
-    methodKind: "unary";
-    input: typeof UpdateGuidelinePresetRequestSchema;
-    output: typeof UpdateGuidelinePresetResponseSchema;
   },
   /**
    * The candidate review surface. A candidate is a completed revision's instruction,

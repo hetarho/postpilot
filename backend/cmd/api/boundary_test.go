@@ -52,8 +52,8 @@ func TestNoContextImportsASiblingStore(t *testing.T) {
 	}
 }
 
-// GUIDE-33: a guideline row is written only by the owner's own GuidelineService procedures —
-// never by generation, a job, a batch or the preset. Three structural checks over every non-test
+// GUIDE-2, GUIDE-18: a guideline row is written only by the owner's own GuidelineService
+// procedures — never by generation, a job or a batch. Three structural checks over every non-test
 // file of cmd and internal (the generated code aside): nothing outside internal/guideline and
 // cmd/api imports the context; only its store calls the row-writing queries; and cmd/api, which
 // wires the service, calls none of its writing methods.
@@ -61,7 +61,7 @@ func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 	const context = "github.com/postpilot/backend/internal/guideline"
 	backend := filepath.Join("..", "..")
 	writingQueries := map[string]bool{"InsertGuideline": true, "UpdateGuidelineText": true, "UpdateGuidelineScope": true}
-	writingMethods := map[string]bool{"Create": true, "Update": true, "UpdatePreset": true, "Delete": true}
+	writingMethods := map[string]bool{"Create": true, "Update": true, "Delete": true}
 
 	for _, dir := range []string{"cmd", "internal"} {
 		err := filepath.WalkDir(filepath.Join(backend, dir), func(path string, entry os.DirEntry, err error) error {

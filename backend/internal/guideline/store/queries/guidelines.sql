@@ -102,31 +102,6 @@ WHERE g.user_id = ?
   )
 ORDER BY CASE g.scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, g.created_at, g.id;
 
--- The preset's state (GUIDE-34, GUIDE-39). It lives outside guidelines, so CountGuidelines and
--- the text UNIQUE constraint never see it. A missing row is the preset off with no field.
-
--- name: GetGuidelinePreset :one
-SELECT enabled, updated_at FROM guideline_presets WHERE user_id = ?;
-
--- name: ListGuidelinePresetFields :many
-SELECT field FROM guideline_preset_fields WHERE user_id = ? ORDER BY field;
-
--- name: UpsertGuidelinePresetEnabled :exec
-INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, ?, ?)
-ON CONFLICT (user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at;
-
--- name: TouchGuidelinePreset :exec
--- A field edit with no switch: the fields need their parent row, and a first write creates it
--- switched off, while an existing row keeps its switch.
-INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, 0, ?)
-ON CONFLICT (user_id) DO UPDATE SET updated_at = excluded.updated_at;
-
--- name: DeleteGuidelinePresetFields :exec
-DELETE FROM guideline_preset_fields WHERE user_id = ?;
-
--- name: InsertGuidelinePresetField :exec
-INSERT INTO guideline_preset_fields (user_id, field) VALUES (?, ?);
-
 -- Guideline candidates (change 26). A candidate is one completed revision's instruction,
 -- recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
 -- stop the same instruction from being recorded again, so nothing here deletes one.

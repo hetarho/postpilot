@@ -263,15 +263,13 @@ func checkSeed(t *testing.T, reader *sql.DB) seedShape {
 	}
 	shape.Phrases = []string{lists[0].Field}
 
-	// GUIDE-34: the preset is the product's own and every guideline is an owner's; a seed
-	// writes neither.
+	// GUIDE-19: guidelines are never seeded; every one is an owner's, so a seed writes none.
 	var guidelineRows int
-	if err := reader.QueryRowContext(ctx, `SELECT (SELECT COUNT(*) FROM guidelines)
-		+ (SELECT COUNT(*) FROM guideline_presets) + (SELECT COUNT(*) FROM guideline_preset_fields)`).Scan(&guidelineRows); err != nil {
+	if err := reader.QueryRowContext(ctx, `SELECT COUNT(*) FROM guidelines`).Scan(&guidelineRows); err != nil {
 		t.Fatal(err)
 	}
 	if guidelineRows != 0 {
-		t.Errorf("the seed wrote %d guideline or preset rows, want none", guidelineRows)
+		t.Errorf("the seed wrote %d guideline rows, want none", guidelineRows)
 	}
 	return shape
 }

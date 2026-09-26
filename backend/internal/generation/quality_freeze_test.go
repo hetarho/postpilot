@@ -124,7 +124,7 @@ func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 		models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
 		deps := testDeps()
 		deps.QualityRules = &recordingRules{answer: []string{"frozen rule"}}
-		deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
+		deps.Guidelines = &fakeGuidelines{texts: testGuidelines()}
 		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 		startOnce(t, svc)
 		if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
@@ -137,7 +137,7 @@ func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 		t.Fatalf("a 분야 moved the write prompt:\n%s\n%s\n---\n%s\n%s", with.System, with.Messages[0].Parts[0].Text, without.System, without.Messages[0].Parts[0].Text)
 	}
 	prompt := with.System + "\n" + with.Messages[0].Parts[0].Text
-	for _, retired := range []string{"[분야 상위 글 문구]", "상위 결과의 제목과 요약", "replacements", "PRESET"} {
+	for _, retired := range []string{"[분야 상위 글 문구]", "상위 결과의 제목과 요약", "replacements"} {
 		if strings.Contains(prompt, retired) {
 			t.Errorf("the write prompt carries %q", retired)
 		}

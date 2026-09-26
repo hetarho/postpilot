@@ -712,11 +712,10 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	adapter := generationGuidelines{service: guidelineSvc}
-	resolved, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, false)
+	texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	texts := resolved.Owner
 	want := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기"}
 	if len(texts) != len(want) {
 		t.Fatalf("resolved %v, want %v", texts, want)
@@ -743,11 +742,10 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolvedGlobal, err := adapter.ForPrompt(ctx, "alice", nil, nil, false)
+	global, err := adapter.ForPrompt(ctx, "alice", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	global := resolvedGlobal.Owner
 	if bare.TemplateID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
 		t.Fatalf("a post with no template resolved %v (template id %q)", global, bare.TemplateID)
 	}
@@ -884,11 +882,10 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 
 	// A4: with candidates recorded and only the approved guideline saved, the prompt carries the
 	// guideline and nothing else — no candidate text reaches it.
-	resolved, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil, false)
+	texts, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	texts := resolved.Owner
 	if len(texts) != 1 || texts[0] != "광고처럼 읽히는 문장을 쓰지 않기" {
 		t.Fatalf("prompt guidelines = %v", texts)
 	}
@@ -946,11 +943,10 @@ type noPurge struct{}
 
 func (noPurge) PurgePost(context.Context, string, string) error { return nil }
 
-// GUIDE-14, GUIDE-17, GUIDE-29, GUIDE-33 on the real stores: a post with a template and a 분야
-// freezes global → template → 분야, the preset's line last once it is on for that 분야 and never
-// for a revision; another 분야's guideline never reaches it; and the preset writes no guideline
-// row.
-func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
+// GUIDE-14, GUIDE-17 on the real stores: a post with a template and a 분야 freezes global →
+// template → 분야 with nothing appended; another 분야's guideline never reaches it; and deleting
+// the 분야 guideline removes it from the next resolution.
+func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-fields.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -1011,9 +1007,9 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 		t.Fatalf("the post reached generation with 분야 %q", input.Field)
 	}
 	adapter := generationGuidelines{service: guidelineSvc}
-	resolve := func(forRevision bool) generation.GuidelineTexts {
+	resolve := func() []string {
 		t.Helper()
-		texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field, forRevision)
+		texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1021,45 +1017,14 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 	}
 	groups := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기", "메뉴 가격은 쓰지 않기"}
 
-	if got := resolve(false); !reflect.DeepEqual(got.Owner, groups) || got.Preset != "" {
-		t.Fatalf("before the preset: %+v, want %q and no preset", got, groups)
+	if got := resolve(); !reflect.DeepEqual(got, groups) {
+		t.Fatalf("resolved %q, want %q", got, groups)
 	}
-	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, resolve(false).Owner)
-	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기\n- 메뉴 가격은 쓰지 않기") || strings.Contains(system, guideline.PresetText) {
-		t.Fatalf("the frozen section before the preset:\n%s", system)
-	}
-
-	countRows := func(query string, args ...any) int {
-		t.Helper()
-		var n int
-		if err := handle.Reader.QueryRow(query, args...).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
-	}
-	before := countRows("SELECT count(*) FROM guidelines WHERE user_id = 'alice'")
-	on, cafe := true, []string{"cafe"}
-	if _, err := guidelineSvc.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &cafe}); err != nil {
-		t.Fatal(err)
-	}
-	if after := countRows("SELECT count(*) FROM guidelines WHERE user_id = 'alice'"); after != before {
-		t.Fatalf("switching the preset changed the guideline rows: %d → %d", before, after)
-	}
-	if held := countRows("SELECT count(*) FROM guidelines WHERE text = ?", guideline.PresetText); held != 0 {
-		t.Fatalf("%d guideline rows hold the preset's text", held)
-	}
-
-	// The line comes back apart; whether a write keeps it is generation's decision (GUIDE-40).
-	if got := resolve(false); !reflect.DeepEqual(got.Owner, groups) || got.Preset != guideline.PresetText {
-		t.Fatalf("with the preset on: %+v, want %q and the preset line", got, groups)
-	}
-	if got := resolve(true); !reflect.DeepEqual(got.Owner, groups) || got.Preset != "" {
-		t.Fatalf("a revision carried %+v, want the groups alone", got)
-	}
-	for _, text := range resolve(false).Owner {
-		if text == "반려동물 이름을 쓰지 않기" {
-			t.Fatal("another 분야's guideline reached the post")
-		}
+	// Another 분야's guideline is not among them, and the section holds the groups alone, in order,
+	// closed straight after the last one by the precedence sentence.
+	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, resolve())
+	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기\n- 메뉴 가격은 쓰지 않기\n지침은 이 글에서") {
+		t.Fatalf("the frozen section:\n%s", system)
 	}
 
 	// Deleting the 분야 guideline removes it from the next resolution.
@@ -1074,7 +1039,7 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 			}
 		}
 	}
-	if got, want := resolve(false), []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기"}; !reflect.DeepEqual(got.Owner, want) || got.Preset != guideline.PresetText {
-		t.Fatalf("after deleting the 분야 guideline: %+v, want %q and the preset line", got, want)
+	if got, want := resolve(), []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("after deleting the 분야 guideline: %q, want %q", got, want)
 	}
 }

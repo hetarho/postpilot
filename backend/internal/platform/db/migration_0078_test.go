@@ -383,9 +383,13 @@ func TestMigration0078IsIdempotent(t *testing.T) {
 	if applied := count0078(t, handle, `SELECT count(*) FROM goose_db_version WHERE version_id = 78 AND is_applied = 1`); applied != 1 {
 		t.Fatalf("78 applied %d times", applied)
 	}
-	for _, table := range []string{"guideline_fields", "guideline_presets", "guideline_preset_fields"} {
-		if n := count0078(t, handle, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, table); n != 1 {
-			t.Errorf("a fresh install has no %s", table)
+	if n := count0078(t, handle, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'guideline_fields'`); n != 1 {
+		t.Error("a fresh install has no guideline_fields")
+	}
+	// 0088 drops the preset's tables, so a fresh install ends without them.
+	for _, table := range []string{"guideline_presets", "guideline_preset_fields"} {
+		if n := count0078(t, handle, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, table); n != 0 {
+			t.Errorf("a fresh install still has %s", table)
 		}
 	}
 }

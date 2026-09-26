@@ -226,68 +226,6 @@ func (x *Guideline) GetFields() []BlogField {
 	return nil
 }
 
-// The one product-owned guideline, 상위 노출 단어 사용 (GUIDE-29). Its multi-select 적용할 분야
-// IS its `fields` scope, so there is no second selector meaning the same thing.
-type GuidelinePreset struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
-	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Fields        []BlogField            `protobuf:"varint,3,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GuidelinePreset) Reset() {
-	*x = GuidelinePreset{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GuidelinePreset) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GuidelinePreset) ProtoMessage() {}
-
-func (x *GuidelinePreset) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GuidelinePreset.ProtoReflect.Descriptor instead.
-func (*GuidelinePreset) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GuidelinePreset) GetText() string {
-	if x != nil {
-		return x.Text
-	}
-	return ""
-}
-
-func (x *GuidelinePreset) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-func (x *GuidelinePreset) GetFields() []BlogField {
-	if x != nil {
-		return x.Fields
-	}
-	return nil
-}
-
 type ListGuidelinesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -296,7 +234,7 @@ type ListGuidelinesRequest struct {
 
 func (x *ListGuidelinesRequest) Reset() {
 	*x = ListGuidelinesRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[3]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +246,7 @@ func (x *ListGuidelinesRequest) String() string {
 func (*ListGuidelinesRequest) ProtoMessage() {}
 
 func (x *ListGuidelinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[3]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,23 +259,21 @@ func (x *ListGuidelinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuidelinesRequest.ProtoReflect.Descriptor instead.
 func (*ListGuidelinesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{2}
 }
 
 type ListGuidelinesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// In injection order: the global group first, then the scoped group, each by creation
-	// time — exactly the order the writer will see them in.
-	Guidelines []*Guideline `protobuf:"bytes,1,rep,name=guidelines,proto3" json:"guidelines,omitempty"`
-	// Shown as a fixed row above the owner's own guidelines.
-	Preset        *GuidelinePreset `protobuf:"bytes,2,opt,name=preset,proto3" json:"preset,omitempty"`
+	// The owner's guidelines alone, in injection order: the global group, then the template
+	// group, then the 분야 group, each by creation time — exactly the order the writer sees.
+	Guidelines    []*Guideline `protobuf:"bytes,1,rep,name=guidelines,proto3" json:"guidelines,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListGuidelinesResponse) Reset() {
 	*x = ListGuidelinesResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[4]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -349,7 +285,7 @@ func (x *ListGuidelinesResponse) String() string {
 func (*ListGuidelinesResponse) ProtoMessage() {}
 
 func (x *ListGuidelinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[4]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -362,19 +298,12 @@ func (x *ListGuidelinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuidelinesResponse.ProtoReflect.Descriptor instead.
 func (*ListGuidelinesResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListGuidelinesResponse) GetGuidelines() []*Guideline {
 	if x != nil {
 		return x.Guidelines
-	}
-	return nil
-}
-
-func (x *ListGuidelinesResponse) GetPreset() *GuidelinePreset {
-	if x != nil {
-		return x.Preset
 	}
 	return nil
 }
@@ -397,7 +326,7 @@ type CreateGuidelineRequest struct {
 
 func (x *CreateGuidelineRequest) Reset() {
 	*x = CreateGuidelineRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[5]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +338,7 @@ func (x *CreateGuidelineRequest) String() string {
 func (*CreateGuidelineRequest) ProtoMessage() {}
 
 func (x *CreateGuidelineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[5]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +351,7 @@ func (x *CreateGuidelineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGuidelineRequest.ProtoReflect.Descriptor instead.
 func (*CreateGuidelineRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateGuidelineRequest) GetText() string {
@@ -469,7 +398,7 @@ type CreateGuidelineResponse struct {
 
 func (x *CreateGuidelineResponse) Reset() {
 	*x = CreateGuidelineResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[6]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +410,7 @@ func (x *CreateGuidelineResponse) String() string {
 func (*CreateGuidelineResponse) ProtoMessage() {}
 
 func (x *CreateGuidelineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[6]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +423,7 @@ func (x *CreateGuidelineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGuidelineResponse.ProtoReflect.Descriptor instead.
 func (*CreateGuidelineResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateGuidelineResponse) GetGuideline() *Guideline {
@@ -518,7 +447,7 @@ type GuidelineScopePatch struct {
 
 func (x *GuidelineScopePatch) Reset() {
 	*x = GuidelineScopePatch{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[7]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -530,7 +459,7 @@ func (x *GuidelineScopePatch) String() string {
 func (*GuidelineScopePatch) ProtoMessage() {}
 
 func (x *GuidelineScopePatch) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[7]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -543,7 +472,7 @@ func (x *GuidelineScopePatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuidelineScopePatch.ProtoReflect.Descriptor instead.
 func (*GuidelineScopePatch) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GuidelineScopePatch) GetScope() GuidelineScope {
@@ -578,7 +507,7 @@ type UpdateGuidelineRequest struct {
 
 func (x *UpdateGuidelineRequest) Reset() {
 	*x = UpdateGuidelineRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[8]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -590,7 +519,7 @@ func (x *UpdateGuidelineRequest) String() string {
 func (*UpdateGuidelineRequest) ProtoMessage() {}
 
 func (x *UpdateGuidelineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[8]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -603,7 +532,7 @@ func (x *UpdateGuidelineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateGuidelineRequest.ProtoReflect.Descriptor instead.
 func (*UpdateGuidelineRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateGuidelineRequest) GetId() string {
@@ -636,7 +565,7 @@ type UpdateGuidelineResponse struct {
 
 func (x *UpdateGuidelineResponse) Reset() {
 	*x = UpdateGuidelineResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[9]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -648,7 +577,7 @@ func (x *UpdateGuidelineResponse) String() string {
 func (*UpdateGuidelineResponse) ProtoMessage() {}
 
 func (x *UpdateGuidelineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[9]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -661,7 +590,7 @@ func (x *UpdateGuidelineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateGuidelineResponse.ProtoReflect.Descriptor instead.
 func (*UpdateGuidelineResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateGuidelineResponse) GetGuideline() *Guideline {
@@ -680,7 +609,7 @@ type DeleteGuidelineRequest struct {
 
 func (x *DeleteGuidelineRequest) Reset() {
 	*x = DeleteGuidelineRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[10]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -692,7 +621,7 @@ func (x *DeleteGuidelineRequest) String() string {
 func (*DeleteGuidelineRequest) ProtoMessage() {}
 
 func (x *DeleteGuidelineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[10]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -705,7 +634,7 @@ func (x *DeleteGuidelineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteGuidelineRequest.ProtoReflect.Descriptor instead.
 func (*DeleteGuidelineRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteGuidelineRequest) GetId() string {
@@ -725,7 +654,7 @@ type DeleteGuidelineResponse struct {
 
 func (x *DeleteGuidelineResponse) Reset() {
 	*x = DeleteGuidelineResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[11]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -737,7 +666,7 @@ func (x *DeleteGuidelineResponse) String() string {
 func (*DeleteGuidelineResponse) ProtoMessage() {}
 
 func (x *DeleteGuidelineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[11]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,151 +679,7 @@ func (x *DeleteGuidelineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteGuidelineResponse.ProtoReflect.Descriptor instead.
 func (*DeleteGuidelineResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{11}
-}
-
-// The preset's 분야 set as one value, whose message presence is what tells "leave the set
-// alone" from "replace it", as GuidelineScopePatch does for a scope.
-type GuidelinePresetFields struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Fields        []BlogField            `protobuf:"varint,1,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GuidelinePresetFields) Reset() {
-	*x = GuidelinePresetFields{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GuidelinePresetFields) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GuidelinePresetFields) ProtoMessage() {}
-
-func (x *GuidelinePresetFields) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GuidelinePresetFields.ProtoReflect.Descriptor instead.
-func (*GuidelinePresetFields) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *GuidelinePresetFields) GetFields() []BlogField {
-	if x != nil {
-		return x.Fields
-	}
-	return nil
-}
-
-// Presence is the edit unit: an absent `enabled` keeps the switch, and an absent `fields`
-// keeps the set.
-type UpdateGuidelinePresetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enabled       *bool                  `protobuf:"varint,1,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
-	Fields        *GuidelinePresetFields `protobuf:"bytes,2,opt,name=fields,proto3" json:"fields,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateGuidelinePresetRequest) Reset() {
-	*x = UpdateGuidelinePresetRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateGuidelinePresetRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateGuidelinePresetRequest) ProtoMessage() {}
-
-func (x *UpdateGuidelinePresetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateGuidelinePresetRequest.ProtoReflect.Descriptor instead.
-func (*UpdateGuidelinePresetRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *UpdateGuidelinePresetRequest) GetEnabled() bool {
-	if x != nil && x.Enabled != nil {
-		return *x.Enabled
-	}
-	return false
-}
-
-func (x *UpdateGuidelinePresetRequest) GetFields() *GuidelinePresetFields {
-	if x != nil {
-		return x.Fields
-	}
-	return nil
-}
-
-type UpdateGuidelinePresetResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Preset        *GuidelinePreset       `protobuf:"bytes,1,opt,name=preset,proto3" json:"preset,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateGuidelinePresetResponse) Reset() {
-	*x = UpdateGuidelinePresetResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateGuidelinePresetResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateGuidelinePresetResponse) ProtoMessage() {}
-
-func (x *UpdateGuidelinePresetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateGuidelinePresetResponse.ProtoReflect.Descriptor instead.
-func (*UpdateGuidelinePresetResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *UpdateGuidelinePresetResponse) GetPreset() *GuidelinePreset {
-	if x != nil {
-		return x.Preset
-	}
-	return nil
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{10}
 }
 
 // A recorded revision instruction awaiting review. It carries NO scope by design: scope is
@@ -921,7 +706,7 @@ type GuidelineCandidate struct {
 
 func (x *GuidelineCandidate) Reset() {
 	*x = GuidelineCandidate{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[15]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -933,7 +718,7 @@ func (x *GuidelineCandidate) String() string {
 func (*GuidelineCandidate) ProtoMessage() {}
 
 func (x *GuidelineCandidate) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[15]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -946,7 +731,7 @@ func (x *GuidelineCandidate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuidelineCandidate.ProtoReflect.Descriptor instead.
 func (*GuidelineCandidate) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{15}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GuidelineCandidate) GetId() string {
@@ -999,7 +784,7 @@ type ListGuidelineCandidatesRequest struct {
 
 func (x *ListGuidelineCandidatesRequest) Reset() {
 	*x = ListGuidelineCandidatesRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[16]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1011,7 +796,7 @@ func (x *ListGuidelineCandidatesRequest) String() string {
 func (*ListGuidelineCandidatesRequest) ProtoMessage() {}
 
 func (x *ListGuidelineCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[16]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1024,7 +809,7 @@ func (x *ListGuidelineCandidatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuidelineCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*ListGuidelineCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{16}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{12}
 }
 
 type ListGuidelineCandidatesResponse struct {
@@ -1042,7 +827,7 @@ type ListGuidelineCandidatesResponse struct {
 
 func (x *ListGuidelineCandidatesResponse) Reset() {
 	*x = ListGuidelineCandidatesResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[17]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1054,7 +839,7 @@ func (x *ListGuidelineCandidatesResponse) String() string {
 func (*ListGuidelineCandidatesResponse) ProtoMessage() {}
 
 func (x *ListGuidelineCandidatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[17]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1067,7 +852,7 @@ func (x *ListGuidelineCandidatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuidelineCandidatesResponse.ProtoReflect.Descriptor instead.
 func (*ListGuidelineCandidatesResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{17}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListGuidelineCandidatesResponse) GetCandidates() []*GuidelineCandidate {
@@ -1093,7 +878,7 @@ type DismissGuidelineCandidateRequest struct {
 
 func (x *DismissGuidelineCandidateRequest) Reset() {
 	*x = DismissGuidelineCandidateRequest{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[18]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1105,7 +890,7 @@ func (x *DismissGuidelineCandidateRequest) String() string {
 func (*DismissGuidelineCandidateRequest) ProtoMessage() {}
 
 func (x *DismissGuidelineCandidateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[18]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1118,7 +903,7 @@ func (x *DismissGuidelineCandidateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DismissGuidelineCandidateRequest.ProtoReflect.Descriptor instead.
 func (*DismissGuidelineCandidateRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{18}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DismissGuidelineCandidateRequest) GetId() string {
@@ -1138,7 +923,7 @@ type DismissGuidelineCandidateResponse struct {
 
 func (x *DismissGuidelineCandidateResponse) Reset() {
 	*x = DismissGuidelineCandidateResponse{}
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[19]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1150,7 +935,7 @@ func (x *DismissGuidelineCandidateResponse) String() string {
 func (*DismissGuidelineCandidateResponse) ProtoMessage() {}
 
 func (x *DismissGuidelineCandidateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_guideline_proto_msgTypes[19]
+	mi := &file_postpilot_v1_guideline_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1163,7 +948,7 @@ func (x *DismissGuidelineCandidateResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use DismissGuidelineCandidateResponse.ProtoReflect.Descriptor instead.
 func (*DismissGuidelineCandidateResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{19}
+	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{15}
 }
 
 var File_postpilot_v1_guideline_proto protoreflect.FileDescriptor
@@ -1183,17 +968,12 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\tR\tupdatedAt\x12/\n" +
-	"\x06fields\x18\a \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"p\n" +
-	"\x0fGuidelinePreset\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\x12/\n" +
-	"\x06fields\x18\x03 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"\x17\n" +
-	"\x15ListGuidelinesRequest\"\x88\x01\n" +
+	"\x06fields\x18\a \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"\x17\n" +
+	"\x15ListGuidelinesRequest\"_\n" +
 	"\x16ListGuidelinesResponse\x127\n" +
 	"\n" +
 	"guidelines\x18\x01 \x03(\v2\x17.postpilot.v1.GuidelineR\n" +
-	"guidelines\x125\n" +
-	"\x06preset\x18\x02 \x01(\v2\x1d.postpilot.v1.GuidelinePresetR\x06preset\"\xfb\x01\n" +
+	"guidelinesJ\x04\b\x02\x10\x03R\x06preset\"\xfb\x01\n" +
 	"\x16CreateGuidelineRequest\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x122\n" +
 	"\x05scope\x18\x02 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
@@ -1216,16 +996,7 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"(\n" +
 	"\x16DeleteGuidelineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x19\n" +
-	"\x17DeleteGuidelineResponse\"H\n" +
-	"\x15GuidelinePresetFields\x12/\n" +
-	"\x06fields\x18\x01 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"\x86\x01\n" +
-	"\x1cUpdateGuidelinePresetRequest\x12\x1d\n" +
-	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12;\n" +
-	"\x06fields\x18\x02 \x01(\v2#.postpilot.v1.GuidelinePresetFieldsR\x06fieldsB\n" +
-	"\n" +
-	"\b_enabled\"V\n" +
-	"\x1dUpdateGuidelinePresetResponse\x125\n" +
-	"\x06preset\x18\x01 \x01(\v2\x1d.postpilot.v1.GuidelinePresetR\x06preset\"\xbd\x01\n" +
+	"\x17DeleteGuidelineResponse\"\xbd\x01\n" +
 	"\x12GuidelineCandidate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1b\n" +
@@ -1248,13 +1019,12 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x1bGUIDELINE_SCOPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16GUIDELINE_SCOPE_GLOBAL\x10\x01\x12\x1d\n" +
 	"\x19GUIDELINE_SCOPE_TEMPLATES\x10\x02\x12\x1a\n" +
-	"\x16GUIDELINE_SCOPE_FIELDS\x10\x032\x85\x06\n" +
+	"\x16GUIDELINE_SCOPE_FIELDS\x10\x032\x91\x05\n" +
 	"\x10GuidelineService\x12]\n" +
 	"\x0eListGuidelines\x12#.postpilot.v1.ListGuidelinesRequest\x1a$.postpilot.v1.ListGuidelinesResponse\"\x00\x12`\n" +
 	"\x0fCreateGuideline\x12$.postpilot.v1.CreateGuidelineRequest\x1a%.postpilot.v1.CreateGuidelineResponse\"\x00\x12`\n" +
 	"\x0fUpdateGuideline\x12$.postpilot.v1.UpdateGuidelineRequest\x1a%.postpilot.v1.UpdateGuidelineResponse\"\x00\x12`\n" +
-	"\x0fDeleteGuideline\x12$.postpilot.v1.DeleteGuidelineRequest\x1a%.postpilot.v1.DeleteGuidelineResponse\"\x00\x12r\n" +
-	"\x15UpdateGuidelinePreset\x12*.postpilot.v1.UpdateGuidelinePresetRequest\x1a+.postpilot.v1.UpdateGuidelinePresetResponse\"\x00\x12x\n" +
+	"\x0fDeleteGuideline\x12$.postpilot.v1.DeleteGuidelineRequest\x1a%.postpilot.v1.DeleteGuidelineResponse\"\x00\x12x\n" +
 	"\x17ListGuidelineCandidates\x12,.postpilot.v1.ListGuidelineCandidatesRequest\x1a-.postpilot.v1.ListGuidelineCandidatesResponse\"\x00\x12~\n" +
 	"\x19DismissGuidelineCandidate\x12..postpilot.v1.DismissGuidelineCandidateRequest\x1a/.postpilot.v1.DismissGuidelineCandidateResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
@@ -1271,68 +1041,57 @@ func file_postpilot_v1_guideline_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_guideline_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_guideline_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_postpilot_v1_guideline_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_postpilot_v1_guideline_proto_goTypes = []any{
 	(GuidelineScope)(0),                       // 0: postpilot.v1.GuidelineScope
 	(*GuidelineTemplateRef)(nil),              // 1: postpilot.v1.GuidelineTemplateRef
 	(*Guideline)(nil),                         // 2: postpilot.v1.Guideline
-	(*GuidelinePreset)(nil),                   // 3: postpilot.v1.GuidelinePreset
-	(*ListGuidelinesRequest)(nil),             // 4: postpilot.v1.ListGuidelinesRequest
-	(*ListGuidelinesResponse)(nil),            // 5: postpilot.v1.ListGuidelinesResponse
-	(*CreateGuidelineRequest)(nil),            // 6: postpilot.v1.CreateGuidelineRequest
-	(*CreateGuidelineResponse)(nil),           // 7: postpilot.v1.CreateGuidelineResponse
-	(*GuidelineScopePatch)(nil),               // 8: postpilot.v1.GuidelineScopePatch
-	(*UpdateGuidelineRequest)(nil),            // 9: postpilot.v1.UpdateGuidelineRequest
-	(*UpdateGuidelineResponse)(nil),           // 10: postpilot.v1.UpdateGuidelineResponse
-	(*DeleteGuidelineRequest)(nil),            // 11: postpilot.v1.DeleteGuidelineRequest
-	(*DeleteGuidelineResponse)(nil),           // 12: postpilot.v1.DeleteGuidelineResponse
-	(*GuidelinePresetFields)(nil),             // 13: postpilot.v1.GuidelinePresetFields
-	(*UpdateGuidelinePresetRequest)(nil),      // 14: postpilot.v1.UpdateGuidelinePresetRequest
-	(*UpdateGuidelinePresetResponse)(nil),     // 15: postpilot.v1.UpdateGuidelinePresetResponse
-	(*GuidelineCandidate)(nil),                // 16: postpilot.v1.GuidelineCandidate
-	(*ListGuidelineCandidatesRequest)(nil),    // 17: postpilot.v1.ListGuidelineCandidatesRequest
-	(*ListGuidelineCandidatesResponse)(nil),   // 18: postpilot.v1.ListGuidelineCandidatesResponse
-	(*DismissGuidelineCandidateRequest)(nil),  // 19: postpilot.v1.DismissGuidelineCandidateRequest
-	(*DismissGuidelineCandidateResponse)(nil), // 20: postpilot.v1.DismissGuidelineCandidateResponse
-	(BlogField)(0),                            // 21: postpilot.v1.BlogField
+	(*ListGuidelinesRequest)(nil),             // 3: postpilot.v1.ListGuidelinesRequest
+	(*ListGuidelinesResponse)(nil),            // 4: postpilot.v1.ListGuidelinesResponse
+	(*CreateGuidelineRequest)(nil),            // 5: postpilot.v1.CreateGuidelineRequest
+	(*CreateGuidelineResponse)(nil),           // 6: postpilot.v1.CreateGuidelineResponse
+	(*GuidelineScopePatch)(nil),               // 7: postpilot.v1.GuidelineScopePatch
+	(*UpdateGuidelineRequest)(nil),            // 8: postpilot.v1.UpdateGuidelineRequest
+	(*UpdateGuidelineResponse)(nil),           // 9: postpilot.v1.UpdateGuidelineResponse
+	(*DeleteGuidelineRequest)(nil),            // 10: postpilot.v1.DeleteGuidelineRequest
+	(*DeleteGuidelineResponse)(nil),           // 11: postpilot.v1.DeleteGuidelineResponse
+	(*GuidelineCandidate)(nil),                // 12: postpilot.v1.GuidelineCandidate
+	(*ListGuidelineCandidatesRequest)(nil),    // 13: postpilot.v1.ListGuidelineCandidatesRequest
+	(*ListGuidelineCandidatesResponse)(nil),   // 14: postpilot.v1.ListGuidelineCandidatesResponse
+	(*DismissGuidelineCandidateRequest)(nil),  // 15: postpilot.v1.DismissGuidelineCandidateRequest
+	(*DismissGuidelineCandidateResponse)(nil), // 16: postpilot.v1.DismissGuidelineCandidateResponse
+	(BlogField)(0),                            // 17: postpilot.v1.BlogField
 }
 var file_postpilot_v1_guideline_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Guideline.scope:type_name -> postpilot.v1.GuidelineScope
 	1,  // 1: postpilot.v1.Guideline.templates:type_name -> postpilot.v1.GuidelineTemplateRef
-	21, // 2: postpilot.v1.Guideline.fields:type_name -> postpilot.v1.BlogField
-	21, // 3: postpilot.v1.GuidelinePreset.fields:type_name -> postpilot.v1.BlogField
-	2,  // 4: postpilot.v1.ListGuidelinesResponse.guidelines:type_name -> postpilot.v1.Guideline
-	3,  // 5: postpilot.v1.ListGuidelinesResponse.preset:type_name -> postpilot.v1.GuidelinePreset
-	0,  // 6: postpilot.v1.CreateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScope
-	21, // 7: postpilot.v1.CreateGuidelineRequest.fields:type_name -> postpilot.v1.BlogField
-	2,  // 8: postpilot.v1.CreateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
-	0,  // 9: postpilot.v1.GuidelineScopePatch.scope:type_name -> postpilot.v1.GuidelineScope
-	21, // 10: postpilot.v1.GuidelineScopePatch.fields:type_name -> postpilot.v1.BlogField
-	8,  // 11: postpilot.v1.UpdateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScopePatch
-	2,  // 12: postpilot.v1.UpdateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
-	21, // 13: postpilot.v1.GuidelinePresetFields.fields:type_name -> postpilot.v1.BlogField
-	13, // 14: postpilot.v1.UpdateGuidelinePresetRequest.fields:type_name -> postpilot.v1.GuidelinePresetFields
-	3,  // 15: postpilot.v1.UpdateGuidelinePresetResponse.preset:type_name -> postpilot.v1.GuidelinePreset
-	16, // 16: postpilot.v1.ListGuidelineCandidatesResponse.candidates:type_name -> postpilot.v1.GuidelineCandidate
-	4,  // 17: postpilot.v1.GuidelineService.ListGuidelines:input_type -> postpilot.v1.ListGuidelinesRequest
-	6,  // 18: postpilot.v1.GuidelineService.CreateGuideline:input_type -> postpilot.v1.CreateGuidelineRequest
-	9,  // 19: postpilot.v1.GuidelineService.UpdateGuideline:input_type -> postpilot.v1.UpdateGuidelineRequest
-	11, // 20: postpilot.v1.GuidelineService.DeleteGuideline:input_type -> postpilot.v1.DeleteGuidelineRequest
-	14, // 21: postpilot.v1.GuidelineService.UpdateGuidelinePreset:input_type -> postpilot.v1.UpdateGuidelinePresetRequest
-	17, // 22: postpilot.v1.GuidelineService.ListGuidelineCandidates:input_type -> postpilot.v1.ListGuidelineCandidatesRequest
-	19, // 23: postpilot.v1.GuidelineService.DismissGuidelineCandidate:input_type -> postpilot.v1.DismissGuidelineCandidateRequest
-	5,  // 24: postpilot.v1.GuidelineService.ListGuidelines:output_type -> postpilot.v1.ListGuidelinesResponse
-	7,  // 25: postpilot.v1.GuidelineService.CreateGuideline:output_type -> postpilot.v1.CreateGuidelineResponse
-	10, // 26: postpilot.v1.GuidelineService.UpdateGuideline:output_type -> postpilot.v1.UpdateGuidelineResponse
-	12, // 27: postpilot.v1.GuidelineService.DeleteGuideline:output_type -> postpilot.v1.DeleteGuidelineResponse
-	15, // 28: postpilot.v1.GuidelineService.UpdateGuidelinePreset:output_type -> postpilot.v1.UpdateGuidelinePresetResponse
-	18, // 29: postpilot.v1.GuidelineService.ListGuidelineCandidates:output_type -> postpilot.v1.ListGuidelineCandidatesResponse
-	20, // 30: postpilot.v1.GuidelineService.DismissGuidelineCandidate:output_type -> postpilot.v1.DismissGuidelineCandidateResponse
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	17, // 2: postpilot.v1.Guideline.fields:type_name -> postpilot.v1.BlogField
+	2,  // 3: postpilot.v1.ListGuidelinesResponse.guidelines:type_name -> postpilot.v1.Guideline
+	0,  // 4: postpilot.v1.CreateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScope
+	17, // 5: postpilot.v1.CreateGuidelineRequest.fields:type_name -> postpilot.v1.BlogField
+	2,  // 6: postpilot.v1.CreateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
+	0,  // 7: postpilot.v1.GuidelineScopePatch.scope:type_name -> postpilot.v1.GuidelineScope
+	17, // 8: postpilot.v1.GuidelineScopePatch.fields:type_name -> postpilot.v1.BlogField
+	7,  // 9: postpilot.v1.UpdateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScopePatch
+	2,  // 10: postpilot.v1.UpdateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
+	12, // 11: postpilot.v1.ListGuidelineCandidatesResponse.candidates:type_name -> postpilot.v1.GuidelineCandidate
+	3,  // 12: postpilot.v1.GuidelineService.ListGuidelines:input_type -> postpilot.v1.ListGuidelinesRequest
+	5,  // 13: postpilot.v1.GuidelineService.CreateGuideline:input_type -> postpilot.v1.CreateGuidelineRequest
+	8,  // 14: postpilot.v1.GuidelineService.UpdateGuideline:input_type -> postpilot.v1.UpdateGuidelineRequest
+	10, // 15: postpilot.v1.GuidelineService.DeleteGuideline:input_type -> postpilot.v1.DeleteGuidelineRequest
+	13, // 16: postpilot.v1.GuidelineService.ListGuidelineCandidates:input_type -> postpilot.v1.ListGuidelineCandidatesRequest
+	15, // 17: postpilot.v1.GuidelineService.DismissGuidelineCandidate:input_type -> postpilot.v1.DismissGuidelineCandidateRequest
+	4,  // 18: postpilot.v1.GuidelineService.ListGuidelines:output_type -> postpilot.v1.ListGuidelinesResponse
+	6,  // 19: postpilot.v1.GuidelineService.CreateGuideline:output_type -> postpilot.v1.CreateGuidelineResponse
+	9,  // 20: postpilot.v1.GuidelineService.UpdateGuideline:output_type -> postpilot.v1.UpdateGuidelineResponse
+	11, // 21: postpilot.v1.GuidelineService.DeleteGuideline:output_type -> postpilot.v1.DeleteGuidelineResponse
+	14, // 22: postpilot.v1.GuidelineService.ListGuidelineCandidates:output_type -> postpilot.v1.ListGuidelineCandidatesResponse
+	16, // 23: postpilot.v1.GuidelineService.DismissGuidelineCandidate:output_type -> postpilot.v1.DismissGuidelineCandidateResponse
+	18, // [18:24] is the sub-list for method output_type
+	12, // [12:18] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_guideline_proto_init() }
@@ -1341,16 +1100,15 @@ func file_postpilot_v1_guideline_proto_init() {
 		return
 	}
 	file_postpilot_v1_post_proto_init()
-	file_postpilot_v1_guideline_proto_msgTypes[5].OneofWrappers = []any{}
-	file_postpilot_v1_guideline_proto_msgTypes[8].OneofWrappers = []any{}
-	file_postpilot_v1_guideline_proto_msgTypes[13].OneofWrappers = []any{}
+	file_postpilot_v1_guideline_proto_msgTypes[4].OneofWrappers = []any{}
+	file_postpilot_v1_guideline_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_guideline_proto_rawDesc), len(file_postpilot_v1_guideline_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   20,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

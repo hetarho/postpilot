@@ -30,15 +30,11 @@ func (h *Handler) ListGuidelines(ctx context.Context, _ *connect.Request[postpil
 	if err != nil {
 		return nil, toConnectError("list guidelines", err)
 	}
-	preset, err := h.service.Preset(ctx, userID)
-	if err != nil {
-		return nil, toConnectError("list guidelines", err)
-	}
 	out := make([]*postpilotv1.Guideline, 0, len(guidelines))
 	for _, g := range guidelines {
 		out = append(out, toProtoGuideline(g))
 	}
-	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out, Preset: toProtoPreset(preset)}), nil
+	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out}), nil
 }
 
 func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[postpilotv1.CreateGuidelineRequest]) (*connect.Response[postpilotv1.CreateGuidelineResponse], error) {
@@ -101,32 +97,6 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 		return nil, toConnectError("delete guideline", err)
 	}
 	return connect.NewResponse(&postpilotv1.DeleteGuidelineResponse{}), nil
-}
-
-// UpdateGuidelinePreset switches the product's 상위 노출 단어 사용 preset and picks its 분야, a
-// presence patch: an absent `enabled` keeps the switch, and an absent `fields` MESSAGE keeps the
-// set while a present one replaces it — present and empty clears it (GUIDE-38).
-func (h *Handler) UpdateGuidelinePreset(ctx context.Context, req *connect.Request[postpilotv1.UpdateGuidelinePresetRequest]) (*connect.Response[postpilotv1.UpdateGuidelinePresetResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	patch := guideline.PresetPatch{Enabled: req.Msg.Enabled}
-	if sent := req.Msg.GetFields(); sent != nil {
-		fields, err := fromProtoFields(sent.GetFields())
-		if err != nil {
-			return nil, toConnectError("update guideline preset", err)
-		}
-		if fields == nil {
-			fields = []string{}
-		}
-		patch.Fields = &fields
-	}
-	preset, err := h.service.UpdatePreset(ctx, userID, patch)
-	if err != nil {
-		return nil, toConnectError("update guideline preset", err)
-	}
-	return connect.NewResponse(&postpilotv1.UpdateGuidelinePresetResponse{Preset: toProtoPreset(preset)}), nil
 }
 
 // ListGuidelineCandidates serves the review list. queue_full comes from the server because
@@ -226,10 +196,6 @@ func toProtoFields(ids []string) []postpilotv1.BlogField {
 		}
 	}
 	return out
-}
-
-func toProtoPreset(preset guideline.Preset) *postpilotv1.GuidelinePreset {
-	return &postpilotv1.GuidelinePreset{Text: guideline.PresetText, Enabled: preset.Enabled, Fields: toProtoFields(preset.Fields)}
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign guideline is NotFound

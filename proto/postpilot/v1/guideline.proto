@@ -20,8 +20,6 @@ service GuidelineService {
   rpc CreateGuideline(CreateGuidelineRequest) returns (CreateGuidelineResponse) {}
   rpc UpdateGuideline(UpdateGuidelineRequest) returns (UpdateGuidelineResponse) {}
   rpc DeleteGuideline(DeleteGuidelineRequest) returns (DeleteGuidelineResponse) {}
-  // Switches the product-owned 상위 노출 단어 사용 preset and sets its 적용할 분야 (GUIDE-29).
-  rpc UpdateGuidelinePreset(UpdateGuidelinePresetRequest) returns (UpdateGuidelinePresetResponse) {}
   // The candidate review surface. A candidate is a completed revision's instruction,
   // recorded verbatim — never learned, never generalized, and never injected into a
   // prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
@@ -61,21 +59,13 @@ message Guideline {
   repeated BlogField fields = 7;
 }
 
-// The one product-owned guideline, 상위 노출 단어 사용 (GUIDE-29). Its multi-select 적용할 분야
-// IS its `fields` scope, so there is no second selector meaning the same thing.
-message GuidelinePreset {
-  string text = 1;
-  bool enabled = 2;
-  repeated BlogField fields = 3;
-}
-
 message ListGuidelinesRequest {}
 message ListGuidelinesResponse {
-  // In injection order: the global group first, then the scoped group, each by creation
-  // time — exactly the order the writer will see them in.
+  // The owner's guidelines alone, in injection order: the global group, then the template
+  // group, then the 분야 group, each by creation time — exactly the order the writer sees.
   repeated Guideline guidelines = 1;
-  // Shown as a fixed row above the owner's own guidelines.
-  GuidelinePreset preset = 2;
+  reserved 2;
+  reserved "preset";
 }
 
 message CreateGuidelineRequest {
@@ -112,20 +102,6 @@ message DeleteGuidelineRequest { string id = 1; }
 // Empty: nothing references a guideline, so a delete detaches nothing and has nothing to
 // report back.
 message DeleteGuidelineResponse {}
-
-// The preset's 분야 set as one value, whose message presence is what tells "leave the set
-// alone" from "replace it", as GuidelineScopePatch does for a scope.
-message GuidelinePresetFields {
-  repeated BlogField fields = 1;
-}
-
-// Presence is the edit unit: an absent `enabled` keeps the switch, and an absent `fields`
-// keeps the set.
-message UpdateGuidelinePresetRequest {
-  optional bool enabled = 1;
-  GuidelinePresetFields fields = 2;
-}
-message UpdateGuidelinePresetResponse { GuidelinePreset preset = 1; }
 
 // A recorded revision instruction awaiting review. It carries NO scope by design: scope is
 // a durable decision about every future post, so it is made at approval time and never at

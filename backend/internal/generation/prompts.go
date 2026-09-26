@@ -262,8 +262,7 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstr
 //
 // Vocabulary carries its own order (GUIDE-35, GUIDE-36): a concrete substitution ranks the
 // guideline over the template over the profile, and an abstract one carries no authority at
-// all. Inside the section the earlier line wins (GUIDE-37), which is what lets an owner's own
-// guideline beat the product's preset, injected last.
+// all. Inside the section the earlier line wins (GUIDE-37).
 const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 템플릿의 요구와 충돌하면 지침을 우선하고, 문체·종결어미는 위의 말투 프로필을 따르세요. \"A 대신 B라고 쓰세요\"처럼 구체적으로 정한 치환은 지침, 템플릿, 말투 프로필 순으로 우선하고, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다. 지침끼리 충돌하면 먼저 적힌 지침을 따르세요."
 
 // qualityRulesHeading and qualityRulesPrecedence frame the ticked quality rules (GEN-51,

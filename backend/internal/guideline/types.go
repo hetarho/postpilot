@@ -46,8 +46,8 @@ var (
 	// carrying template ids, or `templates` carrying none. Silently repairing either would
 	// save a scope the user did not ask for.
 	ErrScopeShape = errors.New("guideline scope shape is invalid")
-	// ErrFieldNotFound is a 분야 in a scope or in the preset's set that is not on the
-	// product's list. Like a foreign template, nothing about the request is applied.
+	// ErrFieldNotFound is a 분야 in a fields scope that is not on the product's list. Like a
+	// foreign template, nothing about the request is applied.
 	ErrFieldNotFound = errors.New("guideline blog field not found")
 )
 
@@ -120,29 +120,3 @@ type Patch struct {
 }
 
 func (p Patch) empty() bool { return p.Text == nil && p.Scope == nil }
-
-// Preset is the account's state of the product's 상위 노출 단어 사용 preset: whether it is on and
-// the 분야 it applies to. It is not a guideline row — its text is a product constant and never
-// stored — so it spends neither the account cap nor text uniqueness (GUIDE-39). An account that
-// never touched it holds the zero value, off with no 분야 (GUIDE-34).
-type Preset struct {
-	Enabled bool
-	Fields  []string
-}
-
-// PresetPatch is a presence-based edit like Patch: a nil field is not part of the edit, so
-// switching the preset keeps its 분야 and editing the 분야 keeps the switch.
-type PresetPatch struct {
-	Enabled *bool
-	Fields  *[]string
-}
-
-// PromptTexts is what a prompt builder receives: the owner's texts that apply, in injection
-// order (global, template, 분야), and the product preset's line — set when the preset is on for
-// the post's 분야 and this is not a revision, "" otherwise. The line is apart so the caller that
-// knows whether its phrases froze decides whether it rides (GUIDE-40), and appends it last
-// (GUIDE-14, GUIDE-37).
-type PromptTexts struct {
-	Owner  []string
-	Preset string
-}

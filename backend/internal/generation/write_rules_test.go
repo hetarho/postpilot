@@ -99,7 +99,7 @@ func TestTitleProhibitionsYieldToATemplateTitleForm(t *testing.T) {
 // GUIDE-35, GUIDE-36, GUIDE-37: the profile no longer receives vocabulary wholesale. 문체 and
 // 종결어미 stay with the voice; a concrete substitution ranks guideline > template > profile; an
 // abstract instruction about better words carries no authority; and inside the guideline
-// section the earlier line wins, which is what lets an owner's guideline beat the preset.
+// section the earlier line wins.
 func TestPrecedenceSentencesRankConcreteSubstitutions(t *testing.T) {
 	for name, sentence := range map[string]string{"template": templatePrecedence, "guideline": guidelinePrecedence} {
 		if strings.Contains(sentence, "어휘") {

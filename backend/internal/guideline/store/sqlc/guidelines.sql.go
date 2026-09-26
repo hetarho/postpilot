@@ -117,15 +117,6 @@ func (q *Queries) DeleteGuidelineFieldLinks(ctx context.Context, arg DeleteGuide
 	return err
 }
 
-const deleteGuidelinePresetFields = `-- name: DeleteGuidelinePresetFields :exec
-DELETE FROM guideline_preset_fields WHERE user_id = ?
-`
-
-func (q *Queries) DeleteGuidelinePresetFields(ctx context.Context, userID string) error {
-	_, err := q.db.ExecContext(ctx, deleteGuidelinePresetFields, userID)
-	return err
-}
-
 const deleteGuidelineScope = `-- name: DeleteGuidelineScope :exec
 DELETE FROM guideline_templates WHERE guideline_id = ? AND user_id = ?
 `
@@ -177,25 +168,6 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
-	return i, err
-}
-
-const getGuidelinePreset = `-- name: GetGuidelinePreset :one
-
-SELECT enabled, updated_at FROM guideline_presets WHERE user_id = ?
-`
-
-type GetGuidelinePresetRow struct {
-	Enabled   int64
-	UpdatedAt string
-}
-
-// The preset's state (GUIDE-34, GUIDE-39). It lives outside guidelines, so CountGuidelines and
-// the text UNIQUE constraint never see it. A missing row is the preset off with no field.
-func (q *Queries) GetGuidelinePreset(ctx context.Context, userID string) (GetGuidelinePresetRow, error) {
-	row := q.db.QueryRowContext(ctx, getGuidelinePreset, userID)
-	var i GetGuidelinePresetRow
-	err := row.Scan(&i.Enabled, &i.UpdatedAt)
 	return i, err
 }
 
@@ -294,20 +266,6 @@ type InsertGuidelineFieldLinkParams struct {
 
 func (q *Queries) InsertGuidelineFieldLink(ctx context.Context, arg InsertGuidelineFieldLinkParams) error {
 	_, err := q.db.ExecContext(ctx, insertGuidelineFieldLink, arg.GuidelineID, arg.Field, arg.UserID)
-	return err
-}
-
-const insertGuidelinePresetField = `-- name: InsertGuidelinePresetField :exec
-INSERT INTO guideline_preset_fields (user_id, field) VALUES (?, ?)
-`
-
-type InsertGuidelinePresetFieldParams struct {
-	UserID string
-	Field  string
-}
-
-func (q *Queries) InsertGuidelinePresetField(ctx context.Context, arg InsertGuidelinePresetFieldParams) error {
-	_, err := q.db.ExecContext(ctx, insertGuidelinePresetField, arg.UserID, arg.Field)
 	return err
 }
 
@@ -428,33 +386,6 @@ type ListGuidelineFieldsParams struct {
 
 func (q *Queries) ListGuidelineFields(ctx context.Context, arg ListGuidelineFieldsParams) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, listGuidelineFields, arg.GuidelineID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var field string
-		if err := rows.Scan(&field); err != nil {
-			return nil, err
-		}
-		items = append(items, field)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listGuidelinePresetFields = `-- name: ListGuidelinePresetFields :many
-SELECT field FROM guideline_preset_fields WHERE user_id = ? ORDER BY field
-`
-
-func (q *Queries) ListGuidelinePresetFields(ctx context.Context, userID string) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listGuidelinePresetFields, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -666,23 +597,6 @@ func (q *Queries) SetCandidateStatusByText(ctx context.Context, arg SetCandidate
 	return err
 }
 
-const touchGuidelinePreset = `-- name: TouchGuidelinePreset :exec
-INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, 0, ?)
-ON CONFLICT (user_id) DO UPDATE SET updated_at = excluded.updated_at
-`
-
-type TouchGuidelinePresetParams struct {
-	UserID    string
-	UpdatedAt string
-}
-
-// A field edit with no switch: the fields need their parent row, and a first write creates it
-// switched off, while an existing row keeps its switch.
-func (q *Queries) TouchGuidelinePreset(ctx context.Context, arg TouchGuidelinePresetParams) error {
-	_, err := q.db.ExecContext(ctx, touchGuidelinePreset, arg.UserID, arg.UpdatedAt)
-	return err
-}
-
 const updateGuidelineScope = `-- name: UpdateGuidelineScope :execrows
 UPDATE guidelines SET scope = ?, updated_at = ? WHERE id = ? AND user_id = ?
 `
@@ -733,20 +647,4 @@ func (q *Queries) UpdateGuidelineText(ctx context.Context, arg UpdateGuidelineTe
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const upsertGuidelinePresetEnabled = `-- name: UpsertGuidelinePresetEnabled :exec
-INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, ?, ?)
-ON CONFLICT (user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at
-`
-
-type UpsertGuidelinePresetEnabledParams struct {
-	UserID    string
-	Enabled   int64
-	UpdatedAt string
-}
-
-func (q *Queries) UpsertGuidelinePresetEnabled(ctx context.Context, arg UpsertGuidelinePresetEnabledParams) error {
-	_, err := q.db.ExecContext(ctx, upsertGuidelinePresetEnabled, arg.UserID, arg.Enabled, arg.UpdatedAt)
-	return err
 }

@@ -36,16 +36,6 @@ type Store interface {
 	// 분야; each matches no link, so a post missing either receives only the groups it has.
 	ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error)
 
-	// Preset reads the account's preset state. A missing row is the preset off with no 분야:
-	// nothing is seeded (GUIDE-34), so an account that never touched it has no row at all.
-	Preset(ctx context.Context, userID string) (Preset, error)
-	// UpdatePreset applies only the present parts of the patch in one transaction and returns
-	// the result. Enabled alone keeps the 분야; 분야 alone keeps Enabled, and a first write of
-	// them creates the row switched off; a present empty set clears them; an empty patch writes
-	// nothing. The preset is not a guideline row, so it spends neither the account cap nor text
-	// uniqueness (GUIDE-39).
-	UpdatePreset(ctx context.Context, userID string, patch PresetPatch, updatedAt time.Time) (Preset, error)
-
 	// RecordCandidate carries out the whole recording rule in ONE transaction: it reads the
 	// existing candidate's status, whether a guideline already holds the text and the pending
 	// count, asks DecideRecording, and then inserts or counts up. The decision cannot be made
@@ -84,7 +74,7 @@ type TemplateDirectory interface {
 }
 
 // FieldDirectory answers whether a 분야 id is on the product's list, consumed to validate a
-// fields scope and the preset's set before anything is written. It is declared here by its
+// fields scope before anything is written. It is declared here by its
 // consumer, so this context never imports the one that owns the list (ARCH-6, ARCH-7).
 type FieldDirectory interface {
 	Known(id string) bool

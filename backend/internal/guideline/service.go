@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -23,8 +22,7 @@ type Service struct {
 }
 
 // NewService takes the field directory as a constructor argument rather than a setter: every
-// fields scope and every preset write needs it, so a service without it is a wiring error
-// (ARCH-40).
+// fields scope needs it, so a service without it is a wiring error (ARCH-40).
 func NewService(store Store, fields FieldDirectory, limits Limits, maxPendingCandidates int) *Service {
 	if fields == nil {
 		panic("guideline: a field directory is required")
@@ -185,76 +183,19 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 	return s.store.Delete(ctx, userID, id)
 }
 
-// Preset is the account's 상위 노출 단어 사용 state; an account that never touched it reads as off
-// with no 분야 (GUIDE-34).
-func (s *Service) Preset(ctx context.Context, userID string) (Preset, error) {
-	preset, err := s.store.Preset(ctx, userID)
-	if err != nil {
-		return Preset{}, fmt.Errorf("read guideline preset: %w", err)
-	}
-	return preset, nil
-}
-
-// UpdatePreset is the owner's switch and 분야 set for the preset, a presence patch. A present
-// set replaces the whole set, an empty one included (GUIDE-38), and every 분야 in it is proved
-// before anything is written. It spends no cap, checks no text and approves no candidate
-// (GUIDE-39), and nothing but the owner's procedure calls it (GUIDE-33).
-func (s *Service) UpdatePreset(ctx context.Context, userID string, patch PresetPatch) (Preset, error) {
-	if patch.Enabled == nil && patch.Fields == nil {
-		return s.Preset(ctx, userID)
-	}
-	normalized := PresetPatch{Enabled: patch.Enabled}
-	if patch.Fields != nil {
-		fields, err := collapse(*patch.Fields, ErrFieldNotFound)
-		if err != nil {
-			return Preset{}, err
-		}
-		if err := s.knownFields(fields); err != nil {
-			return Preset{}, err
-		}
-		normalized.Fields = &fields
-	}
-	preset, err := s.store.UpdatePreset(ctx, userID, normalized, s.now())
-	if err != nil {
-		return Preset{}, fmt.Errorf("update guideline preset: %w", err)
-	}
-	return preset, nil
-}
-
 // ForPrompt is this context's published behavior for prompt builders: the owner's texts that
 // apply to one post, resolved from the post's CURRENT template and 분야 — global, then template,
-// then 분야 (GUIDE-14) — and, apart from them, the preset's line where it applies. Absence is
-// not an error: a prompt with no guidelines is a valid prompt.
+// then 분야, each by created_at then id (GUIDE-14). The write and the revision are given the same
+// texts. Absence is not an error: a prompt with no guidelines is a valid prompt.
 //
 // templateID and field are pointers because "the post has none" and "the post has X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
-// A revision never carries the preset line (GEN-57): it rewrites the owner's own text, and the
-// phrase list the line binds is not part of a revision — so a revision does not even read the
-// preset. The line comes back apart because whether a write keeps it depends on the phrases
-// generation freezes (GUIDE-40), which only freezeWriteMaterial sees.
-func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) (PromptTexts, error) {
-	scoped := trimmed(templateID)
-	blogField := trimmed(field)
-	texts, err := s.store.ApplicableTexts(ctx, userID, scoped, blogField)
+func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string) ([]string, error) {
+	texts, err := s.store.ApplicableTexts(ctx, userID, trimmed(templateID), trimmed(field))
 	if err != nil {
-		return PromptTexts{}, fmt.Errorf("resolve applicable guidelines: %w", err)
+		return nil, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
-	// The preset is only ever read for a generation of a post that has a 분야, so a post without
-	// one never pays for it and never receives it (GUIDE-17, GUIDE-29).
-	if forRevision || blogField == "" {
-		return PromptTexts{Owner: texts}, nil
-	}
-	preset, err := s.store.Preset(ctx, userID)
-	if err != nil {
-		return PromptTexts{}, fmt.Errorf("read guideline preset: %w", err)
-	}
-	// Not deduplicated against an owner line with the same text: the two are independent
-	// (GUIDE-39).
-	result := PromptTexts{Owner: texts}
-	if preset.Enabled && slices.Contains(preset.Fields, blogField) {
-		result.Preset = PresetText
-	}
-	return result, nil
+	return texts, nil
 }
 
 func trimmed(value *string) string {

@@ -26,13 +26,6 @@ type fakeStore struct {
 	askedAccount  string
 	applicableErr error
 
-	// The preset half, kept in memory: the presence rules are the store's, so the fake only
-	// has to hold what it was last given. presetReads counts how often it was read, and
-	// presetWrites how often written.
-	preset       Preset
-	presetReads  int
-	presetWrites []PresetPatch
-
 	// The candidate half. The store owns the whole recording decision, so the fake records
 	// what it was asked to record rather than re-deciding it.
 	candidates    []Candidate
@@ -145,22 +138,6 @@ func (f *fakeStore) Delete(_ context.Context, userID, id string) error {
 func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID, field string) ([]string, error) {
 	f.askedAccount, f.askedTemplate, f.askedField = userID, templateID, field
 	return f.texts, f.applicableErr
-}
-
-func (f *fakeStore) Preset(context.Context, string) (Preset, error) {
-	f.presetReads++
-	return f.preset, nil
-}
-
-func (f *fakeStore) UpdatePreset(_ context.Context, _ string, patch PresetPatch, _ time.Time) (Preset, error) {
-	f.presetWrites = append(f.presetWrites, patch)
-	if patch.Enabled != nil {
-		f.preset.Enabled = *patch.Enabled
-	}
-	if patch.Fields != nil {
-		f.preset.Fields = append([]string(nil), *patch.Fields...)
-	}
-	return f.preset, nil
 }
 
 // fakeFields knows the 분야 it lists.
@@ -293,108 +270,6 @@ func TestRescopeBetweenTemplatesAndFieldsIsOneNormalizedPatch(t *testing.T) {
 	}
 }
 
-// GUIDE-38, GUIDE-39: the preset is a presence patch. Every 분야 is proved before anything is
-// written, an empty set is legal, and an empty patch writes nothing.
-func TestUpdatePresetIsAPresencePatch(t *testing.T) {
-	svc, store := newTestService(t, nil)
-	ctx := context.Background()
-	store.preset = Preset{Enabled: true, Fields: []string{"cafe"}}
-
-	if got, err := svc.UpdatePreset(ctx, "alice", PresetPatch{}); err != nil || !reflect.DeepEqual(got, store.preset) || len(store.presetWrites) != 0 {
-		t.Fatalf("an empty patch = %+v (%v), %d writes", got, err, len(store.presetWrites))
-	}
-	off := false
-	if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Enabled: &off}); err != nil {
-		t.Fatal(err)
-	}
-	if write := store.presetWrites[0]; write.Fields != nil || *write.Enabled {
-		t.Fatalf("the switch alone wrote %+v", write)
-	}
-	fields := []string{"pets", " cafe ", "pets"}
-	if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Fields: &fields}); err != nil {
-		t.Fatal(err)
-	}
-	if write := store.presetWrites[1]; write.Enabled != nil || !reflect.DeepEqual(*write.Fields, []string{"pets", "cafe"}) {
-		t.Fatalf("the 분야 alone wrote %+v", write)
-	}
-	for name, bad := range map[string][]string{"an unlisted 분야": {"cafe", "moon"}, "a blank 분야": {" "}} {
-		on := true
-		if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Enabled: &on, Fields: &bad}); !errors.Is(err, ErrFieldNotFound) {
-			t.Errorf("%s: err = %v", name, err)
-		}
-	}
-	if len(store.presetWrites) != 2 {
-		t.Fatalf("a refused preset wrote: %d writes", len(store.presetWrites))
-	}
-	empty := []string{}
-	if got, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Fields: &empty}); err != nil || len(got.Fields) != 0 {
-		t.Fatalf("the empty set = %+v (%v)", got, err)
-	}
-}
-
-// GUIDE-17, GUIDE-29, GEN-57: the owner texts come back as the store resolved them, and the
-// preset's line comes back apart — set only for a generation of a post whose 분야 the preset is
-// switched on for. Whether a write keeps it is generation's decision (GUIDE-40).
-func TestForPromptReturnsThePresetLineApart(t *testing.T) {
-	cafe, pets := "cafe", "pets"
-	for name, tc := range map[string]struct {
-		preset      Preset
-		field       *string
-		forRevision bool
-		wantPreset  string
-		reads       int
-	}{
-		"the preset off":       {Preset{Fields: []string{"cafe"}}, &cafe, false, "", 1},
-		"on with no 분야":        {Preset{Enabled: true}, &cafe, false, "", 1},
-		"on for another 분야":    {Preset{Enabled: true, Fields: []string{"pets"}}, &cafe, false, "", 1},
-		"on for the post's 분야": {Preset{Enabled: true, Fields: []string{"pets", "cafe"}}, &cafe, false, PresetText, 1},
-		"a revision":           {Preset{Enabled: true, Fields: []string{"cafe"}}, &cafe, true, "", 0},
-		"a post with no 분야":    {Preset{Enabled: true, Fields: []string{"cafe"}}, nil, false, "", 0},
-		"a blank 분야 is none":   {Preset{Enabled: true, Fields: []string{"cafe"}}, new(string), false, "", 0},
-	} {
-		t.Run(name, func(t *testing.T) {
-			svc, store := newTestService(t, nil)
-			store.texts = []string{"전역", "분야"}
-			store.preset = tc.preset
-			texts, err := svc.ForPrompt(context.Background(), "alice", nil, tc.field, tc.forRevision)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(texts.Owner, []string{"전역", "분야"}) || texts.Preset != tc.wantPreset {
-				t.Fatalf("texts = %+v, want owner [전역 분야] and preset %q", texts, tc.wantPreset)
-			}
-			if store.presetReads != tc.reads {
-				t.Fatalf("the preset was read %d times, want %d", store.presetReads, tc.reads)
-			}
-		})
-	}
-	// The 분야 asked of the store is the post's, trimmed.
-	svc, store := newTestService(t, nil)
-	spaced := "  pets  "
-	if _, err := svc.ForPrompt(context.Background(), "alice", nil, &spaced, false); err != nil || store.askedField != pets {
-		t.Fatalf("asked the store for %q (%v)", store.askedField, err)
-	}
-}
-
-// GUIDE-39: the preset is not a guideline row, so it spends no cap and takes no text: an account
-// at the cap with the preset on is refused at exactly the same count, and an owner guideline
-// holding the preset's own text is an ordinary guideline.
-func TestThePresetSpendsNoCapAndNoTextUniqueness(t *testing.T) {
-	store := newFakeStore()
-	store.preset = Preset{Enabled: true, Fields: []string{"cafe"}}
-	svc := NewService(store, testFields, Limits{TextMaxChars: 300, MaxPerAccount: 3}, 2)
-	created, err := svc.Create(context.Background(), "alice", PresetText, ScopePatch{Scope: ScopeFields, Fields: []string{"cafe"}}, "")
-	if err != nil || created.Text != PresetText {
-		t.Fatalf("an owner line equal to the preset: %+v (%v)", created, err)
-	}
-	if store.insertedCap != 3 {
-		t.Fatalf("the cap reached the store as %d with the preset on, want 3", store.insertedCap)
-	}
-	if store.presetReads != 0 || len(store.presetWrites) != 0 {
-		t.Fatalf("a create touched the preset: %d reads, %d writes", store.presetReads, len(store.presetWrites))
-	}
-}
-
 // A2: an unknown or foreign template id is not-found and nothing is applied; duplicates in one
 // request collapse to one link.
 func TestCreateValidatesScopedTemplatesAndCollapsesDuplicates(t *testing.T) {
@@ -465,13 +340,14 @@ func TestForeignIdsReadAsUnknown(t *testing.T) {
 	}
 }
 
-// A5: a post with a template asks for that template; a post without one asks for no template, and
-// the two must not be spelled the same way.
+// A5, GUIDE-14: a post with a template asks for that template; a post without one asks for no
+// template, and the two must not be spelled the same way. The owner's texts come back exactly as
+// the store ordered them, with nothing appended.
 func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	svc, store := newTestService(t, nil)
-	store.texts = []string{"전역 1", "템플릿 1"}
+	store.texts = []string{"전역 1", "템플릿 1", "분야 1"}
 
-	texts, err := svc.ForPrompt(context.Background(), "alice", nil, nil, false)
+	texts, err := svc.ForPrompt(context.Background(), "alice", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,15 +358,20 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	if store.askedField != "" {
 		t.Fatalf("resolution asked for the 분야 %q", store.askedField)
 	}
-	if len(texts.Owner) != 2 || texts.Preset != "" {
-		t.Fatalf("texts = %+v", texts)
+	if want := []string{"전역 1", "템플릿 1", "분야 1"}; !reflect.DeepEqual(texts, want) {
+		t.Fatalf("texts = %q, want %q", texts, want)
 	}
-	id := "  p1  "
-	if _, err := svc.ForPrompt(context.Background(), "alice", &id, nil, false); err != nil {
+	id, field := "  p1  ", "  pets  "
+	if _, err := svc.ForPrompt(context.Background(), "alice", &id, &field); err != nil {
 		t.Fatal(err)
 	}
-	if store.askedTemplate != "p1" {
-		t.Fatalf("template asked = %q, want the trimmed id", store.askedTemplate)
+	if store.askedTemplate != "p1" || store.askedField != "pets" {
+		t.Fatalf("asked the store for template %q and 분야 %q, want the trimmed ids", store.askedTemplate, store.askedField)
+	}
+	// A blank 분야 is none, not the empty-string id of one.
+	blank := "   "
+	if _, err := svc.ForPrompt(context.Background(), "alice", nil, &blank); err != nil || store.askedField != "" {
+		t.Fatalf("a blank 분야 asked for %q (%v)", store.askedField, err)
 	}
 }
 
@@ -682,8 +563,8 @@ func TestNewServiceRefusesANonPositivePendingBound(t *testing.T) {
 	NewService(newFakeStore(), testFields, Limits{TextMaxChars: 10, MaxPerAccount: 1}, 0)
 }
 
-// ARCH-40: every fields scope and every preset write needs the directory, so a service without
-// one is a wiring error, not a mode.
+// ARCH-40: every fields scope needs the directory, so a service without one is a wiring error,
+// not a mode.
 func TestNewServiceRequiresAFieldDirectory(t *testing.T) {
 	defer func() {
 		if recovered := recover(); recovered != "guideline: a field directory is required" {

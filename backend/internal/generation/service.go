@@ -210,12 +210,10 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Template = brief
-	resolved, err := s.freezeGuidelines(ctx, post, true)
+	texts, err := s.freezeGuidelines(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	// A revision freezes the owner's texts only: it never carries the preset's line (GEN-57).
-	texts := resolved.Owner
 	request.Guidelines = texts
 	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.TagCount, request.WriteNativeEffort)
 	if err != nil {
@@ -389,12 +387,12 @@ func postFilenames(post PostInput) []string {
 
 // freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME template id
 // the brief was resolved from and the post's 분야 — one read, one consistent view. Editing,
-// rescoping or deleting a guideline, or switching the preset, afterwards cannot reach the
-// queued work, including across a restart-resume or an explicit retry, because the handlers
-// read only the payload. forRevision leaves the preset line out (GEN-57, GUIDE-17).
-func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevision bool) (GuidelineTexts, error) {
+// rescoping or deleting a guideline afterwards cannot reach the queued work, including across
+// a restart-resume or an explicit retry, because the handlers read only the payload
+// (GUIDE-17).
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]string, error) {
 	if s.guidelines == nil {
-		return GuidelineTexts{}, nil
+		return nil, nil
 	}
 	var templateID, field *string
 	if post.TemplateID != "" {
@@ -405,9 +403,9 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevis
 		id := post.Field
 		field = &id
 	}
-	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, forRevision)
+	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field)
 	if err != nil {
-		return GuidelineTexts{}, fmt.Errorf("load applicable guidelines: %w", err)
+		return nil, fmt.Errorf("load applicable guidelines: %w", err)
 	}
 	return texts, nil
 }
@@ -441,7 +439,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	texts, err := s.freezeGuidelines(ctx, post, false)
+	texts, err := s.freezeGuidelines(ctx, post)
 	if err != nil {
 		return writeMaterial{}, err
 	}
@@ -453,7 +451,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	return writeMaterial{Template: brief, Guidelines: texts.Owner, Memories: memories, QualityRules: rules}, nil
+	return writeMaterial{Template: brief, Guidelines: texts, Memories: memories, QualityRules: rules}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.

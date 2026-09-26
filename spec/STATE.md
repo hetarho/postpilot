@@ -54,17 +54,18 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T409 | The 상위 노출 단어 사용 guideline preset leaves the backend and the guideline proto | GUIDE GEN | T408 | todo |
 | T410 | The 분야 phrase batch, its Naver search client and its table are removed | QUAL | T409 | todo |
 | T411 | Backend, proto and build docs cite current spec decisions instead of deleted docs and IDs | ARCH | T410 | todo |
 | T412 | Frontend, styles and lint scripts cite current spec decisions instead of deleted docs and IDs | ARCH THEME | T407 | todo |
 
 ## next
-- implement-task T409 → T410 → T411; T412 is unblocked
+- implement-task T410 → T411; T412 is unblocked
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
-- Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width
+- Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank
 
 ## log
+- 260926 T409 done (hc): the guideline preset is gone: ListGuidelines answers the owner's guidelines alone and ForPrompt returns their ordered texts ([]string, no forRevision) with nothing appended; UpdateGuidelinePreset and its messages are deleted and ListGuidelinesResponse reserves 2/"preset"; migration 0088 drops guideline_preset_fields and guideline_presets (Down restores 0078's DDL empty); BE/FE gates green, gen:proto and gen:sql clean
+- 260926 T409 claimed (hc)
 - 260926 T408 done (hc): the write freezes no 분야 phrases and no preset line (guidelines = owner texts), its answer and the post carry nouns only, SavePostContent takes no taken indices, migration 0087 drops posts.replacement_candidates, post.proto reserves 30/5 and drops ReplacementSurface/ReplacementCandidate; legacy payload, snapshot and candidate-output keys decode as absent; BE/FE gates green, gen:proto and gen:sql clean
 - 260926 T408 claimed (hc)
 - 260926 T407 done (hc): ② renders plain prose with no replacement marks or takes, /guidelines drops the preset row, and the FE stops reading replacement_candidates/preset and sending taken_candidates/UpdateGuidelinePreset; the queue, autosave, BlockEditor and BlockList return to their pre-T351/T363 form; FE gates green
@@ -83,5 +84,3 @@
 - 260926 T403 claimed (rp)
 - 260926 T402 done (rp): the writer is told each generated region row's slot (role, size, floor, lines, max_syllables from RegionSlotBudget) by its CLIP-147 slot, the repair keeps a row that shrinks or wraps and replaces only an Over one, ① bounds a region-bound answer by the slot's syllable budget on the project ratio, slot notices no longer say one line; BE and FE gates green
 - 260926 T402 claimed (rp)
-- 260926 T401 done (rp): region presets are anchored gap stacks fitted by width (design.LayoutRegion, V20 recomputes the whole region), A/B/outro B/E restated by CDS gaps with short text within 6 px of the old baselines, browser preview on a TS port held to a Go fixture, assets-v2 + digest incl. metrics.json; BE/FE gates, host and image region smokes, pnpm smoke:media green
-- 260926 T401 claimed (rp)
