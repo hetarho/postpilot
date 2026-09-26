@@ -61,8 +61,7 @@ func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized + a.Pub
 //
 // The published posts are what the quality surfaces read (QUAL-2): `master`'s eleven meet
 // every metric's minimum, so each row can be judged, while `pro`'s two leave most of them
-// below it, so the minimum line shows. Both carry 일상·생각, the 분야 the seeded phrase list is
-// for.
+// below it, so the minimum line shows. Both carry 일상·생각, so a seeded post shows a 분야.
 var Fixtures = []Account{
 	{LoginID: "free", Plan: plan.Free, Drafts: 0, Reviews: 0, Finalized: 0, Published: 0},
 	{LoginID: "base", Plan: plan.Basic, Drafts: 2, Reviews: 1, Finalized: 0, Published: 0},
@@ -106,25 +105,6 @@ type Content struct {
 	// Nouns are what a write run returns beside the content, not part of it, so the adapter
 	// stores them apart from the content itself (GEN-55).
 	Nouns []string
-}
-
-// PhraseListFixture is one 분야's phrase list as a seed installs it.
-type PhraseListFixture struct {
-	Field      string
-	CorpusSize int
-	Phrases    []string
-}
-
-// PhraseList is the 일상·생각 list a box without Naver keys would never collect (QUAL-42). The
-// phrases are fixture data of the shape the daily batch collects — 2–5 tokens, observational,
-// naming no gain (QUAL-21) — and a real batch replaces them on its first pass.
-var PhraseList = PhraseListFixture{
-	Field:      FieldDailyLife,
-	CorpusSize: 300,
-	Phrases: []string{
-		"소소한 일상", "일상 기록", "오늘 하루", "주말 나들이", "동네 산책", "집밥 메뉴",
-		"혼자 보내는 주말", "소소한 행복", "하루 루틴", "새로운 취미 생활", "간단한 저녁 메뉴", "기록하는 습관",
-	},
 }
 
 // Template is one template as a seed installs it. UserID is set for the account it is

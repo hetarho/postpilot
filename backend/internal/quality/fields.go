@@ -1,41 +1,30 @@
-// Package quality owns the two observations the product makes outside a single post: how an
-// account's published posts look next to each other, and which phrases rank for a 분야 on
-// Naver (QUAL-1).
+// Package quality owns the one observation the product makes outside a single post: how an
+// account's published posts look next to each other (QUAL-1). It also holds the product's 분야
+// list (QUAL-23), which the post and guideline contexts validate against.
 //
 // It is a new flat context without an ARCH edit. ARCH-5's context list is already stale — it
 // omits clip and memory, and the wrapper packages devseed, fxrate, googleauth, mail and
 // tosspay — so the list does not gate a context that follows ARCH-5's own shape.
 package quality
 
-import "strings"
-
 // Field is one 분야 of the product's own list (QUAL-23). ID is the stable ASCII identifier
-// SQL stores, Name is how the product names it, and Query is what the daily phrase batch
-// sends to the search API for it.
+// SQL stores, and Name is how the product names it.
 type Field struct {
-	ID, Name, Query string
+	ID, Name string
 }
 
-// fields is the v1 list in QUAL-23's order. Query is derived from Name once, here, so the
-// two cannot drift apart.
-var fields = func() []Field {
-	named := []struct{ id, name string }{
-		{"restaurant", "맛집"},
-		{"cafe", "카페"},
-		{"domestic_travel", "국내여행"},
-		{"fashion_beauty", "패션·미용"},
-		{"product_review", "상품리뷰"},
-		{"parenting_marriage", "육아·결혼"},
-		{"pets", "반려동물"},
-		{"interior_diy", "인테리어·DIY"},
-		{"daily_life", "일상·생각"},
-	}
-	out := make([]Field, 0, len(named))
-	for _, field := range named {
-		out = append(out, Field{ID: field.id, Name: field.name, Query: strings.ReplaceAll(field.name, "·", " ")})
-	}
-	return out
-}()
+// fields is the v1 list in QUAL-23's order.
+var fields = []Field{
+	{ID: "restaurant", Name: "맛집"},
+	{ID: "cafe", Name: "카페"},
+	{ID: "domestic_travel", Name: "국내여행"},
+	{ID: "fashion_beauty", Name: "패션·미용"},
+	{ID: "product_review", Name: "상품리뷰"},
+	{ID: "parenting_marriage", Name: "육아·결혼"},
+	{ID: "pets", Name: "반려동물"},
+	{ID: "interior_diy", Name: "인테리어·DIY"},
+	{ID: "daily_life", Name: "일상·생각"},
+}
 
 // Fields returns the v1 list in order. The slice is a copy, so a caller cannot reorder the
 // catalogue for everyone else.

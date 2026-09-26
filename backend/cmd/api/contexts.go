@@ -62,9 +62,8 @@ type contexts struct {
 
 	voucher *voucher.Service
 
-	post        *post.Service
-	quality     *quality.Service
-	phraseBatch *quality.PhraseBatch
+	post    *post.Service
+	quality *quality.Service
 
 	clipStore         *clipstore.Store
 	clipPorts         clipapp.Binder
@@ -203,15 +202,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// Quality reads only post, which exists by now, so its adapter holds the service directly.
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
 	c.quality = quality.NewService(quality.Deps{
-		Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: c.post}, Now: time.Now,
+		Measurements: qualityStore, Posts: qualityPosts{service: c.post}, Now: time.Now,
 	})
-	// Built in every mode: without both Naver keys its search is a true nil and it runs no pass.
-	// An interval below the quality context's floor fails the boot with its key named (ARCH-42).
-	phraseBatch, err := newPhraseBatch(cfg, qualityStore)
-	if err != nil {
-		return nil, err
-	}
-	c.phraseBatch = phraseBatch
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))

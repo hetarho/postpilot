@@ -113,8 +113,7 @@ func TestNoTicksLeaveThePayloadAndPromptByteIdentical(t *testing.T) {
 }
 
 // GEN-14: a post's 분야 reaches no part of the write. The same post with and without one is
-// drained into a byte-identical request: no phrase section, no replacements instruction, and the
-// plain write answer schema.
+// drained into the same request, field for field, asking for the plain write answer schema.
 func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 	var requests []llm.Request
 	for _, field := range []string{"restaurant", ""} {
@@ -133,19 +132,11 @@ func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 		requests = append(requests, models.calls[len(models.calls)-1].request)
 	}
 	with, without := requests[0], requests[1]
-	if with.System != without.System || with.Messages[0].Parts[0].Text != without.Messages[0].Parts[0].Text {
-		t.Fatalf("a 분야 moved the write prompt:\n%s\n%s\n---\n%s\n%s", with.System, with.Messages[0].Parts[0].Text, without.System, without.Messages[0].Parts[0].Text)
+	if !reflect.DeepEqual(with, without) {
+		t.Fatalf("a 분야 moved the write request:\n%s\n%s\n---\n%s\n%s", with.System, with.Messages[0].Parts[0].Text, without.System, without.Messages[0].Parts[0].Text)
 	}
-	prompt := with.System + "\n" + with.Messages[0].Parts[0].Text
-	for _, retired := range []string{"[분야 상위 글 문구]", "상위 결과의 제목과 요약", "replacements"} {
-		if strings.Contains(prompt, retired) {
-			t.Errorf("the write prompt carries %q", retired)
-		}
-	}
-	for _, request := range requests {
-		if !bytes.Equal(request.JSONSchema, WriteAnswerSchema()) {
-			t.Fatalf("the write asked for %s, want the plain write answer schema", request.JSONSchema)
-		}
+	if !bytes.Equal(with.JSONSchema, WriteAnswerSchema()) {
+		t.Fatalf("the write asked for %s, want the plain write answer schema", with.JSONSchema)
 	}
 }
 

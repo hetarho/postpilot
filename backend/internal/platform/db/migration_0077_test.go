@@ -435,9 +435,11 @@ func TestMigration0077IsIdempotent(t *testing.T) {
 	if !hasColumn0077(t, handle, "templates", "title_area") {
 		t.Error("a fresh install has no templates.title_area")
 	}
-	for _, table := range []string{"post_measurements", "field_phrase_lists"} {
-		if _, ok := schemaObject0077(t, handle, "table", table); !ok {
-			t.Errorf("a fresh install has no %s", table)
-		}
+	if _, ok := schemaObject0077(t, handle, "table", "post_measurements"); !ok {
+		t.Error("a fresh install has no post_measurements")
+	}
+	// 0089 drops the phrase lists again, so a fresh install ends without them.
+	if _, ok := schemaObject0077(t, handle, "table", "field_phrase_lists"); ok {
+		t.Error("a fresh install still has field_phrase_lists")
 	}
 }

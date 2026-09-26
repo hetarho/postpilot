@@ -27,13 +27,6 @@ func (m memoryMeasurements) SaveMeasurement(_ context.Context, row quality.Store
 	return nil
 }
 
-type noPhrases struct{}
-
-func (noPhrases) PhraseList(context.Context, string) (quality.PhraseList, bool, error) {
-	return quality.PhraseList{}, false, nil
-}
-func (noPhrases) ReplacePhraseList(context.Context, quality.PhraseList) error { return nil }
-
 // alicesPosts is alice's posts by slug; published is the published window, newest first.
 type alicesPosts struct {
 	posts     map[string]quality.PostSnapshot
@@ -82,7 +75,7 @@ func saturated() *alicesPosts {
 
 func handler(posts *alicesPosts) *Handler {
 	return NewHandler(quality.NewService(quality.Deps{
-		Measurements: memoryMeasurements{}, Phrases: noPhrases{}, Posts: posts,
+		Measurements: memoryMeasurements{}, Posts: posts,
 		Now: func() time.Time { return time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC) },
 	}))
 }

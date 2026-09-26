@@ -54,16 +54,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T410 | The 분야 phrase batch, its Naver search client and its table are removed | QUAL | T409 | todo |
 | T411 | Backend, proto and build docs cite current spec decisions instead of deleted docs and IDs | ARCH | T410 | todo |
 | T412 | Frontend, styles and lint scripts cite current spec decisions instead of deleted docs and IDs | ARCH THEME | T407 | todo |
 
 ## next
-- implement-task T410 → T411; T412 is unblocked
+- implement-task T411; T412 is unblocked
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank
 
 ## log
+- 260926 T410 done (hc): no phrase batch, Naver search client or phrase config remain: internal/naversearch, quality batch/phrases/stopwords, the PhraseLists/BlogSearch ports, Field.Query, the phrase config and env keys, and the devseed/seed phrase list are deleted; migration 0089 drops field_phrase_lists (Down restores 0077's DDL empty); quality/boundary_test pins QUAL-47 over every module package (migrations aside) and drops the guideline/naversearch entries; a cmd/api boot test serves /health with the retired settings set and no quality goroutine or phrase log; BE gates green, gen:sql and gen:proto clean
+- 260926 T410 claimed (hc)
 - 260926 T409 done (hc): the guideline preset is gone: ListGuidelines answers the owner's guidelines alone and ForPrompt returns their ordered texts ([]string, no forRevision) with nothing appended; UpdateGuidelinePreset and its messages are deleted and ListGuidelinesResponse reserves 2/"preset"; migration 0088 drops guideline_preset_fields and guideline_presets (Down restores 0078's DDL empty); BE/FE gates green, gen:proto and gen:sql clean
 - 260926 T409 claimed (hc)
 - 260926 T408 done (hc): the write freezes no 분야 phrases and no preset line (guidelines = owner texts), its answer and the post carry nouns only, SavePostContent takes no taken indices, migration 0087 drops posts.replacement_candidates, post.proto reserves 30/5 and drops ReplacementSurface/ReplacementCandidate; legacy payload, snapshot and candidate-output keys decode as absent; BE/FE gates green, gen:proto and gen:sql clean
@@ -82,5 +83,3 @@
 - 260926 T404 claimed (rp)
 - 260926 T403 done (rp): intro cover/serif/frame/outline/lower/sticker and outro credits/sidebar/chips/list/stamp drawn, verified and admitted per CDS-89..99 through overlay region-v2 (shapes, textPath arcs, one rotation group, radial scrim); decoration is manifest `plate` parts named by kind, V20 checks them and each part's turn; every entry of a block samples the block's text and only its owner draws the CDS-32 scrim; a left-set block's measure stops at the safe edge; assets-v3; BE/FE gates, host region smokes, pnpm smoke:media green
 - 260926 T403 claimed (rp)
-- 260926 T402 done (rp): the writer is told each generated region row's slot (role, size, floor, lines, max_syllables from RegionSlotBudget) by its CLIP-147 slot, the repair keeps a row that shrinks or wraps and replaces only an Over one, ① bounds a region-bound answer by the slot's syllable budget on the project ratio, slot notices no longer say one line; BE and FE gates green
-- 260926 T402 claimed (rp)

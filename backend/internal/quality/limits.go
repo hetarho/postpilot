@@ -1,9 +1,6 @@
 package quality
 
-import (
-	"math"
-	"time"
-)
+import "math"
 
 // The product's own measurement settings (QUAL-6, QUAL-11). They are code constants rather than
 // env: they are product-owned, not per-account options, and changing a band rewrites what every
@@ -45,28 +42,3 @@ func Minimum(m Metric) int {
 		return math.MaxInt
 	}
 }
-
-// The daily phrase batch (QUAL-17, QUAL-38). PhraseRefreshInterval is the product default the
-// QUALITY_PHRASE_REFRESH_INTERVAL override replaces. PhraseRefreshCheck is how often the loop
-// looks for a due field: separate from the interval on purpose, because ticking once per
-// interval against a next refresh stamped a moment after the tick finds nothing due on the next
-// tick, and would refresh every second interval.
-const (
-	PhraseRefreshInterval = 24 * time.Hour
-	// PhraseRefreshMinInterval is the floor an override may not go below (ARCH-42). One pass is 9
-	// fields × 3 pages = 27 search calls; at one an hour that is 648 a day, and a failing field
-	// retries within the same hourly cadence, so the batch cannot exceed it — about 2.6% of the
-	// 25,000/day quota of the Naver application every stack using the keys shares (staging, prod,
-	// dev). A one-minute interval would be 38,880 a day, over the quota. It equals
-	// PhraseRetryDelay, so a failing field never retries faster than the floor either.
-	PhraseRefreshMinInterval = time.Hour
-	PhraseRefreshCheck       = 10 * time.Minute
-	PhraseRetryDelay         = time.Hour
-	// PhrasePageSize is the page the batch asks for, sent as the API's display, so a shorter page
-	// means the search has no more; PhrasePages of them make QUAL-17's 300 results.
-	PhrasePageSize  = 100
-	PhrasePages     = 3
-	PhraseMinTokens = 2
-	PhraseMaxTokens = 5
-	PhraseListMax   = 50
-)

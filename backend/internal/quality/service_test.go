@@ -30,22 +30,6 @@ func (f *fakeMeasurements) SaveMeasurement(_ context.Context, m StoredMeasuremen
 	return nil
 }
 
-type fakePhrases struct {
-	lists map[string]PhraseList
-	reads int
-}
-
-func (f *fakePhrases) PhraseList(_ context.Context, field string) (PhraseList, bool, error) {
-	f.reads++
-	list, ok := f.lists[field]
-	return list, ok, nil
-}
-
-func (f *fakePhrases) ReplacePhraseList(_ context.Context, list PhraseList) error {
-	f.lists[list.Field] = list
-	return nil
-}
-
 // fakePosts is the post context: every post belongs to its owner, and published is the whole
 // published window newest first, across accounts.
 type fakePosts struct {
@@ -93,13 +77,12 @@ func (f *fakePosts) add(slug, title string, revision int64, published bool, noun
 	return snapshot
 }
 
-func newQualityService(t *testing.T) (*Service, *fakeMeasurements, *fakePhrases, *fakePosts) {
+func newQualityService(t *testing.T) (*Service, *fakeMeasurements, *fakePosts) {
 	t.Helper()
 	measurements := &fakeMeasurements{rows: map[string]StoredMeasurement{}}
-	phrases := &fakePhrases{lists: map[string]PhraseList{}}
 	posts := &fakePosts{posts: map[string]PostSnapshot{}, owners: map[string]string{}}
-	svc := NewService(Deps{Measurements: measurements, Phrases: phrases, Posts: posts, Now: func() time.Time { return serviceNow }})
-	return svc, measurements, phrases, posts
+	svc := NewService(Deps{Measurements: measurements, Posts: posts, Now: func() time.Time { return serviceNow }})
+	return svc, measurements, posts
 }
 
 func sampleOf(p PostSnapshot) Sample {
@@ -107,7 +90,7 @@ func sampleOf(p PostSnapshot) Sample {
 }
 
 func TestAStaleRevisionIsRecomputedAndStored(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	post := posts.add("p", "을지로 감자탕 후기", 2, false, []string{"감자탕"}, "감자탕을 먹었다. 국물이 진했다.")
 	measurements.rows["alice/p"] = StoredMeasurement{
 		PostSlug: "p", UserID: "alice", Revision: 1, MeasureVersion: MeasureVersion,
@@ -131,7 +114,7 @@ func TestAStaleRevisionIsRecomputedAndStored(t *testing.T) {
 }
 
 func TestAMeasureVersionChangeIsRecomputed(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	posts.add("p", "후기", 3, false, nil, "오늘은 쉬었다.")
 	measurements.rows["alice/p"] = StoredMeasurement{
 		PostSlug: "p", UserID: "alice", Revision: 3, MeasureVersion: MeasureVersion - 1,
@@ -146,7 +129,7 @@ func TestAMeasureVersionChangeIsRecomputed(t *testing.T) {
 }
 
 func TestAFreshRowIsReadWithoutAWrite(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	posts.add("p", "후기", 3, false, nil, "오늘은 쉬었다.")
 	// Distinctive values no measurement of this post would produce: the answer must come from
 	// the row, not from measuring again.
@@ -167,7 +150,7 @@ func TestAFreshRowIsReadWithoutAWrite(t *testing.T) {
 }
 
 func TestAPostWithoutContentAnswersEveryValueAbsent(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	posts.posts["draft"], posts.owners["draft"] = PostSnapshot{Slug: "draft", Revision: 0, TargetLanguage: LanguageKorean}, "alice"
 	reading, err := svc.PostMeasurement(context.Background(), "alice", "draft")
 	if err != nil {
@@ -182,7 +165,7 @@ func TestAPostWithoutContentAnswersEveryValueAbsent(t *testing.T) {
 }
 
 func TestPostM2IsBelowMinimumWithFewerThanThreeOthers(t *testing.T) {
-	svc, _, _, posts := newQualityService(t)
+	svc, _, posts := newQualityService(t)
 	for i, word := range []string{"첫째", "둘째"} {
 		posts.add(fmt.Sprintf("p%d", i), "후기", 1, true, nil, word+" "+sharedRun+" 왔다")
 	}
@@ -210,7 +193,7 @@ func TestPostM2IsBelowMinimumWithFewerThanThreeOthers(t *testing.T) {
 }
 
 func TestTheAggregateReadsTheNewestPublishedPosts(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	for i := 0; i < 25; i++ {
 		posts.add(fmt.Sprintf("p%02d", i), fmt.Sprintf("%d번째 기록", i), 1, true, []string{"기록"}, fmt.Sprintf("오늘은 %d번째 날이다.", i))
 	}
@@ -239,7 +222,7 @@ func TestTheAggregateReadsTheNewestPublishedPosts(t *testing.T) {
 }
 
 func TestAccountStatesBelowMinimumAndAbsent(t *testing.T) {
-	svc, _, _, posts := newQualityService(t)
+	svc, _, posts := newQualityService(t)
 	posts.add("a", "감자탕 맛집", 1, true, []string{"감자탕"}, "감자탕을 먹었다.")
 	posts.add("b", "감자탕 후기", 1, true, []string{"감자탕"}, "감자탕을 또 먹었다.")
 	reading, err := svc.AccountQuality(context.Background(), "alice", "a")
@@ -257,7 +240,7 @@ func TestAccountStatesBelowMinimumAndAbsent(t *testing.T) {
 	}
 
 	// Ten posts with no nouns meet M1's minimum and measure nothing: absent.
-	svc, _, _, posts = newQualityService(t)
+	svc, _, posts = newQualityService(t)
 	for i := 0; i < 10; i++ {
 		posts.add(fmt.Sprintf("p%d", i), "감자탕 맛집", 1, true, nil, "오늘은 쉬었다.")
 	}
@@ -277,7 +260,7 @@ func saturatedAccount(posts *fakePosts) {
 }
 
 func TestAnOverBandMetricCarriesItsRuleTextInThePostsTargetLanguage(t *testing.T) {
-	svc, _, _, posts := newQualityService(t)
+	svc, _, posts := newQualityService(t)
 	saturatedAccount(posts)
 	english := posts.posts["p0"]
 	english.TargetLanguage = LanguageEnglish
@@ -307,7 +290,7 @@ func TestAnOverBandMetricCarriesItsRuleTextInThePostsTargetLanguage(t *testing.T
 }
 
 func TestRulesForKeepsOnlyTicksOverBandNow(t *testing.T) {
-	svc, _, _, posts := newQualityService(t)
+	svc, _, posts := newQualityService(t)
 	saturatedAccount(posts)
 	ticked := []string{string(MetricComposition), string(MetricCrossPostPhrases), "score", string(MetricTitleSaturation), string(MetricComposition)}
 	texts, err := svc.RulesFor(context.Background(), "alice", "p0", ticked, LanguageEnglish)
@@ -323,7 +306,7 @@ func TestRulesForKeepsOnlyTicksOverBandNow(t *testing.T) {
 }
 
 func TestRulesForWithNothingTickedReadsNothing(t *testing.T) {
-	svc, measurements, _, posts := newQualityService(t)
+	svc, measurements, posts := newQualityService(t)
 	saturatedAccount(posts)
 	for name, ticked := range map[string][]string{"nil": nil, "empty": {}, "only unknown": {"score", ""}} {
 		texts, err := svc.RulesFor(context.Background(), "alice", "p0", ticked, LanguageKorean)
@@ -336,32 +319,8 @@ func TestRulesForWithNothingTickedReadsNothing(t *testing.T) {
 	}
 }
 
-func TestPhrasesForReturnsTheStoredRankOrderOrNothing(t *testing.T) {
-	svc, _, phrases, _ := newQualityService(t)
-	phrases.lists["restaurant"] = PhraseList{Field: "restaurant", Phrases: []string{"웨이팅 없는", "주차 가능", "혼밥"}}
-	phrases.lists["cafe"] = PhraseList{Field: "cafe", Phrases: []string{}}
-
-	got, err := svc.PhrasesFor(context.Background(), "restaurant")
-	if err != nil || !reflect.DeepEqual(got, []string{"웨이팅 없는", "주차 가능", "혼밥"}) {
-		t.Fatalf("phrases = %q, %v", got, err)
-	}
-	got[0] = "변경"
-	if phrases.lists["restaurant"].Phrases[0] != "웨이팅 없는" {
-		t.Fatal("the answer shares the stored slice")
-	}
-	for name, field := range map[string]string{"an empty row": "cafe", "no row": "pets"} {
-		if got, err := svc.PhrasesFor(context.Background(), field); err != nil || len(got) != 0 {
-			t.Fatalf("%s = %q, %v", name, got, err)
-		}
-	}
-	reads := phrases.reads
-	if got, err := svc.PhrasesFor(context.Background(), "  "); err != nil || got != nil || phrases.reads != reads {
-		t.Fatalf("a blank field = %q, %v after %d reads", got, err, phrases.reads-reads)
-	}
-}
-
 func TestAnUnknownOrForeignSlugIsPostNotFound(t *testing.T) {
-	svc, _, _, posts := newQualityService(t)
+	svc, _, posts := newQualityService(t)
 	saturatedAccount(posts)
 	posts.posts["bobs"], posts.owners["bobs"] = posts.posts["p0"], "bob"
 	for _, slug := range []string{"", "  ", "nobody", "bobs"} {
@@ -380,13 +339,12 @@ func TestAnUnknownOrForeignSlugIsPostNotFound(t *testing.T) {
 func TestNewServicePanicsOnAMissingCollaborator(t *testing.T) {
 	full := func() Deps {
 		return Deps{
-			Measurements: &fakeMeasurements{}, Phrases: &fakePhrases{}, Posts: &fakePosts{},
+			Measurements: &fakeMeasurements{}, Posts: &fakePosts{},
 			Now: func() time.Time { return serviceNow },
 		}
 	}
 	for name, strip := range map[string]func(*Deps){
 		"measurements": func(d *Deps) { d.Measurements = nil },
-		"phrases":      func(d *Deps) { d.Phrases = nil },
 		"posts":        func(d *Deps) { d.Posts = nil },
 		"now":          func(d *Deps) { d.Now = nil },
 	} {

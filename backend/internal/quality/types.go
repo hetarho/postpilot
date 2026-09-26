@@ -20,16 +20,6 @@ type StoredMeasurement struct {
 	ComputedAt       time.Time
 }
 
-// PhraseList is one field's phrases in rank order, as the daily batch last wrote them
-// (QUAL-41). RefreshedAt is nil for a field whose first fetch failed.
-type PhraseList struct {
-	Field         string
-	Phrases       []string
-	CorpusSize    int
-	RefreshedAt   *time.Time
-	NextRefreshAt time.Time
-}
-
 // PostSnapshot is one post as this context reads it. Content nil means the post has none yet.
 type PostSnapshot struct {
 	Slug            string

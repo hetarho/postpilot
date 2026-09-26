@@ -32,37 +32,8 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.ClipWorkRoot = filepath.Join(t.TempDir(), "work")
-	cfg.BillingEnabled = false
-	// The renderer pins the bundled faces by checksum; on a host they live in the repo.
-	cfg.ClipFontPaths = map[string]string{}
-	for key, name := range map[string]string{
-		"wantedsans":        "wantedsans/WantedSansVariable.ttf",
-		"paperlogy":         "paperlogy/Paperlogy-8ExtraBold.ttf",
-		"jua":               "jua/Jua-Regular.ttf",
-		"nanummyeongjo":     "nanummyeongjo/NanumMyeongjo-Regular.ttf",
-		"nanummyeongjo-800": "nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
-	} {
-		path, err := filepath.Abs("../../assets/fonts/" + name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cfg.ClipFontPaths[key] = path
-	}
-	handle, err := db.Open(filepath.Join(t.TempDir(), "wiring.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
-	catalog := modelcatalog.NewService(modelcatalogstore.New(handle.Writer, handle.Reader))
-	if err := catalog.Reload(ctx); err != nil {
-		t.Fatal(err)
-	}
-	p := &platform{cfg: cfg, db: handle, catalog: catalog, registry: &llm.Registry{}, mailer: mail.NewLog()}
+	p := wiringPlatform(t, cfg)
 
 	app, err := buildContexts(ctx, p)
 	if err != nil {
@@ -110,4 +81,42 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 			t.Fatalf("worker authority on public %s = %d, want %d", path, w.Code, want)
 		}
 	}
+}
+
+// wiringPlatform is the platform the server boots over, from cfg: a migrated throwaway
+// database, the curated catalog, the bundled fonts and no billing. Object storage is the one
+// piece stubbed (a nil bucket behind the interfaces): nothing dereferences it at construction.
+func wiringPlatform(t *testing.T, cfg *config.Config) *platform {
+	t.Helper()
+	cfg.ClipWorkRoot = filepath.Join(t.TempDir(), "work")
+	cfg.BillingEnabled = false
+	// The renderer pins the bundled faces by checksum; on a host they live in the repo.
+	cfg.ClipFontPaths = map[string]string{}
+	for key, name := range map[string]string{
+		"wantedsans":        "wantedsans/WantedSansVariable.ttf",
+		"paperlogy":         "paperlogy/Paperlogy-8ExtraBold.ttf",
+		"jua":               "jua/Jua-Regular.ttf",
+		"nanummyeongjo":     "nanummyeongjo/NanumMyeongjo-Regular.ttf",
+		"nanummyeongjo-800": "nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
+	} {
+		path, err := filepath.Abs("../../assets/fonts/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg.ClipFontPaths[key] = path
+	}
+	handle, err := db.Open(filepath.Join(t.TempDir(), "wiring.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { handle.Close() })
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	catalog := modelcatalog.NewService(modelcatalogstore.New(handle.Writer, handle.Reader))
+	if err := catalog.Reload(ctx); err != nil {
+		t.Fatal(err)
+	}
+	return &platform{cfg: cfg, db: handle, catalog: catalog, registry: &llm.Registry{}, mailer: mail.NewLog()}
 }

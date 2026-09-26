@@ -38,7 +38,6 @@ import (
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/quality"
-	qualitystore "github.com/postpilot/backend/internal/quality/store"
 	"github.com/postpilot/backend/internal/template"
 	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/usage"
@@ -97,8 +96,7 @@ func run(ctx context.Context) error {
 				TargetLengthMin: post.TargetLengthMin, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
 			}),
 		)},
-		PhraseLists: phraseLists{store: qualitystore.New(handle.Writer, handle.Reader)},
-		Now:         time.Now,
+		Now: time.Now,
 	})
 	if err != nil {
 		return err
@@ -324,30 +322,6 @@ func (t templates) Create(ctx context.Context, fixture devseed.Template) (string
 	return created.ID, nil
 }
 
-// phraseLists adapts the quality context's phrase-list store. A list already present — from
-// an earlier seed, or a real batch on a box with Naver keys — is left byte-identical. A missing
-// one is written due at once, so a keyed box replaces the fixture on its next pass while a box
-// without keys keeps it (QUAL-42).
-type phraseLists struct{ store *qualitystore.Store }
-
-func (p phraseLists) EnsureList(ctx context.Context, list devseed.PhraseListFixture, at time.Time) (bool, error) {
-	if !quality.Known(list.Field) {
-		return false, fmt.Errorf("unknown blog field %q", list.Field)
-	}
-	_, found, err := p.store.PhraseList(ctx, list.Field)
-	if err != nil || found {
-		return false, err
-	}
-	refreshed := at
-	if err := p.store.ReplacePhraseList(ctx, quality.PhraseList{
-		Field: list.Field, Phrases: list.Phrases, CorpusSize: list.CorpusSize,
-		RefreshedAt: &refreshed, NextRefreshAt: at,
-	}); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // media adapts the clip context's source staging, the one account-owned table the cascade
 // from `users` does not reach.
 type media struct{ store *clipstore.Store }
@@ -367,13 +341,6 @@ func printReport(out io.Writer, report devseed.Report, dbPath string) {
 		fmt.Fprintf(out, "  %-14s %-8s %-6d %-7d %-7d %-7d %d\n",
 			account.LoginID, account.Plan, account.Posts(), account.Drafts, account.Reviews, account.Finalized, account.Published)
 	}
-	// Whether the fixture's list went in or a list already there stood, which on a box with
-	// Naver keys is the difference between fixture phrases and collected ones.
-	standing := "left standing"
-	if report.PhraseListWritten {
-		standing = "written"
-	}
-	fmt.Fprintf(out, "\n  phrase list %s: %s\n", devseed.PhraseList.Field, standing)
 	if len(report.Accounts) > 0 {
 		fmt.Fprintf(out, "\n  password for every account: %s\n", report.Accounts[0].Password)
 	}

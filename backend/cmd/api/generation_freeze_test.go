@@ -191,7 +191,7 @@ type drainHarness struct {
 
 func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "phrases.db"))
+	handle, err := db.Open(filepath.Join(t.TempDir(), "drain.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
-	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
+	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
 
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
 	if err != nil {
@@ -317,7 +317,7 @@ func TestGenerationQualityRendersTheTicksInTheRunsLanguage(t *testing.T) {
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
-	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
+	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
 	if err != nil {
 		t.Fatal(err)

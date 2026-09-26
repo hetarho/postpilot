@@ -4,11 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-	"time"
 
-	"github.com/postpilot/backend/internal/naversearch"
-	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/quality"
 )
@@ -124,44 +120,4 @@ func qualityContentLanguage(language *post.Language) (*quality.Language, error) 
 		return nil, fmt.Errorf("unknown content language %q", *language)
 	}
 	return &mapped, nil
-}
-
-// naverBlog is the search client as the adapter below uses it, so a test can stand one in.
-type naverBlog interface {
-	SearchBlog(ctx context.Context, query string, start, display int) ([]naversearch.Item, error)
-}
-
-// qualityBlogSearch hands the phrase batch the Naver blog search, item for item in its order.
-type qualityBlogSearch struct{ client naverBlog }
-
-func (a qualityBlogSearch) SearchBlog(ctx context.Context, query string, start, display int) ([]quality.SearchItem, error) {
-	items, err := a.client.SearchBlog(ctx, query, start, display)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]quality.SearchItem, len(items))
-	for i, item := range items {
-		out[i] = quality.SearchItem{Title: item.Title, Description: item.Description}
-	}
-	return out, nil
-}
-
-// phraseSearch is the batch's search, or nil without both Naver keys (QUAL-42). It returns the
-// interface so that disabled is a true nil, never a typed nil that would read as enabled.
-// newPhraseBatch builds the 분야 phrase batch from its configuration. The quality context bounds
-// the interval (ARCH-42); the key is named here because quality does not know env names, so a
-// boot refused for it says which setting to fix.
-func newPhraseBatch(cfg *config.Config, store quality.PhraseLists) (*quality.PhraseBatch, error) {
-	batch, err := quality.NewPhraseBatch(store, phraseSearch(cfg), cfg.QualityPhraseRefreshInterval, time.Now)
-	if err != nil {
-		return nil, fmt.Errorf("QUALITY_PHRASE_REFRESH_INTERVAL: %w", err)
-	}
-	return batch, nil
-}
-
-func phraseSearch(cfg *config.Config) quality.BlogSearch {
-	if !cfg.NaverSearchEnabled {
-		return nil
-	}
-	return qualityBlogSearch{client: naversearch.New(cfg.NaverSearchClientID, cfg.NaverSearchClientSecret, http.DefaultClient)}
 }

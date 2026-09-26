@@ -16,11 +16,6 @@
 // OpenRouter supplies the candidate list again on its own, but WHICH model serves which
 // purpose is the operator's own choice in /admin, and a seed that erased it would leave a
 // fresh install unable to generate anything until someone re-registered five models by hand.
-//
-// The 분야 phrase lists are left alone for the same reason. `field_phrase_lists` carries no
-// `user_id`, so the `users` cascade never reaches it, and the seed only inserts a list that is
-// missing: a real list collected on a box with Naver keys is installation-wide data like the
-// curated models, and a seed must not replace it with the fixture's.
 package devseed
 
 import (
@@ -71,13 +66,6 @@ type Templates interface {
 	Create(ctx context.Context, t Template) (id string, err error)
 }
 
-// PhraseLists is the quality context's half: the 분야 phrase list a box without Naver keys
-// never collects (QUAL-42). It writes a list only when that 분야 has none, and says whether it
-// did — an existing list, from an earlier seed or a real batch, stands.
-type PhraseLists interface {
-	EnsureList(ctx context.Context, list PhraseListFixture, at time.Time) (written bool, err error)
-}
-
 // Media clears source staging. `clip_source_batches` carries a user_id but deliberately no
 // foreign key to `users` (migration 0036: cleanup identities must outlive their project),
 // so it is the one account-owned table `DELETE FROM users` does not reach and the only
@@ -90,13 +78,12 @@ type Media interface {
 // silently skipped voices would produce five accounts that cannot open the post editor,
 // and the failure would surface as an empty screen rather than as this error.
 type Deps struct {
-	Accounts    Accounts
-	Voices      Voices
-	Credits     Credits
-	Posts       Posts
-	Media       Media
-	Templates   Templates
-	PhraseLists PhraseLists
+	Accounts  Accounts
+	Voices    Voices
+	Credits   Credits
+	Posts     Posts
+	Media     Media
+	Templates Templates
 	// Now is the clock the fixture dates itself against. Injected so a test can pin the
 	// spread of created_at values it asserts on.
 	Now func() time.Time
@@ -109,8 +96,6 @@ type Report struct {
 	DeletedAccounts int64
 	DeletedBatches  int64
 	Accounts        []AccountReport
-	// PhraseListWritten is false when the fixture's 분야 already had a list, which stood.
-	PhraseListWritten bool
 }
 
 // AccountReport is one seeded account as the operator sees it: the id and password to log
@@ -160,12 +145,6 @@ func Run(ctx context.Context, deps Deps) (Report, error) {
 		}
 		report.Accounts = append(report.Accounts, written)
 	}
-	// Once, after every account: the list is installation-wide rather than any account's.
-	written, err := deps.PhraseLists.EnsureList(ctx, PhraseList, now)
-	if err != nil {
-		return report, fmt.Errorf("phrase list %q: %w", PhraseList.Field, err)
-	}
-	report.PhraseListWritten = written
 	return report, nil
 }
 
@@ -224,8 +203,6 @@ func (d Deps) valid() error {
 		missing = "media"
 	case d.Templates == nil:
 		missing = "templates"
-	case d.PhraseLists == nil:
-		missing = "phrase lists"
 	case d.Now == nil:
 		missing = "clock"
 	}

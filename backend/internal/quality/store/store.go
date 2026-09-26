@@ -4,7 +4,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -27,10 +26,7 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
-var (
-	_ quality.Measurements = (*Store)(nil)
-	_ quality.PhraseLists  = (*Store)(nil)
-)
+var _ quality.Measurements = (*Store)(nil)
 
 // Measurement reads a post's row within its account; false means it has none.
 func (s *Store) Measurement(ctx context.Context, userID, slug string) (quality.StoredMeasurement, bool, error) {
@@ -74,58 +70,6 @@ func (s *Store) SaveMeasurement(ctx context.Context, m quality.StoredMeasurement
 	})
 	if err != nil {
 		return fmt.Errorf("upsert post measurement: %w", err)
-	}
-	return nil
-}
-
-// PhraseList reads one field's row; false means the batch has not written it yet.
-func (s *Store) PhraseList(ctx context.Context, field string) (quality.PhraseList, bool, error) {
-	row, err := s.read.GetFieldPhraseList(ctx, field)
-	if errors.Is(err, sql.ErrNoRows) {
-		return quality.PhraseList{}, false, nil
-	}
-	if err != nil {
-		return quality.PhraseList{}, false, fmt.Errorf("select phrase list: %w", err)
-	}
-	var phrases []string
-	if err := json.Unmarshal([]byte(row.Phrases), &phrases); err != nil {
-		return quality.PhraseList{}, false, fmt.Errorf("decode phrase list: %w", err)
-	}
-	next, err := parseTime(row.NextRefreshAt)
-	if err != nil {
-		return quality.PhraseList{}, false, fmt.Errorf("parse phrase list next_refresh_at: %w", err)
-	}
-	list := quality.PhraseList{Field: row.Field, Phrases: phrases, CorpusSize: int(row.CorpusSize), NextRefreshAt: next}
-	if row.RefreshedAt.Valid {
-		refreshed, err := parseTime(row.RefreshedAt.String)
-		if err != nil {
-			return quality.PhraseList{}, false, fmt.Errorf("parse phrase list refreshed_at: %w", err)
-		}
-		list.RefreshedAt = &refreshed
-	}
-	return list, true, nil
-}
-
-// ReplacePhraseList writes a field's whole row. An empty list is stored as `[]`, never `null`,
-// and a nil RefreshedAt as SQL NULL: the field's first fetch failed.
-func (s *Store) ReplacePhraseList(ctx context.Context, list quality.PhraseList) error {
-	phrases := list.Phrases
-	if phrases == nil {
-		phrases = []string{}
-	}
-	encoded, err := json.Marshal(phrases)
-	if err != nil {
-		return fmt.Errorf("encode phrase list: %w", err)
-	}
-	refreshed := sql.NullString{}
-	if list.RefreshedAt != nil {
-		refreshed = sql.NullString{String: formatTime(*list.RefreshedAt), Valid: true}
-	}
-	if err := s.write.ReplaceFieldPhraseList(ctx, sqlc.ReplaceFieldPhraseListParams{
-		Field: list.Field, Phrases: string(encoded), CorpusSize: int64(list.CorpusSize),
-		RefreshedAt: refreshed, NextRefreshAt: formatTime(list.NextRefreshAt),
-	}); err != nil {
-		return fmt.Errorf("replace phrase list: %w", err)
 	}
 	return nil
 }

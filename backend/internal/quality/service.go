@@ -10,7 +10,6 @@ import (
 // Deps are the service's collaborators (ARCH-40). Every one is required.
 type Deps struct {
 	Measurements Measurements
-	Phrases      PhraseLists
 	Posts        PostSource
 	Now          func() time.Time
 }
@@ -19,7 +18,6 @@ type Deps struct {
 // no provider and costs no credit (QUAL-16): every value is arithmetic over stored text.
 type Service struct {
 	measurements Measurements
-	phrases      PhraseLists
 	posts        PostSource
 	now          func() time.Time
 }
@@ -27,9 +25,6 @@ type Service struct {
 func NewService(deps Deps) *Service {
 	if deps.Measurements == nil {
 		panic("quality: measurements collaborator is required")
-	}
-	if deps.Phrases == nil {
-		panic("quality: phrases collaborator is required")
 	}
 	if deps.Posts == nil {
 		panic("quality: posts collaborator is required")
@@ -39,7 +34,7 @@ func NewService(deps Deps) *Service {
 	if deps.Now == nil {
 		panic("quality: now collaborator is required")
 	}
-	return &Service{measurements: deps.Measurements, phrases: deps.Phrases, posts: deps.Posts, now: deps.Now}
+	return &Service{measurements: deps.Measurements, posts: deps.Posts, now: deps.Now}
 }
 
 // PostReading is one post's own readings at the content revision they describe (QUAL-3).
@@ -136,23 +131,6 @@ func (s *Service) RulesFor(ctx context.Context, userID, slug string, ticked []st
 		}
 	}
 	return texts, nil
-}
-
-// PhrasesFor is one field's stored phrases in rank order (QUAL-41), empty for a blank field, a
-// field the batch has not written yet, or an empty row.
-func (s *Service) PhrasesFor(ctx context.Context, field string) ([]string, error) {
-	field = strings.TrimSpace(field)
-	if field == "" {
-		return nil, nil
-	}
-	list, found, err := s.phrases.PhraseList(ctx, field)
-	if err != nil {
-		return nil, fmt.Errorf("read phrase list: %w", err)
-	}
-	if !found || len(list.Phrases) == 0 {
-		return nil, nil
-	}
-	return append([]string(nil), list.Phrases...), nil
 }
 
 func (s *Service) ownedPost(ctx context.Context, userID, slug string) (PostSnapshot, error) {

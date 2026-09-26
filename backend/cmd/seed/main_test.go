@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -91,39 +90,12 @@ func open(t *testing.T, path string) *sql.DB {
 	return handle.Reader
 }
 
-// phraseRow is a field_phrase_lists row, every column, so "left standing" can mean
-// byte-identical.
-type phraseRow struct {
-	Field, Phrases, NextRefreshAt string
-	CorpusSize                    int64
-	RefreshedAt                   sql.NullString
-}
-
-func phraseRows(t *testing.T, reader *sql.DB) []phraseRow {
-	t.Helper()
-	rows, err := reader.Query("SELECT field, phrases, corpus_size, refreshed_at, next_refresh_at FROM field_phrase_lists ORDER BY field")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []phraseRow
-	for rows.Next() {
-		var row phraseRow
-		if err := rows.Scan(&row.Field, &row.Phrases, &row.CorpusSize, &row.RefreshedAt, &row.NextRefreshAt); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, row)
-	}
-	return out
-}
-
 // seedShape is what a seed wrote, without the ids and clock readings a rerun renews.
 type seedShape struct {
 	Statuses  map[string]int // "account/status" → posts
 	Nouns     int            // posts carrying nouns
 	Fields    map[string]int // account → posts carrying daily_life
 	Templates []string       // "account" per template with a title area
-	Phrases   []string       // the phrase lists' fields
 }
 
 // checkSeed asserts every fixture invariant the database can show and returns its shape.
@@ -244,25 +216,6 @@ func checkSeed(t *testing.T, reader *sql.DB) seedShape {
 			firstDraft, assigned, templateID)
 	}
 
-	// QUAL-42: exactly the fixture's list.
-	lists := phraseRows(t, reader)
-	if len(lists) != 1 || lists[0].Field != devseed.PhraseList.Field {
-		t.Fatalf("phrase lists %+v, want the fixture's one", lists)
-	}
-	var phrases []string
-	if err := json.Unmarshal([]byte(lists[0].Phrases), &phrases); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(phrases, devseed.PhraseList.Phrases) || lists[0].CorpusSize != int64(devseed.PhraseList.CorpusSize) {
-		t.Errorf("phrase list holds %v of %d, want the fixture's", phrases, lists[0].CorpusSize)
-	}
-	// Due at once: a box with Naver keys replaces the fixture on its next pass (QUAL-42).
-	if !lists[0].RefreshedAt.Valid || lists[0].NextRefreshAt != lists[0].RefreshedAt.String {
-		t.Errorf("phrase list refreshed %v and due %q, want due the moment it was written",
-			lists[0].RefreshedAt, lists[0].NextRefreshAt)
-	}
-	shape.Phrases = []string{lists[0].Field}
-
 	// GUIDE-19: guidelines are never seeded; every one is an owner's, so a seed writes none.
 	var guidelineRows int
 	if err := reader.QueryRowContext(ctx, `SELECT COUNT(*) FROM guidelines`).Scan(&guidelineRows); err != nil {
@@ -279,65 +232,29 @@ func TestSeedWritesThePublishedQualityFixtureAndIsIdempotent(t *testing.T) {
 	seed(t, path)
 	reader := open(t, path)
 	first := checkSeed(t, reader)
-	list := phraseRows(t, reader)
 
 	seed(t, path)
 	second := checkSeed(t, reader)
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("a second seed wrote %+v, the first %+v", second, first)
 	}
-	// The second run found the list and left it, clock readings included.
-	if after := phraseRows(t, reader); !reflect.DeepEqual(after, list) {
-		t.Fatalf("the phrase list was rewritten: %+v, then %+v", list, after)
-	}
 }
 
-// ARCH-44: a list already there — here edited the way a real batch would replace it — stands.
-func TestSeedLeavesAnExistingPhraseListStanding(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "seed.db")
-	seed(t, path)
-	handle, err := db.Open(path)
-	if err != nil {
-		t.Fatal(err)
+// The report is what an operator reads: a published column beside the other statuses.
+func TestPrintReportShowsThePublishedColumn(t *testing.T) {
+	var out bytes.Buffer
+	printReport(&out, devseed.Report{
+		Accounts: []devseed.AccountReport{{
+			LoginID: "master", Password: devseed.Password, Plan: plan.Master,
+			Drafts: 5, Reviews: 4, Finalized: 3, Published: 11,
+		}},
+	}, "seed.db")
+	lines := strings.Split(out.String(), "\n")
+	header, row := strings.Fields(lines[3]), strings.Fields(lines[4])
+	if !reflect.DeepEqual(header, []string{"LOGIN", "PLAN", "POSTS", "DRAFT", "REVIEW", "FINAL", "PUBL"}) {
+		t.Fatalf("header %v", header)
 	}
-	if _, err := handle.Writer.Exec(`UPDATE field_phrase_lists SET phrases = '["다른 문구"]'`); err != nil {
-		t.Fatal(err)
-	}
-	collected := phraseRows(t, handle.Reader)
-	handle.Close()
-
-	seed(t, path)
-	if after := phraseRows(t, open(t, path)); !reflect.DeepEqual(after, collected) {
-		t.Fatalf("the seed replaced a standing list: %+v, want %+v", after, collected)
-	}
-}
-
-// The report is what an operator reads: a published column, and whether the list went in or
-// stood.
-func TestPrintReportShowsThePublishedColumnAndThePhraseList(t *testing.T) {
-	for _, written := range []bool{true, false} {
-		var out bytes.Buffer
-		printReport(&out, devseed.Report{
-			Accounts: []devseed.AccountReport{{
-				LoginID: "master", Password: devseed.Password, Plan: plan.Master,
-				Drafts: 5, Reviews: 4, Finalized: 3, Published: 11,
-			}},
-			PhraseListWritten: written,
-		}, "seed.db")
-		lines := strings.Split(out.String(), "\n")
-		header, row := strings.Fields(lines[3]), strings.Fields(lines[4])
-		if !reflect.DeepEqual(header, []string{"LOGIN", "PLAN", "POSTS", "DRAFT", "REVIEW", "FINAL", "PUBL"}) {
-			t.Fatalf("header %v", header)
-		}
-		if !reflect.DeepEqual(row, []string{"master", "master", "23", "5", "4", "3", "11"}) {
-			t.Fatalf("row %v", row)
-		}
-		want := "phrase list daily_life: left standing"
-		if written {
-			want = "phrase list daily_life: written"
-		}
-		if !strings.Contains(out.String(), want) {
-			t.Fatalf("report %q does not say %q", out.String(), want)
-		}
+	if !reflect.DeepEqual(row, []string{"master", "master", "23", "5", "4", "3", "11"}) {
+		t.Fatalf("row %v", row)
 	}
 }

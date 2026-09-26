@@ -3,15 +3,3 @@
 //   sqlc v1.31.1
 
 package sqlc
-
-import (
-	"database/sql"
-)
-
-type FieldPhraseList struct {
-	Field         string
-	Phrases       string
-	CorpusSize    int64
-	RefreshedAt   sql.NullString
-	NextRefreshAt string
-}

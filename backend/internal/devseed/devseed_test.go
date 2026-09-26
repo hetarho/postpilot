@@ -240,31 +240,6 @@ func TestEveryPostOfAFieldAccountCarriesItsField(t *testing.T) {
 	}
 }
 
-// QUAL-38: the fixture has the shape the batch collects, so a screen shows what a real list
-// would, and its 분야 is one the product knows.
-func TestThePhraseListFixtureIsAValidList(t *testing.T) {
-	list := devseed.PhraseList
-	if !quality.Known(list.Field) {
-		t.Fatalf("phrase list field %q is not on the product's list", list.Field)
-	}
-	if len(list.Phrases) == 0 || len(list.Phrases) > quality.PhraseListMax {
-		t.Fatalf("phrase list holds %d phrases, want 1 to %d", len(list.Phrases), quality.PhraseListMax)
-	}
-	if list.CorpusSize <= 0 {
-		t.Errorf("phrase list corpus size %d", list.CorpusSize)
-	}
-	seen := map[string]bool{}
-	for _, phrase := range list.Phrases {
-		if tokens := len(strings.Fields(phrase)); tokens < quality.PhraseMinTokens || tokens > quality.PhraseMaxTokens {
-			t.Errorf("phrase %q has %d tokens, want %d to %d", phrase, tokens, quality.PhraseMinTokens, quality.PhraseMaxTokens)
-		}
-		if seen[phrase] {
-			t.Errorf("phrase %q is listed twice", phrase)
-		}
-		seen[phrase] = true
-	}
-}
-
 // QUAL-12: one account publishes enough for every metric's minimum, so every row can be judged,
 // and another publishes some but fewer, so the minimum line shows. The bar is the quality
 // context's own, so a raised minimum fails here instead of silently hiding a row state.
@@ -285,28 +260,6 @@ func TestOneAccountMeetsEveryPublishedMinimum(t *testing.T) {
 	if meets != 1 || below == 0 {
 		t.Fatalf("%d accounts meet the largest minimum %d and %d publish fewer, want exactly 1 and at least 1",
 			meets, largest, below)
-	}
-}
-
-// ARCH-44: the list is installation-wide, written once after every account, and after the wipe
-// — which never reaches it. The report says what the port answered.
-func TestRunEnsuresThePhraseListAfterTheWipe(t *testing.T) {
-	for _, written := range []bool{true, false} {
-		h := newHarness()
-		h.phrases.written = written
-		report, err := devseed.Run(context.Background(), h.deps())
-		if err != nil {
-			t.Fatalf("Run: %v", err)
-		}
-		if report.PhraseListWritten != written {
-			t.Errorf("report says written=%v, the port answered %v", report.PhraseListWritten, written)
-		}
-		if len(h.phrases.ensured) != 1 || h.phrases.ensured[0].Field != devseed.PhraseList.Field || !h.phrases.at[0].Equal(fixed) {
-			t.Fatalf("phrase lists ensured %+v at %v, want the fixture's once at the seed's clock", h.phrases.ensured, h.phrases.at)
-		}
-		if last := h.order[len(h.order)-1]; last != "phrases:"+devseed.PhraseList.Field {
-			t.Errorf("the seed ended with %q, want the phrase list after every account", last)
-		}
 	}
 }
 
@@ -534,9 +487,8 @@ func TestRunReportsWhichAccountItFailedOn(t *testing.T) {
 
 func TestRunRefusesAMissingCollaborator(t *testing.T) {
 	for name, drop := range map[string]func(*devseed.Deps){
-		"voices":       func(d *devseed.Deps) { d.Voices = nil },
-		"templates":    func(d *devseed.Deps) { d.Templates = nil },
-		"phrase lists": func(d *devseed.Deps) { d.PhraseLists = nil },
+		"voices":    func(d *devseed.Deps) { d.Voices = nil },
+		"templates": func(d *devseed.Deps) { d.Templates = nil },
 	} {
 		h := newHarness()
 		deps := h.deps()
@@ -595,7 +547,6 @@ type harness struct {
 	posts     *fakePosts
 	media     *fakeMedia
 	templates *fakeTemplates
-	phrases   *fakePhraseLists
 	order     []string
 }
 
@@ -608,20 +559,18 @@ func newHarness() *harness {
 	h.posts = &fakePosts{record: record, byUser: map[string][]devseed.Article{}}
 	h.media = &fakeMedia{record: record}
 	h.templates = &fakeTemplates{record: record}
-	h.phrases = &fakePhraseLists{record: record, written: true}
 	return h
 }
 
 func (h *harness) deps() devseed.Deps {
 	return devseed.Deps{
-		Accounts:    h.accounts,
-		Voices:      h.voices,
-		Credits:     h.credits,
-		Posts:       h.posts,
-		Media:       h.media,
-		Templates:   h.templates,
-		PhraseLists: h.phrases,
-		Now:         func() time.Time { return fixed },
+		Accounts:  h.accounts,
+		Voices:    h.voices,
+		Credits:   h.credits,
+		Posts:     h.posts,
+		Media:     h.media,
+		Templates: h.templates,
+		Now:       func() time.Time { return fixed },
 	}
 }
 
@@ -710,19 +659,4 @@ func (f *fakeTemplates) Create(_ context.Context, template devseed.Template) (st
 	f.record("template:" + template.UserID)
 	f.created = append(f.created, template)
 	return templateFor(template.UserID), nil
-}
-
-type fakePhraseLists struct {
-	record func(string)
-	// written is what EnsureList answers: false models a list already standing.
-	written bool
-	ensured []devseed.PhraseListFixture
-	at      []time.Time
-}
-
-func (f *fakePhraseLists) EnsureList(_ context.Context, list devseed.PhraseListFixture, at time.Time) (bool, error) {
-	f.record("phrases:" + list.Field)
-	f.ensured = append(f.ensured, list)
-	f.at = append(f.at, at)
-	return f.written, nil
 }
