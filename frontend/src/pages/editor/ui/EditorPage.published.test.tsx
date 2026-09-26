@@ -56,9 +56,8 @@ describe('a published post', () => {
     videos: [{ id: 'video-1', filename: 'CLIP_1.mp4' }],
     template: { id: 'template-review', name: '정보성 식당 리뷰' },
     templateAnswers: [{ label: '방문일', text: '9월 20일', enabled: true }],
-    // The lock holds the brief's ticks and ②'s marks too, so the post carries one of each.
+    // The lock holds the brief's ticks too, so the post carries one.
     qualityRules: ['title_saturation'],
-    replacementCandidates: [{ surface: 'title', index: 0, source: '제주', phrases: ['제주도'] }],
   })
   // A measurement the post would show on ② if it were not published.
   const MEASURED: FakeQualityReading[] = [
@@ -158,7 +157,7 @@ describe('a published post', () => {
     const prose = screen.getByRole('article', { name: '생성된 글' })
     expect(within(prose).getByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
     expect(within(prose).getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
-    // No mark on its prose, and no measurement row read or shown.
+    // No control on its prose, and no measurement row read or shown.
     expect(within(prose).queryByRole('button')).toBeNull()
     expect(screen.queryByRole('region', { name: '이 글의 측정값' })).toBeNull()
     expect(calls.filter((call) => call === 'GetPostMeasurement')).toHaveLength(0)

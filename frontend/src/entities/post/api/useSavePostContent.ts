@@ -10,12 +10,9 @@ import {
   PostContentSchema,
   PostSchema,
   PostService,
-  ReplacementCandidateSchema,
   type PostContent,
 } from '@/shared/api'
-import type { ReplacementCandidate } from '../model/replacements'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
-import { toReplacementCandidates } from './replacement-mappers'
 
 export class ContentRevisionConflictError extends Error {
   constructor() {
@@ -42,11 +39,6 @@ export function useSavePostContent() {
       post.finalizedRevision = saved.finalizedRevision
       post.finalizedAt = saved.finalizedAt
       post.updatedAt = saved.updatedAt
-      // A take spent its candidate in this very save (POST-79), so the screen reads the server's
-      // shorter list without a refetch.
-      post.replacementCandidates = saved.replacementCandidates.map((candidate) =>
-        clone(ReplacementCandidateSchema, candidate),
-      )
       queryClient.setQueryData(key, create(GetPostResponseSchema, { post }))
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
       // A new revision is a new measurement (QUAL-3); the row reads it by revision already, and
@@ -63,26 +55,15 @@ export function useSavePostContent() {
   })
 
   return {
-    /** Saves the content at `expectedRevision`, spending the candidates `takenCandidates` names
-     *  (indices into the list at that revision). Answers the new revision and the list left. */
-    save: async (
-      slug: string,
-      content: PostContent,
-      expectedRevision: bigint,
-      takenCandidates: readonly number[] = [],
-    ): Promise<{ revision: bigint; candidates: ReplacementCandidate[] }> => {
+    save: async (slug: string, content: PostContent, expectedRevision: bigint) => {
       try {
         const response = await mutation.mutateAsync({
           slug,
           content: create(PostContentSchema, content),
           expectedRevision,
-          takenCandidates: [...takenCandidates],
         })
         if (!response.post) throw new Error('SavePostContent returned no post')
-        return {
-          revision: response.post.contentRevision,
-          candidates: toReplacementCandidates(response.post.replacementCandidates),
-        }
+        return response.post.contentRevision
       } catch (cause) {
         if (appFailureFromConnect(cause).reason === 'POST_CONTENT_STALE') {
           throw new ContentRevisionConflictError()

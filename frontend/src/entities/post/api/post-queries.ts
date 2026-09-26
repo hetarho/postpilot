@@ -19,7 +19,6 @@ import {
   type ProtoQualityMetric,
 } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
-import { toReplacementCandidates } from './replacement-mappers'
 
 function requireQualityRule(value: ProtoQualityMetric): QualityMetricId {
   const id = qualityMetricFromProto(value)
@@ -50,7 +49,6 @@ export function toPostDraft(post: Post): PostDraft {
     videos: post.videos.map(toPostVideo),
     activeJob: post.activeJob ? toGenerationJob(post.activeJob) : undefined,
     content: post.content,
-    replacementCandidates: toReplacementCandidates(post.replacementCandidates),
     observations: post.observations,
     pendingExperimentId: post.pendingExperimentId,
     contentRevision: post.contentRevision,

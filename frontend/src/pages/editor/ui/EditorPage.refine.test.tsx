@@ -1,5 +1,4 @@
-// ② 글 다듬기: resumed revisions, 확정 and the content save before it, the post's measurement row,
-// and a replacement take's save.
+// ② 글 다듬기: resumed revisions, 확정 and the content save before it, and the measurement row.
 import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,12 +6,7 @@ import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { USER, finalize, openFinalize, openStep, resetEditorTest } from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
-import {
-  finalizedPostRow,
-  type FakeDraftSave,
-  type FakePostRow,
-  type FakePostsOptions,
-} from '@/test/posts'
+import { finalizedPostRow, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 afterEach(() => {
@@ -409,73 +403,5 @@ describe('the post measurement row', () => {
     expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
     expect(measurementReads(calls)).toBe(0)
-  })
-})
-
-// POST-79, POST-80: ② marks where the last write's candidates still stand, and taking a phrase is
-// an ordinary content save that records nothing about where the words came from.
-describe('the replacement marks', () => {
-  const SLUG = '20260820-rain'
-  const CANDIDATES: NonNullable<FakePostRow['replacementCandidates']> = [
-    { surface: 'title', index: 0, source: '제주', phrases: ['제주도', '제주 바다'] },
-    // '여행' would duplicate tag 2, so only '산책로' is offered.
-    { surface: 'tag', index: 1, source: '산책', phrases: ['산책로', '여행'] },
-    {
-      surface: 'body',
-      index: 0,
-      source: '기다렸다',
-      phrases: ['기다린다', '기다려 본다', '기다리고 있었다', '기다렸어요'],
-    },
-    { surface: 'body', index: 0, source: '비가', phrases: ['빗줄기가'] },
-    { surface: 'body', index: 2, source: '바닷가로', phrases: ['해변으로'] },
-  ]
-  const finalized = finalizedPostRow({
-    slug: SLUG,
-    images: POST_IMAGES_FIXTURE,
-    replacementCandidates: CANDIDATES,
-  })
-  const article = () => within(screen.getByRole('article', { name: '생성된 글' }))
-
-  function renderMarks(row: FakePostRow = finalized) {
-    const calls: string[] = []
-    const contentSaves: NonNullable<FakePostsOptions['contentSaves']> = []
-    const view = renderAppAt(`/posts/${SLUG}`, {
-      user: USER,
-      calls,
-      posts: { calls, contentSaves, posts: [row] },
-    })
-    return { calls, contentSaves, view }
-  }
-
-  async function openRefine(user: ReturnType<typeof userEvent.setup>) {
-    await openStep(user, '글 다듬기')
-    await screen.findByRole('article', { name: '생성된 글' })
-  }
-
-  it('saves a take with the expected revision and returns 확정 to 검토', async () => {
-    const user = userEvent.setup()
-    const { contentSaves } = renderMarks()
-    await openRefine(user)
-
-    await user.click(article().getByRole('button', { name: '기다렸다' }))
-    await user.click(await screen.findByRole('button', { name: '‘기다려 본다’(으)로 바꾸기' }))
-
-    await waitFor(() => expect(contentSaves).toHaveLength(1), { timeout: 4_000 })
-    expect(contentSaves[0].slug).toBe(SLUG)
-    expect(contentSaves[0].expectedRevision).toBe(1n)
-    // The same save spends the candidate it took, by its index in the stored list (POST-79).
-    expect(contentSaves[0].takenCandidates).toEqual([2])
-    expect(contentSaves[0].content.blocks[0].content).toBe('비가 그치기를 기다려 본다.')
-    // The rest of the content went as the editor held it.
-    expect(contentSaves[0].content.title).toBe(POST_CONTENT_FIXTURE.title)
-    expect(contentSaves[0].content.tags).toEqual(POST_CONTENT_FIXTURE.tags)
-    // Focus lands on the pencil of the block that held the text, never on <body>.
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '1번째 블록 수정' })).toHaveFocus(),
-    )
-    await waitFor(() =>
-      expect(screen.getByRole('status', { name: '글 상태' })).toHaveTextContent('검토'),
-    )
-    expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute('aria-selected', 'true')
   })
 })

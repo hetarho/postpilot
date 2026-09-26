@@ -56,11 +56,9 @@ import { i18n as recordPublishedUrlI18n } from '@/features/record-published-url/
 import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config/i18n'
 import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/config/i18n'
-import { i18n as editPostContentI18n } from '@/features/edit-post-content/config/i18n'
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
-import { i18n as adoptGuidelinePresetI18n } from '@/features/adopt-guideline-preset/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
 import { i18n as extractMemoriesI18n } from '@/features/extract-memories/config/i18n'
 import { i18n as usePostMemoriesI18n } from '@/features/use-post-memories/config/i18n'
@@ -171,7 +169,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   editWithAiGuidelinesI18n,
   guidelineI18n,
   guidelinesI18n,
-  adoptGuidelinePresetI18n,
   reviewGuidelineCandidateI18n,
   aiModelsI18n,
   applyModelRecommendationI18n,
@@ -204,7 +201,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   selectPostFieldI18n,
   qualityI18n,
   chooseQualityRulesI18n,
-  editPostContentI18n,
   postI18n,
   postsI18n,
   uploadPhotosI18n,
@@ -248,7 +244,6 @@ export const resources = {
       ...selectPostFieldI18n.ko,
       ...qualityI18n.ko,
       ...chooseQualityRulesI18n.ko,
-      ...editPostContentI18n.ko,
       ...postI18n.ko,
       ...postsI18n.ko,
       ...uploadPhotosI18n.ko,
@@ -283,7 +278,6 @@ export const resources = {
       ...editWithAiGuidelinesI18n.ko,
       ...guidelineI18n.ko,
       ...guidelinesI18n.ko,
-      ...adoptGuidelinePresetI18n.ko,
       ...reviewGuidelineCandidateI18n.ko,
     },
     memories: {
@@ -365,7 +359,6 @@ export const resources = {
       ...selectPostFieldI18n.en,
       ...qualityI18n.en,
       ...chooseQualityRulesI18n.en,
-      ...editPostContentI18n.en,
       ...postI18n.en,
       ...postsI18n.en,
       ...uploadPhotosI18n.en,
@@ -400,7 +393,6 @@ export const resources = {
       ...editWithAiGuidelinesI18n.en,
       ...guidelineI18n.en,
       ...guidelinesI18n.en,
-      ...adoptGuidelinePresetI18n.en,
       ...reviewGuidelineCandidateI18n.en,
     },
     memories: {

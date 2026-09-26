@@ -36,7 +36,7 @@ export function requireBlogField(value: ProtoBlogField): BlogFieldChoice {
   return choice
 }
 
-/** A 분야 in a set that must name one — a guideline's or the preset's. The server filters
+/** A 분야 in a set that must name one — a guideline's. The server filters
  *  UNSPECIFIED out of every such set, so one arriving is a read this build does not understand,
  *  and it fails like an unknown number. */
 export function requireBlogFieldId(value: ProtoBlogField): BlogFieldId {

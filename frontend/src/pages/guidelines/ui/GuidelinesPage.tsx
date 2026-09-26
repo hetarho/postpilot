@@ -11,7 +11,6 @@ import {
   type GuidelineCandidate,
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
-import { GuidelinePresetRow } from '@/features/adopt-guideline-preset'
 import { CreateGuidelineSheet } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
@@ -40,7 +39,7 @@ export function GuidelinesPage() {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const { guidelines, preset, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
+  const { guidelines, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -70,9 +69,6 @@ export function GuidelinesPage() {
 
       {!isError && !isPending && (
         <>
-          {/* Pinned means first, whatever the account holds: a plain block above the list and above
-              the empty state, saying it yields to the owner's own rules (GUIDE-14, GUIDE-29). */}
-          {preset && <GuidelinePresetRow ownerId={ownerId} preset={preset} />}
           {guidelines.length === 0 ? (
             <EmptyState />
           ) : (

@@ -31,8 +31,6 @@ import {
   type Observation,
   type PostContent,
   PostContentSchema,
-  ReplacementCandidateSchema,
-  type ProtoReplacementCandidate,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
@@ -43,7 +41,6 @@ import {
   contentLanguageFromProto,
   contentLanguageToProto,
   ProtoQualityMetric,
-  ProtoReplacementSurface,
   type ContentLanguage,
 } from '@/shared/api'
 import { BLOG_FIELD_IDS, isBlogFieldId } from '@/entities/blog-field'
@@ -154,13 +151,6 @@ export interface FakePostRow {
   videos?: FakeVideoRow[]
   activeJob?: FakeGenerationJobRow
   content?: PostContent
-  /** What the last write offered to replace, as stored (GEN-53). */
-  replacementCandidates?: Array<{
-    surface: 'title' | 'tag' | 'body'
-    index: number
-    source: string
-    phrases: string[]
-  }>
   observations?: Observation[]
   pendingExperimentId?: string
   contentRevision?: bigint
@@ -243,8 +233,6 @@ export interface FakePostsOptions {
     slug: string
     expectedRevision: bigint
     content: PostContent
-    /** The replacement candidates the save spent, as indices into the stored list (POST-79). */
-    takenCandidates: number[]
   }>
   /** The next SavePostDraft on this slug first publishes the post and is then refused as
    *  locked, the way a publish from another tab lands between two autosaves (POST-86). */
@@ -303,7 +291,6 @@ type Row = {
   videos: Video[]
   activeJob?: ProtoGenerationJob
   content?: PostContent
-  replacementCandidates: ProtoReplacementCandidate[]
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint
@@ -459,12 +446,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         (row.tags
           ? create(PostContentSchema, { title: row.title ?? '', tags: row.tags })
           : undefined),
-      replacementCandidates: (row.replacementCandidates ?? []).map((candidate) =>
-        create(ReplacementCandidateSchema, {
-          ...candidate,
-          surface: toWire(ProtoReplacementSurface, candidate.surface),
-        }),
-      ),
       observations: row.observations ?? [],
       pendingExperimentId: row.pendingExperimentId ?? '',
       contentRevision: row.contentRevision ?? 0n,
@@ -684,8 +665,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       videos: existing?.videos ?? [],
       activeJob: existing?.activeJob,
       content: existing?.content,
-      // Kept by a draft save, as by a manual content save and a revision (T341).
-      replacementCandidates: existing?.replacementCandidates ?? [],
       observations: existing?.observations ?? [],
       pendingExperimentId: existing?.pendingExperimentId ?? '',
       contentRevision: existing?.contentRevision ?? 0n,
@@ -745,7 +724,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         slug: req.slug,
         expectedRevision: req.expectedRevision,
         content: req.content,
-        takenCandidates: [...req.takenCandidates],
       })
     await options.contentSaveGate
     const row = rows.get(req.slug)
@@ -753,18 +731,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (row.contentRevision !== req.expectedRevision)
       throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!req.content) throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
-    // Like the server: a repeated index, or one outside the stored list, is malformed.
-    const taken = new Set(req.takenCandidates)
-    if (
-      taken.size !== req.takenCandidates.length ||
-      req.takenCandidates.some((index) => index < 0 || index >= row.replacementCandidates.length)
-    )
-      throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
     // Only a save that changes something is refused: an identical one stays a no-op (R7).
     if (JSON.stringify(row.content) !== JSON.stringify(req.content)) {
       refuseIfPublished(row)
-      // A take spends its candidate in the same write (POST-79); the rest keep their order.
-      row.replacementCandidates = row.replacementCandidates.filter((_, index) => !taken.has(index))
       row.content = req.content
       row.contentRevision += 1n
       row.status = 'review'

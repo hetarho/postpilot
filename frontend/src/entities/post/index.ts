@@ -27,8 +27,6 @@ export {
   postContentWith,
 } from './model/content'
 export { BlockList } from './ui/BlockList'
-export type { ReplacementCandidate, ReplacementSpan, TextAt } from './model/replacements'
-export { applyReplacement, sameCandidate, spansAt, visibleSpans } from './model/replacements'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
 export { usePosts } from './api/usePosts'

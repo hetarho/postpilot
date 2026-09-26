@@ -10,7 +10,7 @@ import { Checkbox, FieldLabel } from '@/shared/ui'
 /** The product's 분야 as a checkbox list, in catalogue order — the template list's shape, since a
  *  multiple-choice native select is close to unusable on a phone. It emits the next set in
  *  catalogue order whatever order the boxes were pressed in, so the wire never carries a press
- *  order. The scope control and the preset row's 적용할 분야 both use it. */
+ *  order. The scope control uses it. */
 export function GuidelineFieldPicker({
   value,
   onChange,

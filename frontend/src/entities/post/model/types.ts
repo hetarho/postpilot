@@ -7,7 +7,6 @@ import type { QualityMetricId } from '@/entities/quality/@x/post'
 import type { TemplateRef } from '@/entities/template/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
 import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
-import type { ReplacementCandidate } from './replacements'
 
 /** A post as the app talks about it.
  *
@@ -87,9 +86,6 @@ export interface PostDraft {
   videos: PostVideo[]
   activeJob: GenerationJob | undefined
   content: PostContent | undefined
-  /** What the last write offered to replace, as stored (GEN-53). Stale ones stay stored and are
-   *  dropped where they render; one with a surface this build cannot name is dropped here. */
-  replacementCandidates: ReplacementCandidate[]
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint

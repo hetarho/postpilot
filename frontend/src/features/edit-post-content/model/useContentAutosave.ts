@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useSavePostContent, type ReplacementCandidate } from '@/entities/post'
+import { useSavePostContent } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
 import { attachContentQueue, type ContentQueueHandle, type ContentSaveState } from './content-queue'
 
@@ -8,35 +8,22 @@ export function useContentAutosave(args: {
   revision: bigint
   content: PostContent
   valid: boolean
-  /** The replacement candidates the post holds at `revision`, read at attach time like the
-   *  content. */
-  candidates: readonly ReplacementCandidate[]
-}): {
-  state: ContentSaveState
-  flush: () => Promise<bigint>
-  /** Records a take: the next valid content this hook queues carries it (POST-79). */
-  take: (candidate: ReplacementCandidate) => void
-} {
+}): { state: ContentSaveState; flush: () => Promise<bigint> } {
   const save = useSavePostContent()
   const [state, setState] = useState<ContentSaveState>('idle')
   const queue = useRef<ContentQueueHandle | undefined>(undefined)
   const send = useRef(save.save)
-  const opened = useRef({ content: args.content, candidates: args.candidates })
-  // Takes made since the last queued snapshot; a snapshot that could not be queued (invalid
-  // content) leaves them for the next one.
-  const taken = useRef<ReplacementCandidate[]>([])
+  const opened = useRef({ content: args.content })
   useLayoutEffect(() => {
     send.current = save.save
-    opened.current = { content: args.content, candidates: args.candidates }
+    opened.current = { content: args.content }
   })
   useLayoutEffect(() => {
     const handle = attachContentQueue({
       slug: args.slug,
       revision: args.revision,
-      saved: { content: opened.current.content, taken: [] },
-      candidates: opened.current.candidates,
-      send: (snapshot, revision, takenCandidates) =>
-        send.current(args.slug, snapshot.content, revision, takenCandidates),
+      saved: opened.current,
+      send: (snapshot, revision) => send.current(args.slug, snapshot.content, revision),
       onState: setState,
     })
     queue.current = handle
@@ -47,9 +34,7 @@ export function useContentAutosave(args: {
     }
   }, [args.revision, args.slug])
   useLayoutEffect(() => {
-    if (!args.valid || !queue.current) return
-    queue.current.queue({ content: args.content, taken: taken.current })
-    taken.current = []
+    if (args.valid) queue.current?.queue({ content: args.content })
   }, [args.content, args.valid])
   useEffect(() => {
     const flush = () => queue.current?.saveNow()
@@ -64,9 +49,6 @@ export function useContentAutosave(args: {
     }
   }, [])
   return {
-    take: (candidate) => {
-      taken.current = [...taken.current, candidate]
-    },
     state: args.valid ? state : 'error',
     flush: () =>
       args.valid

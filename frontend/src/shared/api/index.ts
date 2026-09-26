@@ -218,8 +218,6 @@ export {
   PostSchema,
   PostSummarySchema,
   ReobserveSelectionSchema,
-  ReplacementCandidateSchema,
-  ReplacementSurface as ProtoReplacementSurface,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
@@ -236,7 +234,6 @@ export {
 } from './gen/postpilot/v1/post_pb'
 export type {
   Block,
-  ReplacementCandidate as ProtoReplacementCandidate,
   TemplateAnswer as ProtoTemplateAnswer,
   VoiceRef as ProtoVoiceRef,
   GenerationJob as ProtoGenerationJob,
@@ -375,14 +372,11 @@ export {
   GuidelineCandidateSchema,
   ListGuidelineCandidatesResponseSchema,
   DismissGuidelineCandidateResponseSchema,
-  GuidelinePresetSchema,
-  UpdateGuidelinePresetResponseSchema,
 } from './gen/postpilot/v1/guideline_pb'
 export type {
   Guideline as ProtoGuideline,
   GuidelineTemplateRef as ProtoGuidelineTemplateRef,
   GuidelineCandidate as ProtoGuidelineCandidate,
-  GuidelinePreset as ProtoGuidelinePreset,
 } from './gen/postpilot/v1/guideline_pb'
 export {
   MemoryService,

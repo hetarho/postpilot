@@ -10,13 +10,11 @@ import {
   type ProtoBlogField,
   type ProtoGuideline,
   type ProtoGuidelineCandidate,
-  type ProtoGuidelinePreset,
   type ProtoGuidelineTemplateRef,
 } from '@/shared/api'
 import type {
   Guideline,
   GuidelineCandidate,
-  GuidelinePreset,
   GuidelineScope,
   GuidelineScopeKind,
 } from '../model/types'
@@ -52,13 +50,6 @@ function toTemplateRef(ref: ProtoGuidelineTemplateRef) {
  *  have the next whole-set save erase it on the server. */
 function toFieldIds(fields: readonly ProtoBlogField[]): BlogFieldId[] {
   return fields.map(requireBlogFieldId)
-}
-
-/** The server always sends the preset, so an absent one is a malformed read: it throws, and the
- *  page's load failure covers it, as it does an unreadable scope. */
-export function toGuidelinePreset(preset: ProtoGuidelinePreset | undefined): GuidelinePreset {
-  if (!preset) throw new Error('guideline list carries no preset')
-  return { text: preset.text, enabled: preset.enabled, fields: toFieldIds(preset.fields) }
 }
 
 /** Throws on a scope it cannot read, which fails the list read: the page then says so and offers a
