@@ -30,5 +30,4 @@
 - money received and returned for a sold voucher moves outside the product; the product records the sale (GIFT-4) and issues no receipt or tax document (→BILL-13)
 
 ## chg
-- r2 260925 constraints✎ QUOTA-12 change required→landed as QUOTA r20 (QUOTA-12, QUOTA-58)
-- r1 260925 initial
+-

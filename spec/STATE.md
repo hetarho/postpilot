@@ -13,6 +13,7 @@
 | clip-source-observation-visibility | converted@260912 |
 | clip-template-as-preset | converted@260917 |
 | post-quality-and-related-links | converted@260923 |
+| searchable-details | open@260926 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -20,14 +21,13 @@
 | ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 20 | 20 | - | 0 |
-| POST | 15 | 15 | - | 0 |
+| POST | 16 | 16 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 12 | 12 | - | 0 |
+| GEN | 13 | 13 | - | 0 |
 | MODEL | 17 | 17 | - | 0 |
 | TMPL | 11 | 11 | - | 1 |
-| GUIDE | 6 | 6 | - | 0 |
+| GUIDE | 7 | 7 | - | 0 |
 | EXPORT | 5 | 5 | - | 0 |
-| PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
 | THEME | 18 | 15 | THEME-19✎ | 0 |
 | MKT | 6 | 6 | - | 0 |
@@ -36,7 +36,7 @@
 | CDS | 26 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 3 | 3 | - | 2 |
-| QUAL | 4 | 4 | - | 0 |
+| QUAL | 5 | 5 | - | 0 |
 | GIFT | 2 | 2 | - | 0 |
 
 ## review
@@ -54,15 +54,25 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T406 | The composition preview draws every intro and outro preset as the renderer lays it out | CLIP CDS | - | doing@260926.rp |
+| T407 | The frontend drops ②'s replacement marks and the 상위 노출 단어 사용 preset row | POST GUIDE | - | todo |
+| T408 | Generation stops freezing 분야 phrases and posts stop carrying replacement candidates | GEN POST | T407 | todo |
+| T409 | The 상위 노출 단어 사용 guideline preset leaves the backend and the guideline proto | GUIDE GEN | T408 | todo |
+| T410 | The 분야 phrase batch, its Naver search client and its table are removed | QUAL | T409 | todo |
+| T411 | Backend, proto and build docs cite current spec decisions instead of deleted docs and IDs | ARCH | T410 | todo |
+| T412 | Frontend, styles and lint scripts cite current spec decisions instead of deleted docs and IDs | ARCH THEME | T407 | todo |
 
 ## next
-- review/clip-narrate-failure-260926 is complete (T398, T399): a narration caption fits its named style and the tail trim keeps the 1.2 s cut floor; unmeasured: a rapid phrase in a hook-role style against the canvas width
-- GIFT r2 + QUOTA r20 are implemented (T394–T397): operator vouchers issued at /admin/vouchers, redeemed from the public /gift page; next ARCH edit adds `voucher` to ARCH-5's context list; BILL still carries the Toss placeholder and USD pricing (see payment research) before any card rollout
-- POST r15 is implemented (T392, T393): /posts pages with server-side search/filter and restores its scroll; ListClipProjects still answers whole and can follow the same shape when needed
-- Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- The review wave T354..T375 (review/published-quality-260924) is complete, one commit per task (p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T407 → T408 → T409 → T410 (분야 phrase feature removal, FE first so the proto removal cannot break it); T412 after T407 and T411 after T410 (code citations of deleted docs and IDs)
+- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
+- Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width
 
 ## log
+- 260926 create-task QUAL GEN GUIDE POST done (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 → T407 (FE marks + preset row) → T408 (frozen phrases, candidates, post.proto, drop column) → T409 (preset, guideline.proto, drop tables) → T410 (phrase batch, naversearch, config, drop table); T411/T412 cite current spec in BE/FE code; T400–T405 restored to tasks/done after deletion at done
+- 260926 create-task QUAL GEN GUIDE POST start (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 (분야 phrase feature removal) + stale spec citations in code
+- 260926 T406 claimed (rp)
+- 260926 create-task T406 (rp): the owner asked for every preview to draw the new presets; the TS port and CompositionDesignFrame drew the four defaults only and the template preview had no preset choice
+- 260926 docs-current (hc): spec/ssot/PUB.md and spec/legacy/ deleted; tasks/done, review/ and ideation/ stay as work records (FORMAT/skills keep their archive rules); ARCH-35 drops spec/legacy
 - 260926 T405 done (rp): GetClipRegionPresetSamples draws every intro/outro preset through the region layout and overlay with the caller's `{n}` label (≤ 16 chars) numbering each slot, ids prefixed per preset, no scrim, preview lock/timeout, private no-store; ① offers each region as a radiogroup of tiles (renderer drawing on the media ground above the name, arrows move focus and choice, names alone while loading or on failure); 15 preset names + slot label ko/en; CompositionDesignThumbnail removed; BE/FE gates green, gen:proto clean
 - 260926 T405 claimed (rp)
 - 260926 T404 done (rp): new projects store intro a / outro b (DefaultDesign) while an empty id anywhere it is stored keeps rendering b/e (UnchosenDesign) and migration 0086 writes b/e into every empty project row; ① receives resolved ids, FE preset types are design.json key unions and fall back through CLIP_DEFAULT_REGION_PRESETS; BE/FE gates green, gen:sql clean
@@ -78,8 +88,3 @@
 - 260926 T400 claimed (rp)
 - 260926 create-task CDS CLIP done (rp): CDS r26 + CLIP r45 → T400 (metrics table + width fit), T401 (gap stack layout for A/B/B/E across renderer, V20, admission and FE preview), T402 (writer budgets, repair and answer limits by width), T403 (11 presets, decoration, region scrim), T404 (defaults A/B, existing projects keep b/e), T405 (① radiogroup of renderer-drawn slot drawings); CDS r24 and CLIP-13✎ CLIP-163+ stay pending
 - 260926 create-task CDS CLIP start (rp): CDS r26 + CLIP r45 region preset overhaul; checking whether CDS r24 (Wanted Sans) and CLIP-13✎ still need code
-- 260926 update-ssot CDS CLIP done (rp): CDS r26 — region slots fit their width (shrink to a role floor, then two lines for display/headline/hook/title) instead of CDS-20 counts, blocks stack by fixed ink gaps around their anchor, presets fix size and position only (CDS-88), intro 8 / outro 7 presets (CDS-89..99), radial scrim for centred blocks; CLIP r45 — CLIP-111 lists and new-project defaults A/B with existing projects keeping theirs, CLIP-116 region limit is width, CLIP-165 ① shows numbered slot drawings; no doing tasks affected
-- 260926 update-ssot CDS CLIP start (rp): intro/outro presets fix only slot size and position; titles fit the 856 px measure by shrinking to a floor then wrapping instead of per-role character counts; intro 8 / outro 7 presets with project defaults A and B; waiting on hc's uncommitted CDS/CLIP cleanup before editing
-- 260926 T399 done (nf): the tail trim stops each cut at the 1.2 s cut floor and falls back to the overlap floor only for an overrun the floors cannot absorb; the multi-source pin moved 15760→15630; BE gate green
-- 260926 T399 claimed (nf)
-- 260926 T398 done (nf): narration captions are admitted against their named style's line bound (short text, then omission, never a refused clip), the writer is told each style's bound, and a narration refusal names the caption rather than line 0; BE and FE gates green

@@ -117,7 +117,6 @@ GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 
 | GHCR pull PAT (`read:packages`, classic) | VPS `ubuntu` 계정의 docker 로그인 | VPS가 private 이미지를 pull. **sudo 없이** `docker login` |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | 스택 `.env` | R2 API 토큰(해당 버킷에만 Object Read & Write). Cloudflare → R2 → Manage API Tokens |
 | `R2_ENDPOINT` / `R2_BUCKET` | 스택 `.env` | `https://<account-id>.r2.cloudflarestorage.com` 과 버킷 이름. 비밀은 아니지만 환경마다 다르다 |
-| `PUBLISH_*` | 스택 `.env` | 폐기 브리지 동안 구 설정을 읽기 위한 값. migration 0072 이후 실행에는 사용되지 않으며 최종 제거 단계에서 삭제한다 |
 | `MAIL_DRIVER` | 스택 `.env` | 트랜잭션 메일 전송기. 로컬은 `log`, 배포는 `resend` |
 | `RESEND_API_KEY` / `MAIL_FROM` | 스택 `.env` | Resend API 키와 인증된 발신 주소. `MAIL_DRIVER=resend`이면 둘 다 필수 |
 | `OPENROUTER_API_KEY` (외 `backend/config/providers.yaml`의 `api_key_env`가 가리키는 이름들) | 스택 `.env` | 모델 프로바이더 키. **없어도 API는 뜬다** — 그 프로바이더의 모델만 드롭다운에서 "API key not configured"로 비활성. 이미지는 `/config/providers.yaml`을 내장하며(`PROVIDERS_CONFIG`), 스택이 자기 파일을 그 자리에 마운트해 덮어쓸 수 있다 |
@@ -294,149 +293,6 @@ GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 
 확인: `curl https://api.postpilot.<도메인>/health` → `{"status":"ok","version":"0.0.1"}`
 (인증이 필요한 RPC는 세션 쿠키 없이 부르면 401이다 — `/health`만 열려 있다.)
 
-### 자동 발행 폐기 브리지
-
-migration 0072부터 자동 발행은 영구 차단된다. 아래 보고·정리 명령은 `/retirepublishing`을 포함한
-**T312 bridge 이미지**에서만 실행한다. 최종 이미지에는 이 명령이 없으므로 bridge image SHA를 환경별
-checkpoint가 끝날 때까지 보관한다. 배포 전 구 API 프로세스를 완전히 내리고 bridge 이미지
-하나만 기동한다.
-
-**bridge 이미지가 GHCR에 없을 때.** T310→T283 체인이 한 번의 푸시로 main에 올라가면 그 사이 커밋에는
-deploy 실행이 없고, 따라서 bridge 이미지가 GHCR에 존재하지 않는다(prod에서 실제로 이렇게 됐다 — 아래
-checkpoint 참고). 이때는 bridge 커밋에서 정적 바이너리만 만들어 현재 이미지에 bind-mount하면 같은
-경계를 만족한다. 컨테이너는 그대로 distroless/nonroot로 돌고, 명령·검증·영수증은 전부 동일하다.
-
-```bash
-git worktree add --detach /tmp/postpilot-bridge <T312-bridge-commit-SHA>
-cd /tmp/postpilot-bridge/backend
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" \
-  -o /tmp/retirepublishing ./cmd/retirepublishing
-scp /tmp/retirepublishing <vps>:/home/ubuntu/retirepublishing-bridge-<sha>
-```
-
-그러면 아래 모든 명령에서 `IMAGE_TAG=<T312-bridge-image-SHA>` 대신
-`-v /home/ubuntu/retirepublishing-bridge-<sha>:/retirepublishing:ro`를 붙이고 `--no-deps`로 실행한다.
-`/data`의 보고서·inventory·receipt는 mode 0600에 uid 65532 소유여야 하므로, 호스트에서 만들지 말고
-`docker run --rm -u 65532:65532 -v /srv/postpilot-<env>/data:/data ... sh -c 'umask 077; ...'`로 쓴다. 이 경계에서는 구 이미지와 새 이미지를 동시에 실행하지 않는다. 마이그레이션은
-연결 코드와 에이전트 토큰을 무효화하고, 커밋 전 작업은 `canceled`, 커밋 가능성이 있는 작업은
-`outcome_unknown`으로 고정한다. 구 클라이언트의 SQL 쓰기도 트리거가 거절한다.
-
-새 이미지의 `/health`를 확인한 직후 환경별 비공개 보고서를 한 번 만든다. 출력 파일은 기존 파일을
-덮어쓰지 않으며 mode 0600이다. 내용에는 안전한 연결·작업 식별자와 상태만 있고 글 내용, manifest,
-미디어, 토큰, 브라우저 경로는 없다.
-
-```bash
-cd /srv/postpilot-<env>
-IMAGE_TAG=<T312-bridge-image-SHA> docker compose -f docker-compose.prod.yml run --rm \
-  --entrypoint /retirepublishing api report \
-  --environment <env> \
-  --output /data/publishing-retirement-<env>.json
-```
-
-이미지 SHA, migration 0072 적용 여부, 명령이 출력한 digest와 보고서 파일의 보관 위치를 환경별로
-기록한다. 저장된 Naver URL과 `outcome_unknown` 결과는 운영자가 Naver에서 직접 확인하며 자동 재시도나
-삭제를 하지 않는다. 설치된 Mac 동반 프로그램을 모두 중지했다는 영수증이 모이기 전에는 staged
-object나 발행 레코드를 지우지 않는다. prod는 아래 checkpoint로 실행을 마쳤고, staging은 아직 배포된
-적이 없어 해당 없음이다.
-
-보고서에 대응하는 모든 Mac에서는 **T282 retirement bridge가 들어간 동일한 검토 커밋 SHA**를 따로
-기록하고, 현재 main이 아니라 그 보관 커밋을 임시 worktree로 체크아웃해 읽기 전용 점검을 실행한다.
-최종 소스에는 `agent/`가 없다. 예전 `install.sh`로 바이너리를 교체하거나 LaunchAgent를 다시 올리지 않는다.
-
-```bash
-git worktree add --detach /tmp/postpilot-agent-retirement <T282-bridge-commit-SHA>
-cd /tmp/postpilot-agent-retirement/agent
-go run ./cmd/postpilot-agent retire
-# 표시된 credential 수와 보존될 browser profile 경로를 Mac 소유자가 확인한 뒤
-go run ./cmd/postpilot-agent retire --apply
-```
-
-`--apply`는 현재 사용자 LaunchAgent와 확인된 수동 companion을 먼저 중지·재확인하고, mode 0600 로컬
-영수증을 `~/Library/Application Support/Postpilot Agent Retirement/shutdown-receipt.json`에 남긴다.
-브라우저 프로필은 기본적으로 보존한다. 프로필까지 지워야 하는 Mac에서만 점검에 나온 정확한 경로를
-확인한 뒤 `retire --apply --delete-profiles`를 별도로 실행한다. 영수증이 `complete`가 아니면 해당 장치는
-미해결 상태이며 서버 cleanup을 진행하지 않는다. 재실행은 같은 영수증의 계정·경로 inventory로
-idempotent하게 이어진다.
-
-운영 기록에는 Mac별 bridge 커밋 SHA, 영수증 상태, 운영자가 계산한 digest와 장치 식별용 별칭만 적는다.
-영수증 파일 자체나 로컬 브라우저 경로는 서버·Git·공유 로그에 업로드하지 않는다. 폐기됐거나 설치된
-적이 없는 장치는 별도 inventory reconciliation으로 근거를 남기며, 연락되지 않는 장치를 자동으로
-중지 완료로 간주하지 않는다. 이 명령은 Naver나 Postpilot API에 접속하지 않고 실제 발행도 검증하지
-않는다.
-
-모든 장치를 해소한 뒤 환경별 shutdown inventory를 mode 0600으로 만든다. `devices`는 최초 보고서의
-agent id를 정확히 한 번씩 포함해야 하고, `disposition`은 `shutdown`·`never_installed`·`destroyed` 중
-하나다. `evidence_digest`에는 Mac 로컬 영수증 또는 별도 inventory reconciliation의 `sha256:` digest만
-기록한다. 로컬 경로와 영수증 원문은 넣지 않는다. agent가 0개인 환경도 빈 `devices` 배열을 가진 파일이
-필요하다.
-
-```json
-{
-  "schema_version": 1,
-  "environment": "<env>",
-  "report_digest": "<report 명령이 출력한 digest>",
-  "devices": [
-    {"agent_id": "<agent id>", "disposition": "shutdown", "evidence_digest": "sha256:<64 hex>"}
-  ]
-}
-```
-
-원본 retirement report의 mode 0600 파일과 출력 digest를 그대로 보관한다. cleanup은 그 digest뿐 아니라
-현재 database identity, migration 0072 cutoff, agent/job inventory와 다섯 테이블의 row 수를 원본 보고서와
-대조한다. shutdown inventory의 정확한 파일 digest도 함께 넘긴다(`sha256sum` 결과 앞에 `sha256:`를 붙임).
-기본 실행은 DB와 `publishing/` 전체 목록을 읽기만 하며 파일이나 row를 지우지 않는다.
-
-```bash
-cd /srv/postpilot-<env>
-IMAGE_TAG=<T312-bridge-image-SHA> docker compose -f docker-compose.prod.yml run --rm \
-  --entrypoint /retirepublishing api cleanup \
-  --environment <env> \
-  --report /data/publishing-retirement-<env>.json \
-  --report-digest <report-digest> \
-  --shutdown-inventory /data/publishing-shutdown-<env>.json \
-  --shutdown-digest sha256:<shutdown-file-hex> \
-  --receipt /data/publishing-cleanup-<env>.json
-```
-
-점검 결과가 원본 inventory와 일치할 때 같은 명령에 `--apply`를 추가한다. apply는 완전히 pagination된
-`publishing/` 목록에서 참조 copy와 orphan을 exact key로 먼저 지우고, 새 전체 목록이 0임을 확인한 뒤
-`publish_assets` → `publish_jobs` → `publish_job_ids` → `publishing_agents` → `publishing_pairings` 순서의
-짧은 DB transaction을 실행한다. `posts/`, `clip-inputs/`와 다른 prefix는 대상이 아니다. object I/O 중에는
-DB transaction을 열지 않는다. 실패 시 mode 0600 cleanup receipt가 이미 처리한 exact key와 증거 digest를
-보관하므로 같은 `--apply` 명령을 반복한다. 원본 retirement report는 덮어쓰지 않는다.
-
-apply 성공 후 같은 명령의 `--verify`로 현재 다섯 테이블과 `publishing/` 목록이 모두 0이고 complete receipt의
-digest가 같은 증거를 가리키는지 다시 확인한다. 환경별로 bridge image SHA, 원본 report digest, shutdown
-inventory digest, complete cleanup receipt digest를 기록한다. 실제 환경에서 이 checkpoint가 끝나기 전에는
-publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 배포하지 않는다.
-
-#### prod checkpoint (260922, 완료)
-
-| 항목 | 값 |
-| --- | --- |
-| bridge 커밋 | `cb0575abbc33e47bcec9bbf04b538b17dfa71644` (GHCR 이미지 없음 — 위 bind-mount 방식) |
-| T282 Mac 영수증 | `sha256:bcf0004f31fc76e83d08463f0cb97d2a20e1d2d634a305d0253fdc0ca2ed0768` (`retire --apply --delete-profiles`, status complete) |
-| report digest | `c32ebce5609e73f0d53c4324c0c67a8c50ac56f43aba88879b8b230f499d888b` |
-| shutdown inventory digest | `sha256:a8579b9c37afbfdec8146dedce4b8252f1b4d463921c8200f76d69539098a4cf` |
-| cleanup receipt digest | `93cb45caffcc95548571a3bde8167585b823fe43f21c8823b17e0038f3b9d882` (status complete) |
-| 정리 규모 | rows 18 → 0 (pairings 10, agents 4, jobs 2, job_id 2, assets 0), `publishing/` objects 0 |
-| 최종 이미지 | `4122c499539255b9b9b1f1ff2ec34b60c73b9bb3`, goose 76 |
-
-보고서·inventory·receipt 원본은 `/srv/postpilot-prod/data/publishing-{retirement,shutdown,cleanup}-prod.json`에
-mode 0600으로 남아 있다. 이 checkpoint 이전에 T283 이미지가 먼저 배포돼 `Deploy backend` rollout이
-0076에서 실패했고(run 35704843925), 헬스 게이트가 구 이미지로 롤백했다. 순서를 지켰다면 발생하지 않는다.
-
-prod가 유일한 배포 환경이고 그 receipt가 complete이므로 bridge 바이너리는 checkpoint 직후 VPS에서
-폐기했다. 다시 필요하면 위 커밋에서 그대로 빌드한다 — 최종 이미지에는 이 명령이 없다.
-
-최종 이미지는 migration 0076에서 다섯 테이블의 row 수가 모두 0인지 다시 확인하고, 그 뒤에만 trigger,
-index와 테이블을 FK 순서로 제거한다. migration은 object storage를 읽거나 지우지 않으므로 complete receipt가
-`publishing/` 정리의 유일한 배포 증거다. row가 하나라도 남으면 `publishing cleanup required before final
-removal`로 기동이 실패하고 migration transaction은 어떤 테이블도 지우지 않는다. 이 경우 final migration을
-약화하거나 row를 수동 삭제하지 말고, 해당 환경을 기록된 bridge image SHA로 되돌려 위 inspect → apply →
-verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 바이너리를 빌드해 bind-mount한다). 모든
-환경의 complete receipt와 final image SHA를 기록한 뒤에만 bridge 이미지를 폐기한다.
-
 ## 6. 롤백
 
 - **Backend**: from `/srv/postpilot-<env>`, run
@@ -446,10 +302,7 @@ verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 �
   Exported incoming tags cannot override that snapshot. Do not restore a tag with a
   direct API-only `compose up`: pre-worker boot is unsafe for parked media jobs. The
   minimum supported media rollback is version 1 (`org.postpilot.media.rollback-safe=1`).
-  migration 0072를 지난 환경은 이 경계 아래로 되돌리지 않는다. 구 이미지가 필요해도 데이터베이스의
-  폐기 트리거와 무효화된 자격증명을 유지해야 하며 자동 발행을 다시 활성화하는 설정은 없다.
-  migration 0076을 지난 환경은 publishing 테이블을 요구하는 bridge/구 바이너리로 롤백할 수 없다. 0076의
-  Down도 실행 기능이나 테이블을 복원하지 않으므로, 롤백 대상은 최종 스키마와 호환되는 이미지여야 한다.
+  롤백 대상 이미지는 migration 0076 이후의 스키마와 호환되어야 한다. 그보다 오래된 이미지로는 되돌리지 않는다.
 - **기동 실패 진단**: `docker compose -f docker-compose.prod.yml logs --no-color --tail 80 api`.
   `migration failed`가 있으면 DB의 `goose_db_version`과 해당 마이그레이션을 확인한다.
   확정된 클립은 변경할 수 없으므로 데이터 정리 마이그레이션에서도 보존해야 한다.

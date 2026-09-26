@@ -2,8 +2,8 @@
 > r3 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
 
 ## decisions
-- MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it produces today
-- MEM-2 [o] memory is the fourth authored layer beside the three that exist: VOICE decides how sentences sound, TMPL decides shape and required content, GUIDE decides what to avoid, MEM supplies facts no single post carries ← the recurring failure was a post confined to what one memo and one photo set could prove, which no voice rule, template brief or prohibition can widen
+- MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
+- MEM-2 [o] memory is the fourth authored layer beside the three that exist: VOICE decides how sentences sound, TMPL decides shape and required content, GUIDE decides what to avoid, MEM supplies facts no single post carries ← without it a post is confined to what one memo and one photo set can prove, which no voice rule, template brief or prohibition can widen
 - MEM-3 [o] a memory is account-owned: not voice-scoped, not template-scoped, and carrying no per-post enable ← a fact about the author holds across every voice they write in, and `kind` plus tags already separate subject matter without partitioning the store
 - MEM-4 [o] a memory carries `text`, one `kind`, zero or more tags, zero or more source-post links and timestamps; nothing else is authored and nothing is scored, ranked or weighted by a model
 - MEM-5 [o] `kind` is a closed enum of five — `preference` 취향 · `persona` 설정 · `place` 장소 · `person` 인물 · `history` 이력 — with no user-defined kinds and no sub-kinds ← retrieval behaviour and prompt grouping both rest on the enum being closed; anything finer is a tag
@@ -19,7 +19,7 @@
 - MEM-15 [o] a candidate is never stored: the surface lists them with checkboxes, only checked ones are created, and unchecked ones are discarded rather than queued for later review ← the extraction is repeatable on demand, so a pending queue would preserve what the user already declined
 - MEM-16 [o] what is stored is the approved facts alone — never the post body, never a summary of it, never the raw candidate list
 - MEM-17 [o] a memory links every post it was approved from; deleting a post drops that link and deletes the memory only when it was its last one ← a fact re-confirmed across several posts outlives any one of them, while a fact that existed only inside a deleted post leaves no orphan
-- MEM-18 [o] a post carries a `use_memory` option, default off, saved with the writing brief's run options (→POST-89) as an option save that changes no status, revision, baseline or learning eligibility (→POST-62); off is the shape every existing draft decodes as
+- MEM-18 [o] a post carries a `use_memory` option, default off, saved with the writing brief's run options (→POST-89) as an option save that changes no status, revision, baseline or learning eligibility (→POST-62); a post without the field decodes as off
 - MEM-19 [o] the selected memories are resolved once at enqueue and frozen as text into the generation payload beside the template brief and the guideline texts (→GEN-15) and into a write comparison's snapshot (→GEN-18); handlers never re-read the rows, so editing or deleting a memory after the start changes nothing in flight, across restart-resume or retry
 - MEM-20 [o] the frozen memories render as ONE `[기억]` section in the per-post half of the write prompt, beside the memo and the observations, never in the stable prefix ← the selected set differs per post, and the prefix is what the provider's cache and every prompt golden rest on
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
@@ -44,6 +44,4 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
-- r3 260925 MEM-18✎ autosaved with the draft→saved with the brief's 저장 · MEM-26✎ at the foot of ①'s panel, readable without opening anything→in the writing brief
-- r2 260924 MEM-19✎ frozen into the generation payload→the generation payload and a write comparison's snapshot
-- r1 260920 initial
+-

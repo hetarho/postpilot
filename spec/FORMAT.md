@@ -6,26 +6,27 @@
 2. One line = one decision/fact. If something is ambiguous, don't write prose — register it as a [?] decision.
 3. Short ≠ omitted. Everything needed to decide (decisions, reasons, constraints, open items) must be present.
 4. Docs first. Record state changes in STATE.md before reasoning or implementing.
-5. Truth order: content → ssot/*.md, progress → STATE.md, change history detail → each SSOT's chg (STATE log is a hint, not truth). Fix mismatches on sight.
+5. Truth order: content → ssot/*.md, progress → STATE.md, history → git log and tasks/done/ (STATE log is a hint, not truth). Fix mismatches on sight.
 6. ssot/ holds outcomes only. No request traces ("user asked", "as discussed"), no interview history, no rationale beyond the decision line's ← reason, no sections beyond the skeleton. Task files are disposable and may carry request context — ssot/ never does.
+7. Docs describe the current product only. When a feature leaves the product, its decisions, flows, constraints and runbooks are deleted — never kept as [x], as a retirement SSOT, or as a "migrated from / legacy / formerly / was→now" note, a past task id or a past date. History lives in git log; tasks/, review/ and ideation/ are work records and keep finished work under the rules below.
 
 ## ID
 | target | form | rules |
 |---|---|---|
 | SSOT domain | 2-6 uppercase (AUTH, ARCH) | file ssot/<ID>.md |
-| decision | <ID>-<n> (AUTH-3) | n is permanent — never reused, even after rejection |
+| decision | <ID>-<n> (AUTH-3) | n is never reused, even after its line is deleted: a new n is the highest the SSOT has ever used + 1 (`git log -p` shows a deleted one) |
 | task | T### (T012) | file tasks/T###.<slug>.md (moved to tasks/done/ at done) · slug=kebab-case · numbering=max existing+1 counting tasks/done/ · never reused |
 | review finding | Fn (F3) | scoped to its review doc · n is permanent, never reused |
 
 ## Notation
 - decision line: `- <ID>-<n> [o|?|x] <content>` + ` ← <reason>` only when there was a trade-off
   e.g. `- AUTH-2 [o] session: JWT 15m + refresh 30d ← minimize mobile re-login`
-- [o] decided / [?] open / [x] rejected·deferred
+- [o] decided / [?] open / [x] rejected·deferred — a standing decision not to do something the product does not have; a decision whose feature was removed is deleted, not marked [x]
 - change kind: + added / ✎ modified / - removed (e.g. `AUTH-2✎`)
 - reference: →AUTH-3
 - finding line: `- Fn [?|o|x] P1|P2|P3 <where>: <what>` + ` ← <why it matters>`; append ` →T###` once a task exists. P1 = correctness/security risk or blocks every change · P2 = slows every change · P3 = nice to have. A functional bug is a finding whose <what> starts with `bug:`
 - acceptance check: `- [ ]` open → `- [v]` done (never mark done with x — [x] means rejected in SSOT)
-- rev: rN. +1 per content change, one chg line (`- rN YYMMDD <ID>-n✎ summary`). First write: `- r1 YYMMDD initial`. A ✎ summary MUST keep the old value as `old→new` (e.g. `BM-11✎ limit 100→50`); a `-` summary states what was removed
+- rev: rN. +1 per content change, one chg line (`- rN YYMMDD <ID>-n✎ summary`). First write: `- r1 YYMMDD initial`. A ✎ summary MUST keep the old value as `old→new` (e.g. `BM-11✎ limit 100→50`); a `-` summary states what was removed. chg holds only changes not yet consumed into tasks (revs tasked+1..rev): create-task deletes the lines it consumes, and an empty chg is `-`
 - date: YYMMDD (260905)
 - task st: `todo` → `doing@date.tag` → `done@date`. Stuck: `blocked@date` (one-line reason in the task's ## result). tag = 2-4 chars chosen by the claiming session
 - empty value: `-` (never leave a cell blank)
@@ -51,7 +52,7 @@
 - review st: `open@date` → `ready@date` → `converted@date` (in the quote line + STATE review row `id|st`). Findings start as [?]; the user adopts [o] / rejects [x] ← reason. A [o] finding turned into a task gets `→T###`; the doc becomes converted when every [o] finding has one (no [o] at all ⇒ converted at once).
 - review-sourced tasks: ssot = the ARCH decisions the change enforces, `-` if none; base = ARCH@rev always; first impl-notes line `- from review/<slug> Fn`; acceptance keeps behavior unchanged (existing tests still pass). They never move ssot rev/tasked/pending.
 - STATE next: 1-3 lines. Every skill updates next on exit.
-- STATE log: delete beyond 20 lines — detailed history lives in each SSOT's chg and in task files.
+- STATE log: delete beyond 20 lines — history lives in git log and task files.
 
 ## Language
 - Every spec/ doc is written in English. Code, identifiers, and paths stay as-is.

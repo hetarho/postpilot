@@ -169,27 +169,11 @@ rejectMatches(
   'derived narrative publishing promise',
 )
 
-const deploy = read('DEPLOY.md')
-// Rollout status changes as environments are retired. Keep requiring the bridge and
-// evidence-bearing cleanup procedure, without freezing the runbook in its pending state.
-for (const required of [
-  'T312 bridge 이미지',
-  'migration 0072',
-  'migration 0076',
-  '--report-digest',
-  '--shutdown-inventory',
-  '--shutdown-digest',
-  '--receipt',
-  '--verify',
-]) {
-  if (!deploy.includes(required)) failures.push(`DEPLOY retirement bridge lost: ${required}`)
-}
-
 if (failures.length > 0) {
   process.stderr.write(`Publishing retirement absence check failed:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`)
   process.exitCode = 1
 } else {
   process.stdout.write(
-    'Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, DEPLOY bridge instructions, and the single authenticated legacy redirect.\n',
+    'Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect.\n',
   )
 }
