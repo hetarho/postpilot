@@ -15,6 +15,8 @@ interface VideoTileProps {
   children?: ReactNode
   dimmed?: boolean
   onError?: () => void
+  /** `small` for a clip named inside other content — a storyline paragraph — rather than a strip. */
+  size?: 'strip' | 'small'
 }
 
 /** One square tile of the strip, for a clip.
@@ -31,9 +33,15 @@ export function VideoTile({
   children,
   dimmed,
   onError,
+  size = 'strip',
 }: VideoTileProps) {
   return (
-    <figure className="bg-surface-recessed relative size-32 shrink-0 overflow-hidden rounded-lg">
+    <figure
+      className={clsx(
+        'bg-surface-recessed relative shrink-0 overflow-hidden rounded-lg',
+        size === 'small' ? 'size-16' : 'size-32',
+      )}
+    >
       {src && (
         <video
           src={src}

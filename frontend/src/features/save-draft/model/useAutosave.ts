@@ -7,10 +7,19 @@ import {
   peekPendingDraft,
   type DraftQueueHandle,
   type SaveState,
+  type StorylineParagraphDraft,
   type TemplateAnswerDraft,
 } from './draft-queue'
 
 const NO_ANSWERS: readonly TemplateAnswerDraft[] = []
+
+/** A storyline save refused as an answer the server will repeat (POST-96): the edit is taken
+ *  back rather than retried, like a save refused for the published lock. */
+const STORYLINE_REFUSALS = new Set([
+  'POST_STORYLINE_INVALID',
+  'POST_STORYLINE_FILE_UNKNOWN',
+  'POST_STORYLINE_MISSING',
+])
 
 export interface UseAutosaveArgs {
   /** The post as the server last reported it, or undefined for a draft with no slug yet.
@@ -26,6 +35,8 @@ export interface UseAutosaveArgs {
         template: { id: string }
         targetLanguage: ContentLanguage
         templateAnswers: TemplateAnswerDraft[]
+        /** The stored storyline, absent when the post has none. */
+        storyline?: { paragraphs: StorylineParagraphDraft[] }
       }
     | undefined
   /** The selected template's fields over these answers, in ①'s order; the draft carries exactly
@@ -52,6 +63,12 @@ export interface Autosave {
   memo: string
   /** The selected template's fields' answers, as the draft carries them (POST-62). */
   answers: TemplateAnswerDraft[]
+  /** The storyline's paragraphs as ② shows them: the owner's unsaved edit, or the server's.
+   *  Undefined while the post has no storyline. */
+  storyline: StorylineParagraphDraft[] | undefined
+  /** Records the owner's storyline edit, the whole paragraph list (POST-96). Does nothing while
+   *  the post is published or has no storyline. */
+  setStoryline: (paragraphs: StorylineParagraphDraft[]) => void
   /** Each does nothing while the post is published. `setAnswers` takes ①'s fields as the user
    *  left them, a whole patch by label. */
   setTitle: (title: string) => void
@@ -102,8 +119,17 @@ export function useAutosave({
       title: opening?.title ?? '',
       memo: opening?.memo ?? '',
       edits: NO_ANSWERS as readonly TemplateAnswerDraft[],
+      // Only a queued edit seeds it: the server's storyline is read from `post` on every render.
+      storyline: post ? peekPendingDraft(post.slug)?.storyline : undefined,
+    } as {
+      title: string
+      memo: string
+      edits: readonly TemplateAnswerDraft[]
+      /** The owner's storyline edit not yet known to be saved; undefined is none. */
+      storyline: StorylineParagraphDraft[] | undefined
     }
   })
+  const serverStoryline = post?.storyline?.paragraphs
   const stored = post?.templateAnswers
   // The stored answers with the local edits laid over them; the server's alone while locked.
   const source = useMemo(
@@ -149,11 +175,12 @@ export function useAutosave({
         title: opened?.title ?? '',
         memo: opened?.memo ?? '',
         answers: opened?.templateAnswers ?? [],
+        storyline: opened?.storyline?.paragraphs,
       },
       voiceId: opened?.voice.id ?? voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: ({ slug, draft, voiceId, templateId, targetLanguage }) =>
+      send: ({ slug, draft, voiceId, templateId, targetLanguage, storyline }) =>
         sendRef.current({
           slug,
           title: draft.title,
@@ -164,17 +191,27 @@ export function useAutosave({
           voiceId,
           templateId,
           targetLanguage,
+          storyline,
         }),
       // A post published in another tab refuses every save the same way (POST-86), so the text is
       // taken back rather than retried, and the post's refetch re-renders ① locked.
-      retry: (cause) => appFailureFromConnect(cause).reason !== 'POST_PUBLISHED_LOCKED',
+      // A storyline edit the server refused as invalid is taken back the same way (POST-96).
+      retry: (cause) => {
+        const reason = appFailureFromConnect(cause).reason
+        return reason !== 'POST_PUBLISHED_LOCKED' && !STORYLINE_REFUSALS.has(reason)
+      },
       onState: setState,
       onMinted: (slug) => onMintedRef.current?.(slug),
       // The post as it stands when the refusal lands is the pre-refetch one, whose title and memo
       // are the server's: a publish changes neither.
       onTakenBack: () => {
         const current = postRef.current
-        setLocal({ title: current?.title ?? '', memo: current?.memo ?? '', edits: NO_ANSWERS })
+        setLocal({
+          title: current?.title ?? '',
+          memo: current?.memo ?? '',
+          edits: NO_ANSWERS,
+          storyline: undefined,
+        })
       },
     })
     queueRef.current = handle
@@ -195,8 +232,26 @@ export function useAutosave({
   // costs nothing but a comparison. A published post queues nothing at all.
   useLayoutEffect(() => {
     if (locked) return
-    queueRef.current?.queue({ title, memo, answers })
-  }, [locked, title, memo, answers])
+    queueRef.current?.queue({ title, memo, answers, storyline: local.storyline })
+  }, [locked, title, memo, answers, local.storyline])
+
+  // The server's storyline moved: a storyline job replaced it, or this editor's own save landed.
+  // With no edit of it still queued, the local copy is either what just landed or an edit made
+  // over a storyline that no longer exists, so ② reads the server's and the queue compares the
+  // next edit against it. With one queued — newer typing than the save that landed — both stay.
+  // Keyed by value, since every GetPost is a new object.
+  const serverStorylineKey = JSON.stringify(serverStoryline ?? null)
+  const followedStoryline = useRef(serverStorylineKey)
+  useLayoutEffect(() => {
+    if (followedStoryline.current === serverStorylineKey) return
+    followedStoryline.current = serverStorylineKey
+    const paragraphs =
+      serverStorylineKey === 'null'
+        ? undefined
+        : (JSON.parse(serverStorylineKey) as StorylineParagraphDraft[])
+    if (queueRef.current?.rebaseStoryline(paragraphs) ?? true)
+      setLocal((current) => (current.storyline ? { ...current, storyline: undefined } : current))
+  }, [serverStorylineKey])
 
   // Only a draft with no post yet follows the picker (see `UseAutosaveArgs.voiceId`).
   useLayoutEffect(() => {
@@ -236,6 +291,10 @@ export function useAutosave({
     title,
     memo,
     answers,
+    storyline: locked ? serverStoryline : (local.storyline ?? serverStoryline),
+    setStoryline: (next) => {
+      if (!locked && serverStoryline) setLocal((current) => ({ ...current, storyline: next }))
+    },
     setTitle: (next) => {
       if (!locked) setLocal((current) => ({ ...current, title: next }))
     },

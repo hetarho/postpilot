@@ -1,11 +1,11 @@
-import type { RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BlockList, isPublished, type PostDraft } from '@/entities/post'
 import { PostMeasurementRow } from '@/entities/quality'
 import { voiceContentLanguageMismatchReason } from '@/entities/voice'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
 import type { PostContent } from '@/shared/api'
-import { Notice } from '@/shared/ui'
+import { Notice, Typography } from '@/shared/ui'
 import { EmptyStep } from './EmptyStep'
 
 /** ②'s panel: the block editor over the generated draft, or the way back to ① when there is
@@ -14,6 +14,7 @@ import { EmptyStep } from './EmptyStep'
 export function EditorRefinePanel({
   post,
   ownerId,
+  storylineSpace,
   result,
   languageMismatch,
   editorRef,
@@ -23,6 +24,8 @@ export function EditorRefinePanel({
   post: PostDraft
   /** The signed-in account, whose readings the measurement row is keyed by. */
   ownerId: string
+  /** The storyline space, above the draft, when the post holds a storyline (POST-95). */
+  storylineSpace?: ReactNode
   /** The generated content this step edits; absent until a run has produced one. */
   result?: PostContent
   languageMismatch: boolean
@@ -31,6 +34,16 @@ export function EditorRefinePanel({
   onGoGenerate: () => void
 }) {
   const { t } = useTranslation('posts')
+  // A storyline and no post yet: the draft area waits for 이 스토리로 글 쓰기.
+  if (!result && storylineSpace)
+    return (
+      <>
+        {storylineSpace}
+        <Typography variant="body" as="p" className="text-content-secondary">
+          {t('storylineSpace.waiting')}
+        </Typography>
+      </>
+    )
   if (!result)
     return (
       <EmptyStep goTo={onGoGenerate} goToLabel={t('editor.goGenerate')}>
@@ -39,6 +52,7 @@ export function EditorRefinePanel({
     )
   return (
     <>
+      {storylineSpace}
       {languageMismatch && (
         <Notice tone="warning" role="status" className="mb-4">
           {voiceContentLanguageMismatchReason()}

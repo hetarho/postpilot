@@ -157,3 +157,22 @@ choice would be expensive to undo are listed at the end.
   ② once it has one (다시 만들기). A failed job owned by ② offers no retry until T437.
 - **Layout:** phone row 3:7 = 스토리라인 먼저 | [바로 글 쓰기 (fills) + ▾]; from `sm:` up the three sit
   right-aligned at natural width. The ▾ is icon-only, named 다른 방법으로 쓰기.
+
+## T436 — ②'s storyline space
+
+- **Invalid storyline saves are taken back, not retried.** A save refused with
+  `POST_STORYLINE_INVALID`, `POST_STORYLINE_FILE_UNKNOWN` or `POST_STORYLINE_MISSING` drops the
+  pending edit (and, as with the published lock, the rest of that pending draft), because the server
+  will refuse it every time. `POST_BUSY` keeps today's retry.
+- **A text edit opens with a pencil and closes with 완료** (Editable + autogrowing Textarea); every
+  keystroke is queued. New copy the task did not give: `{{n}}번째 문단 고치기`, `완료`,
+  `{{file}} 옮기기` (move control's name), `{{file}} 넣기` (put-back control's name).
+- **넣기 opens an action menu of paragraphs** (`ActionMenu`); the move control is the single-choice
+  `Menu` as the task said.
+- **Tiles:** `Thumbnail`/`VideoTile` gained a `small` (64px) size; a missing view URL shows the
+  filename inside the tile.
+- **Drag:** tiles are always `draggable`; in practice this is the desktop (`sm:` and up) path,
+  since touch browsers don't do HTML5 drag.
+- **When a storyline job replaces the storyline, an unsaved local edit of the old one is
+  dropped** (the space is read-only while the job runs, so this only affects an edit that was
+  already saved).

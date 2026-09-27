@@ -265,6 +265,11 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           beforeStart={autosave.flush}
           ensureSlug={autosave.ensureSlug}
           jobView={jobView}
+          storyline={{
+            paragraphs: autosave.storyline,
+            onChange: autosave.setStoryline,
+            saveState: autosave.state,
+          }}
         />
       ) : (
         <>

@@ -108,6 +108,8 @@ export interface FakeDraftSave {
    *  upsert of that label, so a test can prove one save carried the whole set on screen and
    *  nothing else (POST-62). */
   templateAnswers: Array<{ label: string; text: string; enabled: boolean }>
+  /** The storyline edit this save carried, undefined when absent (POST-96). */
+  storyline?: Array<{ text: string; files: string[] }>
 }
 
 /** One SavePostGenerationOptions as it arrived: every member undefined when absent, which only an
@@ -319,6 +321,28 @@ type Row = {
   targetLanguage: ReturnType<typeof contentLanguageToProto>
   contentLanguage: ReturnType<typeof contentLanguageToProto>
   storyline?: ProtoStoryline
+}
+
+/** The server's storyline edit (POST-96): the texts and files replaced, the mark set, and what is
+ *  taken out read against what the storyline was made with. Absent keeps the stored one. */
+function editedStoryline(
+  stored: ProtoStoryline | undefined,
+  edit: ReadonlyArray<{ text: string; files: readonly string[] }> | undefined,
+): ProtoStoryline | undefined {
+  if (!stored || !edit) return stored
+  const madeWith = new Set([
+    ...stored.paragraphs.flatMap((paragraph) => paragraph.files),
+    ...stored.takenOutFiles,
+  ])
+  const held = new Set(edit.flatMap((paragraph) => paragraph.files))
+  return create(StorylineSchema, {
+    paragraphs: edit.map((paragraph) =>
+      create(StorylineParagraphSchema, { text: paragraph.text, files: [...paragraph.files] }),
+    ),
+    editedByHand: true,
+    addedFiles: [...stored.addedFiles],
+    takenOutFiles: [...madeWith].filter((file) => !held.has(file)),
+  })
 }
 
 /** A fixture's 분야. An id the catalogue does not hold is a mistake in the test, not 없음. */
@@ -606,6 +630,10 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       targetLanguage:
         req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
       field: req.field === undefined ? undefined : recordedField(req.field),
+      storyline: req.storyline?.paragraphs.map((paragraph) => ({
+        text: paragraph.text,
+        files: [...paragraph.files],
+      })),
     })
     if (failuresLeft > 0) {
       failuresLeft -= 1
@@ -711,6 +739,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           'ko',
       ),
       contentLanguage: existing?.contentLanguage ?? 0,
+      storyline: editedStoryline(existing?.storyline, req.storyline?.paragraphs),
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

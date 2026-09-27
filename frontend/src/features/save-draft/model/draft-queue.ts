@@ -39,6 +39,16 @@ export interface Draft {
    *  (POST-62). Every entry is an UPSERT of that label, so sending the whole current set is
    *  always safe — it cannot disturb an answer this editor is not showing. */
   answers: TemplateAnswerDraft[]
+  /** The owner's storyline edit (POST-96), the whole paragraph list; absent is no edit. It rides
+   *  the same queue so a title save in flight cannot carry an older storyline over a newer one:
+   *  the newest queued list wins, and it goes out only while it differs from what the server
+   *  holds. */
+  storyline?: StorylineParagraphDraft[]
+}
+
+export interface StorylineParagraphDraft {
+  text: string
+  files: string[]
 }
 
 export interface TemplateAnswerDraft {
@@ -70,6 +80,8 @@ export interface DraftRequest extends Partial<Assignments> {
    *  the server never picks. */
   templateId?: string
   targetLanguage?: ContentLanguage
+  /** Present only while the storyline the editor holds differs from the server's. */
+  storyline?: StorylineParagraphDraft[]
 }
 
 /** Performs one save and resolves with the post's slug.
@@ -96,6 +108,9 @@ export interface DraftQueueHandle {
    *  autosave has fired. Resolves once the create lands, however many retries that
    *  takes; rejects only if the session ends first. */
   mint: () => Promise<string>
+  /** Takes the server's storyline as the baseline when it moved, so an edit compares against
+   *  what the server now holds. Ignored — and false — while an edit of it is queued or out. */
+  rebaseStoryline: (storyline: StorylineParagraphDraft[] | undefined) => boolean
   /** Records one assignment: the voice, the 템플릿 ('' for 없음) or the target language. For a
    *  draft with no post yet that is all it does — the create carries it. For an existing post
    *  it is sent at once, on its own request, so a delayed title save cannot revert a newer
@@ -236,8 +251,40 @@ function sameDraft(held: Draft, saved: Draft): boolean {
   return (
     held.title === saved.title &&
     held.memo === saved.memo &&
-    answersSettled(held.answers, saved.answers)
+    answersSettled(held.answers, saved.answers) &&
+    storylineSettled(held.storyline, saved.storyline)
   )
+}
+
+/** An editor holding no storyline edit is settled; one holding an edit is settled once the
+ *  server holds exactly that list. */
+function storylineSettled(
+  held: StorylineParagraphDraft[] | undefined,
+  saved: StorylineParagraphDraft[] | undefined,
+): boolean {
+  return held === undefined || sameStoryline(held, saved)
+}
+
+function sameStoryline(
+  a: readonly StorylineParagraphDraft[] | undefined,
+  b: readonly StorylineParagraphDraft[] | undefined,
+): boolean {
+  if (!a || !b) return a === b
+  return (
+    a.length === b.length &&
+    a.every(
+      (paragraph, index) =>
+        paragraph.text === b[index]!.text &&
+        paragraph.files.length === b[index]!.files.length &&
+        paragraph.files.every((file, at) => file === b[index]!.files[at]),
+    )
+  )
+}
+
+function copyStoryline(
+  storyline: readonly StorylineParagraphDraft[] | undefined,
+): StorylineParagraphDraft[] | undefined {
+  return storyline?.map((paragraph) => ({ text: paragraph.text, files: [...paragraph.files] }))
 }
 
 /** Whether the answers the editor holds are already what the server holds.
@@ -408,18 +455,33 @@ async function run(queue: Queue): Promise<void> {
 
   const sent = queue.pending
   const sentAssignments = carried(queue)
+  // Only a storyline that differs from the server's goes out: an ordinary title save must not
+  // re-send, and so re-mark as edited, a storyline the owner never touched this round.
+  const sentStoryline =
+    queue.slug && sent.storyline && !sameStoryline(sent.storyline, queue.saved.storyline)
+      ? copyStoryline(sent.storyline)
+      : undefined
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
 
   try {
-    const slug = await queue.send({ slug: queue.slug, draft: sent, ...sentAssignments })
+    const slug = await queue.send({
+      slug: queue.slug,
+      draft: sent,
+      ...sentAssignments,
+      ...(sentStoryline ? { storyline: sentStoryline } : {}),
+    })
     if (queue.discarded) return
     queue.inFlight = false
     queue.sending = undefined
     queue.attempts = 0
     queue.failed = false
-    queue.saved = { ...sent, answers: mergeAnswers(queue.saved.answers, sent.answers) }
+    queue.saved = {
+      ...sent,
+      answers: mergeAnswers(queue.saved.answers, sent.answers),
+      storyline: copyStoryline(sent.storyline ?? queue.saved.storyline),
+    }
     each(queue, (channel, assignment) => {
       const value = sentAssignments[channel]
       if (value !== undefined) assignment.saved = value
@@ -628,7 +690,11 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
 
       // The answers are copied too: the queue must not share backing storage with an array
       // the caller mutates next.
-      attached.pending = { ...draft, answers: draft.answers.map((answer) => ({ ...answer })) }
+      attached.pending = {
+        ...draft,
+        answers: draft.answers.map((answer) => ({ ...answer })),
+        storyline: copyStoryline(draft.storyline),
+      }
       publish(attached)
       // Not during a backoff: that timer already covers sending the newest text, and
       // restarting the debounce on every keystroke would defeat the backoff entirely.
@@ -636,6 +702,14 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
     },
 
     saveNow: () => sendNow(attached),
+
+    rebaseStoryline: (storyline) => {
+      const edited = (draft: Draft | undefined) =>
+        draft?.storyline !== undefined && !sameStoryline(draft.storyline, attached.saved.storyline)
+      if (edited(attached.pending) || edited(attached.sending)) return false
+      attached.saved = { ...attached.saved, storyline: copyStoryline(storyline) }
+      return true
+    },
 
     flush: () => {
       if (attached.discarded) return Promise.reject(new Error('session ended'))

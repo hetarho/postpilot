@@ -16,12 +16,28 @@ interface ThumbnailProps {
   /** The image failed to load. A presigned view URL expires, and a caller that offers an action
    *  ON those pixels has to be able to stop offering it. */
   onError?: () => void
+  /** `small` for a photo named inside other content — a storyline paragraph — rather than a strip. */
+  size?: 'strip' | 'small'
 }
 
 /** One square tile of the photo strip. */
-export function Thumbnail({ src, alt, width, height, children, dimmed, onError }: ThumbnailProps) {
+export function Thumbnail({
+  src,
+  alt,
+  width,
+  height,
+  children,
+  dimmed,
+  onError,
+  size = 'strip',
+}: ThumbnailProps) {
   return (
-    <figure className="bg-surface-recessed relative size-32 shrink-0 overflow-hidden rounded-lg">
+    <figure
+      className={clsx(
+        'bg-surface-recessed relative shrink-0 overflow-hidden rounded-lg',
+        size === 'small' ? 'size-16' : 'size-32',
+      )}
+    >
       {src && (
         <img
           src={src}

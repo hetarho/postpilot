@@ -1,12 +1,21 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { hasContent, useRefreshPostImages, type PostDraft } from '@/entities/post'
+import { isTerminal } from '@/entities/generation-job'
+import {
+  hasContent,
+  isPublished,
+  useRefreshPostImages,
+  type PostDraft,
+  type PostStorylineParagraph,
+} from '@/entities/post'
 import { voiceContentLanguageMismatch } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
 import { useVoiceLearning } from '@/features/finalize-post'
 import type { GenerationActionsHandle, GenerationMode } from '@/features/generate-post'
 import type { BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
+import type { SaveState } from '@/features/save-draft'
+import { StorylineSpace } from '@/widgets/storyline-space'
 import { editorStepLabel, type EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
 import { EditorJobNotice } from './EditorJobNotice'
@@ -35,6 +44,7 @@ export function LifecycleSteps({
   beforeStart,
   ensureSlug,
   jobView,
+  storyline,
 }: {
   post: PostDraft
   ownerId: string
@@ -55,6 +65,13 @@ export function LifecycleSteps({
   ensureSlug: () => Promise<string>
   /** The durable job, resolved by the page so the status region and these panels read one poll. */
   jobView: EditorJobView
+  /** The storyline as the draft autosave holds it (POST-96): ② edits it through the same queue as
+   *  ①'s fields, so one save carries whichever changed. */
+  storyline: {
+    paragraphs: PostStorylineParagraph[] | undefined
+    onChange: (paragraphs: PostStorylineParagraph[]) => void
+    saveState: SaveState
+  }
 }) {
   const { t } = useTranslation('posts')
   const generateRef = useRef<GenerationActionsHandle>(null)
@@ -102,10 +119,25 @@ export function LifecycleSteps({
       job={job}
     />
   )
+  // Read-only while a job targets the post, on a published post and while the queue reports a
+  // refusal (POST-86): an edit then could only be overwritten or refused again.
+  const storylineReadOnly =
+    Boolean(job && !isTerminal(job)) || isPublished(post) || storyline.saveState === 'error'
+  const storylineSpace =
+    post.storyline && storyline.paragraphs ? (
+      <StorylineSpace
+        post={post}
+        paragraphs={storyline.paragraphs}
+        onChange={storyline.onChange}
+        readOnly={storylineReadOnly}
+        hasContent={Boolean(result)}
+      />
+    ) : undefined
   const refinePanel = (
     <EditorRefinePanel
       post={post}
       ownerId={ownerId}
+      storylineSpace={storylineSpace}
       result={result}
       languageMismatch={languageMismatch}
       editorRef={contentEditorRef}

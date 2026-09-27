@@ -438,3 +438,82 @@ describe('the post measurement row', () => {
     expect(measurementReads(calls)).toBe(0)
   })
 })
+
+// POST-95, POST-96: a draft that holds a storyline opens ② on its space, open while there is no
+// post yet, and the owner's text edit saves through the draft save as the whole paragraph list.
+describe('the storyline space', () => {
+  const slug = '20260828-storyline'
+  const storyline = {
+    paragraphs: [
+      { text: '가게 앞을 보여줍니다.', files: ['IMG_1.jpg'] },
+      { text: '커피를 이야기합니다.', files: [] },
+    ],
+  }
+
+  it('shows the storyline above a waiting draft and saves a text edit', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      posts: {
+        posts: [{ slug, title: '성수', images: POST_IMAGES_FIXTURE.slice(0, 1), storyline }],
+        draftSaves,
+      },
+    })
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
+    )
+    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(screen.getByText('이 스토리로 글을 쓰면 여기에 글이 나와요')).toBeInTheDocument()
+
+    const second = within(screen.getByRole('listitem', { name: '2번째 문단' }))
+    await user.click(second.getByRole('button', { name: '2번째 문단 고치기' }))
+    await user.type(second.getByRole('textbox', { name: '2번째 문단' }), ' 라떼')
+    await waitFor(() => expect(draftSaves.some((save) => save.storyline)).toBe(true), {
+      timeout: 4_000,
+    })
+    expect(draftSaves.find((save) => save.storyline)?.storyline).toEqual([
+      storyline.paragraphs[0],
+      { text: '커피를 이야기합니다. 라떼', files: [] },
+    ])
+  })
+
+  it('is read-only while a job targets the post', async () => {
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug,
+            storyline,
+            activeJob: { id: 'job-1', kind: 'storyline', status: 'running', stage: 'storyline' },
+          },
+        ],
+      },
+      jobs: { jobs: [{ id: 'job-1', kind: 'storyline', status: 'running', stage: 'storyline' }] },
+    })
+    expect(await screen.findByRole('listitem', { name: '1번째 문단' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
+  })
+
+  it('shows no space for a post written before storylines existed', async () => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', status: 'review', content: POST_CONTENT_FIXTURE }],
+      },
+    })
+    expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.queryByRole('button', { name: '스토리라인' })).not.toBeInTheDocument()
+  })
+})

@@ -227,6 +227,7 @@ export {
   StartRevisionRequestSchema,
   StartRevisionResponseSchema,
   StartStorylineResponseSchema,
+  StorylineEditSchema,
   StorylineParagraphSchema,
   StorylineSchema,
   TemplateAnswerSchema,

@@ -10,6 +10,9 @@ import {
   type Post,
   PostSchema,
   PostService,
+  StorylineEditSchema,
+  StorylineParagraphSchema,
+  StorylineSchema,
   TemplateAnswerSchema,
   TemplateRefSchema,
   VoiceRefSchema,
@@ -27,7 +30,11 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  A reassignment is the one save that also moves the machine baseline: the server clears
  *  it in the same write (POST-24), and it refuses to reassign while a job could
  *  advance that baseline, so mirroring the cleared fields cannot roll a job's result back. */
-export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefined): Post {
+export function applyingSavedDraft(
+  saved: Post,
+  cached: GetPostResponse | undefined,
+  { carriedStoryline = false }: { carriedStoryline?: boolean } = {},
+): Post {
   if (!cached?.post) return saved
   const post = clone(PostSchema, cached.post)
   post.title = saved.title
@@ -61,6 +68,11 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
   // Unconditional for the same reason: the response always reports the post's whole answer
   // set, and a save that cleared one has to be visible before the next GetPost (POST-62).
   post.templateAnswers = saved.templateAnswers.map((answer) => clone(TemplateAnswerSchema, answer))
+  // The storyline only from a save that carried an edit of it (POST-96): an ordinary autosave
+  // answers with the storyline the row held when it was read, and installing that could roll back
+  // one a storyline job wrote while the save was out.
+  if (carriedStoryline)
+    post.storyline = saved.storyline ? clone(StorylineSchema, saved.storyline) : undefined
   return post
 }
 
@@ -79,6 +91,8 @@ export interface PostDraftSave {
   voiceId?: string
   templateId?: string
   targetLanguage?: ContentLanguage
+  /** The owner's storyline edit, the whole paragraph list; absent keeps the stored one. */
+  storyline?: readonly { text: string; files: readonly string[] }[]
 }
 
 export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<string> } {
@@ -87,7 +101,7 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
   const transport = useTransport()
 
   const mutation = useMutation(PostService.method.savePostDraft, {
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       const post = data.post
       if (!post) return
 
@@ -99,7 +113,9 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
       queryClient.setQueryData(
         key,
         create(GetPostResponseSchema, {
-          post: applyingSavedDraft(post, queryClient.getQueryData<GetPostResponse>(key)),
+          post: applyingSavedDraft(post, queryClient.getQueryData<GetPostResponse>(key), {
+            carriedStoryline: Boolean(variables.storyline),
+          }),
         }),
       )
 
@@ -131,6 +147,16 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
           draft.targetLanguage === undefined
             ? undefined
             : contentLanguageToProto(draft.targetLanguage),
+        storyline: draft.storyline
+          ? create(StorylineEditSchema, {
+              paragraphs: draft.storyline.map((paragraph) =>
+                create(StorylineParagraphSchema, {
+                  text: paragraph.text,
+                  files: [...paragraph.files],
+                }),
+              ),
+            })
+          : undefined,
       })
       // A 200 carrying no post is not a confirmation. Taking it as one would mark the text
       // saved, and for a draft with no slug yet would leave the next edit creating a second post.
