@@ -11,21 +11,24 @@
 -- template group, then the field group, each by creation time. So the list, the prompt, and
 -- the experiment snapshot cannot disagree about what the writer sees first.
 
+-- A guideline is of one kind for good, a post's or a clip's (GUIDE-2); the cap and the list count
+-- within the kind (GUIDE-5).
+
 -- name: InsertGuideline :exec
-INSERT INTO guidelines (id, user_id, text, scope, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO guidelines (id, user_id, kind, text, scope, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 -- name: CountGuidelines :one
-SELECT count(*) FROM guidelines WHERE user_id = ?;
+SELECT count(*) FROM guidelines WHERE user_id = ? AND kind = ?;
 
 -- name: ListGuidelines :many
-SELECT id, user_id, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at
 FROM guidelines
-WHERE user_id = ?
+WHERE user_id = ? AND kind = ?
 ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id;
 
 -- name: GetGuideline :one
-SELECT id, user_id, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at
 FROM guidelines
 WHERE id = ? AND user_id = ?;
 
@@ -78,6 +81,27 @@ DELETE FROM guideline_fields WHERE guideline_id = ? AND user_id = ?;
 -- name: InsertGuidelineFieldLink :exec
 INSERT INTO guideline_fields (guideline_id, field, user_id) VALUES (?, ?, ?);
 
+-- A clip guideline's video templates: the same shape as a post guideline's templates, in a table
+-- of their own because the composite key names another context's table.
+
+-- name: ListGuidelineVideoTemplateLinks :many
+SELECT guideline_id, video_template_id
+FROM guideline_video_templates
+WHERE user_id = ?
+ORDER BY guideline_id, video_template_id;
+
+-- name: ListGuidelineVideoTemplates :many
+SELECT video_template_id
+FROM guideline_video_templates
+WHERE guideline_id = ? AND user_id = ?
+ORDER BY video_template_id;
+
+-- name: DeleteGuidelineVideoTemplates :exec
+DELETE FROM guideline_video_templates WHERE guideline_id = ? AND user_id = ?;
+
+-- name: InsertGuidelineVideoTemplateLink :exec
+INSERT INTO guideline_video_templates (guideline_id, video_template_id, user_id) VALUES (?, ?, ?);
+
 -- name: DeleteGuideline :execrows
 -- The schema cascades this guideline's own scope links. No template row is ever touched.
 DELETE FROM guidelines WHERE id = ? AND user_id = ?;
@@ -89,6 +113,7 @@ DELETE FROM guidelines WHERE id = ? AND user_id = ?;
 SELECT g.text
 FROM guidelines g
 WHERE g.user_id = ?
+  AND g.kind = 'post'
   AND (
     g.scope = 'global'
     OR EXISTS (
@@ -102,24 +127,43 @@ WHERE g.user_id = ?
   )
 ORDER BY CASE g.scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, g.created_at, g.id;
 
+-- name: ListApplicableClipGuidelineTexts :many
+-- The clip texts that apply to one clip: the global ones, then those linked to its video
+-- template, each by creation time. An empty template id is a clip with none.
+SELECT g.text
+FROM guidelines g
+WHERE g.user_id = ?
+  AND g.kind = 'clip'
+  AND (
+    g.scope = 'global'
+    OR EXISTS (
+      SELECT 1 FROM guideline_video_templates gv
+      WHERE gv.guideline_id = g.id AND gv.user_id = g.user_id AND gv.video_template_id = ?
+    )
+  )
+ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id;
+
 -- Guideline candidates (GUIDE-7). A candidate is one completed revision's instruction,
 -- recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
 -- stop the same instruction from being recorded again, so nothing here deletes one.
 
+-- A candidate is of one kind like the guideline it may become, and the dedupe, the guideline
+-- check and the pending bound all count within it (GUIDE-10).
+
 -- name: CandidateByText :one
-SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+SELECT id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at
 FROM guideline_candidates
-WHERE user_id = ? AND text = ?;
+WHERE user_id = ? AND kind = ? AND text = ?;
 
 -- name: GuidelineByText :one
-SELECT id FROM guidelines WHERE user_id = ? AND text = ?;
+SELECT id FROM guidelines WHERE user_id = ? AND kind = ? AND text = ?;
 
 -- name: CountPendingCandidates :one
-SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND status = 'pending';
+SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND kind = ? AND status = 'pending';
 
 -- name: InsertCandidate :exec
-INSERT INTO guideline_candidates (id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
-VALUES (?, ?, ?, ?, ?, 1, ?, ?);
+INSERT INTO guideline_candidates (id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?);
 
 -- name: BumpCandidate :execrows
 -- A repeat. post_slug is deliberately NOT rewritten: the candidate names where it was first
@@ -131,9 +175,9 @@ WHERE id = ? AND user_id = ?;
 -- name: ListPendingCandidates :many
 -- Review order: the most-repeated correction first, then the most recent. Exactly the order
 -- idx_guideline_candidates_review serves.
-SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+SELECT id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at
 FROM guideline_candidates
-WHERE user_id = ? AND status = 'pending'
+WHERE user_id = ? AND kind = ? AND status = 'pending'
 ORDER BY occurrences DESC, last_seen_at DESC, id;
 
 -- name: SetCandidateStatus :execrows
@@ -143,17 +187,27 @@ UPDATE guideline_candidates
 SET status = ?
 WHERE id = ? AND user_id = ? AND status = 'pending';
 
+-- name: ApproveCandidate :execrows
+-- Approval by id, which only a candidate of the created guideline's kind can take (GUIDE-11).
+UPDATE guideline_candidates
+SET status = 'approved'
+WHERE id = ? AND user_id = ? AND kind = ? AND status = 'pending';
+
 -- name: SetCandidateStatusByText :exec
 -- Approval by text, which is what marks the candidate a just-completed revision recorded
--- without the client having to learn its id. Only a pending row is moved: an already
--- dismissed one stays dismissed.
+-- without the client having to learn its id. Only a pending row of the kind is moved: an
+-- already dismissed one stays dismissed.
 UPDATE guideline_candidates
 SET status = ?
-WHERE user_id = ? AND text = ? AND status = 'pending';
+WHERE user_id = ? AND kind = ? AND text = ? AND status = 'pending';
 
 -- name: DropCandidatePostSlug :exec
 -- Post deletion drops the link and keeps the text: nothing references a candidate's origin.
 UPDATE guideline_candidates SET post_slug = NULL WHERE user_id = ? AND post_slug = ?;
+
+-- name: DropCandidateClipID :exec
+-- A clip project's deletion drops its link the same way (GUIDE-13).
+UPDATE guideline_candidates SET clip_id = NULL WHERE user_id = ? AND clip_id = ?;
 
 -- name: ListDefaultsOff :many
 -- The defaults an account switched off for one kind. A key the product no longer carries may

@@ -86,6 +86,9 @@ message Guideline {
   string updated_at = 6;
   // The 분야 set of a FIELDS guideline, empty for every other scope.
   repeated BlogField fields = 7;
+  // A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
+  // video templates. UNSPECIFIED reads as POST.
+  GuidelineKind kind = 8;
 }
 
 message ListGuidelinesRequest {
@@ -121,6 +124,9 @@ message CreateGuidelineRequest {
   optional string from_candidate_id = 4;
   // Required (>= 1 분야 from the product's list) for FIELDS; an unknown 분야 is NotFound.
   repeated BlogField fields = 5;
+  // The guideline's kind; for CLIP the template ids name video templates and FIELDS is refused.
+  // An approval sends its candidate's kind. UNSPECIFIED reads as POST.
+  GuidelineKind kind = 6;
 }
 message CreateGuidelineResponse { Guideline guideline = 1; }
 
@@ -162,9 +168,16 @@ message GuidelineCandidate {
   int32 occurrences = 4;
   string first_seen_at = 5;
   string last_seen_at = 6;
+  // The kind of guideline it may become: a post revision's request or a clip revision's.
+  GuidelineKind kind = 7;
+  // The clip project a clip candidate was first seen on, '' once that project is gone.
+  string clip_id = 8;
 }
 
-message ListGuidelineCandidatesRequest {}
+// The pending candidates of one kind. UNSPECIFIED reads as POST.
+message ListGuidelineCandidatesRequest {
+  GuidelineKind kind = 1;
+}
 message ListGuidelineCandidatesResponse {
   // The PENDING candidates only, in review order: occurrences descending, then last-seen
   // descending, so the most-repeated correction is first.

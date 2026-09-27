@@ -37,7 +37,10 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
 
-	held, err := q.CountGuidelines(ctx, g.UserID)
+	// A guideline built without a kind is a post's, as every one before the kind existed.
+	g.Kind = kindOrPost(g.Kind)
+	// The cap counts within the kind: 영상 지침 do not use up 지침 room, nor the reverse (GUIDE-5).
+	held, err := q.CountGuidelines(ctx, sqlc.CountGuidelinesParams{UserID: g.UserID, Kind: string(g.Kind)})
 	if err != nil {
 		return fmt.Errorf("count guidelines: %w", err)
 	}
@@ -45,7 +48,7 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 		return &guideline.AccountCapError{Max: maxPerAccount}
 	}
 	err = q.InsertGuideline(ctx, sqlc.InsertGuidelineParams{
-		ID: g.ID, UserID: g.UserID, Text: g.Text, Scope: string(g.Scope),
+		ID: g.ID, UserID: g.UserID, Kind: string(g.Kind), Text: g.Text, Scope: string(g.Scope),
 		CreatedAt: formatTime(g.CreatedAt), UpdatedAt: formatTime(g.UpdatedAt),
 	})
 	if err != nil {
@@ -54,13 +57,13 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 		}
 		return fmt.Errorf("insert guideline: %w", err)
 	}
-	if err := insertScope(ctx, q, g.UserID, g.ID, g.TemplateIDs); err != nil {
+	if err := insertScope(ctx, q, g.UserID, g.Kind, g.ID, g.TemplateIDs); err != nil {
 		return err
 	}
 	if err := insertFields(ctx, q, g.UserID, g.ID, g.Fields); err != nil {
 		return err
 	}
-	if err := approve(ctx, q, g.UserID, approval); err != nil {
+	if err := approve(ctx, q, g.UserID, g.Kind, approval); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -72,10 +75,11 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 // approve marks the candidate this create came from. Both halves run: an edited candidate is
 // named by id, and the text match is what catches the row a just-completed revision recorded
 // under the unedited text, which the client never learned the id of.
-func approve(ctx context.Context, q *sqlc.Queries, userID string, approval guideline.CandidateApproval) error {
+func approve(ctx context.Context, q *sqlc.Queries, userID string, kind guideline.Kind, approval guideline.CandidateApproval) error {
 	if approval.ID != "" {
-		n, err := q.SetCandidateStatus(ctx, sqlc.SetCandidateStatusParams{
-			Status: string(guideline.CandidateStatusApproved), ID: approval.ID, UserID: userID,
+		// Only a candidate of the guideline's kind: a 영상 지침 cannot approve a 지침 candidate.
+		n, err := q.ApproveCandidate(ctx, sqlc.ApproveCandidateParams{
+			ID: approval.ID, UserID: userID, Kind: string(kind),
 		})
 		if err != nil {
 			return fmt.Errorf("approve guideline candidate: %w", err)
@@ -89,7 +93,7 @@ func approve(ctx context.Context, q *sqlc.Queries, userID string, approval guide
 	}
 	if approval.Text != "" {
 		err := q.SetCandidateStatusByText(ctx, sqlc.SetCandidateStatusByTextParams{
-			Status: string(guideline.CandidateStatusApproved), UserID: userID, Text: approval.Text,
+			Status: string(guideline.CandidateStatusApproved), UserID: userID, Kind: string(kind), Text: approval.Text,
 		})
 		if err != nil {
 			return fmt.Errorf("approve guideline candidate by text: %w", err)
@@ -109,7 +113,8 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
 
-	existing, err := q.CandidateByText(ctx, sqlc.CandidateByTextParams{UserID: c.UserID, Text: c.Text})
+	kind := string(kindOrPost(c.Kind))
+	existing, err := q.CandidateByText(ctx, sqlc.CandidateByTextParams{UserID: c.UserID, Kind: kind, Text: c.Text})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return false, fmt.Errorf("select guideline candidate by text: %w", err)
 	}
@@ -118,7 +123,7 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 	// Only asked when there is no candidate yet: an existing row already decides the outcome.
 	savedGuideline := false
 	if !found {
-		if _, err := q.GuidelineByText(ctx, sqlc.GuidelineByTextParams{UserID: c.UserID, Text: c.Text}); err == nil {
+		if _, err := q.GuidelineByText(ctx, sqlc.GuidelineByTextParams{UserID: c.UserID, Kind: kind, Text: c.Text}); err == nil {
 			savedGuideline = true
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			return false, fmt.Errorf("select guideline by text: %w", err)
@@ -126,7 +131,7 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 	}
 	pending := int64(0)
 	if !found && !savedGuideline {
-		if pending, err = q.CountPendingCandidates(ctx, c.UserID); err != nil {
+		if pending, err = q.CountPendingCandidates(ctx, sqlc.CountPendingCandidatesParams{UserID: c.UserID, Kind: kind}); err != nil {
 			return false, fmt.Errorf("count pending guideline candidates: %w", err)
 		}
 	}
@@ -144,7 +149,8 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 		}
 	case guideline.RecordCandidateInsert:
 		err := q.InsertCandidate(ctx, sqlc.InsertCandidateParams{
-			ID: c.ID, UserID: c.UserID, Text: c.Text, PostSlug: nullString(c.PostSlug),
+			ID: c.ID, UserID: c.UserID, Kind: kind, Text: c.Text, PostSlug: nullString(c.PostSlug),
+			ClipID:      nullString(c.ClipID),
 			Status:      string(guideline.CandidateStatusPending),
 			FirstSeenAt: formatTime(c.FirstSeenAt), LastSeenAt: formatTime(c.LastSeenAt),
 		})
@@ -163,8 +169,8 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 // ListPendingCandidates returns the review list and the pending count together. The count is
 // the length of the list rather than a second query: the two must describe the same read, or the
 // screen could say the queue is full while showing fewer rows than the bound.
-func (s *Store) ListPendingCandidates(ctx context.Context, userID string) ([]guideline.Candidate, int, error) {
-	rows, err := s.read.ListPendingCandidates(ctx, userID)
+func (s *Store) ListPendingCandidates(ctx context.Context, userID string, kind guideline.Kind) ([]guideline.Candidate, int, error) {
+	rows, err := s.read.ListPendingCandidates(ctx, sqlc.ListPendingCandidatesParams{UserID: userID, Kind: string(kind)})
 	if err != nil {
 		return nil, 0, fmt.Errorf("select pending guideline candidates: %w", err)
 	}
@@ -204,20 +210,42 @@ func (s *Store) DropCandidatePostSlug(ctx context.Context, userID, postSlug stri
 	return nil
 }
 
-func (s *Store) List(ctx context.Context, userID string) ([]guideline.Guideline, error) {
-	rows, err := s.read.ListGuidelines(ctx, userID)
+// DropCandidateClipID detaches every candidate that named a deleted clip project (GUIDE-13).
+func (s *Store) DropCandidateClipID(ctx context.Context, userID, clipID string) error {
+	err := s.write.DropCandidateClipID(ctx, sqlc.DropCandidateClipIDParams{
+		UserID: userID, ClipID: nullString(clipID),
+	})
+	if err != nil {
+		return fmt.Errorf("drop guideline candidate clip id: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) List(ctx context.Context, userID string, kind guideline.Kind) ([]guideline.Guideline, error) {
+	rows, err := s.read.ListGuidelines(ctx, sqlc.ListGuidelinesParams{UserID: userID, Kind: string(kind)})
 	if err != nil {
 		return nil, fmt.Errorf("select guidelines: %w", err)
 	}
 	// One link read for the whole account rather than one per guideline: the list is a
-	// screen, and N+1 reads of a two-column join table buy nothing.
-	links, err := s.read.ListGuidelineTemplateLinks(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("select guideline scope links: %w", err)
-	}
-	scoped := make(map[string][]string, len(links))
-	for _, link := range links {
-		scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.TemplateID)
+	// screen, and N+1 reads of a two-column join table buy nothing. A clip guideline's links are
+	// its video templates.
+	scoped := map[string][]string{}
+	if kind == guideline.KindClip {
+		links, err := s.read.ListGuidelineVideoTemplateLinks(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("select guideline video template links: %w", err)
+		}
+		for _, link := range links {
+			scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.VideoTemplateID)
+		}
+	} else {
+		links, err := s.read.ListGuidelineTemplateLinks(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("select guideline scope links: %w", err)
+		}
+		for _, link := range links {
+			scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.TemplateID)
+		}
 	}
 	fieldLinks, err := s.read.ListGuidelineFieldLinks(ctx, userID)
 	if err != nil {
@@ -256,7 +284,12 @@ func (s *Store) get(ctx context.Context, q *sqlc.Queries, userID, id string) (gu
 	if err != nil {
 		return guideline.Guideline{}, err
 	}
-	ids, err := q.ListGuidelineScope(ctx, sqlc.ListGuidelineScopeParams{GuidelineID: id, UserID: userID})
+	var ids []string
+	if value.Kind == guideline.KindClip {
+		ids, err = q.ListGuidelineVideoTemplates(ctx, sqlc.ListGuidelineVideoTemplatesParams{GuidelineID: id, UserID: userID})
+	} else {
+		ids, err = q.ListGuidelineScope(ctx, sqlc.ListGuidelineScopeParams{GuidelineID: id, UserID: userID})
+	}
 	if err != nil {
 		return guideline.Guideline{}, fmt.Errorf("select guideline scope: %w", err)
 	}
@@ -299,7 +332,11 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 		// same-text candidate exactly as a create does. Without this, renaming a guideline onto
 		// a pending candidate's text would leave that candidate un-approvable forever — the
 		// create it needs would be refused as a duplicate — while its count kept rising.
-		if err := approve(ctx, q, userID, guideline.CandidateApproval{Text: *patch.Text}); err != nil {
+		current, err := s.get(ctx, q, userID, id)
+		if err != nil {
+			return guideline.Guideline{}, err
+		}
+		if err := approve(ctx, q, userID, current.Kind, guideline.CandidateApproval{Text: *patch.Text}); err != nil {
 			return guideline.Guideline{}, err
 		}
 		touched = true
@@ -318,10 +355,17 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 		if err := q.DeleteGuidelineScope(ctx, sqlc.DeleteGuidelineScopeParams{GuidelineID: id, UserID: userID}); err != nil {
 			return guideline.Guideline{}, fmt.Errorf("clear guideline scope: %w", err)
 		}
+		if err := q.DeleteGuidelineVideoTemplates(ctx, sqlc.DeleteGuidelineVideoTemplatesParams{GuidelineID: id, UserID: userID}); err != nil {
+			return guideline.Guideline{}, fmt.Errorf("clear guideline video templates: %w", err)
+		}
 		if err := q.DeleteGuidelineFieldLinks(ctx, sqlc.DeleteGuidelineFieldLinksParams{GuidelineID: id, UserID: userID}); err != nil {
 			return guideline.Guideline{}, fmt.Errorf("clear guideline fields: %w", err)
 		}
-		if err := insertScope(ctx, q, userID, id, patch.Scope.TemplateIDs); err != nil {
+		row, err := q.GetGuideline(ctx, sqlc.GetGuidelineParams{ID: id, UserID: userID})
+		if err != nil {
+			return guideline.Guideline{}, fmt.Errorf("select guideline kind: %w", err)
+		}
+		if err := insertScope(ctx, q, userID, guideline.Kind(row.Kind), id, patch.Scope.TemplateIDs); err != nil {
 			return guideline.Guideline{}, err
 		}
 		if err := insertFields(ctx, q, userID, id, patch.Scope.Fields); err != nil {
@@ -381,6 +425,16 @@ func (s *Store) SetDefaultOff(ctx context.Context, userID string, kind guideline
 	return nil
 }
 
+func (s *Store) ClipApplicableTexts(ctx context.Context, userID, videoTemplateID string) ([]string, error) {
+	texts, err := s.read.ListApplicableClipGuidelineTexts(ctx, sqlc.ListApplicableClipGuidelineTextsParams{
+		UserID: userID, VideoTemplateID: videoTemplateID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("select applicable clip guidelines: %w", err)
+	}
+	return texts, nil
+}
+
 func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error) {
 	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{
 		UserID: userID, TemplateID: templateID, Field: field,
@@ -393,11 +447,18 @@ func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID, field s
 
 // insertScope writes the link rows. A foreign template id is refused by the composite foreign
 // key, not by a check here, so the account boundary holds even if a service check is bypassed.
-func insertScope(ctx context.Context, q *sqlc.Queries, userID, guidelineID string, templateIDs []string) error {
+func insertScope(ctx context.Context, q *sqlc.Queries, userID string, kind guideline.Kind, guidelineID string, templateIDs []string) error {
 	for _, templateID := range templateIDs {
-		err := q.InsertGuidelineScopeLink(ctx, sqlc.InsertGuidelineScopeLinkParams{
-			GuidelineID: guidelineID, TemplateID: templateID, UserID: userID,
-		})
+		var err error
+		if kind == guideline.KindClip {
+			err = q.InsertGuidelineVideoTemplateLink(ctx, sqlc.InsertGuidelineVideoTemplateLinkParams{
+				GuidelineID: guidelineID, VideoTemplateID: templateID, UserID: userID,
+			})
+		} else {
+			err = q.InsertGuidelineScopeLink(ctx, sqlc.InsertGuidelineScopeLinkParams{
+				GuidelineID: guidelineID, TemplateID: templateID, UserID: userID,
+			})
+		}
 		if err != nil {
 			if isForeignKeyViolation(err) {
 				return guideline.ErrTemplateNotFound
@@ -435,8 +496,12 @@ func toGuideline(row sqlc.Guideline) (guideline.Guideline, error) {
 	if !scope.Valid() {
 		return guideline.Guideline{}, fmt.Errorf("unknown guideline scope %q", row.Scope)
 	}
+	kind := guideline.Kind(row.Kind)
+	if !kind.Valid() {
+		return guideline.Guideline{}, fmt.Errorf("unknown guideline kind %q", row.Kind)
+	}
 	return guideline.Guideline{
-		ID: row.ID, UserID: row.UserID, Text: row.Text, Scope: scope,
+		ID: row.ID, UserID: row.UserID, Kind: kind, Text: row.Text, Scope: scope,
 		CreatedAt: created, UpdatedAt: updated,
 	}, nil
 }
@@ -454,8 +519,13 @@ func toCandidate(row sqlc.GuidelineCandidate) (guideline.Candidate, error) {
 	if !status.Valid() {
 		return guideline.Candidate{}, fmt.Errorf("unknown guideline candidate status %q", row.Status)
 	}
+	kind := guideline.Kind(row.Kind)
+	if !kind.Valid() {
+		return guideline.Candidate{}, fmt.Errorf("unknown guideline candidate kind %q", row.Kind)
+	}
 	return guideline.Candidate{
-		ID: row.ID, UserID: row.UserID, Text: row.Text, PostSlug: row.PostSlug.String,
+		ID: row.ID, UserID: row.UserID, Kind: kind, Text: row.Text, PostSlug: row.PostSlug.String,
+		ClipID: row.ClipID.String,
 		Status: status, Occurrences: int(row.Occurrences), FirstSeenAt: first, LastSeenAt: last,
 	}, nil
 }
@@ -467,6 +537,13 @@ func nullString(value string) sql.NullString {
 }
 
 func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
+
+func kindOrPost(kind guideline.Kind) guideline.Kind {
+	if kind.Valid() {
+		return kind
+	}
+	return guideline.KindPost
+}
 
 func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
 

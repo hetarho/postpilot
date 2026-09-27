@@ -74,7 +74,19 @@ func (a generationMemories) ForPost(ctx context.Context, userID string, keyParts
 type generationCandidates struct{ service *guideline.Service }
 
 func (a generationCandidates) Record(ctx context.Context, userID, postSlug, instruction string) error {
-	return a.service.RecordCandidate(ctx, userID, postSlug, instruction)
+	return a.service.RecordCandidate(ctx, userID, guideline.KindPost, postSlug, instruction)
+}
+
+// clipGuidelineCandidates hands the clip context the same recorder for its revision requests, a
+// 영상 지침 candidate each, and the detach a project deletion needs (GUIDE-7, GUIDE-13).
+type clipGuidelineCandidates struct{ service *guideline.Service }
+
+func (a clipGuidelineCandidates) Record(ctx context.Context, userID, projectID, request string) error {
+	return a.service.RecordCandidate(ctx, userID, guideline.KindClip, projectID, request)
+}
+
+func (a clipGuidelineCandidates) DetachProject(ctx context.Context, userID, projectID string) error {
+	return a.service.DetachCandidateClip(ctx, userID, projectID)
 }
 
 // postCandidateLinks lets post deletion drop the link without the post context learning what

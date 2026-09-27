@@ -321,6 +321,38 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	if err != nil || len(clip.Msg.GetDefaults()) != 7 || len(clip.Msg.GetGuidelines()) != 0 {
 		t.Fatalf("clip list = %v, %v", clip, err)
 	}
+	// GUIDE-2: a 영상 지침 is created of its kind, listed with it and never in the post list — even
+	// with a post guideline's text.
+	create(alice, &postpilotv1.CreateGuidelineRequest{Text: "과장 금지", Scope: global, Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP})
+	clip, _ = handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
+	if got := clip.Msg.GetGuidelines(); len(got) != 1 || got[0].GetKind() != postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP || got[0].GetText() != "과장 금지" {
+		t.Fatalf("clip guidelines = %v", got)
+	}
+	posts, _ := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{}))
+	for _, g := range posts.Msg.GetGuidelines() {
+		if g.GetKind() != postpilotv1.GuidelineKind_GUIDELINE_KIND_POST {
+			t.Fatalf("the post list carries %v", g)
+		}
+	}
+	if _, err := handler.CreateGuideline(alice, connect.NewRequest(&postpilotv1.CreateGuidelineRequest{
+		Text: "가격 크게", Scope: fields, Fields: []postpilotv1.BlogField{postpilotv1.BlogField_BLOG_FIELD_CAFE},
+		Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP,
+	})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("a 분야 scope on a 영상 지침 = %v", err)
+	}
+	// GUIDE-7: the candidate queue is per kind and a clip candidate names its project.
+	service := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 10}, 5)
+	if err := service.RecordCandidate(ctx, "alice", guideline.KindClip, "project-1", "자막은 짧게"); err != nil {
+		t.Fatal(err)
+	}
+	queued, err := handler.ListGuidelineCandidates(alice, connect.NewRequest(&postpilotv1.ListGuidelineCandidatesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
+	if err != nil || len(queued.Msg.GetCandidates()) != 1 || queued.Msg.GetCandidates()[0].GetClipId() != "project-1" ||
+		queued.Msg.GetCandidates()[0].GetKind() != postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP {
+		t.Fatalf("clip candidates = %v, %v", queued, err)
+	}
+	if postQueue, _ := handler.ListGuidelineCandidates(alice, connect.NewRequest(&postpilotv1.ListGuidelineCandidatesRequest{})); len(postQueue.Msg.GetCandidates()) != 0 {
+		t.Fatalf("the post queue carries a clip candidate: %v", postQueue.Msg.GetCandidates())
+	}
 	if _, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "no_such_key"})); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("unknown key = %v", err)
 	}

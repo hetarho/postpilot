@@ -12,13 +12,14 @@ import (
 )
 
 type Service struct {
-	store      Store
-	templates  TemplateDirectory
-	fields     FieldDirectory
-	limits     Limits
-	maxPending int
-	now        func() time.Time
-	newID      func() string
+	store          Store
+	templates      TemplateDirectory
+	videoTemplates VideoTemplateDirectory
+	fields         FieldDirectory
+	limits         Limits
+	maxPending     int
+	now            func() time.Time
+	newID          func() string
 }
 
 // NewService takes the field directory as a constructor argument rather than a setter: every
@@ -40,16 +41,26 @@ func NewService(store Store, fields FieldDirectory, limits Limits, maxPendingCan
 // cannot be validated or named, so scope writes are refused rather than accepted blind.
 func (s *Service) SetTemplateDirectory(directory TemplateDirectory) { s.templates = directory }
 
+// SetVideoTemplateDirectory wires the clip context's video templates, the scope of a clip
+// guideline; without it a clip guideline scoped to video templates is refused like a post one
+// without its directory.
+func (s *Service) SetVideoTemplateDirectory(directory VideoTemplateDirectory) {
+	s.videoTemplates = directory
+}
+
 func (s *Service) Limits() Limits { return s.limits }
 
-// List returns the account's guidelines in injection order with template names projected, so
-// the management screen shows exactly what the writer will be given, in that order.
-func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) {
-	guidelines, err := s.store.List(ctx, userID)
+// List returns the account's guidelines of one kind in injection order with template names
+// projected, so the management screen shows exactly what the writer will be given, in that order.
+func (s *Service) List(ctx context.Context, userID string, kind Kind) ([]Guideline, error) {
+	if !kind.Valid() {
+		kind = KindPost
+	}
+	guidelines, err := s.store.List(ctx, userID, kind)
 	if err != nil {
 		return nil, fmt.Errorf("list guidelines: %w", err)
 	}
-	if err := s.project(ctx, userID, guidelines); err != nil {
+	if err := s.project(ctx, userID, kind, guidelines); err != nil {
 		return nil, err
 	}
 	return guidelines, nil
@@ -64,19 +75,23 @@ func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) 
 // what marks the candidate an on-the-spot 지침으로 저장 recorded.
 //
 // The scope is one value — a kind with both sets — so a templates set and a 분야 set cannot be
-// passed in each other's place.
-func (s *Service) Create(ctx context.Context, userID, text string, scope ScopePatch, fromCandidateID string) (Guideline, error) {
+// passed in each other's place. kind is the guideline's for good; an approval creates one of its
+// candidate's kind, and a candidate of another kind reads as missing (GUIDE-11).
+func (s *Service) Create(ctx context.Context, userID string, kind Kind, text string, scope ScopePatch, fromCandidateID string) (Guideline, error) {
+	if !kind.Valid() {
+		kind = KindPost
+	}
 	text, err := s.validText(text)
 	if err != nil {
 		return Guideline{}, err
 	}
-	valid, err := s.validScope(ctx, userID, scope)
+	valid, err := s.validScope(ctx, userID, kind, scope)
 	if err != nil {
 		return Guideline{}, err
 	}
 	now := s.now()
 	created := Guideline{
-		ID: s.newID(), UserID: userID, Text: text, Scope: valid.Scope, TemplateIDs: valid.TemplateIDs,
+		ID: s.newID(), UserID: userID, Kind: kind, Text: text, Scope: valid.Scope, TemplateIDs: valid.TemplateIDs,
 		Fields: valid.Fields, CreatedAt: now, UpdatedAt: now,
 	}
 	approval := CandidateApproval{ID: strings.TrimSpace(fromCandidateID), Text: text}
@@ -94,15 +109,25 @@ func (s *Service) Create(ctx context.Context, userID, text string, scope ScopePa
 //
 // A skip is an ordinary outcome, not an error: the text is already a guideline, the user
 // already ruled on it, or the pending queue is full.
-func (s *Service) RecordCandidate(ctx context.Context, userID, postSlug, instruction string) error {
+//
+// kind decides what source names: a post revision's post slug, or a clip revision's project id.
+func (s *Service) RecordCandidate(ctx context.Context, userID string, kind Kind, source, instruction string) error {
+	if !kind.Valid() {
+		return fmt.Errorf("record guideline candidate: unknown kind %q", kind)
+	}
 	text, err := validCandidateText(instruction)
 	if err != nil {
 		return err
 	}
 	now := s.now()
 	candidate := Candidate{
-		ID: s.newID(), UserID: userID, Text: text, PostSlug: strings.TrimSpace(postSlug),
+		ID: s.newID(), UserID: userID, Kind: kind, Text: text,
 		Status: CandidateStatusPending, Occurrences: 1, FirstSeenAt: now, LastSeenAt: now,
+	}
+	if kind == KindClip {
+		candidate.ClipID = strings.TrimSpace(source)
+	} else {
+		candidate.PostSlug = strings.TrimSpace(source)
 	}
 	if _, err := s.store.RecordCandidate(ctx, candidate, s.maxPending); err != nil {
 		return fmt.Errorf("record guideline candidate: %w", err)
@@ -113,8 +138,11 @@ func (s *Service) RecordCandidate(ctx context.Context, userID, postSlug, instruc
 // ListCandidates returns the pending candidates in review order plus whether the queue is at
 // its bound. queueFull is derived here, from the same count recording compares, so the screen
 // and the recording path cannot disagree — and the client never owns a copy of the bound.
-func (s *Service) ListCandidates(ctx context.Context, userID string) (candidates []Candidate, queueFull bool, err error) {
-	candidates, pending, err := s.store.ListPendingCandidates(ctx, userID)
+func (s *Service) ListCandidates(ctx context.Context, userID string, kind Kind) (candidates []Candidate, queueFull bool, err error) {
+	if !kind.Valid() {
+		kind = KindPost
+	}
+	candidates, pending, err := s.store.ListPendingCandidates(ctx, userID, kind)
 	if err != nil {
 		return nil, false, fmt.Errorf("list guideline candidates: %w", err)
 	}
@@ -140,6 +168,15 @@ func (s *Service) DetachCandidatePost(ctx context.Context, userID, postSlug stri
 	return s.store.DropCandidatePostSlug(ctx, userID, postSlug)
 }
 
+// DetachCandidateClip drops the clip project link from every candidate that named one project,
+// called once that project is deleted (GUIDE-13).
+func (s *Service) DetachCandidateClip(ctx context.Context, userID, clipID string) error {
+	if strings.TrimSpace(clipID) == "" {
+		return nil
+	}
+	return s.store.DropCandidateClipID(ctx, userID, clipID)
+}
+
 // Update applies only what the request carried. The validation runs per present part, so a
 // text edit can never be refused for a scope it did not send — and never rewrites one either.
 func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (Guideline, error) {
@@ -153,6 +190,11 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (G
 		}
 		return s.projectOne(ctx, userID, found)
 	}
+	// The kind decides what a scope may name, so it is read first; it never changes.
+	current, err := s.store.Get(ctx, userID, id)
+	if err != nil {
+		return Guideline{}, err
+	}
 	if patch.Text != nil {
 		text, err := s.validText(*patch.Text)
 		if err != nil {
@@ -163,7 +205,7 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (G
 	if patch.Scope != nil {
 		// The normalized patch carries the other kind's set as nil, so a rescope between
 		// templates and fields can never leave a link of the kind it left.
-		valid, err := s.validScope(ctx, userID, *patch.Scope)
+		valid, err := s.validScope(ctx, userID, current.Kind, *patch.Scope)
 		if err != nil {
 			return Guideline{}, err
 		}
@@ -190,8 +232,8 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 // template, then 분야, each by created_at then id. The write and the revision are given the same
 // texts. Absence is not an error: a prompt with no guidelines is a valid prompt.
 //
-// Every owner guideline is read as a post's until the clip kind has a column of its own (T438),
-// so a clip asks for its defaults and receives no owner rows.
+// A clip's owner texts are its kind's: global, then those linked to its video template —
+// templateID is then the video template's id and field is unused.
 //
 // templateID and field are pointers because "the post has none" and "the post has X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
@@ -209,7 +251,12 @@ func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templ
 			out.Defaults = append(out.Defaults, text)
 		}
 	}
-	if kind != KindPost {
+	if kind == KindClip {
+		texts, err := s.store.ClipApplicableTexts(ctx, userID, trimmed(templateID))
+		if err != nil {
+			return PromptGuidelines{}, fmt.Errorf("resolve applicable clip guidelines: %w", err)
+		}
+		out.Owner = texts
 		return out, nil
 	}
 	texts, err := s.store.ApplicableTexts(ctx, userID, trimmed(templateID), trimmed(field))
@@ -264,7 +311,7 @@ func trimmed(value *string) string {
 
 func (s *Service) projectOne(ctx context.Context, userID string, g Guideline) (Guideline, error) {
 	one := []Guideline{g}
-	if err := s.project(ctx, userID, one); err != nil {
+	if err := s.project(ctx, userID, g.Kind, one); err != nil {
 		return Guideline{}, err
 	}
 	return one[0], nil
@@ -273,7 +320,7 @@ func (s *Service) projectOne(ctx context.Context, userID string, g Guideline) (G
 // project fills the template-name projection for the given guidelines. A scoped id with no
 // directory entry is dropped rather than shown as a blank chip: it means the template was
 // deleted between the link read and this read, which is the orphaned-scope state.
-func (s *Service) project(ctx context.Context, userID string, guidelines []Guideline) error {
+func (s *Service) project(ctx context.Context, userID string, kind Kind, guidelines []Guideline) error {
 	needed := false
 	for _, g := range guidelines {
 		if len(g.TemplateIDs) > 0 {
@@ -284,7 +331,7 @@ func (s *Service) project(ctx context.Context, userID string, guidelines []Guide
 	if !needed {
 		return nil
 	}
-	names, err := s.directory(ctx, userID)
+	names, err := s.directory(ctx, userID, kind)
 	if err != nil {
 		return err
 	}
@@ -307,11 +354,21 @@ func (s *Service) project(ctx context.Context, userID string, guidelines []Guide
 	return nil
 }
 
-func (s *Service) directory(ctx context.Context, userID string) (map[string]string, error) {
-	if s.templates == nil {
-		return nil, fmt.Errorf("guideline: template directory is not wired")
+// directory is the kind's template names by id: a post's templates, or a clip's video templates.
+func (s *Service) directory(ctx context.Context, userID string, kind Kind) (map[string]string, error) {
+	var templates []TemplateRef
+	var err error
+	if kind == KindClip {
+		if s.videoTemplates == nil {
+			return nil, fmt.Errorf("guideline: video template directory is not wired")
+		}
+		templates, err = s.videoTemplates.VideoTemplates(ctx, userID)
+	} else {
+		if s.templates == nil {
+			return nil, fmt.Errorf("guideline: template directory is not wired")
+		}
+		templates, err = s.templates.Templates(ctx, userID)
 	}
-	templates, err := s.templates.Templates(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("load template directory: %w", err)
 	}
@@ -338,8 +395,10 @@ func (s *Service) validText(value string) (string, error) {
 // at least one template and a `fields` scope at least one 분야, at creation and on every scope
 // update: only a template deletion may leave a templates set empty (GUIDE-5). The
 // normalized patch carries the other kind's set as nil.
-func (s *Service) validScope(ctx context.Context, userID string, patch ScopePatch) (ScopePatch, error) {
-	if !patch.Scope.Valid() {
+//
+// A clip guideline's templates are video templates, and it has no 분야 scope (GUIDE-5).
+func (s *Service) validScope(ctx context.Context, userID string, kind Kind, patch ScopePatch) (ScopePatch, error) {
+	if !patch.Scope.Valid() || (kind == KindClip && patch.Scope == ScopeFields) {
 		return ScopePatch{}, ErrScopeShape
 	}
 	templates, err := collapse(patch.TemplateIDs, ErrTemplateNotFound)
@@ -360,7 +419,7 @@ func (s *Service) validScope(ctx context.Context, userID string, patch ScopePatc
 		if len(fields) > 0 || len(templates) == 0 {
 			return ScopePatch{}, ErrScopeShape
 		}
-		names, err := s.directory(ctx, userID)
+		names, err := s.directory(ctx, userID, kind)
 		if err != nil {
 			return ScopePatch{}, err
 		}

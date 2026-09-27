@@ -133,3 +133,12 @@ type GenerationConfig struct {
 }
 
 const ResultPrefix = "clip-results/"
+
+// GuidelineCandidates records a completed revision's request as a 영상 지침 candidate and drops a
+// deleted project's link from the candidates it named (GUIDE-7, GUIDE-13). Declared here by its
+// consumer, so the clip context never imports the guideline context (ARCH-7). A failure never
+// fails the revision or the delete that caused it: a candidate is a suggestion, not the work.
+type GuidelineCandidates interface {
+	Record(ctx context.Context, userID, projectID, request string) error
+	DetachProject(ctx context.Context, userID, projectID string) error
+}

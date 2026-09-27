@@ -34,6 +34,7 @@ type GenerationService struct {
 	pricing       clip.QuotePricing
 	accounting    clip.AccountingReader
 	admission     clip.AnalysisAdmission
+	candidates    clip.GuidelineCandidates
 	now           func() time.Time
 }
 
@@ -48,6 +49,9 @@ type GenerationDeps struct {
 	Pricing     clip.QuotePricing
 	Accounting  clip.AccountingReader
 	Admission   clip.AnalysisAdmission
+	// Candidates receives a completed revision's request as a 영상 지침 candidate and a deleted
+	// project's detach (GUIDE-7, GUIDE-13). Nil records nothing.
+	Candidates clip.GuidelineCandidates
 }
 
 func NewGenerationService(store clip.GenerationStore, projects *Service, sources *SourceService, objects clip.ProcessingObjects, media clip.Media, planner clip.Planner, renderer clip.Renderer, jobs clip.GenerationJobs, cfg clip.GenerationConfig, deps GenerationDeps) *GenerationService {
@@ -58,11 +62,13 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 		panic("clip: finisher, pricing, accounting and admission are required")
 	}
 	s := &GenerationService{remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
-		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission}
+		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission,
+		candidates: deps.Candidates}
 	// The project service and its generation side need each other; the pair is closed
 	// here, where both exist, instead of through a setter the composition root could forget.
 	if projects != nil {
 		projects.generation = s
+		projects.candidates = deps.Candidates
 	}
 	return s
 }

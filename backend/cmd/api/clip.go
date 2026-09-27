@@ -55,7 +55,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder) (*clipapp.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clip.GuidelineCandidates) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
@@ -78,6 +78,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		Pricing:     clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
 		Accounting:  clipapp.NewAccounting(models.ledger),
 		Admission:   clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
+		Candidates:  candidates,
 	})
 	if _, err = queue.SweepUnactivated(ctx); err != nil {
 		return nil, err

@@ -39,6 +39,10 @@ type fakeStore struct {
 	statusSet     map[string]CandidateStatus
 	statusErr     error
 	detachedSlugs []string
+	detachedClips []string
+	// askedVideoTemplate is the video template a clip resolution asked for; clipTexts answer it.
+	askedVideoTemplate string
+	clipTexts          []string
 }
 
 func newFakeStore() *fakeStore {
@@ -65,10 +69,10 @@ func (f *fakeStore) RecordCandidate(_ context.Context, c Candidate, maxPending i
 	return f.recorded, nil
 }
 
-func (f *fakeStore) ListPendingCandidates(_ context.Context, userID string) ([]Candidate, int, error) {
+func (f *fakeStore) ListPendingCandidates(_ context.Context, userID string, kind Kind) ([]Candidate, int, error) {
 	out := make([]Candidate, 0, len(f.pending))
 	for _, c := range f.pending {
-		if c.UserID == userID {
+		if c.UserID == userID && candidateKind(c) == kind {
 			out = append(out, c)
 		}
 	}
@@ -92,14 +96,34 @@ func (f *fakeStore) DropCandidatePostSlug(_ context.Context, _, postSlug string)
 	return nil
 }
 
-func (f *fakeStore) List(_ context.Context, userID string) ([]Guideline, error) {
+func (f *fakeStore) DropCandidateClipID(_ context.Context, _, clipID string) error {
+	f.detachedClips = append(f.detachedClips, clipID)
+	return nil
+}
+
+func (f *fakeStore) List(_ context.Context, userID string, kind Kind) ([]Guideline, error) {
 	out := make([]Guideline, 0, len(f.rows))
 	for _, g := range f.rows {
-		if g.UserID == userID {
+		if g.UserID == userID && guidelineKind(g) == kind {
 			out = append(out, g)
 		}
 	}
 	return out, nil
+}
+
+// A row a test built without a kind is a post's, as every row before the kind existed.
+func guidelineKind(g Guideline) Kind {
+	if g.Kind == "" {
+		return KindPost
+	}
+	return g.Kind
+}
+
+func candidateKind(c Candidate) Kind {
+	if c.Kind == "" {
+		return KindPost
+	}
+	return c.Kind
 }
 
 func (f *fakeStore) Get(_ context.Context, userID, id string) (Guideline, error) {
@@ -140,6 +164,11 @@ func (f *fakeStore) Delete(_ context.Context, userID, id string) error {
 func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID, field string) ([]string, error) {
 	f.askedAccount, f.askedTemplate, f.askedField = userID, templateID, field
 	return f.texts, f.applicableErr
+}
+
+func (f *fakeStore) ClipApplicableTexts(_ context.Context, userID, videoTemplateID string) ([]string, error) {
+	f.askedAccount, f.askedVideoTemplate = userID, videoTemplateID
+	return f.clipTexts, f.applicableErr
 }
 
 func (f *fakeStore) DefaultsOff(_ context.Context, _ string, kind Kind) ([]string, error) {
@@ -199,7 +228,7 @@ func newTestService(t *testing.T, directory *fakeDirectory) (*Service, *fakeStor
 // business, because only the store can count and insert atomically.
 func TestCreateTrimsBoundsAndPassesTheCap(t *testing.T) {
 	svc, store := newTestService(t, nil)
-	created, err := svc.Create(context.Background(), "alice", "  CCTV 언급 금지  ", ScopePatch{Scope: ScopeGlobal}, "")
+	created, err := svc.Create(context.Background(), "alice", KindPost, "  CCTV 언급 금지  ", ScopePatch{Scope: ScopeGlobal}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,16 +238,16 @@ func TestCreateTrimsBoundsAndPassesTheCap(t *testing.T) {
 	if store.insertedCap != 3 {
 		t.Fatalf("cap handed to the store = %d, want 3", store.insertedCap)
 	}
-	if _, err := svc.Create(context.Background(), "alice", "   ", ScopePatch{Scope: ScopeGlobal}, ""); !errors.Is(err, ErrInvalidText) {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, "   ", ScopePatch{Scope: ScopeGlobal}, ""); !errors.Is(err, ErrInvalidText) {
 		t.Fatalf("blank text err = %v", err)
 	}
 	var tooLong *TextTooLongError
-	_, err = svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "")
+	_, err = svc.Create(context.Background(), "alice", KindPost, strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "")
 	if !errors.As(err, &tooLong) || tooLong.Chars != 11 || tooLong.Max != 10 {
 		t.Fatalf("over-limit err = %v", err)
 	}
 	// The limit counts Unicode scalar values: exactly ten Hangul syllables must fit.
-	if _, err := svc.Create(context.Background(), "alice", strings.Repeat("나", 10), ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, strings.Repeat("나", 10), ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
 		t.Fatalf("exactly-at-limit refused: %v", err)
 	}
 }
@@ -238,7 +267,7 @@ func TestCreateRefusesContradictoryScopeShapes(t *testing.T) {
 		"an unknown kind":          {Scope: Scope("voice")},
 		"no kind at all":           {},
 	} {
-		if _, err := svc.Create(context.Background(), "alice", "a", scope, ""); !errors.Is(err, ErrScopeShape) {
+		if _, err := svc.Create(context.Background(), "alice", KindPost, "a", scope, ""); !errors.Is(err, ErrScopeShape) {
 			t.Errorf("%s: err = %v, want the scope shape refusal", name, err)
 		}
 	}
@@ -251,7 +280,7 @@ func TestCreateRefusesContradictoryScopeShapes(t *testing.T) {
 // order; an unlisted or blank one is not-found and nothing is written.
 func TestCreateWithFieldsCollapsesAndValidates(t *testing.T) {
 	svc, store := newTestService(t, nil)
-	created, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeFields, Fields: []string{" pets ", "cafe", "pets"}}, "")
+	created, err := svc.Create(context.Background(), "alice", KindPost, "a", ScopePatch{Scope: ScopeFields, Fields: []string{" pets ", "cafe", "pets"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +288,7 @@ func TestCreateWithFieldsCollapsesAndValidates(t *testing.T) {
 		t.Fatalf("created = %+v", created)
 	}
 	for name, fields := range map[string][]string{"an unlisted 분야": {"cafe", "moon"}, "a blank 분야": {"cafe", "  "}} {
-		if _, err := svc.Create(context.Background(), "alice", "b", ScopePatch{Scope: ScopeFields, Fields: fields}, ""); !errors.Is(err, ErrFieldNotFound) {
+		if _, err := svc.Create(context.Background(), "alice", KindPost, "b", ScopePatch{Scope: ScopeFields, Fields: fields}, ""); !errors.Is(err, ErrFieldNotFound) {
 			t.Errorf("%s: err = %v", name, err)
 		}
 	}
@@ -300,13 +329,13 @@ func TestCreateValidatesScopedTemplatesAndCollapsesDuplicates(t *testing.T) {
 	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}, {ID: "p2", Name: "후기"}}}
 	svc, store := newTestService(t, directory)
 
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1", "nope"}}, ""); !errors.Is(err, ErrTemplateNotFound) {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1", "nope"}}, ""); !errors.Is(err, ErrTemplateNotFound) {
 		t.Fatalf("unknown template err = %v", err)
 	}
 	if len(store.inserted) != 0 {
 		t.Fatal("a refused scope still wrote a row")
 	}
-	created, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p2", "p1", "p2"}}, "")
+	created, err := svc.Create(context.Background(), "alice", KindPost, "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p2", "p1", "p2"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +508,7 @@ func TestProjectionDropsUnknownTemplateIdsAndReadsTheDirectoryOnce(t *testing.T)
 	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Scope: ScopeTemplates, TemplateIDs: []string{"p1", "deleted"}}
 	store.rows["g2"] = Guideline{ID: "g2", UserID: "alice", Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}
 
-	listed, err := svc.List(context.Background(), "alice")
+	listed, err := svc.List(context.Background(), "alice", KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +528,7 @@ func TestProjectionDropsUnknownTemplateIdsAndReadsTheDirectoryOnce(t *testing.T)
 func TestListSkipsTheDirectoryWhenNothingIsScoped(t *testing.T) {
 	svc, store := newTestService(t, nil)
 	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Scope: ScopeGlobal}
-	if _, err := svc.List(context.Background(), "alice"); err != nil {
+	if _, err := svc.List(context.Background(), "alice", KindPost); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -507,7 +536,7 @@ func TestListSkipsTheDirectoryWhenNothingIsScoped(t *testing.T) {
 // A scope write with no directory wired must fail closed rather than save an unvalidated set.
 func TestScopedWriteWithoutADirectoryFails(t *testing.T) {
 	svc, _ := newTestService(t, nil)
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}, ""); err == nil {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}, ""); err == nil {
 		t.Fatal("a scoped create was accepted with no template directory")
 	}
 }
@@ -526,7 +555,7 @@ func TestNewServiceRejectsNonPositiveLimits(t *testing.T) {
 func TestRecordCandidateStoresTheInstructionVerbatimAtTheRevisionBound(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
 	long := strings.Repeat("가", 400)
-	if err := svc.RecordCandidate(context.Background(), "alice", "post-1", "  "+long+"  "); err != nil {
+	if err := svc.RecordCandidate(context.Background(), "alice", KindPost, "post-1", "  "+long+"  "); err != nil {
 		t.Fatal(err)
 	}
 	if len(store.candidates) != 1 {
@@ -551,7 +580,7 @@ func TestRecordCandidateStoresTheInstructionVerbatimAtTheRevisionBound(t *testin
 
 func TestRecordCandidateRefusesABlankInstruction(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
-	if err := svc.RecordCandidate(context.Background(), "alice", "post-1", "   "); !errors.Is(err, ErrCandidateTextInvalid) {
+	if err := svc.RecordCandidate(context.Background(), "alice", KindPost, "post-1", "   "); !errors.Is(err, ErrCandidateTextInvalid) {
 		t.Fatalf("blank err = %v", err)
 	}
 	if len(store.candidates) != 0 {
@@ -564,7 +593,7 @@ func TestRecordCandidateRefusesABlankInstruction(t *testing.T) {
 func TestRecordCandidateTreatsASkipAsSuccess(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
 	store.recorded = false
-	if err := svc.RecordCandidate(context.Background(), "alice", "post-1", "광고 같아"); err != nil {
+	if err := svc.RecordCandidate(context.Background(), "alice", KindPost, "post-1", "광고 같아"); err != nil {
 		t.Fatalf("a skip surfaced as an error: %v", err)
 	}
 }
@@ -574,7 +603,7 @@ func TestListCandidatesReportsAFullQueue(t *testing.T) {
 	store.pending = []Candidate{
 		{ID: "c1", UserID: "alice", Text: "a", Status: CandidateStatusPending, Occurrences: 3},
 	}
-	candidates, full, err := svc.ListCandidates(context.Background(), "alice")
+	candidates, full, err := svc.ListCandidates(context.Background(), "alice", KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -583,7 +612,7 @@ func TestListCandidatesReportsAFullQueue(t *testing.T) {
 	}
 	// The configured bound is 2, so two pending rows is a full queue.
 	store.pendingHeld = 2
-	if _, full, err = svc.ListCandidates(context.Background(), "alice"); err != nil || !full {
+	if _, full, err = svc.ListCandidates(context.Background(), "alice", KindPost); err != nil || !full {
 		t.Fatalf("queue_full at the bound = %v (err %v)", full, err)
 	}
 }
@@ -606,13 +635,13 @@ func TestDismissCandidateMarksRatherThanDeletes(t *testing.T) {
 // reappearing as a pending candidate.
 func TestCreateCarriesTheCandidateApproval(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
-	if _, err := svc.Create(context.Background(), "alice", "  광고 금지  ", ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, "  광고 금지  ", ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.approvals[0]; got.Text != "광고 금지" || got.ID != "" {
 		t.Fatalf("approval = %+v", got)
 	}
-	if _, err := svc.Create(context.Background(), "alice", "짧게", ScopePatch{Scope: ScopeGlobal}, "  c9  "); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", KindPost, "짧게", ScopePatch{Scope: ScopeGlobal}, "  c9  "); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.approvals[1]; got.ID != "c9" || got.Text != "짧게" {
@@ -624,7 +653,7 @@ func TestCreateCarriesTheCandidateApproval(t *testing.T) {
 // shorten it and try again (GUIDE-9's bound split).
 func TestCreateRefusedByTheTextBoundApprovesNothing(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
-	_, err := svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "c1")
+	_, err := svc.Create(context.Background(), "alice", KindPost, strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "c1")
 	var tooLong *TextTooLongError
 	if !errors.As(err, &tooLong) {
 		t.Fatalf("over-bound create err = %v", err)

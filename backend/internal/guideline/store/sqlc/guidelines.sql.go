@@ -10,6 +10,27 @@ import (
 	"database/sql"
 )
 
+const approveCandidate = `-- name: ApproveCandidate :execrows
+UPDATE guideline_candidates
+SET status = 'approved'
+WHERE id = ? AND user_id = ? AND kind = ? AND status = 'pending'
+`
+
+type ApproveCandidateParams struct {
+	ID     string
+	UserID string
+	Kind   string
+}
+
+// Approval by id, which only a candidate of the created guideline's kind can take (GUIDE-11).
+func (q *Queries) ApproveCandidate(ctx context.Context, arg ApproveCandidateParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, approveCandidate, arg.ID, arg.UserID, arg.Kind)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const bumpCandidate = `-- name: BumpCandidate :execrows
 UPDATE guideline_candidates
 SET occurrences = occurrences + 1, last_seen_at = ?
@@ -34,27 +55,33 @@ func (q *Queries) BumpCandidate(ctx context.Context, arg BumpCandidateParams) (i
 
 const candidateByText = `-- name: CandidateByText :one
 
-SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+
+SELECT id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at
 FROM guideline_candidates
-WHERE user_id = ? AND text = ?
+WHERE user_id = ? AND kind = ? AND text = ?
 `
 
 type CandidateByTextParams struct {
 	UserID string
+	Kind   string
 	Text   string
 }
 
 // Guideline candidates (GUIDE-7). A candidate is one completed revision's instruction,
 // recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what
 // stop the same instruction from being recorded again, so nothing here deletes one.
+// A candidate is of one kind like the guideline it may become, and the dedupe, the guideline
+// check and the pending bound all count within it (GUIDE-10).
 func (q *Queries) CandidateByText(ctx context.Context, arg CandidateByTextParams) (GuidelineCandidate, error) {
-	row := q.db.QueryRowContext(ctx, candidateByText, arg.UserID, arg.Text)
+	row := q.db.QueryRowContext(ctx, candidateByText, arg.UserID, arg.Kind, arg.Text)
 	var i GuidelineCandidate
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.Kind,
 		&i.Text,
 		&i.PostSlug,
+		&i.ClipID,
 		&i.Status,
 		&i.Occurrences,
 		&i.FirstSeenAt,
@@ -64,22 +91,32 @@ func (q *Queries) CandidateByText(ctx context.Context, arg CandidateByTextParams
 }
 
 const countGuidelines = `-- name: CountGuidelines :one
-SELECT count(*) FROM guidelines WHERE user_id = ?
+SELECT count(*) FROM guidelines WHERE user_id = ? AND kind = ?
 `
 
-func (q *Queries) CountGuidelines(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countGuidelines, userID)
+type CountGuidelinesParams struct {
+	UserID string
+	Kind   string
+}
+
+func (q *Queries) CountGuidelines(ctx context.Context, arg CountGuidelinesParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countGuidelines, arg.UserID, arg.Kind)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const countPendingCandidates = `-- name: CountPendingCandidates :one
-SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND status = 'pending'
+SELECT count(*) FROM guideline_candidates WHERE user_id = ? AND kind = ? AND status = 'pending'
 `
 
-func (q *Queries) CountPendingCandidates(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countPendingCandidates, userID)
+type CountPendingCandidatesParams struct {
+	UserID string
+	Kind   string
+}
+
+func (q *Queries) CountPendingCandidates(ctx context.Context, arg CountPendingCandidatesParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPendingCandidates, arg.UserID, arg.Kind)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -147,6 +184,35 @@ func (q *Queries) DeleteGuidelineScope(ctx context.Context, arg DeleteGuidelineS
 	return err
 }
 
+const deleteGuidelineVideoTemplates = `-- name: DeleteGuidelineVideoTemplates :exec
+DELETE FROM guideline_video_templates WHERE guideline_id = ? AND user_id = ?
+`
+
+type DeleteGuidelineVideoTemplatesParams struct {
+	GuidelineID string
+	UserID      string
+}
+
+func (q *Queries) DeleteGuidelineVideoTemplates(ctx context.Context, arg DeleteGuidelineVideoTemplatesParams) error {
+	_, err := q.db.ExecContext(ctx, deleteGuidelineVideoTemplates, arg.GuidelineID, arg.UserID)
+	return err
+}
+
+const dropCandidateClipID = `-- name: DropCandidateClipID :exec
+UPDATE guideline_candidates SET clip_id = NULL WHERE user_id = ? AND clip_id = ?
+`
+
+type DropCandidateClipIDParams struct {
+	UserID string
+	ClipID sql.NullString
+}
+
+// A clip project's deletion drops its link the same way (GUIDE-13).
+func (q *Queries) DropCandidateClipID(ctx context.Context, arg DropCandidateClipIDParams) error {
+	_, err := q.db.ExecContext(ctx, dropCandidateClipID, arg.UserID, arg.ClipID)
+	return err
+}
+
 const dropCandidatePostSlug = `-- name: DropCandidatePostSlug :exec
 UPDATE guideline_candidates SET post_slug = NULL WHERE user_id = ? AND post_slug = ?
 `
@@ -163,7 +229,7 @@ func (q *Queries) DropCandidatePostSlug(ctx context.Context, arg DropCandidatePo
 }
 
 const getGuideline = `-- name: GetGuideline :one
-SELECT id, user_id, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at
 FROM guidelines
 WHERE id = ? AND user_id = ?
 `
@@ -179,6 +245,7 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.Kind,
 		&i.Text,
 		&i.Scope,
 		&i.CreatedAt,
@@ -188,31 +255,34 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 }
 
 const guidelineByText = `-- name: GuidelineByText :one
-SELECT id FROM guidelines WHERE user_id = ? AND text = ?
+SELECT id FROM guidelines WHERE user_id = ? AND kind = ? AND text = ?
 `
 
 type GuidelineByTextParams struct {
 	UserID string
+	Kind   string
 	Text   string
 }
 
 func (q *Queries) GuidelineByText(ctx context.Context, arg GuidelineByTextParams) (string, error) {
-	row := q.db.QueryRowContext(ctx, guidelineByText, arg.UserID, arg.Text)
+	row := q.db.QueryRowContext(ctx, guidelineByText, arg.UserID, arg.Kind, arg.Text)
 	var id string
 	err := row.Scan(&id)
 	return id, err
 }
 
 const insertCandidate = `-- name: InsertCandidate :exec
-INSERT INTO guideline_candidates (id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at)
-VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+INSERT INTO guideline_candidates (id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
 `
 
 type InsertCandidateParams struct {
 	ID          string
 	UserID      string
+	Kind        string
 	Text        string
 	PostSlug    sql.NullString
+	ClipID      sql.NullString
 	Status      string
 	FirstSeenAt string
 	LastSeenAt  string
@@ -222,8 +292,10 @@ func (q *Queries) InsertCandidate(ctx context.Context, arg InsertCandidateParams
 	_, err := q.db.ExecContext(ctx, insertCandidate,
 		arg.ID,
 		arg.UserID,
+		arg.Kind,
 		arg.Text,
 		arg.PostSlug,
+		arg.ClipID,
 		arg.Status,
 		arg.FirstSeenAt,
 		arg.LastSeenAt,
@@ -256,13 +328,15 @@ func (q *Queries) InsertDefaultOff(ctx context.Context, arg InsertDefaultOffPara
 
 const insertGuideline = `-- name: InsertGuideline :exec
 
-INSERT INTO guidelines (id, user_id, text, scope, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+
+INSERT INTO guidelines (id, user_id, kind, text, scope, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertGuidelineParams struct {
 	ID        string
 	UserID    string
+	Kind      string
 	Text      string
 	Scope     string
 	CreatedAt string
@@ -281,10 +355,13 @@ type InsertGuidelineParams struct {
 // code. The ordering below is the INJECTION order (GUIDE-14): the global group first, then the
 // template group, then the field group, each by creation time. So the list, the prompt, and
 // the experiment snapshot cannot disagree about what the writer sees first.
+// A guideline is of one kind for good, a post's or a clip's (GUIDE-2); the cap and the list count
+// within the kind (GUIDE-5).
 func (q *Queries) InsertGuideline(ctx context.Context, arg InsertGuidelineParams) error {
 	_, err := q.db.ExecContext(ctx, insertGuideline,
 		arg.ID,
 		arg.UserID,
+		arg.Kind,
 		arg.Text,
 		arg.Scope,
 		arg.CreatedAt,
@@ -323,10 +400,71 @@ func (q *Queries) InsertGuidelineScopeLink(ctx context.Context, arg InsertGuidel
 	return err
 }
 
+const insertGuidelineVideoTemplateLink = `-- name: InsertGuidelineVideoTemplateLink :exec
+INSERT INTO guideline_video_templates (guideline_id, video_template_id, user_id) VALUES (?, ?, ?)
+`
+
+type InsertGuidelineVideoTemplateLinkParams struct {
+	GuidelineID     string
+	VideoTemplateID string
+	UserID          string
+}
+
+func (q *Queries) InsertGuidelineVideoTemplateLink(ctx context.Context, arg InsertGuidelineVideoTemplateLinkParams) error {
+	_, err := q.db.ExecContext(ctx, insertGuidelineVideoTemplateLink, arg.GuidelineID, arg.VideoTemplateID, arg.UserID)
+	return err
+}
+
+const listApplicableClipGuidelineTexts = `-- name: ListApplicableClipGuidelineTexts :many
+SELECT g.text
+FROM guidelines g
+WHERE g.user_id = ?
+  AND g.kind = 'clip'
+  AND (
+    g.scope = 'global'
+    OR EXISTS (
+      SELECT 1 FROM guideline_video_templates gv
+      WHERE gv.guideline_id = g.id AND gv.user_id = g.user_id AND gv.video_template_id = ?
+    )
+  )
+ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id
+`
+
+type ListApplicableClipGuidelineTextsParams struct {
+	UserID          string
+	VideoTemplateID string
+}
+
+// The clip texts that apply to one clip: the global ones, then those linked to its video
+// template, each by creation time. An empty template id is a clip with none.
+func (q *Queries) ListApplicableClipGuidelineTexts(ctx context.Context, arg ListApplicableClipGuidelineTextsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listApplicableClipGuidelineTexts, arg.UserID, arg.VideoTemplateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var text string
+		if err := rows.Scan(&text); err != nil {
+			return nil, err
+		}
+		items = append(items, text)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listApplicableGuidelineTexts = `-- name: ListApplicableGuidelineTexts :many
 SELECT g.text
 FROM guidelines g
 WHERE g.user_id = ?
+  AND g.kind = 'post'
   AND (
     g.scope = 'global'
     OR EXISTS (
@@ -550,15 +688,93 @@ func (q *Queries) ListGuidelineTemplateLinks(ctx context.Context, userID string)
 	return items, nil
 }
 
-const listGuidelines = `-- name: ListGuidelines :many
-SELECT id, user_id, text, scope, created_at, updated_at
-FROM guidelines
+const listGuidelineVideoTemplateLinks = `-- name: ListGuidelineVideoTemplateLinks :many
+
+SELECT guideline_id, video_template_id
+FROM guideline_video_templates
 WHERE user_id = ?
+ORDER BY guideline_id, video_template_id
+`
+
+type ListGuidelineVideoTemplateLinksRow struct {
+	GuidelineID     string
+	VideoTemplateID string
+}
+
+// A clip guideline's video templates: the same shape as a post guideline's templates, in a table
+// of their own because the composite key names another context's table.
+func (q *Queries) ListGuidelineVideoTemplateLinks(ctx context.Context, userID string) ([]ListGuidelineVideoTemplateLinksRow, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelineVideoTemplateLinks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuidelineVideoTemplateLinksRow
+	for rows.Next() {
+		var i ListGuidelineVideoTemplateLinksRow
+		if err := rows.Scan(&i.GuidelineID, &i.VideoTemplateID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelineVideoTemplates = `-- name: ListGuidelineVideoTemplates :many
+SELECT video_template_id
+FROM guideline_video_templates
+WHERE guideline_id = ? AND user_id = ?
+ORDER BY video_template_id
+`
+
+type ListGuidelineVideoTemplatesParams struct {
+	GuidelineID string
+	UserID      string
+}
+
+func (q *Queries) ListGuidelineVideoTemplates(ctx context.Context, arg ListGuidelineVideoTemplatesParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelineVideoTemplates, arg.GuidelineID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var video_template_id string
+		if err := rows.Scan(&video_template_id); err != nil {
+			return nil, err
+		}
+		items = append(items, video_template_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelines = `-- name: ListGuidelines :many
+SELECT id, user_id, kind, text, scope, created_at, updated_at
+FROM guidelines
+WHERE user_id = ? AND kind = ?
 ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id
 `
 
-func (q *Queries) ListGuidelines(ctx context.Context, userID string) ([]Guideline, error) {
-	rows, err := q.db.QueryContext(ctx, listGuidelines, userID)
+type ListGuidelinesParams struct {
+	UserID string
+	Kind   string
+}
+
+func (q *Queries) ListGuidelines(ctx context.Context, arg ListGuidelinesParams) ([]Guideline, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelines, arg.UserID, arg.Kind)
 	if err != nil {
 		return nil, err
 	}
@@ -569,6 +785,7 @@ func (q *Queries) ListGuidelines(ctx context.Context, userID string) ([]Guidelin
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.Kind,
 			&i.Text,
 			&i.Scope,
 			&i.CreatedAt,
@@ -588,16 +805,21 @@ func (q *Queries) ListGuidelines(ctx context.Context, userID string) ([]Guidelin
 }
 
 const listPendingCandidates = `-- name: ListPendingCandidates :many
-SELECT id, user_id, text, post_slug, status, occurrences, first_seen_at, last_seen_at
+SELECT id, user_id, kind, text, post_slug, clip_id, status, occurrences, first_seen_at, last_seen_at
 FROM guideline_candidates
-WHERE user_id = ? AND status = 'pending'
+WHERE user_id = ? AND kind = ? AND status = 'pending'
 ORDER BY occurrences DESC, last_seen_at DESC, id
 `
 
+type ListPendingCandidatesParams struct {
+	UserID string
+	Kind   string
+}
+
 // Review order: the most-repeated correction first, then the most recent. Exactly the order
 // idx_guideline_candidates_review serves.
-func (q *Queries) ListPendingCandidates(ctx context.Context, userID string) ([]GuidelineCandidate, error) {
-	rows, err := q.db.QueryContext(ctx, listPendingCandidates, userID)
+func (q *Queries) ListPendingCandidates(ctx context.Context, arg ListPendingCandidatesParams) ([]GuidelineCandidate, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingCandidates, arg.UserID, arg.Kind)
 	if err != nil {
 		return nil, err
 	}
@@ -608,8 +830,10 @@ func (q *Queries) ListPendingCandidates(ctx context.Context, userID string) ([]G
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.Kind,
 			&i.Text,
 			&i.PostSlug,
+			&i.ClipID,
 			&i.Status,
 			&i.Occurrences,
 			&i.FirstSeenAt,
@@ -653,20 +877,26 @@ func (q *Queries) SetCandidateStatus(ctx context.Context, arg SetCandidateStatus
 const setCandidateStatusByText = `-- name: SetCandidateStatusByText :exec
 UPDATE guideline_candidates
 SET status = ?
-WHERE user_id = ? AND text = ? AND status = 'pending'
+WHERE user_id = ? AND kind = ? AND text = ? AND status = 'pending'
 `
 
 type SetCandidateStatusByTextParams struct {
 	Status string
 	UserID string
+	Kind   string
 	Text   string
 }
 
 // Approval by text, which is what marks the candidate a just-completed revision recorded
-// without the client having to learn its id. Only a pending row is moved: an already
-// dismissed one stays dismissed.
+// without the client having to learn its id. Only a pending row of the kind is moved: an
+// already dismissed one stays dismissed.
 func (q *Queries) SetCandidateStatusByText(ctx context.Context, arg SetCandidateStatusByTextParams) error {
-	_, err := q.db.ExecContext(ctx, setCandidateStatusByText, arg.Status, arg.UserID, arg.Text)
+	_, err := q.db.ExecContext(ctx, setCandidateStatusByText,
+		arg.Status,
+		arg.UserID,
+		arg.Kind,
+		arg.Text,
+	)
 	return err
 }
 

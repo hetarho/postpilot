@@ -22,8 +22,7 @@ type Handler struct{ service *guideline.Service }
 func NewHandler(service *guideline.Service) *Handler { return &Handler{service: service} }
 
 // ListGuidelines answers one kind: its 기본 지침 with the account's switches, then the owner's
-// guidelines. Every owner guideline is a post's until the clip kind has a column (T438), so the
-// clip kind lists its defaults and no owner rows.
+// guidelines of that kind.
 func (h *Handler) ListGuidelines(ctx context.Context, req *connect.Request[postpilotv1.ListGuidelinesRequest]) (*connect.Response[postpilotv1.ListGuidelinesResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -34,15 +33,13 @@ func (h *Handler) ListGuidelines(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, toConnectError("list guidelines", err)
 	}
-	out := make([]*postpilotv1.Guideline, 0)
-	if kind == guideline.KindPost {
-		guidelines, err := h.service.List(ctx, userID)
-		if err != nil {
-			return nil, toConnectError("list guidelines", err)
-		}
-		for _, g := range guidelines {
-			out = append(out, toProtoGuideline(g))
-		}
+	guidelines, err := h.service.List(ctx, userID, kind)
+	if err != nil {
+		return nil, toConnectError("list guidelines", err)
+	}
+	out := make([]*postpilotv1.Guideline, 0, len(guidelines))
+	for _, g := range guidelines {
+		out = append(out, toProtoGuideline(g))
 	}
 	states := make([]*postpilotv1.DefaultGuideline, 0, len(defaults))
 	for _, d := range defaults {
@@ -72,6 +69,13 @@ func fromProtoKind(kind postpilotv1.GuidelineKind) guideline.Kind {
 	return guideline.KindPost
 }
 
+func toProtoKind(kind guideline.Kind) postpilotv1.GuidelineKind {
+	if kind == guideline.KindClip {
+		return postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP
+	}
+	return postpilotv1.GuidelineKind_GUIDELINE_KIND_POST
+}
+
 func toProtoDefault(state guideline.DefaultState) *postpilotv1.DefaultGuideline {
 	d := state.Default
 	return &postpilotv1.DefaultGuideline{
@@ -94,7 +98,7 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), guideline.ScopePatch{
+	created, err := h.service.Create(ctx, userID, fromProtoKind(req.Msg.GetKind()), req.Msg.GetText(), guideline.ScopePatch{
 		Scope: scope, TemplateIDs: req.Msg.GetTemplateIds(), Fields: fields,
 	}, req.Msg.GetFromCandidateId())
 	if err != nil {
@@ -146,12 +150,12 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 // ListGuidelineCandidates serves the review list. queue_full comes from the server because
 // the pending bound is server-side: the client relays it rather than predicting it, exactly
 // as it does for the account guideline cap.
-func (h *Handler) ListGuidelineCandidates(ctx context.Context, _ *connect.Request[postpilotv1.ListGuidelineCandidatesRequest]) (*connect.Response[postpilotv1.ListGuidelineCandidatesResponse], error) {
+func (h *Handler) ListGuidelineCandidates(ctx context.Context, req *connect.Request[postpilotv1.ListGuidelineCandidatesRequest]) (*connect.Response[postpilotv1.ListGuidelineCandidatesResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	candidates, queueFull, err := h.service.ListCandidates(ctx, userID)
+	candidates, queueFull, err := h.service.ListCandidates(ctx, userID, fromProtoKind(req.Msg.GetKind()))
 	if err != nil {
 		return nil, toConnectError("list guideline candidates", err)
 	}
@@ -288,14 +292,15 @@ func toProtoGuideline(g guideline.Guideline) *postpilotv1.Guideline {
 		templates = append(templates, &postpilotv1.GuidelineTemplateRef{Id: ref.ID, Name: ref.Name})
 	}
 	return &postpilotv1.Guideline{
-		Id: g.ID, Text: g.Text, Scope: toProtoScope(g.Scope), Templates: templates, Fields: toProtoFields(g.Fields),
+		Id: g.ID, Kind: toProtoKind(g.Kind), Text: g.Text, Scope: toProtoScope(g.Scope), Templates: templates, Fields: toProtoFields(g.Fields),
 		CreatedAt: g.CreatedAt.UTC().Format(timeLayout), UpdatedAt: g.UpdatedAt.UTC().Format(timeLayout),
 	}
 }
 
 func toProtoCandidate(c guideline.Candidate) *postpilotv1.GuidelineCandidate {
 	return &postpilotv1.GuidelineCandidate{
-		Id: c.ID, Text: c.Text, PostSlug: c.PostSlug, Occurrences: int32(c.Occurrences),
+		Id: c.ID, Kind: toProtoKind(c.Kind), Text: c.Text, PostSlug: c.PostSlug, ClipId: c.ClipID,
+		Occurrences: int32(c.Occurrences),
 		FirstSeenAt: c.FirstSeenAt.UTC().Format(timeLayout),
 		LastSeenAt:  c.LastSeenAt.UTC().Format(timeLayout),
 	}

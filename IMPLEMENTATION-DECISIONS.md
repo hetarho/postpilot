@@ -191,3 +191,17 @@ choice would be expensive to undo are listed at the end.
   other refusals disable them with the reason above the row.
 - **Send button name:** "스토리라인 수정 요청 보내기" / "Send the storyline request"; the field shows
   a live `n/500` count.
+
+## T438 — 영상 지침 (backend)
+
+- **The guideline service is constructed before the clip generation service** in `cmd/api`, so the
+  clip revision's candidate recorder can go into `GenerationDeps`; its template directories are
+  still wired after their contexts exist.
+- **`GenerationDeps.Candidates` is optional** (nil records nothing), mirroring the post side's
+  optional candidate recorder; it would otherwise have forced every clip test harness to pass one.
+- **Approving by candidate id checks the kind**: creating a post guideline with a clip candidate's
+  id is `GUIDELINE_CANDIDATE_NOT_FOUND`.
+- **The migration's Down drops clip guidelines and clip candidates**, since the old shape has no
+  place for them.
+- **A guideline or candidate stored without a kind reads as `post`** in the store (the service always
+  sets one).

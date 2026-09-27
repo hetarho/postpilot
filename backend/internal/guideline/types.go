@@ -108,8 +108,11 @@ type TemplateRef struct {
 // ASCII 분야 ids in id order; Templates is the name projection the service fills for reads and
 // is never accepted on a write.
 type Guideline struct {
-	ID          string
-	UserID      string
+	ID     string
+	UserID string
+	// Kind is the writer the guideline is for, a post's or a clip's, for good (GUIDE-2). A clip
+	// guideline's TemplateIDs name video templates.
+	Kind        Kind
 	Text        string
 	Scope       Scope
 	TemplateIDs []string

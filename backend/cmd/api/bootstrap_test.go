@@ -686,14 +686,14 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Scoped to the OTHER template, so it must never reach this post's prompt.
-	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{other.ID}}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "협찬 표기를 빠뜨리지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{other.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -829,7 +829,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, "  "+instruction+"  "); err != nil {
 		t.Fatal(err)
 	}
-	candidates, full, err := guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, full, err := guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -844,7 +844,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, instruction); err != nil {
 		t.Fatal(err)
 	}
-	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -859,7 +859,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, "문단을 짧게"); err != nil {
 		t.Fatal(err)
 	}
-	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -872,14 +872,14 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := guidelineSvc.Create(ctx, "alice", "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, candidates[0].ID)
+	created, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, candidates[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if created.Scope != guideline.ScopeTemplates || len(created.TemplateIDs) != 1 {
 		t.Fatalf("approved with scope %+v", created)
 	}
-	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, full, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -895,7 +895,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, "광고처럼 읽히는 문장을 쓰지 않기"); err != nil {
 		t.Fatal(err)
 	}
-	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -924,7 +924,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := postSvc.DeletePost(ctx, "alice", saved.Slug); err != nil {
 		t.Fatal(err)
 	}
-	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -939,7 +939,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, instruction); err != nil {
 		t.Fatal(err)
 	}
-	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -954,7 +954,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := recorder.Record(ctx, "alice", saved.Slug, "존댓말로 써줘"); err != nil {
 		t.Fatal(err)
 	}
-	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice")
+	candidates, _, err = guidelineSvc.ListCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1010,7 +1010,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 		// Scoped to ANOTHER 분야, so it must never reach this post.
 		{"반려동물 이름을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"pets"}}},
 	} {
-		if _, err := guidelineSvc.Create(ctx, "alice", create.text, create.scope, ""); err != nil {
+		if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, create.text, create.scope, ""); err != nil {
 			t.Fatalf("create %q: %v", create.text, err)
 		}
 	}
@@ -1052,7 +1052,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	}
 
 	// Deleting the 분야 guideline removes it from the next resolution.
-	listed, err := guidelineSvc.List(ctx, "alice")
+	listed, err := guidelineSvc.List(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}

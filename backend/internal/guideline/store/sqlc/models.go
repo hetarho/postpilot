@@ -11,6 +11,7 @@ import (
 type Guideline struct {
 	ID        string
 	UserID    string
+	Kind      string
 	Text      string
 	Scope     string
 	CreatedAt string
@@ -20,8 +21,10 @@ type Guideline struct {
 type GuidelineCandidate struct {
 	ID          string
 	UserID      string
+	Kind        string
 	Text        string
 	PostSlug    sql.NullString
+	ClipID      sql.NullString
 	Status      string
 	Occurrences int64
 	FirstSeenAt string

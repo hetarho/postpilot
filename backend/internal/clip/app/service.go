@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -18,6 +19,9 @@ type Service struct {
 	limits     clip.Limits
 	sources    *SourceService
 	generation *GenerationService
+	// candidates drops a deleted project's link from its 영상 지침 candidates; bound with the
+	// generation side, nil records nothing.
+	candidates clip.GuidelineCandidates
 	// now is the service clock: every stored timestamp comes from here so a test can
 	// hold time still (the same seam GenerationService and SourceService carry).
 	now func() time.Time
@@ -328,5 +332,15 @@ func (s *Service) DeleteProject(ctx context.Context, user, id string) error {
 			return err
 		}
 	}
-	return s.store.DeleteProject(ctx, user, id)
+	if err := s.store.DeleteProject(ctx, user, id); err != nil {
+		return err
+	}
+	// After the row is gone, and never failing the delete: the candidates keep their text and
+	// only lose the link (GUIDE-13).
+	if s.candidates != nil {
+		if err := s.candidates.DetachProject(ctx, user, id); err != nil {
+			slog.WarnContext(ctx, "could not detach a deleted clip project from its guideline candidates", "project", id, "err", err)
+		}
+	}
+	return nil
 }

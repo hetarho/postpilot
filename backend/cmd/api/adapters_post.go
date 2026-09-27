@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/generation"
@@ -89,6 +90,22 @@ func (a guidelineTemplates) Templates(ctx context.Context, userID string) ([]gui
 	out := make([]guideline.TemplateRef, 0, len(templates))
 	for _, p := range templates {
 		out = append(out, guideline.TemplateRef{ID: p.ID, Name: p.Name})
+	}
+	return out, nil
+}
+
+// guidelineVideoTemplates is the clip context's video templates as the guideline context needs
+// them for a 영상 지침's scope: an owned id to validate and a name to show (GUIDE-5).
+type guidelineVideoTemplates struct{ service *clipapp.Service }
+
+func (a guidelineVideoTemplates) VideoTemplates(ctx context.Context, userID string) ([]guideline.TemplateRef, error) {
+	templates, err := a.service.ListTemplates(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]guideline.TemplateRef, 0, len(templates))
+	for _, t := range templates {
+		out = append(out, guideline.TemplateRef{ID: t.ID, Name: t.Name})
 	}
 	return out, nil
 }

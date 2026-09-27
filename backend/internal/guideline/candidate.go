@@ -44,10 +44,15 @@ var (
 // at all: scope is a durable decision about every future post, made at approval time. That
 // absence is what lets recording be automatic without anything being applied.
 type Candidate struct {
-	ID          string
-	UserID      string
-	Text        string
+	ID     string
+	UserID string
+	// Kind is the kind of guideline the candidate may become: a post revision records a post
+	// candidate and a clip revision a clip one (GUIDE-7).
+	Kind Kind
+	Text string
+	// PostSlug and ClipID name where it was first seen, by its kind; empty once that is gone.
 	PostSlug    string
+	ClipID      string
 	Status      CandidateStatus
 	Occurrences int
 	FirstSeenAt time.Time

@@ -232,14 +232,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	if err := clipMedia.CleanupStale(ctx, time.Now()); err != nil {
 		return nil, fmt.Errorf("clip workspace cleanup: %w", err)
 	}
-	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.jobs, c.clipGuard, handle.Writer, c.clipPorts)
-	if err != nil {
-		return nil, fmt.Errorf("clip generation initialization: %w", err)
-	}
-
-	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
-	c.post.SetTemplateDirectory(postTemplates{service: c.template})
-
+	// Built ahead of the clip generation side, which records its revision requests as 영상 지침
+	// candidates through it; its directories are wired below, once their contexts exist.
 	c.guideline = guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		// The same 분야 directory post uses: one adapter over quality's list, not a second.
@@ -247,9 +241,19 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 		cfg.GuidelineCandidateMaxPending,
 	)
+	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline})
+	if err != nil {
+		return nil, fmt.Errorf("clip generation initialization: %w", err)
+	}
+
+	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
+	c.post.SetTemplateDirectory(postTemplates{service: c.template})
+
 	// Template names are a live projection and owned-id validation, never a stored column or
-	// a SQL join: the guideline context asks the template context, through this adapter only.
+	// a SQL join: the guideline context asks the template context, through this adapter only —
+	// and the clip context for a 영상 지침's video templates.
 	c.guideline.SetTemplateDirectory(guidelineTemplates{service: c.template})
+	c.guideline.SetVideoTemplateDirectory(guidelineVideoTemplates{service: c.clip})
 	// The memory context stands alone: it reads no other context, and the only direction
 	// anything crosses is the post-delete hook above, which hands it a slug.
 	c.memory = memory.NewService(

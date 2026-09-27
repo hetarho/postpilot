@@ -325,7 +325,10 @@ type Guideline struct {
 	CreatedAt string                  `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt string                  `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The 분야 set of a FIELDS guideline, empty for every other scope.
-	Fields        []BlogField `protobuf:"varint,7,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
+	Fields []BlogField `protobuf:"varint,7,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
+	// A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
+	// video templates. UNSPECIFIED reads as POST.
+	Kind          GuidelineKind `protobuf:"varint,8,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,6 +410,13 @@ func (x *Guideline) GetFields() []BlogField {
 		return x.Fields
 	}
 	return nil
+}
+
+func (x *Guideline) GetKind() GuidelineKind {
+	if x != nil {
+		return x.Kind
+	}
+	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
 }
 
 type ListGuidelinesRequest struct {
@@ -623,7 +633,10 @@ type CreateGuidelineRequest struct {
 	// 지침으로 저장, are matched by text in the same transaction.
 	FromCandidateId *string `protobuf:"bytes,4,opt,name=from_candidate_id,json=fromCandidateId,proto3,oneof" json:"from_candidate_id,omitempty"`
 	// Required (>= 1 분야 from the product's list) for FIELDS; an unknown 분야 is NotFound.
-	Fields        []BlogField `protobuf:"varint,5,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
+	Fields []BlogField `protobuf:"varint,5,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
+	// The guideline's kind; for CLIP the template ids name video templates and FIELDS is refused.
+	// An approval sends its candidate's kind. UNSPECIFIED reads as POST.
+	Kind          GuidelineKind `protobuf:"varint,6,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -691,6 +704,13 @@ func (x *CreateGuidelineRequest) GetFields() []BlogField {
 		return x.Fields
 	}
 	return nil
+}
+
+func (x *CreateGuidelineRequest) GetKind() GuidelineKind {
+	if x != nil {
+		return x.Kind
+	}
+	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
 }
 
 type CreateGuidelineResponse struct {
@@ -1001,9 +1021,13 @@ type GuidelineCandidate struct {
 	PostSlug string `protobuf:"bytes,3,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
 	// How many completed revisions carried this exact text. The signal that a one-off
 	// correction has become a standing rule.
-	Occurrences   int32  `protobuf:"varint,4,opt,name=occurrences,proto3" json:"occurrences,omitempty"`
-	FirstSeenAt   string `protobuf:"bytes,5,opt,name=first_seen_at,json=firstSeenAt,proto3" json:"first_seen_at,omitempty"`
-	LastSeenAt    string `protobuf:"bytes,6,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
+	Occurrences int32  `protobuf:"varint,4,opt,name=occurrences,proto3" json:"occurrences,omitempty"`
+	FirstSeenAt string `protobuf:"bytes,5,opt,name=first_seen_at,json=firstSeenAt,proto3" json:"first_seen_at,omitempty"`
+	LastSeenAt  string `protobuf:"bytes,6,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
+	// The kind of guideline it may become: a post revision's request or a clip revision's.
+	Kind GuidelineKind `protobuf:"varint,7,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
+	// The clip project a clip candidate was first seen on, ” once that project is gone.
+	ClipId        string `protobuf:"bytes,8,opt,name=clip_id,json=clipId,proto3" json:"clip_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1080,8 +1104,24 @@ func (x *GuidelineCandidate) GetLastSeenAt() string {
 	return ""
 }
 
+func (x *GuidelineCandidate) GetKind() GuidelineKind {
+	if x != nil {
+		return x.Kind
+	}
+	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
+}
+
+func (x *GuidelineCandidate) GetClipId() string {
+	if x != nil {
+		return x.ClipId
+	}
+	return ""
+}
+
+// The pending candidates of one kind. UNSPECIFIED reads as POST.
 type ListGuidelineCandidatesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          GuidelineKind          `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1114,6 +1154,13 @@ func (x *ListGuidelineCandidatesRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListGuidelineCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*ListGuidelineCandidatesRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_guideline_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListGuidelineCandidatesRequest) GetKind() GuidelineKind {
+	if x != nil {
+		return x.Kind
+	}
+	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
 }
 
 type ListGuidelineCandidatesResponse struct {
@@ -1271,7 +1318,7 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x12korean_target_only\x18\x05 \x01(\bR\x10koreanTargetOnly\":\n" +
 	"\x14GuidelineTemplateRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\x94\x02\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xc5\x02\n" +
 	"\tGuideline\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x122\n" +
@@ -1281,7 +1328,8 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\tR\tupdatedAt\x12/\n" +
-	"\x06fields\x18\a \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"H\n" +
+	"\x06fields\x18\a \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\x12/\n" +
+	"\x04kind\x18\b \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\"H\n" +
 	"\x15ListGuidelinesRequest\x12/\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\"\x9b\x01\n" +
 	"\x16ListGuidelinesResponse\x127\n" +
@@ -1294,13 +1342,14 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x18\n" +
 	"\aenabled\x18\x03 \x01(\bR\aenabled\"q\n" +
 	"\"SetDefaultGuidelineEnabledResponse\x12K\n" +
-	"\x11default_guideline\x18\x01 \x01(\v2\x1e.postpilot.v1.DefaultGuidelineR\x10defaultGuideline\"\xfb\x01\n" +
+	"\x11default_guideline\x18\x01 \x01(\v2\x1e.postpilot.v1.DefaultGuidelineR\x10defaultGuideline\"\xac\x02\n" +
 	"\x16CreateGuidelineRequest\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x122\n" +
 	"\x05scope\x18\x02 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
 	"\ftemplate_ids\x18\x03 \x03(\tR\vtemplateIds\x12/\n" +
 	"\x11from_candidate_id\x18\x04 \x01(\tH\x00R\x0ffromCandidateId\x88\x01\x01\x12/\n" +
-	"\x06fields\x18\x05 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fieldsB\x14\n" +
+	"\x06fields\x18\x05 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\x12/\n" +
+	"\x04kind\x18\x06 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kindB\x14\n" +
 	"\x12_from_candidate_id\"P\n" +
 	"\x17CreateGuidelineResponse\x125\n" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"\x9d\x01\n" +
@@ -1317,7 +1366,7 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"(\n" +
 	"\x16DeleteGuidelineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x19\n" +
-	"\x17DeleteGuidelineResponse\"\xbd\x01\n" +
+	"\x17DeleteGuidelineResponse\"\x87\x02\n" +
 	"\x12GuidelineCandidate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1b\n" +
@@ -1325,8 +1374,11 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\voccurrences\x18\x04 \x01(\x05R\voccurrences\x12\"\n" +
 	"\rfirst_seen_at\x18\x05 \x01(\tR\vfirstSeenAt\x12 \n" +
 	"\flast_seen_at\x18\x06 \x01(\tR\n" +
-	"lastSeenAt\" \n" +
-	"\x1eListGuidelineCandidatesRequest\"\x82\x01\n" +
+	"lastSeenAt\x12/\n" +
+	"\x04kind\x18\a \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\x12\x17\n" +
+	"\aclip_id\x18\b \x01(\tR\x06clipId\"Q\n" +
+	"\x1eListGuidelineCandidatesRequest\x12/\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\"\x82\x01\n" +
 	"\x1fListGuidelineCandidatesResponse\x12@\n" +
 	"\n" +
 	"candidates\x18\x01 \x03(\v2 .postpilot.v1.GuidelineCandidateR\n" +
@@ -1399,38 +1451,42 @@ var file_postpilot_v1_guideline_proto_depIdxs = []int32{
 	1,  // 2: postpilot.v1.Guideline.scope:type_name -> postpilot.v1.GuidelineScope
 	4,  // 3: postpilot.v1.Guideline.templates:type_name -> postpilot.v1.GuidelineTemplateRef
 	22, // 4: postpilot.v1.Guideline.fields:type_name -> postpilot.v1.BlogField
-	0,  // 5: postpilot.v1.ListGuidelinesRequest.kind:type_name -> postpilot.v1.GuidelineKind
-	5,  // 6: postpilot.v1.ListGuidelinesResponse.guidelines:type_name -> postpilot.v1.Guideline
-	3,  // 7: postpilot.v1.ListGuidelinesResponse.defaults:type_name -> postpilot.v1.DefaultGuideline
-	0,  // 8: postpilot.v1.SetDefaultGuidelineEnabledRequest.kind:type_name -> postpilot.v1.GuidelineKind
-	3,  // 9: postpilot.v1.SetDefaultGuidelineEnabledResponse.default_guideline:type_name -> postpilot.v1.DefaultGuideline
-	1,  // 10: postpilot.v1.CreateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScope
-	22, // 11: postpilot.v1.CreateGuidelineRequest.fields:type_name -> postpilot.v1.BlogField
-	5,  // 12: postpilot.v1.CreateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
-	1,  // 13: postpilot.v1.GuidelineScopePatch.scope:type_name -> postpilot.v1.GuidelineScope
-	22, // 14: postpilot.v1.GuidelineScopePatch.fields:type_name -> postpilot.v1.BlogField
-	12, // 15: postpilot.v1.UpdateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScopePatch
-	5,  // 16: postpilot.v1.UpdateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
-	17, // 17: postpilot.v1.ListGuidelineCandidatesResponse.candidates:type_name -> postpilot.v1.GuidelineCandidate
-	6,  // 18: postpilot.v1.GuidelineService.ListGuidelines:input_type -> postpilot.v1.ListGuidelinesRequest
-	10, // 19: postpilot.v1.GuidelineService.CreateGuideline:input_type -> postpilot.v1.CreateGuidelineRequest
-	13, // 20: postpilot.v1.GuidelineService.UpdateGuideline:input_type -> postpilot.v1.UpdateGuidelineRequest
-	15, // 21: postpilot.v1.GuidelineService.DeleteGuideline:input_type -> postpilot.v1.DeleteGuidelineRequest
-	18, // 22: postpilot.v1.GuidelineService.ListGuidelineCandidates:input_type -> postpilot.v1.ListGuidelineCandidatesRequest
-	20, // 23: postpilot.v1.GuidelineService.DismissGuidelineCandidate:input_type -> postpilot.v1.DismissGuidelineCandidateRequest
-	8,  // 24: postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled:input_type -> postpilot.v1.SetDefaultGuidelineEnabledRequest
-	7,  // 25: postpilot.v1.GuidelineService.ListGuidelines:output_type -> postpilot.v1.ListGuidelinesResponse
-	11, // 26: postpilot.v1.GuidelineService.CreateGuideline:output_type -> postpilot.v1.CreateGuidelineResponse
-	14, // 27: postpilot.v1.GuidelineService.UpdateGuideline:output_type -> postpilot.v1.UpdateGuidelineResponse
-	16, // 28: postpilot.v1.GuidelineService.DeleteGuideline:output_type -> postpilot.v1.DeleteGuidelineResponse
-	19, // 29: postpilot.v1.GuidelineService.ListGuidelineCandidates:output_type -> postpilot.v1.ListGuidelineCandidatesResponse
-	21, // 30: postpilot.v1.GuidelineService.DismissGuidelineCandidate:output_type -> postpilot.v1.DismissGuidelineCandidateResponse
-	9,  // 31: postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled:output_type -> postpilot.v1.SetDefaultGuidelineEnabledResponse
-	25, // [25:32] is the sub-list for method output_type
-	18, // [18:25] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	0,  // 5: postpilot.v1.Guideline.kind:type_name -> postpilot.v1.GuidelineKind
+	0,  // 6: postpilot.v1.ListGuidelinesRequest.kind:type_name -> postpilot.v1.GuidelineKind
+	5,  // 7: postpilot.v1.ListGuidelinesResponse.guidelines:type_name -> postpilot.v1.Guideline
+	3,  // 8: postpilot.v1.ListGuidelinesResponse.defaults:type_name -> postpilot.v1.DefaultGuideline
+	0,  // 9: postpilot.v1.SetDefaultGuidelineEnabledRequest.kind:type_name -> postpilot.v1.GuidelineKind
+	3,  // 10: postpilot.v1.SetDefaultGuidelineEnabledResponse.default_guideline:type_name -> postpilot.v1.DefaultGuideline
+	1,  // 11: postpilot.v1.CreateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScope
+	22, // 12: postpilot.v1.CreateGuidelineRequest.fields:type_name -> postpilot.v1.BlogField
+	0,  // 13: postpilot.v1.CreateGuidelineRequest.kind:type_name -> postpilot.v1.GuidelineKind
+	5,  // 14: postpilot.v1.CreateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
+	1,  // 15: postpilot.v1.GuidelineScopePatch.scope:type_name -> postpilot.v1.GuidelineScope
+	22, // 16: postpilot.v1.GuidelineScopePatch.fields:type_name -> postpilot.v1.BlogField
+	12, // 17: postpilot.v1.UpdateGuidelineRequest.scope:type_name -> postpilot.v1.GuidelineScopePatch
+	5,  // 18: postpilot.v1.UpdateGuidelineResponse.guideline:type_name -> postpilot.v1.Guideline
+	0,  // 19: postpilot.v1.GuidelineCandidate.kind:type_name -> postpilot.v1.GuidelineKind
+	0,  // 20: postpilot.v1.ListGuidelineCandidatesRequest.kind:type_name -> postpilot.v1.GuidelineKind
+	17, // 21: postpilot.v1.ListGuidelineCandidatesResponse.candidates:type_name -> postpilot.v1.GuidelineCandidate
+	6,  // 22: postpilot.v1.GuidelineService.ListGuidelines:input_type -> postpilot.v1.ListGuidelinesRequest
+	10, // 23: postpilot.v1.GuidelineService.CreateGuideline:input_type -> postpilot.v1.CreateGuidelineRequest
+	13, // 24: postpilot.v1.GuidelineService.UpdateGuideline:input_type -> postpilot.v1.UpdateGuidelineRequest
+	15, // 25: postpilot.v1.GuidelineService.DeleteGuideline:input_type -> postpilot.v1.DeleteGuidelineRequest
+	18, // 26: postpilot.v1.GuidelineService.ListGuidelineCandidates:input_type -> postpilot.v1.ListGuidelineCandidatesRequest
+	20, // 27: postpilot.v1.GuidelineService.DismissGuidelineCandidate:input_type -> postpilot.v1.DismissGuidelineCandidateRequest
+	8,  // 28: postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled:input_type -> postpilot.v1.SetDefaultGuidelineEnabledRequest
+	7,  // 29: postpilot.v1.GuidelineService.ListGuidelines:output_type -> postpilot.v1.ListGuidelinesResponse
+	11, // 30: postpilot.v1.GuidelineService.CreateGuideline:output_type -> postpilot.v1.CreateGuidelineResponse
+	14, // 31: postpilot.v1.GuidelineService.UpdateGuideline:output_type -> postpilot.v1.UpdateGuidelineResponse
+	16, // 32: postpilot.v1.GuidelineService.DeleteGuideline:output_type -> postpilot.v1.DeleteGuidelineResponse
+	19, // 33: postpilot.v1.GuidelineService.ListGuidelineCandidates:output_type -> postpilot.v1.ListGuidelineCandidatesResponse
+	21, // 34: postpilot.v1.GuidelineService.DismissGuidelineCandidate:output_type -> postpilot.v1.DismissGuidelineCandidateResponse
+	9,  // 35: postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled:output_type -> postpilot.v1.SetDefaultGuidelineEnabledResponse
+	29, // [29:36] is the sub-list for method output_type
+	22, // [22:29] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_guideline_proto_init() }

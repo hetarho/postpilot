@@ -101,7 +101,7 @@ func TestInsertRefusesPastTheAccountCap(t *testing.T) {
 	if !errors.As(err, &atCap) || atCap.Max != 2 {
 		t.Fatalf("cap err = %v", err)
 	}
-	listed, err := s.List(ctx, "alice")
+	listed, err := s.List(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	listed, err := s.List(ctx, "alice")
+	listed, err := s.List(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestRecordCandidateCountsARepeatInsteadOfDuplicating(t *testing.T) {
 	if recorded, err := s.RecordCandidate(ctx, newCandidate("c2", "alice", "광고 같아", "post-2", later), 10); err != nil || !recorded {
 		t.Fatalf("repeat = %v (err %v)", recorded, err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +499,7 @@ func TestRecordCandidateSkipsWhatIsAlreadyKnown(t *testing.T) {
 	if recorded, err := s.RecordCandidate(ctx, newCandidate("c3", "alice", "존댓말로", "post-2", testNow.Add(time.Hour)), 10); err != nil || recorded {
 		t.Fatalf("a dismissed instruction was recorded again: %v (err %v)", recorded, err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -546,7 +546,7 @@ func TestListPendingCandidatesReturnsReviewOrderAndTheHeldCount(t *testing.T) {
 	if _, err := s.RecordCandidate(ctx, newCandidate("dup2", "alice", "recent", "post-3", testNow.Add(2*time.Hour)), 10); err != nil {
 		t.Fatal(err)
 	}
-	rows, held, err := s.ListPendingCandidates(ctx, "alice")
+	rows, held, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -577,7 +577,7 @@ func TestDropCandidatePostSlugKeepsTheText(t *testing.T) {
 	if err := s.DropCandidatePostSlug(ctx, "alice", "post-1"); err != nil {
 		t.Fatal(err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,7 +604,7 @@ func TestInsertApprovesTheCandidateInTheSameTransaction(t *testing.T) {
 	if !errors.As(err, &atCap) {
 		t.Fatalf("capped insert err = %v", err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,7 +615,7 @@ func TestInsertApprovesTheCandidateInTheSameTransaction(t *testing.T) {
 	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{Text: "광고 금지"}); err != nil {
 		t.Fatal(err)
 	}
-	rows, _, err = s.ListPendingCandidates(ctx, "alice")
+	rows, _, err = s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +634,7 @@ func TestInsertApprovesAnEditedCandidateByID(t *testing.T) {
 	if err := s.Insert(ctx, newGuideline("g1", "alice", "광고 같은 문장 금지", guideline.ScopeGlobal, testNow), 10, guideline.CandidateApproval{ID: "c1", Text: "광고 같은 문장 금지"}); err != nil {
 		t.Fatal(err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -688,7 +688,7 @@ func TestUpdateGuidelineTextApprovesASameTextCandidate(t *testing.T) {
 	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{Text: &renamed}, testNow); err != nil {
 		t.Fatal(err)
 	}
-	rows, _, err := s.ListPendingCandidates(ctx, "alice")
+	rows, _, err := s.ListPendingCandidates(ctx, "alice", guideline.KindPost)
 	if err != nil {
 		t.Fatal(err)
 	}

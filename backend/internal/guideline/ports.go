@@ -22,7 +22,7 @@ type Store interface {
 	// List returns the account's guidelines in injection order — the global group, then the
 	// template group, then the 분야 group, each by created_at then id (GUIDE-14) — with
 	// TemplateIDs and Fields populated.
-	List(ctx context.Context, userID string) ([]Guideline, error)
+	List(ctx context.Context, userID string, kind Kind) ([]Guideline, error)
 	Get(ctx context.Context, userID, id string) (Guideline, error)
 	// Update applies only the present parts of the patch in one transaction. A present scope
 	// replaces the kind, the template links and the 분야 links together, so a rescope leaves no
@@ -35,6 +35,10 @@ type Store interface {
 	// field. An empty templateID is a post with no template and an empty field a post with no
 	// 분야; each matches no link, so a post missing either receives only the groups it has.
 	ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error)
+	// ClipApplicableTexts is ApplicableTexts for a clip: the account's global clip guidelines, then
+	// those linked to videoTemplateID, each by created_at then id. An empty id is a clip with no
+	// video template.
+	ClipApplicableTexts(ctx context.Context, userID, videoTemplateID string) ([]string, error)
 	// DefaultsOff returns the 기본 지침 keys the account switched off for one kind; a row means
 	// off, so an account that never switched anything has none (GUIDE-43).
 	DefaultsOff(ctx context.Context, userID string, kind Kind) ([]string, error)
@@ -51,12 +55,14 @@ type Store interface {
 	// ListPendingCandidates returns the pending ones in review order (occurrences desc, then
 	// last-seen desc) together with the account's pending count, so the caller can say
 	// whether the queue is full without owning the bound.
-	ListPendingCandidates(ctx context.Context, userID string) ([]Candidate, int, error)
+	ListPendingCandidates(ctx context.Context, userID string, kind Kind) ([]Candidate, int, error)
 	// SetCandidateStatus moves one candidate out of pending. An unknown or foreign id reads
 	// as missing, like every other method here.
 	SetCandidateStatus(ctx context.Context, userID, id string, status CandidateStatus) error
 	// DropCandidatePostSlug detaches every candidate of the account that named one post.
 	DropCandidatePostSlug(ctx context.Context, userID, postSlug string) error
+	// DropCandidateClipID detaches every candidate of the account that named one clip project.
+	DropCandidateClipID(ctx context.Context, userID, clipID string) error
 }
 
 // CandidateApproval is the create's approval side effect, applied inside the insert's own
@@ -76,6 +82,13 @@ type CandidateApproval struct {
 // context's table (ARCHITECTURE §2.2).
 type TemplateDirectory interface {
 	Templates(ctx context.Context, userID string) ([]TemplateRef, error)
+}
+
+// VideoTemplateDirectory is the clip context's video templates, consumed exactly as
+// TemplateDirectory is, for a clip guideline's scope (GUIDE-5). The guideline context reads no
+// clip table: the composite key is the schema's only link (ARCH-7).
+type VideoTemplateDirectory interface {
+	VideoTemplates(ctx context.Context, userID string) ([]TemplateRef, error)
 }
 
 // FieldDirectory answers whether a 분야 id is on the product's list, consumed to validate a

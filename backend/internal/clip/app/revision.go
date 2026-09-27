@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -296,6 +297,13 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	}
 	if _, err := store.SaveRevisedPlan(ctx, user, project, job, frozen.Revision, raw); err != nil {
 		return err
+	}
+	// A completed request is a 영상 지침 candidate (GUIDE-7). Only now, from the frozen request, and
+	// a failure is logged: the revision the owner paid for already landed.
+	if s.candidates != nil {
+		if err := s.candidates.Record(ctx, user, project, frozen.Request); err != nil {
+			slog.WarnContext(ctx, "could not record the clip revision request as a guideline candidate", "project", project, "err", err)
+		}
 	}
 	return nil
 }
