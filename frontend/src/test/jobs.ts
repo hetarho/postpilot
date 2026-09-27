@@ -6,6 +6,7 @@ import {
   GetGenerationResponseSchema,
   StartGenerationResponseSchema,
   StartRevisionResponseSchema,
+  StartStorylineResponseSchema,
   type ProtoGenerationJob,
   contentLanguageToProto,
   type AppFailureReason,
@@ -40,6 +41,8 @@ export interface FakeJobsOptions {
   startJobId?: string
   startFails?: boolean
   starts?: FakeGenerationStart[]
+  /** Every StartStoryline, in the shape of a generation start (no target length). */
+  storylineStarts?: FakeGenerationStart[]
   revisions?: FakeRevisionStart[]
   onRead?: (job: FakeGenerationJobRow) => void
 }
@@ -100,6 +103,21 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
       reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
     })
     return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
+  })
+  router.rpc(GenerationService.method.startStoryline, (req) => {
+    options.calls?.push('StartStoryline')
+    if (options.startFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.storylineStarts?.push({
+      postSlug: req.postSlug,
+      observeModel: req.observeModel
+        ? { providerId: req.observeModel.providerId, modelId: req.observeModel.modelId }
+        : undefined,
+      writeModel: req.writeModel
+        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+        : undefined,
+      reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
+    })
+    return create(StartStorylineResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })
   router.rpc(GenerationService.method.startRevision, (req) => {
     options.calls?.push('StartRevision')

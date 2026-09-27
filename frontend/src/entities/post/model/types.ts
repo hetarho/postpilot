@@ -111,6 +111,24 @@ export interface PostDraft {
   publishedAt: string
   targetLanguage: ContentLanguage
   contentLanguage: ContentLanguage | undefined
+  /** The post's storyline, absent when it has none (POST-99). */
+  storyline?: PostStoryline
+}
+
+/** One part of a storyline: what it shows and says, and the attachment names it uses. */
+export interface PostStorylineParagraph {
+  text: string
+  files: string[]
+}
+
+/** The storyline the write or a storyline job made (POST-99). `addedFiles` are attachments the
+ *  storyline was not made with; `takenOutFiles` are ones it was made with that no paragraph holds
+ *  any more. Both are the server's reading of the attachments as they stand. */
+export interface PostStoryline {
+  paragraphs: PostStorylineParagraph[]
+  editedByHand: boolean
+  addedFiles: string[]
+  takenOutFiles: string[]
 }
 
 /** The writing brief's run options, saved together (POST-89): `targetLength` undefined is

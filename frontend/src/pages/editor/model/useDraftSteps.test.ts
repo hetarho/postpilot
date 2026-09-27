@@ -37,3 +37,14 @@ it('keeps the reader on 글 완성 when a finalized post is published', () => {
   state = draftStep(state, { type: 'status', status: 'published' })
   expect(state).toEqual({ step: 'finish', followed: 'published' })
 })
+
+// A storyline job finishing moves a draft to 글 다듬기 without a status change (POST-44).
+it('moves a draft to 글 다듬기 when a storyline arrives', () => {
+  let state = draftStepStart('draft')
+  expect(state.step).toBe('generate')
+  state = draftStep(state, { type: 'status', status: 'draft', hasStoryline: true })
+  expect(state.step).toBe('refine')
+  // The same storyline again is not a transition.
+  expect(draftStep(state, { type: 'status', status: 'draft', hasStoryline: true })).toBe(state)
+  expect(draftStepStart('draft', true).step).toBe('refine')
+})

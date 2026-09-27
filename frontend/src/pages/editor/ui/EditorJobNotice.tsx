@@ -37,19 +37,26 @@ export function EditorJobNotice({
     <FailureNotice
       failure={job.failure}
       onRetry={
-        step !== jobStep || (job.kind === 'revise' && jobView.startedStep === undefined)
+        step !== jobStep ||
+        (job.kind === 'revise' && jobView.startedStep === undefined) ||
+        // The storyline space's own jobs retry from the space (T437); until it offers the
+        // handle, a retry here would reach nothing.
+        job.kind === 'revise_storyline' ||
+        (job.kind === 'storyline' && jobStep !== 'generate')
           ? undefined
           : () =>
               job.kind === 'revise'
                 ? reviseRef.current?.start()
-                : job.kind === 'model_experiment'
-                  ? post.pendingExperimentId
-                    ? void navigate({
-                        to: '/posts/experiments/$id',
-                        params: { id: post.pendingExperimentId },
-                      })
-                    : undefined
-                  : generateRef.current?.startGeneration()
+                : job.kind === 'storyline'
+                  ? generateRef.current?.startStoryline()
+                  : job.kind === 'model_experiment'
+                    ? post.pendingExperimentId
+                      ? void navigate({
+                          to: '/posts/experiments/$id',
+                          params: { id: post.pendingExperimentId },
+                        })
+                      : undefined
+                    : generateRef.current?.startGeneration()
       }
     />
   ) : null

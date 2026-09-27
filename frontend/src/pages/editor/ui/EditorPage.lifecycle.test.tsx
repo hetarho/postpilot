@@ -260,7 +260,7 @@ describe('the editor lifecycle steps', () => {
     expect(await screen.findByRole('heading', { name: '글 다듬기' })).toBeInTheDocument()
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /옵션/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '바로 글 쓰기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
     const ways = await openFinalize(user)
@@ -282,7 +282,7 @@ describe('the editor lifecycle steps', () => {
     expect(screen.getByRole('button', { name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '생성' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '바로 글 쓰기' })).not.toBeInTheDocument()
   })
 
   // POST-44: a step with no work yet says so and offers the way to the step that produces it.
@@ -368,7 +368,7 @@ describe('the editor lifecycle steps', () => {
     await openStep(user, '글 생성')
     const generateDock = await screen.findByLabelText('글 작업')
     expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
-    expect(within(generateDock).getByRole('button', { name: '생성' })).toBeInTheDocument()
+    expect(within(generateDock).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
     expect(within(generateDock).getByRole('button', { name: /옵션/ })).toBeInTheDocument()
     expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
@@ -388,9 +388,10 @@ describe('the editor lifecycle steps', () => {
 
     const WRITE = '활성 작성 모델을 선택하세요.'
     const dock = await screen.findByLabelText('글 작업')
-    const generate = await within(dock).findByRole('button', { name: '생성' })
+    const generate = await within(dock).findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
-    expect(within(dock).getByRole('button', { name: 'A/B 비교' })).toBeEnabled()
+    expect(within(dock).getByRole('button', { name: '스토리라인 먼저' })).toBeEnabled()
+    expect(within(dock).getByRole('button', { name: '다른 방법으로 쓰기' })).toBeEnabled()
     // Nothing is written under the row, and there is no second route out of the bar.
     expect(within(dock).queryByText(WRITE)).not.toBeInTheDocument()
     expect(within(dock).queryByRole('link')).not.toBeInTheDocument()
@@ -522,8 +523,9 @@ describe('the editor status region', () => {
     })
 
     expect(await screen.findByRole('link', { name: 'A/B 결과 확인' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeDisabled())
-    expect(screen.getByRole('button', { name: 'A/B 비교' })).toBeDisabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '다른 방법으로 쓰기' })).toBeDisabled()
     expect(screen.queryByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).not.toBeInTheDocument()
     expect(screen.queryByText(/^생성:/)).not.toBeInTheDocument()
   })

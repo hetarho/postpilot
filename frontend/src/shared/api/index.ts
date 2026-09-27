@@ -226,6 +226,9 @@ export {
   StartGenerationResponseSchema,
   StartRevisionRequestSchema,
   StartRevisionResponseSchema,
+  StartStorylineResponseSchema,
+  StorylineParagraphSchema,
+  StorylineSchema,
   TemplateAnswerSchema,
   VoiceRefSchema,
 } from './gen/postpilot/v1/post_pb'
@@ -233,6 +236,7 @@ export type {
   Block,
   TemplateAnswer as ProtoTemplateAnswer,
   VoiceRef as ProtoVoiceRef,
+  Storyline as ProtoStoryline,
   GenerationJob as ProtoGenerationJob,
   GetGenerationResponse,
   GetPostResponse,

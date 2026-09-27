@@ -2,6 +2,8 @@ export * from './config'
 export type {
   GenerationOptionsSet,
   PostDraft,
+  PostStoryline,
+  PostStorylineParagraph,
   PostListItem,
   PostStatus,
   PostTemplateAnswer,

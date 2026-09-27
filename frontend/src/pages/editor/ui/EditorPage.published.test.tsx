@@ -206,8 +206,11 @@ describe('a published post', () => {
     expect(await templateField(user)).toBeDisabled()
 
     const dock = screen.getByLabelText('글 작업')
-    await waitFor(() => expect(within(dock).getByRole('button', { name: '생성' })).toBeDisabled())
-    expect(within(dock).getByRole('button', { name: 'A/B 비교' })).toBeDisabled()
+    await waitFor(() =>
+      expect(within(dock).getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled(),
+    )
+    expect(within(dock).getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
+    expect(within(dock).getByRole('button', { name: '다른 방법으로 쓰기' })).toBeDisabled()
     // ONE sentence on the whole screen, and no other reason beside any control of ①.
     expect(screen.getAllByText(LOCKED)).toHaveLength(1)
     expect(

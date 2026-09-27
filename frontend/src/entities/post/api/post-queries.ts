@@ -68,6 +68,17 @@ export function toPostDraft(post: Post): PostDraft {
     publishedAt: post.publishedAt,
     targetLanguage: requireContentLanguage(post.targetLanguage),
     contentLanguage: contentLanguageFromProto(post.contentLanguage),
+    storyline: post.storyline
+      ? {
+          paragraphs: post.storyline.paragraphs.map((paragraph) => ({
+            text: paragraph.text,
+            files: [...paragraph.files],
+          })),
+          editedByHand: post.storyline.editedByHand,
+          addedFiles: [...post.storyline.addedFiles],
+          takenOutFiles: [...post.storyline.takenOutFiles],
+        }
+      : undefined,
   }
 }
 

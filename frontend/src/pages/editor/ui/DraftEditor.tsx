@@ -100,7 +100,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
-  const { step, select: setStep } = useDraftSteps(post?.status ?? '')
+  const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
 
   // The brief widget SETS the target length and the tag count while the generate action SENDS
   // them from another layer, so the screen they both hang off owns the values.

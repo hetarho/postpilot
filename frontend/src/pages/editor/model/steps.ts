@@ -27,9 +27,13 @@ const BY_STATUS: Record<PostStatus, EditorStep> = {
 /** The step a post's status puts it in. The status IS the state — nothing new is persisted, so a
  *  reload, the list badge, and this screen cannot disagree.
  *
+ *  A draft that holds a storyline opens 글 다듬기, where the storyline is read and written from
+ *  (POST-44): the storyline job finished, and the next thing to do happens there.
+ *
  *  Falls back to the first step for a status a later plan adds: 글 생성 is the step that owns the
  *  post's own fields, so an unknown status lands somewhere usable rather than on an empty panel. */
-export function stepForStatus(status: string): EditorStep {
+export function stepForStatus(status: string, hasStoryline = false): EditorStep {
+  if (status === 'draft' && hasStoryline) return 'refine'
   return BY_STATUS[status as PostStatus] ?? 'generate'
 }
 

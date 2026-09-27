@@ -32,11 +32,14 @@ import {
   type Observation,
   type PostContent,
   PostContentSchema,
+  StorylineParagraphSchema,
+  StorylineSchema,
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
   SavePostPublishedUrlResponseSchema,
   type ProtoVoiceRef,
+  type ProtoStoryline,
   ProtoBlogField,
   VoiceRefSchema,
   contentLanguageFromProto,
@@ -174,6 +177,13 @@ export interface FakePostRow {
   /** `null` deliberately models malformed pre-migration data; learned content defaults to the
    *  migration's Korean backfill when a fixture omits the field. */
   contentLanguage?: ContentLanguage | null
+  /** The post's storyline (POST-99); omitted is none. */
+  storyline?: {
+    paragraphs: Array<{ text: string; files?: string[] }>
+    editedByHand?: boolean
+    addedFiles?: string[]
+    takenOutFiles?: string[]
+  }
 }
 
 /** One ListPosts as the fake received it (POST-90, POST-91). */
@@ -308,6 +318,7 @@ type Row = {
   publishedAt: string
   targetLanguage: ReturnType<typeof contentLanguageToProto>
   contentLanguage: ReturnType<typeof contentLanguageToProto>
+  storyline?: ProtoStoryline
 }
 
 /** A fixture's 분야. An id the catalogue does not hold is a mistake in the test, not 없음. */
@@ -471,6 +482,19 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
             : row.content
               ? contentLanguageToProto('ko')
               : 0,
+      storyline: row.storyline
+        ? create(StorylineSchema, {
+            paragraphs: row.storyline.paragraphs.map((paragraph) =>
+              create(StorylineParagraphSchema, {
+                text: paragraph.text,
+                files: paragraph.files ?? [],
+              }),
+            ),
+            editedByHand: row.storyline.editedByHand ?? false,
+            addedFiles: row.storyline.addedFiles ?? [],
+            takenOutFiles: row.storyline.takenOutFiles ?? [],
+          })
+        : undefined,
     }
   }
 

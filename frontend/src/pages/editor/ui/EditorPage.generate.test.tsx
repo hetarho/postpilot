@@ -119,6 +119,70 @@ describe('opening a post', () => {
     expect(screen.getByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
   })
 
+  // GEN-68, POST-44: 스토리라인 먼저 starts a storyline job from ①, the job names its stage, and the
+  // draft that comes back holding a storyline opens ②.
+  it('starts a storyline from ① and opens ② once the storyline lands', async () => {
+    const slug = '20260820-memo'
+    const calls: string[] = []
+    const storylineStarts: FakeGenerationStart[] = []
+    const user = userEvent.setup()
+    const draft = { slug, memo: '노포에 갔다' }
+    const withStoryline = {
+      ...draft,
+      storyline: {
+        paragraphs: [{ text: '노포에 간 이유를 보여줍니다.' }, { text: '마무리합니다.' }],
+      },
+    }
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      calls,
+      // The read on mount, the one the running job refreshes, and the one its completion refreshes.
+      posts: { posts: [draft], getSequence: [draft, draft, withStoryline] },
+      jobs: {
+        storylineStarts,
+        sequence: [
+          {
+            id: 'job-started',
+            kind: 'storyline',
+            status: 'running',
+            stage: 'storyline',
+            progressTotal: 1,
+          },
+          {
+            id: 'job-started',
+            kind: 'storyline',
+            status: 'done',
+            stage: 'storyline',
+            progressDone: 1,
+            progressTotal: 1,
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    const storyline = await screen.findByRole('button', { name: '스토리라인 먼저' })
+    await waitFor(() => expect(storyline).toBeEnabled())
+    await user.click(storyline)
+    await waitFor(() => expect(calls).toContain('StartStoryline'))
+    expect(storylineStarts[0]).toMatchObject({
+      postSlug: slug,
+      writeModel: { providerId: 'openrouter', modelId: 'writer' },
+    })
+    expect(calls).not.toContain('StartGeneration')
+    await waitFor(
+      () =>
+        expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        ),
+      { timeout: 4_000 },
+    )
+  })
+
   it('keeps the empty-profile warning non-blocking for zero-photo generation', async () => {
     renderAppAt('/posts/20260820-memo', {
       user: USER,
@@ -141,7 +205,7 @@ describe('opening a post', () => {
 
     const user = userEvent.setup()
     expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('mt-auto', 'h-6')
 
     const brief = await openBrief(user)
@@ -171,7 +235,7 @@ describe('opening a post', () => {
       },
     })
 
-    const generate = await screen.findByRole('button', { name: '생성' })
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
     await user.click(generate)
@@ -214,7 +278,7 @@ describe('opening a post', () => {
       },
     })
 
-    const generate = await screen.findByRole('button', { name: '생성' })
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     // An unsaved edit, so the draft flush on the start path is a real request whose ORDER
     // against the picker is observable.
@@ -232,7 +296,7 @@ describe('opening a post', () => {
 
     // Reopened, one photo checked, confirmed: the frozen set is exactly that photo, and the
     // draft save now sits on the confirm path, before the RPC that consumes it.
-    await user.click(screen.getByRole('button', { name: '생성' }))
+    await user.click(screen.getByRole('button', { name: '바로 글 쓰기' }))
     await user.click(await screen.findByRole('checkbox', { name: 'IMG_2.jpg 다시 관찰' }))
     await user.click(screen.getByRole('button', { name: '이대로 시작' }))
     await waitFor(() => expect(calls).toContain('StartGeneration'))
@@ -274,9 +338,12 @@ describe('opening a post', () => {
     await user.type(within(brief).getByLabelText('목표 글자 수'), '750')
     await user.click(within(brief).getByRole('button', { name: '저장' }))
     await waitFor(() => expect(calls).toContain('SavePostGenerationOptions'))
-    const compare = screen.getByRole('button', { name: 'A/B 비교' })
-    await waitFor(() => expect(compare).toBeEnabled())
-    await user.click(compare)
+    const other = screen.getByRole('button', { name: '다른 방법으로 쓰기' })
+    await waitFor(() => expect(other).toBeEnabled())
+    await user.click(other)
+    await user.click(
+      within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'A/B 비교' }),
+    )
     await waitFor(() => expect(calls).toContain('StartWriteExperiment'))
     expect(starts).toEqual([
       {

@@ -271,7 +271,7 @@ describe('the post voice', () => {
     // The refusal is said ONCE, by the surface that carries the way out: 글 생성's tombstone
     // warning offers 복원, so the dock only disables the action rather than re-writing the reason
     // under it (POST-48).
-    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeDisabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
     expect(
       screen.queryByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
     ).not.toBeInTheDocument()
@@ -329,7 +329,7 @@ describe('the post voice', () => {
       ]),
     )
     await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
-    await waitFor(() => expect(screen.getByRole('button', { name: '생성' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
   })
 })
 

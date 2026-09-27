@@ -144,3 +144,16 @@ choice would be expensive to undo are listed at the end.
   that resends the stored value cannot flip the mark.
 - **"Busy" means any active job on the post** (not only content-writing ones), since a storyline job
   would overwrite the edit.
+
+## T435 — ①'s 스토리라인 먼저 · 바로 글 쓰기
+
+- **The ▾ trigger is disabled whenever its only action (A/B 비교) is refused for a reason no brief
+  field fixes** — published, a running job, a deleted voice, a pending A/B result — exactly like
+  the old A/B button. A setup refusal leaves it live. `ActionMenu` supports disabled rows with a
+  visible reason, but this menu does not use it yet.
+- **스토리라인 먼저 uses 바로 글 쓰기's checks and, when refused for setup, opens the brief on
+  바로 글 쓰기's fields** (write model, observe model), since it runs on the same models.
+- **Which step owns a storyline job the editor did not start:** ① while the post has no storyline,
+  ② once it has one (다시 만들기). A failed job owned by ② offers no retry until T437.
+- **Layout:** phone row 3:7 = 스토리라인 먼저 | [바로 글 쓰기 (fills) + ▾]; from `sm:` up the three sit
+  right-aligned at natural width. The ▾ is icon-only, named 다른 방법으로 쓰기.

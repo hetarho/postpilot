@@ -20,3 +20,10 @@ describe('stepForStatus', () => {
     expect(editorSteps().map((step) => step.label)).toEqual(['글 생성', '글 다듬기', '글 완성'])
   })
 })
+
+// POST-44: a draft that holds a storyline opens 글 다듬기; any other status ignores it.
+it('opens a draft that holds a storyline on 글 다듬기', () => {
+  expect(stepForStatus('draft', true)).toBe('refine')
+  expect(stepForStatus('draft', false)).toBe('generate')
+  expect(stepForStatus('finalized', true)).toBe('finish')
+})

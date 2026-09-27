@@ -106,6 +106,8 @@ export function progressLabel(
       return i18next.t('generation.observing', { ns: 'posts' })
     case 'write':
       return i18next.t('generation.writing', { ns: 'posts' })
+    case 'storyline':
+      return i18next.t('generation.writingStoryline', { ns: 'posts' })
     case 'analyze':
       return i18next.t('generation.analyzing', { ns: 'posts' })
     case 'compare_write':
