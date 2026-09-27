@@ -18,25 +18,25 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 12 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-5✎ ARCH-31✎ | 0 |
-| AUTH | 9 | 8 | AUTH-17✎ AUTH-36✎ | 0 |
+| ARCH | 12 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
+| AUTH | 9 | 9 | - | 0 |
 | QUOTA | 20 | 20 | - | 0 |
-| POST | 17 | 16 | POST-20✎ POST-26✎ POST-27✎ POST-29✎ POST-39✎ POST-41✎ POST-61✎ POST-73✎ POST-75✎ flow✎ constraints✎ | 0 |
-| VOICE | 4 | 3 | VOICE-13✎ VOICE-38✎ VOICE-39✎ VOICE-40✎ VOICE-42✎ VOICE-46✎ VOICE-54✎ constraints✎ | 1 |
-| GEN | 14 | 13 | GEN-1✎ GEN-3- GEN-5✎ GEN-23✎ GEN-25✎ GEN-26✎ GEN-30✎ GEN-37✎ GEN-38✎ GEN-40✎ flow✎ constraints✎ | 0 |
-| MODEL | 18 | 17 | MODEL-44✎ constraints✎ MODEL-28✎ MODEL-34✎ MODEL-37✎ MODEL-38✎ MODEL-45✎ MODEL-62✎ MODEL-63✎ | 0 |
-| TMPL | 12 | 11 | TMPL-6✎ TMPL-10✎ TMPL-17✎ TMPL-19✎ TMPL-20✎ TMPL-21✎ TMPL-22✎ TMPL-23- TMPL-24✎ TMPL-26✎ TMPL-27✎ TMPL-30✎ TMPL-33✎ TMPL-35✎ TMPL-37✎ TMPL-49✎ constraints✎ | 1 |
-| GUIDE | 8 | 7 | constraints✎ | 0 |
-| EXPORT | 6 | 5 | EXPORT-4- | 0 |
-| LANG | 6 | 5 | LANG-6✎ LANG-7✎ | 0 |
-| THEME | 19 | 15 | THEME-19✎ THEME-38✎ THEME-26✎ THEME-6✎ THEME-29✎ constraints✎ | 0 |
-| MKT | 7 | 6 | MKT-9✎ | 0 |
-| VIDEO | 4 | 3 | VIDEO-6✎ | 0 |
-| CLIP | 46 | 40 | CLIP-13✎ CLIP-163+ CLIP-3✎ CLIP-42✎ CLIP-111✎ CLIP-116✎ CLIP-129✎ CLIP-146✎ CLIP-70- CLIP-101- CLIP-114- CLIP-140- CLIP-144- constraints✎ | 2 |
-| CDS | 27 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ CDS-15✎ CDS-31✎ CDS-60✎ constraints✎ | 1 |
+| POST | 18 | 18 | - | 0 |
+| VOICE | 4 | 4 | - | 1 |
+| GEN | 14 | 14 | - | 0 |
+| MODEL | 18 | 18 | - | 0 |
+| TMPL | 12 | 12 | - | 1 |
+| GUIDE | 8 | 8 | - | 0 |
+| EXPORT | 6 | 6 | - | 0 |
+| LANG | 6 | 6 | - | 0 |
+| THEME | 19 | 15 | THEME-19✎ | 0 |
+| MKT | 7 | 7 | - | 0 |
+| VIDEO | 4 | 4 | - | 0 |
+| CLIP | 46 | 40 | CLIP-13✎ CLIP-163+ | 2 |
+| CDS | 27 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 4 | 3 | MEM-7✎ MEM-15✎ MEM-16✎ MEM-19✎ flow✎ constraints✎ | 2 |
-| QUAL | 5 | 5 | - | 0 |
+| MEM | 4 | 4 | - | 2 |
+| QUAL | 6 | 6 | - | 0 |
 | GIFT | 2 | 2 | - | 0 |
 
 ## review
@@ -50,18 +50,34 @@
 | publishing-260922 | converted@260922 |
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
-| conformance-all-260927 | open@260927 |
+| conformance-all-260927 | converted@260927 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T413 | The legacy clip template path, category presets, chips, hook, CTA and fact minimum are gone | CLIP CDS | - | todo |
+| T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
+| T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
+| T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | todo |
+| T417 | Generation's preconditions, voice re-check and shutdown order match GEN | GEN | - | todo |
+| T418 | Experiments: voice deletion, retention, leaderboard scoring, retry and adoption follow MODEL | MODEL VOICE | T417 | todo |
+| T419 | The model lab and leaderboard screens follow MODEL-31, MODEL-62/63 and MODEL-65 | MODEL | T418 | todo |
+| T420 | Voice measurement, overrides and publication are correct | VOICE | - | todo |
+| T421 | Voice analysis, projection and comparisons carry what VOICE decides | VOICE | T420 | todo |
+| T422 | A resolved extraction job keeps neither the post body nor the raw candidates | MEM | - | todo |
+| T423 | Finalize refuses missing photos and the post target length is 100–10,000 on the server | POST | - | todo |
+| T424 | Place/link template slots and every slot token are gone | TMPL GEN EXPORT | - | todo |
+| T425 | Template grammar errors, attributes, ranges and builder copy follow TMPL | TMPL | T424 | todo |
+| T426 | ②'s M2 minimum, the guideline queue notice and the public copy are right | QUAL GUIDE MKT | - | todo |
+| T427 | CI runs gofmt, plan mapping fails closed, catalog tokens resolve, refunds are labelled, VerifyEmail is throttled | ARCH BILL AUTH THEME | - | todo |
 
 ## next
-- review-code clip: code still implementing retired CDS/CLIP decisions (see T411 result)
+- implement-task T413 → T414 (clip legacy path), then the P1-bearing tasks T415 T416 T417 T418 T420 T422 T423 T424 T426, then T419 T421 T425 T427 (review/conformance-all-260927)
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 create-task review/conformance-all-260927 done (hc): 70 code findings → T413–T427; the SSOT side (CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE VIDEO QUAL) consumed into them or no-op (docs caught up with the code); ARCH CLIP CDS THEME keep their older pending
 - 260927 update-ssot conformance done (hc): CLIP r46 CDS r27 GEN r14 MEM r4 POST r17 EXPORT r6 LANG r6 TMPL r12 GUIDE r8 MKT r7 THEME r19 ARCH r12 AUTH r9 MODEL r18 VOICE r4 VIDEO r4 carry the SSOT side of review/conformance-all-260927 (55 findings closed as SSOT-follows-code; 69 code findings open; F2 F55 await the owner)
 - 260927 update-ssot GEN TMPL POST start (sp): photos grouped into spaces after observation, owner reviews the groups before writing, the write builds the day's story first, template photo positions follow the confirmed spaces instead of attachment order
 - 260927 update-ssot conformance start (hc): SSOT side of review/conformance-all-260927 across CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE; F2 and F55 await the owner
@@ -81,4 +97,3 @@
 - 260926 create-task QUAL GEN GUIDE POST done (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 → T407 (FE marks + preset row) → T408 (frozen phrases, candidates, post.proto, drop column) → T409 (preset, guideline.proto, drop tables) → T410 (phrase batch, naversearch, config, drop table); T411/T412 cite current spec in BE/FE code; T400–T405 restored to tasks/done after deletion at done
 - 260926 create-task QUAL GEN GUIDE POST start (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 (분야 phrase feature removal) + stale spec citations in code
 - 260926 T406 claimed (rp)
-- 260926 create-task T406 (rp): the owner asked for every preview to draw the new presets; the TS port and CompositionDesignFrame drew the four defaults only and the template preview had no preset choice

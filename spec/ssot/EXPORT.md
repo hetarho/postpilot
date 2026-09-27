@@ -36,4 +36,4 @@
 - ops: the production bucket's CORS rule must allow browser `GET` (and PUT/HEAD for uploads) from the FE origin; the deploy asserts the preflight (DEPLOY.md §5)
 
 ## chg
-- r6 260927 EXPORT-4- the unfilled-slot bracketed placeholder in all four formats, its remaining-count note and its no-slot byte identity removed (no slot marker reaches content)
+-

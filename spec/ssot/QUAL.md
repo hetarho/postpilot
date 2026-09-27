@@ -1,5 +1,5 @@
 # QUAL published-post measurement
-> r5 | Measure what code can count about a post while it can still be changed and across the account's published Naver posts, and offer one rule per finding.
+> r6 | Measure what code can count about a post while it can still be changed and across the account's published Naver posts, and offer one rule per finding.
 
 ## decisions
 - QUAL-1 [o] QUAL owns the one observation the product makes outside a single post: how an account's published posts look next to each other
@@ -9,7 +9,7 @@
 - QUAL-5 [o] four metrics ship, each a pass/warn badge with its own minimum published count, never a weighted score ← no published weighting exists for any of them
 - QUAL-6 [o] every band is the product's own and every screen carrying one says so ← the only quantitative rule Naver publishes is that a keyword repeated twice or more in a title risks a penalty
 - QUAL-7 [o] M1 제목 도배율 is an account metric with no per-post value: over the content titles of the account's last 100 발행됨 posts, the share containing the account's most frequent noun, where the candidate nouns are those the write pass returned for those posts (→GEN-55), a Korean title contains a noun when one of its 어절 starts with it, an English one when a word equals it case-insensitively, and the most frequent noun is the one contained in the most titles; minimum 10 published posts ← a saturation over one title is not a quantity, and matching against the text keeps a hand-edited title measurable
-- QUAL-8 [o] M2 글 간 고정 문구: per post, the share of its characters standing inside a run of 8 or more consecutive 어절 that also appears verbatim in one of the account's last 20 발행됨 posts; the account value is the median over those posts; minimum 3
+- QUAL-8 [o] M2 글 간 고정 문구: per post, the share of its characters standing inside a run of 8 or more consecutive 어절 that also appears verbatim in one of the account's 20 most recent 발행됨 posts other than itself; the account value is the median over the account's last 20 발행됨 posts; minimum 3
 - QUAL-9 [o] M3 글 안 반복과 제목 관련성: per post, the share of body noun occurrences taken by its most frequent noun, counting the post's returned nouns by the containment rule of QUAL-7, and the share of those nouns still contained in the title that the body also contains; a post with no returned nouns has no M3 (→QUAL-40); the account value is each median over the last 20; minimum 1
 - QUAL-10 [o] M4 분량·구성: per post the character count, photo count, distinct `Block` types used and average sentence length (in characters for Korean, in words for English), the photo count being IMAGE blocks that carry a file; only the count of distinct block types carries a band; minimum 3 published posts ← Naver publishes no target length, so the other three are context shown beside the badge rather than something to pass or fail
 - QUAL-11 [o] the bands: M1 warns above 30%, M2 above a 10% median, M3 above an 8% repetition share or below 50% title relevance, and M4 at a median of 2 or fewer distinct block types

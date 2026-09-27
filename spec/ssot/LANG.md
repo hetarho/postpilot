@@ -42,4 +42,4 @@
 - tests that pin it: locale precedence including malformed and denied storage · primary-subtag matching and URL/session stability · pre-paint `lang` and metadata · catalog key and placeholder parity · enum ↔ tag ↔ SQL round trips rejecting unknown values · target changes preserving content byte-for-byte · observation request equality across targets · exact same-language and portable projection snapshots · a learning mismatch creating zero events, jobs or provider calls · every reason mapping to both catalogs · unknown or reason-less failures never rendering raw detail as the sole message · UI locale choosing defaults only for a new post
 
 ## chg
-- r6 260927 LANG-6✎ the locale is a `Menu` in every shell→below `lg` the authenticated account panel draws it as a `SegmentedControl` in its rows layout, the `Menu` everywhere else · LANG-7✎ every catalog under `resources/{ko,en}`, no `memories` namespace→`memories` listed; only common, auth, nav, errors, marketing under `resources/{ko,en}`, the rest assembled from slice fragments (→ARCH-16)
+-

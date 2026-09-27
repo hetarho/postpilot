@@ -47,4 +47,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r8 260927 constraints✎ migrations 0014, 0023→0014, 0023, 0078 (`guideline_fields`)
+-

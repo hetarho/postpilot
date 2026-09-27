@@ -44,4 +44,4 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
-- r4 260927 MEM-7✎ ties by most recent use→by most recent sighting (`last_seen_at`, advanced by re-approval) then creation; key terms unqualified→a first generation carries no observation terms · MEM-15✎ extraction payload retention unstated→the extraction job's payload (frozen source, raw candidate list) cleared once its candidates are resolved · MEM-16✎ never the raw candidate list→that includes the extraction job's payload once resolved · MEM-19✎ resolved once at enqueue→resolved at enqueue before the run observes, so a first generation has no observation terms · flow✎ tie by recency→tie by last sighting then creation · constraints✎ bounds published to the client, frontend hardcodes none→backend env with typed defaults, `entities/memory/config` mirrors two via `VITE_MEMORY_*` with the same defaults (→ARCH-21)
+-

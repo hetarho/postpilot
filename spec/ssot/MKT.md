@@ -27,4 +27,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
-- r7 260927 MKT-9✎ one head writer with no exception→one head writer except THEME-5's theme-color and color-scheme tags, which the theme provider writes
+-

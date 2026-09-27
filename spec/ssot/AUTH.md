@@ -66,4 +66,4 @@
 - tests that pin it: dummy-path timing test (AUTH-9) · 401 on every non-public procedure · exact cookie attributes · replayed cookie after Logout is 401 · redirect validation · guard and reverse-guard behaviour
 
 ## chg
-- r9 260927 AUTH-17✎ public set Login, Logout, Ping and the visitor auth procedures→+`VoucherService/GetVoucher` (GIFT-8) · AUTH-36✎ throttled writes login, signup, resend, reset request, reset→+`SignInWithGoogle`
+-
