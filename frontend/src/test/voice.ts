@@ -64,6 +64,8 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 export interface FakeVoiceOptions {
   updatedAt?: string
   activeJobId?: string
+  /** A failed seed the server keeps on the unversioned profile (VOICE-19). */
+  seedFailure?: { reason: string; params?: Record<string, string> }
   /** Returned from the second profile read, simulating a completed analysis. */
   /** The analysis the profile publishes on the read AFTER the first one — the shape a resumed
    *  analysis has when its job is already done. It lands in the structured profile's lexical
@@ -201,6 +203,14 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     create(VoiceProfileSchema, {
       updatedAt: options.updatedAt ?? '',
       activeJobId: options.activeJobId ?? '',
+      ...(options.seedFailure
+        ? {
+            seedFailure: {
+              reason: options.seedFailure.reason,
+              params: options.seedFailure.params ?? {},
+            },
+          }
+        : {}),
       samples: (options.samples ?? []).map((sample) =>
         create(VoiceSampleSchema, {
           ...sample,

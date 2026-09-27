@@ -121,7 +121,7 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
 	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable}, generationVoiceError(err)
+	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
 }
 
 // generationVersionSamples adapts at the boundary the way generationProfiles does. The wire
@@ -130,12 +130,12 @@ func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID
 // decodes -- one schema, defined in the proto, rather than a second JSON shape maintained here.
 type generationVersionSamples struct{ service *voice.Service }
 
-func (a generationVersionSamples) RecordVersionSample(ctx context.Context, userID, voiceID string, content generation.PostContent) error {
+func (a generationVersionSamples) RecordVersionSample(ctx context.Context, userID, voiceID string, version int64, content generation.PostContent) error {
 	encoded, err := protojson.Marshal(generationContentProto(content))
 	if err != nil {
 		return fmt.Errorf("encode voice version sample: %w", err)
 	}
-	return generationVoiceError(a.service.RecordVersionSample(ctx, userID, voiceID, string(encoded)))
+	return generationVoiceError(a.service.RecordVersionSample(ctx, userID, voiceID, version, string(encoded)))
 }
 
 func generationContentProto(content generation.PostContent) *postpilotv1.PostContent {

@@ -222,3 +222,27 @@ func TestLatestForReadsTheNewestJobOfASubjectWhateverItsStatus(t *testing.T) {
 		t.Fatalf("another account read the job: %+v, %v", foreign, err)
 	}
 }
+
+// A voice's most recent job of one kind, whatever became of it: how a failed seed keeps being
+// reported after it ended (VOICE-19). Another kind's newer job does not answer for it.
+func TestLatestForAVoiceReadsTheNewestJobOfOneKind(t *testing.T) {
+	store, _ := subjectHarness(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	alice := job.Subject{Dimension: voiceSubject, ID: "voice-alice"}
+	insert(t, store, job.Job{ID: "seed", Kind: "seed_voice", UserID: "alice", Subjects: []job.Subject{alice}})
+	if _, err := store.PickNextQueued(ctx, now); err != nil {
+		t.Fatalf("pick: %v", err)
+	}
+	if err := store.Finish(ctx, "seed", job.StatusFailed, &job.Failure{Reason: "MODEL_UNAVAILABLE"}, now); err != nil {
+		t.Fatalf("finish: %v", err)
+	}
+	insert(t, store, job.Job{ID: "analysis", Kind: "analyze_voice", UserID: "alice", Subjects: []job.Subject{alice}, CreatedAt: now.Add(time.Second)})
+	latest, err := store.LatestFor(ctx, alice, job.Filter{Kind: "seed_voice"})
+	if err != nil || latest == nil || latest.ID != "seed" || latest.Status != job.StatusFailed || latest.Failure == nil || latest.Failure.Reason != "MODEL_UNAVAILABLE" {
+		t.Fatalf("latest seed = %+v, %v", latest, err)
+	}
+	if none, err := store.LatestFor(ctx, job.Subject{Dimension: voiceSubject, ID: "voice-bob"}, job.Filter{Kind: "seed_voice"}); err != nil || none != nil {
+		t.Fatalf("another voice's seed = %+v, %v", none, err)
+	}
+}

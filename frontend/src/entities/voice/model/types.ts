@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import type { ContentLanguage, PostContent } from '@/shared/api'
+import type { AppFailure, ContentLanguage, PostContent } from '@/shared/api'
 
 export interface VoiceSample {
   id: string
@@ -138,6 +138,9 @@ export interface VoiceProfile {
   structured: StructuredVoiceProfile
   finalizedSourceCount: number
   canValidate: boolean
+  /** Why the seeding a described creation started failed, while the voice has no published
+   *  version yet (VOICE-19). Stays after the job ended and after a reload. */
+  seedFailure?: AppFailure
 }
 export interface VoiceVersion {
   version: bigint

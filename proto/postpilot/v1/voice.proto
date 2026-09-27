@@ -4,6 +4,7 @@ package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/language.proto";
+import "postpilot/v1/error.proto";
 // A version's generation snapshot IS a post content -- the raw AI output of the post that
 // version produced -- so it is typed as the message the client already decodes rather than as
 // a second, voice-flavoured copy of the same shape.
@@ -142,6 +143,9 @@ message VoiceProfile {
   StructuredVoiceProfile structured = 6;
   int32 finalized_source_count = 8;
   bool can_validate = 9;
+  // Why the seeding a described creation started failed, while the voice still has no published
+  // version; absent otherwise (VOICE-19).
+  Failure seed_failure = 11;
 }
 
 message VoiceProfileVersion {

@@ -28,3 +28,15 @@ func TestLearningAndValidationProjectionsHideFrozenInputsModelIdentityAndLegacyE
 		}
 	}
 }
+
+// VOICE-42: the rule-on side is blind until the decision and revealed with it.
+func TestTheRuleOnSideIsRevealedWithTheDecision(t *testing.T) {
+	undecided := toProtoComparison(voice.RuleComparison{ID: "comparison", RuleOnSide: "right", CreatedAt: time.Now()})
+	if undecided.GetRuleOnSide() != "" {
+		t.Fatalf("an undecided comparison revealed its rule-on side: %q", undecided.GetRuleOnSide())
+	}
+	decided := toProtoComparison(voice.RuleComparison{ID: "comparison", RuleOnSide: "right", ChosenSide: "left", CreatedAt: time.Now()})
+	if decided.GetRuleOnSide() != "right" || decided.GetChosenSide() != "left" {
+		t.Fatalf("decided comparison = rule on %q, chosen %q", decided.GetRuleOnSide(), decided.GetChosenSide())
+	}
+}

@@ -48,20 +48,11 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		corpus := personalizationCorpus(samples, sources)
 		attempted = true
 		progress("analyze", 0, 1)
-		response, err := s.models.Complete(ctx, ref, llm.Request{
-			System:   analysisPromptForLanguage(active.SourceLanguage),
-			Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus)}}},
-			// Named so the registry can resolve the operator's style-analysis override. No
-			// Reasoning is set: analysis sends no `reasoning` key by default, which is the
-			// model's own adaptive behavior and the most permissive setting — not "off".
-			Stage: llm.StageNameAnalyze,
-		})
+		// The typed analysis, with its schema: an import-only voice gets its axes and structure
+		// habits from this call, since no learning ever runs for it (VOICE-27).
+		qualitative, err := s.completeAnalysis(ctx, ref, corpus, active.SourceLanguage)
 		if err != nil {
 			return err
-		}
-		styleguide := strings.TrimSpace(response.Text)
-		if !hasRequiredAnalysisShapeForLanguage(styleguide, active.SourceLanguage) {
-			return fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
 		}
 		// The guard, and only the guard: it used to be a write of `styleguide` that happened
 		// to be conditional. False means a sample changed while the provider was working, so
@@ -72,7 +63,10 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		}
 		if stored {
 			measured := MeasuredProfileForLanguage(corpus, active.SourceLanguage, s.now)
-			measured.Lexical.Description = VoiceValue{Value: styleguide, Source: SourceAnalyzed}
+			mergeQualitativeProfile(&measured, qualitative, active.SourceLanguage, analyzedValue)
+			if err := validateAxes(measured.Axes); err != nil {
+				return err
+			}
 			measured.SourceCount = len(samples) + len(sources)
 			measured.Sources = sources
 			measured.Empty = false

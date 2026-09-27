@@ -147,6 +147,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Memories = []string{"매운 음식을 못 먹는다"}
 	fixture.post.Observations = fixture.observations
 	fixture.post.WriteNativeEffort = true
+	// The profile version rides the snapshot so an applied winner files under it (VOICE-29).
+	fixture.profile.Version = 7
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
 	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200}}
 	fixture.post.Content.Blocks = []Block{{

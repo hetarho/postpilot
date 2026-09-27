@@ -16,6 +16,7 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 		return WriteAnswer{}, fmt.Errorf("load voice profile: %w", err)
 	}
 	answer, _, err := s.writeCandidate(ctx, post, profile, observations, model)
+	answer.ProfileVersion = profile.Version
 	return answer, err
 }
 

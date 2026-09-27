@@ -2,6 +2,7 @@ package voice_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -52,10 +53,26 @@ func (f *changingCorpusModels) Complete(_ context.Context, _ llm.ModelRef, reque
 	if call == 0 {
 		close(f.started)
 		<-f.release
-		return llm.Response{Text: "## 1. 종결어미 분포\nold\n## 8. never uses\nold"}, nil
+		return llm.Response{Text: analysisAnswer("## 1. 종결어미 분포\nold\n## 8. never uses\nold")}, nil
 	}
-	return llm.Response{Text: "## 1. 종결어미 분포\nnew\n## 8. never uses\nnew"}, nil
+	return llm.Response{Text: analysisAnswer("## 1. 종결어미 분포\nnew\n## 8. never uses\nnew")}, nil
 }
+
+// analysisAnswer is the analysis call's JSON answer around a nine-section style guide, which
+// is the profile's lexical description (VOICE-25, VOICE-27).
+func analysisAnswer(guide string) string {
+	encoded, err := json.Marshal(map[string]any{
+		"lexical_description": guide, "base_register": "", "connective_style": "", "intro_pattern": "",
+		"closing_pattern": "", "heading_habit": "", "list_habit": "", "emoji_use": "", "axes": map[string]int{},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
+
+// A nine-section guide in the shape the analysis refuses anything short of.
+const koreanGuide = "1. 종결어미 분포: 해요체\n8. 절대 사용하지 않는 표현 (never uses): 과장"
 
 func (f *fakeModels) AnalyzeModel(_ context.Context, userID string) (llm.ModelRef, bool, error) {
 	ref, ok := f.selected[userID]
@@ -88,6 +105,8 @@ type fakeJobs struct {
 	enqueueCalls          []voice.AnalysisJobRequest
 	personalizationCalls  []voice.PersonalizationJobRequest
 	personalizationActive map[string]bool
+	// latest is each voice's most recent job of a kind, keyed voiceID+"/"+kind.
+	latest map[string]*voice.FinishedJob
 }
 
 func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) (string, error) {
@@ -99,6 +118,10 @@ func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) 
 
 func (f *fakeJobs) ActiveForVoiceKind(_ context.Context, voiceID, _ string) (*voice.ActiveJob, error) {
 	return f.active[voiceID], nil
+}
+
+func (f *fakeJobs) LatestForVoiceKind(_ context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
+	return f.latest[voiceID+"/"+kind], nil
 }
 
 func (f *fakeJobs) HasActiveForVoice(_ context.Context, voiceID string) (bool, error) {
@@ -692,7 +715,7 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
-	h.models.response = "## 평균 문장 길이\n짧음"
+	h.models.response = analysisAnswer("## 평균 문장 길이\n짧음")
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err == nil || !strings.Contains(err.Error(), "종결어미") {
 		t.Fatalf("missing ending section error = %v", err)
 	}
@@ -701,7 +724,8 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 		t.Fatalf("invalid analysis mutated profile: %+v", profile)
 	}
 
-	h.models.response = "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	guide := "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	h.models.response = analysisAnswer(guide)
 	var progress [][3]any
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(stage string, done, total int) {
 		progress = append(progress, [3]any{stage, done, total})
@@ -711,7 +735,7 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 	profile, _ = h.store.GetProfile(context.Background(), "alice", alice)
 	// The analysis text lands in the published structured version's lexical description, once
 	// (VOICE-25); the "save as rule" text is never touched by an analysis.
-	if profile.Structured.Lexical.Description.Value != h.models.response || profile.Rules != "keep this rule" || len(progress) != 2 {
+	if profile.Structured.Lexical.Description.Value != guide || profile.Rules != "keep this rule" || len(progress) != 2 {
 		t.Fatalf("successful analysis = profile=%+v progress=%+v", profile, progress)
 	}
 	if !strings.Contains(h.models.request.Messages[0].Parts[0].Text, longSample("글")) {
@@ -726,7 +750,7 @@ func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
 	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
-	h.models.response = "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	h.models.response = analysisAnswer("## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장")
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -861,6 +885,18 @@ func (a queueJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 		return nil, err
 	}
 	return &voice.ActiveJob{ID: found.ID}, nil
+}
+
+func (a queueJobs) LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
+	found, err := a.queue.LatestFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
+	if err != nil || found == nil {
+		return nil, err
+	}
+	finished := &voice.FinishedJob{ID: found.ID, Status: found.Status}
+	if found.Failure != nil {
+		finished.Failure = &voice.Failure{Reason: found.Failure.Reason, Params: found.Failure.Params}
+	}
+	return finished, nil
 }
 
 func (a queueJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {

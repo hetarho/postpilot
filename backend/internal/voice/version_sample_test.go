@@ -30,12 +30,12 @@ func TestVersionSampleReplacesRatherThanAccumulates(t *testing.T) {
 	alice := h.voice("alice")
 	head := publishHead(t, h, "alice", alice, "첫 분석")
 
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, `{"title":"첫 글"}`); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, head, `{"title":"첫 글"}`); err != nil {
 		t.Fatal(err)
 	}
 	// A second generation under the SAME head replaces the snapshot: a version carries at most
 	// one, and it is the most recent thing that version produced.
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, `{"title":"둘째 글"}`); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, head, `{"title":"둘째 글"}`); err != nil {
 		t.Fatal(err)
 	}
 	sample, err := h.svc.VersionSample(ctx, "alice", alice, head)
@@ -51,7 +51,7 @@ func TestVersionSampleReplacesRatherThanAccumulates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, `{"title":"셋째 글"}`); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, next.Version, `{"title":"셋째 글"}`); err != nil {
 		t.Fatal(err)
 	}
 	if old, err := h.svc.VersionSample(ctx, "alice", alice, head); err != nil || old.Content != `{"title":"둘째 글"}` {
@@ -70,7 +70,7 @@ func TestVersionSampleSurvivesItsSourcePost(t *testing.T) {
 	alice := h.voice("alice")
 	head := publishHead(t, h, "alice", alice, "분석")
 	insertPost(t, h, "gone", "alice", alice, "지워질 글", time.Now().UTC().Format(time.RFC3339Nano))
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, `{"title":"지워질 글"}`); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, head, `{"title":"지워질 글"}`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.db.Writer.Exec("DELETE FROM posts WHERE slug='gone'"); err != nil {
@@ -94,10 +94,13 @@ func TestVersionSampleIsPrivateToOneVoiceAndOneAccount(t *testing.T) {
 	otherHead := publishHead(t, h, "alice", other.ID, "다른 분석")
 	bob := h.voice("bob")
 	bobHead := publishHead(t, h, "bob", bob, "밥 분석")
-	for _, row := range []struct{ user, voiceID, content string }{
-		{"alice", alice, "ALICE_ONE"}, {"alice", other.ID, "ALICE_TWO"}, {"bob", bob, "BOB"},
+	for _, row := range []struct {
+		user, voiceID, content string
+		version                int64
+	}{
+		{"alice", alice, "ALICE_ONE", aliceHead}, {"alice", other.ID, "ALICE_TWO", otherHead}, {"bob", bob, "BOB", bobHead},
 	} {
-		if err := h.svc.RecordVersionSample(ctx, row.user, row.voiceID, row.content); err != nil {
+		if err := h.svc.RecordVersionSample(ctx, row.user, row.voiceID, row.version, row.content); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -112,7 +115,7 @@ func TestVersionSampleIsPrivateToOneVoiceAndOneAccount(t *testing.T) {
 	if _, err := h.svc.VersionSample(ctx, "bob", alice, aliceHead); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("cross-account snapshot read = %v", err)
 	}
-	if err := h.svc.RecordVersionSample(ctx, "bob", alice, "HIJACK"); !errors.Is(err, voice.ErrVoiceNotFound) {
+	if err := h.svc.RecordVersionSample(ctx, "bob", alice, aliceHead, "HIJACK"); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("cross-account snapshot write = %v", err)
 	}
 	if got, err := h.svc.VersionSample(ctx, "bob", bob, bobHead); err != nil || got.Content != "BOB" {
@@ -128,8 +131,8 @@ func TestVersionSampleNeedsAPublishedVersionAndAnActiveVoice(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	alice := h.voice("alice")
-	// No head yet: recording invents no version 0.
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, "TOO_EARLY"); err != nil {
+	// A prompt built from no published version files nothing: there is no version 0.
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, 0, "TOO_EARLY"); err != nil {
 		t.Fatal(err)
 	}
 	var rows int
@@ -137,7 +140,7 @@ func TestVersionSampleNeedsAPublishedVersionAndAnActiveVoice(t *testing.T) {
 		t.Fatalf("recorded a snapshot with no head: rows=%d err=%v", rows, err)
 	}
 	head := publishHead(t, h, "alice", alice, "분석")
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, "KEEP"); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, head, "KEEP"); err != nil {
 		t.Fatal(err)
 	}
 	// A deleted voice takes no new writing, but its record stays READABLE like the rest of its
@@ -147,13 +150,13 @@ func TestVersionSampleNeedsAPublishedVersionAndAnActiveVoice(t *testing.T) {
 		t.Fatal(err)
 	}
 	goneHead := publishHead(t, h, "alice", gone.ID, "분석")
-	if err := h.svc.RecordVersionSample(ctx, "alice", gone.ID, "BEFORE_DELETE"); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", gone.ID, goneHead, "BEFORE_DELETE"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.svc.DeleteVoice(ctx, "alice", gone.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.svc.RecordVersionSample(ctx, "alice", gone.ID, "AFTER_DELETE"); !errors.Is(err, voice.ErrVoiceDeleted) {
+	if err := h.svc.RecordVersionSample(ctx, "alice", gone.ID, goneHead, "AFTER_DELETE"); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("recorded into a deleted voice = %v", err)
 	}
 	if got, err := h.svc.VersionSample(ctx, "alice", gone.ID, goneHead); err != nil || got.Content != "BEFORE_DELETE" {
@@ -163,11 +166,30 @@ func TestVersionSampleNeedsAPublishedVersionAndAnActiveVoice(t *testing.T) {
 		t.Fatalf("live voice snapshot = %+v err=%v", got, err)
 	}
 	// Empty content is not a snapshot: a run that produced nothing records nothing.
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, ""); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, head, ""); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := h.svc.VersionSample(ctx, "alice", alice, head); err != nil || got.Content != "KEEP" {
 		t.Fatalf("empty content overwrote a snapshot: %+v err=%v", got, err)
+	}
+}
+
+// VOICE-29: the sample is filed under the version the prompt was built from, even when the
+// head moved on while the provider wrote.
+func TestVersionSampleFilesUnderThePromptsVersionNotTheHead(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	built := publishHead(t, h, "alice", alice, "프롬프트에 쓴 분석")
+	moved := publishHead(t, h, "alice", alice, "그 사이 새 분석")
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, built, `{"title":"그때 쓴 글"}`); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := h.svc.VersionSample(ctx, "alice", alice, built); err != nil || got.Content != `{"title":"그때 쓴 글"}` {
+		t.Fatalf("prompt version sample = %+v err=%v", got, err)
+	}
+	if _, err := h.svc.VersionSample(ctx, "alice", alice, moved); !errors.Is(err, voice.ErrVersionSampleNotFound) {
+		t.Fatalf("the moved head took a post it never wrote: %v", err)
 	}
 }
 
@@ -177,7 +199,7 @@ func TestProfileVersionListReportsSnapshotPresenceOnly(t *testing.T) {
 	ctx := context.Background()
 	alice := h.voice("alice")
 	first := publishHead(t, h, "alice", alice, "첫 분석")
-	if err := h.svc.RecordVersionSample(ctx, "alice", alice, `{"title":"본문"}`); err != nil {
+	if err := h.svc.RecordVersionSample(ctx, "alice", alice, first, `{"title":"본문"}`); err != nil {
 		t.Fatal(err)
 	}
 	second, err := h.store.PublishProfileVersion(ctx, "alice", alice, voice.StructuredProfile{Empty: false}, "manual", 0, time.Now().UTC())
@@ -207,7 +229,7 @@ func TestAnalysisTextReachesThePromptExactlyOnce(t *testing.T) {
 	alice := h.voice("alice")
 	analysis := "## 1. 종결어미 분포\nANALYSIS_MARKER 해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
 	h.addSample(t, "alice", alice, "sample", "글", longSample("글"), time.Now())
-	h.models.response = analysis
+	h.models.response = analysisAnswer(analysis)
 	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

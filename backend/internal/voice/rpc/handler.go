@@ -382,6 +382,7 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
 		Structured:           toProtoStructured(profile.Structured),
 		FinalizedSourceCount: int32(profile.SourceCount), CanValidate: profile.CanValidate,
+		SeedFailure: toProtoFailure(profile.SeedFailure),
 	}
 }
 

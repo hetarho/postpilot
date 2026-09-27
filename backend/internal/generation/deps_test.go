@@ -62,7 +62,7 @@ func (neutralCandidates) Record(context.Context, string, string, string) error {
 
 type neutralSamples struct{}
 
-func (neutralSamples) RecordVersionSample(context.Context, string, string, PostContent) error {
+func (neutralSamples) RecordVersionSample(context.Context, string, string, int64, PostContent) error {
 	return nil
 }
 

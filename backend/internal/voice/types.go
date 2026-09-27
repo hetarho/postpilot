@@ -182,6 +182,10 @@ type Profile struct {
 	Versions    []ProfileVersion
 	SourceCount int
 	CanValidate bool
+	// SeedFailure is why the seeding a described creation started failed, kept while the
+	// voice still has no published version (VOICE-19): the 말투 tab says so after the job ends
+	// and after a reload, until 기존 글 가져오기 publishes one.
+	SeedFailure *Failure
 }
 
 type ValueSource string
@@ -456,6 +460,12 @@ type PersonalizationJobRequest struct {
 }
 
 type ActiveJob struct{ ID string }
+
+// FinishedJob is the latest job of a kind, terminal or not, as the profile reads it.
+type FinishedJob struct {
+	ID, Status string
+	Failure    *Failure
+}
 
 type JobAlreadyInProgressError struct{ ActiveID string }
 

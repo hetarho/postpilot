@@ -120,8 +120,10 @@ type VoiceRuleComparison struct {
 	CreatedAt      string                      `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	VoiceId        string                      `protobuf:"bytes,10,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	SourceLanguage ContentLanguage             `protobuf:"varint,11,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The side the rule was applied to, revealed with the decision and empty until then (VOICE-42).
+	RuleOnSide    string `protobuf:"bytes,12,opt,name=rule_on_side,json=ruleOnSide,proto3" json:"rule_on_side,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VoiceRuleComparison) Reset() {
@@ -229,6 +231,13 @@ func (x *VoiceRuleComparison) GetSourceLanguage() ContentLanguage {
 		return x.SourceLanguage
 	}
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *VoiceRuleComparison) GetRuleOnSide() string {
+	if x != nil {
+		return x.RuleOnSide
+	}
+	return ""
 }
 
 type StartVoiceRuleComparisonRequest struct {
@@ -1312,7 +1321,7 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"\x06output\x18\x03 \x01(\tR\x06output\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x18\n" +
 	"\x05error\x18\x05 \x01(\tB\x02\x18\x01R\x05error\x12/\n" +
-	"\afailure\x18\x06 \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xbd\x03\n" +
+	"\afailure\x18\x06 \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xdf\x03\n" +
 	"\x13VoiceRuleComparison\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x12'\n" +
@@ -1329,7 +1338,9 @@ const file_postpilot_v1_voice_validation_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bvoice_id\x18\n" +
 	" \x01(\tR\avoiceId\x12F\n" +
-	"\x0fsource_language\x18\v \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguageB\x10\n" +
+	"\x0fsource_language\x18\v \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\x12 \n" +
+	"\frule_on_side\x18\f \x01(\tR\n" +
+	"ruleOnSideB\x10\n" +
 	"\x0e_target_length\"\xcc\x01\n" +
 	"\x1fStartVoiceRuleComparisonRequest\x12\x17\n" +
 	"\arule_id\x18\x01 \x01(\tR\x06ruleId\x12\x1b\n" +

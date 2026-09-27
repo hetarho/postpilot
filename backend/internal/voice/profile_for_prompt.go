@@ -12,6 +12,9 @@ type PromptProfile struct {
 	Empty                                bool
 	SourceLanguage, TargetLanguage       Language
 	Portable                             bool
+	// Version is the published profile version this projection was read from, so a post
+	// generated from it can be filed under it (VOICE-29).
+	Version int64
 }
 
 // PromptProfileForLanguage publishes a deterministic full or portable projection for one
@@ -57,7 +60,7 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 		style := renderPortableProfile(profile.Structured)
 		return PromptProfile{
 			Styleguide: style, Empty: style == "", SourceLanguage: voice.SourceLanguage,
-			TargetLanguage: target, Portable: true,
+			TargetLanguage: target, Portable: true, Version: profile.Structured.Version,
 		}, nil
 	}
 	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
@@ -103,7 +106,7 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 	// An empty voice is now exactly "nothing to learn from and nothing published": no samples,
 	// no authored sources, no structured version.
 	empty := len(samples) == 0 && len(sources) == 0 && profile.Structured.Version == 0
-	return PromptProfile{Styleguide: style, ActiveRules: strings.Join(active, "\n"), ManualRules: strings.TrimSpace(profile.Rules), Excerpts: excerpts, Empty: empty, SourceLanguage: voice.SourceLanguage, TargetLanguage: target}, nil
+	return PromptProfile{Styleguide: style, ActiveRules: strings.Join(active, "\n"), ManualRules: strings.TrimSpace(profile.Rules), Excerpts: excerpts, Empty: empty, SourceLanguage: voice.SourceLanguage, TargetLanguage: target, Version: profile.Structured.Version}, nil
 }
 
 func (s *Service) retireStaleRules(ctx context.Context, userID, voiceID string) error {

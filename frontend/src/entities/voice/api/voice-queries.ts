@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import {
+  appFailureFromProto,
   requireContentLanguage,
   VoiceLayer,
   VoiceRuleStatus,
@@ -184,6 +185,7 @@ export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoicePro
     structured: toStructured(profile?.structured),
     finalizedSourceCount: profile?.finalizedSourceCount ?? 0,
     canValidate: profile?.canValidate ?? false,
+    ...(profile?.seedFailure ? { seedFailure: appFailureFromProto(profile.seedFailure) } : {}),
   }
 }
 export function toVoiceVersion(version: ProtoVersion): VoiceVersion {

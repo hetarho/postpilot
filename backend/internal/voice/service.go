@@ -429,6 +429,19 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	if active != nil {
 		profile.ActiveJobID = active.ID
 	}
+	if active == nil && profile.Structured.Version == 0 {
+		seed, err := s.jobs.LatestForVoiceKind(ctx, voiceID, SeedJobKind)
+		if err != nil {
+			return Profile{}, fmt.Errorf("get latest seeding: %w", err)
+		}
+		if seed != nil && seed.Status == "failed" {
+			failure := Failure{Reason: FailureReasonUnknown}
+			if seed.Failure != nil {
+				failure = *seed.Failure
+			}
+			profile.SeedFailure = &failure
+		}
+	}
 	return profile, nil
 }
 
@@ -449,23 +462,18 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 // here.
 //
 // `content` is opaque text. Nothing here parses it.
-func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, content string) error {
-	if content == "" {
+// RecordVersionSample files a generated post under the profile version its prompt was built
+// from, not the head at completion, which may have moved while the provider wrote (VOICE-29).
+// Version 0 is a prompt built from no published version, which files nothing.
+func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID string, version int64, content string) error {
+	if content == "" || version <= 0 {
 		return nil
 	}
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return err
 	}
-	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
-	if err != nil {
-		return fmt.Errorf("get profile for version sample: %w", err)
-	}
-	head := profile.Structured.Version
-	if head <= 0 {
-		return nil
-	}
 	if err := s.versionSamples.UpsertVersionSample(ctx, VersionSample{
-		UserID: userID, VoiceID: voiceID, Version: head, Content: content, CreatedAt: s.now(),
+		UserID: userID, VoiceID: voiceID, Version: version, Content: content, CreatedAt: s.now(),
 	}); err != nil {
 		return fmt.Errorf("record version sample: %w", err)
 	}

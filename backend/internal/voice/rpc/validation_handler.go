@@ -116,7 +116,12 @@ func toProtoComparison(v voice.RuleComparison) *postpilotv1.VoiceRuleComparison 
 	for _, c := range v.Candidates {
 		candidates = append(candidates, &postpilotv1.VoiceComparisonCandidate{Id: c.ID, Side: c.DisplaySide, Output: c.Output, Status: c.Status, Error: "", Failure: toProtoFailure(c.Failure)})
 	}
-	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), VoiceId: v.VoiceID, SourceLanguage: languageToProto(v.SourceLanguage)}
+	// The rule-on side stays blind until a decision exists, and is revealed with it (VOICE-42).
+	ruleOnSide := ""
+	if v.ChosenSide != "" {
+		ruleOnSide = v.RuleOnSide
+	}
+	return &postpilotv1.VoiceRuleComparison{Id: v.ID, RuleId: v.RuleID, ProfileVersion: v.ProfileVersion, TargetLength: protoOptionalLength(v.TargetLength), Status: v.Status, JobId: v.JobID, Candidates: candidates, ChosenSide: v.ChosenSide, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), VoiceId: v.VoiceID, SourceLanguage: languageToProto(v.SourceLanguage), RuleOnSide: ruleOnSide}
 }
 
 func optionalLength(value *int32) *int {

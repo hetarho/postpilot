@@ -109,6 +109,18 @@ func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 	return &voice.ActiveJob{ID: found.ID}, nil
 }
 
+func (a voiceJobs) LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
+	found, err := a.queue.LatestFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
+	if err != nil || found == nil {
+		return nil, err
+	}
+	finished := &voice.FinishedJob{ID: found.ID, Status: found.Status}
+	if found.Failure != nil {
+		finished.Failure = &voice.Failure{Reason: found.Failure.Reason, Params: found.Failure.Params, TechnicalDetail: found.Failure.TechnicalDetail}
+	}
+	return finished, nil
+}
+
 func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
 	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
 }

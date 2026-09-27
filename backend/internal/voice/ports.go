@@ -185,6 +185,9 @@ type PersonalizationModels interface {
 type Jobs interface {
 	Enqueue(ctx context.Context, request AnalysisJobRequest) (string, error)
 	ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*ActiveJob, error)
+	// LatestForVoiceKind is the most recent job of the kind frozen to the voice, whatever its
+	// status, or nil.
+	LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*FinishedJob, error)
 	// HasActiveForVoice reports any queued/running job frozen to the voice, whatever its kind
 	// or post — the whole set a soft delete must wait for.
 	HasActiveForVoice(ctx context.Context, voiceID string) (bool, error)

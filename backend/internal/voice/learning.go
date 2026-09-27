@@ -12,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-const StructuredAnalysisPromptVersion = "voice-profile-v1"
+const StructuredAnalysisPromptVersion = "voice-profile-v2"
 
 // The prompt names every key the decoder expects — including the `axes` object and its six
 // keys — because for a model without structured output the prompt is the only channel that
@@ -20,6 +20,8 @@ const StructuredAnalysisPromptVersion = "voice-profile-v1"
 const structuredAnalysisPrompt = `Analyze the supplied Korean authored corpus as writing style, not subject matter.
 Return one JSON object with these string keys: lexical_description, base_register, connective_style, intro_pattern,
 closing_pattern, heading_habit, list_habit, emoji_use. Use an empty string for unsupported traits.
+lexical_description is the Korean style guide itself, in Korean plain text:
+` + analysisGuideSections + `
 Also return an "axes" object with exactly these six integer keys, each between -3 and 3:
 involvement, narrativity, persuasion_overtness, abstractness, addressee_focus, humor.
 Omit an axis key only when the corpus gives no evidence for it; never guess 0 as a filler.
@@ -28,11 +30,52 @@ Never return topic-specific nouns as preferred vocabulary. Deterministic ending 
 const structuredEnglishAnalysisPrompt = `Analyze the supplied English authored corpus as writing style, not subject matter.
 Return one JSON object with these string keys: lexical_description, base_register, connective_style, intro_pattern,
 closing_pattern, heading_habit, list_habit, emoji_use. Use an empty string for unsupported traits.
+lexical_description is the English style guide itself, in plain text:
+` + englishAnalysisGuideSections + `
 Also return an "axes" object with exactly these six integer keys, each between -3 and 3:
 involvement, narrativity, persuasion_overtness, abstractness, addressee_focus, humor.
 Omit an axis key only when the corpus gives no evidence for it; never guess 0 as a filler.
 Never return topic-specific nouns as preferred vocabulary. Deterministic word length, register, contractions, connectives,
 passive and nominal style, sentence cadence, structure, lexical habits, and axes are calculated separately and override estimates.`
+
+// completeAnalysis is the one analysis call analyze_voice and learning make (VOICE-23, VOICE-27):
+// it names every key it expects, attaches the embedded schema when the resolved model declares
+// structured output, and refuses an answer whose lexical description is not the nine-section
+// style guide (VOICE-25).
+func (s *Service) completeAnalysis(ctx context.Context, ref llm.ModelRef, corpus string, language Language) (qualitativeJSON, error) {
+	request := llm.Request{
+		System:   structuredAnalysisPromptForLanguage(language),
+		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus)}}},
+		// Named so the registry can resolve the operator's style-analysis override. No
+		// Reasoning is set: analysis sends no `reasoning` key by default, which is the model's
+		// own adaptive behavior and the most permissive setting — not "off".
+		Stage: llm.StageNameAnalyze,
+	}
+	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
+		request.JSONSchema = VoiceAnalysisSchemaForLanguage(language)
+	}
+	response, err := s.models.Complete(ctx, ref, request)
+	if err != nil {
+		return qualitativeJSON{}, err
+	}
+	var qualitative qualitativeJSON
+	if err = json.Unmarshal([]byte(strings.TrimSpace(response.Text)), &qualitative); err != nil {
+		return qualitativeJSON{}, fmt.Errorf("typed voice analysis returned invalid JSON: %w", err)
+	}
+	qualitative.LexicalDescription = strings.TrimSpace(qualitative.LexicalDescription)
+	if !hasRequiredAnalysisShapeForLanguage(qualitative.LexicalDescription, language) {
+		return qualitativeJSON{}, fmt.Errorf("문체 분석 결과에 종결어미 또는 never uses 섹션이 없어요. 다시 시도해 주세요")
+	}
+	return qualitative, nil
+}
+
+// analyzedValue is a qualitative answer as a profile value: an empty one is unknown.
+func analyzedValue(v string) VoiceValue {
+	if strings.TrimSpace(v) == "" {
+		return VoiceValue{Unknown: true, Source: SourceUnknown}
+	}
+	return VoiceValue{Value: strings.TrimSpace(v), Source: SourceAnalyzed}
+}
 
 func structuredAnalysisPromptForLanguage(language Language) string {
 	if language == LanguageEnglish {
@@ -345,37 +388,24 @@ func (s *Service) learnOnce(ctx context.Context, job LearningJob, event *Learnin
 		return false, s.failLearning(ctx, *event, err)
 	}
 	sources = authoredSourcesForLanguage(sources, event.SourceLanguage)
-	var corpus strings.Builder
-	for _, source := range sources {
-		corpus.WriteString(source.Body)
-		corpus.WriteString("\n\n")
+	// The analysis reads the voice's whole corpus, imports included, with the same labelled
+	// separators analyze_voice uses, and the post being learned last (VOICE-23).
+	samples, _, err := s.samples.CorpusSnapshot(ctx, job.UserID, event.VoiceID)
+	if err != nil {
+		return false, s.failLearning(ctx, *event, err)
 	}
-	corpus.WriteString(body)
+	corpus := personalizationCorpus(samples, append(append([]AuthoredSource(nil), sources...), AuthoredSource{Title: final.Title, Body: body}))
 	ref, err := parseModelRef(job.WriteModel)
 	if err != nil {
 		return false, s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 0, 1)
-	request := llm.Request{System: structuredAnalysisPromptForLanguage(event.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}, Stage: llm.StageNameAnalyze}
-	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
-		request.JSONSchema = VoiceAnalysisSchemaForLanguage(event.SourceLanguage)
-	}
-	response, err := s.models.Complete(ctx, ref, request)
+	qualitative, err := s.completeAnalysis(ctx, ref, corpus, event.SourceLanguage)
 	if err != nil {
 		return false, s.failLearning(ctx, *event, err)
 	}
-	var qualitative qualitativeJSON
-	if err = json.Unmarshal([]byte(strings.TrimSpace(response.Text)), &qualitative); err != nil {
-		return false, s.failLearning(ctx, *event, fmt.Errorf("typed voice analysis returned invalid JSON: %w", err))
-	}
-	profile := MeasuredProfileForLanguage(corpus.String(), event.SourceLanguage, s.now)
-	unknown := func(v string) VoiceValue {
-		if strings.TrimSpace(v) == "" {
-			return VoiceValue{Unknown: true, Source: SourceUnknown}
-		}
-		return VoiceValue{Value: strings.TrimSpace(v), Source: SourceAnalyzed}
-	}
-	mergeQualitativeProfile(&profile, qualitative, event.SourceLanguage, unknown)
+	profile := MeasuredProfileForLanguage(corpus, event.SourceLanguage, s.now)
+	mergeQualitativeProfile(&profile, qualitative, event.SourceLanguage, analyzedValue)
 	if err = validateAxes(profile.Axes); err != nil {
 		return false, s.failLearning(ctx, *event, err)
 	}

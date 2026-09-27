@@ -119,11 +119,11 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 // snapshot is a record of a post, and losing the record must never lose the post ([I1] is about
 // history outliving its subject, not the other way round). The voice id is the one the run was
 // frozen against, so a reassignment mid-run cannot file the snapshot under the wrong profile.
-func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID string, content PostContent) {
+func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID string, version int64, content PostContent) {
 	if s.samples == nil || voiceID == "" {
 		return
 	}
-	if err := s.samples.RecordVersionSample(ctx, userID, voiceID, content); err != nil {
+	if err := s.samples.RecordVersionSample(ctx, userID, voiceID, version, content); err != nil {
 		slog.WarnContext(ctx, "record voice version sample failed", "error", err, "voice_id", voiceID)
 	}
 }

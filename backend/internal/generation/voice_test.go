@@ -230,3 +230,32 @@ func (p voiceProfiles) ProfileForPrompt(_ context.Context, _, voiceID string, _ 
 	}
 	return profile, nil
 }
+
+type recordedSample struct {
+	voiceID string
+	version int64
+}
+
+type recordingSamples struct{ got []recordedSample }
+
+func (r *recordingSamples) RecordVersionSample(_ context.Context, _, voiceID string, version int64, _ PostContent) error {
+	r.got = append(r.got, recordedSample{voiceID: voiceID, version: version})
+	return nil
+}
+
+// VOICE-29: the generated post is filed under the profile version its prompt was built from.
+func TestGenerateFilesTheSampleUnderThePromptsProfileVersion(t *testing.T) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	samples := &recordingSamples{}
+	deps := testDeps()
+	deps.Samples = samples
+	svc := NewService(posts, fakeProfiles{profile: Profile{Version: 5}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(samples.got) != 1 || samples.got[0] != (recordedSample{voiceID: liveVoice.ID, version: 5}) {
+		t.Fatalf("recorded samples = %+v, want one under version 5", samples.got)
+	}
+}

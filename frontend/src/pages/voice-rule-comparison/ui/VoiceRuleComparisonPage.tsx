@@ -59,6 +59,12 @@ export function VoiceRuleComparisonPage() {
         ? appFailureFromProto(candidate.failure)
         : undefined,
   }))
+  // Revealed with the decision and empty before it (VOICE-42).
+  const ruleOnLabel = comparison.ruleOnSide
+    ? candidates[
+        comparison.candidates.findIndex((candidate) => candidate.side === comparison.ruleOnSide)
+      ]?.label
+    : undefined
   const activeId = candidates.some((candidate) => candidate.id === active)
     ? active
     : (candidates[0]?.id ?? '')
@@ -134,7 +140,10 @@ export function VoiceRuleComparisonPage() {
               ariaLabel={t('comparison.selectAria', { ns: 'voices' })}
             />
             {comparison.chosenSide ? (
-              <Typography variant="body">{t('comparison.applied', { ns: 'voices' })}</Typography>
+              <Typography variant="body">
+                {t('comparison.applied', { ns: 'voices' })}
+                {ruleOnLabel && ` ${t('comparison.ruleOn', { ns: 'voices', side: ruleOnLabel })}`}
+              </Typography>
             ) : (
               <Button
                 variant="cta"

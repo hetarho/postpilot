@@ -84,6 +84,10 @@ func (j *trackingVoiceJobs) Enqueue(context.Context, voice.AnalysisJobRequest) (
 	j.calls++
 	return "", nil
 }
+func (j *trackingVoiceJobs) LatestForVoiceKind(context.Context, string, string) (*voice.FinishedJob, error) {
+	return nil, nil
+}
+
 func (j *trackingVoiceJobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJob, error) {
 	j.calls++
 	return nil, nil

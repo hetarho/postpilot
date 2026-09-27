@@ -56,6 +56,8 @@ type PostContent struct {
 type WriteAnswer struct {
 	Content PostContent
 	Nouns   []string
+	// ProfileVersion is the voice profile version the prompt was built from (VOICE-29).
+	ProfileVersion int64
 }
 
 // WriteAnnotations is what a write hands the post beside its content: its nouns. Handed as a
@@ -242,6 +244,8 @@ type Profile struct {
 	SourceLanguage       Language
 	TargetLanguage       Language
 	Portable             bool
+	// Version is the published voice profile version the projection was read from.
+	Version int64
 }
 
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the

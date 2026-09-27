@@ -51,7 +51,7 @@ type RuleWriter interface {
 // The content crosses as opaque text: the voice context records a copy of what it produced
 // without learning the shape of a post's content.
 type VersionSampleWriter interface {
-	RecordVersionSample(ctx context.Context, userID, voiceID string, content PostContent) error
+	RecordVersionSample(ctx context.Context, userID, voiceID string, version int64, content PostContent) error
 }
 
 type LLM interface {

@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   decide: vi.fn(),
   routeVoiceId: 'voice-default',
   comparisonVoiceId: 'voice-default',
+  chosenSide: '',
+  ruleOnSide: '',
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -29,7 +31,8 @@ vi.mock('@/entities/voice', () => ({
       voiceId: mocks.comparisonVoiceId,
       status: 'review',
       jobId: 'job-1',
-      chosenSide: '',
+      chosenSide: mocks.chosenSide,
+      ruleOnSide: mocks.ruleOnSide,
       candidates: [
         { id: 'candidate-a', side: 'A', output: 'A 결과', status: 'succeeded', error: '' },
         { id: 'candidate-b', side: 'B', output: 'B 결과', status: 'succeeded', error: '' },
@@ -49,6 +52,8 @@ beforeEach(() => {
   mocks.decide.mockReset().mockResolvedValue({})
   mocks.routeVoiceId = 'voice-default'
   mocks.comparisonVoiceId = 'voice-default'
+  mocks.chosenSide = ''
+  mocks.ruleOnSide = ''
 })
 
 it('keeps the desktop selector visible and submits candidate B', async () => {
@@ -69,4 +74,15 @@ it('refuses a comparison that belongs to a different voice than the route', () =
 
   expect(screen.getByRole('alert')).toHaveTextContent('다른 말투의 기록')
   expect(screen.queryByRole('button', { name: '이 글이 더 나아요' })).not.toBeInTheDocument()
+})
+
+// VOICE-42: the rule-on side stays hidden until the decision and is revealed with it.
+it('says which result used the rule once the choice is made, and not before', () => {
+  const { unmount } = render(<VoiceRuleComparisonPage />)
+  expect(screen.queryByText(/규칙을 적용한 글은/)).not.toBeInTheDocument()
+  unmount()
+  mocks.chosenSide = 'A'
+  mocks.ruleOnSide = 'B'
+  render(<VoiceRuleComparisonPage />)
+  expect(screen.getByText(/규칙을 적용한 글은 B였어요/)).toBeInTheDocument()
 })

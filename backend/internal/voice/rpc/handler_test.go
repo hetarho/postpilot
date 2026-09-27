@@ -32,6 +32,10 @@ func (models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response
 type jobs struct{}
 
 func (jobs) Enqueue(context.Context, voice.AnalysisJobRequest) (string, error) { return "job", nil }
+func (jobs) LatestForVoiceKind(context.Context, string, string) (*voice.FinishedJob, error) {
+	return nil, nil
+}
+
 func (jobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJob, error) {
 	return nil, nil
 }
@@ -269,7 +273,7 @@ func TestGetVoiceProfileVersionSampleIsOwnedAndOptional(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := service.RecordVersionSample(ctx, "alice", voices["alice"], string(encoded)); err != nil {
+	if err := service.RecordVersionSample(ctx, "alice", voices["alice"], head.Version, string(encoded)); err != nil {
 		t.Fatal(err)
 	}
 	handler := voicerpc.NewHandler(service)

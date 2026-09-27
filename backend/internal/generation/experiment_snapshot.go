@@ -160,6 +160,9 @@ type snapshotProfile struct {
 	SourceLanguage       string   `json:"SourceLanguage"`
 	TargetLanguage       string   `json:"TargetLanguage"`
 	Portable             bool     `json:"Portable"`
+	// Version is the profile version the projection was read from; absent in a snapshot taken
+	// before it was carried (VOICE-29).
+	Version int64 `json:"Version,omitempty"`
 }
 
 // observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
@@ -411,7 +414,7 @@ func toSnapshotProfile(profile Profile) snapshotProfile {
 	return snapshotProfile{
 		Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: copyTexts(profile.Excerpts), Rules: profile.Rules,
 		EndingMaxConsecutive: profile.EndingMaxConsecutive, SourceLanguage: string(profile.SourceLanguage),
-		TargetLanguage: string(profile.TargetLanguage), Portable: profile.Portable,
+		TargetLanguage: string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
 	}
 }
 
@@ -419,6 +422,6 @@ func fromSnapshotProfile(wire snapshotProfile) Profile {
 	return Profile{
 		Styleguide: wire.Styleguide, ActiveRules: wire.ActiveRules, Excerpts: copyTexts(wire.Excerpts), Rules: wire.Rules,
 		EndingMaxConsecutive: wire.EndingMaxConsecutive, SourceLanguage: Language(wire.SourceLanguage),
-		TargetLanguage: Language(wire.TargetLanguage), Portable: wire.Portable,
+		TargetLanguage: Language(wire.TargetLanguage), Portable: wire.Portable, Version: wire.Version,
 	}
 }

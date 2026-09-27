@@ -277,3 +277,30 @@ func TestSeedingWorkIsVoiceOwnedForTheDeleteGuard(t *testing.T) {
 		t.Fatalf("active job on the profile = %q err=%v", profile.ActiveJobID, err)
 	}
 }
+
+// VOICE-19: a failed seed leaves an ordinary empty voice whose 말투 tab shows the failure — after
+// the job ended and after a reload — until a published version exists; a running job speaks for
+// itself instead.
+func TestAFailedSeedStaysOnTheProfileUntilAVersionIsPublished(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	h.jobs.latest = map[string]*voice.FinishedJob{alice + "/" + voice.SeedJobKind: {
+		ID: "seed-job", Status: "failed", Failure: &voice.Failure{Reason: "MODEL_UNAVAILABLE"},
+	}}
+	profile, err := h.svc.Get(ctx, "alice", alice)
+	if err != nil || profile.SeedFailure == nil || profile.SeedFailure.Reason != "MODEL_UNAVAILABLE" {
+		t.Fatalf("seed failure = %+v err=%v", profile.SeedFailure, err)
+	}
+	h.jobs.active[alice] = &voice.ActiveJob{ID: "analysis-job"}
+	if profile, err = h.svc.Get(ctx, "alice", alice); err != nil || profile.SeedFailure != nil {
+		t.Fatalf("a running job and an old seed failure both spoke: %+v err=%v", profile.SeedFailure, err)
+	}
+	delete(h.jobs.active, alice)
+	if _, err := h.store.PublishProfileVersion(ctx, "alice", alice, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if profile, err = h.svc.Get(ctx, "alice", alice); err != nil || profile.SeedFailure != nil {
+		t.Fatalf("the seed failure outlived the first published version: %+v err=%v", profile.SeedFailure, err)
+	}
+}

@@ -183,10 +183,12 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	}
 	frozenVoiceID := ""
 	var frozenLanguage Language
+	var frozenVersion int64
 	if len(raw) > 0 && len(raw[0]) > 0 {
 		if snapshot, decodeErr := decodeWriteSnapshot(raw[0]); decodeErr == nil {
 			frozenVoiceID = snapshot.Post.Voice.ID
 			frozenLanguage = snapshot.TargetLanguage
+			frozenVersion = snapshot.Profile.Version
 		}
 	}
 	if _, err := frozenVoice(current, frozenVoiceID); err != nil {
@@ -198,7 +200,7 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	if err := s.posts.SetGeneratedContent(ctx, userID, postSlug, answer.Content, frozenLanguage, answer.Annotations()); err != nil {
 		return err
 	}
-	s.recordVersionSample(ctx, userID, frozenVoiceID, answer.Content)
+	s.recordVersionSample(ctx, userID, frozenVoiceID, frozenVersion, answer.Content)
 	return nil
 }
 

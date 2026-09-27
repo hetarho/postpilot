@@ -25,6 +25,8 @@ message VoiceRuleComparison {
   string status = 5; string job_id = 6; repeated VoiceComparisonCandidate candidates = 7;
   string chosen_side = 8; string created_at = 9; string voice_id = 10;
   ContentLanguage source_language = 11;
+  // The side the rule was applied to, revealed with the decision and empty until then (VOICE-42).
+  string rule_on_side = 12;
 }
 message StartVoiceRuleComparisonRequest {
   string rule_id = 1; string source_id = 2; optional int32 target_length = 3; ModelRef write_model = 4;

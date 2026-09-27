@@ -92,7 +92,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil); err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}
-	s.recordVersionSample(ctx, current.UserID, voiceID, filtered)
+	s.recordVersionSample(ctx, current.UserID, voiceID, profile.Version, filtered)
 	s.recordGuidelineCandidate(ctx, current.UserID, current.Slug, payload.Instruction)
 	progress("write", 1, 1)
 	return nil

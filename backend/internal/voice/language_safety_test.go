@@ -167,7 +167,7 @@ func TestEnglishLearningSelectsEnglishCorpusPromptSchemaAndMeasurements(t *testi
 		ContentLanguage: voice.LanguageEnglish, VoiceSourceLanguage: voice.LanguageEnglish,
 	}}, personalizationConfig())
 	h.models.structured = true
-	h.models.response = `{"lexical_description":"clear vocabulary","base_register":"conversational","connective_style":"explicit","intro_pattern":"direct","closing_pattern":"question","heading_habit":"absent","list_habit":"absent","emoji_use":"absent","axes":{"involvement":1,"narrativity":0,"persuasion_overtness":1,"abstractness":0,"addressee_focus":2,"humor":0}}`
+	h.models.response = `{"lexical_description":"1. Register and formality: conversational\n8. Expressions the author never uses: hype","base_register":"conversational","connective_style":"explicit","intro_pattern":"direct","closing_pattern":"question","heading_habit":"absent","list_habit":"absent","emoji_use":"absent","axes":{"involvement":1,"narrativity":0,"persuasion_overtness":1,"abstractness":0,"addressee_focus":2,"humor":0}}`
 	event, _, _, err := h.svc.LearnFromFinalizedPost(ctx, "alice", "english-learn", analyzeRef)
 	if err != nil {
 		t.Fatal(err)

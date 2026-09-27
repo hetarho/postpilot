@@ -145,7 +145,7 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 	targetLength := 900
 	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, TargetLength: &targetLength, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
 	h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
-	h.models.response = `{"lexical_description":"담백한 어휘","base_register":"해요","connective_style":"짧은 연결","intro_pattern":"바로 시작","closing_pattern":"짧게 마침","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
+	h.models.response = `{"lexical_description":"1. 종결어미 분포: 해요\n8. 절대 사용하지 않는 표현 (never uses): 과장","base_register":"해요","connective_style":"짧은 연결","intro_pattern":"바로 시작","closing_pattern":"짧게 마침","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
 
 	event, jobID, reused, err := h.svc.LearnFromFinalizedPost(context.Background(), "alice", "first", analyzeRef)
 	if err != nil || reused || jobID != "job-new" || h.models.completeCalls != 0 || event.VoiceID != alice {
@@ -282,7 +282,8 @@ func TestClearingAnOverrideAfterAnAnalysisRestoresTheAnalyzedValue(t *testing.T)
 	if _, err := h.svc.UpdateOverride(context.Background(), "alice", alice, voice.LayerLexical, "description", &manual); err != nil {
 		t.Fatal(err)
 	}
-	h.models.response = "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	guide := "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	h.models.response = analysisAnswer(guide)
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +295,7 @@ func TestClearingAnOverrideAfterAnAnalysisRestoresTheAnalyzedValue(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := cleared.Structured.Lexical.Description; got.Value != h.models.response || got.Source != voice.SourceAnalyzed {
+	if got := cleared.Structured.Lexical.Description; got.Value != guide || got.Source != voice.SourceAnalyzed {
 		t.Fatalf("cleared description = %+v, want the analysis's own value", got)
 	}
 }
@@ -496,7 +497,7 @@ func TestLearnPublishesUnansweredAxesAsUnknownAndRejectsOutOfRange(t *testing.T)
 		}
 		return profile, h.models.request, err
 	}
-	strings8 := `"lexical_description":"담백","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":""`
+	strings8 := `"lexical_description":"1. 종결어미 분포: 해요\n8. 절대 사용하지 않는 표현 (never uses): 과장","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":""`
 
 	t.Run("omitted axes publish as unknown", func(t *testing.T) {
 		profile, request, err := learnWith(t, `{`+strings8+`}`, false)
@@ -687,7 +688,7 @@ func TestLearningBuiltOverAMovedHeadIsBuiltAgain(t *testing.T) {
 	insertPost(t, h, "first", "alice", alice, "첫 글", time.Now().UTC().Format(time.RFC3339Nano))
 	raw := `{"title":"첫 글","summary":"","tags":["산책"],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
 	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
-	h.models.response = `{"lexical_description":"담백한 어휘","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
+	h.models.response = `{"lexical_description":"1. 종결어미 분포: 해요\n8. 절대 사용하지 않는 표현 (never uses): 과장","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
 	moving := &headMovingModels{fakeModels: h.models}
 	svc := voice.NewService(h.store, moving, h.jobs)
 	svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
@@ -743,5 +744,64 @@ func TestApplyLearningResultRefusesAStaleHead(t *testing.T) {
 	stored, err := h.store.GetLearningEvent(ctx, "alice", event.ID)
 	if err != nil || stored.Status == "done" {
 		t.Fatalf("a stale result closed the event: %+v err=%v", stored, err)
+	}
+}
+
+// VOICE-27, review F95: analyze_voice is the analysis call. It attaches the schema when the
+// model declares structured output, so an import-only voice — one no learning ever ran for —
+// gets its axes and structure habits, with the nine-section guide as its lexical description.
+func TestAnImportOnlyAnalysisCarriesTheTypedDescriptors(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
+	h.models.structured = true
+	h.models.response = `{"lexical_description":"1. 종결어미 분포: 해요\n8. 절대 사용하지 않는 표현 (never uses): 과장","base_register":"해요","connective_style":"그래서","intro_pattern":"바로 시작","closing_pattern":"질문으로 마침","heading_habit":"소제목 없음","list_habit":"목록 드묾","emoji_use":"안 씀","axes":{"involvement":2,"narrativity":1,"persuasion_overtness":0,"abstractness":-1,"addressee_focus":1,"humor":0}}`
+	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if h.models.request.JSONSchema == nil {
+		t.Fatal("the analysis call sent no schema to a structured-output model")
+	}
+	profile, err := h.svc.Get(context.Background(), "alice", alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := profile.Structured
+	if p.Axes.Involvement == nil || *p.Axes.Involvement != 2 || p.Structure.IntroPattern.Value != "바로 시작" || p.Structure.ClosingPattern.Value != "질문으로 마침" ||
+		p.Structure.HeadingHabit.Value != "소제목 없음" || p.Structure.ListHabit.Value != "목록 드묾" || p.Structure.EmojiUse.Value != "안 씀" {
+		t.Fatalf("typed descriptors = axes %+v structure %+v", p.Axes, p.Structure)
+	}
+	if !strings.HasPrefix(p.Lexical.Description.Value, "1. 종결어미 분포") {
+		t.Fatalf("lexical description = %q, want the nine-section guide", p.Lexical.Description.Value)
+	}
+}
+
+// VOICE-23, review F96: learning's analysis reads the whole corpus, imports included, and
+// keeps the nine-section guide as the lexical description.
+func TestLearningAnalysisIncludesImportedSamples(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	ctx := context.Background()
+	h.addSample(t, "alice", alice, "imported", "가져온 글", longSample("임"), time.Now())
+	insertPost(t, h, "first", "alice", alice, "첫 글", time.Now().UTC().Format(time.RFC3339Nano))
+	raw := `{"title":"첫 글","summary":"","tags":[],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
+	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
+	h.svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
+	guide := "1. 종결어미 분포: 해요\n8. 절대 사용하지 않는 표현 (never uses): 과장"
+	h.models.response = analysisAnswer(guide)
+	event, _, _, err := h.svc.LearnFromFinalizedPost(ctx, "alice", "first", analyzeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.svc.Learn(ctx, voice.LearningJob{UserID: "alice", EventID: event.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	corpus := h.models.request.Messages[0].Parts[0].Text
+	if !strings.Contains(corpus, longSample("임")) || !strings.Contains(corpus, "오늘은 천천히 걸어요") {
+		t.Fatalf("the learning corpus left out the imports or the post:\n%s", corpus)
+	}
+	profile, err := h.svc.Get(ctx, "alice", alice)
+	if err != nil || profile.Structured.Lexical.Description.Value != guide {
+		t.Fatalf("lexical description = %q err=%v", profile.Structured.Lexical.Description.Value, err)
 	}
 }

@@ -445,6 +445,18 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
   })
 
+  // VOICE-19: the job's own status ends with the job, so the failure the server keeps on the
+  // unversioned profile is what still says why after the job ended and after a reload.
+  it('keeps a failed seed on the tab once no job is running', async () => {
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: { seedFailure: { reason: 'PROVIDER_DISABLED' } },
+    })
+    expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
+  })
+
   // VOICE-54: renaming lives on the voice, not on the directory row that leads here.
   it('renames the voice from its own screen', async () => {
     const user = userEvent.setup()

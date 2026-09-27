@@ -143,7 +143,7 @@ func (freezeExperiments) BlockingWriteForPost(context.Context, string, string) (
 }
 func (freezeMemories) ForPost(context.Context, string, []string) ([]string, error) { return nil, nil }
 func (freezeCandidates) Record(context.Context, string, string, string) error      { return nil }
-func (freezeSamples) RecordVersionSample(context.Context, string, string, generation.PostContent) error {
+func (freezeSamples) RecordVersionSample(context.Context, string, string, int64, generation.PostContent) error {
 	return nil
 }
 func (freezeLinker) PresignGet(context.Context, string, time.Duration) (string, error) {
