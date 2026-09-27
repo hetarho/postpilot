@@ -8,6 +8,7 @@
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
+  BlockType,
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
@@ -792,6 +793,17 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!row.content || row.machineBaselineRevision <= 0n)
       throw connectAppError('POST_MACHINE_BASELINE_REQUIRED', Code.FailedPrecondition)
+    // Like the server: an IMAGE block naming a photo the post no longer has refuses the
+    // finalize, saying how many such places remain (POST-13).
+    const attached = new Set(row.images.map((image) => image.filename))
+    const missing = row.content.blocks.filter(
+      (block) => block.type === BlockType.IMAGE && block.file !== '' && !attached.has(block.file),
+    ).length
+    if (missing > 0) {
+      throw connectAppError('POST_PHOTO_MISSING', Code.FailedPrecondition, {
+        count: String(missing),
+      })
+    }
     row.status = 'finalized'
     row.finalizedRevision = row.contentRevision
     row.finalizedAt = DEFAULT_UPDATED_AT

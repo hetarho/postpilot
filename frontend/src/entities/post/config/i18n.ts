@@ -18,6 +18,8 @@ export const i18n = {
       refine: '글 다듬기',
       conflict: '다른 화면에서 글이 바뀌었어요. 이 화면을 새로고침한 뒤 다시 수정해 주세요.',
       emptyBlock: '빈 블록을 채워 주세요.',
+      photoMissing:
+        '글에 사진이 없는 자리가 {{count}}곳 남아 있어요. 그 사진 블록을 지우거나 사진을 다시 올린 뒤 완성해 주세요.',
       addParagraph: '문단 추가',
       blockEdit: '{{index}}번째 블록 수정',
       blockType: '{{index}}번째 블록 종류',
@@ -170,6 +172,8 @@ export const i18n = {
       refine: 'Refine post',
       conflict: 'This post changed in another screen. Reload this screen before editing again.',
       emptyBlock: 'Fill in the empty block.',
+      photoMissing:
+        '{{count}} photo places name photos that are no longer attached. Remove those photo blocks or upload the photos again, then finalize.',
       addParagraph: 'Add paragraph',
       blockEdit: 'Edit block {{index}}',
       blockType: 'Block {{index}} type',

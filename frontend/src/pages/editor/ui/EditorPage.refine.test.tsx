@@ -148,6 +148,39 @@ describe('opening a post', () => {
     expect(screen.queryByRole('link', { name: /가제/ })).not.toBeInTheDocument()
   })
 
+  // POST-13: an IMAGE block naming a photo the post no longer has refuses the finalize, and ③
+  // says how many such places remain and what to do about them.
+  it('says how many image blocks name a detached photo and finalizes none of it', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-final', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-final',
+            status: 'review',
+            title: '가제',
+            content: POST_CONTENT_FIXTURE,
+            // IMG_2 was deleted after the text was written; its IMAGE block still names it.
+            images: [POST_IMAGES_FIXTURE[0]!],
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+          },
+        ],
+      },
+    })
+
+    // The editor names the problem where it is fixed, with the count, before any finalize.
+    expect(await screen.findByText(/사진이 없는 자리가 1곳 남아 있어요/)).toBeInTheDocument()
+    await finalize(user)
+    // Content that cannot save cannot be finalized: nothing reaches the server.
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(calls).not.toContain('FinalizePost')
+  })
+
   it('finalizes without an analyze model or learning call', async () => {
     const calls: string[] = []
     const user = userEvent.setup()

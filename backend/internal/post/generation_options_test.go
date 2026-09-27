@@ -52,13 +52,15 @@ func TestSaveGenerationOptionsRefusesABadMemberAndWritesNothing(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "제주")
-	zero, negative := 0, -1
+	zero, negative, over := 0, -1, TargetLengthMax+1
+	var outOfRange *TargetLengthError
 	for name, test := range map[string]struct {
 		change func(*GenerationOptionsSet)
 		want   error
 	}{
-		"length 0":        {func(s *GenerationOptionsSet) { s.TargetLength = &zero }, ErrInvalidContent},
-		"length -1":       {func(s *GenerationOptionsSet) { s.TargetLength = &negative }, ErrInvalidContent},
+		"length 0":        {func(s *GenerationOptionsSet) { s.TargetLength = &zero }, nil},
+		"length -1":       {func(s *GenerationOptionsSet) { s.TargetLength = &negative }, nil},
+		"length 10001":    {func(s *GenerationOptionsSet) { s.TargetLength = &over }, nil},
 		"count 0":         {func(s *GenerationOptionsSet) { s.TagCount = 0 }, ErrInvalidTagCount},
 		"count 11":        {func(s *GenerationOptionsSet) { s.TagCount = 11 }, ErrInvalidTagCount},
 		"an unknown tick": {func(s *GenerationOptionsSet) { s.QualityRules = []string{"score"} }, ErrQualityRuleInvalid},
@@ -67,7 +69,9 @@ func TestSaveGenerationOptionsRefusesABadMemberAndWritesNothing(t *testing.T) {
 		before := store.posts[created.Slug]
 		writes := store.optionWrites
 		set := optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.UseMemory = true; test.change(s) })
-		if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, set); !errors.Is(err, test.want) {
+		_, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, set)
+		// A nil want is the length's own refusal, which names its range (POST-20).
+		if test.want == nil && !errors.As(err, &outOfRange) || test.want != nil && !errors.Is(err, test.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, test.want)
 		}
 		if after := store.posts[created.Slug]; !reflect.DeepEqual(after, before) || store.optionWrites != writes {

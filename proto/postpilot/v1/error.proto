@@ -277,6 +277,11 @@ enum FailureReason {
   VOUCHER_REDEEMED = 246;
   VOUCHER_EXPIRED = 247;
   VOUCHER_REVOKED = 248;
+  // A post's 목표 글자 수 outside the one range both sides share (POST-20). params: min, max.
+  POST_TARGET_LENGTH_INVALID = 249;
+  // FinalizePost while IMAGE blocks name photos no longer attached (POST-13). params: count,
+  // how many such places remain.
+  POST_PHOTO_MISSING = 250;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

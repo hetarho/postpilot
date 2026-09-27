@@ -575,3 +575,44 @@ func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
 		}
 	})
 }
+
+// POST-13: a finalize refuses content in which IMAGE blocks name photos no longer attached,
+// saying how many such places remain, and finalizes once none do.
+func TestFinalizeRefusesImageBlocksNamingDetachedPhotos(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "Photos")
+	attach := func(ids ...string) {
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		for _, id := range ids {
+			store.images["image-"+id] = Image{ID: "image-" + id, PostSlug: created.Slug, Filename: "IMG_" + id + ".jpg", Key: "key-" + id}
+		}
+	}
+	attach("1", "2", "3")
+	content := PostContent{Title: "사진 글", Blocks: []Block{
+		{Type: BlockText, Content: "도착"},
+		{Type: BlockImage, File: "IMG_1.jpg"},
+		{Type: BlockImage, File: "IMG_2.jpg"},
+		{Type: BlockImage, File: "IMG_3.jpg"},
+	}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
+		t.Fatal(err)
+	}
+	// Deleting a photo scrubs no IMAGE block, so the content still names it.
+	store.mu.Lock()
+	delete(store.images, "image-2")
+	delete(store.images, "image-3")
+	store.mu.Unlock()
+	var missing *PhotoMissingError
+	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); !errors.As(err, &missing) || missing.Count != 2 {
+		t.Fatalf("finalize with two detached photos = %v", err)
+	}
+	if stored, _ := svc.Get(ctx, alice, created.Slug); stored.Status == StatusFinalized {
+		t.Fatal("a refused finalize changed the status")
+	}
+	attach("2", "3")
+	if finalized, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil || finalized.Status != StatusFinalized {
+		t.Fatalf("finalize once attached = %+v %v", finalized.Status, err)
+	}
+}

@@ -310,3 +310,26 @@ func TestToProtoSummaryCarriesTags(t *testing.T) {
 		t.Errorf("tags = %v, want none", untagged.GetTags())
 	}
 }
+
+// The two numbers the surface needs travel as params: the range a length missed, and how many
+// image places still name a detached photo (POST-13, POST-20).
+func TestTheRangeAndTheMissingCountTravelAsParams(t *testing.T) {
+	for _, tc := range []struct {
+		err    error
+		code   connect.Code
+		reason string
+		want   map[string]string
+	}{
+		{&post.TargetLengthError{Min: 100, Max: 10_000}, connect.CodeInvalidArgument, "POST_TARGET_LENGTH_INVALID", map[string]string{"min": "100", "max": "10000"}},
+		{&post.PhotoMissingError{Count: 2}, connect.CodeFailedPrecondition, "POST_PHOTO_MISSING", map[string]string{"count": "2"}},
+	} {
+		mapped := toConnectError("op", errors.Join(errors.New("private context"), tc.err))
+		if connect.CodeOf(mapped) != tc.code {
+			t.Fatalf("%v code = %v, want %v", tc.err, connect.CodeOf(mapped), tc.code)
+		}
+		detail := postAppErrorDetail(t, mapped)
+		if detail.GetReason() != tc.reason || !reflect.DeepEqual(detail.GetParams(), tc.want) {
+			t.Fatalf("%v detail = %v %v, want %s %v", tc.err, detail.GetReason(), detail.GetParams(), tc.reason, tc.want)
+		}
+	}
+}

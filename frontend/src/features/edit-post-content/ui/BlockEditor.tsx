@@ -67,6 +67,14 @@ export const BlockEditor = forwardRef<
       ),
     [content, post.images, post.videos],
   )
+  // A photo deleted after the text was written leaves its IMAGE block naming nothing: that is
+  // not an empty block, and the finalize says how many such places remain (POST-13).
+  const detachedPhotos = useMemo(() => {
+    const attached = new Set(post.images.map((image) => image.filename))
+    return content.blocks.filter(
+      (block) => block.type === BlockType.IMAGE && block.file !== '' && !attached.has(block.file),
+    ).length
+  }, [content, post.images])
   const autosave = useContentAutosave({
     slug: post.slug,
     revision: post.contentRevision,
@@ -111,7 +119,13 @@ export const BlockEditor = forwardRef<
       {autosave.state === 'conflict' && (
         <FieldMessage className="mt-2">{t('edit.conflict')}</FieldMessage>
       )}
-      {!valid && <FieldMessage className="mt-2">{t('edit.emptyBlock')}</FieldMessage>}
+      {!valid && (
+        <FieldMessage className="mt-2">
+          {detachedPhotos > 0
+            ? t('edit.photoMissing', { count: detachedPhotos })
+            : t('edit.emptyBlock')}
+        </FieldMessage>
+      )}
       {/* Unfilled template positions are stated here and never gate: the app cannot invent a
           map link, and the reading view below shows WHERE each one is (TMPL-23). */}
       {unfilled > 0 && (

@@ -242,11 +242,16 @@ func TestSavePostGenerationOptionsIsAWholeSet(t *testing.T) {
 		"no use_memory":    func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.UseMemory = nil },
 		"no quality_rules": func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.QualityRules = nil },
 		"no field":         func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.Field = nil },
-		"target_length 0":  func(r *postpilotv1.SavePostGenerationOptionsRequest) { r.TargetLength = i32(0) },
 	} {
 		req := changed()
 		drop(req)
 		refused(name, req, connect.CodeInvalidArgument, "POST_CONTENT_INVALID")
+	}
+	// The length outside its range names the range it missed (POST-20).
+	for name, length := range map[string]int32{"target_length 0": 0, "target_length 10001": 10_001} {
+		req := changed()
+		req.TargetLength = i32(length)
+		refused(name, req, connect.CodeInvalidArgument, "POST_TARGET_LENGTH_INVALID")
 	}
 	for name, field := range map[string]postpilotv1.BlogField{"a number no build names": postpilotv1.BlogField(99), "a 분야 the product does not list": postpilotv1.BlogField_BLOG_FIELD_PETS} {
 		req := changed()

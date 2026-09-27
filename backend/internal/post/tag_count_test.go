@@ -73,25 +73,28 @@ func TestSaveGenerationOptionsUseMemory(t *testing.T) {
 	}
 }
 
-// The length's floor is TargetLengthMin, the one number template reads for the length it may
-// seed (TMPL-47): one below is refused with nothing written, and the floor itself is stored.
+// The length's range is TargetLengthMin … TargetLengthMax, one range on both sides (POST-20);
+// the floor is the number template reads for the length it may seed (TMPL-47). One past either
+// end is refused with nothing written, and both ends themselves are stored.
 func TestSaveGenerationOptionsRefusesATargetLengthBelowTargetLengthMinAndAcceptsIt(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "Length")
 
-	below := TargetLengthMin - 1
-	before := store.posts[created.Slug]
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &below })); !errors.Is(err, ErrInvalidContent) {
-		t.Fatalf("length %d: err = %v, want ErrInvalidContent", below, err)
+	for _, refused := range []int{TargetLengthMin - 1, TargetLengthMax + 1} {
+		before := store.posts[created.Slug]
+		var outOfRange *TargetLengthError
+		if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &refused })); !errors.As(err, &outOfRange) || outOfRange.Min != 100 || outOfRange.Max != 10_000 {
+			t.Fatalf("length %d: err = %v, want the range refusal", refused, err)
+		}
+		if after := store.posts[created.Slug]; !reflect.DeepEqual(after, before) {
+			t.Fatalf("a refused length changed the row: %+v", after)
+		}
 	}
-	if after := store.posts[created.Slug]; !reflect.DeepEqual(after, before) {
-		t.Fatalf("a refused length changed the row: %+v", after)
-	}
-
-	floor := TargetLengthMin
-	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &floor }))
-	if err != nil || saved.TargetLength == nil || *saved.TargetLength != TargetLengthMin {
-		t.Fatalf("length %d = %+v, %v; want it stored", floor, saved.TargetLength, err)
+	for _, end := range []int{TargetLengthMin, TargetLengthMax} {
+		saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, optionsSet(t, svc, alice, created.Slug, func(s *GenerationOptionsSet) { s.TargetLength = &end }))
+		if err != nil || saved.TargetLength == nil || *saved.TargetLength != end {
+			t.Fatalf("length %d = %+v, %v; want it stored", end, saved.TargetLength, err)
+		}
 	}
 }

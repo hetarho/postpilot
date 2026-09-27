@@ -841,8 +841,8 @@ func (p Post) GenerationOptions() GenerationOptionsSet {
 // POST-82). The 분야 rides this statement rather than AssignField, which stays SaveDraft's for
 // tabs that still send it.
 func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, set GenerationOptionsSet) (Post, error) {
-	if set.TargetLength != nil && *set.TargetLength < TargetLengthMin {
-		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
+	if set.TargetLength != nil && (*set.TargetLength < TargetLengthMin || *set.TargetLength > TargetLengthMax) {
+		return Post{}, &TargetLengthError{Min: TargetLengthMin, Max: TargetLengthMax}
 	}
 	if !TagCountRange.Allows(set.TagCount) {
 		return Post{}, ErrInvalidTagCount
@@ -887,6 +887,25 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	}
 	if found.Content == nil {
 		return Post{}, ErrNoMachineBaseline
+	}
+	// An IMAGE block naming a photo the post no longer has is content that cannot be exported
+	// as written, so the finalize says how many such places remain instead (POST-13).
+	images, err := s.images.ListImages(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("list images for finalize: %w", err)
+	}
+	attached := make(map[string]bool, len(images))
+	for _, image := range images {
+		attached[image.Filename] = true
+	}
+	missing := 0
+	for _, block := range found.Content.Blocks {
+		if block.Type == BlockImage && block.File != "" && !attached[block.File] {
+			missing++
+		}
+	}
+	if missing > 0 {
+		return Post{}, &PhotoMissingError{Count: missing}
 	}
 	// Published is refused above and the revision is the expected one, so this is "already
 	// finalized at it".

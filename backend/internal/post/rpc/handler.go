@@ -304,6 +304,18 @@ func actingUser(ctx context.Context) (string, error) {
 func toConnectError(op string, err error) error {
 	// A typed error carries the numbers the message needs, so it is matched before the
 	// sentinel switch — the same shape the template context's field-too-long refusal uses.
+	var targetLength *post.TargetLengthError
+	if errors.As(err, &targetLength) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "target length is out of range", postpilotv1.FailureReason_POST_TARGET_LENGTH_INVALID, map[string]string{
+			"min": strconv.Itoa(targetLength.Min), "max": strconv.Itoa(targetLength.Max),
+		})
+	}
+	var photoMissing *post.PhotoMissingError
+	if errors.As(err, &photoMissing) {
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "image blocks name photos no longer attached", postpilotv1.FailureReason_POST_PHOTO_MISSING, map[string]string{
+			"count": strconv.Itoa(photoMissing.Count),
+		})
+	}
 	var answerTooLong *post.TemplateAnswerTooLongError
 	if errors.As(err, &answerTooLong) {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long", postpilotv1.FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG, map[string]string{

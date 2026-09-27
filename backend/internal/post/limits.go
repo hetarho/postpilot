@@ -1,5 +1,7 @@
 package post
 
+import "fmt"
+
 // TagCountRange is the per-post tag count (POST-63): what a post never saved
 // with one reads as, and the range SavePostGenerationOptions accepts. The
 // generation context reads the same default — for a queued payload or a
@@ -7,9 +9,29 @@ package post
 // mirrors the three as POST_TAG_COUNT_DEFAULT / _MIN / _MAX.
 var TagCountRange = TagCount{Default: 4, Min: 1, Max: 10}
 
-// TargetLengthMin is the smallest 목표 글자 수 an option save accepts; the length has no ceiling
-// (POST-63). Template reads it too, for the length a template may seed (TMPL-47).
-const TargetLengthMin = 1
+// TargetLengthMin and TargetLengthMax bound the 목표 글자 수 an option save accepts: one range on
+// both sides and for a template (POST-20, TMPL-6). The frontend mirrors them as
+// POST_TARGET_LENGTH_MIN / _MAX. Template reads the floor too, for the length a template may
+// seed (TMPL-47).
+const (
+	TargetLengthMin = 100
+	TargetLengthMax = 10_000
+)
+
+// TargetLengthError is a 목표 글자 수 outside TargetLengthMin … TargetLengthMax.
+type TargetLengthError struct{ Min, Max int }
+
+func (e *TargetLengthError) Error() string {
+	return fmt.Sprintf("target length must be between %d and %d", e.Min, e.Max)
+}
+
+// PhotoMissingError refuses a finalize while IMAGE blocks name photos no longer attached to
+// the post; Count is how many such places remain (POST-13).
+type PhotoMissingError struct{ Count int }
+
+func (e *PhotoMissingError) Error() string {
+	return fmt.Sprintf("%d image blocks name photos no longer attached", e.Count)
+}
 
 // TagCount is a tag-count range with the value an unset post reads as.
 type TagCount struct {
