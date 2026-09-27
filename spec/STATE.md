@@ -14,6 +14,7 @@
 | clip-template-as-preset | converted@260917 |
 | post-quality-and-related-links | converted@260923 |
 | searchable-details | open@260926 |
+| storyline-first | ready@260927 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -74,6 +75,8 @@
 - Later: update-ssot CLIP narration — captions read as a shot list, one observation caption per cut (no story step before the flow, every claim must cite an observation, visit/taste markers dropped without an instruction, none of the post writer's memo/voice/memory); update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 ideation storyline-first ready: system prompt = format only, 기본 지침 (추천, on by default, account switch) + 지침 / 영상 지침 = direction incl. grounding, template = form (note/guide gone, a place says what it is about); ①'s 스토리라인 먼저 · 바로 글 쓰기 for posts and clips, the storyline in ②'s own collapsible space with photos per paragraph; clip server content checks removed
+- 260927 ideation storyline-first start: both posts and clips observe well but tell no story; a storyline step (or a story-aware direct write) after observation, and the system prompt / guideline / template roles separated
 - 260927 T424 done
 - 260927 T424 claimed (ia): base TMPL@12→14 GEN@14→16 (TMPL-22/37, GEN-1/40 unchanged)
 - 260927 T423 done
