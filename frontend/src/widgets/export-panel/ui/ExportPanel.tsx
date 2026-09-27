@@ -16,14 +16,7 @@ import {
   type CopyFallbackElement,
   type CopyImageResult,
 } from '@/shared/lib'
-import {
-  Button,
-  FieldLabel,
-  SegmentedControl,
-  Textarea,
-  TextField,
-  Typography,
-} from '@/shared/ui'
+import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
 import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
 import { toHashtags } from '../lib/hashtags'
 
