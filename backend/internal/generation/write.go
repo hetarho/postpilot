@@ -50,9 +50,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		return WriteAnswer{}, response.Usage, responseParseError(response, err)
 	}
 	answer.Content.Blocks = ValidateBlocks(answer.Content.Blocks)
-	// Slot resolution runs LAST, after the attachment filter: a slot block carries no file,
-	// so filtering first keeps that pass unaware of templates entirely.
-	answer.Content = ApplyTemplateSlots(FilterAttachments(answer.Content, photos, videos), post.Template)
+	answer.Content = FilterAttachments(answer.Content, photos, videos)
 	return *answer, response.Usage, nil
 }
 

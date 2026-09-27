@@ -27,20 +27,6 @@ type Block struct {
 	Alt     string
 	Caption string
 	Items   []string
-	// Slot is set only on an unfilled template slot. It rides on a TEXT block rather than
-	// being a sixth BlockType so every existing switch — reading view, block editor, the
-	// four export mappings, revision, the validator — stays correct without changing; only
-	// the surfaces that render a slot specially need to know it exists. [I2] holds either
-	// way: the canonical post is still a block array.
-	Slot *BlockSlot
-}
-
-// BlockSlot is a position a template reserved for content the app cannot invent. Kind is one
-// of the grammar's slot kinds; Label is the template author's own words, shown to the person
-// who has to fill it and never an instruction to a model.
-type BlockSlot struct {
-	Kind  string
-	Label string
 }
 
 type PostContent struct {
@@ -119,9 +105,8 @@ type VoiceRef struct {
 	SourceLanguage Language
 }
 
-// TemplateBrief is the post's 템플릿 as the writer needs it: the name, the body ALREADY
-// expanded for this post's photos and rendered into prompt text, and the slots that body
-// declared in document order.
+// TemplateBrief is the post's 템플릿 as the writer needs it: the name and the body ALREADY
+// expanded for this post's photos and rendered into prompt text.
 //
 // It carries no id. Once frozen into a job payload or an experiment snapshot it must stay
 // readable after the template it came from is renamed or deleted, and re-resolving an id
@@ -132,9 +117,6 @@ type VoiceRef struct {
 type TemplateBrief struct {
 	Name string
 	Body string
-	// Slots are the unfilled kinds (place · link) in the order the body's {{slot:n}} tokens
-	// number them, so the post-processing pass can resolve a token back to its kind and label.
-	Slots []TemplateSlot
 	// Rows is what each photo position bound, in body order. Frozen with the body and read
 	// by nothing yet: the interim contract renders a row as consecutive single-photo IMAGE
 	// blocks (TMPL-40), and this is where the author's row intent waits for whatever
@@ -171,13 +153,6 @@ type TemplateAnswer struct {
 	Label   string
 	Text    string
 	Enabled bool
-}
-
-// TemplateSlot is one position the app cannot fill by itself. It stays honest rather than
-// filled: the model is told not to write prose there, and a person fills it after export.
-type TemplateSlot struct {
-	Kind  string
-	Label string
 }
 
 type PostInput struct {

@@ -188,8 +188,7 @@ type Fact struct {
 }
 
 // Rendered is the prompt-facing projection: one template expanded for one post's photos and
-// rendered into the text the write and revise prompts carry, plus the slots it declared in
-// document order.
+// rendered into the text the write and revise prompts carry.
 //
 // It deliberately carries no id. A frozen render must stay readable after the template it
 // came from is renamed or deleted, which is also why Name is a copy rather than a lookup.
@@ -199,11 +198,6 @@ type Rendered struct {
 	// TitleArea is the title form rendered with the post's answers, "" when the template has
 	// none or nothing is left of it once its asks drop (TMPL-50).
 	TitleArea string
-	// Slots holds the UNFILLED kinds (place · link) in the order they appear, so index+1 is
-	// the number the body's {{slot:n}} tokens carry and the post-processing pass can match
-	// them back. Photo slots are absent by design: they render as their bound filename and
-	// resolve through the attachment filter that already exists.
-	Slots []Slot
 	// Rows records what each photo position actually bound, in body order — one entry per
 	// position that bound at least one photo, iterations of a repeat included. It is frozen
 	// beside the body so the author's row intent survives to whatever finally carries a row
@@ -223,11 +217,4 @@ type Rendered struct {
 type PhotoRow struct {
 	Count     int
 	Filenames []string
-}
-
-// Slot is one reserved position the app cannot fill by itself. It stays honest rather than
-// filled: the model is told not to write prose there, and a person fills it after export.
-type Slot struct {
-	Kind  SlotKind
-	Label string
 }

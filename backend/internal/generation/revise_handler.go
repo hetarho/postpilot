@@ -84,9 +84,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// The FRESH attachment snapshot, both kinds: a revision is filtered against what the post
 	// carries now, not against what it carried when the job was queued.
 	currentPhotos, currentVideos := AttachmentNames(current.Images)
-	// The frozen template's slots are re-applied: a revision that dropped a reserved position
-	// gets it back, in the same place, without the request having mentioned it.
-	filtered := ApplyTemplateSlots(FilterAttachments(*content, currentPhotos, currentVideos), decodeTemplate(payload.Template))
+	filtered := FilterAttachments(*content, currentPhotos, currentVideos)
 	// nil keeps the post's nouns: a revision has no nouns answer (GEN-55), so what the last
 	// generation said stands.
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil); err != nil {

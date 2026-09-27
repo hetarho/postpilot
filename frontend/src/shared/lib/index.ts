@@ -18,13 +18,11 @@ export { formatAppFailure } from './localization'
 export { activeLocale } from './localization'
 export type { Locale } from './localization'
 export {
-  blockSlotPlaceholder,
   escapeHtml,
   escapeHtmlComment,
   escapeMarkdownLabel,
   headingTag,
   relativeFileUrl,
-  unfilledSlotCount,
   walkBlocks,
   yamlString,
 } from './blocks'

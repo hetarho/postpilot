@@ -31,15 +31,12 @@ func loadGolden(t *testing.T, name string) (system, user string) {
 	return parts[0], strings.TrimSuffix(parts[1], "\n")
 }
 
-// testBrief is what the template context hands over: a name, a body already expanded and
-// rendered for this post's photos, and the slots that body declared.
+// testBrief is what the template context hands over: a name and a body already expanded and
+// rendered for this post's photos. A stored place slot has already become its label's text.
 func testBrief() *TemplateBrief {
 	return &TemplateBrief{
 		Name: "정보성 식당 리뷰",
-		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n{{slot:1}}\n\n{{photo:IMG_1.jpg}}\n<write>이 사진에 대한 설명</write>",
-		Slots: []TemplateSlot{
-			{Kind: "place", Label: "네이버 지도"},
-		},
+		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n네이버 지도\n\n{{photo:IMG_1.jpg}}\n<write>이 사진에 대한 설명</write>",
 	}
 }
 
@@ -80,9 +77,8 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 	}
 
 	section := strings.TrimPrefix(system, baseline)
-	// This brief declares a slot, so the legend explains the slot token too.
 	want := "\n\n[글 템플릿: 정보성 식당 리뷰]" +
-		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend + templateSlotLegend +
+		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend +
 		"\n---\n" + brief.Body + "\n---" +
 		"\n" + templatePrecedence
 	if section != want {
@@ -93,21 +89,19 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 	}
 }
 
-// The slot line is explained only when the frozen brief actually declares a slot. No body
-// authored since place/link were retired produces one, and a legend that names a token the
-// prompt does not contain is an invitation to emit it. The row line, by contrast, is
-// always there: adjacent photo tokens are what every counted position renders.
-func TestWritePromptExplainsSlotsOnlyWhenTheBriefHasThem(t *testing.T) {
+// No legend line names a slot token: a stored place/link position reaches the prompt as its
+// label's text (TMPL-37), so there is no token for a model to copy. The row line, by contrast,
+// is always there: adjacent photo tokens are what every counted position renders.
+func TestWritePromptNamesNoSlotTokenAndExplainsPhotoRows(t *testing.T) {
 	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
 	brief := testBrief()
-	brief.Slots = nil
 	brief.Body = "{{photo:IMG_1.jpg}}\n{{photo:IMG_2.jpg}}"
 	brief.Rows = []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}}
 
 	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
 	section := strings.TrimPrefix(system, baseline)
-	if strings.Contains(section, "{{slot:번호}}") {
-		t.Fatalf("the slot legend was sent for a brief with no slots:\n%s", section)
+	if strings.Contains(section, "{{slot") {
+		t.Fatalf("the template section names a slot token:\n%s", section)
 	}
 	if !strings.Contains(section, "연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다.") {
 		t.Fatalf("the photo-row line is missing:\n%s", section)
@@ -146,7 +140,7 @@ func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
 		t.Fatalf("지침 appears in the template section:\n%s", section)
 	}
 	for name, text := range map[string]string{
-		"legend": templateLegend, "slot legend": templateSlotLegend, "fact legend": templateFactLegend,
+		"legend": templateLegend, "fact legend": templateFactLegend,
 		"precedence": templatePrecedence, "title instruction": templateTitleInstruction,
 		"revise title instruction": reviseTemplateTitleInstruction,
 	} {
@@ -170,7 +164,7 @@ func TestTemplateTitleAreaPrecedesTheBodyFence(t *testing.T) {
 	revise, _ := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, brief, nil)
 
 	want := "\n\n[글 템플릿: 정보성 식당 리뷰]" +
-		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend + templateSlotLegend +
+		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend +
 		"\n" + templateTitleInstruction + "\n---\n" + brief.TitleArea + "\n---" +
 		"\n---\n" + brief.Body + "\n---" +
 		"\n" + templatePrecedence
@@ -244,15 +238,13 @@ func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	// because it holds text, not a reference.
 	frozen.Name = "편집된 이름"
 	frozen.Body = "<write>편집된 본문</write>"
-	frozen.Slots[0].Label = "편집된 라벨"
 
 	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if decoded.Template == nil || decoded.Template.Name != "정보성 식당 리뷰" ||
-		!strings.Contains(decoded.Template.Body, "인트로를 작성합니다") ||
-		len(decoded.Template.Slots) != 1 || decoded.Template.Slots[0].Label != "네이버 지도" {
+		!strings.Contains(decoded.Template.Body, "인트로를 작성합니다") {
 		t.Fatalf("payload followed the live row: %+v", decoded.Template)
 	}
 	// Decoding twice is what a resume and a retry each do; both must build the same prompt.
@@ -289,7 +281,7 @@ func TestTheRevisionPayloadFreezesTheTemplateToo(t *testing.T) {
 	}
 	brief := decodeTemplate(decoded.Template)
 	want := testBrief()
-	if brief == nil || brief.Name != want.Name || brief.Body != want.Body || len(brief.Slots) != 1 {
+	if brief == nil || brief.Name != want.Name || brief.Body != want.Body {
 		t.Fatalf("revision payload template = %+v", brief)
 	}
 	// And a revision payload from before templates existed still parses.

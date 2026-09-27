@@ -35,8 +35,7 @@ func fullSnapshotFixture() snapshotFixture {
 			Voice:      VoiceRef{ID: "voice-1", Name: "기본", Deleted: true, SourceLanguage: LanguageKorean},
 			TemplateID: "tmpl",
 			Template: &TemplateBrief{
-				Name: "하루 기록", Body: "<write>인트로를 씁니다</write>{{slot:1}}",
-				Slots:     []TemplateSlot{{Kind: "place", Label: "가게"}},
+				Name: "하루 기록", Body: "<write>인트로를 씁니다</write>네이버 지도",
 				Rows:      []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}},
 				Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
 				TitleArea: "<ask>가게 이름</ask> 다녀온 날",
@@ -57,7 +56,7 @@ func fullSnapshotFixture() snapshotFixture {
 					{Type: BlockText, Content: "본문"},
 					{Type: BlockImage, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판"},
 					{Type: BlockList, Items: []string{"하나", "둘"}},
-					{Type: BlockText, Content: "{{slot:1}}", Slot: &BlockSlot{Kind: "place", Label: "가게"}},
+					{Type: BlockText, Content: "네이버 지도"},
 				},
 			},
 			ContentLanguage: &english, TargetLanguage: LanguageKorean, TargetLength: &target, TagCount: 7,
@@ -153,7 +152,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200}}
 	fixture.post.Content.Blocks = []Block{{
 		Type: BlockText, Content: "본문", Level: 2, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판",
-		Items: []string{"하나"}, Slot: &BlockSlot{Kind: "place", Label: "가게"},
+		Items: []string{"하나"},
 	}}
 	snapshot := fixture.snapshot()
 	requireNoZero(t, "snapshot", reflect.ValueOf(snapshot))

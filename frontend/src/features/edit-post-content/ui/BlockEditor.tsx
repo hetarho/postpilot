@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { unfilledSlotCount } from '@/shared/lib'
 import {
   BlockList,
   blockWith,
@@ -55,9 +54,7 @@ export const BlockEditor = forwardRef<
   }
 >(function BlockEditor({ post, onContentChange, beforeArticle }, ref) {
   const { t } = useTranslation('posts')
-  const { t: tTemplates } = useTranslation('templates')
   const [content, setContent] = useState(() => copyPostContent(post.content!))
-  const unfilled = unfilledSlotCount(content)
   const valid = useMemo(
     () =>
       validContent(
@@ -125,13 +122,6 @@ export const BlockEditor = forwardRef<
             ? t('edit.photoMissing', { count: detachedPhotos })
             : t('edit.emptyBlock')}
         </FieldMessage>
-      )}
-      {/* Unfilled template positions are stated here and never gate: the app cannot invent a
-          map link, and the reading view below shows WHERE each one is (TMPL-23). */}
-      {unfilled > 0 && (
-        <Typography variant="body" role="status" className="text-content-secondary mt-2">
-          {tTemplates('slot.pending', { count: unfilled })}
-        </Typography>
       )}
 
       {beforeArticle}

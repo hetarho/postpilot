@@ -2,17 +2,20 @@ package template
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
-// Copy tokens. A slot becomes a short token the model is asked to reproduce verbatim rather
-// than a label or a sentence: copying twelve characters exactly is something a model does
-// reliably, while reproducing prose is not (TMPL-21, TMPL-22).
+// The photo token. A photo position becomes a short token naming the file it bound, which the
+// model reproduces as that photo's IMAGE block (TMPL-21, TMPL-22).
 const (
-	slotTokenPrefix  = "{{slot:"
 	photoTokenPrefix = "{{photo:"
 	tokenSuffix      = "}}"
+)
+
+// The words a stored place/link position renders as when its label is empty (TMPL-37).
+const (
+	placeFallback = "지도"
+	linkFallback  = "링크"
 )
 
 // factOpenPrefix … factClose fence one data field's value as DATA (TMPL-46). It is a
@@ -24,20 +27,6 @@ const (
 	factOpenSuffix = "\">"
 	factClose      = "</facts>"
 )
-
-// SlotToken is the token slot n (1-based) is rendered as, and the exact string the
-// post-processing pass looks for in the model's output.
-func SlotToken(n int) string { return fmt.Sprintf("%s%d%s", slotTokenPrefix, n, tokenSuffix) }
-
-// slotTokenPattern matches exactly what SlotToken renders, for any slot number.
-var slotTokenPattern = regexp.MustCompile(regexp.QuoteMeta(slotTokenPrefix) + "[0-9]+" + regexp.QuoteMeta(tokenSuffix))
-
-// ReplaceSlotTokens replaces every unfilled slot's token in text with `with`, literally (a `$` in
-// it is never an expansion). A post block carries no slot marker of its own, so this is how a
-// reader of stored content tells an unfilled slot's token from prose.
-func ReplaceSlotTokens(text, with string) string {
-	return slotTokenPattern.ReplaceAllLiteralString(text, with)
-}
 
 // PhotoToken names the attachment a photo slot was bound to during expansion.
 func PhotoToken(filename string) string { return photoTokenPrefix + filename + tokenSuffix }
@@ -64,13 +53,12 @@ func Render(name string, nodes []Node, filenames []string, maxIterations int, an
 	var body strings.Builder
 	state := &renderState{
 		remaining: filenames,
-		slots:     make([]Slot, 0, 4),
 		rows:      make([]PhotoRow, 0, 4),
 		facts:     make([]Fact, 0, 4),
 		answers:   answersByLabel(answers),
 	}
 	renderNodes(&body, state, nodes)
-	return Rendered{Name: name, Body: body.String(), Slots: state.slots, Rows: state.rows, Facts: state.facts}, nil
+	return Rendered{Name: name, Body: body.String(), Rows: state.rows, Facts: state.facts}, nil
 }
 
 // RenderTemplate renders a template's two areas for one post (TMPL-50). The body renders
@@ -128,7 +116,6 @@ func answersByLabel(answers []Answer) map[string]Answer {
 // pass, so the cursor — not the node tree — is what decides which photo a position gets.
 type renderState struct {
 	remaining []string
-	slots     []Slot
 	rows      []PhotoRow
 	facts     []Fact
 	// answers is what the post supplied, by label. Nodes keep saying what the AUTHOR wrote;
@@ -265,14 +252,15 @@ func renderAsk(out *strings.Builder, state *renderState, node Node) {
 	state.facts = append(state.facts, Fact{Label: label, Value: value})
 }
 
-// renderSlot binds a photo position and writes its tokens, or numbers a legacy place/link
-// position. A position's tokens are ADJACENT — joined by a single newline — which is how the
+// renderSlot binds a photo position and writes its tokens, or writes a legacy place/link
+// position's label. A position's tokens are ADJACENT — joined by a single newline — which is how the
 // interim contract says "these photos stand in one row" while every one of them is still an
 // ordinary single-photo IMAGE block (TMPL-40).
 func renderSlot(out *strings.Builder, state *renderState, node Node) {
+	// There is no place or link position (TMPL-37): a stored one is a 고정 문구 whose text is its
+	// label, so no run carries a slot token, a slot block or a slot marker.
 	if node.SlotKind != SlotPhoto {
-		state.slots = append(state.slots, Slot{Kind: node.SlotKind, Label: Decode(node.Label)})
-		out.WriteString(SlotToken(len(state.slots)))
+		out.WriteString(legacySlotText(node))
 		return
 	}
 	bound := state.take(node.Count)
@@ -286,6 +274,18 @@ func renderSlot(out *strings.Builder, state *renderState, node Node) {
 		out.WriteString(PhotoToken(filename))
 	}
 	state.rows = append(state.rows, PhotoRow{Count: node.Count, Filenames: append([]string(nil), bound...)})
+}
+
+// legacySlotText is the literal text a stored place/link position reads as: its label, or 지도 ·
+// 링크 when it has none — the same words the builder shows for it (TMPL-37).
+func legacySlotText(node Node) string {
+	if label := strings.TrimSpace(Decode(node.Label)); label != "" {
+		return label
+	}
+	if node.SlotKind == SlotLink {
+		return linkFallback
+	}
+	return placeFallback
 }
 
 func minInt(a, b int) int {

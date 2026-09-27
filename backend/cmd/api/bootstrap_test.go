@@ -381,7 +381,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 
 	// The render is where the two contexts actually meet: generation hands over the frozen
-	// attachment order and receives prompt text plus the slots that text declared.
+	// attachment order and receives prompt text, a stored place position already its label.
 	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, []string{"IMG_1.jpg", "IMG_2.jpg"}, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
@@ -389,8 +389,8 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	if brief.Name != "정보성 식당 리뷰" {
 		t.Fatalf("brief = %+v", brief)
 	}
-	if len(brief.Slots) != 1 || brief.Slots[0].Kind != "place" || brief.Slots[0].Label != "네이버 지도" {
-		t.Fatalf("slots = %+v", brief.Slots)
+	if !strings.Contains(brief.Body, "\n네이버 지도\n") || strings.Contains(brief.Body, "{{slot") {
+		t.Fatalf("the place position did not render as its label:\n%s", brief.Body)
 	}
 	// Two photos, so the repeat expanded twice and each iteration is bound to its own file.
 	if !strings.Contains(brief.Body, "{{photo:IMG_1.jpg}}") || !strings.Contains(brief.Body, "{{photo:IMG_2.jpg}}") {

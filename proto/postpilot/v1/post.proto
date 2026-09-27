@@ -85,19 +85,6 @@ enum BlogField {
   BLOG_FIELD_DAILY_LIFE = 9;
 }
 
-// A position a template reserved for content the app cannot invent — a place link, an
-// external URL. It rides on a TEXT block rather than becoming a sixth BlockType: a new enum
-// member would force every existing switch (reading view, block editor, the four export
-// mappings, revision, the validator) to change merely to stay correct, while an optional
-// field on a type they already handle means only the surfaces that render a slot specially
-// need to know it exists. [I2] holds either way — the canonical post is still a block array.
-message BlockSlot {
-  // photo | place | link (TMPL-18).
-  string kind = 1;
-  // The template author's label, shown to the user. Never an instruction to the model.
-  string label = 2;
-}
-
 message Block {
   BlockType type = 1;
   string content = 2;
@@ -106,9 +93,9 @@ message Block {
   string alt = 5;
   string caption = 6;
   repeated string items = 7;
-  // Set only on an unfilled template slot. A block carrying one holds its position through
-  // generation, revision, finalization and export until a person fills it.
-  BlockSlot slot = 8;
+  // The retired template slot marker (TMPL-37): a stored place/link position is literal text.
+  reserved 8;
+  reserved "slot";
 }
 
 message PostContent {

@@ -247,8 +247,8 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 	if got := strings.Count(rendered.Body, "<write>사진 설명</write>"); got != 2 {
 		t.Fatalf("the repeat expanded %d times, want 2", got)
 	}
-	if len(rendered.Slots) != 1 || rendered.Slots[0].Kind != SlotPlace {
-		t.Fatalf("slots = %+v", rendered.Slots)
+	if !strings.Contains(rendered.Body, "네이버 지도") || strings.Contains(rendered.Body, "{{slot") {
+		t.Fatalf("the place position did not render as its label:\n%s", rendered.Body)
 	}
 	if rendered.Name != "리뷰" {
 		t.Fatalf("name = %q", rendered.Name)

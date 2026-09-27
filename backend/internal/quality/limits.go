@@ -9,7 +9,7 @@ const (
 	// MeasureVersion is bumped whenever MeasureSelf would give a different answer for the same
 	// input; every stored self-measurement of another version is recomputed. The digest table in
 	// measure_digest_test.go fails when this is forgotten.
-	MeasureVersion = 2
+	MeasureVersion = 3
 	// RunLength is how many consecutive 어절 a shared stretch needs to count (QUAL-8).
 	RunLength = 8
 	// TitleWindow is how many recent published titles M1 reads (QUAL-7).

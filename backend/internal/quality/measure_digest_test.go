@@ -19,6 +19,8 @@ var measureDigests = map[int]struct{ corpus, output string }{
 	1: {corpus: "a54b4a366f98bd6a1818139ab3aae73d3a3d8a5da5e41d4b542db34ce0016a30", output: "a1de633f7538d65a79045bc547b76b882afd18e83edcddfdac7f7cddca9feee3"},
 	// T364: variation selectors, ZWJ, format runes and keycaps trim at 어절 edges.
 	2: {corpus: "a54b4a366f98bd6a1818139ab3aae73d3a3d8a5da5e41d4b542db34ce0016a30", output: "52960bbc68eea1b9ef8df64ee08d267ebdbbe7b34a1ce1e6cd749e275e7f8ecc"},
+	// T424: a TEXT block is measured as written; no slot token is stripped from it.
+	3: {corpus: "a54b4a366f98bd6a1818139ab3aae73d3a3d8a5da5e41d4b542db34ce0016a30", output: "5a00d371a033ba0c3437dce2acf1982e42575684ad6017c9b61e027c6bdf05dd"},
 }
 
 // measuredSelf is the projection the digest covers: exactly the stored numbers the aggregate

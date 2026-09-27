@@ -13,8 +13,7 @@ type templatePayload struct {
 	// TitleArea is the rendered title form, frozen with the body (TMPL-51). omitempty keeps a
 	// template with none byte-identical to a payload written before the member existed, which
 	// decodes as none.
-	TitleArea string             `json:"title_area,omitempty"`
-	Slots     []templateSlotJSON `json:"slots,omitempty"`
+	TitleArea string `json:"title_area,omitempty"`
 	// Rows is omitempty so a payload written before photo rows existed decodes as a
 	// template with none, which is exactly what it is.
 	Rows []templateRowJSON `json:"rows,omitempty"`
@@ -31,11 +30,6 @@ type templateFactJSON struct {
 type templateRowJSON struct {
 	Count     int      `json:"count"`
 	Filenames []string `json:"filenames,omitempty"`
-}
-
-type templateSlotJSON struct {
-	Kind  string `json:"kind"`
-	Label string `json:"label,omitempty"`
 }
 
 type observationPayload struct {
@@ -230,10 +224,6 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	if brief == nil {
 		return nil
 	}
-	slots := make([]templateSlotJSON, 0, len(brief.Slots))
-	for _, slot := range brief.Slots {
-		slots = append(slots, templateSlotJSON{Kind: slot.Kind, Label: slot.Label})
-	}
 	rows := make([]templateRowJSON, 0, len(brief.Rows))
 	for _, row := range brief.Rows {
 		rows = append(rows, templateRowJSON{Count: row.Count, Filenames: row.Filenames})
@@ -242,7 +232,7 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	for _, fact := range brief.Facts {
 		facts = append(facts, templateFactJSON{Label: fact.Label, Value: fact.Value})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Slots: slots, Rows: rows, Facts: facts}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Rows: rows, Facts: facts}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -250,10 +240,6 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	if payload == nil {
 		return nil
-	}
-	slots := make([]TemplateSlot, 0, len(payload.Slots))
-	for _, slot := range payload.Slots {
-		slots = append(slots, TemplateSlot{Kind: slot.Kind, Label: slot.Label})
 	}
 	rows := make([]TemplatePhotoRow, 0, len(payload.Rows))
 	for _, row := range payload.Rows {
@@ -263,5 +249,5 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	for _, fact := range payload.Facts {
 		facts = append(facts, TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows, Facts: facts, TitleArea: payload.TitleArea}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Rows: rows, Facts: facts, TitleArea: payload.TitleArea}
 }

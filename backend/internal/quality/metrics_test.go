@@ -236,11 +236,10 @@ func TestCompositionCountsCharactersPhotosTypesAndSentences(t *testing.T) {
 		{Type: BlockImage, File: "  "},
 		{Type: BlockVideo, File: "clip.mp4"},
 		{Type: BlockList, Items: []string{"감자탕 대", "볶음밥"}},
-		{Type: BlockText, Content: "{{slot:1}}"},
 		{Type: BlockQuote, Content: " "},
 	}}
 	got := MeasureComposition(Sample{Slug: "a", Doc: doc, Language: LanguageKorean})
-	// 18 + 2 + 5 + 3 runes; the title, a blank quote and the slot token do not count.
+	// 18 + 2 + 5 + 3 runes; the title and a blank quote do not count.
 	if got.CharCount != 28 || got.PhotoCount != 1 {
 		t.Fatalf("chars = %d, photos = %d; want 28 and 1", got.CharCount, got.PhotoCount)
 	}

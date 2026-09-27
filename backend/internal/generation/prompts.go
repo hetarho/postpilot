@@ -162,11 +162,7 @@ const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 
 // templateLegend explains the grammar the rendered body uses. It ships with the section
 // rather than living in the template text because it is OUR contract with the model, not the
-// author's: a user editing a template must not be able to change what {{slot:n}} means.
-//
-// The tokens are deliberately short. The model is asked to copy a slot's token verbatim, and
-// copying twelve characters exactly is something a model does reliably while reproducing a
-// label or a sentence is not (TMPL-21).
+// author's: a user editing a template must not be able to change what a tag means.
 const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.
@@ -174,15 +170,8 @@ const templateLegend = `표기는 다음과 같습니다.
 - 연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다. 각각 IMAGE 블록으로, 그 순서대로 이어서 출력하세요.
 - <note>…</note>: 글을 쓸 때 참고할 요구 사항입니다. 출력하지 마세요.`
 
-// templateSlotLegend is appended ONLY when the frozen brief actually declares a slot. No
-// body written since TMPL-37 can produce one, so explaining {{slot:번호}} to every model
-// would be teaching a token the prompt does not contain — and a legend that names absent
-// tokens is an invitation to emit them.
-const templateSlotLegend = "\n- {{slot:번호}}: 앱이 나중에 채우는 자리입니다. 그 토큰만 담은 TEXT 블록 하나를 그대로 출력하고, 그 자리에 어떤 문장도 새로 쓰지 마세요."
-
-// templateFactLegend is appended ONLY when the frozen brief actually carries a fact, for the
-// same reason templateSlotLegend is: explaining a tag the prompt does not contain is an
-// invitation to emit it.
+// templateFactLegend is appended ONLY when the frozen brief actually carries a fact:
+// explaining a tag the prompt does not contain is an invitation to emit it.
 //
 // It says the three things the tag exists for (TMPL-46): the content is the user's own
 // fact, the `<write>` before it may use nothing else, and the tag itself never reaches the
@@ -239,9 +228,6 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstr
 	}
 	fmt.Fprintf(out, "\n\n[글 템플릿: %s]", brief.Name)
 	legend := templateLegend
-	if len(brief.Slots) > 0 {
-		legend += templateSlotLegend
-	}
 	if len(brief.Facts) > 0 {
 		legend += templateFactLegend
 	}

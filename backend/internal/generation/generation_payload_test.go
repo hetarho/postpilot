@@ -24,8 +24,7 @@ func filledGenerationOptions() generationOptions {
 		}},
 		WriteNativeEffort: true,
 		writeMaterial: writeMaterial{Template: &TemplateBrief{
-			Name: "하루 기록", Body: "<write>인트로</write>{{slot:1}}",
-			Slots:     []TemplateSlot{{Kind: "place", Label: "가게"}},
+			Name: "하루 기록", Body: "<write>인트로</write>네이버 지도",
 			Rows:      []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}},
 			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
 			TitleArea: "<ask>가게 이름</ask> 다녀온 날",

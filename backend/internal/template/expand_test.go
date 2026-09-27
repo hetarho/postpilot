@@ -49,11 +49,9 @@ func TestRenderExpandsOncePerPhoto(t *testing.T) {
 	if got := strings.Count(rendered.Body, "========================="); got != 2 {
 		t.Fatalf("separator rendered %d times, want 2", got)
 	}
-	if len(rendered.Slots) != 1 || rendered.Slots[0].Kind != SlotPlace || rendered.Slots[0].Label != "네이버 지도" {
-		t.Fatalf("slots = %+v", rendered.Slots)
-	}
-	if !strings.Contains(rendered.Body, SlotToken(1)) {
-		t.Fatalf("slot token missing from:\n%s", rendered.Body)
+	// The stored place position reads as its label's text (TMPL-37).
+	if !strings.Contains(rendered.Body, "\n네이버 지도\n") {
+		t.Fatalf("the place label is missing from:\n%s", rendered.Body)
 	}
 	// The grammar's own tags stay, because the legend explains them; a raw photo filename
 	// never appears without its token wrapper.
@@ -76,8 +74,8 @@ func TestRenderWithNoPhotosDropsTheWholeRepeat(t *testing.T) {
 			t.Fatalf("%q was dropped with the repeat:\n%s", keep, rendered.Body)
 		}
 	}
-	if len(rendered.Slots) != 1 {
-		t.Fatalf("slots = %+v", rendered.Slots)
+	if !strings.Contains(rendered.Body, "네이버 지도") {
+		t.Fatalf("the place label was dropped with the repeat:\n%s", rendered.Body)
 	}
 }
 
@@ -98,8 +96,10 @@ func TestRenderRefusesAnExpansionOverTheBound(t *testing.T) {
 	}
 }
 
-func TestRenderNumbersSlotsInDocumentOrder(t *testing.T) {
-	nodes, err := Parse(`<slot kind="place" label="지도"/><write>a</write><slot kind="link" label="예약"/>`, fixtureParseOptions)
+// TMPL-37: a stored place/link position is literal text — its label, or 지도 · 링크 when it has
+// none — so no run carries a slot token, and nothing downstream has a slot to resolve.
+func TestRenderWritesAPlaceOrLinkSlotAsItsLabel(t *testing.T) {
+	nodes, err := Parse(`<slot kind="place" label="가게 &amp; 지도"/><write>a</write><slot kind="link" label="예약"/>|<slot kind="place"/>|<slot kind="link" label="  "/>`, fixtureParseOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,11 +107,11 @@ func TestRenderNumbersSlotsInDocumentOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rendered.Slots) != 2 || rendered.Slots[0].Kind != SlotPlace || rendered.Slots[1].Kind != SlotLink {
-		t.Fatalf("slots = %+v", rendered.Slots)
-	}
-	if want := SlotToken(1) + "<write>a</write>" + SlotToken(2); rendered.Body != want {
+	if want := "가게 & 지도<write>a</write>예약|지도|링크"; rendered.Body != want {
 		t.Fatalf("body = %q, want %q", rendered.Body, want)
+	}
+	if strings.Contains(rendered.Body, "{{") {
+		t.Fatalf("a token reached the render: %q", rendered.Body)
 	}
 }
 
@@ -261,23 +261,5 @@ func assertRows(t *testing.T, got, want []PhotoRow) {
 		if got[i].Count != want[i].Count || strings.Join(got[i].Filenames, ",") != strings.Join(want[i].Filenames, ",") {
 			t.Fatalf("row %d = %+v, want %+v", i, got[i], want[i])
 		}
-	}
-}
-
-// Review F11: one slot-token grammar. What quality and generation read stored content with is
-// exactly what SlotToken renders — no near miss, no photo token — and the replacement is literal.
-func TestReplaceSlotTokensMatchesExactlySlotTokens(t *testing.T) {
-	for _, n := range []int{1, 9, 10, 123} {
-		if got := ReplaceSlotTokens("a"+SlotToken(n)+"b", "|"); got != "a|b" {
-			t.Errorf("slot %d: %q", n, got)
-		}
-	}
-	for _, text := range []string{"{{slot:}}", "{{slot:x}}", "{{slot:-1}}", "{slot:1}", PhotoToken("a.jpg")} {
-		if got := ReplaceSlotTokens(text, "|"); got != text {
-			t.Errorf("%q was replaced: %q", text, got)
-		}
-	}
-	if got := ReplaceSlotTokens(SlotToken(1), "$1"); got != "$1" {
-		t.Errorf("a $ replacement expanded: %q", got)
 	}
 }

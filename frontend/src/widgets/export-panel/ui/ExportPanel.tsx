@@ -13,14 +13,12 @@ import {
   copyImage,
   copyText,
   presignExpired,
-  unfilledSlotCount,
   type CopyFallbackElement,
   type CopyImageResult,
 } from '@/shared/lib'
 import {
   Button,
   FieldLabel,
-  Notice,
   SegmentedControl,
   Textarea,
   TextField,
@@ -73,7 +71,6 @@ export function ExportPanel({
   onPhotoUrlsStale,
 }: ExportPanelProps) {
   const { t } = useTranslation('posts')
-  const { t: tTemplates } = useTranslation('templates')
   const [format, setFormat] = useState<ExportFormat>('naver')
   // A photo target names the marker it belongs to, so two markers for one file still report
   // separately and the confirmation lands on the entry that was pressed. A TEXT copy stores the
@@ -122,7 +119,6 @@ export function ExportPanel({
   // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
   // rather than mounting an empty control (THEME-29).
   const hashtags = toHashtags(content.tags)
-  const unfilled = unfilledSlotCount(content)
   // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
   // in the preview and a `사진_<n>_사진` marker in the copied text cannot drift apart: they match
   // by position. The marker index — not the block index — is the copy target's identity, unchanged
@@ -339,15 +335,6 @@ export function ExportPanel({
       <Typography variant="title" id="export-heading">
         {t('export.title')}
       </Typography>
-      {/* Unfilled template positions WARN, they do not gate: the app cannot invent a map link,
-          and blocking the copy over one would leave the user with no way out (TMPL-23). */}
-      {unfilled > 0 && (
-        <Notice tone="info" role="status" className="mt-3">
-          <span>
-            {tTemplates('slot.pending', { count: unfilled })} {tTemplates('slot.exportHint')}
-          </span>
-        </Notice>
-      )}
       {/* The four Korean format names measure ~380px in one row against 328px of content at 360px,
           which cut 마크다운 in half with no scrollbar to say so. Two columns at the base
           breakpoint fit all four; the strip comes back where the width exists. */}

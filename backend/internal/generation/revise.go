@@ -142,15 +142,7 @@ func contentForPrompt(content PostContent) contentJSON {
 		wire.Blocks = append(wire.Blocks, blockJSON{
 			Type: string(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
-			Slot: toSlotJSON(block.Slot),
 		})
 	}
 	return wire
-}
-
-func toSlotJSON(slot *BlockSlot) *blockSlotJSON {
-	if slot == nil {
-		return nil
-	}
-	return &blockSlotJSON{Kind: slot.Kind, Label: slot.Label}
 }

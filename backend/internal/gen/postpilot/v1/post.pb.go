@@ -214,85 +214,22 @@ func (BlogField) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{2}
 }
 
-// A position a template reserved for content the app cannot invent — a place link, an
-// external URL. It rides on a TEXT block rather than becoming a sixth BlockType: a new enum
-// member would force every existing switch (reading view, block editor, the four export
-// mappings, revision, the validator) to change merely to stay correct, while an optional
-// field on a type they already handle means only the surfaces that render a slot specially
-// need to know it exists. [I2] holds either way — the canonical post is still a block array.
-type BlockSlot struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// photo | place | link (TMPL-18).
-	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	// The template author's label, shown to the user. Never an instruction to the model.
-	Label         string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BlockSlot) Reset() {
-	*x = BlockSlot{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BlockSlot) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BlockSlot) ProtoMessage() {}
-
-func (x *BlockSlot) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BlockSlot.ProtoReflect.Descriptor instead.
-func (*BlockSlot) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *BlockSlot) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *BlockSlot) GetLabel() string {
-	if x != nil {
-		return x.Label
-	}
-	return ""
-}
-
 type Block struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Type    BlockType              `protobuf:"varint,1,opt,name=type,proto3,enum=postpilot.v1.BlockType" json:"type,omitempty"`
-	Content string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Level   int32                  `protobuf:"varint,3,opt,name=level,proto3" json:"level,omitempty"`
-	File    string                 `protobuf:"bytes,4,opt,name=file,proto3" json:"file,omitempty"`
-	Alt     string                 `protobuf:"bytes,5,opt,name=alt,proto3" json:"alt,omitempty"`
-	Caption string                 `protobuf:"bytes,6,opt,name=caption,proto3" json:"caption,omitempty"`
-	Items   []string               `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty"`
-	// Set only on an unfilled template slot. A block carrying one holds its position through
-	// generation, revision, finalization and export until a person fills it.
-	Slot          *BlockSlot `protobuf:"bytes,8,opt,name=slot,proto3" json:"slot,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          BlockType              `protobuf:"varint,1,opt,name=type,proto3,enum=postpilot.v1.BlockType" json:"type,omitempty"`
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Level         int32                  `protobuf:"varint,3,opt,name=level,proto3" json:"level,omitempty"`
+	File          string                 `protobuf:"bytes,4,opt,name=file,proto3" json:"file,omitempty"`
+	Alt           string                 `protobuf:"bytes,5,opt,name=alt,proto3" json:"alt,omitempty"`
+	Caption       string                 `protobuf:"bytes,6,opt,name=caption,proto3" json:"caption,omitempty"`
+	Items         []string               `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Block) Reset() {
 	*x = Block{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[1]
+	mi := &file_postpilot_v1_post_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +241,7 @@ func (x *Block) String() string {
 func (*Block) ProtoMessage() {}
 
 func (x *Block) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[1]
+	mi := &file_postpilot_v1_post_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +254,7 @@ func (x *Block) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Block.ProtoReflect.Descriptor instead.
 func (*Block) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Block) GetType() BlockType {
@@ -369,13 +306,6 @@ func (x *Block) GetItems() []string {
 	return nil
 }
 
-func (x *Block) GetSlot() *BlockSlot {
-	if x != nil {
-		return x.Slot
-	}
-	return nil
-}
-
 type PostContent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
@@ -388,7 +318,7 @@ type PostContent struct {
 
 func (x *PostContent) Reset() {
 	*x = PostContent{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[2]
+	mi := &file_postpilot_v1_post_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -400,7 +330,7 @@ func (x *PostContent) String() string {
 func (*PostContent) ProtoMessage() {}
 
 func (x *PostContent) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[2]
+	mi := &file_postpilot_v1_post_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -413,7 +343,7 @@ func (x *PostContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostContent.ProtoReflect.Descriptor instead.
 func (*PostContent) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *PostContent) GetTitle() string {
@@ -467,7 +397,7 @@ type Observation struct {
 
 func (x *Observation) Reset() {
 	*x = Observation{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[3]
+	mi := &file_postpilot_v1_post_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -479,7 +409,7 @@ func (x *Observation) String() string {
 func (*Observation) ProtoMessage() {}
 
 func (x *Observation) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[3]
+	mi := &file_postpilot_v1_post_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +422,7 @@ func (x *Observation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observation.ProtoReflect.Descriptor instead.
 func (*Observation) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Observation) GetFile() string {
@@ -573,7 +503,7 @@ type VoiceRef struct {
 
 func (x *VoiceRef) Reset() {
 	*x = VoiceRef{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[4]
+	mi := &file_postpilot_v1_post_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -585,7 +515,7 @@ func (x *VoiceRef) String() string {
 func (*VoiceRef) ProtoMessage() {}
 
 func (x *VoiceRef) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[4]
+	mi := &file_postpilot_v1_post_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -598,7 +528,7 @@ func (x *VoiceRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoiceRef.ProtoReflect.Descriptor instead.
 func (*VoiceRef) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *VoiceRef) GetId() string {
@@ -691,7 +621,7 @@ type Post struct {
 
 func (x *Post) Reset() {
 	*x = Post{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[5]
+	mi := &file_postpilot_v1_post_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -703,7 +633,7 @@ func (x *Post) String() string {
 func (*Post) ProtoMessage() {}
 
 func (x *Post) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[5]
+	mi := &file_postpilot_v1_post_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -716,7 +646,7 @@ func (x *Post) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Post.ProtoReflect.Descriptor instead.
 func (*Post) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Post) GetSlug() string {
@@ -948,7 +878,7 @@ type Image struct {
 
 func (x *Image) Reset() {
 	*x = Image{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[6]
+	mi := &file_postpilot_v1_post_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -960,7 +890,7 @@ func (x *Image) String() string {
 func (*Image) ProtoMessage() {}
 
 func (x *Image) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[6]
+	mi := &file_postpilot_v1_post_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -973,7 +903,7 @@ func (x *Image) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Image.ProtoReflect.Descriptor instead.
 func (*Image) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Image) GetId() string {
@@ -1044,7 +974,7 @@ type Video struct {
 
 func (x *Video) Reset() {
 	*x = Video{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[7]
+	mi := &file_postpilot_v1_post_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1056,7 +986,7 @@ func (x *Video) String() string {
 func (*Video) ProtoMessage() {}
 
 func (x *Video) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[7]
+	mi := &file_postpilot_v1_post_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +999,7 @@ func (x *Video) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Video.ProtoReflect.Descriptor instead.
 func (*Video) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Video) GetId() string {
@@ -1149,7 +1079,7 @@ type PostSummary struct {
 
 func (x *PostSummary) Reset() {
 	*x = PostSummary{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[8]
+	mi := &file_postpilot_v1_post_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1161,7 +1091,7 @@ func (x *PostSummary) String() string {
 func (*PostSummary) ProtoMessage() {}
 
 func (x *PostSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[8]
+	mi := &file_postpilot_v1_post_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1174,7 +1104,7 @@ func (x *PostSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostSummary.ProtoReflect.Descriptor instead.
 func (*PostSummary) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PostSummary) GetSlug() string {
@@ -1281,7 +1211,7 @@ type GenerationJob struct {
 
 func (x *GenerationJob) Reset() {
 	*x = GenerationJob{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[9]
+	mi := &file_postpilot_v1_post_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1293,7 +1223,7 @@ func (x *GenerationJob) String() string {
 func (*GenerationJob) ProtoMessage() {}
 
 func (x *GenerationJob) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[9]
+	mi := &file_postpilot_v1_post_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1306,7 +1236,7 @@ func (x *GenerationJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerationJob.ProtoReflect.Descriptor instead.
 func (*GenerationJob) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GenerationJob) GetId() string {
@@ -1445,7 +1375,7 @@ type GetGenerationRequest struct {
 
 func (x *GetGenerationRequest) Reset() {
 	*x = GetGenerationRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[10]
+	mi := &file_postpilot_v1_post_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1457,7 +1387,7 @@ func (x *GetGenerationRequest) String() string {
 func (*GetGenerationRequest) ProtoMessage() {}
 
 func (x *GetGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[10]
+	mi := &file_postpilot_v1_post_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1470,7 +1400,7 @@ func (x *GetGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGenerationRequest.ProtoReflect.Descriptor instead.
 func (*GetGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetGenerationRequest) GetId() string {
@@ -1489,7 +1419,7 @@ type GetGenerationResponse struct {
 
 func (x *GetGenerationResponse) Reset() {
 	*x = GetGenerationResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[11]
+	mi := &file_postpilot_v1_post_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1501,7 +1431,7 @@ func (x *GetGenerationResponse) String() string {
 func (*GetGenerationResponse) ProtoMessage() {}
 
 func (x *GetGenerationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[11]
+	mi := &file_postpilot_v1_post_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1514,7 +1444,7 @@ func (x *GetGenerationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGenerationResponse.ProtoReflect.Descriptor instead.
 func (*GetGenerationResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetGenerationResponse) GetJob() *GenerationJob {
@@ -1543,7 +1473,7 @@ type ReobserveSelection struct {
 
 func (x *ReobserveSelection) Reset() {
 	*x = ReobserveSelection{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[12]
+	mi := &file_postpilot_v1_post_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1555,7 +1485,7 @@ func (x *ReobserveSelection) String() string {
 func (*ReobserveSelection) ProtoMessage() {}
 
 func (x *ReobserveSelection) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[12]
+	mi := &file_postpilot_v1_post_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1568,7 +1498,7 @@ func (x *ReobserveSelection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReobserveSelection.ProtoReflect.Descriptor instead.
 func (*ReobserveSelection) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ReobserveSelection) GetFiles() []string {
@@ -1589,7 +1519,7 @@ type QualityRuleTicks struct {
 
 func (x *QualityRuleTicks) Reset() {
 	*x = QualityRuleTicks{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[13]
+	mi := &file_postpilot_v1_post_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1601,7 +1531,7 @@ func (x *QualityRuleTicks) String() string {
 func (*QualityRuleTicks) ProtoMessage() {}
 
 func (x *QualityRuleTicks) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[13]
+	mi := &file_postpilot_v1_post_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1614,7 +1544,7 @@ func (x *QualityRuleTicks) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QualityRuleTicks.ProtoReflect.Descriptor instead.
 func (*QualityRuleTicks) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *QualityRuleTicks) GetMetrics() []QualityMetric {
@@ -1637,7 +1567,7 @@ type StartGenerationRequest struct {
 
 func (x *StartGenerationRequest) Reset() {
 	*x = StartGenerationRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[14]
+	mi := &file_postpilot_v1_post_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1649,7 +1579,7 @@ func (x *StartGenerationRequest) String() string {
 func (*StartGenerationRequest) ProtoMessage() {}
 
 func (x *StartGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[14]
+	mi := &file_postpilot_v1_post_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1662,7 +1592,7 @@ func (x *StartGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartGenerationRequest.ProtoReflect.Descriptor instead.
 func (*StartGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *StartGenerationRequest) GetPostSlug() string {
@@ -1709,7 +1639,7 @@ type StartGenerationResponse struct {
 
 func (x *StartGenerationResponse) Reset() {
 	*x = StartGenerationResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[15]
+	mi := &file_postpilot_v1_post_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1721,7 +1651,7 @@ func (x *StartGenerationResponse) String() string {
 func (*StartGenerationResponse) ProtoMessage() {}
 
 func (x *StartGenerationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[15]
+	mi := &file_postpilot_v1_post_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1734,7 +1664,7 @@ func (x *StartGenerationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartGenerationResponse.ProtoReflect.Descriptor instead.
 func (*StartGenerationResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{15}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *StartGenerationResponse) GetJobId() string {
@@ -1756,7 +1686,7 @@ type StartRevisionRequest struct {
 
 func (x *StartRevisionRequest) Reset() {
 	*x = StartRevisionRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[16]
+	mi := &file_postpilot_v1_post_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1768,7 +1698,7 @@ func (x *StartRevisionRequest) String() string {
 func (*StartRevisionRequest) ProtoMessage() {}
 
 func (x *StartRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[16]
+	mi := &file_postpilot_v1_post_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1781,7 +1711,7 @@ func (x *StartRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRevisionRequest.ProtoReflect.Descriptor instead.
 func (*StartRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{16}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *StartRevisionRequest) GetPostSlug() string {
@@ -1821,7 +1751,7 @@ type StartRevisionResponse struct {
 
 func (x *StartRevisionResponse) Reset() {
 	*x = StartRevisionResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[17]
+	mi := &file_postpilot_v1_post_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1833,7 +1763,7 @@ func (x *StartRevisionResponse) String() string {
 func (*StartRevisionResponse) ProtoMessage() {}
 
 func (x *StartRevisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[17]
+	mi := &file_postpilot_v1_post_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1846,7 +1776,7 @@ func (x *StartRevisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRevisionResponse.ProtoReflect.Descriptor instead.
 func (*StartRevisionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{17}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *StartRevisionResponse) GetJobId() string {
@@ -1874,7 +1804,7 @@ type TemplateAnswer struct {
 
 func (x *TemplateAnswer) Reset() {
 	*x = TemplateAnswer{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[18]
+	mi := &file_postpilot_v1_post_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1886,7 +1816,7 @@ func (x *TemplateAnswer) String() string {
 func (*TemplateAnswer) ProtoMessage() {}
 
 func (x *TemplateAnswer) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[18]
+	mi := &file_postpilot_v1_post_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1899,7 +1829,7 @@ func (x *TemplateAnswer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TemplateAnswer.ProtoReflect.Descriptor instead.
 func (*TemplateAnswer) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{18}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *TemplateAnswer) GetLabel() string {
@@ -1955,7 +1885,7 @@ type SavePostDraftRequest struct {
 
 func (x *SavePostDraftRequest) Reset() {
 	*x = SavePostDraftRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	mi := &file_postpilot_v1_post_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1967,7 +1897,7 @@ func (x *SavePostDraftRequest) String() string {
 func (*SavePostDraftRequest) ProtoMessage() {}
 
 func (x *SavePostDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[19]
+	mi := &file_postpilot_v1_post_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1980,7 +1910,7 @@ func (x *SavePostDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostDraftRequest.ProtoReflect.Descriptor instead.
 func (*SavePostDraftRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{19}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SavePostDraftRequest) GetSlug() string {
@@ -2048,7 +1978,7 @@ type SavePostDraftResponse struct {
 
 func (x *SavePostDraftResponse) Reset() {
 	*x = SavePostDraftResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	mi := &file_postpilot_v1_post_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2060,7 +1990,7 @@ func (x *SavePostDraftResponse) String() string {
 func (*SavePostDraftResponse) ProtoMessage() {}
 
 func (x *SavePostDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[20]
+	mi := &file_postpilot_v1_post_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2073,7 +2003,7 @@ func (x *SavePostDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostDraftResponse.ProtoReflect.Descriptor instead.
 func (*SavePostDraftResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{20}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SavePostDraftResponse) GetPost() *Post {
@@ -2094,7 +2024,7 @@ type SavePostContentRequest struct {
 
 func (x *SavePostContentRequest) Reset() {
 	*x = SavePostContentRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[21]
+	mi := &file_postpilot_v1_post_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2106,7 +2036,7 @@ func (x *SavePostContentRequest) String() string {
 func (*SavePostContentRequest) ProtoMessage() {}
 
 func (x *SavePostContentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[21]
+	mi := &file_postpilot_v1_post_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2119,7 +2049,7 @@ func (x *SavePostContentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostContentRequest.ProtoReflect.Descriptor instead.
 func (*SavePostContentRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{21}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SavePostContentRequest) GetSlug() string {
@@ -2152,7 +2082,7 @@ type SavePostContentResponse struct {
 
 func (x *SavePostContentResponse) Reset() {
 	*x = SavePostContentResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[22]
+	mi := &file_postpilot_v1_post_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2164,7 +2094,7 @@ func (x *SavePostContentResponse) String() string {
 func (*SavePostContentResponse) ProtoMessage() {}
 
 func (x *SavePostContentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[22]
+	mi := &file_postpilot_v1_post_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2177,7 +2107,7 @@ func (x *SavePostContentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostContentResponse.ProtoReflect.Descriptor instead.
 func (*SavePostContentResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{22}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *SavePostContentResponse) GetPost() *Post {
@@ -2213,7 +2143,7 @@ type SavePostGenerationOptionsRequest struct {
 
 func (x *SavePostGenerationOptionsRequest) Reset() {
 	*x = SavePostGenerationOptionsRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[23]
+	mi := &file_postpilot_v1_post_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2225,7 +2155,7 @@ func (x *SavePostGenerationOptionsRequest) String() string {
 func (*SavePostGenerationOptionsRequest) ProtoMessage() {}
 
 func (x *SavePostGenerationOptionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[23]
+	mi := &file_postpilot_v1_post_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2238,7 +2168,7 @@ func (x *SavePostGenerationOptionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostGenerationOptionsRequest.ProtoReflect.Descriptor instead.
 func (*SavePostGenerationOptionsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{23}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SavePostGenerationOptionsRequest) GetSlug() string {
@@ -2292,7 +2222,7 @@ type SavePostGenerationOptionsResponse struct {
 
 func (x *SavePostGenerationOptionsResponse) Reset() {
 	*x = SavePostGenerationOptionsResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[24]
+	mi := &file_postpilot_v1_post_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2304,7 +2234,7 @@ func (x *SavePostGenerationOptionsResponse) String() string {
 func (*SavePostGenerationOptionsResponse) ProtoMessage() {}
 
 func (x *SavePostGenerationOptionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[24]
+	mi := &file_postpilot_v1_post_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2317,7 +2247,7 @@ func (x *SavePostGenerationOptionsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use SavePostGenerationOptionsResponse.ProtoReflect.Descriptor instead.
 func (*SavePostGenerationOptionsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{24}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SavePostGenerationOptionsResponse) GetPost() *Post {
@@ -2337,7 +2267,7 @@ type FinalizePostRequest struct {
 
 func (x *FinalizePostRequest) Reset() {
 	*x = FinalizePostRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[25]
+	mi := &file_postpilot_v1_post_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2349,7 +2279,7 @@ func (x *FinalizePostRequest) String() string {
 func (*FinalizePostRequest) ProtoMessage() {}
 
 func (x *FinalizePostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[25]
+	mi := &file_postpilot_v1_post_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2362,7 +2292,7 @@ func (x *FinalizePostRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinalizePostRequest.ProtoReflect.Descriptor instead.
 func (*FinalizePostRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{25}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FinalizePostRequest) GetSlug() string {
@@ -2388,7 +2318,7 @@ type FinalizePostResponse struct {
 
 func (x *FinalizePostResponse) Reset() {
 	*x = FinalizePostResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[26]
+	mi := &file_postpilot_v1_post_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2400,7 +2330,7 @@ func (x *FinalizePostResponse) String() string {
 func (*FinalizePostResponse) ProtoMessage() {}
 
 func (x *FinalizePostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[26]
+	mi := &file_postpilot_v1_post_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2413,7 +2343,7 @@ func (x *FinalizePostResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinalizePostResponse.ProtoReflect.Descriptor instead.
 func (*FinalizePostResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{26}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *FinalizePostResponse) GetPost() *Post {
@@ -2434,7 +2364,7 @@ type SavePostPublishedUrlRequest struct {
 
 func (x *SavePostPublishedUrlRequest) Reset() {
 	*x = SavePostPublishedUrlRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[27]
+	mi := &file_postpilot_v1_post_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2446,7 +2376,7 @@ func (x *SavePostPublishedUrlRequest) String() string {
 func (*SavePostPublishedUrlRequest) ProtoMessage() {}
 
 func (x *SavePostPublishedUrlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[27]
+	mi := &file_postpilot_v1_post_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2459,7 +2389,7 @@ func (x *SavePostPublishedUrlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostPublishedUrlRequest.ProtoReflect.Descriptor instead.
 func (*SavePostPublishedUrlRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{27}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SavePostPublishedUrlRequest) GetSlug() string {
@@ -2485,7 +2415,7 @@ type SavePostPublishedUrlResponse struct {
 
 func (x *SavePostPublishedUrlResponse) Reset() {
 	*x = SavePostPublishedUrlResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[28]
+	mi := &file_postpilot_v1_post_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2497,7 +2427,7 @@ func (x *SavePostPublishedUrlResponse) String() string {
 func (*SavePostPublishedUrlResponse) ProtoMessage() {}
 
 func (x *SavePostPublishedUrlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[28]
+	mi := &file_postpilot_v1_post_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2510,7 +2440,7 @@ func (x *SavePostPublishedUrlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePostPublishedUrlResponse.ProtoReflect.Descriptor instead.
 func (*SavePostPublishedUrlResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{28}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *SavePostPublishedUrlResponse) GetPost() *Post {
@@ -2529,7 +2459,7 @@ type GetPostRequest struct {
 
 func (x *GetPostRequest) Reset() {
 	*x = GetPostRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[29]
+	mi := &file_postpilot_v1_post_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2541,7 +2471,7 @@ func (x *GetPostRequest) String() string {
 func (*GetPostRequest) ProtoMessage() {}
 
 func (x *GetPostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[29]
+	mi := &file_postpilot_v1_post_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2554,7 +2484,7 @@ func (x *GetPostRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostRequest.ProtoReflect.Descriptor instead.
 func (*GetPostRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{29}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetPostRequest) GetSlug() string {
@@ -2573,7 +2503,7 @@ type GetPostResponse struct {
 
 func (x *GetPostResponse) Reset() {
 	*x = GetPostResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[30]
+	mi := &file_postpilot_v1_post_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2585,7 +2515,7 @@ func (x *GetPostResponse) String() string {
 func (*GetPostResponse) ProtoMessage() {}
 
 func (x *GetPostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[30]
+	mi := &file_postpilot_v1_post_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2598,7 +2528,7 @@ func (x *GetPostResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostResponse.ProtoReflect.Descriptor instead.
 func (*GetPostResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{30}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetPostResponse) GetPost() *Post {
@@ -2625,7 +2555,7 @@ type ListPostsRequest struct {
 
 func (x *ListPostsRequest) Reset() {
 	*x = ListPostsRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[31]
+	mi := &file_postpilot_v1_post_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2637,7 +2567,7 @@ func (x *ListPostsRequest) String() string {
 func (*ListPostsRequest) ProtoMessage() {}
 
 func (x *ListPostsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[31]
+	mi := &file_postpilot_v1_post_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2650,7 +2580,7 @@ func (x *ListPostsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPostsRequest.ProtoReflect.Descriptor instead.
 func (*ListPostsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{31}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListPostsRequest) GetPageSize() int32 {
@@ -2693,7 +2623,7 @@ type ListPostsResponse struct {
 
 func (x *ListPostsResponse) Reset() {
 	*x = ListPostsResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[32]
+	mi := &file_postpilot_v1_post_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2705,7 +2635,7 @@ func (x *ListPostsResponse) String() string {
 func (*ListPostsResponse) ProtoMessage() {}
 
 func (x *ListPostsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[32]
+	mi := &file_postpilot_v1_post_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2718,7 +2648,7 @@ func (x *ListPostsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPostsResponse.ProtoReflect.Descriptor instead.
 func (*ListPostsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{32}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListPostsResponse) GetPosts() []*PostSummary {
@@ -2744,7 +2674,7 @@ type DeletePostRequest struct {
 
 func (x *DeletePostRequest) Reset() {
 	*x = DeletePostRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[33]
+	mi := &file_postpilot_v1_post_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2756,7 +2686,7 @@ func (x *DeletePostRequest) String() string {
 func (*DeletePostRequest) ProtoMessage() {}
 
 func (x *DeletePostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[33]
+	mi := &file_postpilot_v1_post_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2769,7 +2699,7 @@ func (x *DeletePostRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePostRequest.ProtoReflect.Descriptor instead.
 func (*DeletePostRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{33}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *DeletePostRequest) GetSlug() string {
@@ -2787,7 +2717,7 @@ type DeletePostResponse struct {
 
 func (x *DeletePostResponse) Reset() {
 	*x = DeletePostResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[34]
+	mi := &file_postpilot_v1_post_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2799,7 +2729,7 @@ func (x *DeletePostResponse) String() string {
 func (*DeletePostResponse) ProtoMessage() {}
 
 func (x *DeletePostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[34]
+	mi := &file_postpilot_v1_post_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2812,7 +2742,7 @@ func (x *DeletePostResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePostResponse.ProtoReflect.Descriptor instead.
 func (*DeletePostResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{34}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{33}
 }
 
 type CreateUploadRequest struct {
@@ -2827,7 +2757,7 @@ type CreateUploadRequest struct {
 
 func (x *CreateUploadRequest) Reset() {
 	*x = CreateUploadRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[35]
+	mi := &file_postpilot_v1_post_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2839,7 +2769,7 @@ func (x *CreateUploadRequest) String() string {
 func (*CreateUploadRequest) ProtoMessage() {}
 
 func (x *CreateUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[35]
+	mi := &file_postpilot_v1_post_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2852,7 +2782,7 @@ func (x *CreateUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUploadRequest.ProtoReflect.Descriptor instead.
 func (*CreateUploadRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{35}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *CreateUploadRequest) GetPostSlug() string {
@@ -2891,7 +2821,7 @@ type CreateUploadResponse struct {
 
 func (x *CreateUploadResponse) Reset() {
 	*x = CreateUploadResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[36]
+	mi := &file_postpilot_v1_post_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2903,7 +2833,7 @@ func (x *CreateUploadResponse) String() string {
 func (*CreateUploadResponse) ProtoMessage() {}
 
 func (x *CreateUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[36]
+	mi := &file_postpilot_v1_post_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2916,7 +2846,7 @@ func (x *CreateUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUploadResponse.ProtoReflect.Descriptor instead.
 func (*CreateUploadResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{36}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CreateUploadResponse) GetUploadId() string {
@@ -2961,7 +2891,7 @@ type ConfirmUploadRequest struct {
 
 func (x *ConfirmUploadRequest) Reset() {
 	*x = ConfirmUploadRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[37]
+	mi := &file_postpilot_v1_post_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2973,7 +2903,7 @@ func (x *ConfirmUploadRequest) String() string {
 func (*ConfirmUploadRequest) ProtoMessage() {}
 
 func (x *ConfirmUploadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[37]
+	mi := &file_postpilot_v1_post_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2986,7 +2916,7 @@ func (x *ConfirmUploadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmUploadRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmUploadRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{37}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ConfirmUploadRequest) GetUploadId() string {
@@ -3028,7 +2958,7 @@ type ConfirmUploadResponse struct {
 
 func (x *ConfirmUploadResponse) Reset() {
 	*x = ConfirmUploadResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[38]
+	mi := &file_postpilot_v1_post_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3040,7 +2970,7 @@ func (x *ConfirmUploadResponse) String() string {
 func (*ConfirmUploadResponse) ProtoMessage() {}
 
 func (x *ConfirmUploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[38]
+	mi := &file_postpilot_v1_post_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3053,7 +2983,7 @@ func (x *ConfirmUploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmUploadResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmUploadResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{38}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ConfirmUploadResponse) GetImage() *Image {
@@ -3079,7 +3009,7 @@ type DeleteImageRequest struct {
 
 func (x *DeleteImageRequest) Reset() {
 	*x = DeleteImageRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[39]
+	mi := &file_postpilot_v1_post_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3091,7 +3021,7 @@ func (x *DeleteImageRequest) String() string {
 func (*DeleteImageRequest) ProtoMessage() {}
 
 func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[39]
+	mi := &file_postpilot_v1_post_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3104,7 +3034,7 @@ func (x *DeleteImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteImageRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{39}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DeleteImageRequest) GetImageId() string {
@@ -3122,7 +3052,7 @@ type DeleteImageResponse struct {
 
 func (x *DeleteImageResponse) Reset() {
 	*x = DeleteImageResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[40]
+	mi := &file_postpilot_v1_post_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3134,7 +3064,7 @@ func (x *DeleteImageResponse) String() string {
 func (*DeleteImageResponse) ProtoMessage() {}
 
 func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[40]
+	mi := &file_postpilot_v1_post_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3147,7 +3077,7 @@ func (x *DeleteImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageResponse.ProtoReflect.Descriptor instead.
 func (*DeleteImageResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{40}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{39}
 }
 
 type DeleteVideoRequest struct {
@@ -3159,7 +3089,7 @@ type DeleteVideoRequest struct {
 
 func (x *DeleteVideoRequest) Reset() {
 	*x = DeleteVideoRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[41]
+	mi := &file_postpilot_v1_post_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3171,7 +3101,7 @@ func (x *DeleteVideoRequest) String() string {
 func (*DeleteVideoRequest) ProtoMessage() {}
 
 func (x *DeleteVideoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[41]
+	mi := &file_postpilot_v1_post_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3184,7 +3114,7 @@ func (x *DeleteVideoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVideoRequest.ProtoReflect.Descriptor instead.
 func (*DeleteVideoRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{41}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *DeleteVideoRequest) GetVideoId() string {
@@ -3202,7 +3132,7 @@ type DeleteVideoResponse struct {
 
 func (x *DeleteVideoResponse) Reset() {
 	*x = DeleteVideoResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[42]
+	mi := &file_postpilot_v1_post_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3214,7 +3144,7 @@ func (x *DeleteVideoResponse) String() string {
 func (*DeleteVideoResponse) ProtoMessage() {}
 
 func (x *DeleteVideoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[42]
+	mi := &file_postpilot_v1_post_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3227,17 +3157,14 @@ func (x *DeleteVideoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVideoResponse.ProtoReflect.Descriptor instead.
 func (*DeleteVideoResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{42}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{41}
 }
 
 var File_postpilot_v1_post_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/post.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/template.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\x1a\x1apostpilot/v1/quality.proto\"5\n" +
-	"\tBlockSlot\x12\x12\n" +
-	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
-	"\x05label\x18\x02 \x01(\tR\x05label\"\xe7\x01\n" +
+	"\x17postpilot/v1/post.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/template.proto\x1a\x18postpilot/v1/error.proto\x1a\x1bpostpilot/v1/language.proto\x1a\x1apostpilot/v1/quality.proto\"\xc6\x01\n" +
 	"\x05Block\x12+\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x17.postpilot.v1.BlockTypeR\x04type\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x14\n" +
@@ -3245,8 +3172,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x04file\x18\x04 \x01(\tR\x04file\x12\x10\n" +
 	"\x03alt\x18\x05 \x01(\tR\x03alt\x12\x18\n" +
 	"\acaption\x18\x06 \x01(\tR\acaption\x12\x14\n" +
-	"\x05items\x18\a \x03(\tR\x05items\x12+\n" +
-	"\x04slot\x18\b \x01(\v2\x17.postpilot.v1.BlockSlotR\x04slot\"~\n" +
+	"\x05items\x18\a \x03(\tR\x05itemsJ\x04\b\b\x10\tR\x04slot\"~\n" +
 	"\vPostContent\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x12\n" +
@@ -3536,143 +3462,141 @@ func file_postpilot_v1_post_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_post_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_postpilot_v1_post_proto_goTypes = []any{
 	(BlockType)(0),                            // 0: postpilot.v1.BlockType
 	(AttachmentKind)(0),                       // 1: postpilot.v1.AttachmentKind
 	(BlogField)(0),                            // 2: postpilot.v1.BlogField
-	(*BlockSlot)(nil),                         // 3: postpilot.v1.BlockSlot
-	(*Block)(nil),                             // 4: postpilot.v1.Block
-	(*PostContent)(nil),                       // 5: postpilot.v1.PostContent
-	(*Observation)(nil),                       // 6: postpilot.v1.Observation
-	(*VoiceRef)(nil),                          // 7: postpilot.v1.VoiceRef
-	(*Post)(nil),                              // 8: postpilot.v1.Post
-	(*Image)(nil),                             // 9: postpilot.v1.Image
-	(*Video)(nil),                             // 10: postpilot.v1.Video
-	(*PostSummary)(nil),                       // 11: postpilot.v1.PostSummary
-	(*GenerationJob)(nil),                     // 12: postpilot.v1.GenerationJob
-	(*GetGenerationRequest)(nil),              // 13: postpilot.v1.GetGenerationRequest
-	(*GetGenerationResponse)(nil),             // 14: postpilot.v1.GetGenerationResponse
-	(*ReobserveSelection)(nil),                // 15: postpilot.v1.ReobserveSelection
-	(*QualityRuleTicks)(nil),                  // 16: postpilot.v1.QualityRuleTicks
-	(*StartGenerationRequest)(nil),            // 17: postpilot.v1.StartGenerationRequest
-	(*StartGenerationResponse)(nil),           // 18: postpilot.v1.StartGenerationResponse
-	(*StartRevisionRequest)(nil),              // 19: postpilot.v1.StartRevisionRequest
-	(*StartRevisionResponse)(nil),             // 20: postpilot.v1.StartRevisionResponse
-	(*TemplateAnswer)(nil),                    // 21: postpilot.v1.TemplateAnswer
-	(*SavePostDraftRequest)(nil),              // 22: postpilot.v1.SavePostDraftRequest
-	(*SavePostDraftResponse)(nil),             // 23: postpilot.v1.SavePostDraftResponse
-	(*SavePostContentRequest)(nil),            // 24: postpilot.v1.SavePostContentRequest
-	(*SavePostContentResponse)(nil),           // 25: postpilot.v1.SavePostContentResponse
-	(*SavePostGenerationOptionsRequest)(nil),  // 26: postpilot.v1.SavePostGenerationOptionsRequest
-	(*SavePostGenerationOptionsResponse)(nil), // 27: postpilot.v1.SavePostGenerationOptionsResponse
-	(*FinalizePostRequest)(nil),               // 28: postpilot.v1.FinalizePostRequest
-	(*FinalizePostResponse)(nil),              // 29: postpilot.v1.FinalizePostResponse
-	(*SavePostPublishedUrlRequest)(nil),       // 30: postpilot.v1.SavePostPublishedUrlRequest
-	(*SavePostPublishedUrlResponse)(nil),      // 31: postpilot.v1.SavePostPublishedUrlResponse
-	(*GetPostRequest)(nil),                    // 32: postpilot.v1.GetPostRequest
-	(*GetPostResponse)(nil),                   // 33: postpilot.v1.GetPostResponse
-	(*ListPostsRequest)(nil),                  // 34: postpilot.v1.ListPostsRequest
-	(*ListPostsResponse)(nil),                 // 35: postpilot.v1.ListPostsResponse
-	(*DeletePostRequest)(nil),                 // 36: postpilot.v1.DeletePostRequest
-	(*DeletePostResponse)(nil),                // 37: postpilot.v1.DeletePostResponse
-	(*CreateUploadRequest)(nil),               // 38: postpilot.v1.CreateUploadRequest
-	(*CreateUploadResponse)(nil),              // 39: postpilot.v1.CreateUploadResponse
-	(*ConfirmUploadRequest)(nil),              // 40: postpilot.v1.ConfirmUploadRequest
-	(*ConfirmUploadResponse)(nil),             // 41: postpilot.v1.ConfirmUploadResponse
-	(*DeleteImageRequest)(nil),                // 42: postpilot.v1.DeleteImageRequest
-	(*DeleteImageResponse)(nil),               // 43: postpilot.v1.DeleteImageResponse
-	(*DeleteVideoRequest)(nil),                // 44: postpilot.v1.DeleteVideoRequest
-	(*DeleteVideoResponse)(nil),               // 45: postpilot.v1.DeleteVideoResponse
-	(ContentLanguage)(0),                      // 46: postpilot.v1.ContentLanguage
-	(*TemplateRef)(nil),                       // 47: postpilot.v1.TemplateRef
-	(QualityMetric)(0),                        // 48: postpilot.v1.QualityMetric
-	(*ModelRef)(nil),                          // 49: postpilot.v1.ModelRef
-	(*Failure)(nil),                           // 50: postpilot.v1.Failure
+	(*Block)(nil),                             // 3: postpilot.v1.Block
+	(*PostContent)(nil),                       // 4: postpilot.v1.PostContent
+	(*Observation)(nil),                       // 5: postpilot.v1.Observation
+	(*VoiceRef)(nil),                          // 6: postpilot.v1.VoiceRef
+	(*Post)(nil),                              // 7: postpilot.v1.Post
+	(*Image)(nil),                             // 8: postpilot.v1.Image
+	(*Video)(nil),                             // 9: postpilot.v1.Video
+	(*PostSummary)(nil),                       // 10: postpilot.v1.PostSummary
+	(*GenerationJob)(nil),                     // 11: postpilot.v1.GenerationJob
+	(*GetGenerationRequest)(nil),              // 12: postpilot.v1.GetGenerationRequest
+	(*GetGenerationResponse)(nil),             // 13: postpilot.v1.GetGenerationResponse
+	(*ReobserveSelection)(nil),                // 14: postpilot.v1.ReobserveSelection
+	(*QualityRuleTicks)(nil),                  // 15: postpilot.v1.QualityRuleTicks
+	(*StartGenerationRequest)(nil),            // 16: postpilot.v1.StartGenerationRequest
+	(*StartGenerationResponse)(nil),           // 17: postpilot.v1.StartGenerationResponse
+	(*StartRevisionRequest)(nil),              // 18: postpilot.v1.StartRevisionRequest
+	(*StartRevisionResponse)(nil),             // 19: postpilot.v1.StartRevisionResponse
+	(*TemplateAnswer)(nil),                    // 20: postpilot.v1.TemplateAnswer
+	(*SavePostDraftRequest)(nil),              // 21: postpilot.v1.SavePostDraftRequest
+	(*SavePostDraftResponse)(nil),             // 22: postpilot.v1.SavePostDraftResponse
+	(*SavePostContentRequest)(nil),            // 23: postpilot.v1.SavePostContentRequest
+	(*SavePostContentResponse)(nil),           // 24: postpilot.v1.SavePostContentResponse
+	(*SavePostGenerationOptionsRequest)(nil),  // 25: postpilot.v1.SavePostGenerationOptionsRequest
+	(*SavePostGenerationOptionsResponse)(nil), // 26: postpilot.v1.SavePostGenerationOptionsResponse
+	(*FinalizePostRequest)(nil),               // 27: postpilot.v1.FinalizePostRequest
+	(*FinalizePostResponse)(nil),              // 28: postpilot.v1.FinalizePostResponse
+	(*SavePostPublishedUrlRequest)(nil),       // 29: postpilot.v1.SavePostPublishedUrlRequest
+	(*SavePostPublishedUrlResponse)(nil),      // 30: postpilot.v1.SavePostPublishedUrlResponse
+	(*GetPostRequest)(nil),                    // 31: postpilot.v1.GetPostRequest
+	(*GetPostResponse)(nil),                   // 32: postpilot.v1.GetPostResponse
+	(*ListPostsRequest)(nil),                  // 33: postpilot.v1.ListPostsRequest
+	(*ListPostsResponse)(nil),                 // 34: postpilot.v1.ListPostsResponse
+	(*DeletePostRequest)(nil),                 // 35: postpilot.v1.DeletePostRequest
+	(*DeletePostResponse)(nil),                // 36: postpilot.v1.DeletePostResponse
+	(*CreateUploadRequest)(nil),               // 37: postpilot.v1.CreateUploadRequest
+	(*CreateUploadResponse)(nil),              // 38: postpilot.v1.CreateUploadResponse
+	(*ConfirmUploadRequest)(nil),              // 39: postpilot.v1.ConfirmUploadRequest
+	(*ConfirmUploadResponse)(nil),             // 40: postpilot.v1.ConfirmUploadResponse
+	(*DeleteImageRequest)(nil),                // 41: postpilot.v1.DeleteImageRequest
+	(*DeleteImageResponse)(nil),               // 42: postpilot.v1.DeleteImageResponse
+	(*DeleteVideoRequest)(nil),                // 43: postpilot.v1.DeleteVideoRequest
+	(*DeleteVideoResponse)(nil),               // 44: postpilot.v1.DeleteVideoResponse
+	(ContentLanguage)(0),                      // 45: postpilot.v1.ContentLanguage
+	(*TemplateRef)(nil),                       // 46: postpilot.v1.TemplateRef
+	(QualityMetric)(0),                        // 47: postpilot.v1.QualityMetric
+	(*ModelRef)(nil),                          // 48: postpilot.v1.ModelRef
+	(*Failure)(nil),                           // 49: postpilot.v1.Failure
 }
 var file_postpilot_v1_post_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Block.type:type_name -> postpilot.v1.BlockType
-	3,  // 1: postpilot.v1.Block.slot:type_name -> postpilot.v1.BlockSlot
-	4,  // 2: postpilot.v1.PostContent.blocks:type_name -> postpilot.v1.Block
-	46, // 3: postpilot.v1.VoiceRef.source_language:type_name -> postpilot.v1.ContentLanguage
-	9,  // 4: postpilot.v1.Post.images:type_name -> postpilot.v1.Image
-	12, // 5: postpilot.v1.Post.active_job:type_name -> postpilot.v1.GenerationJob
-	5,  // 6: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
-	6,  // 7: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
-	7,  // 8: postpilot.v1.Post.voice:type_name -> postpilot.v1.VoiceRef
-	47, // 9: postpilot.v1.Post.template:type_name -> postpilot.v1.TemplateRef
-	46, // 10: postpilot.v1.Post.target_language:type_name -> postpilot.v1.ContentLanguage
-	46, // 11: postpilot.v1.Post.content_language:type_name -> postpilot.v1.ContentLanguage
-	10, // 12: postpilot.v1.Post.videos:type_name -> postpilot.v1.Video
-	21, // 13: postpilot.v1.Post.template_answers:type_name -> postpilot.v1.TemplateAnswer
-	2,  // 14: postpilot.v1.Post.field:type_name -> postpilot.v1.BlogField
-	48, // 15: postpilot.v1.Post.quality_rules:type_name -> postpilot.v1.QualityMetric
-	12, // 16: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
-	7,  // 17: postpilot.v1.PostSummary.voice:type_name -> postpilot.v1.VoiceRef
-	47, // 18: postpilot.v1.PostSummary.template:type_name -> postpilot.v1.TemplateRef
-	46, // 19: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
-	46, // 20: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
-	49, // 21: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
-	49, // 22: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
-	46, // 23: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
-	50, // 24: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
-	12, // 25: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
-	48, // 26: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
-	49, // 27: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	49, // 28: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	15, // 29: postpilot.v1.StartGenerationRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	49, // 30: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	46, // 31: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
-	21, // 32: postpilot.v1.SavePostDraftRequest.template_answers:type_name -> postpilot.v1.TemplateAnswer
-	2,  // 33: postpilot.v1.SavePostDraftRequest.field:type_name -> postpilot.v1.BlogField
-	8,  // 34: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
-	5,  // 35: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
-	8,  // 36: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
-	16, // 37: postpilot.v1.SavePostGenerationOptionsRequest.quality_rules:type_name -> postpilot.v1.QualityRuleTicks
-	2,  // 38: postpilot.v1.SavePostGenerationOptionsRequest.field:type_name -> postpilot.v1.BlogField
-	8,  // 39: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
-	8,  // 40: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
-	8,  // 41: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
-	8,  // 42: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
-	11, // 43: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
-	1,  // 44: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
-	9,  // 45: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
-	10, // 46: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
-	22, // 47: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
-	24, // 48: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
-	26, // 49: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
-	28, // 50: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
-	30, // 51: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
-	32, // 52: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
-	34, // 53: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
-	36, // 54: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
-	38, // 55: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
-	40, // 56: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
-	42, // 57: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
-	44, // 58: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
-	17, // 59: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	19, // 60: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	13, // 61: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	23, // 62: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	25, // 63: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
-	27, // 64: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
-	29, // 65: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
-	31, // 66: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
-	33, // 67: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	35, // 68: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	37, // 69: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
-	39, // 70: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	41, // 71: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	43, // 72: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	45, // 73: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
-	18, // 74: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	20, // 75: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	14, // 76: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	62, // [62:77] is the sub-list for method output_type
-	47, // [47:62] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	3,  // 1: postpilot.v1.PostContent.blocks:type_name -> postpilot.v1.Block
+	45, // 2: postpilot.v1.VoiceRef.source_language:type_name -> postpilot.v1.ContentLanguage
+	8,  // 3: postpilot.v1.Post.images:type_name -> postpilot.v1.Image
+	11, // 4: postpilot.v1.Post.active_job:type_name -> postpilot.v1.GenerationJob
+	4,  // 5: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
+	5,  // 6: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
+	6,  // 7: postpilot.v1.Post.voice:type_name -> postpilot.v1.VoiceRef
+	46, // 8: postpilot.v1.Post.template:type_name -> postpilot.v1.TemplateRef
+	45, // 9: postpilot.v1.Post.target_language:type_name -> postpilot.v1.ContentLanguage
+	45, // 10: postpilot.v1.Post.content_language:type_name -> postpilot.v1.ContentLanguage
+	9,  // 11: postpilot.v1.Post.videos:type_name -> postpilot.v1.Video
+	20, // 12: postpilot.v1.Post.template_answers:type_name -> postpilot.v1.TemplateAnswer
+	2,  // 13: postpilot.v1.Post.field:type_name -> postpilot.v1.BlogField
+	47, // 14: postpilot.v1.Post.quality_rules:type_name -> postpilot.v1.QualityMetric
+	11, // 15: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
+	6,  // 16: postpilot.v1.PostSummary.voice:type_name -> postpilot.v1.VoiceRef
+	46, // 17: postpilot.v1.PostSummary.template:type_name -> postpilot.v1.TemplateRef
+	45, // 18: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
+	45, // 19: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
+	48, // 20: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
+	48, // 21: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
+	45, // 22: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
+	49, // 23: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
+	11, // 24: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
+	47, // 25: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
+	48, // 26: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	48, // 27: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	14, // 28: postpilot.v1.StartGenerationRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	48, // 29: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	45, // 30: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
+	20, // 31: postpilot.v1.SavePostDraftRequest.template_answers:type_name -> postpilot.v1.TemplateAnswer
+	2,  // 32: postpilot.v1.SavePostDraftRequest.field:type_name -> postpilot.v1.BlogField
+	7,  // 33: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
+	4,  // 34: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
+	7,  // 35: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
+	15, // 36: postpilot.v1.SavePostGenerationOptionsRequest.quality_rules:type_name -> postpilot.v1.QualityRuleTicks
+	2,  // 37: postpilot.v1.SavePostGenerationOptionsRequest.field:type_name -> postpilot.v1.BlogField
+	7,  // 38: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
+	7,  // 39: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
+	7,  // 40: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
+	7,  // 41: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
+	10, // 42: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
+	1,  // 43: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
+	8,  // 44: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
+	9,  // 45: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
+	21, // 46: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
+	23, // 47: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
+	25, // 48: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
+	27, // 49: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
+	29, // 50: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
+	31, // 51: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
+	33, // 52: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
+	35, // 53: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
+	37, // 54: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
+	39, // 55: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
+	41, // 56: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
+	43, // 57: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
+	16, // 58: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	18, // 59: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	12, // 60: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	22, // 61: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	24, // 62: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
+	26, // 63: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
+	28, // 64: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
+	30, // 65: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
+	32, // 66: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	34, // 67: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	36, // 68: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	38, // 69: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	40, // 70: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	42, // 71: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	44, // 72: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
+	17, // 73: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	19, // 74: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	13, // 75: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	61, // [61:76] is the sub-list for method output_type
+	46, // [46:61] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_post_proto_init() }
@@ -3685,17 +3609,17 @@ func file_postpilot_v1_post_proto_init() {
 	file_postpilot_v1_error_proto_init()
 	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_quality_proto_init()
-	file_postpilot_v1_post_proto_msgTypes[5].OneofWrappers = []any{}
-	file_postpilot_v1_post_proto_msgTypes[14].OneofWrappers = []any{}
-	file_postpilot_v1_post_proto_msgTypes[19].OneofWrappers = []any{}
-	file_postpilot_v1_post_proto_msgTypes[23].OneofWrappers = []any{}
+	file_postpilot_v1_post_proto_msgTypes[4].OneofWrappers = []any{}
+	file_postpilot_v1_post_proto_msgTypes[13].OneofWrappers = []any{}
+	file_postpilot_v1_post_proto_msgTypes[18].OneofWrappers = []any{}
+	file_postpilot_v1_post_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_post_proto_rawDesc), len(file_postpilot_v1_post_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   43,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

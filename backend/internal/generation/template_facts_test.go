@@ -14,9 +14,8 @@ func briefWithFacts() *TemplateBrief {
 	return brief
 }
 
-// One legend line, and only when the brief actually carries a fact — the same rule the slot
-// legend follows, because explaining a tag the prompt does not contain invites the model to
-// emit it (TMPL-46).
+// One legend line, and only when the brief actually carries a fact, because explaining a tag
+// the prompt does not contain invites the model to emit it (TMPL-46).
 func TestTheFactLegendAppearsOnlyWithAFact(t *testing.T) {
 	withFacts, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
 		[]string{"IMG_1.jpg"}, nil, briefWithFacts(), nil)

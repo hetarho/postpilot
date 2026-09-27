@@ -1,6 +1,6 @@
 import type { PostImage } from '@/entities/image'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
-import { blockSlotPlaceholder, walkBlocks } from '@/shared/lib'
+import { walkBlocks } from '@/shared/lib'
 
 /** The `VIDEO` blocks' filenames in the order their `[동영상 …]` markers appear, for the same
  *  reason `naverPhotoOrder` exists: the export tab plays each clip beside its own marker, and
@@ -69,11 +69,6 @@ export function toNaver(
   // `naverPhotoOrder` reports and the same order the preview renders.
   let markerNumber = 0
   return walkBlocks(content, (block) => {
-    // An unfilled template slot exports as the position it reserves, never as its copy
-    // token: the token is machinery for the model, and what a person needs in the pasted
-    // body is a place to fill.
-    const slot = blockSlotPlaceholder(block)
-    if (slot) return slot
     switch (block.type) {
       case BlockType.TEXT:
       case BlockType.HEADING:
@@ -84,8 +79,7 @@ export function toNaver(
         // that position was for, so the caption rides inside the marker as a label — folded,
         // so the whole thing is one double-click selection. The caption still has its own
         // copy control for the platform's caption box, because this one goes away with the
-        // marker (EXPORT-24). No brackets either, which is what tells it from an unfilled
-        // template slot (EXPORT-4). A block with an empty `file` still spends its number: the
+        // marker (EXPORT-24). A block with an empty `file` still spends its number: the
         // numbering and `naverPhotoOrder` agree by position, so a hole here would shift every
         // later photo against its marker.
         return photoMarker(contentLanguage, ++markerNumber, block.caption)

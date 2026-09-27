@@ -78,10 +78,6 @@ func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID
 	if err != nil || !ok {
 		return generation.TemplateBrief{}, false, err
 	}
-	slots := make([]generation.TemplateSlot, 0, len(rendered.Slots))
-	for _, slot := range rendered.Slots {
-		slots = append(slots, generation.TemplateSlot{Kind: string(slot.Kind), Label: slot.Label})
-	}
 	rows := make([]generation.TemplatePhotoRow, 0, len(rendered.Rows))
 	for _, row := range rendered.Rows {
 		rows = append(rows, generation.TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
@@ -91,7 +87,7 @@ func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID
 		facts = append(facts, generation.TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
 	return generation.TemplateBrief{
-		Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows, Facts: facts, TitleArea: rendered.TitleArea,
+		Name: rendered.Name, Body: rendered.Body, Rows: rows, Facts: facts, TitleArea: rendered.TitleArea,
 	}, true, nil
 }
 

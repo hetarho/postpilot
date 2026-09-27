@@ -84,17 +84,9 @@ type snapshotVoice struct {
 type snapshotTemplate struct {
 	Name      string         `json:"Name"`
 	Body      string         `json:"Body"`
-	Slots     []snapshotSlot `json:"Slots"`
 	Rows      []snapshotRow  `json:"Rows"`
 	Facts     []snapshotFact `json:"Facts"`
 	TitleArea string         `json:"TitleArea,omitempty"`
-}
-
-// snapshotSlot carries both a template's slot and a block's slot: the two have always been
-// the same two keys.
-type snapshotSlot struct {
-	Kind  string `json:"Kind"`
-	Label string `json:"Label"`
 }
 
 type snapshotRow struct {
@@ -141,14 +133,13 @@ type snapshotContent struct {
 }
 
 type snapshotBlock struct {
-	Type    string        `json:"Type"`
-	Content string        `json:"Content"`
-	Level   int32         `json:"Level"`
-	File    string        `json:"File"`
-	Alt     string        `json:"Alt"`
-	Caption string        `json:"Caption"`
-	Items   []string      `json:"Items"`
-	Slot    *snapshotSlot `json:"Slot"`
+	Type    string   `json:"Type"`
+	Content string   `json:"Content"`
+	Level   int32    `json:"Level"`
+	File    string   `json:"File"`
+	Alt     string   `json:"Alt"`
+	Caption string   `json:"Caption"`
+	Items   []string `json:"Items"`
 }
 
 type snapshotProfile struct {
@@ -338,7 +329,6 @@ func toSnapshotTemplate(brief *TemplateBrief) *snapshotTemplate {
 	}
 	return &snapshotTemplate{
 		Name: brief.Name, Body: brief.Body,
-		Slots: mapSlice(brief.Slots, func(s TemplateSlot) snapshotSlot { return snapshotSlot{Kind: s.Kind, Label: s.Label} }),
 		Rows: mapSlice(brief.Rows, func(r TemplatePhotoRow) snapshotRow {
 			return snapshotRow{Count: r.Count, Filenames: copyTexts(r.Filenames)}
 		}),
@@ -353,7 +343,6 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 	}
 	return &TemplateBrief{
 		Name: wire.Name, Body: wire.Body,
-		Slots: mapSlice(wire.Slots, func(s snapshotSlot) TemplateSlot { return TemplateSlot{Kind: s.Kind, Label: s.Label} }),
 		Rows: mapSlice(wire.Rows, func(r snapshotRow) TemplatePhotoRow {
 			return TemplatePhotoRow{Count: r.Count, Filenames: copyTexts(r.Filenames)}
 		}),
@@ -388,11 +377,7 @@ func toSnapshotContent(content PostContent) snapshotContent {
 	return snapshotContent{
 		Title: content.Title, Summary: content.Summary, Tags: copyTexts(content.Tags),
 		Blocks: mapSlice(content.Blocks, func(b Block) snapshotBlock {
-			var slot *snapshotSlot
-			if b.Slot != nil {
-				slot = &snapshotSlot{Kind: b.Slot.Kind, Label: b.Slot.Label}
-			}
-			return snapshotBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items), Slot: slot}
+			return snapshotBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items)}
 		}),
 	}
 }
@@ -401,11 +386,7 @@ func fromSnapshotContent(wire snapshotContent) PostContent {
 	return PostContent{
 		Title: wire.Title, Summary: wire.Summary, Tags: copyTexts(wire.Tags),
 		Blocks: mapSlice(wire.Blocks, func(b snapshotBlock) Block {
-			var slot *BlockSlot
-			if b.Slot != nil {
-				slot = &BlockSlot{Kind: b.Slot.Kind, Label: b.Slot.Label}
-			}
-			return Block{Type: BlockType(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items), Slot: slot}
+			return Block{Type: BlockType(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items)}
 		}),
 	}
 }

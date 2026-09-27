@@ -51,17 +51,15 @@ func TestTokensNormalizeSplitAndTrimEdgePunctuation(t *testing.T) {
 	}
 }
 
-func TestUnitsFollowBlockOrderAndSkipUnfilledSlots(t *testing.T) {
+func TestUnitsFollowBlockOrder(t *testing.T) {
 	doc := Document{
 		Title: "을지로 감자탕 노포 후기",
 		Blocks: []Block{
 			{Type: BlockHeading, Content: "을지로 감자탕"},
 			{Type: BlockText, Content: "뼈가 푸짐한 감자탕을 먹었다."},
 			{Type: BlockImage, File: "IMG_1.jpg", Content: "사진 설명"},
-			{Type: BlockText, Content: "{{slot:1}}"},
 			{Type: BlockList, Items: []string{"감자탕 대 38,000원", "", "볶음밥 3,000원"}},
 			{Type: BlockVideo, File: "clip.mp4"},
-			{Type: BlockText, Content: "지도는 {{slot:2}}에서 확인하세요."},
 			{Type: BlockQuote, Content: "국물이 진했다"},
 			{Type: BlockText, Content: "   "},
 		},
@@ -71,15 +69,10 @@ func TestUnitsFollowBlockOrderAndSkipUnfilledSlots(t *testing.T) {
 		{Type: BlockText, Text: "뼈가 푸짐한 감자탕을 먹었다."},
 		{Type: BlockList, Text: "감자탕 대 38,000원"},
 		{Type: BlockList, Text: "볶음밥 3,000원"},
-		{Type: BlockText, Text: "지도는  에서 확인하세요."},
 		{Type: BlockQuote, Text: "국물이 진했다"},
 	}
 	if got := Units(doc); !reflect.DeepEqual(got, want) {
 		t.Fatalf("Units =\n%+v\nwant\n%+v", got, want)
-	}
-	// The slot token never reaches a token, and removing it joins no two words.
-	if got := Tokens(Units(doc)[4].Text); !reflect.DeepEqual(got, []string{"지도는", "에서", "확인하세요"}) {
-		t.Errorf("tokens around a removed slot = %q", got)
 	}
 	if got := Units(Document{Title: "제목만 있는 글"}); len(got) != 0 {
 		t.Errorf("a document with no blocks has units %+v", got)

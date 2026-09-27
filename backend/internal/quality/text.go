@@ -5,8 +5,6 @@ import (
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
-
-	"github.com/postpilot/backend/internal/template"
 )
 
 // Tokens splits text into 어절: NFC first, so a decomposed Hangul input compares equal to its
@@ -109,8 +107,7 @@ type Unit struct {
 }
 
 // Units is a document's measured text in block order: the content of each TEXT, HEADING and
-// QUOTE block and each LIST item. Photos and clips carry no text, and an unfilled slot's token
-// is not prose, so a TEXT block holding only one gives nothing; a unit left blank is dropped.
+// QUOTE block and each LIST item. Photos and clips carry no text; a unit left blank is dropped.
 func Units(doc Document) []Unit {
 	var units []Unit
 	add := func(kind BlockType, text string) {
@@ -120,10 +117,7 @@ func Units(doc Document) []Unit {
 	}
 	for _, block := range doc.Blocks {
 		switch block.Type {
-		case BlockText:
-			// A space, not nothing, so a token set between two words cannot join them into one.
-			add(block.Type, template.ReplaceSlotTokens(block.Content, " "))
-		case BlockHeading, BlockQuote:
+		case BlockText, BlockHeading, BlockQuote:
 			add(block.Type, block.Content)
 		case BlockList:
 			for _, item := range block.Items {

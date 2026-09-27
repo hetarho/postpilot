@@ -90,23 +90,6 @@ it('keeps an entry for an image block with no file, because the marker spends it
   expect(output).toContain('사진_3_사진')
 })
 
-// EXPORT-4: the slot placeholder keeps its brackets and the photo marker has none, which is now
-// the whole of what tells them apart in the pasted body.
-it('keeps an unfilled slot bracketed and unreadable as a photo marker', () => {
-  const content = {
-    ...POST_CONTENT_FIXTURE,
-    blocks: [
-      create(BlockSchema, { type: BlockType.TEXT, slot: { kind: 'place', label: '네이버 지도' } }),
-      ...POST_CONTENT_FIXTURE.blocks,
-    ],
-  }
-
-  const output = toNaver(content, POST_IMAGES_FIXTURE, 'ko')
-  expect(output).toContain('[네이버 지도]')
-  expect(output).not.toMatch(/\[[^\]]*사진_\d+_/)
-  expect(output.match(/사진_\d+_[^\n]*사진/g)).toHaveLength(naverPhotoOrder(content).length)
-})
-
 it('ignores every non-image block', () => {
   expect(
     naverPhotoOrder({

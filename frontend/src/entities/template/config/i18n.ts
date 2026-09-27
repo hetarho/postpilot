@@ -137,13 +137,6 @@ export const i18n = {
         not_in_title: '사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
       },
     },
-    slot: {
-      unfilled: '채워야 할 자리',
-      pending: '채워야 할 자리 {{count}}곳',
-      pending_one: '채워야 할 자리 {{count}}곳',
-      pending_other: '채워야 할 자리 {{count}}곳',
-      exportHint: '대괄호로 남은 자리는 붙여 넣은 뒤 플랫폼에서 직접 채워 주세요.',
-    },
     postCount_one: '글 {{count}}개',
     postCount_other: '글 {{count}}개',
     detachWarning: {
@@ -286,13 +279,6 @@ Send the body only — no explanation and no code fence. Write it in the languag
         too_many_asks: 'at most {{askMax}} fields may ask for data',
         not_in_title: 'a photo, 사진마다 반복 or a note to the AI cannot go in the title',
       },
-    },
-    slot: {
-      unfilled: 'Position to fill',
-      pending: '{{count}} positions to fill',
-      pending_one: '{{count}} position to fill',
-      pending_other: '{{count}} positions to fill',
-      exportHint: 'Fill the bracketed positions in the platform editor after pasting.',
     },
     postCount_one: '{{count}} post',
     postCount_other: '{{count}} posts',
