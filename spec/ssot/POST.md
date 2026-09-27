@@ -108,5 +108,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r20 260927 r19 withdrawn: POST-18✎ POST-46✎ POST-48✎ POST-52✎ POST-53✎ POST-54✎ POST-74✎ POST-86✎ back to r18 (no photo grouping, no 사진 분석 / 글 쓰기 split) · POST-94- capture time removed · flow✎ constraints✎ back to r18
-- r19 260927 POST-18✎ the aggregate owns observations and content→also the photo grouping; a deleted photo leaves its space · POST-46✎ labels +공간 나누는 중 · 흐름 잡는 중 · POST-48✎ disables 생성→글 쓰기 · POST-52✎ drops 생성 and A/B 비교→drops its actions · POST-53✎ `A/B 비교` | `생성`→`사진 분석` alone, then `A/B 비교` | `글 쓰기` · POST-54✎ the contact sheet→replaced by the space board once grouped · POST-74✎ +photo analysis and board edits locked · POST-86✎ 생성 and A/B 비교 disabled→the board and every action read-only · POST-94+ capture time read before the re-encode · flow✎ a photo reads its capture time · constraints✎ `PHOTO_SPACE_NAME_MAX_CHARS` 20, posts +photo_spaces +story_plan, images +taken_at
+-

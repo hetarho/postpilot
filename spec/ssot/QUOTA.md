@@ -89,5 +89,4 @@
 - placement: `backend/internal/plan` (ladder, grants, charge, windows, typed refusals, the recommended rung, the estimator's token assumptions and rate derivation) · `backend/internal/usage` (lots, hold/settle, ledger, metering seam) · `backend/internal/auth` (plan on user/session, master set) · `frontend/src/entities/plan` · `pages/plans` · `pages/admin` + `features/manage-users` · `widgets/account-menu` · the header credit control in the app shell
 
 ## chg
-- r22 260927 QUOTA-13✎ +`group_photos`→withdrawn, the r20 kind list
-- r21 260927 QUOTA-13✎ gated job kinds +`group_photos`
+-

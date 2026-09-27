@@ -37,5 +37,4 @@
 - tests that pin it: gate refusals per ceiling · confirm refusals (size, duration, content type, cross-kind filename) · one observe call per video after `ceil(photos/4)` batches with a stubbed provider · validator drops a VIDEO file not attached · the four converters' video mapping goldens · `video_input` mapping from the catalog fixture
 
 ## chg
-- r6 260927 VIDEO-11✎ photo analysis and lab write comparisons, beside the action that would observe→back to r4, post generation and write experiments, beside 생성 / A/B 비교
-- r5 260927 VIDEO-11✎ post generation and write experiments→photo analysis and lab write comparisons; explained beside 생성 / A/B 비교→beside the action that would observe the clip
+-
