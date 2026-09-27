@@ -181,7 +181,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 				// room, and the source itself ends there.
 				cuts = []any{cuts[0], timelineCut(in, "next", "source-0", 1500, 7500, 1000)}
 			}
-			wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
+			wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 			s, models := newService(t, raw(wire), true)
 			_, usage, err := s.Flow(t.Context(), testRef(), in)
 			if mode == "unblocked" {
@@ -216,7 +216,7 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 		cuts = append(cuts, timelineCut(in, fmt.Sprint("cut-", i), in.Analyses[i].Source.ID, 0, 9000, 1000))
 	}
 	in.TargetDurationMS = 30000
-	s, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 30000, "cuts": cuts}), true)
+	s, _ := newService(t, raw(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 30000, "cuts": cuts}), true)
 	got, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +250,7 @@ func TestACutThatCannotReachTheTargetIsKeptAndThePlanCompiles(t *testing.T) {
 	sources(&in, 3)
 	// 900 ms of footage in all: under every target, and nowhere to grow.
 	in.Analyses[0].Source.Info.DurationMS, in.Analyses[0].Segments[0].EndMS = 900, 900
-	wire := map[string]any{"ratio": "vertical", "duration_ms": 15000,
+	wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000,
 		"cuts": []any{timelineCut(in, "short", "source-0", 0, 900, 1000), timelineCut(in, "b", "source-1", 0, 6000, 1000), timelineCut(in, "c", "source-2", 0, 6000, 1000)}}
 	s, _ := newService(t, raw(wire), true)
 	plan, _, err := s.Flow(t.Context(), testRef(), in)
@@ -272,7 +272,7 @@ func TestTheTargetTrimsTheTailToTheApprovedDuration(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		cuts = append(cuts, timelineCut(in, fmt.Sprint("cut-", i), in.Analyses[i].Source.ID, 0, 4200, 1000))
 	}
-	s, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "cuts": cuts}), true)
+	s, _ := newService(t, raw(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 16800, "cuts": cuts}), true)
 	plan, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatalf("a reachable timeline was refused: %v", err)
@@ -313,7 +313,7 @@ func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
 	in.Analyses[2].Source.Info.DurationMS, in.Analyses[2].Segments[0].EndMS = 4500, 4500
 	held := 2*ceiling + 4500
 	in.TargetDurationMS = held + 3000
-	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS,
+	wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": in.TargetDurationMS,
 		"cuts": []any{timelineCut(in, "a", "source-0", 0, ceiling, 1000), timelineCut(in, "b", "source-1", 0, ceiling, 1000), timelineCut(in, "c", "source-2", 0, 4500, 1000)}}
 	s, _ := newService(t, raw(wire), true)
 	plan, _, err := s.Flow(t.Context(), testRef(), in)
@@ -337,7 +337,7 @@ func TestACutMayNotCrossTouchingScenes(t *testing.T) {
 	first.EndMS, second.StartMS = 2800, 2800
 	in.Analyses[0].Segments = []clip.Segment{first, second}
 	in.TargetDurationMS = 2*ceiling + ceiling
-	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS,
+	wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": in.TargetDurationMS,
 		"cuts": []any{timelineCut(in, "straddle", "source-0", 1000, 4000, 1000), timelineCut(in, "b", "source-1", 0, ceiling, 1000), timelineCut(in, "c", "source-2", 0, ceiling, 1000)}}
 	s, models := newService(t, raw(wire), true)
 	delivered, _, err := s.Flow(t.Context(), testRef(), in)
@@ -376,7 +376,7 @@ func TestTheTimelineMeasuresEveryRateOnTransformedOutputTime(t *testing.T) {
 		total += 3000
 	}
 	in.TargetDurationMS = total
-	wire := map[string]any{"ratio": "vertical", "duration_ms": total, "cuts": cuts}
+	wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": total, "cuts": cuts}
 	s, models := newService(t, raw(wire), true)
 	plan, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil || len(models.calls) != 1 {
@@ -414,7 +414,7 @@ func TestReconciliationConvertsOutputDeltaBackToSourceDelta(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			cuts = append(cuts, timelineCut(in, fmt.Sprint("cut-", i), "source", i*span, i*span+span, rate))
 		}
-		wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
+		wire := map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 		s, _ := newService(t, raw(wire), true)
 		plan, _, err := s.Flow(t.Context(), testRef(), in)
 		if err != nil || plan.DurationMS != 15000 {
@@ -463,7 +463,7 @@ func TestPlanUnderTheLengthFloorFailsAsInsufficientFootage(t *testing.T) {
 				}
 				cuts = append(cuts, timelineCut(in, fmt.Sprint("cut-", i), "source", i*span, end, 1000))
 			}
-			s, models := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}), true)
+			s, models := newService(t, raw(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": cuts}), true)
 			plan, _, err := s.Flow(t.Context(), testRef(), in)
 			if len(models.calls) != 1 {
 				t.Fatalf("a validated flow was resent: %d calls", len(models.calls))

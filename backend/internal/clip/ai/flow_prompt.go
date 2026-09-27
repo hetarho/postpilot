@@ -30,22 +30,43 @@ Write no caption, title, label or sentence of any kind: this response carries no
 Return only one JSON object following this closed contract:
 `
 
+// storylineFlowPrompt is the 바로 만들기 flow call (CLIP-178): the same contract, opening with
+// the storyline — the clip told in order — and choosing the cuts along it. A revision's flow
+// rewrite reads flowPrompt itself and writes none (CLIP-131).
+var storylineFlowPrompt = strings.NewReplacer(
+	"from supplied real footage: ordered cuts, and nothing else.",
+	"from supplied real footage: its storyline, then ordered cuts, and nothing else.",
+	"Write no caption, title, label or sentence of any kind: this response carries no text.",
+	"Write no caption, title or label: beyond the storyline, this response carries no text.\n"+storylineFlowRule,
+).Replace(flowPrompt)
+
+// storylineFlowRule is how the storyline is set (CLIP-178, CLIP-104): in the language the
+// observations are written in, which is the project's.
+const storylineFlowRule = "Before the cuts, set storyline: the clip told in order, paragraph by paragraph, each paragraph two or three sentences of plan saying what that part shows and says, and observation_ids naming the observed scenes it uses. Follow the template's stages in order when there is a template. Then choose the cuts along it. Write the storyline in the language of the observations; at most 30 paragraphs of at most 1000 characters each."
+
 // BuildFlowPrompt is the flow call's request, exported so the frozen input
 // allowance can be measured on the exact bytes the call will send (CLIP-90) —
 // the 영상 지침 block included.
 func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
-	system, user := flowPromptParts(in, fadeMS, limits)
+	system, user := flowPromptParts(in, fadeMS, limits, true)
 	return system + videoGuidelineBlock(in.Guidelines), user
 }
 
 // flowPromptParts is the flow request without the 영상 지침 block, which a revision appends
-// after its own block so the block stays last.
-func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
-	contract := flowPromptSchema
+// after its own block so the block stays last. `withStoryline` is the 바로 만들기 call; a
+// revision's flow rewrite answers the contract without a storyline.
+func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limits, withStoryline bool) (string, string) {
+	prompt, contract := flowPrompt, revisionFlowPromptSchema
+	if withStoryline {
+		prompt, contract = storylineFlowPrompt, flowPromptSchema
+	}
 	if in.Policy.StructuredOutput {
 		// The request already carries the closed structural schema; only the
 		// bounds it cannot express are repeated here.
 		contract = "Use the supplied response schema. Additional bounds: cuts 1..100; observation_refs at most 120 per cut. Focal x/y and volume are 0..1. rate_permille is one value from that source's allowed_rate_permille."
+		if withStoryline {
+			contract += " storyline at most 30 paragraphs; text at most 1000 characters."
+		}
 	}
 	groups := map[string][]map[string]any{}
 	for group, items := range in.Composition.Inputs.Items {
@@ -75,7 +96,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	if outline := templateOutline(in, limits); outline != "" {
 		payload["template_outline"] = outline
 	}
-	return flowPrompt + responseContract + contract, promptJSON(payload)
+	return prompt + responseContract + contract, promptJSON(payload)
 }
 
 // templateOutline is the template's form as the flow and narration calls read it:

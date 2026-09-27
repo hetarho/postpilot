@@ -106,7 +106,7 @@ func flow() map[string]any {
 		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "rate_permille": 1000,
 			"focal": map[string]any{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID("source", 0)}}
 	}
-	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{
+	return map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": []any{
 		cut("cut-one", 0, 5000), cut("cut-two", 5000, 10000), cut("cut-three", 10000, 15000),
 	}}
 }

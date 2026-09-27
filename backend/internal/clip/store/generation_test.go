@@ -167,6 +167,10 @@ type plannerFake struct {
 	stages                                                  []string
 	revisions                                               []clip.RevisionInput
 	gate, preparationErr, observeErr, errorPlan, narrateErr error
+	// The storyline a 바로 만들기 flow opens with, and every storyline a narration was
+	// written along (CLIP-178).
+	storyline *clip.Storyline
+	narrated  []*clip.Storyline
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -229,6 +233,7 @@ func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.Planning
 	cut := plan.Cuts[0]
 	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs,
 		Cuts: []composition.Cut{{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, PlaybackRatePermille: cut.Rate()}}}
+	plan.Storyline = p.storyline
 	return plan, usage, nil
 }
 
@@ -244,6 +249,8 @@ func (p *plannerFake) Revise(ctx context.Context, r llm.ModelRef, in clip.Revisi
 		if err != nil {
 			return clip.EditPlan{}, llm.Usage{}, err
 		}
+		// A revision's flow rewrite writes no storyline (CLIP-131).
+		flow.Storyline = nil
 		return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow})
 	}()
 	if err != nil {
@@ -263,6 +270,7 @@ func (p *plannerFake) Revise(ctx context.Context, r llm.ModelRef, in clip.Revisi
 func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.NarrationInput) (clip.EditPlan, llm.Usage, error) {
 	p.narrations++
 	p.stages = append(p.stages, "narrate")
+	p.narrated = append(p.narrated, in.Flow.Storyline)
 	if p.narrateErr != nil {
 		return clip.EditPlan{}, llm.Usage{}, p.narrateErr
 	}

@@ -102,6 +102,8 @@ type Project struct {
 	// What the owner asked the AI for, newest first (CLIP-133). Read only where
 	// the owner reads the project; the run paths take the project without it.
 	Requests []ProjectRequest
+	// The clip's storyline (CLIP-178); nil when it has none.
+	Storyline *Storyline
 }
 
 // ProjectRequest is one accepted request, kept verbatim: the instruction a

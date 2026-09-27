@@ -113,6 +113,25 @@ message ClipProject {
   repeated string allowed_caption_styles = 36;
   // Absent until the project has a successful result; derived from that result.
   optional ClipRenderKind last_render_kind = 37;
+  // The clip's storyline (CLIP-178); absent when it has none.
+  ClipStoryline storyline = 38;
+}
+
+// One paragraph of a clip's storyline: what that part of the clip shows and says, and the
+// observed scenes it uses, each an observation id of the project's analysis.
+message ClipStorylineParagraph {
+  string text = 1;
+  repeated string observation_ids = 2;
+}
+
+// A clip's storyline (CLIP-178): its paragraphs in order, whether the owner edited it by hand,
+// and — computed on read — the sources added since it was written and the observed scenes of
+// the sources it was written from that no paragraph holds.
+message ClipStoryline {
+  repeated ClipStorylineParagraph paragraphs = 1;
+  bool edited_by_hand = 2;
+  repeated string added_source_ids = 3;
+  repeated string taken_out_observation_ids = 4;
 }
 // One accepted request, verbatim: the instruction a generation froze, or the
 // words of a revision. An empty body under kind `instruction` is the record of a

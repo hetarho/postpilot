@@ -15,13 +15,19 @@ type flowCutJSON struct {
 	Volume       float64    `json:"volume"`
 	Observations []string   `json:"observation_refs"`
 }
+type flowStorylineJSON struct {
+	Text           string   `json:"text"`
+	ObservationIDs []string `json:"observation_ids"`
+}
 type flowJSON struct {
-	Ratio      string        `json:"ratio"`
-	DurationMS int           `json:"duration_ms"`
-	Cuts       []flowCutJSON `json:"cuts"`
+	Storyline  []flowStorylineJSON `json:"storyline"`
+	Ratio      string              `json:"ratio"`
+	DurationMS int                 `json:"duration_ms"`
+	Cuts       []flowCutJSON       `json:"cuts"`
 }
 
 var flowShape = readShape(flowSchema)
+var revisionFlowShape = readShape(revisionFlowSchema)
 
 // parseFlowPlan admits the footage flow. Every check the single writer's cuts
 // answered still applies — source, range, coverage, one contained scene,
@@ -30,7 +36,11 @@ var flowShape = readShape(flowSchema)
 // and the speech rule bind the WRITING (CLIP-128, CLIP-129): a response that
 // breaks one is planned and rendered as written, never silently re-rated,
 // because returning one cut to 1x moves every millisecond after it.
-func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string) (out clip.EditPlan, err error) {
+//
+// On 바로 만들기 the answer opens with the storyline (CLIP-178), kept on the plan within its
+// bounds and naming only observed scenes; a revision's rewrite answers the contract without
+// one (`withStoryline` false) and so carries none.
+func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string, withStoryline bool) (out clip.EditPlan, err error) {
 	var wire flowJSON
 	candidate := clip.EditPlan{}
 	failedCut := 0
@@ -42,7 +52,11 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string) (out clip.E
 			}
 		}
 	}()
-	if err := decode(raw, cfg.MaxResponseBytes, flowShape, &wire); err != nil {
+	contract := revisionFlowShape
+	if withStoryline {
+		contract = flowShape
+	}
+	if err := decode(raw, cfg.MaxResponseBytes, contract, &wire); err != nil {
 		return clip.EditPlan{}, err
 	}
 	doc, problem := composition.Parse(input.Composition.Snapshot.Body, compositionLimits(cfg, input))
@@ -138,6 +152,16 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string) (out clip.E
 	clip.RecomputePlanNotices(&plan, input.TargetDurationMS, cfg.TargetToleranceMS)
 	if _, err := clip.EncodeEditPlan(plan); err != nil {
 		return clip.EditPlan{}, err
+	}
+	if withStoryline {
+		paragraphs := make([]clip.StorylineParagraph, 0, len(wire.Storyline))
+		for _, p := range wire.Storyline {
+			paragraphs = append(paragraphs, clip.StorylineParagraph{Text: p.Text, ObservationIDs: p.ObservationIDs})
+		}
+		// A storyline that keeps nothing is none; the flow itself stands either way.
+		if kept := clip.BoundStoryline(paragraphs, clip.ObservedScenes(input.Analyses)); len(kept) > 0 {
+			plan.Storyline = &clip.Storyline{Paragraphs: kept}
+		}
 	}
 	return plan, nil
 }

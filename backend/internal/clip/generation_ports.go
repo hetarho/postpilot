@@ -80,7 +80,9 @@ type AttemptResult struct {
 	JobID, UserID, ProjectID string
 	ExpectedRevision         int
 	Analysis, EditPlan       string
-	Result                   Result
+	// The storyline saved with the plan, stored form; "" leaves the stored one as it is.
+	Storyline string
+	Result    Result
 }
 type ClipFinisher interface {
 	Complete(context.Context, AttemptResult) error

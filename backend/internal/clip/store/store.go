@@ -281,6 +281,9 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return p, err
 	}
+	if p.Storyline, err = clip.DecodeStoryline(r.StorylineJson.String); err != nil {
+		return p, err
+	}
 	return p, nil
 }
 func getProject(ctx context.Context, q *sqlc.Queries, user, id string) (clip.Project, error) {

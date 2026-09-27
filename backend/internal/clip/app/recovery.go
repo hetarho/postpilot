@@ -112,7 +112,7 @@ func (s *GenerationService) selectRecovery(r *clip.RecoveryState, b clip.SourceB
 		return cmp.Compare(a.SourceID, b.SourceID)
 	})
 	if len(out.Chunks) == len(r.Chunks) && len(out.Sources) == len(r.Sources) {
-		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady
+		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady, out.Storyline = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady, r.Storyline
 	}
 	return out
 }

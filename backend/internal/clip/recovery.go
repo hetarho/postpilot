@@ -26,9 +26,12 @@ type RecoveryState struct {
 	// PlanReady is a complete plan that resumes at rendering; FlowReady is the
 	// written footage flow the narration call has still to write over.
 	PlanReady, FlowReady bool
-	Sources              []AnalysisSource
-	Chunks               []ChunkAnalysis
-	Legacy               *AttemptCheckpoint
+	// The storyline the kept flow opened with, so a continuation that resumes on
+	// the flow keeps it (CLIP-178).
+	Storyline *Storyline `json:",omitempty"`
+	Sources   []AnalysisSource
+	Chunks    []ChunkAnalysis
+	Legacy    *AttemptCheckpoint
 }
 type RecoveryStore interface {
 	GetRecovery(context.Context, string, string) (*RecoveryState, error)

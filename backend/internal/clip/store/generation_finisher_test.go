@@ -19,7 +19,7 @@ func (f generationFinisher) Complete(ctx context.Context, c clip.AttemptResult) 
 		// A generation stops at the plan and carries no result of its own
 		// (CLIP-151); only a legacy staged completion still brings one.
 		if c.Result.Key == "" {
-			return f.store.SaveGeneratedPlan(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, time.Now())
+			return f.store.SaveGeneratedPlan(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Storyline, time.Now())
 		}
 		return f.store.SaveGeneration(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Result)
 	}

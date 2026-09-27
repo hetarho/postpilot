@@ -42,7 +42,7 @@ func revisionPayload(in clip.RevisionInput) map[string]any {
 }
 
 func buildFlowRevisionPrompt(in clip.RevisionInput, fadeMS int, limits composition.Limits) (string, string) {
-	system, user := flowPromptParts(in.PlanningInput, fadeMS, limits)
+	system, user := flowPromptParts(in.PlanningInput, fadeMS, limits, false)
 	return system + revisionBlock + videoGuidelineBlock(in.Guidelines), user + promptJSON(map[string]any{
 		"current_plan": revisionPayload(in), "revision_request": in.Request,
 	})

@@ -15,6 +15,10 @@ UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),anal
 -- the previous result survives and reads as the stale one it is (CLIP-152).
 -- name: SaveGeneratedPlan :execrows
 UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+-- The storyline a flow call opened with, written in the same transaction as the plan it came
+-- with (CLIP-178).
+-- name: SetClipStoryline :execrows
+UPDATE clip_projects SET storyline_json=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- name: EnqueueObjectDeletion :exec
 INSERT INTO clip_object_deletions(object_key,created_at) VALUES (?,?) ON CONFLICT(object_key) DO NOTHING;
 -- name: DeletionKeys :many

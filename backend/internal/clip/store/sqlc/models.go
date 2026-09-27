@@ -155,6 +155,7 @@ type ClipProject struct {
 	OutroPreset              string
 	AllowedCaptionStyles     string
 	RenderKind               string
+	StorylineJson            sql.NullString
 }
 
 type ClipSourceAttempt struct {

@@ -24,7 +24,34 @@ func compactContract(value []byte) string {
 	return out.String()
 }
 
+// revisionFlowSchema is the flow contract a revision's flow rewrite answers: the same
+// document without the storyline, which a revision never writes (CLIP-131, CLIP-178).
+var revisionFlowSchema = withoutProperty(flowSchema, "storyline")
+
+// withoutProperty is a code-owned contract with one top-level property and its requirement
+// removed.
+func withoutProperty(contract []byte, key string) []byte {
+	var doc map[string]any
+	if err := json.Unmarshal(contract, &doc); err != nil {
+		panic(err)
+	}
+	delete(doc["properties"].(map[string]any), key)
+	required := []any{}
+	for _, name := range doc["required"].([]any) {
+		if name != key {
+			required = append(required, name)
+		}
+	}
+	doc["required"] = required
+	out, err := json.Marshal(doc)
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
 var flowPromptSchema = compactContract(flowSchema)
+var revisionFlowPromptSchema = compactContract(revisionFlowSchema)
 var narrationPromptSchema = compactContract(narrationSchema)
 var chunkPromptSchema = compactContract(chunkSchema)
 
@@ -78,6 +105,11 @@ func ChunkSchema() []byte { return append([]byte(nil), chunkOutputSchema...) }
 var flowOutputSchema = structuralSchema(flowSchema)
 
 func FlowSchema() []byte { return append([]byte(nil), flowOutputSchema...) }
+
+var revisionFlowOutputSchema = structuralSchema(revisionFlowSchema)
+
+// RevisionFlowSchema is the structural shape of a revision's flow answer: no storyline.
+func RevisionFlowSchema() []byte { return append([]byte(nil), revisionFlowOutputSchema...) }
 
 var narrationOutputSchema = structuralSchema(narrationSchema)
 

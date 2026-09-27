@@ -138,8 +138,9 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 // plan it validated, and no result. The stored result and the revision it was
 // rendered from stay exactly as they are, so a regenerated project keeps the
 // clip it already has while the new plan waits for the render the owner asks
-// for (CLIP-151, CLIP-152, CLIP-26).
-func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan string, now time.Time) error {
+// for (CLIP-151, CLIP-152, CLIP-26). A storyline the flow call opened with is written in the
+// same transaction (CLIP-178); "" leaves the stored one as it is.
+func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan, storyline string, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		old, err := getProject(ctx, q, user, id)
 		if err != nil {
@@ -148,6 +149,12 @@ func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan 
 		n, err := q.SaveGeneratedPlan(ctx, sqlc.SaveGeneratedPlanParams{AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), UpdatedAt: stamp(now), UserID: user, ID: id})
 		if e := affected(n, err); e != nil {
 			return struct{}{}, e
+		}
+		if storyline != "" {
+			n, err := q.SetClipStoryline(ctx, sqlc.SetClipStorylineParams{StorylineJson: nullable(storyline), UserID: user, ID: id})
+			if e := affected(n, err); e != nil {
+				return struct{}{}, e
+			}
 		}
 		if decoded, e := clip.DecodeEditPlan(plan); e == nil && decoded.Portable != nil {
 			old.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}

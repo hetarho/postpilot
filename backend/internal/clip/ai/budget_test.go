@@ -112,6 +112,6 @@ func realisticFlow() []byte {
 			"observation_refs": []string{strings.Repeat("a", 32) + "/0"},
 		}
 	}
-	out, _ := json.Marshal(map[string]any{"ratio": "vertical", "duration_ms": 60000, "cuts": cuts})
+	out, _ := json.Marshal(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 60000, "cuts": cuts})
 	return out
 }

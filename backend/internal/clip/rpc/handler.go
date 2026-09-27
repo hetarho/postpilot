@@ -227,6 +227,7 @@ func projectProto(p clip.Project) *v1.ClipProject {
 		out.FinalizedResultId = f.ResultID
 		out.FinalizationRefusal = "finalized"
 	}
+	out.Storyline = storylineProto(p, nil)
 	// Verbatim, newest first, exactly as the store answered (CLIP-133).
 	for _, r := range p.Requests {
 		out.Requests = append(out.Requests, &v1.ClipProjectRequest{Kind: r.Kind, Body: r.Body, CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano)})
@@ -365,6 +366,15 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, toConnectError(err)
 	}
 	out := projectProto(value)
+	// The storyline reads what was added against the project's CURRENT sources, which only
+	// this read looks up (CLIP-178).
+	if value.Storyline != nil && h.sources != nil {
+		batches, err := h.sources.GetSources(ctx, user, value.ID)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		out.Storyline = storylineProto(value, currentSourceIDs(batches))
+	}
 	// A finalized project is read in ① and ② as well as played in ③ (CLIP-160),
 	// and both readings are projections of the stored plan and evidence: no
 	// original is touched here, and every write stays refused where it is made.
@@ -433,4 +443,40 @@ func (h *Handler) DeleteClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteClipProjectResponse{}), nil
+}
+
+// storylineProto is the clip's storyline with what changed since it was written (CLIP-178): the
+// sources not in the ones it was made with, and the observed scenes of those it was made with
+// that no paragraph holds. `current` are the project's current sources; nil reads the analysed
+// ones, which is all a projection without the source read has.
+func storylineProto(p clip.Project, current []string) *v1.ClipStoryline {
+	s := p.Storyline
+	if s == nil {
+		return nil
+	}
+	analyses, _ := clip.RetainedObservations(p)
+	if current == nil {
+		for _, a := range analyses {
+			current = append(current, a.Source.ID)
+		}
+	}
+	out := &v1.ClipStoryline{EditedByHand: s.EditedByHand, AddedSourceIds: s.AddedSources(current), TakenOutObservationIds: s.TakenOutObservations(analyses)}
+	for _, paragraph := range s.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, &v1.ClipStorylineParagraph{Text: paragraph.Text, ObservationIds: paragraph.ObservationIDs})
+	}
+	return out
+}
+
+// currentSourceIDs are the sources of the project's current batch, in batch order.
+func currentSourceIDs(batches []clip.SourceBatch) []string {
+	out := []string{}
+	for _, b := range batches {
+		if !b.Current {
+			continue
+		}
+		for _, v := range b.Sources {
+			out = append(out, v.ID)
+		}
+	}
+	return out
 }

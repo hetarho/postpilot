@@ -160,6 +160,10 @@ type EditPlan struct {
 	// What the compiler decided per cut, in the same order: the class it read,
 	// the scene it read it in and the fallback it had to use, if any.
 	Decisions []Composition
+	// The storyline a 바로 만들기 flow call opened with (CLIP-178), carried from the
+	// flow to the narration and the save. It is never encoded with the plan: the
+	// project stores it on its own, where the owner edits it.
+	Storyline *Storyline
 }
 type RenderSource struct {
 	ID, Fingerprint string

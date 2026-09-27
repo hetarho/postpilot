@@ -51,7 +51,7 @@ func flowResponse(cuts ...map[string]any) string {
 	for _, c := range cuts {
 		values = append(values, c)
 	}
-	return raw(map[string]any{"ratio": "vertical", "duration_ms": 22500, "cuts": values})
+	return raw(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 22500, "cuts": values})
 }
 func defaultFlow() string {
 	return flowResponse(flowCut("cut-one", 0, 7500, 1000), flowCut("cut-two", 7500, 15000, 1000), flowCut("cut-three", 15000, 22500, 1000))

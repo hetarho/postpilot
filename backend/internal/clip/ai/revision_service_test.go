@@ -21,8 +21,25 @@ func revisionInput(t *testing.T, target, request string) clip.RevisionInput {
 	return clip.RevisionInput{PlanningInput: in.PlanningInput, Current: current, Request: request, Target: target}
 }
 
+// revisionFlow is a flow answer as a revision's rewrite gives it: the contract without the
+// storyline, which only 바로 만들기 writes (CLIP-131, CLIP-178).
+func revisionFlow(response string) string {
+	var fields map[string]any
+	if json.Unmarshal([]byte(response), &fields) != nil {
+		return response
+	}
+	if _, flow := fields["cuts"]; !flow {
+		return response
+	}
+	delete(fields, "storyline")
+	return raw(fields)
+}
+
 func revise(t *testing.T, in clip.RevisionInput, responses ...string) (clip.EditPlan, []map[string]any, []string) {
 	t.Helper()
+	for i, response := range responses {
+		responses[i] = revisionFlow(response)
+	}
 	s, models := newService(t, responses[0], true)
 	models.responses = responses
 	plan, _, err := s.Revise(t.Context(), testRef(), in)

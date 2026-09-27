@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"strings"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
@@ -23,6 +25,10 @@ declared_captions are captions the template's outline already carries, in the or
 For every caption, including declared_captions, name one style id from allowed_caption_styles. Choose the treatment that suits what that caption says and vary it across the clip when the selection offers a mix. Never name a style outside that selection. Do not choose a position, an accent or a transition: the server places every caption.
 Return only one JSON object following this closed contract:
 `
+
+// narrationStorylineRule is the one sentence a narration over a storyline adds (CLIP-178):
+// the captions follow it. Absent with no storyline, so that request stays as it was.
+const narrationStorylineRule = "Write the captions along storyline, part by part, in its order.\n"
 
 // BuildNarrationPrompt is the narration call's request, measured the same way.
 func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (string, string) {
@@ -65,7 +71,12 @@ func narrationPromptParts(in clip.NarrationInput, limits composition.Limits) (st
 	if declared := declaredCaptionPayload(in, limits); len(declared) > 0 {
 		payload["declared_captions"] = declared
 	}
-	return narrationPrompt + responseContract + contract, promptJSON(payload)
+	prompt := narrationPrompt
+	if s := in.Flow.Storyline; s != nil && len(s.Paragraphs) > 0 {
+		payload["storyline"] = storylinePayload(*s)
+		prompt = strings.Replace(narrationPrompt, "Return only one JSON object", narrationStorylineRule+"Return only one JSON object", 1)
+	}
+	return prompt + responseContract + contract, promptJSON(payload)
 }
 
 // declaredCaptionPayload is the outline's own caption entries in the order they
@@ -132,6 +143,20 @@ func narrationStyles(selection clip.ProjectDesign) []map[string]any {
 			rule := style.Rule()
 			out = append(out, map[string]any{"id": id, "name": style.Name, "reads_as": style.Description, "max_lines": rule.Lines, "max_line_chars": rule.Chars})
 		}
+	}
+	return out
+}
+
+// storylinePayload is the storyline as the narration reads it: its paragraphs in order, each
+// with the observed scenes it uses.
+func storylinePayload(s clip.Storyline) []map[string]any {
+	out := make([]map[string]any, 0, len(s.Paragraphs))
+	for _, p := range s.Paragraphs {
+		ids := p.ObservationIDs
+		if ids == nil {
+			ids = []string{}
+		}
+		out = append(out, map[string]any{"text": p.Text, "observation_ids": ids})
 	}
 	return out
 }

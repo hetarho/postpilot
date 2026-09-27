@@ -176,8 +176,12 @@ type generationRun struct {
 	prepared           []preparedChunk
 	analyses           []clip.SourceAnalysis
 	edit               clip.EditPlan
-	analysisJSON       []byte
-	planJSON           string
+	// The storyline the flow call opened with (CLIP-178), or the one the kept flow did;
+	// nil when the flow wrote none.
+	storyline     *clip.Storyline
+	analysisJSON  []byte
+	planJSON      string
+	storylineJSON string
 }
 
 // Run is the generation job: accept the approved payload, prepare the sources, observe
@@ -371,7 +375,7 @@ func (r *generationRun) accept(payload []byte) error {
 		return clip.ErrQuoteChanged
 	}
 	if !pricing.SkipFlow {
-		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady = "", "", false, false
+		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady, recovery.Storyline = "", "", false, false, nil
 	}
 	r.p, r.b, r.pricing, r.recovery = p, b, pricing, recovery
 	if !pricing.RenderOnly() {
@@ -544,6 +548,9 @@ func (r *generationRun) keep(flowReady, planReady bool) error {
 	}
 	r.recovery.Plan, r.recovery.PlanDigest = raw, planRecoveryDigest(r.p)
 	r.recovery.FlowReady, r.recovery.PlanReady = flowReady, planReady
+	// The plan's own encoding does not carry the storyline, so the recovery does: a
+	// continuation that resumes on this flow keeps what it opened with.
+	r.recovery.Storyline = r.storyline
 	return r.s.saveRecovery(r.ctx, r.user, r.project, r.recovery)
 }
 
@@ -560,6 +567,7 @@ func (r *generationRun) write() error {
 	var err error
 	if pricing.SkipFlow {
 		r.edit, err = clip.DecodeEditPlan(r.recovery.Plan)
+		r.edit.Storyline = r.recovery.Storyline
 	} else {
 		// A composition is written by the flow call and then the narration
 		// over it (CLIP-135).
@@ -568,6 +576,7 @@ func (r *generationRun) write() error {
 	if err != nil {
 		return err
 	}
+	r.storyline = r.edit.Storyline
 	// The project's caption pace and accent are render inputs too: a plan
 	// carries what was written, the project says how it is shown (CLIP-139).
 	r.edit = r.edit.WithDesign(p.Design())
@@ -586,6 +595,8 @@ func (r *generationRun) write() error {
 		if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
 			return err
 		}
+		// The narration writes along the storyline the flow opened with (CLIP-178).
+		r.edit.Storyline = r.storyline
 		r.edit, _, err = s.planner.Narrate(r.correcting("narrate"), pricing.Narration.Ref, clip.NarrationInput{PlanningInput: in, Flow: r.edit})
 		if err != nil {
 			return err
@@ -651,7 +662,18 @@ func (r *generationRun) save() error {
 	// from the live leases, so a reselected source keeps the choice already
 	// made about it and a new one stays silent (CLIP-18, CLIP-100).
 	r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
-	r.planJSON, err = clip.EncodeEditPlan(r.edit)
+	if r.planJSON, err = clip.EncodeEditPlan(r.edit); err != nil {
+		return err
+	}
+	// Saved with the plan, as written: not edited by hand, and made with the sources this
+	// generation analysed (CLIP-178).
+	if r.storyline != nil {
+		made := make([]string, 0, len(r.analyses))
+		for _, a := range r.analyses {
+			made = append(made, a.Source.ID)
+		}
+		r.storylineJSON, err = clip.EncodeStoryline(&clip.Storyline{Paragraphs: r.storyline.Paragraphs, MadeWithSources: made})
+	}
 	return err
 }
 
@@ -660,7 +682,7 @@ func (r *generationRun) save() error {
 // the render is asked for, which is what leaves that result standing as a stale one
 // (CLIP-26, CLIP-152).
 func (r *generationRun) finish(currentProject clip.Project) error {
-	if err := r.s.finisher.Complete(r.ctx, clip.AttemptResult{JobID: r.job, UserID: r.user, ProjectID: r.project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(r.analysisJSON), EditPlan: r.planJSON}); err != nil {
+	if err := r.s.finisher.Complete(r.ctx, clip.AttemptResult{JobID: r.job, UserID: r.user, ProjectID: r.project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(r.analysisJSON), EditPlan: r.planJSON, Storyline: r.storylineJSON}); err != nil {
 		return err
 	}
 	r.set("cleanup", 0, 1)

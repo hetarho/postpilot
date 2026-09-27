@@ -169,7 +169,7 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
 	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.EditPlan, error) {
-		return parseFlowPlan(s.cfg, input, raw)
+		return parseFlowPlan(s.cfg, input, raw, true)
 	})
 	if err != nil {
 		return clip.EditPlan{}, usage, stageError("flow", err)
@@ -197,9 +197,9 @@ func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.Rev
 	usage := llm.Usage{}
 	flow := input.Current
 	if input.Target != clip.RevisionNarration {
-		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", s.cfg.FlowCompletionTokens, FlowSchema(), func() (string, string) {
+		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
 			return buildFlowRevisionPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input.PlanningInput))
-		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, input.PlanningInput, raw) })
+		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, input.PlanningInput, raw, false) })
 		usage = addUsage(usage, spent)
 		if err != nil {
 			return clip.EditPlan{}, usage, err

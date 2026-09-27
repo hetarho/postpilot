@@ -61,7 +61,10 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 }
 
 // widestFlow is the largest footage flow the narration request can be asked to
-// carry: the cut ceiling, each cut with the longest identity a writer may mint.
+// carry: the cut ceiling, each cut with the longest identity a writer may mint,
+// and the widest storyline the flow may open with (CLIP-178). The storyline's
+// scene ids are measured the way the analyses are — not here, before anything
+// was observed.
 // The frozen allowance is checked against that, never against the flow one
 // particular generation happens to produce.
 func WidestFlow(cfg Config, in clip.PlanningInput) clip.EditPlan {
@@ -69,11 +72,22 @@ func WidestFlow(cfg Config, in clip.PlanningInput) clip.EditPlan {
 	if len(in.Analyses) > 0 {
 		source = in.Analyses[0].Source
 	}
-	flow := clip.EditPlan{Ratio: in.Ratio, DurationMS: cfg.Render.MaxDurationMS}
+	flow := clip.EditPlan{Ratio: in.Ratio, DurationMS: cfg.Render.MaxDurationMS, Storyline: widestStoryline()}
 	length := max(1, cfg.Render.MaxDurationMS/max(1, cfg.Render.MaxCuts))
 	for i := range cfg.Render.MaxCuts {
 		flow.Cuts = append(flow.Cuts, clip.Cut{ID: strings.Repeat("c", 64), SourceID: source.ID, Fingerprint: source.Fingerprint,
 			StartMS: i * length, EndMS: (i + 1) * length, PlaybackRatePermille: clip.RateUnitPermille})
 	}
 	return flow
+}
+
+// widestStoryline is the storyline BoundStoryline can keep at its widest: every paragraph, and
+// the byte cap spent on three-byte syllables.
+func widestStoryline() *clip.Storyline {
+	s := &clip.Storyline{}
+	per := clip.StorylineMaxBytes / clip.StorylineParagraphMax / len("가")
+	for range clip.StorylineParagraphMax {
+		s.Paragraphs = append(s.Paragraphs, clip.StorylineParagraph{Text: strings.Repeat("가", per)})
+	}
+	return s
 }

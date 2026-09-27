@@ -360,3 +360,23 @@ func (q *Queries) SaveRender(ctx context.Context, arg SaveRenderParams) (int64, 
 	}
 	return result.RowsAffected()
 }
+
+const setClipStoryline = `-- name: SetClipStoryline :execrows
+UPDATE clip_projects SET storyline_json=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+`
+
+type SetClipStorylineParams struct {
+	StorylineJson sql.NullString
+	UserID        string
+	ID            string
+}
+
+// The storyline a flow call opened with, written in the same transaction as the plan it came
+// with (CLIP-178).
+func (q *Queries) SetClipStoryline(ctx context.Context, arg SetClipStorylineParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setClipStoryline, arg.StorylineJson, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
