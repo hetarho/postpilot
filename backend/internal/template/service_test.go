@@ -24,7 +24,7 @@ func testLimits() Limits {
 	},
 		// The POST option's bounds, explicit: this package never imports post. The length has a
 		// floor and no ceiling, the tag count both.
-		NumberBounds{TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10})
+		NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})
 }
 
 // fakeStore is the persistence port. It keeps ownership the way the real SQL does — every

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import {
+  TEMPLATE_ASK_LABEL_MAX_CHARS,
   TEMPLATE_ASK_MAX_PER_BODY,
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
@@ -60,6 +61,15 @@ describe.each(['ko', 'en'] as const)('the format guide in %s', (language) => {
     expect(text).toContain(String(TEMPLATE_BODY_MAX_CHARS))
     expect(text).toContain(String(TEMPLATE_PHOTO_ROW_MAX))
     expect(text).toContain(String(TEMPLATE_ASK_MAX_PER_BODY))
+    expect(text).toContain(String(TEMPLATE_ASK_LABEL_MAX_CHARS))
+  })
+
+  // TMPL-19, TMPL-20: the refusals an outside AI would otherwise walk into — a tag inside text,
+  // and an attribute a tag does not name or gives twice.
+  it('says write, note and ask hold text only and each tag takes only its own attributes', () => {
+    const text = guide()
+    expect(text).toMatch(language === 'ko' ? /write, note, ask 안에는 글만/ : /hold text only/)
+    expect(text).toMatch(language === 'ko' ? /위에 나온 속성만/ : /only the attributes shown/)
   })
 
   // A slot label is the one `label=` that must never appear: it belongs to the retired place and

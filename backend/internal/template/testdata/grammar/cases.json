@@ -363,6 +363,86 @@
       }
     },
     {
+      "name": "an attribute write does not name",
+      "body": "<write tone=\"x\">a</write>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an attribute note does not name",
+      "body": "<note to=\"ai\">짧게</note>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "a count on a repeat",
+      "body": "<repeat each=\"photo\" count=\"2\">\n<slot kind=\"photo\"/>\n</repeat>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an attribute a data field does not name",
+      "body": "<ask label=\"총평\" hint=\"x\"/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an attribute given twice",
+      "body": "<slot kind=\"photo\" kind=\"photo\"/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "a count given twice",
+      "body": "<slot kind=\"photo\" count=\"2\" count=\"3\"/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an unknown attribute outranks a missing one",
+      "body": "<slot foo=\"x\"/>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "a head with an unknown attribute that never closes stays unclosed",
+      "body": "<write tone=\"x\"",
+      "error": {
+        "line": 1,
+        "reason": "unclosed_tag"
+      }
+    },
+    {
+      "name": "a data field in a repeat outranks its unknown attribute",
+      "body": "<repeat each=\"photo\">\n<ask label=\"a\" x=\"1\"/>\n</repeat>",
+      "error": {
+        "line": 2,
+        "reason": "ask_in_repeat"
+      }
+    },
+    {
+      "name": "a nested repeat outranks its unknown attribute",
+      "body": "<repeat each=\"photo\">\n<repeat each=\"photo\" x=\"1\">\n<write>a</write>\n</repeat>\n</repeat>",
+      "error": {
+        "line": 2,
+        "reason": "nested_repeat"
+      }
+    },
+    {
       "name": "slot without kind",
       "body": "<slot label=\"지도\"/>",
       "error": {
@@ -751,6 +831,46 @@
       }
     },
     {
+      "name": "the grammar's own tag inside note text",
+      "body": "<note>톤 <slot kind=\"photo\"/></note>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an unknown opening tag inside write text",
+      "body": "<write>a <b>굵게</b></write>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "an unknown opening tag inside note text",
+      "body": "<note>짧게 <heading>제목</note>",
+      "error": {
+        "line": 1,
+        "reason": "malformed_tag"
+      }
+    },
+    {
+      "name": "a foreign close inside write text",
+      "body": "<write>a </b></write>",
+      "error": {
+        "line": 1,
+        "reason": "unexpected_close"
+      }
+    },
+    {
+      "name": "another element's close inside data-field text",
+      "body": "<ask label=\"총평\">별점</write></ask>",
+      "error": {
+        "line": 1,
+        "reason": "unexpected_close"
+      }
+    },
+    {
       "name": "an unclosed data field",
       "body": "<ask label=\"총평\">총평을",
       "error": {
@@ -829,6 +949,16 @@
     {
       "name": "the place outranks the attributes in the title area",
       "titleArea": "<slot kind=\"video\"></slot>",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "the place outranks an unknown attribute in the title area",
+      "titleArea": "<note tone=\"x\">짧게</note>",
       "body": "",
       "error": {
         "line": 1,

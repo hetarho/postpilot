@@ -93,7 +93,7 @@ func run(ctx context.Context) error {
 			// Every value is named, not a literal: a zero bound added later fails NewService's
 			// check at seed start, which main_test.go catches.
 			template.NewLimits(template.Ceilings(cfg.Template), template.NumberBounds{
-				TargetLengthMin: post.TargetLengthMin, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
+				TargetLengthMin: post.TargetLengthMin, TargetLengthMax: post.TargetLengthMax, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
 			}),
 		)},
 		Now: time.Now,

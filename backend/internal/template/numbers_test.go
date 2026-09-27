@@ -22,6 +22,8 @@ func TestNumbersAreBoundedByThePostOptionsRules(t *testing.T) {
 	}{
 		{"zero length", Numbers{TargetLength: ptr(0)}, "target_length"},
 		{"negative length", Numbers{TargetLength: ptr(-1)}, "target_length"},
+		{"length below the floor", Numbers{TargetLength: ptr(99)}, "target_length"},
+		{"length above the ceiling", Numbers{TargetLength: ptr(10_001)}, "target_length"},
 		{"tag count below the floor", Numbers{TagCount: ptr(0)}, "tag_count"},
 		{"tag count above the ceiling", Numbers{TagCount: ptr(11)}, "tag_count"},
 	}
@@ -38,12 +40,15 @@ func TestNumbersAreBoundedByThePostOptionsRules(t *testing.T) {
 	}
 
 	// The edges are accepted, and so is "no opinion" on both.
-	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody, Numbers: Numbers{TargetLength: ptr(1), TagCount: ptr(10)}})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody, Numbers: Numbers{TargetLength: ptr(100), TagCount: ptr(10)}})
 	if err != nil {
 		t.Fatalf("the edges were refused: %v", err)
 	}
-	if created.TargetLength == nil || *created.TargetLength != 1 || created.TagCount == nil || *created.TagCount != 10 {
+	if created.TargetLength == nil || *created.TargetLength != 100 || created.TagCount == nil || *created.TagCount != 10 {
 		t.Fatalf("the numbers were not stored: %+v", created)
+	}
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "긴 리뷰", Body: okBody, Numbers: Numbers{TargetLength: ptr(10_000)}}); err != nil {
+		t.Fatalf("the length ceiling was refused: %v", err)
 	}
 	quiet, err := svc.Create(ctx, "alice", Authored{Name: "의견 없음", Body: okBody})
 	if err != nil {

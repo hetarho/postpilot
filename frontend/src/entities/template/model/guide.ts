@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import {
+  TEMPLATE_ASK_LABEL_MAX_CHARS,
   TEMPLATE_ASK_MAX_PER_BODY,
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
@@ -36,6 +37,7 @@ export function formatGuide(): string {
     bodyMax: TEMPLATE_BODY_MAX_CHARS,
     photoRowMax: TEMPLATE_PHOTO_ROW_MAX,
     askMax: TEMPLATE_ASK_MAX_PER_BODY,
+    askLabelMax: TEMPLATE_ASK_LABEL_MAX_CHARS,
     interpolation: { escapeValue: false },
   })
 }

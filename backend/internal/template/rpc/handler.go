@@ -99,18 +99,17 @@ func actingUser(ctx context.Context) (string, error) {
 // toConnectError maps the context's sentinels to wire codes. A foreign template is NotFound
 // like an unknown one — the two must not be distinguishable.
 //
-// A parse failure carries the line and the reason as allowlisted params, because the editor
-// has to point at the offending line and it must not parse wire prose to find out which one.
-// A failure in the title area also names that area; one in the body names none, so a body
-// refusal reads exactly as it always has.
+// A parse failure carries the line, the reason and the area as allowlisted params, because the
+// editor has to point at the offending line in the right area and it must not parse wire prose
+// to find out which one (TMPL-20).
 func toConnectError(op string, err error) error {
 	var tooLong *template.FieldTooLongError
 	var outOfRange *template.NumberOutOfRangeError
 	var parseErr *template.ParseError
 	switch {
 	case errors.As(err, &outOfRange):
-		// `max` is omitted for a number the product gives no ceiling: the target length is any
-		// positive value, and a params key claiming a ceiling would be a rule nobody set.
+		// `max` is omitted for a number with no ceiling: a params key claiming one would be a
+		// rule nobody set.
 		params := map[string]string{
 			"field": outOfRange.Field, "min": strconv.Itoa(outOfRange.Min),
 			"actual": strconv.Itoa(outOfRange.Value),
@@ -124,10 +123,7 @@ func toConnectError(op string, err error) error {
 			"field": tooLong.Field, "max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
 		})
 	case errors.As(err, &parseErr):
-		params := map[string]string{"line": strconv.Itoa(parseErr.Line), "reason": parseErr.Reason}
-		if parseErr.Area == template.AreaTitle {
-			params["area"] = template.AreaTitle
-		}
+		params := map[string]string{"line": strconv.Itoa(parseErr.Line), "reason": parseErr.Reason, "area": parseErr.Area}
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template does not parse", postpilotv1.FailureReason_TEMPLATE_PARSE_FAILED, params)
 	case errors.Is(err, template.ErrNameRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template name is required", postpilotv1.FailureReason_TEMPLATE_NAME_REQUIRED, nil)

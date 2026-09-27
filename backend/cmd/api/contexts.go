@@ -354,6 +354,6 @@ func templateLimits(cfg *config.Config) template.Limits {
 // store a number the post would refuse.
 func postNumberBounds() template.NumberBounds {
 	return template.NumberBounds{
-		TargetLengthMin: post.TargetLengthMin, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
+		TargetLengthMin: post.TargetLengthMin, TargetLengthMax: post.TargetLengthMax, TagCountMin: post.TagCountRange.Min, TagCountMax: post.TagCountRange.Max,
 	}
 }

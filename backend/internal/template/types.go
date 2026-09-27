@@ -90,9 +90,10 @@ type Limits struct {
 	// memo off a phone costs more than the invented sentence it prevents.
 	AskLabelMaxChars int
 	AskMaxPerBody    int
-	// TargetLengthMin and TagCountMin/Max bound the two generation numbers a template may
+	// TargetLengthMin/Max and TagCountMin/Max bound the two generation numbers a template may
 	// author (TMPL-47); see NumberBounds for why they are passed in.
 	TargetLengthMin int
+	TargetLengthMax int
 	TagCountMin     int
 	TagCountMax     int
 }
@@ -101,7 +102,7 @@ func (l Limits) valid() bool {
 	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 && l.TitleAreaMaxChars > 0 &&
 		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0 &&
 		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0 &&
-		l.TargetLengthMin > 0 && l.TagCountMin > 0 && l.TagCountMax >= l.TagCountMin
+		l.TargetLengthMin > 0 && l.TargetLengthMax >= l.TargetLengthMin && l.TagCountMin > 0 && l.TagCountMax >= l.TagCountMin
 }
 
 // Template is the aggregate. Body is the single source of truth for the template's shape:

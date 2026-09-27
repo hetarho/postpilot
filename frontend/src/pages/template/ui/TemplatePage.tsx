@@ -281,6 +281,27 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     withResolver: true,
   })
 
+  // The clean baseline is what the server stored, from the mutation's own response (TMPL-25),
+  // and the draft's text takes it too: the server trims the body at its edges (TMPL-6), so a
+  // saved screen is clean and shows exactly what was written. The fields are disabled while the
+  // save runs, so nothing typed meanwhile is overwritten. A response without a template leaves
+  // the sent draft as the baseline.
+  const adoptSaved = (template: Template | undefined) => {
+    if (!template) {
+      setSavedBaseline(trimmed)
+      return
+    }
+    const written = draftOf(template)
+    setSavedBaseline(written)
+    setDraft((current) => ({
+      ...current,
+      name: written.name,
+      description: written.description,
+      body: written.body,
+      titleArea: written.titleArea,
+    }))
+  }
+
   const save = async () => {
     if (blocked) return
     try {
@@ -288,8 +309,8 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
         // All three fields in one call. They are one decision now, and the server applies a
         // present field and leaves an absent one alone — so sending three is one transaction,
         // not a read-modify-write of anything the user did not touch on this screen.
-        await update.saveAll(trimmed)
-        setSavedBaseline(trimmed)
+        const updated = await update.saveAll(trimmed)
+        adoptSaved(updated.template)
         setSaved(true)
         return
       }
@@ -297,7 +318,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
       const id = created.template?.id
       // The baseline moves BEFORE the navigation, or the blocker below would intercept the
       // screen's own redirect and ask whether to discard a template that was just created.
-      setSavedBaseline(trimmed)
+      adoptSaved(created.template)
       if (!id) {
         // A create that answered without an id has nothing to navigate to. Staying put with the
         // draft intact is the honest outcome; navigating to an empty param would 404.

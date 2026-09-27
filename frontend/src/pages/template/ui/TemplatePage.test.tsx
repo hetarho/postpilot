@@ -304,6 +304,26 @@ describe('the template screen', () => {
     expect(updates[0].body).toBe('  <write>붙여넣은 본문</write>\n')
   })
 
+  // TMPL-25: the clean baseline is the mutation's own response. The server trims the body at its
+  // edges (TMPL-6), so a padded paste is clean once saved and shows what was stored.
+  it('goes clean on what the server stored, not on the draft it sent', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-review')
+
+    expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    const source = screen.getByLabelText('원문')
+    await user.clear(source)
+    await user.click(source)
+    await user.paste('  <write>붙여넣은 본문</write>\n')
+
+    const save = screen.getByRole('button', { name: '저장' })
+    await user.click(save)
+    await screen.findByText('저장했어요.')
+    expect(save).toBeDisabled()
+    expect(screen.getByLabelText('원문')).toHaveValue('<write>붙여넣은 본문</write>')
+  })
+
   // TMPL-30, TMPL-7: a body that does not parse cannot be saved from EITHER mode, and
   // editing the name does not buy a way past it.
   it('refuses to save an unparsable body even after the name is edited', async () => {

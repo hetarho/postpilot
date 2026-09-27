@@ -13,7 +13,7 @@ export const i18n = {
       add: '블록 추가',
       empty: '위에서 블록을 더해 글의 순서를 짜 주세요.',
       insertHere: '여기에 추가돼요',
-      repeatEmpty: '이 반복 안에 아직 아무것도 없어요.',
+      repeatEmpty: '이 사진마다 반복 안에 아직 아무것도 없어요.',
       repeatHelp:
         '첨부한 사진 개수만큼 안쪽 블록이 되풀이돼요. 한 번 되풀이할 때 사진 {{count}}장을 씁니다.',
       unreadable:
@@ -50,6 +50,8 @@ export const i18n = {
       manualCopy: '복사가 막혀 있어요. 선택된 내용을 길게 눌러 복사해 주세요.',
       showGuide: '형식 안내 보기',
       error: '{{line}}번째 줄: {{reason}}',
+      // The area a server refusal names (TMPL-20).
+      area: { title_area: '제목', body: '본문' },
       guide: `아래 형식으로 블로그 글 템플릿의 본문을 하나 작성해 주세요.
 
 [템플릿이 하는 일]
@@ -70,7 +72,9 @@ export const i18n = {
 - count는 1에서 {{photoRowMax}} 사이의 정수입니다. 없으면 1장입니다.
 - repeat는 each="photo"만 받고, repeat 안에 repeat를 넣을 수 없습니다.
 - write와 note는 비워 둘 수 없습니다.
-- ask는 label이 반드시 있어야 하고, 한 본문 안에서 label이 겹치면 안 됩니다. repeat 안에는 넣을 수 없고, 한 본문에 최대 {{askMax}}개까지입니다.
+- write, note, ask 안에는 글만 씁니다. 그 안에 다른 태그를 넣으면 저장되지 않습니다.
+- 각 태그에는 위에 나온 속성만 쓰고, 한 태그에 같은 속성을 두 번 쓰지 않습니다.
+- ask는 label이 반드시 있어야 하고, label은 {{askLabelMax}}자까지이며, 한 본문 안에서 label이 겹치면 안 됩니다. repeat 안에는 넣을 수 없고, 한 본문에 최대 {{askMax}}개까지입니다.
 - ask는 사용자가 매번 알려줘야 하는 것(별점, 방문일, 가격처럼 AI가 알 수 없는 사실)에만 쓰세요.
 - 위 여섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
 - 문장 안에 <로 시작하는 글자를 그대로 쓰려면 &lt;로 적어 주세요.
@@ -109,7 +113,6 @@ export const i18n = {
           '사진마다 반복 안에서는 데이터를 받을 수 없어요. 칸 개수가 사진 수에 따라 달라지기 때문이에요.',
         instruction: '무엇을 쓸지',
         text: '들어갈 문구',
-        label: '이 자리의 이름',
         note: 'AI에게 남길 말',
         count: '가로로 놓을 사진 수',
         fewer: '줄이기',
@@ -126,10 +129,10 @@ export const i18n = {
         malformed_tag: '표기 형식이 잘못됐어요',
         missing_attribute: '빠진 항목이 있어요',
         unknown_slot_kind: '모르는 자리 종류예요',
-        unknown_repeat_each: '모르는 반복 기준이에요',
-        nested_repeat: '반복 안에 반복은 넣을 수 없어요',
+        unknown_repeat_each: '사진마다 반복의 기준은 사진만 쓸 수 있어요',
+        nested_repeat: '사진마다 반복 안에 사진마다 반복은 넣을 수 없어요',
         empty_write: '무엇을 쓸지 비어 있어요',
-        empty_note: '메모가 비어 있어요',
+        empty_note: 'AI에게만 하는 말이 비어 있어요',
         invalid_count: '가로 사진 수가 1~{{max}} 사이가 아니에요',
         duplicate_ask_label: '같은 제목의 데이터 받기가 이미 있어요',
         ask_in_repeat: '사진마다 반복 안에서는 데이터를 받을 수 없어요',
@@ -156,7 +159,7 @@ export const i18n = {
       add: 'Add block',
       empty: 'Add blocks above to lay out the post.',
       insertHere: 'Adds here',
-      repeatEmpty: 'Nothing inside this repeat yet.',
+      repeatEmpty: 'Nothing inside this Repeat per photos yet.',
       repeatHelp:
         'The blocks inside repeat once per attached photo. Each repetition uses {{count}} photos.',
       unreadable:
@@ -193,6 +196,7 @@ export const i18n = {
       manualCopy: 'Copying is blocked. Press and hold the selected text to copy it.',
       showGuide: 'Show format guide',
       error: 'Line {{line}}: {{reason}}',
+      area: { title_area: 'Title', body: 'Body' },
       guide: `Write the body of one blog post template in the format below.
 
 [What a template does]
@@ -213,7 +217,9 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - count is a whole number from 1 to {{photoRowMax}}. Without it, one photo.
 - repeat takes only each="photo", and a repeat may not contain a repeat.
 - write and note may never be empty.
-- ask must carry a label, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {{askMax}}.
+- write, note and ask hold text only. A tag inside one of them is refused.
+- Each tag takes only the attributes shown above, and no attribute twice.
+- ask must carry a label of at most {{askLabelMax}} characters, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {{askMax}}.
 - Use ask only for what the author has to supply each time — a rating, a visit date, a price: facts the AI cannot know.
 - Any tag other than those six is refused.
 - To write a literal < in a sentence, write &lt; instead.
@@ -252,7 +258,6 @@ Send the body only — no explanation and no code fence. Write it in the languag
           'A row inside Repeat per photos cannot ask for data: how many fields there are must not depend on the photo count.',
         instruction: 'What to write',
         text: 'Text to include',
-        label: 'Name for this position',
         note: 'Note for AI',
         count: 'Photos side by side',
         fewer: 'Fewer',
@@ -269,15 +274,15 @@ Send the body only — no explanation and no code fence. Write it in the languag
         malformed_tag: 'malformed notation',
         missing_attribute: 'a required part is missing',
         unknown_slot_kind: 'unknown position kind',
-        unknown_repeat_each: 'unknown repeat basis',
-        nested_repeat: 'a repeat cannot contain a repeat',
+        unknown_repeat_each: 'Repeat per photos can only go by photo',
+        nested_repeat: 'a Repeat per photos cannot hold another one',
         empty_write: 'nothing to write',
-        empty_note: 'the note is empty',
+        empty_note: 'the Note to AI is empty',
         invalid_count: 'photos per row must be between 1 and {{max}}',
         duplicate_ask_label: 'another field already asks under that title',
-        ask_in_repeat: 'a field inside 사진마다 반복 cannot ask for data',
+        ask_in_repeat: 'a field inside Repeat per photos cannot ask for data',
         too_many_asks: 'at most {{askMax}} fields may ask for data',
-        not_in_title: 'a photo, 사진마다 반복 or a note to the AI cannot go in the title',
+        not_in_title: 'a photo, Repeat per photos or a Note to AI cannot go in the title',
       },
     },
     postCount_one: '{{count}} post',

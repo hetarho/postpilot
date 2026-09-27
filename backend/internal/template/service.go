@@ -221,9 +221,10 @@ func (s *Service) validDescription(value string) (string, error) {
 // the post's value alone rather than clearing it.
 func (s *Service) validNumbers(numbers Numbers) error {
 	if value := numbers.TargetLength; value != nil {
-		if *value < s.limits.TargetLengthMin {
+		if *value < s.limits.TargetLengthMin || *value > s.limits.TargetLengthMax {
 			return &NumberOutOfRangeError{
-				Field: "target_length", Value: *value, Min: s.limits.TargetLengthMin,
+				Field: "target_length", Value: *value,
+				Min: s.limits.TargetLengthMin, Max: s.limits.TargetLengthMax,
 			}
 		}
 	}

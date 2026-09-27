@@ -151,11 +151,10 @@ export const appFailureSpecs = {
   TEMPLATE_NAME_TAKEN: {},
   TEMPLATE_LIMIT_REACHED: {},
   TEMPLATE_FIELD_TOO_LONG: { required: ['actual', 'max'], optional: ['field'] },
-  // `max` is optional: the target length has a floor and no ceiling, because the post option
-  // this number seeds has none either.
-  TEMPLATE_NUMBER_OUT_OF_RANGE: { required: ['actual', 'min'], optional: ['field', 'max'] },
-  // `area` names the part that failed once a template has a title area (TMPL-50); a refusal
-  // without it is a body's, as every one was before.
+  // Both numbers have a ceiling (100–10,000 characters and the tag range, TMPL-6), so `max` is
+  // always there.
+  TEMPLATE_NUMBER_OUT_OF_RANGE: { required: ['actual', 'min', 'max'], optional: ['field'] },
+  // `area` names the part that failed (TMPL-20); a refusal without it reads as the body's.
   TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'], optional: ['area'] },
   PURPOSE_NOT_FOUND: {},
   GUIDELINE_NOT_FOUND: {},

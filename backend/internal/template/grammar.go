@@ -3,6 +3,7 @@ package template
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -132,6 +133,16 @@ var tagNames = map[string]NodeKind{
 	"note":   NodeNote,
 	"repeat": NodeRepeat,
 	"ask":    NodeAsk,
+}
+
+// tagAttributes is every attribute each tag names; any other one, or one given twice, is
+// malformed_tag (TMPL-20). `slot`'s `label` stays for stored place/link bodies (TMPL-37).
+var tagAttributes = map[string][]string{
+	"write":  nil,
+	"slot":   {"kind", "count", "label"},
+	"note":   nil,
+	"repeat": {"each"},
+	"ask":    {"label"},
 }
 
 // Parse turns one area's text into an ordered node list — a body unless opts.TitleArea says
@@ -357,10 +368,13 @@ func parseNodes(body string, from int, inRepeat bool, opts ParseOptions) ([]Node
 // parseTag reads one opening tag and, for the container kinds, everything up to its close.
 func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions) (Node, int, error) {
 	line := lineAt(body, at)
-	attrs, selfClosing, afterOpen, err := parseTagHead(body, at, name)
+	head, err := parseTagHead(body, at, name)
 	if err != nil {
 		return Node{}, 0, err
 	}
+	// head.stray — an attribute the tag does not name, or one given twice — is malformed_tag,
+	// refused after the place rules and before any rule reads an attribute.
+	attrs, selfClosing, afterOpen := head.attrs, head.selfClosing, head.after
 	// The PLACE is checked once the head reads and before any rule of the tag's own kind, as
 	// ask_in_repeat is: a photo position in a title is wrong whatever its attributes say, while
 	// a head that does not read stays the reason it is.
@@ -373,9 +387,10 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 
 	switch tagNames[name] {
 	case NodeSlot:
-		if !selfClosing {
+		if !selfClosing || head.stray {
 			// `<slot ...></slot>` — a slot reserves a position, it does not wrap content,
-			// so a closing tag means the author expected different semantics.
+			// so a closing tag means the author expected different semantics. A stray
+			// attribute is the same malformed_tag.
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		rawKind, ok := attrs["kind"]
@@ -401,6 +416,9 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 		if inRepeat {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonAskInRepeat}
 		}
+		if head.stray {
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+		}
 		rawLabel, ok := attrs["label"]
 		if !ok || isBlank(Decode(rawLabel)) {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMissingAttribute}
@@ -425,7 +443,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 		}, afterClose, nil
 
 	case NodeWrite, NodeNote:
-		if selfClosing {
+		if selfClosing || head.stray {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		inner, afterClose, err := readTextBody(body, afterOpen, name, line)
@@ -449,6 +467,9 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 		}
 		if inRepeat {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonNestedRepeat}
+		}
+		if head.stray {
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		rawEach, ok := attrs["each"]
 		if !ok {
@@ -513,11 +534,24 @@ func allDigits(value string) bool {
 	return true
 }
 
+// tagHead is one opening tag as read: its attributes, whether it closed itself, where it ended,
+// and whether it carried an attribute the tag does not name or one given twice.
+type tagHead struct {
+	attrs       map[string]string
+	selfClosing bool
+	after       int
+	stray       bool
+}
+
 // parseTagHead reads the attribute list of one opening tag. A bare `key=value` is refused:
 // accepting it would make `kind=photo/>` ambiguous about whether the slash is the value.
-func parseTagHead(body string, at int, name string) (map[string]string, bool, int, error) {
+//
+// An attribute the tag does not name, or one given twice, does not stop the read: it is
+// reported as stray, and parseTag refuses it after the place rules, as the place outranks the
+// attributes. Left unreported, `<write tone="x">` would change nothing and never say so.
+func parseTagHead(body string, at int, name string) (tagHead, error) {
 	line := lineAt(body, at)
-	attrs := map[string]string{}
+	head := tagHead{attrs: map[string]string{}}
 	i := at + 1 + len(name)
 	for i < len(body) {
 		for i < len(body) && isSpace(body[i]) {
@@ -527,25 +561,27 @@ func parseTagHead(body string, at int, name string) (map[string]string, bool, in
 			break
 		}
 		if body[i] == '>' {
-			return attrs, false, i + 1, nil
+			head.after = i + 1
+			return head, nil
 		}
 		if body[i] == '/' {
 			if i+1 < len(body) && body[i+1] == '>' {
-				return attrs, true, i + 2, nil
+				head.selfClosing, head.after = true, i+2
+				return head, nil
 			}
-			return nil, false, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+			return tagHead{}, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		keyStart := i
 		for i < len(body) && isAttrNameByte(body[i]) {
 			i++
 		}
 		if i == keyStart || i >= len(body) || body[i] != '=' {
-			return nil, false, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+			return tagHead{}, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		key := body[keyStart:i]
 		i++ // '='
 		if i >= len(body) || (body[i] != '"' && body[i] != '\'') {
-			return nil, false, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+			return tagHead{}, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
 		quote := body[i]
 		i++
@@ -554,12 +590,15 @@ func parseTagHead(body string, at int, name string) (map[string]string, bool, in
 			i++
 		}
 		if i >= len(body) {
-			return nil, false, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+			return tagHead{}, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
-		attrs[key] = body[valueStart:i]
+		if _, seen := head.attrs[key]; seen || !slices.Contains(tagAttributes[name], key) {
+			head.stray = true
+		}
+		head.attrs[key] = body[valueStart:i]
 		i++ // closing quote
 	}
-	return nil, false, 0, &ParseError{Line: line, Reason: ReasonUnclosedTag}
+	return tagHead{}, &ParseError{Line: line, Reason: ReasonUnclosedTag}
 }
 
 // readTextBody reads the inner text of a write or note. A known tag inside it is a malformed

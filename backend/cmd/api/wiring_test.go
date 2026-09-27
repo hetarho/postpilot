@@ -51,9 +51,9 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		}
 	}
 	// Template's number bounds are post's own (TMPL-47), handed over by the command.
-	if limits := app.template.Limits(); limits.TargetLengthMin != post.TargetLengthMin ||
+	if limits := app.template.Limits(); limits.TargetLengthMin != post.TargetLengthMin || limits.TargetLengthMax != post.TargetLengthMax ||
 		limits.TagCountMin != post.TagCountRange.Min || limits.TagCountMax != post.TagCountRange.Max {
-		t.Fatalf("template limits = %+v, want post's target-length floor and tag-count range", limits)
+		t.Fatalf("template limits = %+v, want post's target-length and tag-count ranges", limits)
 	}
 	registerJobs(app)
 	got := handlers(app)

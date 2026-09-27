@@ -17,9 +17,10 @@ type Ceilings struct {
 // NumberBounds are the POST option range a template's two generation numbers seed (TMPL-47),
 // passed in and not owned here: the number is a SEED for that option, and a template able to
 // store one the post refuses would make an assignment fail at a place the user never typed
-// anything. The length has a floor and no ceiling, exactly as the post's own option does.
+// anything. Each is the post option's own range, the same on both sides (TMPL-6).
 type NumberBounds struct {
 	TargetLengthMin int
+	TargetLengthMax int
 	TagCountMin     int
 	TagCountMax     int
 }
@@ -32,6 +33,7 @@ func NewLimits(c Ceilings, n NumberBounds) Limits {
 		BodyMaxChars: c.BodyMaxChars, TitleAreaMaxChars: c.TitleAreaMaxChars,
 		MaxPerAccount: c.MaxPerAccount, MaxRepeatExpansion: c.MaxRepeatExpansion,
 		PhotoRowMax: c.PhotoRowMax, AskLabelMaxChars: c.AskLabelMaxChars, AskMaxPerBody: c.AskMaxPerBody,
-		TargetLengthMin: n.TargetLengthMin, TagCountMin: n.TagCountMin, TagCountMax: n.TagCountMax,
+		TargetLengthMin: n.TargetLengthMin, TargetLengthMax: n.TargetLengthMax,
+		TagCountMin: n.TagCountMin, TagCountMax: n.TagCountMax,
 	}
 }

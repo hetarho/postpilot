@@ -15,6 +15,15 @@ const SLOT_KINDS: readonly string[] = ['photo', 'place', 'link']
 /** Attached photos are the only countable material a post has. */
 const EACH_VALUES: readonly string[] = ['photo']
 const TAG_NAMES: readonly string[] = ['write', 'slot', 'note', 'repeat', 'ask']
+/** Every attribute each tag names; any other one, or one given twice, is `malformed_tag`
+ *  (TMPL-20). `slot`'s `label` stays for stored place/link bodies (TMPL-37). */
+const TAG_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
+  write: [],
+  slot: ['kind', 'count', 'label'],
+  note: [],
+  repeat: ['each'],
+  ask: ['label'],
+}
 
 /** One parsed construct. `source` is the node's exact source slice and serialization re-emits
  *  it verbatim, which is what makes `serialize(parse(body)) === body` by construction — for a
@@ -334,6 +343,8 @@ function parseTag(
   const line = lineAt(body, at)
   const head = parseTagHead(body, at, name)
   if (!head.ok) return head
+  // `head.stray` — an attribute the tag does not name, or one given twice — is malformed_tag,
+  // refused after the place rules and before any rule reads an attribute.
   // The PLACE is checked once the head reads and before any rule of the tag's own kind, as
   // ask_in_repeat is: a photo position in a title is wrong whatever its attributes say, while a
   // head that does not read stays the reason it is.
@@ -342,9 +353,10 @@ function parseTag(
   }
 
   if (name === 'slot') {
-    if (!head.selfClosing) {
+    if (!head.selfClosing || head.stray) {
       // `<slot ...></slot>` — a slot reserves a position, it does not wrap content, so a
-      // closing tag means the author expected different semantics.
+      // closing tag means the author expected different semantics. A stray attribute is the
+      // same malformed_tag.
       return { ok: false, failure: { line, reason: 'malformed_tag' } }
     }
     const rawKind = head.attrs.get('kind')
@@ -380,6 +392,7 @@ function parseTag(
     // The PLACE is checked before the attributes: a field inside a repeat is wrong wherever
     // its title is.
     if (inRepeat) return { ok: false, failure: { line, reason: 'ask_in_repeat' } }
+    if (head.stray) return { ok: false, failure: { line, reason: 'malformed_tag' } }
     const rawLabel = head.attrs.get('label')
     if (rawLabel === undefined || isBlank(decode(rawLabel))) {
       return { ok: false, failure: { line, reason: 'missing_attribute' } }
@@ -404,7 +417,8 @@ function parseTag(
   }
 
   if (name === 'write' || name === 'note') {
-    if (head.selfClosing) return { ok: false, failure: { line, reason: 'malformed_tag' } }
+    if (head.selfClosing || head.stray)
+      return { ok: false, failure: { line, reason: 'malformed_tag' } }
     const inner = readTextBody(body, head.after, name, line)
     if (!inner.ok) return inner
     if (isBlank(decode(inner.text))) {
@@ -423,6 +437,7 @@ function parseTag(
   // repeat
   if (head.selfClosing) return { ok: false, failure: { line, reason: 'malformed_tag' } }
   if (inRepeat) return { ok: false, failure: { line, reason: 'nested_repeat' } }
+  if (head.stray) return { ok: false, failure: { line, reason: 'malformed_tag' } }
   const rawEach = head.attrs.get('each')
   if (rawEach === undefined) return { ok: false, failure: { line, reason: 'missing_attribute' } }
   const each = decode(rawEach)
@@ -472,21 +487,27 @@ function trimBlank(value: string): string {
 }
 
 type HeadResult =
-  | { ok: true; attrs: Map<string, string>; selfClosing: boolean; after: number }
+  | { ok: true; attrs: Map<string, string>; selfClosing: boolean; after: number; stray: boolean }
   | { ok: false; failure: ScanFailure }
 
 /** Reads one opening tag's attribute list. A bare `key=value` is refused: accepting it would
- *  make `kind=photo/>` ambiguous about whether the slash is part of the value. */
+ *  make `kind=photo/>` ambiguous about whether the slash is part of the value.
+ *
+ *  An attribute the tag does not name, or one given twice, does not stop the read: it is
+ *  reported as `stray`, and `parseTag` refuses it after the place rules, as the place outranks
+ *  the attributes. Left unreported, `<write tone="x">` would change nothing and never say so. */
 function parseTagHead(body: string, at: number, name: string): HeadResult {
   const line = lineAt(body, at)
   const attrs = new Map<string, string>()
+  const allowed = TAG_ATTRIBUTES[name] ?? []
+  let stray = false
   let i = at + 1 + name.length
   while (i < body.length) {
     while (i < body.length && isSpace(body[i])) i += 1
     if (i >= body.length) break
-    if (body[i] === '>') return { ok: true, attrs, selfClosing: false, after: i + 1 }
+    if (body[i] === '>') return { ok: true, attrs, selfClosing: false, after: i + 1, stray }
     if (body[i] === '/') {
-      if (body[i + 1] === '>') return { ok: true, attrs, selfClosing: true, after: i + 2 }
+      if (body[i + 1] === '>') return { ok: true, attrs, selfClosing: true, after: i + 2, stray }
       return { ok: false, failure: { line, reason: 'malformed_tag' } }
     }
     const keyStart = i
@@ -504,6 +525,7 @@ function parseTagHead(body: string, at: number, name: string): HeadResult {
     const valueStart = i
     while (i < body.length && body[i] !== quote) i += 1
     if (i >= body.length) return { ok: false, failure: { line, reason: 'malformed_tag' } }
+    if (attrs.has(key) || !allowed.includes(key)) stray = true
     attrs.set(key, body.slice(valueStart, i))
     i += 1
   }

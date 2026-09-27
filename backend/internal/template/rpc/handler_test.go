@@ -59,7 +59,7 @@ func handler(store *fakeStore) *Handler {
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 		AskLabelMaxChars: 40, AskMaxPerBody: 8,
-	}, template.NumberBounds{TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10})))
+	}, template.NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})))
 }
 
 func signedIn(t *testing.T) context.Context {
@@ -197,14 +197,11 @@ func TestEveryDomainRefusalHasItsOwnCodeAndReason(t *testing.T) {
 		}
 	}
 
-	// The editor points at the offending line, so the parse failure carries it as a param. A
-	// failure in the title area also names the area; one in the body carries exactly the two
-	// params it always has.
-	for _, area := range []string{"", template.AreaBody} {
-		parse := detail(t, toConnectError("create template", &template.ParseError{Line: 4, Reason: "unknown_directive", Area: area}))
-		if len(parse.GetParams()) != 2 || parse.GetParams()["line"] != "4" || parse.GetParams()["reason"] != "unknown_directive" {
-			t.Fatalf("body parse params = %+v", parse.GetParams())
-		}
+	// The editor points at the offending line in its area, so every parse failure carries the
+	// line, the reason and the area as params (TMPL-20).
+	parse := detail(t, toConnectError("create template", &template.ParseError{Line: 4, Reason: "unknown_directive", Area: template.AreaBody}))
+	if len(parse.GetParams()) != 3 || parse.GetParams()["line"] != "4" || parse.GetParams()["reason"] != "unknown_directive" || parse.GetParams()["area"] != "body" {
+		t.Fatalf("body parse params = %+v", parse.GetParams())
 	}
 	titleErr := toConnectError("update template", &template.ParseError{Line: 1, Reason: template.ReasonNotInTitle, Area: template.AreaTitle})
 	title := detail(t, titleErr)
