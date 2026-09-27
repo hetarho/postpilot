@@ -7,16 +7,13 @@ import (
 
 type templatePayload struct {
 	Name string `json:"name"`
-	// The expanded, rendered body — not the authored source. What the worker prompts with
+	// The resolved, rendered body — not the authored source. What the worker prompts with
 	// must be exactly what enqueue decided.
 	Body string `json:"body"`
 	// TitleArea is the rendered title form, frozen with the body (TMPL-51). omitempty keeps a
 	// template with none byte-identical to a payload written before the member existed, which
 	// decodes as none.
 	TitleArea string `json:"title_area,omitempty"`
-	// Rows is omitempty so a payload written before photo rows existed decodes as a
-	// template with none, which is exactly what it is.
-	Rows []templateRowJSON `json:"rows,omitempty"`
 	// Facts is omitempty for the same reason, and because a template whose data fields were
 	// all switched off has to be byte-identical to one that never declared any.
 	Facts []templateFactJSON `json:"facts,omitempty"`
@@ -25,11 +22,6 @@ type templatePayload struct {
 type templateFactJSON struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
-}
-
-type templateRowJSON struct {
-	Count     int      `json:"count"`
-	Filenames []string `json:"filenames,omitempty"`
 }
 
 type observationPayload struct {
@@ -224,15 +216,11 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	if brief == nil {
 		return nil
 	}
-	rows := make([]templateRowJSON, 0, len(brief.Rows))
-	for _, row := range brief.Rows {
-		rows = append(rows, templateRowJSON{Count: row.Count, Filenames: row.Filenames})
-	}
 	facts := make([]templateFactJSON, 0, len(brief.Facts))
 	for _, fact := range brief.Facts {
 		facts = append(facts, templateFactJSON{Label: fact.Label, Value: fact.Value})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Rows: rows, Facts: facts}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Facts: facts}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -241,13 +229,9 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	if payload == nil {
 		return nil
 	}
-	rows := make([]TemplatePhotoRow, 0, len(payload.Rows))
-	for _, row := range payload.Rows {
-		rows = append(rows, TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
-	}
 	facts := make([]TemplateFact, 0, len(payload.Facts))
 	for _, fact := range payload.Facts {
 		facts = append(facts, TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Rows: rows, Facts: facts, TitleArea: payload.TitleArea}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Facts: facts, TitleArea: payload.TitleArea}
 }

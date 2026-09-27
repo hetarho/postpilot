@@ -84,14 +84,8 @@ type snapshotVoice struct {
 type snapshotTemplate struct {
 	Name      string         `json:"Name"`
 	Body      string         `json:"Body"`
-	Rows      []snapshotRow  `json:"Rows"`
 	Facts     []snapshotFact `json:"Facts"`
 	TitleArea string         `json:"TitleArea,omitempty"`
-}
-
-type snapshotRow struct {
-	Count     int      `json:"Count"`
-	Filenames []string `json:"Filenames"`
 }
 
 type snapshotFact struct {
@@ -329,9 +323,6 @@ func toSnapshotTemplate(brief *TemplateBrief) *snapshotTemplate {
 	}
 	return &snapshotTemplate{
 		Name: brief.Name, Body: brief.Body,
-		Rows: mapSlice(brief.Rows, func(r TemplatePhotoRow) snapshotRow {
-			return snapshotRow{Count: r.Count, Filenames: copyTexts(r.Filenames)}
-		}),
 		Facts:     mapSlice(brief.Facts, func(f TemplateFact) snapshotFact { return snapshotFact{Label: f.Label, Value: f.Value} }),
 		TitleArea: brief.TitleArea,
 	}
@@ -343,9 +334,6 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 	}
 	return &TemplateBrief{
 		Name: wire.Name, Body: wire.Body,
-		Rows: mapSlice(wire.Rows, func(r snapshotRow) TemplatePhotoRow {
-			return TemplatePhotoRow{Count: r.Count, Filenames: copyTexts(r.Filenames)}
-		}),
 		Facts:     mapSlice(wire.Facts, func(f snapshotFact) TemplateFact { return TemplateFact{Label: f.Label, Value: f.Value} }),
 		TitleArea: wire.TitleArea,
 	}

@@ -106,22 +106,17 @@ type VoiceRef struct {
 }
 
 // TemplateBrief is the post's 템플릿 as the writer needs it: the name and the body ALREADY
-// expanded for this post's photos and rendered into prompt text.
+// resolved with the post's answers and rendered into prompt text, its photo places unbound.
 //
 // It carries no id. Once frozen into a job payload or an experiment snapshot it must stay
 // readable after the template it came from is renamed or deleted, and re-resolving an id
 // would defeat the freeze.
 //
-// The body is expanded rather than raw so that attaching a photo after the start cannot
-// change what the model was asked for — the expansion is part of what gets frozen.
+// The body is rendered rather than raw so that an answer edited after the start cannot change
+// what the model was asked for — the render is part of what gets frozen.
 type TemplateBrief struct {
 	Name string
 	Body string
-	// Rows is what each photo position bound, in body order. Frozen with the body and read
-	// by nothing yet: the interim contract renders a row as consecutive single-photo IMAGE
-	// blocks (TMPL-40), and this is where the author's row intent waits for whatever
-	// finally carries it downstream (→TMPL-39).
-	Rows []TemplatePhotoRow
 	// Facts are the data fields the freeze resolved, in body order — the values already
 	// substituted into Body and fenced there. It is carried beside the body so the prompt
 	// builder can tell whether this brief holds any fact at all without re-parsing it, which
@@ -138,13 +133,6 @@ type TemplateBrief struct {
 type TemplateFact struct {
 	Label string
 	Value string
-}
-
-// TemplatePhotoRow is one photo position after binding: how many photos it asked to stand
-// side by side, and which ones it got.
-type TemplatePhotoRow struct {
-	Count     int
-	Filenames []string
 }
 
 // TemplateAnswer is one answer the post gives to a data field its template declared. It

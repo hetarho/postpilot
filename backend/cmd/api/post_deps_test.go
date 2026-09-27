@@ -15,7 +15,7 @@ import (
 func testTemplateLimits() template.Limits {
 	return template.NewLimits(template.Ceilings{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-		MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4, AskLabelMaxChars: 40, AskMaxPerBody: 10,
+		MaxPerAccount: 50, PhotoRowMax: 4, AskLabelMaxChars: 40, AskMaxPerBody: 10,
 	}, postNumberBounds())
 }
 

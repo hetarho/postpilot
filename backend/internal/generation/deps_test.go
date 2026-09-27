@@ -38,7 +38,7 @@ func (neutralExperiments) BlockingWriteForPost(context.Context, string, string) 
 
 type neutralBriefs struct{}
 
-func (neutralBriefs) RenderedFor(context.Context, string, string, []string, []TemplateAnswer) (TemplateBrief, bool, error) {
+func (neutralBriefs) RenderedFor(context.Context, string, string, bool, []TemplateAnswer) (TemplateBrief, bool, error) {
 	return TemplateBrief{}, false, nil
 }
 

@@ -19,11 +19,10 @@ const okBody = `<write>인트로</write>
 func testLimits() Limits {
 	return NewLimits(Ceilings{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: fixtureParseOptions.PhotoRowMax,
+		MaxPerAccount: 3, PhotoRowMax: fixtureParseOptions.PhotoRowMax,
 		AskLabelMaxChars: 40, AskMaxPerBody: fixtureParseOptions.AskMaxPerBody,
 	},
-		// The POST option's bounds, explicit: this package never imports post. The length has a
-		// floor and no ceiling, the tag count both.
+		// The POST option's bounds, explicit: this package never imports post.
 		NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})
 }
 
@@ -224,15 +223,15 @@ func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 		if _, err := svc.Delete(ctx, "alice", id); !errors.Is(err, ErrNotFound) {
 			t.Fatalf("%s delete error = %v", label, err)
 		}
-		if _, ok, err := svc.RenderedFor(ctx, "alice", id, nil, nil); ok || err != nil {
+		if _, ok, err := svc.RenderedFor(ctx, "alice", id, false, nil); ok || err != nil {
 			t.Fatalf("%s render = ok:%v err:%v", label, ok, err)
 		}
 	}
 }
 
-// A6/A11: the render expands for the attachments it is GIVEN, and refuses past the bound
-// rather than sending an unbounded prompt.
-func TestRenderedForExpandsAndBounds(t *testing.T) {
+// TMPL-11, TMPL-21: the render resolves for whether the post has a photo and names none; the
+// repeat renders once whatever the photo count.
+func TestRenderedForRendersPlacesUnbound(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
 	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody})
@@ -240,12 +239,15 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rendered, ok, err := svc.RenderedFor(ctx, "alice", created.ID, []string{"a.jpg", "b.jpg"}, nil)
+	rendered, ok, err := svc.RenderedFor(ctx, "alice", created.ID, true, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
-	if got := strings.Count(rendered.Body, "<write>사진 설명</write>"); got != 2 {
-		t.Fatalf("the repeat expanded %d times, want 2", got)
+	if got := strings.Count(rendered.Body, "<write>사진 설명</write>"); got != 1 {
+		t.Fatalf("the repeat rendered %d times, want once", got)
+	}
+	if !strings.Contains(rendered.Body, "<repeat>\n"+PhotoPlace(1)) || strings.Contains(rendered.Body, "{{photo:") {
+		t.Fatalf("the photo place did not render unbound:\n%s", rendered.Body)
 	}
 	if !strings.Contains(rendered.Body, "네이버 지도") || strings.Contains(rendered.Body, "{{slot") {
 		t.Fatalf("the place position did not render as its label:\n%s", rendered.Body)
@@ -255,16 +257,8 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 	}
 
 	// An empty id is a post with no template: absence, not an error.
-	if _, ok, err := svc.RenderedFor(ctx, "alice", "", nil, nil); ok || err != nil {
+	if _, ok, err := svc.RenderedFor(ctx, "alice", "", false, nil); ok || err != nil {
 		t.Fatalf("empty id = ok:%v err:%v", ok, err)
-	}
-
-	many := make([]string, 41)
-	for i := range many {
-		many[i] = "p.jpg"
-	}
-	if _, _, err := svc.RenderedFor(ctx, "alice", created.ID, many, nil); !errors.Is(err, ErrExpansionTooLarge) {
-		t.Fatalf("over-bound render error = %v", err)
 	}
 }
 
@@ -486,7 +480,7 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 		{Label: "총평", Text: "뼈가 푸짐했다", Enabled: true},
 		{Label: "가게 이름", Text: " 을지로 노포 ", Enabled: true},
 	}
-	rendered, ok, err := svc.RenderedFor(ctx, "alice", shaped.ID, []string{"a.jpg", "b.jpg"}, answered)
+	rendered, ok, err := svc.RenderedFor(ctx, "alice", shaped.ID, true, answered)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
@@ -497,14 +491,14 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 	if len(rendered.Facts) != 2 || rendered.Facts[0] != (Fact{Label: "가게 이름", Value: "을지로 노포"}) || rendered.Facts[1] != (Fact{Label: "총평", Value: "뼈가 푸짐했다"}) {
 		t.Fatalf("facts = %+v, want the title's first", rendered.Facts)
 	}
-	// The title binds no photo: both went to the body.
-	if !strings.Contains(rendered.Body, "{{photo:a.jpg}}") || !strings.Contains(rendered.Body, "{{photo:b.jpg}}") || strings.Contains(rendered.TitleArea, "photo") {
-		t.Fatalf("photos bound = body %q, title %q", rendered.Body, rendered.TitleArea)
+	// The title holds no photo place: the body's is the only one.
+	if !strings.Contains(rendered.Body, PhotoPlace(1)) || strings.Contains(rendered.TitleArea, "사진") {
+		t.Fatalf("photo places = body %q, title %q", rendered.Body, rendered.TitleArea)
 	}
 
 	// The title's field off: its position drops and the rest of the title stays verbatim.
 	off := []Answer{answered[0], {Label: "가게 이름", Text: "을지로 노포", Enabled: false}}
-	rendered, _, _ = svc.RenderedFor(ctx, "alice", shaped.ID, nil, off)
+	rendered, _, _ = svc.RenderedFor(ctx, "alice", shaped.ID, false, off)
 	if rendered.TitleArea != " 방문 후기" || len(rendered.Facts) != 1 || rendered.Facts[0].Label != "총평" {
 		t.Fatalf("with the title field off = %q, %+v", rendered.TitleArea, rendered.Facts)
 	}
@@ -524,7 +518,7 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 		"blank":      {[]Answer{{Label: "가게 이름", Text: "   ", Enabled: true}}, ""},
 		"unanswered": {nil, ""},
 	} {
-		rendered, ok, err := svc.RenderedFor(ctx, "alice", plain.ID, nil, test.answers)
+		rendered, ok, err := svc.RenderedFor(ctx, "alice", plain.ID, false, test.answers)
 		if err != nil || !ok || rendered.TitleArea != test.want {
 			t.Errorf("%s: title area = %q (ok=%v err=%v), want %q", name, rendered.TitleArea, ok, err, test.want)
 		}
@@ -539,11 +533,8 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := Render("제목 없음", nodes, []string{"a.jpg"}, svc.limits.MaxRepeatExpansion, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, ok, err := svc.RenderedFor(ctx, "alice", bare.ID, []string{"a.jpg"}, nil)
+	want := Render("제목 없음", nodes, true, nil)
+	got, ok, err := svc.RenderedFor(ctx, "alice", bare.ID, true, nil)
 	if err != nil || !ok || got.TitleArea != "" || got.Body != want.Body || len(got.Facts) != 0 {
 		t.Fatalf("no title area = %+v (ok=%v err=%v), want %+v", got, ok, err, want)
 	}
@@ -552,7 +543,7 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 	row := store.rows[shaped.ID]
 	row.TitleArea = "<repeat each=\"photo\"></repeat>"
 	store.rows[shaped.ID] = row
-	if _, ok, err := svc.RenderedFor(ctx, "alice", shaped.ID, nil, answered); ok || err != nil {
+	if _, ok, err := svc.RenderedFor(ctx, "alice", shaped.ID, false, answered); ok || err != nil {
 		t.Fatalf("an unparsable title area = ok:%v err:%v", ok, err)
 	}
 }

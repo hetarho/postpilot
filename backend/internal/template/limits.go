@@ -8,7 +8,6 @@ type Ceilings struct {
 	BodyMaxChars        int
 	TitleAreaMaxChars   int
 	MaxPerAccount       int
-	MaxRepeatExpansion  int
 	PhotoRowMax         int
 	AskLabelMaxChars    int
 	AskMaxPerBody       int
@@ -31,8 +30,7 @@ func NewLimits(c Ceilings, n NumberBounds) Limits {
 	return Limits{
 		NameMaxChars: c.NameMaxChars, DescriptionMaxChars: c.DescriptionMaxChars,
 		BodyMaxChars: c.BodyMaxChars, TitleAreaMaxChars: c.TitleAreaMaxChars,
-		MaxPerAccount: c.MaxPerAccount, MaxRepeatExpansion: c.MaxRepeatExpansion,
-		PhotoRowMax: c.PhotoRowMax, AskLabelMaxChars: c.AskLabelMaxChars, AskMaxPerBody: c.AskMaxPerBody,
+		MaxPerAccount: c.MaxPerAccount, PhotoRowMax: c.PhotoRowMax, AskLabelMaxChars: c.AskLabelMaxChars, AskMaxPerBody: c.AskMaxPerBody,
 		TargetLengthMin: n.TargetLengthMin, TargetLengthMax: n.TargetLengthMax,
 		TagCountMin: n.TagCountMin, TagCountMax: n.TagCountMax,
 	}

@@ -11,17 +11,13 @@ const askBody = `방문 기록
 <ask label="총평 별점">별점과 한 줄 총평을 쓰세요</ask>
 <slot kind="photo"/>`
 
-func renderAsks(t *testing.T, body string, filenames []string, answers []Answer) Rendered {
+func renderAsks(t *testing.T, body string, hasPhotos bool, answers []Answer) Rendered {
 	t.Helper()
 	nodes, err := Parse(body, fixtureParseOptions)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	rendered, err := Render("리뷰", nodes, filenames, 40, answers)
-	if err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	return rendered
+	return Render("리뷰", nodes, hasPhotos, answers)
 }
 
 // The guarantee TMPL-45 buys: an off, blank or unanswered field leaves a body byte for
@@ -53,8 +49,8 @@ func TestAnUnusableFieldRendersAsIfItWereNotInTheBody(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rendered := renderAsks(t, askBody, []string{"a.jpg"}, tc.answers)
-			want := renderAsks(t, withoutBoth, []string{"a.jpg"}, nil)
+			rendered := renderAsks(t, askBody, true, tc.answers)
+			want := renderAsks(t, withoutBoth, true, nil)
 			if rendered.Body != want.Body {
 				t.Fatalf("body is not the node-deleted equivalent:\n got %q\nwant %q", rendered.Body, want.Body)
 			}
@@ -72,7 +68,7 @@ func TestAnUnusableFieldRendersAsIfItWereNotInTheBody(t *testing.T) {
 }
 
 func TestBothFlavorsRenderWhatTheirAnswerSupplies(t *testing.T) {
-	rendered := renderAsks(t, askBody, []string{"a.jpg"}, []Answer{
+	rendered := renderAsks(t, askBody, true, []Answer{
 		{Label: "방문일", Text: "  2026-03-01  ", Enabled: true},
 		{Label: "총평 별점", Text: "4.5점, 재방문 의사 있음", Enabled: true},
 	})
@@ -97,7 +93,7 @@ func TestBothFlavorsRenderWhatTheirAnswerSupplies(t *testing.T) {
 func TestFactsFollowBodyOrder(t *testing.T) {
 	body := `<ask label="둘째">둘째 지시</ask>
 <ask label="첫째">첫째 지시</ask>`
-	rendered := renderAsks(t, body, nil, []Answer{
+	rendered := renderAsks(t, body, false, []Answer{
 		{Label: "첫째", Text: "1", Enabled: true},
 		{Label: "둘째", Text: "2", Enabled: true},
 	})
@@ -110,7 +106,7 @@ func TestFactsFollowBodyOrder(t *testing.T) {
 // attribute, so the alternative is a tag that stops being readable where the legend told the
 // model to read. The frozen Fact record keeps the decoded title, which is what a person reads.
 func TestAskLabelKeepsItsEscapeInTheAttribute(t *testing.T) {
-	rendered := renderAsks(t, `<ask label="네이버 &quot;별점&quot;">지시</ask>`, nil, []Answer{
+	rendered := renderAsks(t, `<ask label="네이버 &quot;별점&quot;">지시</ask>`, false, []Answer{
 		{Label: `네이버 "별점"`, Text: "4.5", Enabled: true},
 	})
 	if !strings.Contains(rendered.Body, `<facts label="네이버 &quot;별점&quot;">4.5</facts>`) {
@@ -118,23 +114,5 @@ func TestAskLabelKeepsItsEscapeInTheAttribute(t *testing.T) {
 	}
 	if len(rendered.Facts) != 1 || rendered.Facts[0].Label != `네이버 "별점"` {
 		t.Errorf("facts = %+v, want the decoded title", rendered.Facts)
-	}
-}
-
-// Resolution runs BEFORE expansion, so a dropped field cannot be priced by the bound. This
-// body would exceed a bound of 1 only if the dropped node still counted.
-func TestADroppedFieldIsNotPricedByTheExpansionBound(t *testing.T) {
-	body := "<ask label=\"총평\">지시</ask>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n</repeat>"
-	nodes, err := Parse(body, fixtureParseOptions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Two photos, one photo per iteration: two iterations, which is the whole budget.
-	if _, err := Render("리뷰", nodes, []string{"a.jpg", "b.jpg"}, 2, nil); err != nil {
-		t.Fatalf("a dropped field was counted against the bound: %v", err)
-	}
-	// And the bound still refuses what it should.
-	if _, err := Render("리뷰", nodes, []string{"a.jpg", "b.jpg", "c.jpg"}, 2, nil); err == nil {
-		t.Error("the expansion bound stopped refusing")
 	}
 }

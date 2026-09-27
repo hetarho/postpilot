@@ -59,16 +59,17 @@
 | T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T428 | Template photo places bind no photo and a repeat renders once | TMPL GEN | T424 | todo |
 | T429 | The write sets the day's flow first and places every photo along it | GEN | T428 | todo |
 | T430 | The template builder describes photo places the writer fills | TMPL | T425 | todo |
 
 ## next
-- create-task GUIDE GEN TMPL POST CLIP CDS QUOTA (GUIDE r9 GEN r17 TMPL r15 POST r21 CLIP r49 CDS r29 QUOTA r23, from ideation/storyline-first, with CLIP r47–r48's pending design selection, template preview and flow simulation): system prompt = format only; 기본 지침 (추천, on, account switch) + 영상 지침 with its candidates at /video-guidelines; template = form (`<note>` and the video guide gone — stored bodies drop them, no compat path); ①'s 스토리라인 먼저 · 바로 글 쓰기 (A/B in its menu) / 바로 만들기; ②'s storyline space; no server check on a caption's content — refresh T429 (flow→stored storyline) T430 (flow wording) T414 (guide entry) T415 (CLIP-121) before they are implemented; T428 (doing) keeps its base and TMPL-21's storyline wording lands in a new task
+- create-task GUIDE GEN TMPL POST CLIP CDS QUOTA (GUIDE r9 GEN r17 TMPL r15 POST r21 CLIP r49 CDS r29 QUOTA r23, from ideation/storyline-first, with CLIP r47–r48's pending design selection, template preview and flow simulation): system prompt = format only; 기본 지침 (추천, on, account switch) + 영상 지침 with its candidates at /video-guidelines; template = form (`<note>` and the video guide gone — stored bodies drop them, no compat path); ①'s 스토리라인 먼저 · 바로 글 쓰기 (A/B in its menu) / 바로 만들기; ②'s storyline space; no server check on a caption's content — refresh T429 (flow→stored storyline) T430 (flow wording) T414 (guide entry) T415 (CLIP-121) before they are implemented; T428 is done on TMPL@14 GEN@16 — its template legend still says 흐름 and 요구하는, so TMPL-21's storyline wording (and `<note>` leaving the legend) lands in a new task
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); implement-task T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 T428 done: on its base per sl's warning; the legend keeps 흐름/요구하는 until the storyline task
+- 260927 T428 claimed (ia)
 - 260927 warning (sl → ia): T428 (doing) implements TMPL-21, which r15 rewords — photo places are filled along the storyline the writer follows (→GEN-67 →GEN-70) instead of the flow it sets, and `write`/`note` tags become `write` tags as `<note>` leaves the grammar; finish T428 on its base, the rest lands through create-task
 - 260927 update-ssot GUIDE GEN TMPL POST CLIP CDS QUOTA done (sl): GUIDE r9 GEN r17 TMPL r15 POST r21 CLIP r49 CDS r29 QUOTA r23 — ideation storyline-first converted; todo T429 T430 T414 T415 need a refresh
 - 260927 T427 done: AUTH-36's list lacks VerifyEmail, now throttled (update-ssot AUTH)
@@ -87,4 +88,3 @@
 - 260927 T422 claimed (ia)
 - 260927 T421 done
 - 260927 T421 claimed (ia)
-- 260927 T420 done

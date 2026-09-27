@@ -166,8 +166,8 @@ const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 지시대로 글을 쓰고, 태그와 지시문 자체는 출력하지 마세요.
-- {{photo:파일명}}: 그 자리에 해당 파일명의 IMAGE 블록을 놓으세요.
-- 연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다. 각각 IMAGE 블록으로, 그 순서대로 이어서 출력하세요.
+- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 요구하는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.
+- <repeat>…</repeat>: 흐름에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.
 - <note>…</note>: 글을 쓸 때 참고할 요구 사항입니다. 출력하지 마세요.`
 
 // templateFactLegend is appended ONLY when the frozen brief actually carries a fact:
@@ -215,9 +215,9 @@ const reviseTemplateTitleInstruction = "수정 요청이 제목을 바꾸라고 
 // templates (PRD §5's caching note), and the template stays in the stable half, so every
 // revision of one post re-injects the identical block.
 //
-// The body arrives already expanded and rendered by the template context, frozen at enqueue.
-// Nothing here parses, expands or re-renders: a photo attached after the start must not be
-// able to change what the model was asked for.
+// The body arrives already resolved and rendered by the template context, frozen at enqueue.
+// Nothing here parses or re-renders: an answer edited after the start must not be able to
+// change what the model was asked for.
 //
 // A nil template writes nothing at all, so a post without one adds no template bytes.
 // titleInstruction is the pass's own title line: templateTitleInstruction for the write,

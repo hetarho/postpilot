@@ -353,19 +353,19 @@ func observeTargets(images []Image, observeFiles *[]string) []Image {
 	return out
 }
 
-// freezeTemplate resolves the post's CURRENT template once, at enqueue, expanded for the
-// post's CURRENT attachments, so the text the worker prompts with is decided here and never
-// re-read. A template deleted between the save and the start is simply absent — that is a
-// post with no template, not a failure.
+// freezeTemplate resolves the post's CURRENT template once, at enqueue, with its answers and
+// its photo places unbound (TMPL-11, TMPL-21), so the text the worker prompts with is decided
+// here and never re-read. A template deleted between the save and the start is simply absent —
+// that is a post with no template, not a failure.
 //
-// Expansion happens inside the freeze rather than at prompt time on purpose: it is what
-// makes "attaching a photo after the start cannot change the run" true, and it is the only
-// place the expansion bound can refuse before a provider is called.
+// Only whether the post has a photo reaches the render, videos not counted: a photo repeat and
+// a photo place are about photos, and a video-only post has none to fill.
 func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*TemplateBrief, error) {
 	if s.templates == nil || post.TemplateID == "" {
 		return nil, nil
 	}
-	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, postFilenames(post), post.TemplateAnswers)
+	photos, _ := AttachmentNames(post.Images)
+	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, len(photos) > 0, post.TemplateAnswers)
 	if err != nil {
 		return nil, fmt.Errorf("render template: %w", err)
 	}
@@ -374,15 +374,6 @@ func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*Template
 	}
 	frozen := brief
 	return &frozen, nil
-}
-
-// postFilenames is the attachment order every stage refers to a photo by.
-func postFilenames(post PostInput) []string {
-	names := make([]string, 0, len(post.Images))
-	for _, image := range post.Images {
-		names = append(names, image.Filename)
-	}
-	return names
 }
 
 // freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME template id

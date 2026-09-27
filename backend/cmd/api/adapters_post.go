@@ -130,12 +130,8 @@ func (a postMemoryLinks) DetachPost(ctx context.Context, userID, postSlug string
 	return a.memories().DetachPost(ctx, userID, postSlug)
 }
 
-// RenderedFor is the whole seam between the two contexts: generation hands over the account,
-// the template id and the frozen attachment order, and receives prompt text. It never learns
-// the grammar, and the template context never learns what a job is.
-//
-// The expansion bound is enforced on the other side, so an error here is a real refusal that
-// must stop the start rather than fall back to "no template".
+// postJobFinder answers the post context's "is a job running on this post" from the job queue,
+// so the post context never learns what a job is.
 type postJobFinder struct {
 	queue *job.Queue
 }

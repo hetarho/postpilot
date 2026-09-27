@@ -57,7 +57,7 @@ func (f *fakeStore) Delete(_ context.Context, _, id string) (int, error) {
 func handler(store *fakeStore) *Handler {
 	return NewHandler(template.NewService(store, template.NewLimits(template.Ceilings{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
-		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+		MaxPerAccount: 3, PhotoRowMax: 4,
 		AskLabelMaxChars: 40, AskMaxPerBody: 8,
 	}, template.NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})))
 }

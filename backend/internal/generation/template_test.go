@@ -36,7 +36,7 @@ func loadGolden(t *testing.T, name string) (system, user string) {
 func testBrief() *TemplateBrief {
 	return &TemplateBrief{
 		Name: "정보성 식당 리뷰",
-		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n네이버 지도\n\n{{photo:IMG_1.jpg}}\n<write>이 사진에 대한 설명</write>",
+		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n네이버 지도\n\n{{사진 자리 · 한 줄 1장}}\n<write>이 사진에 대한 설명</write>",
 	}
 }
 
@@ -89,27 +89,28 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 	}
 }
 
-// No legend line names a slot token: a stored place/link position reaches the prompt as its
-// label's text (TMPL-37), so there is no token for a model to copy. The row line, by contrast,
-// is always there: adjacent photo tokens are what every counted position renders.
-func TestWritePromptNamesNoSlotTokenAndExplainsPhotoRows(t *testing.T) {
+// TMPL-21: the legend explains the two markers an unbound body carries — a photo place with its
+// row size and a repeat the writer repeats per photo group — and names no photo token and no
+// slot token (TMPL-37), so there is no filename for a model to copy.
+func TestWritePromptExplainsThePlaceAndRepeatMarkers(t *testing.T) {
 	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
 	brief := testBrief()
-	brief.Body = "{{photo:IMG_1.jpg}}\n{{photo:IMG_2.jpg}}"
-	brief.Rows = []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}}
+	brief.Body = "<repeat>{{사진 자리 · 한 줄 2장}}\n<write>이 사진들에 대한 설명</write></repeat>"
 
 	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
 	section := strings.TrimPrefix(system, baseline)
-	if strings.Contains(section, "{{slot") {
-		t.Fatalf("the template section names a slot token:\n%s", section)
+	for _, line := range []string{
+		"- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 요구하는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.",
+		"- <repeat>…</repeat>: 흐름에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.",
+	} {
+		if !strings.Contains(section, line) {
+			t.Fatalf("the legend lacks %q:\n%s", line, section)
+		}
 	}
-	if !strings.Contains(section, "연속된 {{photo:…}} 토큰은 한 줄에 나란히 놓이는 사진들입니다.") {
-		t.Fatalf("the photo-row line is missing:\n%s", section)
-	}
-	// The rows are frozen material, not prompt bytes: the model is told about adjacency by
-	// the legend and by the body's own token layout, and nothing lists the specs.
-	if strings.Contains(section, "count") {
-		t.Fatalf("the frozen row specs leaked into the prompt:\n%s", section)
+	for _, token := range []string{"{{photo", "{{slot"} {
+		if strings.Contains(section, token) {
+			t.Fatalf("the template section names %q:\n%s", token, section)
+		}
 	}
 }
 
@@ -297,15 +298,15 @@ type fakeTemplateBriefs struct {
 	brief     TemplateBrief
 	deleted   bool
 	calls     int
-	filenames []string
+	hasPhotos bool
 	// answers records what the enqueue handed over, so a test can prove the post's own
 	// answers reached the render rather than being dropped at the seam.
 	answers []TemplateAnswer
 }
 
-func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string, filenames []string, answers []TemplateAnswer) (TemplateBrief, bool, error) {
+func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error) {
 	f.calls++
-	f.filenames = filenames
+	f.hasPhotos = hasPhotos
 	f.answers = answers
 	if f.deleted || templateID == "" {
 		return TemplateBrief{}, false, nil
@@ -365,30 +366,41 @@ func TestGenerationFreezesTheTemplateAtEnqueueAndTheDrainIgnoresTheLiveRow(t *te
 	}
 }
 
-// A6: the render sees exactly the attachment set the enqueue froze, so a photo attached after
-// the start cannot change the expansion.
-func TestTheEnqueuePassesTheFrozenAttachmentOrderToTheRender(t *testing.T) {
-	ctx := context.Background()
-	briefs := &fakeTemplateBriefs{brief: *testBrief()}
-	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review",
-		Images: []Image{{Filename: "IMG_1.jpg"}, {Filename: "IMG_2.jpg"}},
-	}}
-	models := newFakeModels()
-	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
-	svc := templateAwareService(t, briefs, posts, &fakeJobs{id: "job"}, models)
+// TMPL-21: the render is told only whether the post has a photo — no filename crosses the seam
+// — and a video alone is no photo: a photo place and a photo repeat are about photos.
+func TestTheEnqueueTellsTheRenderWhetherThePostHasAPhoto(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		images []Image
+		want   bool
+	}{
+		{"photos", []Image{{Filename: "IMG_1.jpg"}, {Filename: "IMG_2.jpg", Kind: AttachmentPhoto}}, true},
+		{"a photo and a video", []Image{{Filename: "clip.mp4", Kind: AttachmentVideo}, {Filename: "IMG_1.jpg"}}, true},
+		{"videos only", []Image{{Filename: "clip.mp4", Kind: AttachmentVideo}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			briefs := &fakeTemplateBriefs{brief: *testBrief()}
+			posts := &fakePosts{input: PostInput{
+				Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review", Images: tc.images,
+			}}
+			// A model that can watch video, so a clip is a valid attachment to start with.
+			models := videoModels()
+			models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+			svc := templateAwareService(t, briefs, posts, &fakeJobs{id: "job"}, models)
 
-	if _, err := svc.Start(ctx, StartRequest{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if got := strings.Join(briefs.filenames, ","); got != "IMG_1.jpg,IMG_2.jpg" {
-		t.Fatalf("render saw filenames %q, want the post's attachment order", got)
+			if _, err := svc.Start(context.Background(), StartRequest{
+				UserID: "alice", PostSlug: "post", ObserveModel: videoObserveRef.String(), WriteModel: writeRef.String(),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if briefs.calls != 1 || briefs.hasPhotos != tc.want {
+				t.Fatalf("render calls = %d, hasPhotos = %v, want one call with %v", briefs.calls, briefs.hasPhotos, tc.want)
+			}
+		})
 	}
 }
 
-// The post's answers ride the same seam as its attachment order, and for the same reason: the
+// The post's answers ride the same seam as whether it has a photo, and for the same reason: the
 // freeze has to see exactly what the author had typed when the run started, so the render is
 // handed them once and no handler ever reads one (TMPL-45, POST-62).
 func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {

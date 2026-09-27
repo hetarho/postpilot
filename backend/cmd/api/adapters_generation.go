@@ -69,25 +69,21 @@ func (a generationCandidates) Record(ctx context.Context, userID, postSlug, inst
 
 // postCandidateLinks lets post deletion drop the link without the post context learning what
 // a guideline candidate is: it hands over the account and the slug, and nothing comes back.
-func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, filenames []string, answers []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
 	owned := make([]template.Answer, 0, len(answers))
 	for _, answer := range answers {
 		owned = append(owned, template.Answer{Label: answer.Label, Text: answer.Text, Enabled: answer.Enabled})
 	}
-	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, filenames, owned)
+	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, hasPhotos, owned)
 	if err != nil || !ok {
 		return generation.TemplateBrief{}, false, err
-	}
-	rows := make([]generation.TemplatePhotoRow, 0, len(rendered.Rows))
-	for _, row := range rendered.Rows {
-		rows = append(rows, generation.TemplatePhotoRow{Count: row.Count, Filenames: row.Filenames})
 	}
 	facts := make([]generation.TemplateFact, 0, len(rendered.Facts))
 	for _, fact := range rendered.Facts {
 		facts = append(facts, generation.TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
 	return generation.TemplateBrief{
-		Name: rendered.Name, Body: rendered.Body, Rows: rows, Facts: facts, TitleArea: rendered.TitleArea,
+		Name: rendered.Name, Body: rendered.Body, Facts: facts, TitleArea: rendered.TitleArea,
 	}, true, nil
 }
 

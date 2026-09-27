@@ -9,9 +9,8 @@
  *  Counted in Unicode scalar values, like the backend, so a Hangul syllable is
  *  one character.
  *
- *  The per-account cap and the repeat-expansion bound are deliberately NOT
- *  mirrored: both are server-owned guards, and the second depends on the post's
- *  photo count rather than on the template being edited. */
+ *  The per-account cap is deliberately NOT mirrored: it is a server-owned
+ *  storage guard. */
 import { ENV_LIMIT_OVERRIDES, positiveIntEnv } from '@/shared/config'
 export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(ENV_LIMIT_OVERRIDES.templateNameMaxChars, 40)
 export const TEMPLATE_DESCRIPTION_MAX_CHARS = positiveIntEnv(

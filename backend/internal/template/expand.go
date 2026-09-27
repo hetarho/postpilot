@@ -1,15 +1,18 @@
 package template
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 )
 
-// The photo token. A photo position becomes a short token naming the file it bound, which the
-// model reproduces as that photo's IMAGE block (TMPL-21, TMPL-22).
+// The marked place a photo position renders as, carrying its row size (TMPL-21, TMPL-40), and
+// the marked part a photo repeat renders as. They are code, not author text, so the write legend
+// can name them; the repeat marker carries no attribute for the same reason.
 const (
-	photoTokenPrefix = "{{photo:"
-	tokenSuffix      = "}}"
+	photoPlacePrefix = "{{사진 자리 · 한 줄 "
+	photoPlaceSuffix = "장}}"
+	repeatOpen       = "<repeat>"
+	repeatClose      = "</repeat>"
 )
 
 // The words a stored place/link position renders as when its label is empty (TMPL-37).
@@ -28,58 +31,47 @@ const (
 	factClose      = "</facts>"
 )
 
-// PhotoToken names the attachment a photo slot was bound to during expansion.
-func PhotoToken(filename string) string { return photoTokenPrefix + filename + tokenSuffix }
+// PhotoPlace is the marked place a photo position of row size count renders as.
+func PhotoPlace(count int) string {
+	return photoPlacePrefix + strconv.Itoa(count) + photoPlaceSuffix
+}
 
-// Render expands a parsed template for one post's photos and renders it into the text the
-// write and revise prompts carry.
+// Render resolves a parsed template for one post and renders it into the text the write and
+// revise prompts carry.
 //
-// Expansion happens here rather than in the prompt builder so it can be FROZEN: the caller
-// resolves once at enqueue, and a photo attached after the start can no longer change what
-// the model was asked for.
+// It runs here rather than in the prompt builder so it can be FROZEN: the caller resolves once
+// at enqueue, and an answer edited after the start can no longer change what the model was
+// asked for.
 //
-// The photos are consumed ONCE, in attachment order, across every photo position in body
-// order (TMPL-21): each position takes the next `count` unbound photos, a repeat runs
-// as many iterations as its positions need to exhaust what is left, and a position with
-// nothing left renders nothing. Zero photos drops every repeat block whole — including its
-// literals — because a section that exists to describe photos has nothing to say about none.
-func Render(name string, nodes []Node, filenames []string, maxIterations int, answers []Answer) (Rendered, error) {
-	// Resolution runs FIRST: a dropped field must not be counted by the expansion bound, and
-	// the body the bound prices has to be the body that gets rendered (TMPL-45).
-	nodes = resolveAsks(nodes, answers)
-	if err := checkExpansion(nodes, len(filenames), maxIterations); err != nil {
-		return Rendered{}, err
-	}
+// A photo place binds no photo (TMPL-21): it renders as a marked place with its row size, and
+// the writer chooses which attached photos stand there. A `<repeat each="photo">` renders once,
+// marked as a part the writer repeats per photo group. A post with no photo drops every repeat
+// whole, literals included, and its photo places render nothing: a section that exists to
+// describe photos has nothing to say about none. Nothing expands per photo, so no expansion
+// bound exists.
+func Render(name string, nodes []Node, hasPhotos bool, answers []Answer) Rendered {
 	var body strings.Builder
 	state := &renderState{
-		remaining: filenames,
-		rows:      make([]PhotoRow, 0, 4),
+		hasPhotos: hasPhotos,
 		facts:     make([]Fact, 0, 4),
 		answers:   answersByLabel(answers),
 	}
-	renderNodes(&body, state, nodes)
-	return Rendered{Name: name, Body: body.String(), Rows: state.rows, Facts: state.facts}, nil
+	renderNodes(&body, state, resolveAsks(nodes, answers))
+	return Rendered{Name: name, Body: body.String(), Facts: state.facts}
 }
 
 // RenderTemplate renders a template's two areas for one post (TMPL-50). The body renders
-// exactly as Render renders it. The title area renders with the same answers and no photos: it
-// holds no photo position and no repeat, so it binds nothing and costs nothing against the
-// bound. A title left blank once its asks drop is no title form at all, so it renders as "".
-// The facts read in document order, the title's first (TMPL-55).
-func RenderTemplate(name string, title, body []Node, filenames []string, maxIterations int, answers []Answer) (Rendered, error) {
-	rendered, err := Render(name, body, filenames, maxIterations, answers)
-	if err != nil {
-		return Rendered{}, err
-	}
-	heading, err := Render(name, title, nil, maxIterations, answers)
-	if err != nil {
-		return Rendered{}, err
-	}
+// exactly as Render renders it. The title area renders with the same answers; it holds no photo
+// position and no repeat. A title left blank once its asks drop is no title form at all, so it
+// renders as "". The facts read in document order, the title's first (TMPL-55).
+func RenderTemplate(name string, title, body []Node, hasPhotos bool, answers []Answer) Rendered {
+	rendered := Render(name, body, hasPhotos, answers)
+	heading := Render(name, title, false, answers)
 	if !isBlank(heading.Body) {
 		rendered.TitleArea = heading.Body
 	}
 	rendered.Facts = append(heading.Facts, rendered.Facts...)
-	return rendered, nil
+	return rendered
 }
 
 // resolveAsks replaces every data field with what the post actually answered, and REMOVES the
@@ -112,85 +104,14 @@ func answersByLabel(answers []Answer) map[string]Answer {
 	return byLabel
 }
 
-// renderState is the one cursor over the post's photos. Binding is a single left-to-right
-// pass, so the cursor — not the node tree — is what decides which photo a position gets.
+// renderState is what one render carries besides its output: whether the post has a photo, the
+// facts resolved so far, and the post's answers.
 type renderState struct {
-	remaining []string
-	rows      []PhotoRow
+	hasPhotos bool
 	facts     []Fact
 	// answers is what the post supplied, by label. Nodes keep saying what the AUTHOR wrote;
 	// the answer is looked up here, so nothing has to overload a parsed field to carry it.
 	answers map[string]Answer
-}
-
-// take returns the next min(n, remaining) filenames and advances past them.
-func (s *renderState) take(n int) []string {
-	if n > len(s.remaining) {
-		n = len(s.remaining)
-	}
-	taken := s.remaining[:n]
-	s.remaining = s.remaining[n:]
-	return taken
-}
-
-// checkExpansion bounds the ITERATIONS an expansion produces rather than the resulting byte
-// count: iterations are what multiply, and the bound has to be comparable across templates
-// whose repeat bodies differ in size.
-//
-// It counts them exactly the way Render binds them, cursor and all, so a template can never
-// be accepted here and then render more iterations than were priced.
-func checkExpansion(nodes []Node, photos, maxIterations int) error {
-	iterations := plannedIterations(nodes, photos)
-	if iterations > maxIterations {
-		return fmt.Errorf("%w: %d iterations exceed %d", ErrExpansionTooLarge, iterations, maxIterations)
-	}
-	return nil
-}
-
-func plannedIterations(nodes []Node, photos int) int {
-	remaining := photos
-	total := 0
-	for _, node := range nodes {
-		switch node.Kind {
-		case NodeSlot:
-			if node.SlotKind == SlotPhoto {
-				remaining -= minInt(node.Count, remaining)
-			}
-		case NodeRepeat:
-			group := groupSize(node.Children)
-			count := iterationCount(group, remaining)
-			total += count
-			if group > 0 {
-				remaining -= minInt(group*count, remaining)
-			}
-		}
-	}
-	return total
-}
-
-// groupSize is how many photos ONE iteration of a repeat asks for: the sum of its photo
-// positions' counts. A repeat with no photo position asks for none.
-func groupSize(children []Node) int {
-	total := 0
-	for _, child := range children {
-		if child.Kind == NodeSlot && child.SlotKind == SlotPhoto {
-			total += child.Count
-		}
-	}
-	return total
-}
-
-// iterationCount is the ceiling of remaining ÷ group, with the two edges the grammar
-// decided: no photos left drops the block whole, and a repeat that asks for no photos runs
-// exactly once (it still has literals and write instructions to contribute).
-func iterationCount(group, remaining int) int {
-	if remaining == 0 {
-		return 0
-	}
-	if group == 0 {
-		return 1
-	}
-	return (remaining + group - 1) / group
 }
 
 func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
@@ -214,10 +135,11 @@ func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
 		case NodeSlot:
 			renderSlot(out, state, node)
 		case NodeRepeat:
-			// The iteration count is read ONCE, before the first iteration consumes
-			// anything: recomputing it from what is left would shrink the block as it ran.
-			for n := iterationCount(groupSize(node.Children), len(state.remaining)); n > 0; n-- {
+			// Once, marked, whatever the photo count: the writer repeats it per photo group.
+			if state.hasPhotos {
+				out.WriteString(repeatOpen)
 				renderNodes(out, state, node.Children)
+				out.WriteString(repeatClose)
 			}
 		}
 	}
@@ -252,10 +174,8 @@ func renderAsk(out *strings.Builder, state *renderState, node Node) {
 	state.facts = append(state.facts, Fact{Label: label, Value: value})
 }
 
-// renderSlot binds a photo position and writes its tokens, or writes a legacy place/link
-// position's label. A position's tokens are ADJACENT — joined by a single newline — which is how the
-// interim contract says "these photos stand in one row" while every one of them is still an
-// ordinary single-photo IMAGE block (TMPL-40).
+// renderSlot writes a photo position as its marked place, or a legacy place/link position as
+// its label. The place carries its row size and names no photo (TMPL-21, TMPL-40).
 func renderSlot(out *strings.Builder, state *renderState, node Node) {
 	// There is no place or link position (TMPL-37): a stored one is a 고정 문구 whose text is its
 	// label, so no run carries a slot token, a slot block or a slot marker.
@@ -263,17 +183,9 @@ func renderSlot(out *strings.Builder, state *renderState, node Node) {
 		out.WriteString(legacySlotText(node))
 		return
 	}
-	bound := state.take(node.Count)
-	if len(bound) == 0 {
-		return
+	if state.hasPhotos {
+		out.WriteString(PhotoPlace(node.Count))
 	}
-	for i, filename := range bound {
-		if i > 0 {
-			out.WriteString("\n")
-		}
-		out.WriteString(PhotoToken(filename))
-	}
-	state.rows = append(state.rows, PhotoRow{Count: node.Count, Filenames: append([]string(nil), bound...)})
 }
 
 // legacySlotText is the literal text a stored place/link position reads as: its label, or 지도 ·
@@ -286,11 +198,4 @@ func legacySlotText(node Node) string {
 		return linkFallback
 	}
 	return placeFallback
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

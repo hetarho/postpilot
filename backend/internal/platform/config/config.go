@@ -196,18 +196,15 @@ const BillingTickInterval = 10 * time.Minute
 // field-for-field identical to template.Ceilings, so the composition root converts one into
 // the other and a field added to either stops both builds.
 //
-// MaxPerAccount and MaxRepeatExpansion stay server-side: the first is a storage guard, and the
-// second bounds how large one expanded template may grow before it reaches a provider, which
-// the frontend cannot know because it depends on how many photos the post carries.
+// MaxPerAccount stays server-side: it is a storage guard.
 type TemplateCeilings struct {
 	NameMaxChars        int
 	DescriptionMaxChars int
 	BodyMaxChars        int
 	// TitleAreaMaxChars bounds a template's title area (TMPL-50). A title is one line of a
 	// post, so its source is bounded like a short field rather than like the body.
-	TitleAreaMaxChars  int
-	MaxPerAccount      int
-	MaxRepeatExpansion int
+	TitleAreaMaxChars int
+	MaxPerAccount     int
 	// PhotoRowMax is the largest `count` a photo position may carry — how many photos stand
 	// side by side in one row (TMPL-38). It is env because the browser mirrors it as
 	// VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
@@ -518,11 +515,6 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.Template.MaxPerAccount = templateCap
-	templateExpansion, err := positiveInt("TEMPLATE_MAX_REPEAT_EXPANSION", "40")
-	if err != nil {
-		return nil, err
-	}
-	cfg.Template.MaxRepeatExpansion = templateExpansion
 	templatePhotoRow, err := positiveInt("TEMPLATE_PHOTO_ROW_MAX", "4")
 	if err != nil {
 		return nil, err

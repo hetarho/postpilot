@@ -305,7 +305,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	}
 
 	// And the brief the enqueue freezes carries the shape alone: the numbers have no way in.
-	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, nil, nil)
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, false, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
@@ -380,9 +380,9 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatalf("answers = %+v", input.TemplateAnswers)
 	}
 
-	// The render is where the two contexts actually meet: generation hands over the frozen
-	// attachment order and receives prompt text, a stored place position already its label.
-	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, []string{"IMG_1.jpg", "IMG_2.jpg"}, nil)
+	// The render is where the two contexts actually meet: generation says whether the post has a
+	// photo and receives prompt text, a stored place position already its label.
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, true, nil)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}
@@ -392,17 +392,12 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	if !strings.Contains(brief.Body, "\n네이버 지도\n") || strings.Contains(brief.Body, "{{slot") {
 		t.Fatalf("the place position did not render as its label:\n%s", brief.Body)
 	}
-	// Two photos, so the repeat expanded twice and each iteration is bound to its own file.
-	if !strings.Contains(brief.Body, "{{photo:IMG_1.jpg}}") || !strings.Contains(brief.Body, "{{photo:IMG_2.jpg}}") {
-		t.Fatalf("the repeat did not expand per attachment:\n%s", brief.Body)
+	// The repeat renders once, marked, and its photo place names no attachment (TMPL-21).
+	if !strings.Contains(brief.Body, "<repeat>\n{{사진 자리 · 한 줄 1장}}") || strings.Contains(brief.Body, "{{photo:") {
+		t.Fatalf("the repeat did not render once, unbound:\n%s", brief.Body)
 	}
-	// The row specs are frozen beside the body: one bare position per iteration, one photo each.
-	if len(brief.Rows) != 2 || brief.Rows[0].Count != 1 || brief.Rows[0].Filenames[0] != "IMG_1.jpg" ||
-		brief.Rows[1].Filenames[0] != "IMG_2.jpg" {
-		t.Fatalf("rows = %+v", brief.Rows)
-	}
-	if got := strings.Count(brief.Body, "<write>사진 설명</write>"); got != 2 {
-		t.Fatalf("per-photo write rendered %d times, want 2", got)
+	if got := strings.Count(brief.Body, "<write>사진 설명</write>"); got != 1 {
+		t.Fatalf("the repeated write rendered %d times, want once", got)
 	}
 	// And the prompt that render produces actually carries it.
 	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
@@ -494,7 +489,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, nil, input.TemplateAnswers)
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, false, input.TemplateAnswers)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
 	}

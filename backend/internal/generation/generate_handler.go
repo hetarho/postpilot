@@ -102,21 +102,15 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	return nil
 }
 
-// cloneTemplate deep-copies the row and fact slices too: a frozen brief must not share
-// backing storage with whatever the caller does next to its own slices. A row's filenames
-// are copied as well — the row is the innermost slice, and sharing it would defeat the
-// freeze one level down.
+// cloneTemplate deep-copies the fact slice too: a frozen brief must not share backing storage
+// with whatever the caller does next to its own slices.
 func cloneTemplate(value *TemplateBrief) *TemplateBrief {
 	if value == nil {
 		return nil
 	}
 	copied := *value
-	if len(value.Rows) > 0 {
-		rows := make([]TemplatePhotoRow, 0, len(value.Rows))
-		for _, row := range value.Rows {
-			rows = append(rows, TemplatePhotoRow{Count: row.Count, Filenames: append([]string(nil), row.Filenames...)})
-		}
-		copied.Rows = rows
+	if len(value.Facts) > 0 {
+		copied.Facts = append([]TemplateFact(nil), value.Facts...)
 	}
 	return &copied
 }

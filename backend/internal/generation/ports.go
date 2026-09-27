@@ -78,14 +78,12 @@ type PendingExperiments interface {
 // `ok` false means the post has no template or it was deleted between the save and the start
 // — an ordinary case, not an error, because a prompt without a template is a valid one.
 //
-// The filenames and the post's answers are passed IN rather than looked up on the other
-// side: the freeze has to see exactly the attachment set and the exact answers this enqueue
-// decided on, and a lookup there could observe a photo attached or a field edited in between.
-//
-// An error is a real failure and stops the start — the expansion bound is enforced here, so
-// a template that would grow past it never reaches a provider.
+// Whether the post has a photo and the post's answers are passed IN rather than looked up on
+// the other side: the freeze has to see exactly what this enqueue decided on, and a lookup
+// there could observe a photo attached or a field edited in between. The brief names no
+// attachment (TMPL-21). An error is a real failure and stops the start.
 type TemplateBriefs interface {
-	RenderedFor(ctx context.Context, userID, templateID string, filenames []string, answers []TemplateAnswer) (TemplateBrief, bool, error)
+	RenderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error)
 }
 
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at

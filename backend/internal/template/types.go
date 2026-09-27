@@ -1,6 +1,6 @@
 // Package template is the 템플릿 context: reusable account-owned documents that decide the
-// SHAPE of a post — its literal text, the positions it reserves for content the app cannot
-// invent, what repeats per photo, and where prose gets written.
+// SHAPE of a post — its literal text, its photo places, what repeats per photo group, and
+// where prose gets written.
 //
 // A template is authored text and nothing else. Nothing here is learned, inferred, or
 // written by a model ([I4] stays entirely with voice), and no behavior in this package
@@ -31,18 +31,13 @@ var (
 	// ErrTooMany is the per-account cap. It is a storage guard rather than a prompt guard —
 	// only the one assigned template ever reaches a prompt.
 	ErrTooMany = errors.New("this account already holds the maximum number of templates")
-	// ErrExpansionTooLarge is a repeat that would grow past the configured bound for the
-	// post's photo count. It is refused at start rather than sent, so an unbounded prompt
-	// never reaches a provider.
-	ErrExpansionTooLarge = errors.New("expanding this template for that many photos exceeds the bound")
 )
 
 // NumberOutOfRangeError is a generation number a template may not hold. The bounds are the
 // POST option's own (TMPL-6): a template's number only ever lands in a post's option, so
 // one the post would refuse must not be storable here either.
 //
-// Max 0 means the product sets no ceiling - the target length is any positive number
-// (POST-20), and inventing one here would be a rule the post itself does not have.
+// Max 0 would mean a number with no ceiling; both numbers have one today (TMPL-6).
 type NumberOutOfRangeError struct {
 	Field string
 	Value int
@@ -79,7 +74,6 @@ type Limits struct {
 	BodyMaxChars        int
 	TitleAreaMaxChars   int
 	MaxPerAccount       int
-	MaxRepeatExpansion  int
 	// PhotoRowMax is the largest `count` a photo position may carry (TMPL-38). It bounds
 	// a row's width rather than a total: four thumbnails is what still reads on a 360 px
 	// phone, and the browser mirrors the same number.
@@ -100,7 +94,7 @@ type Limits struct {
 
 func (l Limits) valid() bool {
 	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 && l.TitleAreaMaxChars > 0 &&
-		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0 &&
+		l.MaxPerAccount > 0 && l.PhotoRowMax > 0 &&
 		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0 &&
 		l.TargetLengthMin > 0 && l.TargetLengthMax >= l.TargetLengthMin && l.TagCountMin > 0 && l.TagCountMax >= l.TagCountMin
 }
@@ -188,8 +182,8 @@ type Fact struct {
 	Value string
 }
 
-// Rendered is the prompt-facing projection: one template expanded for one post's photos and
-// rendered into the text the write and revise prompts carry.
+// Rendered is the prompt-facing projection: one template resolved for one post and rendered,
+// its photo places unbound, into the text the write and revise prompts carry (TMPL-11).
 //
 // It deliberately carries no id. A frozen render must stay readable after the template it
 // came from is renamed or deleted, which is also why Name is a copy rather than a lookup.
@@ -199,23 +193,9 @@ type Rendered struct {
 	// TitleArea is the title form rendered with the post's answers, "" when the template has
 	// none or nothing is left of it once its asks drop (TMPL-50).
 	TitleArea string
-	// Rows records what each photo position actually bound, in body order — one entry per
-	// position that bound at least one photo, iterations of a repeat included. It is frozen
-	// beside the body so the author's row intent survives to whatever finally carries a row
-	// downstream (→TMPL-39); the rendered body itself stays n adjacent single-photo
-	// tokens in the meantime (TMPL-40).
-	Rows []PhotoRow
 	// Facts are the data fields this render resolved, the title area's first and then the
 	// body's, each in document order (TMPL-55). Empty means the template declared none or
 	// every one of them was off or blank — which is the same thing to everything downstream
 	// (TMPL-45).
 	Facts []Fact
-}
-
-// PhotoRow is one photo position after binding: how many photos it asked for and the ones
-// it got. A short last group makes len(Filenames) < Count, which is the row the author
-// asked for as far as the photos went.
-type PhotoRow struct {
-	Count     int
-	Filenames []string
 }
