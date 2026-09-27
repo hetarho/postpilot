@@ -253,3 +253,7 @@ choice would be expensive to undo are listed at the end.
 - **Only the two confirmations the spec names:** 다시 만들기 over a hand-edited storyline, and 이 스토리로 다시 만들기 over a hand-edited plan. The AI storyline request asks nothing, even over a hand-edited storyline.
 - **The storyline request** runs with ② on screen, like a plan revision, and shows its progress where the field was. Its approve label is `최대 N 크레딧 · 승인하고 스토리라인 고치기`, and the request record labels it `스토리라인 수정 요청`.
 - **Batch:** 다시 만들기 and the build are quoted against the project's ready batch (this session's upload or the retained originals). They are disabled while there is none.
+
+## T443 — video-template builder rows open in place
+- **The open row follows its entry when moved.** It stays open on the entry it belongs to, including a row inside a moved group. Before, a reorder closed everything.
+- **A new entry opens and focuses its first field**, which for a text entry is its first control. Pressing its row button after adding closes it, like any open row.

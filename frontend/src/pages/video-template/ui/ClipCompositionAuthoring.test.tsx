@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import {
@@ -269,7 +269,8 @@ describe('composition template authoring', () => {
     const captions = screen
       .getAllByRole('button', { name: /자막/ })
       .filter((b) => b.hasAttribute('aria-expanded'))
-    await user.click(captions[captions.length - 1])
+    // A new entry opens in place for typing (CLIP-172).
+    expect(captions[captions.length - 1]).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('combobox', { name: /문구 작성 방식/ })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /화면 위치/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /글자 정렬/ })).not.toBeInTheDocument()
@@ -322,4 +323,49 @@ it('accepts an outro entry holding more lines than a preset draws', async () => 
   const saved = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
   expect(saved.elements.find((e) => e.role === 'ending')!.rows).toHaveLength(3)
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+// CLIP-172, CLIP-42: every entry opens its editor inside its own row, delete included, one row
+// at a time; a new entry opens there for typing; reordering keeps the open row on its entry.
+describe('builder rows open in place', () => {
+  const rowOf = (button: HTMLElement) => button.closest('li')!
+
+  it('opens an entry inside its own row with its delete there, one row at a time', async () => {
+    const user = userEvent.setup()
+    mount()
+    const place = await screen.findByRole('button', { name: '장소' })
+    await user.click(place)
+    const editor = screen.getByRole('region', { name: '장소' })
+    expect(rowOf(place)).toContainElement(editor)
+    expect(rowOf(place)).toContainElement(screen.getByRole('button', { name: '장소 삭제' }))
+    // The intro and the outro open the same way.
+    const intro = screen.getByRole('button', { name: '인트로' })
+    await user.click(intro)
+    expect(rowOf(intro)).toContainElement(screen.getByRole('region', { name: '인트로' }))
+    expect(screen.queryByRole('region', { name: '장소' })).not.toBeInTheDocument()
+    expect(place).toHaveAttribute('aria-expanded', 'false')
+    await user.click(screen.getByRole('button', { name: '인트로 삭제' }))
+    expect(screen.queryByRole('button', { name: '인트로' })).not.toBeInTheDocument()
+  })
+
+  it('opens a new entry for typing', async () => {
+    const user = userEvent.setup()
+    mount()
+    await screen.findByRole('button', { name: '장소' })
+    await user.click(screen.getByRole('button', { name: '정보 추가' }))
+    const field = await screen.findByLabelText('정보 이름')
+    await waitFor(() => expect(field).toHaveFocus())
+  })
+
+  it('keeps the open row on its entry while it is moved', async () => {
+    const user = userEvent.setup()
+    mount()
+    const outro = await screen.findByRole('button', { name: '아웃트로' })
+    await user.click(outro)
+    const moveUp = within(rowOf(outro)).getByRole('button', { name: '위로 이동' })
+    await user.click(moveUp)
+    const moved = screen.getByRole('button', { name: '아웃트로' })
+    expect(moved).toHaveAttribute('aria-expanded', 'true')
+    expect(rowOf(moved)).toContainElement(screen.getByRole('region', { name: '아웃트로' }))
+  })
 })
