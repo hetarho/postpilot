@@ -196,7 +196,10 @@ type PostInput struct {
 	// Observations is the post's stored observation snapshot, read only at enqueue so the
 	// selection and what it carries over can both be frozen there. No handler reads a live
 	// snapshot: it reads the payload, which is what makes the frozen decision hold.
-	Observations    []Observation
+	Observations []Observation
+	// Storyline is the post's stored storyline, nil for none. Only the storyline request reads
+	// it, at enqueue for its paragraphs and at the write for what it was made with (GEN-69).
+	Storyline       *Storyline
 	Content         *PostContent
 	TargetLanguage  Language
 	ContentLanguage *Language

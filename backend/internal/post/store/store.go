@@ -237,6 +237,21 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	return n > 0, nil
 }
 
+// UpdateStoryline replaces the post's storyline, nil for none (GEN-68, GEN-69).
+func (s *Store) UpdateStoryline(ctx context.Context, slug, userID string, storyline *post.Storyline, updatedAt time.Time) (bool, error) {
+	story, err := marshalStoryline(storyline)
+	if err != nil {
+		return false, err
+	}
+	n, err := s.write.UpdatePostStoryline(ctx, sqlc.UpdatePostStorylineParams{
+		Storyline: story, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update storyline: %w", err)
+	}
+	return n > 0, nil
+}
+
 // UpdateAttachmentTraces writes a deleted attachment's leftovers away, the observations and the
 // storyline together (POST-18).
 func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []post.Observation, storyline *post.Storyline, updatedAt time.Time) (bool, error) {

@@ -558,6 +558,9 @@ type fakePosts struct {
 	annotations              []*WriteAnnotations
 	contentLanguages         []Language
 	preserveMissingLanguages bool
+	// storylines is every storyline a storyline job stored; storylineErr refuses the write.
+	storylines   []Storyline
+	storylineErr error
 }
 
 func (f *fakePosts) AttachedImages(context.Context, string, string) (PostInput, error) {
@@ -585,6 +588,16 @@ func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value Po
 	f.contentLanguages = append(f.contentLanguages, language)
 	f.input.Content = &value
 	f.input.ContentLanguage = &language
+	return nil
+}
+
+func (f *fakePosts) SetStoryline(_ context.Context, _, _ string, storyline Storyline) error {
+	if f.storylineErr != nil {
+		return f.storylineErr
+	}
+	f.storylines = append(f.storylines, storyline)
+	stored := storyline
+	f.input.Storyline = &stored
 	return nil
 }
 
@@ -654,6 +667,12 @@ type fakeJobs struct {
 	generations []StartRequest
 	// generatePayloads[i] is the payload Start encoded for generations[i].
 	generatePayloads [][]byte
+	// storylineStarts and storylineRequests are what the two storyline starts enqueued, each with
+	// its payload at the same index.
+	storylineStarts          []StartStorylineRequest
+	storylinePayloads        [][]byte
+	storylineRequests        []StartStorylineRevisionRequest
+	storylineRequestPayloads [][]byte
 }
 
 func (f *fakeJobs) EnqueueGeneration(_ context.Context, request StartRequest, payload []byte) (string, error) {
@@ -700,6 +719,18 @@ func (f *fakeJobs) EnqueueRevision(_ context.Context, request StartRevisionReque
 	f.enqueues++
 	f.revisions = append(f.revisions, request)
 	f.payloads = append(f.payloads, append([]byte(nil), payload...))
+	return f.id, f.err
+}
+func (f *fakeJobs) EnqueueStoryline(_ context.Context, request StartStorylineRequest, payload []byte) (string, error) {
+	f.enqueues++
+	f.storylineStarts = append(f.storylineStarts, request)
+	f.storylinePayloads = append(f.storylinePayloads, append([]byte(nil), payload...))
+	return f.id, f.err
+}
+func (f *fakeJobs) EnqueueStorylineRevision(_ context.Context, request StartStorylineRevisionRequest, payload []byte) (string, error) {
+	f.enqueues++
+	f.storylineRequests = append(f.storylineRequests, request)
+	f.storylineRequestPayloads = append(f.storylineRequestPayloads, append([]byte(nil), payload...))
 	return f.id, f.err
 }
 func (f fakeJobs) GetGeneration(context.Context, string, string) (*JobSummary, error) {

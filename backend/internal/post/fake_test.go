@@ -110,6 +110,20 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 	return true, nil
 }
 
+func (f *fakeStore) UpdateStoryline(_ context.Context, slug, userID string, storyline *Storyline, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
+		return false, nil
+	}
+	existing.Storyline = storyline
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) UpdateAttachmentTraces(_ context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()

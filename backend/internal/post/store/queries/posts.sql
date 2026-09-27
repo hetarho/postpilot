@@ -26,6 +26,12 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 UPDATE posts SET observations = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published';
 
+-- name: UpdatePostStoryline :execrows
+-- A storyline job's answer replaces the post's storyline and nothing else: the content, the
+-- machine baseline, the status and the revisions stay (GEN-68, GEN-69). NULL is none.
+UPDATE posts SET storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
+
 -- name: UpdatePostAttachmentTraces :execrows
 -- What a deleted attachment leaves behind, the observations and the storyline, in one statement
 -- (POST-18). NULL storyline is none.

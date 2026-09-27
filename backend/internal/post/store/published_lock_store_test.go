@@ -106,6 +106,9 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 	"UpdatePostObservations": func(s *store.Store) (bool, error) {
 		return s.UpdateObservations(context.Background(), "p", "alice", []post.Observation{{File: "IMG_1.jpg", Scene: "바다"}}, lockLater)
 	},
+	"UpdatePostStoryline": func(s *store.Store) (bool, error) {
+		return s.UpdateStoryline(context.Background(), "p", "alice", &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞"}}}, lockLater)
+	},
 	"UpdatePostAttachmentTraces": func(s *store.Store) (bool, error) {
 		return s.UpdateAttachmentTraces(context.Background(), "p", "alice", nil, &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞"}}}, lockLater)
 	},

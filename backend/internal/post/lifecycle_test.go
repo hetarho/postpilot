@@ -310,6 +310,11 @@ var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture
 			return svc.SetGeneratedContent(context.Background(), alice, f.slug, lockedEdit, LanguageKorean, nil)
 		},
 	},
+	"SetStoryline": {
+		"a storyline job's answer": func(svc *Service, f publishedFixture) error {
+			return svc.SetStoryline(context.Background(), alice, f.slug, Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞"}}})
+		},
+	},
 	"SaveContent": {
 		"a changed save": func(svc *Service, f publishedFixture) error {
 			_, err := svc.SaveContent(context.Background(), alice, f.slug, lockedEdit, f.revision)

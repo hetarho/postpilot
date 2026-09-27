@@ -143,6 +143,15 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstr
 	if brief == nil {
 		return
 	}
+	writeTemplateForm(out, brief, titleInstruction)
+	fmt.Fprintf(out, "\n%s", templatePrecedence)
+}
+
+// writeTemplateForm is the section without its closing precedence line: the heading, the
+// legend, the title form when titleInstruction names one, and the body form. The storyline
+// prompt uses it alone — it plans the body, has no title to write and no voice to rank the
+// template against (GEN-68).
+func writeTemplateForm(out *strings.Builder, brief *TemplateBrief, titleInstruction string) {
 	fmt.Fprintf(out, "\n\n[글 템플릿: %s]", brief.Name)
 	legend := templateLegend
 	if len(brief.Facts) > 0 {
@@ -151,11 +160,10 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstr
 	fmt.Fprintf(out, "\n아래 템플릿의 구성을 그대로 따르세요. %s", legend)
 	// The title form sits above the body form, in fences of its own (GEN-52). An empty title
 	// area writes nothing, so every template authored before it existed keeps its bytes.
-	if brief.TitleArea != "" {
+	if brief.TitleArea != "" && titleInstruction != "" {
 		fmt.Fprintf(out, "\n%s\n---\n%s\n---", titleInstruction, brief.TitleArea)
 	}
 	fmt.Fprintf(out, "\n---\n%s\n---", brief.Body)
-	fmt.Fprintf(out, "\n%s", templatePrecedence)
 }
 
 // guidelinePrecedence closes [작문 지침] (GUIDE-15, GUIDE-37). A guideline says how this post is
@@ -216,6 +224,12 @@ func qualityRulesSection(rules []string) string {
 // target language, exactly as writeTemplateSection does: the section frames the guideline texts,
 // and its framing is not part of the output-language contract.
 func writeGuidelinesSection(out *strings.Builder, defaults, owner []string) bool {
+	return writeGuidelinesSectionClosedBy(out, defaults, owner, guidelinePrecedence)
+}
+
+// writeGuidelinesSectionClosedBy is the section with the pass's own closing sentence: the write
+// and the revise close with guidelinePrecedence, the storyline with storylineGuidelinePrecedence.
+func writeGuidelinesSectionClosedBy(out *strings.Builder, defaults, owner []string, precedence string) bool {
 	if len(defaults) == 0 && len(owner) == 0 {
 		return false
 	}
@@ -232,7 +246,7 @@ func writeGuidelinesSection(out *strings.Builder, defaults, owner []string) bool
 			out.WriteString("\n- " + strings.ReplaceAll(text, "\n", "\n  "))
 		}
 	}
-	fmt.Fprintf(out, "\n%s", guidelinePrecedence)
+	fmt.Fprintf(out, "\n%s", precedence)
 	return true
 }
 

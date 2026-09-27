@@ -5,6 +5,8 @@ import (
 	"errors"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -882,6 +884,22 @@ func TestStorylineRoundTripsBesideTheContent(t *testing.T) {
 	after, err := s.GetPost(ctx, p.Slug)
 	if err != nil || !reflect.DeepEqual(after.Storyline, taken) || after.Content == nil || after.ContentRevision != got.ContentRevision {
 		t.Fatalf("after the traces write: storyline %+v, revision %d (%v)", after.Storyline, after.ContentRevision, err)
+	}
+}
+
+// GEN-71: a storyline changes only through a write, a storyline job and a deleted attachment
+// (the owner's own edits arrive with T434), so exactly those statements write the column.
+func TestOnlyTheStorylineWritersWriteTheColumn(t *testing.T) {
+	writes := regexp.MustCompile(`(?i)\bstoryline\s*=`)
+	var writers []string
+	for _, st := range readStatements(t) {
+		if st.isWrite() && writes.MatchString(st.body) {
+			writers = append(writers, st.name)
+		}
+	}
+	sort.Strings(writers)
+	if want := []string{"UpdateGeneratedContent", "UpdatePostAttachmentTraces", "UpdatePostStoryline"}; !reflect.DeepEqual(writers, want) {
+		t.Fatalf("storyline writers = %v, want %v", writers, want)
 	}
 }
 

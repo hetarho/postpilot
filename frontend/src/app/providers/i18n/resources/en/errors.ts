@@ -227,6 +227,7 @@ export const errors = {
   POST_TARGET_LENGTH_INVALID: 'Enter a target length between {{min}} and {{max}} characters.',
   POST_PHOTO_MISSING:
     '{{count}} photo places in the text name photos that are no longer attached. Remove those photo blocks in ② or upload the photos again, then finalize.',
+  POST_STORYLINE_MISSING: 'This post has no storyline yet. Make one first.',
   GENERATION_ALREADY_RUNNING: 'An AI job is already running for this post.',
   GENERATION_VOICE_MISMATCH: 'The selected voice differs from the voice saved on the post.',
   REVISION_INSTRUCTION_REQUIRED: 'Enter a revision request.',

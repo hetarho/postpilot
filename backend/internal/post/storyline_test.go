@@ -122,3 +122,40 @@ func TestStorylineAddedAndTakenOutFiles(t *testing.T) {
 		t.Errorf("taken out = %v", got)
 	}
 }
+
+// GEN-68, GEN-69: a storyline job's answer replaces the storyline and nothing else; it is never
+// an owner edit, and an answer with no paragraph leaves none.
+func TestSetStorylineReplacesTheStorylineAlone(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	ctx := context.Background()
+	p := mustCreatePost(t, svc, alice, "성수")
+	content := PostContent{Title: "성수 카페", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
+	if err := svc.SetGeneratedContent(ctx, alice, p.Slug, content, LanguageKorean, nil); err != nil {
+		t.Fatal(err)
+	}
+	before, err := svc.Get(ctx, alice, p.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.SetStoryline(ctx, alice, p.Slug, Storyline{
+		Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{}}}, EditedByHand: true, MadeWith: []string{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	after, err := svc.Get(ctx, alice, p.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(after.Storyline, &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞"}}}) {
+		t.Fatalf("storyline = %+v", after.Storyline)
+	}
+	if after.ContentRevision != before.ContentRevision || after.Status != before.Status || !reflect.DeepEqual(after.Content, before.Content) {
+		t.Fatalf("the storyline write moved the post: %+v", after)
+	}
+	if err := svc.SetStoryline(ctx, alice, p.Slug, Storyline{MadeWith: []string{"a.jpg"}}); err != nil {
+		t.Fatal(err)
+	}
+	if cleared, _ := svc.Get(ctx, alice, p.Slug); cleared.Storyline != nil {
+		t.Fatalf("an answer with no paragraph left %+v", cleared.Storyline)
+	}
+}

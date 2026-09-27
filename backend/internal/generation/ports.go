@@ -24,6 +24,9 @@ type Posts interface {
 	// SetGeneratedContent stores a machine write. annotations nil keeps the post's nouns (a
 	// revision); non-nil replaces them, where empty clears.
 	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language, annotations *WriteAnnotations) error
+	// SetStoryline replaces the post's storyline with a storyline job's answer and touches
+	// nothing else; a published post refuses it (GEN-68, GEN-69, POST-74).
+	SetStoryline(ctx context.Context, userID, slug string, storyline Storyline) error
 }
 
 // Profiles projects exactly the post's voice; the voice context never falls back to a
@@ -64,6 +67,8 @@ type Jobs interface {
 	// and the hold.
 	EnqueueGeneration(ctx context.Context, request StartRequest, payload []byte) (string, error)
 	EnqueueRevision(ctx context.Context, request StartRevisionRequest, payload []byte) (string, error)
+	EnqueueStoryline(ctx context.Context, request StartStorylineRequest, payload []byte) (string, error)
+	EnqueueStorylineRevision(ctx context.Context, request StartStorylineRevisionRequest, payload []byte) (string, error)
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 

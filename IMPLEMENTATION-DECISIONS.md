@@ -88,3 +88,31 @@ choice would be expensive to undo are listed at the end.
 - **The switch hook is `useSetDefaultGuidelineEnabled(ownerId, kind)`**: the task wrote
   `(kind)`, but the cache key is per account. For the clip kind (T439) the cache key currently
   sits under the same `['guidelines', …]` root.
+
+## T433 — storyline jobs (backend)
+
+- **The two start RPCs carry model refs.** `StartStorylineRequest` gained `observe_model` and
+  `write_model`, and `StartStorylineRevisionRequest` `write_model`, like `StartGeneration`. The
+  task listed only slug and reobserve, but the server keeps no per-post model, so without them the
+  write/observe/video preconditions could not be checked.
+- **Storyline jobs carry no voice subject.** They are post-targeted (one active job per post), and
+  the start still requires an active voice as `Start` does, but the job row does not name the
+  voice, since the prompt has none. *If you want voice deletion to cancel them:* pass the voice id
+  to `postVoiceWork` in the two enqueue adapters.
+- **The storyline request's payload also freezes the stored observations.** The acceptance asked
+  for this; the impl notes' field list left it out. What the request shows the model is the
+  still-attached files those observations cover; a photo attached later with no observation is
+  not shown until the next 다시 만들기.
+- **A storyline answer that is missing, malformed or empty fails as `MODEL_OUTPUT_INVALID`.** In
+  the direct write an empty storyline is tolerated because the post is the output; in a storyline
+  job the storyline *is* the output.
+- **The storyline prompt's template section drops the title form and the closing
+  template-vs-voice sentence.** It keeps the heading, legend and body form. Its `[작문 지침]`
+  closes with the storyline precedence sentence from the impl notes.
+- **English wording I wrote for the twins:** task "Plan the storyline of a blog post from the
+  material below. Do not write the post yet.", paragraph plan "Write each paragraph as sentences
+  that state the plan (it shows …, it tells …).", and the request rule "Revise [현재 스토리라인]
+  as [수정 요청] asks. Leave the paragraphs and the photo placement the request does not touch as
+  they are, and keep every attached photo and video in exactly one paragraph."
+- **Error copy for `POST_STORYLINE_MISSING`:** "아직 스토리라인이 없어요. 먼저 스토리라인을
+  만들어 주세요." / "This post has no storyline yet. Make one first."

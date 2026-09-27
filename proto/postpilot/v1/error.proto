@@ -285,6 +285,8 @@ enum FailureReason {
   // SetDefaultGuidelineEnabled named a 기본 지침 key the product does not carry for that kind
   // (GUIDE-43).
   GUIDELINE_DEFAULT_NOT_FOUND = 251;
+  // StartStorylineRevision on a post that holds no storyline yet (GEN-69).
+  POST_STORYLINE_MISSING = 252;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

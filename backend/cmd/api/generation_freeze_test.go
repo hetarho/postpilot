@@ -157,6 +157,8 @@ type recordingModels struct {
 	requests []llm.Request
 	// nativeEffort is what every model resolves with as ReasoningNativeEffort.
 	nativeEffort bool
+	// answer replaces the post answer every call returns, when set.
+	answer string
 }
 
 func (m *recordingModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
@@ -167,6 +169,9 @@ func (m *recordingModels) Complete(_ context.Context, _ llm.ModelRef, request ll
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.requests = append(m.requests, request)
+	if m.answer != "" {
+		return llm.Response{Text: m.answer}, nil
+	}
 	return llm.Response{Text: `{"title":"을지로 노포","summary":"요약","tags":["을지로","노포","맛집","식당"],"blocks":[{"type":"TEXT","content":"을지로 골목의 노포에 다녀왔다."}]}`}, nil
 }
 
@@ -367,5 +372,53 @@ func TestGenerationQualityRendersTheTicksInTheRunsLanguage(t *testing.T) {
 	}
 	if _, err := adapter.RulesFor(ctx, "alice", slug, ticked, generation.Language("fr")); err == nil {
 		t.Fatal("an unknown language was rendered")
+	}
+}
+
+// GEN-68, GEN-69: both storyline kinds run through the worker's own registrations and write the
+// post's storyline alone — no content, no revision, no status move.
+func TestStorylineJobsDrainIntoThePostsStorylineAlone(t *testing.T) {
+	models := &recordingModels{answer: `{"storyline":[{"text":"노포에 간 이유를 보여줍니다.","files":[]}]}`}
+	h := newDrainHarness(t, models)
+	saved := h.draft(t, "")
+	writer := llm.ModelRef{ProviderID: "p", ModelID: "writer"}.String()
+	id, err := h.generation.StartStoryline(h.ctx, generation.StartStorylineRequest{UserID: "alice", PostSlug: saved.Slug, WriteModel: writer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitDone(id)
+	if got := models.last(); got.MaxTokens != generation.StorylineCompletionBudget || !bytes.Equal(got.JSONSchema, generation.StorylineAnswerSchema()) {
+		t.Fatalf("the storyline call asked for %d tokens with schema %s", got.MaxTokens, got.JSONSchema)
+	}
+	written, err := h.posts.Get(h.ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written.Storyline == nil || len(written.Storyline.Paragraphs) != 1 || written.Storyline.Paragraphs[0].Text != "노포에 간 이유를 보여줍니다." {
+		t.Fatalf("storyline = %+v", written.Storyline)
+	}
+	if written.Content != nil || written.ContentRevision != saved.ContentRevision || written.Status != saved.Status {
+		t.Fatalf("a storyline job moved the post: content %v, revision %d, status %s", written.Content, written.ContentRevision, written.Status)
+	}
+
+	models.mu.Lock()
+	models.answer = `{"storyline":[{"text":"을지로 골목부터 이야기합니다.","files":[]}]}`
+	models.mu.Unlock()
+	id, err = h.generation.StartStorylineRevision(h.ctx, generation.StartStorylineRevisionRequest{
+		UserID: "alice", PostSlug: saved.Slug, Request: "골목부터 시작해 주세요", WriteModel: writer,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitDone(id)
+	revised, err := h.posts.Get(h.ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if revised.Storyline == nil || revised.Storyline.Paragraphs[0].Text != "을지로 골목부터 이야기합니다." || revised.Content != nil {
+		t.Fatalf("revised storyline = %+v", revised.Storyline)
+	}
+	if !strings.Contains(models.last().Messages[0].Parts[0].Text, "[수정 요청]\n골목부터 시작해 주세요") {
+		t.Fatalf("the request did not reach the prompt:\n%s", models.last().Messages[0].Parts[0].Text)
 	}
 }

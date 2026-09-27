@@ -784,6 +784,28 @@ func generatedAlready(p Post, content PostContent, language Language, annotation
 		reflect.DeepEqual(p.Storyline, annotations.Storyline)
 }
 
+// SetStoryline replaces the post's storyline with a storyline job's answer (GEN-68, GEN-69):
+// never an owner edit, and never the content, its baseline, the status or a revision. A
+// storyline with no paragraph is none. A published post is locked (POST-74).
+func (s *Service) SetStoryline(ctx context.Context, userID, slug string, storyline Storyline) error {
+	if _, err := s.writablePost(ctx, userID, slug); err != nil {
+		return err
+	}
+	var next *Storyline
+	if len(storyline.Paragraphs) > 0 {
+		normalized := storyline.normalized()
+		next = &normalized
+	}
+	updated, err := s.drafts.UpdateStoryline(ctx, slug, userID, next, s.now())
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return s.lockedOrGone(ctx, userID, slug, ErrNotFound)
+	}
+	return nil
+}
+
 // SaveContent optimistically saves only canonical content. The machine baseline is
 // intentionally absent from the store operation and remains immutable.
 func (s *Service) SaveContent(ctx context.Context, userID, slug string, content PostContent, expectedRevision int64) (Post, error) {

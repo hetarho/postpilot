@@ -123,6 +123,8 @@ type PostCatalog interface {
 type DraftWriter interface {
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
+	// UpdateStoryline replaces the storyline alone, nil for none (GEN-68, GEN-69).
+	UpdateStoryline(ctx context.Context, slug, userID string, storyline *Storyline, updatedAt time.Time) (bool, error)
 	// UpdateAttachmentTraces writes the observations and the storyline (nil for none) together:
 	// what a deleted attachment leaves behind goes in one statement (POST-18).
 	UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error)

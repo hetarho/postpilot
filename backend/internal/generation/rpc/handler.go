@@ -78,6 +78,41 @@ func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpi
 	return connect.NewResponse(&postpilotv1.StartRevisionResponse{JobId: id}), nil
 }
 
+// StartStoryline starts 스토리라인 먼저 or 다시 만들기 (GEN-68), answering the job id as
+// StartGeneration does.
+func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRequest]) (*connect.Response[postpilotv1.StartStorylineResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.service.StartStoryline(ctx, generation.StartStorylineRequest{
+		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
+		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
+		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
+	})
+	if err != nil {
+		return nil, toConnectError("start storyline", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartStorylineResponse{JobId: id}), nil
+}
+
+// StartStorylineRevision starts the storyline space's AI request (GEN-69).
+func (h *Handler) StartStorylineRevision(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRevisionRequest]) (*connect.Response[postpilotv1.StartStorylineRevisionResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.service.StartStorylineRevision(ctx, generation.StartStorylineRevisionRequest{
+		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Request: req.Msg.GetRequest(),
+		WriteModel: modelRefValue(req.Msg.GetWriteModel()),
+	})
+	if err != nil {
+		return nil, toConnectError("start storyline revision", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartStorylineRevisionResponse{JobId: id}), nil
+}
+
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -137,6 +172,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrContentLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
+	case errors.Is(err, generation.ErrStorylineMissing):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
 	case errors.Is(err, generation.ErrRevisionContentRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content is required for revision", postpilotv1.FailureReason_REVISION_CONTENT_REQUIRED, nil)
 	case errors.Is(err, generation.ErrVoiceDeleted):

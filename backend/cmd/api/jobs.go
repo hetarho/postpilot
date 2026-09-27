@@ -82,6 +82,25 @@ func registerJobs(c *contexts) {
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
+	q.Register(job.KindStoryline, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		slug := found.Subject(post.JobSubject)
+		if slug == "" {
+			return job.ErrInvalidTarget
+		}
+		return generationSvc.WriteStoryline(ctx, generation.StorylineJob{
+			UserID: found.UserID, PostSlug: slug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+			Payload: found.Payload,
+		}, generation.Progress(progress))
+	}))
+	q.Register(job.KindReviseStoryline, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		slug := found.Subject(post.JobSubject)
+		if slug == "" {
+			return job.ErrInvalidTarget
+		}
+		return generationSvc.ReviseStoryline(ctx, generation.StorylineRevisionJob{
+			UserID: found.UserID, PostSlug: slug, WriteModel: found.WriteModel, Payload: found.Payload,
+		}, generation.Progress(progress))
+	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 }
 

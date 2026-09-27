@@ -34,44 +34,9 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// change the prompt of work that is already waiting in the queue, and none of them is ever
 	// resolved afresh here (GEN-5, GEN-30, MEM-19, GEN-51).
 	post = options.onto(post)
-	// An empty observe model records that StartGeneration accepted a zero-photo input.
-	// Photos attached while the queued job waits belong to the next generation; without
-	// this snapshot bit the accepted job would fail later for lacking a vision model.
-	if job.ObserveModel == "" {
-		post.Images = nil
-	}
-	var observations []Observation
-	if len(post.Images) == 0 {
-		progress("observe", 0, 0)
-		if err := s.posts.SetObservations(ctx, post.UserID, post.Slug, nil); err != nil {
-			return fmt.Errorf("clear observations: %w", err)
-		}
-	} else {
-		observeModel, ok := parseModelRef(job.ObserveModel)
-		if !ok {
-			return ErrObserveModelRequired
-		}
-		// The payload's frozen decision, never a live snapshot: what this run observes was
-		// settled at enqueue and a photo attached since then belongs to the next generation.
-		targets, seed := frozenObserveSelection(post.Images, options.ObserveFiles, options.Observations)
-		if len(targets) == 0 {
-			// Every observation is being reused, so there is nothing to call a provider for
-			// and nothing to write: making no SetObservations call at all is what leaves the
-			// stored snapshot byte-identical. The stage is complete the moment it starts.
-			progress("observe", 0, 0)
-			observations = mergeObservations(post.Images, seed, nil)
-		} else {
-			observations, err = s.observe(ctx, post, targets, seed, observeModel, progress)
-			if err != nil {
-				return err
-			}
-		}
-		// The write stage is shown ONLY the photos this run has eyesight for. post.Images is
-		// read live at dequeue, so a photo confirmed between the enqueue and here is outside
-		// the frozen decision: it is not observed, and it must not reach the write prompt
-		// either — a filename with no observation is exactly the "write from a photo nothing
-		// has looked at" case this change exists to prevent. It belongs to the next run.
-		post.Images = observedImages(post.Images, observations)
+	post, observations, err := s.observeForRun(ctx, post, job.ObserveModel, options.ObserveFiles, options.Observations, progress)
+	if err != nil {
+		return err
 	}
 	writeModel, ok := parseModelRef(job.WriteModel)
 	if !ok {
@@ -100,6 +65,56 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	s.recordVersionSample(ctx, post.UserID, voiceID, answer.ProfileVersion, answer.Content)
 	progress("write", 1, 1)
 	return nil
+}
+
+// observeForRun is the observe step a generation and a storyline job share (GEN-8, GEN-10,
+// GEN-11), so reuse, provenance and the non-shrinking snapshot stay one implementation. It
+// returns the post with only the attachments the run has eyesight for, and their observations.
+//
+// observeModel, observeFiles and carried are the run's frozen decision: the row's observe model
+// and the payload's selection and snapshot, never a live read.
+func (s *Service) observeForRun(ctx context.Context, post PostInput, observeModel string, observeFiles *[]string, carried []Observation, progress Progress) (PostInput, []Observation, error) {
+	// An empty observe model records that the start accepted a zero-photo input. Photos
+	// attached while the queued job waits belong to the next run; without this snapshot bit
+	// the accepted job would fail later for lacking a vision model.
+	if observeModel == "" {
+		post.Images = nil
+	}
+	if len(post.Images) == 0 {
+		progress("observe", 0, 0)
+		if err := s.posts.SetObservations(ctx, post.UserID, post.Slug, nil); err != nil {
+			return post, nil, fmt.Errorf("clear observations: %w", err)
+		}
+		return post, nil, nil
+	}
+	model, ok := parseModelRef(observeModel)
+	if !ok {
+		return post, nil, ErrObserveModelRequired
+	}
+	// The payload's frozen decision, never a live snapshot: what this run observes was settled
+	// at enqueue and a photo attached since then belongs to the next run.
+	targets, seed := frozenObserveSelection(post.Images, observeFiles, carried)
+	var observations []Observation
+	if len(targets) == 0 {
+		// Every observation is being reused, so there is nothing to call a provider for and
+		// nothing to write: making no SetObservations call at all is what leaves the stored
+		// snapshot byte-identical. The stage is complete the moment it starts.
+		progress("observe", 0, 0)
+		observations = mergeObservations(post.Images, seed, nil)
+	} else {
+		var err error
+		observations, err = s.observe(ctx, post, targets, seed, model, progress)
+		if err != nil {
+			return post, nil, err
+		}
+	}
+	// The next stage is shown ONLY the attachments this run has eyesight for. post.Images is
+	// read live at dequeue, so one confirmed between the enqueue and here is outside the frozen
+	// decision: it is not observed, and it must not reach the prompt either — a filename with
+	// no observation is exactly the "write from a photo nothing has looked at" case. It belongs
+	// to the next run.
+	post.Images = observedImages(post.Images, observations)
+	return post, observations, nil
 }
 
 // cloneTemplate deep-copies the fact slice too: a frozen brief must not share backing storage

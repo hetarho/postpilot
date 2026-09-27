@@ -108,6 +108,34 @@ func boundedStoryline(raw json.RawMessage, attachments []string) []StorylinePara
 		slog.Warn("dropping a malformed generated storyline", "err", err)
 		return nil
 	}
+	return boundParagraphs(values, attachments)
+}
+
+// ParseStorylineAnswer reads a storyline job's answer (GEN-68, GEN-69): the storyline is the
+// whole output, so unlike the write's member a missing, malformed or empty one is bad output —
+// there is nothing else the job could keep. The paragraphs follow the write's bounds.
+func ParseStorylineAnswer(raw string, attachments []string) ([]StorylineParagraph, error) {
+	candidate, ok := jsonCandidate(raw)
+	if !ok {
+		return nil, badOutput(raw)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(candidate), &fields); err != nil || !hasFields(fields, "storyline") {
+		return nil, badOutput(raw)
+	}
+	var values []storylineParagraphJSON
+	if err := json.Unmarshal(fields["storyline"], &values); err != nil {
+		return nil, badOutput(raw)
+	}
+	paragraphs := boundParagraphs(values, attachments)
+	if len(paragraphs) == 0 {
+		return nil, badOutput(raw)
+	}
+	return paragraphs, nil
+}
+
+// boundParagraphs applies the storyline's bounds to decoded paragraphs; see boundedStoryline.
+func boundParagraphs(values []storylineParagraphJSON, attachments []string) []StorylineParagraph {
 	attached := make(map[string]bool, len(attachments))
 	for _, name := range attachments {
 		attached[name] = true

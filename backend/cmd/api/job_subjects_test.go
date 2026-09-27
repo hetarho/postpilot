@@ -5,6 +5,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
+	"github.com/postpilot/backend/internal/post"
 )
 
 // The rule this pins used to live inside the queue: which subject serializes which kind.
@@ -89,6 +90,9 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 		job.KindAnalyzeVoice:         false,
 		job.KindValidateVoiceProfile: false,
 		job.KindSeedVoice:            false,
+		// A storyline job writes the storyline, never the content (GEN-68, GEN-69).
+		job.KindStoryline:       false,
+		job.KindReviseStoryline: false,
 	} {
 		if got := postContentWork(kind); got != want {
 			t.Errorf("postContentWork(%q) = %v, want %v", kind, got, want)
@@ -97,6 +101,21 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, ""} {
 		if postContentWork(kind) {
 			t.Errorf("postContentWork(%q) = true", kind)
+		}
+	}
+}
+
+// GEN-68, GEN-69: a storyline job is post-targeted — one active job per post — and belongs to no
+// voice.
+func TestStorylineWorkIsPostTargetedAndOwnsNoVoice(t *testing.T) {
+	for _, kind := range []string{job.KindStoryline, job.KindReviseStoryline} {
+		if voiceOwnedKind(kind) {
+			t.Errorf("%s is voice-owned", kind)
+		}
+		subjects, guards := postVoiceWork(kind, "alice", "post", "")
+		want := job.Subject{Dimension: post.JobSubject, ID: "post"}
+		if len(subjects) != 1 || subjects[0] != want || len(guards) != 1 || guards[0].Subject != want || guards[0].Filter != (job.Filter{UserID: "alice"}) {
+			t.Errorf("%s: subjects %v guards %v", kind, subjects, guards)
 		}
 	}
 }

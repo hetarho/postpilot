@@ -51,3 +51,23 @@ func TestRevisionPricingUsesTheLargerFrozenLength(t *testing.T) {
 		t.Fatalf("revision calls = %+v, want the 6000-character budget", calls)
 	}
 }
+
+// QUOTA-13: a storyline job is priced over its frozen set — the observe calls it will make and
+// one storyline call at its own budget — and the storyline request as that one call.
+func TestStorylinePricingCallsUseTheBudgetsTheCallsWillSend(t *testing.T) {
+	calls := storylinePricingCalls(generation.StartStorylineRequest{
+		ObserveModel: "openrouter/shared", WriteModel: "openrouter/writer", ObserveCalls: 2,
+	}, testCompletionBudget())
+	if len(calls) != 2 || calls[0].Count != 2 || calls[0].CompletionTokens != 1024 ||
+		calls[1].Ref != "openrouter/writer" || calls[1].Count != 1 || calls[1].CompletionTokens != generation.StorylineCompletionBudget {
+		t.Fatalf("storyline calls = %+v", calls)
+	}
+	reused := storylinePricingCalls(generation.StartStorylineRequest{ObserveModel: "openrouter/shared", WriteModel: "openrouter/writer"}, testCompletionBudget())
+	if len(reused) != 1 || reused[0].Ref != "openrouter/writer" {
+		t.Fatalf("a storyline reusing every observation = %+v, want the one call", reused)
+	}
+	request := storylineRevisionPricingCalls(generation.StartStorylineRevisionRequest{WriteModel: "openrouter/writer"})
+	if len(request) != 1 || request[0].Count != 1 || request[0].CompletionTokens != generation.StorylineCompletionBudget {
+		t.Fatalf("storyline request calls = %+v", request)
+	}
+}

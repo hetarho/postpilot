@@ -251,7 +251,37 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			Events: observation.Events, Speech: observation.Speech,
 		})
 	}
+	if found.Storyline != nil {
+		input.Storyline = generationStoryline(*found.Storyline)
+	}
 	return input, nil
+}
+
+// generationStoryline hands generation the stored storyline's paragraphs and what it was made
+// with; whether the owner edited it is the post's own business.
+func generationStoryline(storyline post.Storyline) *generation.Storyline {
+	out := &generation.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...)}
+	for _, paragraph := range storyline.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, generation.StorylineParagraph{
+			Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
+		})
+	}
+	return out
+}
+
+// postStoryline is the other direction, for a write's or a storyline job's answer.
+func postStoryline(storyline generation.Storyline) post.Storyline {
+	out := post.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...)}
+	for _, paragraph := range storyline.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, post.StorylineParagraph{
+			Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
+		})
+	}
+	return out
+}
+
+func (a generationPosts) SetStoryline(ctx context.Context, userID, slug string, storyline generation.Storyline) error {
+	return generationPostError(a.service.SetStoryline(ctx, userID, slug, postStoryline(storyline)))
 }
 
 func (a generationPosts) SetObservations(ctx context.Context, userID, slug string, observations []generation.Observation) error {
@@ -285,13 +315,9 @@ func postAnnotations(annotations *generation.WriteAnnotations) *post.WriteAnnota
 		return nil
 	}
 	out := &post.WriteAnnotations{Nouns: append([]string(nil), annotations.Nouns...)}
-	if story := annotations.Storyline; story != nil {
-		out.Storyline = &post.Storyline{MadeWith: append([]string(nil), story.MadeWith...)}
-		for _, paragraph := range story.Paragraphs {
-			out.Storyline.Paragraphs = append(out.Storyline.Paragraphs, post.StorylineParagraph{
-				Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
-			})
-		}
+	if annotations.Storyline != nil {
+		storyline := postStoryline(*annotations.Storyline)
+		out.Storyline = &storyline
 	}
 	return out
 }
@@ -371,6 +397,77 @@ func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.
 		return "", generation.ErrVoiceDeleted
 	}
 	return id, err
+}
+
+// EnqueueStoryline routes a storyline job (GEN-68). It is post-targeted — the one active job per
+// post applies — and carries no voice: the prompt has none, so a voice change cannot make its
+// answer land in the wrong profile.
+func (a generationJobs) EnqueueStoryline(ctx context.Context, request generation.StartStorylineRequest, payload []byte) (string, error) {
+	calls := map[string]int{}
+	if request.ObserveModel != "" {
+		// Stated even when ZERO, as for a generation: the count is per model across the job.
+		total := request.ObserveCalls
+		if request.ObserveModel == request.WriteModel {
+			total++
+		}
+		calls[request.ObserveModel] = total
+	}
+	subjects, guards := postVoiceWork(job.KindStoryline, request.UserID, request.PostSlug, "")
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindStoryline, UserID: request.UserID, Subjects: subjects, Guards: guards,
+		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
+		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
+		CallCounts: calls, PricingCalls: storylinePricingCalls(request, a.budget),
+	})
+	return id, generationEnqueueError(err)
+}
+
+// EnqueueStorylineRevision routes the storyline space's AI request (GEN-69): one call, no
+// observation.
+func (a generationJobs) EnqueueStorylineRevision(ctx context.Context, request generation.StartStorylineRevisionRequest, payload []byte) (string, error) {
+	subjects, guards := postVoiceWork(job.KindReviseStoryline, request.UserID, request.PostSlug, "")
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindReviseStoryline, UserID: request.UserID, Subjects: subjects, Guards: guards,
+		WriteModel: request.WriteModel, TargetLanguage: request.TargetLanguage.String(), Payload: payload,
+		PricingCalls: storylineRevisionPricingCalls(request),
+	})
+	return id, generationEnqueueError(err)
+}
+
+func generationEnqueueError(err error) error {
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return generation.ErrVoiceDeleted
+	}
+	return err
+}
+
+// storylinePricingCalls prices a storyline job over its frozen set, as a generation is priced
+// (QUOTA-13): the observe calls it will make, then one storyline call at its own budget.
+func storylinePricingCalls(request generation.StartStorylineRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
+	calls := make([]job.PlannedCall, 0, 2)
+	if request.ObserveModel != "" && request.ObserveCalls > 0 {
+		calls = append(calls, job.PlannedCall{
+			Ref: request.ObserveModel, Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
+		})
+	}
+	if request.WriteModel != "" {
+		calls = append(calls, job.PlannedCall{
+			Ref: request.WriteModel, Count: 1, CompletionTokens: generation.StorylineCompletionBudget,
+		})
+	}
+	return calls
+}
+
+// storylineRevisionPricingCalls prices the storyline request: one storyline call.
+func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequest) []job.PlannedCall {
+	if request.WriteModel == "" {
+		return nil
+	}
+	return []job.PlannedCall{{Ref: request.WriteModel, Count: 1, CompletionTokens: generation.StorylineCompletionBudget}}
 }
 
 func generationPricingCalls(request generation.StartRequest, budget config.LLMCompletionBudget) []job.PlannedCall {

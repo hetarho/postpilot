@@ -230,6 +230,7 @@ export const appFailureSpecs = {
   GENERATION_TARGET_LENGTH_INVALID: {},
   POST_TAG_COUNT_INVALID: {},
   POST_TARGET_LENGTH_INVALID: { required: ['min', 'max'] },
+  POST_STORYLINE_MISSING: {},
   POST_PHOTO_MISSING: { required: ['count'] },
   GENERATION_ALREADY_RUNNING: { optional: ['active_job_id'] },
   GENERATION_VOICE_MISMATCH: {},

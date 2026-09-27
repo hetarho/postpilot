@@ -18,7 +18,10 @@ var (
 	ErrRevisionInstructionRequired  = errors.New("a revision instruction is required")
 	ErrRevisionInstructionTooLong   = errors.New("the revision instruction is too long")
 	ErrRevisionContentRequired      = errors.New("generated content is required before revision")
-	ErrVoiceRequired                = errors.New("the post has no voice")
+	// ErrStorylineMissing: the storyline request rewrites the stored storyline, so a post that
+	// holds none has nothing to ask about (GEN-69).
+	ErrStorylineMissing = errors.New("the post holds no storyline to revise")
+	ErrVoiceRequired    = errors.New("the post has no voice")
 	// ErrVoiceDeleted refuses AI work for a post whose voice is a tombstone; the post stays
 	// readable and exportable, and restoring the voice or reassigning the post lifts it.
 	ErrVoiceDeleted = errors.New("the post's voice is deleted; restore it or assign another voice first")

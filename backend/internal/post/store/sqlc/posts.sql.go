@@ -732,3 +732,30 @@ func (q *Queries) UpdatePostObservations(ctx context.Context, arg UpdatePostObse
 	}
 	return result.RowsAffected()
 }
+
+const updatePostStoryline = `-- name: UpdatePostStoryline :execrows
+UPDATE posts SET storyline = ?1, updated_at = ?2
+WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+`
+
+type UpdatePostStorylineParams struct {
+	Storyline sql.NullString
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+// A storyline job's answer replaces the post's storyline and nothing else: the content, the
+// machine baseline, the status and the revisions stay (GEN-68, GEN-69). NULL is none.
+func (q *Queries) UpdatePostStoryline(ctx context.Context, arg UpdatePostStorylineParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updatePostStoryline,
+		arg.Storyline,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

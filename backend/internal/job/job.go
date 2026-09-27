@@ -19,6 +19,11 @@ const (
 	KindValidateVoiceProfile = "validate_voice_profile"
 	KindSeedVoice            = "seed_voice"
 	KindExtractMemory        = "extract_memory"
+	// KindStoryline writes a post's storyline from its material (스토리라인 먼저, 다시 만들기);
+	// KindReviseStoryline rewrites it from the owner's request. Neither writes content (GEN-68,
+	// GEN-69).
+	KindStoryline       = "storyline"
+	KindReviseStoryline = "revise_storyline"
 
 	StatusQueued    = "queued"
 	StatusRunning   = "running"

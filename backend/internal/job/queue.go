@@ -31,7 +31,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	if input.NonMetered && input.DeferHold {
 		return "", ErrInvalidTarget
 	}
-	if (input.Kind == KindGenerate || input.Kind == KindRevise) && input.TargetLanguage == "" {
+	if languageRequired(input.Kind) && input.TargetLanguage == "" {
 		return "", fmt.Errorf("enqueue job: target language is required for %s", input.Kind)
 	}
 	if input.TargetLanguage != "" && input.TargetLanguage != "ko" && input.TargetLanguage != "en" {
@@ -120,4 +120,15 @@ func (q *Queue) activeForInput(ctx context.Context, input NewJob) (*Job, error) 
 		}
 	}
 	return nil, nil
+}
+
+// languageRequired is the work that writes in a frozen target language, so a row without one is
+// refused at enqueue rather than guessed at run time.
+func languageRequired(kind string) bool {
+	switch kind {
+	case KindGenerate, KindRevise, KindStoryline, KindReviseStoryline:
+		return true
+	default:
+		return false
+	}
 }

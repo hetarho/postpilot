@@ -40,6 +40,12 @@ service PostService {
 service GenerationService {
   rpc StartGeneration(StartGenerationRequest) returns (StartGenerationResponse) {}
   rpc StartRevision(StartRevisionRequest) returns (StartRevisionResponse) {}
+  // 스토리라인 먼저 and 다시 만들기: a durable job that observes like a generation and writes the
+  // post's storyline and no content (GEN-68).
+  rpc StartStoryline(StartStorylineRequest) returns (StartStorylineResponse) {}
+  // The storyline space's AI request: a durable job that rewrites the stored storyline from the
+  // owner's request (GEN-69).
+  rpc StartStorylineRevision(StartStorylineRevisionRequest) returns (StartStorylineRevisionResponse) {}
   rpc GetGeneration(GetGenerationRequest) returns (GetGenerationResponse) {}
 }
 
@@ -328,6 +334,30 @@ message StartRevisionRequest {
 }
 
 message StartRevisionResponse {
+  string job_id = 1;
+}
+
+// The models are the picker's, as for StartGeneration; reobserve is the re-observation
+// picker's answer, with the same presence semantics (GEN-8, GEN-9).
+message StartStorylineRequest {
+  string post_slug = 1;
+  ReobserveSelection reobserve = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+
+message StartStorylineResponse {
+  string job_id = 1;
+}
+
+message StartStorylineRevisionRequest {
+  string post_slug = 1;
+  // Trimmed, 1…500 characters (GEN-69).
+  string request = 2;
+  ModelRef write_model = 3;
+}
+
+message StartStorylineRevisionResponse {
   string job_id = 1;
 }
 
