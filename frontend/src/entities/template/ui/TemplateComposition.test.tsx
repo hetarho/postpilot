@@ -54,19 +54,19 @@ describe('the composition editor', () => {
     expect(summaries()).toEqual([
       'AI가 쓰는 글인트로를 씁니다',
       '고정 문구지도는 아래에',
-      '사진마다 반복사진마다 되풀이',
-      '사진사진 1장',
+      '사진마다 반복스토리라인의 사진 묶음마다 되풀이합니다',
+      '사진한 줄에 1장',
       'AI가 쓰는 글이 사진에 대한 설명',
       'AI가 쓰는 글총평 및 재방문 의사',
     ])
     // A9: nothing of the grammar reaches the screen.
-    for (const syntax of ['<write', '<repeat', '<slot', '<note', 'each="photo"', 'count="']) {
+    for (const syntax of ['<write', '<repeat', '<slot', 'each="photo"', 'count="']) {
       expect(
         screen.getByRole('group', { name: '블록 추가' }).closest('div')?.textContent,
       ).not.toContain(syntax)
     }
     // No fields are open, so no editable control is mounted yet.
-    expect(screen.queryByLabelText('무엇을 쓸지')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('이 자리에 오는 것')).not.toBeInTheDocument()
   })
 
   // A11: an untouched composition emits the byte-identical body it was given.
@@ -81,11 +81,11 @@ describe('the composition editor', () => {
     render(<Editor initial={REVIEW} />)
 
     await user.click(toggle(0))
-    expect(screen.getByLabelText('무엇을 쓸지')).toHaveValue('인트로를 씁니다')
+    expect(screen.getByLabelText('이 자리에 오는 것')).toHaveValue('인트로를 씁니다')
 
     await user.click(toggle(1))
     // The first row's field is gone: at most one is open.
-    expect(screen.queryByLabelText('무엇을 쓸지')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('이 자리에 오는 것')).not.toBeInTheDocument()
     expect(screen.getByLabelText('들어갈 문구')).toHaveValue('지도는 아래에')
 
     await user.clear(screen.getByLabelText('들어갈 문구'))
@@ -100,7 +100,7 @@ describe('the composition editor', () => {
     render(<Editor initial={REVIEW} />)
 
     await user.click(toggle(3))
-    const value = screen.getByRole('spinbutton', { name: '가로로 놓을 사진 수' })
+    const value = screen.getByRole('spinbutton', { name: '한 줄에 놓을 사진 수' })
     expect(value).toHaveAttribute('aria-valuenow', '1')
     expect(value).toHaveAttribute('aria-valuemin', '1')
     expect(value).toHaveAttribute('aria-valuemax', '4')
@@ -110,10 +110,10 @@ describe('the composition editor', () => {
     await user.click(screen.getByRole('button', { name: '늘리기' }))
     expect(body()).toContain('<slot kind="photo" count="2"/>')
     // The collapsed summary says they stand side by side, which is the point of the count.
-    expect(summaries()[3]).toBe('사진사진 2장 가로로')
+    expect(summaries()[3]).toBe('사진한 줄에 2장')
     // And the repeat's help states what one iteration now takes.
     await user.click(toggle(2))
-    expect(screen.getByText(/한 번 되풀이할 때 사진 2장을 씁니다/)).toBeInTheDocument()
+    expect(screen.getByText(/한 번 되풀이할 때 사진 자리 2장이 있어요/)).toBeInTheDocument()
 
     await user.click(toggle(3))
     await user.click(screen.getByRole('button', { name: '늘리기' }))
@@ -157,8 +157,8 @@ describe('the composition editor', () => {
     const marked = rows().findIndex((row) => within(row).queryByText('여기에 추가돼요') !== null)
     expect(marked).toBe(0)
 
-    await user.click(paletteButton('AI에게만 하는 말'))
-    expect(summaries()[1]).toContain('AI에게만 하는 말')
+    await user.click(paletteButton('고정 문구'))
+    expect(summaries()[1]).toContain('고정 문구')
   })
 
   // A7 second half: the aim inside a repeat puts the block inside it.
@@ -243,7 +243,7 @@ describe('the composition editor', () => {
     expect(rows()).toHaveLength(1)
     expect(body()).toBe('')
 
-    await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상')
+    await user.type(screen.getByLabelText('이 자리에 오는 것'), '첫인상')
     expect(body()).toBe('<write>첫인상</write>')
   })
 
@@ -273,8 +273,8 @@ describe('the composition editor', () => {
     expect(screen.getByText('여기에 추가돼요')).toBeInTheDocument()
     expect(rows().some((row) => within(row).queryByText('여기에 추가돼요') !== null)).toBe(false)
 
-    await user.click(paletteButton('AI에게만 하는 말'))
-    expect(summaries()[summaries().length - 1]).toContain('AI에게만 하는 말')
+    await user.click(paletteButton('고정 문구'))
+    expect(summaries()[summaries().length - 1]).toContain('고정 문구')
   })
 
   // A10: a body the parser cannot read shows no grammar and offers one action.
@@ -327,7 +327,9 @@ describe('데이터 받기', () => {
   it('is offered on the two rows whose text a post can decide, and on no other kind', async () => {
     render(
       <Editor
-        initial={'<write>인트로</write>\n고정 문구\n<slot kind="photo"/>\n<note>메모</note>'}
+        initial={
+          '<write>인트로</write>\n고정 문구\n<slot kind="photo"/>\n<repeat each="photo"><slot kind="photo"/></repeat>'
+        }
       />,
     )
     for (const [index, offered] of [
@@ -355,7 +357,7 @@ describe('데이터 받기', () => {
     await userEvent.type(screen.getByLabelText('입력란 제목'), '총평 별점')
     expect(body()).toBe('<ask label="총평 별점">별점과 총평</ask>')
     // The instruction is still editable beside the title.
-    expect(screen.getByLabelText('무엇을 쓸지')).toHaveValue('별점과 총평')
+    expect(screen.getByLabelText('이 자리에 오는 것')).toHaveValue('별점과 총평')
   })
 
   it('replaces a 고정 문구 row text with the title, and restores it when switched off', async () => {
@@ -449,7 +451,7 @@ describe('the title area', () => {
     expect(text.tagName).toBe('INPUT')
     await user.type(text, '방문 후기')
     await user.click(titlePalette().getByRole('button', { name: /^AI가 쓰는 글/ }))
-    await user.type(screen.getByLabelText('무엇을 쓸지'), '메뉴를 한 줄로')
+    await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴를 한 줄로')
 
     expect(body()).toBe('방문 후기 <write>메뉴를 한 줄로</write>')
     expect(
@@ -469,7 +471,7 @@ describe('the title area', () => {
 
   it('names the title when it cannot be read, and clears only it', async () => {
     const user = userEvent.setup()
-    render(<TitleEditor initial={'<note>톤</note>'} />)
+    render(<TitleEditor initial={'<repeat each="photo"><write>톤</write></repeat>'} />)
     expect(screen.getByRole('alert')).toHaveTextContent('제목 형식을 읽을 수 없어요.')
     await user.click(screen.getByRole('button', { name: '제목 비우고 다시 만들기' }))
     expect(body()).toBe('')

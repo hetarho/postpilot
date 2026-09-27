@@ -3,7 +3,7 @@
     "The ONE grammar fixture. Both parsers read this file: Go (internal/template/grammar_test.go)",
     "and TypeScript (frontend/src/entities/template/lib/grammar.test.ts). A new grammar rule lands",
     "here first — this file is the only mechanism that keeps two implementations of one grammar",
-    "honest. Node shapes: literal{raw} · write{text} · slot{kind,label,count} · note{text} ·",
+    "honest. Node shapes: literal{raw} · write{text} · slot{kind,label,count} ·",
     "repeat{each,children} · ask{label,text}. Every ok case is also asserted to serialize back to",
     "`body` byte-exactly.",
     "`photoRowMax` below is the ceiling BOTH harnesses must parse with — never the deployment's",
@@ -95,14 +95,12 @@
       ]
     },
     {
-      "name": "note node",
+      "name": "a note is an unknown tag",
       "body": "<note>존댓말을 유지하세요</note>",
-      "nodes": [
-        {
-          "t": "note",
-          "text": "존댓말을 유지하세요"
-        }
-      ]
+      "error": {
+        "line": 1,
+        "reason": "unknown_tag"
+      }
     },
     {
       "name": "repeat over photos with children",
@@ -340,7 +338,7 @@
     },
     {
       "name": "mismatched close",
-      "body": "<write>a</note>",
+      "body": "<write>a</ask>",
       "error": {
         "line": 1,
         "reason": "unexpected_close"
@@ -371,8 +369,8 @@
       }
     },
     {
-      "name": "an attribute note does not name",
-      "body": "<note to=\"ai\">짧게</note>",
+      "name": "an attribute an instructing data field does not name",
+      "body": "<ask label=\"총평\" to=\"ai\">짧게</ask>",
       "error": {
         "line": 1,
         "reason": "malformed_tag"
@@ -499,14 +497,6 @@
       }
     },
     {
-      "name": "empty note",
-      "body": "<note> </note>",
-      "error": {
-        "line": 1,
-        "reason": "empty_note"
-      }
-    },
-    {
       "name": "nested write is not allowed",
       "body": "<write>a <write>b</write></write>",
       "error": {
@@ -539,11 +529,11 @@
       }
     },
     {
-      "name": "an ideographic space alone is an empty note on both sides",
-      "body": "<note>　</note>",
+      "name": "an ideographic space alone is an empty write on both sides",
+      "body": "<write>　</write>",
       "error": {
         "line": 1,
-        "reason": "empty_note"
+        "reason": "empty_write"
       }
     },
     {
@@ -831,8 +821,8 @@
       }
     },
     {
-      "name": "the grammar's own tag inside note text",
-      "body": "<note>톤 <slot kind=\"photo\"/></note>",
+      "name": "the grammar's own tag inside data-field text",
+      "body": "<ask label=\"총평\">톤 <slot kind=\"photo\"/></ask>",
       "error": {
         "line": 1,
         "reason": "malformed_tag"
@@ -847,8 +837,8 @@
       }
     },
     {
-      "name": "an unknown opening tag inside note text",
-      "body": "<note>짧게 <heading>제목</note>",
+      "name": "an unknown opening tag inside data-field text",
+      "body": "<ask label=\"총평\">짧게 <heading>제목</ask>",
       "error": {
         "line": 1,
         "reason": "malformed_tag"
@@ -937,8 +927,8 @@
       }
     },
     {
-      "name": "a note in the title area",
-      "titleArea": "<note>짧게</note>",
+      "name": "a photo row in the title area",
+      "titleArea": "<slot kind=\"photo\" count=\"2\"/>",
       "body": "",
       "error": {
         "line": 1,
@@ -958,7 +948,7 @@
     },
     {
       "name": "the place outranks an unknown attribute in the title area",
-      "titleArea": "<note tone=\"x\">짧게</note>",
+      "titleArea": "<repeat each=\"photo\" tone=\"x\"><write>짧게</write></repeat>",
       "body": "",
       "error": {
         "line": 1,
@@ -1008,7 +998,7 @@
     },
     {
       "name": "the title area is read before the body",
-      "titleArea": "<note>톤</note>",
+      "titleArea": "<repeat each=\"photo\"><write>톤</write></repeat>",
       "body": "<writer>",
       "error": {
         "line": 1,

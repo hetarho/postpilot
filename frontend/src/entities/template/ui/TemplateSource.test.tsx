@@ -168,9 +168,7 @@ describe('the title area source', () => {
     )
     const field = screen.getByLabelText('제목 원문')
     const message = screen.getByRole('alert')
-    expect(message).toHaveTextContent(
-      '1번째 줄: 사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
-    )
+    expect(message).toHaveTextContent('1번째 줄: 사진·사진마다 반복은 제목에 넣을 수 없어요')
     expect(message).toHaveAttribute('id', 'template-title-source-error')
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(field).toHaveAttribute('aria-describedby', message.id)

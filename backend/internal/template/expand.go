@@ -123,10 +123,6 @@ func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
 			out.WriteString("<write>")
 			out.WriteString(Decode(node.Text))
 			out.WriteString("</write>")
-		case NodeNote:
-			out.WriteString("<note>")
-			out.WriteString(Decode(node.Text))
-			out.WriteString("</note>")
 		case NodeAsk:
 			// Only resolved fields reach here — resolveAsks dropped the rest. The verbatim
 			// flavor IS literal text on the page, so it renders as exactly that; the write

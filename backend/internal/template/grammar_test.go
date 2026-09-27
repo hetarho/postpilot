@@ -165,7 +165,7 @@ func assertNodes(t *testing.T, got []Node, want []fixtureNode, path string) {
 			if got[i].Text != want[i].Raw {
 				t.Fatalf("%s: literal %q, want %q", at, got[i].Text, want[i].Raw)
 			}
-		case "write", "note":
+		case "write":
 			if Decode(got[i].Text) != want[i].Text {
 				t.Fatalf("%s: text %q, want %q", at, Decode(got[i].Text), want[i].Text)
 			}

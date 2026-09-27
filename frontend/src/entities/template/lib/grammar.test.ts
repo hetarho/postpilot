@@ -61,7 +61,7 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
     const actual = got[i]
     const at = `${path}[${i}]`
     if (expected.t === 'literal') expect(actual.text, at).toBe(expected.raw)
-    if (expected.t === 'write' || expected.t === 'note') {
+    if (expected.t === 'write') {
       expect(decode(actual.text ?? ''), at).toBe(expected.text)
     }
     if (expected.t === 'slot') {
@@ -129,7 +129,10 @@ describe('template grammar against the shared fixtures', () => {
   it('names the area a failure sits in, a body on its own included', () => {
     const body = parse('<writer>', options)
     expect(body.ok ? null : body.failure.area).toBe('body')
-    const title = parse('<note>톤</note>', { ...options, titleArea: true })
+    const title = parse('<repeat each="photo"><write>톤</write></repeat>', {
+      ...options,
+      titleArea: true,
+    })
     expect(title.ok ? null : title.failure).toEqual({
       line: 1,
       reason: 'not_in_title',
@@ -283,7 +286,9 @@ describe('the data fields a template asks for', () => {
   })
 
   it('asks for nothing when the title area does not parse', () => {
-    expect(templateAskFields('<note>톤</note>', '<ask label="총평"/>', options)).toEqual([])
+    expect(
+      templateAskFields('<repeat each="photo"></repeat>', '<ask label="총평"/>', options),
+    ).toEqual([])
   })
 
   it('asks for nothing when the body does not parse', () => {

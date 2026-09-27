@@ -12,7 +12,6 @@ import {
   isCompleteBlock,
   newBlock,
   outline,
-  photoSummaryKey,
   positionAfter,
   repeatPhotoCount,
   reorder,
@@ -198,13 +197,6 @@ describe('the collapsed outline', () => {
     expect(blockKindKey({ id: 'x', kind: 'photo', count: 1 })).toBe('photo')
     expect(blockKindKey({ id: 'y', kind: 'write', text: '' })).toBe('write')
   })
-
-  // One photo reads as a photo; more than one has to say they stand side by side, which is the
-  // whole point of the count (TMPL-38).
-  it('picks the summary key by whether the photos stand side by side', () => {
-    expect(photoSummaryKey(1)).toBe('composition.summary.photo')
-    expect(photoSummaryKey(2)).toBe('composition.summary.photoRow')
-  })
 })
 
 describe('insertion at a position', () => {
@@ -219,9 +211,9 @@ describe('insertion at a position', () => {
 
   // A7: the toolbar's block lands where the screen said it would.
   it('inserts at the top level and inside a repeat', () => {
-    const top = insertAt(composition, { parentId: null, index: 1 }, 'note')
-    expect(top.blocks.map((block) => block.kind)).toEqual(['write', 'note', 'repeat'])
-    expect(top.inserted?.kind).toBe('note')
+    const top = insertAt(composition, { parentId: null, index: 1 }, 'text')
+    expect(top.blocks.map((block) => block.kind)).toEqual(['write', 'text', 'repeat'])
+    expect(top.inserted?.kind).toBe('text')
 
     const inside = insertAt(composition, { parentId: 'b', index: 1 }, 'write')
     const repeat = inside.blocks[1]
@@ -392,7 +384,7 @@ describe('the title area', () => {
   it('offers and admits only AI가 쓰는 글 and 고정 문구', () => {
     expect(TITLE_AREA_PALETTE).toEqual(['write', 'text'])
     const end = endPosition([])
-    for (const kind of ['photo', 'repeat', 'note'] as const) {
+    for (const kind of ['photo', 'repeat'] as const) {
       expect(canInsert(kind, end, 'title_area')).toBe(false)
       expect(insertAt([], end, kind, 'title_area')).toEqual({ blocks: [], inserted: null })
       // The body keeps them.

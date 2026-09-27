@@ -332,7 +332,7 @@ func TestCreateStoresATitleAreaAndRefusesOneThatDoesNotParse(t *testing.T) {
 		reason string
 	}{
 		"a photo position": {"[후기]\n<slot kind=\"photo\"/>", 2, ReasonNotInTitle},
-		"a note":           {"<note>메모</note>", 1, ReasonNotInTitle},
+		"a repeat":         {"<repeat each=\"photo\"><write>메모</write></repeat>", 1, ReasonNotInTitle},
 		"unclosed":         {"<write>제목", 1, ReasonUnclosedTag},
 	} {
 		_, err := svc.Create(ctx, "alice", Authored{Name: "거부 " + name, Body: okBody, TitleArea: tc.title})
@@ -380,7 +380,7 @@ func TestUpdateChecksTheTitleAreaAgainstTheStoredBody(t *testing.T) {
 	if !errors.As(err, &parseErr) || parseErr.Reason != ReasonDuplicateAskLabel || parseErr.Area != AreaBody || parseErr.Line != 2 {
 		t.Fatalf("a title reusing a stored body label = %v", err)
 	}
-	notInTitle := "<note>메모</note>"
+	notInTitle := "<repeat each=\"photo\"><write>메모</write></repeat>"
 	if _, err := svc.Update(ctx, "alice", created.ID, Patch{TitleArea: &notInTitle}); !errors.As(err, &parseErr) || parseErr.Area != AreaTitle {
 		t.Fatalf("a title that does not parse = %v", err)
 	}

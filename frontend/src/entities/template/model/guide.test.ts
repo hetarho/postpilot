@@ -12,7 +12,7 @@ import { GUIDE_EXAMPLE_BODY, formatGuide } from './guide'
 
 afterEach(() => initializeI18n('ko'))
 
-/** The six constructs a person authors today, as the guide has to teach them. Derived from the
+/** The five constructs a person authors today, as the guide has to teach them. Derived from the
  *  grammar rather than from the guide's prose (TMPL-41): when TMPL-18 changes, this list
  *  and the shared fixture both fail until the guide follows. */
 const CONSTRUCTS = [
@@ -22,19 +22,26 @@ const CONSTRUCTS = [
   'count="',
   '<repeat each="photo">',
   '</repeat>',
-  '<note>',
-  '</note>',
   '<ask label="',
   '</ask>',
 ]
 
-/** Retired in r2 and never taught again: a guide that mentioned one would have an outside AI
- *  write a body this app parses but the builder immediately rewrites (TMPL-37).
+/** Retired and never taught again: a guide that mentioned the place/link slots would have an
+ *  outside AI write a body this app parses but the builder immediately rewrites (TMPL-37), and
+ *  one that taught `<note>` would have it write a body this app refuses (TMPL-18).
  *
  *  The retired attribute is the SLOT's `label`, which is what TMPL-18 retired along with the
  *  place and link kinds — not the word, which `ask` now carries as a live attribute of a live
  *  construct (TMPL-43). So the check is scoped to where a retired label could appear. */
-const RETIRED = ['place', 'link', '<slot kind="place', '<slot kind="link', 'label="이름']
+const RETIRED = [
+  'place',
+  'link',
+  '<slot kind="place',
+  '<slot kind="link',
+  'label="이름',
+  '<note',
+  '</note',
+]
 
 describe.each(['ko', 'en'] as const)('the format guide in %s', (language) => {
   const guide = () => {
@@ -66,9 +73,9 @@ describe.each(['ko', 'en'] as const)('the format guide in %s', (language) => {
 
   // TMPL-19, TMPL-20: the refusals an outside AI would otherwise walk into — a tag inside text,
   // and an attribute a tag does not name or gives twice.
-  it('says write, note and ask hold text only and each tag takes only its own attributes', () => {
+  it('says write and ask hold text only and each tag takes only its own attributes', () => {
     const text = guide()
-    expect(text).toMatch(language === 'ko' ? /write, note, ask 안에는 글만/ : /hold text only/)
+    expect(text).toMatch(language === 'ko' ? /write, ask 안에는 글만/ : /hold text only/)
     expect(text).toMatch(language === 'ko' ? /위에 나온 속성만/ : /only the attributes shown/)
   })
 

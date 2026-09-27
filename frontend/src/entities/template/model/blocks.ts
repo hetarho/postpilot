@@ -18,7 +18,6 @@ export type BuilderBlock =
   | { id: string; kind: 'write'; text: string; ask?: string }
   | { id: string; kind: 'text'; text: string; ask?: string }
   | { id: string; kind: 'photo'; count: number }
-  | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'repeat'; children: BuilderBlock[] }
 
 /** 데이터 받기 on a row: `ask` holds the TITLE the post's author is asked under (TMPL-44).
@@ -31,7 +30,7 @@ export type BuilderBlock =
  *  something" would collapse the field the moment someone cleared it to retype it, and an empty
  *  title simply keeps the row out of the body the way an empty `<write>` already does. */
 /** The two rows whose text a post can decide: an AI가 쓰는 글 and a 고정 문구 (TMPL-44). A
- *  사진 holds an attachment and an AI에게만 하는 말 reaches no reader, so neither can ask. */
+ *  사진 holds an attachment, so it cannot ask. */
 export type AskableBlock = Extract<BuilderBlock, { kind: 'write' | 'text' }>
 
 export function askTitle(block: BuilderBlock): string {
@@ -48,12 +47,12 @@ export function asksForData(block: BuilderBlock): boolean {
  *  link positions, the whole vocabulary of blocks there is. A thing the author fills in later
  *  is written as fixed text in their own words (TMPL-37), so the builder authors no slot
  *  at all; a stored one is READ as fixed text on the way in. */
-export type PaletteKind = 'write' | 'text' | 'photo' | 'repeat' | 'note'
+export type PaletteKind = 'write' | 'text' | 'photo' | 'repeat'
 
 export type BuilderBlockKind = PaletteKind
 
 /** What a title area may hold (TMPL-50): words an AI writes and words fixed by the template, each
- *  able to ask. A photo, a repeat or a note has no place in a post's title. */
+ *  able to ask. A photo or a repeat has no place in a post's title. */
 export const TITLE_AREA_PALETTE: readonly PaletteKind[] = ['write', 'text']
 
 let sequence = 0
@@ -71,8 +70,6 @@ export function newBlock(kind: BuilderBlockKind): BuilderBlock {
       return { id, kind: 'write', text: '' }
     case 'text':
       return { id, kind: 'text', text: '' }
-    case 'note':
-      return { id, kind: 'note', text: '' }
     case 'repeat':
       return { id, kind: 'repeat', children: [] }
     case 'photo':
@@ -98,8 +95,6 @@ function blockSource(block: BuilderBlock): string {
   switch (block.kind) {
     case 'write':
       return `<write>${encode(block.text)}</write>`
-    case 'note':
-      return `<note>${encode(block.text)}</note>`
     case 'text':
       // A literal is the one block whose text is NOT escaped as a tag body: it is the body's
       // own prose. Only a `<` that would start a tag needs hiding.
@@ -170,8 +165,6 @@ function fromNodes(
       case 'write':
         blocks.push({ id: nextBlockId(), kind: 'write', text: decodeText(node.text ?? '') })
         break
-      case 'note':
-        blocks.push({ id: nextBlockId(), kind: 'note', text: decodeText(node.text ?? '') })
         break
       case 'ask': {
         // The flavor decides which ROW it is: an instruction makes it an AI가 쓰는 글 row, an
@@ -260,7 +253,6 @@ export function isCompleteBlock(block: BuilderBlock): boolean {
 
   switch (block.kind) {
     case 'write':
-    case 'note':
     case 'text':
       return block.text.trim() !== ''
     case 'photo':
@@ -331,25 +323,16 @@ export function blockSummary(block: BuilderBlock): string {
   if (ask !== '') return ask
   switch (block.kind) {
     case 'write':
-    case 'note':
     case 'text':
       return block.text.replace(/\s+/g, ' ').trim()
     case 'photo':
       // A photo row's summary is a COUNT, not text the author typed, so it is the one summary
-      // the UI formats rather than reads — see photoSummaryKey.
+      // the UI formats rather than reads (`composition.summary.photo`).
       return ''
     case 'repeat':
       // A repeat's content IS its children, and they are rows of their own directly beneath it.
       return ''
   }
-}
-
-/** Which i18n key a photo row's collapsed summary uses. One photo reads as a photo; more than
- *  one has to say that they stand side by side, which is the whole point of the count. */
-export function photoSummaryKey(
-  count: number,
-): 'composition.summary.photo' | 'composition.summary.photoRow' {
-  return count > 1 ? 'composition.summary.photoRow' : 'composition.summary.photo'
 }
 
 /** Which titles more than one row asks under. The parser refuses such a body outright
@@ -437,7 +420,7 @@ export function positionAfter(blocks: readonly BuilderBlock[], blockId: string):
 }
 
 /** Whether a kind may be inserted at a position. The grammar forbids a repeat inside a repeat, and
- *  a photo, a repeat or a note in a title area (TMPL-50), and those rules live HERE rather than in
+ *  a photo or a repeat in a title area (TMPL-50), and those rules live HERE rather than in
  *  the palette: hiding the button is the affordance, and this is the enforcement — so a position
  *  that drifts cannot produce text the parser refuses. */
 export function canInsert(

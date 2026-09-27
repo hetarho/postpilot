@@ -8,19 +8,18 @@
  *  `backend/internal/template/testdata/grammar/cases.json`, which both test suites read. A
  *  new rule lands there first. The server stays authoritative on a save. */
 
-export type NodeKind = 'literal' | 'write' | 'slot' | 'note' | 'repeat' | 'ask'
+export type NodeKind = 'literal' | 'write' | 'slot' | 'repeat' | 'ask'
 export type SlotKind = 'photo' | 'place' | 'link'
 
 const SLOT_KINDS: readonly string[] = ['photo', 'place', 'link']
 /** Attached photos are the only countable material a post has. */
 const EACH_VALUES: readonly string[] = ['photo']
-const TAG_NAMES: readonly string[] = ['write', 'slot', 'note', 'repeat', 'ask']
+const TAG_NAMES: readonly string[] = ['write', 'slot', 'repeat', 'ask']
 /** Every attribute each tag names; any other one, or one given twice, is `malformed_tag`
  *  (TMPL-20). `slot`'s `label` stays for stored place/link bodies (TMPL-37). */
 const TAG_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
   write: [],
   slot: ['kind', 'count', 'label'],
-  note: [],
   repeat: ['each'],
   ask: ['label'],
 }
@@ -36,7 +35,7 @@ export interface TemplateNode {
   kind: NodeKind
   source: string
   line: number
-  /** write · note · ask — empty on an ask means the verbatim flavor */
+  /** write · ask — empty on an ask means the verbatim flavor */
   text?: string
   /** slot */
   slotKind?: SlotKind
@@ -61,7 +60,6 @@ export type ParseReason =
   | 'unknown_repeat_each'
   | 'nested_repeat'
   | 'empty_write'
-  | 'empty_note'
   /** A photo position's `count` that is not an integer in 1 … photoRowMax. Its own reason
    *  rather than malformed_tag: the attribute parsed fine, it is the VALUE to go fix. */
   | 'invalid_count'
@@ -70,7 +68,7 @@ export type ParseReason =
   | 'duplicate_ask_label'
   | 'ask_in_repeat'
   | 'too_many_asks'
-  /** A photo position, a repeat or a note inside the title area, which admits literal text,
+  /** A photo position or a repeat inside the title area, which admits literal text,
    *  `<write>` and `<ask>` only. Like `ask_in_repeat` it names the PLACE (TMPL-50). */
   | 'not_in_title'
 
@@ -89,7 +87,6 @@ export const PARSE_REASONS: readonly ParseReason[] = [
   'unknown_repeat_each',
   'nested_repeat',
   'empty_write',
-  'empty_note',
   'invalid_count',
   'duplicate_ask_label',
   'ask_in_repeat',
@@ -348,7 +345,7 @@ function parseTag(
   // The PLACE is checked once the head reads and before any rule of the tag's own kind, as
   // ask_in_repeat is: a photo position in a title is wrong whatever its attributes say, while a
   // head that does not read stays the reason it is.
-  if (options.titleArea && (name === 'slot' || name === 'repeat' || name === 'note')) {
+  if (options.titleArea && (name === 'slot' || name === 'repeat')) {
     return { ok: false, failure: { line, reason: 'not_in_title' } }
   }
 
@@ -416,17 +413,12 @@ function parseTag(
     }
   }
 
-  if (name === 'write' || name === 'note') {
+  if (name === 'write') {
     if (head.selfClosing || head.stray)
       return { ok: false, failure: { line, reason: 'malformed_tag' } }
     const inner = readTextBody(body, head.after, name, line)
     if (!inner.ok) return inner
-    if (isBlank(decode(inner.text))) {
-      return {
-        ok: false,
-        failure: { line, reason: name === 'note' ? 'empty_note' : 'empty_write' },
-      }
-    }
+    if (isBlank(decode(inner.text))) return { ok: false, failure: { line, reason: 'empty_write' } }
     return {
       ok: true,
       node: { kind: name, source: body.slice(at, inner.after), line, text: inner.text },
@@ -534,7 +526,7 @@ function parseTagHead(body: string, at: number, name: string): HeadResult {
 
 type TextResult = { ok: true; text: string; after: number } | { ok: false; failure: ScanFailure }
 
-/** Reads the inner text of a write or note. A known tag inside it is a malformed tag rather
+/** Reads the inner text of a write or an ask. A known tag inside it is a malformed tag rather
  *  than a nested node: neither construct wraps content, so `<write>a <write>b` is a mistake
  *  with no reasonable reading. */
 function readTextBody(body: string, from: number, name: string, openLine: number): TextResult {

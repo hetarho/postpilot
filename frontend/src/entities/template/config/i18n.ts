@@ -15,7 +15,7 @@ export const i18n = {
       insertHere: '여기에 추가돼요',
       repeatEmpty: '이 사진마다 반복 안에 아직 아무것도 없어요.',
       repeatHelp:
-        '첨부한 사진 개수만큼 안쪽 블록이 되풀이돼요. 한 번 되풀이할 때 사진 {{count}}장을 씁니다.',
+        '스토리라인의 사진 묶음마다 안쪽 블록이 되풀이돼요. 한 번 되풀이할 때 사진 자리 {{count}}장이 있어요.',
       unreadable:
         '이 템플릿의 구성을 읽을 수 없어요. 원문에서 직접 고치거나, 구성을 비우고 다시 만들 수 있어요.',
       clearAndRestart: '구성 비우고 다시 만들기',
@@ -29,15 +29,13 @@ export const i18n = {
         clearAndRestart: '제목 비우고 다시 만들기',
       },
       summary: {
-        photo: '사진 {{count}}장',
-        photoRow: '사진 {{count}}장 가로로',
+        photo: '한 줄에 {{count}}장',
       },
       placeholder: {
-        write: '무엇을 쓸지 적어 주세요',
+        write: '이 자리에 무엇이 오는지 적어 주세요 (예: 메뉴 소개)',
         text: '들어갈 문구를 적어 주세요',
-        note: 'AI에게 남길 말을 적어 주세요',
-        photo: '첨부한 사진이 들어갑니다',
-        repeat: '사진마다 되풀이',
+        photo: '스토리라인에 맞는 사진이 들어갑니다',
+        repeat: '스토리라인의 사진 묶음마다 되풀이합니다',
       },
     },
     // The one surface where this app's grammar is visible (TMPL-26).
@@ -57,26 +55,25 @@ export const i18n = {
 [템플릿이 하는 일]
 템플릿은 글의 뼈대입니다. 글의 순서와 어디에 무엇이 들어갈지를 정하고, 문체나 어휘는 정하지 않습니다.
 
-[쓸 수 있는 표기 여섯 가지]
+[쓸 수 있는 표기 다섯 가지]
 - 그냥 쓴 문장: 글에 그대로 나옵니다.
-- <write>무엇을 쓸지</write>: AI가 그 자리에 지시대로 글을 씁니다. 지시문 자체는 글에 나오지 않습니다.
-- <slot kind="photo"/>: 첨부한 사진이 한 장 들어갑니다. <slot kind="photo" count="2"/>처럼 count를 주면 그만큼 한 줄에 나란히 놓입니다.
-- <repeat each="photo">…</repeat>: 안쪽 내용이 사진 수만큼 되풀이됩니다.
-- <note>AI에게만 하는 말</note>: AI만 읽고 글에는 나오지 않습니다.
+- <write>메뉴 소개</write>: AI가 그 자리에 적힌 주제로 글을 씁니다. 말투·길이·강조 같은 쓰는 방식은 여기에 적지 말고 지침으로 정하세요. 태그 안의 글은 글에 나오지 않습니다.
+- <slot kind="photo"/>: 사진이 들어갈 자리입니다. <slot kind="photo" count="2"/>처럼 count를 줄 수 있습니다. count는 한 줄에 나란히 놓을 사진 수이고, 어떤 사진을 놓을지는 AI가 스토리라인을 따라 고릅니다.
+- <repeat each="photo">…</repeat>: 안쪽 내용이 스토리라인의 사진 묶음마다 한 번씩 되풀이됩니다.
 - <ask label="입력란 제목"/>: 글을 쓸 때 사용자가 직접 입력한 내용이 그 자리에 그대로 들어갑니다.
-- <ask label="입력란 제목">무엇을 쓸지</ask>: 사용자가 입력한 내용만 근거로 AI가 그 자리에 글을 씁니다.
+- <ask label="입력란 제목">총평</ask>: 사용자가 입력한 내용으로 AI가 그 자리의 주제를 씁니다.
 
 [지켜야 할 규칙]
-- write, note, repeat는 반드시 닫아야 합니다.
+- write, repeat는 반드시 닫아야 합니다.
 - slot은 <slot …/>처럼 스스로 닫고, kind는 photo만 쓸 수 있습니다.
 - count는 1에서 {{photoRowMax}} 사이의 정수입니다. 없으면 1장입니다.
 - repeat는 each="photo"만 받고, repeat 안에 repeat를 넣을 수 없습니다.
-- write와 note는 비워 둘 수 없습니다.
-- write, note, ask 안에는 글만 씁니다. 그 안에 다른 태그를 넣으면 저장되지 않습니다.
+- write는 비워 둘 수 없습니다.
+- write, ask 안에는 글만 씁니다. 그 안에 다른 태그를 넣으면 저장되지 않습니다.
 - 각 태그에는 위에 나온 속성만 쓰고, 한 태그에 같은 속성을 두 번 쓰지 않습니다.
 - ask는 label이 반드시 있어야 하고, label은 {{askLabelMax}}자까지이며, 한 본문 안에서 label이 겹치면 안 됩니다. repeat 안에는 넣을 수 없고, 한 본문에 최대 {{askMax}}개까지입니다.
 - ask는 사용자가 매번 알려줘야 하는 것(별점, 방문일, 가격처럼 AI가 알 수 없는 사실)에만 쓰세요.
-- 위 여섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
+- 위 다섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
 - 문장 안에 <로 시작하는 글자를 그대로 쓰려면 &lt;로 적어 주세요.
 - 본문 전체는 {{bodyMax}}자를 넘을 수 없습니다.
 
@@ -89,15 +86,13 @@ export const i18n = {
     builder: {
       palette: {
         write: 'AI가 쓰는 글',
-        writeHelp: 'AI가 이 자리에 글을 씁니다',
+        writeHelp: '적어 둔 주제로 AI가 글을 씁니다',
         text: '고정 문구',
         textHelp: '적은 그대로 글에 들어갑니다',
         photo: '사진',
-        photoHelp: '첨부한 사진이 들어갑니다',
+        photoHelp: '스토리라인에 맞는 사진이 들어갑니다',
         repeat: '사진마다 반복',
-        repeatHelp: '사진 개수만큼 안쪽을 되풀이합니다',
-        note: 'AI에게만 하는 말',
-        noteHelp: 'AI만 읽고 글에는 안 나옵니다',
+        repeatHelp: '스토리라인의 사진 묶음마다 되풀이합니다',
       },
       // What an unlabelled legacy 자리 is called once it is read as 고정 문구 (TMPL-37).
       legacy: {
@@ -110,11 +105,10 @@ export const i18n = {
           '켜면 글쓰기 화면에서 이 자리에 넣을 내용을 직접 입력받아요. 지어내지 않아요.',
         askTitle: '입력란 제목',
         askInRepeat:
-          '사진마다 반복 안에서는 데이터를 받을 수 없어요. 칸 개수가 사진 수에 따라 달라지기 때문이에요.',
-        instruction: '무엇을 쓸지',
+          '사진마다 반복 안에서는 데이터를 받을 수 없어요. 되풀이 횟수가 글의 스토리라인에 따라 달라지기 때문이에요.',
+        instruction: '이 자리에 오는 것',
         text: '들어갈 문구',
-        note: 'AI에게 남길 말',
-        count: '가로로 놓을 사진 수',
+        count: '한 줄에 놓을 사진 수',
         fewer: '줄이기',
         more: '늘리기',
         drag: '끌어서 옮기기',
@@ -131,13 +125,12 @@ export const i18n = {
         unknown_slot_kind: '모르는 자리 종류예요',
         unknown_repeat_each: '사진마다 반복의 기준은 사진만 쓸 수 있어요',
         nested_repeat: '사진마다 반복 안에 사진마다 반복은 넣을 수 없어요',
-        empty_write: '무엇을 쓸지 비어 있어요',
-        empty_note: 'AI에게만 하는 말이 비어 있어요',
+        empty_write: '이 자리에 오는 것이 비어 있어요',
         invalid_count: '가로 사진 수가 1~{{max}} 사이가 아니에요',
         duplicate_ask_label: '같은 제목의 데이터 받기가 이미 있어요',
         ask_in_repeat: '사진마다 반복 안에서는 데이터를 받을 수 없어요',
         too_many_asks: '데이터 받기는 최대 {{askMax}}개까지예요',
-        not_in_title: '사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
+        not_in_title: '사진·사진마다 반복은 제목에 넣을 수 없어요',
       },
     },
     postCount_one: '글 {{count}}개',
@@ -161,7 +154,7 @@ export const i18n = {
       insertHere: 'Adds here',
       repeatEmpty: 'Nothing inside this Repeat per photos yet.',
       repeatHelp:
-        'The blocks inside repeat once per attached photo. Each repetition uses {{count}} photos.',
+        'The blocks inside repeat once per photo group of the storyline. Each repetition holds {{count}} photo places.',
       unreadable:
         "This template's composition can't be read. Fix it in the source, or clear it and start over.",
       clearAndRestart: 'Clear and start over',
@@ -173,17 +166,13 @@ export const i18n = {
         clearAndRestart: 'Clear the title and start over',
       },
       summary: {
-        // Only ever formatted with a count of one — photoSummaryKey sends anything above it to
-        // photoRow — so no plural form is needed on either side.
-        photo: '{{count}} photo',
-        photoRow: '{{count}} photos side by side',
+        photo: '{{count}} per row',
       },
       placeholder: {
-        write: 'Say what to write here',
+        write: 'What goes here (e.g. the menu)',
         text: 'Type the text that goes in',
-        note: 'Say something to AI only',
-        photo: 'An attached photo goes here',
-        repeat: 'Once per photo',
+        photo: 'Photos that fit the storyline go here',
+        repeat: 'Repeats once per photo group of the storyline',
       },
     },
     // The one surface where this app's grammar is visible (TMPL-26).
@@ -202,26 +191,25 @@ export const i18n = {
 [What a template does]
 A template is the skeleton of a post. It decides the order and what goes where; it never decides tone or word choice.
 
-[The six things you can write]
+[The five things you can write]
 - Plain text: appears in the post exactly as written.
-- <write>what to write</write>: the AI writes here as instructed. The instruction itself never appears in the post.
-- <slot kind="photo"/>: one attached photo goes here. With a count, as in <slot kind="photo" count="2"/>, that many stand side by side in one row.
-- <repeat each="photo">…</repeat>: what is inside repeats once per group of photos.
-- <note>note to the AI</note>: only the AI reads it; it never appears in the post.
+- <write>the menu</write>: the AI writes here about the topic named. How to write it — tone, length, emphasis — belongs to guidelines, not here. The text inside the tag never appears in the post.
+- <slot kind="photo"/>: photos go here. It can take a count, as in <slot kind="photo" count="2"/>: count is how many photos stand side by side in one row, and the AI chooses which photos stand there along the storyline.
+- <repeat each="photo">…</repeat>: what is inside repeats once per photo group of the storyline.
 - <ask label="field title"/>: what the author types on the write screen goes here exactly as typed.
-- <ask label="field title">what to write</ask>: the AI writes here using only what the author typed as its facts.
+- <ask label="field title">overall verdict</ask>: the AI writes the topic here from what the author typed.
 
 [Rules that must hold]
-- write, note and repeat must be closed.
+- write and repeat must be closed.
 - slot closes itself, as <slot …/>, and kind may only be photo.
 - count is a whole number from 1 to {{photoRowMax}}. Without it, one photo.
 - repeat takes only each="photo", and a repeat may not contain a repeat.
-- write and note may never be empty.
-- write, note and ask hold text only. A tag inside one of them is refused.
+- write may never be empty.
+- write and ask hold text only. A tag inside one of them is refused.
 - Each tag takes only the attributes shown above, and no attribute twice.
 - ask must carry a label of at most {{askLabelMax}} characters, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {{askMax}}.
 - Use ask only for what the author has to supply each time — a rating, a visit date, a price: facts the AI cannot know.
-- Any tag other than those six is refused.
+- Any tag other than those five is refused.
 - To write a literal < in a sentence, write &lt; instead.
 - The whole body may not exceed {{bodyMax}} characters.
 
@@ -234,15 +222,13 @@ Send the body only — no explanation and no code fence. Write it in the languag
     builder: {
       palette: {
         write: 'AI writes here',
-        writeHelp: 'AI writes prose here',
+        writeHelp: 'AI writes about the topic you name',
         text: 'Fixed text',
         textHelp: 'Appears in the post exactly as typed',
         photo: 'Photo',
-        photoHelp: 'An attached photo goes here',
+        photoHelp: 'Photos that fit the storyline go here',
         repeat: 'Repeat per photos',
-        repeatHelp: 'Repeats its contents once per photo',
-        note: 'Note to AI',
-        noteHelp: 'Only AI reads it; it never appears in the post',
+        repeatHelp: 'Repeats once per photo group of the storyline',
       },
       // What an unlabelled legacy position is called once it is read as fixed text (TMPL-37).
       legacy: {
@@ -255,11 +241,10 @@ Send the body only — no explanation and no code fence. Write it in the languag
           'On, the write screen asks you for what goes here instead of the AI inventing it.',
         askTitle: 'Field title',
         askInRepeat:
-          'A row inside Repeat per photos cannot ask for data: how many fields there are must not depend on the photo count.',
-        instruction: 'What to write',
+          'A row inside Repeat per photos cannot ask for data: how many times it repeats follows the post’s storyline.',
+        instruction: 'What goes here',
         text: 'Text to include',
-        note: 'Note for AI',
-        count: 'Photos side by side',
+        count: 'Photos per row',
         fewer: 'Fewer',
         more: 'More',
         drag: 'Drag to move',
@@ -276,13 +261,12 @@ Send the body only — no explanation and no code fence. Write it in the languag
         unknown_slot_kind: 'unknown position kind',
         unknown_repeat_each: 'Repeat per photos can only go by photo',
         nested_repeat: 'a Repeat per photos cannot hold another one',
-        empty_write: 'nothing to write',
-        empty_note: 'the Note to AI is empty',
+        empty_write: 'nothing says what goes here',
         invalid_count: 'photos per row must be between 1 and {{max}}',
         duplicate_ask_label: 'another field already asks under that title',
         ask_in_repeat: 'a field inside Repeat per photos cannot ask for data',
         too_many_asks: 'at most {{askMax}} fields may ask for data',
-        not_in_title: 'a photo, Repeat per photos or a Note to AI cannot go in the title',
+        not_in_title: 'a photo or Repeat per photos cannot go in the title',
       },
     },
     postCount_one: '{{count}} post',

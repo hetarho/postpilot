@@ -21,7 +21,7 @@ import (
 // never panic, must always terminate, and must round-trip whenever they are accepted.
 func TestCorpusMatchesTheCommittedFile(t *testing.T) {
 	pieces := []string{
-		"<write>", "</write>", "<note>", "</note>", "<slot kind=\"photo\"/>",
+		"<write>", "</write>", "<slot kind=\"photo\"/>",
 		"<slot kind=\"place\" label=\"지도\"/>", "<repeat each=\"photo\">", "</repeat>",
 		"<slot kind=", "kind=\"photo\"", "/>", ">", "<", "&lt;", "&amp;", "\n", " ", "가",
 		"=====", "3 < 5", "<writer>", "<slot/>", "'", "\"", "<repeat>", "each=\"tag\"",
@@ -108,7 +108,7 @@ func titleCorpus(t *testing.T) []titleEntry {
 	t.Helper()
 	pieces := []string{
 		"<write>메뉴</write>", "<write>", "</write>", "<ask label=\"가게\"/>", "<ask label=\"총평\">별점</ask>",
-		"<ask label=\"총평\"/>", "<ask/>", "</ask>", "<note>톤</note>", "<slot kind=\"photo\"/>",
+		"<ask label=\"총평\"/>", "<ask/>", "</ask>", "<slot kind=\"photo\"/>",
 		"<slot kind=\"video\"></slot>", "<repeat each=\"photo\">", "</repeat>", "<writer>", " | ", " ", "\n",
 		"가", "3 < 5", "&lt;",
 	}
@@ -146,7 +146,7 @@ func titleCorpus(t *testing.T) []titleEntry {
 }
 
 // titleReasons are the refusals a title pair can end on. The other reasons cannot: a title refuses
-// slot, repeat and note as not_in_title before reading their attributes, and none of the fixed
+// slot and repeat as not_in_title before reading their attributes, and none of the fixed
 // bodies fails alone.
 var titleReasons = []string{
 	ReasonUnknownTag, ReasonUnclosedTag, ReasonUnexpectedClose, ReasonMalformedTag,

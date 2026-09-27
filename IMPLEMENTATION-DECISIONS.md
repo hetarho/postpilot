@@ -29,3 +29,14 @@ choice would be expensive to undo are listed at the end.
 - **Copy tweaks beyond the list:** the `ai` entry help and the stage hint now say "what stands
   here; how belongs to 영상 지침", the unused 글자 정렬 labels and `editor.guidance` went, and the
   video-templates page description no longer says "cut guidance".
+
+## T430 — post template form only, no `<note>`
+
+- **Legend photo/repeat lines switched to the storyline wording here.** T428 kept 흐름/요구하는 on
+  its old base; T430's goal (the legend describes photo places along the storyline) was the first
+  task to own that wording, so it is 스토리라인/다루는 now.
+- **`empty_write` copy now reads "이 자리에 오는 것이 비어 있어요" / "nothing says what goes here"**
+  to match the new write label; the task did not list it.
+- **The English guide avoids the word "place"** ("photos go here", "the topic here"): the guide
+  test forbids it because the retired place slot must never be taught.
+- **Migration number 0094**, since T414 took 0093.

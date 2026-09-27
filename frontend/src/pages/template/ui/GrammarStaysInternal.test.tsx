@@ -17,7 +17,7 @@ const EVERY_CONSTRUCT: FakeTemplateRow = {
   body:
     '<write>인트로를 씁니다</write>\n머리말 그대로\n<slot kind="place" label="네이버 지도"/>\n' +
     '<repeat each="photo">\n<slot kind="photo" count="3"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
-    '<slot kind="link" label="예약"/>\n<note>광고 티 내지 말 것</note>',
+    '<slot kind="link" label="예약"/>',
 }
 
 /** The tag syntax, the attribute names, and the brace notation the old empty state invented. */
@@ -29,8 +29,6 @@ const SYNTAX = [
   '<repeat',
   '</repeat',
   '<slot',
-  '<note',
-  '</note',
   'each="photo"',
   'kind="place"',
   'kind="photo"',
@@ -99,7 +97,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
             id: 'template-broken',
             name: '옛 템플릿',
             body: '<write>닫히지 않음',
-            titleArea: '<note>톤</note>',
+            titleArea: '<repeat each="photo"><write>톤</write></repeat>',
           },
         ],
       },

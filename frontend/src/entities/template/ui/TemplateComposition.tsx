@@ -14,7 +14,6 @@ import {
   fromBody,
   insertAt,
   positionAfter,
-  photoSummaryKey,
   repeatPhotoCount,
   reorder,
   toValidBody,
@@ -404,13 +403,13 @@ function AddToolbar({
 }) {
   const { t } = useTranslation('templates')
   const title = area === 'title_area'
-  // Five buttons, named for what the reader gets rather than for what the grammar calls it,
+  // Four buttons, named for what the reader gets rather than for what the grammar calls it,
   // in the order a post is usually built (TMPL-36). The place and link positions are gone:
   // a thing the author fills in later is fixed text in their own words (TMPL-37). A title
   // takes only the two that are words (TMPL-50).
   const kinds: readonly PaletteKind[] = title
     ? TITLE_AREA_PALETTE
-    : ['write', 'text', 'photo', 'repeat', 'note']
+    : ['write', 'text', 'photo', 'repeat']
   return (
     // Only the body's toolbar sticks: two sticky bars would stack under the header while the body
     // scrolls, and the title's composition is a line or two long.
@@ -492,7 +491,7 @@ function BlockRow({
   // typed, and it has to say whether the photos stand side by side (TMPL-38).
   const summary =
     block.kind === 'photo'
-      ? t(photoSummaryKey(block.count), { count: block.count })
+      ? t('composition.summary.photo', { count: block.count })
       : blockSummary(block)
 
   return (
@@ -593,16 +592,6 @@ function BlockFields({
             onChange={(text) => onChange({ ...block, text })}
           />
         </>
-      )
-    case 'note':
-      return (
-        <Field
-          id={id}
-          label={t('builder.block.note')}
-          value={block.text}
-          disabled={disabled}
-          onChange={(text) => onChange({ ...block, text })}
-        />
       )
     case 'text':
       return (

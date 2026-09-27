@@ -8,14 +8,13 @@ import (
 	"strings"
 )
 
-// NodeKind is one of the grammar's six constructs (TMPL-18).
+// NodeKind is one of the grammar's five constructs (TMPL-18).
 type NodeKind string
 
 const (
 	NodeLiteral NodeKind = "literal"
 	NodeWrite   NodeKind = "write"
 	NodeSlot    NodeKind = "slot"
-	NodeNote    NodeKind = "note"
 	NodeRepeat  NodeKind = "repeat"
 	// NodeAsk is a position whose facts the POST's author supplies rather than the model
 	// inventing them (TMPL-43). Its Label is the title the write screen shows over the
@@ -50,7 +49,7 @@ type Node struct {
 	Kind     NodeKind
 	Source   string
 	Line     int
-	Text     string   // write · note · ask (empty on an ask means the verbatim flavor)
+	Text     string   // write · ask (empty on an ask means the verbatim flavor)
 	SlotKind SlotKind // slot
 	Label    string   // slot · ask
 	// Count is how many photos a photo position holds side by side (TMPL-38). It is 1
@@ -94,7 +93,6 @@ const (
 	ReasonUnknownEach      = "unknown_repeat_each"
 	ReasonNestedRepeat     = "nested_repeat"
 	ReasonEmptyWrite       = "empty_write"
-	ReasonEmptyNote        = "empty_note"
 	// ReasonInvalidCount is a photo position's `count` that is not an integer in
 	// 1 … PhotoRowMax. It is its own reason rather than malformed_tag because the attribute
 	// parsed fine — it is the VALUE the author has to go fix.
@@ -106,9 +104,9 @@ const (
 	ReasonDuplicateAskLabel = "duplicate_ask_label"
 	ReasonAskInRepeat       = "ask_in_repeat"
 	ReasonTooManyAsks       = "too_many_asks"
-	// ReasonNotInTitle is a photo position, a repeat or a note inside the title area, which
-	// admits literal text, <write> and <ask> only (TMPL-50). Like ask_in_repeat it names the
-	// PLACE: the tag is real, and a title has no photo, nothing to repeat and no one to note.
+	// ReasonNotInTitle is a photo position or a repeat inside the title area, which admits
+	// literal text, <write> and <ask> only (TMPL-50). Like ask_in_repeat it names the PLACE:
+	// the tag is real, and a title has no photo and nothing to repeat.
 	ReasonNotInTitle = "not_in_title"
 )
 
@@ -130,7 +128,6 @@ type ParseOptions struct {
 var tagNames = map[string]NodeKind{
 	"write":  NodeWrite,
 	"slot":   NodeSlot,
-	"note":   NodeNote,
 	"repeat": NodeRepeat,
 	"ask":    NodeAsk,
 }
@@ -140,7 +137,6 @@ var tagNames = map[string]NodeKind{
 var tagAttributes = map[string][]string{
 	"write":  nil,
 	"slot":   {"kind", "count", "label"},
-	"note":   nil,
 	"repeat": {"each"},
 	"ask":    {"label"},
 }
@@ -380,7 +376,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 	// a head that does not read stays the reason it is.
 	if opts.TitleArea {
 		switch tagNames[name] {
-		case NodeSlot, NodeRepeat, NodeNote:
+		case NodeSlot, NodeRepeat:
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonNotInTitle}
 		}
 	}
@@ -442,7 +438,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 			Kind: NodeAsk, Source: body[at:afterClose], Line: line, Label: rawLabel, Text: inner,
 		}, afterClose, nil
 
-	case NodeWrite, NodeNote:
+	case NodeWrite:
 		if selfClosing || head.stray {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
@@ -451,11 +447,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 			return Node{}, 0, err
 		}
 		if isBlank(Decode(inner)) {
-			reason := ReasonEmptyWrite
-			if tagNames[name] == NodeNote {
-				reason = ReasonEmptyNote
-			}
-			return Node{}, 0, &ParseError{Line: line, Reason: reason}
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonEmptyWrite}
 		}
 		return Node{
 			Kind: tagNames[name], Source: body[at:afterClose], Line: line, Text: inner,
@@ -601,7 +593,7 @@ func parseTagHead(body string, at int, name string) (tagHead, error) {
 	return tagHead{}, &ParseError{Line: line, Reason: ReasonUnclosedTag}
 }
 
-// readTextBody reads the inner text of a write or note. A known tag inside it is a malformed
+// readTextBody reads the inner text of a write or an ask. A known tag inside it is a malformed
 // tag rather than a nested node: neither construct wraps content, so `<write>a <write>b` is
 // a mistake with no reasonable reading.
 func readTextBody(body string, from int, name string, openLine int) (string, int, error) {

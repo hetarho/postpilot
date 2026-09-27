@@ -100,8 +100,8 @@ func TestWritePromptExplainsThePlaceAndRepeatMarkers(t *testing.T) {
 	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
 	section := strings.TrimPrefix(system, baseline)
 	for _, line := range []string{
-		"- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 요구하는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.",
-		"- <repeat>…</repeat>: 흐름에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.",
+		"- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 다루는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.",
+		"- <repeat>…</repeat>: 스토리라인에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.",
 	} {
 		if !strings.Contains(section, line) {
 			t.Fatalf("the legend lacks %q:\n%s", line, section)

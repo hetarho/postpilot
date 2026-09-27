@@ -134,7 +134,7 @@ describe('the template screen', () => {
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.type(screen.getByLabelText(/어떤 글인가요/), '동네 카페')
     await user.click(paletteButton('AI가 쓰는 글'))
-    await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
+    await user.type(screen.getByLabelText('이 자리에 오는 것'), '첫인상을 씁니다')
 
     await user.click(screen.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(creates).toHaveLength(1))
@@ -170,7 +170,7 @@ describe('the template screen', () => {
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.click(paletteButton('AI가 쓰는 글'))
-    await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
+    await user.type(screen.getByLabelText('이 자리에 오는 것'), '첫인상을 씁니다')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(creates).toHaveLength(1))
@@ -206,7 +206,7 @@ describe('the template screen', () => {
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.click(paletteButton('AI가 쓰는 글'))
-    await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
+    await user.type(screen.getByLabelText('이 자리에 오는 것'), '첫인상을 씁니다')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(creates).toHaveLength(1))
@@ -457,7 +457,7 @@ describe('the title area', () => {
     await user.click(titlePalette().getByRole('button', { name: /^고정 문구/ }))
     await user.type(within(titleSection()).getByLabelText('들어갈 문구'), '방문 후기')
     await user.click(titlePalette().getByRole('button', { name: /^AI가 쓰는 글/ }))
-    await user.type(within(titleSection()).getByLabelText('무엇을 쓸지'), '메뉴')
+    await user.type(within(titleSection()).getByLabelText('이 자리에 오는 것'), '메뉴')
     expect(save).toBeEnabled()
 
     await user.click(save)
@@ -590,7 +590,7 @@ describe('the title area', () => {
       id: 'template-broken-title',
       name: '옛 템플릿',
       body: '<write>인트로를 씁니다</write>',
-      titleArea: '<note>톤</note>',
+      titleArea: '<repeat each="photo"><write>톤</write></repeat>',
     }
 
     it('shows the title unreadable, leaves the body alone, and fixes it in 제목 원문', async () => {
@@ -606,10 +606,10 @@ describe('the title area', () => {
 
       await user.click(within(titleSection()).getByRole('button', { name: '원문에서 고치기' }))
       const source = screen.getByLabelText('제목 원문')
-      expect(source).toHaveValue('<note>톤</note>')
+      expect(source).toHaveValue('<repeat each="photo"><write>톤</write></repeat>')
       expect(source).toHaveFocus()
       expect(within(titleSection()).getByRole('alert')).toHaveTextContent(
-        '1번째 줄: 사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
+        '1번째 줄: 사진·사진마다 반복은 제목에 넣을 수 없어요',
       )
       expect(within(bodySection()).queryByRole('alert')).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()

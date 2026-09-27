@@ -10,16 +10,16 @@ import {
  *  It is a BODY, not prose: `guide.test.ts` parses it with the real parser, so an example that
  *  drifted from the grammar fails the build rather than teaching an outside AI to write something
  *  this app refuses (TMPL-41). It deliberately uses every construct a person authors today,
- *  including a photo row and a data field, and none of the retired ones. */
+ *  including a photo row and a data field, and none of the retired ones; each `<write>` names
+ *  what stands at its place, never how to write it (TMPL-57). */
 export const GUIDE_EXAMPLE_BODY =
-  '<write>어디를 왜 갔는지 두세 문장으로 시작</write>\n' +
+  '<write>방문한 이유와 첫인상</write>\n' +
   '<repeat each="photo">\n' +
   '<slot kind="photo" count="2"/>\n' +
-  '<write>위 사진 두 장에 대해 한 문단</write>\n' +
+  '<write>이 사진들이 보여주는 장면</write>\n' +
   '</repeat>\n' +
-  '<ask label="총평 별점">별점과 한 줄 총평</ask>\n' +
-  '오늘도 좋은 하루 보내세요\n' +
-  '<note>광고처럼 들리지 않게</note>'
+  '<ask label="총평 별점">총평</ask>\n' +
+  '오늘도 좋은 하루 보내세요'
 
 /** A self-contained instruction a user can hand to any outside AI so it writes a body in this
  *  app's format (TMPL-41).
