@@ -89,4 +89,4 @@
 - placement: `backend/internal/plan` (ladder, grants, charge, windows, typed refusals, the recommended rung, the estimator's token assumptions and rate derivation) · `backend/internal/usage` (lots, hold/settle, ledger, metering seam) · `backend/internal/auth` (plan on user/session, master set) · `frontend/src/entities/plan` · `pages/plans` · `pages/admin` + `features/manage-users` · `widgets/account-menu` · the header credit control in the app shell
 
 ## chg
-- r23 260927 QUOTA-13✎ +a post's storyline jobs pass the enqueue gate · QUOTA-45✎ +a clip approval binds the storyline it builds from
+-

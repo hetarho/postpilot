@@ -114,4 +114,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r21 260927 POST-18✎ observations and content→observations, storyline and content, a deleted attachment taken out of the storyline too · POST-44✎ draft ①→a draft with no storyline ①, one holding a storyline ② · POST-46✎ +스토리라인 작성 중 · POST-48✎ 생성 and A/B 비교→①'s actions · POST-52✎ 생성 and A/B 비교→①'s actions · POST-53✎ A/B 비교 · 생성→스토리라인 먼저 · 바로 글 쓰기, A/B 비교 in its menu · POST-54✎ ② the draft→the storyline space above the draft · POST-74✎ +storyline edits and storyline jobs locked · POST-86✎ +the storyline read-only, ①'s actions disabled · POST-95+ ②'s collapsible storyline space · POST-96+ editing paragraphs and moving attachments · POST-97+ the space's own controls · POST-98+ confirmation only over hand edits · POST-99+ attachments added after the storyline · flow✎ lifecycle, +storyline · constraints✎ posts.storyline
+-
