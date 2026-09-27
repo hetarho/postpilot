@@ -20,18 +20,18 @@
 |---|---|---|---|---|
 | ARCH | 12 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 9 | 9 | - | 0 |
-| QUOTA | 21 | 20 | QUOTA-13✎ | 0 |
-| POST | 19 | 18 | POST-18✎ POST-46✎ POST-48✎ POST-52✎ POST-53✎ POST-54✎ POST-74✎ POST-86✎ POST-94+ flow✎ constraints✎ | 0 |
+| QUOTA | 22 | 20 | r21 withdrawn by r22, no net change | 0 |
+| POST | 20 | 18 | r19 withdrawn by r20, no net change | 0 |
 | VOICE | 4 | 4 | - | 1 |
-| GEN | 15 | 14 | GEN-5✎ GEN-7✎ GEN-8✎ GEN-9✎ GEN-11✎ GEN-12✎ GEN-13✎ GEN-14✎ GEN-18✎ GEN-19✎ GEN-22✎ GEN-23✎ GEN-24✎ GEN-25✎ GEN-29✎ GEN-30✎ GEN-56✎ GEN-58+ GEN-59+ GEN-60+ GEN-61+ GEN-62+ GEN-63+ GEN-64+ GEN-65+ GEN-66+ flow✎ constraints✎ | 0 |
+| GEN | 16 | 14 | GEN-14✎ GEN-47✎ GEN-67+ flow✎ constraints✎ | 0 |
 | MODEL | 18 | 18 | - | 0 |
-| TMPL | 13 | 12 | TMPL-11✎ TMPL-15✎ TMPL-18✎ TMPL-21✎ TMPL-34✎ TMPL-38✎ TMPL-40✎ TMPL-45✎ TMPL-56+ flow✎ constraints✎ | 1 |
+| TMPL | 14 | 12 | TMPL-11✎ TMPL-18✎ TMPL-21✎ TMPL-38✎ TMPL-40✎ TMPL-45✎ flow✎ constraints✎ | 1 |
 | GUIDE | 8 | 8 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 6 | 6 | - | 0 |
 | THEME | 19 | 15 | THEME-19✎ | 0 |
 | MKT | 7 | 7 | - | 0 |
-| VIDEO | 5 | 4 | VIDEO-11✎ | 0 |
+| VIDEO | 6 | 4 | r5 withdrawn by r6, no net change | 0 |
 | CLIP | 48 | 40 | CLIP-13✎ CLIP-163+ CLIP-4✎ CLIP-14✎ CLIP-42✎ CLIP-111✎ CLIP-130✎ CLIP-139✎ CLIP-166+ CLIP-167+ CLIP-168+ CLIP-169+ CLIP-170+ CLIP-171+ CLIP-172+ CLIP-53✎ CLIP-173+ CLIP-174+ CLIP-175+ CLIP-176+ | 2 |
 | CDS | 28 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ CDS-61✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
@@ -55,7 +55,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T413 | The legacy clip template path, category presets, chips, hook, CTA and fact minimum are gone | CLIP CDS | - | todo |
+| T413 | The legacy clip template path, category presets, chips, hook, CTA and fact minimum are gone | CLIP CDS | - | doing@260927.ia |
 | T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | todo |
@@ -79,6 +79,9 @@
 - Later: update-ssot CLIP narration — captions read as a shot list, one observation caption per cut (no story step before the flow, every claim must cite an observation, visit/taste markers dropped without an instruction, none of the post writer's memo/voice/memory); update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 update-ssot GEN TMPL POST QUOTA VIDEO done (sp): GEN r16 TMPL r14 POST r20 QUOTA r22 VIDEO r6 — the photo-space pipeline (group_photos, grouping call, space board, plan call, capture time) is withdrawn; GEN-47 GEN-67: the one write call opens its answer with `flow` and writes one post along it, every photo once where its moment is; TMPL-21: photo places bind nothing and a repeat renders once
+- 260927 update-ssot GEN TMPL POST QUOTA VIDEO start (sp): withdraw r15/r13/r19/r21/r5's photo-space pipeline (group_photos, grouping call, board, plan call, capture time); the one write call sets the day's flow first and places photos along it, template photo places unbound
+- 260927 T413 claimed (ia)
 - 260927 update-ssot CLIP done (ve): CLIP r48 — ② gains a flow simulation: still cut frames under the project's intro, per-caption styles, outro and badge, shown and hidden by the scrubber, opened from the preview's frame in the video preview's place, no originals needed; clip narration quality (shot-list captions) left for later
 - 260927 update-ssot CLIP CDS done (ve): CLIP r47 CDS r28 — a video template saves intro/outro presets and allowed caption styles, which a project takes whenever it selects the template; the template preview keeps text off the intro/outro, fills the span between with 3–4 s captions and shows the last frame at its end; every builder entry opens in place with its own delete
 - 260927 create-task GEN TMPL POST QUOTA VIDEO start (sp): photo-space deltas GEN r15 TMPL r13 POST r19 QUOTA r21 VIDEO r5; ordering against hc's T417 T424 T425
@@ -96,7 +99,3 @@
 - 260926 T410 claimed (hc)
 - 260926 T409 done (hc): the guideline preset is gone: ListGuidelines answers the owner's guidelines alone and ForPrompt returns their ordered texts ([]string, no forRevision) with nothing appended; UpdateGuidelinePreset and its messages are deleted and ListGuidelinesResponse reserves 2/"preset"; migration 0088 drops guideline_preset_fields and guideline_presets (Down restores 0078's DDL empty); BE/FE gates green, gen:proto and gen:sql clean
 - 260926 T409 claimed (hc)
-- 260926 T408 done (hc): the write freezes no 분야 phrases and no preset line (guidelines = owner texts), its answer and the post carry nouns only, SavePostContent takes no taken indices, migration 0087 drops posts.replacement_candidates, post.proto reserves 30/5 and drops ReplacementSurface/ReplacementCandidate; legacy payload, snapshot and candidate-output keys decode as absent; BE/FE gates green, gen:proto and gen:sql clean
-- 260926 T408 claimed (hc)
-- 260926 T407 done (hc): ② renders plain prose with no replacement marks or takes, /guidelines drops the preset row, and the FE stops reading replacement_candidates/preset and sending taken_candidates/UpdateGuidelinePreset; the queue, autosave, BlockEditor and BlockList return to their pre-T351/T363 form; FE gates green
-- 260926 T407 claimed (hc)
