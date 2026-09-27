@@ -98,7 +98,64 @@ it('states a row its badge tallies, most often first and bounded per group', () 
   expect(screen.queryByText('간결해요 1')).not.toBeInTheDocument()
 })
 
+// MODEL-62/63: `기타` is neither praise nor complaint. It is tallied apart from both groups,
+// shown below them, never in the warning tone, and never takes a negative's place.
+it('keeps 기타 apart from the negatives, below both groups, and never as a warning', () => {
+  render(
+    <ModelLeaderboard
+      window="week"
+      entries={[
+        {
+          ...entryFixture(),
+          badgeTallies: [
+            { badge: 'other', count: 9 },
+            { badge: 'slow', count: 5 },
+            { badge: 'ai_like', count: 4 },
+            { badge: 'verbose', count: 3 },
+            { badge: 'repetitive', count: 2 },
+            { badge: 'fast', count: 1 },
+          ],
+        },
+      ]}
+    />,
+  )
+  const other = screen.getByText(/^기타 9$/)
+  expect(screen.getByText('느려요 5')).toBeInTheDocument()
+  expect(screen.getByText('AI 같아요 4')).toBeInTheDocument()
+  expect(screen.getByText('장황해요 3')).toBeInTheDocument()
+  // Three negatives, however often 기타 was given: it is not one of them.
+  expect(screen.queryByText('반복이 많아요 2')).not.toBeInTheDocument()
+  expect(other.className).not.toMatch(/warning/)
+  const chips = Array.from(other.parentElement!.children).map((chip) => chip.textContent)
+  expect(chips.at(-1)).toBe('기타 9')
+  expect(chips[0]).toBe('속도가 빨라요 1')
+})
+
 it('shows no tally row when a model earned none', () => {
   render(<ModelLeaderboard window="week" entries={[{ ...entryFixture(), badgeTallies: [] }]} />)
   expect(screen.queryByText(/속도가 빨라요/)).not.toBeInTheDocument()
+})
+
+// MODEL-38: a dismissal of two delivered candidates is one loss each against the fixed
+// reference, which the board never ranks. A model seen only in dismissals is a row of losses.
+it('shows the losses a dismissal counts, with no reference opponent on the board', () => {
+  render(
+    <ModelLeaderboard
+      window="week"
+      entries={[
+        {
+          ...entryFixture(),
+          rating: 1484,
+          matches: 1,
+          wins: 0,
+          losses: 1,
+          winRate: 0,
+          provisional: true,
+        },
+      ]}
+    />,
+  )
+  expect(screen.getByText('1전 0승 1패 · 승률 0%')).toBeInTheDocument()
+  expect(screen.getByText('Elo 1484')).toBeInTheDocument()
+  expect(screen.getAllByRole('listitem')).toHaveLength(1)
 })

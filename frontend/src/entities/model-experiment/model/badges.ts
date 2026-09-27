@@ -60,6 +60,23 @@ export function isPositiveBadge(badge: VerdictBadgeName): boolean {
   return (POSITIVE_BADGES as readonly VerdictBadgeName[]).includes(badge)
 }
 
+export function isNegativeBadge(badge: VerdictBadgeName): boolean {
+  return (NEGATIVE_BADGES as readonly VerdictBadgeName[]).includes(badge)
+}
+
+/** Which of the three groups a badge sits in, in the order they are shown: `other` is its own
+ *  group below both, neither praise nor complaint (MODEL-62). */
+export function badgeGroup(badge: VerdictBadgeName): 'positive' | 'negative' | 'other' {
+  return isPositiveBadge(badge) ? 'positive' : isNegativeBadge(badge) ? 'negative' : 'other'
+}
+
+/** The tone a badge's chip takes. `other` is never a warning: it carries a note, not a
+ *  judgement (MODEL-62). */
+export function badgeTone(badge: VerdictBadgeName): 'success' | 'warning' | 'neutral' {
+  const group = badgeGroup(badge)
+  return group === 'positive' ? 'success' : group === 'negative' ? 'warning' : 'neutral'
+}
+
 /** What one candidate was given at the verdict. Zero badges is as valid as ten. */
 export interface CandidateBadges {
   candidateId: string

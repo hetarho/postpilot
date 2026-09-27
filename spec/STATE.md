@@ -58,7 +58,6 @@
 | T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T419 | The model lab and leaderboard screens follow MODEL-31, MODEL-62/63 and MODEL-65 | MODEL | T418 | todo |
 | T420 | Voice measurement, overrides and publication are correct | VOICE | - | todo |
 | T421 | Voice analysis, projection and comparisons carry what VOICE decides | VOICE | T420 | todo |
 | T422 | A resolved extraction job keeps neither the post body nor the raw candidates | MEM | - | todo |
@@ -75,11 +74,13 @@
 - create-task CLIP CDS (CLIP r48 CDS r28): video templates carry the design selection a project takes on selection; the template preview's 15–90 s timing, 3–4 s captions and last frame; builder entries open in place with their own delete; ②'s flow simulation over still cut frames — also refresh T414 (its preview-select removal and builder items meet CLIP-166/169/172) and T415 (F58/F59/F73's copy assumed a template carries no design) before they are implemented
 - implement-task T428 after T424 (template photo places unbound), then T429 (the write sets the day's flow first); T430 after T425 (builder copy)
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable
-- implement-task the P1-bearing tasks T420 T422 T423 T424 T426, then T419 T421 T425 T427 (review/conformance-all-260927); T414 T415 after their refresh
+- implement-task the P1-bearing tasks T420 T422 T423 T424 T426, then T421 T425 T427 (review/conformance-all-260927); T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP narration — captions read as a shot list, one observation caption per cut (no story step before the flow, every claim must cite an observation, visit/taste markers dropped without an instruction, none of the post writer's memo/voice/memory); update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 T419 done
+- 260927 T419 claimed (ia)
 - 260927 T418 done
 - 260927 T418 claimed (ia)
 - 260927 T417 done
@@ -98,5 +99,3 @@
 - 260927 update-ssot CLIP CDS done (ve): CLIP r47 CDS r28 — a video template saves intro/outro presets and allowed caption styles, which a project takes whenever it selects the template; the template preview keeps text off the intro/outro, fills the span between with 3–4 s captions and shows the last frame at its end; every builder entry opens in place with its own delete
 - 260927 create-task GEN TMPL POST QUOTA VIDEO start (sp): photo-space deltas GEN r15 TMPL r13 POST r19 QUOTA r21 VIDEO r5; ordering against hc's T417 T424 T425
 - 260927 update-ssot GEN TMPL POST QUOTA VIDEO done (sp): GEN r15 TMPL r13 POST r19 QUOTA r21 VIDEO r5 on top of hc's conformance revs — 사진 분석 is group_photos (observe in 4s, then one grouping call into spaces: a place or one menu item's food, named from the material else 공간 n, the rest 그외); the space board replaces the contact sheet (top-right dropdown or drag, 새 공간, rename, reorder); 글 쓰기 plans (story in the confirmed order + a position per photo, repaired) then writes with `[오늘의 흐름]`; template photos bind from the plan, never upload order, and TEMPLATE_MAX_REPEAT_EXPANSION is gone; capture time recorded; no doing task affected
-- 260927 note (hc → sp): GEN, POST, TMPL and VIDEO also hold uncommitted hc edits beside your in-progress r15/r13/r5 work — consumed chg lines removed and POST r18's POST-13✎ (finalize refuses a missing photo); please commit them with yours, and add your deltas to those STATE rows (hc set GEN 14/14, TMPL 12/12, POST 18/18, VIDEO 4/4)
-- 260927 create-task review/conformance-all-260927 done (hc): 70 code findings → T413–T427; the SSOT side (CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE VIDEO QUAL) consumed into them or no-op (docs caught up with the code); ARCH CLIP CDS THEME keep their older pending

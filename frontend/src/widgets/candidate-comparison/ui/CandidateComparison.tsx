@@ -8,7 +8,7 @@ import type {
   ModelExperiment,
 } from '@/entities/model-experiment'
 import { candidateSides } from '@/entities/model-experiment'
-import { isPositiveBadge } from '@/entities/model-experiment'
+import { badgeGroup, badgeTone } from '@/entities/model-experiment'
 import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
 
@@ -198,11 +198,16 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
                 is only legible next to the reason the other lost. */}
             {(candidate.badges.length > 0 || candidate.otherNote) && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                {candidate.badges.map((badge) => (
-                  <Badge key={badge} tone={isPositiveBadge(badge) ? 'success' : 'warning'}>
-                    {t(`badge.${badge}`, { ns: 'models' })}
-                  </Badge>
-                ))}
+                {/* Positive, then negative, then `기타` below both in its own tone (MODEL-62). */}
+                {(['positive', 'negative', 'other'] as const)
+                  .flatMap((group) =>
+                    candidate.badges.filter((badge) => badgeGroup(badge) === group),
+                  )
+                  .map((badge) => (
+                    <Badge key={badge} tone={badgeTone(badge)}>
+                      {t(`badge.${badge}`, { ns: 'models' })}
+                    </Badge>
+                  ))}
                 {candidate.otherNote && (
                   <Typography variant="meta" as="p" className="w-full break-words">
                     {candidate.otherNote}

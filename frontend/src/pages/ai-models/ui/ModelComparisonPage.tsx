@@ -4,16 +4,17 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   type ComparisonPair,
   type ModelRef,
+  refKey,
   sameRef,
   useComparisonPairSavePending,
   useModelSetup,
   useStageSelection,
 } from '@/entities/model-catalog'
 import { useStartModelExperiment, useStartWriteExperiment } from '@/entities/model-experiment'
-import { displayTitle, isPublished, usePost, usePosts } from '@/entities/post'
+import { displayTitle, usePost, usePosts } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
-import { ModelPairForm } from '@/features/configure-model-pair'
+import { ModelPairForm, type ShownPair } from '@/features/configure-model-pair'
 import {
   comparisonGenerationPreconditions,
   needsPicker,
@@ -46,7 +47,12 @@ export function ModelComparisonPage() {
   const { active: activeVoices, defaultVoice } = useVoices(user?.id ?? '')
   const start = useStartModelExperiment()
   const navigate = useNavigate()
-  const pair = setup.pairs.find((item) => item.stage === stage)
+  const stored = setup.pairs.find((item) => item.stage === stage)
+  // The gate reads the pair the screen shows (MODEL-65): while the fields hold a change that
+  // wrote nothing — incomplete, or one model twice — the stored pair is not what the owner
+  // sees, so nothing may start against it.
+  const [shown, setShown] = useState<ShownPair>()
+  const pair = shownIsStored(shown, stage, stored) ? stored : undefined
   // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
   // explicitly — initialized to the default, never guessed by the server
   // (MODEL-31). A choice that has since been deleted falls back to the
@@ -95,7 +101,7 @@ export function ModelComparisonPage() {
         <div className="mt-6">
           {/* Keyed by stage: the form's save mutations live inside the feature, and a '저장했어요'
               or a save error belongs to the tab it was fired from, not to the next one. */}
-          <ModelPairForm key={stage} stage={stage} />
+          <ModelPairForm key={stage} stage={stage} onShownChange={setShown} />
         </div>
         {stage === 'analyze' && (
           <div className="mt-6">
@@ -252,7 +258,9 @@ function SelectedPostWriteComparison({
     ? comparisonGenerationPreconditions({
         images: post.images,
         videos: post.videos,
-        published: isPublished(post),
+        // The lab's write tab takes an owned post in any status (MODEL-31): a comparison run to
+        // rank two models is a reading of the post, and the published lock guards writes.
+        published: false,
         activeJob: post.activeJob,
         voice: post.voice,
         observe: observeSelection,
@@ -292,7 +300,8 @@ function SelectedPostWriteComparison({
       const response = await start.start(
         post.slug,
         'lab',
-        post.images.length ? observeSelection?.ref : undefined,
+        // A post with photos or videos observes, as the editor's entry does (MODEL-31).
+        post.images.length || post.videos.length ? observeSelection?.ref : undefined,
         writeA.ref,
         writeB.ref,
         post.targetLength,
@@ -310,7 +319,7 @@ function SelectedPostWriteComparison({
 
   const startComparison = async () => {
     if (!canStart || !post || !writeA || !writeB) return
-    if (needsPicker(post.images, post.observations)) {
+    if (needsPicker(post.images, post.observations, post.videos)) {
       setPicking(true)
       return
     }
@@ -339,6 +348,7 @@ function SelectedPostWriteComparison({
         <ReobservePicker
           open={picking}
           images={post.images}
+          videos={post.videos}
           observations={post.observations}
           observeModel={observeSelection?.ref}
           pending={start.isPending}
@@ -353,11 +363,30 @@ function SelectedPostWriteComparison({
   )
 }
 
+function shownIsStored(
+  shown: ShownPair | undefined,
+  stage: string,
+  stored: { candidateA?: { ref: ModelRef }; candidateB?: { ref: ModelRef } } | undefined,
+) {
+  if (!shown || shown.stage !== stage) return true
+  const key = (ref: ModelRef | undefined) => (ref ? refKey(ref) : '')
+  return shown.a === key(stored?.candidateA?.ref) && shown.b === key(stored?.candidateB?.ref)
+}
+
 function resolveSelection(
   models: ReturnType<typeof useStageSelection>['models'],
   ref: ModelRef | null | undefined,
 ): GenerationModelSelection | undefined {
   if (!ref) return undefined
   const model = models.find((candidate) => sameRef(candidate.ref, ref))
-  return model && !model.disabled ? { ref, vision: model.vision } : undefined
+  // The same capabilities the editor's entry reads: a video-only post is judged on whether the
+  // observe model can watch it, not on vision alone (VIDEO-11).
+  return model && !model.disabled
+    ? {
+        ref,
+        vision: model.vision,
+        videoInput: model.videoInput,
+        signedVideoUrl: model.signedVideoUrl,
+      }
+    : undefined
 }

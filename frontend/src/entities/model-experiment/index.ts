@@ -21,6 +21,9 @@ export {
   POSITIVE_BADGES,
   badgeAppliesTo,
   isPositiveBadge,
+  isNegativeBadge,
+  badgeGroup,
+  badgeTone,
 } from './model/badges'
 export { isExperimentActive, needsExperimentReview } from './model/types'
 export { useExperiment, useExperiments, useLeaderboard } from './api/useExperiments'

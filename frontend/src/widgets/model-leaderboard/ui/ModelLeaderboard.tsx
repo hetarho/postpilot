@@ -5,7 +5,7 @@ import type {
   LeaderboardEntry,
   LeaderboardWindowName,
 } from '@/entities/model-experiment'
-import { isPositiveBadge } from '@/entities/model-experiment'
+import { badgeGroup, badgeTone } from '@/entities/model-experiment'
 import { formatNumber } from '@/shared/lib'
 import { Badge, Typography } from '@/shared/ui'
 
@@ -85,20 +85,22 @@ export function ModelLeaderboard({
   )
 }
 
-/** What this model's verdicts said about it, in the same span the rating covers. Three of
- *  each at most: the row is a ranking, and a dozen chips under every label would bury the
- *  rank and the rating the board exists to show. */
+/** What this model's verdicts said about it, in the same span the rating covers. Three
+ *  positive and three negative at most, counted apart, and `기타` as its own group below both
+ *  (MODEL-63): the row is a ranking, and a dozen chips under every label would bury the rank
+ *  and the rating the board exists to show. */
 function BadgeTallies({ tallies }: { tallies: BadgeTally[] }) {
   const { t } = useTranslation('models')
   if (tallies.length === 0) return null
   const shown = [
-    ...tallies.filter((tally) => isPositiveBadge(tally.badge)).slice(0, 3),
-    ...tallies.filter((tally) => !isPositiveBadge(tally.badge)).slice(0, 3),
+    ...tallies.filter((tally) => badgeGroup(tally.badge) === 'positive').slice(0, 3),
+    ...tallies.filter((tally) => badgeGroup(tally.badge) === 'negative').slice(0, 3),
+    ...tallies.filter((tally) => badgeGroup(tally.badge) === 'other'),
   ]
   return (
     <div className="mt-1 flex flex-wrap gap-1">
       {shown.map((tally) => (
-        <Badge key={tally.badge} tone={isPositiveBadge(tally.badge) ? 'success' : 'warning'}>
+        <Badge key={tally.badge} tone={badgeTone(tally.badge)}>
           {t('leaderboard.tally', { label: t(`badge.${tally.badge}`), count: tally.count })}
         </Badge>
       ))}

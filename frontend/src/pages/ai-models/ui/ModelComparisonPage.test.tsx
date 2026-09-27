@@ -224,9 +224,9 @@ it('blocks posts with active work or an unresolved write experiment', async () =
   expect(starts).toHaveLength(0)
 })
 
-// POST-86, review F23: a published post takes no write, so the lab offers no comparison on one,
-// and says why in the same sentence the editor does.
-it('keeps 비교 시작 disabled for a published post and says why', async () => {
+// MODEL-31: the lab's write tab takes an owned post in any status. A lab comparison writes
+// nothing to its post (MODEL-66), so the published lock that guards writes does not hold it.
+it('starts a lab write comparison on a published post', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
   renderAppAt('/ai-models/compare', {
@@ -247,15 +247,56 @@ it('keeps 비교 시작 disabled for a published post and says why', async () =>
 
   await user.click(await screen.findByRole('tab', { name: '글 작성' }))
   await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '발행된 글')
-  expect(
-    await screen.findByText(
-      '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
-    ),
-  ).toBeInTheDocument()
   const startButton = screen.getByRole('button', { name: '비교 시작' })
-  expect(startButton).toHaveAttribute('aria-disabled', 'true')
+  await waitFor(() => expect(startButton).not.toHaveAttribute('aria-disabled'))
+  expect(screen.queryByText(/발행된 글은 바꿀 수 없어요/)).not.toBeInTheDocument()
   await user.click(startButton)
-  expect(starts).toHaveLength(0)
+  await waitFor(() => expect(starts).toHaveLength(1))
+  expect(starts[0]).toMatchObject({ postSlug: 'published-post', origin: ExperimentOrigin.LAB })
+})
+
+// MODEL-31, review F76: a video-only post observes too, so the lab sends the active observe
+// model for it exactly as the editor's entry does — without it the start is refused.
+it('sends the observe model for a post with videos and no photos', async () => {
+  const user = userEvent.setup()
+  const starts: FakeWriteExperimentStart[] = []
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: {
+      posts: [
+        {
+          slug: 'video-post',
+          title: '영상 글',
+          videos: [{ id: 'video-1', filename: 'clip.mp4' }],
+        },
+      ],
+    },
+    providers: {
+      models: [
+        ...writeModels,
+        {
+          providerId: 'openrouter',
+          modelId: 'vision',
+          label: 'Vision',
+          vision: true,
+          videoInput: true,
+          signedVideoUrl: true,
+        },
+      ],
+      selections: [{ stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' }],
+      comparisonPairs: [writePair],
+    },
+    experiments: { starts },
+  })
+
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '영상 글')
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+  await waitFor(() =>
+    expect(starts[0]?.observeModel).toEqual({ providerId: 'openrouter', modelId: 'vision' }),
+  )
 })
 
 const analyzePair = {
@@ -306,6 +347,31 @@ it('starts an analyze comparison for the default voice unless another is chosen'
     'href',
     '/ai-models/compare?stage=analyze',
   )
+})
+
+// MODEL-65: the gate reads the pair the screen shows. A change that wrote nothing leaves the
+// stored pair behind the fields, so nothing may start against the pair no longer on screen.
+it('starts nothing while the fields show a pair the store does not hold', async () => {
+  const user = userEvent.setup()
+  const analyzeStarts: FakeAnalyzeExperimentStart[] = []
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    providers: { models: writeModels, comparisonPairs: [analyzePair] },
+    voice: { voices: twoVoices },
+    experiments: { analyzeStarts },
+  })
+  await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  const candidateB = await screen.findByRole('combobox', { name: /후보 B/ })
+  await chooseOption(user, candidateB, 'Writer A')
+  expect(candidateB).toHaveAccessibleDescription('서로 다른 모델을 선택해 주세요.')
+  await waitFor(() => expect(start).toHaveAttribute('aria-disabled', 'true'))
+  await user.click(start)
+  expect(analyzeStarts).toEqual([])
+  // Putting the stored pair back on screen reopens the gate.
+  await chooseOption(user, candidateB, 'Writer B')
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
 })
 
 it('sends the explicitly chosen voice with an analyze comparison', async () => {

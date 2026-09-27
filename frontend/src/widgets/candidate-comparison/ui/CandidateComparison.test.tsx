@@ -105,7 +105,8 @@ it('states each revealed candidate its own badges and note', () => {
           {
             ...base.candidates[1],
             modelLabel: 'B model',
-            badges: ['ai_like', 'other'],
+            // Stored in the order the owner ticked them; shown by group (MODEL-62).
+            badges: ['other', 'ai_like'],
             otherNote: '제목이 비슷해요',
           },
         ],
@@ -115,6 +116,11 @@ it('states each revealed candidate its own badges and note', () => {
   )
   expect(screen.getByText('속도가 빨라요')).toBeInTheDocument()
   expect(screen.getByText('문체가 잘 맞아요')).toBeInTheDocument()
-  expect(screen.getByText('AI 같아요')).toBeInTheDocument()
+  const complaint = screen.getByText('AI 같아요')
+  const other = screen.getByText('기타')
   expect(screen.getByText('제목이 비슷해요')).toBeInTheDocument()
+  // 기타 is its own group below the negatives, and never in the warning tone.
+  expect(complaint.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(other.className).not.toMatch(/warning/)
+  expect(complaint.className).toMatch(/warning/)
 })

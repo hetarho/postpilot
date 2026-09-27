@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ModelSelect } from './ModelSelect'
 import {
@@ -10,9 +10,23 @@ import {
   useModelSetup,
   useSaveComparisonPair,
 } from '@/entities/model-catalog'
-import { FieldMessage } from '@/shared/ui'
 
-export function ModelPairForm({ stage }: { stage: StageName }) {
+/** The pair the two fields show, which may differ from the stored one while a change is
+ *  incomplete, names one model twice, or is still being written. */
+export interface ShownPair {
+  stage: StageName
+  a: string
+  b: string
+}
+
+export function ModelPairForm({
+  stage,
+  onShownChange,
+}: {
+  stage: StageName
+  /** Told what the fields show, so a start gate reads the pair the screen shows (MODEL-65). */
+  onShownChange?: (shown: ShownPair) => void
+}) {
   const { models } = useModels()
   const { pairs } = useModelSetup()
   const savePair = useSaveComparisonPair()
@@ -29,6 +43,7 @@ export function ModelPairForm({ stage }: { stage: StageName }) {
       initialB={initialB}
       suitable={suitable}
       savePair={savePair}
+      onShownChange={onShownChange}
     />
   )
 }
@@ -39,12 +54,14 @@ function ModelPairFields({
   initialB,
   suitable,
   savePair,
+  onShownChange,
 }: {
   stage: StageName
   initialA: string
   initialB: string
   suitable: ReturnType<typeof useModels>['models']
   savePair: ReturnType<typeof useSaveComparisonPair>
+  onShownChange?: (shown: ShownPair) => void
 }) {
   const { t } = useTranslation('models')
   const [a, setA] = useState(initialA)
@@ -52,6 +69,14 @@ function ModelPairFields({
   // Which side was changed last, so a refusal sits under the control that caused it instead
   // of under both.
   const [changed, setChanged] = useState<'a' | 'b' | ''>('')
+  // Why the last change wrote nothing, on the field that made it (MODEL-65).
+  const [refused, setRefused] = useState<{ side: 'a' | 'b'; reason: 'incomplete' | 'same' }>()
+  useEffect(() => {
+    onShownChange?.({ stage, a, b })
+  }, [onShownChange, stage, a, b])
+  const notice = refused
+    ? t(refused.reason === 'same' ? 'differentModels' : 'pairIncomplete')
+    : undefined
   const find = (key: string): ModelRef | undefined =>
     suitable.find((model) => refKey(model.ref) === key)?.ref
 
@@ -67,10 +92,12 @@ function ModelPairFields({
     if (!left || !right || keys[0] === keys[1]) {
       // Nothing was written, so an earlier refusal has nothing to point at any more. The
       // mutation's own failure outlives its mutation; forgetting which field it belonged to
-      // is what takes it off the screen.
+      // is what takes it off the screen. What this change did not do is said instead.
       setChanged('')
+      setRefused({ side, reason: left && right ? 'same' : 'incomplete' })
       return
     }
+    setRefused(undefined)
     setChanged(side)
     void savePair.save(stage, left, right).catch(() => {
       // The mutation state carries the structured failure, rendered on the changed field.
@@ -90,6 +117,7 @@ function ModelPairFields({
           // (MODEL-23).
           saving={savePair.isPending}
           error={changed === 'a' ? savePair.failure : undefined}
+          notice={refused?.side === 'a' ? notice : undefined}
         />
         <ModelSelect
           label={t('candidateB')}
@@ -99,9 +127,9 @@ function ModelPairFields({
           onChange={(key) => commit('b', key)}
           saving={savePair.isPending}
           error={changed === 'b' ? savePair.failure : undefined}
+          notice={refused?.side === 'b' ? notice : undefined}
         />
       </div>
-      {a && a === b && <FieldMessage>{t('differentModels')}</FieldMessage>}
     </div>
   )
 }

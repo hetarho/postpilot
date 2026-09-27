@@ -13,6 +13,7 @@ export function ModelSelect({
   onChange,
   saving = false,
   error,
+  notice,
 }: {
   label: string
   /** Which stage's grade to show: a model is graded per stage, not once (MODEL-57). */
@@ -25,6 +26,8 @@ export function ModelSelect({
   saving?: boolean
   /** Why the last save of this field failed, if it did. */
   error?: AppFailure
+  /** Why the last change of this field wrote nothing (MODEL-65). */
+  notice?: string
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -53,8 +56,8 @@ export function ModelSelect({
         // Disabled only while a save is in flight: on 3G the round trip is seconds long and a
         // second tap would fire a second SaveSelection against the first one's result.
         disabled={saving}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-invalid={error || notice ? true : undefined}
+        aria-describedby={error || notice ? errorId : undefined}
         onChange={onChange}
       />
       {value && <ModelMeta model={models.find((model) => refKey(model.ref) === value)} />}
@@ -68,7 +71,7 @@ export function ModelSelect({
       >
         {saving ? t('pair.saving') : null}
       </Typography>
-      {error && (
+      {(error || notice) && (
         <Typography
           variant="body"
           as="div"
@@ -76,7 +79,7 @@ export function ModelSelect({
           role="alert"
           className="text-field-error mt-1 break-words"
         >
-          <AppFailureMessage failure={error} />
+          {error ? <AppFailureMessage failure={error} /> : notice}
         </Typography>
       )}
     </div>

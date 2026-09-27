@@ -181,17 +181,24 @@ describe('ModelPairForm saves as it is chosen (MODEL-65)', () => {
     })
     await waitFor(() => expect(screen.getAllByRole('combobox')[0]).toBeEnabled())
 
-    // One side alone is not a pair.
-    await chooseOption(user, screen.getAllByRole('combobox')[0], 'Writer A')
+    const [a, b] = screen.getAllByRole('combobox')
+    // One side alone is not a pair, and the field that made the change says so (MODEL-65).
+    await chooseOption(user, a, 'Writer A')
+    expect(pairs).toEqual([])
+    expect(a).toHaveAccessibleDescription('두 후보를 모두 골라야 저장돼요.')
+    expect(a).toHaveAttribute('aria-invalid', 'true')
+
+    // The same model twice is refused here, on the field that named it, so the stored pair
+    // is left alone.
+    await chooseOption(user, b, 'Writer A')
+    expect(b).toHaveAccessibleDescription('서로 다른 모델을 선택해 주세요.')
+    expect(a).not.toHaveAttribute('aria-invalid')
     expect(pairs).toEqual([])
 
-    // The same model twice is refused here, so the stored pair is left alone.
-    await chooseOption(user, screen.getAllByRole('combobox')[1], 'Writer A')
-    expect(await screen.findByText('서로 다른 모델을 선택해 주세요.')).toBeInTheDocument()
-    expect(pairs).toEqual([])
-
-    // Making them distinct completes it.
-    await chooseOption(user, screen.getAllByRole('combobox')[1], 'Writer B')
+    // Making them distinct completes it, and nothing is left to say.
+    await chooseOption(user, b, 'Writer B')
     await waitFor(() => expect(pairs).toEqual([{ a: 'writer-a', b: 'writer-b' }]))
+    expect(screen.queryByText('서로 다른 모델을 선택해 주세요.')).not.toBeInTheDocument()
+    expect(screen.queryByText('두 후보를 모두 골라야 저장돼요.')).not.toBeInTheDocument()
   })
 })
