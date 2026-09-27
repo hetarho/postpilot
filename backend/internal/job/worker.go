@@ -236,7 +236,7 @@ func (q *Queue) logJobFailure(found Job, failure Failure, err error) {
 		var staged interface{ FailureStage() string }
 		if errors.As(err, &staged) {
 			switch stage := staged.FailureStage(); stage {
-			case "prepare", "analyze", "flow", "narrate", "plan", "render", "save", "cleanup":
+			case "prepare", "analyze", "flow", "narrate", "storyline", "plan", "render", "save", "cleanup":
 				attrs = append(attrs, "stage", stage)
 			}
 		}

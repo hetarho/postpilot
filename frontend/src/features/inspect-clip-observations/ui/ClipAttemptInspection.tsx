@@ -123,6 +123,9 @@ const checkExplanations = {
   plan_cut_usability: 'inspection.planCutUsability',
   plan_source_overlap: 'inspection.planSourceOverlap',
   plan_source_audio: 'inspection.planSourceAudio',
+  // The storyline call (CLIP-177) and 이 스토리로 만들기 (CLIP-178).
+  storyline_empty: 'inspection.storylineEmpty',
+  storyline_scene: 'inspection.storylineScene',
 } as const
 
 function CandidatePlayback({

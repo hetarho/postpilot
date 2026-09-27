@@ -527,9 +527,12 @@ type ClipProject struct {
 	// Absent until the project has a successful result; derived from that result.
 	LastRenderKind *ClipRenderKind `protobuf:"varint,37,opt,name=last_render_kind,json=lastRenderKind,proto3,enum=postpilot.v1.ClipRenderKind,oneof" json:"last_render_kind,omitempty"`
 	// The clip's storyline (CLIP-178); absent when it has none.
-	Storyline     *ClipStoryline `protobuf:"bytes,38,opt,name=storyline,proto3" json:"storyline,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Storyline *ClipStoryline `protobuf:"bytes,38,opt,name=storyline,proto3" json:"storyline,omitempty"`
+	// Whether the owner changed the plan since a writer last wrote it (CLIP-180): what
+	// 이 스토리로 만들기 confirms before replacing it.
+	PlanEditedByHand bool `protobuf:"varint,39,opt,name=plan_edited_by_hand,json=planEditedByHand,proto3" json:"plan_edited_by_hand,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ClipProject) Reset() {
@@ -812,6 +815,13 @@ func (x *ClipProject) GetStoryline() *ClipStoryline {
 		return x.Storyline
 	}
 	return nil
+}
+
+func (x *ClipProject) GetPlanEditedByHand() bool {
+	if x != nil {
+		return x.PlanEditedByHand
+	}
+	return false
 }
 
 // One paragraph of a clip's storyline: what that part of the clip shows and says, and the
@@ -4555,7 +4565,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xf7\r\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xa6\x0e\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -4600,7 +4610,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\foutro_preset\x18# \x01(\tR\voutroPreset\x124\n" +
 	"\x16allowed_caption_styles\x18$ \x03(\tR\x14allowedCaptionStyles\x12K\n" +
 	"\x10last_render_kind\x18% \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindH\x02R\x0elastRenderKind\x88\x01\x01\x129\n" +
-	"\tstoryline\x18& \x01(\v2\x1b.postpilot.v1.ClipStorylineR\tstorylineB\v\n" +
+	"\tstoryline\x18& \x01(\v2\x1b.postpilot.v1.ClipStorylineR\tstoryline\x12-\n" +
+	"\x13plan_edited_by_hand\x18' \x01(\bR\x10planEditedByHandB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalizeB\x13\n" +
 	"\x11_last_render_kindJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"U\n" +

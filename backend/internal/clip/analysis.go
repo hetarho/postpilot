@@ -120,6 +120,10 @@ type PlanningInput struct {
 	// The clip's frozen 영상 지침 (GUIDE-15, GUIDE-17): read into the flow, narration and
 	// revision system prompts, and absent from them when both groups are empty.
 	Guidelines VideoGuidelines
+	// The storyline 이 스토리로 만들기 builds along (CLIP-178, CDS-37): the flow is given only
+	// the scenes it holds and keeps its order and pace, and writes no storyline of its own.
+	// Nil is 바로 만들기.
+	FollowStoryline *Storyline
 }
 
 // VideoGuidelines are a clip's frozen 영상 지침: the enabled clip 기본 지침 in the project's
@@ -147,6 +151,15 @@ func (g VideoGuidelines) Digest() string {
 	raw, _ := json.Marshal(g)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
+}
+
+// StorylineInput is the storyline call's input (CLIP-177): the planning input over the
+// observations, and for a storyline request (CLIP-181) the current storyline and the owner's
+// words. Current is nil and Request empty for 스토리라인 먼저 and 다시 만들기.
+type StorylineInput struct {
+	PlanningInput
+	Current *Storyline
+	Request string
 }
 
 // RevisionInput is one owner-written revision request (CLIP-131): the plan as

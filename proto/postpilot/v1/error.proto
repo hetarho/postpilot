@@ -296,6 +296,10 @@ enum FailureReason {
   // StartGeneration asked to write along the storyline and sent a reobserve selection beside
   // it; a storyline run observes exactly what the storyline holds (GEN-70).
   GENERATION_STORYLINE_REOBSERVE = 255;
+  // CLIP-178: 이 스토리로 만들기, a storyline request or an edit on a clip with no storyline.
+  CLIP_STORYLINE_MISSING = 256;
+  // CLIP-178: an owner storyline edit that does not keep its shape.
+  CLIP_STORYLINE_INVALID = 257;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

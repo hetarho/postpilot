@@ -71,6 +71,8 @@ export const i18n = {
       planCutUsability: '원본의 관찰 결과로는 해당 구간을 선택한 속도로 사용할 수 없었어요.',
       planSourceOverlap: '같은 원본의 선택 구간이 겹치거나 허용된 순서를 벗어났어요.',
       planSourceAudio: '편집안의 원본 음성 설정이 선택된 원본이나 컷의 음량과 맞지 않았어요.',
+      storylineEmpty: 'AI가 스토리라인을 쓰지 못했어요. 다시 시도해 주세요.',
+      storylineScene: '스토리라인에 없는 장면을 쓴 컷을 뺐어요.',
       inputTooLarge:
         '템플릿·입력 내용과 분석 결과의 합계가 이번 작업의 입력 한도를 넘어 다음 AI 요청을 보내지 못했어요. 템플릿을 줄이거나 원본 수를 줄여 주세요.',
       inputInvalid:
@@ -297,6 +299,8 @@ export const i18n = {
         'Selected ranges from the same original overlapped or broke the allowed order.',
       planSourceAudio:
         'The plan’s original sound settings did not match the selected sources or cut volumes.',
+      storylineEmpty: 'The AI wrote no storyline. Try again.',
+      storylineScene: 'A cut on a scene the storyline does not hold was left out.',
       inputTooLarge:
         'The combined template, inputs and observations exceeded this job’s input allowance, so the next AI request was not sent. Shorten the template or select fewer sources.',
       inputInvalid:

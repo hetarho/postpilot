@@ -49,7 +49,13 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 		value := int(*req.Msg.ApprovedMaxCredits)
 		maxCredits = &value
 	}
-	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), clip.QuoteApproval{CancellationPolicyVersion: int(req.Msg.CancellationPolicyVersion), QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits})
+	approval := clip.QuoteApproval{CancellationPolicyVersion: int(req.Msg.CancellationPolicyVersion), QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits}
+	var id string
+	if req.Msg.FromStoryline {
+		id, err = h.generation.StartFromStoryline(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), approval)
+	} else {
+		id, err = h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), approval)
+	}
 	if err != nil {
 		var admission *clip.ModelAdmissionError
 		if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
@@ -156,6 +162,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip input limit", postpilotv1.FailureReason_CLIP_INPUT_TOO_LARGE, nil)
 	case errors.Is(err, clip.ErrAnalysisTooLarge):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", postpilotv1.FailureReason_CLIP_ANALYSIS_TOO_LARGE, nil)
+	case errors.Is(err, clip.ErrStorylineMissing):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip has no storyline", postpilotv1.FailureReason_CLIP_STORYLINE_MISSING, nil)
+	case errors.Is(err, clip.ErrStorylineInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip storyline edit invalid", postpilotv1.FailureReason_CLIP_STORYLINE_INVALID, nil)
 	case errors.Is(err, clip.ErrPlanConflict):
 		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", postpilotv1.FailureReason_CLIP_PLAN_CONFLICT, nil)
 	case errors.Is(err, clip.ErrDisclosureRequired):
@@ -228,6 +238,7 @@ func projectProto(p clip.Project) *v1.ClipProject {
 		out.FinalizationRefusal = "finalized"
 	}
 	out.Storyline = storylineProto(p, nil)
+	out.PlanEditedByHand = p.PlanEditedByHand()
 	// Verbatim, newest first, exactly as the store answered (CLIP-133).
 	for _, r := range p.Requests {
 		out.Requests = append(out.Requests, &v1.ClipProjectRequest{Kind: r.Kind, Body: r.Body, CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano)})
@@ -423,7 +434,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)}
+	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Storyline: storylineEdit(m.Storyline)}
 	if m.TargetDurationMs != nil {
 		v := int(*m.TargetDurationMs)
 		p.TargetDurationMS = &v

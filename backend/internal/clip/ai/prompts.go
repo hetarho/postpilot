@@ -41,10 +41,21 @@ func BuildObservePrompt(in clip.ChunkInput) (string, string) {
 	})
 }
 func planObservationPayload(values []clip.SourceAnalysis, refs bool) []map[string]any {
+	_, analyses := observationPayload(values, refs, nil)
+	return analyses
+}
+
+// observationPayload is the analyses as a writer reads them. A non-nil `held` keeps only those
+// observation ids and the sources that have one, and answers which analyses it kept, in order.
+func observationPayload(values []clip.SourceAnalysis, refs bool, held map[string]bool) ([]clip.SourceAnalysis, []map[string]any) {
 	analyses := make([]map[string]any, 0, len(values))
+	var kept []clip.SourceAnalysis
 	for _, a := range values {
 		segments := make([]map[string]any, 0, len(a.Segments))
 		for index, s := range a.Segments {
+			if held != nil && !held[clip.ObservationID(a.Source.ID, index)] {
+				continue
+			}
 			entry := map[string]any{
 				"start_ms": s.StartMS, "end_ms": s.EndMS, "event": s.Event, "action": s.Action, "motion": s.Motion,
 				"subjects": s.Subjects, "speech": s.Speech, "quality": s.Quality,
@@ -60,7 +71,11 @@ func planObservationPayload(values []clip.SourceAnalysis, refs bool) []map[strin
 		// The allowed rates are the SERVER's own reading of this source's
 		// verified cadence. The model chooses from them; it is never asked to
 		// infer frame-rate arithmetic (CDS-68).
+		if held != nil && len(segments) == 0 {
+			continue
+		}
+		kept = append(kept, a)
 		analyses = append(analyses, map[string]any{"source_id": a.Source.ID, "source_name": a.Source.Filename, "duration_ms": a.Source.Info.DurationMS, "width": a.Source.Info.Width, "height": a.Source.Info.Height, "has_audio": a.Source.Info.HasAudio, "allowed_rate_permille": clip.AllowedPlaybackRates(a.Source.Info), "segments": segments})
 	}
-	return analyses
+	return kept, analyses
 }

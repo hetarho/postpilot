@@ -1,11 +1,25 @@
 package clip
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
+
+// ErrStorylineMissing refuses what needs a storyline on a clip that has none: building from it,
+// a storyline request and an owner edit (CLIP-178, CLIP-181).
+var ErrStorylineMissing = errors.New("clip has no storyline")
+
+// ErrStorylineInvalid refuses an owner edit that does not keep the storyline's shape: another
+// paragraph count, a scene outside the made-with sources' observations, a scene named twice, an
+// empty paragraph or a text past its bounds (CLIP-178).
+var ErrStorylineInvalid = errors.New("clip storyline edit invalid")
 
 // A clip's storyline (CLIP-178): the clip told in order, paragraph by paragraph, each naming
 // the observed scenes it uses. It names scenes, not files: an observation id
@@ -144,4 +158,109 @@ func cutRunes(text string, max int) string {
 		count++
 	}
 	return text
+}
+
+// ApplyStorylineEdit is the owner's edit of the stored storyline (CLIP-178): the same number of
+// paragraphs with their texts and scenes replaced, each scene an observation of the sources it
+// was made with and none named twice. The result is marked edited by hand and keeps the sources
+// it was made with.
+func ApplyStorylineEdit(current *Storyline, edit []StorylineParagraph, analyses []SourceAnalysis) (*Storyline, error) {
+	if current == nil {
+		return nil, ErrStorylineMissing
+	}
+	if len(edit) != len(current.Paragraphs) {
+		return nil, ErrStorylineInvalid
+	}
+	allowed := map[string]bool{}
+	for _, a := range analyses {
+		if !slices.Contains(current.MadeWithSources, a.Source.ID) {
+			continue
+		}
+		for i := range a.Segments {
+			allowed[ObservationID(a.Source.ID, i)] = true
+		}
+	}
+	used := map[string]bool{}
+	out := &Storyline{EditedByHand: true, MadeWithSources: slices.Clone(current.MadeWithSources)}
+	bytes := 0
+	for _, p := range edit {
+		text := strings.TrimSpace(p.Text)
+		if utf8.RuneCountInString(text) > StorylineTextMaxChars {
+			return nil, ErrStorylineInvalid
+		}
+		kept := StorylineParagraph{Text: text}
+		for _, id := range p.ObservationIDs {
+			if !allowed[id] || used[id] {
+				return nil, ErrStorylineInvalid
+			}
+			used[id] = true
+			kept.ObservationIDs = append(kept.ObservationIDs, id)
+		}
+		if text == "" && len(kept.ObservationIDs) == 0 {
+			return nil, ErrStorylineInvalid
+		}
+		if bytes += len(text); bytes > StorylineMaxBytes {
+			return nil, ErrStorylineInvalid
+		}
+		out.Paragraphs = append(out.Paragraphs, kept)
+	}
+	return out, nil
+}
+
+// WithoutRemovedSources takes a removed source out of the storyline (CLIP-178): its scenes leave
+// every paragraph and it leaves the sources the storyline was made with. `kept` are the sources
+// that stay. The paragraphs themselves stay, text and all.
+func (s Storyline) WithoutRemovedSources(kept map[string]bool) Storyline {
+	out := Storyline{EditedByHand: s.EditedByHand}
+	for _, id := range s.MadeWithSources {
+		if kept[id] {
+			out.MadeWithSources = append(out.MadeWithSources, id)
+		}
+	}
+	for _, p := range s.Paragraphs {
+		paragraph := StorylineParagraph{Text: p.Text}
+		for _, id := range p.ObservationIDs {
+			if kept[ObservationSource(id)] {
+				paragraph.ObservationIDs = append(paragraph.ObservationIDs, id)
+			}
+		}
+		out.Paragraphs = append(out.Paragraphs, paragraph)
+	}
+	return out
+}
+
+// HeldScenes are the observation ids the storyline's paragraphs hold.
+func (s Storyline) HeldScenes() map[string]bool {
+	out := map[string]bool{}
+	for _, p := range s.Paragraphs {
+		for _, id := range p.ObservationIDs {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// Digest binds an approval to the storyline it was taken against (QUOTA-45): an owner edit
+// between the quote and the start invalidates it. Nil is the empty digest.
+func (s *Storyline) Digest() string {
+	if s == nil {
+		return ""
+	}
+	raw, _ := json.Marshal(s)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+// StorylineStore saves what the storyline call wrote (CLIP-177): the analysis it read and the
+// storyline, and no plan. An empty analysis keeps the stored one.
+type StorylineStore interface {
+	SaveStoryline(ctx context.Context, user, id, analysis, storyline string, now time.Time) (Project, error)
+}
+
+// ObservationSource is the source an observation id belongs to.
+func ObservationSource(id string) string {
+	if at := strings.LastIndex(id, "/"); at >= 0 {
+		return id[:at]
+	}
+	return ""
 }

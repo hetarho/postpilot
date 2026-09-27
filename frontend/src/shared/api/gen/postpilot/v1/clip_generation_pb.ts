@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { ClipAccounting, ClipAnalysisModelEligibility, ClipCancellationPolicy, ClipCaptionStyles, ClipCompositionInputs, ClipPricedCall, ClipProject, ClipSequenceCaptionCost } from "./clip_pb";
+import type { ClipAccounting, ClipAnalysisModelEligibility, ClipCancellationPolicy, ClipCaptionStyles, ClipCompositionInputs, ClipPricedCall, ClipProject, ClipSequenceCaptionCost, ClipStorylineParagraph } from "./clip_pb";
 import { file_postpilot_v1_clip } from "./clip_pb";
 import type { GenerationJob } from "./post_pb";
 import { file_postpilot_v1_post } from "./post_pb";
@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_generation.proto.
  */
 export const file_postpilot_v1_clip_generation: GenFile = /*@__PURE__*/
-  fileDesc("CiJwb3N0cGlsb3QvdjEvY2xpcF9nZW5lcmF0aW9uLnByb3RvEgxwb3N0cGlsb3QudjEiGQoXTGlzdENsaXBQcm9qZWN0c1JlcXVlc3QiRwoYTGlzdENsaXBQcm9qZWN0c1Jlc3BvbnNlEisKCHByb2plY3RzGAEgAygLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IqIEChhDcmVhdGVDbGlwUHJvamVjdFJlcXVlc3QSDQoFdGl0bGUYASABKAkSGQoRdmlkZW9fdGVtcGxhdGVfaWQYAiABKAkSDQoFcmF0aW8YAyABKAkSGgoSdGFyZ2V0X2R1cmF0aW9uX21zGAQgASgFEhIKCmRpc2Nsb3N1cmUYBiABKAkSFwoPaGlkZV9kaXNjbG9zdXJlGAggASgIEj8KEmNvbXBvc2l0aW9uX2lucHV0cxgJIAEoCzIjLnBvc3RwaWxvdC52MS5DbGlwQ29tcG9zaXRpb25JbnB1dHMSLwoIbGFuZ3VhZ2UYCiABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlEhMKC2luc3RydWN0aW9uGAsgASgJEhkKDGNhcHRpb25fcGFjZRgMIAEoCUgAiAEBEhMKBmFjY2VudBgNIAEoCUgBiAEBEhkKDGludHJvX3ByZXNldBgOIAEoCUgCiAEBEhkKDG91dHJvX3ByZXNldBgPIAEoCUgDiAEBEj8KFmFsbG93ZWRfY2FwdGlvbl9zdHlsZXMYECABKAsyHy5wb3N0cGlsb3QudjEuQ2xpcENhcHRpb25TdHlsZXNCDwoNX2NhcHRpb25fcGFjZUIJCgdfYWNjZW50Qg8KDV9pbnRyb19wcmVzZXRCDwoNX291dHJvX3ByZXNldEoECAUQBkoECAcQCFIHYW5zd2Vyc1IDY3RhIkcKGUNyZWF0ZUNsaXBQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCIjChVHZXRDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkiRAoWR2V0Q2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IvYEChhVcGRhdGVDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkSEgoFdGl0bGUYAiABKAlIAIgBARIeChF2aWRlb190ZW1wbGF0ZV9pZBgDIAEoCUgBiAEBEh8KEnRhcmdldF9kdXJhdGlvbl9tcxgEIAEoBUgCiAEBEhcKCmRpc2Nsb3N1cmUYBiABKAlIA4gBARIcCg9oaWRlX2Rpc2Nsb3N1cmUYCCABKAhIBIgBARI/ChJjb21wb3NpdGlvbl9pbnB1dHMYCSABKAsyIy5wb3N0cGlsb3QudjEuQ2xpcENvbXBvc2l0aW9uSW5wdXRzEhgKC2luc3RydWN0aW9uGAogASgJSAWIAQESGQoMY2FwdGlvbl9wYWNlGAsgASgJSAaIAQESEwoGYWNjZW50GAwgASgJSAeIAQESGQoMaW50cm9fcHJlc2V0GA0gASgJSAiIAQESGQoMb3V0cm9fcHJlc2V0GA4gASgJSAmIAQESPwoWYWxsb3dlZF9jYXB0aW9uX3N0eWxlcxgPIAEoCzIfLnBvc3RwaWxvdC52MS5DbGlwQ2FwdGlvblN0eWxlc0IICgZfdGl0bGVCFAoSX3ZpZGVvX3RlbXBsYXRlX2lkQhUKE190YXJnZXRfZHVyYXRpb25fbXNCDQoLX2Rpc2Nsb3N1cmVCEgoQX2hpZGVfZGlzY2xvc3VyZUIOCgxfaW5zdHJ1Y3Rpb25CDwoNX2NhcHRpb25fcGFjZUIJCgdfYWNjZW50Qg8KDV9pbnRyb19wcmVzZXRCDwoNX291dHJvX3ByZXNldEoECAUQBkoECAcQCFIHYW5zd2Vyc1IDY3RhIkcKGVVwZGF0ZUNsaXBQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCImChhEZWxldGVDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkiGwoZRGVsZXRlQ2xpcFByb2plY3RSZXNwb25zZSKeAQoaUXVvdGVDbGlwR2VuZXJhdGlvblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIQCghiYXRjaF9pZBgCIAEoCRItCg1vYnNlcnZlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIvECChtRdW90ZUNsaXBHZW5lcmF0aW9uUmVzcG9uc2USEAoIcXVvdGVfaWQYASABKAkSEwoLbWF4X2NyZWRpdHMYAiABKAUSEgoKZXhwaXJlc19hdBgDIAEoCRIyCgxwcmljZWRfY2FsbHMYBCADKAsyHC5wb3N0cGlsb3QudjEuQ2xpcFByaWNlZENhbGwSQQoTY2FuY2VsbGF0aW9uX3BvbGljeRgFIAEoCzIkLnBvc3RwaWxvdC52MS5DbGlwQ2FuY2VsbGF0aW9uUG9saWN5EhUKDXJldXNlZF9jaHVua3MYBiABKAUSGAoQcmVtYWluaW5nX2NodW5rcxgHIAEoBRITCgtyZW5kZXJfb25seRgIIAEoCBIYChByZXNwb25zZV9yZXRyaWVzGAkgASgFEkAKEXNlcXVlbmNlX2NhcHRpb25zGAogASgLMiUucG9zdHBpbG90LnYxLkNsaXBTZXF1ZW5jZUNhcHRpb25Db3N0IpECChpTdGFydENsaXBHZW5lcmF0aW9uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEAoIcXVvdGVfaWQYBSABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYBiABKAVIAIgBARIjChtjYW5jZWxsYXRpb25fcG9saWN5X3ZlcnNpb24YByABKAVCFwoVX2FwcHJvdmVkX21heF9jcmVkaXRzIi0KG1N0YXJ0Q2xpcEdlbmVyYXRpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkiZwoaRmluYWxpemVDbGlwUHJvamVjdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIaChJleHBlY3RlZF9yZXN1bHRfaWQYAyABKAkiSQobRmluYWxpemVDbGlwUHJvamVjdFJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiOgoUQ2FuY2VsQ2xpcEpvYlJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIOCgZqb2JfaWQYAiABKAkihQEKFUNhbmNlbENsaXBKb2JSZXNwb25zZRIoCgNqb2IYASABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYhIwCgphY2NvdW50aW5nGAIgASgLMhwucG9zdHBpbG90LnYxLkNsaXBBY2NvdW50aW5nEhAKCGFjY2VwdGVkGAMgASgIIiQKIkxpc3RDbGlwQW5hbHlzaXNFbGlnaWJpbGl0eVJlcXVlc3QiYQojTGlzdENsaXBBbmFseXNpc0VsaWdpYmlsaXR5UmVzcG9uc2USOgoGbW9kZWxzGAEgAygLMioucG9zdHBpbG90LnYxLkNsaXBBbmFseXNpc01vZGVsRWxpZ2liaWxpdHkywAgKFUNsaXBHZW5lcmF0aW9uU2VydmljZRJjChBMaXN0Q2xpcFByb2plY3RzEiUucG9zdHBpbG90LnYxLkxpc3RDbGlwUHJvamVjdHNSZXF1ZXN0GiYucG9zdHBpbG90LnYxLkxpc3RDbGlwUHJvamVjdHNSZXNwb25zZSIAEmYKEUNyZWF0ZUNsaXBQcm9qZWN0EiYucG9zdHBpbG90LnYxLkNyZWF0ZUNsaXBQcm9qZWN0UmVxdWVzdBonLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwUHJvamVjdFJlc3BvbnNlIgASXQoOR2V0Q2xpcFByb2plY3QSIy5wb3N0cGlsb3QudjEuR2V0Q2xpcFByb2plY3RSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkdldENsaXBQcm9qZWN0UmVzcG9uc2UiABJmChFVcGRhdGVDbGlwUHJvamVjdBImLnBvc3RwaWxvdC52MS5VcGRhdGVDbGlwUHJvamVjdFJlcXVlc3QaJy5wb3N0cGlsb3QudjEuVXBkYXRlQ2xpcFByb2plY3RSZXNwb25zZSIAEmYKEURlbGV0ZUNsaXBQcm9qZWN0EiYucG9zdHBpbG90LnYxLkRlbGV0ZUNsaXBQcm9qZWN0UmVxdWVzdBonLnBvc3RwaWxvdC52MS5EZWxldGVDbGlwUHJvamVjdFJlc3BvbnNlIgASbAoTUXVvdGVDbGlwR2VuZXJhdGlvbhIoLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBHZW5lcmF0aW9uUmVxdWVzdBopLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBHZW5lcmF0aW9uUmVzcG9uc2UiABJsChNTdGFydENsaXBHZW5lcmF0aW9uEigucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXNwb25zZSIAEmwKE0ZpbmFsaXplQ2xpcFByb2plY3QSKC5wb3N0cGlsb3QudjEuRmluYWxpemVDbGlwUHJvamVjdFJlcXVlc3QaKS5wb3N0cGlsb3QudjEuRmluYWxpemVDbGlwUHJvamVjdFJlc3BvbnNlIgASWgoNQ2FuY2VsQ2xpcEpvYhIiLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwSm9iUmVxdWVzdBojLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwSm9iUmVzcG9uc2UiABKEAQobTGlzdENsaXBBbmFseXNpc0VsaWdpYmlsaXR5EjAucG9zdHBpbG90LnYxLkxpc3RDbGlwQW5hbHlzaXNFbGlnaWJpbGl0eVJlcXVlc3QaMS5wb3N0cGlsb3QudjEuTGlzdENsaXBBbmFseXNpc0VsaWdpYmlsaXR5UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_clip, file_postpilot_v1_post, file_postpilot_v1_provider, file_postpilot_v1_language]);
+  fileDesc("CiJwb3N0cGlsb3QvdjEvY2xpcF9nZW5lcmF0aW9uLnByb3RvEgxwb3N0cGlsb3QudjEiGQoXTGlzdENsaXBQcm9qZWN0c1JlcXVlc3QiRwoYTGlzdENsaXBQcm9qZWN0c1Jlc3BvbnNlEisKCHByb2plY3RzGAEgAygLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IqIEChhDcmVhdGVDbGlwUHJvamVjdFJlcXVlc3QSDQoFdGl0bGUYASABKAkSGQoRdmlkZW9fdGVtcGxhdGVfaWQYAiABKAkSDQoFcmF0aW8YAyABKAkSGgoSdGFyZ2V0X2R1cmF0aW9uX21zGAQgASgFEhIKCmRpc2Nsb3N1cmUYBiABKAkSFwoPaGlkZV9kaXNjbG9zdXJlGAggASgIEj8KEmNvbXBvc2l0aW9uX2lucHV0cxgJIAEoCzIjLnBvc3RwaWxvdC52MS5DbGlwQ29tcG9zaXRpb25JbnB1dHMSLwoIbGFuZ3VhZ2UYCiABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlEhMKC2luc3RydWN0aW9uGAsgASgJEhkKDGNhcHRpb25fcGFjZRgMIAEoCUgAiAEBEhMKBmFjY2VudBgNIAEoCUgBiAEBEhkKDGludHJvX3ByZXNldBgOIAEoCUgCiAEBEhkKDG91dHJvX3ByZXNldBgPIAEoCUgDiAEBEj8KFmFsbG93ZWRfY2FwdGlvbl9zdHlsZXMYECABKAsyHy5wb3N0cGlsb3QudjEuQ2xpcENhcHRpb25TdHlsZXNCDwoNX2NhcHRpb25fcGFjZUIJCgdfYWNjZW50Qg8KDV9pbnRyb19wcmVzZXRCDwoNX291dHJvX3ByZXNldEoECAUQBkoECAcQCFIHYW5zd2Vyc1IDY3RhIkcKGUNyZWF0ZUNsaXBQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCIjChVHZXRDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkiRAoWR2V0Q2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IqoFChhVcGRhdGVDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkSEgoFdGl0bGUYAiABKAlIAIgBARIeChF2aWRlb190ZW1wbGF0ZV9pZBgDIAEoCUgBiAEBEh8KEnRhcmdldF9kdXJhdGlvbl9tcxgEIAEoBUgCiAEBEhcKCmRpc2Nsb3N1cmUYBiABKAlIA4gBARIcCg9oaWRlX2Rpc2Nsb3N1cmUYCCABKAhIBIgBARI/ChJjb21wb3NpdGlvbl9pbnB1dHMYCSABKAsyIy5wb3N0cGlsb3QudjEuQ2xpcENvbXBvc2l0aW9uSW5wdXRzEhgKC2luc3RydWN0aW9uGAogASgJSAWIAQESGQoMY2FwdGlvbl9wYWNlGAsgASgJSAaIAQESEwoGYWNjZW50GAwgASgJSAeIAQESGQoMaW50cm9fcHJlc2V0GA0gASgJSAiIAQESGQoMb3V0cm9fcHJlc2V0GA4gASgJSAmIAQESPwoWYWxsb3dlZF9jYXB0aW9uX3N0eWxlcxgPIAEoCzIfLnBvc3RwaWxvdC52MS5DbGlwQ2FwdGlvblN0eWxlcxIyCglzdG9yeWxpbmUYECABKAsyHy5wb3N0cGlsb3QudjEuQ2xpcFN0b3J5bGluZUVkaXRCCAoGX3RpdGxlQhQKEl92aWRlb190ZW1wbGF0ZV9pZEIVChNfdGFyZ2V0X2R1cmF0aW9uX21zQg0KC19kaXNjbG9zdXJlQhIKEF9oaWRlX2Rpc2Nsb3N1cmVCDgoMX2luc3RydWN0aW9uQg8KDV9jYXB0aW9uX3BhY2VCCQoHX2FjY2VudEIPCg1faW50cm9fcHJlc2V0Qg8KDV9vdXRyb19wcmVzZXRKBAgFEAZKBAgHEAhSB2Fuc3dlcnNSA2N0YSJNChFDbGlwU3RvcnlsaW5lRWRpdBI4CgpwYXJhZ3JhcGhzGAEgAygLMiQucG9zdHBpbG90LnYxLkNsaXBTdG9yeWxpbmVQYXJhZ3JhcGgiRwoZVXBkYXRlQ2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IiYKGERlbGV0ZUNsaXBQcm9qZWN0UmVxdWVzdBIKCgJpZBgBIAEoCSIbChlEZWxldGVDbGlwUHJvamVjdFJlc3BvbnNlIrYBChpRdW90ZUNsaXBHZW5lcmF0aW9uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSFgoOZnJvbV9zdG9yeWxpbmUYBSABKAgi8QIKG1F1b3RlQ2xpcEdlbmVyYXRpb25SZXNwb25zZRIQCghxdW90ZV9pZBgBIAEoCRITCgttYXhfY3JlZGl0cxgCIAEoBRISCgpleHBpcmVzX2F0GAMgASgJEjIKDHByaWNlZF9jYWxscxgEIAMoCzIcLnBvc3RwaWxvdC52MS5DbGlwUHJpY2VkQ2FsbBJBChNjYW5jZWxsYXRpb25fcG9saWN5GAUgASgLMiQucG9zdHBpbG90LnYxLkNsaXBDYW5jZWxsYXRpb25Qb2xpY3kSFQoNcmV1c2VkX2NodW5rcxgGIAEoBRIYChByZW1haW5pbmdfY2h1bmtzGAcgASgFEhMKC3JlbmRlcl9vbmx5GAggASgIEhgKEHJlc3BvbnNlX3JldHJpZXMYCSABKAUSQAoRc2VxdWVuY2VfY2FwdGlvbnMYCiABKAsyJS5wb3N0cGlsb3QudjEuQ2xpcFNlcXVlbmNlQ2FwdGlvbkNvc3QiqQIKGlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSLQoNb2JzZXJ2ZV9tb2RlbBgDIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIrCgt3cml0ZV9tb2RlbBgEIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIQCghxdW90ZV9pZBgFIAEoCRIhChRhcHByb3ZlZF9tYXhfY3JlZGl0cxgGIAEoBUgAiAEBEiMKG2NhbmNlbGxhdGlvbl9wb2xpY3lfdmVyc2lvbhgHIAEoBRIWCg5mcm9tX3N0b3J5bGluZRgIIAEoCEIXChVfYXBwcm92ZWRfbWF4X2NyZWRpdHMiLQobU3RhcnRDbGlwR2VuZXJhdGlvblJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSKdAQoZUXVvdGVDbGlwU3RvcnlsaW5lUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYikAIKGVN0YXJ0Q2xpcFN0b3J5bGluZVJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIQCghiYXRjaF9pZBgCIAEoCRItCg1vYnNlcnZlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhAKCHF1b3RlX2lkGAUgASgJEiEKFGFwcHJvdmVkX21heF9jcmVkaXRzGAYgASgFSACIAQESIwobY2FuY2VsbGF0aW9uX3BvbGljeV92ZXJzaW9uGAcgASgFQhcKFV9hcHByb3ZlZF9tYXhfY3JlZGl0cyKkAQohUXVvdGVDbGlwU3RvcnlsaW5lUmV2aXNpb25SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDwoHcmVxdWVzdBgCIAEoCRItCg1vYnNlcnZlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIpcCCiFTdGFydENsaXBTdG9yeWxpbmVSZXZpc2lvblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIPCgdyZXF1ZXN0GAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEAoIcXVvdGVfaWQYBSABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYBiABKAVIAIgBARIjChtjYW5jZWxsYXRpb25fcG9saWN5X3ZlcnNpb24YByABKAVCFwoVX2FwcHJvdmVkX21heF9jcmVkaXRzImcKGkZpbmFsaXplQ2xpcFByb2plY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUSGgoSZXhwZWN0ZWRfcmVzdWx0X2lkGAMgASgJIkkKG0ZpbmFsaXplQ2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IjoKFENhbmNlbENsaXBKb2JSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDgoGam9iX2lkGAIgASgJIoUBChVDYW5jZWxDbGlwSm9iUmVzcG9uc2USKAoDam9iGAEgASgLMhsucG9zdHBpbG90LnYxLkdlbmVyYXRpb25Kb2ISMAoKYWNjb3VudGluZxgCIAEoCzIcLnBvc3RwaWxvdC52MS5DbGlwQWNjb3VudGluZxIQCghhY2NlcHRlZBgDIAEoCCIkCiJMaXN0Q2xpcEFuYWx5c2lzRWxpZ2liaWxpdHlSZXF1ZXN0ImEKI0xpc3RDbGlwQW5hbHlzaXNFbGlnaWJpbGl0eVJlc3BvbnNlEjoKBm1vZGVscxgBIAMoCzIqLnBvc3RwaWxvdC52MS5DbGlwQW5hbHlzaXNNb2RlbEVsaWdpYmlsaXR5MpAMChVDbGlwR2VuZXJhdGlvblNlcnZpY2USYwoQTGlzdENsaXBQcm9qZWN0cxIlLnBvc3RwaWxvdC52MS5MaXN0Q2xpcFByb2plY3RzUmVxdWVzdBomLnBvc3RwaWxvdC52MS5MaXN0Q2xpcFByb2plY3RzUmVzcG9uc2UiABJmChFDcmVhdGVDbGlwUHJvamVjdBImLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwUHJvamVjdFJlcXVlc3QaJy5wb3N0cGlsb3QudjEuQ3JlYXRlQ2xpcFByb2plY3RSZXNwb25zZSIAEl0KDkdldENsaXBQcm9qZWN0EiMucG9zdHBpbG90LnYxLkdldENsaXBQcm9qZWN0UmVxdWVzdBokLnBvc3RwaWxvdC52MS5HZXRDbGlwUHJvamVjdFJlc3BvbnNlIgASZgoRVXBkYXRlQ2xpcFByb2plY3QSJi5wb3N0cGlsb3QudjEuVXBkYXRlQ2xpcFByb2plY3RSZXF1ZXN0GicucG9zdHBpbG90LnYxLlVwZGF0ZUNsaXBQcm9qZWN0UmVzcG9uc2UiABJmChFEZWxldGVDbGlwUHJvamVjdBImLnBvc3RwaWxvdC52MS5EZWxldGVDbGlwUHJvamVjdFJlcXVlc3QaJy5wb3N0cGlsb3QudjEuRGVsZXRlQ2xpcFByb2plY3RSZXNwb25zZSIAEmwKE1F1b3RlQ2xpcEdlbmVyYXRpb24SKC5wb3N0cGlsb3QudjEuUXVvdGVDbGlwR2VuZXJhdGlvblJlcXVlc3QaKS5wb3N0cGlsb3QudjEuUXVvdGVDbGlwR2VuZXJhdGlvblJlc3BvbnNlIgASbAoTU3RhcnRDbGlwR2VuZXJhdGlvbhIoLnBvc3RwaWxvdC52MS5TdGFydENsaXBHZW5lcmF0aW9uUmVxdWVzdBopLnBvc3RwaWxvdC52MS5TdGFydENsaXBHZW5lcmF0aW9uUmVzcG9uc2UiABJqChJRdW90ZUNsaXBTdG9yeWxpbmUSJy5wb3N0cGlsb3QudjEuUXVvdGVDbGlwU3RvcnlsaW5lUmVxdWVzdBopLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBHZW5lcmF0aW9uUmVzcG9uc2UiABJqChJTdGFydENsaXBTdG9yeWxpbmUSJy5wb3N0cGlsb3QudjEuU3RhcnRDbGlwU3RvcnlsaW5lUmVxdWVzdBopLnBvc3RwaWxvdC52MS5TdGFydENsaXBHZW5lcmF0aW9uUmVzcG9uc2UiABJ6ChpRdW90ZUNsaXBTdG9yeWxpbmVSZXZpc2lvbhIvLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBTdG9yeWxpbmVSZXZpc2lvblJlcXVlc3QaKS5wb3N0cGlsb3QudjEuUXVvdGVDbGlwR2VuZXJhdGlvblJlc3BvbnNlIgASegoaU3RhcnRDbGlwU3RvcnlsaW5lUmV2aXNpb24SLy5wb3N0cGlsb3QudjEuU3RhcnRDbGlwU3RvcnlsaW5lUmV2aXNpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXNwb25zZSIAEmwKE0ZpbmFsaXplQ2xpcFByb2plY3QSKC5wb3N0cGlsb3QudjEuRmluYWxpemVDbGlwUHJvamVjdFJlcXVlc3QaKS5wb3N0cGlsb3QudjEuRmluYWxpemVDbGlwUHJvamVjdFJlc3BvbnNlIgASWgoNQ2FuY2VsQ2xpcEpvYhIiLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwSm9iUmVxdWVzdBojLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwSm9iUmVzcG9uc2UiABKEAQobTGlzdENsaXBBbmFseXNpc0VsaWdpYmlsaXR5EjAucG9zdHBpbG90LnYxLkxpc3RDbGlwQW5hbHlzaXNFbGlnaWJpbGl0eVJlcXVlc3QaMS5wb3N0cGlsb3QudjEuTGlzdENsaXBBbmFseXNpc0VsaWdpYmlsaXR5UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_clip, file_postpilot_v1_post, file_postpilot_v1_provider, file_postpilot_v1_language]);
 
 /**
  * @generated from message postpilot.v1.ListClipProjectsRequest
@@ -270,6 +270,13 @@ export type UpdateClipProjectRequest = Message<"postpilot.v1.UpdateClipProjectRe
    * @generated from field: postpilot.v1.ClipCaptionStyles allowed_caption_styles = 15;
    */
   allowedCaptionStyles?: ClipCaptionStyles | undefined;
+
+  /**
+   * The owner's storyline edit (CLIP-178); absent leaves the storyline as it is.
+   *
+   * @generated from field: postpilot.v1.ClipStorylineEdit storyline = 16;
+   */
+  storyline?: ClipStorylineEdit | undefined;
 };
 
 /**
@@ -278,6 +285,25 @@ export type UpdateClipProjectRequest = Message<"postpilot.v1.UpdateClipProjectRe
  */
 export const UpdateClipProjectRequestSchema: GenMessage<UpdateClipProjectRequest> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_clip_generation, 6);
+
+/**
+ * The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.
+ *
+ * @generated from message postpilot.v1.ClipStorylineEdit
+ */
+export type ClipStorylineEdit = Message<"postpilot.v1.ClipStorylineEdit"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.ClipStorylineParagraph paragraphs = 1;
+   */
+  paragraphs: ClipStorylineParagraph[];
+};
+
+/**
+ * Describes the message postpilot.v1.ClipStorylineEdit.
+ * Use `create(ClipStorylineEditSchema)` to create a new message.
+ */
+export const ClipStorylineEditSchema: GenMessage<ClipStorylineEdit> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_generation, 7);
 
 /**
  * @generated from message postpilot.v1.UpdateClipProjectResponse
@@ -294,7 +320,7 @@ export type UpdateClipProjectResponse = Message<"postpilot.v1.UpdateClipProjectR
  * Use `create(UpdateClipProjectResponseSchema)` to create a new message.
  */
 export const UpdateClipProjectResponseSchema: GenMessage<UpdateClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 7);
+  messageDesc(file_postpilot_v1_clip_generation, 8);
 
 /**
  * @generated from message postpilot.v1.DeleteClipProjectRequest
@@ -311,7 +337,7 @@ export type DeleteClipProjectRequest = Message<"postpilot.v1.DeleteClipProjectRe
  * Use `create(DeleteClipProjectRequestSchema)` to create a new message.
  */
 export const DeleteClipProjectRequestSchema: GenMessage<DeleteClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 8);
+  messageDesc(file_postpilot_v1_clip_generation, 9);
 
 /**
  * @generated from message postpilot.v1.DeleteClipProjectResponse
@@ -324,7 +350,7 @@ export type DeleteClipProjectResponse = Message<"postpilot.v1.DeleteClipProjectR
  * Use `create(DeleteClipProjectResponseSchema)` to create a new message.
  */
 export const DeleteClipProjectResponseSchema: GenMessage<DeleteClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 9);
+  messageDesc(file_postpilot_v1_clip_generation, 10);
 
 /**
  * @generated from message postpilot.v1.QuoteClipGenerationRequest
@@ -349,6 +375,13 @@ export type QuoteClipGenerationRequest = Message<"postpilot.v1.QuoteClipGenerati
    * @generated from field: postpilot.v1.ModelRef write_model = 4;
    */
   writeModel?: ModelRef | undefined;
+
+  /**
+   * 이 스토리로 만들기 (CLIP-178): build along the stored storyline. A clip with none is refused.
+   *
+   * @generated from field: bool from_storyline = 5;
+   */
+  fromStoryline: boolean;
 };
 
 /**
@@ -356,7 +389,7 @@ export type QuoteClipGenerationRequest = Message<"postpilot.v1.QuoteClipGenerati
  * Use `create(QuoteClipGenerationRequestSchema)` to create a new message.
  */
 export const QuoteClipGenerationRequestSchema: GenMessage<QuoteClipGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 10);
+  messageDesc(file_postpilot_v1_clip_generation, 11);
 
 /**
  * @generated from message postpilot.v1.QuoteClipGenerationResponse
@@ -418,7 +451,7 @@ export type QuoteClipGenerationResponse = Message<"postpilot.v1.QuoteClipGenerat
  * Use `create(QuoteClipGenerationResponseSchema)` to create a new message.
  */
 export const QuoteClipGenerationResponseSchema: GenMessage<QuoteClipGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 11);
+  messageDesc(file_postpilot_v1_clip_generation, 12);
 
 /**
  * @generated from message postpilot.v1.StartClipGenerationRequest
@@ -458,6 +491,11 @@ export type StartClipGenerationRequest = Message<"postpilot.v1.StartClipGenerati
    * @generated from field: int32 cancellation_policy_version = 7;
    */
   cancellationPolicyVersion: number;
+
+  /**
+   * @generated from field: bool from_storyline = 8;
+   */
+  fromStoryline: boolean;
 };
 
 /**
@@ -465,7 +503,7 @@ export type StartClipGenerationRequest = Message<"postpilot.v1.StartClipGenerati
  * Use `create(StartClipGenerationRequestSchema)` to create a new message.
  */
 export const StartClipGenerationRequestSchema: GenMessage<StartClipGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 12);
+  messageDesc(file_postpilot_v1_clip_generation, 13);
 
 /**
  * @generated from message postpilot.v1.StartClipGenerationResponse
@@ -482,7 +520,167 @@ export type StartClipGenerationResponse = Message<"postpilot.v1.StartClipGenerat
  * Use `create(StartClipGenerationResponseSchema)` to create a new message.
  */
 export const StartClipGenerationResponseSchema: GenMessage<StartClipGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 13);
+  messageDesc(file_postpilot_v1_clip_generation, 14);
+
+/**
+ * @generated from message postpilot.v1.QuoteClipStorylineRequest
+ */
+export type QuoteClipStorylineRequest = Message<"postpilot.v1.QuoteClipStorylineRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string batch_id = 2;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef observe_model = 3;
+   */
+  observeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 4;
+   */
+  writeModel?: ModelRef | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.QuoteClipStorylineRequest.
+ * Use `create(QuoteClipStorylineRequestSchema)` to create a new message.
+ */
+export const QuoteClipStorylineRequestSchema: GenMessage<QuoteClipStorylineRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_generation, 15);
+
+/**
+ * @generated from message postpilot.v1.StartClipStorylineRequest
+ */
+export type StartClipStorylineRequest = Message<"postpilot.v1.StartClipStorylineRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string batch_id = 2;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef observe_model = 3;
+   */
+  observeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 4;
+   */
+  writeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: string quote_id = 5;
+   */
+  quoteId: string;
+
+  /**
+   * @generated from field: optional int32 approved_max_credits = 6;
+   */
+  approvedMaxCredits?: number | undefined;
+
+  /**
+   * @generated from field: int32 cancellation_policy_version = 7;
+   */
+  cancellationPolicyVersion: number;
+};
+
+/**
+ * Describes the message postpilot.v1.StartClipStorylineRequest.
+ * Use `create(StartClipStorylineRequestSchema)` to create a new message.
+ */
+export const StartClipStorylineRequestSchema: GenMessage<StartClipStorylineRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_generation, 16);
+
+/**
+ * @generated from message postpilot.v1.QuoteClipStorylineRevisionRequest
+ */
+export type QuoteClipStorylineRevisionRequest = Message<"postpilot.v1.QuoteClipStorylineRevisionRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * The owner's words, 1 to the instruction bound.
+   *
+   * @generated from field: string request = 2;
+   */
+  request: string;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef observe_model = 3;
+   */
+  observeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 4;
+   */
+  writeModel?: ModelRef | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.QuoteClipStorylineRevisionRequest.
+ * Use `create(QuoteClipStorylineRevisionRequestSchema)` to create a new message.
+ */
+export const QuoteClipStorylineRevisionRequestSchema: GenMessage<QuoteClipStorylineRevisionRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_generation, 17);
+
+/**
+ * @generated from message postpilot.v1.StartClipStorylineRevisionRequest
+ */
+export type StartClipStorylineRevisionRequest = Message<"postpilot.v1.StartClipStorylineRevisionRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string request = 2;
+   */
+  request: string;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef observe_model = 3;
+   */
+  observeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 4;
+   */
+  writeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: string quote_id = 5;
+   */
+  quoteId: string;
+
+  /**
+   * @generated from field: optional int32 approved_max_credits = 6;
+   */
+  approvedMaxCredits?: number | undefined;
+
+  /**
+   * @generated from field: int32 cancellation_policy_version = 7;
+   */
+  cancellationPolicyVersion: number;
+};
+
+/**
+ * Describes the message postpilot.v1.StartClipStorylineRevisionRequest.
+ * Use `create(StartClipStorylineRevisionRequestSchema)` to create a new message.
+ */
+export const StartClipStorylineRevisionRequestSchema: GenMessage<StartClipStorylineRevisionRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_generation, 18);
 
 /**
  * @generated from message postpilot.v1.FinalizeClipProjectRequest
@@ -509,7 +707,7 @@ export type FinalizeClipProjectRequest = Message<"postpilot.v1.FinalizeClipProje
  * Use `create(FinalizeClipProjectRequestSchema)` to create a new message.
  */
 export const FinalizeClipProjectRequestSchema: GenMessage<FinalizeClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 14);
+  messageDesc(file_postpilot_v1_clip_generation, 19);
 
 /**
  * @generated from message postpilot.v1.FinalizeClipProjectResponse
@@ -526,7 +724,7 @@ export type FinalizeClipProjectResponse = Message<"postpilot.v1.FinalizeClipProj
  * Use `create(FinalizeClipProjectResponseSchema)` to create a new message.
  */
 export const FinalizeClipProjectResponseSchema: GenMessage<FinalizeClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 15);
+  messageDesc(file_postpilot_v1_clip_generation, 20);
 
 /**
  * @generated from message postpilot.v1.CancelClipJobRequest
@@ -548,7 +746,7 @@ export type CancelClipJobRequest = Message<"postpilot.v1.CancelClipJobRequest"> 
  * Use `create(CancelClipJobRequestSchema)` to create a new message.
  */
 export const CancelClipJobRequestSchema: GenMessage<CancelClipJobRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 16);
+  messageDesc(file_postpilot_v1_clip_generation, 21);
 
 /**
  * @generated from message postpilot.v1.CancelClipJobResponse
@@ -575,7 +773,7 @@ export type CancelClipJobResponse = Message<"postpilot.v1.CancelClipJobResponse"
  * Use `create(CancelClipJobResponseSchema)` to create a new message.
  */
 export const CancelClipJobResponseSchema: GenMessage<CancelClipJobResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 17);
+  messageDesc(file_postpilot_v1_clip_generation, 22);
 
 /**
  * @generated from message postpilot.v1.ListClipAnalysisEligibilityRequest
@@ -588,7 +786,7 @@ export type ListClipAnalysisEligibilityRequest = Message<"postpilot.v1.ListClipA
  * Use `create(ListClipAnalysisEligibilityRequestSchema)` to create a new message.
  */
 export const ListClipAnalysisEligibilityRequestSchema: GenMessage<ListClipAnalysisEligibilityRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 18);
+  messageDesc(file_postpilot_v1_clip_generation, 23);
 
 /**
  * Registry order; display metadata is the observe model list's (ProviderService).
@@ -607,7 +805,7 @@ export type ListClipAnalysisEligibilityResponse = Message<"postpilot.v1.ListClip
  * Use `create(ListClipAnalysisEligibilityResponseSchema)` to create a new message.
  */
 export const ListClipAnalysisEligibilityResponseSchema: GenMessage<ListClipAnalysisEligibilityResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_generation, 19);
+  messageDesc(file_postpilot_v1_clip_generation, 24);
 
 /**
  * The clip project itself and the paid run that fills it.
@@ -669,6 +867,44 @@ export const ClipGenerationService: GenService<{
   startClipGeneration: {
     methodKind: "unary";
     input: typeof StartClipGenerationRequestSchema;
+    output: typeof StartClipGenerationResponseSchema;
+  },
+  /**
+   * 스토리라인 먼저 and 다시 만들기 (CLIP-177): the analysis still missing and ONE storyline
+   * writing call, which stops at the storyline. Quoted and approved like a generation.
+   *
+   * @generated from rpc postpilot.v1.ClipGenerationService.QuoteClipStoryline
+   */
+  quoteClipStoryline: {
+    methodKind: "unary";
+    input: typeof QuoteClipStorylineRequestSchema;
+    output: typeof QuoteClipGenerationResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipGenerationService.StartClipStoryline
+   */
+  startClipStoryline: {
+    methodKind: "unary";
+    input: typeof StartClipStorylineRequestSchema;
+    output: typeof StartClipGenerationResponseSchema;
+  },
+  /**
+   * The storyline request (CLIP-181): one writing call on the stored observations that
+   * rewrites the storyline as the owner asks.
+   *
+   * @generated from rpc postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision
+   */
+  quoteClipStorylineRevision: {
+    methodKind: "unary";
+    input: typeof QuoteClipStorylineRevisionRequestSchema;
+    output: typeof QuoteClipGenerationResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipGenerationService.StartClipStorylineRevision
+   */
+  startClipStorylineRevision: {
+    methodKind: "unary";
+    input: typeof StartClipStorylineRevisionRequestSchema;
     output: typeof StartClipGenerationResponseSchema;
   },
   /**

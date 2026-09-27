@@ -16,6 +16,9 @@ var flowSchema []byte
 //go:embed schemas/narration.schema.json
 var narrationSchema []byte
 
+//go:embed schemas/storyline.schema.json
+var storylineSchema []byte
+
 func compactContract(value []byte) string {
 	var out bytes.Buffer
 	if err := json.Compact(&out, value); err != nil {
@@ -53,6 +56,7 @@ func withoutProperty(contract []byte, key string) []byte {
 var flowPromptSchema = compactContract(flowSchema)
 var revisionFlowPromptSchema = compactContract(revisionFlowSchema)
 var narrationPromptSchema = compactContract(narrationSchema)
+var storylinePromptSchema = compactContract(storylineSchema)
 var chunkPromptSchema = compactContract(chunkSchema)
 
 // Provider grammars receive the closed structural shape, not every domain
@@ -114,3 +118,8 @@ func RevisionFlowSchema() []byte { return append([]byte(nil), revisionFlowOutput
 var narrationOutputSchema = structuralSchema(narrationSchema)
 
 func NarrationSchema() []byte { return append([]byte(nil), narrationOutputSchema...) }
+
+var storylineOutputSchema = structuralSchema(storylineSchema)
+
+// StorylineSchema is the structural shape of the storyline call's answer (CLIP-177).
+func StorylineSchema() []byte { return append([]byte(nil), storylineOutputSchema...) }

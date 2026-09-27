@@ -33,12 +33,13 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 		Ratio, Write, Disclosure, Language string
 		Instruction                        string
 		Guidelines                         string `json:",omitempty"`
+		FollowStoryline                    string `json:",omitempty"`
 		Target                             int
 		Hide                               bool
 		Version                            int
 		Analysis                           string
 		Sources                            [][2]string
-	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
+	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }

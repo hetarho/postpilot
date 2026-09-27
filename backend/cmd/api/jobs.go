@@ -104,8 +104,8 @@ func registerJobs(c *contexts) {
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 }
 
-// registerClipJobs binds the three clip kinds and releases each attempt's held sources
-// when its job ends, whatever the outcome.
+// registerClipJobs binds the clip kinds and releases each attempt's held sources when its
+// job ends, whatever the outcome.
 func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources *clipapp.SourceService) {
 	q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
@@ -116,7 +116,14 @@ func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources 
 	q.Register(clip.JobKindRevise, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise} {
+	// The storyline call and the storyline request (CLIP-177, CLIP-181).
+	q.Register(clip.JobKindStoryline, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunStoryline(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
+	}))
+	q.Register(clip.JobKindReviseStoryline, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunStorylineRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
+	}))
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})

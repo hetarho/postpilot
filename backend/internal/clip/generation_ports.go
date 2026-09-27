@@ -13,13 +13,16 @@ import (
 // a project is.
 const JobSubject = "clip_project"
 
-// The three kinds of clip work. They are the clip context's words, handed to the queue as
-// opaque strings: a generation, an owner's revision of a saved plan (CLIP-131), and a
-// render that writes nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132).
+// The kinds of clip work. They are the clip context's words, handed to the queue as opaque
+// strings: a generation, an owner's revision of a saved plan (CLIP-131), a render that writes
+// nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132), the 스토리라인 먼저 call that stops
+// at the storyline, and the storyline request that rewrites it (CLIP-177, CLIP-181).
 const (
-	JobKindGenerate = "generate_clip"
-	JobKindRender   = "render_clip"
-	JobKindRevise   = "revise_clip"
+	JobKindGenerate        = "generate_clip"
+	JobKindRender          = "render_clip"
+	JobKindRevise          = "revise_clip"
+	JobKindStoryline       = "storyline_clip"
+	JobKindReviseStoryline = "revise_storyline_clip"
 )
 
 // SafeJobStage is the stage vocabulary a clip job may have its progress logged under.
@@ -28,7 +31,7 @@ func SafeJobStage(stage string) string {
 	switch stage {
 	// `plan` and `plan_retry` are the single writing call this build no longer makes; a
 	// job queued before it split keeps a readable stage.
-	case "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "plan", "plan_retry", "render", "save", "cleanup":
+	case "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"
@@ -36,7 +39,7 @@ func SafeJobStage(stage string) string {
 
 // IsJobKind reports whether a job belongs to the clip surface at all.
 func IsJobKind(kind string) bool {
-	return kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise
+	return kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
 }
 
 // ChargedJobKind reports whether a clip job reserves an approved credit ceiling before
@@ -44,8 +47,12 @@ func IsJobKind(kind string) bool {
 // Every admission, metering and settlement gate asks this instead of naming the
 // generation alone — naming it is what left the revision unable to reserve.
 func ChargedJobKind(kind string) bool {
-	return kind == JobKindGenerate || kind == JobKindRevise
+	return kind == JobKindGenerate || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
 }
+
+// PreparesMedia reports whether a clip job observes footage and so takes the prepare stage:
+// a generation and the 스토리라인 먼저 call, which analyzes what is not yet analyzed.
+func PreparesMedia(kind string) bool { return kind == JobKindGenerate || kind == JobKindStoryline }
 
 // One budget per call the generation makes: the observation, then the two
 // writing calls the assembly contract names (CLIP-135).
@@ -58,6 +65,9 @@ type Planner interface {
 	// The composition writer: the flow call, then the narration over it
 	// (CLIP-135).
 	Flow(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
+	// The storyline call (CLIP-177, CLIP-181): one writing call that sets the storyline, or
+	// rewrites the current one as a request asks, and stops there.
+	Storyline(context.Context, llm.ModelRef, StorylineInput) (Storyline, llm.Usage, error)
 	Narrate(context.Context, llm.ModelRef, NarrationInput) (EditPlan, llm.Usage, error)
 	// One owner-written revision of a saved plan (CLIP-131), through the same
 	// two contracts.
@@ -95,7 +105,10 @@ type GenerationStart struct {
 	// One owner-written revision of the saved plan (CLIP-131): charged work
 	// with no media in it.
 	Revise bool
-	Quote  *GenerationQuote
+	// Kind names the job outright when it is none of the above: the storyline call and the
+	// storyline request (CLIP-177, CLIP-181).
+	Kind  string
+	Quote *GenerationQuote
 	// What the owner asked the AI for, kept with the project once this start is
 	// accepted (CLIP-133). Absent for a re-render, which asks for nothing new.
 	Request *ProjectRequest

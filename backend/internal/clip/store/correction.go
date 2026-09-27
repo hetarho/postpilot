@@ -11,17 +11,19 @@ import (
 )
 
 func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision int, raw string) (clip.Project, error) {
-	return s.saveCorrection(ctx, user, id, "", revision, raw)
+	return s.saveCorrection(ctx, user, id, "", revision, raw, false)
 }
 
 // SaveRevisedPlan is the same save, performed by the revision job that wrote the
 // plan: every other active job still refuses it, but the job doing the writing
 // is not "busy" against itself (CLIP-131).
 func (s *Store) SaveRevisedPlan(ctx context.Context, user, id, job string, revision int, raw string) (clip.Project, error) {
-	return s.saveCorrection(ctx, user, id, job, revision, raw)
+	return s.saveCorrection(ctx, user, id, job, revision, raw, true)
 }
 
-func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revision int, raw string) (clip.Project, error) {
+// saveCorrection saves an owner's correction, or with `written` a revision's plan, which is a
+// writer's plan and so moves the generated revision with it (CLIP-180).
+func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revision int, raw string, written bool) (clip.Project, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.Project, error) {
 		p, err := getProject(ctx, q, user, id)
 		if err != nil {
@@ -58,6 +60,11 @@ func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revisi
 		}
 		if n != 1 {
 			return clip.Project{}, clip.ErrPlanConflict
+		}
+		if written {
+			if e := affected(q.MarkGeneratedPlanRevision(ctx, sqlc.MarkGeneratedPlanRevisionParams{ID: id, UserID: user})); e != nil {
+				return clip.Project{}, e
+			}
 		}
 		if decoded, e := clip.DecodeEditPlan(raw); e == nil && decoded.Portable != nil {
 			p.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}

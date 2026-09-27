@@ -9,16 +9,22 @@ INSERT INTO clip_proxy_leases(object_key,batch_id) VALUES (?,?);
 -- name: RemoveProxy :exec
 DELETE FROM clip_proxy_leases WHERE object_key=?;
 -- name: SaveGeneration :execrows
-UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1,generated_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- A generation that stops at the plan (CLIP-151). The analysis and the plan
 -- advance; result_key, result_id and rendered_plan_revision are untouched, so
 -- the previous result survives and reads as the stale one it is (CLIP-152).
 -- name: SaveGeneratedPlan :execrows
-UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,generated_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- The storyline a flow call opened with, written in the same transaction as the plan it came
 -- with (CLIP-178).
 -- name: SetClipStoryline :execrows
 UPDATE clip_projects SET storyline_json=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+-- The storyline call's result (CLIP-177): the analysis it read and the storyline, and no plan.
+-- name: SaveClipStorylineAnalysis :execrows
+UPDATE clip_projects SET analysis_json=?,storyline_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+-- A revision's save is a writer's plan too (CLIP-180), unlike the owner's correction beside it.
+-- name: MarkGeneratedPlanRevision :execrows
+UPDATE clip_projects SET generated_plan_revision=edit_plan_revision WHERE id=? AND user_id=?;
 -- name: EnqueueObjectDeletion :exec
 INSERT INTO clip_object_deletions(object_key,created_at) VALUES (?,?) ON CONFLICT(object_key) DO NOTHING;
 -- name: DeletionKeys :many

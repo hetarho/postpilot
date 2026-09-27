@@ -39,6 +39,9 @@ func (a Jobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, erro
 	if s.Revise {
 		kind = clip.JobKindRevise
 	}
+	if s.Kind != "" {
+		kind = s.Kind
+	}
 	policy := 0
 	if s.Quote != nil {
 		policy = s.Quote.Pricing.CancellationPolicyVersion
@@ -142,7 +145,9 @@ func validClipStart(kind string, s clip.GenerationStart, policy int) error {
 		return clip.ErrNotFound
 	case kind == clip.JobKindRender && (s.Observe != "" || s.Write != ""):
 		return clip.ErrNotFound
-	case kind == clip.JobKindGenerate && (s.Observe == "" || s.Write == ""):
+	case (kind == clip.JobKindGenerate || kind == clip.JobKindStoryline) && (s.Observe == "" || s.Write == ""):
+		return clip.ErrNotFound
+	case !clip.IsJobKind(kind):
 		return clip.ErrNotFound
 	}
 	return nil

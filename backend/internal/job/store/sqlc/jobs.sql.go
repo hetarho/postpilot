@@ -640,6 +640,8 @@ SET status = 'running',
     stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE CASE kind
         WHEN 'generate_clip' THEN 'prepare'
         WHEN 'revise_clip' THEN 'prepare'
+        WHEN 'storyline_clip' THEN 'prepare'
+        WHEN 'revise_storyline_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
         WHEN 'learn_voice' THEN 'learn'
         WHEN 'compare_voice_rule' THEN 'compare_rule'

@@ -234,6 +234,8 @@ export const appFailureSpecs = {
   POST_STORYLINE_FILE_UNKNOWN: { required: ['file'] },
   POST_STORYLINE_INVALID: { optional: ['max'] },
   GENERATION_STORYLINE_REOBSERVE: {},
+  CLIP_STORYLINE_MISSING: {},
+  CLIP_STORYLINE_INVALID: {},
   POST_PHOTO_MISSING: { required: ['count'] },
   GENERATION_ALREADY_RUNNING: { optional: ['active_job_id'] },
   GENERATION_VOICE_MISMATCH: {},

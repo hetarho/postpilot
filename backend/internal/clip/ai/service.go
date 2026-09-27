@@ -163,13 +163,17 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 		if !info.StructuredOutput {
 			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
 		}
+		// Built from a storyline, the flow writes none of its own (CLIP-178).
 		request.JSONSchema = FlowSchema()
+		if input.FollowStoryline != nil {
+			request.JSONSchema = RevisionFlowSchema()
+		}
 	}
 	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
 	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.EditPlan, error) {
-		return parseFlowPlan(s.cfg, input, raw, true)
+		return parseFlowPlan(s.cfg, input, raw, input.FollowStoryline == nil)
 	})
 	if err != nil {
 		return clip.EditPlan{}, usage, stageError("flow", err)
@@ -263,7 +267,46 @@ func (s *Service) write(ctx context.Context, model llm.ModelRef, in clip.Plannin
 	return result, usage, stageError(stage, err)
 }
 
-// Narrate is the SECOND writing call of a generation// Narrate is the SECOND writing call of a generation (CLIP-135): it writes what
+// Storyline is the storyline call (CLIP-177, CLIP-181): one writing call over the observations
+// that sets the storyline — or rewrites the current one as the request asks — and stops there.
+// It is corrected like the flow call (CLIP-94).
+func (s *Service) Storyline(ctx context.Context, model llm.ModelRef, input clip.StorylineInput) (clip.Storyline, llm.Usage, error) {
+	if err := ctx.Err(); err != nil {
+		return clip.Storyline{}, llm.Usage{}, err
+	}
+	if !nativeComposition(input.PlanningInput) || len(input.Analyses) == 0 ||
+		input.Request != "" && (input.Current == nil || !within(input.Request, 1, s.cfg.Template.InstructionChars)) {
+		return clip.Storyline{}, llm.Usage{}, stageError("storyline", clip.ErrInvalid)
+	}
+	if err := validateInput(s.cfg, input.PlanningInput); err != nil {
+		return clip.Storyline{}, llm.Usage{}, err
+	}
+	info, err := s.model(model, llm.StageNameWrite)
+	if err != nil {
+		return clip.Storyline{}, llm.Usage{}, stageError("storyline", err)
+	}
+	execution, err := executionPolicy(input.Policy, model, llm.StageNameWrite, s.cfg.FlowCompletionTokens, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.Storyline{}, llm.Usage{}, err
+	}
+	system, user := BuildStorylinePrompt(input, compositionLimits(s.cfg, input.PlanningInput))
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.Storyline{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
+		request.JSONSchema = StorylineSchema()
+	}
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
+		return clip.Storyline{}, llm.Usage{}, err
+	}
+	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.Storyline, error) {
+		return parseStoryline(s.cfg, input, raw)
+	})
+	return result, usage, stageError("storyline", err)
+}
+
+// Narrate is the SECOND writing call of a generation (CLIP-135): it writes what
 // is said over the flow the server has already resolved — captions on absolute
 // output intervals, and the template's own generated slot rows. It may not
 // change a cut, and the flow it is given is the flow it writes over.

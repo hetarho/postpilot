@@ -115,6 +115,9 @@ message ClipProject {
   optional ClipRenderKind last_render_kind = 37;
   // The clip's storyline (CLIP-178); absent when it has none.
   ClipStoryline storyline = 38;
+  // Whether the owner changed the plan since a writer last wrote it (CLIP-180): what
+  // 이 스토리로 만들기 confirms before replacing it.
+  bool plan_edited_by_hand = 39;
 }
 
 // One paragraph of a clip's storyline: what that part of the clip shows and says, and the

@@ -104,6 +104,15 @@ type Project struct {
 	Requests []ProjectRequest
 	// The clip's storyline (CLIP-178); nil when it has none.
 	Storyline *Storyline
+	// The plan revision a generation or a revision last wrote (CLIP-180). An owner edit moves
+	// EditPlanRevision past it, which is what "edited by hand" means.
+	GeneratedPlanRevision int
+}
+
+// PlanEditedByHand is whether the owner changed the plan since a writer last wrote it: the
+// confirmation 이 스토리로 만들기 asks before replacing it (CLIP-180).
+func (p Project) PlanEditedByHand() bool {
+	return p.EditPlan != "" && p.EditPlanRevision != p.GeneratedPlanRevision
 }
 
 // ProjectRequest is one accepted request, kept verbatim: the instruction a
@@ -121,11 +130,14 @@ type ProjectRequest struct {
 // RequestInstruction is the record of a generation run WITHOUT an instruction.
 const RequestInstruction = "instruction"
 
+// RequestStoryline is the kind of a storyline request's words (CLIP-133, CLIP-181).
+const RequestStoryline = "storyline"
+
 func RevisionRequestKind(target string) string { return "revision:" + target }
 
 // ValidRequestKind is the same set the table's CHECK holds.
 func ValidRequestKind(kind string) bool {
-	return kind == RequestInstruction ||
+	return kind == RequestInstruction || kind == RequestStoryline ||
 		(strings.HasPrefix(kind, "revision:") && ValidRevisionTarget(strings.TrimPrefix(kind, "revision:")))
 }
 
@@ -161,4 +173,7 @@ type ProjectPatch struct {
 	IntroPreset, OutroPreset *string
 	CaptionStyles            *[]string
 	TargetDurationMS         *int
+	// The owner's storyline edit (CLIP-178): the same paragraphs with their texts and scenes
+	// replaced. Nil leaves the storyline as it is.
+	Storyline *[]StorylineParagraph
 }

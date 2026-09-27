@@ -40,6 +40,11 @@ var storylineFlowPrompt = strings.NewReplacer(
 	"Write no caption, title or label: beyond the storyline, this response carries no text.\n"+storylineFlowRule,
 ).Replace(flowPrompt)
 
+// followStorylineRule is 이 스토리로 만들기 (CLIP-178, CDS-37): the flow is built along the
+// stored storyline, from only the scenes it holds, keeping its order and pace — which outrank
+// the instruction's here — and writes no storyline of its own.
+const followStorylineRule = "Build the cuts along storyline, part by part, in its order: the storyline's order and pace outrank project_instruction's. analyses show only the observed scenes the storyline holds; select footage only from them.\n"
+
 // storylineFlowRule is how the storyline is set (CLIP-178, CLIP-104): in the language the
 // observations are written in, which is the project's.
 const storylineFlowRule = "Before the cuts, set storyline: the clip told in order, paragraph by paragraph, each paragraph two or three sentences of plan saying what that part shows and says, and observation_ids naming the observed scenes it uses. Follow the template's stages in order when there is a template. Then choose the cuts along it. Write the storyline in the language of the observations; at most 30 paragraphs of at most 1000 characters each."
@@ -56,9 +61,14 @@ func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limit
 // after its own block so the block stays last. `withStoryline` is the 바로 만들기 call; a
 // revision's flow rewrite answers the contract without a storyline.
 func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limits, withStoryline bool) (string, string) {
+	following := in.FollowStoryline != nil
+	withStoryline = withStoryline && !following
 	prompt, contract := flowPrompt, revisionFlowPromptSchema
 	if withStoryline {
 		prompt, contract = storylineFlowPrompt, flowPromptSchema
+	}
+	if following {
+		prompt = strings.Replace(flowPrompt, "Return only one JSON object", followStorylineRule+"Return only one JSON object", 1)
 	}
 	if in.Policy.StructuredOutput {
 		// The request already carries the closed structural schema; only the
@@ -95,6 +105,9 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	// stays byte-identical (CLIP-5, TMPL-12).
 	if outline := templateOutline(in, limits); outline != "" {
 		payload["template_outline"] = outline
+	}
+	if following {
+		payload["storyline"] = storylinePayload(*in.FollowStoryline)
 	}
 	return prompt + responseContract + contract, promptJSON(payload)
 }
@@ -137,8 +150,14 @@ func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 // makes its speech spans untransformable (CLIP-129). The setting itself stays
 // the owner's and is applied by the server, never by this response.
 func flowObservationPayload(in clip.PlanningInput) []map[string]any {
-	analyses := planObservationPayload(in.Analyses, true)
-	for i, a := range in.Analyses {
+	// Built from a storyline, the writer is shown only the scenes it holds (CLIP-178), each
+	// under its original observation id so what it cites is what the server checks.
+	var held map[string]bool
+	if in.FollowStoryline != nil {
+		held = in.FollowStoryline.HeldScenes()
+	}
+	values, analyses := observationPayload(in.Analyses, true, held)
+	for i, a := range values {
 		retains := false
 		for _, setting := range in.SourceAudio {
 			if setting.SourceID == a.Source.ID && setting.Fingerprint == a.Source.Fingerprint {

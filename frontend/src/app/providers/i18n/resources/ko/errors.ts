@@ -226,6 +226,9 @@ export const errors = {
     '{{file}} 파일은 이 스토리라인에 넣을 수 없어요. 스토리라인을 다시 만들어 주세요.',
   POST_STORYLINE_INVALID: '스토리라인을 저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요.',
   GENERATION_STORYLINE_REOBSERVE: '스토리라인으로 쓸 때는 다시 볼 사진을 고를 수 없어요.',
+  CLIP_STORYLINE_MISSING: '이 영상에는 아직 스토리라인이 없어요. 스토리라인을 먼저 만들어 주세요.',
+  CLIP_STORYLINE_INVALID:
+    '스토리라인을 저장할 수 없어요. 문단 수를 그대로 두고, 장면은 한 문단에 한 번씩만 넣어 주세요.',
   GENERATION_ALREADY_RUNNING: '이 글에서 AI 작업이 이미 진행 중이에요.',
   GENERATION_VOICE_MISMATCH: '글에 저장된 말투와 선택한 말투가 달라요.',
   REVISION_INSTRUCTION_REQUIRED: '수정 요청을 입력해 주세요.',

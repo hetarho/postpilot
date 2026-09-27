@@ -15,9 +15,9 @@ import (
 // is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
-		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise},
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 	}
 }
 
@@ -25,7 +25,7 @@ func jobKinds() jobstore.Kinds {
 // ceiling: a clip generation and an owner's revision each quote their whole run before
 // the first model call (CLIP-19, CLIP-132). A render spends nothing and never reserves.
 func approvedCeilingKinds() []string {
-	return []string{clip.JobKindGenerate, clip.JobKindRevise}
+	return []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline}
 }
 
 // clipCancellation is the rule the queue asks before it accepts a stop: a render may

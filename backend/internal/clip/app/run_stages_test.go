@@ -60,6 +60,9 @@ func (p *stagePlanner) ObserveChunk(context.Context, llm.ModelRef, clip.ChunkInp
 func (p *stagePlanner) Flow(context.Context, llm.ModelRef, clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	return clip.EditPlan{}, llm.Usage{}, errors.New("not in this test")
 }
+func (p *stagePlanner) Storyline(context.Context, llm.ModelRef, clip.StorylineInput) (clip.Storyline, llm.Usage, error) {
+	return clip.Storyline{}, llm.Usage{}, clip.ErrInvalid
+}
 func (p *stagePlanner) Narrate(context.Context, llm.ModelRef, clip.NarrationInput) (clip.EditPlan, llm.Usage, error) {
 	return clip.EditPlan{}, llm.Usage{}, errors.New("not in this test")
 }

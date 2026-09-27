@@ -232,6 +232,9 @@ export const errors = {
   POST_STORYLINE_INVALID: 'Could not save the storyline. Refresh and edit it again.',
   GENERATION_STORYLINE_REOBSERVE:
     'Writing from the storyline takes no photo re-observation choice.',
+  CLIP_STORYLINE_MISSING: 'This clip has no storyline yet. Make one first.',
+  CLIP_STORYLINE_INVALID:
+    'The storyline could not be saved. Keep the same paragraphs, and put each scene in one paragraph only.',
   GENERATION_ALREADY_RUNNING: 'An AI job is already running for this post.',
   GENERATION_VOICE_MISMATCH: 'The selected voice differs from the voice saved on the post.',
   REVISION_INSTRUCTION_REQUIRED: 'Enter a revision request.',

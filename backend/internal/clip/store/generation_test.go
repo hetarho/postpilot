@@ -171,6 +171,30 @@ type plannerFake struct {
 	// written along (CLIP-178).
 	storyline *clip.Storyline
 	narrated  []*clip.Storyline
+	// The storyline call: every input it was given, the answer it gives and its failure.
+	storylines      []clip.StorylineInput
+	storylineAnswer *clip.Storyline
+	storylineErr    error
+}
+
+func (p *plannerFake) Storyline(ctx context.Context, r llm.ModelRef, in clip.StorylineInput) (clip.Storyline, llm.Usage, error) {
+	p.storylines = append(p.storylines, in)
+	p.stages = append(p.stages, "storyline")
+	frozen, err := clipapp.ConsumePolicy(ctx, "alice", p.id, r.String(), 32768, "write")
+	if err != nil {
+		return clip.Storyline{}, llm.Usage{}, err
+	}
+	if in.Policy != frozen {
+		return clip.Storyline{}, llm.Usage{}, errors.New("missing frozen storyline policy")
+	}
+	if p.storylineErr != nil {
+		return clip.Storyline{}, llm.Usage{}, p.storylineErr
+	}
+	if p.storylineAnswer != nil {
+		return *p.storylineAnswer, llm.Usage{}, nil
+	}
+	s := in.Analyses[0].Source
+	return clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "가게 앞에서 시작해요.", ObservationIDs: []string{clip.ObservationID(s.ID, 0)}}}}, llm.Usage{}, nil
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -429,6 +453,9 @@ func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (st
 	if s.Revise {
 		kind = clip.JobKindRevise
 	}
+	if s.Kind != "" {
+		kind = s.Kind
+	}
 	policy := 0
 	if s.Quote != nil {
 		policy = s.Quote.Pricing.CancellationPolicyVersion
@@ -551,6 +578,10 @@ func (h *generationHarness) run(t *testing.T) error {
 		run = h.service.RunRender
 	case clip.JobKindRevise:
 		run = h.service.RunRevision
+	case clip.JobKindStoryline:
+		run = h.service.RunStoryline
+	case clip.JobKindReviseStoryline:
+		run = h.service.RunStorylineRevision
 	}
 	err = run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 		if e := h.jobs.UpdateProgress(ctx, j.ID, stage, done, total, time.Now()); e != nil {

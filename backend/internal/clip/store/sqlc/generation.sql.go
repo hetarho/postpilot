@@ -183,6 +183,24 @@ func (q *Queries) ListConsumingBatches(ctx context.Context) ([]ClipSourceBatch, 
 	return items, nil
 }
 
+const markGeneratedPlanRevision = `-- name: MarkGeneratedPlanRevision :execrows
+UPDATE clip_projects SET generated_plan_revision=edit_plan_revision WHERE id=? AND user_id=?
+`
+
+type MarkGeneratedPlanRevisionParams struct {
+	ID     string
+	UserID string
+}
+
+// A revision's save is a writer's plan too (CLIP-180), unlike the owner's correction beside it.
+func (q *Queries) MarkGeneratedPlanRevision(ctx context.Context, arg MarkGeneratedPlanRevisionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, markGeneratedPlanRevision, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const removeDeletion = `-- name: RemoveDeletion :exec
 DELETE FROM clip_object_deletions WHERE object_key=?
 `
@@ -230,6 +248,33 @@ func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {
 	return items, nil
 }
 
+const saveClipStorylineAnalysis = `-- name: SaveClipStorylineAnalysis :execrows
+UPDATE clip_projects SET analysis_json=?,storyline_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+`
+
+type SaveClipStorylineAnalysisParams struct {
+	AnalysisJson  sql.NullString
+	StorylineJson sql.NullString
+	UpdatedAt     string
+	UserID        string
+	ID            string
+}
+
+// The storyline call's result (CLIP-177): the analysis it read and the storyline, and no plan.
+func (q *Queries) SaveClipStorylineAnalysis(ctx context.Context, arg SaveClipStorylineAnalysisParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveClipStorylineAnalysis,
+		arg.AnalysisJson,
+		arg.StorylineJson,
+		arg.UpdatedAt,
+		arg.UserID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const saveCorrection = `-- name: SaveCorrection :execrows
 UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
 `
@@ -257,7 +302,7 @@ func (q *Queries) SaveCorrection(ctx context.Context, arg SaveCorrectionParams) 
 }
 
 const saveGeneratedPlan = `-- name: SaveGeneratedPlan :execrows
-UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,generated_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `
 
 type SaveGeneratedPlanParams struct {
@@ -286,7 +331,7 @@ func (q *Queries) SaveGeneratedPlan(ctx context.Context, arg SaveGeneratedPlanPa
 }
 
 const saveGeneration = `-- name: SaveGeneration :execrows
-UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1,generated_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `
 
 type SaveGenerationParams struct {

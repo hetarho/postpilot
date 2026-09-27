@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -122,6 +123,7 @@ func (s *Store) ReplaceSourceBatch(ctx context.Context, b clip.SourceBatch) ([]c
 		if err := q.InsertSourceBatch(ctx, sqlc.InsertSourceBatchParams{ID: b.ID, UserID: b.UserID, ProjectID: b.ProjectID, State: b.State, CreatedAt: stamp(b.CreatedAt), ExpiresAt: stamp(b.ExpiresAt), PutExpiresAt: stamp(b.PutExpiresAt)}); err != nil {
 			return nil, err
 		}
+		kept := map[string]bool{}
 		for i, v := range b.Sources {
 			id := v.ID
 			if prior := canonical[v.Fingerprint]; prior != "" {
@@ -129,6 +131,20 @@ func (s *Store) ReplaceSourceBatch(ctx context.Context, b clip.SourceBatch) ([]c
 			}
 			if err := q.InsertSourceLease(ctx, sqlc.InsertSourceLeaseParams{ID: v.ID, CanonicalID: id, BatchID: b.ID, UserID: b.UserID, ObjectKey: v.Key, Filename: v.Filename, ContentType: v.ContentType, Fingerprint: v.Fingerprint, DeclaredBytes: v.Bytes, DurationMs: int64(v.DurationMS), Width: int64(v.Width), Height: int64(v.Height), State: v.State, Ordinal: int64(i), RetainOriginalAudio: flag(retained[id+"\x00"+v.Fingerprint])}); err != nil {
 				return nil, err
+			}
+			kept[id] = true
+		}
+		// A source left out of the new batch is removed: its scenes leave every paragraph of
+		// the storyline and it leaves the sources the storyline was made with (CLIP-178).
+		if p.Storyline != nil {
+			if pruned := p.Storyline.WithoutRemovedSources(kept); !reflect.DeepEqual(pruned, *p.Storyline) {
+				raw, err := clip.EncodeStoryline(&pruned)
+				if err != nil {
+					return nil, err
+				}
+				if err := affected(q.SetClipStoryline(ctx, sqlc.SetClipStorylineParams{StorylineJson: nullable(raw), UserID: b.UserID, ID: b.ProjectID})); err != nil {
+					return nil, err
+				}
 			}
 		}
 		return nil, affected(q.SelectSourceBatch(ctx, sqlc.SelectSourceBatchParams{SourceBatchID: nullable(b.ID), ID: b.ProjectID, UserID: b.UserID}))

@@ -21,8 +21,9 @@ var ErrBusy = errors.New("clip busy")
 // campaign type cannot render a clip that carries one. Version 4 freezes the
 // project composition. Version 5 freezes the observation language; accepted
 // version-3/4 jobs retain Korean, the legacy project language. Version 6 freezes the clip's
-// 영상 지침; an accepted version-3..5 job ran with none and keeps running with none.
-const GenerationPayloadVersion = 6
+// 영상 지침; an accepted version-3..5 job ran with none and keeps running with none. Version 7
+// freezes the storyline 이 스토리로 만들기 builds along.
+const GenerationPayloadVersion = 7
 
 type GenerationPayload struct {
 	Language                         string
@@ -43,6 +44,9 @@ type GenerationPayload struct {
 	// The clip's 영상 지침 (GUIDE-15), frozen with the approval that priced them: a frozen
 	// attempt reads only this across restart and continuation.
 	Guidelines VideoGuidelines `json:",omitzero"`
+	// The storyline 이 스토리로 만들기 builds along (CLIP-178), frozen with its approval so an
+	// edit afterwards changes nothing in flight. Nil is 바로 만들기.
+	FollowStoryline *Storyline `json:",omitempty"`
 	// The project's caption pace and accent (CLIP-139), frozen with the rest of
 	// the render inputs. They are deliberately absent from planRecoveryDigest
 	// and from the quote: changing either re-renders the same plan and costs no

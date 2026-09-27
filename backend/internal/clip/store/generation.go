@@ -166,6 +166,28 @@ func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan,
 	})
 	return err
 }
+
+// SaveStoryline is what the storyline call finishes with (CLIP-177): the analysis it read and
+// the storyline, and no plan — the saved plan and the result stay exactly as they are.
+func (s *Store) SaveStoryline(ctx context.Context, user, id, analysis, storyline string, now time.Time) (clip.Project, error) {
+	return transact(ctx, s, func(q *sqlc.Queries) (clip.Project, error) {
+		p, err := getProject(ctx, q, user, id)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		if p.Finalized != nil {
+			return clip.Project{}, clip.ErrFinalized
+		}
+		if analysis == "" {
+			analysis = p.Analysis
+		}
+		n, err := q.SaveClipStorylineAnalysis(ctx, sqlc.SaveClipStorylineAnalysisParams{AnalysisJson: nullable(analysis), StorylineJson: nullable(storyline), UpdatedAt: stamp(now), UserID: user, ID: id})
+		if e := affected(n, err); e != nil {
+			return clip.Project{}, e
+		}
+		return getProject(ctx, q, user, id)
+	})
+}
 func (s *Store) DeletionKeys(ctx context.Context) ([]string, error) { return s.read.DeletionKeys(ctx) }
 func (s *Store) RemoveDeletion(ctx context.Context, key string) error {
 	return s.write.RemoveDeletion(ctx, key)

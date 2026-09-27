@@ -262,7 +262,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -348,6 +348,32 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.Composition != nil && p.ExpectedCompositionRevision != nil && before.EditPlanRevision != *p.ExpectedCompositionRevision {
 			return clip.Project{}, clip.ErrPlanConflict
+		}
+		// The owner's storyline edit (CLIP-178): refused while a job holds the project, since
+		// a storyline job would overwrite it and a build reads it; marked edited by hand.
+		if p.Storyline != nil {
+			active, e := q.HasActiveClipJob(ctx, nullable(id))
+			if e != nil {
+				return clip.Project{}, e
+			}
+			if active > 0 {
+				return clip.Project{}, clip.ErrBusy
+			}
+			analyses, e := clip.RetainedObservations(before)
+			if e != nil {
+				return clip.Project{}, e
+			}
+			edited, e := clip.ApplyStorylineEdit(before.Storyline, *p.Storyline, analyses)
+			if e != nil {
+				return clip.Project{}, e
+			}
+			raw, e := clip.EncodeStoryline(edited)
+			if e != nil {
+				return clip.Project{}, e
+			}
+			if e := affected(q.SetClipStoryline(ctx, sqlc.SetClipStorylineParams{StorylineJson: nullable(raw), UserID: user, ID: id})); e != nil {
+				return clip.Project{}, e
+			}
 		}
 		if p.Title != nil {
 			if err := affected(q.UpdateClipTitle(ctx, sqlc.UpdateClipTitleParams{Title: *p.Title, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {

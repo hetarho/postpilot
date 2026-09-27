@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"slices"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 )
@@ -101,6 +103,11 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string, withStoryli
 	}
 	failedCut = 0
 	portable := &clip.PortablePlan{Snapshot: input.Composition.Snapshot, Inputs: input.Composition.Inputs, Observations: input.Analyses, TargetDurationMS: input.TargetDurationMS}
+	// Built from a storyline, the flow uses only the scenes it holds (CLIP-178).
+	var held map[string]bool
+	if input.FollowStoryline != nil {
+		held = input.FollowStoryline.HeldScenes()
+	}
 	// Each retry of this local pass removes at least one cut; no model retry.
 	for pass, budget := 0, len(plan.Cuts)+1; pass < budget; pass++ {
 		if err := composeTimeline(cfg, input, &plan); err != nil {
@@ -115,6 +122,10 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string, withStoryli
 			observed, covered := clip.CutEvidence(input.Analyses, cut)
 			if !covered {
 				recordGeneratedNotice(&plan, "composition_observation_gap", cut.ID, "", "removal")
+				continue
+			}
+			if held != nil && slices.ContainsFunc(observed, func(o clip.ObservedEvidence) bool { return !held[o.ID] }) {
+				recordGeneratedNotice(&plan, "storyline_scene", cut.ID, "", "removal")
 				continue
 			}
 			// The model's stale or fabricated references never become evidence.

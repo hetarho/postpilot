@@ -54,6 +54,18 @@ const (
 	// ClipGenerationServiceStartClipGenerationProcedure is the fully-qualified name of the
 	// ClipGenerationService's StartClipGeneration RPC.
 	ClipGenerationServiceStartClipGenerationProcedure = "/postpilot.v1.ClipGenerationService/StartClipGeneration"
+	// ClipGenerationServiceQuoteClipStorylineProcedure is the fully-qualified name of the
+	// ClipGenerationService's QuoteClipStoryline RPC.
+	ClipGenerationServiceQuoteClipStorylineProcedure = "/postpilot.v1.ClipGenerationService/QuoteClipStoryline"
+	// ClipGenerationServiceStartClipStorylineProcedure is the fully-qualified name of the
+	// ClipGenerationService's StartClipStoryline RPC.
+	ClipGenerationServiceStartClipStorylineProcedure = "/postpilot.v1.ClipGenerationService/StartClipStoryline"
+	// ClipGenerationServiceQuoteClipStorylineRevisionProcedure is the fully-qualified name of the
+	// ClipGenerationService's QuoteClipStorylineRevision RPC.
+	ClipGenerationServiceQuoteClipStorylineRevisionProcedure = "/postpilot.v1.ClipGenerationService/QuoteClipStorylineRevision"
+	// ClipGenerationServiceStartClipStorylineRevisionProcedure is the fully-qualified name of the
+	// ClipGenerationService's StartClipStorylineRevision RPC.
+	ClipGenerationServiceStartClipStorylineRevisionProcedure = "/postpilot.v1.ClipGenerationService/StartClipStorylineRevision"
 	// ClipGenerationServiceFinalizeClipProjectProcedure is the fully-qualified name of the
 	// ClipGenerationService's FinalizeClipProject RPC.
 	ClipGenerationServiceFinalizeClipProjectProcedure = "/postpilot.v1.ClipGenerationService/FinalizeClipProject"
@@ -74,6 +86,14 @@ type ClipGenerationServiceClient interface {
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// 스토리라인 먼저 and 다시 만들기 (CLIP-177): the analysis still missing and ONE storyline
+	// writing call, which stops at the storyline. Quoted and approved like a generation.
+	QuoteClipStoryline(context.Context, *connect.Request[v1.QuoteClipStorylineRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipStoryline(context.Context, *connect.Request[v1.StartClipStorylineRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// The storyline request (CLIP-181): one writing call on the stored observations that
+	// rewrites the storyline as the owner asks.
+	QuoteClipStorylineRevision(context.Context, *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
@@ -134,6 +154,30 @@ func NewClipGenerationServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipGeneration")),
 			connect.WithClientOptions(opts...),
 		),
+		quoteClipStoryline: connect.NewClient[v1.QuoteClipStorylineRequest, v1.QuoteClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceQuoteClipStorylineProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipStoryline")),
+			connect.WithClientOptions(opts...),
+		),
+		startClipStoryline: connect.NewClient[v1.StartClipStorylineRequest, v1.StartClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceStartClipStorylineProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStoryline")),
+			connect.WithClientOptions(opts...),
+		),
+		quoteClipStorylineRevision: connect.NewClient[v1.QuoteClipStorylineRevisionRequest, v1.QuoteClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceQuoteClipStorylineRevisionProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipStorylineRevision")),
+			connect.WithClientOptions(opts...),
+		),
+		startClipStorylineRevision: connect.NewClient[v1.StartClipStorylineRevisionRequest, v1.StartClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceStartClipStorylineRevisionProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStorylineRevision")),
+			connect.WithClientOptions(opts...),
+		),
 		finalizeClipProject: connect.NewClient[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse](
 			httpClient,
 			baseURL+ClipGenerationServiceFinalizeClipProjectProcedure,
@@ -164,6 +208,10 @@ type clipGenerationServiceClient struct {
 	deleteClipProject           *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
 	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
+	quoteClipStoryline          *connect.Client[v1.QuoteClipStorylineRequest, v1.QuoteClipGenerationResponse]
+	startClipStoryline          *connect.Client[v1.StartClipStorylineRequest, v1.StartClipGenerationResponse]
+	quoteClipStorylineRevision  *connect.Client[v1.QuoteClipStorylineRevisionRequest, v1.QuoteClipGenerationResponse]
+	startClipStorylineRevision  *connect.Client[v1.StartClipStorylineRevisionRequest, v1.StartClipGenerationResponse]
 	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
 	cancelClipJob               *connect.Client[v1.CancelClipJobRequest, v1.CancelClipJobResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
@@ -204,6 +252,26 @@ func (c *clipGenerationServiceClient) StartClipGeneration(ctx context.Context, r
 	return c.startClipGeneration.CallUnary(ctx, req)
 }
 
+// QuoteClipStoryline calls postpilot.v1.ClipGenerationService.QuoteClipStoryline.
+func (c *clipGenerationServiceClient) QuoteClipStoryline(ctx context.Context, req *connect.Request[v1.QuoteClipStorylineRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return c.quoteClipStoryline.CallUnary(ctx, req)
+}
+
+// StartClipStoryline calls postpilot.v1.ClipGenerationService.StartClipStoryline.
+func (c *clipGenerationServiceClient) StartClipStoryline(ctx context.Context, req *connect.Request[v1.StartClipStorylineRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return c.startClipStoryline.CallUnary(ctx, req)
+}
+
+// QuoteClipStorylineRevision calls postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision.
+func (c *clipGenerationServiceClient) QuoteClipStorylineRevision(ctx context.Context, req *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return c.quoteClipStorylineRevision.CallUnary(ctx, req)
+}
+
+// StartClipStorylineRevision calls postpilot.v1.ClipGenerationService.StartClipStorylineRevision.
+func (c *clipGenerationServiceClient) StartClipStorylineRevision(ctx context.Context, req *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return c.startClipStorylineRevision.CallUnary(ctx, req)
+}
+
 // FinalizeClipProject calls postpilot.v1.ClipGenerationService.FinalizeClipProject.
 func (c *clipGenerationServiceClient) FinalizeClipProject(ctx context.Context, req *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
 	return c.finalizeClipProject.CallUnary(ctx, req)
@@ -229,6 +297,14 @@ type ClipGenerationServiceHandler interface {
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// 스토리라인 먼저 and 다시 만들기 (CLIP-177): the analysis still missing and ONE storyline
+	// writing call, which stops at the storyline. Quoted and approved like a generation.
+	QuoteClipStoryline(context.Context, *connect.Request[v1.QuoteClipStorylineRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipStoryline(context.Context, *connect.Request[v1.StartClipStorylineRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// The storyline request (CLIP-181): one writing call on the stored observations that
+	// rewrites the storyline as the owner asks.
+	QuoteClipStorylineRevision(context.Context, *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
@@ -285,6 +361,30 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 		connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipGeneration")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipGenerationServiceQuoteClipStorylineHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceQuoteClipStorylineProcedure,
+		svc.QuoteClipStoryline,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipStoryline")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceStartClipStorylineHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceStartClipStorylineProcedure,
+		svc.StartClipStoryline,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStoryline")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceQuoteClipStorylineRevisionHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceQuoteClipStorylineRevisionProcedure,
+		svc.QuoteClipStorylineRevision,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipStorylineRevision")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceStartClipStorylineRevisionHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceStartClipStorylineRevisionProcedure,
+		svc.StartClipStorylineRevision,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStorylineRevision")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipGenerationServiceFinalizeClipProjectHandler := connect.NewUnaryHandler(
 		ClipGenerationServiceFinalizeClipProjectProcedure,
 		svc.FinalizeClipProject,
@@ -319,6 +419,14 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 			clipGenerationServiceQuoteClipGenerationHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceStartClipGenerationProcedure:
 			clipGenerationServiceStartClipGenerationHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceQuoteClipStorylineProcedure:
+			clipGenerationServiceQuoteClipStorylineHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceStartClipStorylineProcedure:
+			clipGenerationServiceStartClipStorylineHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceQuoteClipStorylineRevisionProcedure:
+			clipGenerationServiceQuoteClipStorylineRevisionHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceStartClipStorylineRevisionProcedure:
+			clipGenerationServiceStartClipStorylineRevisionHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceFinalizeClipProjectProcedure:
 			clipGenerationServiceFinalizeClipProjectHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceCancelClipJobProcedure:
@@ -360,6 +468,22 @@ func (UnimplementedClipGenerationServiceHandler) QuoteClipGeneration(context.Con
 
 func (UnimplementedClipGenerationServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.StartClipGeneration is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) QuoteClipStoryline(context.Context, *connect.Request[v1.QuoteClipStorylineRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.QuoteClipStoryline is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) StartClipStoryline(context.Context, *connect.Request[v1.StartClipStorylineRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.StartClipStoryline is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) QuoteClipStorylineRevision(context.Context, *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.StartClipStorylineRevision is not implemented"))
 }
 
 func (UnimplementedClipGenerationServiceHandler) FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {

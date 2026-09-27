@@ -16,6 +16,14 @@ service ClipGenerationService {
   rpc DeleteClipProject(DeleteClipProjectRequest) returns (DeleteClipProjectResponse) {}
   rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
+  // 스토리라인 먼저 and 다시 만들기 (CLIP-177): the analysis still missing and ONE storyline
+  // writing call, which stops at the storyline. Quoted and approved like a generation.
+  rpc QuoteClipStoryline(QuoteClipStorylineRequest) returns (QuoteClipGenerationResponse) {}
+  rpc StartClipStoryline(StartClipStorylineRequest) returns (StartClipGenerationResponse) {}
+  // The storyline request (CLIP-181): one writing call on the stored observations that
+  // rewrites the storyline as the owner asks.
+  rpc QuoteClipStorylineRevision(QuoteClipStorylineRevisionRequest) returns (QuoteClipGenerationResponse) {}
+  rpc StartClipStorylineRevision(StartClipStorylineRevisionRequest) returns (StartClipGenerationResponse) {}
   rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
   rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
   // Read-only: every registered observe model with its current clip-analysis
@@ -79,6 +87,13 @@ message UpdateClipProjectRequest {
   optional string intro_preset = 13;
   optional string outro_preset = 14;
   ClipCaptionStyles allowed_caption_styles = 15;
+  // The owner's storyline edit (CLIP-178); absent leaves the storyline as it is.
+  ClipStorylineEdit storyline = 16;
+}
+
+// The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.
+message ClipStorylineEdit {
+  repeated ClipStorylineParagraph paragraphs = 1;
 }
 
 message UpdateClipProjectResponse { ClipProject project = 1; }
@@ -92,6 +107,8 @@ message QuoteClipGenerationRequest {
   string batch_id = 2;
   ModelRef observe_model = 3;
   ModelRef write_model = 4;
+  // 이 스토리로 만들기 (CLIP-178): build along the stored storyline. A clip with none is refused.
+  bool from_storyline = 5;
 }
 
 message QuoteClipGenerationResponse {
@@ -115,9 +132,45 @@ message StartClipGenerationRequest {
   string quote_id = 5;
   optional int32 approved_max_credits = 6;
   int32 cancellation_policy_version = 7;
+  bool from_storyline = 8;
 }
 
 message StartClipGenerationResponse { string job_id = 1; }
+
+message QuoteClipStorylineRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+
+message StartClipStorylineRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
+}
+
+message QuoteClipStorylineRevisionRequest {
+  string project_id = 1;
+  // The owner's words, 1 to the instruction bound.
+  string request = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+
+message StartClipStorylineRevisionRequest {
+  string project_id = 1;
+  string request = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
+}
 
 message FinalizeClipProjectRequest { string project_id = 1; int32 expected_revision = 2; string expected_result_id = 3; }
 

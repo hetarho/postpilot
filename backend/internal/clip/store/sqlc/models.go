@@ -156,6 +156,7 @@ type ClipProject struct {
 	AllowedCaptionStyles     string
 	RenderKind               string
 	StorylineJson            sql.NullString
+	GeneratedPlanRevision    int64
 }
 
 type ClipSourceAttempt struct {

@@ -24,7 +24,35 @@ func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n
 	return s.pricing.Freeze(ctx, o, w, n)
 }
 
-func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
+// quoteMode is the work a clip quote prices: 바로 만들기's flow and narration, 이 스토리로
+// 만들기's (the same two calls along the stored storyline), or the storyline call alone.
+type quoteMode int
+
+const (
+	quoteGenerate quoteMode = iota
+	quoteFromStoryline
+	quoteStoryline
+)
+
+func (m quoteMode) kind() string {
+	if m == quoteStoryline {
+		return clip.JobKindStoryline
+	}
+	return ""
+}
+
+// refreeze prices the approved work again on the current documents, in the shape it was
+// approved in: the storyline call is ONE writing call with no narration after it (CLIP-177).
+func (s *GenerationService) refreeze(ctx context.Context, pricing clip.GenerationPricing, count int) (clip.GenerationPricing, error) {
+	if pricing.Storyline {
+		current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, false, true, pricing.Plan.ResponseRetries)
+		current.SkipNarration, current.Storyline = false, true
+		return current, err
+	}
+	return s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
+}
+
+func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string, mode quoteMode) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
 	var p clip.Project
 	var t clip.VideoTemplate
 	var b clip.SourceBatch
@@ -36,6 +64,10 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	}
 	if p.Finalized != nil {
 		return p, t, b, pricing, guidelines, clip.ErrFinalized
+	}
+	// Building from the storyline needs one (CLIP-178).
+	if mode == quoteFromStoryline && p.Storyline == nil {
+		return p, t, b, pricing, guidelines, clip.ErrStorylineMissing
 	}
 	// A project generates with no template (CLIP-5) and with one it has since
 	// lost (CLIP-25): both leave the zero recipe standing and no declared
@@ -97,11 +129,16 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, err
 	}
 	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines}
+	if mode == quoteFromStoryline {
+		seed.FollowStoryline = p.Storyline
+	}
 	// A resume reuses exactly what the recovery holds: a complete plan answers
 	// both writing calls, a written flow answers only the first. A recovery
 	// saved before the flow was its own call carries a complete plan, so it
 	// still resumes at rendering.
-	written := recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
+	// The storyline call writes no plan, so no kept plan answers it; the analysis it
+	// still needs is counted below either way (CLIP-93).
+	written := mode != quoteStoryline && recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
 	skipFlow := written && (recovered.FlowReady || recovered.PlanReady)
 	skipNarration := skipFlow && recovered.PlanReady
 	upperCount := count
@@ -136,7 +173,14 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
 			return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 		}
-		pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipFlow, skipNarration, 3)
+		if mode == quoteStoryline {
+			// The analysis still missing and ONE writing call (CLIP-177): priced as a flow
+			// with no narration after it, then marked as the storyline call it is.
+			pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, false, true, DefaultQuoteRetries)
+			pricing.SkipNarration, pricing.Storyline = false, true
+		} else {
+			pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipFlow, skipNarration, 3)
+		}
 	}
 	pricing.RecoveryDigest = clip.RecoveryDigest(rawRecovery)
 	pricing.ReusedChunks = len(recovered.Chunks)
@@ -147,6 +191,10 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	// The quote binds them through the pricing, and a change before the start invalidates the
 	// approval (QUOTA-45).
 	pricing.GuidelinesDigest = guidelines.Digest()
+	// 이 스토리로 만들기 binds the storyline it builds along the same way (QUOTA-45).
+	if mode == quoteFromStoryline {
+		pricing.StorylineDigest = p.Storyline.Digest()
+	}
 	if pricing.Version != clip.PricingPolicyVersion || pricing.ObservationCalls != count || pricing.MaxCredits < 0 || pricing.Observe.Ref != modelRef(observe) || pricing.Plan.Ref != modelRef(write) || !pricing.Observe.Valid() || !pricing.Plan.Valid() {
 		return p, t, b, pricing, guidelines, clip.ErrPricingUnavailable
 	}
@@ -154,7 +202,23 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 }
 
 func (s *GenerationService) Quote(ctx context.Context, user, id, batch, observe, write string) (clip.GenerationQuote, error) {
-	p, t, b, pricing, _, err := s.quoteInputs(ctx, user, id, batch, observe, write)
+	return s.quote(ctx, user, id, batch, observe, write, quoteGenerate)
+}
+
+// QuoteFromStoryline prices 이 스토리로 만들기 (CLIP-178): the flow and the narration along the
+// stored storyline, which the quote binds.
+func (s *GenerationService) QuoteFromStoryline(ctx context.Context, user, id, batch, observe, write string) (clip.GenerationQuote, error) {
+	return s.quote(ctx, user, id, batch, observe, write, quoteFromStoryline)
+}
+
+// QuoteStoryline prices 스토리라인 먼저 and 다시 만들기 (CLIP-177): the analysis still missing
+// and one storyline call.
+func (s *GenerationService) QuoteStoryline(ctx context.Context, user, id, batch, observe, write string) (clip.GenerationQuote, error) {
+	return s.quote(ctx, user, id, batch, observe, write, quoteStoryline)
+}
+
+func (s *GenerationService) quote(ctx context.Context, user, id, batch, observe, write string, mode quoteMode) (clip.GenerationQuote, error) {
+	p, t, b, pricing, _, err := s.quoteInputs(ctx, user, id, batch, observe, write, mode)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -181,7 +245,21 @@ func (s *GenerationService) Quote(ctx context.Context, user, id, batch, observe,
 	return q, nil
 }
 
+// StartFromStoryline accepts an approved 이 스토리로 만들기 (CLIP-178).
+func (s *GenerationService) StartFromStoryline(ctx context.Context, user, id, batch, observe, write string, approval clip.QuoteApproval) (string, error) {
+	return s.startMode(ctx, user, id, batch, observe, write, approval, quoteFromStoryline)
+}
+
+// StartStoryline accepts an approved 스토리라인 먼저 or 다시 만들기 (CLIP-177).
+func (s *GenerationService) StartStoryline(ctx context.Context, user, id, batch, observe, write string, approval clip.QuoteApproval) (string, error) {
+	return s.startMode(ctx, user, id, batch, observe, write, approval, quoteStoryline)
+}
+
 func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, observe, write string, a clip.QuoteApproval) (string, error) {
+	return s.startMode(ctx, user, id, batch, observe, write, a, quoteGenerate)
+}
+
+func (s *GenerationService) startMode(ctx context.Context, user, id, batch, observe, write string, a clip.QuoteApproval, mode quoteMode) (string, error) {
 	if a.QuoteID == "" || a.MaxCredits == nil || *a.MaxCredits < 0 {
 		return "", clip.ErrQuoteRequired
 	}
@@ -220,7 +298,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if !s.now().Before(q.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, t, b, pricing, guidelines, err := s.quoteInputs(ctx, user, id, batch, observe, write)
+	p, t, b, pricing, guidelines, err := s.quoteInputs(ctx, user, id, batch, observe, write, mode)
 	if err != nil {
 		return "", err
 	}
@@ -243,7 +321,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}
@@ -251,7 +329,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	// An empty one is recorded as the empty instruction it was: a clip written
 	// without direction is a thing the record has to be able to explain.
 	frozen := clip.ProjectRequest{Kind: clip.RequestInstruction, Body: p.Instruction, CreatedAt: s.now()}
-	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q, Request: &frozen}, batch, 0)
+	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q, Request: &frozen, Kind: mode.kind()}, batch, 0)
 	if err != nil {
 		// A racing request may have won the unique active-project/source linkage.
 		if existing, lookup := s.acceptedJob(ctx, user, id, batch, observe, write, a); lookup == nil && existing != "" {
@@ -289,4 +367,13 @@ func (s *GenerationService) acceptedJob(ctx context.Context, user, id, batch, ob
 		return "", nil
 	}
 	return j.ID, nil
+}
+
+// followed is the storyline a start freezes to build along: the stored one for 이 스토리로
+// 만들기, none otherwise.
+func followed(mode quoteMode, p clip.Project) *clip.Storyline {
+	if mode == quoteFromStoryline {
+		return p.Storyline
+	}
+	return nil
 }

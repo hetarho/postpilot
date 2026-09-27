@@ -28,6 +28,9 @@ var planCheckTiers = map[string]planTier{
 	"composition_section_order": removePlan, "composition_item_order": removePlan,
 	"plan_source_overlap": removePlan, "plan_cut_identity": removePlan, "plan_source": removePlan,
 	"composition_cut_identity": removePlan, "composition_observation_gap": removePlan,
+	// A cut on a scene the storyline does not hold (CLIP-178), and a storyline answer that
+	// keeps nothing (CLIP-177).
+	"storyline_scene": removePlan, "storyline_empty": failPlan,
 	"composition_generated_identity": removePlan, "composition_generated_rows": removePlan,
 	"composition_generated_bounds": removePlan, "composition_plan_bounds": removePlan, "plan_cut_count": removePlan,
 	"plan_cut_range": removePlan, "plan_source_metadata": removePlan,

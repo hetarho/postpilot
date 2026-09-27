@@ -49,6 +49,12 @@ type GenerationPricing struct {
 	// digest, which the store recomputes from the saved pricing, binds them without the store
 	// reading another context; empty when the project has none.
 	GuidelinesDigest string `json:",omitempty"`
+	// Storyline prices the storyline call (CLIP-177, CLIP-181): the observations it still
+	// needs and ONE writing call, priced on the flow's policy, with no narration after it.
+	Storyline bool `json:",omitempty"`
+	// The storyline an approval was taken against (QUOTA-45): the one 이 스토리로 만들기 builds
+	// along, or the current one a storyline request rewrites. Empty when neither.
+	StorylineDigest string `json:",omitempty"`
 }
 
 // Both stages must have the complete enforceable profile, not a legacy pair of
@@ -57,7 +63,7 @@ func (p GenerationPricing) Valid() bool {
 	writing := func(c llm.CallPolicy) bool {
 		return c.Valid() && c.Pricing.Valid() && c.Pricing.Delivery == llm.ExecutionTextOnly && c.Stage == llm.StageNameWrite && c.CompletionTokens == 32768
 	}
-	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) &&
+	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) && (!p.Storyline || !p.SkipFlow && !p.SkipNarration) &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		writing(p.Plan) && writing(p.Narration) && p.Plan.Ref == p.Narration.Ref
 }
@@ -72,7 +78,7 @@ func (p GenerationPricing) FlowCalls() int {
 	return 1 + p.Plan.ResponseRetries
 }
 func (p GenerationPricing) NarrationCalls() int {
-	if p.SkipNarration {
+	if p.SkipNarration || p.Storyline {
 		return 0
 	}
 	return 1 + p.Narration.ResponseRetries

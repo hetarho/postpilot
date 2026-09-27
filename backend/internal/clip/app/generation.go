@@ -189,6 +189,18 @@ type generationRun struct {
 // with the job. The attempt ends on the validated plan — no media is rendered and no
 // result file is produced; the owner starts the render they want (CLIP-151).
 func (s *GenerationService) Run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
+	return s.run(ctx, user, job, project, payload, progress, false)
+}
+
+// RunStoryline is the 스토리라인 먼저 and 다시 만들기 job (CLIP-177): Run's prepare, admission
+// and analysis, then ONE storyline call in place of the flow and the narration, and the
+// storyline saved alone with the analysis it read — the saved plan and the result stay as
+// they are. Cancellation and failure settle as a generation's do.
+func (s *GenerationService) RunStoryline(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
+	return s.run(ctx, user, job, project, payload, progress, true)
+}
+
+func (s *GenerationService) run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int), storyline bool) (err error) {
 	if s.finisher == nil {
 		return clip.ErrCompositionUnavailable
 	}
@@ -212,12 +224,20 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if err := r.accept(payload); err != nil {
 		return err
 	}
+	// The approval prices the work this job is: one storyline call, or the flow and the
+	// narration.
+	if r.pricing.Storyline != storyline {
+		return clip.ErrQuoteChanged
+	}
 	r.checkpoint.TotalSources = len(r.b.Sources)
 	s.checkpoint(ctx, user, project, r.checkpoint)
 	r.ctx = r.observeMedia(ctx)
 	continueAI := func() error {
 		if err := r.analyze(); err != nil {
 			return err
+		}
+		if storyline {
+			return r.writeStoryline()
 		}
 		if err := r.write(); err != nil {
 			return err
@@ -239,7 +259,53 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if err != nil {
 		return err
 	}
+	if storyline {
+		return r.saveStoryline()
+	}
 	return r.finish(currentProject)
+}
+
+// writeStoryline is the storyline call over every analysis (CLIP-177), written as made with
+// the sources this job analysed.
+func (r *generationRun) writeStoryline() error {
+	in := r.planningInput()
+	in.Analyses, in.SourceAudio = r.analyses, batchSourceAudio(r.b)
+	r.set("storyline", 0, 1)
+	if err := r.s.checkpoint(r.ctx, r.user, r.project, r.checkpoint); err != nil {
+		return err
+	}
+	written, _, err := r.s.planner.Storyline(r.correcting("storyline"), r.pricing.Plan.Ref, clip.StorylineInput{PlanningInput: in})
+	if err != nil {
+		return err
+	}
+	made := make([]string, 0, len(r.analyses))
+	for _, a := range r.analyses {
+		made = append(made, a.Source.ID)
+	}
+	r.storyline = &clip.Storyline{Paragraphs: written.Paragraphs, MadeWithSources: made}
+	return nil
+}
+
+// saveStoryline saves the storyline alone, with the analysis it was written from (CLIP-177).
+func (r *generationRun) saveStoryline() error {
+	r.set("save", 0, 1)
+	store, ok := r.s.store.(clip.StorylineStore)
+	if !ok {
+		return clip.ErrCompositionUnavailable
+	}
+	analysis, err := json.Marshal(r.analyses)
+	if err != nil {
+		return err
+	}
+	raw, err := clip.EncodeStoryline(r.storyline)
+	if err != nil {
+		return err
+	}
+	if _, err := store.SaveStoryline(r.ctx, r.user, r.project, string(analysis), raw, r.s.now()); err != nil {
+		return err
+	}
+	r.set("cleanup", 0, 1)
+	return nil
 }
 
 // recordFailure folds the failing stage and its diagnostic into the durable checkpoint.
@@ -296,7 +362,7 @@ func (r *generationRun) set(name string, done, total int) {
 // planningInput is the frozen brief every planner call reads.
 func (r *generationRun) planningInput() clip.PlanningInput {
 	p := r.p
-	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines}
+	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines, FollowStoryline: p.FollowStoryline}
 }
 
 // validatePreparation is the planner's own check of the models, the budgets and the
@@ -455,7 +521,7 @@ func (r *generationRun) admitPrepared() error {
 		}
 		// The same qualification the quote ran, on the current document: a leaf
 		// that drifted refuses here, before the reservation and any model call.
-		current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
+		current, err := s.refreeze(ctx, pricing, count)
 		if err != nil {
 			return admissionRefusal(pricing.Observe.Ref, err)
 		}
@@ -595,8 +661,12 @@ func (r *generationRun) write() error {
 		if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
 			return err
 		}
-		// The narration writes along the storyline the flow opened with (CLIP-178).
+		// The narration writes along the storyline the flow opened with, or the one this
+		// build follows (CLIP-178).
 		r.edit.Storyline = r.storyline
+		if p.FollowStoryline != nil {
+			r.edit.Storyline = p.FollowStoryline
+		}
 		r.edit, _, err = s.planner.Narrate(r.correcting("narrate"), pricing.Narration.Ref, clip.NarrationInput{PlanningInput: in, Flow: r.edit})
 		if err != nil {
 			return err

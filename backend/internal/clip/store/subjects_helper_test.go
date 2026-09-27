@@ -33,7 +33,7 @@ func attach(in job.NewJob, slug, voiceID string) job.NewJob {
 // clipJob mirrors the clip adapter: charged clip work defers its hold until its owner
 // approves the quote, and a render spends nothing at all.
 func clipJob(in job.NewJob, project string) job.NewJob {
-	in.DeferHold = in.Kind == "generate_clip" || in.Kind == "revise_clip"
+	in.DeferHold = clip.ChargedJobKind(in.Kind)
 	in.NonMetered = in.Kind == "render_clip"
 	subject := job.Subject{Dimension: clip.JobSubject, ID: project}
 	in.Subjects = append(in.Subjects, subject)
@@ -55,9 +55,9 @@ func voiceOwnedTestKind(kind string) bool {
 // jobKindsForTest is the same shape the composition root wires.
 func jobKindsForTest() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
-		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise},
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 	}
 }
 

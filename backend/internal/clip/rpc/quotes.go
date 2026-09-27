@@ -23,7 +23,11 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	}
 	observe := llm.ModelRef{ProviderID: req.Msg.GetObserveModel().GetProviderId(), ModelID: req.Msg.GetObserveModel().GetModelId()}
 	write := llm.ModelRef{ProviderID: req.Msg.GetWriteModel().GetProviderId(), ModelID: req.Msg.GetWriteModel().GetModelId()}
-	q, err := h.generation.Quote(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
+	quote := h.generation.Quote
+	if req.Msg.FromStoryline {
+		quote = h.generation.QuoteFromStoryline
+	}
+	q, err := quote(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
 	var admission *clip.ModelAdmissionError
 	if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
 		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", postpilotv1.FailureReason_MODEL_VIDEO_UNSUPPORTED, map[string]string{"model": observe.String()})
@@ -31,7 +35,17 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, req.Msg.ProjectId), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}}), nil
+	return connect.NewResponse(generationQuoteProto(ctx, h, user, req.Msg.ProjectId, q)), nil
+}
+
+// generationQuoteProto is a clip quote as ① reads it. A storyline call prices its one writing
+// call under its own label and no narration (CLIP-177).
+func generationQuoteProto(ctx context.Context, h *Handler, user, project string, q clip.GenerationQuote) *v1.QuoteClipGenerationResponse {
+	calls := []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}
+	if q.Pricing.Storyline {
+		calls = []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "storyline", q.Pricing.FlowCalls())}
+	}
+	return &v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, project), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: calls}
 }
 
 // QuoteClipRevision prices ONE written revision of the plan the owner is
