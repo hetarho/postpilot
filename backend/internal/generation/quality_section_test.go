@@ -92,7 +92,7 @@ func TestTheRevisePromptCarriesNoQualityRules(t *testing.T) {
 	needles := append([]string{qualityRulesHeading, qualityRulesPrecedence}, testQualityRules()...)
 	for name, prompt := range map[string][2]string{
 		"Korean":  toPair(BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "고쳐줘", nil, testBrief(), testGuidelines())),
-		"English": toPair(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, testBrief(), testGuidelines())),
+		"English": toPair(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, testBrief(), FrozenGuidelines{Owner: testGuidelines()})),
 	} {
 		for _, half := range prompt {
 			for _, needle := range needles {

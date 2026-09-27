@@ -45,9 +45,11 @@ type generationPayload struct {
 	// the decoder resolves 0 to the default (GEN-46).
 	TagCount int              `json:"tag_count,omitempty"`
 	Template *templatePayload `json:"template,omitempty"`
-	// The applicable guideline texts in injection order, frozen exactly as Template is. A
-	// payload written before guidelines existed decodes with this absent, which is "none".
-	Guidelines []string `json:"guidelines,omitempty"`
+	// The owner's applicable guideline texts in injection order, frozen exactly as Template is,
+	// and the enabled 기본 지침 ahead of them. A payload written before either existed decodes
+	// with it absent, which is "none" (GUIDE-17).
+	Guidelines        []string `json:"guidelines,omitempty"`
+	DefaultGuidelines []string `json:"default_guidelines,omitempty"`
 	// The retrieved memory texts, frozen exactly as Guidelines are. Absent is "none", which
 	// is what a payload written before memories existed decodes as — and also what a post
 	// with the option off freezes, so the two are one state on the wire (MEM-19).
@@ -100,6 +102,7 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		TagCount:          options.TagCount,
 		Template:          encodeTemplate(options.Template),
 		Guidelines:        cloneTexts(options.Guidelines),
+		DefaultGuidelines: cloneTexts(options.DefaultGuidelines),
 		Memories:          cloneTexts(options.Memories),
 		QualityRules:      cloneTexts(options.QualityRules),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
@@ -137,10 +140,11 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
 		TagCount:       resolveTagCount(payload.TagCount),
 		writeMaterial: writeMaterial{
-			Template:     decodeTemplate(payload.Template),
-			Guidelines:   cloneTexts(payload.Guidelines),
-			Memories:     cloneTexts(payload.Memories),
-			QualityRules: cloneTexts(payload.QualityRules),
+			Template:          decodeTemplate(payload.Template),
+			Guidelines:        cloneTexts(payload.Guidelines),
+			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines),
+			Memories:          cloneTexts(payload.Memories),
+			QualityRules:      cloneTexts(payload.QualityRules),
 		},
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),

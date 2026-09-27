@@ -21,20 +21,64 @@ type Handler struct{ service *guideline.Service }
 
 func NewHandler(service *guideline.Service) *Handler { return &Handler{service: service} }
 
-func (h *Handler) ListGuidelines(ctx context.Context, _ *connect.Request[postpilotv1.ListGuidelinesRequest]) (*connect.Response[postpilotv1.ListGuidelinesResponse], error) {
+// ListGuidelines answers one kind: its 기본 지침 with the account's switches, then the owner's
+// guidelines. Every owner guideline is a post's until the clip kind has a column (T438), so the
+// clip kind lists its defaults and no owner rows.
+func (h *Handler) ListGuidelines(ctx context.Context, req *connect.Request[postpilotv1.ListGuidelinesRequest]) (*connect.Response[postpilotv1.ListGuidelinesResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	guidelines, err := h.service.List(ctx, userID)
+	kind := fromProtoKind(req.Msg.GetKind())
+	defaults, err := h.service.Defaults(ctx, userID, kind)
 	if err != nil {
 		return nil, toConnectError("list guidelines", err)
 	}
-	out := make([]*postpilotv1.Guideline, 0, len(guidelines))
-	for _, g := range guidelines {
-		out = append(out, toProtoGuideline(g))
+	out := make([]*postpilotv1.Guideline, 0)
+	if kind == guideline.KindPost {
+		guidelines, err := h.service.List(ctx, userID)
+		if err != nil {
+			return nil, toConnectError("list guidelines", err)
+		}
+		for _, g := range guidelines {
+			out = append(out, toProtoGuideline(g))
+		}
 	}
-	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out}), nil
+	states := make([]*postpilotv1.DefaultGuideline, 0, len(defaults))
+	for _, d := range defaults {
+		states = append(states, toProtoDefault(d))
+	}
+	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out, Defaults: states}), nil
+}
+
+func (h *Handler) SetDefaultGuidelineEnabled(ctx context.Context, req *connect.Request[postpilotv1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[postpilotv1.SetDefaultGuidelineEnabledResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	state, err := h.service.SetDefaultEnabled(ctx, userID, fromProtoKind(req.Msg.GetKind()), req.Msg.GetKey(), req.Msg.GetEnabled())
+	if err != nil {
+		return nil, toConnectError("set default guideline", err)
+	}
+	return connect.NewResponse(&postpilotv1.SetDefaultGuidelineEnabledResponse{DefaultGuideline: toProtoDefault(state)}), nil
+}
+
+// fromProtoKind reads UNSPECIFIED as POST, so a client from before the kind existed asks for what
+// it always asked for.
+func fromProtoKind(kind postpilotv1.GuidelineKind) guideline.Kind {
+	if kind == postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP {
+		return guideline.KindClip
+	}
+	return guideline.KindPost
+}
+
+func toProtoDefault(state guideline.DefaultState) *postpilotv1.DefaultGuideline {
+	d := state.Default
+	return &postpilotv1.DefaultGuideline{
+		Key: d.Key, Enabled: state.Enabled, KoreanTargetOnly: d.KoreanTargetOnly,
+		Ko: &postpilotv1.DefaultGuidelineCopy{Name: d.Ko.Name, Text: d.Ko.Text},
+		En: &postpilotv1.DefaultGuidelineCopy{Name: d.En.Name, Text: d.En.Text},
+	}
 }
 
 func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[postpilotv1.CreateGuidelineRequest]) (*connect.Response[postpilotv1.CreateGuidelineResponse], error) {
@@ -225,6 +269,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "scoped blog field not found", postpilotv1.FailureReason_GUIDELINE_FIELD_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", postpilotv1.FailureReason_GUIDELINE_NOT_FOUND, nil)
+	case errors.Is(err, guideline.ErrDefaultNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "default guideline not found", postpilotv1.FailureReason_GUIDELINE_DEFAULT_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrCandidateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", postpilotv1.FailureReason_GUIDELINE_CANDIDATE_NOT_FOUND, nil)
 	default:

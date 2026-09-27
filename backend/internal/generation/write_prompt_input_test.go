@@ -22,6 +22,9 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 		"TagCount":     func(in *WritePromptInput) { in.TagCount = 7 },
 		"Template":     func(in *WritePromptInput) { in.Template = testBrief() },
 		"Guidelines":   func(in *WritePromptInput) { in.Guidelines = testGuidelines() },
+		"DefaultGuidelines": func(in *WritePromptInput) {
+			in.DefaultGuidelines = []string{"메모의 이름으로 쓰세요"}
+		},
 		"Memories":     func(in *WritePromptInput) { in.Memories = testMemories() },
 		"QualityRules": func(in *WritePromptInput) { in.QualityRules = testQualityRules() },
 	}

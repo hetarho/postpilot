@@ -55,7 +55,7 @@ func TestGenerationPayloadFreezesTheTagCount(t *testing.T) {
 }
 
 func TestRevisionPayloadFreezesTheTagCount(t *testing.T) {
-	raw, err := encodeRevisionPayloadForLanguage("shorten", false, LanguageKorean, nil, nil, 7, false)
+	raw, err := encodeRevisionPayloadForLanguage("shorten", false, LanguageKorean, nil, FrozenGuidelines{}, 7, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,8 +72,8 @@ func TestRevisionPayloadFreezesTheTagCount(t *testing.T) {
 func TestPromptsAskForExactlyTheFrozenTagCount(t *testing.T) {
 	writeKo, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 7})
 	writeEn, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 7})
-	reviseKo, _ := BuildRevisePromptForLanguage(LanguageKorean, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, nil)
-	reviseEn, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, nil)
+	reviseKo, _ := BuildRevisePromptForLanguage(LanguageKorean, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, FrozenGuidelines{})
+	reviseEn, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, FrozenGuidelines{})
 	for name, tc := range map[string]struct{ prompt, want string }{
 		"write ko":  {writeKo, "정확히 7개의 tags"},
 		"write en":  {writeEn, "exactly 7 tags"},

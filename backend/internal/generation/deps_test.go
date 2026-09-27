@@ -44,8 +44,8 @@ func (neutralBriefs) RenderedFor(context.Context, string, string, bool, []Templa
 
 type neutralGuidelines struct{}
 
-func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string) ([]string, error) {
-	return nil, nil
+func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string, Language) (FrozenGuidelines, error) {
+	return FrozenGuidelines{}, nil
 }
 
 // neutralMemories answers the way the context behaved before memories existed: none, for

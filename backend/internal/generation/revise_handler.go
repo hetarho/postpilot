@@ -45,7 +45,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// The brief, the 지침 and the tag count come from the frozen payload, never from the
 	// live rows, exactly as the generate handler does it.
 	tagCount := resolveTagCount(payload.TagCount)
-	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), payload.Guidelines)
+	system, user := BuildRevisePromptForLanguage(payload.ContentLanguage, profile, *post.Content, filenames, payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Owner: payload.Guidelines})
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},

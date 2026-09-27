@@ -154,3 +154,17 @@ WHERE user_id = ? AND text = ? AND status = 'pending';
 -- name: DropCandidatePostSlug :exec
 -- Post deletion drops the link and keeps the text: nothing references a candidate's origin.
 UPDATE guideline_candidates SET post_slug = NULL WHERE user_id = ? AND post_slug = ?;
+
+-- name: ListDefaultsOff :many
+-- The defaults an account switched off for one kind. A key the product no longer carries may
+-- still be here; the service ignores it.
+SELECT default_key FROM guideline_defaults_off WHERE user_id = ? AND kind = ? ORDER BY default_key;
+
+-- name: InsertDefaultOff :exec
+-- Switching off twice is the same as once.
+INSERT INTO guideline_defaults_off (user_id, kind, default_key, created_at) VALUES (?, ?, ?, ?)
+ON CONFLICT (user_id, kind, default_key) DO NOTHING;
+
+-- name: DeleteDefaultOff :exec
+-- Switching on is removing the off row; one that is already on stays on.
+DELETE FROM guideline_defaults_off WHERE user_id = ? AND kind = ? AND default_key = ?;

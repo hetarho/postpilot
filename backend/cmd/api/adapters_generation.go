@@ -44,8 +44,18 @@ func (a generationQuality) RulesFor(ctx context.Context, userID, slug string, ti
 
 type generationGuidelines struct{ service *guideline.Service }
 
-func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string) ([]string, error) {
-	return a.service.ForPrompt(ctx, userID, templateID, field)
+// ForPrompt asks for a post's 지침 in the run's target language. Generation receives the texts
+// alone (ARCH-7): the kind is always a post's here, and the language is mapped at this seam.
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, target generation.Language) (generation.FrozenGuidelines, error) {
+	language := guideline.LanguageKorean
+	if target == generation.LanguageEnglish {
+		language = guideline.LanguageEnglish
+	}
+	resolved, err := a.service.ForPrompt(ctx, userID, guideline.KindPost, templateID, field, language)
+	if err != nil {
+		return generation.FrozenGuidelines{}, err
+	}
+	return generation.FrozenGuidelines{Defaults: resolved.Defaults, Owner: resolved.Owner}, nil
 }
 
 // generationMemories hands the generation context the memory context's retrieval. What

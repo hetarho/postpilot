@@ -35,6 +35,11 @@ type Store interface {
 	// field. An empty templateID is a post with no template and an empty field a post with no
 	// 분야; each matches no link, so a post missing either receives only the groups it has.
 	ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error)
+	// DefaultsOff returns the 기본 지침 keys the account switched off for one kind; a row means
+	// off, so an account that never switched anything has none (GUIDE-43).
+	DefaultsOff(ctx context.Context, userID string, kind Kind) ([]string, error)
+	// SetDefaultOff writes one switch, idempotently either way.
+	SetDefaultOff(ctx context.Context, userID string, kind Kind, key string, off bool, at time.Time) error
 
 	// RecordCandidate carries out the whole recording rule in ONE transaction: it reads the
 	// existing candidate's status, whether a guideline already holds the text and the pending

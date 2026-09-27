@@ -9,9 +9,9 @@ import (
 )
 
 // koreanReviseScope / englishReviseScope qualify the minimality rule directly above them,
-// because without a qualifier that rule loses whole-post requests. Four separate sentences in
-// this prompt — the opening 최소한, the byte-for-byte line, koreanGroundingReviseScope and
-// NaturalnessBaseline's own revise clause — all push toward touching as little as possible, so
+// because without a qualifier that rule loses whole-post requests. Several sentences in this
+// prompt — the opening 최소한, the byte-for-byte line and the [작문 지침] scope sentence — all
+// push toward touching as little as possible, so
 // "톤을 바꿔줘" or "구성을 다시 잡아줘" was answered with one local edit and the post's shape
 // never moved. This says what minimality is measured against: the request's scope, not the
 // number of blocks. It licenses nothing outside that scope, which is the property to keep.
@@ -29,7 +29,6 @@ const koreanReviseLiteral = "수정 요청문은 지시이지 본문이 아닙�
 const englishReviseLiteral = "The request is an instruction, not body text. Never copy its sentences, wording, or typos into the post: write what it asks for in the voice profile above. Reproduce an exact phrase only when the user quoted it as the words to use."
 
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
-` + koreanGrounding + " " + koreanGroundingReviseScope + `
 요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
 ` + koreanReviseScope + `
 ` + koreanReviseLiteral + `
@@ -39,7 +38,6 @@ IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
 
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
-` + englishGrounding + " " + englishGroundingReviseScope + `
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
 ` + englishReviseScope + `
 ` + englishReviseLiteral + `
@@ -55,8 +53,10 @@ type revisionPayloadJSON struct {
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before templates existed decodes with this absent, which is "no template".
 	Template *templatePayload `json:"template,omitempty"`
-	// Likewise for the applicable guideline texts, in injection order.
-	Guidelines []string `json:"guidelines,omitempty"`
+	// Likewise for the owner's applicable guideline texts, in injection order, and the enabled
+	// 기본 지침 ahead of them; absent is none (GUIDE-17).
+	Guidelines        []string `json:"guidelines,omitempty"`
+	DefaultGuidelines []string `json:"default_guidelines,omitempty"`
 	// Frozen at Start like the brief (GEN-46); a payload from before the member decodes 0,
 	// which the handler resolves to the default.
 	TagCount          int  `json:"tag_count,omitempty"`
@@ -64,17 +64,18 @@ type revisionPayloadJSON struct {
 }
 
 func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, post.TagCountRange.Default, false)
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, FrozenGuidelines{Owner: guidelines}, post.TagCountRange.Default, false)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string, tagCount int, nativeEffort bool) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
 		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
-		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines),
-		TagCount: tagCount, WriteNativeEffort: nativeEffort,
+		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines.Owner),
+		DefaultGuidelines: cloneTexts(guidelines.Defaults),
+		TagCount:          tagCount, WriteNativeEffort: nativeEffort,
 	})
 }
 
@@ -99,10 +100,10 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 }
 
 func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, post.TagCountRange.Default, template, guidelines)
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, post.TagCountRange.Default, template, FrozenGuidelines{Owner: guidelines})
 }
 
-func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines []string) (string, string) {
+func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines FrozenGuidelines) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -122,8 +123,11 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	// The same section, at the same relative position, as the write prompt: a revision of a
 	// post with a template must not be given a different brief than the pass that wrote it.
 	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction)
-	// The same section, at the same relative position, for the same reason.
-	writeGuidelinesSection(&stable, guidelines)
+	// The same section, at the same relative position, for the same reason — bound to what the
+	// request writes or touches (GEN-40).
+	if writeGuidelinesSection(&stable, guidelines.Defaults, guidelines.Owner) {
+		stable.WriteString("\n" + reviseGuidelineScope)
+	}
 
 	files := "없음"
 	if len(filenames) > 0 {

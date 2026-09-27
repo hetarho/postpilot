@@ -356,6 +356,31 @@ func (s *Store) Delete(ctx context.Context, userID, id string) error {
 	return nil
 }
 
+// DefaultsOff returns the keys an account switched off for one kind (GUIDE-43).
+func (s *Store) DefaultsOff(ctx context.Context, userID string, kind guideline.Kind) ([]string, error) {
+	keys, err := s.read.ListDefaultsOff(ctx, sqlc.ListDefaultsOffParams{UserID: userID, Kind: string(kind)})
+	if err != nil {
+		return nil, fmt.Errorf("select switched-off defaults: %w", err)
+	}
+	return keys, nil
+}
+
+// SetDefaultOff writes one switch: off inserts the row, on deletes it, and either is idempotent.
+func (s *Store) SetDefaultOff(ctx context.Context, userID string, kind guideline.Kind, key string, off bool, at time.Time) error {
+	var err error
+	if off {
+		err = s.write.InsertDefaultOff(ctx, sqlc.InsertDefaultOffParams{
+			UserID: userID, Kind: string(kind), DefaultKey: key, CreatedAt: at.UTC().Format(writeLayout),
+		})
+	} else {
+		err = s.write.DeleteDefaultOff(ctx, sqlc.DeleteDefaultOffParams{UserID: userID, Kind: string(kind), DefaultKey: key})
+	}
+	if err != nil {
+		return fmt.Errorf("write default switch: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error) {
 	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{
 		UserID: userID, TemplateID: templateID, Field: field,

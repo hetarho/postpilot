@@ -51,6 +51,9 @@ const (
 	// GuidelineServiceDismissGuidelineCandidateProcedure is the fully-qualified name of the
 	// GuidelineService's DismissGuidelineCandidate RPC.
 	GuidelineServiceDismissGuidelineCandidateProcedure = "/postpilot.v1.GuidelineService/DismissGuidelineCandidate"
+	// GuidelineServiceSetDefaultGuidelineEnabledProcedure is the fully-qualified name of the
+	// GuidelineService's SetDefaultGuidelineEnabled RPC.
+	GuidelineServiceSetDefaultGuidelineEnabledProcedure = "/postpilot.v1.GuidelineService/SetDefaultGuidelineEnabled"
 )
 
 // GuidelineServiceClient is a client for the postpilot.v1.GuidelineService service.
@@ -65,6 +68,10 @@ type GuidelineServiceClient interface {
 	// own: the create already owns every field rule and every refusal an approval needs.
 	ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error)
 	DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error)
+	// Switches one of the product's 기본 지침 on or off for the whole account and kind, saving on
+	// change (GUIDE-43). It changes nothing already enqueued: runs freeze the texts they start
+	// with (GUIDE-17).
+	SetDefaultGuidelineEnabled(context.Context, *connect.Request[v1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[v1.SetDefaultGuidelineEnabledResponse], error)
 }
 
 // NewGuidelineServiceClient constructs a client for the postpilot.v1.GuidelineService service. By
@@ -114,17 +121,24 @@ func NewGuidelineServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(guidelineServiceMethods.ByName("DismissGuidelineCandidate")),
 			connect.WithClientOptions(opts...),
 		),
+		setDefaultGuidelineEnabled: connect.NewClient[v1.SetDefaultGuidelineEnabledRequest, v1.SetDefaultGuidelineEnabledResponse](
+			httpClient,
+			baseURL+GuidelineServiceSetDefaultGuidelineEnabledProcedure,
+			connect.WithSchema(guidelineServiceMethods.ByName("SetDefaultGuidelineEnabled")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // guidelineServiceClient implements GuidelineServiceClient.
 type guidelineServiceClient struct {
-	listGuidelines            *connect.Client[v1.ListGuidelinesRequest, v1.ListGuidelinesResponse]
-	createGuideline           *connect.Client[v1.CreateGuidelineRequest, v1.CreateGuidelineResponse]
-	updateGuideline           *connect.Client[v1.UpdateGuidelineRequest, v1.UpdateGuidelineResponse]
-	deleteGuideline           *connect.Client[v1.DeleteGuidelineRequest, v1.DeleteGuidelineResponse]
-	listGuidelineCandidates   *connect.Client[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse]
-	dismissGuidelineCandidate *connect.Client[v1.DismissGuidelineCandidateRequest, v1.DismissGuidelineCandidateResponse]
+	listGuidelines             *connect.Client[v1.ListGuidelinesRequest, v1.ListGuidelinesResponse]
+	createGuideline            *connect.Client[v1.CreateGuidelineRequest, v1.CreateGuidelineResponse]
+	updateGuideline            *connect.Client[v1.UpdateGuidelineRequest, v1.UpdateGuidelineResponse]
+	deleteGuideline            *connect.Client[v1.DeleteGuidelineRequest, v1.DeleteGuidelineResponse]
+	listGuidelineCandidates    *connect.Client[v1.ListGuidelineCandidatesRequest, v1.ListGuidelineCandidatesResponse]
+	dismissGuidelineCandidate  *connect.Client[v1.DismissGuidelineCandidateRequest, v1.DismissGuidelineCandidateResponse]
+	setDefaultGuidelineEnabled *connect.Client[v1.SetDefaultGuidelineEnabledRequest, v1.SetDefaultGuidelineEnabledResponse]
 }
 
 // ListGuidelines calls postpilot.v1.GuidelineService.ListGuidelines.
@@ -157,6 +171,11 @@ func (c *guidelineServiceClient) DismissGuidelineCandidate(ctx context.Context, 
 	return c.dismissGuidelineCandidate.CallUnary(ctx, req)
 }
 
+// SetDefaultGuidelineEnabled calls postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled.
+func (c *guidelineServiceClient) SetDefaultGuidelineEnabled(ctx context.Context, req *connect.Request[v1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[v1.SetDefaultGuidelineEnabledResponse], error) {
+	return c.setDefaultGuidelineEnabled.CallUnary(ctx, req)
+}
+
 // GuidelineServiceHandler is an implementation of the postpilot.v1.GuidelineService service.
 type GuidelineServiceHandler interface {
 	ListGuidelines(context.Context, *connect.Request[v1.ListGuidelinesRequest]) (*connect.Response[v1.ListGuidelinesResponse], error)
@@ -169,6 +188,10 @@ type GuidelineServiceHandler interface {
 	// own: the create already owns every field rule and every refusal an approval needs.
 	ListGuidelineCandidates(context.Context, *connect.Request[v1.ListGuidelineCandidatesRequest]) (*connect.Response[v1.ListGuidelineCandidatesResponse], error)
 	DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error)
+	// Switches one of the product's 기본 지침 on or off for the whole account and kind, saving on
+	// change (GUIDE-43). It changes nothing already enqueued: runs freeze the texts they start
+	// with (GUIDE-17).
+	SetDefaultGuidelineEnabled(context.Context, *connect.Request[v1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[v1.SetDefaultGuidelineEnabledResponse], error)
 }
 
 // NewGuidelineServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -214,6 +237,12 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 		connect.WithSchema(guidelineServiceMethods.ByName("DismissGuidelineCandidate")),
 		connect.WithHandlerOptions(opts...),
 	)
+	guidelineServiceSetDefaultGuidelineEnabledHandler := connect.NewUnaryHandler(
+		GuidelineServiceSetDefaultGuidelineEnabledProcedure,
+		svc.SetDefaultGuidelineEnabled,
+		connect.WithSchema(guidelineServiceMethods.ByName("SetDefaultGuidelineEnabled")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.GuidelineService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case GuidelineServiceListGuidelinesProcedure:
@@ -228,6 +257,8 @@ func NewGuidelineServiceHandler(svc GuidelineServiceHandler, opts ...connect.Han
 			guidelineServiceListGuidelineCandidatesHandler.ServeHTTP(w, r)
 		case GuidelineServiceDismissGuidelineCandidateProcedure:
 			guidelineServiceDismissGuidelineCandidateHandler.ServeHTTP(w, r)
+		case GuidelineServiceSetDefaultGuidelineEnabledProcedure:
+			guidelineServiceSetDefaultGuidelineEnabledHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -259,4 +290,8 @@ func (UnimplementedGuidelineServiceHandler) ListGuidelineCandidates(context.Cont
 
 func (UnimplementedGuidelineServiceHandler) DismissGuidelineCandidate(context.Context, *connect.Request[v1.DismissGuidelineCandidateRequest]) (*connect.Response[v1.DismissGuidelineCandidateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.DismissGuidelineCandidate is not implemented"))
+}
+
+func (UnimplementedGuidelineServiceHandler) SetDefaultGuidelineEnabled(context.Context, *connect.Request[v1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[v1.SetDefaultGuidelineEnabledResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.GuidelineService.SetDefaultGuidelineEnabled is not implemented"))
 }

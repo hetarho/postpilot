@@ -40,3 +40,20 @@ choice would be expensive to undo are listed at the end.
 - **The English guide avoids the word "place"** ("photos go here", "the topic here"): the guide
   test forbids it because the retired place slot must never be taught.
 - **Migration number 0094**, since T414 took 0093.
+
+## T431 — 기본 지침 (backend)
+
+- **`natural_korean` renders as one bullet with indented continuation lines.** The old baseline was
+  a list of `- ` lines; inside `[작문 지침]` each default is one `- ` bullet, so the leading dashes
+  were stripped and the lines continue two spaces in. Owner guidelines with line breaks render the
+  same way. *If you want each baseline line as its own bullet:* split the text on `\n` in
+  `writeGuidelinesSection`.
+- **A non-English target reads the Korean texts.** Generation has only `ko`/`en`; the adapter maps
+  anything else to Korean.
+- **An unknown kind is `GUIDELINE_DEFAULT_NOT_FOUND` too.** The service refuses a kind outside
+  `post`/`clip` with the same reason as an unknown key; the RPC reads UNSPECIFIED as POST, so only
+  an internal caller can hit it.
+- **Test fixtures freeze no defaults unless the test is about them.** The prompt goldens
+  (`write_prompt_no_template`, `revise_prompt_no_template`, `write_prompt_memories`) carry no
+  `[작문 지침]` section, so they pin the format-only static rules; the 11 defaults are pinned by the
+  default and section tests instead.

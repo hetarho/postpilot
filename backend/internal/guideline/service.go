@@ -183,19 +183,76 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 	return s.store.Delete(ctx, userID, id)
 }
 
-// ForPrompt is this context's published behavior for prompt builders: the owner's texts that
-// apply to one post, resolved from the post's CURRENT template and 분야 — global, then template,
-// then 분야, each by created_at then id (GUIDE-14). The write and the revision are given the same
+// ForPrompt is this context's published behavior for prompt builders: the texts one run is
+// given (GUIDE-14). First the enabled 기본 지침 of the kind, in the product's order and in the
+// target language — a Korean-target-only one reaching a Korean target alone — then the owner's
+// texts that apply to the post, resolved from its CURRENT template and 분야: global, then
+// template, then 분야, each by created_at then id. The write and the revision are given the same
 // texts. Absence is not an error: a prompt with no guidelines is a valid prompt.
+//
+// Every owner guideline is read as a post's until the clip kind has a column of its own (T438),
+// so a clip asks for its defaults and receives no owner rows.
 //
 // templateID and field are pointers because "the post has none" and "the post has X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
-func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string) ([]string, error) {
+func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templateID, field *string, target Language) (PromptGuidelines, error) {
+	defaults, err := s.Defaults(ctx, userID, kind)
+	if err != nil {
+		return PromptGuidelines{}, err
+	}
+	var out PromptGuidelines
+	for _, d := range defaults {
+		if !d.Enabled {
+			continue
+		}
+		if text, ok := d.Default.Text(target); ok {
+			out.Defaults = append(out.Defaults, text)
+		}
+	}
+	if kind != KindPost {
+		return out, nil
+	}
 	texts, err := s.store.ApplicableTexts(ctx, userID, trimmed(templateID), trimmed(field))
 	if err != nil {
-		return nil, fmt.Errorf("resolve applicable guidelines: %w", err)
+		return PromptGuidelines{}, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
-	return texts, nil
+	out.Owner = texts
+	return out, nil
+}
+
+// Defaults is every 기본 지침 of one kind with the account's switch, in the product's order. A
+// stored key the product no longer carries is ignored (GUIDE-43).
+func (s *Service) Defaults(ctx context.Context, userID string, kind Kind) ([]DefaultState, error) {
+	if !kind.Valid() {
+		return nil, ErrDefaultNotFound
+	}
+	off, err := s.store.DefaultsOff(ctx, userID, kind)
+	if err != nil {
+		return nil, err
+	}
+	switchedOff := make(map[string]bool, len(off))
+	for _, key := range off {
+		switchedOff[key] = true
+	}
+	registry := Defaults(kind)
+	out := make([]DefaultState, 0, len(registry))
+	for _, d := range registry {
+		out = append(out, DefaultState{Default: d, Enabled: !switchedOff[d.Key]})
+	}
+	return out, nil
+}
+
+// SetDefaultEnabled switches one 기본 지침 on or off for the account and kind, idempotently. An
+// unknown key is ErrDefaultNotFound and writes nothing.
+func (s *Service) SetDefaultEnabled(ctx context.Context, userID string, kind Kind, key string, enabled bool) (DefaultState, error) {
+	d, ok := DefaultFor(kind, key)
+	if !kind.Valid() || !ok {
+		return DefaultState{}, ErrDefaultNotFound
+	}
+	if err := s.store.SetDefaultOff(ctx, userID, kind, key, !enabled, s.now()); err != nil {
+		return DefaultState{}, err
+	}
+	return DefaultState{Default: d, Enabled: enabled}, nil
 }
 
 func trimmed(value *string) string {

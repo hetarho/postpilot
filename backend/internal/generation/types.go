@@ -151,9 +151,12 @@ type PostInput struct {
 	// never resolve it: they use Template, which the job payload froze.
 	TemplateID string
 	Template   *TemplateBrief
-	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
+	// Guidelines is the owner's frozen 작문 지침 in injection order, filled at enqueue from
 	// TemplateID and Field like Template is. Handlers never resolve guidelines live either.
 	Guidelines []string
+	// DefaultGuidelines are the frozen 기본 지침 texts, rendered ahead of the owner's (GUIDE-14),
+	// in the run's target language.
+	DefaultGuidelines []string
 	// UseMemory is the post's opt-in, read at enqueue. It is the ONLY thing that decides
 	// whether this context asks the memory context anything at all (MEM-18).
 	UseMemory bool
@@ -248,15 +251,16 @@ type GenerateJob struct {
 }
 
 type StartRevisionRequest struct {
-	UserID          string
-	PostSlug        string
-	VoiceID         string
-	Instruction     string
-	SaveAsRule      bool
-	WriteModel      string
-	ContentLanguage Language
-	Template        *TemplateBrief
-	Guidelines      []string
+	UserID            string
+	PostSlug          string
+	VoiceID           string
+	Instruction       string
+	SaveAsRule        bool
+	WriteModel        string
+	ContentLanguage   Language
+	Template          *TemplateBrief
+	Guidelines        []string
+	DefaultGuidelines []string
 	// The enqueue adapter uses the same frozen length facts as the revision handler to price
 	// the completion budget. Neither field is sent by the client or persisted independently.
 	TargetLength *int

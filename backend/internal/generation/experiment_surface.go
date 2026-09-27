@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	WriteExperimentPromptVersion   = "write-v3-language-ab"
+	WriteExperimentPromptVersion   = "write-v4-default-guidelines"
 	ObserveExperimentPromptVersion = "observe-v1-ab"
 )
 

@@ -149,7 +149,7 @@ func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
 			t.Errorf("the template %s says 지침: %q", name, text)
 		}
 	}
-	if !strings.Contains(system[end:], "지침이 템플릿의 요구와 충돌하면 지침을 우선하고") {
+	if !strings.Contains(system[end:], "지침이 템플릿과 충돌하면 지침을 우선하고") {
 		t.Fatalf("the guideline precedence no longer names the template:\n%s", system[end:])
 	}
 }
@@ -196,7 +196,7 @@ func TestTheReviseTitleFormBindsOnlyATitleRequest(t *testing.T) {
 	brief := titleAreaBrief()
 	fenced := "\n" + reviseTemplateTitleInstruction + "\n---\n" + brief.TitleArea + "\n---\n---\n" + brief.Body
 	korean, _ := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, brief, nil)
-	english, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, brief, nil)
+	english, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, brief, FrozenGuidelines{})
 	for name, system := range map[string]string{"Korean": korean, "English": english} {
 		if strings.Count(system, fenced) != 1 {
 			t.Errorf("the %s revise prompt does not carry the revise title line in the fence once:\n%s", name, system)

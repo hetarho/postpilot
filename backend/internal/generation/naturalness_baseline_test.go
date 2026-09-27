@@ -6,9 +6,11 @@ import (
 	"unicode/utf8"
 )
 
-const naturalnessPrecedence = "말투 프로필, 활성 대조 규칙, 사용자 규칙이 이 기준선과 충돌하면 해당 프로필과 규칙을 우선하세요."
-
-func TestNaturalnessBaselineContract(t *testing.T) {
+// GEN-17, GUIDE-41: the Korean naturalness baseline is the natural_korean 기본 지침 — its rule
+// markers, none of the rejected folk rules, at most 700 runes, closed by the line that lets the
+// voice outrank it.
+func TestNaturalKoreanDefaultContract(t *testing.T) {
+	baseline := defaultText("natural_korean", LanguageKorean)
 	for family, marker := range map[string]string{
 		"TEXT and revision scope":   "수정에서는 요청 밖의 기존 문장을 그대로 두세요",
 		"non-TEXT exclusion":        "제목·요약·HEADING·LIST에는 적용하지 말고",
@@ -27,7 +29,7 @@ func TestNaturalnessBaselineContract(t *testing.T) {
 		"abstract noun chains":      "~적 명사",
 		"rhetorical decoration":     "수사·경구",
 	} {
-		if !strings.Contains(NaturalnessBaseline, marker) {
+		if !strings.Contains(baseline, marker) {
 			t.Errorf("%s marker %q is missing", family, marker)
 		}
 	}
@@ -36,221 +38,44 @@ func TestNaturalnessBaselineContract(t *testing.T) {
 		"문장 첫머리", "문장 처음", "문장 시작", "첫 단어", "문두", "접속사",
 		"그리고", "그러나", "하지만", "그런데", "또한", "반면", "따라서", "그러므로",
 	} {
-		if strings.Contains(NaturalnessBaseline, rejected) {
+		if strings.Contains(baseline, rejected) {
 			t.Errorf("rejected folk-rule marker %q is present", rejected)
 		}
 	}
-	if !strings.HasPrefix(NaturalnessBaseline, "[한국어 자연 문체 기준선]\n") {
-		t.Fatal("baseline header changed")
+	if !strings.HasSuffix(baseline, "말투 프로필, 활성 대조 규칙, 사용자 규칙과 충돌하면 그쪽을 따르세요.") {
+		t.Fatal("the voice's precedence must close the baseline")
 	}
-	if !strings.HasSuffix(NaturalnessBaseline, naturalnessPrecedence) {
-		t.Fatal("precedence must close the baseline section")
-	}
-	if got := utf8.RuneCountInString(NaturalnessBaseline); got > 700 {
+	if got := utf8.RuneCountInString(baseline); got > 700 {
 		t.Fatalf("baseline is %d runes, want at most 700", got)
 	}
-}
-
-func TestNaturalnessBaselineIsSharedByWriteAndRevise(t *testing.T) {
-	write, _ := BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil, nil)
-	revise, _ := BuildRevisePrompt(Profile{}, *revisionContent("body"), nil, "shorten", nil, nil, nil)
-	section := "\n\n" + NaturalnessBaseline + "\n\n[스타일가이드]\n"
-
-	for name, prompt := range map[string]string{"write": write, "revise": revise} {
-		if strings.Count(prompt, NaturalnessBaseline) != 1 {
-			t.Errorf("%s prompt does not contain exactly one baseline", name)
-		}
-		if !strings.Contains(prompt, section) {
-			t.Errorf("%s prompt does not place the complete baseline before the styleguide", name)
-		}
-	}
-	if !strings.HasPrefix(write, WritePrompt+"\ntitle, 한 줄 summary, 정확히 4개의 tags, blocks를 반환하세요."+
-		"\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요."+section) {
-		t.Fatal("write baseline moved outside the static task/format prefix")
-	}
-	if !strings.HasPrefix(revise, RevisePrompt+"\n태그를 바꾸라는 요청이면 정확히 4개로 유지하세요."+
-		"\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요."+section) {
-		t.Fatal("revise baseline moved outside the static task/format prefix")
+	if english := defaultText("natural_korean", LanguageEnglish); english != "" {
+		t.Fatalf("the Korean-only baseline has an English prompt text: %q", english)
 	}
 }
 
-func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
-	for name, test := range map[string]struct {
-		prompt    string
-		grounding string
-		scope     string
-		altitude  string
-		naming    string
-	}{
-		"Korean": {
-			prompt:    firstOf(BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil, nil)),
-			grounding: koreanGrounding,
-			scope:     koreanGroundingWriteScope,
-			altitude:  koreanAltitude,
-			naming:    koreanNaming,
-		},
-		"English": {
-			prompt:    firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: Profile{}, Memo: "memo", Title: "title", TagCount: 4})),
-			grounding: englishGrounding,
-			scope:     englishGroundingWriteScope,
-			altitude:  englishAltitude,
-			naming:    englishNaming,
-		},
+// It reaches a Korean write and revise exactly once, inside [작문 지침] and never before the
+// styleguide; an English target and a switched-off one carry none of it.
+func TestNaturalKoreanReachesKoreanRunsOnceInsideTheSection(t *testing.T) {
+	baseline := defaultText("natural_korean", LanguageKorean)
+	korean := productDefaults(LanguageKorean)
+	for name, prompt := range map[string]string{
+		"write":  firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, DefaultGuidelines: korean})),
+		"revise": firstOf(BuildRevisePromptForLanguage(LanguageKorean, goldenProfile(), goldenContent(), nil, "고쳐줘", nil, 4, nil, FrozenGuidelines{Defaults: korean})),
 	} {
-		if strings.Count(test.prompt, test.naming) != 1 {
-			t.Errorf("%s write prompt does not contain the naming rule exactly once", name)
+		at := strings.Index(prompt, rendered(baseline))
+		if strings.Count(prompt, rendered(baseline)) != 1 || at < strings.Index(prompt, "\n\n[작문 지침]") {
+			t.Errorf("%s: the baseline is not once inside [작문 지침]", name)
 		}
-		wantLines := test.grounding + " " + test.scope + "\n" + test.altitude + "\n" + test.naming + "\n"
-		if !strings.Contains(test.prompt, wantLines) {
-			t.Errorf("%s grounding, altitude and naming lines are not in that order, each on its own line", name)
+		if at < strings.Index(prompt, "[스타일가이드]") {
+			t.Errorf("%s: the baseline sits before the voice profile", name)
 		}
 	}
-
-	for name, test := range map[string]struct {
-		prompt string
-		naming string
-	}{
-		"Korean": {
-			prompt: firstOf(BuildRevisePrompt(Profile{}, *revisionContent("body"), nil, "shorten", nil, nil, nil)),
-			naming: koreanNaming,
-		},
-		"English": {
-			prompt: firstOf(BuildRevisePromptForLanguage(LanguageEnglish, Profile{}, *revisionContent("body"), nil, "shorten", nil, 4, nil, nil)),
-			naming: englishNaming,
-		},
+	for name, prompt := range map[string]string{
+		"English write": firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, DefaultGuidelines: productDefaults(LanguageEnglish)})),
+		"switched off":  firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, DefaultGuidelines: without(korean, baseline)})),
 	} {
-		if strings.Contains(test.prompt, test.naming) {
-			t.Errorf("%s revise prompt contains the write-only naming rule", name)
-		}
-	}
-}
-
-// GEN-47: the altitude rule reaches the write prompt and nothing else. The revise pass holds
-// no observations to stay above, and the two observe passes are the ones whose whole job is to
-// enumerate what is in a frame — telling either of them not to describe would be a bug.
-func TestAltitudeRuleIsInWritePromptsOnly(t *testing.T) {
-	for name, test := range map[string]struct {
-		prompt   string
-		altitude string
-	}{
-		"Korean bare":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)), altitude: koreanAltitude},
-		"Korean full":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), goldenObservations(), "memo", "title", nil, nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
-		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4})), altitude: englishAltitude},
-	} {
-		if strings.Count(test.prompt, test.altitude) != 1 {
-			t.Errorf("%s write prompt carries the altitude rule %d times", name, strings.Count(test.prompt, test.altitude))
-		}
-	}
-
-	for name, test := range map[string]struct {
-		prompt   string
-		altitude string
-	}{
-		"Korean revise":  {prompt: firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
-		"English revise": {prompt: firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)), altitude: englishAltitude},
-	} {
-		if strings.Contains(test.prompt, test.altitude) {
-			t.Errorf("%s prompt contains the write-only altitude rule", name)
-		}
-	}
-
-	for name, prompt := range map[string]string{"photo observe": ObservePrompt, "video observe": ObserveVideoPrompt} {
-		for _, altitude := range []string{koreanAltitude, englishAltitude} {
-			if strings.Contains(prompt, altitude) {
-				t.Errorf("the %s prompt gained the altitude rule", name)
-			}
-		}
-	}
-}
-
-// GEN-16: only the scope clause differs between the passes. The core prohibition is the same
-// bytes in the write and the revise prompt, which is what one shared constant is for — the
-// altitude rule sits after that shared line and must not have split it.
-func TestGroundingCoreIsByteIdenticalInWriteAndRevisePrompts(t *testing.T) {
-	for name, test := range map[string]struct {
-		write, revise           string
-		core                    string
-		writeScope, reviseScope string
-	}{
-		"Korean": {
-			write:       firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)),
-			revise:      firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, nil, nil)),
-			core:        koreanGrounding,
-			writeScope:  koreanGroundingWriteScope,
-			reviseScope: koreanGroundingReviseScope,
-		},
-		"English": {
-			write:       firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4})),
-			revise:      firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
-			core:        englishGrounding,
-			writeScope:  englishGroundingWriteScope,
-			reviseScope: englishGroundingReviseScope,
-		},
-	} {
-		writeLine, reviseLine := lineContaining(test.write, test.core), lineContaining(test.revise, test.core)
-		if writeLine == "" || reviseLine == "" {
-			t.Fatalf("%s: the grounding core is missing from the write or the revise prompt", name)
-		}
-		if !strings.HasPrefix(writeLine, test.core+" ") || !strings.HasPrefix(reviseLine, test.core+" ") {
-			t.Fatalf("%s: the grounding core no longer opens its own line in both passes", name)
-		}
-		if writeLine != test.core+" "+test.writeScope {
-			t.Errorf("%s write grounding line = %q", name, writeLine)
-		}
-		if reviseLine != test.core+" "+test.reviseScope {
-			t.Errorf("%s revise grounding line = %q", name, reviseLine)
-		}
-	}
-}
-
-func lineContaining(prompt, needle string) string {
-	for _, line := range strings.Split(prompt, "\n") {
-		if strings.Contains(line, needle) {
-			return line
-		}
-	}
-	return ""
-}
-
-// The pre-naturalness goldens are the baseline the fixed-text additions are stated against:
-// the stylistic section (GEN-17), the grounding line (GEN-16), T041's write-only naming line,
-// T287's write-only altitude line, and T324's write-only title, tag and nouns lines with the nouns
-// member of the answer shape.
-// Removing exactly those additions leaves the legacy bytes, which keeps each delta checkable.
-//
-// The rename of the concept the fixed output-language line names (용도 → 템플릿) landed in
-// BOTH the current and the legacy goldens, so this check still sees exactly two additions rather
-// than reading a rename as a third one.
-func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
-	for _, pair := range []struct {
-		current string
-		legacy  string
-	}{
-		{current: "write_prompt_no_template.golden", legacy: "write_prompt_pre_naturalness.golden"},
-		{current: "revise_prompt_no_template.golden", legacy: "revise_prompt_pre_naturalness.golden"},
-	} {
-		currentSystem, currentUser := loadGolden(t, pair.current)
-		legacySystem, legacyUser := loadGolden(t, pair.legacy)
-		stripped := strings.Replace(currentSystem, "\n\n"+NaturalnessBaseline, "", 1)
-		for _, scope := range []string{koreanGroundingWriteScope, koreanGroundingReviseScope} {
-			stripped = strings.Replace(stripped, "\n"+koreanGrounding+" "+scope, "", 1)
-		}
-		stripped = strings.Replace(stripped, "\n"+koreanAltitude, "", 1)
-		stripped = strings.Replace(stripped, "\n"+koreanNaming, "", 1)
-		// T324's write-only additions: the two title prohibitions, the tag rule, the nouns rule
-		// and the nouns member of the answer shape.
-		stripped = strings.Replace(stripped, "\n"+koreanTitleProhibitions, "", 1)
-		stripped = strings.Replace(stripped, "\n"+koreanTagRule, "", 1)
-		stripped = strings.Replace(stripped, "\n"+koreanNounsRule, "", 1)
-		stripped = strings.Replace(stripped, `"blocks":[],"nouns":[]}`, `"blocks":[]}`, 1)
-		// The two revise-only additions, stated against the same legacy baseline.
-		stripped = strings.Replace(stripped, "\n"+koreanReviseScope, "", 1)
-		stripped = strings.Replace(stripped, "\n"+koreanReviseLiteral, "", 1)
-		if stripped != legacySystem {
-			t.Errorf("%s changed by more than the inserted baseline, grounding, altitude, naming, title, tag and nouns lines and the nouns member", pair.current)
-		}
-		if currentUser != legacyUser {
-			t.Errorf("%s changed the per-post user material", pair.current)
+		if strings.Contains(prompt, "A가 아니라 B") || strings.Contains(prompt, "잠식·청사진·신호탄") {
+			t.Errorf("%s carries the Korean baseline", name)
 		}
 	}
 }

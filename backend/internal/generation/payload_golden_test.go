@@ -29,14 +29,15 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 		writeMaterial: writeMaterial{Template: &TemplateBrief{
 			Name: "여행", Body: "# 제목",
 			Facts: []TemplateFact{{Label: "장소", Value: "제주"}},
-		}, Guidelines: []string{"문장은 짧게"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
+		}, Guidelines: []string{"문장은 짧게"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
 	})
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
 	const want = `{"target_language":"ko","target_length":1200,"tag_count":7,` +
 		`"template":{"name":"여행","body":"# 제목","facts":[{"label":"장소","value":"제주"}]},` +
-		`"guidelines":["문장은 짧게"],"memories":["매운 음식을 못 먹는다"],` +
+		`"guidelines":["문장은 짧게"],"default_guidelines":["메모의 이름으로 쓰세요"],` +
+		`"memories":["매운 음식을 못 먹는다"],` +
 		`"quality_rules":["제목에 같은 말을 되풀이하지 않는다"],"observe_files":["a.jpg"],` +
 		`"observations":[{"file":"a.jpg","scene":"바다","objects":["파도"],"model":"p/m",` +
 		`"events":["파도가 친다"],"speech":"좋다"}],"write_native_effort":true}`
@@ -57,6 +58,14 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	}
 	if !reflect.DeepEqual(back.QualityRules, []string{"제목에 같은 말을 되풀이하지 않는다"}) {
 		t.Fatalf("round trip lost the rules: %+v", back.QualityRules)
+	}
+	if !reflect.DeepEqual(back.DefaultGuidelines, []string{"메모의 이름으로 쓰세요"}) {
+		t.Fatalf("round trip lost the 기본 지침: %+v", back.DefaultGuidelines)
+	}
+	// A payload queued before 기본 지침 existed carries no member and freezes none.
+	legacy, err := decodeGenerationPayload([]byte(`{"target_language":"ko","guidelines":["문장은 짧게"]}`))
+	if err != nil || len(legacy.DefaultGuidelines) != 0 || len(legacy.Guidelines) != 1 {
+		t.Fatalf("a payload without default_guidelines = %+v, %v", legacy, err)
 	}
 
 	// The three states of the re-observation set survive the edge, including the empty one

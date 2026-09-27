@@ -210,12 +210,12 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Template = brief
-	texts, err := s.freezeGuidelines(ctx, post)
+	guidelines, err := s.freezeGuidelines(ctx, post, request.ContentLanguage)
 	if err != nil {
 		return "", err
 	}
-	request.Guidelines = texts
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.TagCount, request.WriteNativeEffort)
+	request.Guidelines, request.DefaultGuidelines = guidelines.Owner, guidelines.Defaults
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -376,14 +376,14 @@ func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*Template
 	return &frozen, nil
 }
 
-// freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME template id
-// the brief was resolved from and the post's 분야 — one read, one consistent view. Editing,
-// rescoping or deleting a guideline afterwards cannot reach the queued work, including across
-// a restart-resume or an explicit retry, because the handlers read only the payload
-// (GUIDE-17).
-func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]string, error) {
+// freezeGuidelines resolves the run's 지침 once, at enqueue — the enabled 기본 지침 in the target
+// language, then the owner's texts that apply from the SAME template id the brief was resolved
+// from and the post's 분야 — one read, one consistent view. Editing, rescoping, deleting or
+// switching a guideline afterwards cannot reach the queued work, including across a
+// restart-resume or an explicit retry, because the handlers read only the payload (GUIDE-17).
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, target Language) (FrozenGuidelines, error) {
 	if s.guidelines == nil {
-		return nil, nil
+		return FrozenGuidelines{}, nil
 	}
 	var templateID, field *string
 	if post.TemplateID != "" {
@@ -394,21 +394,22 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]strin
 		id := post.Field
 		field = &id
 	}
-	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field)
+	guidelines, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, target)
 	if err != nil {
-		return nil, fmt.Errorf("load applicable guidelines: %w", err)
+		return FrozenGuidelines{}, fmt.Errorf("load applicable guidelines: %w", err)
 	}
-	return texts, nil
+	return guidelines, nil
 }
 
 // writeMaterial is a write's frozen material: the brief, the 지침, the 기억 and the ticked
 // rule texts. freezeWriteMaterial is the one place it is resolved, for the ordinary generate
 // and the write comparison alike (GEN-15, GEN-18, MEM-19).
 type writeMaterial struct {
-	Template     *TemplateBrief
-	Guidelines   []string
-	Memories     []string
-	QualityRules []string
+	Template          *TemplateBrief
+	Guidelines        []string
+	DefaultGuidelines []string
+	Memories          []string
+	QualityRules      []string
 }
 
 // onto lays the material over the post as-is: the values are freshly resolved or decoded, and
@@ -416,6 +417,7 @@ type writeMaterial struct {
 func (m writeMaterial) onto(post PostInput) PostInput {
 	post.Template = m.Template
 	post.Guidelines = m.Guidelines
+	post.DefaultGuidelines = m.DefaultGuidelines
 	post.Memories = m.Memories
 	post.QualityRules = m.QualityRules
 	return post
@@ -423,14 +425,14 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 
 // freezeWriteMaterial resolves everything a write freezes, once. Start and SnapshotWriteInput
 // both call it, so a comparison can never freeze less than the run it compares — the drop that
-// left a comparison of a post with 기억 사용 on without its memories. The 지침 are the owner's
-// texts alone (GEN-14, GEN-18).
+// left a comparison of a post with 기억 사용 on without its memories. The 지침 are the enabled
+// 기본 지침 and the owner's texts, in the target language (GUIDE-14, GUIDE-17).
 func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writeMaterial, error) {
 	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	texts, err := s.freezeGuidelines(ctx, post)
+	guidelines, err := s.freezeGuidelines(ctx, post, post.TargetLanguage)
 	if err != nil {
 		return writeMaterial{}, err
 	}
@@ -442,7 +444,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	return writeMaterial{Template: brief, Guidelines: texts, Memories: memories, QualityRules: rules}, nil
+	return writeMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, Memories: memories, QualityRules: rules}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.

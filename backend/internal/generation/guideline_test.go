@@ -17,13 +17,16 @@ func testGuidelines() []string {
 // enqueue is how a test edits, rescopes or deletes rows between enqueue and drain.
 type fakeGuidelines struct {
 	texts         []string
+	defaults      []string
 	calls         int
 	askedTemplate *string
 	askedField    *string
+	askedLanguage Language
 }
 
-func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string) ([]string, error) {
+func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, target Language) (FrozenGuidelines, error) {
 	f.calls++
+	f.askedLanguage = target
 	if templateID == nil {
 		f.askedTemplate = nil
 	} else {
@@ -36,7 +39,7 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, fiel
 		id := *field
 		f.askedField = &id
 	}
-	return f.texts, nil
+	return FrozenGuidelines{Defaults: f.defaults, Owner: f.texts}, nil
 }
 
 func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
@@ -49,8 +52,9 @@ func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fak
 	return svc
 }
 
-// A4: exactly one section, its texts verbatim as list lines in the given order, closed by the
-// fixed precedence sentence, sitting after the complete voice profile and before [이번 글].
+// A4, GUIDE-15: exactly one section, its texts verbatim as list lines in the given order under
+// their group label, closed by the fixed precedence sentence, sitting after the complete voice
+// profile and before [이번 글].
 func TestWritePromptAppendsOneGuidelineSectionAfterTheProfile(t *testing.T) {
 	baseline, baselineUser := loadGolden(t, "write_prompt_no_template.golden")
 	system, user := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, testGuidelines())
@@ -64,9 +68,34 @@ func TestWritePromptAppendsOneGuidelineSectionAfterTheProfile(t *testing.T) {
 	if strings.Count(system, "[작문 지침]") != 1 {
 		t.Fatalf("guideline sections = %d", strings.Count(system, "[작문 지침]"))
 	}
-	want := "\n\n[작문 지침]\n- CCTV를 언급하지 않기\n- 직원·주인과의 상호작용을 쓰지 않기\n" + guidelinePrecedence
+	want := "\n\n[작문 지침]\n사용자 지침:\n- CCTV를 언급하지 않기\n- 직원·주인과의 상호작용을 쓰지 않기\n" + guidelinePrecedence
 	if got := strings.TrimPrefix(system, baseline); got != want {
 		t.Fatalf("section =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// GUIDE-14, GUIDE-15: the enabled 기본 지침 come first under their own label, a multi-line one as
+// one bullet with its continuation lines indented, then the owner's; a group with no line is left
+// out, and with neither there is no section.
+func TestTheSectionPutsTheDefaultsFirstUnderTheirOwnLabel(t *testing.T) {
+	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
+	build := func(defaults, owner []string) string {
+		return firstOf(BuildWritePromptForLanguage(WritePromptInput{
+			Language: LanguageKorean, Profile: goldenProfile(), Observations: goldenObservations(),
+			Memo: "MEMO 본문", Title: "가제 TITLE", Photos: []string{"IMG_1.jpg", "IMG_2.jpg"}, TagCount: 4,
+			DefaultGuidelines: defaults, Guidelines: owner,
+		}))
+	}
+	both := build([]string{"첫 기본", "둘째 줄\n이어지는 줄"}, testGuidelines())
+	want := "\n\n[작문 지침]\n기본 지침:\n- 첫 기본\n- 둘째 줄\n  이어지는 줄\n사용자 지침:\n- CCTV를 언급하지 않기\n- 직원·주인과의 상호작용을 쓰지 않기\n" + guidelinePrecedence
+	if got := strings.TrimPrefix(both, baseline); got != want {
+		t.Fatalf("section =\n%q\nwant\n%q", got, want)
+	}
+	if got := strings.TrimPrefix(build([]string{"첫 기본"}, nil), baseline); got != "\n\n[작문 지침]\n기본 지침:\n- 첫 기본\n"+guidelinePrecedence {
+		t.Fatalf("defaults alone = %q", got)
+	}
+	if build(nil, nil) != baseline {
+		t.Fatal("no guideline at all still wrote a section")
 	}
 }
 
@@ -127,52 +156,9 @@ func TestRevisePromptInjectsTheSameGuidelineSectionAtTheSamePosition(t *testing.
 	if reviseUser != reviseBaselineUser {
 		t.Fatal("the section changed the revision's per-post material")
 	}
-	if got, want := strings.TrimPrefix(revise, reviseBaseline), strings.TrimPrefix(write, writeBaseline); got != want {
-		t.Fatalf("revise section =\n%q\nwrite section =\n%q", got, want)
-	}
-}
-
-// A7: the grounding constraint is in the fixed text of every write and revise prompt, with or
-// without guidelines and with or without a template, in both languages — and never in observe.
-func TestGroundingConstraintIsInEveryWriteAndRevisePrompt(t *testing.T) {
-	for name, prompt := range map[string]string{
-		"write bare":            firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)),
-		"write with template":   firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, testBrief(), nil)),
-		"write with guidelines": firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, testBrief(), testGuidelines())),
-		"revise bare":           firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, nil, nil)),
-		"revise with both":      firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, testBrief(), testGuidelines())),
-	} {
-		if strings.Count(prompt, koreanGrounding) != 1 {
-			t.Errorf("%s contains the grounding constraint %d times", name, strings.Count(prompt, koreanGrounding))
-		}
-	}
-	for name, prompt := range map[string]string{
-		"english write":  firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4})),
-		"english revise": firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
-	} {
-		if strings.Count(prompt, englishGrounding) != 1 {
-			t.Errorf("%s contains the grounding constraint %d times", name, strings.Count(prompt, englishGrounding))
-		}
-	}
-	// The write pass holds the memo and the observations, so only it is told to omit the
-	// unconfirmed; the revise pass is told to leave untouched sentences alone instead, because it
-	// receives neither and would otherwise strip real facts out of them.
-	write := firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil))
-	revise := firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, nil, nil))
-	if !strings.Contains(write, koreanGroundingWriteScope) || strings.Contains(write, koreanGroundingReviseScope) {
-		t.Error("the write prompt carries the wrong grounding scope clause")
-	}
-	if !strings.Contains(revise, koreanGroundingReviseScope) || strings.Contains(revise, koreanGroundingWriteScope) {
-		t.Error("the revise prompt carries the wrong grounding scope clause")
-	}
-	// [I3]: observation stays a photo-facts pass and gains nothing from the grounding constraint.
-	if strings.Contains(ObservePrompt, koreanGrounding) {
-		t.Fatal("the observe prompt gained the grounding constraint")
-	}
-	// It is grounding only: the stylistic floor stays the naturalness baseline (GEN-17), not
-	// restated here.
-	if strings.Contains(NaturalnessBaseline, koreanGrounding) || strings.Contains(koreanGrounding, "기준선") {
-		t.Fatal("the grounding line and the naturalness baseline overlap")
+	// The same section, bound to what the request writes or touches (GEN-40).
+	if got, want := strings.TrimPrefix(revise, reviseBaseline), strings.TrimPrefix(write, writeBaseline)+"\n"+reviseGuidelineScope; got != want {
+		t.Fatalf("revise section =\n%q\nwant\n%q", got, want)
 	}
 }
 
@@ -260,7 +246,7 @@ func TestFrozenGuidelinesSurviveAResumeAndALegacyPayloadDecodesAsNone(t *testing
 // revision payload still parses as no guidelines.
 func TestRevisionFreezesGuidelinesIntoItsPayload(t *testing.T) {
 	ctx := context.Background()
-	guidelines := &fakeGuidelines{texts: testGuidelines()}
+	guidelines := &fakeGuidelines{texts: testGuidelines(), defaults: []string{"메모의 이름으로 쓰세요"}}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 	jobs := &fakeJobs{id: "job"}
 	models := newFakeModels()
@@ -276,20 +262,20 @@ func TestRevisionFreezesGuidelinesIntoItsPayload(t *testing.T) {
 		t.Fatalf("a post with no template asked for %q", *guidelines.askedTemplate)
 	}
 	payload := jobs.payloads[0]
-	guidelines.texts = nil
+	guidelines.texts, guidelines.defaults = nil, nil
 
 	if err := svc.Revise(ctx, RevisionJob{
 		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: payload,
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(models.calls[0].request.System, "- CCTV를 언급하지 않기") {
+	if !strings.Contains(models.calls[0].request.System, "기본 지침:\n- 메모의 이름으로 쓰세요\n사용자 지침:\n- CCTV를 언급하지 않기") {
 		t.Fatalf("revision lost the frozen guidelines:\n%s", models.calls[0].request.System)
 	}
 
 	old, err := parseRevisionPayload([]byte(`{"instruction":"고쳐줘","save_as_rule":false}`))
-	if err != nil || len(old.Guidelines) != 0 {
-		t.Fatalf("legacy revision payload = %v err=%v", old.Guidelines, err)
+	if err != nil || len(old.Guidelines) != 0 || len(old.DefaultGuidelines) != 0 {
+		t.Fatalf("legacy revision payload = %v / %v err=%v", old.Guidelines, old.DefaultGuidelines, err)
 	}
 }
 
@@ -406,7 +392,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	// Every brief member set: the payload's decoder turns an absent slice into an empty one, so
 	// only a full brief compares the two freezes rather than the two codecs.
 	deps.Templates = &fakeTemplateBriefs{brief: *filledGenerationOptions().Template}
-	deps.Guidelines = &fakeGuidelines{texts: testGuidelines()}
+	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), defaults: []string{"메모의 이름으로 쓰세요"}}
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: testQualityRules()}
 	jobs := &fakeJobs{id: "job"}
@@ -424,7 +410,8 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	}
 	frozen := jobs.frozen(t, 0).writeMaterial
 	compared := writeMaterial{
-		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines, Memories: snapshot.Post.Memories,
+		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines,
+		DefaultGuidelines: snapshot.Post.DefaultGuidelines, Memories: snapshot.Post.Memories,
 		QualityRules: snapshot.Post.QualityRules,
 	}
 	requireNoZero(t, "frozen", reflect.ValueOf(frozen))

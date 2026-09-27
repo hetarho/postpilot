@@ -25,6 +25,8 @@ type fakeStore struct {
 	askedField    string
 	askedAccount  string
 	applicableErr error
+	// off is the switched-off 기본 지침, keyed kind/key.
+	off map[string]bool
 
 	// The candidate half. The store owns the whole recording decision, so the fake records
 	// what it was asked to record rather than re-deciding it.
@@ -138,6 +140,28 @@ func (f *fakeStore) Delete(_ context.Context, userID, id string) error {
 func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID, field string) ([]string, error) {
 	f.askedAccount, f.askedTemplate, f.askedField = userID, templateID, field
 	return f.texts, f.applicableErr
+}
+
+func (f *fakeStore) DefaultsOff(_ context.Context, _ string, kind Kind) ([]string, error) {
+	var keys []string
+	for k := range f.off {
+		if strings.HasPrefix(k, string(kind)+"/") {
+			keys = append(keys, strings.TrimPrefix(k, string(kind)+"/"))
+		}
+	}
+	return keys, nil
+}
+
+func (f *fakeStore) SetDefaultOff(_ context.Context, _ string, kind Kind, key string, off bool, _ time.Time) error {
+	if f.off == nil {
+		f.off = map[string]bool{}
+	}
+	if off {
+		f.off[string(kind)+"/"+key] = true
+	} else {
+		delete(f.off, string(kind)+"/"+key)
+	}
+	return nil
 }
 
 // fakeFields knows the 분야 it lists.
@@ -347,10 +371,11 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	svc, store := newTestService(t, nil)
 	store.texts = []string{"전역 1", "템플릿 1", "분야 1"}
 
-	texts, err := svc.ForPrompt(context.Background(), "alice", nil, nil)
+	got, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, nil, LanguageKorean)
 	if err != nil {
 		t.Fatal(err)
 	}
+	texts := got.Owner
 	if store.askedTemplate != "" || store.askedAccount != "alice" {
 		t.Fatalf("no-template resolution asked for %q / %q", store.askedAccount, store.askedTemplate)
 	}
@@ -362,7 +387,7 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 		t.Fatalf("texts = %q, want %q", texts, want)
 	}
 	id, field := "  p1  ", "  pets  "
-	if _, err := svc.ForPrompt(context.Background(), "alice", &id, &field); err != nil {
+	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, &id, &field, LanguageKorean); err != nil {
 		t.Fatal(err)
 	}
 	if store.askedTemplate != "p1" || store.askedField != "pets" {
@@ -370,8 +395,79 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	}
 	// A blank 분야 is none, not the empty-string id of one.
 	blank := "   "
-	if _, err := svc.ForPrompt(context.Background(), "alice", nil, &blank); err != nil || store.askedField != "" {
+	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, &blank, LanguageKorean); err != nil || store.askedField != "" {
 		t.Fatalf("a blank 분야 asked for %q (%v)", store.askedField, err)
+	}
+}
+
+// GUIDE-14, GUIDE-41, GUIDE-43: the enabled 기본 지침 come first, in the product's order and the
+// target language; a switched-off one leaves the run; natural_korean reaches a Korean target
+// alone; and a clip asks for its own defaults and receives no owner rows yet.
+func TestForPromptPutsTheEnabledDefaultsFirst(t *testing.T) {
+	ctx := context.Background()
+	svc, store := newTestService(t, nil)
+	store.texts = []string{"사용자 지침"}
+	korean, err := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(korean.Defaults) != 11 || korean.Defaults[0] != Defaults(KindPost)[0].Ko.Text || korean.Defaults[10] != Defaults(KindPost)[10].Ko.Text {
+		t.Fatalf("Korean defaults = %d, first %q", len(korean.Defaults), korean.Defaults)
+	}
+	if !reflect.DeepEqual(korean.Owner, []string{"사용자 지침"}) {
+		t.Fatalf("owner = %q", korean.Owner)
+	}
+	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish)
+	if len(english.Defaults) != 10 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
+		t.Fatalf("English defaults = %q", english.Defaults)
+	}
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "facts", false); err != nil {
+		t.Fatal(err)
+	}
+	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean)
+	if len(off.Defaults) != 10 || off.Defaults[0] != Defaults(KindPost)[1].Ko.Text {
+		t.Fatalf("a switched-off default still reached the run: %q", off.Defaults)
+	}
+	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean)
+	if len(clip.Defaults) != 7 || clip.Owner != nil {
+		t.Fatalf("clip = %+v", clip)
+	}
+}
+
+// GUIDE-43: a switch saves idempotently and only for a key the product carries; a stored key
+// it no longer carries is ignored.
+func TestDefaultSwitchesAreIdempotentAndKnownOnly(t *testing.T) {
+	ctx := context.Background()
+	svc, store := newTestService(t, nil)
+	for range 2 {
+		state, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "tags", false)
+		if err != nil || state.Enabled || state.Default.Key != "tags" {
+			t.Fatalf("switch off = %+v, %v", state, err)
+		}
+	}
+	store.off["post/retired_key"] = true
+	states, err := svc.Defaults(ctx, "alice", KindPost)
+	if err != nil || len(states) != 11 {
+		t.Fatalf("defaults = %d, %v", len(states), err)
+	}
+	for _, s := range states {
+		if s.Enabled != (s.Default.Key != "tags") {
+			t.Errorf("%s enabled = %v", s.Default.Key, s.Enabled)
+		}
+	}
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "tags", true); err != nil {
+		t.Fatal(err)
+	}
+	if store.off["post/tags"] {
+		t.Fatal("switching on left the off row")
+	}
+	for _, bad := range []struct {
+		kind Kind
+		key  string
+	}{{KindPost, "clip_facts"}, {KindPost, "nope"}, {Kind("video"), "facts"}} {
+		if _, err := svc.SetDefaultEnabled(ctx, "alice", bad.kind, bad.key, false); !errors.Is(err, ErrDefaultNotFound) {
+			t.Errorf("%s/%s = %v, want ErrDefaultNotFound", bad.kind, bad.key, err)
+		}
 	}
 }
 

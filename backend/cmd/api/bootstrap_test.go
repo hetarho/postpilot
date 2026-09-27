@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -711,10 +712,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	adapter := generationGuidelines{service: guidelineSvc}
-	texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil)
+	frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean)
 	if err != nil {
 		t.Fatal(err)
 	}
+	texts := frozen.Owner
 	want := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기"}
 	if len(texts) != len(want) {
 		t.Fatalf("resolved %v, want %v", texts, want)
@@ -724,12 +726,32 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 			t.Fatalf("resolved %v, want %v", texts, want)
 		}
 	}
-	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, texts)
-	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기") {
+	// GUIDE-19: a new account runs every post default, the Korean-only one included.
+	if got, all := len(frozen.Defaults), len(guideline.Defaults(guideline.KindPost)); got != all {
+		t.Fatalf("a new account froze %d defaults, want all %d", got, all)
+	}
+	system, _ := generation.BuildWritePromptForLanguage(generation.WritePromptInput{
+		Language: generation.LanguageKorean, DefaultGuidelines: frozen.Defaults, Guidelines: texts,
+	})
+	if !strings.Contains(system, "\n사용자 지침:\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기") {
 		t.Fatalf("the frozen guidelines did not reach the prompt:\n%s", system)
 	}
 	if strings.Contains(system, "협찬 표기") {
 		t.Fatalf("a guideline scoped to another template reached the prompt:\n%s", system)
+	}
+
+	// A default switched off stays out of the next freeze.
+	tags, _ := guideline.DefaultFor(guideline.KindPost, "tags")
+	tagsText, _ := tags.Text(guideline.LanguageKorean)
+	if _, err := guidelineSvc.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "tags", false); err != nil {
+		t.Fatal(err)
+	}
+	off, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(off.Defaults) != len(frozen.Defaults)-1 || slices.Contains(off.Defaults, tagsText) {
+		t.Fatalf("the switched-off default still froze: %v", off.Defaults)
 	}
 
 	// A post left on 없음 receives the global group alone.
@@ -741,10 +763,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	global, err := adapter.ForPrompt(ctx, "alice", nil, nil)
+	resolved, err := adapter.ForPrompt(ctx, "alice", nil, nil, generation.LanguageKorean)
 	if err != nil {
 		t.Fatal(err)
 	}
+	global := resolved.Owner
 	if bare.TemplateID != "" || len(global) != 1 || global[0] != "없는 사실을 쓰지 않기" {
 		t.Fatalf("a post with no template resolved %v (template id %q)", global, bare.TemplateID)
 	}
@@ -882,10 +905,11 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 
 	// A4: with candidates recorded and only the approved guideline saved, the prompt carries the
 	// guideline and nothing else — no candidate text reaches it.
-	texts, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil)
+	frozen, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil, generation.LanguageKorean)
 	if err != nil {
 		t.Fatal(err)
 	}
+	texts := frozen.Owner
 	if len(texts) != 1 || texts[0] != "광고처럼 읽히는 문장을 쓰지 않기" {
 		t.Fatalf("prompt guidelines = %v", texts)
 	}
@@ -1009,11 +1033,11 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	adapter := generationGuidelines{service: guidelineSvc}
 	resolve := func() []string {
 		t.Helper()
-		texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field)
+		frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field, generation.LanguageKorean)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return texts
+		return frozen.Owner
 	}
 	groups := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기", "메뉴 가격은 쓰지 않기"}
 
@@ -1023,7 +1047,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	// Another 분야's guideline is not among them, and the section holds the groups alone, in order,
 	// closed straight after the last one by the precedence sentence.
 	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, resolve())
-	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기\n- 메뉴 가격은 쓰지 않기\n지침은 이 글에서") {
+	if !strings.Contains(system, "[작문 지침]\n사용자 지침:\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기\n- 메뉴 가격은 쓰지 않기\n지침은 이 글을") {
 		t.Fatalf("the frozen section:\n%s", system)
 	}
 

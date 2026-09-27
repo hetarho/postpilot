@@ -707,3 +707,32 @@ func TestSetCandidateStatusRefusesAForeignID(t *testing.T) {
 		t.Fatalf("foreign id err = %v", err)
 	}
 }
+
+// GUIDE-43: a switch is a row only while off, per account and kind, idempotently either way.
+func TestDefaultSwitchesArePerAccountAndKind(t *testing.T) {
+	s, handle := newStore(t)
+	ctx := context.Background()
+	for range 2 {
+		if err := s.SetDefaultOff(ctx, "alice", guideline.KindPost, "tags", true, testNow); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.SetDefaultOff(ctx, "alice", guideline.KindClip, "clip_hook", true, testNow); err != nil {
+		t.Fatal(err)
+	}
+	post, err := s.DefaultsOff(ctx, "alice", guideline.KindPost)
+	if err != nil || len(post) != 1 || post[0] != "tags" {
+		t.Fatalf("post off = %v, %v", post, err)
+	}
+	if other, _ := s.DefaultsOff(ctx, "bob", guideline.KindPost); len(other) != 0 {
+		t.Fatalf("another account's switch leaked: %v", other)
+	}
+	for range 2 {
+		if err := s.SetDefaultOff(ctx, "alice", guideline.KindPost, "tags", false, testNow); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := count(t, handle, `SELECT count(*) FROM guideline_defaults_off WHERE user_id='alice'`); n != 1 {
+		t.Fatalf("rows = %d, want only the clip switch", n)
+	}
+}

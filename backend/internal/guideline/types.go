@@ -49,7 +49,22 @@ var (
 	// ErrFieldNotFound is a 분야 in a fields scope that is not on the product's list. Like a
 	// foreign template, nothing about the request is applied.
 	ErrFieldNotFound = errors.New("guideline blog field not found")
+	// ErrDefaultNotFound is a 기본 지침 key the product does not carry for that kind.
+	ErrDefaultNotFound = errors.New("default guideline not found")
 )
+
+// DefaultState is one 기본 지침 with the account's switch (GUIDE-43).
+type DefaultState struct {
+	Default DefaultGuideline
+	Enabled bool
+}
+
+// PromptGuidelines are the texts one run is given, in injection order (GUIDE-14): the enabled
+// 기본 지침 of the kind in the product's order and the target language, then the owner's own.
+type PromptGuidelines struct {
+	Defaults []string
+	Owner    []string
+}
 
 // TextTooLongError carries both counts so the handler can report the limit that was hit
 // without re-deriving it.

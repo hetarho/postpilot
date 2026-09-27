@@ -86,13 +86,20 @@ type TemplateBriefs interface {
 	RenderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error)
 }
 
+// FrozenGuidelines are the 지침 texts one run is given, in injection order (GUIDE-14): the
+// enabled 기본 지침 in the product's order and the run's target language, then the owner's.
+type FrozenGuidelines struct {
+	Defaults []string
+	Owner    []string
+}
+
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at
-// enqueue time: the owner's texts — the global group, the template group, then the 분야 group,
-// each by created_at then id (GUIDE-14). templateID and field are nil for a post with none,
-// which yields only the groups the post has — an empty result is the ordinary case, not an
-// error.
+// enqueue time: the enabled 기본 지침 of a post, then the owner's texts — the global group, the
+// template group, then the 분야 group, each by created_at then id (GUIDE-14). templateID and
+// field are nil for a post with none, which yields only the groups the post has — an empty
+// result is the ordinary case, not an error.
 type GuidelinesForPrompt interface {
-	ForPrompt(ctx context.Context, userID string, templateID, field *string) ([]string, error)
+	ForPrompt(ctx context.Context, userID string, templateID, field *string, target Language) (FrozenGuidelines, error)
 }
 
 // MemoriesForPrompt is the memory context's published retrieval, consumed only at enqueue

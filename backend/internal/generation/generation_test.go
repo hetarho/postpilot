@@ -266,8 +266,8 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 		if request.HasImages() {
 			t.Fatal("zero-photo generation made an observation call")
 		}
-		if !strings.Contains(request.System, NaturalnessBaseline) {
-			t.Error("ordinary generation lost the naturalness baseline")
+		if !strings.HasPrefix(request.System, WritePrompt) {
+			t.Error("ordinary generation lost its static rules")
 		}
 		if !strings.Contains(request.Messages[0].Parts[0].Text, "첨부 사진이 없습니다") {
 			t.Error("no-photo prompt missing")
@@ -468,8 +468,8 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	if left.Content.Title == right.Content.Title || len(models.calls) != 2 || !reflect.DeepEqual(models.calls[0].request, models.calls[1].request) {
 		t.Fatalf("writers did not receive equal request snapshots: left=%+v right=%+v calls=%+v", left, right, models.calls)
 	}
-	if !strings.Contains(models.calls[0].request.System, NaturalnessBaseline) {
-		t.Fatal("write comparison candidates lost the naturalness baseline")
+	if !strings.HasPrefix(models.calls[0].request.System, WritePrompt) {
+		t.Fatal("write comparison candidates lost the static rules")
 	}
 	if !leftUsage.CostReported || leftUsage.CostMicrousd != 3 {
 		t.Fatalf("candidate usage = %+v", leftUsage)

@@ -38,6 +38,7 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 		"account cap":        {&guideline.AccountCapError{Max: 100}, connect.CodeFailedPrecondition, "GUIDELINE_LIMIT_REACHED"},
 		"unknown candidate":  {guideline.ErrCandidateNotFound, connect.CodeNotFound, "GUIDELINE_CANDIDATE_NOT_FOUND"},
 		"unknown 분야":         {guideline.ErrFieldNotFound, connect.CodeNotFound, "GUIDELINE_FIELD_NOT_FOUND"},
+		"unknown default":    {guideline.ErrDefaultNotFound, connect.CodeNotFound, "GUIDELINE_DEFAULT_NOT_FOUND"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			// A service error arrives wrapped as often as bare, and both must keep the reason.
@@ -120,11 +121,15 @@ func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) 
 	if _, err := handler.DismissGuidelineCandidate(anonymous, connect.NewRequest(&postpilotv1.DismissGuidelineCandidateRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("dismiss candidate = %v", err)
 	}
+	if _, err := handler.SetDefaultGuidelineEnabled(anonymous, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("set default = %v", err)
+	}
 
 	for _, message := range []proto.Message{
 		&postpilotv1.ListGuidelinesRequest{}, &postpilotv1.CreateGuidelineRequest{},
 		&postpilotv1.UpdateGuidelineRequest{}, &postpilotv1.DeleteGuidelineRequest{},
 		&postpilotv1.ListGuidelineCandidatesRequest{}, &postpilotv1.DismissGuidelineCandidateRequest{},
+		&postpilotv1.SetDefaultGuidelineEnabledRequest{},
 	} {
 		fields := message.ProtoReflect().Descriptor().Fields()
 		for i := 0; i < fields.Len(); i++ {
@@ -289,8 +294,54 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 		t.Fatalf("listed = %q, want %q", texts, want)
 	}
 	response := listed.Msg.ProtoReflect().Descriptor().Fields()
-	if response.Len() != 1 || response.Get(0).Name() != "guidelines" {
-		t.Fatalf("ListGuidelinesResponse carries %d fields, want guidelines alone", response.Len())
+	if response.Len() != 2 || response.Get(0).Name() != "guidelines" || response.Get(1).Name() != "defaults" {
+		t.Fatalf("ListGuidelinesResponse carries %d fields, want guidelines and defaults", response.Len())
+	}
+
+	// GUIDE-14, GUIDE-43: the post list carries every 기본 지침 with its switch, both copies, and a
+	// switch saves on change and reads back; the clip kind lists its own defaults and no owner row.
+	defaults := listed.Msg.GetDefaults()
+	if len(defaults) != 11 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[10].GetKoreanTargetOnly() {
+		t.Fatalf("defaults = %v", defaults)
+	}
+	switched, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "tags", Enabled: false}))
+	if err != nil || switched.Msg.GetDefaultGuideline().GetKey() != "tags" || switched.Msg.GetDefaultGuideline().GetEnabled() {
+		t.Fatalf("switch = %v, %v", switched, err)
+	}
+	again, _ := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_POST}))
+	for _, d := range again.Msg.GetDefaults() {
+		if d.GetEnabled() != (d.GetKey() != "tags") {
+			t.Errorf("%s enabled = %v after the switch", d.GetKey(), d.GetEnabled())
+		}
+	}
+	if other, _ := handler.ListGuidelines(bob, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{})); !other.Msg.GetDefaults()[9].GetEnabled() {
+		t.Fatal("alice's switch reached bob")
+	}
+	clip, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
+	if err != nil || len(clip.Msg.GetDefaults()) != 7 || len(clip.Msg.GetGuidelines()) != 0 {
+		t.Fatalf("clip list = %v, %v", clip, err)
+	}
+	if _, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "no_such_key"})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("unknown key = %v", err)
+	}
+}
+
+// ARCH-3: the kind mapping is walked against the generated enum: UNSPECIFIED reads as POST, and
+// each named kind maps to its own.
+func TestGuidelineKindWalksTheGeneratedEnum(t *testing.T) {
+	want := map[postpilotv1.GuidelineKind]guideline.Kind{
+		postpilotv1.GuidelineKind_GUIDELINE_KIND_UNSPECIFIED: guideline.KindPost,
+		postpilotv1.GuidelineKind_GUIDELINE_KIND_POST:        guideline.KindPost,
+		postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP:        guideline.KindClip,
+	}
+	if len(postpilotv1.GuidelineKind_name) != len(want) {
+		t.Fatalf("generated kinds = %d, want %d; update the mapping", len(postpilotv1.GuidelineKind_name), len(want))
+	}
+	for number := range postpilotv1.GuidelineKind_name {
+		kind := postpilotv1.GuidelineKind(number)
+		if got := fromProtoKind(kind); got != want[kind] {
+			t.Errorf("%s = %s, want %s", kind, got, want[kind])
+		}
 	}
 }
 

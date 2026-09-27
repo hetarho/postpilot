@@ -53,29 +53,22 @@ func TestTheRevisePromptCarriesTheSameFactSection(t *testing.T) {
 	}
 }
 
-// The grounding constraint names the data fields as a third source in both languages, in the
-// write and the revise prompt alike (GEN-16). It is unconditional: this text sits in the
-// static rules ahead of the voice profile, and a conditional clause would break the
-// byte-stable prefix prompt caching depends on.
-func TestGroundingNamesTheTemplateFields(t *testing.T) {
-	for _, phrase := range []string{"템플릿 입력란"} {
-		if !strings.Contains(koreanGrounding, phrase) {
-			t.Errorf("the Korean grounding constraint does not name %q", phrase)
+// GEN-16, GUIDE-41: the facts 기본 지침 names the data fields as a source in both languages, and
+// it reaches a post with no template at all, in the write and the revise alike.
+func TestTheFactsDefaultNamesTheTemplateFields(t *testing.T) {
+	if !strings.Contains(defaultText("facts", LanguageKorean), "템플릿 입력란") {
+		t.Error("the Korean facts 기본 지침 does not name the template's fields")
+	}
+	if !strings.Contains(defaultText("facts", LanguageEnglish), "the template's fields") {
+		t.Error("the English facts 기본 지침 does not name the template's fields")
+	}
+	defaults := productDefaults(LanguageKorean)
+	system := firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: goldenProfile(), Observations: goldenObservations(), Memo: "MEMO 본문", Title: "가제 TITLE", Photos: []string{"IMG_1.jpg"}, TagCount: 4, DefaultGuidelines: defaults}))
+	revise := firstOf(BuildRevisePromptForLanguage(LanguageKorean, goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, 4, nil, FrozenGuidelines{Defaults: defaults}))
+	for name, prompt := range map[string]string{"write": system, "revise": revise} {
+		if !strings.Contains(prompt, "템플릿 입력란") {
+			t.Errorf("the %s prompt lost the facts 기본 지침's template fields", name)
 		}
-	}
-	if !strings.Contains(englishGrounding, "the facts given in the template's fields") {
-		t.Error("the English grounding constraint does not name the template's fields")
-	}
-	// Even for a post with no template at all.
-	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-		[]string{"IMG_1.jpg"}, nil, nil, nil)
-	if !strings.Contains(system, "템플릿 입력란") {
-		t.Error("the grounding clause is conditional on having a template")
-	}
-	revise, _ := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"},
-		"INSTRUCTION 수정 요청", nil, nil, nil)
-	if !strings.Contains(revise, "템플릿 입력란") {
-		t.Error("the revise prompt lost the grounding clause")
 	}
 }
 

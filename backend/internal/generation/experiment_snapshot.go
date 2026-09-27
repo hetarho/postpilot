@@ -58,6 +58,7 @@ type snapshotPost struct {
 	TemplateID        string                `json:"TemplateID"`
 	Template          *snapshotTemplate     `json:"Template"`
 	Guidelines        []string              `json:"Guidelines"`
+	DefaultGuidelines []string              `json:"default_guidelines,omitempty"`
 	UseMemory         bool                  `json:"UseMemory"`
 	Memories          []string              `json:"Memories"`
 	QualityRules      []string              `json:"quality_rules,omitempty"`
@@ -268,7 +269,8 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		Slug: post.Slug, UserID: post.UserID,
 		Voice:      snapshotVoice{ID: post.Voice.ID, Name: post.Voice.Name, Deleted: post.Voice.Deleted, SourceLanguage: string(post.Voice.SourceLanguage)},
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
-		Guidelines: copyTexts(post.Guidelines), UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
+		Guidelines: copyTexts(post.Guidelines), DefaultGuidelines: copyTexts(post.DefaultGuidelines),
+		UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
 		QualityRules: copyTexts(post.QualityRules),
 		TemplateAnswers: mapSlice(post.TemplateAnswers, func(a TemplateAnswer) snapshotAnswer {
 			return snapshotAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
@@ -296,7 +298,8 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		Slug: wire.Slug, UserID: wire.UserID,
 		Voice:      VoiceRef{ID: wire.Voice.ID, Name: wire.Voice.Name, Deleted: wire.Voice.Deleted, SourceLanguage: Language(wire.Voice.SourceLanguage)},
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
-		Guidelines: copyTexts(wire.Guidelines), UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
+		Guidelines: copyTexts(wire.Guidelines), DefaultGuidelines: copyTexts(wire.DefaultGuidelines),
+		UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
 		QualityRules: copyTexts(wire.QualityRules),
 		TemplateAnswers: mapSlice(wire.TemplateAnswers, func(a snapshotAnswer) TemplateAnswer {
 			return TemplateAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}

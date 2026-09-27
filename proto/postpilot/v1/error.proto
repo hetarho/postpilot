@@ -282,6 +282,9 @@ enum FailureReason {
   // FinalizePost while IMAGE blocks name photos no longer attached (POST-13). params: count,
   // how many such places remain.
   POST_PHOTO_MISSING = 250;
+  // SetDefaultGuidelineEnabled named a 기본 지침 key the product does not carry for that kind
+  // (GUIDE-43).
+  GUIDELINE_DEFAULT_NOT_FOUND = 251;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

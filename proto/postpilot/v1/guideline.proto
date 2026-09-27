@@ -26,6 +26,35 @@ service GuidelineService {
   // own: the create already owns every field rule and every refusal an approval needs.
   rpc ListGuidelineCandidates(ListGuidelineCandidatesRequest) returns (ListGuidelineCandidatesResponse) {}
   rpc DismissGuidelineCandidate(DismissGuidelineCandidateRequest) returns (DismissGuidelineCandidateResponse) {}
+  // Switches one of the product's 기본 지침 on or off for the whole account and kind, saving on
+  // change (GUIDE-43). It changes nothing already enqueued: runs freeze the texts they start
+  // with (GUIDE-17).
+  rpc SetDefaultGuidelineEnabled(SetDefaultGuidelineEnabledRequest) returns (SetDefaultGuidelineEnabledResponse) {}
+}
+
+// Which writing a guideline directs (GUIDE-14): a post's 지침 or a clip's 영상 지침. UNSPECIFIED
+// is read as POST, so a client from before the kind existed lists what it always listed.
+enum GuidelineKind {
+  GUIDELINE_KIND_UNSPECIFIED = 0;
+  GUIDELINE_KIND_POST = 1;
+  GUIDELINE_KIND_CLIP = 2;
+}
+
+// One language's name and text of a 기본 지침.
+message DefaultGuidelineCopy {
+  string name = 1;
+  string text = 2;
+}
+
+// One of the product's 기본 지침 (GUIDE-16) with the account's switch. Both copies ride along so
+// the screen shows the UI language while a run uses its target language.
+message DefaultGuideline {
+  string key = 1;
+  bool enabled = 2;
+  DefaultGuidelineCopy ko = 3;
+  DefaultGuidelineCopy en = 4;
+  // Reaches a Korean-target run alone (GUIDE-41).
+  bool korean_target_only = 5;
 }
 
 enum GuidelineScope {
@@ -59,13 +88,26 @@ message Guideline {
   repeated BlogField fields = 7;
 }
 
-message ListGuidelinesRequest {}
+message ListGuidelinesRequest {
+  GuidelineKind kind = 1;
+}
 message ListGuidelinesResponse {
-  // The owner's guidelines alone, in injection order: the global group, then the template
-  // group, then the 분야 group, each by creation time — exactly the order the writer sees.
+  // The owner's guidelines, in injection order: the global group, then the template group, then
+  // the 분야 group, each by creation time — exactly the order the writer sees after the 기본 지침.
   repeated Guideline guidelines = 1;
   reserved 2;
   reserved "preset";
+  // Every 기본 지침 of the kind in the product's order, each with its switch (GUIDE-14).
+  repeated DefaultGuideline defaults = 3;
+}
+
+message SetDefaultGuidelineEnabledRequest {
+  GuidelineKind kind = 1;
+  string key = 2;
+  bool enabled = 3;
+}
+message SetDefaultGuidelineEnabledResponse {
+  DefaultGuideline default_guideline = 1;
 }
 
 message CreateGuidelineRequest {

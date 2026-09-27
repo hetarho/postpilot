@@ -60,8 +60,9 @@ func TestNoContextImportsASiblingStore(t *testing.T) {
 func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 	const context = "github.com/postpilot/backend/internal/guideline"
 	backend := filepath.Join("..", "..")
-	writingQueries := map[string]bool{"InsertGuideline": true, "UpdateGuidelineText": true, "UpdateGuidelineScope": true}
-	writingMethods := map[string]bool{"Create": true, "Update": true, "Delete": true}
+	// A 기본 지침 switch is the owner's too (GUIDE-43): only the owner's procedure writes one.
+	writingQueries := map[string]bool{"InsertGuideline": true, "UpdateGuidelineText": true, "UpdateGuidelineScope": true, "InsertDefaultOff": true, "DeleteDefaultOff": true}
+	writingMethods := map[string]bool{"Create": true, "Update": true, "Delete": true, "SetDefaultEnabled": true}
 
 	for _, dir := range []string{"cmd", "internal"} {
 		err := filepath.WalkDir(filepath.Join(backend, dir), func(path string, entry os.DirEntry, err error) error {

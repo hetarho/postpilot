@@ -29,7 +29,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		Language: post.TargetLanguage, Profile: profile, Observations: observations,
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
-		Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
+		DefaultGuidelines: post.DefaultGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
 	})
 	request := llm.Request{
 		System:    system,

@@ -85,6 +85,22 @@ func (q *Queries) CountPendingCandidates(ctx context.Context, userID string) (in
 	return count, err
 }
 
+const deleteDefaultOff = `-- name: DeleteDefaultOff :exec
+DELETE FROM guideline_defaults_off WHERE user_id = ? AND kind = ? AND default_key = ?
+`
+
+type DeleteDefaultOffParams struct {
+	UserID     string
+	Kind       string
+	DefaultKey string
+}
+
+// Switching on is removing the off row; one that is already on stays on.
+func (q *Queries) DeleteDefaultOff(ctx context.Context, arg DeleteDefaultOffParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDefaultOff, arg.UserID, arg.Kind, arg.DefaultKey)
+	return err
+}
+
 const deleteGuideline = `-- name: DeleteGuideline :execrows
 DELETE FROM guidelines WHERE id = ? AND user_id = ?
 `
@@ -215,6 +231,29 @@ func (q *Queries) InsertCandidate(ctx context.Context, arg InsertCandidateParams
 	return err
 }
 
+const insertDefaultOff = `-- name: InsertDefaultOff :exec
+INSERT INTO guideline_defaults_off (user_id, kind, default_key, created_at) VALUES (?, ?, ?, ?)
+ON CONFLICT (user_id, kind, default_key) DO NOTHING
+`
+
+type InsertDefaultOffParams struct {
+	UserID     string
+	Kind       string
+	DefaultKey string
+	CreatedAt  string
+}
+
+// Switching off twice is the same as once.
+func (q *Queries) InsertDefaultOff(ctx context.Context, arg InsertDefaultOffParams) error {
+	_, err := q.db.ExecContext(ctx, insertDefaultOff,
+		arg.UserID,
+		arg.Kind,
+		arg.DefaultKey,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertGuideline = `-- name: InsertGuideline :exec
 
 INSERT INTO guidelines (id, user_id, text, scope, created_at, updated_at)
@@ -324,6 +363,40 @@ func (q *Queries) ListApplicableGuidelineTexts(ctx context.Context, arg ListAppl
 			return nil, err
 		}
 		items = append(items, text)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDefaultsOff = `-- name: ListDefaultsOff :many
+SELECT default_key FROM guideline_defaults_off WHERE user_id = ? AND kind = ? ORDER BY default_key
+`
+
+type ListDefaultsOffParams struct {
+	UserID string
+	Kind   string
+}
+
+// The defaults an account switched off for one kind. A key the product no longer carries may
+// still be here; the service ignores it.
+func (q *Queries) ListDefaultsOff(ctx context.Context, arg ListDefaultsOffParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listDefaultsOff, arg.UserID, arg.Kind)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var default_key string
+		if err := rows.Scan(&default_key); err != nil {
+			return nil, err
+		}
+		items = append(items, default_key)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

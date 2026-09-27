@@ -61,7 +61,7 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 		if !strings.Contains(request.System, "The output language is English") {
 			t.Fatalf("English target was not used:\n%s", request.System)
 		}
-		if strings.Contains(request.System, NaturalnessBaseline) || strings.Contains(request.System, "[한국어 자연 문체 기준선]") {
+		if strings.Contains(request.System, "A가 아니라 B") || strings.Contains(request.System, "[한국어 자연 문체 기준선]") {
 			t.Fatalf("Korean baseline leaked into English generation:\n%s", request.System)
 		}
 		return llm.Response{Text: `{"title":"English title","summary":"Summary","tags":["one","two","three"],"blocks":[{"type":"TEXT","content":"Body"}]}`}, nil
@@ -153,14 +153,42 @@ func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *te
 			t.Errorf("English prompt missing %q", required)
 		}
 	}
-	for _, forbidden := range []string{NaturalnessBaseline, "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-ACTIVE", "DO-NOT-LEAK-EXCERPT", "DO-NOT-LEAK-RULE", "종결어미 제약"} {
+	for _, forbidden := range []string{"A가 아니라 B", "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-ACTIVE", "DO-NOT-LEAK-EXCERPT", "DO-NOT-LEAK-RULE", "종결어미 제약"} {
 		if strings.Contains(english, forbidden) {
 			t.Errorf("English portable prompt leaked %q", forbidden)
 		}
 	}
-	korean, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: Profile{}, Memo: "", Title: "", TagCount: 4})
-	if strings.Count(korean, NaturalnessBaseline) != 1 {
-		t.Fatalf("Korean baseline count = %d", strings.Count(korean, NaturalnessBaseline))
+	korean, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: Profile{}, TagCount: 4, DefaultGuidelines: productDefaults(LanguageKorean)})
+	if baseline := rendered(defaultText("natural_korean", LanguageKorean)); strings.Count(korean, baseline) != 1 {
+		t.Fatalf("Korean baseline count = %d", strings.Count(korean, baseline))
+	}
+}
+
+// GUIDE-15, LANG: an English target gets the English 기본 지침 texts and no Korean one, while the
+// section's heading, group labels and sentences stay Korean like every section frame.
+func TestAnEnglishTargetGetsTheEnglishDefaultTextsInAKoreanFrame(t *testing.T) {
+	english := productDefaults(LanguageEnglish)
+	write := firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, DefaultGuidelines: english, Guidelines: []string{"No prices"}}))
+	revise := firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, FrozenGuidelines{Defaults: english}))
+	for name, prompt := range map[string]string{"write": write, "revise": revise} {
+		for _, text := range english {
+			if !strings.Contains(prompt, rendered(text)) {
+				t.Errorf("%s lacks the English default %q", name, text)
+			}
+		}
+		for _, text := range productDefaults(LanguageKorean) {
+			if strings.Contains(prompt, text) {
+				t.Errorf("%s carries a Korean default text %q", name, text)
+			}
+		}
+		for _, frame := range []string{"[작문 지침]", "\n기본 지침:\n", guidelinePrecedence} {
+			if !strings.Contains(prompt, frame) {
+				t.Errorf("%s lost the Korean frame %q", name, frame)
+			}
+		}
+	}
+	if !strings.Contains(write, "\n사용자 지침:\n- No prices") || !strings.Contains(revise, reviseGuidelineScope) {
+		t.Error("the owner group or the revise scope sentence lost its Korean frame")
 	}
 }
 
@@ -222,7 +250,7 @@ func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testin
 		if !strings.Contains(request.System, "Preserve English") || !strings.Contains(request.System, "Translation is outside revision semantics") {
 			t.Fatalf("revision language contract missing:\n%s", request.System)
 		}
-		if strings.Contains(request.System, NaturalnessBaseline) {
+		if strings.Contains(request.System, "A가 아니라 B") {
 			t.Fatalf("Korean baseline leaked into English revision:\n%s", request.System)
 		}
 		return llm.Response{Text: `{"title":"title","summary":"summary","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"next"}]}`}, nil
