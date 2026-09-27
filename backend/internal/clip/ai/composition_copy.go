@@ -19,21 +19,10 @@ func sentenceKey(text string) string {
 	}, text)
 }
 
-func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, used map[string]bool, instructed bool) string {
-	evidence, valid := selectedReferences(entry.Observations, observed, false)
-	if !valid || out.Scope != "context" && len(evidence) == 0 || len(evidence) == 0 && len(entry.Facts) == 0 {
-		return "missing_scene_evidence"
-	}
-	var facts []composition.Fact
-	seen := map[factJSON]bool{}
-	for _, ref := range entry.Facts {
-		fact, valid := clip.ScopedFact(doc, inputs, clip.FactReference{FieldID: ref.FieldID, GroupID: ref.GroupID, ItemID: ref.ItemID}, out.Scope, binding)
-		if !valid || seen[ref] {
-			return "unavailable_scoped_fact"
-		}
-		seen[ref] = true
-		facts = append(facts, fact)
-	}
+// resolveGeneratedCopy is one generated row's ladder: the full row, then the shorter one. It
+// checks the row's form and nothing it states (CLIP-184, CDS-1): what copy may say is the
+// 영상 지침's.
+func resolveGeneratedCopy(entry generatedJSON, out *clip.PortableText) string {
 	alternative := func(text string, rows []string) clip.CopyAlternative {
 		candidate := clip.CopyAlternative{Text: text}
 		for i, row := range rows {
@@ -46,15 +35,8 @@ func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInpu
 		for _, row := range candidate.Rows {
 			texts = append(texts, row.Text)
 		}
-		combined := strings.Join(texts, " ")
-		if strings.TrimSpace(combined) == "" {
+		if strings.TrimSpace(strings.Join(texts, " ")) == "" {
 			return "copy_omitted"
-		}
-		if reason := clip.GroundScopedText(combined, facts, inputs, binding, out.Scope, instructed); reason != "" {
-			return reason
-		}
-		if out.Resolved.Element.Role == "caption" && used[sentenceKey(combined)] {
-			return "repeated_copy"
 		}
 		return ""
 	}
@@ -69,18 +51,7 @@ func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInpu
 	} else if shortReason == "" && (short.Text != full.Text || !slices.Equal(short.Rows, full.Rows)) {
 		out.Alternatives = []clip.CopyAlternative{short}
 	}
-	out.Resolved.Text, out.Resolved.Rows, out.Resolved.Facts = chosen.Text, chosen.Rows, facts
-	out.Evidence = evidence
-	combined := chosen.Text
-	for _, row := range chosen.Rows {
-		combined += " " + row.Text
-	}
-	if entry.Keyword != "" && strings.Contains(combined, entry.Keyword) {
-		out.Keyword = entry.Keyword
-	}
-	if out.Resolved.Element.Role == "caption" {
-		used[sentenceKey(combined)] = true
-	}
+	out.Resolved.Text, out.Resolved.Rows = chosen.Text, chosen.Rows
 	return ""
 }
 
@@ -103,9 +74,9 @@ func regionSelection(presets composition.DesignSelection, e composition.Element)
 	return "", ""
 }
 
-// Ground and repair AI rows individually. A missing or malformed response can
+// Fit and repair AI rows individually. A missing or malformed response can
 // empty generated slots, but can never replace their fixed neighbours.
-func attachRegionRows(presets composition.DesignSelection, ratio string, offset int, doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
+func attachRegionRows(presets composition.DesignSelection, ratio string, offset int, entry generatedJSON, exists bool, out *clip.PortableText, owner *clip.EditPlan) {
 	e := out.Resolved.Element
 	region, id := regionSelection(presets, e)
 	out.Resolved.Rows = slices.Clone(out.Resolved.Rows)
@@ -130,23 +101,12 @@ func attachRegionRows(presets composition.DesignSelection, ratio string, offset 
 			if i < len(entry.ShortRows) {
 				g.ShortText = entry.ShortRows[i]
 			}
-			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{}, instructed)
-			if reason == "" {
+			if resolveGeneratedCopy(g, &one) == "" {
 				// The slot's own fit, and the smaller bound this row declares
 				// (CLIP-116); the parser has already refused a larger one.
 				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, spec, width, row.Chars)
 				if action == "" && one.FallbackReason != "" {
 					action = "repair"
-				}
-				for _, ref := range one.Evidence {
-					if !slices.Contains(out.Evidence, ref) {
-						out.Evidence = append(out.Evidence, ref)
-					}
-				}
-				for _, fact := range one.Resolved.Facts {
-					if !slices.Contains(out.Resolved.Facts, fact) {
-						out.Resolved.Facts = append(out.Resolved.Facts, fact)
-					}
 				}
 			}
 		}

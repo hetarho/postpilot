@@ -72,11 +72,8 @@ export const clipNoticeKeys = {
   caption_overlap: 'captionOverlap',
   caption_outside_output: 'captionOutsideOutput',
   caption_floor: 'captionFloor',
-  missing_scene_evidence: 'ungroundedText',
-  unavailable_scoped_fact: 'ungroundedText',
-  unsupported_number_unit: 'ungroundedText',
-  unsupported_price_basis: 'ungroundedText',
-  unsupported_experience: 'ungroundedText',
+  // The content checks are gone (CLIP-184): a plan stored under them still
+  // carries their reasons, which read as the generic detail below.
   copy_omitted: 'textOmitted',
   repeated_copy: 'repeatedTextOmitted',
   sentence_count: 'extraTextOmitted',
@@ -100,11 +97,6 @@ export function clipNoticeKey(notice: ClipNotice) {
     return 'notices.shorterResult'
   if (notice.code === 'plan_cut_usability' && notice.action === 'removal')
     return 'notices.unusableOmitted'
-  if (
-    clipNoticeKeys[notice.code as keyof typeof clipNoticeKeys] === 'ungroundedText' &&
-    notice.action === 'repair'
-  )
-    return 'notices.groundedAlternative'
   const key = clipNoticeKeys[notice.code as keyof typeof clipNoticeKeys]
   return key ? (`notices.${key}` as const) : 'inspection.detailUnknown'
 }

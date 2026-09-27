@@ -183,7 +183,10 @@ func TestVerifierHoldsTheNarrationToTheTimelineAndItsFacts(t *testing.T) {
 	}
 }
 
-func TestVerifierRefusesANumberNoCollectedFactStates(t *testing.T) {
+// CLIP-184: the render verifier reads no caption's content. V11's number
+// grounding is gone, so a figure no collected fact states renders like any
+// other caption, written by the model or by the owner.
+func TestVerifierRendersANumberNoCollectedFactStates(t *testing.T) {
 	a, r := measured(t)
 	layoutError := func(plan clip.EditPlan) error {
 		return a.WithWorkspace(t.Context(), "narration-grounding", func(ws clip.MediaWorkspace) error {
@@ -191,23 +194,13 @@ func TestVerifierRefusesANumberNoCollectedFactStates(t *testing.T) {
 			return err
 		})
 	}
-	problem := &composition.Problem{}
-	err := layoutError(narrationPlan(t, narrationText("narration-1", "12,000원입니다", 1000, 5000)))
-	if !errors.As(err, &problem) || problem.Reason != "unsupported_number_unit" {
-		t.Fatal("an ungrounded number was rendered", err)
+	if err := layoutError(narrationPlan(t, narrationText("narration-1", "12,000원입니다", 1000, 5000))); err != nil {
+		t.Fatal("a caption's figure was checked against the facts", err)
 	}
-	// The same number, collected as an item fact of a dish the caption never
-	// names: a caption belongs to no item and may state any of them.
-	grounded := narrationPlan(t, narrationText("narration-1", "12,000원입니다", 1000, 5000))
-	grounded.Portable.Inputs.Items = map[string][]composition.Item{"menu": {{ID: "sea", Values: map[string]string{"price": "12,000원"}}}}
-	if err := layoutError(grounded); err != nil {
-		t.Fatal("a grounded number was refused", err)
-	}
-	// An owner-written caption is the owner's own claim.
 	owned := narrationPlan(t, narrationText("narration-1", "9,000원입니다", 1000, 5000))
 	owned.Portable.Elements[0].OwnerEdited = true
 	if err := layoutError(owned); err != nil {
-		t.Fatal("the owner's own sentence was ground checked", err)
+		t.Fatal("the owner's own sentence was refused", err)
 	}
 }
 

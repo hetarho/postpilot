@@ -1,6 +1,9 @@
 package clip
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"math"
 	"strings"
 
@@ -114,6 +117,36 @@ type PlanningInput struct {
 	// (CLIP-129). The setting itself stays the owner's and is applied by the
 	// server after the response (CLIP-100).
 	SourceAudio []SourceAudioSetting
+	// The clip's frozen 영상 지침 (GUIDE-15, GUIDE-17): read into the flow, narration and
+	// revision system prompts, and absent from them when both groups are empty.
+	Guidelines VideoGuidelines
+}
+
+// VideoGuidelines are a clip's frozen 영상 지침: the enabled clip 기본 지침 in the project's
+// language, then the owner's that apply to its video template, each in injection order
+// (GUIDE-14). Frozen with an approval, so a guideline edited mid-flight changes nothing in
+// flight.
+type VideoGuidelines struct {
+	Defaults []string `json:",omitempty"`
+	Owner    []string `json:",omitempty"`
+}
+
+func (g VideoGuidelines) Empty() bool { return len(g.Defaults) == 0 && len(g.Owner) == 0 }
+
+// IsZero lets a payload omit an empty value whole, so a job frozen with none reads byte for byte
+// as it did before 영상 지침 existed.
+func (g VideoGuidelines) IsZero() bool { return g.Empty() }
+
+// Digest binds a quote to the 영상 지침 it was taken under (QUOTA-45): a guideline changed
+// between the quote and the start invalidates the approval. Empty is the empty digest, so a
+// project with none quotes exactly as it did before 영상 지침 existed.
+func (g VideoGuidelines) Digest() string {
+	if g.Empty() {
+		return ""
+	}
+	raw, _ := json.Marshal(g)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 // RevisionInput is one owner-written revision request (CLIP-131): the plan as

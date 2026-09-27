@@ -34,7 +34,7 @@ func declaredNarrationInput(t *testing.T) clip.NarrationInput {
 
 func declaredCaption(id, text string, start, end int) map[string]any {
 	return map[string]any{"element_id": id, "text": text, "short_text": "", "keyword": "",
-		"start_ms": start, "end_ms": end, "observation_refs": []string{clip.ObservationID("source", 0)}, "fact_refs": []any{}}
+		"start_ms": start, "end_ms": end}
 }
 func declaredResponse(declared []map[string]any, captions ...map[string]any) string {
 	values, entries := []any{}, []any{}
@@ -128,23 +128,21 @@ func TestADeclaredCaptionTheResponseOmitsIsNoticed(t *testing.T) {
 	}
 }
 
-// An ai entry is the writer's own claim and answers to CLIP-137 like any other
-// caption; the authored one beside it does not (CLIP-122).
-func TestADeclaredAICaptionIsGroundedLikeAnyWrittenOne(t *testing.T) {
+// An ai entry is the writer's own words and, like any caption, is admitted on
+// its form alone (CLIP-184): a figure no fact states is kept beside the authored
+// entry.
+func TestADeclaredAICaptionIsAdmittedOnItsFormAlone(t *testing.T) {
 	plan, _, _ := narrate(t, declaredNarrationInput(t), declaredResponse(
 		[]map[string]any{
 			declaredCaption("opening_line", "", 0, 3000),
 			declaredCaption("dish_line", "한 그릇에 99,000원이에요", 4000, 8000),
 		},
 	))
-	if narrationText(plan, "한 그릇에 99,000원이에요") != nil {
-		t.Fatal("an ungrounded number was admitted from a declared entry")
-	}
-	if !hasReason(plan, "unsupported_number_unit") {
-		t.Fatal("the removal did not carry its reason", plan.Portable.Fallbacks)
+	if narrationText(plan, "한 그릇에 99,000원이에요") == nil {
+		t.Fatal("a declared entry's figure was removed", plan.Portable.Fallbacks)
 	}
 	if fixed := narrationText(plan, "성수 곱창 다녀왔어요"); fixed == nil {
-		t.Fatal("the authored entry was ground checked with it", fixed)
+		t.Fatal("the authored entry was lost beside it", fixed)
 	}
 }
 

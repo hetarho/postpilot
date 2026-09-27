@@ -509,26 +509,12 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// One caption over the whole clip, stated on the OUTPUT timeline the
 			// resolved flow defines (CLIP-134): the gate has to see a written
 			// caption reach the delivered file, which is the path a caption that
-			// no anchor can hold silently drops. No number and no unit, so it is
-			// grounded by construction (CLIP-137), and its window is far wider
-			// than CDS-41's reading floor for nine characters.
-			// The observations the RESOLVED CUTS carry, which is the only evidence
-			// a caption may cite: the payload states them per cut beside the
-			// output window each one occupies.
-			// Each cited observation appears ONCE: consecutive cuts of one source
-			// are backed by the same observation, and citing it twice is refused.
-			refs, cited := []string{}, map[string]bool{}
-			for _, entry := range metadata["cuts"].([]any) {
-				for _, value := range entry.(map[string]any)["observation_ids"].([]any) {
-					if id := value.(string); !cited[id] {
-						cited[id] = true
-						refs = append(refs, id)
-					}
-				}
-			}
+			// no anchor can hold silently drops. A caption cites nothing and is
+			// admitted on its form alone (CLIP-184); its window is far wider than
+			// CDS-41's reading floor for nine characters.
 			content = map[string]any{"slots": []any{}, "captions": []any{map[string]any{
 				"id": "", "text": releaseCaption, "short_text": "흐르는 장면", "keyword": "",
-				"start_ms": 1000, "end_ms": 6000, "observation_refs": refs, "fact_refs": []any{},
+				"start_ms": 1000, "end_ms": 6000,
 			}}}
 		} else {
 			// The template's stages reach the writer as `template_outline` rather
@@ -594,8 +580,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			// Each cut cites the observations its own source range covers: the flow
-			// is answered from the evidence, and the narration is then grounded in
-			// the same ids (CLIP-137).
+			// is answered from the evidence (CLIP-134 keeps a cut's citations).
 			for _, entry := range content.(map[string]any)["cuts"].([]any) {
 				cut := entry.(map[string]any)
 				refs := []string{}

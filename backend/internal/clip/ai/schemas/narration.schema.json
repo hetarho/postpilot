@@ -18,9 +18,7 @@
           "short_text",
           "keyword",
           "start_ms",
-          "end_ms",
-          "observation_refs",
-          "fact_refs"
+          "end_ms"
         ],
         "properties": {
           "id": {
@@ -47,37 +45,6 @@
             "type": "integer",
             "minimum": 1
           },
-          "observation_refs": {
-            "type": "array",
-            "maxItems": 120,
-            "items": {
-              "type": "string"
-            }
-          },
-          "fact_refs": {
-            "type": "array",
-            "maxItems": 10,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "field_id",
-                "group_id",
-                "item_id"
-              ],
-              "properties": {
-                "field_id": {
-                  "type": "string"
-                },
-                "group_id": {
-                  "type": "string"
-                },
-                "item_id": {
-                  "type": "string"
-                }
-              }
-            }
-          },
           "style": {
             "type": "string"
           }
@@ -93,9 +60,7 @@
         "required": [
           "element_id",
           "rows",
-          "short_rows",
-          "observation_refs",
-          "fact_refs"
+          "short_rows"
         ],
         "properties": {
           "element_id": {
@@ -115,37 +80,6 @@
             "items": {
               "type": "string",
               "maxLength": 500
-            }
-          },
-          "observation_refs": {
-            "type": "array",
-            "maxItems": 120,
-            "items": {
-              "type": "string"
-            }
-          },
-          "fact_refs": {
-            "type": "array",
-            "maxItems": 10,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "field_id",
-                "group_id",
-                "item_id"
-              ],
-              "properties": {
-                "field_id": {
-                  "type": "string"
-                },
-                "group_id": {
-                  "type": "string"
-                },
-                "item_id": {
-                  "type": "string"
-                }
-              }
             }
           }
         }
@@ -192,9 +126,7 @@
           "short_text",
           "keyword",
           "start_ms",
-          "end_ms",
-          "observation_refs",
-          "fact_refs"
+          "end_ms"
         ],
         "properties": {
           "element_id": {
@@ -220,37 +152,6 @@
           "end_ms": {
             "type": "integer",
             "minimum": 1
-          },
-          "observation_refs": {
-            "type": "array",
-            "maxItems": 120,
-            "items": {
-              "type": "string"
-            }
-          },
-          "fact_refs": {
-            "type": "array",
-            "maxItems": 10,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "field_id",
-                "group_id",
-                "item_id"
-              ],
-              "properties": {
-                "field_id": {
-                  "type": "string"
-                },
-                "group_id": {
-                  "type": "string"
-                },
-                "item_id": {
-                  "type": "string"
-                }
-              }
-            }
           },
           "style": {
             "type": "string"

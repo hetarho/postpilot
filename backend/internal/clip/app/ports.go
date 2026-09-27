@@ -16,6 +16,14 @@ import (
 	"github.com/postpilot/backend/internal/usage"
 )
 
+// VideoGuidelineSource resolves the 영상 지침 a clip is written under (GUIDE-15, GUIDE-17): the
+// enabled clip 기본 지침 in the project's language and the owner's that apply to its video
+// template, or the global ones alone when it has none. Declared here by its consumer so the clip
+// context never imports the guideline one (ARCH-7).
+type VideoGuidelineSource interface {
+	ForClip(ctx context.Context, userID, videoTemplateID, language string) (clip.VideoGuidelines, error)
+}
+
 // JobReader is the job context's read side the sagas consult outside a
 // transaction, for idempotency and post-failure classification.
 type JobReader interface {

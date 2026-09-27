@@ -23,13 +23,9 @@ func narrationInput(t *testing.T) clip.NarrationInput {
 	return clip.NarrationInput{PlanningInput: in, Flow: flow}
 }
 
-func narrationCaption(text string, start, end int, facts ...map[string]any) map[string]any {
-	refs := []any{}
-	for _, f := range facts {
-		refs = append(refs, f)
-	}
+func narrationCaption(text string, start, end int) map[string]any {
 	return map[string]any{"id": "model-" + text, "text": text, "short_text": "", "keyword": "",
-		"start_ms": start, "end_ms": end, "observation_refs": []string{clip.ObservationID("source", 0)}, "fact_refs": refs}
+		"start_ms": start, "end_ms": end}
 }
 func narrationResponse(captions ...map[string]any) string {
 	values := []any{}
@@ -107,10 +103,16 @@ func TestNarrationRequestCarriesTheResolvedFlowAndNothingToChangeIt(t *testing.T
 		"a rapid phrase is at most 14",
 		"at least 900 + 90 × characters ms",
 		"may play over footage it does not describe",
-		"A taste, texture, satisfaction or visit claim may be written only when project_instruction asks for it",
 	} {
 		if !strings.Contains(system, sentence) {
 			t.Fatal("the narration contract does not state: " + sentence)
+		}
+	}
+	// The content rules are the 영상 지침's now (CLIP-184, GUIDE-42): the contract
+	// neither matches figures to facts, asks for a citation nor gates a taste.
+	for _, gone := range []string{"fact_refs", "observation_refs", "must appear in global_values", "A taste, texture, satisfaction or visit claim", "grounded"} {
+		if strings.Contains(system, gone) {
+			t.Fatal("the narration contract still states: " + gone)
 		}
 	}
 }
@@ -177,50 +179,52 @@ func TestNarrationFloorTakesTheShorterSentenceThenTheRoomThenNothing(t *testing.
 	// With the next caption starting immediately there is no room: the shorter
 	// sentence is used instead.
 	short := map[string]any{"id": "m", "text": long, "short_text": "짧은 문장", "keyword": "",
-		"start_ms": 1000, "end_ms": 1000 + clip.MinExposureMS("짧은 문장"), "observation_refs": []string{clip.ObservationID("source", 0)}, "fact_refs": []any{}}
+		"start_ms": 1000, "end_ms": 1000 + clip.MinExposureMS("짧은 문장")}
 	plan, _, _ = narrate(t, in, narrationResponse(short, narrationCaption("다음 자막", 1000+clip.MinExposureMS("짧은 문장"), 12000)))
 	captions = narrationOf(plan)
 	if len(captions) != 2 || captions[0].Resolved.Text != "짧은 문장" || captions[0].FallbackReason == "" {
-		t.Fatal("the grounded shorter sentence was not used", captions)
+		t.Fatal("the shorter sentence was not used", captions)
 	}
 	// No shorter sentence and no room at all: the caption is removed and said so.
 	crowded := map[string]any{"id": "m", "text": long, "short_text": "", "keyword": "",
-		"start_ms": 1000, "end_ms": 1300, "observation_refs": []string{clip.ObservationID("source", 0)}, "fact_refs": []any{}}
+		"start_ms": 1000, "end_ms": 1300}
 	plan, _, _ = narrate(t, in, narrationResponse(crowded, narrationCaption("다음 자막", 1300, 6000)))
 	if len(narrationOf(plan)) != 1 || !hasReason(plan, clip.NoticeCaptionFloor) {
 		t.Fatal("an unreadable caption was kept or unexplained", narrationOf(plan), plan.Portable.Fallbacks)
 	}
 }
 
-func TestNarrationGroundsNumbersAndNeedsAnInstructionForAnExperience(t *testing.T) {
+// CLIP-184: the server checks a caption's form and nothing it says. A price no
+// collected fact states, a taste nobody asked for and a caption citing nothing
+// are all kept, with no instruction and no notice — the 입력한 사실만 and
+// 감상은 내가 쓴 것만 기본 지침 are what speak to them (GUIDE-42).
+func TestNarrationKeepsWhatACaptionSaysWithoutAnyContentCheck(t *testing.T) {
 	in := narrationInput(t)
-	fact := map[string]any{"field_id": "price", "group_id": "menu", "item_id": "sea"}
-	// A number some collected fact states, cited, and naming the item it belongs
-	// to even though another item's footage is on screen.
-	plan, _, _ := narrate(t, in, narrationResponse(narrationCaption("해물라면 12,000원", 1000, 6000, fact)))
-	captions := narrationOf(plan)
-	if len(captions) != 1 || len(captions[0].Resolved.Facts) != 1 || captions[0].Resolved.Facts[0].ItemID != "sea" {
-		t.Fatal("a grounded caption lost its cited fact", captions)
+	in.Instruction = ""
+	for _, text := range []string{"해물라면 9,000원", "국물이 고소했어요", "1박 2인 30만 원이에요", "치즈라면도 맛있어요"} {
+		plan, _, _ := narrate(t, in, narrationResponse(narrationCaption(text, 1000, 6000)))
+		captions := narrationOf(plan)
+		if len(captions) != 1 || captions[0].Resolved.Text != text {
+			t.Fatalf("%q was not kept as written: %+v %+v", text, captions, plan.Portable.Fallbacks)
+		}
+		if len(plan.Portable.Fallbacks) != 0 {
+			t.Fatalf("%q recorded a removal: %+v", text, plan.Portable.Fallbacks)
+		}
+		// Nothing was cited, so nothing is carried as the caption's grounds.
+		if len(captions[0].Resolved.Facts) != 0 || len(captions[0].Evidence) != 0 {
+			t.Fatalf("%q carries citations nobody sent: %+v", text, captions[0])
+		}
 	}
-	if len(captions[0].Evidence) == 0 {
-		t.Fatal("a caption kept no observation", captions[0])
-	}
-	// A number no fact states is removed with its reason.
-	plan, _, _ = narrate(t, in, narrationResponse(narrationCaption("해물라면 9,000원", 1000, 6000, fact)))
-	if len(narrationOf(plan)) != 0 || !hasReason(plan, "unsupported_number_unit") {
-		t.Fatal("an ungrounded number survived", narrationOf(plan), plan.Portable.Fallbacks)
-	}
-	// An experiential claim needs an instruction that asked for it.
-	tasted := narrationResponse(narrationCaption("국물이 고소했어요", 1000, 6000))
-	plan, _, _ = narrate(t, in, tasted)
-	if len(narrationOf(plan)) != 0 || !hasReason(plan, "unsupported_experience") {
-		t.Fatal("an unasked experience survived", narrationOf(plan), plan.Portable.Fallbacks)
-	}
-	instructed := in
-	instructed.Instruction = "먹어본 맛을 이야기해줘"
-	plan, _, _ = narrate(t, instructed, tasted)
-	if len(narrationOf(plan)) != 1 {
-		t.Fatal("the instruction did not admit the experience it asked for", plan.Portable.Fallbacks)
+}
+
+// A caption answer still carrying the retired citation keys is outside the
+// closed contract (CLIP-134), exactly as any other unknown key is.
+func TestNarrationRefusesTheRetiredCitationKeys(t *testing.T) {
+	cited := narrationCaption("국물이 진해요", 1000, 6000)
+	cited["observation_refs"] = []string{clip.ObservationID("source", 0)}
+	s, _ := newService(t, narrationResponse(cited), true)
+	if _, _, err := s.Narrate(t.Context(), testRef(), narrationInput(t)); err == nil {
+		t.Fatal("a caption citing observations was accepted outside the contract")
 	}
 }
 
@@ -259,7 +263,7 @@ func TestNarrationIgnoresCutsAndUnknownSlotIdentities(t *testing.T) {
 	in := narrationInput(t)
 	response := raw(map[string]any{
 		"captions": []any{narrationCaption("고기를 올렸어요", 1000, 5000)},
-		"slots":    []any{map[string]any{"element_id": "nobody", "rows": []string{"x"}, "short_rows": []string{}, "observation_refs": []string{}, "fact_refs": []any{}}},
+		"slots":    []any{map[string]any{"element_id": "nobody", "rows": []string{"x"}, "short_rows": []string{}}},
 		"cuts":     []any{map[string]any{"id": "cut-one", "start_ms": 0, "end_ms": 1000}},
 	})
 	plan, _, _ := narrate(t, in, response)
@@ -289,7 +293,7 @@ func TestNarrationWritesTheTemplatesOwnSlotRows(t *testing.T) {
 	in.Flow = flow
 	response := raw(map[string]any{
 		"captions": []any{},
-		"slots":    []any{map[string]any{"element_id": "hook", "rows": []string{"성수 곱창", ""}, "short_rows": []string{}, "observation_refs": []string{clip.ObservationID("source", 0)}, "fact_refs": []any{}}},
+		"slots":    []any{map[string]any{"element_id": "hook", "rows": []string{"성수 곱창", ""}, "short_rows": []string{}}},
 	})
 	plan, payload, _ := narrate(t, in, response)
 	if len(payload["generated_region_slots"].([]any)) != 1 {

@@ -2,7 +2,6 @@ package ai
 
 import (
 	"encoding/json"
-	"maps"
 	"slices"
 	"strings"
 
@@ -13,40 +12,37 @@ import (
 
 type narrationCaptionJSON struct {
 	// declaredID is the outline entry this caption is, empty for one the writer
-	// chose to add; authored says its text is the template's own and is neither
-	// rewritten nor ground checked (CLIP-65). Neither crosses the wire.
-	declaredID   string
-	authored     bool
-	ID           string     `json:"id"`
-	Text         string     `json:"text"`
-	ShortText    string     `json:"short_text"`
-	Keyword      string     `json:"keyword"`
-	Style        string     `json:"style"`
-	StartMS      int        `json:"start_ms"`
-	EndMS        int        `json:"end_ms"`
-	Observations []string   `json:"observation_refs"`
-	Facts        []factJSON `json:"fact_refs"`
+	// chose to add; authored says its text is the template's own and is never
+	// rewritten (CLIP-65). Neither crosses the wire.
+	declaredID string
+	authored   bool
+	ID         string `json:"id"`
+	Text       string `json:"text"`
+	ShortText  string `json:"short_text"`
+	Keyword    string `json:"keyword"`
+	Style      string `json:"style"`
+	StartMS    int    `json:"start_ms"`
+	EndMS      int    `json:"end_ms"`
 }
+
+// A caption and a generated slot row cite nothing (CLIP-134): what copy may state is the
+// 영상 지침's to say, and the server checks only its format (CLIP-184).
 type narrationSlotJSON struct {
-	ElementID    string     `json:"element_id"`
-	Rows         []string   `json:"rows"`
-	ShortRows    []string   `json:"short_rows"`
-	Observations []string   `json:"observation_refs"`
-	Facts        []factJSON `json:"fact_refs"`
+	ElementID string   `json:"element_id"`
+	Rows      []string `json:"rows"`
+	ShortRows []string `json:"short_rows"`
 }
 
 // narrationDeclaredJSON places one caption the template's outline already
 // carries: where it plays, and — for an `ai` entry alone — what it says.
 type narrationDeclaredJSON struct {
-	ElementID    string     `json:"element_id"`
-	Text         string     `json:"text"`
-	ShortText    string     `json:"short_text"`
-	Keyword      string     `json:"keyword"`
-	Style        string     `json:"style"`
-	StartMS      int        `json:"start_ms"`
-	EndMS        int        `json:"end_ms"`
-	Observations []string   `json:"observation_refs"`
-	Facts        []factJSON `json:"fact_refs"`
+	ElementID string `json:"element_id"`
+	Text      string `json:"text"`
+	ShortText string `json:"short_text"`
+	Keyword   string `json:"keyword"`
+	Style     string `json:"style"`
+	StartMS   int    `json:"start_ms"`
+	EndMS     int    `json:"end_ms"`
 }
 type narrationJSON struct {
 	Captions []narrationCaptionJSON  `json:"captions"`
@@ -58,47 +54,6 @@ type narrationJSON struct {
 }
 
 var narrationShape = readShape(narrationSchema)
-
-// collectedFacts is every fact the project actually collected — global values
-// and item values alike. A caption belongs to no item and may state any of them
-// (CLIP-137), so this is the whole set a number is checked against.
-func collectedFacts(inputs clip.CompositionInputs) []composition.Fact {
-	var out []composition.Fact
-	for _, id := range slices.Sorted(maps.Keys(inputs.Values)) {
-		if strings.TrimSpace(inputs.Values[id]) != "" {
-			out = append(out, composition.Fact{FieldID: id, Value: inputs.Values[id]})
-		}
-	}
-	for _, group := range slices.Sorted(maps.Keys(inputs.Items)) {
-		for _, item := range inputs.Items[group] {
-			for _, field := range slices.Sorted(maps.Keys(item.Values)) {
-				if strings.TrimSpace(item.Values[field]) != "" {
-					out = append(out, composition.Fact{FieldID: field, GroupID: group, ItemID: item.ID, Value: item.Values[field]})
-				}
-			}
-		}
-	}
-	return out
-}
-
-func citedFacts(refs []factJSON, collected []composition.Fact) ([]composition.Fact, bool) {
-	var out []composition.Fact
-	seen := map[factJSON]bool{}
-	for _, ref := range refs {
-		if seen[ref] {
-			return nil, false
-		}
-		seen[ref] = true
-		at := slices.IndexFunc(collected, func(f composition.Fact) bool {
-			return f.FieldID == ref.FieldID && f.GroupID == ref.GroupID && f.ItemID == ref.ItemID
-		})
-		if at < 0 {
-			return nil, false
-		}
-		out = append(out, collected[at])
-	}
-	return out, true
-}
 
 // parseNarration writes the captions and the generated slot rows onto the flow
 // the server resolved, and changes nothing else about it. Every removal it
@@ -136,14 +91,6 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 	}
 	portable.Fallbacks = fallbacks
 
-	evidence := []clip.ObservedEvidence{}
-	for _, cut := range plan.Cuts {
-		observed, _ := clip.CutEvidence(input.Analyses, cut)
-		evidence = append(evidence, observed...)
-	}
-	collected := collectedFacts(portable.Inputs)
-	instructed := input.Instruction != ""
-
 	slots := map[string]narrationSlotJSON{}
 	for _, slot := range wire.Slots {
 		if _, exists := slots[slot.ElementID]; exists {
@@ -172,10 +119,10 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 			continue
 		}
 		// A generated region row goes through the ladder it already had: the
-		// grounded shorter row, then an empty row with its own notice.
+		// shorter row, then an empty row with its own notice.
 		slot, exists := slots[resolved.Element.ID]
-		entry := generatedJSON{ElementID: slot.ElementID, Rows: slot.Rows, ShortRows: slot.ShortRows, Observations: slot.Observations, Facts: slot.Facts}
-		attachRegionRows(input.Design.RegionPresets(), input.Ratio, placements[resolved.InstanceID].Offset, doc, portable.Inputs, entry, exists, clip.ItemBinding{}, evidence, &text, &plan, instructed)
+		entry := generatedJSON{ElementID: slot.ElementID, Rows: slot.Rows, ShortRows: slot.ShortRows}
+		attachRegionRows(input.Design.RegionPresets(), input.Ratio, placements[resolved.InstanceID].Offset, entry, exists, &text, &plan)
 		if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 			portable.Elements = append(portable.Elements, text)
 		}
@@ -186,7 +133,7 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 		}
 	}
 
-	admitNarration(cfg, input, &plan, &portable, narrationCaptions(&plan, wire, timeline), evidence, collected, doc.Pace, instructed)
+	admitNarration(cfg, input, &plan, &portable, narrationCaptions(&plan, wire, timeline), doc.Pace)
 	clip.RecomputePlanNotices(&plan, input.TargetDurationMS, cfg.TargetToleranceMS)
 	if _, err := clip.EncodeEditPlan(plan); err != nil {
 		return clip.EditPlan{}, err
@@ -216,13 +163,12 @@ func narrationCaptions(plan *clip.EditPlan, wire narrationJSON, timeline composi
 		}
 		caption := narrationCaptionJSON{declaredID: declared.Element.ID, ID: declared.Element.ID,
 			Text: answer.Text, ShortText: answer.ShortText, Keyword: answer.Keyword, Style: answer.Style,
-			StartMS: answer.StartMS, EndMS: answer.EndMS, Observations: answer.Observations, Facts: answer.Facts}
+			StartMS: answer.StartMS, EndMS: answer.EndMS}
 		// A fixed entry says what the template wrote, whatever the response
 		// returned in its place (CLIP-65).
 		if declared.Element.Kind != "ai" {
 			caption.authored = true
 			caption.Text, caption.ShortText, caption.Keyword = declared.Text, "", ""
-			caption.Observations, caption.Facts = nil, nil
 		}
 		out = append(out, caption)
 	}
@@ -233,7 +179,13 @@ func narrationCaptions(plan *clip.EditPlan, wire narrationJSON, timeline composi
 // the output it will play on. Every refusal is the server's own removal and
 // carries its reason (CLIP-138); the captions that survive hold disjoint
 // absolute windows and their identities are minted here, never by the writer.
-func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, portable *clip.PortablePlan, captions []narrationCaptionJSON, evidence []clip.ObservedEvidence, collected []composition.Fact, pace string, instructed bool) {
+//
+// It checks a caption's FORM and nothing it says (CLIP-184): the bounds, the
+// windows, the styles and the reading floor. Whether a figure matches a fact,
+// what the footage shows or a taste was asked for is the 영상 지침's to decide —
+// the 입력한 사실만 and 감상은 내가 쓴 것만 기본 지침, which the owner may switch
+// off (GUIDE-42).
+func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, portable *clip.PortablePlan, captions []narrationCaptionJSON, pace string) {
 	ordered := slices.Clone(captions)
 	slices.SortStableFunc(ordered, func(a, b narrationCaptionJSON) int { return a.StartMS - b.StartMS })
 	used := map[string]bool{}
@@ -262,12 +214,6 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			drop(clip.NoticeCaptionOverlap)
 			continue
 		}
-		cited, valid := citedFacts(caption.Facts, collected)
-		observed, complete := selectedReferences(caption.Observations, evidence, false)
-		if !valid || !complete {
-			drop("unavailable_scoped_fact")
-			continue
-		}
 		// An absent choice is not a repair. Freeze the selection's default so
 		// a later render does not choose a different treatment for this caption.
 		style, styleFallback := caption.Style, false
@@ -293,8 +239,7 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			}
 			return rule.Holds(value)
 		}
-		// The full sentence first, then the grounded shorter one: the same
-		// ladder a scene-bound caption answered, minus every item rule.
+		// The full sentence first, then the shorter one.
 		check := func(value string) string {
 			if strings.TrimSpace(value) == "" {
 				return "copy_omitted"
@@ -302,13 +247,10 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			if !bounded(value) {
 				return "composition_generated_bounds"
 			}
-			// The template's own words are the owner's claim, not the writer's,
-			// and saying them once more is what the template asked for.
+			// Saying the template's own words once more is what the template
+			// asked for.
 			if caption.authored {
 				return ""
-			}
-			if reason := clip.GroundNarration(value, collected, instructed); reason != "" {
-				return reason
 			}
 			if used[sentenceKey(value)] {
 				return "repeated_copy"
@@ -353,7 +295,7 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			clip.AddPlanNotice(plan, "composition_caption_style", "", text.Resolved.Element.ID, "style_fallback")
 		}
 		text.Resolved.Element.Style = style
-		text.Resolved.Facts, text.Evidence, text.Pace, text.FallbackReason = cited, observed, pace, fallback
+		text.Pace, text.FallbackReason = pace, fallback
 		if caption.Keyword != "" && strings.Contains(chosen, caption.Keyword) {
 			text.Keyword = caption.Keyword
 		}

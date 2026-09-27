@@ -304,34 +304,6 @@ func TestNarrationCreationRefusals(t *testing.T) {
 	}
 }
 
-func TestGroundNarrationChecksFactsWithoutAnItemRule(t *testing.T) {
-	facts := []composition.Fact{
-		{FieldID: "price", GroupID: "menu", ItemID: "galbi", Value: "1인분 18,000원"},
-		{FieldID: "name", GroupID: "menu", ItemID: "galbi", Value: "살치살"},
-		{FieldID: "verdict", Value: "고소했어요"},
-	}
-	for name, c := range map[string]struct {
-		text       string
-		instructed bool
-		reason     string
-	}{
-		// A caption belongs to no item, so another item's fact grounds it and
-		// naming an item is not a cross-item claim any more (CLIP-137).
-		"a number another item's fact states":      {"살치살은 1인분 18,000원", false, ""},
-		"a number no fact states":                  {"1인분 21,000원이에요", false, "unsupported_number_unit"},
-		"a price basis no fact states":             {"1인분 18,000원 인당", false, "unsupported_price_basis"},
-		"an experience nobody asked for":           {"국물이 고소하고 맛있었어요", false, "unsupported_experience"},
-		"an experience an instruction asked for":   {"국물이 고소하고 맛있었어요", true, ""},
-		"an experience the owner wrote down":       {"고소했어요", false, ""},
-		"a number pointed at the dish on screen":   {"이 메뉴는 1인분 18,000원", false, ""},
-		"a sentence that claims nothing checkable": {"고기를 올렸어요", false, ""},
-	} {
-		if reason := clip.GroundNarration(c.text, facts, c.instructed); reason != c.reason {
-			t.Fatal(name+": got "+reason+", wanted", c.reason)
-		}
-	}
-}
-
 func TestAPlanWithoutSectionsResolvesOnlyItsFixedRegions(t *testing.T) {
 	limits := clip.DefaultCompositionLimits()
 	body := `<clip version="1">` +

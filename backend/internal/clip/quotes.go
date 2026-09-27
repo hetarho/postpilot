@@ -45,6 +45,10 @@ type GenerationPricing struct {
 	SkipFlow, SkipNarration bool
 	RecoveryDigest          string
 	ReusedChunks            int
+	// The 영상 지침 the quote was taken under (QUOTA-45). It rides the pricing so the quote's
+	// digest, which the store recomputes from the saved pricing, binds them without the store
+	// reading another context; empty when the project has none.
+	GuidelinesDigest string `json:",omitempty"`
 }
 
 // Both stages must have the complete enforceable profile, not a legacy pair of

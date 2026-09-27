@@ -23,7 +23,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if err != nil {
 		return err
 	}
-	v := &manifestVerifier{plan: plan, limits: limits, captionWindows: map[string][]CompositionElement{}, facts: collectedCompositionFacts(plan.Portable.Inputs)}
+	v := &manifestVerifier{plan: plan, limits: limits, captionWindows: map[string][]CompositionElement{}}
 	// V20 is checked against the presets the PROJECT chose, which is what the
 	// layout was given: the frozen document declares the slot text, not which
 	// preset holds it (CLIP-139).
@@ -81,7 +81,6 @@ type manifestVerifier struct {
 	placements map[string]RegionPlacement
 	regionRows map[string][]string
 	canvas     Canvas
-	facts      []composition.Fact
 	// V18 on the whole timeline: a narration caption belongs to no cut, so its
 	// window is checked against every other caption (CDS-43).
 	captionWindows   map[string][]CompositionElement
@@ -130,17 +129,8 @@ func (v *manifestVerifier) verify(element CompositionElement, text PortableText)
 	if element.StartMS < 0 || element.EndMS > v.plan.DurationMS {
 		return fail("interval_outside")
 	}
-	// V11: a collected fact behind every number the narration states, from
-	// any item — a caption belongs to none (CLIP-137). Owner-written text is
-	// the owner's own claim and is not ground checked (CLIP-122).
-	if text.Scope == NarrationScope && !text.OwnerEdited && !text.Authored {
-		// `instructed` is true here: whether an experiential sentence was
-		// asked for was settled when it was written, and the instruction
-		// itself is not part of a rendered plan.
-		if reason := GroundNarration(element.Text, v.facts, true); reason != "" {
-			return fail(reason)
-		}
-	}
+	// No check reads what a caption says (CLIP-184): V11's number grounding
+	// went with CLIP-137, and the 영상 지침 decide what copy may state.
 	return nil
 }
 
@@ -281,27 +271,6 @@ func (v *manifestVerifier) verifyCaptionCues(element CompositionElement, text Po
 		return "authored_text_changed"
 	}
 	return ""
-}
-
-// collectedCompositionFacts is every fact the project collected, which is what
-// a narration number is checked against.
-func collectedCompositionFacts(inputs CompositionInputs) []composition.Fact {
-	var out []composition.Fact
-	for id, value := range inputs.Values {
-		if strings.TrimSpace(value) != "" {
-			out = append(out, composition.Fact{FieldID: id, Value: value})
-		}
-	}
-	for group, items := range inputs.Items {
-		for _, item := range items {
-			for field, value := range item.Values {
-				if strings.TrimSpace(value) != "" {
-					out = append(out, composition.Fact{FieldID: field, GroupID: group, ItemID: item.ID, Value: value})
-				}
-			}
-		}
-	}
-	return out
 }
 
 func compositionInside(box, safe Region) bool {

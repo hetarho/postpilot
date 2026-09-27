@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/postpilot/backend/internal/clip"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/guideline"
@@ -87,6 +88,21 @@ func (a clipGuidelineCandidates) Record(ctx context.Context, userID, projectID, 
 
 func (a clipGuidelineCandidates) DetachProject(ctx context.Context, userID, projectID string) error {
 	return a.service.DetachCandidateClip(ctx, userID, projectID)
+}
+
+// ForClip resolves a clip's 영상 지침 for the clip context (GUIDE-15, GUIDE-17): the clip kind's
+// enabled 기본 지침 in the project's language and the owner's scoped to its video template, or
+// the global ones alone when the project has none.
+func (a clipGuidelineCandidates) ForClip(ctx context.Context, userID, videoTemplateID, language string) (clip.VideoGuidelines, error) {
+	var templateID *string
+	if videoTemplateID != "" {
+		templateID = &videoTemplateID
+	}
+	got, err := a.service.ForPrompt(ctx, userID, guideline.KindClip, templateID, nil, guideline.Language(language))
+	if err != nil {
+		return clip.VideoGuidelines{}, err
+	}
+	return clip.VideoGuidelines{Defaults: got.Defaults, Owner: got.Owner}, nil
 }
 
 // postCandidateLinks lets post deletion drop the link without the post context learning what

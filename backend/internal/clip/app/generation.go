@@ -35,7 +35,17 @@ type GenerationService struct {
 	accounting    clip.AccountingReader
 	admission     clip.AnalysisAdmission
 	candidates    clip.GuidelineCandidates
+	guidelines    VideoGuidelineSource
 	now           func() time.Time
+}
+
+// videoGuidelines is the 영상 지침 this project is written under right now, read once per quote or
+// start so the value the approval binds is the value the job freezes.
+func (s *GenerationService) videoGuidelines(ctx context.Context, p clip.Project) (clip.VideoGuidelines, error) {
+	if s.guidelines == nil {
+		return clip.VideoGuidelines{}, nil
+	}
+	return s.guidelines.ForClip(ctx, p.UserID, p.VideoTemplateID, p.Language)
 }
 
 // GenerationDeps are the collaborators the generation side reaches other contexts
@@ -52,6 +62,8 @@ type GenerationDeps struct {
 	// Candidates receives a completed revision's request as a 영상 지침 candidate and a deleted
 	// project's detach (GUIDE-7, GUIDE-13). Nil records nothing.
 	Candidates clip.GuidelineCandidates
+	// Guidelines resolves the 영상 지침 a quote binds and a start freezes. Nil freezes none.
+	Guidelines VideoGuidelineSource
 }
 
 func NewGenerationService(store clip.GenerationStore, projects *Service, sources *SourceService, objects clip.ProcessingObjects, media clip.Media, planner clip.Planner, renderer clip.Renderer, jobs clip.GenerationJobs, cfg clip.GenerationConfig, deps GenerationDeps) *GenerationService {
@@ -63,7 +75,7 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 	}
 	s := &GenerationService{remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
 		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission,
-		candidates: deps.Candidates}
+		candidates: deps.Candidates, guidelines: deps.Guidelines}
 	// The project service and its generation side need each other; the pair is closed
 	// here, where both exist, instead of through a setter the composition root could forget.
 	if projects != nil {
@@ -280,7 +292,7 @@ func (r *generationRun) set(name string, done, total int) {
 // planningInput is the frozen brief every planner call reads.
 func (r *generationRun) planningInput() clip.PlanningInput {
 	p := r.p
-	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan}
+	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines}
 }
 
 // validatePreparation is the planner's own check of the models, the budgets and the

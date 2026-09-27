@@ -24,73 +24,79 @@ func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n
 	return s.pricing.Freeze(ctx, o, w, n)
 }
 
-func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, error) {
+func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
 	var p clip.Project
 	var t clip.VideoTemplate
 	var b clip.SourceBatch
 	var pricing clip.GenerationPricing
+	var guidelines clip.VideoGuidelines
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if p.Finalized != nil {
-		return p, t, b, pricing, clip.ErrFinalized
+		return p, t, b, pricing, guidelines, clip.ErrFinalized
 	}
 	// A project generates with no template (CLIP-5) and with one it has since
 	// lost (CLIP-25): both leave the zero recipe standing and no declared
 	// structure to satisfy.
 	if p.VideoTemplateID != "" {
 		if t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID); err != nil {
-			return p, t, b, pricing, err
+			return p, t, b, pricing, guidelines, err
 		}
 	}
 	if err = clip.RequiredAnswers(t, p, s.projects.limits.Composition); err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if !s.projects.duration(p.TargetDurationMS) {
-		return p, t, b, pricing, clip.ErrTargetDurationRequired
+		return p, t, b, pricing, guidelines, clip.ErrTargetDurationRequired
 	}
 	c, err := clip.GenerationComposition(t, p, s.projects.limits.Composition)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if err = s.checkComposition(c); err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, clip.PlanningInput) error
 	}); ok {
 		if err := validator.ValidateAuthoredInput(ctx, clip.PlanningInput{Composition: c, Template: t.Recipe, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.DesignSelection()}); err != nil {
-			return p, t, b, pricing, err
+			return p, t, b, pricing, guidelines, err
 		}
 	}
 	b, err = s.sources.AvailableBatch(ctx, user, batch)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if !clip.ValidQuoteBatch(b, user, id, s.now()) {
-		return p, t, b, pricing, clip.ErrSourceState
+		return p, t, b, pricing, guidelines, clip.ErrSourceState
 	}
 	if err := clip.MatchCompositionSources(c, b); err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	count, err := clip.ConservativeObservationCount(s.cfg.Media, b)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	if s.pricing == nil || s.cfg.QuoteTTL <= 0 {
-		return p, t, b, pricing, clip.ErrPricingUnavailable
+		return p, t, b, pricing, guidelines, clip.ErrPricingUnavailable
 	}
 	rawRecovery, err := s.loadRecovery(ctx, user, id)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	upgraded, err := s.upgradeRecovery(ctx, user, id, rawRecovery)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, guidelines, err
 	}
 	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction}
+	// The 영상 지침 are writer input like the instruction (CLIP-69, GUIDE-15): read once here, so the
+	// value the approval binds is the value the start freezes.
+	if guidelines, err = s.videoGuidelines(ctx, p); err != nil {
+		return p, t, b, pricing, guidelines, err
+	}
+	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines}
 	// A resume reuses exactly what the recovery holds: a complete plan answers
 	// both writing calls, a written flow answers only the first. A recovery
 	// saved before the flow was its own call carries a complete plan, so it
@@ -107,7 +113,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		one.Sources = []clip.SourceLease{v}
 		n, e := clip.ConservativeObservationCount(s.cfg.Media, one)
 		if e != nil {
-			return p, t, b, pricing, e
+			return p, t, b, pricing, guidelines, e
 		}
 		if a, ok := recoverySource(recovered, v.ID); ok {
 			n = (a.Info.DurationMS + 59999) / 60000
@@ -128,24 +134,27 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		pricing.SkipFlow, pricing.SkipNarration, pricing.ObservationCalls, pricing.MaxCredits = true, true, 0, 0
 	} else {
 		if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
-			return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
+			return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 		}
 		pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipFlow, skipNarration, 3)
 	}
 	pricing.RecoveryDigest = clip.RecoveryDigest(rawRecovery)
 	pricing.ReusedChunks = len(recovered.Chunks)
 	if err != nil {
-		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
+		return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 	}
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
+	// The quote binds them through the pricing, and a change before the start invalidates the
+	// approval (QUOTA-45).
+	pricing.GuidelinesDigest = guidelines.Digest()
 	if pricing.Version != clip.PricingPolicyVersion || pricing.ObservationCalls != count || pricing.MaxCredits < 0 || pricing.Observe.Ref != modelRef(observe) || pricing.Plan.Ref != modelRef(write) || !pricing.Observe.Valid() || !pricing.Plan.Valid() {
-		return p, t, b, pricing, clip.ErrPricingUnavailable
+		return p, t, b, pricing, guidelines, clip.ErrPricingUnavailable
 	}
-	return p, t, b, pricing, nil
+	return p, t, b, pricing, guidelines, nil
 }
 
 func (s *GenerationService) Quote(ctx context.Context, user, id, batch, observe, write string) (clip.GenerationQuote, error) {
-	p, t, b, pricing, err := s.quoteInputs(ctx, user, id, batch, observe, write)
+	p, t, b, pricing, _, err := s.quoteInputs(ctx, user, id, batch, observe, write)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -211,7 +220,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if !s.now().Before(q.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, t, b, pricing, err := s.quoteInputs(ctx, user, id, batch, observe, write)
+	p, t, b, pricing, guidelines, err := s.quoteInputs(ctx, user, id, batch, observe, write)
 	if err != nil {
 		return "", err
 	}
@@ -234,7 +243,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

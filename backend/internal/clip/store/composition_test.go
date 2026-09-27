@@ -327,7 +327,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 		Version     int
 		Composition *clip.ProjectComposition
 	}
-	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != 5 || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
+	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != clip.GenerationPayloadVersion || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
 		t.Fatal("accepted payload lost composition")
 	}
 	changed := strings.Replace(nativeBody, "장면만 설명", "새 구성", 1)

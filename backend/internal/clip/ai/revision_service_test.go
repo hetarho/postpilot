@@ -85,7 +85,7 @@ func TestAFlowRevisionRewritesTheFootageAndThenWhatIsSaidOverIt(t *testing.T) {
 
 func TestANarrationRevisionRewritesOnlyWhatIsSaid(t *testing.T) {
 	in := revisionInput(t, clip.RevisionNarration, "가격을 말해줘")
-	plan, payloads, systems := revise(t, in, narrationResponse(narrationCaption("해물라면 12,000원", 1000, 6000, map[string]any{"field_id": "price", "group_id": "menu", "item_id": "sea"})))
+	plan, payloads, systems := revise(t, in, narrationResponse(narrationCaption("해물라면 12,000원", 1000, 6000)))
 	if len(payloads) != 1 {
 		t.Fatal("a narration revision made more than one writing call", len(payloads))
 	}
@@ -107,11 +107,12 @@ func TestANarrationRevisionRewritesOnlyWhatIsSaid(t *testing.T) {
 }
 
 func TestARevisionAnswersOnTheSameContractsAsAGeneration(t *testing.T) {
-	// An ungrounded number is removed here exactly as it is in a generation.
+	// A figure no fact states is kept here exactly as it is in a generation:
+	// neither checks what a caption says (CLIP-184).
 	in := revisionInput(t, clip.RevisionNarration, "가격을 말해줘")
 	plan, _, _ := revise(t, in, narrationResponse(narrationCaption("해물라면 9,000원", 1000, 6000)))
-	if len(narrationOf(plan)) != 0 || !hasReason(plan, "unsupported_number_unit") {
-		t.Fatal("a revision admitted what a generation refuses", narrationOf(plan), plan.Portable.Fallbacks)
+	if len(narrationOf(plan)) != 1 || len(plan.Portable.Fallbacks) != 0 {
+		t.Fatal("a revision refused what a generation keeps", narrationOf(plan), plan.Portable.Fallbacks)
 	}
 	// An over-share flow is planned as written, the writing bound being the
 	// writer's to keep (CLIP-128).

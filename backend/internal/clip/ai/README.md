@@ -34,10 +34,11 @@ slot rows, using `narration.schema.json`. It may not change the flow: a `cuts`
 key or an unknown element id in the response is ignored and recorded rather than
 applied. Each caption is admitted in start order against the output it plays on:
 inside the output, disjoint from the caption before it, within CDS-25's
-character bound, grounded by `GroundNarration` on the facts the project
-collected, not a sentence already said, and holding CDS-41's reading time —
-through the grounded shorter sentence, then the room the next caption leaves,
-then omission with its own reason. The server mints every caption identity
+character bound, not a sentence already said, and holding CDS-41's reading time
+— through the shorter sentence, then the room the next caption leaves, then
+omission with its own reason. Nothing checks what a caption says (CLIP-184): the
+flow, narration and revision system prompts end with the clip's frozen
+`[영상 지침]`, and those decide it. The server mints every caption identity
 (`narration-N`, in start order); the writer's own ids are recorded nowhere. A
 moment left without a caption, a fact the narration did not state and a source
 it did not use record nothing.

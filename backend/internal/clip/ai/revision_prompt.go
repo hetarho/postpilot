@@ -42,19 +42,19 @@ func revisionPayload(in clip.RevisionInput) map[string]any {
 }
 
 func buildFlowRevisionPrompt(in clip.RevisionInput, fadeMS int, limits composition.Limits) (string, string) {
-	system, user := BuildFlowPrompt(in.PlanningInput, fadeMS, limits)
-	return system + revisionBlock, user + promptJSON(map[string]any{
+	system, user := flowPromptParts(in.PlanningInput, fadeMS, limits)
+	return system + revisionBlock + videoGuidelineBlock(in.Guidelines), user + promptJSON(map[string]any{
 		"current_plan": revisionPayload(in), "revision_request": in.Request,
 	})
 }
 
 func buildNarrationRevisionPrompt(in clip.RevisionInput, flow clip.EditPlan, limits composition.Limits) (string, string) {
-	system, user := BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow}, limits)
+	system, user := narrationPromptParts(clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow}, limits)
 	block := revisionBlock
 	if in.Target == clip.RevisionNarration {
 		block += narrationRevisionBlock
 	}
-	return system + block, user + promptJSON(map[string]any{
+	return system + block + videoGuidelineBlock(in.Guidelines), user + promptJSON(map[string]any{
 		"current_plan": revisionPayload(in), "revision_request": in.Request,
 	})
 }

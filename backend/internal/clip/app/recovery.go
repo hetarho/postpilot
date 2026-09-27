@@ -24,18 +24,21 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 	// reusable under CLIP-93. The owner's instruction is writer input a
 	// generation freezes (CLIP-69), so a changed one leaves no plan to reuse.
 	// The owner's source-sound setting is deliberately absent — it is
-	// render-only and rides the render revision instead.
+	// render-only and rides the render revision instead. The 영상 지침 join the
+	// instruction as writer input (GUIDE-15), by their digest so a project with
+	// none keeps the digest it had before they existed.
 	raw, _ := json.Marshal(struct {
 		Composition                        *clip.ProjectComposition
 		Template                           clip.Recipe
 		Ratio, Write, Disclosure, Language string
 		Instruction                        string
+		Guidelines                         string `json:",omitempty"`
 		Target                             int
 		Hide                               bool
 		Version                            int
 		Analysis                           string
 		Sources                            [][2]string
-	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
+	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }

@@ -20,8 +20,9 @@ var ErrBusy = errors.New("clip busy")
 // and the resolved CTA, so a job approved before the owner could choose a
 // campaign type cannot render a clip that carries one. Version 4 freezes the
 // project composition. Version 5 freezes the observation language; accepted
-// version-3/4 jobs retain Korean, the legacy project language.
-const GenerationPayloadVersion = 5
+// version-3/4 jobs retain Korean, the legacy project language. Version 6 freezes the clip's
+// 영상 지침; an accepted version-3..5 job ran with none and keeps running with none.
+const GenerationPayloadVersion = 6
 
 type GenerationPayload struct {
 	Language                         string
@@ -39,6 +40,9 @@ type GenerationPayload struct {
 	// The project's own instruction (CLIP-121), frozen with the composition so
 	// editing it mid-flight changes nothing in flight.
 	Instruction string
+	// The clip's 영상 지침 (GUIDE-15), frozen with the approval that priced them: a frozen
+	// attempt reads only this across restart and continuation.
+	Guidelines VideoGuidelines `json:",omitzero"`
 	// The project's caption pace and accent (CLIP-139), frozen with the rest of
 	// the render inputs. They are deliberately absent from planRecoveryDigest
 	// and from the quote: changing either re-renders the same plan and costs no

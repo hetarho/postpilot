@@ -212,3 +212,12 @@ choice would be expensive to undo are listed at the end.
 - **When 영상 지침으로 저장 appears:** only after the `revise_clip` job that this mounted dock started (matched by job id) reaches `done`. After a reload, or for a job started in another tab, the button is not offered. The request remains in the 영상 지침 후보 queue instead.
 - **Save-as scope:** 전역 by default. 이 영상의 템플릿 「name」에만 appears only while the project's video template still exists in the directory.
 - **Nav icon:** lucide `ListVideo`.
+
+## T440 — clip writing calls carry 영상 지침; no content checks
+- **How the quote binds the 영상 지침:** their digest rides `GenerationPricing.GuidelinesDigest`, the same way the recovery digest already does. `QuoteInputDigest` and `RevisionInputDigest` hash the pricing, so they bind it. The store recomputes the digest inside the link transaction from the saved pricing, so it never has to read the guideline context. The alternative was a new digest parameter that the store would have to resolve itself.
+- **Where the block sits:** `[영상 지침]` is the last thing in each system prompt: after the fixed rules and after a revision's own block. This keeps the provider-cached prefix identical for every account. A clip with no guidelines adds no bytes.
+- **Recovery:** a recovered plan written under different 영상 지침 is not reused (they join `planRecoveryDigest` like the instruction). The observations are still reused.
+- **Payload versions:** generation payload 6 and revision payload 2. Jobs frozen under the older versions still run, with no guidelines.
+- **Citation keys:** a caption that still sends `observation_refs` or `fact_refs` is refused by the closed contract, like any unknown key. The flow's cuts keep their citations.
+- **Retired notices:** the five content-check reasons were deleted from the frontend map. A plan stored before this change shows them as the generic "unknown" detail.
+- **Also changed:** the narration line "A caption may name any item it has a fact for" now reads "…any item". The "grounded shorter row" wording became "shorter row".

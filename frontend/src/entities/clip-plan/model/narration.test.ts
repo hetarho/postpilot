@@ -119,6 +119,12 @@ it('reads the narration removal reasons and no longer knows the retired ones', (
     'cross_item_identity',
     'context_item_claim',
     'copy_not_generated',
+    // CLIP-184: the content checks' reasons, from a plan stored before they went.
+    'missing_scene_evidence',
+    'unavailable_scoped_fact',
+    'unsupported_number_unit',
+    'unsupported_price_basis',
+    'unsupported_experience',
   ])
     expect(clipNoticeKey({ code, cutId: '', elementId: 'x', action: 'removal' })).toBe(
       'inspection.detailUnknown',

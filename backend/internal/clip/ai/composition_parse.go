@@ -6,21 +6,14 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-type factJSON struct {
-	FieldID string `json:"field_id"`
-	GroupID string `json:"group_id"`
-	ItemID  string `json:"item_id"`
-}
+// generatedJSON is one generated region entry's answer: its rows, and the shorter rows it
+// falls back to. It cites nothing (CLIP-134).
 type generatedJSON struct {
-	ElementID    string     `json:"element_id"`
-	CutID        string     `json:"cut_id"`
-	Text         string     `json:"text"`
-	ShortText    string     `json:"short_text"`
-	Keyword      string     `json:"keyword"`
-	Rows         []string   `json:"rows"`
-	ShortRows    []string   `json:"short_rows"`
-	Observations []string   `json:"observation_refs"`
-	Facts        []factJSON `json:"fact_refs"`
+	ElementID string
+	Text      string
+	ShortText string
+	Rows      []string
+	ShortRows []string
 }
 
 var writerIdentity = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)

@@ -629,7 +629,7 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 		Template    clip.Recipe
 		Approval    *clip.GenerationApproval
 	}
-	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 5 || snapshot.Language != "ko" || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
+	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != clip.GenerationPayloadVersion || snapshot.Language != "ko" || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
 		t.Fatal(string(j.Payload))
 	}
 	changed := `<clip version="1"><field id="place" label="장소" required="true">changed after enqueue</field></clip>`

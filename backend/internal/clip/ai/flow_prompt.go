@@ -31,8 +31,16 @@ Return only one JSON object following this closed contract:
 `
 
 // BuildFlowPrompt is the flow call's request, exported so the frozen input
-// allowance can be measured on the exact bytes the call will send (CLIP-90).
+// allowance can be measured on the exact bytes the call will send (CLIP-90) —
+// the 영상 지침 block included.
 func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
+	system, user := flowPromptParts(in, fadeMS, limits)
+	return system + videoGuidelineBlock(in.Guidelines), user
+}
+
+// flowPromptParts is the flow request without the 영상 지침 block, which a revision appends
+// after its own block so the block stays last.
+func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
 	contract := flowPromptSchema
 	if in.Policy.StructuredOutput {
 		// The request already carries the closed structural schema; only the

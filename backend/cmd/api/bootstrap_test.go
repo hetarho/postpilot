@@ -1067,3 +1067,52 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 		t.Fatalf("after deleting the 분야 guideline: %q, want %q", got, want)
 	}
 }
+
+// GUIDE-15, GUIDE-17: the clip context's 영상 지침 port resolves the clip kind — its enabled
+// 기본 지침 in the project's language and the owner's global clip guidelines — and never a
+// post's guideline.
+func TestClipGuidelineAdapterResolvesTheClipKind(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "clip-guideline.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	guidelineSvc := guideline.NewService(
+		guidelinestore.New(handle.Writer, handle.Reader),
+		blogFields{},
+		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		50,
+	)
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindClip, "자막은 두 줄까지", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+		t.Fatal(err)
+	}
+	adapter := clipGuidelineCandidates{service: guidelineSvc}
+	for _, language := range []guideline.Language{guideline.LanguageKorean, guideline.LanguageEnglish} {
+		got, err := adapter.ForClip(ctx, "alice", "", string(language))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var want []string
+		for _, d := range guideline.Defaults(guideline.KindClip) {
+			if text, ok := d.Text(language); ok {
+				want = append(want, text)
+			}
+		}
+		if len(want) == 0 || !slices.Equal(got.Defaults, want) {
+			t.Fatalf("%s: the clip 기본 지침 did not arrive in the project's language: %q", language, got.Defaults)
+		}
+		if !slices.Equal(got.Owner, []string{"자막은 두 줄까지"}) {
+			t.Fatalf("%s: the owner's 영상 지침 were not the clip kind's: %q", language, got.Owner)
+		}
+	}
+}

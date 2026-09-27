@@ -15,7 +15,9 @@ import (
 // same way (CLIP-131, CLIP-19). It does no media work at all — it rewrites the
 // saved plan and leaves the rendered result exactly where it is, which is what
 // makes the result read as stale and 다시 렌더 stay credit-free (CLIP-132).
-const revisionPayloadVersion = 1
+//
+// Version 2 freezes the clip's 영상 지침; an accepted version-1 job ran with none.
+const revisionPayloadVersion = 2
 
 type revisionJobPayload struct {
 	Version                  int
@@ -28,6 +30,7 @@ type revisionJobPayload struct {
 	Template                 clip.Recipe
 	Disclosure               string
 	Instruction              string
+	Guidelines               clip.VideoGuidelines `json:",omitzero"`
 	CaptionPace, Accent      string
 	IntroPreset, OutroPreset string
 	CaptionStyles            []string
@@ -46,7 +49,7 @@ func (p revisionJobPayload) Design() clip.ProjectDesign {
 // narration request, two where the footage is rewritten and the narration
 // follows it. No observation is repaid — the recorded ones are the evidence
 // this rewrite is bound to (CLIP-93, CLIP-131).
-func (s *GenerationService) revisionPricing(ctx context.Context, write, observe string, target string) (clip.GenerationPricing, error) {
+func (s *GenerationService) revisionPricing(ctx context.Context, write, observe string, target string, guidelines clip.VideoGuidelines) (clip.GenerationPricing, error) {
 	if s.pricing == nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
@@ -55,6 +58,8 @@ func (s *GenerationService) revisionPricing(ctx context.Context, write, observe 
 		return clip.GenerationPricing{}, admissionRefusal(modelRef(observe), err)
 	}
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
+	// The revision's digest binds the 영상 지침 through its pricing, as a generation's does.
+	pricing.GuidelinesDigest = guidelines.Digest()
 	if !pricing.Valid() || pricing.ObservationCalls != 0 {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
@@ -126,7 +131,11 @@ func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request
 	if err := s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
 		return clip.GenerationQuote{}, admissionRefusal(modelRef(observe), err)
 	}
-	pricing, err := s.revisionPricing(ctx, write, observe, target)
+	guidelines, err := s.videoGuidelines(ctx, p)
+	if err != nil {
+		return clip.GenerationQuote{}, err
+	}
+	pricing, err := s.revisionPricing(ctx, write, observe, target, guidelines)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -172,7 +181,12 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if err != nil {
 		return "", err
 	}
-	pricing, err := s.revisionPricing(ctx, write, observe, target)
+	// Read once: the value the digest check compares is the value the payload freezes.
+	guidelines, err := s.videoGuidelines(ctx, p)
+	if err != nil {
+		return "", err
+	}
+	pricing, err := s.revisionPricing(ctx, write, observe, target, guidelines)
 	if err != nil {
 		return "", err
 	}
@@ -190,7 +204,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 		Version: revisionPayloadVersion, ProjectID: id, Write: write, Revision: p.EditPlanRevision,
 		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
 		Composition: p.Composition, Template: recipe,
-		Disclosure: p.Disclosure, Instruction: p.Instruction,
+		Disclosure: p.Disclosure, Instruction: p.Instruction, Guidelines: guidelines,
 		CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, HideDisclosure: p.HideDisclosure,
 		TargetDurationMS: p.TargetDurationMS, SourceAudio: batchSourceAudio(b), Batch: b,
 		Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing},
@@ -215,7 +229,7 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 		}
 	}()
 	var frozen revisionJobPayload
-	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version != revisionPayloadVersion || frozen.ProjectID != project || frozen.Approval == nil {
+	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version < 1 || frozen.Version > revisionPayloadVersion || frozen.ProjectID != project || frozen.Approval == nil {
 		return clip.ErrInvalid
 	}
 	if !clip.ValidRevisionTarget(frozen.Target) || strings.TrimSpace(frozen.Request) == "" {
@@ -258,7 +272,8 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
-		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio}
+		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,
+		Guidelines: frozen.Guidelines}
 	stage = "flow"
 	if frozen.Target == clip.RevisionNarration {
 		stage = "narrate"
