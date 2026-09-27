@@ -10,12 +10,12 @@ import (
 )
 
 // A template of the grammar every clip is written against today: fixed regions,
-// fields, a group and a guide — and no scene, so nothing in it admits or
-// forbids footage (CLIP-136).
+// fields, a group and a composition stage — and no scene, so nothing in it admits
+// or forbids footage (CLIP-136).
 const flowBody = `<clip version="1" intro="b" caption="bold" outro="e" accent="teal">
 <field id="place" label="상호" required="true">가게 이름</field>
 <group id="menu" label="메뉴" min="1"><field id="name" label="메뉴" required="true">메뉴 이름</field><field id="price" label="가격">가격</field></group>
-<guide>음식을 차분하게 보여준다.</guide>
+<stage name="음식">주문한 메뉴가 나오는 순간</stage>
 <text id="badge" kind="fixed" role="badge" position="header" basis="whole">직접 작성</text>
 <text id="hook" kind="fixed" role="hook" basis="output-start" start="0" end="2"><row><value field="place"/></row></text>
 <text id="ending" kind="fixed" role="ending" basis="output-end" start="-2" end="0"><row>또 갈래요</row></text></clip>`
@@ -78,13 +78,13 @@ func TestFlowRequestCarriesWhatTheOrderIsMadeFrom(t *testing.T) {
 	in := flowInput()
 	in.Instruction = "고기 장면을 먼저 보여줘"
 	_, payload, system := flowRequest(t, in, defaultFlow())
-	for _, key := range []string{"project_instruction", "template_guide", "global_values", "item_groups", "source_order", "item_hints", "analyses", "ratio", "target_duration_ms", "fade_ms"} {
+	for _, key := range []string{"project_instruction", "template_outline", "global_values", "item_groups", "source_order", "item_hints", "analyses", "ratio", "target_duration_ms", "fade_ms"} {
 		if _, ok := payload[key]; !ok {
 			t.Fatal("the request lost " + key)
 		}
 	}
-	if payload["project_instruction"] != in.Instruction || !strings.Contains(payload["template_guide"].(string), "차분하게") {
-		t.Fatal("the instruction or the template's own guide is missing", payload["project_instruction"], payload["template_guide"])
+	if payload["project_instruction"] != in.Instruction || !strings.Contains(payload["template_outline"].(string), "1. 음식 — 주문한 메뉴가 나오는 순간") {
+		t.Fatal("the instruction or the template's outline is missing", payload["project_instruction"], payload["template_outline"])
 	}
 	if order := payload["source_order"].([]any); len(order) != 1 || order[0] != "source" {
 		t.Fatal("the sources were not offered in the order they were arranged in", order)

@@ -135,14 +135,6 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 		return out, fail("clip", 1, "missing_footage")
 	}
 	budget := 0
-	for _, g := range d.Guidance {
-		budget += len(g)
-	}
-	for _, s := range d.Sections {
-		for _, g := range s.Guidance {
-			budget += len(g)
-		}
-	}
 	appendElement := func(t Element, c *Cut, cutStart int) *Problem {
 		id := t.ID
 		group, itemID, cutID := "", "", ""
@@ -189,7 +181,7 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 			text := b.String()
 			max := l.CopyChars
 			if kind == "ai" {
-				max = l.GuideChars
+				max = l.GeneratedChars
 			}
 			if scalar(text) > max {
 				return "", fail(t.ID, t.Span.Line, "copy_limit")

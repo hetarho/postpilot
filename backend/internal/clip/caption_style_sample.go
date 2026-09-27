@@ -44,7 +44,7 @@ func CaptionStyleSamplePlan(ratio string, styles []string) (EditPlan, []RenderSo
 	body.WriteString(`</clip>`)
 	limits := composition.Limits{SourceChars: 1 << 15, Nodes: 4 * len(styles), Fields: 1, Items: 1, Cuts: len(styles),
 		Cues: 4 * len(styles), Stages: 1, LabelChars: 40, PromptChars: 200, AnswerChars: 500, CopyChars: 500,
-		GuideChars: 4000, MaxDurationMS: len(styles) * cutMS, AutoInsetMS: 0}
+		GeneratedChars: 4000, MaxDurationMS: len(styles) * cutMS, AutoInsetMS: 0}
 	doc, problem := composition.ReadStored(body.String(), limits)
 	if problem != nil {
 		return EditPlan{}, nil, problem

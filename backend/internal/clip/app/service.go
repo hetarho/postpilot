@@ -31,7 +31,7 @@ func NewService(store clip.Store, limits clip.Limits, sources *SourceService, fi
 	if sources == nil || finalizer == nil {
 		panic("clip: sources and finalizer are required")
 	}
-	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.InstructionChars, limits.MinDurationMS, limits.MaxDurationMS} {
+	for _, n := range []int{limits.NameChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.InstructionChars, limits.MinDurationMS, limits.MaxDurationMS} {
 		if n <= 0 {
 			panic("clip: limits must be positive")
 		}

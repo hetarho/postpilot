@@ -531,10 +531,10 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				"start_ms": 1000, "end_ms": 6000, "observation_refs": refs, "fact_refs": []any{},
 			}}}
 		} else {
-			// The template's own prose now reaches the writer as `template_guide`
-			// rather than as the composition body, so that is what the detailed
-			// input is measured on.
-			if p.mode == "detailed-input" && (len(analyses) != 20 || !strings.Contains(fmt.Sprint(metadata["template_guide"]), "관찰한 장면을 차분히 설명한다") || len(data) <= llm.ClipInputUnits) {
+			// The template's stages reach the writer as `template_outline` rather
+			// than as the composition body, so that is what the detailed input is
+			// measured on.
+			if p.mode == "detailed-input" && (len(analyses) != 20 || !strings.Contains(fmt.Sprint(metadata["template_outline"]), "관찰한 장면을 차분히 설명한다") || len(data) <= llm.ClipInputUnits) {
 				p.reject(w, "detailed input regression was truncated or did not exceed the old allowance")
 				return
 			}
@@ -727,7 +727,7 @@ func releaseCorrelation(a, b []byte) float64 {
 
 // Synthetic content with the same detailed-template plus twenty-observation
 // failure shape, written under the grammar a template must satisfy today: the
-// design selection, two long guides, the badge and the two slots, with no
+// design selection, eight long composition stages, the badge and the two slots, with no
 // footage section, caption or information element of its own (CLIP-4, CLIP-59).
 // No customer XML, facts or footage are committed.
 // The one caption every release fixture writes over its footage.
@@ -735,11 +735,11 @@ const releaseCaption = "천천히 흐르는 장면"
 
 // releaseBody is the outline the ordinary release modes write against: three
 // required values, an intro and an outro that read them, and — for the
-// multi-source modes — the guidance a template may carry (CLIP-4).
-func releaseBody(guide string) string {
+// multi-source modes — one composition stage (CLIP-4, CLIP-141).
+func releaseBody(stage string) string {
 	body := `<clip version="1"><field id="name" label="상호" required="true">가게 이름</field><field id="where" label="위치" required="true">어디</field><field id="place" label="place" required="true">where</field>`
-	if guide != "" {
-		body += `<guide>` + guide + `</guide>`
+	if stage != "" {
+		body += `<stage name="흐름">` + stage + `</stage>`
 	}
 	return body + `<text id="opening" kind="fixed" role="hook"><row><value field="name"/></row></text><text id="closing" kind="fixed" role="ending"><row><value field="name"/></row><row><value field="where"/></row></text></clip>`
 }
@@ -750,5 +750,9 @@ func releaseValues() *clip.CompositionInputs {
 }
 
 func releaseDetailedBody() string {
-	return `<clip version="1"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header">검증용 영상</text><text id="opening" kind="fixed" role="hook"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
+	var stages strings.Builder
+	for i := range clip.CompositionStages {
+		fmt.Fprintf(&stages, `<stage name="단계 %d">%s</stage>`, i+1, strings.Repeat("관찰한 장면을 차분히 설명한다. ", 11))
+	}
+	return `<clip version="1">` + stages.String() + `<text id="label" kind="fixed" role="badge" position="header">검증용 영상</text><text id="opening" kind="fixed" role="hook"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
 }

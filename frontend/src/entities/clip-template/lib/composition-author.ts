@@ -75,7 +75,7 @@ export function compositionOutline(root: CompositionNode): CompositionOutlineRow
 }
 
 /** The entries the palette can add to the outline: the information to collect,
- *  a named composition stage, one invisible guide, and the visible text — an
+ *  a named composition stage, and the visible text — an
  *  intro or outro line, a caption, the disclosure badge — each declaring its
  *  words and nothing about where or when it is drawn (CLIP-59, CLIP-112). */
 export function newCompositionNode(name: string, label: string): CompositionNode {
@@ -87,8 +87,6 @@ export function newCompositionNode(name: string, label: string): CompositionNode
       return compositionNode(name, { id, label: '', min: '0' }, [
         newCompositionNode('field', label),
       ])
-    case 'guide':
-      return compositionNode(name, {}, [compositionLiteral('')])
     case 'stage':
       return compositionNode(name, { name: label }, [compositionLiteral('')])
     case 'hook':

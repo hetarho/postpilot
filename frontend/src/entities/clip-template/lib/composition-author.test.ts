@@ -104,6 +104,22 @@ describe('composition authoring contract', () => {
         // The retired grammar is taught nowhere (CLIP-113).
         for (const gone of ['outro E 22/6/18', 'basis="whole|output-start|output-end"', 'slot'])
           expect(guide).not.toContain(gone)
+        // No guide entry, no alignment and no footage or timing ceilings (CLIP-59, CLIP-65,
+        // CLIP-113), and a stage names what it shows, never how (CLIP-185).
+        for (const gone of [
+          '<guide',
+          'guide =',
+          'align=',
+          'cuts=',
+          'cues=',
+          'maxDurationMs=',
+          'autoInsetMs=',
+        ])
+          expect(guide).not.toContain(gone)
+        expect(guide).toContain(
+          'stage(name) = one line naming what the stage shows — never how to write or show it',
+        )
+        expect(guide).toContain('generatedChars=4000')
         const doc = parseClipComposition(CLIP_COMPOSITION_EXAMPLE)
         expect(doc.sections).toEqual([])
         // Sample values must fit the example's own maxima (score is 6 characters).

@@ -170,18 +170,24 @@ export function CompositionTextControls({
       <Typography variant="body" className="text-content-secondary">
         {t(a.kind === 'ai' ? 'composition.aiHelp' : 'composition.fixedHelp')}
       </Typography>
-      <CompositionSelect
-        label={t('composition.positionLabel')}
-        value={a.position ?? 'auto'}
-        options={options('position', ['auto', 'top', 'upper_mid', 'lower_mid', 'bottom', 'header'])}
-        onChange={(v) => attr('position', v)}
-      />
-      <CompositionSelect
-        label={t('composition.alignLabel')}
-        value={a.align ?? 'center'}
-        options={options('align', ['left', 'center', 'right'])}
-        onChange={(v) => attr('align', v)}
-      />
+      {/* Order is the only position an entry declares (CLIP-65, CLIP-112): a caption takes its
+          place from the narration and its look from the project's design, and the badge declares
+          only where it stands. Nothing here offers an alignment. */}
+      {a.role === 'badge' && (
+        <CompositionSelect
+          label={t('composition.positionLabel')}
+          value={a.position ?? 'auto'}
+          options={options('position', [
+            'auto',
+            'top',
+            'upper_mid',
+            'lower_mid',
+            'bottom',
+            'header',
+          ])}
+          onChange={(v) => attr('position', v)}
+        />
+      )}
       <CharsInput
         max={compositionPositionChars(a.role)}
         value={a.chars ?? ''}

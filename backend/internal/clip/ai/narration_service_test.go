@@ -78,7 +78,7 @@ func TestNarrationRequestCarriesTheResolvedFlowAndNothingToChangeIt(t *testing.T
 	in := narrationInput(t)
 	in.Instruction = "고기 이야기를 해줘"
 	_, payload, system := narrate(t, in, narrationResponse(narrationCaption("고기를 올렸어요", 1000, 4000)))
-	for _, key := range []string{"project_instruction", "template_guide", "global_values", "item_groups", "item_hints", "analyses", "generated_region_slots", "cuts", "output_duration_ms"} {
+	for _, key := range []string{"project_instruction", "template_outline", "global_values", "item_groups", "item_hints", "analyses", "generated_region_slots", "cuts", "output_duration_ms"} {
 		if _, ok := payload[key]; !ok {
 			t.Fatal("the narration request lost " + key)
 		}

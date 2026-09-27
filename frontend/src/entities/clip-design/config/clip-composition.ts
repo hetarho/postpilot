@@ -12,7 +12,7 @@ export const CLIP_COMPOSITION_LIMITS = {
   promptChars: 200,
   answerChars: 500,
   copyChars: 500,
-  guideChars: 4000,
+  generatedChars: 4000,
   maxDurationMs: 90000,
   autoInsetMs: 120,
 } as const

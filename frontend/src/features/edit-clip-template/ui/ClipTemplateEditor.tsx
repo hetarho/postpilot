@@ -110,7 +110,7 @@ export function ClipTemplateEditor({
   }
   const copy = async (format: boolean) => {
     setSaved(false)
-    const text = format ? clipCompositionGuide(body) : body
+    const text = format ? clipCompositionGuide() : body
     const result = await copyText(text)
     setCopyStatus(t(result.copied ? 'composition.copied' : 'composition.copyManually'))
     if (!result.copied) {

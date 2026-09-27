@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -113,25 +112,13 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	// CDS-37's length targets and CDS-36's transitions are the caller's, not the
 	// model's: the scene the observer reported decides both, so the same input
 	// joins the same cuts the same way (CDS-7). No template or category imposes
-	// a range of its own; authored guidance replaces the targets instead.
-	authoredRhythm := false
-	if nativeComposition(in) {
-		doc, problem := composition.Parse(in.Composition.Snapshot.Body, cfg.Template.Composition)
-		if problem != nil {
-			return problem
-		}
-		authoredRhythm = len(doc.Guidance) > 0
-		for _, section := range doc.Sections {
-			authoredRhythm = authoredRhythm || len(section.Guidance) > 0
-		}
-	}
+	// a range of its own, and a template holds form alone (CLIP-185), so nothing
+	// it carries replaces the targets.
 	scenes := make([]string, len(plan.Cuts))
 	for i, c := range plan.Cuts {
 		scenes[i], _ = clip.CutScene(c, analyses[c.SourceID])
 	}
-	if !authoredRhythm {
-		holdCutLengths(plan, analyses, scenes)
-	}
+	holdCutLengths(plan, analyses, scenes)
 	for i, ms := range design.Transitions(scenes) {
 		plan.Cuts[i].TransitionMS = ms
 	}
@@ -161,9 +148,6 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	// cut has room left there, the second pass uses all the observed footage.
 	// A reachable timeline is never refused for a rhythm target (CDS-37).
 	for _, hard := range []bool{false, true} {
-		if authoredRhythm && !hard {
-			continue
-		}
 		room := make([]int, len(plan.Cuts))
 		for i, c := range plan.Cuts {
 			ceiling := cutCeiling(plan, analyses, scenes, i, hard)

@@ -16,7 +16,6 @@ import (
 const nativeBody = `<clip version="1" intro="b" caption="bold" outro="e" accent="teal">
 <field id="fee" label="입장료"/>
 <group id="menu"><field id="name" label="메뉴" required="true"/><field id="price" label="가격"/><field id="extra" label="설명"/><field id="experience" label="경험"/></group>
-<guide>음식을 긴 장면으로 차분하게 설명한다. 방문한 척하지 않는다.</guide>
 <text id="authored" kind="fixed" role="badge" position="header" basis="whole">  &lt;직접 작성&gt; &amp; 그대로  </text>
 <repeat for="menu"><scene id="dish" scope="item">
 <text id="sticker" kind="fixed" role="info" basis="cut"><value field="menu.name"/>: <value field="menu.price"/></text>
@@ -184,7 +183,6 @@ func TestNativeWriterBoundsAndFrozenAdmissionBeforeProvider(t *testing.T) {
 const admittedBody = `<clip version="1" intro="b" caption="bold" outro="e">
 <group id="menu"><field id="name" label="메뉴" required="true"/></group>
 <group id="extra"><field id="note" label="메모"/></group>
-<guide>음식을 차분하게 설명한다.</guide>
 <repeat for="menu"><scene id="dish" scope="item">
 <text id="copy" kind="ai" role="caption" basis="cut">관찰한 <value field="menu.name"/>을 설명한다.</text>
 </scene></repeat>

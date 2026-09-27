@@ -5,9 +5,9 @@ package composition
 import "strconv"
 
 type Limits struct {
-	SourceChars, Nodes, Fields, Items, Cuts, Cues, Stages       int
-	LabelChars, PromptChars, AnswerChars, CopyChars, GuideChars int
-	MaxDurationMS, AutoInsetMS                                  int
+	SourceChars, Nodes, Fields, Items, Cuts, Cues, Stages           int
+	LabelChars, PromptChars, AnswerChars, CopyChars, GeneratedChars int
+	MaxDurationMS, AutoInsetMS                                      int
 }
 
 // Span offsets count Unicode scalar values, not bytes or UTF-16 code units.
@@ -65,9 +65,9 @@ type Group struct {
 	Span      Span
 }
 
-// Stage is one named composition stage (CLIP-141): a short name and one line of
-// intent, kept in document order. It is guidance for the flow call only — it
-// admits no footage and forbids none.
+// Stage is one named composition stage (CLIP-141): a short name and one line
+// saying what the stage is about, kept in document order. The flow call reads the
+// stages as the clip's form — they admit no footage and forbid none.
 type Stage struct {
 	Name, Intent string
 	Span         Span
@@ -91,7 +91,6 @@ type Element struct {
 }
 type Section struct {
 	ID, Scope, Repeat string
-	Guidance          []string
 	Elements          []Element
 	Span              Span
 }
@@ -126,7 +125,6 @@ type Document struct {
 	Accent, Pace string
 	Fields       []Field
 	Groups       []Group
-	Guidance     []string
 	Stages       []Stage
 	Sections     []Section
 	Elements     []Element
@@ -177,7 +175,7 @@ type ResolvedRow struct{ Role, Text string }
 type ResolvedElement struct {
 	InstanceID, CutID, GroupID, ItemID string
 	Element                            Element
-	Text                               string // Fixed output text, or AI guidance when Element.Kind == "ai".
+	Text                               string // Fixed output text, or what the writer writes there when Element.Kind == "ai".
 	Rows                               []ResolvedRow
 	Facts                              []Fact
 	StartMS, EndMS                     int

@@ -3,12 +3,16 @@ package db
 import (
 	"io/fs"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/pressly/goose/v3"
 )
+
+// guides0054 matches a stored guide entry, which 0093 removes (CLIP-59).
+var guides0054 = regexp.MustCompile(`(?s)<guide>.*?</guide>|<guide/>`)
 
 func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 	d := openTemp(t)
@@ -51,7 +55,7 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 	if _, err = provider.UpTo(t.Context(), 54); err != nil {
 		t.Fatal(err)
 	}
-	limits := composition.Limits{SourceChars: 16000, Nodes: 1000, Fields: 10, Items: 20, Cuts: 100, Cues: 1000, Stages: 8, LabelChars: 100, PromptChars: 4000, AnswerChars: 4000, CopyChars: 4000, GuideChars: 12000, MaxDurationMS: 90000}
+	limits := composition.Limits{SourceChars: 16000, Nodes: 1000, Fields: 10, Items: 20, Cuts: 100, Cues: 1000, Stages: 8, LabelChars: 100, PromptChars: 4000, AnswerChars: 4000, CopyChars: 4000, GeneratedChars: 12000, MaxDurationMS: 90000}
 	for id, body := range map[string]string{"restaurant": restaurant, "literal": original, "selected": selected} {
 		want := body
 		if id == "restaurant" {
@@ -72,7 +76,10 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 		if got != want || styles != "[]" {
 			t.Fatalf("%s changed authored bytes\ngot: %s\nwant: %s", id, got, want)
 		}
-		doc, p := composition.ReadStored(got, limits)
+		// The bytes are 0054's; the reader is today's, which has no guide entry since 0093
+		// removed every stored one, so it reads the body as 0093 leaves it.
+		readable := guides0054.ReplaceAllString(got, "")
+		doc, p := composition.ReadStored(readable, limits)
 		if p != nil {
 			t.Fatal(id, p)
 		}
@@ -80,7 +87,7 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 			if doc.Sections[len(doc.Sections)-1].Elements[1].ID != "closing_verdict" {
 				t.Fatal("ending moved")
 			}
-			if _, p := composition.Parse(got, limits); p == nil || p.Reason != "invalid_skeleton" || p.ElementID != "closing_verdict" {
+			if _, p := composition.Parse(readable, limits); p == nil || p.Reason != "invalid_skeleton" || p.ElementID != "closing_verdict" {
 				t.Fatal(p)
 			}
 		}

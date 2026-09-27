@@ -428,7 +428,7 @@ func TestPreparationChecksKnownPromptSizeBeforeAnyPaidWork(t *testing.T) {
 		fmt.Fprintf(&body, `<field id="%s" label="%d">%s</field>`, id, i, strings.Repeat("나", 200))
 		values[id] = strings.Repeat("다", 500)
 	}
-	body.WriteString("<guide>" + strings.Repeat("가", 4000) + "</guide></clip>")
+	body.WriteString(`<text id="big" kind="ai" role="caption">` + strings.Repeat("가", 4000) + "</text></clip>")
 	in.Template = clip.Recipe{Name: "가장 큰 템플릿", CompositionBody: body.String()}
 	in.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: body.String(), TemplateID: "largest"},
 		Inputs: clip.CompositionInputs{Values: values, Items: map[string][]composition.Item{}}}

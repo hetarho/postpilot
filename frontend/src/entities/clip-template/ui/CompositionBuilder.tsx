@@ -154,14 +154,6 @@ export function CompositionBuilder({
             />
           </>
         )}
-        {name === 'guide' && (
-          <CompositionInput
-            label={t('composition.guidance')}
-            value={node.children.map((n) => n.text).join('')}
-            multiline
-            onChange={(v) => change({ ...node, children: [compositionLiteral(v)] })}
-          />
-        )}
         {name === 'text' && (
           <CompositionTextControls node={node} bindings={bindings} onChange={change} />
         )}
@@ -231,7 +223,7 @@ export function CompositionBuilder({
       <Typography variant="meta">{t('composition.projectSettings')}</Typography>
       {activeEditor}
       {outline}
-      {addButtons(root, ['field', 'group', 'stage', 'guide', 'hook', 'caption', 'ending', 'badge'])}
+      {addButtons(root, ['field', 'group', 'stage', 'hook', 'caption', 'ending', 'badge'])}
     </div>
   )
 }

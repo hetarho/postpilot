@@ -90,7 +90,7 @@ func optional(n *Node, key, fallback string) string {
 	return v
 }
 func validLimits(l Limits) bool {
-	for _, v := range []int{l.SourceChars, l.Nodes, l.Fields, l.Items, l.Cuts, l.Cues, l.Stages, l.LabelChars, l.PromptChars, l.AnswerChars, l.CopyChars, l.GuideChars, l.MaxDurationMS} {
+	for _, v := range []int{l.SourceChars, l.Nodes, l.Fields, l.Items, l.Cuts, l.Cues, l.Stages, l.LabelChars, l.PromptChars, l.AnswerChars, l.CopyChars, l.GeneratedChars, l.MaxDurationMS} {
 		if v <= 0 {
 			return false
 		}
@@ -135,8 +135,8 @@ func ReadStored(source string, limits Limits) (*Document, *Problem) {
 }
 
 // ParseTemplate is the grammar a TEMPLATE body must satisfy before it is saved
-// (CLIP-4, CLIP-59): the fixed regions — intro and outro slots and the badge —
-// plus fields, groups and invisible guides. Footage sections, scene-bound text
+// (CLIP-4, CLIP-59): the outline's stages and visible entries — intro and outro
+// slots, captions and the badge — plus fields and groups. Footage sections, scene-bound text
 // and cut-relative timing belong to the flow and the narration now, so a body
 // still declaring them is refused with the construct named. Frozen project
 // snapshots keep reading through Parse and ReadStored exactly as before
@@ -185,13 +185,15 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 	}
 	// `intro`, `caption` and `outro` are still accepted on the root so every
 	// body saved before CLIP r33 opens, and they decide nothing: the presets a
-	// clip renders in are the project's (CLIP-14, CLIP-139, CLIP-144).
+	// clip renders in are the project's (CLIP-14, CLIP-139, CLIP-144). A stored
+	// `accent` or `pace` outside its list is a design attribute the grammar has no
+	// use for, so it is read as absent rather than refusing the body (CLIP-113).
 	d := &Document{Source: source, Root: root, Accent: optional(root, "accent", ""), Pace: optional(root, "pace", "steady")}
 	if !slices.Contains([]string{"", "coral", "amber", "lime", "teal", "blue", "violet", "pink"}, d.Accent) {
-		return nil, issue(root, "invalid_accent")
+		d.Accent = ""
 	}
 	if d.Pace != "steady" && d.Pace != "rapid" {
-		return nil, issue(root, "invalid_pace")
+		d.Pace = "steady"
 	}
 	children, e := nodes(root)
 	if e != nil {
@@ -298,19 +300,6 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 			}
 		}
 	}
-	guide := func(n *Node) (string, *Problem) {
-		if e := attrs(n); e != nil {
-			return "", e
-		}
-		v, e := content(n)
-		if e != nil {
-			return "", e
-		}
-		if scalar(v) > limits.GuideChars {
-			return "", issue(n, "guide_limit")
-		}
-		return v, nil
-	}
 	var section func(*Node, string) *Problem
 	section = func(n *Node, repeat string) *Problem {
 		if e := attrs(n, "id", "scope"); e != nil {
@@ -333,12 +322,6 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 		}
 		for _, c := range children {
 			switch c.Name {
-			case "guide":
-				v, e := guide(c)
-				if e != nil {
-					return e
-				}
-				s.Guidance = append(s.Guidance, v)
 			case "text":
 				if e := claim(c, ""); e != nil {
 					return e
@@ -358,12 +341,6 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 	for _, n := range children {
 		switch n.Name {
 		case "field", "group":
-		case "guide":
-			v, e := guide(n)
-			if e != nil {
-				return nil, e
-			}
-			d.Guidance = append(d.Guidance, v)
 		case "stage":
 			if e = readStage(n, d, limits); e != nil {
 				return nil, e
@@ -422,7 +399,7 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 }
 
 // readStage reads one named composition stage (CLIP-141): a short name and one
-// line of intent, bounded by the counts a label and a prompt already have and
+// line saying what the stage is about, bounded by the counts a label and a prompt already have and
 // capped in number so a body cannot script the clip stage by stage. A stage is
 // a property of the whole clip, so it lives at the root only — inside a scene
 // or a repetition `stage` stays an unknown tag.
@@ -588,6 +565,16 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 			return t, issue(n, "invalid_skeleton")
 		}
 	}
+	// Order is the only position a template entry declares (CLIP-65, CLIP-112):
+	// a caption's position and align and the badge's align are the project's
+	// design, so a template body carrying them is read as if it did not. The
+	// badge keeps its position, which it declares with its visibility.
+	if template && t.Role == "caption" {
+		t.Position, t.Align = "auto", "center"
+	}
+	if template && t.Role == "badge" {
+		t.Align = "center"
+	}
 	if !slices.Contains([]string{"auto", "top", "upper_mid", "lower_mid", "bottom", "header"}, t.Position) || t.Position == "header" && t.Role != "info" && t.Role != "badge" {
 		return t, issue(n, "invalid_position")
 	}
@@ -750,7 +737,7 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	for _, p := range append([]Row{{Kind: t.Kind, Parts: t.Parts}}, t.Rows...) {
 		max := l.CopyChars
 		if p.Kind == "ai" {
-			max = l.GuideChars
+			max = l.GeneratedChars
 		}
 		count := 0
 		for _, part := range p.Parts {

@@ -76,7 +76,6 @@ const summary = (d: ClipComposition) => ({
   })),
   sections: d.sections.map(({ id, scope, repeat }) => ({ id, scope, repeat })),
   elements: d.elements.map((e) => e.id),
-  guidance: d.guidance,
   stages: d.stages.map(({ name, intent }) => ({ name, intent })),
 })
 const resolution = (t: CompositionTimeline) =>
@@ -91,9 +90,9 @@ const resolution = (t: CompositionTimeline) =>
   }))
 
 describe('shared portable composition contract', () => {
-  it('addresses repeated field names by group and guides by exact node span', () => {
+  it('addresses repeated field names by group and stages by exact node span', () => {
     const source =
-      '<clip version="1" intro="b" caption="bold" outro="e"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
+      '<clip version="1" intro="b" caption="bold" outro="e"><stage name="외관">keep</stage><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
     let d = parseClipComposition(source)
     const replacement: CompositionNode = {
       name: 'field',
@@ -104,12 +103,12 @@ describe('shared portable composition contract', () => {
     }
     d = replaceCompositionNode(d, 'a.price', replacement)
     expect(d.fields.map((f) => f.label)).toEqual(['changed', 'B'])
-    const guide = d.root.children[0]
-    d = replaceCompositionSpan(d, guide.span, {
-      ...guide,
-      children: [{ ...guide.children[0], text: 'new guidance' }],
+    const stage = d.root.children[0]
+    d = replaceCompositionSpan(d, stage.span, {
+      ...stage,
+      children: [{ ...stage.children[0], text: '간판과 입구' }],
     })
-    expect(d.guidance).toEqual(['new guidance'])
+    expect(d.stages.map((s) => s.intent)).toEqual(['간판과 입구'])
     expect(() =>
       replaceCompositionSpan(d, { start: 1, end: 3, line: 1 }, replacement),
     ).toThrowError('unknown_element')
@@ -119,7 +118,6 @@ describe('shared portable composition contract', () => {
     expect(d.sections).toEqual([])
     expect(d.elements.map((e) => e.id)).toEqual(['disclosure_badge', 'intro', 'taste', 'closing'])
     expect(d.groups.map((g) => g.id)).toEqual(['menu'])
-    expect(d.guidance).toHaveLength(1)
     // The example shows the outline mixing its kinds in one order (CLIP-112).
     expect(d.outline.map((e) => e.kind)).toEqual(['text', 'text', 'stage', 'stage', 'text', 'text'])
     expect(d.stages.map((s) => s.name)).toEqual(['가게 앞', '음식'])
@@ -164,8 +162,9 @@ describe('shared portable composition contract', () => {
         if (c.resolved !== undefined) expect(resolution(timeline!)).toEqual(c.resolved)
         if (c.resolvedCount !== undefined) expect(timeline!.elements).toHaveLength(c.resolvedCount)
       }
+      // A template body round-trips through the template grammar it was read with.
       const canonical = serializeCompositionNode(d.root),
-        again = parseClipComposition(canonical)
+        again = c.template ? parseClipTemplate(canonical) : parseClipComposition(canonical)
       expect(serializeCompositionNode(again.root)).toBe(canonical)
       if (c.inputs)
         expect(
@@ -174,7 +173,7 @@ describe('shared portable composition contract', () => {
     })
   it('changes only the selected subtree, preserving original Unicode, quotes and whitespace', () => {
     const source =
-      ' \n<clip version=\'1\' intro="b" caption="bold" outro="e">\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id=\'copy\' kind=\'fixed\' role=\'caption\' basis=\'whole\'>old</text>\n<text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>\n'
+      ' \n<clip version=\'1\' intro="b" caption="bold" outro="e">\n <stage name="🧑‍🍳">keep &amp; spacing</stage>\n <text id=\'copy\' kind=\'fixed\' role=\'caption\' basis=\'whole\'>old</text>\n<text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>\n'
     const d = parseClipComposition(source),
       node = d.root.children.find((n) => n.name === 'text')!
     const replacement: CompositionNode = {

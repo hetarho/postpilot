@@ -31,12 +31,12 @@ func legacyTemplate(t *testing.T, st *store.Store, user, name, body string) clip
 func TestTemplateSaveRefusesSections(t *testing.T) {
 	s, _, _ := setup(t)
 	ctx := context.Background()
-	sections := `<clip version="1"><field id="place" label="장소"/><guide>말투</guide><scene id="exterior" scope="context"><guide>가장 이른 클립으로 시작</guide><text id="c" kind="ai" role="caption" basis="cut">보이는 것 하나</text></scene><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
+	sections := `<clip version="1"><field id="place" label="장소"/><scene id="exterior" scope="context"><text id="c" kind="ai" role="caption" basis="cut">보이는 것 하나</text></scene><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	var problem *composition.Problem
 	if _, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "sections", CompositionBody: sections}); err == nil || !asProblem(err, &problem) || problem.Reason != "unsupported_section" || problem.ElementID != "exterior" {
 		t.Fatalf("section template was saved: %v", err)
 	}
-	clean := `<clip version="1"><field id="place" label="장소"/><guide>말투</guide><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
+	clean := `<clip version="1"><field id="place" label="장소"/><stage name="외관">가게 입구</stage><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	saved, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "clean", CompositionBody: clean})
 	if err != nil || saved.CompositionBody != clean {
 		t.Fatal(saved, err)

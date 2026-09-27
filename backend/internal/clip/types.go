@@ -23,9 +23,9 @@ var (
 )
 
 type Limits struct {
-	Composition                                                   composition.Limits
-	NameChars, GuidanceChars, FieldCount, LabelChars, PromptChars int
-	TitleChars, AnswerChars, MinDurationMS, MaxDurationMS         int
+	Composition                                           composition.Limits
+	NameChars, FieldCount, LabelChars, PromptChars        int
+	TitleChars, AnswerChars, MinDurationMS, MaxDurationMS int
 	// The project instruction's own maximum (CLIP-121), counted CDS-20's way
 	// like every other BoundedText text.
 	InstructionChars int

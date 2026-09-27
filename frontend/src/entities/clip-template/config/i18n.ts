@@ -6,8 +6,6 @@ export const i18n = {
   ko: {
     composition: {
       design: {
-        selectedSource:
-          '현재 템플릿 — 아래 선택한 디자인을 유지하고 슬롯 문구와 본문 영역만 편집하세요.',
         title: '영상 디자인',
         help: '인트로·자막·아웃트로 디자인을 고르면 본문을 편집할 수 있어요.',
         intro: '인트로 디자인',
@@ -66,18 +64,15 @@ export const i18n = {
       required: '필수로 받기',
       requiredSuffix: '(필수)',
       optionalSuffix: '(선택)',
-      guidance: '화면에 표시하지 않는 구성 안내',
       stageName: '단계 이름',
-      stageIntent: '이 단계에서 보여줄 것',
-      stageHint:
-        '찍힌 영상이 허락하는 만큼만 따라가요. 해당하는 영상이 없으면 그 단계는 건너뛰어요.',
+      stageIntent: '이 단계에 오는 것',
+      stageHint: '무엇을 보여주는 단계인지 적어요. 어떻게 보여줄지는 영상 지침으로 정해요.',
       kindLabel: '문구 작성 방식',
       roleLabel: '문구 용도',
       positionLabel: '화면 위치',
-      alignLabel: '글자 정렬',
       timingLabel: '표시 구간 기준',
       auto: '자동',
-      aiHelp: 'AI가 실제 장면과 연결된 답변을 바탕으로 쓸 문구의 방향을 적어 주세요.',
+      aiHelp: '이 자리에 무엇이 오는지 적어 주세요. 어떻게 쓸지는 영상 지침으로 정해요.',
       fixedHelp: '입력한 글자와 연결한 답변을 그대로 보여줘요.',
       explicitCut: '컷 안에서 시간을 직접 지정',
       start: '시작 (초)',
@@ -137,11 +132,6 @@ export const i18n = {
         bottom: '아래쪽',
         header: '상단 정보 영역',
       },
-      align: {
-        left: '왼쪽',
-        center: '가운데',
-        right: '오른쪽',
-      },
       basis: {
         whole: '영상 전체',
         'output-start': '영상 시작부터',
@@ -166,7 +156,6 @@ export const i18n = {
         group: '항목 묶음 {{n}}',
         scene: '장면 구성 {{n}}',
         repeat: '반복 구성 {{n}}',
-        guide: '구성 안내 {{n}}',
         stage: '구성 단계 {{n}}',
       },
       projectSettings:
@@ -174,7 +163,6 @@ export const i18n = {
       add: {
         field: '정보 추가',
         group: '항목 묶음 추가',
-        guide: '구성 안내 추가',
         stage: '구성 단계 추가',
         scene: '장면 추가',
         repeat: '반복 추가',
@@ -207,7 +195,6 @@ export const i18n = {
           '정보(info) 문구는 더 이상 템플릿에 쓰지 않아요. 화면에 남길 값은 자막으로 적어 주세요.',
         unsupported_basis:
           '템플릿은 표시 시간을 적지 않아요. 순서대로 놓으면 각 문구가 제자리에 나오고, 시간은 ② 클립 다듬기에서 바꿔요.',
-        guide_limit: '안내문이 너무 길어요. 안내문 길이 제한 안으로 줄여 주세요.',
         stage_limit:
           '구성 단계는 이름과 한 줄 설명이 모두 있어야 하고, 길이와 개수 제한 안에 들어와야 해요.',
         unknown_attribute: '지원하지 않는 속성이 있어요. 형식 안내를 확인해 주세요.',
@@ -219,7 +206,7 @@ export const i18n = {
           '{{label}}은(는) {{max}}자까지예요. 지금 {{actual}}자라서 그대로 만들 수 없어요.',
       },
       guide:
-        '아래 문법으로 postpilot 영상 템플릿 원문만 작성하세요. 외부 AI에서 만든 원문을 붙여넣어 사용할 수 있습니다. 원문 작성·복사·해석·예시 미리보기에는 모델 호출이나 크레딧 사용이 없습니다. 템플릿은 클립이 처음부터 끝까지 무엇을 보여주는지를 적은 순서 목록입니다. 적은 순서가 곧 등장 순서이고, 그 밖의 위치나 시간은 적지 않습니다. 장면 순서와 컷 리듬, 각 자막이 나오는 시각은 클립을 만들 때 프로젝트 지침과 실제 영상이 정하고, 인트로·아웃트로 디자인과 자막 스타일, 자막 속도, 강조색은 클립마다 ① 클립 생성에서 고릅니다. 필수 가격이나 자동 광고 문구, CTA는 없습니다.\n\n문법:\n{{grammar}}\n\n상한(문자 수는 유니코드 글자 수, Ms는 밀리초):\n{{limits}}\n\nfield의 label은 화면 이름, 본문은 입력 안내입니다. ID로 연결하므로 이름 변경이 항목의 정체성을 바꾸지 않습니다. 선택 정보가 비어 있으면 그 정보에 연결된 문구가 생략됩니다. 인트로·아웃트로에서는 그 줄만 비고 나머지 줄은 자리를 지킵니다. 필수 정보가 비면 생성을 시작할 수 없습니다. 각 항목의 가격·통화·단위·가격 기준은 같은 항목 안에 적고 다른 항목에 섞지 마세요. 항목의 이름과 가격은 화면 라벨이 아니라 내레이션이 말하는 사실이 되고, 숫자는 입력된 값과 정확히 일치할 때만 자막에 들어갑니다. fixed 문구는 value 치환을 제외하면 공백까지 그대로 보존합니다. guide는 출력에 보이지 않으며 말투와 시점처럼 매번 반복하기 귀찮은 안내를 담습니다. 프로젝트 지침이 먼저이고 guide는 그 뒤에 붙습니다.\n\n예시(입력 화면에서 메뉴 항목을 2개 이상 추가할 수 있음):\n{{example}}',
+        '아래 문법으로 postpilot 영상 템플릿 원문만 작성하세요. 외부 AI에서 만든 원문을 붙여넣어 사용할 수 있습니다. 원문 작성·복사·해석·예시 미리보기에는 모델 호출이나 크레딧 사용이 없습니다. 템플릿은 클립이 처음부터 끝까지 무엇을 보여주는지를 적은 순서 목록입니다. 적은 순서가 곧 등장 순서이고, 그 밖의 위치나 시간은 적지 않습니다. 장면 순서와 컷 리듬, 각 자막이 나오는 시각은 클립을 만들 때 프로젝트 지침과 실제 영상이 정하고, 인트로·아웃트로 디자인과 자막 스타일, 자막 속도, 강조색은 클립마다 ① 클립 생성에서 고릅니다. 필수 가격이나 자동 광고 문구, CTA는 없습니다.\n\n문법:\n{{grammar}}\n\n상한(문자 수는 유니코드 글자 수, Ms는 밀리초):\n{{limits}}\n\nfield의 label은 화면 이름, 본문은 입력 안내입니다. ID로 연결하므로 이름 변경이 항목의 정체성을 바꾸지 않습니다. 선택 정보가 비어 있으면 그 정보에 연결된 문구가 생략됩니다. 인트로·아웃트로에서는 그 줄이 앞의 간격과 함께 빠지고, 나머지 줄은 순서를 지킵니다. 필수 정보가 비면 생성을 시작할 수 없습니다. 각 항목의 가격·통화·단위·가격 기준은 같은 항목 안에 적고 다른 항목에 섞지 마세요. 항목의 이름과 가격은 화면 라벨이 아니라 내레이션이 말하는 사실이 되고, 숫자는 입력된 값과 정확히 일치할 때만 자막에 들어갑니다. fixed 문구는 value 치환을 제외하면 공백까지 그대로 보존합니다. stage의 한 줄과 ai 문구에는 그 자리에 무엇이 오는지만 적고, 어떻게 쓰거나 보여줄지는 적지 마세요. 말투·강조·이야기 순서는 영상 지침이 정합니다.\n\n예시(입력 화면에서 메뉴 항목을 2개 이상 추가할 수 있음):\n{{example}}',
     },
     templates: '영상 템플릿',
     disclosure: {
@@ -233,8 +220,6 @@ export const i18n = {
   en: {
     composition: {
       design: {
-        selectedSource:
-          'Current template — keep its selected design and edit only slot text and the content region.',
         title: 'Video design',
         help: 'Choose the intro, caption and outro before editing the body.',
         intro: 'Intro design',
@@ -291,18 +276,15 @@ export const i18n = {
       required: 'Require this field',
       requiredSuffix: '(required)',
       optionalSuffix: '(optional)',
-      guidance: 'Instructions hidden from the output',
       stageName: 'Stage name',
-      stageIntent: 'What this stage shows',
-      stageHint:
-        'Followed only as far as the footage allows. A stage nothing was filmed for is skipped.',
+      stageIntent: 'What this stage holds',
+      stageHint: 'Say what this stage shows; how to show it belongs to video guidelines.',
       kindLabel: 'Copy authoring',
       roleLabel: 'Copy purpose',
       positionLabel: 'Screen position',
-      alignLabel: 'Text alignment',
       timingLabel: 'Visibility reference',
       auto: 'Automatic',
-      aiHelp: 'Describe the copy AI should write from this scene and its matching answers.',
+      aiHelp: 'Say what stands here; how to write it belongs to video guidelines.',
       fixedHelp: 'Show your exact text and explicitly linked answers.',
       explicitCut: 'Set times within this cut',
       start: 'Start (seconds)',
@@ -361,11 +343,6 @@ export const i18n = {
         bottom: 'Bottom',
         header: 'Header information area',
       },
-      align: {
-        left: 'Left',
-        center: 'Center',
-        right: 'Right',
-      },
       basis: {
         whole: 'Whole output',
         'output-start': 'From output start',
@@ -390,7 +367,6 @@ export const i18n = {
         group: 'Item group {{n}}',
         scene: 'Scene section {{n}}',
         repeat: 'Repetition {{n}}',
-        guide: 'Guidance {{n}}',
         stage: 'Composition stage {{n}}',
       },
       projectSettings:
@@ -398,7 +374,6 @@ export const i18n = {
       add: {
         field: 'Add field',
         group: 'Add item group',
-        guide: 'Add guidance',
         stage: 'Add composition stage',
         scene: 'Add scene',
         repeat: 'Add repetition',
@@ -431,7 +406,6 @@ export const i18n = {
           'Info texts are no longer part of a template. Write what should stay on screen as a caption.',
         unsupported_basis:
           'A template declares no timing. Entries appear in the order you place them, and ② is where their times change.',
-        guide_limit: 'The guide is too long. Shorten it to the guide limit.',
         stage_limit:
           'A composition stage needs both a name and one line of intent, within the length and count limits.',
         unknown_attribute: 'Unsupported attribute. Check the format guide.',
@@ -441,7 +415,7 @@ export const i18n = {
         answer_limit_field: '{{label}} holds {{max}} characters and currently has {{actual}}.',
       },
       guide:
-        "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. A template is an ordered outline of what the clip shows from beginning to end: the order you write is the order it shows, and nothing else about where or when is written here. Footage order, cut rhythm and every caption's time are decided at generation from the project instruction and the observed footage; the intro/outro design, the caption styles, the caption pace and the accent are chosen per clip. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro or outro it clears only that line and the others keep their places; required values block generation when blank. Keep each item's price, currency, units and price basis together. An item's name and price are facts the narration states rather than on-screen labels, and a number enters a caption only when it matches the entered value exactly. Fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output and hold what is tedious to repeat every time, such as voice and viewpoint; the project instruction comes first and the guide follows it.\n\nExample (add two or more menu items on the input screen):\n{{example}}",
+        "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. A template is an ordered outline of what the clip shows from beginning to end: the order you write is the order it shows, and nothing else about where or when is written here. Footage order, cut rhythm and every caption's time are decided at generation from the project instruction and the observed footage; the intro/outro design, the caption styles, the caption pace and the accent are chosen per clip. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro or outro that line is left out together with the gap before it, and the other lines keep their order; required values block generation when blank. Keep each item's price, currency, units and price basis together. An item's name and price are facts the narration states rather than on-screen labels, and a number enters a caption only when it matches the entered value exactly. Fixed copy preserves even whitespace except explicit value substitution. A stage's line and an ai text say what stands there, never how to write or show it; tone, emphasis and the order a story takes belong to video guidelines.\n\nExample (add two or more menu items on the input screen):\n{{example}}",
     },
     templates: 'Video templates',
     disclosure: {

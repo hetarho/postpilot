@@ -21,7 +21,7 @@ export const i18n = {
   en: {
     directory: {
       title: 'Video templates',
-      description: 'Save the information to collect, cut guidance and video design.',
+      description: 'Save the information to collect, the outline and video design.',
       saved: 'Saved video templates',
       empty: 'No video templates yet',
       emptyHelp:

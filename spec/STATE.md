@@ -56,7 +56,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T414 | Video template authoring follows the outline grammar alone, with no guide entry | CLIP CDS | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | T441 | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
 | T429 | The direct write opens with a storyline the post keeps | GEN POST TMPL | T431 | todo |
@@ -86,6 +85,8 @@
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260928 T414 done: decisions in /IMPLEMENTATION-DECISIONS.md
+- 260927 T414 claimed (ia)
 - 260927 create-task GUIDE GEN TMPL POST CLIP CDS QUOTA done (sl): T431–T448 created, T429 T430 rewritten (flow-first → stored storyline; builder copy → template form only), T414 T415 refreshed to CLIP@49 (guide entry removed, r47's preview selectors kept, template design copy); GUIDE r9 GEN r17 TMPL r15 POST r21 QUOTA r23 CDS r29 fully tasked, CLIP tasked to r43 with CLIP-163+ still open
 - 260927 CLIP r41 CLIP-13✎ and CDS r24 CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ consumed without a task: implemented in b18e73e8 (Wanted Sans, the glyph fallback and refusal); T416 stays blocked on its own CDS question
 - 260927 create-task GUIDE GEN TMPL POST CLIP CDS QUOTA start (sl): GUIDE r9 GEN r17 TMPL r15 POST r21 CLIP r49 (with r41/r47/r48 pending) CDS r29 (with r24/r28 pending) QUOTA r23; refresh T429 T430 T414 T415, T428 (doing, ia) untouched
@@ -104,5 +105,3 @@
 - 260927 T424 done
 - 260927 T424 claimed (ia): base TMPL@12→14 GEN@14→16 (TMPL-22/37, GEN-1/40 unchanged)
 - 260927 T423 done
-- 260927 T423 claimed (ia): base POST@18→20 (r19/r20 no code impact)
-- 260927 T422 done

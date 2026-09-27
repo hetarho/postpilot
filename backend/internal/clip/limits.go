@@ -14,7 +14,9 @@ import (
 
 const (
 	TemplateNameChars = 40
-	GuidanceChars     = 4000
+	// GeneratedChars bounds the text of a generated (`ai`) entry: what the writer
+	// writes there, in the author's words (CLIP-185).
+	GeneratedChars    = 4000
 	InformationFields = 10
 	// CompositionStages is how many named composition stages one template may
 	// carry (CLIP-141). A stage is a movement of the whole clip, so a body
@@ -110,7 +112,7 @@ type Environment struct {
 
 // DefaultLimits is the template-authoring surface CLIP validates against.
 func DefaultLimits() Limits {
-	return Limits{Composition: DefaultCompositionLimits(), NameChars: TemplateNameChars, GuidanceChars: GuidanceChars, FieldCount: InformationFields, LabelChars: LabelChars, PromptChars: PromptChars, TitleChars: TitleChars, AnswerChars: AnswerChars, InstructionChars: InstructionChars, MinDurationMS: MinDurationMS, MaxDurationMS: MaxDurationMS}
+	return Limits{Composition: DefaultCompositionLimits(), NameChars: TemplateNameChars, FieldCount: InformationFields, LabelChars: LabelChars, PromptChars: PromptChars, TitleChars: TitleChars, AnswerChars: AnswerChars, InstructionChars: InstructionChars, MinDurationMS: MinDurationMS, MaxDurationMS: MaxDurationMS}
 }
 
 // DefaultCompositionLimits bounds one composition document.
@@ -118,7 +120,7 @@ func DefaultCompositionLimits() composition.Limits {
 	return composition.Limits{
 		SourceChars: 16000, Nodes: 200, Fields: InformationFields, Items: 20, Cuts: 100, Cues: 2400, Stages: CompositionStages,
 		LabelChars: LabelChars, PromptChars: PromptChars, AnswerChars: AnswerChars,
-		CopyChars: 500, GuideChars: GuidanceChars, MaxDurationMS: MaxDurationMS, AutoInsetMS: 120,
+		CopyChars: 500, GeneratedChars: GeneratedChars, MaxDurationMS: MaxDurationMS, AutoInsetMS: 120,
 	}
 }
 

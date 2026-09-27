@@ -142,9 +142,12 @@ function readElement(
       (role === 'hook' ? basis !== 'output-start' : basis !== 'output-end'))
   )
     problem(n, 'invalid_skeleton')
+  // Order is the only position a template entry declares (CLIP-65, CLIP-112): a caption's
+  // position and align and the badge's align are the project's design, so a template body
+  // carrying them reads as if it did not. The badge keeps its position.
   const style = 'auto',
-    position = a.position ?? 'auto',
-    align = a.align ?? 'center'
+    position = template && role === 'caption' ? 'auto' : (a.position ?? 'auto'),
+    align = template && (role === 'caption' || role === 'badge') ? 'center' : (a.align ?? 'center')
   if (
     !['auto', 'top', 'upper_mid', 'lower_mid', 'bottom', 'header'].includes(position) ||
     (position === 'header' && role !== 'info' && role !== 'badge')
@@ -249,7 +252,7 @@ function readElement(
   if (region && !stored && t.parts.some((p) => p.field || trimCompositionSpace(p.literal)))
     problem(n, 'invalid_skeleton')
   for (const row of [{ kind, parts: t.parts }, ...t.rows]) {
-    const max = row.kind === 'ai' ? l.guideChars : l.copyChars
+    const max = row.kind === 'ai' ? l.generatedChars : l.copyChars
     if (row.parts.reduce((n, p) => n + scalarLength(p.literal), 0) > max) problem(n, 'copy_limit')
   }
   return t
@@ -270,7 +273,7 @@ export function readStoredClipComposition(
 }
 
 /** The grammar a TEMPLATE body must satisfy before it is saved (CLIP-4,
- * CLIP-59): fixed regions, the badge, fields, groups and guides. Footage
+ * CLIP-59): the outline's stages and visible entries, fields and groups. Footage
  * sections, scene-bound text and cut-relative timing are refused with the
  * construct named, mirroring the server's ParseTemplate; frozen project
  * snapshots keep reading through parseClipComposition (CLIP-140). */
@@ -322,7 +325,6 @@ function readClipComposition(
     pace: root.attributes.pace ?? 'steady',
     fields: [],
     groups: [],
-    guidance: [],
     stages: [],
     sections: [],
     elements: [],
@@ -330,9 +332,11 @@ function readClipComposition(
     maxima: {},
     minima: {},
   }
+  // A stored `accent` or `pace` outside its list is a design attribute the grammar has no use
+  // for, so it reads as absent rather than refusing the body (CLIP-113).
   if (!['', 'coral', 'amber', 'lime', 'teal', 'blue', 'violet', 'pink'].includes(d.accent))
-    problem(root, 'invalid_accent')
-  if (!['steady', 'rapid'].includes(d.pace)) problem(root, 'invalid_pace')
+    d.accent = ''
+  if (!['steady', 'rapid'].includes(d.pace)) d.pace = 'steady'
   const ns = children(root),
     ids = new Set<string>()
   const claim = (n: CompositionNode, prefix = '') => {
@@ -394,13 +398,7 @@ function readClipComposition(
       }
     }
   }
-  const guide = (n: CompositionNode) => {
-    attributes(n)
-    const v = content(n)
-    if (scalarLength(v) > limits.guideChars) problem(n, 'guide_limit')
-    return v
-  }
-  /** One named composition stage (CLIP-141): a short name and one line of intent,
+  /** One named composition stage (CLIP-141): a short name and one line saying what it is about,
    * bounded by the counts a label and a prompt already have and capped in number
    * so a body cannot script the clip stage by stage. A stage is a property of the
    * whole clip, so it lives at the root only — inside a scene or a repetition
@@ -432,13 +430,11 @@ function readClipComposition(
       id: n.attributes.id,
       scope,
       repeat,
-      guidance: [],
       elements: [],
       span: n.span,
     }
     for (const c of children(n)) {
-      if (c.name === 'guide') s.guidance.push(guide(c))
-      else if (c.name === 'text') {
+      if (c.name === 'text') {
         claim(c)
         s.elements.push(readElement(c, d, scope, repeat, true, limits, stored, template))
       } else problem(c, 'unknown_tag')
@@ -449,9 +445,6 @@ function readClipComposition(
     switch (n.name) {
       case 'field':
       case 'group':
-        break
-      case 'guide':
-        d.guidance.push(guide(n))
         break
       case 'stage':
         stage(n)

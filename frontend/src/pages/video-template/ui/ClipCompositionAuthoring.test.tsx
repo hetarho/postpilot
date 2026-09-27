@@ -30,7 +30,7 @@ describe('composition template authoring', () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
     const original =
-      '<clip version=\'1\'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<guide>  keep &amp; spacing  </guide>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
+      '<clip version=\'1\'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<stage name="외관">  keep &amp; spacing  </stage>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
     mount({ templates: [{ ...template, compositionBody: original }], writes })
     await user.click(await screen.findByRole('button', { name: '항목 묶음 1' }))
     expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('')
@@ -41,7 +41,7 @@ describe('composition template authoring', () => {
     expect(parseClipComposition(edited).groups).toMatchObject([
       { id: 'menu', label: '메뉴 & 음료', min: 2, max: 3 },
     ])
-    expect(edited).toContain('<guide>  keep &amp; spacing  </guide>')
+    expect(edited).toContain('<stage name="외관">  keep &amp; spacing  </stage>')
     await user.click(screen.getByRole('tab', { name: '구성 편집' }))
     await user.click(screen.getByRole('button', { name: '메뉴 & 음료' }))
     expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('메뉴 & 음료')
@@ -186,14 +186,13 @@ describe('composition template authoring', () => {
     expect(await source()).toHaveValue(body)
     expect(calls).not.toContain('UpdateVideoTemplate')
   })
-  it('offers only the information, guide and badge a template may declare', async () => {
+  it('offers only the information, stages and visible entries a template may declare', async () => {
     const user = userEvent.setup()
     mount()
     await screen.findByRole('button', { name: '장소' })
     for (const name of [
       '정보 추가',
       '항목 묶음 추가',
-      '구성 안내 추가',
       '구성 단계 추가',
       '인트로 문구 추가',
       '자막 추가',
@@ -201,7 +200,8 @@ describe('composition template authoring', () => {
       '표시 문구 추가',
     ])
       expect(screen.getByRole('button', { name })).toBeInTheDocument()
-    for (const name of ['장면 추가', '반복 추가'])
+    // No guide entry: how to show it belongs to video guidelines (CLIP-59, CLIP-185).
+    for (const name of ['장면 추가', '반복 추가', '구성 안내 추가'])
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     // Caption pace and the accent belong to the project now (CLIP-139).
     expect(screen.queryByRole('combobox', { name: /강조색/ })).not.toBeInTheDocument()
@@ -256,6 +256,23 @@ describe('composition template authoring', () => {
     expect(screen.queryByRole('combobox', { name: /표시 구간 기준/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '시작 (초)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '끝 (초)' })).not.toBeInTheDocument()
+    // The badge declares where it stands and nothing about alignment (CLIP-65).
+    expect(screen.getByRole('combobox', { name: /화면 위치/ })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /글자 정렬/ })).not.toBeInTheDocument()
+  })
+  it('offers a caption neither a position nor an alignment', async () => {
+    const user = userEvent.setup()
+    mount()
+    await screen.findByRole('button', { name: '장소' })
+    await user.click(screen.getByRole('button', { name: '자막 추가' }))
+    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
+    const captions = screen
+      .getAllByRole('button', { name: /자막/ })
+      .filter((b) => b.hasAttribute('aria-expanded'))
+    await user.click(captions[captions.length - 1])
+    expect(screen.getByRole('combobox', { name: /문구 작성 방식/ })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /화면 위치/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /글자 정렬/ })).not.toBeInTheDocument()
   })
 })
 

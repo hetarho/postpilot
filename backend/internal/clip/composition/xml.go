@@ -295,7 +295,7 @@ func ReplaceNode(d *Document, id string, replacement *Node, limits Limits) (*Doc
 	return ReplaceSpan(d, target.Span, replacement, limits)
 }
 
-// ReplaceSpan also addresses unlabelled guides/rows, using a span from this exact
+// ReplaceSpan also addresses unlabelled rows, using a span from this exact
 // document. It refuses stale/arbitrary ranges rather than slicing through nodes.
 func ReplaceSpan(d *Document, span Span, replacement *Node, limits Limits) (*Document, *Problem) {
 	found := false

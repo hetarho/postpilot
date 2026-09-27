@@ -19,32 +19,32 @@ func noTemplateInput(in clip.PlanningInput) clip.PlanningInput {
 	return in
 }
 
-// The template guide section is omitted WHOLE rather than sent empty, so a clip
+// The template outline section is omitted WHOLE rather than sent empty, so a clip
 // with no template adds no bytes to either writing call and the prefix every
 // revision re-injects stays byte-identical (CLIP-5, TMPL-12).
 func TestNoTemplateAddsNoBytesToTheFlowCall(t *testing.T) {
 	_, payload, system := flowRequest(t, noTemplateInput(flowInput()), defaultFlow())
-	if _, present := payload["template_guide"]; present {
-		t.Fatal("an empty template guide was sent as a key of its own", payload["template_guide"])
+	if _, present := payload["template_outline"]; present {
+		t.Fatal("an empty template outline was sent as a key of its own", payload["template_outline"])
 	}
 	// The same request WITH a template carries the key, and the prefix both
 	// calls are sent under is the same bytes either way.
 	_, withTemplate, templateSystem := flowRequest(t, flowInput(), defaultFlow())
-	if _, present := withTemplate["template_guide"]; !present {
-		t.Fatal("the fixture template carries no guide, so this proves nothing")
+	if _, present := withTemplate["template_outline"]; !present {
+		t.Fatal("the fixture template carries no stage, so this proves nothing")
 	}
 	if system != templateSystem {
 		t.Fatal("the prefix changed with the template attached")
 	}
 	golden(t, "testdata/flow-prompt-prefix.txt", system)
-	// A template that simply says nothing is omitted the same way: an empty
-	// guide is a section that is not there, not a section that is empty.
+	// A template with no stage is omitted the same way: an empty outline is a
+	// section that is not there, not a section that is empty.
 	silent := flowInput()
-	body := strings.Replace(flowBody, "<guide>음식을 차분하게 보여준다.</guide>", "", 1)
+	body := strings.Replace(flowBody, "<stage name=\"음식\">주문한 메뉴가 나오는 순간</stage>", "", 1)
 	silent.Template.CompositionBody = body
 	silent.Composition.Snapshot.Body = body
-	if _, quiet, _ := flowRequest(t, silent, defaultFlow()); hasKey(quiet, "template_guide") {
-		t.Fatal("a template with nothing to say still sent the section", quiet["template_guide"])
+	if _, quiet, _ := flowRequest(t, silent, defaultFlow()); hasKey(quiet, "template_outline") {
+		t.Fatal("a template with nothing to say still sent the section", quiet["template_outline"])
 	}
 }
 
@@ -64,8 +64,8 @@ func TestNoTemplateAddsNoBytesToTheNarrationCall(t *testing.T) {
 	}
 	in := clip.NarrationInput{PlanningInput: planning, Flow: flow}
 	_, payload, system := narrate(t, in, narrationResponse(narrationCaption("고기를 올렸어요", 1000, 4000)))
-	if _, present := payload["template_guide"]; present {
-		t.Fatal("an empty template guide was sent as a key of its own", payload["template_guide"])
+	if _, present := payload["template_outline"]; present {
+		t.Fatal("an empty template outline was sent as a key of its own", payload["template_outline"])
 	}
 	// A template that declares no caption entry — a project with no template
 	// included — adds no key either (CLIP-5, CLIP-112).

@@ -10,7 +10,7 @@ export interface CompositionLimits {
   promptChars: number
   answerChars: number
   copyChars: number
-  guideChars: number
+  generatedChars: number
   maxDurationMs: number
   autoInsetMs: number
 }
@@ -40,8 +40,6 @@ export type CompositionReason =
   | 'unknown_attribute'
   | 'unknown_version'
   | 'invalid_skeleton'
-  | 'invalid_accent'
-  | 'invalid_pace'
   | 'invalid_id'
   | 'duplicate_id'
   | 'field_limit'
@@ -51,7 +49,6 @@ export type CompositionReason =
   | 'empty_group'
   | 'invalid_item_bounds'
   | 'items_required'
-  | 'guide_limit'
   | 'stage_limit'
   | 'unsupported_section'
   | 'unsupported_role'
@@ -148,9 +145,9 @@ export interface CompositionElement {
   rows: CompositionRow[]
   span: CompositionSpan
 }
-/** One named composition stage (CLIP-141): a short name and one line of intent,
- * kept in document order. Guidance for the flow call only — it admits no footage
- * and forbids none. */
+/** One named composition stage (CLIP-141): a short name and one line saying what the
+ * stage is about, kept in document order. The flow call reads the stages as the clip's
+ * form — they admit no footage and forbid none. */
 export interface CompositionStage {
   name: string
   intent: string
@@ -160,7 +157,6 @@ export interface CompositionSection {
   id: string
   scope: string
   repeat: string
-  guidance: string[]
   elements: CompositionElement[]
   span: CompositionSpan
 }
@@ -177,7 +173,6 @@ export interface ClipComposition {
   pace: string
   fields: CompositionField[]
   groups: CompositionGroup[]
-  guidance: string[]
   stages: CompositionStage[]
   sections: CompositionSection[]
   elements: CompositionElement[]
@@ -223,7 +218,7 @@ export interface ResolvedCompositionElement {
   groupId: string
   itemId: string
   element: CompositionElement
-  /** Fixed output text, or AI guidance when element.kind is ai. */
+  /** Fixed output text, or what the writer writes there when element.kind is ai. */
   text: string
   rows: { role: string; text: string }[]
   facts: CompositionFact[]

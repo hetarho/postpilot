@@ -124,7 +124,7 @@ func summary(d *composition.Document) map[string]any {
 		}
 		outline = append(outline, "text:"+d.Elements[entry.Index].ID)
 	}
-	return map[string]any{"outline": outline, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...), "stages": stages}
+	return map[string]any{"outline": outline, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "stages": stages}
 }
 func resolution(t *testing.T, out composition.Timeline) []map[string]any {
 	t.Helper()
@@ -180,7 +180,11 @@ func TestSharedCorpus(t *testing.T) {
 				}
 			}
 			canonical := composition.SerializeNode(d.Root)
-			again, err := composition.Parse(canonical, l)
+			reparse := composition.Parse
+			if c.Template {
+				reparse = composition.ParseTemplate
+			}
+			again, err := reparse(canonical, l)
 			if err != nil || composition.SerializeNode(again.Root) != canonical {
 				t.Fatalf("canonical round trip failed: %+v", err)
 			}
@@ -199,7 +203,7 @@ func TestSharedCorpus(t *testing.T) {
 }
 func TestSubtreeEditPreservesUntouchedSource(t *testing.T) {
 	l := clip.DefaultCompositionLimits()
-	source := " \n<clip version='1' intro=\"b\" caption=\"bold\" outro=\"e\">\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>\n"
+	source := " \n<clip version='1' intro=\"b\" caption=\"bold\" outro=\"e\">\n <stage name=\"🧑‍🍳\">keep &amp; spacing</stage>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>\n"
 	d, e := composition.Parse(source, l)
 	if e != nil {
 		t.Fatal(e)
@@ -264,9 +268,9 @@ func FuzzCompositionParser(f *testing.F) {
 	})
 }
 
-func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
+func TestQualifiedFieldEditAndUnlabelledStage(t *testing.T) {
 	l := clip.DefaultCompositionLimits()
-	source := `<clip version="1" intro="b" caption="bold" outro="e"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	source := `<clip version="1" intro="b" caption="bold" outro="e"><stage name="외관">keep</stage><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	d, e := composition.Parse(source, l)
 	if e != nil {
 		t.Fatal(e)
@@ -276,10 +280,10 @@ func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 	if e != nil || d.Fields[0].Label != "changed" || d.Fields[1].Label != "B" {
 		t.Fatalf("wrong field changed: %+v %v", d, e)
 	}
-	guide := d.Root.Children[0]
-	d, e = composition.ReplaceSpan(d, guide.Span, &composition.Node{Name: "guide", Attributes: map[string]string{}, Children: []*composition.Node{{Name: "#text", Text: "new guidance"}}}, l)
-	if e != nil || d.Guidance[0] != "new guidance" {
-		t.Fatalf("guide edit: %+v %v", d, e)
+	stage := d.Root.Children[0]
+	d, e = composition.ReplaceSpan(d, stage.Span, &composition.Node{Name: "stage", Attributes: map[string]string{"name": "외관"}, Children: []*composition.Node{{Name: "#text", Text: "간판과 입구"}}}, l)
+	if e != nil || d.Stages[0].Intent != "간판과 입구" {
+		t.Fatalf("stage edit: %+v %v", d, e)
 	}
 	if _, e = composition.ReplaceSpan(d, composition.Span{Start: 1, End: 3, Line: 1}, replacement, l); e == nil {
 		t.Fatal("arbitrary span accepted")

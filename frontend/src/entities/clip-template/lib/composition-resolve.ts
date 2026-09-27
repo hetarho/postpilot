@@ -118,10 +118,7 @@ export function resolveClipComposition(
     if (output.durationMs > limits.maxDurationMs) fail(c.id, 1, 'duration_limit')
   }
   if (output.durationMs <= 0) fail('clip', 1, 'missing_footage')
-  let budget = [...d.guidance, ...d.sections.flatMap((s) => s.guidance)].reduce(
-    (n, g) => n + bytes(g),
-    0,
-  )
+  let budget = 0
   const append = (t: CompositionElement, cut: CompositionCut | null, cutStart: number) => {
     let instanceId = t.id
     const groupId = cut?.groupId ?? '',
@@ -161,7 +158,7 @@ export function resolveClipComposition(
           return value
         })
         .join('')
-      if (scalarLength(text) > (kind === 'ai' ? limits.guideChars : limits.copyChars))
+      if (scalarLength(text) > (kind === 'ai' ? limits.generatedChars : limits.copyChars))
         fail(t.id, t.span.line, 'copy_limit')
       return text
     }
