@@ -15,7 +15,7 @@ const COPY = {
     access:
       /이메일 주소와 비밀번호로 계정을 만들고, 첫 로그인 전에 메일로 주소를 인증합니다. Google 로그인도 사용할 수 있습니다/,
     steps: [
-      '말투·용도·출력 언어를 고릅니다',
+      '말투·템플릿·출력 언어를 고릅니다',
       '사진과 메모를 올립니다',
       '사진을 먼저 관찰하고, 그다음 씁니다',
       '고치고 확정한 뒤 내보냅니다',
@@ -29,6 +29,8 @@ const COPY = {
     // Claims the product does not own (QUOTA-2, QUOTA-19): a plan decides the monthly grant
     // and nothing else — no daily job count, no spend allowance, no model range.
     unownedPlanClaims: ['하루', '일일', '사용 금액', '범위'],
+    // A retired feature and a comparative accuracy claim (MKT-4, MKT-11).
+    unownedClaims: ['용도', '덜 만듭니다'],
     facts: /화면을 여는 것만으로는 AI 작업이 시작되지 않습니다/,
     credentials: /목적지 서비스의 로그인 정보가 필요하지 않습니다/,
   },
@@ -46,7 +48,7 @@ const COPY = {
     access:
       /An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available/,
     steps: [
-      'Pick a voice, a purpose, and the output language',
+      'Pick a voice, a template, and the output language',
       'Add photos and rough notes',
       'Observe the photos first, then write',
       'Revise, finalize, and export',
@@ -58,6 +60,7 @@ const COPY = {
     recommended: 'Best value',
     haveAccount: 'Already have an account?',
     unownedPlanClaims: ['per day', 'daily', 'spend', 'range of'],
+    unownedClaims: ['purpose', 'less room'],
     facts: /Opening a screen never starts AI work/,
     credentials: /require no credentials for a destination service/,
   },
@@ -169,6 +172,16 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
 
     for (const claim of copy.unownedPlanClaims) {
       expect(plans.textContent).not.toContain(claim)
+    }
+  })
+
+  // MKT-4, MKT-11: the page advertises templates, not the retired purpose, and says how
+  // observation and writing are split without claiming it invents less.
+  it('names no retired feature and makes no comparative accuracy claim', async () => {
+    render()
+    await screen.findByRole('heading', { level: 1, name: copy.h1 })
+    for (const claim of copy.unownedClaims) {
+      expect(document.body.textContent).not.toContain(claim)
     }
   })
 

@@ -203,25 +203,29 @@ func TestCompositionNeedsThreePublishedPosts(t *testing.T) {
 	}
 }
 
-func TestPostCrossPostIsBelowMinimumWithFewerThanThreeOthers(t *testing.T) {
+// QUAL-36, F1: ② compares M2's minimum with the account's published count, exactly as the brief
+// does, so each of exactly three published posts is measured against the other two.
+func TestPostCrossPostMinimumIsTheAccountsPublishedCount(t *testing.T) {
 	published := sharing()
-	// A published post is not its own other, so three published posts leave each only two.
 	for _, post := range published {
-		got := JudgePost(post, MeasureSelf(post), OthersOf(published, post.Slug)).CrossPost
-		if got.Verdict != VerdictBelowMinimum || got.Share != nil || got.Others != 2 {
-			t.Errorf("%s: %+v, want below minimum naming 2 others", post.Slug, got)
+		got := JudgePost(post, MeasureSelf(post), published).CrossPost
+		if got.Verdict == VerdictBelowMinimum || got.Share == nil || got.Published != 3 {
+			t.Errorf("%s: %+v, want measured against the other two of three published", post.Slug, got)
+		}
+		if Aggregate(published, nil).CrossPost.Verdict == VerdictBelowMinimum {
+			t.Fatal("the brief does not measure M2 on three published posts either")
 		}
 	}
 
 	draft := sample("draft", "초안", []string{"감자탕"}, "넷째 "+sharedRun+" 갔다")
 	for n := 0; n < Minimum(MetricCrossPostPhrases); n++ {
 		got := JudgePost(draft, MeasureSelf(draft), published[:n]).CrossPost
-		if got.Verdict != VerdictBelowMinimum || got.Share != nil || got.Others != n {
-			t.Errorf("%d others: %+v", n, got)
+		if got.Verdict != VerdictBelowMinimum || got.Share != nil || got.Published != n {
+			t.Errorf("%d published: %+v", n, got)
 		}
 	}
-	got := JudgePost(draft, MeasureSelf(draft), OthersOf(published, draft.Slug)).CrossPost
-	if got.Verdict != VerdictOverBand || got.Share == nil || got.Others != 3 {
+	got := JudgePost(draft, MeasureSelf(draft), published).CrossPost
+	if got.Verdict != VerdictOverBand || got.Share == nil || got.Published != 3 {
 		t.Fatalf("the draft against three = %+v", got)
 	}
 

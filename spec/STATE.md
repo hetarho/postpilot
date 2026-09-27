@@ -59,7 +59,6 @@
 | T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T426 | ②'s M2 minimum, the guideline queue notice and the public copy are right | QUAL GUIDE MKT | - | todo |
 | T427 | CI runs gofmt, plan mapping fails closed, catalog tokens resolve, refunds are labelled, VerifyEmail is throttled | ARCH BILL AUTH THEME | - | todo |
 | T428 | Template photo places bind no photo and a repeat renders once | TMPL GEN | T424 | todo |
 | T429 | The write sets the day's flow first and places every photo along it | GEN | T428 | todo |
@@ -69,11 +68,13 @@
 - create-task CLIP CDS (CLIP r48 CDS r28): video templates carry the design selection a project takes on selection; the template preview's 15–90 s timing, 3–4 s captions and last frame; builder entries open in place with their own delete; ②'s flow simulation over still cut frames — also refresh T414 (its preview-select removal and builder items meet CLIP-166/169/172) and T415 (F58/F59/F73's copy assumed a template carries no design) before they are implemented
 - implement-task T428 (template photo places unbound), then T429 (the write sets the day's flow first); T430 (builder copy)
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable
-- implement-task the P1-bearing task T426, then T427 (review/conformance-all-260927); T414 T415 after their refresh
+- implement-task T427 (review/conformance-all-260927); T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP narration — captions read as a shot list, one observation caption per cut (no story step before the flow, every claim must cite an observation, visit/taste markers dropped without an instruction, none of the post writer's memo/voice/memory); update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 T426 done
+- 260927 T426 claimed (ia)
 - 260927 T425 done: out of scope, .env.production.example still lists PURPOSE_*/VITE_PURPOSE_* ceilings no code reads
 - 260927 T425 claimed (ia): base TMPL@12→14 (TMPL-18/21/38/40 photo-place meaning is T428/T430's)
 - 260927 ideation storyline-first ready: system prompt = format only, 기본 지침 (추천, on by default, account switch) + 지침 / 영상 지침 = direction incl. grounding, template = form (note/guide gone, a place says what it is about); ①'s 스토리라인 먼저 · 바로 글 쓰기 for posts and clips, the storyline in ②'s own collapsible space with photos per paragraph; clip server content checks removed
@@ -92,5 +93,3 @@
 - 260927 T419 claimed (ia)
 - 260927 T418 done
 - 260927 T418 claimed (ia)
-- 260927 T417 done
-- 260927 T413 done

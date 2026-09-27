@@ -209,7 +209,8 @@ func count(n int) *float64 {
 }
 
 // PostMeasurement is one post's own readings as ② shows them (QUAL-36): M2 against the account's
-// other published posts, and M3 and M4 against the bands alone, since they have no minimum.
+// other published posts once the account meets its minimum, and M3 and M4 against the bands
+// alone, since they have no minimum.
 type PostMeasurement struct {
 	CrossPost   PostCrossPost
 	Repetition  PostRepetition
@@ -219,9 +220,9 @@ type PostMeasurement struct {
 type PostCrossPost struct {
 	Verdict Verdict
 	Share   *float64
-	// Others is how many published posts this one was compared with, the count ② names beside
-	// the minimum.
-	Others int
+	// Published is the account's published count, the one M2's minimum is compared with and
+	// the count ② names beside it, exactly as the brief does (QUAL-36).
+	Published int
 }
 
 type PostRepetition struct {
@@ -234,16 +235,18 @@ type PostComposition struct {
 	Composition *Composition
 }
 
-// JudgePost gives a post with content its three verdicts. M2 is BELOW_MINIMUM while fewer than
-// the minimum of other published posts exist, and ABSENT when its share cannot be computed.
-func JudgePost(post Sample, self Self, others []Sample) PostMeasurement {
+// JudgePost gives a post with content its three verdicts. published is the account's published
+// posts, newest first, the post itself among them when it is published. M2 is BELOW_MINIMUM while
+// the account has fewer published than the minimum — the brief's own test (QUAL-36) — is measured
+// against the others otherwise, and is ABSENT when its share cannot be computed.
+func JudgePost(post Sample, self Self, published []Sample) PostMeasurement {
 	var m PostMeasurement
-	m.CrossPost.Others = len(others)
+	m.CrossPost.Published = min(len(published), TitleWindow)
 	switch {
-	case len(others) < Minimum(MetricCrossPostPhrases):
+	case !met(m.CrossPost.Published, MetricCrossPostPhrases):
 		m.CrossPost.Verdict = VerdictBelowMinimum
 	default:
-		if overlap, ok := MeasureCrossPost(post, others); ok {
+		if overlap, ok := MeasureCrossPost(post, OthersOf(published, post.Slug)); ok {
 			share := overlap.Share
 			m.CrossPost.Share = &share
 		}

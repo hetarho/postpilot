@@ -23,7 +23,7 @@ var _ postpilotv1connect.QualityServiceHandler = (*Handler)(nil)
 
 // GetPostMeasurement answers M2, M3 and M4 in that order, never M1 (QUAL-36). The minimum and
 // the published count mean something on M2 only: it is the one per-post metric that reads the
-// published window, and its count is the number of others it was judged against.
+// published window, and its count is the account's published count, as the brief's is.
 func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[postpilotv1.GetPostMeasurementRequest]) (*connect.Response[postpilotv1.GetPostMeasurementResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -36,7 +36,7 @@ func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[p
 	m := reading.Measurement
 	crossPost := &postpilotv1.QualityReading{
 		Metric: toProtoMetric(quality.MetricCrossPostPhrases), Verdict: toProtoVerdict(m.CrossPost.Verdict),
-		Minimum: int32(quality.Minimum(quality.MetricCrossPostPhrases)), PublishedCount: int32(m.CrossPost.Others),
+		Minimum: int32(quality.Minimum(quality.MetricCrossPostPhrases)), PublishedCount: int32(m.CrossPost.Published),
 		Values: crossPostValues(m.CrossPost.Share),
 	}
 	repetition := &postpilotv1.QualityReading{

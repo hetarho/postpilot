@@ -6,6 +6,8 @@ export const i18n = {
   ko: {
     candidate: {
       summary: '지침 후보 {{count}}개',
+      // GUIDE-22: a full queue is said while the disclosure is still closed.
+      summaryFull: '지침 후보 {{count}}개 · 가득 참',
       approveAll: '전부 수락',
       dismissAll: '전부 거절',
       dismissAllTitle: '후보 {{count}}개를 전부 거절할까요?',
@@ -35,6 +37,7 @@ export const i18n = {
   en: {
     candidate: {
       summary: 'Guideline candidates ({{count}})',
+      summaryFull: 'Guideline candidates ({{count}}) · full',
       approveAll: 'Accept all',
       dismissAll: 'Dismiss all',
       dismissAllTitle: 'Dismiss all {{count}} candidates?',

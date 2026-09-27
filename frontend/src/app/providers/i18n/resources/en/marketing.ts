@@ -24,8 +24,8 @@ export const marketing = {
   flow: {
     title: 'How it works',
     step1: {
-      title: 'Pick a voice, a purpose, and the output language',
-      body: 'For each post you choose which voice writes it, what kind of text it is (its purpose), and whether it comes out in Korean or English.',
+      title: 'Pick a voice, a template, and the output language',
+      body: 'For each post you choose which voice writes it, which template shapes it (or none), and whether it comes out in Korean or English.',
     },
     step2: {
       title: 'Add photos and rough notes',
@@ -48,7 +48,7 @@ export const marketing = {
     },
     observation: {
       title: 'Observation is separate from writing',
-      body: 'Recording what the photos show is a distinct step from writing the post, which leaves less room for inventing things the photos never showed.',
+      body: 'Recording what the photos show is a step of its own, and the post is written from that record.',
     },
     blocks: {
       title: 'The post is stored as structured blocks',

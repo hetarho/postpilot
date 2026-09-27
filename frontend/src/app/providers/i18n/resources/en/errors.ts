@@ -189,9 +189,9 @@ export const errors = {
   MEMORY_LIMIT_REACHED:
     'You can keep at most {{max}} memories. Delete one you no longer need and try again.',
   GUIDELINE_SCOPE_INVALID:
-    'Pick the scope again: leave templates empty for everything, or pick at least one for specific templates.',
+    'Pick the scope again: leave templates and categories empty for everything, or pick at least one for specific templates or specific categories.',
   GUIDELINE_TEMPLATE_NOT_FOUND:
-    'Could not find the purpose you picked. Refresh the list and try again.',
+    'Could not find the template you picked. Refresh the list and try again.',
   GUIDELINE_FIELD_NOT_FOUND: 'That category is not available. Pick one again.',
   GUIDELINE_LIMIT_REACHED:
     'You can save at most {{max}} guidelines. Delete one you no longer use and try again.',

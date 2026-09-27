@@ -183,7 +183,7 @@ export const errors = {
   MEMORY_LIMIT_REACHED:
     '기억은 {{max}}개까지 저장할 수 있어요. 필요 없는 기억을 지우고 다시 시도해 주세요.',
   GUIDELINE_SCOPE_INVALID:
-    '적용 범위를 다시 골라 주세요. 전역이면 템플릿을 비우고, 특정 템플릿이면 하나 이상 골라야 해요.',
+    '적용 범위를 다시 골라 주세요. 전역이면 템플릿과 분야를 비우고, 특정 템플릿이나 특정 분야면 하나 이상 골라야 해요.',
   GUIDELINE_TEMPLATE_NOT_FOUND:
     '고른 템플릿을 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
   GUIDELINE_FIELD_NOT_FOUND: '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.',

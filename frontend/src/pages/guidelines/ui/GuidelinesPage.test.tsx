@@ -859,6 +859,15 @@ describe('the guideline candidate section', () => {
     expect(list.queryByRole('button', { name: '전부 거절' })).not.toBeInTheDocument()
   })
 
+  // GUIDE-22, F3: the closed disclosure's summary says the queue is full, so a full queue is seen
+  // without opening it.
+  it('says the queue is full in the closed summary', async () => {
+    renderGuidelines({ candidates: [], candidateQueueFull: true })
+
+    const summary = await screen.findByText('지침 후보 0개 · 가득 참')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+  })
+
   // Nothing waiting and room to record is the ordinary state: no section, no words about it.
   it('renders no section when nothing is waiting', async () => {
     renderGuidelines({ candidates: [] })

@@ -72,8 +72,7 @@ func (s *Service) PostMeasurement(ctx context.Context, userID, slug string) (Pos
 	if err != nil {
 		return PostReading{}, fmt.Errorf("read published posts: %w", err)
 	}
-	others := OthersOf(publishedSamples(published), snapshot.Slug)
-	return PostReading{Revision: snapshot.Revision, Measurement: JudgePost(sample, self, others)}, nil
+	return PostReading{Revision: snapshot.Revision, Measurement: JudgePost(sample, self, publishedSamples(published))}, nil
 }
 
 // AccountQuality is the writing brief's reading of the account (POST-81): the aggregate over its

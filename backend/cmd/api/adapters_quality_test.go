@@ -123,9 +123,10 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 	if got := reading.Measurement.Composition.Composition; got == nil || got.DistinctBlockTypes != 2 {
 		t.Fatalf("the adapter lost a block: composition %+v", got)
 	}
-	// The finalized-but-unpublished posts are not the published window.
-	if reading.Measurement.CrossPost.Others != 1 {
-		t.Fatalf("the post was compared with %d others, want the one other published post", reading.Measurement.CrossPost.Others)
+	// The finalized-but-unpublished posts are not the published window: M2 counts the account's
+	// two published posts, this one included, as the brief does (QUAL-36).
+	if reading.Measurement.CrossPost.Published != 2 {
+		t.Fatalf("M2 counted %d published posts, want the account's two", reading.Measurement.CrossPost.Published)
 	}
 	account, err := qualitySvc.AccountQuality(ctx, "alice", slugs[2])
 	if err != nil || account.Account.PublishedCount != 2 {

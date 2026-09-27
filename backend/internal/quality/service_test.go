@@ -164,31 +164,31 @@ func TestAPostWithoutContentAnswersEveryValueAbsent(t *testing.T) {
 	}
 }
 
-func TestPostM2IsBelowMinimumWithFewerThanThreeOthers(t *testing.T) {
+// QUAL-36, F1: ② compares M2's minimum with the account's published count, the post itself
+// included when it is published, so an account with three published posts measures M2 on ② as the
+// brief does.
+func TestPostM2MinimumIsTheAccountsPublishedCount(t *testing.T) {
 	svc, _, posts := newQualityService(t)
-	for i, word := range []string{"첫째", "둘째"} {
-		posts.add(fmt.Sprintf("p%d", i), "후기", 1, true, nil, word+" "+sharedRun+" 왔다")
-	}
-	// A published post is not its own other: three published posts leave it two.
+	posts.add("p0", "후기", 1, true, nil, "첫째 "+sharedRun+" 왔다")
 	posts.add("self", "후기", 1, true, nil, "셋째 "+sharedRun+" 좋았다")
 	reading, err := svc.PostMeasurement(context.Background(), "alice", "self")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := reading.Measurement.CrossPost; got.Verdict != VerdictBelowMinimum || got.Others != 2 || got.Share != nil {
-		t.Fatalf("M2 with two others = %+v", got)
+	if got := reading.Measurement.CrossPost; got.Verdict != VerdictBelowMinimum || got.Published != 2 || got.Share != nil {
+		t.Fatalf("M2 with two published = %+v", got)
 	}
 	if posts.limits[len(posts.limits)-1] != PostWindow+1 {
 		t.Fatalf("the window read asked for %d posts, want %d", posts.limits[len(posts.limits)-1], PostWindow+1)
 	}
 
-	posts.add("p2", "후기", 1, true, nil, "넷째 "+sharedRun+" 싶다")
+	posts.add("p1", "후기", 1, true, nil, "둘째 "+sharedRun+" 싶다")
 	reading, err = svc.PostMeasurement(context.Background(), "alice", "self")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := reading.Measurement.CrossPost; got.Verdict != VerdictOverBand || got.Others != 3 || got.Share == nil {
-		t.Fatalf("M2 with three others = %+v", got)
+	if got := reading.Measurement.CrossPost; got.Verdict != VerdictOverBand || got.Published != 3 || got.Share == nil {
+		t.Fatalf("M2 with three published = %+v", got)
 	}
 }
 

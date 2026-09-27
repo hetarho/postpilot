@@ -193,7 +193,9 @@ function CandidateQueue({
             'active:bg-row-bg-active text-content-secondary min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
         })}
       >
-        {t('candidate.summary', { count: candidates.length })}
+        {/* A full queue stops recording corrections, so the closed summary says so from the
+            server's queue_full (GUIDE-22); the notice inside says what to do about it. */}
+        {t(queueFull ? 'candidate.summaryFull' : 'candidate.summary', { count: candidates.length })}
       </summary>
       {/* Named by what it is, not by the summary's count, so the region a screen reader lands in
           keeps the same name as the queue empties. */}
