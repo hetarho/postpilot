@@ -279,3 +279,10 @@ choice would be expensive to undo are listed at the end.
 - **"What restarts" line:** when the latest job failed or was cancelled and the quote reports no recovery, the approval says `이전 시도에서 이어 쓸 수 있는 작업이 없어 분석부터 다시 해요.` Both it and the reuse line now stand outside 요금 자세히.
 - **No leave dialog in ②, and no lost edits:** the page's route blocker is gone, along with the tab-close prompt. In its place, an edit still waiting for its autosave is sent when the correction unmounts or the page is hidden. On a tab close that send is best effort. The reload-discard dialog inside the correction workspace stays; it is not a leave confirmation.
 - **Copy:** 항목 is the neutral word in `source.boundItem`, since the picker is not given the group's label. `source.saveFirst` now reads "클립 설정을 마치면 원본 영상을 선택할 수 있어요", which is true whether the title is missing or the template needs applying.
+
+## T444 — ②'s flow simulation over still cut frames
+- **The control is an icon button** on the frame's top-right row, before the info control, like the audio and refresh controls. Its accessible name is `흐름 보기` / `영상 보기`. The flow view hides the play overlay and the audio control, since it has no playback or sound. Refresh stays.
+- **A still is a paused `<video>` at the cut's source start**, the same approach as `ClipCutSourceFrame`. A canvas capture could taint on a cross-origin retained original. Only the cut under the playhead is mounted, with no prefetch of the next cut's frame. While its footage loads, or when none can be had, the cut shows `컷 N` on the canvas ground. *If scrubbing across many cuts feels slow:* mount the next cut's still in advance, as the video preview mounts its incoming cut.
+- **In a transition overlap the still is the incoming cut**, since a still has no fade.
+- **Overlays are the server's own assets**, the ones the video preview already fetches. Each is drawn whole and at rest while its interval holds the playhead. A sequence style is its one representative frame, which is how the server hands it over.
+- **The info control's new line** (`멈춘 장면으로 흐름만 보여줘요. 실제 렌더와 다를 수 있어요.`) stands in both views, next to the existing parity line.

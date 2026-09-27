@@ -323,6 +323,10 @@ export function ClipCorrectionWorkspace({
                   <Typography variant="body" className="text-content-secondary">
                     {t('preview.parity')}
                   </Typography>
+                  {/* The flow view is still frames, never the delivered render (CLIP-176). */}
+                  <Typography variant="body" className="text-content-secondary">
+                    {t('preview.flowParity')}
+                  </Typography>
                   {/* The preview reports the precision of the frame it is showing, so
                       this says the position is approximate only while it is. */}
                   {frame && !frame.precise && (

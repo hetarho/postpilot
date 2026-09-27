@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { Code } from '@connectrpc/connect'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { connectAppError } from '@/test/app-error'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import type { ClipPreviewOverlay } from '../model/draft-preview'
@@ -395,4 +395,71 @@ it('says the preparation failed and offers the way back, without knowing what fa
   ).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: '미리보기 다시 준비' }))
   expect(preview.onRetry).toHaveBeenCalledTimes(1)
+})
+
+// CLIP-173 – CLIP-176: the flow simulation takes the video's place on the same frame and playhead.
+describe('the flow view', () => {
+  const timed = overlay({
+    assets: [
+      {
+        ...overlay().assets[0],
+        key: 'intro',
+        instanceId: 'intro',
+        startMs: 0,
+        endMs: 2500,
+        inMs: 300,
+        dy: 40,
+      },
+      { ...overlay().assets[0], key: 'outro', instanceId: 'outro', startMs: 16800, endMs: 19800 },
+    ],
+  })
+  const slider = () => screen.getByRole('slider', { name: '완성 영상 기준 시간' })
+  it('switches from the frame’s control and keeps the output second both ways', async () => {
+    const view = mount('vertical', undefined, { preview: timed })
+    fireEvent.change(slider(), { target: { value: '12000' } })
+    fireEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
+    expect(slider()).toHaveValue('12000')
+    // Cut b at its own source start, held still: nothing plays and there is no sound control.
+    const still = await waitFor(() => {
+      const node = view.container.querySelector('video[data-flow-still="b"]')
+      expect(node).toHaveAttribute('src', 'blob:b')
+      return node as HTMLVideoElement
+    })
+    fireEvent.loadedMetadata(still)
+    expect(still.currentTime).toBe(3)
+    expect(view.container.querySelectorAll('video')).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: '미리보기 소리 듣기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /재생/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '영상 보기' }))
+    expect(slider()).toHaveValue('12000')
+    expect(view.container.querySelector('[data-flow-simulation]')).not.toBeInTheDocument()
+  })
+
+  it('shows each overlay by its interval, whole and at rest, and the last frame at the end', async () => {
+    const view = mount('vertical', undefined, { preview: timed })
+    fireEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
+    const intro = view.container.querySelector<HTMLElement>('img[data-flow-asset="intro"]')!
+    // No fade and no settle: the asset stands where it lands.
+    expect(intro.style.opacity).toBe('')
+    expect(intro.style.top).toBe('0%')
+    expect(view.container.querySelector('img[data-flow-asset="outro"]')).not.toBeInTheDocument()
+    fireEvent.change(slider(), { target: { value: '19800' } })
+    expect(view.container.querySelector('img[data-flow-asset="outro"]')).toBeInTheDocument()
+    expect(view.container.querySelector('img[data-flow-asset="intro"]')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(view.container.querySelector('video[data-flow-still="b"]')).toBeInTheDocument(),
+    )
+  })
+
+  it('stands a cut whose frame cannot be had as its number on a neutral ground', async () => {
+    const view = mount(
+      'vertical',
+      vi.fn(async () => {
+        throw connectAppError('CLIP_SOURCE_EXPIRED', Code.FailedPrecondition)
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
+    expect(await screen.findByText('컷 1')).toBeInTheDocument()
+    await waitFor(() => expect(view.container.querySelector('video')).not.toBeInTheDocument())
+  })
 })

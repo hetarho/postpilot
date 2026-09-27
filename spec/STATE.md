@@ -57,14 +57,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T444 | ②'s flow simulation over still cut frames | CLIP | - | todo |
 
 ## next
-- implement-task T444
-- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); implement-task T414 T415 after their refresh
+- owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
+- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it)
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260928 T444 done: decisions in /IMPLEMENTATION-DECISIONS.md
+- 260928 T444 claimed (ia)
 - 260928 T415 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T415 found (out of scope): a storyline paragraph edit waiting for its 600 ms autosave is not flushed before 이 스토리로 만들기 or a storyline request
 - 260928 T415 claimed (ia)
@@ -83,5 +84,3 @@
 - 260928 T445 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T445 claimed (ia)
 - 260928 T440 done: decisions in /IMPLEMENTATION-DECISIONS.md
-- 260928 T440 claimed (ia)
-- 260928 T439 done: decisions in /IMPLEMENTATION-DECISIONS.md

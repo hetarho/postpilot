@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  flowAssets,
+  flowCut,
+  flowInstant,
   previewCrop,
   previewElementIDs,
   previewFrame,
@@ -146,4 +149,36 @@ it('refuses explicit invalid rates and checked-integer overflow instead of previ
       previewTimeline({ ...plan, cuts: [{ ...plan.cuts[0], playbackRatePermille: rate }] }),
     ).toEqual([])
   expect(transformedDurationMs(Number.MAX_SAFE_INTEGER, 500)).toBe(0)
+})
+
+// CLIP-173, CLIP-175: the flow simulation stands one cut per instant and the overlay by its
+// intervals, and its end is the last frame.
+describe('the flow simulation', () => {
+  const timeline = previewTimeline(plan)
+  it('stands the cut whose interval holds the playhead, the incoming one in a transition', () => {
+    expect(flowCut(timeline, 0)?.cut.id).toBe('a')
+    expect(flowCut(timeline, 9700)?.cut.id).toBe('a')
+    // b fades in from 9800 over a's last 200 ms: a still has no fade, so it is b.
+    expect(flowCut(timeline, 9900)?.cut.id).toBe('b')
+    expect(flowCut(timeline, 15000)?.cut.id).toBe('b')
+  })
+  it('draws the last instant at the scrubber’s end, never the empty one after it', () => {
+    expect(flowInstant(timeline, 19800)).toBe(19799)
+    expect(flowCut(timeline, 19800)?.cut.id).toBe('b')
+    expect(flowCut(timeline, 99999)?.cut.id).toBe('b')
+    expect(flowCut([], 0)).toBeUndefined()
+  })
+  it('shows each overlay asset while its interval holds the playhead', () => {
+    const assets = [
+      { id: 'intro', startMs: 0, endMs: 2500 },
+      { id: 'caption', startMs: 2500, endMs: 6000 },
+      { id: 'outro', startMs: 16800, endMs: 19800 },
+      { id: 'badge', startMs: 0, endMs: 19800 },
+    ]
+    const at = (ms: number) => flowAssets(assets, timeline, ms).map((a) => a.id)
+    expect(at(0)).toEqual(['intro', 'badge'])
+    expect(at(2500)).toEqual(['caption', 'badge'])
+    expect(at(10000)).toEqual(['badge'])
+    expect(at(19800)).toEqual(['outro', 'badge'])
+  })
 })

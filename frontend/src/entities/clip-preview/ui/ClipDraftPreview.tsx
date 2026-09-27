@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Play, RefreshCw, RotateCcw, Volume2, VolumeX } from 'lucide-react'
+import { Film, Images, Play, RefreshCw, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import { CLIP_DRAFT_PREVIEW, CLIP_DESIGN } from '@/entities/clip-design/@x/clip-preview'
 import { type ClipRatioId } from '@/entities/clip-design/@x/clip-preview'
 import { appFailureFromConnect } from '@/shared/api'
@@ -30,6 +30,7 @@ import {
   type PreviewCut,
   type PreviewSourceAccess,
 } from '../model/draft-preview'
+import { ClipFlowFrame } from './ClipFlowFrame'
 
 export interface ClipDisplayedFrame {
   cutId: string
@@ -350,6 +351,10 @@ export function ClipDraftPreview({
   }
   const [muted, setMuted] = useState(true)
   const [reload, setReload] = useState(0)
+  // The flow simulation takes the video's place on the same frame and the same playhead, so a
+  // switch keeps the output second (CLIP-174).
+  const [view, setView] = useState<'video' | 'flow'>('video')
+  const flow = view === 'flow'
   const stopPlayback = useCallback(() => setPlaying(false), [])
   const timeline = useMemo(() => previewTimeline(plan), [plan])
   const duration = Math.max(0, timeline.at(-1)?.endMs ?? 0)
@@ -411,28 +416,40 @@ export function ClipDraftPreview({
             className="bg-media-canvas-bg relative w-full overflow-hidden rounded-md"
             style={{ aspectRatio: `${canvas.width} / ${canvas.height}` }}
           >
-            {slots.map((slot) => (
-              <PreviewVideo
-                key={slot.index % 2}
-                item={slot}
-                source={sources.find(
-                  (s) => s.id === slot.cut.sourceId && s.fingerprint === slot.cut.fingerprint,
-                )}
-                access={resolvePlayback}
-                reload={reload}
+            {flow && (
+              <ClipFlowFrame
+                timeline={timeline}
                 timeMs={timeMs}
-                playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
-                muted={muted || !sourceAudioEnabled(plan, slot.cut)}
-                opacity={slot.opacity}
-                audioGain={slot.audioGain}
-                master={slot.master}
+                preview={preview}
+                sources={sources}
+                resolvePlayback={resolvePlayback}
                 canvas={canvas}
-                onFrame={changeTime}
-                onDisplayedFrame={onDisplayedFrame}
-                onPlayRefused={stopPlayback}
               />
-            ))}
-            {preview.ready &&
+            )}
+            {!flow &&
+              slots.map((slot) => (
+                <PreviewVideo
+                  key={slot.index % 2}
+                  item={slot}
+                  source={sources.find(
+                    (s) => s.id === slot.cut.sourceId && s.fingerprint === slot.cut.fingerprint,
+                  )}
+                  access={resolvePlayback}
+                  reload={reload}
+                  timeMs={timeMs}
+                  playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
+                  muted={muted || !sourceAudioEnabled(plan, slot.cut)}
+                  opacity={slot.opacity}
+                  audioGain={slot.audioGain}
+                  master={slot.master}
+                  canvas={canvas}
+                  onFrame={changeTime}
+                  onDisplayedFrame={onDisplayedFrame}
+                  onPlayRefused={stopPlayback}
+                />
+              ))}
+            {!flow &&
+              preview.ready &&
               preview.assets.map((asset, index) => {
                 const motion = previewMotion(asset, timeMs)
                 if (!motion.opacity) return null
@@ -454,39 +471,62 @@ export function ClipDraftPreview({
                   />
                 )
               })}
-            <button
-              type="button"
-              aria-label={t(playing ? 'preview.pause' : atEnd ? 'preview.replay' : 'preview.play')}
-              disabled={!timeline.length}
-              onClick={toggle}
-              className="absolute inset-0 z-20 flex items-center justify-center"
-            >
-              {!playing && timeline.length > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="bg-media-scrim-bg/60 text-media-scrim-fg flex size-14 items-center justify-center rounded-full"
-                >
-                  {atEnd ? <RotateCcw className="size-7" /> : <Play className="size-7" />}
-                </span>
-              )}
-            </button>
+            {!flow && (
+              <button
+                type="button"
+                aria-label={t(
+                  playing ? 'preview.pause' : atEnd ? 'preview.replay' : 'preview.play',
+                )}
+                disabled={!timeline.length}
+                onClick={toggle}
+                className="absolute inset-0 z-20 flex items-center justify-center"
+              >
+                {!playing && timeline.length > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="bg-media-scrim-bg/60 text-media-scrim-fg flex size-14 items-center justify-center rounded-full"
+                  >
+                    {atEnd ? <RotateCcw className="size-7" /> : <Play className="size-7" />}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
           <div className="absolute top-2 right-2 z-30 flex items-center gap-1">
+            {/* The simulation has no sound, so the audio control stands only over the video. */}
+            {!flow && (
+              <Button
+                variant="scrim"
+                size="icon"
+                aria-label={t('preview.originalAudio')}
+                aria-pressed={!muted}
+                onClick={() => setMuted(!muted)}
+              >
+                {muted ? (
+                  <VolumeX aria-hidden="true" className="size-5" />
+                ) : (
+                  <Volume2 aria-hidden="true" className="size-5" />
+                )}
+              </Button>
+            )}
+            <Button variant="scrim" size="icon" aria-label={t('preview.refresh')} onClick={refresh}>
+              <RefreshCw aria-hidden="true" className="size-5" />
+            </Button>
             <Button
               variant="scrim"
               size="icon"
-              aria-label={t('preview.originalAudio')}
-              aria-pressed={!muted}
-              onClick={() => setMuted(!muted)}
+              aria-label={t(flow ? 'preview.videoView' : 'preview.flowView')}
+              disabled={!timeline.length}
+              onClick={() => {
+                setPlaying(false)
+                setView(flow ? 'video' : 'flow')
+              }}
             >
-              {muted ? (
-                <VolumeX aria-hidden="true" className="size-5" />
+              {flow ? (
+                <Film aria-hidden="true" className="size-5" />
               ) : (
-                <Volume2 aria-hidden="true" className="size-5" />
+                <Images aria-hidden="true" className="size-5" />
               )}
-            </Button>
-            <Button variant="scrim" size="icon" aria-label={t('preview.refresh')} onClick={refresh}>
-              <RefreshCw aria-hidden="true" className="size-5" />
             </Button>
             {corner}
           </div>

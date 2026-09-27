@@ -151,6 +151,22 @@ it('leaves ② without a dialog and saves the edit waiting for its autosave', as
   await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('떠나기 전 장면'))
 })
 
+// CLIP-53, CLIP-174: an item's sheet opens over whichever of the two previews is showing, and the
+// info control says what the flow view is (CLIP-176).
+it('opens an item sheet over the flow view, and says the flow view is still frames', async () => {
+  const view = await mount()
+  await userEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
+  expect(view.container.querySelector('[data-flow-simulation]')).toBeInTheDocument()
+  await selectCut()
+  expect(screen.getByRole('dialog', { name: /컷 1/ })).toBeInTheDocument()
+  expect(view.container.querySelector('[data-flow-simulation]')).toBeInTheDocument()
+  await userEvent.keyboard('{Escape}')
+  await userEvent.click(screen.getByRole('button', { name: '이 미리보기에 대해' }))
+  expect(
+    await screen.findByText('멈춘 장면으로 흐름만 보여줘요. 실제 렌더와 다를 수 있어요.'),
+  ).toBeInTheDocument()
+})
+
 // CLIP-53: one selection is ONE sheet. The page behind keeps the preview and the
 // timeline, the item's own controls open over them, and the notice naming that
 // item rides inside its sheet rather than anywhere in ②'s flow.
@@ -245,9 +261,11 @@ it('carries its scrubber, its info control and its download on the preview itsel
   expect(canvas.parentElement).toContainElement(about)
   expect(canvas).not.toContainElement(about)
   const corner = within(canvas.parentElement!.lastElementChild as HTMLElement)
+  // The flow view's control stands beside the info control (CLIP-174).
   expect(corner.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
     '미리보기 소리 듣기',
     '미리보기 새로고침',
+    '흐름 보기',
     '이 미리보기에 대해',
   ])
   await userEvent.click(about)

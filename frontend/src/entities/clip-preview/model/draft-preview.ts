@@ -60,6 +60,30 @@ export function previewFrame(timeline: readonly PreviewCut[], requestedMs: numbe
   })
 }
 
+/** The flow simulation's instant (CLIP-175): the playhead, with the scrubber's end drawn as the
+ *  clip's last millisecond rather than the empty instant after it. */
+export function flowInstant(timeline: readonly PreviewCut[], timeMs: number) {
+  const duration = timeline.at(-1)?.endMs ?? 0
+  return Math.max(0, Math.min(timeMs, duration - 1))
+}
+/** The cut the flow simulation stands at the playhead (CLIP-173): the one whose interval holds
+ *  it, the incoming one where two overlap in a transition — a still has no fade. */
+export function flowCut(timeline: readonly PreviewCut[], timeMs: number) {
+  const time = flowInstant(timeline, timeMs)
+  return timeline.filter((c) => time >= c.startMs && time < c.endMs).at(-1)
+}
+/** The overlay the flow simulation shows at the playhead (CLIP-176): every asset whose interval
+ *  holds it, drawn whole and at rest — no fade or settle; a sequence-drawn style is its one
+ *  representative frame. */
+export function flowAssets<T extends Pick<PreviewAsset, 'startMs' | 'endMs'>>(
+  assets: readonly T[],
+  timeline: readonly PreviewCut[],
+  timeMs: number,
+): T[] {
+  const time = flowInstant(timeline, timeMs)
+  return assets.filter((asset) => asset.startMs <= time && time < asset.endMs)
+}
+
 export function previewElementIDs(
   plan: ClipEditPlan,
   timeline: readonly PreviewCut[],
