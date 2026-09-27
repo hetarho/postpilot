@@ -286,3 +286,9 @@ choice would be expensive to undo are listed at the end.
 - **In a transition overlap the still is the incoming cut**, since a still has no fade.
 - **Overlays are the server's own assets**, the ones the video preview already fetches. Each is drawn whole and at rest while its interval holds the playhead. A sequence style is its one representative frame, which is how the server hands it over.
 - **The info control's new line** (`멈춘 장면으로 흐름만 보여줘요. 실제 렌더와 다를 수 있어요.`) stands in both views, next to the existing parity line.
+
+## Not done, skipped, and found on the way
+- **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
+- **T416 is still blocked, and the cause is not cost:** it waits on an SSOT decision (update-ssot CDS). The question is what a caption does when its face, including the default 크게 강조, has no ink for a syllable. It was blocked before this wave.
+- **The deploy failure is fixed but not pushed** (commit `fix(deploy): label the images with media contract 2…`). T413 moved the media contract to 2, but both Dockerfile images still said protocol "1". The rollout compares the API binary with its image labels, so every deploy since T413 has stopped with "API executable and image manifest disagree" and rolled back. A new Go test pins the Dockerfile labels to the constants. Pushing `main` deploys the whole wave, including migrations 0098–0102.
+- **Open finding (T415, out of scope):** a storyline paragraph edit that has not yet autosaved (600 ms) is not sent before 이 스토리로 만들기 or a storyline request starts. Those can therefore run on the storyline as it was one edit earlier.
