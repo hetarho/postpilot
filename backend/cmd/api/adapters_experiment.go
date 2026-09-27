@@ -39,9 +39,13 @@ type experimentVoices struct{ service *voice.Service }
 
 func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID string) error {
 	found, err := a.service.GetVoice(ctx, userID, voiceID)
+	// MODEL-31: an unknown or foreign voice is NotFound, a deleted one of the owner's is
+	// FailedPrecondition.
 	switch {
-	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
-		return experiment.ErrVoiceUnavailable
+	case errors.Is(err, voice.ErrVoiceNotFound):
+		return experiment.ErrVoiceNotFound
+	case errors.Is(err, voice.ErrVoiceRequired):
+		return experiment.ErrVoiceRequired
 	case err != nil:
 		return err
 	case found.Deleted():

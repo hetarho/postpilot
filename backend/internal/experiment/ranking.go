@@ -5,9 +5,13 @@ import (
 	"sort"
 )
 
+// Match is one counted outcome, replayed in decision order (MODEL-38). A winner verdict names
+// its Winner and Loser. A dismissal of two delivered candidates names neither and carries both
+// in Dismissed instead: each loses one match to the fixed dismissal reference.
 type Match struct {
-	Winner ModelRef
-	Loser  ModelRef
+	Winner    ModelRef
+	Loser     ModelRef
+	Dismissed []ModelRef
 }
 
 // BadgeTally is how often one model earned one badge inside a board's own scope, stage and
@@ -63,8 +67,35 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 		}
 		return entries[ref]
 	}
+	// A model reaches the board only through a counted outcome; the calls beside it are
+	// accounting for a model already there (MODEL-38).
+	for _, match := range matches {
+		if len(match.Dismissed) > 0 {
+			for _, ref := range match.Dismissed {
+				loser := entry(ref)
+				expected := 1 / (1 + math.Pow(10, float64(LeaderboardDismissalReference-loser.Rating)/400))
+				loser.Rating += int(math.Round(LeaderboardKFactor * (0 - expected)))
+				loser.Matches++
+				loser.Losses++
+			}
+			continue
+		}
+		winner := entry(match.Winner)
+		loser := entry(match.Loser)
+		expectedWinner := 1 / (1 + math.Pow(10, float64(loser.Rating-winner.Rating)/400))
+		delta := int(math.Round(LeaderboardKFactor * (1 - expectedWinner)))
+		winner.Rating += delta
+		loser.Rating -= delta
+		winner.Matches++
+		winner.Wins++
+		loser.Matches++
+		loser.Losses++
+	}
 	for _, candidate := range candidates {
-		current := entry(candidate.Model)
+		current := entries[candidate.Model]
+		if current == nil {
+			continue
+		}
 		if current.ModelLabel == "" {
 			current.ModelLabel = candidate.ModelLabel
 		}
@@ -78,18 +109,6 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 			}
 			current.CostQuality = mergeCostQuality(current.CostQuality, candidate.Usage.CostSource)
 		}
-	}
-	for _, match := range matches {
-		winner := entry(match.Winner)
-		loser := entry(match.Loser)
-		expectedWinner := 1 / (1 + math.Pow(10, float64(loser.Rating-winner.Rating)/400))
-		delta := int(math.Round(LeaderboardKFactor * (1 - expectedWinner)))
-		winner.Rating += delta
-		loser.Rating -= delta
-		winner.Matches++
-		winner.Wins++
-		loser.Matches++
-		loser.Losses++
 	}
 	out := make([]LeaderboardEntry, 0, len(entries))
 	for _, current := range entries {

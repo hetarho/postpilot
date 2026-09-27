@@ -227,3 +227,87 @@ func TestEquallyEarnedTalliesFallBackOnCatalogOrder(t *testing.T) {
 		}
 	}
 }
+
+func seedDismissal(store *memoryStore, id, user string, stage Stage, left, right ModelRef, rightStatus CandidateStatus, at time.Time) {
+	decided := at
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.rows[id] = Experiment{
+		ID: id, UserID: user, Stage: stage, Origin: OriginLab, Status: StatusDismissed,
+		Outcome: OutcomeSkipped, DecidedAt: &decided,
+		Candidates: []Candidate{
+			{ID: id + "-l", ExperimentID: id, Model: left, ModelLabel: left.ModelID, DisplaySide: SideLeft, Status: CandidateSucceeded, Usage: Usage{LatencyMS: 100}},
+			{ID: id + "-r", ExperimentID: id, Model: right, ModelLabel: right.ModelID, DisplaySide: SideRight, Status: rightStatus, Usage: Usage{LatencyMS: 100}},
+		},
+	}
+}
+
+// MODEL-38: a dismissal of two delivered candidates counts one match and one loss for each
+// against a fixed 1500 reference that is never ranked; a dismissal with one delivered
+// candidate and an unpaired verdict are excluded, and a model seen only there has no row,
+// its calls included.
+func TestADismissalIsOneLossEachAgainstAFixedReference(t *testing.T) {
+	svc, store, _, _, _ := newTestService()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+	a := ModelRef{ProviderID: "p", ModelID: "a"}
+	b := ModelRef{ProviderID: "p", ModelID: "b"}
+	c := ModelRef{ProviderID: "p", ModelID: "c"}
+	d := ModelRef{ProviderID: "p", ModelID: "d"}
+	seedDismissal(store, "both-delivered", "alice", StageWrite, a, b, CandidateSucceeded, now.Add(-time.Hour))
+	seedDismissal(store, "one-delivered", "alice", StageWrite, c, d, CandidateFailed, now.Add(-30*time.Minute))
+	store.mu.Lock()
+	unpaired := now.Add(-10 * time.Minute)
+	store.rows["unpaired"] = Experiment{
+		ID: "unpaired", UserID: "alice", Stage: StageWrite, Origin: OriginLab, Status: StatusDecided,
+		Outcome: OutcomeUnpaired, WinnerCandidateID: "unpaired-l", DecidedAt: &unpaired,
+		Candidates: []Candidate{
+			{ID: "unpaired-l", ExperimentID: "unpaired", Model: c, Status: CandidateSucceeded},
+			{ID: "unpaired-r", ExperimentID: "unpaired", Model: d, Status: CandidateFailed},
+		},
+	}
+	store.mu.Unlock()
+	entries, err := svc.Leaderboard(context.Background(), "alice", StageWrite, WindowWeek, ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("board = %+v, want exactly the two delivered, dismissed models", entries)
+	}
+	for _, entry := range entries {
+		if entry.Model != a && entry.Model != b {
+			t.Fatalf("%s reached the board without a counted outcome", entry.Model)
+		}
+		// Expected 0.5 against the 1500 reference: 1500 + round(32 × (0 − 0.5)).
+		if entry.Matches != 1 || entry.Losses != 1 || entry.Wins != 0 || entry.Rating != 1484 || entry.SuccessfulCalls != 1 {
+			t.Fatalf("dismissed entry = %+v", entry)
+		}
+	}
+}
+
+// The reference never moves: a second dismissal is rated against 1500 again, not against a
+// reference that "won" the first one, and the dismissal interleaves with winner verdicts in
+// decision order.
+func TestDismissalsReplayInDecisionOrderAgainstAnUnmovedReference(t *testing.T) {
+	a := ModelRef{ProviderID: "p", ModelID: "a"}
+	b := ModelRef{ProviderID: "p", ModelID: "b"}
+	board := BuildLeaderboard([]Match{
+		{Dismissed: []ModelRef{a, b}},
+		{Dismissed: []ModelRef{a, b}},
+		{Winner: a, Loser: b},
+	}, nil, nil, nil)
+	byModel := map[ModelRef]LeaderboardEntry{}
+	for _, entry := range board {
+		byModel[entry.Model] = entry
+	}
+	// 1500 → 1484 → 1484 + round(32 × (0 − 1/(1+10^(16/400)))) = 1469; then an even match.
+	if got := byModel[a]; got.Rating != 1469+16 || got.Matches != 3 || got.Wins != 1 || got.Losses != 2 {
+		t.Fatalf("a = %+v", got)
+	}
+	if got := byModel[b]; got.Rating != 1469-16 || got.Matches != 3 || got.Wins != 0 || got.Losses != 3 {
+		t.Fatalf("b = %+v", got)
+	}
+	if len(board) != 2 {
+		t.Fatalf("the reference was ranked: %+v", board)
+	}
+}

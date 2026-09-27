@@ -23,7 +23,7 @@ type RunLedger interface {
 	SetSnapshot(ctx context.Context, id string, snapshot Snapshot, hash string) error
 	SetStatus(ctx context.Context, id string, status Status, finishedAt *time.Time) error
 	ListQueued(ctx context.Context) ([]string, error)
-	CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error)
+	CountPublishableForVoice(ctx context.Context, userID, voiceID string, now time.Time) (int, error)
 }
 
 // CandidateLedger is the two sides of a run while they are being produced, including what a
@@ -47,6 +47,9 @@ type OutcomeLedger interface {
 	SetApplyRequested(ctx context.Context, id, userID string) error
 	SetApplyFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetApplied(ctx context.Context, id, userID string, now time.Time) error
+	// SetAdoptionRequested records that a decided verdict now owes an adoption (MODEL-36).
+	// Idempotent.
+	SetAdoptionRequested(ctx context.Context, id, userID string) error
 	SetAdoptionFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetAdopted(ctx context.Context, id, userID string, now time.Time) error
 	// LeaderboardData returns the winner verdicts decided at or after `since` and the call

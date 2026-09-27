@@ -62,14 +62,17 @@ WHERE user_id = ? AND post_slug = ? AND stage = 'write' AND origin = 'editor'
 ORDER BY created_at DESC, id DESC LIMIT 1;
 
 -- name: CountPublishableForVoice :one
--- An experiment frozen to the voice that could still publish into it (a styleguide for an
--- analyze comparison, a machine baseline for a write one): unfinished, awaiting a verdict, or
--- decided with its winner not yet applied. ASCII only: sqlc expands SELECT * by byte offset
--- and a multi-byte character in this file corrupts the queries after it.
+-- An analyze experiment frozen to the voice that could still publish a styleguide into it
+-- (VOICE-13, MODEL-37): unfinished, awaiting a verdict, or decided with its winner not yet
+-- applied while its output is still held. A write-stage experiment publishes nothing into a
+-- voice, and a pick past its retention or already purged can no longer be applied, so
+-- neither counts. ASCII only: sqlc expands SELECT * by byte offset and a multi-byte
+-- character in this file corrupts the queries after it.
 SELECT count(*) FROM model_experiments
-WHERE voice_id = ? AND user_id = ?
+WHERE voice_id = sqlc.arg(voice_id) AND user_id = sqlc.arg(user_id) AND stage = 'analyze'
   AND (status IN ('queued', 'running', 'review', 'partial')
-       OR (status = 'decided' AND applied_at IS NULL));
+       OR (status = 'decided' AND applied_at IS NULL AND input_snapshot IS NOT NULL
+           AND (content_expires_at IS NULL OR content_expires_at > sqlc.arg(now))));
 
 -- name: SetExperimentStatus :exec
 UPDATE model_experiments
@@ -172,6 +175,13 @@ WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND p
 UPDATE model_experiments SET apply_requested = 1
 WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL;
 
+-- name: SetAdoptionRequested :execrows
+-- Marks that this decided verdict now owes an active-model adoption, so the lab's follow-up
+-- is reload-safe: a failure leaves a visible retry, and a success lands on adopted_at.
+-- Idempotent: a repeat is a no-op.
+UPDATE model_experiments SET adoption_requested = 1
+WHERE id = ? AND user_id = ? AND status = 'decided' AND adopted_at IS NULL;
+
 -- name: SetApplyFailure :exec
 UPDATE model_experiments
 SET apply_error = NULL, apply_error_reason = ?, apply_error_params = ?,
@@ -220,10 +230,13 @@ UPDATE model_experiment_candidates SET output = NULL
 WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND post_slug = ?);
 
 -- name: ListDecidedForLeaderboard :many
--- The winner verdicts one account reached inside the window. decided_at is stored in a
+-- The winner verdicts and dismissals one account reached inside the window; the service keeps
+-- a dismissal only when both of its candidates delivered (MODEL-38). decided_at is stored in a
 -- fixed-width UTC layout, so the string comparison is the chronological one.
 SELECT * FROM model_experiments
-WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+WHERE user_id = ? AND stage = ?
+  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+       OR (status = 'dismissed' AND outcome = 'skipped'))
   AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id;
 
@@ -231,7 +244,9 @@ ORDER BY decided_at, id;
 -- The same, over every account. Only the candidates' model refs leave this query, so no
 -- account, experiment or output reaches the board it feeds.
 SELECT * FROM model_experiments
-WHERE stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+WHERE stage = ?
+  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+       OR (status = 'dismissed' AND outcome = 'skipped'))
   AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id;
 

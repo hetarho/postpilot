@@ -114,7 +114,9 @@ export function ExperimentActions({
             {t('actions.retryApply')}
           </Button>
         )}
-        {experiment.status === 'decided' && !commits && (
+        {/* The adoption leaves its marker, so a reload never offers it again (MODEL-36); a
+            failed one keeps this button as its retry. */}
+        {experiment.status === 'decided' && !commits && !experiment.adoptedAt && (
           <Button
             variant="secondary"
             disabled={actions.isPending}
@@ -124,7 +126,7 @@ export function ExperimentActions({
             {t('actions.useActive')}
           </Button>
         )}
-        {experiment.adoptionFailure && (
+        {experiment.adoptionFailure && commits && (
           <Button
             variant="secondary"
             disabled={actions.isPending}

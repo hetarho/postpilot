@@ -58,7 +58,7 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 		t.Fatalf("reloaded voice = %q err=%v", reloaded.VoiceID, err)
 	}
 	count := func(user, voiceID string) int {
-		n, err := store.CountPublishableForVoice(ctx, user, voiceID)
+		n, err := store.CountPublishableForVoice(ctx, user, voiceID, now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,6 +95,61 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 	if count("alice", "voice-alice") != 0 {
 		t.Fatal("applied experiment still holds the voice")
 	}
+}
+
+// VOICE-13, MODEL-37: of the experiments, only an analyze pick that can still be published
+// holds a voice. A write pick never does — a lab write pick on a finalized post can never be
+// applied — and neither does an analyze pick past its retention or already purged.
+func TestOnlyALiveAnalyzePickHoldsTheVoice(t *testing.T) {
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		stage, origin string
+		expires       time.Duration
+		purged        bool
+		holds         bool
+	}{
+		"analyze pick":            {stage: "analyze", origin: "lab", expires: time.Hour, holds: true},
+		"analyze pick expired":    {stage: "analyze", origin: "lab", expires: -time.Hour},
+		"analyze pick purged":     {stage: "analyze", origin: "lab", expires: time.Hour, purged: true},
+		"lab write pick":          {stage: "write", origin: "lab", expires: time.Hour},
+		"editor write, unapplied": {stage: "write", origin: "editor", expires: time.Hour},
+	} {
+		t.Run(name, func(t *testing.T) {
+			store, handle := testStore(t)
+			ctx := context.Background()
+			found := sample("exp-pick", "alice", "post-a", now)
+			found.VoiceID = "voice-alice"
+			if tc.stage == "analyze" {
+				found.Stage, found.Origin, found.PostSlug, found.TargetLanguage = experiment.StageAnalyze, experiment.OriginLab, "", nil
+			} else if tc.origin == "lab" {
+				found.Origin = experiment.OriginLab
+			}
+			if err := store.Create(ctx, found); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := handle.Writer.ExecContext(ctx,
+				`UPDATE model_experiments SET status='decided', winner_candidate_id=?, outcome='winner', decided_at=?, content_expires_at=? WHERE id=?`,
+				found.Candidates[0].ID, formatAt(now), formatAt(now.Add(tc.expires)), found.ID); err != nil {
+				t.Fatal(err)
+			}
+			if tc.purged {
+				if _, err := handle.Writer.ExecContext(ctx, `UPDATE model_experiments SET input_snapshot=NULL WHERE id=?`, found.ID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			n, err := store.CountPublishableForVoice(ctx, "alice", "voice-alice", now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (n == 1) != tc.holds || n > 1 {
+				t.Fatalf("publishable = %d, want holds=%v", n, tc.holds)
+			}
+		})
+	}
+}
+
+func formatAt(value time.Time) string {
+	return value.UTC().Format("2006-01-02T15:04:05.000000000Z07:00")
 }
 
 func sample(id, user, slug string, at time.Time) experiment.Experiment {
@@ -761,6 +816,90 @@ func TestLabPickReleasesThePostAndAnAskedApplicationHoldsIt(t *testing.T) {
 // The board's two scopes read the same rows through different predicates: `me` is the
 // caller's own verdicts, `all` is every account's. Both are bounded by the window, and both
 // leave a comparison still awaiting its verdict out of the call accounting.
+// A dismissal reaches the board query beside the winner verdicts, in decision order, since
+// a dismissal of two delivered candidates is a counted outcome (MODEL-38).
+// A lab pick requests nothing at its verdict; its adoption follow-up marks the debt first,
+// and only then can adopted_at land (MODEL-36).
+func TestALabPickRecordsItsAdoptionOnceRequested(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	found := sample("exp-lab", "alice", "post-a", now)
+	found.Origin = experiment.OriginLab
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range found.Candidates {
+		candidate.Status = experiment.CandidateSucceeded
+		candidate.Output = []byte(`{"title":"ok"}`)
+		candidate.FinishedAt = &now
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &now); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, nil, now, now.Add(time.Hour)); err != nil || !changed {
+		t.Fatalf("decide = %v, %v", changed, err)
+	}
+	if err := store.SetAdopted(ctx, found.ID, "alice", now); err == nil {
+		if reloaded, _ := store.Get(ctx, found.ID); reloaded.AdoptedAt != nil {
+			t.Fatal("an adoption nobody requested was recorded")
+		}
+	}
+	for range 2 {
+		if err := store.SetAdoptionRequested(ctx, found.ID, "alice"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetAdopted(ctx, found.ID, "alice", now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil || !reloaded.AdoptionRequested || reloaded.AdoptedAt == nil {
+		t.Fatalf("adoption = %+v, %v", reloaded, err)
+	}
+	if err := store.SetAdoptionRequested(ctx, found.ID, "alice"); err != nil {
+		t.Fatalf("a repeat after adoption = %v", err)
+	}
+}
+
+func TestLeaderboardDataCarriesDismissalsInDecisionOrder(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	found := sample("exp-dismissed", "alice", "post-a", now.Add(-time.Hour))
+	found.Origin = experiment.OriginLab
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	at := now.Add(-time.Hour)
+	for _, candidate := range found.Candidates {
+		candidate.Status = experiment.CandidateSucceeded
+		candidate.Output = []byte(`{"title":"ok"}`)
+		candidate.FinishedAt = &at
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &at); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := store.Decide(ctx, found.ID, "alice", "", experiment.StatusDismissed, experiment.OutcomeSkipped, false, false, nil, at, at.Add(time.Hour)); err != nil || !changed {
+		t.Fatalf("dismiss = %v, %v", changed, err)
+	}
+	for _, scope := range []experiment.Scope{experiment.ScopeMe, experiment.ScopeAll} {
+		decided, calls, _, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-24*time.Hour), scope)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(decided) != 1 || decided[0].ID != found.ID || decided[0].Status != experiment.StatusDismissed || len(calls) != 2 {
+			t.Fatalf("%s: dismissal missing from the board data: %+v (%d calls)", scope, decided, len(calls))
+		}
+	}
+}
+
 func TestLeaderboardDataFollowsItsScopeAndWindow(t *testing.T) {
 	store, handle := testStore(t)
 	ctx := context.Background()

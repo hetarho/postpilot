@@ -230,6 +230,31 @@ it('offers a decided lab pick the model adoption and, on a draft, the content ap
   expect(actions.decideWrite).not.toHaveBeenCalled()
 })
 
+// MODEL-36: an adoption leaves adopted_at, so a reload offers it no more; a failed one is
+// retried through the lab's own adoption, never the editor's committing verdict.
+it('offers a lab pick its adoption until the marker says it happened', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  const { unmount } = renderActions({
+    ...decidedLabPair,
+    adoptionRequested: true,
+    adoptedAt: '2026-09-27T00:00:00Z',
+  })
+  // The content application still shows, so the panel has settled.
+  expect(await screen.findByRole('button', { name: '결과 적용' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '활성 모델로 사용' })).not.toBeInTheDocument()
+  unmount()
+  renderActions({
+    ...decidedLabPair,
+    adoptionRequested: true,
+    adoptionFailure: { reason: 'UNKNOWN_FAILURE', params: {} },
+  })
+  await userEvent.click(await screen.findByRole('button', { name: '활성 모델로 사용' }))
+  expect(screen.queryByRole('button', { name: '활성 모델 변경 다시 시도' })).not.toBeInTheDocument()
+  expect(actions.adopt).toHaveBeenCalled()
+  expect(actions.decideWrite).not.toHaveBeenCalled()
+})
+
 it('withholds the content application from a finalized post and keeps the adoption', async () => {
   const actions = actionSet()
   mocks.useExperimentActions.mockReturnValue(actions)

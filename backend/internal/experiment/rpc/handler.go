@@ -275,6 +275,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", postpilotv1.FailureReason_EXPERIMENT_RETRY_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrVoiceUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", postpilotv1.FailureReason_EXPERIMENT_VOICE_UNAVAILABLE, nil)
+	case errors.Is(err, experiment.ErrVoiceNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "experiment voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrBadgesInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the badges offered with this verdict are not ones it can carry", postpilotv1.FailureReason_EXPERIMENT_BADGES_INVALID, nil)
 	case errors.Is(err, experiment.ErrPostFinalized):

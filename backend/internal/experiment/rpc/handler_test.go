@@ -36,6 +36,7 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"snapshot":                 {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
 		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
 		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
+		"voice not found":          {experiment.ErrVoiceNotFound, connect.CodeNotFound, "VOICE_NOT_FOUND", nil},
 		"post finalized":           {experiment.ErrPostFinalized, connect.CodeFailedPrecondition, "EXPERIMENT_POST_FINALIZED", nil},
 		"post published":           {experiment.ErrPostPublished, connect.CodeFailedPrecondition, "POST_PUBLISHED_LOCKED", nil},
 		"badges invalid":           {experiment.ErrBadgesInvalid, connect.CodeInvalidArgument, "EXPERIMENT_BADGES_INVALID", nil},

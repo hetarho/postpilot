@@ -167,11 +167,11 @@ func (s *Service) PurgePost(ctx context.Context, userID, postSlug string) error 
 	return s.purge.PurgePost(ctx, userID, postSlug)
 }
 
-// HasPublishableForVoice is the guard the voice context asks before a soft delete: an
-// experiment frozen to the voice that is unfinished, awaiting a verdict, or decided but not
-// yet applied could still write into it.
+// HasPublishableForVoice is the guard the voice context asks before a soft delete: only an
+// analyze experiment frozen to the voice that is unfinished, awaiting a verdict, or decided
+// but not yet applied while its output is still held could still publish into it (VOICE-13).
 func (s *Service) HasPublishableForVoice(ctx context.Context, userID, voiceID string) (bool, error) {
-	n, err := s.runs.CountPublishableForVoice(ctx, userID, voiceID)
+	n, err := s.runs.CountPublishableForVoice(ctx, userID, voiceID, s.now())
 	return n > 0, err
 }
 
@@ -218,10 +218,16 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 		return StartResult{}, err
 	}
 	for _, candidate := range found.Candidates {
-		if candidate.Status == CandidateFailed {
-			if _, err := s.resolveForStage(found.Stage, candidate.Model); err != nil {
-				return StartResult{}, ErrRetryModelUnavailable
-			}
+		if candidate.Status != CandidateFailed {
+			continue
+		}
+		// The snapshot is the retry boundary: a candidate that failed on a photo the snapshot
+		// no longer has is a new comparison, never a retry (MODEL-30).
+		if candidate.Failure != nil && candidate.Failure.Reason == FailureReasonSnapshotUnavailable {
+			return StartResult{}, ErrSnapshotUnavailable
+		}
+		if _, err := s.resolveForStage(found.Stage, candidate.Model); err != nil {
+			return StartResult{}, ErrRetryModelUnavailable
 		}
 	}
 	// An editor retry re-prepares into the post, so it asks first; a lab retry writes nothing
@@ -435,7 +441,12 @@ func (s *Service) allowPostWrite(ctx context.Context, found Experiment) error {
 	return ErrPostFinalized
 }
 
+// AdoptWinner is the decided result's active-model follow-up (MODEL-36). The debt is marked
+// before the catalog call and adopted_at after it, so a reload knows the adoption happened
+// and a retry checks the catalog's active selection before it adopts anything.
 func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef, Stage, error) {
+	s.adoptMu.Lock()
+	defer s.adoptMu.Unlock()
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return ModelRef{}, "", err
@@ -444,10 +455,28 @@ func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef,
 	if found.Status != StatusDecided || winner == nil {
 		return ModelRef{}, "", ErrInvalidState
 	}
+	if found.AdoptedAt != nil {
+		return winner.Model, found.Stage, nil
+	}
 	if _, err := s.resolveForStage(found.Stage, winner.Model); err != nil {
 		return ModelRef{}, "", err
 	}
-	if err := s.catalog.Adopt(ctx, userID, found.Stage, winner.Model); err != nil {
+	if !found.AdoptionRequested {
+		if err := s.outcome.SetAdoptionRequested(ctx, found.ID, userID); err != nil {
+			return ModelRef{}, "", err
+		}
+	}
+	active, selected, err := s.catalog.Active(ctx, userID, found.Stage)
+	if err == nil && !(selected && active == winner.Model) {
+		err = s.catalog.Adopt(ctx, userID, found.Stage, winner.Model)
+	}
+	if err != nil {
+		if storeErr := s.outcome.SetAdoptionFailure(ctx, found.ID, userID, normalizeFailure(err)); storeErr != nil {
+			return ModelRef{}, "", storeErr
+		}
+		return ModelRef{}, "", err
+	}
+	if err := s.outcome.SetAdopted(ctx, found.ID, userID, s.now()); err != nil {
 		return ModelRef{}, "", err
 	}
 	return winner.Model, found.Stage, nil
@@ -529,8 +558,9 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	return s.owned(ctx, userID, id)
 }
 
-// Leaderboard replays the winner verdicts of one (scope, stage, window) from 1500. The
-// window is rolling and measured here, at the moment of the request (MODEL-38).
+// Leaderboard replays the counted outcomes of one (scope, stage, window) from 1500: winner
+// verdicts, and dismissals whose two candidates both delivered. The window is rolling and
+// measured here, at the moment of the request (MODEL-38).
 func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, window Window, scope Scope) ([]LeaderboardEntry, error) {
 	if _, err := ParseStage(string(stage)); err != nil {
 		return nil, err
@@ -552,10 +582,22 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 		labels[candidate.Model] = candidate.ModelLabel
 	}
 	matches := make([]Match, 0, len(decided))
+	// Only a counted outcome's calls are accounted: a failed, unpaired or single-delivery run
+	// puts nothing on the board, its calls, latency and cost included.
+	var counted []Candidate
 	for _, found := range decided {
+		pair := byExperiment[found.ID]
+		if found.Status == StatusDismissed {
+			if len(pair) != 2 || pair[0].Status != CandidateSucceeded || pair[1].Status != CandidateSucceeded {
+				continue
+			}
+			matches = append(matches, Match{Dismissed: []ModelRef{pair[0].Model, pair[1].Model}})
+			counted = append(counted, pair...)
+			continue
+		}
 		var winner, loser *Candidate
-		for i := range byExperiment[found.ID] {
-			candidate := &byExperiment[found.ID][i]
+		for i := range pair {
+			candidate := &pair[i]
 			if candidate.ID == found.WinnerCandidateID {
 				winner = candidate
 			} else {
@@ -564,9 +606,10 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 		}
 		if winner != nil && loser != nil {
 			matches = append(matches, Match{Winner: winner.Model, Loser: loser.Model})
+			counted = append(counted, pair...)
 		}
 	}
-	entries := BuildLeaderboard(matches, calls, labels, tallies)
+	entries := BuildLeaderboard(matches, counted, labels, tallies)
 	active, hasActive, err := s.catalog.Active(ctx, userID, stage)
 	if err != nil {
 		return nil, err

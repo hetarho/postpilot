@@ -19,20 +19,23 @@ func (s *Sweeper) Sweep(ctx context.Context) (int64, error) {
 	return s.retention.PurgeExpired(ctx, s.now())
 }
 
+// Run sweeps once at boot and then on every interval (MODEL-42). Every deploy restarts the
+// process, so a sweep that waited for the first tick could be put off for good by releases
+// more frequent than the interval, and stored comparison text would outlive its retention.
 func (s *Sweeper) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
+		count, err := s.Sweep(ctx)
+		if err != nil {
+			slog.Warn("experiment content sweep failed", "err", err)
+		} else if count > 0 {
+			slog.Info("experiment content purged", "count", count)
+		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			count, err := s.Sweep(ctx)
-			if err != nil {
-				slog.Warn("experiment content sweep failed", "err", err)
-			} else if count > 0 {
-				slog.Info("experiment content purged", "count", count)
-			}
 		}
 	}
 }

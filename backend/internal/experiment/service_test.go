@@ -279,6 +279,17 @@ func (s *memoryStore) SetApplyRequested(_ context.Context, id, userID string) er
 	s.rows[id] = row
 	return nil
 }
+func (s *memoryStore) SetAdoptionRequested(_ context.Context, id, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.Status != StatusDecided || row.AdoptedAt != nil {
+		return nil
+	}
+	row.AdoptionRequested = true
+	s.rows[id] = row
+	return nil
+}
 func (s *memoryStore) SetApplyFailure(_ context.Context, id, userID string, failure Failure) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -343,7 +354,8 @@ func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage St
 		if row.Status == StatusDecided || row.Status == StatusDismissed {
 			calls = append(calls, cloneExperiment(row).Candidates...)
 		}
-		if row.Outcome == OutcomeWinner && row.WinnerCandidateID != "" {
+		if row.Outcome == OutcomeWinner && row.WinnerCandidateID != "" ||
+			row.Status == StatusDismissed && row.Outcome == OutcomeSkipped {
 			decided = append(decided, cloneExperiment(row))
 		}
 	}
@@ -357,19 +369,19 @@ func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage St
 }
 func (s *memoryStore) PurgeExpired(context.Context, time.Time) (int64, error) { return 0, nil }
 func (s *memoryStore) PurgePost(context.Context, string, string) error        { return nil }
-func (s *memoryStore) CountPublishableForVoice(_ context.Context, userID, voiceID string) (int, error) {
+func (s *memoryStore) CountPublishableForVoice(_ context.Context, userID, voiceID string, now time.Time) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n := 0
 	for _, row := range s.rows {
-		if row.UserID != userID || row.VoiceID != voiceID {
+		if row.UserID != userID || row.VoiceID != voiceID || row.Stage != StageAnalyze {
 			continue
 		}
 		switch row.Status {
 		case StatusQueued, StatusRunning, StatusReview, StatusPartial:
 			n++
 		case StatusDecided:
-			if row.AppliedAt == nil {
+			if row.AppliedAt == nil && row.InputSnapshot != nil && (row.ContentExpiresAt == nil || row.ContentExpiresAt.After(now)) {
 				n++
 			}
 		}
@@ -961,6 +973,27 @@ func TestRetryEnqueueFailureRestoresCandidateState(t *testing.T) {
 		if after.Candidates[i].Status != before.Candidates[i].Status || !reflect.DeepEqual(after.Candidates[i].Failure, before.Candidates[i].Failure) {
 			t.Fatalf("candidate %d changed: before=%+v after=%+v", i, before.Candidates[i], after.Candidates[i])
 		}
+	}
+}
+
+// MODEL-30: the snapshot is the retry boundary. A candidate that failed because a photo of
+// the snapshot is gone cannot be retried; the refusal is the fixed 새 비교 reason and the
+// comparison is left as it was.
+func TestRetryRefusesACandidateWhoseSnapshotPhotoIsGone(t *testing.T) {
+	svc, store, _, jobs, runner := newTestService()
+	runner.fail["b"] = fmt.Errorf("candidate: %w", ErrSnapshotUnavailable)
+	started, _ := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	if err := svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := store.Get(context.Background(), started.ExperimentID)
+	enqueued := len(jobs.ids)
+	if _, err := svc.Retry(context.Background(), "alice", started.ExperimentID); !errors.Is(err, ErrSnapshotUnavailable) {
+		t.Fatalf("retry over a gone photo = %v, want ErrSnapshotUnavailable", err)
+	}
+	after, _ := store.Get(context.Background(), started.ExperimentID)
+	if len(jobs.ids) != enqueued || after.Status != before.Status || !reflect.DeepEqual(after.Candidates, before.Candidates) {
+		t.Fatalf("a refused retry changed the comparison: %+v", after)
 	}
 }
 

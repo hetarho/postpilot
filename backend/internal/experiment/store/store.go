@@ -337,6 +337,13 @@ func (s *Store) SetApplyRequested(ctx context.Context, id, userID string) error 
 	return nil
 }
 
+func (s *Store) SetAdoptionRequested(ctx context.Context, id, userID string) error {
+	if _, err := s.write.SetAdoptionRequested(ctx, sqlc.SetAdoptionRequestedParams{ID: id, UserID: userID}); err != nil {
+		return fmt.Errorf("set adoption requested: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) SetApplyFailure(ctx context.Context, id, userID string, failure experiment.Failure) error {
 	reason, params, detail, err := failureColumns(&failure)
 	if err != nil {
@@ -465,8 +472,8 @@ func (s *Store) PurgeExpired(ctx context.Context, before time.Time) (int64, erro
 	return count, nil
 }
 
-func (s *Store) CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error) {
-	n, err := s.read.CountPublishableForVoice(ctx, sqlc.CountPublishableForVoiceParams{VoiceID: nullString(voiceID), UserID: userID})
+func (s *Store) CountPublishableForVoice(ctx context.Context, userID, voiceID string, now time.Time) (int, error) {
+	n, err := s.read.CountPublishableForVoice(ctx, sqlc.CountPublishableForVoiceParams{VoiceID: nullString(voiceID), UserID: userID, Now: nullTime(&now)})
 	if err != nil {
 		return 0, fmt.Errorf("count publishable experiments for voice: %w", err)
 	}

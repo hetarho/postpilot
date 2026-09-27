@@ -97,22 +97,26 @@ func (q *Queries) CompleteCandidate(ctx context.Context, arg CompleteCandidatePa
 
 const countPublishableForVoice = `-- name: CountPublishableForVoice :one
 SELECT count(*) FROM model_experiments
-WHERE voice_id = ? AND user_id = ?
+WHERE voice_id = ?1 AND user_id = ?2 AND stage = 'analyze'
   AND (status IN ('queued', 'running', 'review', 'partial')
-       OR (status = 'decided' AND applied_at IS NULL))
+       OR (status = 'decided' AND applied_at IS NULL AND input_snapshot IS NOT NULL
+           AND (content_expires_at IS NULL OR content_expires_at > ?3)))
 `
 
 type CountPublishableForVoiceParams struct {
 	VoiceID sql.NullString
 	UserID  string
+	Now     sql.NullString
 }
 
-// An experiment frozen to the voice that could still publish into it (a styleguide for an
-// analyze comparison, a machine baseline for a write one): unfinished, awaiting a verdict, or
-// decided with its winner not yet applied. ASCII only: sqlc expands SELECT * by byte offset
-// and a multi-byte character in this file corrupts the queries after it.
+// An analyze experiment frozen to the voice that could still publish a styleguide into it
+// (VOICE-13, MODEL-37): unfinished, awaiting a verdict, or decided with its winner not yet
+// applied while its output is still held. A write-stage experiment publishes nothing into a
+// voice, and a pick past its retention or already purged can no longer be applied, so
+// neither counts. ASCII only: sqlc expands SELECT * by byte offset and a multi-byte
+// character in this file corrupts the queries after it.
 func (q *Queries) CountPublishableForVoice(ctx context.Context, arg CountPublishableForVoiceParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countPublishableForVoice, arg.VoiceID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, countPublishableForVoice, arg.VoiceID, arg.UserID, arg.Now)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -682,7 +686,9 @@ func (q *Queries) ListCandidatesForLeaderboardAll(ctx context.Context, arg ListC
 
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
-WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+WHERE user_id = ? AND stage = ?
+  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+       OR (status = 'dismissed' AND outcome = 'skipped'))
   AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id
 `
@@ -693,7 +699,8 @@ type ListDecidedForLeaderboardParams struct {
 	DecidedAt sql.NullString
 }
 
-// The winner verdicts one account reached inside the window. decided_at is stored in a
+// The winner verdicts and dismissals one account reached inside the window; the service keeps
+// a dismissal only when both of its candidates delivered (MODEL-38). decided_at is stored in a
 // fixed-width UTC layout, so the string comparison is the chronological one.
 func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecidedForLeaderboardParams) ([]ModelExperiment, error) {
 	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
@@ -752,7 +759,9 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 
 const listDecidedForLeaderboardAll = `-- name: ListDecidedForLeaderboardAll :many
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
-WHERE stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+WHERE stage = ?
+  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+       OR (status = 'dismissed' AND outcome = 'skipped'))
   AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id
 `
@@ -1196,6 +1205,27 @@ func (q *Queries) SetAdoptionFailure(ctx context.Context, arg SetAdoptionFailure
 		arg.UserID,
 	)
 	return err
+}
+
+const setAdoptionRequested = `-- name: SetAdoptionRequested :execrows
+UPDATE model_experiments SET adoption_requested = 1
+WHERE id = ? AND user_id = ? AND status = 'decided' AND adopted_at IS NULL
+`
+
+type SetAdoptionRequestedParams struct {
+	ID     string
+	UserID string
+}
+
+// Marks that this decided verdict now owes an active-model adoption, so the lab's follow-up
+// is reload-safe: a failure leaves a visible retry, and a success lands on adopted_at.
+// Idempotent: a repeat is a no-op.
+func (q *Queries) SetAdoptionRequested(ctx context.Context, arg SetAdoptionRequestedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setAdoptionRequested, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setApplyFailure = `-- name: SetApplyFailure :exec

@@ -6,6 +6,9 @@ const (
 	LeaderboardInitialRating = 1500
 	LeaderboardKFactor       = 32
 	LeaderboardMinMatches    = 3
+	// The fixed opponent a dismissed candidate loses to: it never moves and is never ranked
+	// (MODEL-38).
+	LeaderboardDismissalReference = 1500
 )
 
 // The leaderboard windows are rolling, measured back from the moment of the request rather

@@ -299,6 +299,66 @@ func TestAdoptWinnerServesALabPick(t *testing.T) {
 	}
 }
 
+// MODEL-36: the adoption follow-up is reload-safe. It leaves adopted_at behind, so a reload
+// knows it happened and a repeat adopts nothing; an already-active winner is marked without a
+// catalog call; and a failed adoption keeps its marker and a visible retry.
+func TestAdoptWinnerRecordsItsMarkerAndChecksTheActiveSelectionFirst(t *testing.T) {
+	t.Run("marks and is idempotent", func(t *testing.T) {
+		svc, store, catalog, _, _ := newTestService()
+		pair := ready(t, svc, store, writeRequest(OriginLab))
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
+			t.Fatal(err)
+		}
+		for range 2 {
+			if _, _, err := svc.AdoptWinner(context.Background(), "alice", pair.ID); err != nil {
+				t.Fatal(err)
+			}
+		}
+		found, _ := store.Get(context.Background(), pair.ID)
+		if found.AdoptedAt == nil || !found.AdoptionRequested || len(catalog.adopted) != 1 {
+			t.Fatalf("adoption = %+v, catalog adopted %v", found, catalog.adopted)
+		}
+	})
+	t.Run("already active", func(t *testing.T) {
+		svc, store, catalog, _, _ := newTestService()
+		pair := ready(t, svc, store, writeRequest(OriginLab))
+		decided, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		catalog.active, catalog.selected = decided.Winner().Model, true
+		if _, _, err := svc.AdoptWinner(context.Background(), "alice", pair.ID); err != nil {
+			t.Fatal(err)
+		}
+		found, _ := store.Get(context.Background(), pair.ID)
+		if found.AdoptedAt == nil || len(catalog.adopted) != 0 {
+			t.Fatalf("an already-active winner was adopted again: %+v, catalog adopted %v", found, catalog.adopted)
+		}
+	})
+	t.Run("failure keeps a retry", func(t *testing.T) {
+		svc, store, catalog, _, _ := newTestService()
+		pair := ready(t, svc, store, writeRequest(OriginLab))
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
+			t.Fatal(err)
+		}
+		catalog.adoptErr = errors.New("catalog unavailable")
+		if _, _, err := svc.AdoptWinner(context.Background(), "alice", pair.ID); err == nil {
+			t.Fatal("a failed adoption reported success")
+		}
+		found, _ := store.Get(context.Background(), pair.ID)
+		if found.AdoptedAt != nil || !found.AdoptionRequested || found.AdoptionFailure == nil {
+			t.Fatalf("failed adoption = %+v", found)
+		}
+		catalog.adoptErr = nil
+		if _, _, err := svc.AdoptWinner(context.Background(), "alice", pair.ID); err != nil {
+			t.Fatal(err)
+		}
+		if found, _ := store.Get(context.Background(), pair.ID); found.AdoptedAt == nil || found.AdoptionFailure != nil {
+			t.Fatalf("retried adoption = %+v", found)
+		}
+	})
+}
+
 // The origin has to reach whatever freezes the input, because the freezing side is what
 // decides whether the preparing observation is written onto the post (MODEL-66).
 func TestTheFrozenInputIsToldWhereTheComparisonStarted(t *testing.T) {
