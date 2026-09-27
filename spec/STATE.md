@@ -18,24 +18,24 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 11 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
-| AUTH | 8 | 8 | - | 0 |
+| ARCH | 12 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-5✎ ARCH-31✎ | 0 |
+| AUTH | 9 | 8 | AUTH-17✎ AUTH-36✎ | 0 |
 | QUOTA | 20 | 20 | - | 0 |
-| POST | 16 | 16 | - | 0 |
-| VOICE | 3 | 3 | - | 1 |
-| GEN | 13 | 13 | - | 0 |
-| MODEL | 17 | 17 | - | 0 |
-| TMPL | 11 | 11 | - | 1 |
-| GUIDE | 7 | 7 | - | 0 |
-| EXPORT | 5 | 5 | - | 0 |
-| LANG | 5 | 5 | - | 0 |
-| THEME | 18 | 15 | THEME-19✎ | 0 |
-| MKT | 6 | 6 | - | 0 |
-| VIDEO | 3 | 3 | - | 0 |
-| CLIP | 45 | 40 | CLIP-13✎ CLIP-163+ | 2 |
-| CDS | 26 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
+| POST | 17 | 16 | POST-20✎ POST-26✎ POST-27✎ POST-29✎ POST-39✎ POST-41✎ POST-61✎ POST-73✎ POST-75✎ flow✎ constraints✎ | 0 |
+| VOICE | 4 | 3 | VOICE-13✎ VOICE-38✎ VOICE-39✎ VOICE-40✎ VOICE-42✎ VOICE-46✎ VOICE-54✎ constraints✎ | 1 |
+| GEN | 14 | 13 | GEN-1✎ GEN-3- GEN-5✎ GEN-23✎ GEN-25✎ GEN-26✎ GEN-30✎ GEN-37✎ GEN-38✎ GEN-40✎ flow✎ constraints✎ | 0 |
+| MODEL | 18 | 17 | MODEL-44✎ constraints✎ MODEL-28✎ MODEL-34✎ MODEL-37✎ MODEL-38✎ MODEL-45✎ MODEL-62✎ MODEL-63✎ | 0 |
+| TMPL | 12 | 11 | TMPL-6✎ TMPL-10✎ TMPL-17✎ TMPL-19✎ TMPL-20✎ TMPL-21✎ TMPL-22✎ TMPL-23- TMPL-24✎ TMPL-26✎ TMPL-27✎ TMPL-30✎ TMPL-33✎ TMPL-35✎ TMPL-37✎ TMPL-49✎ constraints✎ | 1 |
+| GUIDE | 8 | 7 | constraints✎ | 0 |
+| EXPORT | 6 | 5 | EXPORT-4- | 0 |
+| LANG | 6 | 5 | LANG-6✎ LANG-7✎ | 0 |
+| THEME | 19 | 15 | THEME-19✎ THEME-38✎ THEME-26✎ THEME-6✎ THEME-29✎ constraints✎ | 0 |
+| MKT | 7 | 6 | MKT-9✎ | 0 |
+| VIDEO | 4 | 3 | VIDEO-6✎ | 0 |
+| CLIP | 46 | 40 | CLIP-13✎ CLIP-163+ CLIP-3✎ CLIP-42✎ CLIP-111✎ CLIP-116✎ CLIP-129✎ CLIP-146✎ CLIP-70- CLIP-101- CLIP-114- CLIP-140- CLIP-144- constraints✎ | 2 |
+| CDS | 27 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ CDS-15✎ CDS-31✎ CDS-60✎ constraints✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 3 | 3 | - | 2 |
+| MEM | 4 | 3 | MEM-7✎ MEM-15✎ MEM-16✎ MEM-19✎ flow✎ constraints✎ | 2 |
 | QUAL | 5 | 5 | - | 0 |
 | GIFT | 2 | 2 | - | 0 |
 
@@ -50,6 +50,7 @@
 | publishing-260922 | converted@260922 |
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
+| conformance-all-260927 | open@260927 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -61,6 +62,10 @@
 - Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 update-ssot conformance done (hc): CLIP r46 CDS r27 GEN r14 MEM r4 POST r17 EXPORT r6 LANG r6 TMPL r12 GUIDE r8 MKT r7 THEME r19 ARCH r12 AUTH r9 MODEL r18 VOICE r4 VIDEO r4 carry the SSOT side of review/conformance-all-260927 (55 findings closed as SSOT-follows-code; 69 code findings open; F2 F55 await the owner)
+- 260927 update-ssot GEN TMPL POST start (sp): photos grouped into spaces after observation, owner reviews the groups before writing, the write builds the day's story first, template photo positions follow the confirmed spaces instead of attachment order
+- 260927 update-ssot conformance start (hc): SSOT side of review/conformance-all-260927 across CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE; F2 and F55 await the owner
+- 260927 review-code conformance-all-260927 start (hc): every SSOT domain against the code; code≠SSOT is the owner's top priority
 - 260926 T412 done (hc): frontend, index.html, styles and lint-style-escapes cite current decisions: 61 legacy doc paths → POST/TMPL/VOICE/MODEL/GEN/GUIDE/MKT ids; ~255 design-language refs incl. bare §N → THEME-n by claim, ARCHITECTURE § → ARCH-13/17; 95 TEMPLATE-n/MARKETING-n → TMPL-n/MKT-n; 19 retired CDS/VIDEO/ARCH/QUAL ids → current ids or dropped; ~180 job/plan/change/AC refs → current ids; the lint:style failure message names THEME-11/15/19/29; unused hasVideoBlock deleted; comment-only otherwise; FE gates green
 - 260926 T411 done (hc): backend, proto and RENDER.md cite current decisions: 13 legacy doc paths → TMPL-17..22/TMPL-2, POST-17, MODEL-9+GEN-22; 90 retired CDS/CLIP/PUB ids → current ids or dropped (TestPresetsMatchCDS50 → TestCategoryPresetsKeepTheirValues); ~180 job/plan/change refs → current ids; 74 TEMPLATE-n/BILLING-n → TMPL-n/BILL-n; RENDER.md draws the intro/outro regions (CDS-70); comment-only, migrations untouched; the task result lists clip code still implementing retired decisions; BE gates green, gen:proto and gen:sql clean
 - 260926 T411 T412 claimed (hc)
@@ -77,7 +82,3 @@
 - 260926 create-task QUAL GEN GUIDE POST start (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 (분야 phrase feature removal) + stale spec citations in code
 - 260926 T406 claimed (rp)
 - 260926 create-task T406 (rp): the owner asked for every preview to draw the new presets; the TS port and CompositionDesignFrame drew the four defaults only and the template preview had no preset choice
-- 260926 docs-current (hc): spec/ssot/PUB.md and spec/legacy/ deleted; tasks/done, review/ and ideation/ stay as work records (FORMAT/skills keep their archive rules); ARCH-35 drops spec/legacy
-- 260926 T405 done (rp): GetClipRegionPresetSamples draws every intro/outro preset through the region layout and overlay with the caller's `{n}` label (≤ 16 chars) numbering each slot, ids prefixed per preset, no scrim, preview lock/timeout, private no-store; ① offers each region as a radiogroup of tiles (renderer drawing on the media ground above the name, arrows move focus and choice, names alone while loading or on failure); 15 preset names + slot label ko/en; CompositionDesignThumbnail removed; BE/FE gates green, gen:proto clean
-- 260926 T405 claimed (rp)
-- 260926 T404 done (rp): new projects store intro a / outro b (DefaultDesign) while an empty id anywhere it is stored keeps rendering b/e (UnchosenDesign) and migration 0086 writes b/e into every empty project row; ① receives resolved ids, FE preset types are design.json key unions and fall back through CLIP_DEFAULT_REGION_PRESETS; BE/FE gates green, gen:sql clean

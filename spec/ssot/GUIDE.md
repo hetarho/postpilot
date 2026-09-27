@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r7 | Reusable, account-owned rules about what a post must avoid or watch out for — applied to every generation by default or scoped to specific templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r8 | Reusable, account-owned rules about what a post must avoid or watch out for — applied to every generation by default or scoped to specific templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the third authored layer: the voice decides how sentences sound (VOICE), the template decides genre and required content (TMPL), and a guideline is a prohibition or caution that outranks the template on content while leaving register to the voice ← the recurring failures were fluent, on-genre but unnatural or ungrounded sentences that no voice rule (wrong aggregate, re-registered per voice) or template brief (optional per post) could hold
@@ -41,10 +41,10 @@
 
 ## constraints
 - config: `GUIDELINE_TEXT_MAX_CHARS` 300 (BE `platform/config` env · FE `shared/config` `VITE_GUIDELINE_TEXT_MAX_CHARS`, falling back to the default) · `GUIDELINE_MAX_PER_ACCOUNT` 100 · `GUIDELINE_CANDIDATE_MAX_PENDING` 50 (BE only; malformed values are boot-fatal); the heading, precedence sentence, grounding constraint, injection ordering, candidate statuses and review order, the candidate storage bound (the revision instruction bound) and the proto/SQL schema are code
-- schema: `guidelines(id, user_id, text, scope, created_at, updated_at, UNIQUE(user_id, text), UNIQUE(id, user_id))` · `guideline_templates` (composite FKs to guideline and template) · `guideline_fields` (guideline ↔ 분야) · `guideline_candidates(id, user_id, text, status, occurrences, post_slug NULL, first/last_seen_at, UNIQUE(user_id, text))`; migrations 0014, 0023
+- schema: `guidelines(id, user_id, text, scope, created_at, updated_at, UNIQUE(user_id, text), UNIQUE(id, user_id))` · `guideline_templates` (composite FKs to guideline and template) · `guideline_fields` (guideline ↔ 분야) · `guideline_candidates(id, user_id, text, status, occurrences, post_slug NULL, first/last_seen_at, UNIQUE(user_id, text))`; migrations 0014, 0023, 0078
 - placement BE: `backend/internal/guideline` (`ForPrompt` resolving by template and 분야, candidates, store, rpc; consumed by generation and post through consumer-declared ports; template names through the directory port, never a SQL join)
 - placement FE: `entities/guideline` (model, api, ui scope control) · `features/create-guideline` `edit-guideline` `delete-guideline` `review-guideline-candidate` · `features/edit-with-ai` (the capture) · `pages/guidelines`
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r8 260927 constraints✎ migrations 0014, 0023→0014, 0023, 0078 (`guideline_fields`)
