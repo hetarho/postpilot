@@ -1,6 +1,7 @@
 /** What `clip-design` exposes to `clip-template` (ARCH-13 @x). */
 export { CLIP_COMPOSITION_LIMITS, CLIP_COMPOSITION_PREVIEW } from '../config/clip-composition'
 export {
+  CLIP_DEFAULT_CAPTION_STYLE,
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
   CLIP_REGIONS,

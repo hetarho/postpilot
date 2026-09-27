@@ -123,12 +123,14 @@ describe('composition authoring contract', () => {
         const doc = parseClipComposition(CLIP_COMPOSITION_EXAMPLE)
         expect(doc.sections).toEqual([])
         // Sample values must fit the example's own maxima (score is 6 characters).
-        const preview = sampleClipComposition(doc, 30000, (_label, i) => `${i}`, '자막 예시')
+        const preview = sampleClipComposition(doc, 30000, (_label, i) => `${i}`, {
+          caption: (n) => `자막 예시 ${n}`,
+        })
         expect(preview.elements.map((e) => e.element.id)).toEqual(
           expect.arrayContaining(['disclosure_badge', 'intro', 'taste', 'closing']),
         )
-        // The example declares its own caption entry, so the preview draws that
-        // one rather than supplying a sample line (CLIP-112).
+        // The example declares its own caption entry, so the preview draws that one first and
+        // the sample sentences after it (CLIP-112, CLIP-170).
         const caption = preview.elements.find((e) => e.element.role === 'caption')!
         expect(caption.element.id).toBe('taste')
         expect(caption.endMs).toBeLessThanOrEqual(preview.durationMs)

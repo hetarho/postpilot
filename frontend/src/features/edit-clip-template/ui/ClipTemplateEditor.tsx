@@ -227,6 +227,7 @@ export function ClipTemplateEditor({
               <CompositionPreview
                 document={document}
                 presets={{ intro: draft.introPreset, outro: draft.outroPreset }}
+                captionStyles={draft.allowedCaptionStyles}
                 onPresetsChange={({ intro, outro }) =>
                   change({ introPreset: intro, outroPreset: outro })
                 }

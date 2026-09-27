@@ -101,7 +101,7 @@ export const i18n = {
       sampleTime: '확인할 시점',
       seconds: '{{value}}초',
       sampleValue: '예시 {{label}} {{n}}',
-      sampleNarration: '자막은 이렇게 보여요',
+      sampleCaption: '샘플 자막 {{n}}',
       previewError:
         '이 예시 길이에서는 {{line}}번째 줄 · {{element}} 항목의 연결이나 표시 구간을 확인해야 해요.',
       sampleFrame: '예시 영상의 안전 영역과 현재 문구 구성',
@@ -313,7 +313,7 @@ export const i18n = {
       sampleTime: 'Preview time',
       seconds: '{{value}} seconds',
       sampleValue: 'Sample {{label}} {{n}}',
-      sampleNarration: 'A caption reads like this',
+      sampleCaption: 'Sample caption {{n}}',
       previewError:
         'For this sample duration, check the binding or interval at line {{line}}, element {{element}}.',
       sampleFrame: 'Illustrative safe area and current composition',

@@ -264,3 +264,10 @@ choice would be expensive to undo are listed at the end.
 - **Caption pace and accent stay the project's own.** A template gives only the two presets and the styles, per the task. The legacy `intro`/`pace`/`accent` root attributes still in some template bodies are not read for this.
 - **The editor's caption-style checkboxes show names only.** ①'s style samples are drawn for a project (`GetClipCaptionStyleSamples` takes a project id), and a template has none. The list sits inside the preview section, under its intro/outro selectors. As with ①'s list, ticking keeps the catalogue order. Following the no-help-copy rule, there is no "none selected means bold" line. *If you want samples:* the sample RPC needs a project-less variant.
 - **The docked 저장 always sends all three**, even when unchanged, the same way it always sends the name and the body.
+
+## T442 — the video-template preview plays an illustrative timed clip
+- **How many captions fit:** the span between the regions is split evenly into `ceil(span / 4 s)` captions. Every caption is then at most 4 s. The shortest span the bounds allow (15 s minus 2.5 s minus 3 s = 9.5 s) still gives each at least 3 s, so no 3 s floor is needed in code.
+- **The preview draws a style's type, stroke and shadow only.** The frame is the preview's own SVG, not the renderer, so a style's colour, plate and motion are not drawn. The drawing is enough to tell the styles apart as the captions rotate. *If you want each style exact:* the preview would need the renderer's caption samples, and those are per project today (same gap as T441's checkboxes).
+- **Info entries keep their own timing, clipped to the span between the regions.** CLIP-170 allows no other text beside the intro or the outro, and names only captions for the span between. Info entries are neither, so they stay where they were authored, cut out of the region spans.
+- **A caption entry repeated per cut** counts once per cut, in outline position and then cut order. Entries that do not fit are left out.
+- **The old single sample line (`자막은 이렇게 보여요`) is gone.** Its place is taken by the numbered `샘플 자막 N` sentences.

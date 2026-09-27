@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_COMPOSITION_PREVIEW,
+  CLIP_DEFAULT_CAPTION_STYLE,
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_REGIONS,
 } from '@/entities/clip-design/@x/clip-template'
@@ -28,11 +29,14 @@ export function CompositionPreview({
   document,
   presets: chosen,
   onPresetsChange,
+  captionStyles = [],
   children,
 }: {
   document: ClipComposition
   presets?: ClipRegionPresets
   onPresetsChange?: (next: ClipRegionPresets) => void
+  /** The styles the sample captions take in turn; none is the default style alone. */
+  captionStyles?: readonly string[]
   children?: ReactNode
 }) {
   const { t } = useTranslation('clips')
@@ -48,13 +52,19 @@ export function CompositionPreview({
       document,
       duration,
       (label, n) => t('composition.sampleValue', { label, n }),
-      t('composition.sampleNarration'),
+      {
+        caption: (n) => t('composition.sampleCaption', { n }),
+        styles: captionStyles.length ? captionStyles : [CLIP_DEFAULT_CAPTION_STYLE],
+      },
     )
   } catch (e) {
     if (e instanceof CompositionProblem) error = e
     else throw e
   }
-  const active = timeline?.elements.filter((e) => e.startMs <= time && time < e.endMs) ?? []
+  // The scrubber's end is the clip's last frame, not the instant after it (CLIP-171): the
+  // last millisecond is drawn there, inside every interval that runs to the end.
+  const instant = Math.min(time, duration - 1)
+  const active = timeline?.elements.filter((e) => e.startMs <= instant && instant < e.endMs) ?? []
   return (
     <section className="min-w-0 space-y-4" aria-label={t('composition.preview')}>
       <Typography variant="fieldTitle" as="h2">

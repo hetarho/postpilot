@@ -118,6 +118,26 @@ function typeLine(
   }
 }
 
+type CaptionStyleId = keyof typeof CLIP_REGIONS.caption
+/** The look a caption is drawn in: the approved style it names, or the default style for one
+ *  that names none. The preview draws each style's type, stroke and shadow — enough to tell the
+ *  styles apart as the captions take them in turn (CLIP-170); the renderer draws the rest. */
+function captionStyle(e: ResolvedCompositionElement['element']) {
+  const id = (e.style in CLIP_REGIONS.caption ? e.style : 'bold') as CaptionStyleId
+  const rule = CLIP_REGIONS.caption[id]
+  return {
+    id,
+    type: rule.type,
+    stroke:
+      rule.stroke === 'text'
+        ? CLIP_DESIGN.spacing.stroke_text
+        : rule.stroke === 'small'
+          ? CLIP_DESIGN.spacing.stroke_small
+          : 0,
+    shadow: rule.shadow !== '',
+  }
+}
+
 export function CompositionDesignFrame({
   document,
   entries,
@@ -219,10 +239,17 @@ export function CompositionDesignFrame({
       if (at.rules && lines.length) shapes.push(...(block?.shapes.filter((s) => s.slot < 0) ?? []))
       return { entry, lines, kind, rules: at.rules, shapes }
     }
+    const style = captionStyle(e)
     const lines = shown(entry)
       .map((row, i) => {
         const type = (
-          e.role === 'badge' ? 'badge' : e.role === 'info' ? row.role || 'caption' : 'title'
+          e.role === 'badge'
+            ? 'badge'
+            : e.role === 'info'
+              ? row.role || 'caption'
+              : e.role === 'caption'
+                ? style.type
+                : 'title'
         ) as TypeName
         const colour = CLIP_DESIGN.color[type === 'label' ? 'text_muted' : 'text_white']
         return typeLine(`${entry.instanceId}/${i}`, row.text, type, ratio, {
@@ -236,8 +263,10 @@ export function CompositionDesignFrame({
               ? 0
               : e.role === 'info'
                 ? CLIP_DESIGN.spacing.stroke_small
-                : CLIP_DESIGN.spacing.stroke_text,
-          shadow: e.role !== 'badge',
+                : e.role === 'caption'
+                  ? style.stroke
+                  : CLIP_DESIGN.spacing.stroke_text,
+          shadow: e.role === 'caption' ? style.shadow : e.role !== 'badge',
         })
       })
       .filter((line) => line.text.trim() !== '')
@@ -550,7 +579,13 @@ export function CompositionDesignFrame({
         }
         let top = y + (e.role === 'caption' ? CLIP_DESIGN.spacing.stroke_text / 2 : 0)
         return (
-          <g key={v.entry.instanceId} data-element={e.id} data-role={e.role} data-position={pos}>
+          <g
+            key={v.entry.instanceId}
+            data-element={e.id}
+            data-role={e.role}
+            data-position={pos}
+            data-caption-style={e.role === 'caption' ? captionStyle(e).id : undefined}
+          >
             {e.role === 'badge' && (
               <rect
                 data-disclosure="true"
