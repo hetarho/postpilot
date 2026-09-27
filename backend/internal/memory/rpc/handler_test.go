@@ -29,6 +29,9 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 		"text too long":      {&memory.TextTooLongError{Chars: 121, Max: 120}, connect.CodeInvalidArgument, "MEMORY_TEXT_TOO_LONG"},
 		"too many tags":      {&memory.TooManyTagsError{Count: 6, Max: 5}, connect.CodeInvalidArgument, "MEMORY_TAGS_TOO_MANY"},
 		"account cap":        {&memory.AccountCapError{Max: 300}, connect.CodeFailedPrecondition, "MEMORY_LIMIT_REACHED"},
+		// A resolved extraction answers nothing (MEM-15).
+		"resolved extraction": {memory.ErrExtractionResolved, connect.CodeNotFound, "MEMORY_NOT_FOUND"},
+		"no such candidate":   {memory.ErrCandidateIndex, connect.CodeInvalidArgument, "MEMORY_NOT_FOUND"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mapped := toConnectError("op", tc.err)
@@ -104,10 +107,14 @@ func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) 
 	if _, err := handler.DeleteMemory(anonymous, connect.NewRequest(&postpilotv1.DeleteMemoryRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("delete = %v", err)
 	}
+	if _, err := handler.ResolveMemoryExtraction(anonymous, connect.NewRequest(&postpilotv1.ResolveMemoryExtractionRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("resolve = %v", err)
+	}
 
 	for _, message := range []proto.Message{
 		&postpilotv1.ListMemoriesRequest{}, &postpilotv1.CreateMemoryRequest{},
 		&postpilotv1.UpdateMemoryRequest{}, &postpilotv1.DeleteMemoryRequest{},
+		&postpilotv1.ResolveMemoryExtractionRequest{},
 	} {
 		fields := message.ProtoReflect().Descriptor().Fields()
 		for i := 0; i < fields.Len(); i++ {
@@ -140,5 +147,16 @@ func TestTheKindRoundTripsAndUnspecifiedIsRefused(t *testing.T) {
 	// in the domain can store.
 	if got := postpilotv1.MemoryKind_name; len(got) != len(memory.Kinds)+1 {
 		t.Fatalf("wire kinds = %d, want the closed five plus UNSPECIFIED", len(got))
+	}
+}
+
+// A refusal reported beside the others carries the same reason and params its own call would.
+func TestACandidateFailureCarriesItsReason(t *testing.T) {
+	failure := failureOf(toConnectError("approve memory candidate", &memory.AccountCapError{Max: 300}))
+	if failure.GetReason() != "MEMORY_LIMIT_REACHED" || failure.GetParams()["max"] != "300" {
+		t.Fatalf("failure = %+v", failure)
+	}
+	if unknown := failureOf(errors.New("plain")); unknown.GetReason() != "UNKNOWN_FAILURE" {
+		t.Fatalf("a plain error = %+v", unknown)
 	}
 }

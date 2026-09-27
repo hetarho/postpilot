@@ -246,3 +246,37 @@ func TestLatestForAVoiceReadsTheNewestJobOfOneKind(t *testing.T) {
 		t.Fatalf("another voice's seed = %+v, %v", none, err)
 	}
 }
+
+// MEM-15: a finished extraction's payload is cleared for its owner once its candidates are
+// ruled on. A running job, another account's and another kind's are left as they are.
+func TestClearFinishedPayloadEmptiesOnlyTheOwnersFinishedJobOfTheKind(t *testing.T) {
+	store, _ := subjectHarness(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	post := job.Subject{Dimension: postSubject, ID: "post-alice"}
+	insert(t, store, job.Job{ID: "extraction", Kind: job.KindExtractMemory, UserID: "alice", Subjects: []job.Subject{post}, Payload: []byte(`{"source":"private"}`)})
+	if cleared, err := store.ClearFinishedPayload(ctx, "alice", "extraction", job.KindExtractMemory, now); err != nil || cleared {
+		t.Fatalf("a queued job was cleared: %v %v", cleared, err)
+	}
+	if _, err := store.PickNextQueued(ctx, now); err != nil {
+		t.Fatalf("pick: %v", err)
+	}
+	if ok, err := store.SavePayload(ctx, "extraction", []byte(`{"candidates":[]}`), now); err != nil || !ok {
+		t.Fatalf("save result: %v %v", ok, err)
+	}
+	if err := store.Finish(ctx, "extraction", job.StatusDone, nil, now); err != nil {
+		t.Fatalf("finish: %v", err)
+	}
+	for _, refused := range []struct{ user, kind string }{{"bob", job.KindExtractMemory}, {"alice", job.KindAnalyzeVoice}} {
+		if cleared, err := store.ClearFinishedPayload(ctx, refused.user, "extraction", refused.kind, now); err != nil || cleared {
+			t.Fatalf("%+v cleared the job: %v %v", refused, cleared, err)
+		}
+	}
+	if cleared, err := store.ClearFinishedPayload(ctx, "alice", "extraction", job.KindExtractMemory, now); err != nil || !cleared {
+		t.Fatalf("owner clear = %v %v", cleared, err)
+	}
+	found, err := store.GetByID(ctx, "extraction")
+	if err != nil || len(found.Payload) != 0 {
+		t.Fatalf("payload after clear = %q %v", found.Payload, err)
+	}
+}

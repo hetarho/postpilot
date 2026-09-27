@@ -77,6 +77,11 @@ var (
 	// candidates yet, or whose payload is not one. The two are one answer on purpose: both
 	// mean "there is nothing to rule on here", and neither is a reason to say more.
 	ErrExtractionNotReady = errors.New("memory extraction has no candidates yet")
+	// ErrExtractionResolved is an extraction whose candidates were ruled on: its payload is
+	// gone, so it answers nothing (MEM-15, MEM-16).
+	ErrExtractionResolved = errors.New("memory extraction was resolved")
+	// ErrCandidateIndex is an approval naming no candidate of the extraction, or one twice.
+	ErrCandidateIndex = errors.New("memory extraction has no such candidate")
 	// ErrAnalyzeModelRequired is an account with no enabled analyze-stage model. Extraction
 	// reads finished prose, which is what that stage is for; there is no fallback, because
 	// a silent substitution would spend credits on a model the user did not choose.

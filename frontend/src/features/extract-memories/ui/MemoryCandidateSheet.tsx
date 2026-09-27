@@ -47,7 +47,7 @@ export function MemoryCandidateSheet({
       .map((candidate, index) => ({ index, ...candidate }))
       .filter((candidate) => isChecked(candidate.index))
     if (selected.length === 0) return
-    const result = await approve.approve(extraction.postSlug, selected)
+    const result = await approve.approve(jobId, selected)
     setOutcome(result)
     // A clean run is done: the sheet's whole purpose is finished. A partial one stays open with
     // its reasons, and the rows that saved are unchecked so a retry sends only what failed.
@@ -64,6 +64,13 @@ export function MemoryCandidateSheet({
     )
   }
 
+  // The sheet's own close discards whatever is left (MEM-15); a clean save already resolved
+  // the extraction on the server, so it closes without a second ruling.
+  const close = () => {
+    if (extraction.candidates.length > 0) void approve.discard(jobId)
+    onClose()
+  }
+
   const toggle = (index: number) => {
     setUnchecked((current) => {
       const next = new Set(current)
@@ -74,7 +81,7 @@ export function MemoryCandidateSheet({
   }
 
   return (
-    <Sheet open labelledBy={titleId} onClose={approve.isPending ? () => {} : onClose}>
+    <Sheet open labelledBy={titleId} onClose={approve.isPending ? () => {} : close}>
       <Typography variant="title" as="h2" id={titleId}>
         {t('memories.candidateTitle', { ns: 'posts' })}
       </Typography>
@@ -136,7 +143,7 @@ export function MemoryCandidateSheet({
       )}
 
       <div className="mt-6 flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" disabled={approve.isPending} onClick={onClose}>
+        <Button variant="ghost" disabled={approve.isPending} onClick={close}>
           {t('action.close', { ns: 'common' })}
         </Button>
         {extraction.candidates.length > 0 && (

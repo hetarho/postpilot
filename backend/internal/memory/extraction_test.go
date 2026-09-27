@@ -52,6 +52,7 @@ type fakeExtractions struct {
 	saved    map[string][]byte
 	stored   []byte
 	loadErr  error
+	cleared  []string
 }
 
 func (f *fakeExtractions) Enqueue(_ context.Context, request ExtractionRequest) (string, error) {
@@ -69,6 +70,12 @@ func (f *fakeExtractions) SaveCandidates(_ context.Context, jobID string, payloa
 
 func (f *fakeExtractions) Candidates(context.Context, string, string) ([]byte, error) {
 	return f.stored, f.loadErr
+}
+
+func (f *fakeExtractions) ClearCandidates(_ context.Context, _, jobID string) error {
+	f.cleared = append(f.cleared, jobID)
+	f.stored = nil
+	return nil
 }
 
 func extractionService(t *testing.T, models *fakeModels, posts *fakePosts, jobs *fakeExtractions) (*Service, *fakeStore) {
@@ -283,9 +290,14 @@ func TestExtractionRefusesWhatIsNotAFinishedOwnedJob(t *testing.T) {
 		t.Fatalf("a foreign job = %v", err)
 	}
 
-	service, _ = extractionService(t, &fakeModels{}, &fakePosts{}, &fakeExtractions{stored: nil})
+	service, _ = extractionService(t, &fakeModels{}, &fakePosts{}, &fakeExtractions{loadErr: ErrExtractionNotReady})
 	if _, _, err := service.Extraction(context.Background(), "alice", "job-1"); !errors.Is(err, ErrExtractionNotReady) {
 		t.Fatalf("an unfinished job = %v", err)
+	}
+	// A finished job whose payload was cleared was resolved, and answers nothing (MEM-15).
+	service, _ = extractionService(t, &fakeModels{}, &fakePosts{}, &fakeExtractions{stored: nil})
+	if _, _, err := service.Extraction(context.Background(), "alice", "job-1"); !errors.Is(err, ErrExtractionResolved) {
+		t.Fatalf("a resolved job = %v", err)
 	}
 
 	service, _ = extractionService(t, &fakeModels{}, &fakePosts{}, &fakeExtractions{stored: []byte("not json")})
@@ -301,5 +313,84 @@ func TestExtractionRefusesWhatIsNotAFinishedOwnedJob(t *testing.T) {
 	slug, candidates, err := service.Extraction(context.Background(), "alice", "job-1")
 	if err != nil || slug != "post-1" || len(candidates) != 1 || candidates[0].Kind != KindPersona {
 		t.Fatalf("extraction = %q %+v %v", slug, candidates, err)
+	}
+}
+
+func resolvable(t *testing.T) (*Service, *fakeStore, *fakeExtractions) {
+	t.Helper()
+	stored, err := encodeExtraction("post-1", []Candidate{
+		{Text: "매운 음식을 못 먹는다", Kind: KindPreference},
+		{Text: "성수동에 산다", Kind: KindPersona},
+		{Text: "연남 김밥", Kind: KindPlace, Tags: []string{"김밥"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobs := &fakeExtractions{stored: stored}
+	service, store := extractionService(t, &fakeModels{}, &fakePosts{}, jobs)
+	return service, store, jobs
+}
+
+// MEM-15, MEM-16: the ruling creates the approved candidates from the STORED list, with the
+// post as their source, discards the rest, and clears the payload — after which the job
+// answers nothing.
+func TestResolvingAnExtractionCreatesTheApprovedAndClearsThePayload(t *testing.T) {
+	service, store, jobs := resolvable(t)
+	saved, failures, err := service.ResolveExtraction(context.Background(), "alice", "job-1", []int{2, 0})
+	if err != nil || saved != 2 || len(failures) != 0 {
+		t.Fatalf("resolve = saved %d failures %+v err %v", saved, failures, err)
+	}
+	if len(store.inserted) != 2 || store.inserted[0].Text != "연남 김밥" || store.inserted[1].Text != "매운 음식을 못 먹는다" || store.sourceSlugs[0] != "post-1" {
+		t.Fatalf("created = %+v from %v", store.inserted, store.sourceSlugs)
+	}
+	if len(jobs.cleared) != 1 || jobs.cleared[0] != "job-1" {
+		t.Fatalf("payload cleared = %v", jobs.cleared)
+	}
+	if _, _, err := service.Extraction(context.Background(), "alice", "job-1"); !errors.Is(err, ErrExtractionResolved) {
+		t.Fatalf("a resolved extraction still answered: %v", err)
+	}
+}
+
+// Discarding every candidate is a ruling too: nothing is created and the payload goes.
+func TestDiscardingEveryCandidateResolvesTheExtraction(t *testing.T) {
+	service, store, jobs := resolvable(t)
+	if saved, failures, err := service.ResolveExtraction(context.Background(), "alice", "job-1", nil); err != nil || saved != 0 || len(failures) != 0 {
+		t.Fatalf("discard all = %d %+v %v", saved, failures, err)
+	}
+	if len(store.inserted) != 0 || len(jobs.cleared) != 1 {
+		t.Fatalf("created %+v, cleared %v", store.inserted, jobs.cleared)
+	}
+}
+
+// A refused candidate keeps the extraction open, by index, so a retry names only what failed;
+// unresolved candidates still read as before.
+func TestARefusedCandidateKeepsTheExtractionReadable(t *testing.T) {
+	service, store, jobs := resolvable(t)
+	store.insertErr = &AccountCapError{Max: 5}
+	saved, failures, err := service.ResolveExtraction(context.Background(), "alice", "job-1", []int{1})
+	if err != nil || saved != 0 || len(failures) != 1 || failures[0].Index != 1 {
+		t.Fatalf("refused resolve = %d %+v %v", saved, failures, err)
+	}
+	if len(jobs.cleared) != 0 {
+		t.Fatalf("a refused ruling cleared the payload: %v", jobs.cleared)
+	}
+	if _, candidates, err := service.Extraction(context.Background(), "alice", "job-1"); err != nil || len(candidates) != 3 {
+		t.Fatalf("unresolved candidates = %+v err=%v", candidates, err)
+	}
+	store.insertErr = nil
+	if saved, failures, err := service.ResolveExtraction(context.Background(), "alice", "job-1", []int{1}); err != nil || saved != 1 || len(failures) != 0 || len(jobs.cleared) != 1 {
+		t.Fatalf("retry = %d %+v %v cleared %v", saved, failures, err, jobs.cleared)
+	}
+}
+
+func TestResolvingRefusesAnIndexTheExtractionDoesNotHave(t *testing.T) {
+	for _, approved := range [][]int{{3}, {-1}, {0, 0}} {
+		service, store, jobs := resolvable(t)
+		if _, _, err := service.ResolveExtraction(context.Background(), "alice", "job-1", approved); !errors.Is(err, ErrCandidateIndex) {
+			t.Fatalf("approved %v = %v", approved, err)
+		}
+		if len(store.inserted) != 0 || len(jobs.cleared) != 0 {
+			t.Fatalf("a refused ruling wrote something: %+v %v", store.inserted, jobs.cleared)
+		}
 	}
 }

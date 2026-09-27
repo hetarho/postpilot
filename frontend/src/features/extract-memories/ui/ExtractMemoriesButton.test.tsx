@@ -55,7 +55,8 @@ describe('기억으로 저장', () => {
     const user = userEvent.setup()
     const creates: FakeMemoriesOptions['creates'] = []
     const extractions: string[] = []
-    renderButton({ candidates: CANDIDATES, creates, extractions })
+    const resolutions: FakeMemoriesOptions['resolutions'] = []
+    renderButton({ candidates: CANDIDATES, creates, extractions, resolutions })
 
     await user.click(screen.getByRole('button', { name: '기억으로 저장' }))
     const sheet = within(await screen.findByRole('dialog'))
@@ -76,6 +77,9 @@ describe('기억으로 저장', () => {
       sourcePostSlug: 'draft',
     })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    // One ruling on the server, by index: the checked one created, the rest discarded, and
+    // no second ruling on close (MEM-15).
+    expect(resolutions).toEqual([{ jobId: 'extract-job', approved: [0] }])
   })
 
   // The bulk shape 지침's 전부 수락 uses: one refusal keeps its row and its reason, the rest save.
@@ -100,14 +104,18 @@ describe('기억으로 저장', () => {
   it('discards what was not checked when the sheet is closed', async () => {
     const user = userEvent.setup()
     const creates: FakeMemoriesOptions['creates'] = []
-    renderButton({ candidates: CANDIDATES, creates })
+    const resolutions: FakeMemoriesOptions['resolutions'] = []
+    renderButton({ candidates: CANDIDATES, creates, resolutions })
 
     await user.click(screen.getByRole('button', { name: '기억으로 저장' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await sheet.findAllByRole('checkbox')
     await user.click(sheet.getByRole('button', { name: '닫기' }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(creates).toEqual([])
+    // Closing is the ruling that approves nothing, so the payload goes with the sheet.
+    await waitFor(() => expect(resolutions).toEqual([{ jobId: 'extract-job', approved: [] }]))
     expect(screen.queryByText('나중에')).not.toBeInTheDocument()
     // The button is offered again: the extraction is repeatable on demand.
     expect(screen.getByRole('button', { name: '기억으로 저장' })).toBeEnabled()

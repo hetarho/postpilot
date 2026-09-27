@@ -4,13 +4,15 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Failure } from "./error_pb";
+import { file_postpilot_v1_error } from "./error_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/memory.proto.
  */
 export const file_postpilot_v1_memory: GenFile = /*@__PURE__*/
-  fileDesc("Chlwb3N0cGlsb3QvdjEvbWVtb3J5LnByb3RvEgxwb3N0cGlsb3QudjEisQEKBk1lbW9yeRIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEiYKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAQgAygJEhkKEXNvdXJjZV9wb3N0X3NsdWdzGAUgAygJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIUCgxsYXN0X3NlZW5fYXQYCCABKAkiFQoTTGlzdE1lbW9yaWVzUmVxdWVzdCI+ChRMaXN0TWVtb3JpZXNSZXNwb25zZRImCghtZW1vcmllcxgBIAMoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkicwoTQ3JlYXRlTWVtb3J5UmVxdWVzdBIMCgR0ZXh0GAEgASgJEiYKBGtpbmQYAiABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAMgAygJEhgKEHNvdXJjZV9wb3N0X3NsdWcYBCABKAkiUgoUQ3JlYXRlTWVtb3J5UmVzcG9uc2USJAoGbWVtb3J5GAEgASgLMhQucG9zdHBpbG90LnYxLk1lbW9yeRIUCgxkZWR1cGxpY2F0ZWQYAiABKAgiHwoPTWVtb3J5VGFnc1BhdGNoEgwKBHRhZ3MYASADKAkioAEKE1VwZGF0ZU1lbW9yeVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEisKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZEgBiAEBEisKBHRhZ3MYBCABKAsyHS5wb3N0cGlsb3QudjEuTWVtb3J5VGFnc1BhdGNoQgcKBV90ZXh0QgcKBV9raW5kIjwKFFVwZGF0ZU1lbW9yeVJlc3BvbnNlEiQKBm1lbW9yeRgBIAEoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkiIQoTRGVsZXRlTWVtb3J5UmVxdWVzdBIKCgJpZBgBIAEoCSIWChREZWxldGVNZW1vcnlSZXNwb25zZSIxChxTdGFydE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCSIvCh1TdGFydE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkiVQoPTWVtb3J5Q2FuZGlkYXRlEgwKBHRleHQYASABKAkSJgoEa2luZBgCIAEoDjIYLnBvc3RwaWxvdC52MS5NZW1vcnlLaW5kEgwKBHRhZ3MYAyADKAkiLAoaR2V0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QSDgoGam9iX2lkGAEgASgJImMKG0dldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIRCglwb3N0X3NsdWcYASABKAkSMQoKY2FuZGlkYXRlcxgCIAMoCzIdLnBvc3RwaWxvdC52MS5NZW1vcnlDYW5kaWRhdGUqpgEKCk1lbW9yeUtpbmQSGwoXTUVNT1JZX0tJTkRfVU5TUEVDSUZJRUQQABIaChZNRU1PUllfS0lORF9QUkVGRVJFTkNFEAESFwoTTUVNT1JZX0tJTkRfUEVSU09OQRACEhUKEU1FTU9SWV9LSU5EX1BMQUNFEAMSFgoSTUVNT1JZX0tJTkRfUEVSU09OEAQSFwoTTUVNT1JZX0tJTkRfSElTVE9SWRAFMtUECg1NZW1vcnlTZXJ2aWNlElcKDExpc3RNZW1vcmllcxIhLnBvc3RwaWxvdC52MS5MaXN0TWVtb3JpZXNSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkxpc3RNZW1vcmllc1Jlc3BvbnNlIgASVwoMQ3JlYXRlTWVtb3J5EiEucG9zdHBpbG90LnYxLkNyZWF0ZU1lbW9yeVJlcXVlc3QaIi5wb3N0cGlsb3QudjEuQ3JlYXRlTWVtb3J5UmVzcG9uc2UiABJXCgxVcGRhdGVNZW1vcnkSIS5wb3N0cGlsb3QudjEuVXBkYXRlTWVtb3J5UmVxdWVzdBoiLnBvc3RwaWxvdC52MS5VcGRhdGVNZW1vcnlSZXNwb25zZSIAElcKDERlbGV0ZU1lbW9yeRIhLnBvc3RwaWxvdC52MS5EZWxldGVNZW1vcnlSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkRlbGV0ZU1lbW9yeVJlc3BvbnNlIgAScgoVU3RhcnRNZW1vcnlFeHRyYWN0aW9uEioucG9zdHBpbG90LnYxLlN0YXJ0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QaKy5wb3N0cGlsb3QudjEuU3RhcnRNZW1vcnlFeHRyYWN0aW9uUmVzcG9uc2UiABJsChNHZXRNZW1vcnlFeHRyYWN0aW9uEigucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("Chlwb3N0cGlsb3QvdjEvbWVtb3J5LnByb3RvEgxwb3N0cGlsb3QudjEisQEKBk1lbW9yeRIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEiYKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAQgAygJEhkKEXNvdXJjZV9wb3N0X3NsdWdzGAUgAygJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIUCgxsYXN0X3NlZW5fYXQYCCABKAkiFQoTTGlzdE1lbW9yaWVzUmVxdWVzdCI+ChRMaXN0TWVtb3JpZXNSZXNwb25zZRImCghtZW1vcmllcxgBIAMoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkicwoTQ3JlYXRlTWVtb3J5UmVxdWVzdBIMCgR0ZXh0GAEgASgJEiYKBGtpbmQYAiABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAMgAygJEhgKEHNvdXJjZV9wb3N0X3NsdWcYBCABKAkiUgoUQ3JlYXRlTWVtb3J5UmVzcG9uc2USJAoGbWVtb3J5GAEgASgLMhQucG9zdHBpbG90LnYxLk1lbW9yeRIUCgxkZWR1cGxpY2F0ZWQYAiABKAgiHwoPTWVtb3J5VGFnc1BhdGNoEgwKBHRhZ3MYASADKAkioAEKE1VwZGF0ZU1lbW9yeVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEisKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZEgBiAEBEisKBHRhZ3MYBCABKAsyHS5wb3N0cGlsb3QudjEuTWVtb3J5VGFnc1BhdGNoQgcKBV90ZXh0QgcKBV9raW5kIjwKFFVwZGF0ZU1lbW9yeVJlc3BvbnNlEiQKBm1lbW9yeRgBIAEoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkiIQoTRGVsZXRlTWVtb3J5UmVxdWVzdBIKCgJpZBgBIAEoCSIWChREZWxldGVNZW1vcnlSZXNwb25zZSIxChxTdGFydE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCSIvCh1TdGFydE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkiVQoPTWVtb3J5Q2FuZGlkYXRlEgwKBHRleHQYASABKAkSJgoEa2luZBgCIAEoDjIYLnBvc3RwaWxvdC52MS5NZW1vcnlLaW5kEgwKBHRhZ3MYAyADKAkiQgoeUmVzb2x2ZU1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCRIQCghhcHByb3ZlZBgCIAMoBSJPChZNZW1vcnlDYW5kaWRhdGVGYWlsdXJlEg0KBWluZGV4GAEgASgFEiYKB2ZhaWx1cmUYAiABKAsyFS5wb3N0cGlsb3QudjEuRmFpbHVyZSJoCh9SZXNvbHZlTWVtb3J5RXh0cmFjdGlvblJlc3BvbnNlEg0KBXNhdmVkGAEgASgFEjYKCGZhaWx1cmVzGAIgAygLMiQucG9zdHBpbG90LnYxLk1lbW9yeUNhbmRpZGF0ZUZhaWx1cmUiLAoaR2V0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QSDgoGam9iX2lkGAEgASgJImMKG0dldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIRCglwb3N0X3NsdWcYASABKAkSMQoKY2FuZGlkYXRlcxgCIAMoCzIdLnBvc3RwaWxvdC52MS5NZW1vcnlDYW5kaWRhdGUqpgEKCk1lbW9yeUtpbmQSGwoXTUVNT1JZX0tJTkRfVU5TUEVDSUZJRUQQABIaChZNRU1PUllfS0lORF9QUkVGRVJFTkNFEAESFwoTTUVNT1JZX0tJTkRfUEVSU09OQRACEhUKEU1FTU9SWV9LSU5EX1BMQUNFEAMSFgoSTUVNT1JZX0tJTkRfUEVSU09OEAQSFwoTTUVNT1JZX0tJTkRfSElTVE9SWRAFMs8FCg1NZW1vcnlTZXJ2aWNlElcKDExpc3RNZW1vcmllcxIhLnBvc3RwaWxvdC52MS5MaXN0TWVtb3JpZXNSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkxpc3RNZW1vcmllc1Jlc3BvbnNlIgASVwoMQ3JlYXRlTWVtb3J5EiEucG9zdHBpbG90LnYxLkNyZWF0ZU1lbW9yeVJlcXVlc3QaIi5wb3N0cGlsb3QudjEuQ3JlYXRlTWVtb3J5UmVzcG9uc2UiABJXCgxVcGRhdGVNZW1vcnkSIS5wb3N0cGlsb3QudjEuVXBkYXRlTWVtb3J5UmVxdWVzdBoiLnBvc3RwaWxvdC52MS5VcGRhdGVNZW1vcnlSZXNwb25zZSIAElcKDERlbGV0ZU1lbW9yeRIhLnBvc3RwaWxvdC52MS5EZWxldGVNZW1vcnlSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkRlbGV0ZU1lbW9yeVJlc3BvbnNlIgAScgoVU3RhcnRNZW1vcnlFeHRyYWN0aW9uEioucG9zdHBpbG90LnYxLlN0YXJ0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QaKy5wb3N0cGlsb3QudjEuU3RhcnRNZW1vcnlFeHRyYWN0aW9uUmVzcG9uc2UiABJsChNHZXRNZW1vcnlFeHRyYWN0aW9uEigucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZSIAEngKF1Jlc29sdmVNZW1vcnlFeHRyYWN0aW9uEiwucG9zdHBpbG90LnYxLlJlc29sdmVNZW1vcnlFeHRyYWN0aW9uUmVxdWVzdBotLnBvc3RwaWxvdC52MS5SZXNvbHZlTWVtb3J5RXh0cmFjdGlvblJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_error]);
 
 /**
  * @generated from message postpilot.v1.Memory
@@ -318,9 +320,9 @@ export const StartMemoryExtractionResponseSchema: GenMessage<StartMemoryExtracti
   messageDesc(file_postpilot_v1_memory, 11);
 
 /**
- * One proposed fact. It is NOT a memory: approving it is an ordinary CreateMemory carrying
- * this text, kind and tags plus the post it came from, which is where every field rule and
- * the account cap are applied.
+ * One proposed fact. It is NOT a memory: ResolveMemoryExtraction approves it by its index,
+ * creating it exactly as CreateMemory would — every field rule and the account cap applied —
+ * with the post it came from as its source.
  *
  * @generated from message postpilot.v1.MemoryCandidate
  */
@@ -349,6 +351,80 @@ export const MemoryCandidateSchema: GenMessage<MemoryCandidate> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_memory, 12);
 
 /**
+ * @generated from message postpilot.v1.ResolveMemoryExtractionRequest
+ */
+export type ResolveMemoryExtractionRequest = Message<"postpilot.v1.ResolveMemoryExtractionRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+
+  /**
+   * Indexes into the extraction's candidate list, as GetMemoryExtraction returned it. Every
+   * other candidate is discarded.
+   *
+   * @generated from field: repeated int32 approved = 2;
+   */
+  approved: number[];
+};
+
+/**
+ * Describes the message postpilot.v1.ResolveMemoryExtractionRequest.
+ * Use `create(ResolveMemoryExtractionRequestSchema)` to create a new message.
+ */
+export const ResolveMemoryExtractionRequestSchema: GenMessage<ResolveMemoryExtractionRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 13);
+
+/**
+ * @generated from message postpilot.v1.MemoryCandidateFailure
+ */
+export type MemoryCandidateFailure = Message<"postpilot.v1.MemoryCandidateFailure"> & {
+  /**
+   * @generated from field: int32 index = 1;
+   */
+  index: number;
+
+  /**
+   * @generated from field: postpilot.v1.Failure failure = 2;
+   */
+  failure?: Failure | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.MemoryCandidateFailure.
+ * Use `create(MemoryCandidateFailureSchema)` to create a new message.
+ */
+export const MemoryCandidateFailureSchema: GenMessage<MemoryCandidateFailure> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 14);
+
+/**
+ * @generated from message postpilot.v1.ResolveMemoryExtractionResponse
+ */
+export type ResolveMemoryExtractionResponse = Message<"postpilot.v1.ResolveMemoryExtractionResponse"> & {
+  /**
+   * How many approved candidates are now memories, a deduplicated one included.
+   *
+   * @generated from field: int32 saved = 1;
+   */
+  saved: number;
+
+  /**
+   * Empty once the extraction is resolved; otherwise the refused candidates, and the
+   * extraction stays readable for their retry.
+   *
+   * @generated from field: repeated postpilot.v1.MemoryCandidateFailure failures = 2;
+   */
+  failures: MemoryCandidateFailure[];
+};
+
+/**
+ * Describes the message postpilot.v1.ResolveMemoryExtractionResponse.
+ * Use `create(ResolveMemoryExtractionResponseSchema)` to create a new message.
+ */
+export const ResolveMemoryExtractionResponseSchema: GenMessage<ResolveMemoryExtractionResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 15);
+
+/**
  * @generated from message postpilot.v1.GetMemoryExtractionRequest
  */
 export type GetMemoryExtractionRequest = Message<"postpilot.v1.GetMemoryExtractionRequest"> & {
@@ -363,7 +439,7 @@ export type GetMemoryExtractionRequest = Message<"postpilot.v1.GetMemoryExtracti
  * Use `create(GetMemoryExtractionRequestSchema)` to create a new message.
  */
 export const GetMemoryExtractionRequestSchema: GenMessage<GetMemoryExtractionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_memory, 13);
+  messageDesc(file_postpilot_v1_memory, 16);
 
 /**
  * @generated from message postpilot.v1.GetMemoryExtractionResponse
@@ -391,7 +467,7 @@ export type GetMemoryExtractionResponse = Message<"postpilot.v1.GetMemoryExtract
  * Use `create(GetMemoryExtractionResponseSchema)` to create a new message.
  */
 export const GetMemoryExtractionResponseSchema: GenMessage<GetMemoryExtractionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_memory, 14);
+  messageDesc(file_postpilot_v1_memory, 17);
 
 /**
  * The closed five (MEM-5). There are no user-defined kinds and no sub-kinds: retrieval
@@ -519,6 +595,20 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof GetMemoryExtractionRequestSchema;
     output: typeof GetMemoryExtractionResponseSchema;
+  },
+  /**
+   * The one ruling on an extraction's candidates: the approved ones are created from the
+   * stored list and the rest discarded, and once every approved one is stored the job's
+   * payload — its frozen source and the raw list — is cleared, so nothing can read them
+   * again (MEM-15, MEM-16). A candidate the create refuses keeps the extraction open, with
+   * its reason, for a retry of the refused ones.
+   *
+   * @generated from rpc postpilot.v1.MemoryService.ResolveMemoryExtraction
+   */
+  resolveMemoryExtraction: {
+    methodKind: "unary";
+    input: typeof ResolveMemoryExtractionRequestSchema;
+    output: typeof ResolveMemoryExtractionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_memory, 0);

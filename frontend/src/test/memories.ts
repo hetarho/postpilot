@@ -9,11 +9,13 @@ import {
   MemoryService,
   MemorySchema,
   ProtoMemoryKind,
+  ResolveMemoryExtractionResponseSchema,
   StartMemoryExtractionResponseSchema,
   UpdateMemoryResponseSchema,
+  appFailureFromConnect,
 } from '@/shared/api'
 import { MEMORY_TEXT_MAX_CHARS } from '@/entities/memory'
-import { connectAppError } from './app-error'
+import { connectAppError, durableFailure } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
@@ -63,6 +65,8 @@ export interface FakeMemoriesOptions {
   refuseCreateOf?: string
   /** Every StartMemoryExtraction's post slug. */
   extractions?: string[]
+  /** Every ResolveMemoryExtraction: the job and the indexes it approved. */
+  resolutions?: Array<{ jobId: string; approved: number[] }>
 }
 
 const DEFAULT_AT = '2026-09-20T12:00:00Z'
@@ -111,8 +115,12 @@ export function registerMemoryService(router: ConnectRouter, options: FakeMemori
     return create(ListMemoriesResponseSchema, { memories: listed.map(toProto) })
   })
 
-  rpc(MemoryService.method.createMemory, (req) => {
-    calls?.push('CreateMemory')
+  const createMemory = (req: {
+    text: string
+    kind: ProtoMemoryKind
+    tags: string[]
+    sourcePostSlug: string
+  }) => {
     options.creates?.push({
       text: req.text,
       kind: req.kind,
@@ -159,6 +167,10 @@ export function registerMemoryService(router: ConnectRouter, options: FakeMemori
     // A new memory is the most recently used one, which is where the server's order puts it.
     order.unshift(row.id)
     return create(CreateMemoryResponseSchema, { memory: toProto(row), deduplicated: false })
+  }
+  rpc(MemoryService.method.createMemory, (req) => {
+    calls?.push('CreateMemory')
+    return createMemory(req)
   })
 
   rpc(MemoryService.method.updateMemory, (req) => {
@@ -206,9 +218,42 @@ export function registerMemoryService(router: ConnectRouter, options: FakeMemori
     return create(StartMemoryExtractionResponseSchema, { jobId: 'extract-job' })
   })
 
+  // Once ruled on, the extraction answers nothing: its payload is cleared (MEM-15).
+  let resolved = false
+  rpc(MemoryService.method.resolveMemoryExtraction, (req) => {
+    calls?.push('ResolveMemoryExtraction')
+    options.resolutions?.push({ jobId: req.jobId, approved: [...req.approved] })
+    if (req.jobId !== 'extract-job' || resolved) {
+      throw connectAppError('MEMORY_NOT_FOUND', Code.NotFound)
+    }
+    const candidates = options.candidates ?? []
+    let saved = 0
+    const failures: Array<{ index: number; failure: ReturnType<typeof durableFailure> }> = []
+    for (const index of req.approved) {
+      const candidate = candidates[index]
+      if (!candidate) throw connectAppError('MEMORY_NOT_FOUND', Code.InvalidArgument)
+      try {
+        createMemory({
+          text: candidate.text,
+          kind: candidate.kind ?? ProtoMemoryKind.PREFERENCE,
+          tags: candidate.tags ?? [],
+          sourcePostSlug: 'draft',
+        })
+        saved += 1
+      } catch (cause) {
+        const failure = appFailureFromConnect(cause)
+        failures.push({ index, failure: durableFailure(failure.reason, { ...failure.params }) })
+      }
+    }
+    if (failures.length === 0) resolved = true
+    return create(ResolveMemoryExtractionResponseSchema, { saved, failures })
+  })
+
   rpc(MemoryService.method.getMemoryExtraction, (req) => {
     calls?.push('GetMemoryExtraction')
-    if (req.jobId !== 'extract-job') throw connectAppError('MEMORY_NOT_FOUND', Code.NotFound)
+    if (req.jobId !== 'extract-job' || resolved) {
+      throw connectAppError('MEMORY_NOT_FOUND', Code.NotFound)
+    }
     return create(GetMemoryExtractionResponseSchema, {
       postSlug: 'draft',
       candidates: (options.candidates ?? []).map((candidate) =>

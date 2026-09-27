@@ -535,6 +535,15 @@ func (s *Store) SweepUnactivated(ctx context.Context, f job.Failure) (int64, err
 }
 
 // SavePayload replaces a running job's payload with its handler's result.
+// ClearFinishedPayload empties one owner's finished job of one kind, reporting whether it did.
+func (s *Store) ClearFinishedPayload(ctx context.Context, userID, id, kind string, at time.Time) (bool, error) {
+	n, err := s.write.ClearFinishedPayload(ctx, sqlc.ClearFinishedPayloadParams{UpdatedAt: formatTime(at), ID: id, UserID: userID, Kind: kind})
+	if err != nil {
+		return false, fmt.Errorf("clear finished job payload: %w", err)
+	}
+	return n == 1, nil
+}
+
 func (s *Store) SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error) {
 	n, err := s.write.SaveJobPayload(ctx, sqlc.SaveJobPayloadParams{
 		Payload: string(payload), UpdatedAt: formatTime(at), ID: id,

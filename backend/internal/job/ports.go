@@ -66,4 +66,5 @@ type Store interface {
 	// SavePayload replaces a RUNNING job's payload with what its handler produced. Only a
 	// kind whose result lives on the row uses it (see Queue.SaveResult).
 	SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error)
+	ClearFinishedPayload(ctx context.Context, userID, id, kind string, at time.Time) (bool, error)
 }

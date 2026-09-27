@@ -51,6 +51,9 @@ const (
 	// MemoryServiceGetMemoryExtractionProcedure is the fully-qualified name of the MemoryService's
 	// GetMemoryExtraction RPC.
 	MemoryServiceGetMemoryExtractionProcedure = "/postpilot.v1.MemoryService/GetMemoryExtraction"
+	// MemoryServiceResolveMemoryExtractionProcedure is the fully-qualified name of the MemoryService's
+	// ResolveMemoryExtraction RPC.
+	MemoryServiceResolveMemoryExtractionProcedure = "/postpilot.v1.MemoryService/ResolveMemoryExtraction"
 )
 
 // MemoryServiceClient is a client for the postpilot.v1.MemoryService service.
@@ -65,6 +68,12 @@ type MemoryServiceClient interface {
 	// The candidates of a finished extraction. They live on the job row and nowhere else:
 	// an unchecked candidate is discarded with the job and never queued for later (MEM-15).
 	GetMemoryExtraction(context.Context, *connect.Request[v1.GetMemoryExtractionRequest]) (*connect.Response[v1.GetMemoryExtractionResponse], error)
+	// The one ruling on an extraction's candidates: the approved ones are created from the
+	// stored list and the rest discarded, and once every approved one is stored the job's
+	// payload — its frozen source and the raw list — is cleared, so nothing can read them
+	// again (MEM-15, MEM-16). A candidate the create refuses keeps the extraction open, with
+	// its reason, for a retry of the refused ones.
+	ResolveMemoryExtraction(context.Context, *connect.Request[v1.ResolveMemoryExtractionRequest]) (*connect.Response[v1.ResolveMemoryExtractionResponse], error)
 }
 
 // NewMemoryServiceClient constructs a client for the postpilot.v1.MemoryService service. By
@@ -114,17 +123,24 @@ func NewMemoryServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(memoryServiceMethods.ByName("GetMemoryExtraction")),
 			connect.WithClientOptions(opts...),
 		),
+		resolveMemoryExtraction: connect.NewClient[v1.ResolveMemoryExtractionRequest, v1.ResolveMemoryExtractionResponse](
+			httpClient,
+			baseURL+MemoryServiceResolveMemoryExtractionProcedure,
+			connect.WithSchema(memoryServiceMethods.ByName("ResolveMemoryExtraction")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // memoryServiceClient implements MemoryServiceClient.
 type memoryServiceClient struct {
-	listMemories          *connect.Client[v1.ListMemoriesRequest, v1.ListMemoriesResponse]
-	createMemory          *connect.Client[v1.CreateMemoryRequest, v1.CreateMemoryResponse]
-	updateMemory          *connect.Client[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse]
-	deleteMemory          *connect.Client[v1.DeleteMemoryRequest, v1.DeleteMemoryResponse]
-	startMemoryExtraction *connect.Client[v1.StartMemoryExtractionRequest, v1.StartMemoryExtractionResponse]
-	getMemoryExtraction   *connect.Client[v1.GetMemoryExtractionRequest, v1.GetMemoryExtractionResponse]
+	listMemories            *connect.Client[v1.ListMemoriesRequest, v1.ListMemoriesResponse]
+	createMemory            *connect.Client[v1.CreateMemoryRequest, v1.CreateMemoryResponse]
+	updateMemory            *connect.Client[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse]
+	deleteMemory            *connect.Client[v1.DeleteMemoryRequest, v1.DeleteMemoryResponse]
+	startMemoryExtraction   *connect.Client[v1.StartMemoryExtractionRequest, v1.StartMemoryExtractionResponse]
+	getMemoryExtraction     *connect.Client[v1.GetMemoryExtractionRequest, v1.GetMemoryExtractionResponse]
+	resolveMemoryExtraction *connect.Client[v1.ResolveMemoryExtractionRequest, v1.ResolveMemoryExtractionResponse]
 }
 
 // ListMemories calls postpilot.v1.MemoryService.ListMemories.
@@ -157,6 +173,11 @@ func (c *memoryServiceClient) GetMemoryExtraction(ctx context.Context, req *conn
 	return c.getMemoryExtraction.CallUnary(ctx, req)
 }
 
+// ResolveMemoryExtraction calls postpilot.v1.MemoryService.ResolveMemoryExtraction.
+func (c *memoryServiceClient) ResolveMemoryExtraction(ctx context.Context, req *connect.Request[v1.ResolveMemoryExtractionRequest]) (*connect.Response[v1.ResolveMemoryExtractionResponse], error) {
+	return c.resolveMemoryExtraction.CallUnary(ctx, req)
+}
+
 // MemoryServiceHandler is an implementation of the postpilot.v1.MemoryService service.
 type MemoryServiceHandler interface {
 	ListMemories(context.Context, *connect.Request[v1.ListMemoriesRequest]) (*connect.Response[v1.ListMemoriesResponse], error)
@@ -169,6 +190,12 @@ type MemoryServiceHandler interface {
 	// The candidates of a finished extraction. They live on the job row and nowhere else:
 	// an unchecked candidate is discarded with the job and never queued for later (MEM-15).
 	GetMemoryExtraction(context.Context, *connect.Request[v1.GetMemoryExtractionRequest]) (*connect.Response[v1.GetMemoryExtractionResponse], error)
+	// The one ruling on an extraction's candidates: the approved ones are created from the
+	// stored list and the rest discarded, and once every approved one is stored the job's
+	// payload — its frozen source and the raw list — is cleared, so nothing can read them
+	// again (MEM-15, MEM-16). A candidate the create refuses keeps the extraction open, with
+	// its reason, for a retry of the refused ones.
+	ResolveMemoryExtraction(context.Context, *connect.Request[v1.ResolveMemoryExtractionRequest]) (*connect.Response[v1.ResolveMemoryExtractionResponse], error)
 }
 
 // NewMemoryServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -214,6 +241,12 @@ func NewMemoryServiceHandler(svc MemoryServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(memoryServiceMethods.ByName("GetMemoryExtraction")),
 		connect.WithHandlerOptions(opts...),
 	)
+	memoryServiceResolveMemoryExtractionHandler := connect.NewUnaryHandler(
+		MemoryServiceResolveMemoryExtractionProcedure,
+		svc.ResolveMemoryExtraction,
+		connect.WithSchema(memoryServiceMethods.ByName("ResolveMemoryExtraction")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.MemoryService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MemoryServiceListMemoriesProcedure:
@@ -228,6 +261,8 @@ func NewMemoryServiceHandler(svc MemoryServiceHandler, opts ...connect.HandlerOp
 			memoryServiceStartMemoryExtractionHandler.ServeHTTP(w, r)
 		case MemoryServiceGetMemoryExtractionProcedure:
 			memoryServiceGetMemoryExtractionHandler.ServeHTTP(w, r)
+		case MemoryServiceResolveMemoryExtractionProcedure:
+			memoryServiceResolveMemoryExtractionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -259,4 +294,8 @@ func (UnimplementedMemoryServiceHandler) StartMemoryExtraction(context.Context, 
 
 func (UnimplementedMemoryServiceHandler) GetMemoryExtraction(context.Context, *connect.Request[v1.GetMemoryExtractionRequest]) (*connect.Response[v1.GetMemoryExtractionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.MemoryService.GetMemoryExtraction is not implemented"))
+}
+
+func (UnimplementedMemoryServiceHandler) ResolveMemoryExtraction(context.Context, *connect.Request[v1.ResolveMemoryExtractionRequest]) (*connect.Response[v1.ResolveMemoryExtractionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.MemoryService.ResolveMemoryExtraction is not implemented"))
 }

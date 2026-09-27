@@ -129,6 +129,13 @@ SELECT * FROM generation_jobs WHERE id = ?;
 -- a cancelled or finished job cannot be written into after the fact.
 UPDATE generation_jobs SET payload = ?, updated_at = ? WHERE id = ? AND status = 'running';
 
+-- name: ClearFinishedPayload :execrows
+-- Drops a finished job's result once its owner has ruled on it: the payload of a proposal
+-- nothing stores until the user decides, which must not outlive that decision. Owner- and
+-- kind-scoped so no other job can be emptied through it.
+UPDATE generation_jobs SET payload = '', updated_at = ?
+WHERE id = ? AND user_id = ? AND kind = ? AND status = 'done';
+
 -- name: ActiveForProject :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
 -- name: LatestForProject :one

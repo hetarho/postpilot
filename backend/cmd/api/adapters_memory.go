@@ -125,6 +125,14 @@ func (a memoryExtractions) SaveCandidates(ctx context.Context, jobID string, pay
 	return a.queue.SaveResult(ctx, jobID, payload)
 }
 
+func (a memoryExtractions) ClearCandidates(ctx context.Context, userID, jobID string) error {
+	err := a.queue.ClearResult(ctx, userID, jobID, job.KindExtractMemory)
+	if errors.Is(err, job.ErrNotFound) {
+		return memory.ErrNotFound
+	}
+	return err
+}
+
 func (a memoryExtractions) Candidates(ctx context.Context, userID, jobID string) ([]byte, error) {
 	found, err := a.queue.Result(ctx, userID, jobID)
 	if err != nil {

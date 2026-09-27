@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import { createClient } from '@connectrpc/connect'
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { MemoryService } from '@/shared/api'
-import type { MemoryKind } from '../model/types'
+import { MemoryService, appFailureFromProto } from '@/shared/api'
+import { formatAppFailure } from '@/shared/lib'
 import { invalidateMemories } from './memory-cache'
 import { memoryErrorMessage } from './memory-errors'
-import { toMemoryCandidate, toProtoKind, type MemoryCandidate } from './memory-queries'
+import { toMemoryCandidate, type MemoryCandidate } from './memory-queries'
 
 /** 기억으로 저장 (MEM-13): one durable, credit-gated job. The refusal an account without the
  *  balance meets is the queue's own, and it arrives here as an ordinary Connect error. */
@@ -50,46 +50,62 @@ export interface CandidateSaveOutcome {
   failures: Array<{ index: number; message: string }>
 }
 
-/** Approving checked candidates, one create each (MEM-15). The same shape 지침's 전부 수락 uses:
- *  a per-row refusal (a duplicate text, the account cap, a bound) stays with its row and the walk
- *  continues, because the alternative is losing every approval to one bad row. */
+/** The one ruling on an extraction (MEM-15): the checked candidates are created on the server
+ *  from the stored list, the rest discarded, and once every checked one is stored the job's
+ *  payload is cleared so nothing can read it again (MEM-16). A per-row refusal (the account cap,
+ *  a bound) comes back with its index and keeps the extraction open, so a retry sends only what
+ *  failed — the ones that saved deduplicate rather than doubling. */
 export function useApproveMemoryCandidates(ownerId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const [running, setRunning] = useState(false)
 
   const approve = async (
-    postSlug: string,
-    candidates: readonly { index: number; text: string; kind: MemoryKind; tags: string[] }[],
+    jobId: string,
+    candidates: readonly { index: number }[],
   ): Promise<CandidateSaveOutcome> => {
     const client = createClient(MemoryService, transport)
-    const failures: CandidateSaveOutcome['failures'] = []
-    let saved = 0
     setRunning(true)
     try {
-      for (const candidate of candidates) {
-        try {
-          await client.createMemory({
-            text: candidate.text.trim(),
-            kind: toProtoKind(candidate.kind),
-            tags: candidate.tags,
-            // The post it was approved from, so the memory outlives that post only while it has
-            // another source (MEM-17).
-            sourcePostSlug: postSlug,
-          })
-          saved += 1
-        } catch (cause) {
-          failures.push({ index: candidate.index, message: memoryErrorMessage(cause) })
-        }
+      const response = await client.resolveMemoryExtraction({
+        jobId,
+        approved: candidates.map((candidate) => candidate.index),
+      })
+      if (response.saved > 0) invalidateMemories(queryClient, transport, ownerId)
+      return {
+        saved: response.saved,
+        failures: response.failures.map((failure) => ({
+          index: failure.index,
+          message: formatAppFailure(appFailureFromProto(failure.failure)),
+        })),
+      }
+    } catch (cause) {
+      // The whole ruling was refused (a network failure, a resolved extraction): every checked
+      // row keeps the reason, and nothing was stored.
+      return {
+        saved: 0,
+        failures: candidates.map((candidate) => ({
+          index: candidate.index,
+          message: memoryErrorMessage(cause),
+        })),
       }
     } finally {
       setRunning(false)
-      if (saved > 0) invalidateMemories(queryClient, transport, ownerId)
     }
-    return { saved, failures }
   }
 
-  return { approve, isPending: running }
+  /** Closing the sheet discards what is left: a ruling that approves nothing, so the job's
+   *  payload goes with the sheet (MEM-15). A job already resolved or never loaded has nothing
+   *  to discard, which is why its refusal is not the user's to see. */
+  const discard = (jobId: string) =>
+    createClient(MemoryService, transport)
+      .resolveMemoryExtraction({ jobId, approved: [] })
+      .then(
+        () => undefined,
+        () => undefined,
+      )
+
+  return { approve, discard, isPending: running }
 }
 
 export type { MemoryCandidate }

@@ -362,6 +362,34 @@ func (q *Queries) AuthorizeDispatch(ctx context.Context, arg AuthorizeDispatchPa
 	return result.RowsAffected()
 }
 
+const clearFinishedPayload = `-- name: ClearFinishedPayload :execrows
+UPDATE generation_jobs SET payload = '', updated_at = ?
+WHERE id = ? AND user_id = ? AND kind = ? AND status = 'done'
+`
+
+type ClearFinishedPayloadParams struct {
+	UpdatedAt string
+	ID        string
+	UserID    string
+	Kind      string
+}
+
+// Drops a finished job's result once its owner has ruled on it: the payload of a proposal
+// nothing stores until the user decides, which must not outlive that decision. Owner- and
+// kind-scoped so no other job can be emptied through it.
+func (q *Queries) ClearFinishedPayload(ctx context.Context, arg ClearFinishedPayloadParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, clearFinishedPayload,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+		arg.Kind,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const failQueuedJob = `-- name: FailQueuedJob :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,

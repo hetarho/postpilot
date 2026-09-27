@@ -133,6 +133,44 @@ func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&postpilotv1.GetMemoryExtractionResponse{PostSlug: postSlug, Candidates: out}), nil
 }
 
+func (h *Handler) ResolveMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.ResolveMemoryExtractionRequest]) (*connect.Response[postpilotv1.ResolveMemoryExtractionResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	approved := make([]int, 0, len(req.Msg.GetApproved()))
+	for _, index := range req.Msg.GetApproved() {
+		approved = append(approved, int(index))
+	}
+	saved, failures, err := h.service.ResolveExtraction(ctx, userID, req.Msg.GetJobId(), approved)
+	if err != nil {
+		return nil, toConnectError("resolve memory extraction", err)
+	}
+	out := make([]*postpilotv1.MemoryCandidateFailure, 0, len(failures))
+	for _, failure := range failures {
+		out = append(out, &postpilotv1.MemoryCandidateFailure{Index: int32(failure.Index), Failure: failureOf(toConnectError("approve memory candidate", failure.Err))})
+	}
+	return connect.NewResponse(&postpilotv1.ResolveMemoryExtractionResponse{Saved: int32(saved), Failures: out}), nil
+}
+
+// failureOf is the product failure a refusal carries, for a response that reports several
+// refusals at once rather than failing the whole call.
+func failureOf(err error) *postpilotv1.Failure {
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		for _, detail := range connectErr.Details() {
+			value, valueErr := detail.Value()
+			if valueErr != nil {
+				continue
+			}
+			if app, ok := value.(*postpilotv1.AppErrorDetail); ok {
+				return &postpilotv1.Failure{Reason: app.GetReason(), Params: app.GetParams()}
+			}
+		}
+	}
+	return &postpilotv1.Failure{Reason: postpilotv1.FailureReason_UNKNOWN_FAILURE.String()}
+}
+
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
@@ -205,6 +243,11 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "memory tag is empty", postpilotv1.FailureReason_MEMORY_TAG_REQUIRED, nil)
 	case errors.Is(err, memory.ErrDuplicateText):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "memory text already exists", postpilotv1.FailureReason_MEMORY_TEXT_TAKEN, nil)
+	case errors.Is(err, memory.ErrExtractionResolved):
+		// Resolved answers nothing: its candidates are gone (MEM-15).
+		return rpcserver.NewAppError(connect.CodeNotFound, "memory extraction was resolved", postpilotv1.FailureReason_MEMORY_NOT_FOUND, nil)
+	case errors.Is(err, memory.ErrCandidateIndex):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "memory extraction has no such candidate", postpilotv1.FailureReason_MEMORY_NOT_FOUND, nil)
 	case errors.Is(err, memory.ErrExtractionNotReady):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "memory extraction has no candidates yet", postpilotv1.FailureReason_MEMORY_EXTRACTION_NOT_READY, nil)
 	case errors.Is(err, memory.ErrAnalyzeModelRequired):

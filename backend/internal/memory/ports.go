@@ -64,6 +64,9 @@ type ExtractionJobs interface {
 	Enqueue(ctx context.Context, request ExtractionRequest) (string, error)
 	SaveCandidates(ctx context.Context, jobID string, payload []byte) error
 	Candidates(ctx context.Context, userID, jobID string) ([]byte, error)
+	// ClearCandidates empties the owner's finished extraction, so neither its frozen source
+	// nor its raw candidate list can be read again (MEM-15).
+	ClearCandidates(ctx context.Context, userID, jobID string) error
 }
 
 // ExtractionRequest is one enqueue: the post it reads, the frozen analyze model, and the

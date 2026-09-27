@@ -122,6 +122,24 @@ func (q *Queue) Result(ctx context.Context, userID, id string) (Job, error) {
 	return found, nil
 }
 
+// ClearResult empties an owner's finished job of one kind once its result has been ruled on,
+// so the payload cannot be read again. A job that is not that owner's, not that kind or not
+// finished is ErrNotFound; a second clear finds nothing left to clear and is not an error.
+func (q *Queue) ClearResult(ctx context.Context, userID, id, kind string) error {
+	cleared, err := q.store.ClearFinishedPayload(ctx, userID, id, kind, q.now())
+	if err != nil || cleared {
+		return err
+	}
+	found, err := q.store.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if found.UserID != userID || found.Kind != kind || found.Status != StatusDone {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // SaveResult replaces a RUNNING job's payload with what its handler produced. It exists for
 // the one shape of work whose output IS the payload — a proposal the user rules on and that
 // nothing stores until they do — and the store's guard is what keeps a cancelled or already

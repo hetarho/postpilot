@@ -736,9 +736,9 @@ func (x *StartMemoryExtractionResponse) GetJobId() string {
 	return ""
 }
 
-// One proposed fact. It is NOT a memory: approving it is an ordinary CreateMemory carrying
-// this text, kind and tags plus the post it came from, which is where every field rule and
-// the account cap are applied.
+// One proposed fact. It is NOT a memory: ResolveMemoryExtraction approves it by its index,
+// creating it exactly as CreateMemory would — every field rule and the account cap applied —
+// with the post it came from as its source.
 type MemoryCandidate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
@@ -799,6 +799,167 @@ func (x *MemoryCandidate) GetTags() []string {
 	return nil
 }
 
+type ResolveMemoryExtractionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	JobId string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// Indexes into the extraction's candidate list, as GetMemoryExtraction returned it. Every
+	// other candidate is discarded.
+	Approved      []int32 `protobuf:"varint,2,rep,packed,name=approved,proto3" json:"approved,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveMemoryExtractionRequest) Reset() {
+	*x = ResolveMemoryExtractionRequest{}
+	mi := &file_postpilot_v1_memory_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveMemoryExtractionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveMemoryExtractionRequest) ProtoMessage() {}
+
+func (x *ResolveMemoryExtractionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_memory_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveMemoryExtractionRequest.ProtoReflect.Descriptor instead.
+func (*ResolveMemoryExtractionRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ResolveMemoryExtractionRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ResolveMemoryExtractionRequest) GetApproved() []int32 {
+	if x != nil {
+		return x.Approved
+	}
+	return nil
+}
+
+type MemoryCandidateFailure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Index         int32                  `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	Failure       *Failure               `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MemoryCandidateFailure) Reset() {
+	*x = MemoryCandidateFailure{}
+	mi := &file_postpilot_v1_memory_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemoryCandidateFailure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemoryCandidateFailure) ProtoMessage() {}
+
+func (x *MemoryCandidateFailure) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_memory_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemoryCandidateFailure.ProtoReflect.Descriptor instead.
+func (*MemoryCandidateFailure) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *MemoryCandidateFailure) GetIndex() int32 {
+	if x != nil {
+		return x.Index
+	}
+	return 0
+}
+
+func (x *MemoryCandidateFailure) GetFailure() *Failure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
+}
+
+type ResolveMemoryExtractionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// How many approved candidates are now memories, a deduplicated one included.
+	Saved int32 `protobuf:"varint,1,opt,name=saved,proto3" json:"saved,omitempty"`
+	// Empty once the extraction is resolved; otherwise the refused candidates, and the
+	// extraction stays readable for their retry.
+	Failures      []*MemoryCandidateFailure `protobuf:"bytes,2,rep,name=failures,proto3" json:"failures,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveMemoryExtractionResponse) Reset() {
+	*x = ResolveMemoryExtractionResponse{}
+	mi := &file_postpilot_v1_memory_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveMemoryExtractionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveMemoryExtractionResponse) ProtoMessage() {}
+
+func (x *ResolveMemoryExtractionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_memory_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveMemoryExtractionResponse.ProtoReflect.Descriptor instead.
+func (*ResolveMemoryExtractionResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ResolveMemoryExtractionResponse) GetSaved() int32 {
+	if x != nil {
+		return x.Saved
+	}
+	return 0
+}
+
+func (x *ResolveMemoryExtractionResponse) GetFailures() []*MemoryCandidateFailure {
+	if x != nil {
+		return x.Failures
+	}
+	return nil
+}
+
 type GetMemoryExtractionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
@@ -808,7 +969,7 @@ type GetMemoryExtractionRequest struct {
 
 func (x *GetMemoryExtractionRequest) Reset() {
 	*x = GetMemoryExtractionRequest{}
-	mi := &file_postpilot_v1_memory_proto_msgTypes[13]
+	mi := &file_postpilot_v1_memory_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +981,7 @@ func (x *GetMemoryExtractionRequest) String() string {
 func (*GetMemoryExtractionRequest) ProtoMessage() {}
 
 func (x *GetMemoryExtractionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_memory_proto_msgTypes[13]
+	mi := &file_postpilot_v1_memory_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +994,7 @@ func (x *GetMemoryExtractionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMemoryExtractionRequest.ProtoReflect.Descriptor instead.
 func (*GetMemoryExtractionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetMemoryExtractionRequest) GetJobId() string {
@@ -857,7 +1018,7 @@ type GetMemoryExtractionResponse struct {
 
 func (x *GetMemoryExtractionResponse) Reset() {
 	*x = GetMemoryExtractionResponse{}
-	mi := &file_postpilot_v1_memory_proto_msgTypes[14]
+	mi := &file_postpilot_v1_memory_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +1030,7 @@ func (x *GetMemoryExtractionResponse) String() string {
 func (*GetMemoryExtractionResponse) ProtoMessage() {}
 
 func (x *GetMemoryExtractionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_memory_proto_msgTypes[14]
+	mi := &file_postpilot_v1_memory_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +1043,7 @@ func (x *GetMemoryExtractionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMemoryExtractionResponse.ProtoReflect.Descriptor instead.
 func (*GetMemoryExtractionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_memory_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetMemoryExtractionResponse) GetPostSlug() string {
@@ -903,7 +1064,7 @@ var File_postpilot_v1_memory_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_memory_proto_rawDesc = "" +
 	"\n" +
-	"\x19postpilot/v1/memory.proto\x12\fpostpilot.v1\"\xfa\x01\n" +
+	"\x19postpilot/v1/memory.proto\x12\fpostpilot.v1\x1a\x18postpilot/v1/error.proto\"\xfa\x01\n" +
 	"\x06Memory\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12,\n" +
@@ -948,7 +1109,16 @@ const file_postpilot_v1_memory_proto_rawDesc = "" +
 	"\x0fMemoryCandidate\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12,\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x18.postpilot.v1.MemoryKindR\x04kind\x12\x12\n" +
-	"\x04tags\x18\x03 \x03(\tR\x04tags\"3\n" +
+	"\x04tags\x18\x03 \x03(\tR\x04tags\"S\n" +
+	"\x1eResolveMemoryExtractionRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1a\n" +
+	"\bapproved\x18\x02 \x03(\x05R\bapproved\"_\n" +
+	"\x16MemoryCandidateFailure\x12\x14\n" +
+	"\x05index\x18\x01 \x01(\x05R\x05index\x12/\n" +
+	"\afailure\x18\x02 \x01(\v2\x15.postpilot.v1.FailureR\afailure\"y\n" +
+	"\x1fResolveMemoryExtractionResponse\x12\x14\n" +
+	"\x05saved\x18\x01 \x01(\x05R\x05saved\x12@\n" +
+	"\bfailures\x18\x02 \x03(\v2$.postpilot.v1.MemoryCandidateFailureR\bfailures\"3\n" +
 	"\x1aGetMemoryExtractionRequest\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"y\n" +
 	"\x1bGetMemoryExtractionResponse\x12\x1b\n" +
@@ -963,14 +1133,15 @@ const file_postpilot_v1_memory_proto_rawDesc = "" +
 	"\x13MEMORY_KIND_PERSONA\x10\x02\x12\x15\n" +
 	"\x11MEMORY_KIND_PLACE\x10\x03\x12\x16\n" +
 	"\x12MEMORY_KIND_PERSON\x10\x04\x12\x17\n" +
-	"\x13MEMORY_KIND_HISTORY\x10\x052\xd5\x04\n" +
+	"\x13MEMORY_KIND_HISTORY\x10\x052\xcf\x05\n" +
 	"\rMemoryService\x12W\n" +
 	"\fListMemories\x12!.postpilot.v1.ListMemoriesRequest\x1a\".postpilot.v1.ListMemoriesResponse\"\x00\x12W\n" +
 	"\fCreateMemory\x12!.postpilot.v1.CreateMemoryRequest\x1a\".postpilot.v1.CreateMemoryResponse\"\x00\x12W\n" +
 	"\fUpdateMemory\x12!.postpilot.v1.UpdateMemoryRequest\x1a\".postpilot.v1.UpdateMemoryResponse\"\x00\x12W\n" +
 	"\fDeleteMemory\x12!.postpilot.v1.DeleteMemoryRequest\x1a\".postpilot.v1.DeleteMemoryResponse\"\x00\x12r\n" +
 	"\x15StartMemoryExtraction\x12*.postpilot.v1.StartMemoryExtractionRequest\x1a+.postpilot.v1.StartMemoryExtractionResponse\"\x00\x12l\n" +
-	"\x13GetMemoryExtraction\x12(.postpilot.v1.GetMemoryExtractionRequest\x1a).postpilot.v1.GetMemoryExtractionResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x13GetMemoryExtraction\x12(.postpilot.v1.GetMemoryExtractionRequest\x1a).postpilot.v1.GetMemoryExtractionResponse\"\x00\x12x\n" +
+	"\x17ResolveMemoryExtraction\x12,.postpilot.v1.ResolveMemoryExtractionRequest\x1a-.postpilot.v1.ResolveMemoryExtractionResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_memory_proto_rawDescOnce sync.Once
@@ -985,24 +1156,28 @@ func file_postpilot_v1_memory_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_memory_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_memory_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_postpilot_v1_memory_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_postpilot_v1_memory_proto_goTypes = []any{
-	(MemoryKind)(0),                       // 0: postpilot.v1.MemoryKind
-	(*Memory)(nil),                        // 1: postpilot.v1.Memory
-	(*ListMemoriesRequest)(nil),           // 2: postpilot.v1.ListMemoriesRequest
-	(*ListMemoriesResponse)(nil),          // 3: postpilot.v1.ListMemoriesResponse
-	(*CreateMemoryRequest)(nil),           // 4: postpilot.v1.CreateMemoryRequest
-	(*CreateMemoryResponse)(nil),          // 5: postpilot.v1.CreateMemoryResponse
-	(*MemoryTagsPatch)(nil),               // 6: postpilot.v1.MemoryTagsPatch
-	(*UpdateMemoryRequest)(nil),           // 7: postpilot.v1.UpdateMemoryRequest
-	(*UpdateMemoryResponse)(nil),          // 8: postpilot.v1.UpdateMemoryResponse
-	(*DeleteMemoryRequest)(nil),           // 9: postpilot.v1.DeleteMemoryRequest
-	(*DeleteMemoryResponse)(nil),          // 10: postpilot.v1.DeleteMemoryResponse
-	(*StartMemoryExtractionRequest)(nil),  // 11: postpilot.v1.StartMemoryExtractionRequest
-	(*StartMemoryExtractionResponse)(nil), // 12: postpilot.v1.StartMemoryExtractionResponse
-	(*MemoryCandidate)(nil),               // 13: postpilot.v1.MemoryCandidate
-	(*GetMemoryExtractionRequest)(nil),    // 14: postpilot.v1.GetMemoryExtractionRequest
-	(*GetMemoryExtractionResponse)(nil),   // 15: postpilot.v1.GetMemoryExtractionResponse
+	(MemoryKind)(0),                         // 0: postpilot.v1.MemoryKind
+	(*Memory)(nil),                          // 1: postpilot.v1.Memory
+	(*ListMemoriesRequest)(nil),             // 2: postpilot.v1.ListMemoriesRequest
+	(*ListMemoriesResponse)(nil),            // 3: postpilot.v1.ListMemoriesResponse
+	(*CreateMemoryRequest)(nil),             // 4: postpilot.v1.CreateMemoryRequest
+	(*CreateMemoryResponse)(nil),            // 5: postpilot.v1.CreateMemoryResponse
+	(*MemoryTagsPatch)(nil),                 // 6: postpilot.v1.MemoryTagsPatch
+	(*UpdateMemoryRequest)(nil),             // 7: postpilot.v1.UpdateMemoryRequest
+	(*UpdateMemoryResponse)(nil),            // 8: postpilot.v1.UpdateMemoryResponse
+	(*DeleteMemoryRequest)(nil),             // 9: postpilot.v1.DeleteMemoryRequest
+	(*DeleteMemoryResponse)(nil),            // 10: postpilot.v1.DeleteMemoryResponse
+	(*StartMemoryExtractionRequest)(nil),    // 11: postpilot.v1.StartMemoryExtractionRequest
+	(*StartMemoryExtractionResponse)(nil),   // 12: postpilot.v1.StartMemoryExtractionResponse
+	(*MemoryCandidate)(nil),                 // 13: postpilot.v1.MemoryCandidate
+	(*ResolveMemoryExtractionRequest)(nil),  // 14: postpilot.v1.ResolveMemoryExtractionRequest
+	(*MemoryCandidateFailure)(nil),          // 15: postpilot.v1.MemoryCandidateFailure
+	(*ResolveMemoryExtractionResponse)(nil), // 16: postpilot.v1.ResolveMemoryExtractionResponse
+	(*GetMemoryExtractionRequest)(nil),      // 17: postpilot.v1.GetMemoryExtractionRequest
+	(*GetMemoryExtractionResponse)(nil),     // 18: postpilot.v1.GetMemoryExtractionResponse
+	(*Failure)(nil),                         // 19: postpilot.v1.Failure
 }
 var file_postpilot_v1_memory_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Memory.kind:type_name -> postpilot.v1.MemoryKind
@@ -1013,24 +1188,28 @@ var file_postpilot_v1_memory_proto_depIdxs = []int32{
 	6,  // 5: postpilot.v1.UpdateMemoryRequest.tags:type_name -> postpilot.v1.MemoryTagsPatch
 	1,  // 6: postpilot.v1.UpdateMemoryResponse.memory:type_name -> postpilot.v1.Memory
 	0,  // 7: postpilot.v1.MemoryCandidate.kind:type_name -> postpilot.v1.MemoryKind
-	13, // 8: postpilot.v1.GetMemoryExtractionResponse.candidates:type_name -> postpilot.v1.MemoryCandidate
-	2,  // 9: postpilot.v1.MemoryService.ListMemories:input_type -> postpilot.v1.ListMemoriesRequest
-	4,  // 10: postpilot.v1.MemoryService.CreateMemory:input_type -> postpilot.v1.CreateMemoryRequest
-	7,  // 11: postpilot.v1.MemoryService.UpdateMemory:input_type -> postpilot.v1.UpdateMemoryRequest
-	9,  // 12: postpilot.v1.MemoryService.DeleteMemory:input_type -> postpilot.v1.DeleteMemoryRequest
-	11, // 13: postpilot.v1.MemoryService.StartMemoryExtraction:input_type -> postpilot.v1.StartMemoryExtractionRequest
-	14, // 14: postpilot.v1.MemoryService.GetMemoryExtraction:input_type -> postpilot.v1.GetMemoryExtractionRequest
-	3,  // 15: postpilot.v1.MemoryService.ListMemories:output_type -> postpilot.v1.ListMemoriesResponse
-	5,  // 16: postpilot.v1.MemoryService.CreateMemory:output_type -> postpilot.v1.CreateMemoryResponse
-	8,  // 17: postpilot.v1.MemoryService.UpdateMemory:output_type -> postpilot.v1.UpdateMemoryResponse
-	10, // 18: postpilot.v1.MemoryService.DeleteMemory:output_type -> postpilot.v1.DeleteMemoryResponse
-	12, // 19: postpilot.v1.MemoryService.StartMemoryExtraction:output_type -> postpilot.v1.StartMemoryExtractionResponse
-	15, // 20: postpilot.v1.MemoryService.GetMemoryExtraction:output_type -> postpilot.v1.GetMemoryExtractionResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	19, // 8: postpilot.v1.MemoryCandidateFailure.failure:type_name -> postpilot.v1.Failure
+	15, // 9: postpilot.v1.ResolveMemoryExtractionResponse.failures:type_name -> postpilot.v1.MemoryCandidateFailure
+	13, // 10: postpilot.v1.GetMemoryExtractionResponse.candidates:type_name -> postpilot.v1.MemoryCandidate
+	2,  // 11: postpilot.v1.MemoryService.ListMemories:input_type -> postpilot.v1.ListMemoriesRequest
+	4,  // 12: postpilot.v1.MemoryService.CreateMemory:input_type -> postpilot.v1.CreateMemoryRequest
+	7,  // 13: postpilot.v1.MemoryService.UpdateMemory:input_type -> postpilot.v1.UpdateMemoryRequest
+	9,  // 14: postpilot.v1.MemoryService.DeleteMemory:input_type -> postpilot.v1.DeleteMemoryRequest
+	11, // 15: postpilot.v1.MemoryService.StartMemoryExtraction:input_type -> postpilot.v1.StartMemoryExtractionRequest
+	17, // 16: postpilot.v1.MemoryService.GetMemoryExtraction:input_type -> postpilot.v1.GetMemoryExtractionRequest
+	14, // 17: postpilot.v1.MemoryService.ResolveMemoryExtraction:input_type -> postpilot.v1.ResolveMemoryExtractionRequest
+	3,  // 18: postpilot.v1.MemoryService.ListMemories:output_type -> postpilot.v1.ListMemoriesResponse
+	5,  // 19: postpilot.v1.MemoryService.CreateMemory:output_type -> postpilot.v1.CreateMemoryResponse
+	8,  // 20: postpilot.v1.MemoryService.UpdateMemory:output_type -> postpilot.v1.UpdateMemoryResponse
+	10, // 21: postpilot.v1.MemoryService.DeleteMemory:output_type -> postpilot.v1.DeleteMemoryResponse
+	12, // 22: postpilot.v1.MemoryService.StartMemoryExtraction:output_type -> postpilot.v1.StartMemoryExtractionResponse
+	18, // 23: postpilot.v1.MemoryService.GetMemoryExtraction:output_type -> postpilot.v1.GetMemoryExtractionResponse
+	16, // 24: postpilot.v1.MemoryService.ResolveMemoryExtraction:output_type -> postpilot.v1.ResolveMemoryExtractionResponse
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_memory_proto_init() }
@@ -1038,6 +1217,7 @@ func file_postpilot_v1_memory_proto_init() {
 	if File_postpilot_v1_memory_proto != nil {
 		return
 	}
+	file_postpilot_v1_error_proto_init()
 	file_postpilot_v1_memory_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1045,7 +1225,7 @@ func file_postpilot_v1_memory_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_memory_proto_rawDesc), len(file_postpilot_v1_memory_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

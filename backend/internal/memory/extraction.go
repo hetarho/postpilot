@@ -163,8 +163,10 @@ func (s *Service) Extraction(ctx context.Context, userID, jobID string) (string,
 		return "", nil, err
 	}
 	var payload extractionPayload
+	// A finished job with nothing left on it was resolved: its payload was cleared once its
+	// candidates were ruled on, and it answers nothing (MEM-15).
 	if len(raw) == 0 {
-		return "", nil, ErrExtractionNotReady
+		return "", nil, ErrExtractionResolved
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return "", nil, ErrExtractionNotReady
@@ -178,6 +180,50 @@ func (s *Service) Extraction(ctx context.Context, userID, jobID string) (string,
 		out = append(out, Candidate{Text: c.Text, Kind: kind, Tags: append([]string(nil), c.Tags...)})
 	}
 	return payload.PostSlug, out, nil
+}
+
+// CandidateFailure is one approved candidate the create refused, by its index.
+type CandidateFailure struct {
+	Index int
+	Err   error
+}
+
+// ResolveExtraction is the one ruling on an extraction's candidates (MEM-15): the approved
+// indexes are created from the STORED list — never from text the client sends back — with the
+// post as their source, and every other candidate is discarded. Once every approved one is a
+// memory the job's payload is cleared, so its frozen source and raw list can never be read
+// again (MEM-16). A refused candidate (the account cap, say) keeps the extraction readable and
+// comes back with its index, so a retry names only what failed; the ones that did save
+// deduplicate on that retry rather than doubling (MEM-9).
+func (s *Service) ResolveExtraction(ctx context.Context, userID, jobID string, approved []int) (int, []CandidateFailure, error) {
+	postSlug, candidates, err := s.Extraction(ctx, userID, jobID)
+	if err != nil {
+		return 0, nil, err
+	}
+	seen := make(map[int]bool, len(approved))
+	for _, index := range approved {
+		if index < 0 || index >= len(candidates) || seen[index] {
+			return 0, nil, ErrCandidateIndex
+		}
+		seen[index] = true
+	}
+	saved := 0
+	var failures []CandidateFailure
+	for _, index := range approved {
+		candidate := candidates[index]
+		if _, _, err := s.Create(ctx, userID, candidate.Text, candidate.Kind, candidate.Tags, postSlug); err != nil {
+			failures = append(failures, CandidateFailure{Index: index, Err: err})
+			continue
+		}
+		saved++
+	}
+	if len(failures) > 0 {
+		return saved, failures, nil
+	}
+	if err := s.extractions.ClearCandidates(ctx, userID, jobID); err != nil {
+		return saved, nil, fmt.Errorf("기억 후보를 정리하지 못했어요: %w", err)
+	}
+	return saved, nil, nil
 }
 
 // extractionInput is what the model reads: the post's own title, memo and prose. No

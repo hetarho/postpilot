@@ -386,6 +386,7 @@ export {
   DeleteMemoryResponseSchema,
   StartMemoryExtractionResponseSchema,
   GetMemoryExtractionResponseSchema,
+  ResolveMemoryExtractionResponseSchema,
 } from './gen/postpilot/v1/memory_pb'
 export type {
   Memory as ProtoMemory,

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package postpilot.v1;
 
+import "postpilot/v1/error.proto";
+
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 // memory.proto is the 기억 slice: short atomic facts about the author's world that no single
@@ -28,6 +30,12 @@ service MemoryService {
   // The candidates of a finished extraction. They live on the job row and nowhere else:
   // an unchecked candidate is discarded with the job and never queued for later (MEM-15).
   rpc GetMemoryExtraction(GetMemoryExtractionRequest) returns (GetMemoryExtractionResponse) {}
+  // The one ruling on an extraction's candidates: the approved ones are created from the
+  // stored list and the rest discarded, and once every approved one is stored the job's
+  // payload — its frozen source and the raw list — is cleared, so nothing can read them
+  // again (MEM-15, MEM-16). A candidate the create refuses keeps the extraction open, with
+  // its reason, for a retry of the refused ones.
+  rpc ResolveMemoryExtraction(ResolveMemoryExtractionRequest) returns (ResolveMemoryExtractionResponse) {}
 }
 
 // The closed five (MEM-5). There are no user-defined kinds and no sub-kinds: retrieval
@@ -115,13 +123,31 @@ message StartMemoryExtractionRequest { string post_slug = 1; }
 // GetMemoryExtraction once it is done.
 message StartMemoryExtractionResponse { string job_id = 1; }
 
-// One proposed fact. It is NOT a memory: approving it is an ordinary CreateMemory carrying
-// this text, kind and tags plus the post it came from, which is where every field rule and
-// the account cap are applied.
+// One proposed fact. It is NOT a memory: ResolveMemoryExtraction approves it by its index,
+// creating it exactly as CreateMemory would — every field rule and the account cap applied —
+// with the post it came from as its source.
 message MemoryCandidate {
   string text = 1;
   MemoryKind kind = 2;
   repeated string tags = 3;
+}
+
+message ResolveMemoryExtractionRequest {
+  string job_id = 1;
+  // Indexes into the extraction's candidate list, as GetMemoryExtraction returned it. Every
+  // other candidate is discarded.
+  repeated int32 approved = 2;
+}
+message MemoryCandidateFailure {
+  int32 index = 1;
+  Failure failure = 2;
+}
+message ResolveMemoryExtractionResponse {
+  // How many approved candidates are now memories, a deduplicated one included.
+  int32 saved = 1;
+  // Empty once the extraction is resolved; otherwise the refused candidates, and the
+  // extraction stays readable for their retry.
+  repeated MemoryCandidateFailure failures = 2;
 }
 
 message GetMemoryExtractionRequest { string job_id = 1; }
