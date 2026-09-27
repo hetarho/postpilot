@@ -12,7 +12,7 @@ import (
 
 func validPlan() (clip.EditPlan, []clip.RenderSource) {
 	s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-	c := clip.EditCut{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "Hello", Anchor: "bottom", Align: "center", Style: "clean"}}}
+	c := clip.EditCut{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "Hello", Anchor: "bottom", Align: "center", Style: "bold"}}}
 	d := c
 	d.ID = "two"
 	// The scene changes between the two, so the second leads in with CDS-36's
@@ -58,20 +58,24 @@ func TestCopyLimitsAndExposurePerStyle(t *testing.T) {
 		start, end  int
 		code        string
 	}{
-		// 깔끔하게 takes two lines of fourteen, 메모 exactly one of eighteen,
-		// 크게 강조 two of eleven and 형광펜 one of sixteen.
-		"clean third line":     {"clean", "가\n나\n다", 0, 7600, "plan_copy_lines"},
-		"clean fifteenth char": {"clean", strings.Repeat("가", 15), 0, 7600, "plan_copy_chars"},
-		"bold two lines":       {"bold", strings.Repeat("가", 11) + "\n" + strings.Repeat("나", 11), 0, 7600, ""},
-		"bold eleven":          {"bold", strings.Repeat("가", 11), 0, 7600, ""},
-		"bold twelfth char":    {"bold", strings.Repeat("가", 12), 0, 7600, "plan_copy_chars"},
+		// The default treatment, 크게 강조, takes two lines of eleven.
+		"third line":        {"bold", "가\n나\n다", 0, 7600, "plan_copy_lines"},
+		"bold two lines":    {"bold", strings.Repeat("가", 11) + "\n" + strings.Repeat("나", 11), 0, 7600, ""},
+		"bold eleven":       {"bold", strings.Repeat("가", 11), 0, 7600, ""},
+		"bold twelfth char": {"bold", strings.Repeat("가", 12), 0, 7600, "plan_copy_chars"},
 		// Five characters earn 900 + 5 × 90 ms, and neither the space nor the
 		// punctuation counts toward either the limit or the exposure.
-		"exposure met":     {"clean", "여섯 글자다", 0, 1350, ""},
-		"exposure short":   {"clean", "여섯 글자다", 0, 1349, "plan_copy_exposure"},
-		"punctuation free": {"clean", "여섯 글자다!!!!!!!!", 0, 1350, ""},
+		"exposure met":     {"bold", "여섯 글자다", 0, 1350, ""},
+		"exposure short":   {"bold", "여섯 글자다", 0, 1349, "plan_copy_exposure"},
+		"punctuation free": {"bold", "여섯 글자다!!!!!!!!", 0, 1350, ""},
 		// An empty copy is a cut with no text, not a copy that breaks the limits.
-		"no copy": {"clean", "", 0, 0, ""},
+		"no copy": {"bold", "", 0, 0, ""},
+		// The retired style names are not approved styles, so nothing renders
+		// in them any more (CDS-80).
+		"retired clean":  {"clean", "조용한 골목", 0, 7600, "plan_copy_format"},
+		"retired memo":   {"memo", "조용한 골목", 0, 7600, "plan_copy_format"},
+		"retired mark":   {"mark", "조용한 골목", 0, 7600, "plan_copy_format"},
+		"retired simple": {"simple", "조용한 골목", 0, 7600, "plan_copy_format"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			p, s := validPlan()
@@ -216,8 +220,8 @@ func TestSecondCopyRules(t *testing.T) {
 		p, s := validPlan()
 		for i := range p.Cuts {
 			p.Cuts[i].Copies = []clip.Copy{
-				{Text: "조용한 골목을 걸었어요", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 120, EndMS: 3000},
-				{Text: "9900원", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 3120, EndMS: 7480},
+				{Text: "조용한 골목을 걸었어요", Anchor: "bottom", Align: "center", Style: "bold", StartMS: 120, EndMS: 3000},
+				{Text: "9900원", Anchor: "bottom", Align: "center", Style: "bold", StartMS: 3120, EndMS: 7480},
 			}
 		}
 		return p, s

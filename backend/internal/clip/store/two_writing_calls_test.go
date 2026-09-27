@@ -66,7 +66,6 @@ func TestPricingCountsEachWritingCallAndRefusesAnIncompleteOne(t *testing.T) {
 // so a failure in the narration resumes on the flow that was already paid for.
 func TestGenerationRunsTheFlowThenTheNarration(t *testing.T) {
 	h := generationSetup(t)
-	h.planner.portableFlow = true
 	h.start(t)
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
@@ -85,7 +84,6 @@ func TestGenerationRunsTheFlowThenTheNarration(t *testing.T) {
 
 func TestANarrationFailureResumesOnTheFlowItAlreadyPaidFor(t *testing.T) {
 	h := generationSetup(t)
-	h.planner.portableFlow = true
 	h.planner.narrateErr = llm.ErrBadOutput
 	h.start(t)
 	if err := h.run(t); err == nil {

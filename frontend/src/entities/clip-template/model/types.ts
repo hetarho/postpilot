@@ -1,18 +1,8 @@
 import { parseClipTemplate } from '../lib/composition-parse'
-import { CLIP_PRESETS } from '@/entities/clip-design/@x/clip-template'
-import { type ClipPresetId, type ClipCaptionPace } from '@/entities/clip-design/@x/clip-template'
 export const CLIP_TEMPLATE_LIMITS = {
   name: 40,
-  guidance: 4000,
-  fields: 10,
-  label: 40,
-  prompt: 200,
 } as const
 
-/** The CDS copy styles and five category presets — both
- *  read from the design system rather than listed again here. */
-export const CLIP_PRESETS_LIST = CLIP_PRESETS
-export type ClipPreset = ClipPresetId
 export const CLIP_ACCENTS = [
   '',
   'coral',
@@ -24,122 +14,40 @@ export const CLIP_ACCENTS = [
   'pink',
 ] as const
 export type ClipAccent = (typeof CLIP_ACCENTS)[number]
-export interface InformationField {
-  label: string
-  prompt: string
-}
+/** A template is an outline body under a name (CLIP-14); nothing else is stored. */
 export interface ClipRecipe {
-  compositionBody?: string
-  compositionLegacy?: boolean
-  captionPace?: ClipCaptionPace
   name: string
-  informationFields: InformationField[]
-  cutGuidance: string
-
-  accent: ClipAccent
-  /** One of the five category presets. Empty is only ever a template written
-   *  before presets existed; a save must name one. */
-  preset: ClipPreset | ''
+  compositionBody: string
 }
 export interface ClipTemplate extends ClipRecipe {
   id: string
-  /** The body came back converted from the old section grammar (CLIP-140); the
-   * stored body changes only when the owner saves. */
-  compositionConverted?: boolean
   projectCount: number
   createdAt: string
   updatedAt: string
 }
 
 export function emptyClipRecipe(): ClipRecipe {
-  return {
-    name: '',
-    informationFields: [],
-    cutGuidance: '',
-
-    accent: '',
-    preset: '',
-  }
+  return { name: '', compositionBody: '' }
 }
 export function normalizeRecipe(value: ClipRecipe): ClipRecipe {
-  return {
-    ...value,
-    name: value.name.trim(),
-    informationFields: value.informationFields.map((field) => ({
-      label: field.label.trim(),
-      prompt: field.prompt.trim(),
-    })),
-  }
+  return { ...value, name: value.name.trim() }
 }
 export function recipeOf(value: ClipRecipe): ClipRecipe {
-  return {
-    ...(value.compositionBody !== undefined
-      ? {
-          compositionBody: value.compositionBody,
-          compositionLegacy: value.compositionLegacy ?? false,
-        }
-      : {}),
-    name: value.name,
-    informationFields: value.informationFields.map((f) => ({ ...f })),
-    cutGuidance: value.cutGuidance,
-
-    accent: value.accent,
-    preset: value.preset,
-    ...(value.captionPace ? { captionPace: value.captionPace } : {}),
-  }
+  return { name: value.name, compositionBody: value.compositionBody }
 }
 export type FieldError = 'required' | 'tooLong' | 'duplicate' | 'invalid'
 export function validateClipRecipe(value: ClipRecipe) {
   const recipe = normalizeRecipe(value)
-  const length = (text: string) => Array.from(text).length
-  const textError = (text: string, max: number, required = true): FieldError | undefined =>
-    required && !text ? 'required' : length(text) > max ? 'tooLong' : undefined
-  if (recipe.compositionBody !== undefined && !recipe.compositionLegacy) {
-    const name = textError(recipe.name, CLIP_TEMPLATE_LIMITS.name)
-    let composition: 'invalid' | undefined
-    try {
-      parseClipTemplate(recipe.compositionBody)
-    } catch {
-      composition = 'invalid'
-    }
-    return {
-      name,
-      guidance: undefined,
-      fields: [],
-      fieldCount: false,
-      accent: false,
-      pace: false,
-      preset: false,
-      composition,
-      valid: !name && !composition,
-    }
+  const name: FieldError | undefined = !recipe.name
+    ? 'required'
+    : Array.from(recipe.name).length > CLIP_TEMPLATE_LIMITS.name
+      ? 'tooLong'
+      : undefined
+  let composition: 'invalid' | undefined
+  try {
+    parseClipTemplate(recipe.compositionBody)
+  } catch {
+    composition = 'invalid'
   }
-  const labels = recipe.informationFields.map((f) => f.label)
-  const fields = recipe.informationFields.map((f) => ({
-    label:
-      textError(f.label, CLIP_TEMPLATE_LIMITS.label) ??
-      (labels.filter((v) => v === f.label).length > 1 ? 'duplicate' : undefined),
-    prompt: textError(f.prompt, CLIP_TEMPLATE_LIMITS.prompt),
-  }))
-  const errors = {
-    name: textError(recipe.name, CLIP_TEMPLATE_LIMITS.name),
-    guidance: textError(recipe.cutGuidance, CLIP_TEMPLATE_LIMITS.guidance, false),
-    fields,
-    fieldCount: recipe.informationFields.length > CLIP_TEMPLATE_LIMITS.fields,
-    accent: !CLIP_ACCENTS.includes(recipe.accent),
-    pace: recipe.captionPace !== undefined && !['steady', 'rapid'].includes(recipe.captionPace),
-    // A template names its category, which fixes chip priority, CTA and accent.
-    preset: !CLIP_PRESETS.includes(recipe.preset as ClipPresetId),
-  }
-  return {
-    ...errors,
-    valid:
-      !errors.name &&
-      !errors.guidance &&
-      !errors.fieldCount &&
-      !errors.accent &&
-      !errors.pace &&
-      !errors.preset &&
-      fields.every((f) => !f.label && !f.prompt),
-  }
+  return { name, composition, valid: !name && !composition }
 }

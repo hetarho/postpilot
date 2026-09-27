@@ -9,13 +9,9 @@ import design from './clip-design.json'
 export const CLIP_DESIGN = design
 
 export type ClipRatioId = 'vertical' | 'horizontal' | 'square'
-export type ClipPresetId = keyof typeof design.presets
 export type ClipDisclosureId = keyof typeof design.disclosure
-export type ClipCTAId = keyof typeof design.cta
 
-export const CLIP_PRESETS = Object.keys(design.presets) as ClipPresetId[]
 export const CLIP_DISCLOSURES = Object.keys(design.disclosure) as ClipDisclosureId[]
-export const CLIP_CTAS = Object.keys(design.cta) as ClipCTAId[]
 
 export const CLIP_REGIONS = design.regions
 export const CLIP_RULES = design.rule
@@ -72,7 +68,6 @@ export const CLIP_RATES = design.playback.rates_permille as readonly number[]
 /** CDS-43: how many copies a cut may carry, the cut length the second one needs
  *  and how short the second sentence has to be to stand alone. */
 export const CLIP_COPY = design.copy
-export const CLIP_FACTS = design.facts
 export const CLIP_ACCENT_HEX = design.accent
 /** The voice CDS-42 refuses: emoji and these tokens. */
 export const CLIP_VOICE = design.voice

@@ -120,11 +120,6 @@ function TemplateRow({ ownerId, template }: { ownerId: string; template: ClipTem
       >
         {template.name}
       </Link>
-      <Typography variant="meta" as="span" className="min-w-0 flex-1 truncate">
-        {/* A template names no design any more (CLIP-14), so what it carries is
-            what it asks the owner for. */}
-        {t('directory.fields', { count: template.informationFields.length })}
-      </Typography>
       <div className="relative ml-auto flex shrink-0 items-center gap-2">
         <Badge tone="neutral">
           {t('directory.projectCount', { count: template.projectCount })}

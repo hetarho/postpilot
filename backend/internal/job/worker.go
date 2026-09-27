@@ -252,7 +252,7 @@ func (q *Queue) logJobFailure(found Job, failure Failure, err error) {
 			case "output_encoding_or_size", "output_json", "output_shape", "output_field_type",
 				"plan_required", "plan_cut_fields", "plan_caption_fields", "plan_source",
 				"plan_caption_time", "plan_volume", "plan_ratio", "plan_target_duration",
-				"plan_style", "plan_accent", "caption_measurement", "plan_cut_count",
+				"plan_style", "caption_measurement", "plan_cut_count",
 				"plan_duration_range", "plan_source_metadata", "plan_cut_identity",
 				"plan_cut_range", "plan_cut_fade", "plan_cut_transition", "plan_focal", "plan_copy_format",
 				"plan_duration_limit", "plan_timeline", "plan_length_floor", "plan_copy_lines",
@@ -260,7 +260,7 @@ func (q *Queue) logJobFailure(found Job, failure Failure, err error) {
 				"plan_layout_safe_area", "plan_layout_size", "plan_layout_overlap",
 				"plan_layout_motion", "plan_layout_anchor_step", "plan_layout_frequency",
 				"plan_layout_disclosure", "plan_layout_kind", "plan_layout_contrast",
-				"plan_hook", "plan_chip_count", "plan_chip_label", "plan_copy_count",
+				"plan_copy_count",
 				"plan_copy_second_cut", "plan_copy_sequence", "plan_copy_classes":
 				attrs = append(attrs, "output_validation", code)
 			}

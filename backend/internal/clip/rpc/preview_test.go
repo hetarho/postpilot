@@ -37,8 +37,18 @@ type previewRPCRenderer struct{ clip.Renderer }
 func (previewRPCRenderer) PreparePreview(context.Context, clip.EditPlan, []clip.RenderSource, []string, int, clip.PreviewConfig) (clip.PreparedPreview, error) {
 	return clip.PreparedPreview{Canvas: clip.Canvas{Width: 1080, Height: 1920}, NextOffset: -1, Parity: []clip.PreviewParity{clip.PreviewSourceContrast, clip.PreviewAudioNormalization, clip.PreviewFrameTiming}}, nil
 }
+
+// nativePreviewPlan is one cut of a project with no template: a draft is drawn
+// from the composition it was written into.
+func nativePreviewPlan() clip.EditPlan {
+	composed := clip.NoTemplateComposition()
+	return clip.EditPlan{Ratio: "vertical", DurationMS: 15000,
+		Cuts:     []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, PlaybackRatePermille: clip.RateUnitPermille}},
+		Portable: &clip.PortablePlan{Snapshot: composed.Snapshot, Inputs: composed.Inputs, Cuts: []composition.Cut{{ID: "cut", SourceID: "source", EndMS: 15000, PlaybackRatePermille: clip.RateUnitPermille}}}}
+}
+
 func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
+	plan := nativePreviewPlan()
 	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +77,7 @@ func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 	if out.Msg.DraftHash != body.DraftHash || out.Header().Get("Cache-Control") != "private, no-store" || len(out.Msg.Parity) != 3 || out.Msg.NextOffset != -1 {
 		t.Fatal(out.Msg)
 	}
-	body.Plan.Hook = "changed"
+	body.Plan.DurationMs++
 	if _, err := h.PrepareClipPreview(ctx, connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatal("stale body hash accepted", err)
 	}
@@ -81,7 +91,7 @@ func (previewRPCRenderer) PrepareCaptionFrames(_ context.Context, _ clip.EditPla
 // is: the owner's own project, at the revision they were looking at, pinned to
 // the plan they hold (CLIP-159, CLIP-154).
 func TestCaptionFramesRPCIsOwnerScopedAndPinnedToTheDraft(t *testing.T) {
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
+	plan := nativePreviewPlan()
 	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +126,7 @@ func TestCaptionFramesRPCIsOwnerScopedAndPinnedToTheDraft(t *testing.T) {
 	if _, err := h.PrepareClipCaptionFrames(ctx, connect.NewRequest(stale)); connect.CodeOf(err) != connect.CodeAborted {
 		t.Fatal("a stale revision was served", err)
 	}
-	body.Plan.Hook = "changed"
+	body.Plan.DurationMs++
 	if _, err := h.PrepareClipCaptionFrames(ctx, connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatal("stale body hash accepted", err)
 	}
@@ -124,7 +134,7 @@ func TestCaptionFramesRPCIsOwnerScopedAndPinnedToTheDraft(t *testing.T) {
 	store.project.Finalized = &clip.Finalization{PlanRevision: 1, ResultID: "result"}
 	finalized := NewHandler(testProjects(store)).WithGeneration(
 		clipapp.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps()), nil)
-	body.Plan.Hook = ""
+	body.Plan.DurationMs--
 	if _, err := finalized.PrepareClipCaptionFrames(ctx, connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatal("a finalized project served frames", err)
 	}

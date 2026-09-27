@@ -15,7 +15,7 @@ import (
 func DefaultConfig(env clip.Environment) Config {
 	return Config{
 		Analysis: clip.DefaultAnalysisLimits(),
-		Render:   clip.DefaultRenderConfig(env), Template: clip.DefaultLimits(), ObserveCompletionTokens: 8192, PlanCompletionTokens: 32768,
+		Render:   clip.DefaultRenderConfig(env), Template: clip.DefaultLimits(), ObserveCompletionTokens: 8192,
 		// One ceiling per writing call, generous first and lowered on measured
 		// usage rather than guessed down before anything has been measured.
 		FlowCompletionTokens: 32768, NarrationCompletionTokens: 32768,

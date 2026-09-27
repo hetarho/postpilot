@@ -12,7 +12,7 @@ import (
 )
 
 func (s *GenerationService) EditingState(p clip.Project) (*clip.CorrectionState, error) {
-	return clip.EditingStateOf(p, s.cfg.Render, s.CompositionCapability() >= clip.CompositionPlanVersion)
+	return clip.EditingState(p, s.cfg.Render)
 }
 
 func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string, revision int, input clip.CorrectionPlan) (clip.Project, error) {
@@ -75,12 +75,6 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 				break
 			}
 		}
-		if err != nil {
-			return clip.Project{}, err
-		}
-	}
-	if p.Composition != nil && p.Composition.Snapshot.Legacy && p.Composition.Snapshot.LegacyRecipe != nil {
-		next.Portable, err = clip.FreezeLegacyPlan(p, next, *p.Composition.Snapshot.LegacyRecipe, s.projects.limits.Composition)
 		if err != nil {
 			return clip.Project{}, err
 		}
@@ -166,16 +160,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	// Resolve the same bundled-font layout and checks before either executor
 	// starts. Pixel-dependent contrast and output checks stay with the producer.
 	if plan.Portable == nil {
-		t := clip.VideoTemplate{}
-		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-			t.Recipe = *p.Composition.Snapshot.LegacyRecipe
-		} else if p.VideoTemplateID != "" {
-			t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
-			if err != nil && !errors.Is(err, clip.ErrNotFound) {
-				return "", err
-			}
-		}
-		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, p.HideDisclosure)
+		plan = plan.WithDisclosure(p.Disclosure, p.HideDisclosure)
 	}
 	plan = plan.WithDesign(p.DesignSelection())
 	plan.HideDisclosure = p.HideDisclosure
@@ -278,23 +263,13 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err := s.checkComposition(p.Composition); err != nil {
 		return err
 	}
-	if plan.Portable != nil && !plan.Portable.Snapshot.Legacy && s.CompositionCapability() < clip.CompositionPlanVersion {
+	if plan.Portable != nil && s.CompositionCapability() < clip.CompositionPlanVersion {
 		return clip.ErrCompositionUnavailable
 	}
-	// Manual rerender reads the frozen legacy recipe, including after template
-	// edits or deletion. Project-local disclosure changes retain their meaning.
-	t := clip.VideoTemplate{}
-	if s.remoteMedia == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-		t.Recipe = *p.Composition.Snapshot.LegacyRecipe
-	} else if s.remoteMedia == nil && plan.Portable == nil && p.VideoTemplateID != "" {
-		t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
-		if err != nil && !errors.Is(err, clip.ErrNotFound) {
-			return err
-		}
-	}
-
+	// Project-local disclosure changes retain their meaning on a plan whose
+	// badge is not a composition entry.
 	if s.remoteMedia == nil && plan.Portable == nil {
-		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure)
+		plan = plan.WithDisclosure(p.Disclosure, frozen.HideDisclosure)
 	}
 	if err = clip.MatchRenderBatch(plan, b); err != nil {
 		return err

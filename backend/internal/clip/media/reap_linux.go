@@ -1,9 +1,10 @@
 package media
 
 import (
-	"golang.org/x/sys/unix"
 	"sync"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 var reaperOnce sync.Once

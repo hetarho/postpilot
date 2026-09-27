@@ -88,11 +88,9 @@ func (r *Rendering) LayoutComposition(ctx context.Context, plan clip.EditPlan, s
 }
 
 func compositionGeometry(plan clip.EditPlan) clip.EditPlan {
-	plan.Hook = ""
 	plan.Cuts = slices.Clone(plan.Cuts)
 	for i := range plan.Cuts {
 		plan.Cuts[i].Copies = nil
-		plan.Cuts[i].Chips = nil
 	}
 	return plan
 }
@@ -108,9 +106,6 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	limits := r.cfg.Composition
 	if plan.Portable == nil {
 		return declaredLayout{}, clip.ErrInvalid
-	}
-	if plan.Portable.Snapshot.Legacy {
-		limits = clip.LegacyCompositionLimits(limits)
 	}
 	_, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits)
 	if problem != nil {
@@ -128,19 +123,17 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return declaredLayout{}, err
 	}
-	// The pace and the accent are the PROJECT's (CLIP-139): they are applied
-	// here, once, so the scheduler, the layout and the verifier all read the
-	// same values. A project that chose neither leaves the frozen document's
-	// own values standing.
-	if plan.CaptionPace != "" || plan.Accent != "" {
-		elements := slices.Clone(plan.Portable.Elements)
-		for i := range elements {
-			elements[i].Pace, elements[i].Accent = plan.CaptionPaceOf(elements[i]), plan.AccentOf(elements[i])
-		}
-		portable := *plan.Portable
-		portable.Elements = elements
-		plan.Portable = &portable
+	// The pace and the accent are the PROJECT's and nothing else's (CLIP-139):
+	// they are applied here, once, so the scheduler, the layout and the verifier
+	// all read the same values. An empty choice is the shared default, never
+	// whatever the frozen document or an older plan said (CDS-60).
+	elements := slices.Clone(plan.Portable.Elements)
+	for i := range elements {
+		elements[i].Pace, elements[i].Accent = plan.CaptionPaceOrDefault(), plan.Accent
 	}
+	designed := *plan.Portable
+	designed.Elements = elements
+	plan.Portable = &designed
 	result := declaredLayout{plan: plan}
 	portable := *plan.Portable
 	// Reading extension is a generation-time choice. Subsequent correction
@@ -314,7 +307,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 	// carrying "auto" keep that entry, and the owner's choice always wins.
 	owner := text.Owner
 	style := candidates[0]
-	if !plan.Portable.Snapshot.Legacy && e.Style != "" && e.Style != "auto" {
+	if e.Style != "" && e.Style != "auto" {
 		style = e.Style
 	}
 	if owner.Style != "" {

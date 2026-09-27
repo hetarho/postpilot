@@ -13,22 +13,17 @@ func TestOverlappingPlansRemainReviewable(t *testing.T) {
 	_, r := measured(t)
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		for _, compiled := range []bool{false, true} {
-			for _, collision := range []string{"chips across fade", "captions across fade"} {
+			for _, collision := range []string{"captions across fade"} {
 				t.Run(ratio+"/"+map[bool]string{false: "manual", true: "compiled"}[compiled]+"/"+collision, func(t *testing.T) {
 					plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Disclosure: "ad", Accent: "coral",
-						Facts: []clip.Answer{{Label: "위치", Text: "서울"}},
 						Cuts: []clip.EditCut{
-							{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "오늘의 한 끼", Style: "clean", Anchor: "bottom", Align: "center"}}},
-							{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "함께한 시간", Style: "clean", Anchor: "bottom", Align: "center"}}},
+							{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "오늘의 한 끼", Style: "bold", Anchor: "bottom", Align: "center"}}},
+							{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "함께한 시간", Style: "bold", Anchor: "bottom", Align: "center"}}},
 						}}
 					if compiled {
 						plan.Decisions = []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}
 					}
 					switch collision {
-					case "chips across fade":
-						for i := range plan.Cuts {
-							plan.Cuts[i].Chips = []string{"위치"}
-						}
 					case "captions across fade":
 						plan.Cuts[0].Copies[0].EndMS = 7600
 						plan.Cuts[1].Copies[0].EndMS = 7480

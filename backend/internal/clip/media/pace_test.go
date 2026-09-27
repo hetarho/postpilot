@@ -38,7 +38,7 @@ func TestRapidLayersHaveUniquePathsCroppedExtentsAndNoMotion(t *testing.T) {
 	a := newAdapter(t, runner)
 	r := testRenderer(t, a)
 	canvas, _ := clip.ClipCanvas("vertical")
-	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}, 120, 1420)
+	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "bold", Anchor: "bottom", Align: "center"}, 120, 1420)
 	cut := clip.EditCut{EndMS: 3000, Copies: copies}
 	c := composed{plan: clip.EditPlan{Cuts: []clip.EditCut{cut}}, layouts: [][]copyLayout{make([]copyLayout, len(copies))}, grounds: [][]Luminance{make([]Luminance, len(copies))}}
 	if err := a.WithWorkspace(t.Context(), "rapid", func(ws clip.MediaWorkspace) error {
@@ -113,7 +113,7 @@ func TestRenderSmokeRapidCaptions(t *testing.T) {
 			if i%2 == 1 {
 				text = "철판 요리를 먹어요"
 			}
-			cut.Copies = append(cut.Copies, clip.Caption{Pace: "rapid", Text: text, Style: "simple", Anchor: "bottom", Align: "center", StartMS: i * 300, EndMS: (i + 1) * 300})
+			cut.Copies = append(cut.Copies, clip.Caption{Pace: "rapid", Text: text, Style: "bold", Anchor: "bottom", Align: "center", StartMS: i * 300, EndMS: (i + 1) * 300})
 		}
 		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Cuts: []clip.Cut{cut}}
 		sources := []clip.RenderSource{{ID: "source", Fingerprint: "source", Info: info}}

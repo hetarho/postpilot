@@ -16,7 +16,7 @@ func TestCaptionPaceAndAccentStartUnsetAndAreOwnedByTheProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p.CaptionPace != "" || p.Accent != "" {
-		t.Fatal("a template seeded the project's pace or accent", p.CaptionPace, p.Accent, h.template.CaptionPace, h.template.Accent)
+		t.Fatal("a template seeded the project's pace or accent", p.CaptionPace, p.Accent)
 	}
 	pace, accent := "rapid", "teal"
 	changed, err := h.projects.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{CaptionPace: &pace, Accent: &accent})

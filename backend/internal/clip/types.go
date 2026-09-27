@@ -31,34 +31,18 @@ type Limits struct {
 	InstructionChars int
 }
 
-type InformationField struct{ Label, Prompt string }
+// Recipe is what a template carries: its name and its outline body (CLIP-4).
 type Recipe struct {
-	CompositionBody string
-	// Legacy is a server-owned conversion marker, never accepted from a client.
-	CompositionLegacy bool
-	CaptionPace       string
-	Name              string
-	InformationFields []InformationField
-	CutGuidance       string
-	Accent            string
-	// One of the five CDS category presets. Empty is a template written before
-	// presets existed and reads as the shared defaults, never as a category.
-	Preset string
+	Name, CompositionBody string
 }
 type VideoTemplate struct {
 	ID, UserID string
 	Recipe
 	ProjectCount         int
 	CreatedAt, UpdatedAt time.Time
-	// True only on a read projection whose CompositionBody has been converted
-	// from the old grammar (CLIP-140); the stored body is untouched until the
-	// owner saves. Never set on a template read for generation.
-	CompositionConverted bool
 }
 type TemplatePatch struct {
-	CompositionBody                                *string
-	Name, CutGuidance, Accent, Preset, CaptionPace *string
-	InformationFields                              *[]InformationField
+	Name, CompositionBody *string
 }
 type Answer struct{ Label, Text string }
 type RenderKind string
@@ -94,27 +78,23 @@ type Project struct {
 	Composition                               *ProjectComposition
 	HideDisclosure                            bool
 	ID, UserID, Title, VideoTemplateID, Ratio string
-	// The owner's campaign type and closing call to action, as fixed ids: the
-	// phrases are code-owned so the renderer can never be handed an edited
-	// disclosure. Empty disclosure is what the generation gate refuses; an empty
-	// CTA falls back to the template's preset.
-	Disclosure, CTA string
+	// The owner's campaign type, as a fixed id: the phrase is code-owned so the
+	// renderer can never be handed an edited disclosure. Empty is what the
+	// generation gate refuses.
+	Disclosure string
 	// The owner's own free-text instruction for this project (CLIP-121), empty
-	// when none was written. It belongs to the project, not to the answers the
+	// when none was written. It belongs to the project, not to the values the
 	// template declared.
 	Instruction string
-	// The owner's caption pace and accent for this clip (CLIP-139). Empty is
-	// "not chosen": the render falls back to what the frozen document said, so
-	// a project made before they moved renders exactly as it did.
+	// The owner's caption pace and accent for this clip (CLIP-139). Empty is the
+	// shared default: the steady pace and no accent.
 	CaptionPace, Accent string
 	// The owner's design selection for this clip (CLIP-139, CLIP-142): the two
-	// region presets and the caption styles the clip may use. Seeded from the
-	// template at creation and the project's to change afterwards; an empty
-	// style selection is the default style alone (CDS-25).
+	// region presets and the caption styles the clip may use; an empty style
+	// selection is the default style alone (CDS-25).
 	IntroPreset, OutroPreset               string
 	CaptionStyles                          []string
 	TargetDurationMS                       int
-	Answers                                []Answer
 	Analysis, EditPlan                     string
 	Result                                 *Result
 	EditPlanRevision, RenderedPlanRevision int
@@ -152,17 +132,15 @@ type ProjectInput struct {
 	CompositionInputs             *CompositionInputs
 	HideDisclosure                bool
 	Title, VideoTemplateID, Ratio string
-	Disclosure, CTA               string
+	Disclosure                    string
 	Instruction                   string
-	// Absent seeds both from the selected template; an explicit empty string is
-	// the steady pace and no accent.
+	// Absent or empty is the shared default: the steady pace and no accent.
 	CaptionPace, Accent *string
 	// Absent seeds all three from the selected template, or from the shared
 	// defaults where no template is attached (CLIP-139).
 	IntroPreset, OutroPreset *string
 	CaptionStyles            *[]string
 	TargetDurationMS         int
-	Answers                  []Answer
 }
 
 // Ratio deliberately has no update representation.
@@ -170,16 +148,15 @@ type ProjectPatch struct {
 	ExpectedCompositionRevision *int
 	CompositionInputs           *CompositionInputs
 	// The service creates the snapshot; the caller cannot replace frozen content.
-	Composition                             *ProjectComposition
-	HideDisclosure                          *bool
-	Title, VideoTemplateID, Disclosure, CTA *string
-	Instruction                             *string
-	CaptionPace, Accent                     *string
+	Composition                        *ProjectComposition
+	HideDisclosure                     *bool
+	Title, VideoTemplateID, Disclosure *string
+	Instruction                        *string
+	CaptionPace, Accent                *string
 	// Presence-aware like the pace and the accent: changing any of the three
 	// marks the result stale and invalidates no observation and no plan
 	// (CLIP-139).
 	IntroPreset, OutroPreset *string
 	CaptionStyles            *[]string
 	TargetDurationMS         *int
-	Answers                  []Answer
 }

@@ -13,9 +13,7 @@ export {
   CLIP_RULES,
   clipRegion,
   clipCaption,
-  CLIP_PRESETS,
   CLIP_DISCLOSURES,
-  CLIP_CTAS,
   CLIP_SHADOW,
   CLIP_SPACING,
   CLIP_TIMING,
@@ -24,7 +22,6 @@ export {
   CLIP_RATES,
   CLIP_COPY,
   CLIP_RAPID,
-  CLIP_FACTS,
   CLIP_ACCENT_HEX,
   CLIP_TYPE,
   CLIP_VOICE,
@@ -36,10 +33,8 @@ export type {
   ClipOutroPresetId,
   ClipRegionPresets,
   ClipRatioId,
-  ClipPresetId,
   ClipCaptionStyleId,
   ClipDisclosureId,
-  ClipCTAId,
 } from './clip-design'
 export {
   CLIP_COMPOSITION_LIMITS,

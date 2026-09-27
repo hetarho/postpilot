@@ -2,42 +2,15 @@ import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipTemplateService, type ProtoVideoTemplate } from '@/shared/api'
-import {
-  CLIP_ACCENTS,
-  normalizeRecipe,
-  recipeOf,
-  type ClipTemplate,
-  type ClipRecipe,
-  type ClipAccent,
-} from '../model/types'
+import { normalizeRecipe, type ClipTemplate, type ClipRecipe } from '../model/types'
 
 export const clipTemplatesKey = (transport: Transport, ownerId: string) =>
   ['clip-templates', transport, ownerId] as const
 export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
-  if (
-    !['', 'steady', 'rapid'].includes(value.captionPace) ||
-    !CLIP_ACCENTS.includes(value.accent as ClipAccent)
-  )
-    throw new Error('Invalid clip template contract')
   return {
-    ...(value.compositionBody
-      ? {
-          compositionBody: value.compositionBody,
-          compositionLegacy: value.compositionLegacy,
-          ...(value.compositionConverted ? { compositionConverted: true } : {}),
-        }
-      : {}),
-    ...(value.captionPace
-      ? { captionPace: value.captionPace as NonNullable<ClipRecipe['captionPace']> }
-      : {}),
     id: value.id,
     name: value.name,
-    cutGuidance: value.cutGuidance,
-    informationFields: value.informationFields.map((f) => ({ label: f.label, prompt: f.prompt })),
-
-    accent: value.accent as ClipAccent,
-    // Retained only for reading and converting legacy recipes.
-    preset: value.preset as ClipRecipe['preset'],
+    compositionBody: value.compositionBody,
     projectCount: value.projectCount,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
@@ -70,20 +43,10 @@ export function useClipTemplateMutations(ownerId: string) {
   }
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {
-      const { compositionBody, compositionLegacy, ...recipeFields } = normalizeRecipe(recipe)
-      const fields = { ...recipeOf(recipeFields), captionPace: recipe.captionPace ?? 'steady' }
-      const authored = compositionBody !== undefined && !compositionLegacy
-      const response = authored
-        ? id
-          ? await client.updateVideoTemplate({ id, name: fields.name, compositionBody })
-          : await client.createVideoTemplate({ name: fields.name, compositionBody })
-        : id
-          ? await client.updateVideoTemplate({
-              id,
-              ...fields,
-              informationFields: { values: fields.informationFields },
-            })
-          : await client.createVideoTemplate(fields)
+      const { name, compositionBody } = normalizeRecipe(recipe)
+      const response = id
+        ? await client.updateVideoTemplate({ id, name, compositionBody })
+        : await client.createVideoTemplate({ name, compositionBody })
       if (!response.template?.id) throw new Error('Missing saved video template')
       return toClipTemplate(response.template)
     },

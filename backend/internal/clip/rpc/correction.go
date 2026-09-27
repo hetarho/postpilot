@@ -1,9 +1,10 @@
 package rpc
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
+
+	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -27,7 +28,7 @@ func captionProto(c clip.Caption) *v1.ClipCaption {
 const explicitZeroRate = -1
 
 func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
-	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs()), Hook: p.GetHook(), NativeComposition: p.GetNativeComposition()}
+	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs()), NativeComposition: p.GetNativeComposition()}
 	if p.GetSourceAudio() != nil {
 		out.SourceAudio = []clip.SourceAudioSetting{}
 		for _, v := range p.GetSourceAudio().GetValues() {
@@ -58,7 +59,7 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 		if c.GetCreation() != nil {
 			creation = &clip.CutCreation{Kind: c.GetCreation().GetKind(), OriginID: c.GetCreation().GetOriginCutId()}
 		}
-		out.Cuts = append(out.Cuts, clip.CorrectionCut{Creation: creation, Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies, PlaybackRatePermille: rate})
+		out.Cuts = append(out.Cuts, clip.CorrectionCut{Creation: creation, Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Copies: copies, PlaybackRatePermille: rate})
 	}
 	for _, t := range p.GetElements() {
 		out.Elements = append(out.Elements, correctionText(t))
@@ -149,7 +150,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 	if s == nil {
 		return nil
 	}
-	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook, NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
 	if s.Plan.SourceAudio != nil {
 		settings := &v1.ClipSourceAudioSettings{}
 		for _, v := range s.Plan.SourceAudio {
@@ -179,7 +180,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 			focal = &v1.ClipFocal{X: c.Focal.X, Y: c.Focal.Y}
 		}
 		rate := int32(c.Rate())
-		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Focal: focal, Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: first, Copies: copies, PlaybackRatePermille: &rate})
+		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Focal: focal, Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Copy: first, Copies: copies, PlaybackRatePermille: &rate})
 	}
 	for _, t := range s.Plan.Elements {
 		out.Plan.Elements = append(out.Plan.Elements, correctionTextProto(t))

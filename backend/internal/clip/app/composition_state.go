@@ -1,9 +1,6 @@
 package app
 
 import (
-	"slices"
-	"strings"
-
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 )
@@ -25,49 +22,20 @@ func (s *GenerationService) CompositionCapability() int {
 }
 
 func (s *GenerationService) checkComposition(c *clip.ProjectComposition) error {
-	if c != nil && !c.Snapshot.Legacy && s.CompositionCapability() < clip.CompositionPlanVersion {
+	if c != nil && s.CompositionCapability() < clip.CompositionPlanVersion {
 		return clip.ErrCompositionUnavailable
 	}
 	return nil
 }
 
-// TemplateProjection is what the owner reads and edits: a body still written
-// under the old grammar comes back converted, flagged so the editor can say so,
-// while the stored body waits for the owner's own save (CLIP-140). Generation
-// and project freezing read the stored template directly and never this.
-func (s *Service) TemplateProjection(t clip.VideoTemplate) clip.VideoTemplate {
-	if t.CompositionBody == "" {
-		return t
+// authoredBody reads a template body under the template's own limits and
+// returns it exactly as the owner wrote it; a template is its outline and
+// nothing is derived from it to be stored beside it (CLIP-4, CLIP-14).
+func (s *Service) authoredBody(body string) error {
+	if _, e := composition.ParseTemplate(body, s.limits.Composition); e != nil {
+		return e
 	}
-	// The converted body is what the owner will save, so it is read and BoundedText
-	// by the template's own limits; a body that cannot be read under them is left
-	// exactly as it is stored.
-	converted, changed, problem := composition.ConvertLegacyTemplate(t.CompositionBody, s.limits.Composition)
-	if problem != nil || !changed {
-		return t
-	}
-	t.CompositionBody, t.CompositionConverted = converted, true
-	return t
-}
-
-func (s *Service) authoredRecipe(r clip.Recipe) (clip.Recipe, error) {
-	d, e := composition.ParseTemplate(r.CompositionBody, s.limits.Composition)
-	if e != nil {
-		return r, e
-	}
-	r.CompositionLegacy = false
-	r.Accent = d.Accent
-	r.CaptionPace = d.Pace
-	r.Preset = ""
-	r.InformationFields = nil
-	r.CutGuidance = strings.Join(d.Guidance, "\n")
-	// Compatibility projections are presentation only; field IDs remain authoritative.
-	for _, f := range d.Fields {
-		if f.Group == "" {
-			r.InformationFields = append(r.InformationFields, clip.InformationField{Label: f.Label, Prompt: f.Prompt})
-		}
-	}
-	return r, nil
+	return nil
 }
 
 func (s *Service) projectComposition(t clip.VideoTemplate, in *clip.CompositionInputs, p clip.Project) (*clip.ProjectComposition, error) {
@@ -89,24 +57,6 @@ func (s *Service) projectComposition(t clip.VideoTemplate, in *clip.CompositionI
 		}
 		return &c, nil
 	}
-	if t.CompositionBody == "" || t.CompositionLegacy {
-		c := clip.LegacyProjectComposition(p, t.Recipe)
-		if in != nil {
-			d, problem := composition.ReadStored(c.Snapshot.Body, clip.LegacyCompositionLimits(s.limits.Composition))
-			if problem != nil {
-				return nil, problem
-			}
-			if err := clip.ValidateCompositionInputs(d, *in, s.limits.Composition, false); err != nil {
-				return nil, err
-			}
-			if err := clip.ValidateSourceAssociations(p, in.Associations); err != nil {
-				return nil, err
-			}
-			p.Answers = legacyAnswers(p.Answers, t.InformationFields, in.Values)
-			c = clip.LegacyProjectComposition(p, t.Recipe)
-		}
-		return &c, nil
-	}
 	d, e := composition.Parse(t.CompositionBody, s.limits.Composition)
 	if e != nil {
 		return nil, e
@@ -122,25 +72,4 @@ func (s *Service) projectComposition(t clip.VideoTemplate, in *clip.CompositionI
 		return nil, err
 	}
 	return &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: d.Source, TemplateID: t.ID}, Inputs: values}, nil
-}
-
-// Typed patches replace all declared values; unrelated historical answers stay
-// available to the compatibility renderer and are never turned into new fields.
-func legacyAnswers(previous []clip.Answer, fields []clip.InformationField, values map[string]string) []clip.Answer {
-	out := slices.Clone(previous)
-	for _, field := range fields {
-		answer := clip.Answer{Label: field.Label, Text: values[clip.LegacyFieldID(field.Label)]}
-		found := false
-		for i := range out {
-			if out[i].Label == field.Label {
-				out[i] = answer
-				found = true
-				break
-			}
-		}
-		if !found {
-			out = append(out, answer)
-		}
-	}
-	return out
 }

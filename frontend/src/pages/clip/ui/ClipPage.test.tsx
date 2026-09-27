@@ -5,7 +5,7 @@ import { connectAppError } from '@/test/app-error'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import type { FakeClipsOptions } from '@/test/clips'
+import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
 import type { ClipProjectDraft } from '@/entities/clip-project'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
@@ -19,24 +19,24 @@ vi.mock('@/shared/lib/upload', async (original) => ({
   ...(await original<object>()),
   putBlobWithProgress: vi.fn(),
 }))
-const template = {
-  id: 'template',
-  name: '여행',
-  informationFields: [{ label: '장소', prompt: '어디인가요?' }],
-  cutGuidance: '',
-
-  accent: '' as const,
-  preset: 'restaurant' as const,
-}
-const project: ClipProjectDraft & { id: string } = {
+const PLACE_BODY =
+  '<clip version="1"><field id="place" label="장소" required="true">어디인가요?</field>' +
+  '<text id="hook" kind="fixed" role="hook" basis="output-start"/>' +
+  '<text id="ending" kind="fixed" role="ending" basis="output-end"/></clip>'
+const template = { id: 'template', name: '여행', compositionBody: PLACE_BODY }
+const inputs = { values: { place: '제주도' }, items: {}, associations: [] }
+const project: FakeClipProject = {
   id: 'project',
   title: '제주 여행',
   videoTemplateId: template.id,
   ratio: 'vertical',
   targetDurationMs: 30000,
   disclosure: 'ad',
-  cta: '',
-  answers: [{ label: '장소', text: '제주도' }],
+  composition: {
+    snapshot: { version: 1, body: PLACE_BODY, templateId: template.id },
+    inputs,
+  },
+  compositionInputs: inputs,
 }
 const mount = (path: string, clips: FakeClipsOptions = {}) =>
   renderAppAt(path, {
@@ -78,7 +78,9 @@ describe('clip directory and setup', () => {
   it('autosaves disclosure visibility independently and restores it after reopening', async () => {
     const user = userEvent.setup()
     const updates: ClipProjectDraft[] = []
-    const { router } = mount('/clips/project', { projectWrites: updates })
+    // The retained disclosure is offered on a project with no outline snapshot.
+    const bare = { ...project, composition: undefined, compositionInputs: undefined }
+    const { router } = mount('/clips/project', { projectWrites: updates, projects: [bare] })
     const toggle = await screen.findByRole('checkbox', { name: '영상에 광고·협찬 표시' })
     expect(toggle).toBeChecked()
     await user.click(toggle)
@@ -149,8 +151,6 @@ describe('clip directory and setup', () => {
       ratio: 'square',
       targetDurationMs: 0,
       disclosure: '',
-      cta: '',
-      answers: [],
     })
     // ① is where the rest is asked for, and the length it was minted without is empty there.
     expect(await screen.findByLabelText('목표 길이 (초)')).toHaveValue(null)
@@ -211,14 +211,9 @@ describe('clip directory and setup', () => {
     expect(screen.getByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('여행')
     expect(router.state.location.pathname).toBe('/clips/new')
   })
-  it('updates title and answers without changing ratio, and preserves stale-template answers', async () => {
+  it('updates the title without changing the ratio', async () => {
     const projectWrites: ClipProjectDraft[] = []
-    mount('/clips/project', {
-      projectWrites,
-      projects: [
-        { ...project, answers: [...project.answers, { label: '이전 질문', text: '보존' }] },
-      ],
-    })
+    mount('/clips/project', { projectWrites })
     const user = userEvent.setup()
     const title = await screen.findByLabelText('클립 제목')
     // A project minted before this opens ① with the length it already had (CLIP-130).
@@ -232,7 +227,6 @@ describe('clip directory and setup', () => {
     expect(projectWrites[0]).toMatchObject({
       title: '제주 여행 기록',
       ratio: 'vertical',
-      answers: expect.arrayContaining([{ label: '이전 질문', text: '보존' }]),
     })
     expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
   })

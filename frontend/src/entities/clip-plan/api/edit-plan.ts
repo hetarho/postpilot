@@ -63,7 +63,6 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           }
         : {}),
       durationMs: value.plan.durationMs,
-      hook: value.plan.hook,
       cuts: value.plan.cuts.map((c) => {
         // `copies` is the authority; a server that still sends only the one
         // `copy` is read exactly as it was before CDS-43.
@@ -121,7 +120,6 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           // An absent rate is a server that predates them, read as 1x; an
           // explicit value is carried exactly so the editor cannot round it.
           playbackRatePermille: c.playbackRatePermille ?? CLIP_PLAYBACK.unit_permille,
-          chips: [...c.chips],
           copies,
         }
       }),
@@ -163,7 +161,6 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       creation: text.creation,
     })),
     durationMs: plan.durationMs,
-    hook: plan.hook,
     cuts: plan.cuts.map((c) => ({
       focal: c.focal,
       id: c.id,
@@ -176,7 +173,6 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       playbackRatePermille: c.playbackRatePermille,
       // Request-only: the server never returns it, so it is never read back.
       creation: c.creation,
-      chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number
       // through the vocabulary change (CDS-12). `copy` stays populated with the
       // first one for a release, beside the list that is the authority.

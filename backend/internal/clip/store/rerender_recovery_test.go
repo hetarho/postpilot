@@ -25,6 +25,8 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 	h, p, draft := completedClip(t)
 	ctx := context.Background()
 	b := rerenderBatch(t, h, true)
+	// A save that changes the plan, so the render's revision is stale.
+	draft.Cuts[0].Copies[0].Text = "부산"
 	jobs := beforeRenderEnqueue{generationJobs: h.clipJobs(), before: func() {
 		if _, err := h.service.SaveCorrection(ctx, "alice", p.ID, 1, draft); err != nil {
 			t.Fatal(err)

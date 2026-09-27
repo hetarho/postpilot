@@ -8,7 +8,7 @@ import (
 // These are compatibility identifiers, not host or library version detection.
 // A changed execution/output contract must change the matching identifier.
 const (
-	MediaContractVersion = 1
+	MediaContractVersion = 2
 	MediaRendererVersion = "cpu-v1"
 	MediaAssetVersion    = "assets-v3"
 	MediaCPUProfile      = "cpu"

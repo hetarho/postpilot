@@ -41,8 +41,6 @@ export const i18n = {
       showDisclosure: '영상에 광고·협찬 표시',
       chooseDisclosure: '유형을 선택하세요',
       disclosureRequired: '체험단 유형을 선택해야 클립을 만들 수 있어요.',
-      cta: '마무리 문구',
-      ctaHelp: '클립 끝에 한 줄로 들어가요. 비워 두면 템플릿 프리셋의 기본값을 써요.',
       instruction: '클립에 담고 싶은 내용',
       instructionPrompt:
         '이 클립에서 무엇을 어떤 순서로 보여줄지, 자막이 무엇을 말할지 자유롭게 적어 주세요. 여기에 적은 내용이 영상 순서와 리듬, 자막 내용에서 템플릿의 안내보다 우선합니다. 첫 화면과 마지막 화면의 구성은 템플릿이 정한 대로 유지돼요.',
@@ -66,7 +64,6 @@ export const i18n = {
       templateUnavailable: '영상 템플릿을 확인할 수 없어요.',
       summaryDuration: '목표 {{seconds}}초',
       titleLimit: '제목은 1~100자로 입력해 주세요.',
-      answerLimit: '답변은 1~500자로 입력해 주세요.',
       delete: '삭제',
       deleteTitle: '클립을 삭제할까요?',
       deleteBody: '분석과 편집 내용, 생성된 영상이 함께 삭제돼요.',
@@ -148,8 +145,6 @@ export const i18n = {
       showDisclosure: 'Show campaign disclosure in video',
       chooseDisclosure: 'Choose a type',
       disclosureRequired: 'A clip needs a campaign type before it can be generated.',
-      cta: 'Closing line',
-      ctaHelp: "One line at the end of the clip. Leave it empty for the template preset's own.",
       instruction: 'What this clip should say',
       instructionPrompt:
         'Write freely about what this clip shows, in what order, and what the captions say. What you write here outranks the template’s guidance on the order of the footage, its rhythm and what is said; the opening and closing cards stay as the template declared them.',
@@ -173,7 +168,6 @@ export const i18n = {
       templateUnavailable: 'Could not check the video template.',
       summaryDuration: 'Target {{seconds}} seconds',
       titleLimit: 'Enter a title between 1 and 100 characters.',
-      answerLimit: 'Enter an answer between 1 and 500 characters.',
       delete: 'Delete',
       deleteTitle: 'Delete this clip?',
       deleteBody: 'Its analysis, edit plan and generated video will also be deleted.',

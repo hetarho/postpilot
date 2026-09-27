@@ -14,7 +14,6 @@ import (
 func revisionReady(t *testing.T) *generationHarness {
 	t.Helper()
 	h := generationSetup(t)
-	h.planner.portableFlow = true
 	h.start(t)
 	if err := h.run(t); err != nil {
 		t.Fatal(err)

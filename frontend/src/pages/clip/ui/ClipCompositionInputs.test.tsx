@@ -10,64 +10,16 @@ const template = {
   id: 'menu',
   name: '여러 메뉴',
   compositionBody: CLIP_COMPOSITION_EXAMPLE,
-  compositionLegacy: false,
-  informationFields: [],
-  cutGuidance: '',
-
-  accent: '' as const,
-  preset: '' as const,
 }
 afterEach(() => discardClipDraftQueues())
 
 describe('template-defined project inputs', () => {
-  it('takes footage for a project whose template only came back converted', async () => {
-    // The server rewrites a template still written under the old grammar into the current one on
-    // the way out and flags it, while the STORED body waits for the owner's own save (CLIP-140).
-    // The project froze that stored body, so the two differ although nobody edited the template.
-    const stored =
-      '<clip version="1" intro="b" caption="bold" outro="e"><field id="place" label="상호명" required="true"/><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
-    const converted = stored.replace('<field', '<guide>장면 설명</guide><field')
-    const composition = {
-      snapshot: { version: 1, body: stored, templateId: template.id, legacy: false },
-      inputs: { values: { place: '해미연풍우가' }, items: {}, associations: [] },
-    }
-    renderAppAt('/clips/owned', {
-      user: { id: 'alice' },
-      clips: {
-        templates: [
-          {
-            ...template,
-            compositionBody: converted,
-            compositionLegacy: false,
-            compositionConverted: true,
-          },
-        ],
-        projects: [
-          {
-            id: 'owned',
-            title: '해미연풍우가',
-            videoTemplateId: template.id,
-            ratio: 'vertical',
-            targetDurationMs: 30000,
-            answers: [],
-            disclosure: '',
-            cta: '',
-            composition,
-            compositionInputs: composition.inputs,
-          },
-        ],
-      },
-    })
-    // The conversion is not an edit to offer, and it must not hold the footage the clip needs.
-    await waitFor(() => expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled())
-    expect(screen.queryByRole('button', { name: '최신 템플릿 적용' })).not.toBeInTheDocument()
-  })
   it('opens an older short group at its minimum and saves the stable items only after editing', async () => {
     const writes: ClipProjectDraft[] = []
     const body =
       '<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" label="메뉴" min="2" max="3"><field id="name" label="메뉴 이름" required="true"/></group><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
     const composition = {
-      snapshot: { version: 1, body, templateId: template.id, legacy: false },
+      snapshot: { version: 1, body, templateId: template.id },
       inputs: {
         values: {},
         items: { menu: [{ id: 'retained', values: { name: '파스타' } }] },
@@ -86,9 +38,7 @@ describe('template-defined project inputs', () => {
             videoTemplateId: template.id,
             ratio: 'vertical',
             targetDurationMs: 30000,
-            answers: [],
             disclosure: '',
-            cta: '',
             composition,
             compositionInputs: composition.inputs,
           },
@@ -119,7 +69,6 @@ describe('template-defined project inputs', () => {
         version: 1,
         body: CLIP_COMPOSITION_EXAMPLE,
         templateId: template.id,
-        legacy: false,
       },
       inputs: { values: {}, items: {}, associations: [] },
     }
@@ -135,9 +84,7 @@ describe('template-defined project inputs', () => {
             videoTemplateId: template.id,
             ratio: 'vertical',
             targetDurationMs: 30000,
-            answers: [],
             disclosure: '',
-            cta: '',
             composition,
             compositionInputs: composition.inputs,
           },
@@ -186,7 +133,7 @@ describe('template-defined project inputs', () => {
     const first = { ...template, id: 'first', name: '첫 구성', compositionBody: body }
     const second = { ...template, id: 'second', name: '다른 구성', compositionBody: body }
     const composition = {
-      snapshot: { version: 1, body, templateId: 'first', legacy: false },
+      snapshot: { version: 1, body, templateId: 'first' },
       inputs: { values: { place: '서울' }, items: {}, associations: [] },
     }
     renderAppAt('/clips/owned', {
@@ -201,9 +148,7 @@ describe('template-defined project inputs', () => {
             videoTemplateId: 'first',
             ratio: 'vertical',
             targetDurationMs: 30000,
-            answers: [],
             disclosure: '',
-            cta: '',
             composition,
             compositionInputs: composition.inputs,
           },
@@ -235,7 +180,7 @@ describe('template-defined project inputs', () => {
       .replace('label="장소"', 'label="촬영 장소"')
       .replace('</clip>', '<field id="extra" label="추가 정보"/></clip>')
     const composition = {
-      snapshot: { version: 1, body: oldBody, templateId: template.id, legacy: false },
+      snapshot: { version: 1, body: oldBody, templateId: template.id },
       inputs: { values: { place: '서울' }, items: {}, associations: [] },
     }
     renderAppAt('/clips/owned', {
@@ -250,9 +195,7 @@ describe('template-defined project inputs', () => {
             videoTemplateId: template.id,
             ratio: 'vertical',
             targetDurationMs: 30000,
-            answers: [],
             disclosure: '',
-            cta: '',
             composition,
             compositionInputs: composition.inputs,
           },

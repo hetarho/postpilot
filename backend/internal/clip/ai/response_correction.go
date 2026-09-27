@@ -3,9 +3,10 @@ package ai
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
-	"strings"
 )
 
 const responseContract = `

@@ -43,15 +43,10 @@ func (s *GenerationService) CaptionPreviewOf(ctx context.Context, user, id strin
 	// The design selection is the PROJECT's, exactly as it is for a preview or a
 	// render: the styles a caption may take and the pace it moves at (CLIP-139).
 	next = next.WithDesign(p.DesignSelection())
+	// A draft is drawn from the composition it was written into; a plan
+	// with none cannot be drawn.
 	if next.Portable == nil {
-		recipe := clip.Recipe{}
-		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-			recipe = *p.Composition.Snapshot.LegacyRecipe
-		}
-		next.Portable, err = clip.FreezeLegacyPlan(p, next, recipe, s.cfg.Render.Composition)
-		if err != nil {
-			return clip.CaptionPreview{}, err
-		}
+		return clip.CaptionPreview{}, clip.ErrCompositionUnavailable
 	}
 	sources, err := clip.RetainedSources(p)
 	if err != nil {

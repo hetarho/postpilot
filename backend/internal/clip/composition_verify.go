@@ -16,9 +16,6 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if plan.Portable == nil {
 		return ErrInvalid
 	}
-	if plan.Portable.Snapshot.Legacy {
-		limits = LegacyCompositionLimits(limits)
-	}
 	if _, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits); problem != nil {
 		return problem
 	}

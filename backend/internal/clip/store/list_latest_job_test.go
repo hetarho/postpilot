@@ -25,7 +25,6 @@ func TestListClipProjectsCarriesEachProjectsLatestJob(t *testing.T) {
 		VideoTemplateID:  h.template.ID,
 		Ratio:            "vertical",
 		TargetDurationMS: 15000,
-		Answers:          []clip.Answer{{Label: "place", Text: "제주"}},
 	})
 	if err != nil {
 		t.Fatal(err)

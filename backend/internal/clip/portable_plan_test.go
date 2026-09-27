@@ -6,23 +6,20 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
 )
 
-func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
+// A version-6 plan keeps its portable composition exactly — text, output
+// clocks, evidence — and refuses one whose composition contradicts its cuts.
+func TestPortablePlanRoundTripsAndRefusesInconsistency(t *testing.T) {
 	p, _ := correctionFixture(t)
 	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	plan.Cuts[0].Copies[0].Text = "정확한 <한글> & 🥣"
-	r := clip.Recipe{Accent: "teal"}
-	portable, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
+	portable := nativePortable(plan)
 	if len(portable.Elements) != 2 || portable.Elements[0].Resolved.Text != "정확한 <한글> & 🥣" {
-		t.Fatal("empty legacy furniture invented", portable)
+		t.Fatal("the copies did not become one caption each", portable)
 	}
 	if portable.Elements[0].Resolved.StartMS != 120 || portable.Elements[0].Resolved.EndMS != 9880 || portable.Elements[1].Resolved.StartMS != 9920 {
 		t.Fatal("cut/output clocks changed", portable.Elements)
@@ -55,52 +52,6 @@ func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 		if _, e := clip.EncodeEditPlan(v); e == nil {
 			t.Fatal("inconsistent portable plan accepted")
 		}
-	}
-}
-
-func TestLegacyCardsBecomeExplicitWithoutSharedDisclosure(t *testing.T) {
-	p, _ := correctionFixture(t)
-	p.Disclosure = "sponsored"
-	p.Answers = []clip.Answer{{Label: "상호", Text: "카페"}, {Label: "위치", Text: "서울"}, {Label: "가격", Text: "7,000원"}}
-	plan, _ := clip.DecodeEditPlan(p.EditPlan)
-	plan.Hook = "서울 카페"
-	plan.Cuts[0].Chips = []string{"위치"}
-	r := clip.Recipe{Preset: "cafe", Accent: "teal", InformationFields: []clip.InformationField{{Label: "상호", Prompt: "이름"}}}
-	body := clip.LegacyCompositionBody(r)
-	if strings.Contains(body, "협찬") || strings.Contains(body, "legacy-disclosure") {
-		t.Fatal("shared template copied campaign", body)
-	}
-	if _, e := composition.Parse(body, clip.DefaultCompositionLimits()); e != nil {
-		t.Fatal("invalid legacy template source", e, body)
-	}
-	portable, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
-	roles := map[string]int{}
-	for _, e := range portable.Elements {
-		roles[e.Resolved.Element.Role]++
-	}
-	if roles["hook"] != 1 || roles["ending"] != 1 || roles["badge"] != 1 || roles["info"] != 1 {
-		t.Fatal(roles, portable)
-	}
-	p.HideDisclosure = true
-	hidden, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range hidden.Elements {
-		if e.Resolved.Element.Role == "badge" {
-			t.Fatal("hidden disclosure restored")
-		}
-	}
-}
-
-func TestDetachedLegacyProjectUsesDefaultDesignSelection(t *testing.T) {
-	p, _ := correctionFixture(t)
-	c := clip.LegacyProjectComposition(p, clip.Recipe{})
-	if strings.Contains(c.Snapshot.Body, `styles=`) || !strings.Contains(c.Snapshot.Body, `intro="b"`) || !strings.Contains(c.Snapshot.Body, `outro="e"`) {
-		t.Fatal(c.Snapshot.Body)
 	}
 }
 

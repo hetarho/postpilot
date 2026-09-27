@@ -42,28 +42,21 @@ import (
 // and 23 with two sequence-rendered ones, because every process this package
 // runs passes through one global semaphore of width 1 (workspace.go).
 type localPlan struct {
-	Ratio          string      `json:"ratio"`
-	DurationMS     int         `json:"durationMS"`
-	Disclosure     string      `json:"disclosure"`
-	HideDisclosure bool        `json:"hideDisclosure"`
-	Preset         string      `json:"preset"`
-	Accent         string      `json:"accent"`
-	Intro          string      `json:"intro"`
-	Outro          string      `json:"outro"`
-	Hook           string      `json:"hook"`
-	CTA            string      `json:"cta"`
-	CaptionStyles  []string    `json:"captionStyles"`
-	Facts          []localFact `json:"facts"`
-	Cuts           []localCut  `json:"cuts"`
-}
-
-// A label from design.json's fact set: 상호 · 위치 · 가격 · 메뉴 · 영업 · 평점.
-// The intro's second line reads 상호; the outro block reads 상호, then 위치,
-// then 가격 (or 메뉴 where there is no price), and omits the line of any answer
-// left empty (CDS-73).
-type localFact struct {
-	Label string `json:"label"`
-	Text  string `json:"text"`
+	Ratio          string `json:"ratio"`
+	DurationMS     int    `json:"durationMS"`
+	Disclosure     string `json:"disclosure"`
+	HideDisclosure bool   `json:"hideDisclosure"`
+	Accent         string `json:"accent"`
+	Intro          string `json:"intro"`
+	Outro          string `json:"outro"`
+	// The outline the clip is written against, and the values its fields take:
+	// the intro, outro and badge entries it declares are what the regions draw,
+	// each line in the order it is written (CDS-73). Empty is the no-template
+	// document, which draws no region at all (CLIP-5).
+	Body          string            `json:"body"`
+	Values        map[string]string `json:"values"`
+	CaptionStyles []string          `json:"captionStyles"`
+	Cuts          []localCut        `json:"cuts"`
 }
 
 type localCut struct {
@@ -75,7 +68,6 @@ type localCut struct {
 	TransitionMS int         `json:"transitionMS"`
 	FocalX       float64     `json:"focalX"`
 	FocalY       float64     `json:"focalY"`
-	Chips        []string    `json:"chips"`
 	Copies       []localCopy `json:"copies"`
 }
 
@@ -149,12 +141,8 @@ func TestLocalAuthoredClip(t *testing.T) {
 	if err := a.WithWorkspace(t.Context(), "local-authored", func(ws clip.MediaWorkspace) error {
 		plan := clip.EditPlan{
 			Ratio: lp.Ratio, DurationMS: lp.DurationMS,
-			Disclosure: lp.Disclosure, HideDisclosure: lp.HideDisclosure,
-			Preset: lp.Preset, Accent: lp.Accent, Hook: lp.Hook, CTA: lp.CTA,
+			Disclosure: lp.Disclosure, HideDisclosure: lp.HideDisclosure, Accent: lp.Accent,
 			IntroPreset: lp.Intro, OutroPreset: lp.Outro, CaptionStyles: lp.CaptionStyles,
-		}
-		for _, f := range lp.Facts {
-			plan.Facts = append(plan.Facts, clip.Answer{Label: f.Label, Text: f.Text})
 		}
 		var sources []clip.RenderSource
 		paths := map[string]string{}
@@ -193,7 +181,7 @@ func TestLocalAuthoredClip(t *testing.T) {
 			cut := clip.EditCut{
 				ID: fmt.Sprintf("cut-%02d", i), SourceID: id, Fingerprint: id,
 				StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS,
-				Focal: clip.Point{X: c.FocalX, Y: c.FocalY}, Chips: c.Chips,
+				Focal: clip.Point{X: c.FocalX, Y: c.FocalY},
 			}
 			for _, cp := range c.Copies {
 				cut.Copies = append(cut.Copies, clip.Copy{
@@ -203,30 +191,17 @@ func TestLocalAuthoredClip(t *testing.T) {
 			}
 			plan.Cuts = append(plan.Cuts, cut)
 		}
-		// Freeze here rather than letting Render do it, so each caption can carry
-		// its own style. The composition grammar declares no style at all: the
-		// layout narrows the project's allowed set by text.Owner alone, so every
-		// caption of a plan that leaves it empty draws in the set's FIRST entry.
-		// Filling Owner.Style is not a workaround — it is the one path a caption
-		// style is ever chosen on, the same one step ② uses (CLIP-143, CDS-25).
-		portable, err := clip.FreezeLegacyPlan(
-			clip.Project{Answers: plan.Facts, Disclosure: plan.Disclosure, HideDisclosure: plan.HideDisclosure, CTA: plan.CTA},
-			plan, clip.Recipe{Preset: plan.Preset, Accent: plan.Accent}, r.cfg.Composition)
+		// The plan is written into its outline here, the way a generation writes
+		// it: each cut bound, the outline's fixed entries resolved over those
+		// cuts, and every copy a caption on its own cut. The composition grammar
+		// declares no style at all: the layout narrows the project's allowed set
+		// by text.Owner alone, so every caption of a plan that leaves it empty
+		// draws in the set's FIRST entry. Filling Owner.Style is not a workaround
+		// — it is the one path a caption style is ever chosen on, the same one
+		// step ② uses (CLIP-143, CDS-25).
+		portable, err := localPortable(lp, plan, r.cfg.Composition)
 		if err != nil {
-			return renderFailure(err)
-		}
-		styles := map[string]string{}
-		for i, c := range lp.Cuts {
-			for j, cp := range c.Copies {
-				if cp.Style != "" {
-					styles[fmt.Sprintf("legacy-copy-cut-%02d-%d", i, j)] = cp.Style
-				}
-			}
-		}
-		for i := range portable.Elements {
-			if style, ok := styles[portable.Elements[i].Resolved.InstanceID]; ok {
-				portable.Elements[i].Owner.Style = style
-			}
+			return localFailure(err)
 		}
 		plan.Portable = portable
 		started := time.Now()
@@ -272,4 +247,55 @@ func TestLocalAuthoredClip(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// localPortable is the composition a generation would have written these cuts
+// and copies into.
+func localPortable(lp localPlan, plan clip.EditPlan, limits composition.Limits) (*clip.PortablePlan, error) {
+	body := lp.Body
+	if body == "" {
+		body = clip.EmptyCompositionBody()
+	}
+	doc, problem := composition.Parse(body, limits)
+	if problem != nil {
+		return nil, problem
+	}
+	values := lp.Values
+	if values == nil {
+		values = map[string]string{}
+	}
+	portable := &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: body},
+		Inputs: clip.CompositionInputs{Values: values, Items: map[string][]composition.Item{}}}
+	for _, cut := range plan.Cuts {
+		portable.Cuts = append(portable.Cuts, composition.Cut{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS, PlaybackRatePermille: cut.Rate()})
+	}
+	timeline, _, err := clip.ResolveSelectedComposition(doc, portable.Inputs, portable.Cuts, limits, 1<<20)
+	if err != nil {
+		return nil, err
+	}
+	for _, resolved := range timeline.Elements {
+		if resolved.Element.Kind == "fixed" {
+			portable.Elements = append(portable.Elements, clip.PortableText{Resolved: resolved, Scope: "context"})
+		}
+	}
+	offset := 0
+	for i, cut := range plan.Cuts {
+		offset -= cut.TransitionMS
+		for j, copy := range cut.Copies {
+			if copy.Text == "" {
+				continue
+			}
+			start, end := cut.CaptionWindow(j)
+			id := fmt.Sprintf("copy-cut-%02d-%d", i, j)
+			e := composition.Element{ID: id, Kind: "fixed", Role: "caption", Style: copy.Style, Position: copy.Anchor, Align: copy.Align, Basis: "cut", StartMS: &start, EndMS: &end, Parts: []composition.Part{{Literal: copy.Text}}}
+			if copy.StartMS == 0 && copy.EndMS == 0 {
+				e.StartMS, e.EndMS = nil, nil
+			}
+			portable.Elements = append(portable.Elements, clip.PortableText{Accent: copy.Accent, Keyword: copy.Keyword, Scope: "scene", Owner: clip.OwnerCaption{Style: copy.Style},
+				Resolved: composition.ResolvedElement{InstanceID: id, CutID: cut.ID, Element: e, Text: copy.Text, StartMS: offset + start, EndMS: offset + end, AuthoredTiming: copy.StartMS != 0 || copy.EndMS != 0},
+				Evidence: []clip.SourceEvidence{{SourceID: cut.SourceID, Fingerprint: cut.Fingerprint, StartMS: cut.StartMS, EndMS: cut.EndMS}}})
+		}
+		offset += cut.OutputDurationMS()
+	}
+	return portable, nil
 }

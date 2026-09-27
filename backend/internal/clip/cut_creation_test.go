@@ -24,18 +24,13 @@ func creationFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 	}
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: info}, Filename: "a.mp4"}, Segments: segments}}
 	analysis, _ := json.Marshal(sources)
-	copies := []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "clean"}}
+	copies := []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "bold"}}
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Cuts: []clip.Cut{
 		{ID: "first", SourceID: "a", Fingerprint: "fa", StartMS: 0, EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copies: copies},
 		{ID: "second", SourceID: "a", Fingerprint: "fa", StartMS: 10000, EndMS: 20000, TransitionMS: 0, Focal: clip.Point{X: .5, Y: .5}, Copies: copies},
 	}}
 	p := clip.Project{Ratio: "vertical", Analysis: string(analysis), EditPlanRevision: 1}
-	portable, err := clip.FreezeLegacyPlan(p, plan, clip.Recipe{Accent: "teal"}, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
-	plan.Portable = portable
-	plan.Portable.NativeEditing = true
+	plan.Portable = nativePortable(plan)
 	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +40,6 @@ func creationFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved.Portable.NativeEditing = true
 	return p, saved
 }
 
@@ -82,7 +76,7 @@ func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
 	if created.Focal != (clip.Point{X: .25, Y: .75}) {
 		t.Fatal("the focal point was not the observation's", created.Focal)
 	}
-	if len(created.Copies) != 0 || len(created.Chips) != 0 {
+	if len(created.Copies) != 0 {
 		t.Fatal("a created cut carried text", created)
 	}
 	for _, e := range next.Portable.Elements {
@@ -278,7 +272,6 @@ func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved.Portable.NativeEditing = true
 	// Delete it: the identity and its binding are retired, not forgotten.
 	deleted := creationDraft(saved)
 	deleted.Cuts = deleted.Cuts[:2]

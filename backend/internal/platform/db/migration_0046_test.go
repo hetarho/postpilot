@@ -17,21 +17,9 @@ func TestMigration0046PreservesLegacyClipsAcrossRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { d.Close() })
-	prior := fstest.MapFS{}
-	entries, err := fs.ReadDir(migrationsFS, "migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range entries {
-		if strings.Compare(entry.Name(), "0046_") >= 0 {
-			continue
-		}
-		body, err := migrationsFS.ReadFile("migrations/" + entry.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		prior[entry.Name()] = &fstest.MapFile{Data: body}
-	}
+	// 0090 retires the recipe columns and the answers this test reads, so the
+	// restart is pinned to the migrations before it.
+	prior, retained := migrationsBefore(t, "0046_"), migrationsBefore(t, "0090_")
 	ctx := context.Background()
 	if err = migrate(ctx, d.Writer, prior); err != nil {
 		t.Fatal(err)
@@ -46,7 +34,7 @@ func TestMigration0046PreservesLegacyClipsAcrossRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err = Migrate(ctx, d.Writer); err != nil {
+	if err = migrate(ctx, d.Writer, retained); err != nil {
 		t.Fatal(err)
 	}
 	if err = d.Close(); err != nil {
@@ -56,7 +44,7 @@ func TestMigration0046PreservesLegacyClipsAcrossRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = Migrate(ctx, d.Writer); err != nil {
+	if err = migrate(ctx, d.Writer, retained); err != nil {
 		t.Fatal(err)
 	}
 	var analysis, plan, key, answer, guide string
@@ -66,4 +54,24 @@ func TestMigration0046PreservesLegacyClipsAcrossRestart(t *testing.T) {
 	if err != nil || analysis != "analysis exact" || plan != "plan exact" || key != "result.mp4" || revision != 7 || rendered != 6 || snapshot.Valid || inputs.Valid || body.Valid || guide != "& exact guide" || answer != "  exact answer  " {
 		t.Fatal("migration rewrote retained data", err, analysis, plan, key, revision, rendered, snapshot, inputs, body, guide, answer)
 	}
+}
+
+func migrationsBefore(t *testing.T, name string) fstest.MapFS {
+	t.Helper()
+	files := fstest.MapFS{}
+	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.Compare(entry.Name(), name) >= 0 {
+			continue
+		}
+		body, err := migrationsFS.ReadFile("migrations/" + entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[entry.Name()] = &fstest.MapFile{Data: body}
+	}
+	return files
 }

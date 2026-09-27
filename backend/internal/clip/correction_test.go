@@ -14,11 +14,11 @@ import (
 func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {
 	t.Helper()
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "a.mp4"}}, {Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "b", Fingerprint: "fb", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "b.mp4"}}}
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 19800, Cuts: []clip.Cut{{ID: "first", SourceID: "a", Fingerprint: "fa", EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copies: []clip.Caption{{Text: "hello", Anchor: "bottom", Align: "center", Style: "clean"}}}, {ID: "second", SourceID: "b", Fingerprint: "fb", EndMS: 10000, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{Text: "서울", Anchor: "top", Align: "left", Style: "memo"}}}}}
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 19800, Cuts: []clip.Cut{{ID: "first", SourceID: "a", Fingerprint: "fa", EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copies: []clip.Caption{{Text: "hello", Anchor: "bottom", Align: "center", Style: "bold"}}}, {ID: "second", SourceID: "b", Fingerprint: "fb", EndMS: 10000, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{Text: "서울", Anchor: "top", Align: "left", Style: "bold"}}}}}
 	a, _ := json.Marshal(sources)
 	// A genuinely legacy stored row, which is what these tests are about: the
 	// version-4 envelope this build still reads but no longer writes.
-	raw := legacyStoredPlan(plan, []string{"clean", "memo"})
+	raw := legacyStoredPlan(plan, []string{"bold"})
 	stored, err := clip.DecodeEditPlan(raw)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,6 @@ func legacyStoredPlan(p clip.EditPlan, styles []string) string {
 		StartMS, EndMS            int
 		TransitionMS              int
 		Copies                    []clip.Caption
-		Chips                     []string
 		VolumePermille            int
 	}
 	out := struct {
@@ -43,14 +42,13 @@ func legacyStoredPlan(p clip.EditPlan, styles []string) string {
 		Plan    struct {
 			DurationMS int
 			Cuts       []storedCut
-			Hook       string
 		}
 		Focals     map[string]clip.Point
 		CopyStyles []string
 	}{Version: 4, Ratio: p.Ratio, Focals: map[string]clip.Point{}, CopyStyles: styles}
-	out.Plan.DurationMS, out.Plan.Hook = p.DurationMS, p.Hook
+	out.Plan.DurationMS = p.DurationMS
 	for _, c := range p.Cuts {
-		out.Plan.Cuts = append(out.Plan.Cuts, storedCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, int(math.Round(c.OriginalVolume() * 1000))})
+		out.Plan.Cuts = append(out.Plan.Cuts, storedCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, int(math.Round(c.OriginalVolume() * 1000))})
 		out.Focals[c.ID] = c.Focal
 	}
 	raw, _ := json.Marshal(out)
@@ -67,7 +65,7 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	// The fade rides the cut it leads into, so the swap carries it along and the
 	// cut now in front leads in from nothing.
 	draft.Cuts[0].TransitionMS, draft.Cuts[1].TransitionMS = 0, 200
-	draft.Cuts[0].Copies[0] = clip.Caption{Text: "정확한 글자 & <copy>", Anchor: "lower_mid", Align: "center", Style: "clean", Accent: "coral", StartMS: 200, EndMS: 2000}
+	draft.Cuts[0].Copies[0] = clip.Caption{Text: "정확한 글자 & <copy>", Anchor: "lower_mid", Align: "center", Style: "bold", Accent: "coral", StartMS: 200, EndMS: 2000}
 	draft.DurationMS = 28800
 	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
@@ -140,44 +138,26 @@ func TestRenderBatchRequiresMatchingSubsetAndAllowsRetainedSuperset(t *testing.T
 
 }
 
-func TestLegacyGeneratedPlanRemainsReadableAndMigratesOnSave(t *testing.T) {
+// T076's original representation — the whole plan with its category preset,
+// facts, opening hook and call to action, and no envelope version — is retired
+// with them and no longer reads (T413), and neither does any other unknown
+// envelope.
+func TestDecodeRefusesTheRetiredAndUnknownEnvelopes(t *testing.T) {
+	legacy := `{"Ratio":"vertical","DurationMS":10000,"Cuts":[{"ID":"one","SourceID":"s","Fingerprint":"f","StartMS":0,"EndMS":10000,"TransitionMS":0,` +
+		`"Focal":{"X":0.5,"Y":0.5},"Copy":{"Text":"조용한 골목","Anchor":"bottom","Align":"center","Style":"bold"},"Chips":["위치"],"Volume":null}],` +
+		`"Disclosure":"ad","Facts":[{"Label":"위치","Text":"서울"}],"Preset":"restaurant","Hook":"연남 김밥","CTA":"place","Accent":"coral"}`
 	p, _ := correctionFixture(t)
 	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// What T076 actually stored: the whole plan, with ONE copy per cut where
-	// there is now a list (CDS-43). Marshalling today's plan would not be a
-	// legacy row at all.
-	type legacyCut struct {
-		ID, SourceID, Fingerprint string
-		StartMS, EndMS            int
-		TransitionMS              int
-		Focal                     clip.Point
-		Copy                      clip.Caption
-		Chips                     []string
-		Volume                    *float64
+	next, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
 	}
-	old := struct {
-		Ratio      string
-		DurationMS int
-		Cuts       []legacyCut
-	}{plan.Ratio, plan.DurationMS, nil}
-	for _, c := range plan.Cuts {
-		old.Cuts = append(old.Cuts, legacyCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Focal, c.FirstCopy(), c.Chips, c.Volume})
-	}
-	legacy, _ := json.Marshal(old)
-	decoded, err := clip.DecodeEditPlan(string(legacy))
-	if err != nil || !reflect.DeepEqual(plan, decoded) {
-		t.Fatal(decoded, err)
-	}
-	next, err := clip.EncodeEditPlan(decoded)
-	if err != nil || strings.Contains(next, `"Volume":`) {
-		t.Fatal(next, err)
-	}
-	for _, bad := range []string{"null", `{"Version":99}`, next + " {}"} {
+	for _, bad := range []string{legacy, "null", `{"Version":99}`, next + " {}"} {
 		if _, err = clip.DecodeEditPlan(bad); err == nil {
-			t.Fatal("invalid persisted version accepted", bad)
+			t.Fatal("invalid persisted plan accepted", bad)
 		}
 	}
 }
@@ -224,12 +204,12 @@ func TestDecodeMapsTheRetiredPlanVocabularyOnRead(t *testing.T) {
 // A plan stored before CDS-43 carried one copy per cut, and reads back as the
 // one copy it was — the same words, the same placement, the same window.
 func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
-	legacy := `{"Version":2,"Ratio":"vertical","Plan":{"DurationMS":20000,"Hook":"","Cuts":[` +
+	legacy := `{"Version":2,"Ratio":"vertical","Plan":{"DurationMS":20000,"Cuts":[` +
 		`{"ID":"one","SourceID":"s","Fingerprint":"f","StartMS":0,"EndMS":10000,"TransitionMS":0,` +
-		`"Copy":{"Text":"조용한 골목","Anchor":"bottom","Align":"center","Style":"clean","Accent":"","Keyword":"","StartMS":0,"EndMS":0},"Chips":null,"VolumePermille":1000},` +
+		`"Copy":{"Text":"조용한 골목","Anchor":"bottom","Align":"center","Style":"bold","Accent":"","Keyword":"","StartMS":0,"EndMS":0},"VolumePermille":1000},` +
 		`{"ID":"two","SourceID":"s","Fingerprint":"f","StartMS":0,"EndMS":10000,"TransitionMS":0,` +
-		`"Copy":{"Text":"9900원","Anchor":"top","Align":"left","Style":"memo","Accent":"","Keyword":"","StartMS":0,"EndMS":0},"Chips":null,"VolumePermille":1000}]},` +
-		`"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},"CopyStyles":["clean","memo"]}`
+		`"Copy":{"Text":"9900원","Anchor":"top","Align":"left","Style":"bold","Accent":"","Keyword":"","StartMS":0,"EndMS":0},"VolumePermille":1000}]},` +
+		`"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},"CopyStyles":["bold"]}`
 	plan, err := clip.DecodeEditPlan(legacy)
 	if err != nil {
 		t.Fatal(err)
@@ -237,7 +217,7 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	if len(plan.Cuts) != 2 || len(plan.Cuts[0].Copies) != 1 || len(plan.Cuts[1].Copies) != 1 {
 		t.Fatalf("the one copy did not become a list of one: %+v", plan.Cuts)
 	}
-	if plan.Cuts[0].FirstCopy().Text != "조용한 골목" || plan.Cuts[1].FirstCopy().Style != "memo" {
+	if plan.Cuts[0].FirstCopy().Text != "조용한 골목" || plan.Cuts[1].FirstCopy().Text != "9900원" {
 		t.Fatalf("the stored copy changed: %+v", plan.Cuts)
 	}
 	// Saved again, it is a version-6 assembly plan: the same result, now stating

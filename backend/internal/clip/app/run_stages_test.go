@@ -40,6 +40,14 @@ type stagePlanner struct {
 }
 
 func (p *stagePlanner) ValidateModels(llm.ModelRef, llm.ModelRef) error { return nil }
+func (p *stagePlanner) CompositionPlanVersion() int                     { return clip.CompositionPlanVersion }
+
+// stageRenderer executes the plan version the planner writes, and nothing in
+// these tests reaches it: every generation freezes a composition (CLIP-5), and
+// admitting one needs both sides to speak its version.
+type stageRenderer struct{ clip.Renderer }
+
+func (stageRenderer) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 func (p *stagePlanner) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []clip.AnalysisSource) error {
 	return nil
 }
@@ -56,9 +64,6 @@ func (p *stagePlanner) Narrate(context.Context, llm.ModelRef, clip.NarrationInpu
 	return clip.EditPlan{}, llm.Usage{}, errors.New("not in this test")
 }
 func (p *stagePlanner) Revise(context.Context, llm.ModelRef, clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
-	return clip.EditPlan{}, llm.Usage{}, errors.New("not in this test")
-}
-func (p *stagePlanner) Plan(context.Context, llm.ModelRef, clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	return clip.EditPlan{}, llm.Usage{}, errors.New("not in this test")
 }
 
@@ -78,14 +83,15 @@ func approvedWork(t *testing.T) (clip.GenerationPayload, clip.SourceBatch, clip.
 	pricing := approvedPricing(1)
 	lease := clip.SourceLease{ID: "src", SourceMetadata: clip.SourceMetadata{Filename: "a.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 16000, Width: 640, Height: 640, Fingerprint: "f"}}
 	batch := clip.SourceBatch{ID: "batch", UserID: "alice", ProjectID: "clip", State: "consuming", Sources: []clip.SourceLease{lease}}
-	payload := clip.GenerationPayload{Version: 3, ProjectID: "clip", Batch: batch, Observe: "p/o", Write: "p/w", Language: "ko", Ratio: "vertical", TargetDurationMS: 15000,
+	composed := clip.NoTemplateComposition()
+	payload := clip.GenerationPayload{Version: 3, ProjectID: "clip", Batch: batch, Observe: "p/o", Write: "p/w", Language: "ko", Ratio: "vertical", TargetDurationMS: 15000, Composition: &composed,
 		Approval: &clip.GenerationApproval{QuoteID: "quote", MaxCredits: pricing.MaxCredits, Pricing: pricing}}
 	quote := clip.GenerationQuote{ID: "quote", UserID: "alice", ProjectID: "clip", BatchID: "batch", ConsumedJobID: "job", Pricing: pricing}
 	return payload, batch, quote
 }
 
 func newRun(store clip.GenerationStore, planner clip.Planner, finisher clip.ClipFinisher) *generationRun {
-	s := &GenerationService{store: store, planner: planner, finisher: finisher, jobs: neutralRunJobs{}, cfg: clip.GenerationConfig{Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}}
+	s := &GenerationService{store: store, planner: planner, renderer: stageRenderer{}, finisher: finisher, jobs: neutralRunJobs{}, cfg: clip.GenerationConfig{Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}}
 	return &generationRun{s: s, ctx: context.Background(), user: "alice", job: "job", project: "clip", stage: "prepare", checkpoint: clip.AttemptCheckpoint{Version: 1, JobID: "job", Stage: "prepare"}}
 }
 

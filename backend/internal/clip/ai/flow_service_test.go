@@ -23,7 +23,6 @@ const flowBody = `<clip version="1" intro="b" caption="bold" outro="e" accent="t
 func flowInput() clip.PlanningInput {
 	in := planningInput()
 	in.Template = clip.Recipe{Name: "flow template", CompositionBody: flowBody}
-	in.Answers = nil
 	in.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: 1, Body: flowBody, TemplateID: "flow-template"},
 		Inputs: clip.CompositionInputs{
 			Values: map[string]string{"place": "성수 곱창"},
@@ -60,7 +59,7 @@ func defaultFlow() string {
 
 func flowRequest(t *testing.T, in clip.PlanningInput, response string) (clip.EditPlan, map[string]any, string) {
 	t.Helper()
-	s, models, _ := newService(t, response, true)
+	s, models := newService(t, response, true)
 	plan, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -188,7 +187,7 @@ func TestFlowKeepsEverySelectionCheckTheWriterAnsweredBefore(t *testing.T) {
 		"footage another cut already used": {flowResponse(flowCut("cut-one", 0, 7500, 1000), flowCut("cut-two", 7500, 15000, 1000), flowCut("cut-three", 7000, 14000, 1000)), "plan_source_overlap", 2},
 		"an identity nobody minted":        {flowResponse(flowCut("cut-one", 0, 7500, 1000), flowCut("두 번째", 7500, 15000, 1000)), "composition_cut_identity", 1},
 	} {
-		s, _, _ := newService(t, c.response, true)
+		s, _ := newService(t, c.response, true)
 		plan, _, err := s.Flow(t.Context(), testRef(), flowInput())
 		if err != nil {
 			t.Fatal(name, err)
@@ -214,13 +213,5 @@ func TestFlowKeepsEverySelectionCheckTheWriterAnsweredBefore(t *testing.T) {
 		if cut.StartMS >= 15000 {
 			t.Fatal("a cut was taken from the unusable scene", cut)
 		}
-	}
-}
-
-func TestTheSingleWriterNoLongerWritesAComposition(t *testing.T) {
-	s, models, _ := newService(t, defaultFlow(), true)
-	_, _, err := s.Plan(t.Context(), testRef(), flowInput())
-	if err == nil || len(models.calls) != 0 {
-		t.Fatal("a composition reached the retired single writer", err)
 	}
 }

@@ -80,37 +80,3 @@ func SplitRapid(seed Caption, start, end int) ([]Caption, bool) {
 	}
 	return out, true
 }
-
-func composeRapid(cut Cut, written Written, text, accent string, placed Manifest, subject Region, readable bool, previous string, measure func(Caption) (Region, bool, error)) (Cut, bool, error) {
-	style := "bold"
-	rule := design.Caption()
-	for _, value := range []string{text, strings.TrimSpace(written.ShortText)} {
-		if value == "" || !Grounded(value, written.Answers) {
-			continue
-		}
-		for _, anchor := range []string{rule.Anchor, rule.AnchorAlt} {
-			copies, ok := SplitRapid(Caption{Text: value, Anchor: anchor, Align: rule.Align, Style: style, Accent: accent},
-				design.Timing.CopyLeadMS, cut.OutputDurationMS()-design.Timing.CopyLeadMS)
-			if !ok {
-				continue
-			}
-			fits := true
-			for _, copy := range copies {
-				bounds, ok, err := measure(copy)
-				if err != nil {
-					return cut, false, err
-				}
-				candidate := design.Candidate{Anchor: copy.Anchor, Align: copy.Align, Plate: design.Bounds(bounds), Fits: ok}
-				if design.SelectAnchor([]design.Candidate{candidate}, design.Bounds(subject), placed, readable, previous, nil) < 0 {
-					fits = false
-					break
-				}
-			}
-			if fits {
-				cut.Copies = copies
-				return cut, true, nil
-			}
-		}
-	}
-	return cut, false, nil
-}

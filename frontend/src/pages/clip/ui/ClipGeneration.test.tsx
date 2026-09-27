@@ -34,8 +34,6 @@ const project: FakeClipProject = {
   ratio: 'vertical',
   targetDurationMs: 15000,
   disclosure: 'ad',
-  cta: '',
-  answers: [],
 }
 const result = {
   contentType: 'video/mp4',
@@ -79,11 +77,7 @@ function mount(
         {
           id: 'template',
           name: '여행',
-          informationFields: [],
-          cutGuidance: '',
-
-          accent: '',
-          preset: 'restaurant',
+          compositionBody: '<clip version="1"/>',
         },
       ],
       projects: [project],

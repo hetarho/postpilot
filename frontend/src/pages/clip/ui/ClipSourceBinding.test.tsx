@@ -25,21 +25,14 @@ const project = {
   videoTemplateId: 'meat',
   ratio: 'vertical' as const,
   targetDurationMs: 30000,
-  answers: [],
   disclosure: '' as const,
-  cta: '' as const,
-  composition: { snapshot: { version: 1, body, templateId: 'meat', legacy: false }, inputs },
+  composition: { snapshot: { version: 1, body, templateId: 'meat' }, inputs },
   compositionInputs: inputs,
 }
 const template = {
   id: 'meat',
   name: '고기',
   compositionBody: body,
-  compositionLegacy: false,
-  informationFields: [],
-  cutGuidance: '',
-  accent: '' as const,
-  preset: '' as const,
 }
 const batch = (
   sources: { id: string; filename: string; durationMs: number; fingerprint: string }[],
@@ -143,7 +136,7 @@ describe('binding a source to an item before generation', () => {
           {
             ...project,
             composition: {
-              snapshot: { version: 1, body: plain, templateId: 'meat', legacy: false },
+              snapshot: { version: 1, body: plain, templateId: 'meat' },
               inputs: { values: {}, items: {}, associations: [] },
             },
             compositionInputs: { values: {}, items: {}, associations: [] },

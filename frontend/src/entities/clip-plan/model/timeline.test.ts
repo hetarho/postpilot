@@ -38,7 +38,6 @@ function fixture(): ClipEditPlan {
   return {
     nativeComposition: true,
     durationMs: 19800,
-    hook: '',
     associations: [],
     cuts: ['a', 'b'].map((id, i) => ({
       id,
@@ -48,7 +47,6 @@ function fixture(): ClipEditPlan {
       endMs: 11000,
       transitionMs: i ? 200 : 0,
       copies: [],
-      chips: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
     })),
@@ -253,7 +251,6 @@ it('adds footage with stable identity, then splits without copying left-side cla
     transitionMs: 0,
     volumePermille: 1000,
     copies: [],
-    chips: [],
     creation: { kind: 'add', originCutId: 'a' },
   })
   expect(state.plan.sourceAudio).toEqual(initial.sourceAudio)
@@ -289,7 +286,6 @@ it('adds footage with stable identity, then splits without copying left-side cla
     volumePermille: 300,
     transitionMs: 0,
     copies: [],
-    chips: [],
     creation: { kind: 'split', originCutId: 'a' },
   })
   expect(split.elements?.find((t) => t.instanceId === 'caption')).toMatchObject({

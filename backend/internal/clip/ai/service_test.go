@@ -15,7 +15,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
-	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -42,61 +42,21 @@ func (f *fakeModels) Complete(_ context.Context, ref llm.ModelRef, request llm.R
 	return f.response, f.err
 }
 
-type fakeSizer struct {
-	err       error
-	fixedErr  error
-	layoutErr error
-	calls     int
-	fixed     int
-	layouts   int
-}
-
-// The composer verifies its own result through this port (CDS-52).
-func (f *fakeSizer) Layout(_ context.Context, plan clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, clip.Manifest, error) {
-	f.layouts++
-	return plan, nil, f.layoutErr
-}
-
-func (f *fakeSizer) CaptionSize(context.Context, string, clip.Caption) (float64, float64, error) {
-	f.calls++
-	return 500, 100, f.err
-}
-
-// The badge and the chips the composer must keep copy off. The fixture puts the
-// badge where 9:16 puts it (CDS-31) and no chips, so the anchor walk is driven
-// by the subject box alone.
-func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, labels []string, _ []clip.Answer, hideDisclosure ...bool) (clip.Manifest, error) {
-	f.fixed++
-	if f.fixedErr != nil {
-		return nil, f.fixedErr
-	}
-	out := clip.Manifest{{Kind: "badge", Region: design.Bounds{X: 768, Y: 270, Width: 120, Height: 60}}}
-	if len(hideDisclosure) > 0 && hideDisclosure[0] {
-		out = nil
-	}
-	for i := range labels {
-		out = append(out, design.Element{Kind: "chip", Region: design.Bounds{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
-	}
-	return out, nil
-}
-
 // structuredFixture is what testPolicy freezes as the request's schema
 // presence; newService sets it from the model it fakes, the way FreezeCall reads
 // the catalog, so fixtures built after newService describe the same request.
 var structuredFixture = true
 
-func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels, *fakeSizer) {
+func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels) {
 	t.Helper()
 	structuredFixture = structured
 	t.Cleanup(func() { structuredFixture = true })
 	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, VideoDelivery: llm.VideoDelivery{InlineStaticVideo: true}, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
-	c := &fakeSizer{}
-	cfg := ai.DefaultConfig(clip.Environment{})
-	s, err := ai.New(f, c, cfg)
+	s, err := ai.New(f, ai.DefaultConfig(clip.Environment{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s, f, c
+	return s, f
 }
 func source() clip.AnalysisSource {
 	return clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "frozen-fingerprint", Info: clip.MediaInfo{DurationMS: 65000, Width: 1080, Height: 1920, HasAudio: true}}, Filename: "제주 & Seoul.mp4"}
@@ -120,23 +80,12 @@ func testPolicy(stage string) llm.CallPolicy {
 func observation() map[string]any {
 	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "action": "담는다", "motion": "static", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "scene": "food", "readable_text": false, "subject": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}, "certainty": "certain", "usability": "usable"}}}
 }
+
+// planningInput is a project with no template: the server's own empty document
+// frozen with nothing declared, over one observed source (CLIP-5).
 func planningInput() clip.PlanningInput {
-	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
-}
-func plan() map[string]any {
-	// Legacy one-call fixture: caption styling now belongs to Narrate, while
-	// this retired response still contains only words and times.
-	// Three cuts, because CDS-37 holds every cut to 6.0 s while a clip is at
-	// least 15 s (CLIP-19): one long take is not a clip any more.
-	cut := func(id string, start, end int, text string) map[string]any {
-		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
-			"caption": map[string]any{"text": text, "start_ms": 1000, "end_ms": end - start - 1000, "short_text": "한글 여행", "keyword": ""}}
-	}
-	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{
-		cut("cut-one", 0, 5000, "정확한 한글 & 여행"),
-		cut("cut-two", 5000, 10000, "조용한 한글 & 여행"),
-		cut("cut-three", 10000, 15000, "천천히 걷는 골목"),
-	}}
+	composed := clip.NoTemplateComposition()
+	return clip.PlanningInput{Policy: testPolicy("write"), Composition: &composed, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
 }
 func raw(value any) string {
 	data, err := json.Marshal(value)
@@ -150,12 +99,24 @@ func firstSegment(value map[string]any) map[string]any {
 }
 func firstCut(value map[string]any) map[string]any { return value["cuts"].([]any)[0].(map[string]any) }
 
+// flow is the flow writer's answer over planningInput's one source: three cuts
+// of five seconds, each citing the one observation it lies in.
+func flow() map[string]any {
+	cut := func(id string, start, end int) map[string]any {
+		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "rate_permille": 1000,
+			"focal": map[string]any{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID("source", 0)}}
+	}
+	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{
+		cut("cut-one", 0, 5000), cut("cut-two", 5000, 10000), cut("cut-three", 10000, 15000),
+	}}
+}
+
 func TestObservationContractPlainFallbackOffsetAndSpeech(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		for _, speech := range []string{"", "오늘은 제주입니다. Today in Jeju."} {
 			value := observation()
 			firstSegment(value)["speech"] = speech
-			s, f, _ := newService(t, "```json\n"+raw(value)+"\n```", structured)
+			s, f := newService(t, "```json\n"+raw(value)+"\n```", structured)
 			in := chunk()
 			in.Source.Info.HasAudio = speech != ""
 			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "explicit-observer"}
@@ -244,7 +205,7 @@ func TestObservationRejectsInvalidModelOutput(t *testing.T) {
 				}
 				v["segments"] = segments
 			}
-			s, f, _ := newService(t, raw(v), true)
+			s, f := newService(t, raw(v), true)
 			if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); !errors.Is(err, llm.ErrBadOutput) {
 				t.Fatal(err)
 			}
@@ -255,16 +216,12 @@ func TestObservationRejectsInvalidModelOutput(t *testing.T) {
 	}
 }
 
-func TestRecordedLiveClipResponses(t *testing.T) {
+func TestRecordedLiveObservationResponse(t *testing.T) {
 	observationJSON, err := os.ReadFile("testdata/live-observation.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	planJSON, err := os.ReadFile("testdata/live-plan.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, models, _ := newService(t, string(observationJSON), true)
+	s, models := newService(t, string(observationJSON), true)
 	in := chunk()
 	in.Source = clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "synthetic", Fingerprint: "synthetic", Info: clip.MediaInfo{DurationMS: 15000, Width: 320, Height: 180, HasAudio: true}}, Filename: "synthetic.mp4"}
 	in.Index, in.OffsetMS, in.DurationMS = 0, 0, 15000
@@ -274,56 +231,11 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	limits := ai.DefaultConfig(clip.Environment{}).Analysis
-	analyses, err := clip.MergeAnalyses(limits, []clip.AnalysisSource{in.Source}, []clip.ChunkAnalysis{observed})
-	if err != nil {
+	if _, err := clip.MergeAnalyses(limits, []clip.AnalysisSource{in.Source}, []clip.ChunkAnalysis{observed}); err != nil {
 		t.Fatal(err)
 	}
-	models.response.Text = currentRecordedPlan(t, string(planJSON))
-	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
-	// The recorded response is ONE fifteen-second take. CDS-37's 6.0 s is a
-	// target, not a gate (r3): the compiler trims to it, finds the approved
-	// fifteen seconds unreachable that way, lets the target yield and ships the
-	// take the model chose. The evidence is kept as it was recorded and its
-	// executability is what it proves.
-	single, _, err := s.Plan(t.Context(), testRef(), input)
-	if err != nil || single.DurationMS != 15000 || len(single.Cuts) != 1 || single.Cuts[0].EndMS-single.Cuts[0].StartMS != 15000 {
-		t.Fatalf("the recorded single take no longer compiles: %+v %v", single.Cuts, err)
-	}
-	// The same words over three cuts — what the design system does admit — still
-	// compile, and nothing but the cut count changed.
-	var recorded map[string]any
-	if err = json.Unmarshal(planJSON, &recorded); err != nil {
-		t.Fatal(err)
-	}
-	delete(recorded, "hook")
-	recorded["cuts"] = splitRecordedCut(recorded["cuts"].([]any)[0].(map[string]any), 3, 5000)
-	models.response.Text = raw(recorded)
-	result, _, err := s.Plan(t.Context(), testRef(), input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cut := result.Cuts[1]
-	start, end := cut.CaptionWindow(0)
-	if result.DurationMS != 15000 || len(result.Cuts) != 3 || cut.FirstCopy().Text != "영상 생성 확인" || start != 120 || end != 4880 {
-		t.Fatalf("unexpected plan: %+v", result)
-	}
-	// One scene throughout, so CDS-36 joins every boundary with a hard cut.
-	if result.TransitionTotal() != 0 {
-		t.Fatalf("invented a transition inside one scene: %+v", result.Cuts)
-	}
-	// The legacy recorded response named no style or position; it takes the
-	// default style at its default anchor (CDS-25, CDS-38).
-	if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Anchor != "upper_mid" || cut.FirstCopy().Align != "center" {
-		t.Fatalf("placement was not the design system's: %+v %+v", cut.FirstCopy(), result.Decisions)
-	}
-	if len(models.calls) != 3 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
-		t.Fatal("production budgets or call count changed")
-	}
-	if string(models.calls[0].JSONSchema) != string(ai.ChunkSchema()) || string(models.calls[1].JSONSchema) != string(ai.PlanSchema()) {
-		t.Fatal("did not send structural output schemas")
-	}
-	if models.calls[1].HasVideos() || models.calls[1].HasImages() {
-		t.Fatal("composition received pixels")
+	if len(models.calls) != 1 || models.calls[0].MaxTokens != 8192 || string(models.calls[0].JSONSchema) != string(ai.ChunkSchema()) {
+		t.Fatal("production budget, call count or structural schema changed")
 	}
 }
 
@@ -340,7 +252,7 @@ func TestStructuralOutputStillEnforcesDomainBounds(t *testing.T) {
 				}
 				segment[field] = subjects
 			}
-			s, f, _ := newService(t, raw(v), structured)
+			s, f := newService(t, raw(v), structured)
 			if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); !errors.Is(err, llm.ErrBadOutput) {
 				t.Fatalf("accepted out-of-bounds %s with structured=%v: %v", field, structured, err)
 			}
@@ -348,67 +260,14 @@ func TestStructuralOutputStillEnforcesDomainBounds(t *testing.T) {
 				t.Fatal("paid repair attempted")
 			}
 		}
-		v := plan()
-		firstCut(v)["caption"].(map[string]any)["text"] = strings.Repeat("한", 501)
-		s, f, _ := newService(t, raw(v), structured)
-		delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
-		if err != nil || !hasNotice(delivered, "plan_copy_chars") || len(delivered.Cuts[0].Copies) != 0 || len(f.calls) != 1 {
-			t.Fatalf("oversized generated caption was not removed: %v", err)
-		}
 	}
 }
 
-func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
-	for _, structured := range []bool{false, true} {
-		s, f, c := newService(t, "Here is the JSON:\n"+raw(plan()), structured)
-		in := planningInput()
-		got, usage, err := s.Plan(t.Context(), testRef(), in)
-		if err != nil || usage != f.response.Usage || len(got.Cuts) != 3 {
-			t.Fatalf("%+v %v", got, err)
-		}
-		cut := got.Cuts[0]
-		// The fixed caption uses the CENTER column and clears the observed subject.
-		if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Align != "center" || cut.FirstCopy().Anchor != "upper_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
-			t.Fatalf("%+v", cut)
-		}
-		// 크게 강조 has two candidate anchors (CDS-38), so the selector measures the
-		// plate at both and at neither more, and the composition is verified
-		// exactly once before the plan is returned (CDS-52).
-		if c.calls != 2*len(got.Cuts) || c.fixed != len(got.Cuts) || c.layouts != 1 {
-			t.Fatalf("%d measurements, %d fixed-element reads, %d verifications", c.calls, c.fixed, c.layouts)
-		}
-		// The window is CDS-27's, not the model's: cut start + 120 ms to cut end
-		// − 120 ms, which a zero start and end resolve to.
-		if start, end := cut.CaptionWindow(0); start != 120 || end != 4880 {
-			t.Fatalf("caption window %d..%d", start, end)
-		}
-		request := f.calls[0]
-		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != ai.DefaultConfig(clip.Environment{}).PlanCompletionTokens || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
-			t.Fatal(request)
-		}
-		var data struct {
-			Answers []struct {
-				Text string `json:"text"`
-			} `json:"answers"`
-		}
-		if err := json.Unmarshal([]byte(request.Messages[0].Parts[0].Text), &data); err != nil || data.Answers[0].Text != in.Answers[0].Text {
-			t.Fatalf("exact answers lost: %+v %v", data, err)
-		}
-		// With no subject box 메모 still takes its own default anchor: the table
-		// decides, and the box only ever moves it off a subject (CDS-38).
-		in.Analyses[0].Segments[0].Subject = clip.Region{}
-		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].FirstCopy().Anchor != "upper_mid" || got.Cuts[0].FirstCopy().Align != "center" {
-			t.Fatalf("the default anchor moved: %+v %v", got, err)
-		}
-	}
-}
-func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
-	for _, mode := range []string{"unknown source", "empty cuts", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "caption negative", "caption outside cut", "caption backwards", "caption missing", "free position", "disallowed style", "disallowed accent", "free coordinates", "music", "gain over", "gain under", "gain null", "fractional"} {
+func TestFlowRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
+	for _, mode := range []string{"unknown source", "empty cuts", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "free field", "music", "gain over", "gain under", "gain null", "fractional"} {
 		t.Run(mode, func(t *testing.T) {
-			v := plan()
+			v := flow()
 			cut := firstCut(v)
-			caption := cut["caption"].(map[string]any)
 			switch mode {
 			case "unknown source":
 				cut["source_id"] = "invented"
@@ -416,7 +275,6 @@ func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
 				v["cuts"] = []any{}
 			case "duplicate id":
 				v["cuts"] = []any{cut, cut}
-				v["duration_ms"] = 29800
 			case "empty id":
 				cut["id"] = " "
 			case "long id":
@@ -431,23 +289,8 @@ func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
 				cut["end_ms"] = 400
 			case "wrong ratio":
 				v["ratio"] = "square"
-			case "caption negative":
-				caption["start_ms"] = -1
-			case "caption outside cut":
-				caption["start_ms"] = 15000
-				caption["end_ms"] = 16000
-			case "caption backwards":
-				caption["start_ms"] = 14000
-			case "caption missing":
-				delete(caption, "start_ms")
-			case "free position":
-				caption["position"] = "anywhere"
-			case "disallowed style":
-				caption["style"] = "bold"
-			case "disallowed accent":
-				caption["accent"] = "blue"
-			case "free coordinates":
-				caption["x"] = 123
+			case "free field":
+				cut["x"] = 123
 			case "music":
 				v["background_music"] = "song.mp3"
 			case "gain over":
@@ -459,12 +302,12 @@ func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
 			case "fractional":
 				cut["start_ms"] = 1.5
 			}
-			s, f, c := newService(t, raw(v), false)
-			delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
-			readable := slices.Contains([]string{"unknown source", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "caption negative", "caption outside cut", "caption backwards", "gain over", "gain under"}, mode)
+			s, f := newService(t, raw(v), false)
+			delivered, _, err := s.Flow(t.Context(), testRef(), planningInput())
+			readable := slices.Contains([]string{"unknown source", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "gain over", "gain under"}, mode)
 			if readable {
 				if err != nil || len(f.calls) != 1 {
-					t.Fatalf("readable plan failed: %v", err)
+					t.Fatalf("readable flow failed: %v", err)
 				}
 				assertExecutableTimeline(t, planningInput(), delivered)
 				if mode != "short cut" && len(delivered.Notices) == 0 {
@@ -473,18 +316,18 @@ func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
 				return
 			}
 			if !errors.Is(err, llm.ErrBadOutput) {
-				t.Fatalf("unreadable plan accepted: %v", err)
+				t.Fatalf("unreadable flow accepted: %v", err)
 			}
-			if len(f.calls) != 1 || c.calls != 0 {
-				t.Fatal("invalid plan reached repair or renderer")
+			if len(f.calls) != 1 {
+				t.Fatal("an unreadable flow was retried")
 			}
 		})
 	}
 }
 func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
-	for _, stage := range []string{"analyze", "plan"} {
+	for _, stage := range []string{"analyze", "flow"} {
 		for _, cause := range []error{llm.ErrRateLimited, llm.ErrProviderDisabled, llm.ErrUnsupported, nil} {
-			s, f, _ := newService(t, "{\"partial\":", true)
+			s, f := newService(t, "{\"partial\":", true)
 			f.err = cause
 			f.response.FinishReason = "length"
 			f.response.Usage.ReasoningTokens = 90
@@ -493,7 +336,7 @@ func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
 			if stage == "analyze" {
 				_, usage, err = s.ObserveChunk(t.Context(), testRef(), chunk())
 			} else {
-				_, usage, err = s.Plan(t.Context(), testRef(), planningInput())
+				_, usage, err = s.Flow(t.Context(), testRef(), planningInput())
 			}
 			want := cause
 			if want == nil {
@@ -510,9 +353,9 @@ func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
 	}
 }
 func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
-	for _, mode := range []string{"no video", "no vision", "schema capability lost", "wrong purpose", "disabled", "bad chunk", "bad inline", "missing policy", "missing answer", "duplicate source"} {
+	for _, mode := range []string{"no video", "no vision", "schema capability lost", "wrong purpose", "disabled", "bad chunk", "bad inline", "missing policy", "missing required value", "no composition", "duplicate source"} {
 		t.Run(mode, func(t *testing.T) {
-			s, f, _ := newService(t, raw(observation()), true)
+			s, f := newService(t, raw(observation()), true)
 			in := chunk()
 			planIn := planningInput()
 			switch mode {
@@ -533,14 +376,19 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 				in.OffsetMS++
 			case "bad inline":
 				in.Video.Open = nil
-			case "missing answer":
-				planIn.Answers = nil
+			case "missing required value":
+				planIn = flowInput()
+				delete(planIn.Composition.Inputs.Values, "place")
+			case "no composition":
+				// Every generation freezes one (CLIP-5); a payload without one is
+				// refused rather than written some other way.
+				planIn.Composition = nil
 			case "duplicate source":
 				planIn.Analyses = append(planIn.Analyses, planIn.Analyses[0])
 			}
 			var err error
-			if mode == "missing answer" || mode == "duplicate source" {
-				_, _, err = s.Plan(t.Context(), testRef(), planIn)
+			if mode == "missing required value" || mode == "no composition" || mode == "duplicate source" {
+				_, _, err = s.Flow(t.Context(), testRef(), planIn)
 			} else {
 				_, _, err = s.ObserveChunk(t.Context(), testRef(), in)
 			}
@@ -554,7 +402,7 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 			}
 		})
 	}
-	s, f, _ := newService(t, raw(observation()), true)
+	s, f := newService(t, raw(observation()), true)
 	f.info.VideoDelivery.InlineStaticVideo = false
 	if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); err != nil || len(f.calls) != 1 {
 		t.Fatalf("a model outside the static-processing profile was refused by flag: %v", err)
@@ -562,7 +410,7 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 }
 
 func TestPreparationChecksKnownPromptSizeBeforeAnyPaidWork(t *testing.T) {
-	s, f, _ := newService(t, "", true)
+	s, f := newService(t, "", true)
 	in := planningInput()
 	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); err != nil {
 		t.Fatal(err)
@@ -572,14 +420,18 @@ func TestPreparationChecksKnownPromptSizeBeforeAnyPaidWork(t *testing.T) {
 	// the smaller allowance a policy may be frozen with. The check under test is
 	// the same one either way: it runs before any provider call.
 	in.Policy.InputTokens = llm.ClipInputUnits
-	in.Template.CutGuidance = strings.Repeat("가", 4000)
-	in.Template.InformationFields = nil
-	in.Answers = nil
+	var body strings.Builder
+	body.WriteString(`<clip version="1">`)
+	values := map[string]string{}
 	for i := 0; i < 10; i++ {
-		label := fmt.Sprint(i)
-		in.Template.InformationFields = append(in.Template.InformationFields, clip.InformationField{Label: label, Prompt: strings.Repeat("나", 200)})
-		in.Answers = append(in.Answers, clip.Answer{Label: label, Text: strings.Repeat("다", 500)})
+		id := fmt.Sprintf("field%d", i)
+		fmt.Fprintf(&body, `<field id="%s" label="%d">%s</field>`, id, i, strings.Repeat("나", 200))
+		values[id] = strings.Repeat("다", 500)
 	}
+	body.WriteString("<guide>" + strings.Repeat("가", 4000) + "</guide></clip>")
+	in.Template = clip.Recipe{Name: "가장 큰 템플릿", CompositionBody: body.String()}
+	in.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: body.String(), TemplateID: "largest"},
+		Inputs: clip.CompositionInputs{Values: values, Items: map[string][]composition.Item{}}}
 	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); !errors.Is(err, clip.ErrInputTooLarge) {
 		t.Fatal("oversized known context accepted", err)
 	}
@@ -604,7 +456,7 @@ func TestSchemasAreClosedAndReturnedAsCopies(t *testing.T) {
 			}
 		}
 	}
-	for _, schema := range []func() []byte{ai.ChunkSchema, ai.PlanSchema} {
+	for _, schema := range []func() []byte{ai.ChunkSchema, ai.FlowSchema, ai.NarrationSchema} {
 		var value any
 		if err := json.Unmarshal(schema(), &value); err != nil {
 			t.Fatal(err)
@@ -618,51 +470,7 @@ func TestSchemasAreClosedAndReturnedAsCopies(t *testing.T) {
 	}
 }
 
-func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
-	in := planningInput()
-	in.TargetDurationMS = 90000
-	in.Analyses = nil
-	for i := 0; i < 20; i++ {
-		a := planningInput().Analyses[0]
-		a.Source.ID = fmt.Sprintf("source-%d", i)
-		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
-		a.Source.Info.DurationMS = 90000
-		a.Segments[0].EndMS = 90000
-		in.Analyses = append(in.Analyses, a)
-	}
-	v := plan()
-	v["duration_ms"] = 90000
-	// Ninety seconds of 1.8 s cuts: CDS-37's 1.2 s floor puts a ceiling on how
-	// many cuts ninety seconds can hold, so this is fifty, not a hundred.
-	cuts := make([]any, 50)
-	for i := range cuts {
-		c := firstCut(plan())
-		c["id"] = fmt.Sprintf("cut-%d", i)
-		c["source_id"] = fmt.Sprintf("source-%d", i%20)
-		// A source may supply several cuts, but each is its own DISTINCT range:
-		// the same footage is never selected twice (CLIP-98).
-		c["start_ms"] = (i / 20) * 1800
-		c["end_ms"] = (i/20)*1800 + 1800
-		p := c["caption"].(map[string]any)
-		// A 1.8 s cut pays for two characters of exposure and little more
-		// (CDS-41); this fixture is about the cut count, not about copy.
-		p["text"] = "여행"
-		p["start_ms"] = 0
-		p["end_ms"] = 1800
-		if i == 0 {
-			c["volume"] = 0
-		}
-		cuts[i] = c
-	}
-	v["cuts"] = cuts
-	s, f, _ := newService(t, raw(v), false)
-	in.Policy = testPolicy("write")
-	got, _, err := s.Plan(t.Context(), testRef(), in)
-	if err != nil || got.DurationMS != 90000 || len(got.Cuts) != 50 || got.Cuts[0].OriginalVolume() != 0 || got.Cuts[1].OriginalVolume() != 1 || len(f.calls) != 1 || f.calls[0].MaxTokens != 32768 {
-		t.Fatalf("%+v %v", got, err)
-	}
-}
-func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
+func TestStrictFieldsSilentSpeechAndCancellation(t *testing.T) {
 	for _, mode := range []string{"case field", "null subject", "silent speech", "null focal"} {
 		v := observation()
 		seg := firstSegment(v)
@@ -679,28 +487,16 @@ func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
 		case "null focal":
 			seg["focal"].(map[string]any)["x"] = nil
 		}
-		s, _, _ := newService(t, raw(v), false)
+		s, _ := newService(t, raw(v), false)
 		in.Policy = testPolicy("observe")
 		if _, _, err := s.ObserveChunk(t.Context(), testRef(), in); !errors.Is(err, llm.ErrBadOutput) {
 			t.Fatalf("%s: %v", mode, err)
 		}
 	}
-	s, f, c := newService(t, raw(plan()), true)
-	c.err = clip.ErrCopyTooLong
-	if _, usage, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrCopyTooLong) || usage != f.response.Usage || len(f.calls) != 1 {
-		t.Fatalf("%+v %v", usage, err)
-	}
-	// A verifier failure on the composer's own result is a composition failure
-	// with the check named, and no paid call is retried.
-	s, f, c = newService(t, raw(plan()), true)
-	c.layoutErr = clip.ErrInvalid
-	if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrInvalid) || len(f.calls) != 1 {
-		t.Fatalf("composition verification: %v", err)
-	}
+	s, f := newService(t, raw(flow()), true)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	f.calls = nil
-	if _, _, err := s.Plan(ctx, testRef(), planningInput()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
+	if _, _, err := s.Flow(ctx, testRef(), planningInput()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
 		t.Fatal(err)
 	}
 	if _, _, err := s.ObserveChunk(ctx, testRef(), chunk()); !errors.Is(err, context.Canceled) || len(f.calls) != 0 {
@@ -709,12 +505,12 @@ func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
 }
 
 func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
-	v := plan()
+	v := flow()
 	c := firstCut(v)
 	c["start_ms"] = math.MaxInt - 10000
 	c["end_ms"] = math.MinInt + 4999
-	s, f, _ := newService(t, raw(v), true)
-	delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
+	s, f := newService(t, raw(v), true)
+	delivered, _, err := s.Flow(t.Context(), testRef(), planningInput())
 	if err != nil || len(f.calls) != 1 || !hasNotice(delivered, "plan_cut_range") {
 		t.Fatalf("overflowed cut was not removed: %v", err)
 	}
@@ -724,60 +520,4 @@ func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
 		}
 	}
 	assertExecutableTimeline(t, planningInput(), delivered)
-}
-
-// splitRecordedCut cuts one recorded take into n consecutive cuts of the same
-// source, keeping its caption, focal point and gain: the words are the model's,
-// only the cut count is the design system's (CDS-37).
-func splitRecordedCut(cut map[string]any, n, length int) []any {
-	out := make([]any, 0, n)
-	for i := 0; i < n; i++ {
-		c := map[string]any{}
-		for k, v := range cut {
-			c[k] = v
-		}
-		c["id"] = fmt.Sprintf("%v-%d", cut["id"], i)
-		c["start_ms"], c["end_ms"] = i*length, (i+1)*length
-		caption := map[string]any{}
-		for k, v := range cut["caption"].(map[string]any) {
-			caption[k] = v
-		}
-		caption["start_ms"], caption["end_ms"] = 200, length-200
-		c["caption"] = caption
-		out = append(out, c)
-	}
-	return out
-}
-
-func TestRapidPlanningUsesOneWriterCall(t *testing.T) {
-	value := plan()
-	for _, item := range value["cuts"].([]any) {
-		item.(map[string]any)["caption"].(map[string]any)["text"] = "오늘은 구로디지털단지에 와보았는데요"
-	}
-	service, models, _ := newService(t, raw(value), true)
-	input := planningInput()
-	input.Template.CaptionPace = "rapid"
-	result, _, err := service.Plan(t.Context(), testRef(), input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(models.calls) != 1 {
-		t.Fatalf("rapid splitting used %d provider calls", len(models.calls))
-	}
-	for _, cut := range result.Cuts {
-		if !cut.Rapid() || len(cut.Copies) != 3 || cut.Copies[0].EndMS-cut.Copies[0].StartMS != 300 {
-			t.Fatal(cut)
-		}
-	}
-}
-
-// Keep recorded provider evidence intact while adapting its retired output key.
-func currentRecordedPlan(t *testing.T, original string) string {
-	t.Helper()
-	var body map[string]any
-	if err := json.Unmarshal([]byte(original), &body); err != nil {
-		t.Fatal(err)
-	}
-	delete(body, "hook")
-	return raw(body)
 }

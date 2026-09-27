@@ -58,8 +58,20 @@ func (r *previewRenderer) PreparePreview(ctx context.Context, p clip.EditPlan, s
 	}
 	return clip.PreparedPreview{NextOffset: -1}, nil
 }
+
+// previewSetup is a native project: a draft is drawn from the composition it
+// was written into.
 func previewSetup(t *testing.T) (*clipapp.GenerationService, *previewProjectStore, *previewRenderer, clip.CorrectionPlan) {
-	p, draft := correctionFixture(t)
+	p, _ := correctionFixture(t)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Portable = nativePortable(plan)
+	if p.EditPlan, err = clip.EncodeEditPlan(plan); err != nil {
+		t.Fatal(err)
+	}
+	draft := clip.CorrectionFromPlan(plan)
 	p.ID, p.UserID = "owned", "alice"
 	store := &previewProjectStore{project: p}
 	render := &previewRenderer{}
@@ -124,11 +136,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original.Portable, err = clip.FreezeLegacyPlan(p, original, clip.Recipe{}, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
-	original.Portable.Snapshot.Legacy = false
+	original.Portable = nativePortable(original)
 	p.EditPlan, err = clip.EncodeEditPlan(original)
 	if err != nil {
 		t.Fatal(err)
@@ -166,37 +174,13 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	}
 }
 
-func TestLegacyPreviewUsesTheCurrentHookInsteadOfThePreviousSnapshot(t *testing.T) {
-	service, store, render, draft := previewSetup(t)
-	store.project.Answers = []clip.Answer{{Label: "상호", Text: "카페"}, {Label: "위치", Text: "서울"}}
-	previous := clip.LegacyProjectComposition(store.project, clip.Recipe{})
-	store.project.Composition = &previous
-	draft.Hook = "서울 카페"
-	if _, err := service.PreparePreview(t.Context(), "alice", "owned", 1, "hook", draft, nil, 0); err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, element := range render.last.Portable.Elements {
-		if element.Resolved.Element.ID == "legacy-hook" {
-			for _, row := range element.Resolved.Rows {
-				if row.Text == draft.Hook {
-					found = true
-				}
-			}
-		}
-	}
-	if !found {
-		t.Fatal("preview reused the saved opening text")
-	}
-}
-
 func TestEditingProjectionDoesNotWidenLegacyStoredPlanJSON(t *testing.T) {
 	p, _ := correctionFixture(t)
 	var envelope struct{ Plan map[string]json.RawMessage }
 	if err := json.Unmarshal([]byte(p.EditPlan), &envelope); err != nil {
 		t.Fatal(err)
 	}
-	if len(envelope.Plan) != 3 || envelope.Plan["NativeComposition"] != nil || envelope.Plan["Elements"] != nil {
+	if len(envelope.Plan) != 2 || envelope.Plan["NativeComposition"] != nil || envelope.Plan["Elements"] != nil {
 		t.Fatal("legacy envelope widened", envelope.Plan)
 	}
 	var cuts []map[string]json.RawMessage

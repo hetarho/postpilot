@@ -28,22 +28,21 @@ message ListClipProjectsRequest {}
 message ListClipProjectsResponse { repeated ClipProject projects = 1; }
 
 message CreateClipProjectRequest {
+  reserved 5, 7;
+  reserved "answers", "cta";
   string title = 1;
   string video_template_id = 2;
   string ratio = 3;
   int32 target_duration_ms = 4;
-  repeated ClipAnswer answers = 5;
-  // Both may be empty at creation; generation refuses an empty disclosure.
+  // May be empty at creation; generation refuses an empty disclosure.
   string disclosure = 6;
-  string cta = 7;
   bool hide_disclosure = 8;
   ClipCompositionInputs composition_inputs = 9;
   // Required concrete UI language; UNSPECIFIED is refused.
   ContentLanguage language = 10;
   // Optional; empty is indistinguishable from never having written one.
   string instruction = 11;
-  // Absent seeds both from the selected template; an explicit empty string is
-  // the owner choosing the steady pace and no accent.
+  // Absent or empty is the shared default: the steady pace and no accent.
   optional string caption_pace = 12;
   optional string accent = 13;
   // Absent seeds all three from the selected template, or from the shared
@@ -60,14 +59,13 @@ message GetClipProjectRequest { string id = 1; }
 message GetClipProjectResponse { ClipProject project = 1; }
 
 message UpdateClipProjectRequest {
+  reserved 5, 7;
+  reserved "answers", "cta";
   string id = 1;
   optional string title = 2;
   optional string video_template_id = 3;
   optional int32 target_duration_ms = 4;
-  // Only supplied labels change; an empty text explicitly clears that answer.
-  repeated ClipAnswer answers = 5;
   optional string disclosure = 6;
-  optional string cta = 7;
   optional bool hide_disclosure = 8;
   ClipCompositionInputs composition_inputs = 9;
   // Supplied only when it changes; an empty string clears it.

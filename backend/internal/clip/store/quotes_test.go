@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/job"
 )
 
@@ -74,10 +75,10 @@ func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
 				value := true
 				_, err = h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{HideDisclosure: &value})
 			case "recipe":
-				value := "different"
-				_, err = h.projects.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CutGuidance: &value})
+				value := `<clip version="1"><field id="place" label="장소" required="true">different</field></clip>`
+				_, err = h.projects.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &value})
 			case "answer":
-				_, err = h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{Answers: []clip.Answer{{Label: h.project.Answers[0].Label, Text: "changed"}}})
+				_, err = h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{CompositionInputs: &clip.CompositionInputs{Values: map[string]string{"place": "changed"}, Items: map[string][]composition.Item{}}})
 			case "title":
 				value := "different"
 				_, err = h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{Title: &value})

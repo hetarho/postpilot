@@ -1,12 +1,10 @@
 import {
   CLIP_COPY,
   CLIP_RAPID,
-  CLIP_FACTS,
   CLIP_TIMING,
   CLIP_TRANSITION,
   CLIP_PLAYBACK,
   CLIP_RATES,
-  CLIP_TYPE,
   CLIP_VOICE,
   clipCaption,
 } from '@/entities/clip-design/@x/clip-plan'
@@ -111,8 +109,6 @@ export interface ClipEditCut {
   transitionMs: number
   /** Sentence captions follow CDS-43; rapid phrases follow CDS-59. */
   copies: ClipCaption[]
-  /** Reserved fact labels whose chips belong on this cut, at most two. */
-  chips: string[]
   volumePermille: number
   /** The ONE constant rate this cut plays at, as permille (CLIP-98).
    * Legacy absence is normalized to 1x by the API mapper; explicit zero is invalid. */
@@ -185,8 +181,6 @@ export interface ClipEditPlan {
   elements?: ClipEditableText[]
   durationMs: number
   cuts: ClipEditCut[]
-  /** The opening card's one sentence. Empty renders no hook card. */
-  hook: string
 }
 export interface RetainedClipSource {
   id: string
@@ -228,7 +222,6 @@ export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
     cuts: plan.cuts.map((c) => ({
       ...c,
       ...(c.focal ? { focal: { ...c.focal } } : {}),
-      chips: [...c.chips],
       copies: c.copies.map((copy) => ({ ...copy })),
     })),
   }
@@ -273,8 +266,6 @@ export type ClipEdit =
   | { type: 'addCopy'; id: string }
   | { type: 'removeCopy'; id: string; index?: number }
   | { type: 'pace'; id: string; pace: ClipCaptionPace }
-  | { type: 'chips'; id: string; chips: string[] }
-  | { type: 'hook'; hook: string }
 /** The clip is its footage less what each cut's own transition overlaps
  *  (CDS-36) — never one fade times the boundaries. */
 export function clipPlanDuration(cuts: readonly ClipEditCut[]): number {
@@ -296,7 +287,6 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
       transitionMs: 0,
       volumePermille: 1000,
       copies: [],
-      chips: [],
       creation: { kind: 'add', originCutId: edit.originCutId },
     })
     if (
@@ -334,7 +324,6 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
         startMs: edit.sourceMs,
         transitionMs: 0,
         copies: [],
-        chips: [],
         creation: { kind: 'split', originCutId: parent.id },
       },
     )
@@ -351,13 +340,11 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
     const [cut] = next.cuts.splice(edit.from, 1)
     next.cuts.splice(edit.to, 0, cut!)
   } else if (edit.type === 'remove') next.cuts = next.cuts.filter((c) => c.id !== edit.id)
-  else if (edit.type === 'hook') next.hook = edit.hook
   else
     next.cuts = next.cuts.map((c) => {
       if (c.id !== edit.id) return c
       if (edit.type === 'rate') return { ...c, playbackRatePermille: edit.ratePermille }
       if (edit.type === 'cut') return { ...c, ...edit.patch }
-      if (edit.type === 'chips') return { ...c, chips: [...edit.chips] }
       if (edit.type === 'pace') {
         if (isRapidCut(c) === (edit.pace === 'rapid')) return c
         const seed = c.copies[0]!
@@ -464,13 +451,6 @@ function withinCaptionLimits(text: string): boolean {
   const rule = clipCaption()
   const lines = text.split('\n')
   return lines.length <= rule.lines && lines.every((line) => copyChars(line) <= rule.chars)
-}
-/** The hook card's sentence: two lines of nine at most (CDS-20), grounded in the
- *  owner's own answers (CDS-42). A hook the field refuses would be dropped by
- *  the compiler rather than shown, so it is refused here where it is typed. */
-export function withinHookLimits(hook: string): boolean {
-  const lines = hook.split('\n')
-  return lines.length <= 2 && copyChars(hook) <= 2 * CLIP_TYPE.hook.chars
 }
 
 /** CDS-42: a sentence may only state numbers and Latin names the owner's own
@@ -606,9 +586,6 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
         c.copies.length > (rapid ? CLIP_RAPID.max_per_cut : CLIP_COPY.max_per_cut) ||
         (!rapid && c.copies.length > 1 && !allowsSecondCopy(c)),
       copyClasses: false,
-      chips:
-        c.chips.length > 2 ||
-        c.chips.some((label) => !(CLIP_FACTS.chips as readonly string[]).includes(label)),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,
       // Exactly one CLIP-98 rate, and only one this source's verified cadence
       // actually admits (CDS-68). An unsupported rate is named, never replaced.
@@ -635,18 +612,15 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
     duration < state.minDurationMs ||
     duration > state.maxDurationMs
   const count = plan.cuts.length === 0 || plan.cuts.length > state.maxCuts
-  const hook = !withinHookLimits(plan.hook)
   return {
     cuts,
     timeline,
     count,
     frequency,
-    hook,
     valid:
       !count &&
       !timeline &&
       !frequency &&
-      !hook &&
       cuts.every(
         (c) =>
           Object.entries(c).every(([key, v]) => key === 'copies' || !v) &&

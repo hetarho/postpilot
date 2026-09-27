@@ -8,10 +8,7 @@ import { discardClipDraftQueues } from '@/features/edit-clip-project'
 const template = {
   id: 'template',
   name: '여행',
-  informationFields: [{ label: '장소', prompt: '어디인가요?' }],
-  cutGuidance: '',
-  accent: 'teal' as const,
-  preset: 'restaurant' as const,
+  compositionBody: '<clip version="1"/>',
 }
 const project = {
   id: 'project',
@@ -20,8 +17,6 @@ const project = {
   ratio: 'vertical' as const,
   targetDurationMs: 30000,
   disclosure: 'ad' as const,
-  cta: '' as const,
-  answers: [{ label: '장소', text: '제주도' }],
   captionPace: 'steady' as const,
   accent: 'teal' as const,
 }

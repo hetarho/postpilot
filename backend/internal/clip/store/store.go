@@ -93,19 +93,6 @@ func transact[T any](ctx context.Context, s *Store, f func(*sqlc.Queries) (T, er
 	return value, nil
 }
 
-type fieldJSON struct {
-	Label  string `json:"label"`
-	Prompt string `json:"prompt"`
-}
-
-func encodeFields(fields []clip.InformationField) string {
-	out := make([]fieldJSON, 0, len(fields))
-	for _, f := range fields {
-		out = append(out, fieldJSON{f.Label, f.Prompt})
-	}
-	b, _ := json.Marshal(out)
-	return string(b)
-}
 func encodeStyles(styles []string) string {
 	if styles == nil {
 		styles = []string{}
@@ -124,14 +111,10 @@ func strictJSON(value string, out any) error {
 	}
 	return nil
 }
+
+// A template row is its name and its outline body. A row without a readable
+// body is corrupt rather than a template of some older kind (CLIP-4).
 func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
-	var fields []fieldJSON
-	if err := strictJSON(r.InformationFields, &fields); err != nil {
-		return clip.VideoTemplate{}, fmt.Errorf("stored information fields: %w", err)
-	}
-	if fields == nil || !clip.ValidAccent(r.Accent.String) || !clip.ValidCaptionPace(r.CaptionPace) {
-		return clip.VideoTemplate{}, errors.New("stored recipe must contain JSON arrays")
-	}
 	created, err := time.Parse(time.RFC3339Nano, r.CreatedAt)
 	if err != nil {
 		return clip.VideoTemplate{}, err
@@ -140,25 +123,11 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if err != nil {
 		return clip.VideoTemplate{}, err
 	}
-	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CutGuidance: r.CutGuidance, Accent: r.Accent.String, Preset: r.Preset, CaptionPace: r.CaptionPace}, CreatedAt: created, UpdatedAt: updated}
-	seen := make(map[string]bool, len(fields))
-	for _, f := range fields {
-		if (!r.CompositionBody.Valid || r.CompositionLegacy != 0) && (strings.TrimSpace(f.Label) == "" || strings.TrimSpace(f.Prompt) == "" || seen[f.Label]) {
-			return clip.VideoTemplate{}, errors.New("malformed stored information field")
-		}
-		seen[f.Label] = true
-		t.InformationFields = append(t.InformationFields, clip.InformationField{Label: f.Label, Prompt: f.Prompt})
-	}
-	t.CompositionBody = r.CompositionBody.String
-	t.CompositionLegacy = r.CompositionLegacy != 0 || !r.CompositionBody.Valid
 	if !r.CompositionBody.Valid {
-		t.CompositionBody = clip.LegacyCompositionBody(t.Recipe)
+		return clip.VideoTemplate{}, errors.New("stored template has no outline body")
 	}
-	limits := clip.DefaultCompositionLimits()
-	if t.CompositionLegacy {
-		limits = clip.LegacyCompositionLimits(limits)
-	}
-	if _, e := composition.ReadStored(t.CompositionBody, limits); e != nil {
+	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CompositionBody: r.CompositionBody.String}, CreatedAt: created, UpdatedAt: updated}
+	if _, e := composition.ReadStored(t.CompositionBody, clip.DefaultCompositionLimits()); e != nil {
 		return t, e
 	}
 	return t, nil
@@ -201,15 +170,7 @@ func (s *Store) ListTemplates(ctx context.Context, user string) ([]clip.VideoTem
 }
 func (s *Store) InsertTemplate(ctx context.Context, t clip.VideoTemplate) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		if e := q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, InformationFields: encodeFields(t.InformationFields), CutGuidance: t.CutGuidance, CopyStyles: "[]", Accent: nullable(t.Accent), Preset: t.Preset, CaptionPace: t.CaptionPace, CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)}); e != nil {
-			return struct{}{}, e
-		}
-		if t.CompositionBody != "" {
-			if e := affected(q.SaveTemplateComposition(ctx, sqlc.SaveTemplateCompositionParams{CompositionBody: nullable(t.CompositionBody), CompositionLegacy: disclosureFlag(t.CompositionLegacy), ID: t.ID, UserID: t.UserID})); e != nil {
-				return struct{}{}, e
-			}
-		}
-		return struct{}{}, nil
+		return struct{}{}, q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, CompositionBody: nullable(t.CompositionBody), CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)})
 	})
 	return err
 }
@@ -226,47 +187,12 @@ func (s *Store) UpdateTemplate(ctx context.Context, user, id string, p clip.Temp
 				return clip.VideoTemplate{}, err
 			}
 		}
-		if p.InformationFields != nil {
-			if err := affected(q.UpdateVideoTemplateInformationFields(ctx, sqlc.UpdateVideoTemplateInformationFieldsParams{InformationFields: encodeFields(*p.InformationFields), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
-		if p.CutGuidance != nil {
-			if err := affected(q.UpdateVideoTemplateCutGuidance(ctx, sqlc.UpdateVideoTemplateCutGuidanceParams{CutGuidance: *p.CutGuidance, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
-		if p.CaptionPace != nil {
-			if err := affected(q.UpdateVideoTemplateCaptionPace(ctx, sqlc.UpdateVideoTemplateCaptionPaceParams{CaptionPace: *p.CaptionPace, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
-		if p.Accent != nil {
-			if err := affected(q.UpdateVideoTemplateAccent(ctx, sqlc.UpdateVideoTemplateAccentParams{Accent: nullable(*p.Accent), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
-		if p.Preset != nil {
-			if err := affected(q.UpdateVideoTemplatePreset(ctx, sqlc.UpdateVideoTemplatePresetParams{Preset: *p.Preset, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
 		if p.CompositionBody != nil {
-			if e := affected(q.SaveTemplateComposition(ctx, sqlc.SaveTemplateCompositionParams{CompositionBody: nullable(*p.CompositionBody), CompositionLegacy: 0, ID: id, UserID: user})); e != nil {
+			if e := affected(q.SaveTemplateComposition(ctx, sqlc.SaveTemplateCompositionParams{CompositionBody: nullable(*p.CompositionBody), UpdatedAt: stamp(now), ID: id, UserID: user})); e != nil {
 				return clip.VideoTemplate{}, e
 			}
 		}
-		t, e := getTemplate(ctx, q, user, id)
-		if e != nil {
-			return t, e
-		}
-		if t.CompositionLegacy {
-			t.CompositionBody = clip.LegacyCompositionBody(t.Recipe)
-			if e = affected(q.SaveTemplateComposition(ctx, sqlc.SaveTemplateCompositionParams{CompositionBody: nullable(t.CompositionBody), CompositionLegacy: 1, ID: id, UserID: user})); e != nil {
-				return t, e
-			}
-		}
-		return t, nil
+		return getTemplate(ctx, q, user, id)
 	})
 }
 func (s *Store) DeleteTemplate(ctx context.Context, user, id string) (int, error) {
@@ -336,7 +262,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, CTA: r.Cta, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -366,13 +292,6 @@ func getProject(ctx context.Context, q *sqlc.Queries, user, id string) (clip.Pro
 	if err != nil {
 		return p, err
 	}
-	answers, err := q.ListClipAnswers(ctx, sqlc.ListClipAnswersParams{ProjectID: id, UserID: user})
-	if err != nil {
-		return p, err
-	}
-	for _, a := range answers {
-		p.Answers = append(p.Answers, clip.Answer{Label: a.Label, Text: a.Answer})
-	}
 	if err = hydrateComposition(ctx, q, &p); err != nil {
 		return p, err
 	}
@@ -396,20 +315,9 @@ func (s *Store) ListProjects(ctx context.Context, user string) ([]clip.Project, 
 	}
 	return out, nil
 }
-func saveAnswers(ctx context.Context, q *sqlc.Queries, user, id string, answers []clip.Answer, now time.Time) error {
-	for _, a := range answers {
-		if err := q.UpsertClipAnswer(ctx, sqlc.UpsertClipAnswerParams{ProjectID: id, UserID: user, Label: a.Label, Answer: a.Text, UpdatedAt: stamp(now)}); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
-		if err == nil {
-			err = saveAnswers(ctx, q, p.UserID, p.ID, p.Answers, p.UpdatedAt)
-		}
+		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
 		if err == nil {
 			err = saveComposition(ctx, q, p)
 		}
@@ -463,11 +371,6 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 				return clip.Project{}, err
 			}
 		}
-		if p.CTA != nil {
-			if err := affected(q.UpdateClipCTA(ctx, sqlc.UpdateClipCTAParams{Cta: *p.CTA, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.Project{}, err
-			}
-		}
 		if p.Instruction != nil {
 			if err := affected(q.UpdateClipInstruction(ctx, sqlc.UpdateClipInstructionParams{Instruction: *p.Instruction, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.Project{}, err
@@ -500,14 +403,6 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 				return clip.Project{}, err
 			}
 		}
-		if len(p.Answers) > 0 {
-			if err := saveAnswers(ctx, q, user, id, p.Answers, now); err != nil {
-				return clip.Project{}, err
-			}
-			if err := affected(q.TouchClip(ctx, sqlc.TouchClipParams{UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.Project{}, err
-			}
-		}
 		next, e := getProject(ctx, q, user, id)
 		if e != nil {
 			return next, e
@@ -519,14 +414,6 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 					return next, e
 				}
 			}
-		} else if next.Composition != nil && next.Composition.Snapshot.Legacy && (len(p.Answers) > 0 || p.Disclosure != nil || p.HideDisclosure != nil || p.CTA != nil) {
-			recipe := clip.Recipe{}
-			if before.Composition != nil && before.Composition.Snapshot.LegacyRecipe != nil {
-				recipe = *before.Composition.Snapshot.LegacyRecipe
-			}
-			c := clip.LegacyProjectComposition(next, recipe)
-			c.Snapshot.TemplateID = before.Composition.Snapshot.TemplateID
-			next.Composition = &c
 		}
 		if e = saveComposition(ctx, q, next); e != nil {
 			return next, e

@@ -137,7 +137,6 @@ type ClipProject struct {
 	UpdatedAt                string
 	Deleting                 int64
 	Disclosure               string
-	Cta                      string
 	HideDisclosure           int64
 	CompositionInputsJson    sql.NullString
 	CompositionSnapshotJson  sql.NullString
@@ -202,17 +201,10 @@ type ClipSourceLease struct {
 }
 
 type VideoTemplate struct {
-	ID                string
-	UserID            string
-	Name              string
-	InformationFields string
-	CutGuidance       string
-	CopyStyles        string
-	Accent            sql.NullString
-	CreatedAt         string
-	UpdatedAt         string
-	Preset            string
-	CaptionPace       string
-	CompositionBody   sql.NullString
-	CompositionLegacy int64
+	ID              string
+	UserID          string
+	Name            string
+	CreatedAt       string
+	UpdatedAt       string
+	CompositionBody sql.NullString
 }

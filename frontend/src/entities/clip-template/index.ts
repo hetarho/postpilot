@@ -7,19 +7,12 @@ export {
 export {
   CLIP_TEMPLATE_LIMITS,
   CLIP_ACCENTS,
-  CLIP_PRESETS_LIST,
   emptyClipRecipe,
   normalizeRecipe,
   recipeOf,
   validateClipRecipe,
 } from './model/types'
-export type {
-  ClipTemplate,
-  ClipRecipe,
-  InformationField,
-  ClipAccent,
-  FieldError,
-} from './model/types'
+export type { ClipTemplate, ClipRecipe, ClipAccent, FieldError } from './model/types'
 export { CompositionBuilder } from './ui/CompositionBuilder'
 export { CompositionPreview } from './ui/CompositionPreview'
 export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'

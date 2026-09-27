@@ -93,16 +93,13 @@ type PlanningInput struct {
 	Language         string
 	Composition      *ProjectComposition
 	Template         Recipe
-	Answers          []Answer
 	Ratio            string
 	TargetDurationMS int
 	Analyses         []SourceAnalysis
 	Policy           llm.CallPolicy
-	// The campaign type the badge shows and the closing CTA, already resolved
-	// against the template's preset, so the composer and the cards read one
-	// place (CDS-31). The preset itself rides Template.
-	Disclosure, CTA string
-	HideDisclosure  bool
+	// The campaign type the badge shows (CDS-31).
+	Disclosure     string
+	HideDisclosure bool
 	// The project's own instruction (CLIP-121), empty when none was written.
 	// On content it outranks the template's authored guidance; every declared
 	// structure stays the template's.

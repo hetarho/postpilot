@@ -35,8 +35,6 @@ export function browserAudioPlan(plan: ClipEditPlan) {
     .map((element) => textInterval(plan, element))
     .filter((window) => window.valid)
     .map((window) => ({ start: window.startMs / 1000, end: window.endMs / 1000 }))
-  if (!plan.nativeComposition && !plan.elements?.length && plan.hook.trim())
-    hooks.push({ start: 0, end: CLIP_DESIGN.timing.intro_default_s })
   hooks.sort((a, b) => a.start - b.start)
   const dip: { start: number; end: number }[] = []
   for (const window of hooks) {

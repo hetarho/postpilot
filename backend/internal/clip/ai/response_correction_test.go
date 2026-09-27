@@ -45,9 +45,9 @@ func TestIncompleteCoverageUsesTheReservedCorrectionAllowance(t *testing.T) {
 			case "status":
 				firstSegment(bad)["certainty"] = "probably"
 			}
-			_, base, sizer := newService(t, raw(observation()), true)
+			_, base := newService(t, raw(observation()), true)
 			models := &correctionModels{fakeModels: base, validAfter: 3, invalid: raw(bad)}
-			service, err := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
+			service, err := ai.New(models, ai.DefaultConfig(clip.Environment{}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -103,14 +103,14 @@ func TestReadableRuleBreaksNeverSpendCorrectionCalls(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			in, good := planningInput(), plan()
-			bad := plan()
+			in, good := planningInput(), flow()
+			bad := flow()
 			tc.break_(&in, bad)
-			_, base, sizer := newService(t, raw(good), true)
-			// The corrected attempt answers with the valid plan, so a working
+			_, base := newService(t, raw(good), true)
+			// The corrected attempt answers with the valid flow, so a working
 			// correction shows up as exactly two calls.
 			models := &correctionModels{fakeModels: base, validAfter: 2, invalid: raw(bad)}
-			service, err := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
+			service, err := ai.New(models, ai.DefaultConfig(clip.Environment{}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,7 +120,7 @@ func TestReadableRuleBreaksNeverSpendCorrectionCalls(t *testing.T) {
 				return nil
 			})
 			in.Policy.ResponseRetries = 3
-			delivered, _, err := service.Plan(ctx, testRef(), in)
+			delivered, _, err := service.Flow(ctx, testRef(), in)
 			if len(base.calls) != 1 || len(checks) != 0 {
 				t.Fatalf("readable plan consumed retries: calls=%d checks=%v", len(base.calls), checks)
 			}
@@ -140,7 +140,7 @@ func TestReadableRuleBreaksNeverSpendCorrectionCalls(t *testing.T) {
 func TestResponseCorrectionStopsOnCancellationProviderAndLegacyLimits(t *testing.T) {
 	for _, kind := range []string{"legacy", "cancel", "provider", "length", "authored", "unreported"} {
 		t.Run(kind, func(t *testing.T) {
-			_, base, sizer := newService(t, raw(observation()), true)
+			_, base := newService(t, raw(observation()), true)
 			models := &correctionModels{fakeModels: base, validAfter: 5, invalid: `{`}
 			if kind == "unreported" {
 				base.response.Usage.CostReported = false
@@ -151,7 +151,7 @@ func TestResponseCorrectionStopsOnCancellationProviderAndLegacyLimits(t *testing
 			if kind == "length" {
 				models.finish = "length"
 			}
-			service, _ := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
+			service, _ := ai.New(models, ai.DefaultConfig(clip.Environment{}))
 			ctx := t.Context()
 			if kind == "cancel" {
 				ctx = clip.WithResponseCorrectionObserver(ctx, func(int, int, clip.AttemptDiagnostic) error { return context.Canceled })

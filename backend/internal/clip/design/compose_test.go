@@ -73,20 +73,6 @@ func TestSelectAnchorFollowsCDS38(t *testing.T) {
 	}
 }
 
-// CDS-42's voice: no emoji, no ㅋㅋ or ㄹㅇ, no superlatives.
-func TestBannedVoice(t *testing.T) {
-	for _, text := range []string{"진짜 맛있어요 🙂", "ㅋㅋ 웃겼어요", "ㄹㅇ 맛집", "역대급 맛", "최고의 하루"} {
-		if !design.Banned(text) {
-			t.Fatalf("%q was accepted", text)
-		}
-	}
-	for _, text := range []string{"조용하고 아늑했어요", "9,900원", "서울 연남동 — 김밥", "O'Brien's 10:30"} {
-		if design.Banned(text) {
-			t.Fatalf("%q was refused", text)
-		}
-	}
-}
-
 // CDS-36: a hard cut is the default, a scene change earns a 200 ms fade and no
 // more than 40 % of the boundaries may take one — the earliest ones.
 func TestTransitionsFadeOnlyOnSceneChangeAndWithinTheRatio(t *testing.T) {
@@ -129,33 +115,17 @@ func TestTransitionsFadeOnlyOnSceneChangeAndWithinTheRatio(t *testing.T) {
 	}
 }
 
-// CDS-37 r3: the target range is the preset's own where the template names one,
-// the shared 1.2–6.0 s where it does not, and a food close-up is capped at
-// 4.0 s under every preset.
-func TestCutBoundsReadThePresetAndCapFood(t *testing.T) {
-	for _, scene := range []string{"scenery", "interior", "menu", "person", "unknown"} {
-		if minimum, maximum := design.CutBounds(scene, ""); minimum != 1200 || maximum != 6000 {
-			t.Fatalf("%s %d..%d", scene, minimum, maximum)
+// CDS-37: the target range is the shared 1.2–6.0 s for every scene, and a food
+// close-up is capped at 4.0 s. The range takes no template or category, so
+// nothing can impose one of its own.
+func TestCutBoundsAreSharedAndCapFood(t *testing.T) {
+	for _, scene := range []string{"scenery", "interior", "menu", "person", "unknown", ""} {
+		if minimum, maximum := design.CutBounds(scene); minimum != 1200 || maximum != 6000 {
+			t.Fatalf("%q %d..%d", scene, minimum, maximum)
 		}
 	}
-	if minimum, maximum := design.CutBounds("food", ""); minimum != 1200 || maximum != 4000 {
+	if minimum, maximum := design.CutBounds("food"); minimum != 1200 || maximum != 4000 {
 		t.Fatalf("food %d..%d", minimum, maximum)
-	}
-	for preset, want := range map[string][2]int{"restaurant": {2500, 4000}, "cafe": {4000, 6000}, "stay": {4000, 6000}, "beauty": {2000, 3000}, "home": {3000, 4000}} {
-		if minimum, maximum := design.CutBounds("interior", preset); minimum != want[0] || maximum != want[1] {
-			t.Fatalf("%s interior %d..%d, want %v", preset, minimum, maximum, want)
-		}
-		_, maximum := design.CutBounds("food", preset)
-		if maximum > 4000 {
-			t.Fatalf("%s food ceiling %d", preset, maximum)
-		}
-	}
-	// A preset whose floor sits above the food ceiling gives food a flat 4.0 s.
-	if minimum, maximum := design.CutBounds("food", "cafe"); minimum != 4000 || maximum != 4000 {
-		t.Fatalf("cafe food %d..%d", minimum, maximum)
-	}
-	if minimum, maximum := design.CutBounds("interior", "unknown-preset"); minimum != 1200 || maximum != 6000 {
-		t.Fatalf("unknown preset %d..%d", minimum, maximum)
 	}
 }
 

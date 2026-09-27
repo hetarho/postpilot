@@ -13,7 +13,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/clip/design"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
@@ -109,7 +108,6 @@ func actingUser(ctx context.Context) (string, error) {
 	return user, nil
 }
 func toConnectError(err error) error {
-	var facts *clip.MissingFactsError
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
 	var cut *clip.CutError
@@ -164,8 +162,6 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip disclosure is required", postpilotv1.FailureReason_CLIP_DISCLOSURE_REQUIRED, nil)
 	case errors.Is(err, clip.ErrTargetDurationRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", postpilotv1.FailureReason_CLIP_TARGET_DURATION_REQUIRED, nil)
-	case errors.As(err, &facts):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip needs more on-screen facts", postpilotv1.FailureReason_CLIP_FACTS_REQUIRED, map[string]string{"labels": strings.Join(facts.Labels, ", ")})
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", postpilotv1.FailureReason_CLIP_BUSY, nil)
 	case errors.Is(err, llm.ErrModelUnavailable):
@@ -195,13 +191,6 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeInternal, "clip operation failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
-func fields(values []*v1.ClipInformationField) []clip.InformationField {
-	out := make([]clip.InformationField, 0, len(values))
-	for _, v := range values {
-		out = append(out, clip.InformationField{Label: v.GetLabel(), Prompt: v.GetPrompt()})
-	}
-	return out
-}
 
 // captionStyles carries the wrapper's presence through: absent leaves the
 // selection as it is, and present-and-empty is a selection of none, which
@@ -216,26 +205,15 @@ func captionStyles(m *v1.ClipCaptionStyles) *[]string {
 	}
 	return &values
 }
-func answers(values []*v1.ClipAnswer) []clip.Answer {
-	out := make([]clip.Answer, 0, len(values))
-	for _, v := range values {
-		out = append(out, clip.Answer{Label: v.GetLabel(), Text: v.GetText()})
-	}
-	return out
-}
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	out := &v1.VideoTemplate{CompositionBody: t.CompositionBody, CompositionLegacy: t.CompositionLegacy, CompositionConverted: t.CompositionConverted, Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
-	for _, f := range t.InformationFields {
-		out.InformationFields = append(out.InformationFields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
-	}
-	return out
+	return &v1.VideoTemplate{CompositionBody: t.CompositionBody, Id: t.ID, Name: t.Name, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 }
 func projectProto(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
 	// The presets it renders in, so an empty stored id never reaches ① as
 	// "unchosen" and shows another look than the renderer draws (CLIP-111).
 	presets := p.DesignSelection().RegionPresets()
-	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: presets.Intro, OutroPreset: presets.Outro, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: presets.Intro, OutroPreset: presets.Outro, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	if p.EditPlan != "" {
 		if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
 			for _, n := range clip.ActivePlanNotices(plan, p.DesignSelection().RegionPresets()) {
@@ -248,9 +226,6 @@ func projectProto(p clip.Project) *v1.ClipProject {
 		out.FinalizedPlanRevision = int32(f.PlanRevision)
 		out.FinalizedResultId = f.ResultID
 		out.FinalizationRefusal = "finalized"
-	}
-	for _, a := range p.Answers {
-		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
 	// Verbatim, newest first, exactly as the store answered (CLIP-133).
 	for _, r := range p.Requests {
@@ -277,7 +252,7 @@ func (h *Handler) ListVideoTemplates(ctx context.Context, req *connect.Request[v
 	}
 	out := make([]*v1.VideoTemplate, 0, len(values))
 	for _, v := range values {
-		out = append(out, templateProto(h.service.TemplateProjection(v)))
+		out = append(out, templateProto(v))
 	}
 	return connect.NewResponse(&v1.ListVideoTemplatesResponse{Templates: out}), nil
 }
@@ -287,10 +262,12 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	if m.CompositionBody != nil && *m.CompositionBody == "" {
+	// A template is its outline: a request without a body has nothing to save
+	// and is refused rather than turned into a template of some other kind.
+	if strings.TrimSpace(m.CompositionBody) == "" {
 		return nil, toConnectError(&composition.Problem{ElementID: "clip", Line: 1, Reason: "root"})
 	}
-	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.GetCompositionBody(), Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CaptionPace: m.CaptionPace, Accent: m.Accent, Preset: m.Preset})
+	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.CompositionBody, Name: m.Name})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -302,12 +279,7 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.TemplatePatch{CompositionBody: m.CompositionBody, Name: m.Name, CutGuidance: m.CutGuidance, Accent: m.Accent, Preset: m.Preset}
-	if m.InformationFields != nil {
-		v := fields(m.InformationFields.Values)
-		p.InformationFields = &v
-	}
-	p.CaptionPace = m.CaptionPace
+	p := clip.TemplatePatch{CompositionBody: m.CompositionBody, Name: m.Name}
 	value, err := h.service.UpdateTemplate(ctx, user, m.Id, p)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -315,22 +287,6 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&v1.UpdateVideoTemplateResponse{Template: templateProto(value)}), nil
 }
 
-// SeedPresetFields answers with the reserved information fields a preset needs,
-// so the editor can seed them without the owner typing a Korean label exactly.
-// Pure and owner-independent, but authenticated like every other procedure.
-func (h *Handler) SeedPresetFields(ctx context.Context, req *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
-		return nil, err
-	}
-	if !clip.ValidPreset(req.Msg.Preset) {
-		return nil, toConnectError(clip.ErrInvalid)
-	}
-	out := &v1.SeedPresetFieldsResponse{}
-	for _, f := range design.PresetFields(req.Msg.Preset) {
-		out.Fields = append(out.Fields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
-	}
-	return connect.NewResponse(out), nil
-}
 func (h *Handler) DeleteVideoTemplate(ctx context.Context, req *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error) {
 	user, err := actingUser(ctx)
 	if err != nil {
@@ -380,7 +336,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Answers: answers(m.Answers)})
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -457,7 +413,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Answers: answers(m.Answers)}
+	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)}
 	if m.TargetDurationMs != nil {
 		v := int(*m.TargetDurationMs)
 		p.TargetDurationMS = &v

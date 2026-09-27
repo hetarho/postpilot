@@ -17,9 +17,6 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 		return nil
 	}
 	limits := r.cfg.Composition
-	if in.Composition.Snapshot.Legacy {
-		limits = clip.LegacyCompositionLimits(limits)
-	}
 	doc, problem := composition.Parse(in.Composition.Snapshot.Body, limits)
 	if problem != nil {
 		return problem

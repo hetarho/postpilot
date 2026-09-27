@@ -22,7 +22,6 @@ func requests(t *testing.T, h *generationHarness) []clip.ProjectRequest {
 // instruction typed and never used leaves no trace of having been asked for.
 func TestEveryAcceptedRequestIsKeptAndNoSaveWritesOne(t *testing.T) {
 	h := generationSetup(t)
-	h.planner.portableFlow = true
 	written := "  고기 굽는 소리를 살려 주세요.  "
 	if _, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{Instruction: &written}); err != nil {
 		t.Fatal(err)

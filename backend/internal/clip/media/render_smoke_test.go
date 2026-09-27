@@ -99,7 +99,7 @@ func TestRenderSmoke(t *testing.T) {
 			t.Fatal("variable font weight was ignored")
 		}
 		canvas, _ := clip.ClipCanvas("vertical")
-		copy := clip.Copy{Text: "한글 여행", Style: "clean", Anchor: "bottom", Align: "center"}
+		copy := clip.Copy{Text: "한글 여행", Style: "bold", Anchor: "bottom", Align: "center"}
 		layout, err := r.layoutCopy(t.Context(), ws, canvas, copy)
 		if err != nil {
 			return err
@@ -263,20 +263,11 @@ func TestRenderSmoke(t *testing.T) {
 				// The second cut joins with a hard cut and the third fades, so
 				// one render exercises both boundaries CDS-36 admits and the
 				// audio has to stay locked to the picture across each of them.
-				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Facts: []clip.Answer{
-					{Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
-				}, Cuts: []clip.EditCut{
-					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}}},
-					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
+				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
+					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "bold", Anchor: "bottom", Align: "center", Accent: "coral"}}},
+					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "bold", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
 					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}}},
 				}}
-				if variant != "vertical" && variant != "horizontal" && variant != "square" {
-					// One cut, no cards: these variants are about timing and
-					// rounding, and a card over the only cut would cover the
-					// copy they measure.
-					plan.Hook, plan.Facts = "", nil
-					plan.Disclosure = "ad"
-				}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
 					plan.DurationMS = 15017
 					if variant == "silent-rounded" {
@@ -292,8 +283,7 @@ func TestRenderSmoke(t *testing.T) {
 					// bright ground and the scrim has to reach the pixels.
 					plan.Cuts = plan.Cuts[:1]
 					plan.Cuts[0].EndMS = 15000
-					plan.Cuts[0].Copies = []clip.Copy{{Text: "가격 9900원", Keyword: "9900원", Style: "mark", Anchor: "bottom", Align: "center", Accent: "amber"}}
-					plan.Cuts[0].Chips = nil
+					plan.Cuts[0].Copies = []clip.Copy{{Text: "가격 9900원", Keyword: "9900원", Style: "bold", Anchor: "bottom", Align: "center", Accent: "amber"}}
 				}
 				if variant == "caption-timed" {
 					plan.Cuts = plan.Cuts[:1]

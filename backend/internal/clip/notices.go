@@ -93,17 +93,11 @@ func sameNoticeCut(a, b Cut) bool {
 func trackNoticeCutEdits(old EditPlan, next *EditPlan) {
 	next.Notices = slices.Clone(old.Notices)
 	next.NoticeCutRevisions = maps.Clone(old.NoticeCutRevisions)
-	if old.Hook != next.Hook {
-		if next.NoticeCutRevisions == nil {
-			next.NoticeCutRevisions = map[string]int{}
-		}
-		next.NoticeCutRevisions[noticeRevisionKey("", "hook")]++
-	}
 	for i, prior := range old.Cuts {
 		index := slices.IndexFunc(next.Cuts, func(c Cut) bool { return c.ID == prior.ID })
 		changed := index < 0 || index != i || !sameNoticeCut(prior, next.Cuts[index])
 		if !changed && old.Portable == nil {
-			changed = !reflect.DeepEqual(prior.Copies, next.Cuts[index].Copies) || !slices.Equal(prior.Chips, next.Cuts[index].Chips)
+			changed = !reflect.DeepEqual(prior.Copies, next.Cuts[index].Copies)
 		}
 		if changed {
 			if next.NoticeCutRevisions == nil {

@@ -18,11 +18,7 @@ func nativeHistoryFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 		t.Fatal(err)
 	}
 	plan.Cuts[0].EndMS, plan.Cuts[1].EndMS, plan.DurationMS = 20000, 20000, 39800
-	plan.Portable, err = clip.FreezeLegacyPlan(p, plan, clip.Recipe{}, clip.DefaultCompositionLimits())
-	if err != nil {
-		t.Fatal(err)
-	}
-	plan.Portable.NativeEditing = true
+	plan.Portable = nativePortable(plan)
 	p.EditPlan, err = clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
@@ -116,24 +112,5 @@ func TestAssociationCorrectionPreservesObservationsAndFactsUntilOwnerReviews(t *
 	}
 	if p.Analysis != string(raw) {
 		t.Fatal("changed raw observations")
-	}
-}
-
-func TestNativeCorrectionDoesNotEnableTheLegacyEditingMarker(t *testing.T) {
-	p, plan := nativeHistoryFixture(t)
-	plan.Portable.Snapshot.Legacy, plan.Portable.NativeEditing = false, false
-	p.EditPlan, _ = clip.EncodeEditPlan(plan)
-	draft := clip.CorrectionFromPlan(plan)
-	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if next.Portable.NativeEditing {
-		t.Fatal("native correction acquired an unnecessary legacy marker")
-	}
-	p.EditPlan, _ = clip.EncodeEditPlan(next)
-	again, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, clip.CorrectionFromPlan(next))
-	if err != nil || !reflect.DeepEqual(next, again) {
-		t.Fatal("unchanged correction is not idempotent", err)
 	}
 }

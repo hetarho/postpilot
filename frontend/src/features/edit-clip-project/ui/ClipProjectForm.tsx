@@ -90,22 +90,15 @@ export function ClipProjectForm({
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
   const bodyFor = (next: ClipProjectDraft) => {
     const template = templates.templates.find((v) => v.id === next.videoTemplateId)
-    if (template?.compositionBody && !template.compositionLegacy) return template.compositionBody
+    if (template?.compositionBody) return template.compositionBody
     return stored?.videoTemplateId === next.videoTemplateId
       ? stored.composition?.snapshot.body
       : template?.compositionBody
   }
   const document = projectCompositionDocument(bodyFor(draft))
-  // A CONVERTED body is not an edit the owner made. A template still written under the old
-  // grammar comes back rewritten into the current one, flagged, while the STORED body waits for
-  // the owner's own save (CLIP-140) — and a project freezes that stored body. Comparing the two
-  // reports a change nobody made, and the offer could never clear it: applying it freezes the
-  // stored body again, so 최신 템플릿 적용 stayed on screen and ① kept refusing footage.
   const templateChanged =
     !!stored?.composition &&
     selected?.id === stored.videoTemplateId &&
-    !selected.compositionLegacy &&
-    !selected.compositionConverted &&
     selected.compositionBody !== stored.composition.snapshot.body
   const inputs = document
     ? matchingCompositionInputs(document, draft.compositionInputs ?? emptyCompositionInputs())
@@ -113,9 +106,7 @@ export function ClipProjectForm({
   // `/clips/new` mints from the title, the template and the ratio; every other setting is
   // written in ① beside the sources it describes (CLIP-130).
   const creating = !stored
-  const valid = creating
-    ? validNewClipProject(draft)
-    : validClipProject(draft, selected?.informationFields, document)
+  const valid = creating ? validNewClipProject(draft) : validClipProject(draft, document)
   const savable = savableClipProject(draft)
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
   const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
@@ -166,7 +157,7 @@ export function ClipProjectForm({
       // nothing about how it looks: the design selection is the project's own
       // and a template carries none of it (CLIP-14, CLIP-139).
       key === 'videoTemplateId' && value !== draft.videoTemplateId
-        ? { [key]: value, answers: [], compositionInputs: emptyCompositionInputs() }
+        ? { [key]: value, compositionInputs: emptyCompositionInputs() }
         : { [key]: value },
     )
   const failure = save.error
@@ -255,36 +246,29 @@ export function ClipProjectForm({
               <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
             )}
           </div>
-          {stored &&
-            (!stored.composition || stored.composition.snapshot.legacy) &&
-            stored.disclosure && (
-              <section className="space-y-3">
-                <Typography variant="body">
-                  {t('composition.retainedDisclosure', {
-                    text: t(`disclosure.${stored.disclosure}`),
-                  })}
-                </Typography>
-                <label className="flex min-h-11 items-center gap-3">
-                  <Checkbox
-                    checked={!draft.hideDisclosure}
-                    onChange={(e) => change('hideDisclosure', !e.target.checked)}
-                  />
-                  {t('project.showDisclosure')}
-                </label>
-              </section>
-            )}
+          {stored && !stored.composition && stored.disclosure && (
+            <section className="space-y-3">
+              <Typography variant="body">
+                {t('composition.retainedDisclosure', {
+                  text: t(`disclosure.${stored.disclosure}`),
+                })}
+              </Typography>
+              <label className="flex min-h-11 items-center gap-3">
+                <Checkbox
+                  checked={!draft.hideDisclosure}
+                  onChange={(e) => change('hideDisclosure', !e.target.checked)}
+                />
+                {t('project.showDisclosure')}
+              </label>
+            </section>
+          )}
           {templateChanged && (
             <section className="space-y-3">
               <Typography variant="body">{t('composition.templateChanged')}</Typography>
               <Button
                 variant="ghost"
                 disabled={
-                  !document ||
-                  !validClipProject(
-                    { ...draft, compositionInputs: inputs },
-                    selected?.informationFields,
-                    document,
-                  )
+                  !document || !validClipProject({ ...draft, compositionInputs: inputs }, document)
                 }
                 onClick={() => change('compositionInputs', inputs)}
               >
@@ -304,36 +288,6 @@ export function ClipProjectForm({
               onChange={(inputs) => change('compositionInputs', inputs)}
             />
           )}
-          {!creating &&
-            !document &&
-            selected?.informationFields.map((field, index) => {
-              const answer = draft.answers.find((a) => a.label === field.label)?.text ?? ''
-              const invalid =
-                !answer.trim() || Array.from(answer).length > CLIP_PROJECT_LIMITS.answer
-              return (
-                <div key={field.label}>
-                  <FieldLabel htmlFor={`clip-answer-${index}`}>{field.label}</FieldLabel>
-                  <Typography variant="body" className="text-content-secondary mb-2 break-words">
-                    {field.prompt}
-                  </Typography>
-                  <Textarea
-                    id={`clip-answer-${index}`}
-                    inputMode="text"
-                    {...INPUT}
-                    autoGrow
-                    value={answer}
-                    aria-invalid={invalid}
-                    onChange={(event) =>
-                      change('answers', [
-                        ...draft.answers.filter((a) => a.label !== field.label),
-                        { label: field.label, text: event.target.value },
-                      ])
-                    }
-                  />
-                  {invalid && <FieldMessage>{t('project.answerLimit')}</FieldMessage>}
-                </div>
-              )
-            })}
           {/* The owner's own instruction sits with the answers it accompanies
               and is optional; an empty one is indistinguishable from never
               having written one (CLIP-121). */}

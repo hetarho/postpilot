@@ -41,26 +41,11 @@ func TestRapidPhraseTimingAndLosslessFallback(t *testing.T) {
 	if got := clip.RapidPhrases(long); strings.Join(got, "") != long || len(got) != 3 {
 		t.Fatal(got)
 	}
-	canvas, _ := clip.ClipCanvas("vertical")
-	fit := func(clip.Caption) (clip.Region, bool, error) {
-		return clip.Region{X: 100, Y: 1270, Width: 400, Height: 100}, true, nil
-	}
-	cut := clip.Cut{ID: "one", EndMS: 1540, Focal: clip.Point{X: .5, Y: .5}}
-	got, _, err := clip.Compose(canvas, cut, clip.Written{Text: seed.Text, Pace: "rapid"}, "food", false, clip.Region{}, nil, "", "", 1540, fit)
-	if err != nil || !reflect.DeepEqual(got.Copies, copies) {
-		t.Fatal(got, err)
-	}
-	// No room for every phrase: the existing short grounded wording is used.
-	cut.EndMS = 740
-	got, _, err = clip.Compose(canvas, cut, clip.Written{Text: seed.Text, ShortText: "오늘은", Pace: "rapid"}, "food", false, clip.Region{}, nil, "", "", 740, fit)
-	if err != nil || len(got.Copies) != 1 || got.FirstCopy().Text != "오늘은" || !got.Rapid() {
-		t.Fatal(got, err)
-	}
 }
 
 func TestRapidCorrectionRoundtripAndBoundaries(t *testing.T) {
 	p, draft := correctionFixture(t)
-	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "clean", Anchor: "bottom", Align: "center"}, 120, 1420)
+	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "bold", Anchor: "bottom", Align: "center"}, 120, 1420)
 	draft.Cuts[0].Copies = copies
 	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	next, err := clip.ApplyCorrection(cfg, p, draft)

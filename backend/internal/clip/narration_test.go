@@ -25,7 +25,6 @@ func narrationFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved.Portable.NativeEditing = true
 	return p, saved
 }
 

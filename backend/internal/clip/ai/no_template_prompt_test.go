@@ -57,7 +57,7 @@ func TestNoTemplateAddsNoBytesToTheNarrationCall(t *testing.T) {
 	// The flow is written from the same settings, so the narration reads a flow
 	// that was itself produced without a template.
 	planning := noTemplateInput(flowInput())
-	s, _, _ := newService(t, defaultFlow(), true)
+	s, _ := newService(t, defaultFlow(), true)
 	flow, _, err := s.Flow(t.Context(), testRef(), planning)
 	if err != nil {
 		t.Fatal(err)

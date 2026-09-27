@@ -2,8 +2,6 @@ package design
 
 import (
 	"slices"
-	"strings"
-	"unicode"
 )
 
 // Scene identifiers describe observed footage independently of typography.
@@ -145,22 +143,6 @@ func collides(plate Bounds, placed []Element) bool {
 	return false
 }
 
-// Banned reports whether the copy uses a voice CDS-42 refuses: emoji, ㅋㅋ, ㄹㅇ
-// or a superlative.
-func Banned(text string) bool {
-	for _, token := range Voice.Banned {
-		if strings.Contains(text, token) {
-			return true
-		}
-	}
-	for _, r := range text {
-		if r > 0x2000 && !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsPunct(r) && !unicode.IsSpace(r) {
-			return true
-		}
-	}
-	return false
-}
-
 // Transitions is CDS-36's whole rule, and the only place a transition is
 // chosen: a hard cut joins two cuts of the same scene, a 200 ms fade joins two
 // that differ, and at most 40 % of the boundaries may fade. The value at index i
@@ -187,16 +169,13 @@ func Transitions(scenes []string) []int {
 	return out
 }
 
-// CutBounds is CDS-37's TARGET range for one cut, in milliseconds: the template
-// preset's own range where it names one, the shared 1.2–6.0 s where it
-// does not, and a food close-up capped at 4.0 s either way. These are editing
-// rhythm, not correctness: the compiler aims at them wherever the approved
-// timeline still allows and never refuses a plan for missing them (r3).
-func CutBounds(scene, preset string) (int, int) {
+// CutBounds is CDS-37's TARGET range for one cut, in milliseconds: the shared
+// 1.2–6.0 s, with a food close-up capped at 4.0 s. No template or category
+// imposes a range of its own. These are editing rhythm, not correctness: the
+// compiler aims at them wherever the approved timeline still allows and never
+// refuses a plan for missing them (r3).
+func CutBounds(scene string) (int, int) {
 	minimum, maximum := Timing.CutMinS, Timing.CutMaxS
-	if p, ok := Presets[preset]; ok && p.CutMinS > 0 && p.CutMaxS > 0 {
-		minimum, maximum = p.CutMinS, p.CutMaxS
-	}
 	if Scene(scene) == "food" {
 		maximum = min(maximum, Timing.CutMaxFoodS)
 	}

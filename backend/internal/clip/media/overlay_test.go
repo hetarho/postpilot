@@ -106,7 +106,7 @@ func TestRendererUsesNewPresetFromFilesWithoutAnotherStyleSwitch(t *testing.T) {
 	// A bad edit after boot must not alter an already running catalog.
 	write("editorial/overlay.svg", "invalid")
 	canvas, _ := clip.ClipCanvas("vertical")
-	copy := clip.Copy{Text: `한글 & <여행>`, Style: "clean", Anchor: "bottom", Align: "center"}
+	copy := clip.Copy{Text: `한글 & <여행>`, Style: "bold", Anchor: "bottom", Align: "center"}
 	l, err := fitCopy(canvas, copy, [][]string{{copy.Text}}, map[string]clip.Region{copy.Text: {X: 1, Y: -80, Width: 500, Height: 100}})
 	if err != nil {
 		t.Fatal(err)

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -731,6 +732,22 @@ func releaseCorrelation(a, b []byte) float64 {
 // No customer XML, facts or footage are committed.
 // The one caption every release fixture writes over its footage.
 const releaseCaption = "천천히 흐르는 장면"
+
+// releaseBody is the outline the ordinary release modes write against: three
+// required values, an intro and an outro that read them, and — for the
+// multi-source modes — the guidance a template may carry (CLIP-4).
+func releaseBody(guide string) string {
+	body := `<clip version="1"><field id="name" label="상호" required="true">가게 이름</field><field id="where" label="위치" required="true">어디</field><field id="place" label="place" required="true">where</field>`
+	if guide != "" {
+		body += `<guide>` + guide + `</guide>`
+	}
+	return body + `<text id="opening" kind="fixed" role="hook"><row><value field="name"/></row></text><text id="closing" kind="fixed" role="ending"><row><value field="name"/></row><row><value field="where"/></row></text></clip>`
+}
+
+// releaseValues answers releaseBody's three required values.
+func releaseValues() *clip.CompositionInputs {
+	return &clip.CompositionInputs{Values: map[string]string{"name": "연남 김밥", "where": "서울 연남동", "place": "fixture"}, Items: map[string][]composition.Item{}}
+}
 
 func releaseDetailedBody() string {
 	return `<clip version="1"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header">검증용 영상</text><text id="opening" kind="fixed" role="hook"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`

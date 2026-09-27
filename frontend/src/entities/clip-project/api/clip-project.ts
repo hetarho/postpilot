@@ -70,10 +70,9 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     ratio: value.ratio as ClipRatio,
     targetDurationMs: value.targetDurationMs,
     // An empty campaign type is a clip still being set up; generation refuses
-    // one (CDS-5). An empty CTA means the template preset's.
+    // one (CDS-5).
     disclosure: value.disclosure as ClipProject['disclosure'],
     hideDisclosure: value.hideDisclosure,
-    cta: value.cta as ClipProject['cta'],
     instruction: value.instruction,
     // Empty is "not chosen": the clip renders with what its template said.
     captionPace: value.captionPace as ClipProject['captionPace'],
@@ -81,7 +80,6 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     introPreset: value.introPreset as ClipProject['introPreset'],
     outroPreset: value.outroPreset as ClipProject['outroPreset'],
     allowedCaptionStyles: [...value.allowedCaptionStyles],
-    answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     // Verbatim and in the order the server answered — newest first. A kind this
     // build does not know is dropped rather than shown as an unlabelled entry.
     requests: value.requests

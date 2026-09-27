@@ -50,8 +50,6 @@ export const i18n = {
       copyGuide: '형식 안내 복사',
       copied: '복사했어요',
       copyManually: '텍스트를 선택해서 복사해 주세요.',
-      converted:
-        '이전 템플릿의 내용이 편집 가능한 구성으로 변환되어 있어요. 저장하기 전까지 기존 내용은 유지돼요.',
       unavailable:
         '서버에서 아직 이 영상 구성의 생성을 지원하지 않아요. 템플릿은 저장할 수 있어요.',
       invalid: '{{line}}번째 줄 · {{element}} 항목을 확인해 주세요.',
@@ -173,8 +171,6 @@ export const i18n = {
       },
       projectSettings:
         '자막 속도와 강조색은 클립을 만들 때 프로젝트마다 고릅니다. 템플릿은 모든 클립에 반드시 들어갈 것만 담아요.',
-      sectionsMoved:
-        '이 템플릿에 있던 장면 구성은 구성 안내로 옮겼어요. 장면 순서와 자막은 이제 클립의 지침이 정해요. 저장하면 옮긴 내용이 반영돼요.',
       add: {
         field: '정보 추가',
         group: '항목 묶음 추가',
@@ -279,8 +275,6 @@ export const i18n = {
       copyGuide: 'Copy format guide',
       copied: 'Copied',
       copyManually: 'Select the text and copy it manually.',
-      converted:
-        'Previous template content is represented as editable composition. Nothing changes until you save.',
       unavailable:
         'This server does not yet support generating this composition. You can still save the template.',
       invalid: 'Check line {{line}}, element {{element}}.',
@@ -401,8 +395,6 @@ export const i18n = {
       },
       projectSettings:
         'Caption pace and the accent are chosen per project when a clip is made. A template holds only what every clip must carry.',
-      sectionsMoved:
-        "This template's scenes were moved into its guide. Footage order and captions now come from the clip instruction. Saving keeps the moved text.",
       add: {
         field: 'Add field',
         group: 'Add item group',

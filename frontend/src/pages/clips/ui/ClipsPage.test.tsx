@@ -8,11 +8,7 @@ import { POLL_INTERVAL_MS } from '@/shared/config'
 const template: FakeClipTemplate = {
   id: 'template',
   name: '여행',
-  informationFields: [],
-  cutGuidance: '',
-
-  accent: '',
-  preset: 'restaurant',
+  compositionBody: '<clip version="1"/>',
 }
 const result = {
   id: 'result',
@@ -26,8 +22,6 @@ const base = {
   ratio: 'vertical' as const,
   targetDurationMs: 15000,
   disclosure: 'ad' as const,
-  cta: '' as const,
-  answers: [],
 }
 const running: FakeGenerationJobRow = {
   id: 'running-job',

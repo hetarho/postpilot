@@ -30,7 +30,7 @@ func (layoutRenderer) LayoutComposition(_ context.Context, p clip.EditPlan, _ []
 // The whole path an editor uses: one optimistic full-plan save that adds
 // footage, splits a cut and reorders, through the existing revision check.
 func TestOwnerCutCreationRidesTheExistingOptimisticSave(t *testing.T) {
-	h, _, _ := completedClip(t)
+	h, _, _ := completedNativeClip(t)
 	ctx := context.Background()
 	// The editor only exists where planning and rendering both understand the
 	// current plan, so the fixture's executors advertise that capability.

@@ -25,7 +25,6 @@ type CorrectionCut struct {
 	// One copy, or CDS-43's two in sequence. The owner may add and remove the
 	// second one on step ②, which is why it is a list here too.
 	Copies         []Caption
-	Chips          []string
 	VolumePermille int
 	Focal          *Point
 	// The cut's ONE fixed playback rate, as permille (CLIP-98). Zero is a draft
@@ -46,10 +45,6 @@ type CorrectionPlan struct {
 	Elements          []CorrectionText
 	DurationMS        int
 	Cuts              []CorrectionCut
-	// A legacy plan's opening sentence, the first line of its intro block
-	// (CDS-70). Part of the approved composition, so
-	// unlike the disclosure and the facts it IS stored with the plan.
-	Hook string
 }
 type CorrectionState struct {
 	Plan                                                        CorrectionPlan
@@ -72,48 +67,12 @@ type legacyCorrectionCut struct {
 	StartMS, EndMS            int
 	TransitionMS              int
 	Copy                      Caption
-	Chips                     []string
 	VolumePermille            int
-}
-
-// The whole plan T076 stored, whose cuts also carried one copy each.
-type legacyEditPlan struct {
-	Ratio       string
-	DurationMS  int
-	Cuts        []legacyEditCut
-	Disclosure  string
-	Facts       []Answer
-	Preset      string
-	Hook        string
-	CTA, Accent string
-	Written     []Written
-	Decisions   []Composition
-}
-type legacyEditCut struct {
-	ID, SourceID, Fingerprint string
-	StartMS, EndMS            int
-	TransitionMS              int
-	Focal                     Point
-	Copy                      Copy
-	Chips                     []string
-	Volume                    *float64
-}
-
-func (p legacyEditPlan) upgrade() EditPlan {
-	out := EditPlan{Ratio: p.Ratio, DurationMS: p.DurationMS, Disclosure: p.Disclosure, Facts: p.Facts,
-		Preset: p.Preset, Hook: p.Hook, CTA: p.CTA, Accent: p.Accent, Written: p.Written, Decisions: p.Decisions}
-	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint,
-			StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: c.Focal,
-			Copies: []Copy{c.Copy}, Chips: c.Chips, Volume: c.Volume})
-	}
-	return out
 }
 
 type legacyCorrectionPlan struct {
 	DurationMS int
 	Cuts       []legacyCorrectionCut
-	Hook       string
 }
 type legacyStoredEditPlan struct {
 	Version    int
@@ -124,11 +83,11 @@ type legacyStoredEditPlan struct {
 }
 
 func (p legacyCorrectionPlan) upgrade() CorrectionPlan {
-	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook}
+	out := CorrectionPlan{DurationMS: p.DurationMS}
 	for _, c := range p.Cuts {
 		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint,
 			StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS,
-			Copies: []Caption{c.Copy}, Chips: c.Chips, VolumePermille: c.VolumePermille})
+			Copies: []Caption{c.Copy}, VolumePermille: c.VolumePermille})
 	}
 	return out
 }
@@ -140,19 +99,17 @@ type storedCorrectionCut struct {
 	StartMS, EndMS            int
 	TransitionMS              int
 	Copies                    []Caption
-	Chips                     []string
 	VolumePermille            int
 }
 type storedCorrectionPlan struct {
 	DurationMS int
 	Cuts       []storedCorrectionCut
-	Hook       string
 }
 
 func storedCorrection(p CorrectionPlan) storedCorrectionPlan {
-	out := storedCorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook}
+	out := storedCorrectionPlan{DurationMS: p.DurationMS}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, storedCorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, c.VolumePermille})
+		out.Cuts = append(out.Cuts, storedCorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.VolumePermille})
 	}
 	return out
 }
@@ -166,9 +123,9 @@ type storedEditPlan struct {
 }
 
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
-	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
+	out := CorrectionPlan{DurationMS: p.DurationMS, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), Chips: slices.Clone(c.Chips), VolumePermille: int(math.Round(c.OriginalVolume() * 1000)), PlaybackRatePermille: c.Rate()})
+		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), VolumePermille: int(math.Round(c.OriginalVolume() * 1000)), PlaybackRatePermille: c.Rate()})
 	}
 	for i, c := range p.Cuts {
 		focal := c.Focal
@@ -177,7 +134,7 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	if p.SourceAudio != nil {
 		out.SourceAudio = slices.Clone(p.SourceAudio.Values)
 	}
-	if p.Portable != nil && (!p.Portable.Snapshot.Legacy || p.Portable.NativeEditing) {
+	if p.Portable != nil {
 		out.NativeComposition = true
 		associations := slices.Clone(p.Portable.Inputs.Associations)
 		out.Associations = &associations
@@ -252,38 +209,6 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 		return decodePortablePlan(raw)
 	}
 	raw = migrateStoredPlan(raw)
-	if marker.Version == 0 {
-		// T076's original representation. Do not invent template permissions lost in
-		// that format: only styles already present in the retained plan are approved.
-		var legacy legacyEditPlan
-		if err := StrictJSON(raw, &legacy); err != nil {
-			return EditPlan{}, err
-		}
-		p := legacy.upgrade()
-		if len(p.Cuts) == 0 || p.DurationMS <= 0 {
-			return EditPlan{}, ErrInvalid
-		}
-		if _, err := ClipCanvas(p.Ratio); err != nil {
-			return EditPlan{}, err
-		}
-		// T076 predates CDS-36 too: every boundary was a fade, and the stored
-		// duration only adds up if it is read back as one.
-		for i := range p.Cuts {
-			if i > 0 {
-				p.Cuts[i].TransitionMS = design.Transition.FadeMS
-			}
-		}
-		styles := []string{}
-		for _, c := range p.Cuts {
-			for _, copy := range c.Copies {
-				if !slices.Contains(styles, copy.Style) {
-					styles = append(styles, copy.Style)
-				}
-			}
-		}
-		upgradeLegacyAssembly(&p)
-		return p, nil
-	}
 	var s storedEditPlan
 	if marker.Version < 3 {
 		var legacy legacyStoredEditPlan
@@ -310,14 +235,14 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 	if _, err := ClipCanvas(s.Ratio); err != nil {
 		return EditPlan{}, err
 	}
-	p := EditPlan{Ratio: s.Ratio, DurationMS: s.Plan.DurationMS, Hook: s.Plan.Hook}
+	p := EditPlan{Ratio: s.Ratio, DurationMS: s.Plan.DurationMS}
 	for _, c := range s.Plan.Cuts {
 		f, ok := s.Focals[c.ID]
 		if !ok || c.VolumePermille < 0 || c.VolumePermille > 1000 {
 			return EditPlan{}, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copies: c.Copies, Chips: c.Chips, Volume: &v})
+		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copies: c.Copies, Volume: &v})
 	}
 	upgradeLegacyAssembly(&p)
 	return p, nil
@@ -347,24 +272,12 @@ func RetainedSources(p Project) ([]AnalysisSource, error) {
 	return sources, nil
 }
 func EditingState(p Project, cfg RenderConfig) (*CorrectionState, error) {
-	return EditingStateOf(p, cfg, false)
-}
-func EditingStateOf(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionState, error) {
 	if p.EditPlan == "" {
 		return nil, nil
 	}
 	plan, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		return nil, err
-	}
-	if exposeNative && plan.Portable == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-		plan.Portable, err = FreezeLegacyPlan(p, plan, *p.Composition.Snapshot.LegacyRecipe, cfg.Composition)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if exposeNative && plan.Portable != nil {
-		plan.Portable.NativeEditing = true
 	}
 	sources, err := RetainedSources(p)
 	if err != nil {
@@ -384,17 +297,11 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	if err != nil {
 		return EditPlan{}, err
 	}
-	if input.NativeComposition && old.Portable == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-		old.Portable, err = FreezeLegacyPlan(p, old, *p.Composition.Snapshot.LegacyRecipe, cfg.Composition)
-		if err != nil {
-			return EditPlan{}, err
-		}
-	}
 	sources, err := RetainedSources(p)
 	if err != nil {
 		return EditPlan{}, err
 	}
-	if old.Portable != nil && (input.NativeComposition || old.Portable.NativeEditing || !old.Portable.Snapshot.Legacy) {
+	if old.Portable != nil {
 		return applyNativeCorrection(cfg, p, old, sources, input)
 	}
 	if input.NativeComposition || len(input.Elements) != 0 {
@@ -404,15 +311,9 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	for _, c := range old.Cuts {
 		known[c.ID] = c
 	}
-	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, Hook: strings.TrimSpace(input.Hook), SourceAudio: old.SourceAudio}
+	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, SourceAudio: old.SourceAudio}
 	if err := matchOwnerAudio(old, input); err != nil {
 		return EditPlan{}, err
-	}
-	// The hook is the one text on a corrected plan the owner wrote for the clip
-	// rather than for a cut, so it answers to CDS-42 here: it may only state
-	// numbers and names the owner's own answers already carry.
-	if !Grounded(next.Hook, p.Answers) {
-		return EditPlan{}, planViolation("plan_hook")
 	}
 	for _, c := range input.Cuts {
 		prior, ok := known[c.ID]
@@ -426,7 +327,7 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 			return EditPlan{}, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copies, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, &v
+		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copies, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copies, &v
 		// Per-cut volume is a gain, never a permission: it cannot turn a source's
 		// original sound on, and the rate cannot change it either (CLIP-18).
 		prior.PlaybackRatePermille = c.Rate()

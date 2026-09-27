@@ -1,68 +1,22 @@
 package ai_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/ai"
-	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// Recorded synthetic model responses are replayed without network or payment.
-// This is not a reproduction of the owner's unavailable failed response.
-func TestRecordedMultiSourcePlans(t *testing.T) {
-	data, err := os.ReadFile("testdata/multi-source.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var fixture struct {
-		Input     clip.PlanningInput
-		Responses []llm.Response
-	}
-	if err := json.Unmarshal(data, &fixture); err != nil {
-		t.Fatal(err)
-	}
-	if len(fixture.Input.Analyses) != 8 || len(fixture.Responses) != 2 {
-		t.Fatal("incomplete recorded multi-source evidence")
-	}
-	fixture.Input.Policy = testPolicy("write")
-	for i, response := range fixture.Responses {
-		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			response.Text = currentRecordedPlan(t, response.Text)
-			s, models, captions := newService(t, response.Text, true)
-			models.response = response
-			got, usage, err := s.Plan(t.Context(), testRef(), fixture.Input)
-			total := 0
-			for _, c := range got.Cuts {
-				total += c.EndMS - c.StartMS
-			}
-			// The recorded cuts all show the same scene, so CDS-36 joins every
-			// one of them with a hard cut and the clip is exactly as long as its
-			// footage — inside the target's own tolerance.
-			if err != nil || len(got.Cuts) != 4 || got.Ratio != "vertical" || got.TransitionTotal() != 0 || got.DurationMS != total || abs(got.DurationMS-15000) > 1000 {
-				t.Fatalf("recorded plan rejected: %+v %v", got, err)
-			}
-			// One paid call, and at most one measurement per candidate anchor.
-			if len(models.calls) != 1 || captions.calls > 2*len(got.Cuts) || captions.calls == 0 || usage != response.Usage {
-				t.Fatalf("lost call, caption or usage evidence: %d measurements", captions.calls)
-			}
-		})
-	}
-}
-
-func multiSourcePlan() (clip.PlanningInput, map[string]any) {
-	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
+// multiSourceFlow is eight short synthetic sources of one scene and a flow that
+// takes one cut from each. The third cut is 1200 ms, CDS-37's own floor; the
+// eight sum to 16400 and the target pulls them back to 15000.
+func multiSourceFlow() (clip.PlanningInput, map[string]any) {
+	composed := clip.NoTemplateComposition()
+	in := clip.PlanningInput{Policy: testPolicy("write"), Composition: &composed, Ratio: "vertical", TargetDurationMS: 15000}
 	durations := []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
-	// The third cut is 1200 ms, not 1000: a three-character copy earns 1170 ms of
-	// exposure (CDS-41) and a cut cannot be shorter than the copy it carries —
-	// which is also CDS-37's own floor. The eight sum to 16400 and the target
-	// pulls them back to 15000.
 	lengths := []int{2000, 2000, 1200, 2200, 2300, 2300, 2200, 2200}
 	var cuts []any
 	for i, duration := range durations {
@@ -75,61 +29,37 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 			Source:   clip.AnalysisSource{RenderSource: clip.RenderSource{ID: id, Fingerprint: id, Info: clip.MediaInfo{DurationMS: duration, Width: width, Height: height, HasAudio: true}}, Filename: fmt.Sprintf("synthetic-%d.mp4", i)},
 			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}, Scene: "scenery", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}},
 		})
-		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "rate_permille": 1000, "volume": 1, "chips": []string{},
-			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "조용한 장면", "start_ms": 0, "end_ms": lengths[i], "short_text": "장면", "keyword": ""}})
+		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "rate_permille": 1000, "volume": 1,
+			"focal": map[string]any{"x": .5, "y": .5}, "observation_refs": []string{clip.ObservationID(id, 0)}})
 	}
 	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 }
 
 func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 	for _, structured := range []bool{false, true} {
-		in, wire := multiSourcePlan()
-		s, models, captions := newService(t, raw(wire), structured)
+		in, wire := multiSourceFlow()
+		s, models := newService(t, raw(wire), structured)
 		in.Policy = testPolicy("write")
-		got, usage, err := s.Plan(t.Context(), testRef(), in)
-		// 16400 ms pulled back to 15000 stops the last cut at CDS's 1200 ms floor
-		// and takes the other 400 ms from the cut before it; the last cut then
-		// extends to earn its copy's exposure.
-		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15630 || !hasNotice(got, "plan_target_duration") || got.Ratio != in.Ratio {
-			t.Fatalf("multi-source plan: %+v %v", got, err)
+		got, usage, err := s.Flow(t.Context(), testRef(), in)
+		if err != nil || len(got.Cuts) != 8 || got.DurationMS != in.TargetDurationMS || !hasNotice(got, "plan_target_duration") || got.Ratio != in.Ratio {
+			t.Fatalf("multi-source flow: %+v %v", got, err)
 		}
-		// One paid call, and at most one measurement per candidate anchor: the
-		// selector measures what it might choose, never more (CDS-38).
-		if len(models.calls) != 1 || captions.calls > 2*len(got.Cuts) || captions.calls == 0 || usage != models.response.Usage {
-			t.Fatalf("call/measurement/usage contract changed: %d calls, %d measurements", len(models.calls), captions.calls)
+		if len(models.calls) != 1 || usage != models.response.Usage || models.calls[0].HasVideos() || models.calls[0].HasImages() {
+			t.Fatalf("call/usage contract changed: %d calls", len(models.calls))
 		}
-		total, dropped, styles := 0, 0, map[string]int{}
+		total := 0
 		for i, cut := range got.Cuts {
-			total += cut.EndMS - cut.StartMS
+			total += cut.OutputDurationMS()
 			if cut.SourceID != in.Analyses[i].Source.ID || cut.EndMS > in.Analyses[i].Source.Info.DurationMS {
 				t.Fatal("lost source", i)
 			}
-			// A cut too short for its copy's earned exposure carries none: CDS-41
-			// shortens, then extends, then drops, and the choice is recorded.
-			if cut.FirstCopy().Text == "" {
-				if got.Decisions[i].Fallback != "dropped" {
-					t.Fatalf("cut %d lost its copy silently: %+v", i, got.Decisions[i])
-				}
-				dropped++
-				continue
-			}
-			if cut.FirstCopy().Accent != "amber" || cut.FirstCopy().Style != "bold" {
-				t.Fatalf("cut %d used %q outside the approved set", i, cut.FirstCopy().Style)
-			}
-			styles[cut.FirstCopy().Style]++
 		}
 		// Eight cuts of one scene: CDS-36 joins every boundary with a hard cut,
 		// so the clip is exactly as long as the footage it selected.
-		if got.TransitionTotal() != 0 || total-got.TransitionTotal() != got.DurationMS || models.calls[0].HasVideos() || models.calls[0].HasImages() {
-			t.Fatal("invalid timeline or non-text planning")
+		if got.TransitionTotal() != 0 || total-got.TransitionTotal() != got.DurationMS {
+			t.Fatal("invalid timeline")
 		}
-		if len(styles) != 1 || styles["bold"] == 0 {
-			t.Fatalf("legacy captions did not retain their default treatment: %v", styles)
-		}
-		// Exactly the 1200 ms cut is too short to earn its copy's exposure.
-		if dropped != 1 {
-			t.Fatalf("%d copies dropped", dropped)
-		}
+		assertExecutableTimeline(t, in, got)
 	}
 }
 
@@ -139,22 +69,20 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		mutate     func(map[string]any)
 	}{
 		{"source range", "plan_cut_range", func(v map[string]any) { firstCut(v)["end_ms"] = 5000 }},
-		{"caption time", "plan_caption_time", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["start_ms"] = 2000 }},
 		{"source identity", "plan_source", func(v map[string]any) { firstCut(v)["source_id"] = "private-canary" }},
 		{"duplicate cut", "plan_cut_identity", func(v map[string]any) { v["cuts"].([]any)[1].(map[string]any)["id"] = firstCut(v)["id"] }},
 		{"ratio", "plan_ratio", func(v map[string]any) { v["ratio"] = "horizontal" }},
-		// Styles are named by Narrate, not this legacy one-call contract.
-		// Here a style or accent remains an unknown property.
-		{"style", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
-		{"accent", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
+		// Words, styles and accents are the narration's, not the flow's: a
+		// caption on a cut is an unknown property of this contract.
+		{"caption", "output_shape", func(v map[string]any) { firstCut(v)["caption"] = map[string]any{"text": "조용한 장면"} }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},
 		{"field type", "output_field_type", func(v map[string]any) { firstCut(v)["start_ms"] = 1.5 }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			in, wire := multiSourcePlan()
+			in, wire := multiSourceFlow()
 			tc.mutate(wire)
-			s, models, captions := newService(t, raw(wire), true)
-			delivered, usage, err := s.Plan(t.Context(), testRef(), in)
+			s, models := newService(t, raw(wire), true)
+			delivered, usage, err := s.Flow(t.Context(), testRef(), in)
 			if !strings.HasPrefix(tc.code, "output_") {
 				if err != nil || !hasNotice(delivered, tc.code) || usage != models.response.Usage || len(models.calls) != 1 {
 					t.Fatalf("readable correction lost its notice or usage: %v %+v", err, delivered.Notices)
@@ -166,30 +94,10 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 			if !errors.Is(err, llm.ErrBadOutput) || !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != tc.code {
 				t.Fatalf("missing exact safe failure: %v", err)
 			}
-			if strings.Contains(err.Error(), "private-canary") || llm.NormalizeFailure(err).Reason != llm.FailureReasonOutputInvalid || usage != models.response.Usage || len(models.calls) != 1 || captions.calls != 0 {
+			if strings.Contains(err.Error(), "private-canary") || llm.NormalizeFailure(err).Reason != llm.FailureReasonOutputInvalid || usage != models.response.Usage || len(models.calls) != 1 {
 				t.Fatal("diagnostics changed privacy, failure, usage or retry behavior")
 			}
 		})
-	}
-}
-
-// A chip outside the reserved-fact vocabulary is dropped, never a reason to refuse the
-// plan: the renderer places nothing for it, so a paid retry would change
-// nothing on screen. The prompt offers exactly the labels the parser keeps.
-func TestUnknownChipLabelsAreDroppedNotRefused(t *testing.T) {
-	in, wire := multiSourcePlan()
-	firstCut(wire)["chips"] = []any{"상호", "주차", "위치", "위치", "가격"}
-	s, _, _ := newService(t, raw(wire), true)
-	plan, _, err := s.Plan(t.Context(), testRef(), in)
-	if err != nil {
-		t.Fatalf("plan refused over an unknown chip: %v", err)
-	}
-	if got := plan.Cuts[0].Chips; len(got) != 2 || got[0] != "위치" || got[1] != "가격" {
-		t.Fatalf("chips = %v, want the two reserved labels in order", got)
-	}
-	system, _ := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
-	if !strings.Contains(system, strings.Join(design.Fact.Chips, " · ")) || strings.Contains(system, "상호 · 위치") {
-		t.Fatal("the prompt's chip vocabulary is not the design table's")
 	}
 }
 

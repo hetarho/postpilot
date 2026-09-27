@@ -1,6 +1,7 @@
 package clip_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -72,7 +73,8 @@ func TestMediaCodecRefusesUnknownCommandsAndVersions(t *testing.T) {
 	if _, err := mediacodec.DecodeTask(raw); err != nil {
 		t.Fatal(err)
 	}
-	for _, bad := range []string{strings.Replace(raw, `"Version":1`, `"Version":99`, 1), strings.Replace(raw, `"Version":1`, `"Version":1,"Command":"ffmpeg -i /etc/passwd"`, 1), raw + "{}", strings.Repeat(" ", clip.MediaPayloadMaxBytes+1)} {
+	version := fmt.Sprintf(`"Version":%d`, clip.MediaContractVersion)
+	for _, bad := range []string{strings.Replace(raw, version, `"Version":99`, 1), strings.Replace(raw, version, version+`,"Command":"ffmpeg -i /etc/passwd"`, 1), raw + "{}", strings.Repeat(" ", clip.MediaPayloadMaxBytes+1)} {
 		if _, err := mediacodec.DecodeTask(bad); err == nil {
 			t.Fatal("invalid contract decoded")
 		}

@@ -3,7 +3,6 @@ package clip
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -32,26 +31,22 @@ type GenerationPayload struct {
 	ProjectID, Ratio, Observe, Write string
 	TargetDurationMS                 int
 	Template                         Recipe
-	Answers                          []Answer
-	// Frozen with the approval, like the template and the answers: the badge's
-	// campaign type and the resolved closing CTA. Version 3 exists because of
-	// them — a job approved before the disclosure was a choice cannot render a
-	// clip that carries one, and is refused rather than rendered without it.
-	Disclosure, CTA string
-	// The project's own instruction (CLIP-121), frozen with the answers and the
-	// composition so editing it mid-flight changes nothing in flight. A payload
-	// written before it existed decodes as none, which is today's behaviour.
+	// Frozen with the approval, like the template: the badge's campaign type.
+	// Version 3 exists because of it — a job approved before the disclosure was
+	// a choice cannot render a clip that carries one, and is refused rather than
+	// rendered without it.
+	Disclosure string
+	// The project's own instruction (CLIP-121), frozen with the composition so
+	// editing it mid-flight changes nothing in flight.
 	Instruction string
 	// The project's caption pace and accent (CLIP-139), frozen with the rest of
 	// the render inputs. They are deliberately absent from planRecoveryDigest
 	// and from the quote: changing either re-renders the same plan and costs no
-	// writing call. A payload written before they existed decodes as empty,
-	// which is the frozen document's own value — today's behaviour.
+	// writing call. Empty is the shared default.
 	CaptionPace, Accent string
 	// The rest of the project's design selection (CLIP-139, CLIP-142), frozen
-	// the same way and absent from the digest for the same reason. A payload
-	// written before it moved onto the project decodes as empty, which reads as
-	// the shared defaults -- today's behaviour.
+	// the same way and absent from the digest for the same reason; empty reads
+	// as the shared defaults.
 	IntroPreset, OutroPreset string
 	CaptionStyles            []string
 	HideDisclosure           bool
@@ -79,7 +74,6 @@ func (e *StageFailure) Failure() llm.Failure {
 	f := llm.NormalizeFailure(e.Cause)
 	var credits *plan.InsufficientCreditsError
 	var layout interface{ LayoutReason() string }
-	var facts *MissingFactsError
 	var admission *ModelAdmissionError
 	var element *composition.Problem
 	var media *MediaStageFailure
@@ -137,8 +131,6 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: reasonDisclosureRequired}
 	case errors.Is(e.Cause, ErrTargetDurationRequired):
 		f = llm.Failure{Reason: reasonTargetDuration}
-	case errors.As(e.Cause, &facts):
-		f = llm.Failure{Reason: reasonFactsRequired, Params: map[string]string{"labels": strings.Join(facts.Labels, ", ")}}
 	case errors.Is(e.Cause, ErrCopyTooLong):
 		f = llm.Failure{Reason: "CLIP_COPY_TOO_LONG"}
 	// A plan that was read and validated but cannot fill the floor is the

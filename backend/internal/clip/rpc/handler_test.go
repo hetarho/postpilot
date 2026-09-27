@@ -50,43 +50,36 @@ func TestPresenceActorAndNotFound(t *testing.T) {
 	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	title := "new title"
-	response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Title: &title, Answers: []*v1.ClipAnswer{{Label: "場所", Text: ""}}}))
+	response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Title: &title}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.user != "alice" || s.patch.Title == nil || s.patch.TargetDurationMS != nil || s.patch.VideoTemplateID != nil || len(s.patch.Answers) != 1 || response.Msg.Project.Ratio != "vertical" {
+	if s.user != "alice" || s.patch.Title == nil || s.patch.TargetDurationMS != nil || s.patch.VideoTemplateID != nil || response.Msg.Project.Ratio != "vertical" {
 		t.Fatalf("presence/actor lost: %+v", s)
 	}
-	neutral := ""
-	_, err = h.UpdateVideoTemplate(ctx, connect.NewRequest(&v1.UpdateVideoTemplateRequest{Id: "owned", InformationFields: &v1.ClipInformationFields{}, Accent: &neutral}))
-	if err != nil {
+	name := "새 이름"
+	if _, err = h.UpdateVideoTemplate(ctx, connect.NewRequest(&v1.UpdateVideoTemplateRequest{Id: "owned", Name: &name})); err != nil {
 		t.Fatal(err)
 	}
-	if s.templatePatch.InformationFields == nil || len(*s.templatePatch.InformationFields) != 0 || s.templatePatch.Name != nil || s.templatePatch.Accent == nil || s.templatePatch.Preset != nil {
-		t.Fatal("wrapper presence lost")
+	if s.templatePatch.Name == nil || *s.templatePatch.Name != name || s.templatePatch.CompositionBody != nil {
+		t.Fatalf("template presence lost: %+v", s.templatePatch)
 	}
-	// The preset, the disclosure and the CTA carry the same presence semantics:
-	// absent is not a change, and an explicit value reaches the service as one.
-	preset, disclosure, cta := "cafe", "ad", ""
-	if _, err = h.UpdateVideoTemplate(ctx, connect.NewRequest(&v1.UpdateVideoTemplateRequest{Id: "owned", Preset: &preset})); err != nil {
+	// The disclosure carries the same presence semantics: absent is not a
+	// change, and an explicit value reaches the service as one.
+	disclosure := "ad"
+	if _, err = h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Disclosure: &disclosure})); err != nil {
 		t.Fatal(err)
 	}
-	if s.templatePatch.Preset == nil || *s.templatePatch.Preset != "cafe" || s.templatePatch.Accent != nil {
-		t.Fatalf("preset presence: %+v", s.templatePatch)
-	}
-	if _, err = h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Disclosure: &disclosure, Cta: &cta})); err != nil {
-		t.Fatal(err)
-	}
-	if s.patch.Disclosure == nil || *s.patch.Disclosure != "ad" || s.patch.CTA == nil || *s.patch.CTA != "" {
+	if s.patch.Disclosure == nil || *s.patch.Disclosure != "ad" {
 		t.Fatalf("disclosure presence: %+v", s.patch)
 	}
-	// The seed is code-owned and only the five presets have one.
-	seed, err := h.SeedPresetFields(ctx, connect.NewRequest(&v1.SeedPresetFieldsRequest{Preset: "restaurant"}))
-	if err != nil || len(seed.Msg.Fields) != 4 || seed.Msg.Fields[0].Label != "상호" || seed.Msg.Fields[0].Prompt == "" {
-		t.Fatalf("preset seed: %+v %v", seed, err)
-	}
-	if _, err := h.SeedPresetFields(ctx, connect.NewRequest(&v1.SeedPresetFieldsRequest{Preset: ""})); connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Fatal(err)
+	// A template is its outline: a create without a body is refused before it
+	// reaches the store, rather than minted as a template of another kind
+	// (CLIP-4, CLIP-14).
+	for _, body := range []string{"", "  "} {
+		if _, err := h.CreateVideoTemplate(ctx, connect.NewRequest(&v1.CreateVideoTemplateRequest{Name: "카페", CompositionBody: body})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("a body-less template was not refused: %q %v", body, err)
+		}
 	}
 	for _, id := range []string{"foreign", "unknown"} {
 		_, err := h.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: id}))

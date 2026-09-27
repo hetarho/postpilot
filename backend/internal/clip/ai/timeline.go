@@ -111,12 +111,11 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		return outputError("plan_source_overlap")
 	}
 	// CDS-37's length targets and CDS-36's transitions are the caller's, not the
-	// model's: the scene the observer reported and the template's preset decide
-	// both, so the same input joins the same cuts the same way (CDS-7).
-	preset := in.Template.Preset
+	// model's: the scene the observer reported decides both, so the same input
+	// joins the same cuts the same way (CDS-7). No template or category imposes
+	// a range of its own; authored guidance replaces the targets instead.
 	authoredRhythm := false
 	if nativeComposition(in) {
-		preset = ""
 		doc, problem := composition.Parse(in.Composition.Snapshot.Body, cfg.Template.Composition)
 		if problem != nil {
 			return problem
@@ -131,7 +130,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		scenes[i], _ = clip.CutScene(c, analyses[c.SourceID])
 	}
 	if !authoredRhythm {
-		holdCutLengths(plan, analyses, scenes, preset)
+		holdCutLengths(plan, analyses, scenes)
 	}
 	for i, ms := range design.Transitions(scenes) {
 		plan.Cuts[i].TransitionMS = ms
@@ -167,7 +166,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		}
 		room := make([]int, len(plan.Cuts))
 		for i, c := range plan.Cuts {
-			ceiling := cutCeiling(plan, analyses, scenes, preset, i, hard)
+			ceiling := cutCeiling(plan, analyses, scenes, i, hard)
 			room[i] = outputSpan(ceiling-c.StartMS, c.Rate()) - c.OutputDurationMS()
 		}
 		// Distribute the adjustment evenly, redistributing when a cut reaches
@@ -250,8 +249,8 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 // cutCeiling is the furthest a cut's end may move: inside the footage it was
 // observed in, never through an unobserved gap or into the next already-selected
 // range of the same source, and — unless the target has yielded (hard) — never
-// past CDS-37's target ceiling for its scene and preset.
-func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, preset string, i int, hard bool) int {
+// past CDS-37's target ceiling for its scene.
+func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, i int, hard bool) int {
 	c := plan.Cuts[i]
 	_, end := observedSpan(analyses[c.SourceID], c)
 	for j, other := range plan.Cuts {
@@ -268,7 +267,7 @@ func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, sc
 	if hard {
 		return end
 	}
-	_, maximum := design.CutBounds(scenes[i], preset)
+	_, maximum := design.CutBounds(scenes[i])
 	return min(end, c.StartMS+maximum)
 }
 
@@ -317,17 +316,17 @@ func cutFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i in
 // forward first, then backward, because moving the end keeps the cut's opening
 // frame — and one that still cannot reach the target is left as it is. Nothing
 // here refuses: the only hard length rule is the renderer's plan_cut_fade (r3).
-func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, preset string) {
+func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string) {
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
 		// CDS-37's targets are OUTPUT durations, so the source span that holds
 		// them depends on the cut's own rate.
-		minimum, maximum := design.CutBounds(scenes[i], preset)
+		minimum, maximum := design.CutBounds(scenes[i])
 		if c.OutputDurationMS() > maximum {
 			c.EndMS = c.StartMS + sourceSpan(maximum, c.Rate())
 		}
 		if c.OutputDurationMS() < minimum {
-			c.EndMS = min(c.StartMS+sourceSpan(minimum, c.Rate()), cutCeiling(plan, analyses, scenes, preset, i, false))
+			c.EndMS = min(c.StartMS+sourceSpan(minimum, c.Rate()), cutCeiling(plan, analyses, scenes, i, false))
 			if c.OutputDurationMS() < minimum {
 				c.StartMS = max(c.EndMS-sourceSpan(minimum, c.Rate()), cutFloor(plan, analyses, i))
 			}

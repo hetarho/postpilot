@@ -17,15 +17,7 @@ export const i18n = {
       fieldLabel: '정보 이름 {{number}}',
       fieldPrompt: '질문 안내 {{number}}',
       removeField: '정보 {{number}} 삭제',
-      preset: '카테고리 프리셋',
-      presetHelp:
-        '카테고리를 고르면 정보 칩 순서, 기본 CTA, 기본 강조색과 컷 리듬이 함께 정해져요.',
-      presetNone: '카테고리를 선택하세요',
       previewKeyword: '좋은',
-      seedTitle: '정보 항목을 추가할까요?',
-      seedBody:
-        '이 프리셋에 필요한 정보 항목을 추가해요. 이 템플릿을 쓰는 클립 {{count}}개의 ① 단계 질문이 늘어나고, 이미 입력한 답변은 그대로 남아요.',
-      seedConfirm: '추가',
       accent: '강조 색상',
       preview: '오늘의 좋은 순간',
       saved: '저장했어요',
@@ -54,15 +46,7 @@ export const i18n = {
       fieldLabel: 'Information label {{number}}',
       fieldPrompt: 'Question prompt {{number}}',
       removeField: 'Delete information field {{number}}',
-      preset: 'Category preset',
-      presetHelp:
-        'A category fixes the chip order, the default CTA, the default accent and the cut rhythm.',
-      presetNone: 'Choose a category',
       previewKeyword: 'good',
-      seedTitle: 'Add the information fields?',
-      seedBody:
-        'This preset needs a few information fields. Step ① of the {{count}} clip(s) using this template will ask for them, and answers already given are kept.',
-      seedConfirm: 'Add',
       accent: 'Accent colour',
       preview: 'A moment to remember',
       saved: 'Saved',

@@ -330,27 +330,6 @@ func TestRegionPresetsRealFontSmoke(t *testing.T) {
 	checkRegionPresets(t, a, r, true)
 }
 
-func TestLegacyHookOverflowIsIdentifiedBeforeRerender(t *testing.T) {
-	a, r := measured(t)
-	for _, hook := range []string{"한 줄\n두 줄", "하나둘셋넷다섯여섯일"} {
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Hook: hook,
-			Cuts: []clip.Cut{{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
-		if err := a.WithWorkspace(t.Context(), "legacy-region", func(ws clip.MediaWorkspace) error {
-			_, err := r.Render(t.Context(), ws, plan, []clip.RenderSource{{ID: "s", Fingerprint: "s", Info: clip.MediaInfo{DurationMS: 15000}}}, func(_ context.Context, _ string, _ func(clip.MediaSource) error) error {
-				t.Fatal("overflow fetched source media")
-				return nil
-			})
-			var problem *composition.Problem
-			if !errors.As(err, &problem) || problem.Reason != "copy_limit" || problem.ElementID != "legacy-hook" {
-				t.Fatalf("%q: %v", hook, err)
-			}
-			return nil
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 func TestAuthoredRegionAdmissionChecksOnlyFixedRows(t *testing.T) {
 	_, r := measured(t)
 	for _, kind := range []string{"fixed", "ai"} {

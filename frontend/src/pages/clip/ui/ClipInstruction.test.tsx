@@ -10,31 +10,17 @@ const template = {
   id: 'menu',
   name: '여러 메뉴',
   compositionBody: CLIP_COMPOSITION_EXAMPLE,
-  compositionLegacy: false,
-  informationFields: [],
-  cutGuidance: '',
-  accent: '' as const,
-  preset: '' as const,
 }
 // The saved project uses the same fixture pair ClipPage's autosave test does:
 // the instruction is written in ① now (CLIP-130), so it rides that same queue.
-const legacyTemplate = {
-  id: 'template',
-  name: '여행',
-  informationFields: [{ label: '장소', prompt: '어디인가요?' }],
-  cutGuidance: '',
-  accent: '' as const,
-  preset: 'restaurant' as const,
-}
+const savedTemplate = { id: 'template', name: '여행', compositionBody: '<clip version="1"/>' }
 const project = {
   id: 'project',
   title: '제주 여행',
-  videoTemplateId: legacyTemplate.id,
+  videoTemplateId: savedTemplate.id,
   ratio: 'vertical' as const,
   targetDurationMs: 30000,
   disclosure: 'ad' as const,
-  cta: '' as const,
-  answers: [{ label: '장소', text: '제주도' }],
 }
 afterEach(() => discardClipDraftQueues())
 
@@ -54,7 +40,7 @@ describe("the project's own instruction", () => {
     const writes: ClipProjectDraft[] = []
     renderAppAt('/clips/project', {
       user: { id: 'alice' },
-      clips: { templates: [legacyTemplate], projects: [project], projectWrites: writes },
+      clips: { templates: [savedTemplate], projects: [project], projectWrites: writes },
     })
     const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)
     expect(instruction).toHaveValue('')
@@ -69,7 +55,7 @@ describe("the project's own instruction", () => {
   it('accepts no character past its maximum and counts down beside the control', async () => {
     renderAppAt('/clips/project', {
       user: { id: 'alice' },
-      clips: { templates: [legacyTemplate], projects: [project] },
+      clips: { templates: [savedTemplate], projects: [project] },
     })
     const max = CLIP_PROJECT_LIMITS.instruction
     const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)

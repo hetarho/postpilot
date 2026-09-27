@@ -48,7 +48,6 @@ const (
 	FailureReason_CLIP_COPY_TOO_LONG                         FailureReason = 11
 	FailureReason_CLIP_CREDIT_CEILING_EXCEEDED               FailureReason = 12
 	FailureReason_CLIP_DISCLOSURE_REQUIRED                   FailureReason = 13
-	FailureReason_CLIP_FACTS_REQUIRED                        FailureReason = 14
 	FailureReason_CLIP_FINALIZATION_CONFLICT                 FailureReason = 15
 	FailureReason_CLIP_FINALIZATION_INVALID                  FailureReason = 16
 	FailureReason_CLIP_FINALIZED                             FailureReason = 17
@@ -302,7 +301,6 @@ var (
 		11:  "CLIP_COPY_TOO_LONG",
 		12:  "CLIP_CREDIT_CEILING_EXCEEDED",
 		13:  "CLIP_DISCLOSURE_REQUIRED",
-		14:  "CLIP_FACTS_REQUIRED",
 		15:  "CLIP_FINALIZATION_CONFLICT",
 		16:  "CLIP_FINALIZATION_INVALID",
 		17:  "CLIP_FINALIZED",
@@ -532,7 +530,6 @@ var (
 		"CLIP_COPY_TOO_LONG":                         11,
 		"CLIP_CREDIT_CEILING_EXCEEDED":               12,
 		"CLIP_DISCLOSURE_REQUIRED":                   13,
-		"CLIP_FACTS_REQUIRED":                        14,
 		"CLIP_FINALIZATION_CONFLICT":                 15,
 		"CLIP_FINALIZATION_INVALID":                  16,
 		"CLIP_FINALIZED":                             17,
@@ -916,7 +913,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe95\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xeb5\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -932,8 +929,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x12\x16\n" +
 	"\x12CLIP_COPY_TOO_LONG\x10\v\x12 \n" +
 	"\x1cCLIP_CREDIT_CEILING_EXCEEDED\x10\f\x12\x1c\n" +
-	"\x18CLIP_DISCLOSURE_REQUIRED\x10\r\x12\x17\n" +
-	"\x13CLIP_FACTS_REQUIRED\x10\x0e\x12\x1e\n" +
+	"\x18CLIP_DISCLOSURE_REQUIRED\x10\r\x12\x1e\n" +
 	"\x1aCLIP_FINALIZATION_CONFLICT\x10\x0f\x12\x1d\n" +
 	"\x19CLIP_FINALIZATION_INVALID\x10\x10\x12\x12\n" +
 	"\x0eCLIP_FINALIZED\x10\x11\x12\x18\n" +
@@ -1147,7 +1143,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x11VOUCHER_NOT_FOUND\x10\xf5\x01\x12\x15\n" +
 	"\x10VOUCHER_REDEEMED\x10\xf6\x01\x12\x14\n" +
 	"\x0fVOUCHER_EXPIRED\x10\xf7\x01\x12\x14\n" +
-	"\x0fVOUCHER_REVOKED\x10\xf8\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALIDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x0fVOUCHER_REVOKED\x10\xf8\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

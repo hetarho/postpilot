@@ -55,7 +55,7 @@ func TestObservationFailuresHavePrivateBoundedDiagnostics(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := observation()
 			tc.change(v, firstSegment(v))
-			s, models, _ := newService(t, raw(v), true)
+			s, models := newService(t, raw(v), true)
 			in := chunk()
 			if tc.name == "silent speech" {
 				in.Source.Info.HasAudio = false
@@ -95,7 +95,7 @@ func TestSourceSoundSettingNeverReachesObservation(t *testing.T) {
 		if len(frozen.Values) != 1 || frozen.Values[0].RetainOriginal != retain {
 			t.Fatalf("fixture does not express the owner's choice: %+v", frozen)
 		}
-		s, models, _ := newService(t, raw(observation()), true)
+		s, models := newService(t, raw(observation()), true)
 		in := chunk()
 		got, _, err := s.ObserveChunk(t.Context(), testRef(), in)
 		if err != nil || len(models.calls) != 1 {
@@ -119,7 +119,7 @@ func TestSourceSoundSettingNeverReachesObservation(t *testing.T) {
 func TestObservationTruncationKeepsDiagnosticAndUsage(t *testing.T) {
 	v := observation()
 	firstSegment(v)["subject"].(map[string]any)["width"] = 1
-	s, models, _ := newService(t, raw(v), true)
+	s, models := newService(t, raw(v), true)
 	models.response.FinishReason = "length"
 	_, usage, err := s.ObserveChunk(t.Context(), testRef(), chunk())
 	d, ok := clip.DiagnosticFromError(err)

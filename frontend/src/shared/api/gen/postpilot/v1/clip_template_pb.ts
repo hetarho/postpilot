@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { ClipCopyStyles, ClipInformationField, ClipInformationFields, VideoTemplate } from "./clip_pb";
+import type { VideoTemplate } from "./clip_pb";
 import { file_postpilot_v1_clip } from "./clip_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_template.proto.
  */
 export const file_postpilot_v1_clip_template: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvY2xpcF90ZW1wbGF0ZS5wcm90bxIMcG9zdHBpbG90LnYxIhsKGUxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QiTAoaTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2USLgoJdGVtcGxhdGVzGAEgAygLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUi/wEKGkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSPgoSaW5mb3JtYXRpb25fZmllbGRzGAIgAygLMiIucG9zdHBpbG90LnYxLkNsaXBJbmZvcm1hdGlvbkZpZWxkEhQKDGN1dF9ndWlkYW5jZRgDIAEoCRITCgtjb3B5X3N0eWxlcxgEIAMoCRIOCgZhY2NlbnQYBSABKAkSDgoGcHJlc2V0GAYgASgJEhQKDGNhcHRpb25fcGFjZRgHIAEoCRIdChBjb21wb3NpdGlvbl9ib2R5GAggASgJSACIAQFCEwoRX2NvbXBvc2l0aW9uX2JvZHkiTAobQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUihAMKGlVwZGF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARI/ChJpbmZvcm1hdGlvbl9maWVsZHMYAyABKAsyIy5wb3N0cGlsb3QudjEuQ2xpcEluZm9ybWF0aW9uRmllbGRzEhkKDGN1dF9ndWlkYW5jZRgEIAEoCUgBiAEBEjEKC2NvcHlfc3R5bGVzGAUgASgLMhwucG9zdHBpbG90LnYxLkNsaXBDb3B5U3R5bGVzEhMKBmFjY2VudBgGIAEoCUgCiAEBEhMKBnByZXNldBgHIAEoCUgDiAEBEhkKDGNhcHRpb25fcGFjZRgIIAEoCUgEiAEBEh0KEGNvbXBvc2l0aW9uX2JvZHkYCSABKAlIBYgBAUIHCgVfbmFtZUIPCg1fY3V0X2d1aWRhbmNlQgkKB19hY2NlbnRCCQoHX3ByZXNldEIPCg1fY2FwdGlvbl9wYWNlQhMKEV9jb21wb3NpdGlvbl9ib2R5IkwKG1VwZGF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIigKGkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjgKG0RlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRIZChFkZXRhY2hlZF9wcm9qZWN0cxgBIAEoBSIpChdTZWVkUHJlc2V0RmllbGRzUmVxdWVzdBIOCgZwcmVzZXQYASABKAkiTgoYU2VlZFByZXNldEZpZWxkc1Jlc3BvbnNlEjIKBmZpZWxkcxgBIAMoCzIiLnBvc3RwaWxvdC52MS5DbGlwSW5mb3JtYXRpb25GaWVsZCIcChpHZXRDbGlwQ2FwYWJpbGl0aWVzUmVxdWVzdCJcChtHZXRDbGlwQ2FwYWJpbGl0aWVzUmVzcG9uc2USGwoTY29tcG9zaXRpb25fdmVyc2lvbhgBIAEoBRIgChhjb21wb3NpdGlvbl9wbGFuX3ZlcnNpb24YAiABKAUynQUKE0NsaXBUZW1wbGF0ZVNlcnZpY2USaQoSTGlzdFZpZGVvVGVtcGxhdGVzEicucG9zdHBpbG90LnYxLkxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2UiABJsChNDcmVhdGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmwKE1VwZGF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuVXBkYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTRGVsZXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJjChBTZWVkUHJlc2V0RmllbGRzEiUucG9zdHBpbG90LnYxLlNlZWRQcmVzZXRGaWVsZHNSZXF1ZXN0GiYucG9zdHBpbG90LnYxLlNlZWRQcmVzZXRGaWVsZHNSZXNwb25zZSIAEmwKE0dldENsaXBDYXBhYmlsaXRpZXMSKC5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1JlcXVlc3QaKS5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip]);
+  fileDesc("CiBwb3N0cGlsb3QvdjEvY2xpcF90ZW1wbGF0ZS5wcm90bxIMcG9zdHBpbG90LnYxIhsKGUxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QiTAoaTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2USLgoJdGVtcGxhdGVzGAEgAygLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUilwEKGkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSGAoQY29tcG9zaXRpb25fYm9keRgIIAEoCUoECAIQCFISaW5mb3JtYXRpb25fZmllbGRzUgxjdXRfZ3VpZGFuY2VSC2NvcHlfc3R5bGVzUgZhY2NlbnRSBnByZXNldFIMY2FwdGlvbl9wYWNlIkwKG0NyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIssBChpVcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESHQoQY29tcG9zaXRpb25fYm9keRgJIAEoCUgBiAEBQgcKBV9uYW1lQhMKEV9jb21wb3NpdGlvbl9ib2R5SgQIAxAJUhJpbmZvcm1hdGlvbl9maWVsZHNSDGN1dF9ndWlkYW5jZVILY29weV9zdHlsZXNSBmFjY2VudFIGcHJlc2V0UgxjYXB0aW9uX3BhY2UiTAobVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUiKAoaRGVsZXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QSCgoCaWQYASABKAkiOAobRGVsZXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEhkKEWRldGFjaGVkX3Byb2plY3RzGAEgASgFIhwKGkdldENsaXBDYXBhYmlsaXRpZXNSZXF1ZXN0IlwKG0dldENsaXBDYXBhYmlsaXRpZXNSZXNwb25zZRIbChNjb21wb3NpdGlvbl92ZXJzaW9uGAEgASgFEiAKGGNvbXBvc2l0aW9uX3BsYW5fdmVyc2lvbhgCIAEoBTK4BAoTQ2xpcFRlbXBsYXRlU2VydmljZRJpChJMaXN0VmlkZW9UZW1wbGF0ZXMSJy5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5MaXN0VmlkZW9UZW1wbGF0ZXNSZXNwb25zZSIAEmwKE0NyZWF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTVXBkYXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJsChNEZWxldGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmwKE0dldENsaXBDYXBhYmlsaXRpZXMSKC5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1JlcXVlc3QaKS5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.ListVideoTemplatesRequest
@@ -45,6 +45,9 @@ export const ListVideoTemplatesResponseSchema: GenMessage<ListVideoTemplatesResp
   messageDesc(file_postpilot_v1_clip_template, 1);
 
 /**
+ * A request without an outline body is refused (CLIP-4, CLIP-14); the retired
+ * category-preset recipe fields keep their numbers and names reserved.
+ *
  * @generated from message postpilot.v1.CreateVideoTemplateRequest
  */
 export type CreateVideoTemplateRequest = Message<"postpilot.v1.CreateVideoTemplateRequest"> & {
@@ -54,41 +57,9 @@ export type CreateVideoTemplateRequest = Message<"postpilot.v1.CreateVideoTempla
   name: string;
 
   /**
-   * @generated from field: repeated postpilot.v1.ClipInformationField information_fields = 2;
+   * @generated from field: string composition_body = 8;
    */
-  informationFields: ClipInformationField[];
-
-  /**
-   * @generated from field: string cut_guidance = 3;
-   */
-  cutGuidance: string;
-
-  /**
-   * @generated from field: repeated string copy_styles = 4;
-   */
-  copyStyles: string[];
-
-  /**
-   * @generated from field: string accent = 5;
-   */
-  accent: string;
-
-  /**
-   * Required on create: one of the five presets.
-   *
-   * @generated from field: string preset = 6;
-   */
-  preset: string;
-
-  /**
-   * @generated from field: string caption_pace = 7;
-   */
-  captionPace: string;
-
-  /**
-   * @generated from field: optional string composition_body = 8;
-   */
-  compositionBody?: string | undefined;
+  compositionBody: string;
 };
 
 /**
@@ -128,38 +99,6 @@ export type UpdateVideoTemplateRequest = Message<"postpilot.v1.UpdateVideoTempla
    * @generated from field: optional string name = 2;
    */
   name?: string | undefined;
-
-  /**
-   * @generated from field: postpilot.v1.ClipInformationFields information_fields = 3;
-   */
-  informationFields?: ClipInformationFields | undefined;
-
-  /**
-   * @generated from field: optional string cut_guidance = 4;
-   */
-  cutGuidance?: string | undefined;
-
-  /**
-   * @generated from field: postpilot.v1.ClipCopyStyles copy_styles = 5;
-   */
-  copyStyles?: ClipCopyStyles | undefined;
-
-  /**
-   * @generated from field: optional string accent = 6;
-   */
-  accent?: string | undefined;
-
-  /**
-   * Present means change it, and only one of the five is accepted.
-   *
-   * @generated from field: optional string preset = 7;
-   */
-  preset?: string | undefined;
-
-  /**
-   * @generated from field: optional string caption_pace = 8;
-   */
-  captionPace?: string | undefined;
 
   /**
    * @generated from field: optional string composition_body = 9;
@@ -226,43 +165,6 @@ export const DeleteVideoTemplateResponseSchema: GenMessage<DeleteVideoTemplateRe
   messageDesc(file_postpilot_v1_clip_template, 7);
 
 /**
- * The reserved information fields a preset needs, in the order a form shows
- * them. Labels are exact Korean and the prompts are code-owned.
- *
- * @generated from message postpilot.v1.SeedPresetFieldsRequest
- */
-export type SeedPresetFieldsRequest = Message<"postpilot.v1.SeedPresetFieldsRequest"> & {
-  /**
-   * @generated from field: string preset = 1;
-   */
-  preset: string;
-};
-
-/**
- * Describes the message postpilot.v1.SeedPresetFieldsRequest.
- * Use `create(SeedPresetFieldsRequestSchema)` to create a new message.
- */
-export const SeedPresetFieldsRequestSchema: GenMessage<SeedPresetFieldsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_template, 8);
-
-/**
- * @generated from message postpilot.v1.SeedPresetFieldsResponse
- */
-export type SeedPresetFieldsResponse = Message<"postpilot.v1.SeedPresetFieldsResponse"> & {
-  /**
-   * @generated from field: repeated postpilot.v1.ClipInformationField fields = 1;
-   */
-  fields: ClipInformationField[];
-};
-
-/**
- * Describes the message postpilot.v1.SeedPresetFieldsResponse.
- * Use `create(SeedPresetFieldsResponseSchema)` to create a new message.
- */
-export const SeedPresetFieldsResponseSchema: GenMessage<SeedPresetFieldsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_template, 9);
-
-/**
  * Version 0 means unavailable; storage support never implies execution support.
  *
  * @generated from message postpilot.v1.GetClipCapabilitiesRequest
@@ -275,7 +177,7 @@ export type GetClipCapabilitiesRequest = Message<"postpilot.v1.GetClipCapabiliti
  * Use `create(GetClipCapabilitiesRequestSchema)` to create a new message.
  */
 export const GetClipCapabilitiesRequestSchema: GenMessage<GetClipCapabilitiesRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_template, 10);
+  messageDesc(file_postpilot_v1_clip_template, 8);
 
 /**
  * @generated from message postpilot.v1.GetClipCapabilitiesResponse
@@ -297,7 +199,7 @@ export type GetClipCapabilitiesResponse = Message<"postpilot.v1.GetClipCapabilit
  * Use `create(GetClipCapabilitiesResponseSchema)` to create a new message.
  */
 export const GetClipCapabilitiesResponseSchema: GenMessage<GetClipCapabilitiesResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_template, 11);
+  messageDesc(file_postpilot_v1_clip_template, 9);
 
 /**
  * The video templates an account writes clips from, and what the design system allows.
@@ -337,14 +239,6 @@ export const ClipTemplateService: GenService<{
     methodKind: "unary";
     input: typeof DeleteVideoTemplateRequestSchema;
     output: typeof DeleteVideoTemplateResponseSchema;
-  },
-  /**
-   * @generated from rpc postpilot.v1.ClipTemplateService.SeedPresetFields
-   */
-  seedPresetFields: {
-    methodKind: "unary";
-    input: typeof SeedPresetFieldsRequestSchema;
-    output: typeof SeedPresetFieldsResponseSchema;
   },
   /**
    * @generated from rpc postpilot.v1.ClipTemplateService.GetClipCapabilities

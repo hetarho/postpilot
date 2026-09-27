@@ -190,7 +190,9 @@ func declaredPlan(t *testing.T, body, ratio string) clip.EditPlan {
 	if problem != nil {
 		t.Fatal(problem)
 	}
-	plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}, Portable: &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: cuts}}
+	// A fixture body that names a pace or an accent is a project that chose
+	// them: the project's are the only ones a render reads (CLIP-139).
+	plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, CaptionPace: doc.Pace, Accent: doc.Accent, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}, Portable: &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: cuts}}
 	for _, element := range resolved.Elements {
 		plan.Portable.Elements = append(plan.Portable.Elements, clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent})
 	}
@@ -202,7 +204,7 @@ func TestDeclaredLayoutHasNoImplicitFurniture(t *testing.T) {
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		t.Run(ratio, func(t *testing.T) {
 			plan := declaredPlan(t, `<clip version="1"/>`, ratio)
-			plan.Disclosure, plan.Hook, plan.Preset, plan.CTA = "ad", "hidden hook", "restaurant", "profile"
+			plan.Disclosure = "ad"
 			if err := a.WithWorkspace(t.Context(), "empty-native", func(ws clip.MediaWorkspace) error {
 				layout, err := r.layoutComposition(t.Context(), ws, plan)
 				if err == nil && len(layout.visuals) != 0 {
@@ -279,5 +281,31 @@ func TestInvalidLiteralReturnsItsIdentityWithoutTruncation(t *testing.T) {
 	var problem *composition.Problem
 	if !errors.As(err, &problem) || problem.ElementID != "owner" || problem.Reason != "copy_limit" || plan.Portable.Elements[0].Resolved.Text != exact {
 		t.Fatalf("literal damaged: %v", err)
+	}
+}
+
+// The pace and the accent a caption renders with are the PROJECT's alone
+// (CLIP-139): a frozen document that names its own, as an older plan's does,
+// decides neither, and the project's empty choice is the shared default — the
+// steady pace and no accent (CDS-60).
+func TestTheProjectsPaceAndAccentAreTheOnlyOnes(t *testing.T) {
+	body := `<clip version="1" pace="rapid" accent="teal"><text id="caption" kind="fixed" role="caption" basis="whole">오늘은 철판 요리를 먹어요</text></clip>`
+	plan := declaredPlan(t, body, "vertical")
+	for i := range plan.Portable.Elements {
+		if plan.Portable.Elements[i].Pace != "rapid" || plan.Portable.Elements[i].Accent != "teal" {
+			t.Fatal("the fixture did not freeze the document's own values", plan.Portable.Elements[i])
+		}
+	}
+	for _, project := range []struct{ pace, accent, wantPace string }{{"", "", "steady"}, {"steady", "coral", "steady"}, {"rapid", "", "rapid"}} {
+		plan.CaptionPace, plan.Accent = project.pace, project.accent
+		visuals := measuredDeclared(t, plan).visuals
+		if len(visuals) == 0 {
+			t.Fatal("nothing was laid out")
+		}
+		for _, visual := range visuals {
+			if visual.text.Pace != project.wantPace || visual.text.Accent != project.accent {
+				t.Fatalf("project %+v rendered pace %q accent %q", project, visual.text.Pace, visual.text.Accent)
+			}
+		}
 	}
 }

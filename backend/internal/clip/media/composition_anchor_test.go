@@ -77,7 +77,7 @@ func TestAutomaticCaptionUsesItsScenesSpaceAndPinnedPositionsStay(t *testing.T) 
 					segment.EndMS = 30000
 				}
 				if mode == "owner" {
-					plan.Portable.Elements[0].Placement = &clip.CompositionPlacement{Style: "simple", Position: "bottom", StartMS: 120, EndMS: 14880}
+					plan.Portable.Elements[0].Placement = &clip.CompositionPlacement{Style: "bold", Position: "bottom", StartMS: 120, EndMS: 14880}
 				}
 				plan.Portable.Observations = []clip.SourceAnalysis{{Source: source, Segments: []clip.Segment{segment}}}
 				layout := measuredDeclared(t, plan)

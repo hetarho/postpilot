@@ -46,8 +46,7 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "shorts-example", func(ws clip.MediaWorkspace) error {
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", HideDisclosure: os.Getenv("CLIP_EXAMPLE_HIDE_DISCLOSURE") == "1", Preset: "restaurant", Hook: "이 소리, 못 참지", Accent: "lime", CTA: "save",
-			Facts: []clip.Answer{{Label: "상호", Text: "철판 한 끼"}, {Label: "메뉴", Text: "철판 요리 · 볶음밥"}}}
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", HideDisclosure: os.Getenv("CLIP_EXAMPLE_HIDE_DISCLOSURE") == "1", Accent: "lime"}
 		// These are editorial sample words about visible footage. The title is
 		// not a claimed merchant name, and no unknown price/location is invented.
 		order := []int{6, 0, 1, 2, 3, 4, 5, 7}
@@ -80,7 +79,7 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 				cut.TransitionMS = design.Transition.FadeMS
 			}
 			if captions[i] != "" {
-				cut.Copies = []clip.Copy{{Text: captions[i], Style: "clean", Anchor: "bottom", Align: "center", Accent: "lime"}}
+				cut.Copies = []clip.Copy{{Text: captions[i], Style: "bold", Anchor: "bottom", Align: "center", Accent: "lime"}}
 			}
 			if paceExample && len(cut.Copies) > 0 {
 				if i >= 2 {
@@ -98,11 +97,6 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 						return fmt.Errorf("rapid example did not fit")
 					}
 				}
-			}
-			// The title and ending each have their own message, with no duplicate
-			// caption or information strip underneath them.
-			if i > 0 && i < len(order)-1 && ends[i] >= 2000 {
-				cut.Chips = []string{"메뉴"}
 			}
 			plan.Cuts = append(plan.Cuts, cut)
 		}

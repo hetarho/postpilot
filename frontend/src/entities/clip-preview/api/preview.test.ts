@@ -18,7 +18,6 @@ it('refuses an oversized Connect JSON body before sending or truncating the curr
   const plan: ClipEditPlan = {
     nativeComposition: true,
     durationMs: 15000,
-    hook: '',
     cuts: [],
     elements: Array.from({ length: 800 }, (_, i) => ({
       instanceId: `copy-${i}`,

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	clipapp "github.com/postpilot/backend/internal/clip/app"
+	"github.com/postpilot/backend/internal/clip/composition"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
@@ -87,7 +88,7 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 }
 
 func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
-	for _, change := range []string{"facts", "target", "template", "instruction"} {
+	for _, change := range []string{"values", "target", "template", "instruction"} {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
 			h.media.cleanupErr = errors.New("workspace cleanup failed")
@@ -98,9 +99,8 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 			h.media.cleanupErr = nil
 			patch := clip.ProjectPatch{}
 			switch change {
-			case "facts":
-				v := "save"
-				patch.CTA = &v
+			case "values":
+				patch.CompositionInputs = &clip.CompositionInputs{Values: map[string]string{"place": "바뀐 곳"}, Items: map[string][]composition.Item{}}
 			case "target":
 				v := 45000
 				patch.TargetDurationMS = &v
@@ -114,6 +114,8 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 				}
 				template, _ := create(t, h.projects)
 				patch.VideoTemplateID = &template.ID
+				// Another outline asks for its own values again.
+				patch.CompositionInputs = &clip.CompositionInputs{Values: map[string]string{"place": "서울"}, Items: map[string][]composition.Item{}}
 			}
 			if _, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, patch); err != nil {
 				t.Fatal(err)

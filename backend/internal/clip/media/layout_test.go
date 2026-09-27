@@ -53,11 +53,9 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 		// Fifteen-two, not fifteen: the second cut joins with a hard cut and only
 		// the third fades, so the transitions take 200 ms off the sum and not
 		// 400 (CDS-36).
-		plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Hook: "정확한 한글", Accent: "coral", Facts: []clip.Answer{
-			{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
-		}, Cuts: []clip.EditCut{
-			{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}}},
-			{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
+		plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
+			{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "bold", Anchor: "bottom", Align: "center", Accent: "coral"}}},
+			{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "bold", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
 			{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}}},
 		}}
 		canvas, _ := clip.ClipCanvas(ratio)
@@ -154,13 +152,13 @@ func TestCaptionDoesNotChangeTreatmentAfterSampling(t *testing.T) {
 // windows that never meet, and one manifest that names them apart.
 func TestTwoCopiesOnOneCutLayOutAndVerify(t *testing.T) {
 	a, r := measured(t)
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
 		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7500, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{
-			{Text: "조용한 골목을 걸었어요", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 120, EndMS: 3000},
-			{Text: "9900원", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 3120, EndMS: 7380},
+			{Text: "조용한 골목을 걸었어요", Style: "bold", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 120, EndMS: 3000},
+			{Text: "9900원", Style: "bold", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 3120, EndMS: 7380},
 		}},
 		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7500, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{
-			{Text: "기록처럼 오늘", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"},
+			{Text: "기록처럼 오늘", Style: "bold", Anchor: "lower_mid", Align: "left", Accent: "teal"},
 		}},
 	}}
 	canvas, _ := clip.ClipCanvas("vertical")
@@ -212,13 +210,14 @@ func TestTheRepairLadderWalksAnchorThenDrop(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
 	base := func() clip.EditPlan {
-		return clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
-			{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "clean", Anchor: "bottom", Align: "center"}}},
-			{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "bottom", Align: "center"}}},
+		return clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
+			{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "bold", Anchor: "bottom", Align: "center"}}},
+			{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "bottom", Align: "center"}}},
 		}, Decisions: []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}}
 	}
-	// Rung 2: two 깔끔하게 cuts whose anchors are three steps apart (V13); the
-	// style is already 깔끔하게, so the first rung has nothing to do.
+	// Rung 2: two cuts in the default treatment whose anchors are two steps
+	// apart (V13); the style is already the default, so the first rung has
+	// nothing to do.
 	anchorCase := base()
 	anchorCase.Cuts[0].Copies[0].Anchor = "upper_mid"
 	anchorCase.Cuts[1].Copies[0].Anchor = "bottom"
@@ -235,7 +234,7 @@ func TestTheRepairLadderWalksAnchorThenDrop(t *testing.T) {
 		check  func(clip.EditPlan) error
 	}{
 		"anchor": {anchorCase, 1, "anchor", func(p clip.EditPlan) error {
-			if c := p.Cuts[1].FirstCopy(); c.Anchor != design.Caption().Anchor || c.Style != "clean" {
+			if c := p.Cuts[1].FirstCopy(); c.Anchor != design.Caption().Anchor || c.Style != "bold" {
 				return fmt.Errorf("anchor rung placed %+v", c)
 			}
 			return nil
@@ -291,9 +290,9 @@ func TestTheRepairLadderWalksAnchorThenDrop(t *testing.T) {
 func TestTheLadderRefusesPersonsPlansAndFurnitureFailures(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
-		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "clean", Anchor: "bottom", Align: "center"}}},
-		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "top", Align: "center"}}},
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
+		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "bold", Anchor: "bottom", Align: "center"}}},
+		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "top", Align: "center"}}},
 	}}
 	if err := a.WithWorkspace(t.Context(), "ladder-refusals", func(ws clip.MediaWorkspace) error {
 		// A person's plan: no decisions, the anchor-step failure is named, nothing moves.
@@ -312,7 +311,7 @@ func TestTheLadderRefusesPersonsPlansAndFurnitureFailures(t *testing.T) {
 		// compiled plan is a renderer defect, refused at once.
 		compiled := plan
 		compiled.Cuts = slices.Clone(plan.Cuts)
-		compiled.Cuts[1].Copies = []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "bottom", Align: "center"}}
+		compiled.Cuts[1].Copies = []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "bottom", Align: "center"}}
 		compiled.Decisions = []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}
 		c, err = r.layout(t.Context(), ws, canvas, compiled)
 		if err != nil {
@@ -345,7 +344,7 @@ func TestTheLadderRefusesPersonsPlansAndFurnitureFailures(t *testing.T) {
 func TestAClipWithEveryCaptionDroppedStillLaysOut(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Hook: "오늘의 한 끼", Cuts: []clip.EditCut{
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
 		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{}}},
 		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{}}},
 	}, Decisions: []clip.Composition{{Fallback: "dropped"}, {Fallback: "dropped"}}}

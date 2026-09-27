@@ -233,7 +233,6 @@ export function validateTimelinePlan(
       ),
     copyCount: false,
     copyClasses: false,
-    chips: false,
     copies: [],
   }))
   const elements = nativeTextErrors(plan)
@@ -255,7 +254,6 @@ export function validateTimelinePlan(
     cuts,
     elements,
     frequency: false,
-    hook: false,
     saveable,
     valid: saveable && elements.every((e) => !e.stale),
   }

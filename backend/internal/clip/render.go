@@ -61,9 +61,6 @@ type Cut struct {
 	// a description and then the number it leads to, never both on screen at
 	// once. A cut whose copy the composer dropped carries none.
 	Copies []Copy
-	// Reserved fact labels whose chips belong on this cut, at most two
-	// at a time. Part of the approved composition, so it is stored with it.
-	Chips  []string
 	Volume *float64 // nil keeps original audio; explicit zero mutes it
 	// The ONE constant rate this cut plays at, as permille (CLIP-98). Zero is
 	// the absence a plan written before rates carried, read as 1x through
@@ -148,33 +145,18 @@ type EditPlan struct {
 	DurationMS     int
 	Cuts           []EditCut
 	// Render inputs, not part of the approved composition and never stored with
-	// it: the disclosure the badge shows and the facts a chip reads. They are
-	// filled from the PROJECT at render time, so the badge is always the owner's
-	// current campaign type and a plan stored before presets existed still
-	// renders (CDS-31).
+	// it: the disclosure the badge shows, filled from the PROJECT at render time
+	// so the badge is always the owner's current campaign type (CDS-31).
 	Disclosure string
-	Facts      []Answer
-	// The template's category preset, which fixes the chip priority.
-	Preset string
-	// A legacy plan's opening title, written by the model under CDS-42 and
-	// drawn as the first line of its intro block (CDS-70); empty when it could
-	// not be grounded.
-	Hook string
-	// The closing call to action, already resolved against the preset, and the
-	// project accent (CLIP-14).
-	CTA, Accent string
-	// The project's caption pace (CLIP-139), a render input like Accent beside
-	// it: empty is not chosen, and the frozen document's own value stands.
-	CaptionPace string
+	// The project's accent and caption pace (CLIP-139), render inputs like the
+	// disclosure beside them. Empty is the shared default: no accent and the
+	// steady pace.
+	Accent, CaptionPace string
 	// The project's design selection (CLIP-139, CLIP-142), render inputs like
 	// the pace beside them: the presets the intro and outro render in and the
-	// styles a caption may take. Empty is a plan rendered before the selection
-	// moved onto the project, which reads as the shared defaults.
+	// styles a caption may take. Empty reads as the shared defaults.
 	IntroPreset, OutroPreset string
 	CaptionStyles            []string
-	// What the model wrote per cut, parallel to Cuts, before the compiler placed
-	// it. It is the compiler's input and is never stored with the plan.
-	Written []Written
 	// What the compiler decided per cut, in the same order: the class it read,
 	// the scene it read it in and the fallback it had to use, if any.
 	Decisions []Composition
@@ -275,11 +257,6 @@ func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && 
 // coordinate or an original-audio gain.
 func Normalized(v float64) bool { return normalized(v) }
 
-// RetiredCopyStyles are the style names the approved set (CDS-80) no longer
-// carries, the siblings of CDS-25's 크게 강조. Nothing writes one; a stored plan
-// that carries one is read.
-var RetiredCopyStyles = []string{"clean", "memo", "mark", "simple"}
-
 func ValidCopy(c Copy, maxRunes int) bool {
 	if !utf8.ValidString(c.Text) || utf8.RuneCountInString(c.Text) > maxRunes || !ValidAccent(c.Accent) || !ValidCaptionPace(c.Pace) {
 		return false
@@ -290,12 +267,9 @@ func ValidCopy(c Copy, maxRunes int) bool {
 	if strings.TrimSpace(c.Text) == "" && c.Anchor == "" && c.Align == "" && c.Style == "" {
 		return c.Keyword == ""
 	}
-	// The approved set (CDS-80), plus the names CDS retired with the plated
-	// styles: a plan written before the set still renders, in the default
-	// treatment it already rendered in when the set carried one style.
+	// The approved set (CDS-80) and nothing else.
 	_, approved := design.LookupCaptionStyle(c.Style)
-	known := approved || slices.Contains(RetiredCopyStyles, c.Style)
-	return slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && known
+	return slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && approved
 }
 
 // planViolation preserves the invalid-plan identity and a content-free cause.
@@ -313,7 +287,6 @@ func (e planViolation) OutputValidationCode() string { return string(e) }
 const (
 	reasonDisclosureRequired  = "CLIP_DISCLOSURE_REQUIRED"
 	reasonTargetDuration      = "CLIP_TARGET_DURATION_REQUIRED"
-	reasonFactsRequired       = "CLIP_FACTS_REQUIRED"
 	reasonInsufficientFootage = "CLIP_INSUFFICIENT_FOOTAGE"
 )
 
@@ -346,7 +319,7 @@ const FurnitureSlot = design.FurnitureSlot
 
 // LayoutError is one verifier failure and the caption it names: the (cut, copy)
 // whose style, anchor or presence the repair ladder may change (CDS-55), or the
-// furniture slot when the badge, a chip or a card failed — a renderer defect no
+// furniture slot when the badge or a card failed — a renderer defect no
 // caption repair can reach. It keeps the invalid-plan identity and the
 // content-free reason every caller already understands.
 type LayoutError struct {
@@ -389,18 +362,12 @@ func (p EditPlan) Compiled() bool {
 	return len(p.Cuts) > 0 && len(p.Decisions) == len(p.Cuts)
 }
 
-// WithProject fills the render inputs the badge and the chips need. It is
-// called at render time rather than at approval time so a stored plan never
-// carries a stale disclosure.
 // WithDesign is how the PROJECT's design selection reaches a render (CLIP-139):
 // the pace and the accent, the two region presets and the caption styles this
-// clip may use. An empty pace or accent leaves the frozen document's value
-// standing, so a plan written before they moved renders exactly as it did.
+// clip may use. The project's values are the only ones: an empty pace or accent
+// is the shared default, never whatever the frozen document said.
 func (p EditPlan) WithDesign(d ProjectDesign) EditPlan {
-	p.CaptionPace = d.CaptionPace
-	if d.Accent != "" {
-		p.Accent = d.Accent
-	}
+	p.CaptionPace, p.Accent = d.CaptionPace, d.Accent
 	p.IntroPreset, p.OutroPreset, p.CaptionStyles = d.IntroPreset, d.OutroPreset, d.CaptionStyles
 	return p
 }
@@ -410,58 +377,26 @@ func (p EditPlan) Design() ProjectDesign {
 	return ProjectDesign{CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles}
 }
 
-// CaptionPaceOf and AccentOf answer what a caption actually renders with: the
-// project's choice where it made one, and what was frozen with the plan where
-// it did not.
-func (p EditPlan) CaptionPaceOf(text PortableText) string {
-	if p.CaptionPace != "" {
-		return p.CaptionPace
+// CaptionPaceOrDefault is the pace every caption of this plan renders at: the
+// project's, with the empty choice meaning the shared steady default.
+func (p EditPlan) CaptionPaceOrDefault() string {
+	if p.CaptionPace == "" {
+		return "steady"
 	}
-	return text.Pace
-}
-func (p EditPlan) AccentOf(text PortableText) string {
-	if p.Accent != "" {
-		return p.Accent
-	}
-	return text.Accent
+	return p.CaptionPace
 }
 
-func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string, hideDisclosure ...bool) EditPlan {
-	p.HideDisclosure = len(hideDisclosure) > 0 && hideDisclosure[0]
-	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
-	p.CTA, p.Accent = cta, accent
+// WithDisclosure fills the badge's render inputs from the project. It is called
+// at render time rather than at approval time so a stored plan never carries a
+// stale disclosure.
+func (p EditPlan) WithDisclosure(disclosure string, hideDisclosure bool) EditPlan {
+	p.Disclosure, p.HideDisclosure = disclosure, hideDisclosure
 	return p
-}
-
-// ChipLabels is the subset of a cut's chips that names a reserved fact and has
-// an answer, in the template preset's own priority.
-func (p EditPlan) ChipLabels(c Cut) []string {
-	answers := map[string]string{}
-	for _, a := range p.Facts {
-		answers[a.Label] = a.Text
-	}
-	out := []string{}
-	// A chip is shown for the whole cut it belongs to and for at least 2.0 s, so
-	// a shorter cut carries none rather than flashing one.
-	if c.OutputDurationMS() < int(design.Timing.ChipMinS*1000) {
-		return out
-	}
-	for _, label := range design.ChipPriority(p.Preset) {
-		if !slices.Contains(c.Chips, label) || strings.TrimSpace(answers[label]) == "" {
-			continue
-		}
-		out = append(out, label)
-	}
-	return out
 }
 
 func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) error {
 	if _, err := ClipCanvas(plan.Ratio); err != nil {
 		return planViolation("plan_ratio")
-	}
-	// Two lines of nine, the limit a legacy plan's hook sentence was written to.
-	if design.Chars(plan.Hook) > 2*design.Type["hook"].Chars || strings.Count(plan.Hook, "\n") > 1 {
-		return planViolation("plan_hook")
 	}
 	if len(plan.Cuts) == 0 || len(plan.Cuts) > cfg.MaxCuts {
 		return planViolation("plan_cut_count")
@@ -543,16 +478,6 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		for _, copy := range c.Copies {
 			if !ValidCopy(copy, cfg.MaxCopyRunes) || (copy.Pace == "rapid" && !rapid) || (rapid && strings.TrimSpace(copy.Text) == "") {
 				return planViolation("plan_copy_format")
-			}
-		}
-		// A chip names one of the five reserved facts, and at most two show at
-		// once.
-		if len(c.Chips) > 2 {
-			return planViolation("plan_chip_count")
-		}
-		for _, label := range c.Chips {
-			if !slices.Contains(design.Fact.Chips, label) {
-				return planViolation("plan_chip_label")
 			}
 		}
 		seen[c.ID] = true
@@ -676,8 +601,8 @@ func ClampCaptionPlacement(canvas Canvas, at CaptionPlacement) CaptionPlacement 
 
 // PickCopyAnchor maps a normalized output-space avoid region only to the four
 // approved anchors, keeping the alignment it was given. Manual placement remains
-// exactly what the owner selected. CDS-38's full selection — subject rank, placed
-// chips and badge, readable footage text and the one-step walk — is T105's.
+// exactly what the owner selected. CDS-38's full selection — subject rank, the
+// placed badge, readable footage text and the one-step walk — is T105's.
 func PickCopyAnchor(canvas Canvas, preferred, align string, width, height float64, avoid Region) (string, error) {
 	if !normalized(avoid.X) || !normalized(avoid.Y) || !normalized(avoid.Width) || !normalized(avoid.Height) || avoid.X+avoid.Width > 1 || avoid.Y+avoid.Height > 1 {
 		return "", ErrInvalid

@@ -31,7 +31,6 @@ func nativeInput() clip.PlanningInput {
 		{ID: "sea", Values: map[string]string{"name": "해물라면", "price": "12,000원"}},
 		{ID: "cheese", Values: map[string]string{"name": "치즈라면", "price": "$12 per serving"}},
 	}}}}
-	in.Answers = nil
 	in.Analyses[0].Source.Info.DurationMS = 15000
 	in.Analyses[0].Source.Info.HasAudio = false
 	in.Analyses[0].Segments = []clip.Segment{
@@ -81,7 +80,7 @@ func hasFallback(plan clip.EditPlan, cut, reason string) bool {
 func TestObservationGapIsRefusedBeforeTheWriterIsPaid(t *testing.T) {
 	in, p := nativeInput(), nativePlan()
 	in.Analyses[0].Segments[0].EndMS = 7499
-	s, models, _ := newService(t, raw(p), true)
+	s, models := newService(t, raw(p), true)
 	_, _, err := s.Flow(t.Context(), testRef(), in)
 	d, ok := clip.DiagnosticFromError(err)
 	if err == nil || len(models.calls) != 0 {
@@ -92,11 +91,11 @@ func TestObservationGapIsRefusedBeforeTheWriterIsPaid(t *testing.T) {
 	}
 }
 
-// The writer receives the frozen narrative, the owner's exact facts, the
+// The flow writer receives the frozen narrative, the owner's exact facts, the
 // complete observations, source metadata and the SERVER's own allowed-rate
-// list — and nothing else. No pixels, no URL, and no authority over sound:
-// the owner's source-sound setting is not in the request at all (CLIP-31,
-// CLIP-100, CDS-68).
+// list. No pixels and no URL; whether a source keeps its sound reaches it only
+// as a fact it plans around, and its contract has no field that could set it
+// (CLIP-31, CLIP-100, CLIP-129, CDS-68).
 func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 	in := nativeInput()
 	// A 60 fps original earns the slow rates; the fixture's unmeasured source
@@ -104,7 +103,7 @@ func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 	in.Analyses[0].Source.Info.FrameRateNumerator, in.Analyses[0].Source.Info.FrameRateDenominator = 60, 1
 	in.Analyses[0].Source.Info.DecodedFrames, in.Analyses[0].Source.Info.DecodedDurationMS = 900, 15000
 	in.Analyses[0].Source.Info.CadenceVerified = true
-	system, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
+	system, user := ai.BuildFlowPrompt(in, 200, clip.DefaultCompositionLimits())
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(user), &payload); err != nil {
 		t.Fatal(err)
@@ -120,9 +119,14 @@ func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 			t.Fatalf("allowed rates changed: %v, want %v", got, want)
 		}
 	}
-	for _, forbidden := range []string{"retain", "original_audio", "original_sound", "source_audio", "http://", "https://", "object_key", "signature"} {
+	for _, forbidden := range []string{"source_audio", "http://", "https://", "object_key", "signature"} {
 		if strings.Contains(strings.ToLower(system+user), forbidden) {
 			t.Fatalf("the writer request carried %q", forbidden)
+		}
+	}
+	for _, authority := range []string{"retain", "original_audio", "original_sound", "source_audio"} {
+		if strings.Contains(string(ai.FlowSchema()), authority) {
+			t.Fatalf("the flow contract lets the writer answer %q", authority)
 		}
 	}
 	// Each observed scene reaches the writer with its recorded status, so the
@@ -158,7 +162,7 @@ func TestNativeWriterBoundsAndFrozenAdmissionBeforeProvider(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s, models, _ := newService(t, raw(nativePlan()), true)
+			s, models := newService(t, raw(nativePlan()), true)
 			in := nativeInput()
 			tc.mutate(&in)
 			if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{in.Analyses[0].Source}); err == nil {
@@ -169,7 +173,7 @@ func TestNativeWriterBoundsAndFrozenAdmissionBeforeProvider(t *testing.T) {
 			}
 		})
 	}
-	s, models, _ := newService(t, raw(nativePlan()), true)
+	s, models := newService(t, raw(nativePlan()), true)
 	in := nativeInput()
 	models.info.StructuredOutput = false
 	if _, _, err := s.Flow(t.Context(), testRef(), in); !errors.Is(err, clip.ErrPricingUnavailable) || len(models.calls) != 0 {

@@ -12,7 +12,6 @@ import { useClipDraftPreview } from './useClipDraftPreview'
 
 const plan: ClipEditPlan = {
   durationMs: 10000,
-  hook: '',
   cuts: [
     {
       id: 'a',
@@ -22,7 +21,6 @@ const plan: ClipEditPlan = {
       endMs: 10000,
       transitionMs: 0,
       copies: [],
-      chips: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
     },

@@ -1,42 +1,28 @@
 package store_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
 )
 
-func TestTemplatePacePersistsAndPatchPresence(t *testing.T) {
+// A template carries no pace of its own (CLIP-14): a root pace attribute is
+// part of the body the owner wrote and reaches no project. The project's pace
+// starts at the shared default.
+func TestTemplateCarriesNoPaceOfItsOwn(t *testing.T) {
 	service, store, _ := setup(t)
 	r := recipe()
-	r.CaptionPace = "rapid"
+	r.CompositionBody = `<clip version="1" pace="rapid"><field id="place" label="장소" required="true">어디였나요?</field></clip>`
 	created, err := service.CreateTemplate(t.Context(), "alice", r)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.GetTemplate(t.Context(), "alice", created.ID)
-	if err != nil || got.CaptionPace != "rapid" {
+	if err != nil || got.CompositionBody != r.CompositionBody {
 		t.Fatal(got, err)
 	}
-	name := "다른 이름"
-	got, err = service.UpdateTemplate(t.Context(), "alice", created.ID, clip.TemplatePatch{Name: &name})
-	if err != nil || got.CaptionPace != "rapid" {
-		t.Fatal(got, err)
-	}
-	for _, pace := range []string{"steady", "", "rapid"} {
-		got, err = service.UpdateTemplate(t.Context(), "alice", created.ID, clip.TemplatePatch{CaptionPace: &pace})
-		if err != nil || got.CaptionPace != pace {
-			t.Fatal(got, err)
-		}
-	}
-	invalid := "fast"
-	if _, err = service.UpdateTemplate(t.Context(), "alice", created.ID, clip.TemplatePatch{CaptionPace: &invalid}); !errors.Is(err, clip.ErrInvalid) {
-		t.Fatal(err)
-	}
-	r.Name = "invalid"
-	r.CaptionPace = invalid
-	if _, err = service.CreateTemplate(t.Context(), "alice", r); !errors.Is(err, clip.ErrInvalid) {
-		t.Fatal(err)
+	p, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Language: "ko", Title: "여행", VideoTemplateID: created.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	if err != nil || p.CaptionPace != "" {
+		t.Fatal("the template seeded the project's pace", p.CaptionPace, err)
 	}
 }

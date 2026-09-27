@@ -10,13 +10,13 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
-func TestWriterListsEachGeneratedRegionSlotLimit(t *testing.T) {
+func TestNarrationListsEachGeneratedRegionSlotLimit(t *testing.T) {
 	in := nativeInput()
 	// The body names no preset; the slot counts come from the PROJECT's own
 	// selection (CLIP-14, CLIP-139, CLIP-147).
 	in.Design = clip.ProjectDesign{IntroPreset: "a", OutroPreset: "e"}
 	setNativeBody(&in, `<clip version="1"><text id="opening" kind="ai" role="hook"><row>주제</row><row kind="fixed">고정 제목</row></text><text id="closing" kind="fixed" role="ending"><row kind="ai">라벨</row><row kind="ai">점수</row><row kind="ai">마무리</row></text></clip>`)
-	system, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
+	system, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in}, clip.DefaultCompositionLimits())
 	var payload struct {
 		Slots []struct {
 			Element      string  `json:"element_id"`
@@ -48,12 +48,8 @@ func TestWriterListsEachGeneratedRegionSlotLimit(t *testing.T) {
 			t.Fatal(i, payload.Slots)
 		}
 	}
-	if !strings.Contains(system, "max_syllables") || strings.Contains(system, "single-line") || !strings.Contains(system, "row kind overrides") || strings.Contains(system, "opening card") {
+	if !strings.Contains(system, "max_syllables") || strings.Contains(system, "single-line") || strings.Contains(system, "opening card") {
 		t.Fatal(system)
-	}
-	legacy, _ := ai.BuildPlanPrompt(clip.PlanningInput{}, 200, clip.DefaultCompositionLimits())
-	if strings.Contains(legacy, `"hook"`) || strings.Contains(legacy, "opening card") || strings.Contains(string(ai.PlanSchema()), `"hook"`) {
-		t.Fatal("legacy plan still requests hook")
 	}
 }
 
@@ -63,7 +59,7 @@ func TestAGeneratedRowIsDescribedByTheSlotItLandsIn(t *testing.T) {
 	in := nativeInput()
 	in.Design = clip.ProjectDesign{IntroPreset: "a", OutroPreset: "e"}
 	setNativeBody(&in, `<clip version="1"><text id="title" kind="fixed" role="hook"><row>고정 제목</row></text><text id="subtitle" kind="ai" role="hook"><row>부제</row></text></clip>`)
-	_, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
+	_, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in}, clip.DefaultCompositionLimits())
 	var payload struct {
 		Slots []struct {
 			Element string `json:"element_id"`

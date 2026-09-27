@@ -78,7 +78,7 @@ func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
 	if got := correctionPlan(decoded.Plan); !reflect.DeepEqual(got, s.Plan) {
 		t.Fatal(got)
 	}
-	if got := templateProto(clip.VideoTemplate{Recipe: clip.Recipe{CaptionPace: "rapid"}}); got.CaptionPace != "rapid" {
+	if got := templateProto(clip.VideoTemplate{ID: "t", Recipe: clip.Recipe{Name: "카페", CompositionBody: `<clip version="1"/>`}}); got.Id != "t" || got.Name != "카페" || got.CompositionBody != `<clip version="1"/>` {
 		t.Fatal(got)
 	}
 }

@@ -26,20 +26,19 @@ type RevisionQuoteStore interface {
 // never approved (CLIP-131).
 func RevisionInputDigest(p Project, request, target, write string, pricing GenerationPricing) string {
 	input := struct {
-		User, Project, Write   string
-		Revision               int
-		Request, Target        string
-		PlanJSON               string
-		Pricing                GenerationPricing
-		Composition            *ProjectComposition
-		Instruction            string
-		CaptionPace, Accent    string
-		Disclosure, CTA, Ratio string
-		HideDisclosure         bool
-		Target_                int
-		Answers                []Answer
+		User, Project, Write string
+		Revision             int
+		Request, Target      string
+		PlanJSON             string
+		Pricing              GenerationPricing
+		Composition          *ProjectComposition
+		Instruction          string
+		CaptionPace, Accent  string
+		Disclosure, Ratio    string
+		HideDisclosure       bool
+		Target_              int
 	}{p.UserID, p.ID, write, p.EditPlanRevision, request, target, p.EditPlan, pricing, p.Composition,
-		p.Instruction, p.CaptionPace, p.Accent, p.Disclosure, p.CTA, p.Ratio, p.HideDisclosure, p.TargetDurationMS, p.Answers}
+		p.Instruction, p.CaptionPace, p.Accent, p.Disclosure, p.Ratio, p.HideDisclosure, p.TargetDurationMS}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])

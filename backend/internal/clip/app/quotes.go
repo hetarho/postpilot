@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -61,7 +60,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, clip.PlanningInput) error
 	}); ok {
-		if err := validator.ValidateAuthoredInput(ctx, clip.PlanningInput{Composition: c, Template: t.Recipe, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.DesignSelection()}); err != nil {
+		if err := validator.ValidateAuthoredInput(ctx, clip.PlanningInput{Composition: c, Template: t.Recipe, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.DesignSelection()}); err != nil {
 			return p, t, b, pricing, err
 		}
 	}
@@ -91,7 +90,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, err
 	}
 	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Answers: clip.RequiredQuoteAnswers(p, t), Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction}
+	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction}
 	// A resume reuses exactly what the recovery holds: a complete plan answers
 	// both writing calls, a written flow answers only the first. A recovery
 	// saved before the flow was its own call carries a complete plan, so it
@@ -235,7 +234,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: clip.RequiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

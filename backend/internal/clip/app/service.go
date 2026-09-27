@@ -50,70 +50,20 @@ func newID() string {
 	return hex.EncodeToString(b[:])
 }
 
-func (s *Service) fields(values []clip.InformationField) ([]clip.InformationField, error) {
-	if len(values) > s.limits.FieldCount {
-		return nil, clip.ErrInvalid
-	}
-	out := make([]clip.InformationField, 0, len(values))
-	seen := map[string]bool{}
-	for _, f := range values {
-		f.Label = strings.TrimSpace(f.Label)
-		f.Prompt = strings.TrimSpace(f.Prompt)
-		if seen[f.Label] || !clip.BoundedText(f.Label, 1, s.limits.LabelChars) || !clip.BoundedText(f.Prompt, 1, s.limits.PromptChars) {
-			return nil, clip.ErrInvalid
-		}
-		seen[f.Label] = true
-		out = append(out, f)
-	}
-	return out, nil
-}
-
-func (s *Service) answers(values []clip.Answer) ([]clip.Answer, error) {
-	out := make([]clip.Answer, 0, len(values))
-	seen := map[string]bool{}
-	for _, a := range values {
-		a.Label = strings.TrimSpace(a.Label)
-		if seen[a.Label] || !clip.BoundedText(a.Label, 1, s.limits.LabelChars) || !clip.BoundedText(a.Text, 0, s.limits.AnswerChars) {
-			return nil, clip.ErrInvalid
-		}
-		seen[a.Label] = true
-		out = append(out, a)
-	}
-	return out, nil
-}
-
 func (s *Service) ListTemplates(ctx context.Context, user string) ([]clip.VideoTemplate, error) {
 	return s.store.ListTemplates(ctx, user)
 }
 
+// CreateTemplate saves a name and an outline body; a request without a body is
+// refused, because a template is its outline and nothing else (CLIP-4, CLIP-14).
 func (s *Service) CreateTemplate(ctx context.Context, user string, recipe clip.Recipe) (clip.VideoTemplate, error) {
 	recipe.Name = strings.TrimSpace(recipe.Name)
-	if recipe.CompositionBody != "" {
-		if !clip.BoundedText(recipe.Name, 1, s.limits.NameChars) {
-			return clip.VideoTemplate{}, clip.ErrInvalid
-		}
-		var err error
-		recipe, err = s.authoredRecipe(recipe)
-		if err != nil {
-			return clip.VideoTemplate{}, err
-		}
-		now := s.now()
-		t := clip.VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, CreatedAt: now, UpdatedAt: now}
-		if err = s.store.InsertTemplate(ctx, t); err != nil {
-			return clip.VideoTemplate{}, err
-		}
-		return t, nil
-	}
-	if !clip.BoundedText(recipe.Name, 1, s.limits.NameChars) || !clip.BoundedText(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !clip.ValidAccent(recipe.Accent) || !clip.ValidPreset(recipe.Preset) || !clip.ValidCaptionPace(recipe.CaptionPace) {
+	if !clip.BoundedText(recipe.Name, 1, s.limits.NameChars) || strings.TrimSpace(recipe.CompositionBody) == "" {
 		return clip.VideoTemplate{}, clip.ErrInvalid
 	}
-	fields, err := s.fields(recipe.InformationFields)
-	if err != nil {
+	if err := s.authoredBody(recipe.CompositionBody); err != nil {
 		return clip.VideoTemplate{}, err
 	}
-	recipe.InformationFields = fields
-	recipe.CompositionBody = clip.LegacyCompositionBody(recipe)
-	recipe.CompositionLegacy = true
 	now := s.now()
 	t := clip.VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertTemplate(ctx, t); err != nil {
@@ -123,8 +73,7 @@ func (s *Service) CreateTemplate(ctx context.Context, user string, recipe clip.R
 }
 
 func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p clip.TemplatePatch) (clip.VideoTemplate, error) {
-	old, err := s.store.GetTemplate(ctx, user, id)
-	if err != nil {
+	if _, err := s.store.GetTemplate(ctx, user, id); err != nil {
 		return clip.VideoTemplate{}, err
 	}
 	if p.Name != nil {
@@ -135,45 +84,12 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p clip.Te
 		p.Name = &name
 	}
 	if p.CompositionBody != nil {
-		r := old.Recipe
-		r.CompositionBody = *p.CompositionBody
-		r, err = s.authoredRecipe(r)
-		if err != nil {
-			return clip.VideoTemplate{}, err
-		}
-		p.CutGuidance = &r.CutGuidance
-		p.Accent = &r.Accent
-		p.Preset = &r.Preset
-		p.CaptionPace = &r.CaptionPace
-		p.InformationFields = &r.InformationFields
-		return s.store.UpdateTemplate(ctx, user, id, p, s.now())
-	}
-	if old.CompositionBody != "" && !old.CompositionLegacy {
-		if p.CutGuidance != nil || p.Accent != nil || p.Preset != nil || p.CaptionPace != nil || p.InformationFields != nil {
+		if strings.TrimSpace(*p.CompositionBody) == "" {
 			return clip.VideoTemplate{}, clip.ErrInvalid
 		}
-		return s.store.UpdateTemplate(ctx, user, id, p, s.now())
-	}
-	if p.CutGuidance != nil && !clip.BoundedText(*p.CutGuidance, 0, s.limits.GuidanceChars) {
-		return clip.VideoTemplate{}, clip.ErrInvalid
-	}
-	if p.Accent != nil && !clip.ValidAccent(*p.Accent) {
-		return clip.VideoTemplate{}, clip.ErrInvalid
-	}
-	if p.CaptionPace != nil && !clip.ValidCaptionPace(*p.CaptionPace) {
-		return clip.VideoTemplate{}, clip.ErrInvalid
-	}
-	// The empty preset is readable but never writable: a template that names one
-	// must name one of the five.
-	if p.Preset != nil && !clip.ValidPreset(*p.Preset) {
-		return clip.VideoTemplate{}, clip.ErrInvalid
-	}
-	if p.InformationFields != nil {
-		fields, err := s.fields(*p.InformationFields)
-		if err != nil {
+		if err := s.authoredBody(*p.CompositionBody); err != nil {
 			return clip.VideoTemplate{}, err
 		}
-		p.InformationFields = &fields
 	}
 	return s.store.UpdateTemplate(ctx, user, id, p, s.now())
 }
@@ -238,15 +154,11 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	}
 	// Empty disclosure is allowed at creation — the owner chooses it before
 	// starting, and the generation gate is what refuses a clip without one.
-	if input.Disclosure != "" && !clip.ValidDisclosure(input.Disclosure) || !clip.ValidCTA(input.CTA) {
+	if input.Disclosure != "" && !clip.ValidDisclosure(input.Disclosure) {
 		return clip.Project{}, clip.ErrInvalid
 	}
 	if !clip.BoundedText(input.Instruction, 0, s.limits.InstructionChars) {
 		return clip.Project{}, clip.ErrInvalid
-	}
-	answers, err := s.answers(input.Answers)
-	if err != nil {
-		return clip.Project{}, err
 	}
 	// The pace and the accent are the PROJECT's alone and start unset, which is
 	// the shared default: a template carries none of the five design values any
@@ -286,13 +198,11 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	now := s.now()
-	p := clip.Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := clip.Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
+	var err error
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
 		return clip.Project{}, err
-	}
-	if input.CompositionInputs != nil && p.Composition.Snapshot.Legacy {
-		p.Answers = legacyAnswers(p.Answers, template.InformationFields, p.Composition.Inputs.Values)
 	}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return clip.Project{}, err
@@ -331,16 +241,11 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	if p.Instruction != nil && !clip.BoundedText(*p.Instruction, 0, s.limits.InstructionChars) {
 		return clip.Project{}, clip.ErrInvalid
 	}
-	// The retired picker's value is the campaign identity only where nothing
-	// else declares one, so a legacy project still may not clear it (CDS-5). An
-	// authored composition owns its own disclosure field and leaves this column
-	// empty, and an owner edit has to be able to write that back — otherwise the
-	// project can never be saved again after creation.
-	authored := old.Composition != nil && !old.Composition.Snapshot.Legacy
+	// An authored composition owns its own disclosure field and leaves this
+	// column empty, and an owner edit has to be able to write that back —
+	// otherwise the project can never be saved again after creation (CDS-5).
+	authored := old.Composition != nil
 	if p.Disclosure != nil && !clip.ValidDisclosure(*p.Disclosure) && !(authored && *p.Disclosure == "") {
-		return clip.Project{}, clip.ErrInvalid
-	}
-	if p.CTA != nil && !clip.ValidCTA(*p.CTA) {
 		return clip.Project{}, clip.ErrInvalid
 	}
 	// Either one only changes how the SAME plan renders — how its phrases split
@@ -365,11 +270,6 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 			return clip.Project{}, err
 		}
 	}
-	answers, err := s.answers(p.Answers)
-	if err != nil {
-		return clip.Project{}, err
-	}
-	p.Answers = answers
 	p.Composition = nil
 	p.ExpectedCompositionRevision = nil
 	if p.VideoTemplateID != nil && *p.VideoTemplateID != old.VideoTemplateID {
@@ -400,14 +300,9 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 			if e != nil {
 				return clip.Project{}, e
 			}
-			if current.CompositionBody != "" && !current.CompositionLegacy {
-				c.Snapshot = clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: current.CompositionBody, TemplateID: current.ID}
-			}
+			c.Snapshot = clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: current.CompositionBody, TemplateID: current.ID}
 		}
 		limits := s.limits.Composition
-		if c.Snapshot.Legacy {
-			limits = clip.LegacyCompositionLimits(limits)
-		}
 		d, e := composition.Parse(c.Snapshot.Body, limits)
 		if e != nil {
 			return clip.Project{}, e
@@ -417,23 +312,6 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		if e := clip.ValidateSourceAssociations(old, c.Inputs.Associations); e != nil {
 			return clip.Project{}, e
-		}
-		if c.Snapshot.Legacy && c.Snapshot.LegacyRecipe != nil {
-			next := old
-			next.Answers = legacyAnswers(old.Answers, c.Snapshot.LegacyRecipe.InformationFields, c.Inputs.Values)
-			if p.Disclosure != nil {
-				next.Disclosure = *p.Disclosure
-			}
-			if p.HideDisclosure != nil {
-				next.HideDisclosure = *p.HideDisclosure
-			}
-			if p.CTA != nil {
-				next.CTA = *p.CTA
-			}
-			p.Answers = next.Answers
-			updated := clip.LegacyProjectComposition(next, *c.Snapshot.LegacyRecipe)
-			updated.Snapshot.TemplateID = c.Snapshot.TemplateID
-			c = updated
 		}
 		p.Composition = &c
 	}

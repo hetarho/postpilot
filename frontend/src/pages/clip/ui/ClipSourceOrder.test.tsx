@@ -10,10 +10,7 @@ import { discardClipDraftQueues } from '@/features/edit-clip-project'
 const template = {
   id: 'template',
   name: '여행',
-  informationFields: [],
-  cutGuidance: '',
-  accent: '' as const,
-  preset: 'restaurant' as const,
+  compositionBody: '<clip version="1"/>',
 }
 const project = {
   id: 'owned',
@@ -21,9 +18,7 @@ const project = {
   videoTemplateId: template.id,
   ratio: 'vertical' as const,
   targetDurationMs: 30000,
-  answers: [],
   disclosure: 'ad' as const,
-  cta: '' as const,
 }
 const batch = create(ClipSourceBatchSchema, {
   id: 'retained',

@@ -8,6 +8,6 @@ export interface ClipCompositionInputs {
   associations: ClipSourceAssociation[]
 }
 export interface ClipProjectComposition {
-  snapshot: { version: number; body: string; templateId: string; legacy: boolean }
+  snapshot: { version: number; body: string; templateId: string }
   inputs: ClipCompositionInputs
 }

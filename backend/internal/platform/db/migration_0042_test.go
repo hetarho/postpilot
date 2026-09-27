@@ -44,7 +44,8 @@ func TestMigration0042LeavesExistingRowsUndeclared(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := provider.Up(ctx); err != nil {
+	// 0090 drops the preset and the CTA; this pins what 0042 left behind.
+	if _, err := provider.UpTo(ctx, 89); err != nil {
 		t.Fatal(err)
 	}
 

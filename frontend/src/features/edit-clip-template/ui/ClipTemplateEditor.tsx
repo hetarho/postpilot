@@ -40,11 +40,7 @@ const FORM_ID = 'clip-template-form'
 const EMPTY_COMPOSITION_BODY = '<clip version="1"/>'
 function authoredRecipe(stored?: ClipTemplate): ClipRecipe {
   const recipe = stored ? recipeOf(stored) : emptyClipRecipe()
-  return {
-    ...recipe,
-    compositionBody: stored?.compositionBody || EMPTY_COMPOSITION_BODY,
-    compositionLegacy: false,
-  }
+  return { ...recipe, compositionBody: recipe.compositionBody || EMPTY_COMPOSITION_BODY }
 }
 export function ClipTemplateEditor({
   ownerId,
@@ -77,7 +73,7 @@ export function ClipTemplateEditor({
     enableBeforeUnload: guard,
     withResolver: true,
   })
-  const body = draft.compositionBody ?? ''
+  const body = draft.compositionBody
   let document: ClipComposition | undefined, problem: CompositionProblem | undefined
   try {
     document = parseClipTemplate(body)
@@ -157,16 +153,6 @@ export function ClipTemplateEditor({
               </FieldMessage>
             )}
           </div>
-          {stored?.compositionLegacy && (
-            <Typography variant="body" className="text-content-secondary">
-              {t('composition.converted')}
-            </Typography>
-          )}
-          {stored?.compositionConverted && !dirty && (
-            <Typography variant="body" role="status" className="text-content-secondary">
-              {t('composition.sectionsMoved')}
-            </Typography>
-          )}
           {capabilities.data &&
             (capabilities.data.compositionVersion !== 1 ||
               capabilities.data.compositionPlanVersion < 5) && (

@@ -51,7 +51,7 @@ func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) Se
 			continue
 		}
 		id := allowed[0]
-		if !plan.Portable.Snapshot.Legacy && text.Resolved.Element.Style != "" && text.Resolved.Element.Style != "auto" {
+		if text.Resolved.Element.Style != "" && text.Resolved.Element.Style != "auto" {
 			id = text.Resolved.Element.Style
 		}
 		if text.Owner.Style != "" {

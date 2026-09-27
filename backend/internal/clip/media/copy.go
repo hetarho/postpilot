@@ -579,133 +579,58 @@ func keywordValues(candidates [][]string, keyword string) []string {
 
 // The disclosure badge (CDS-31) and legacy information pairs.
 // Plans with information are routed through the sampled composition renderer.
-type chip struct {
-	Label, Value             string
-	Region                   clip.Region
-	LabelWidth               float64
-	LabelBounds, ValueBounds clip.Region
-}
 type furniture struct {
 	Badge       clip.Region
 	BadgeText   string
 	BadgeLines  []string
-	Chips       []chip
 	BadgeBounds clip.Region
 }
 
-// badgeAndChips measures the phrase and every chip's text, then places them.
-// The measurement is the only impure half, exactly as it is for copy.
-func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string) (furniture, error) {
-	groups := map[string][]string{}
+// badge measures the disclosure phrase, then places it. The measurement is the
+// only impure half, exactly as it is for copy.
+func (r *Rendering) badge(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string) (furniture, error) {
+	bounds := clip.Region{}
 	if phrase != "" {
-		groups["badge"] = []string{phrase}
-	}
-	for _, label := range labels {
-		if value := strings.TrimSpace(answers[label]); value != "" {
-			groups["label"] = append(groups["label"], label)
-			groups["caption"] = append(groups["caption"], value)
-		}
-	}
-	bounds := map[string]clip.Region{}
-	for _, name := range []string{"badge", "label", "caption"} {
-		values := groups[name]
-		if len(values) == 0 {
-			continue
-		}
-		role := design.Type[name]
-		if name == "label" {
-			role.Tracking = design.Information.LabelTracking
-		}
-		if err := r.checkCopy(strings.Join(values, ""), role); err != nil {
+		role := design.Type["badge"]
+		if err := r.checkCopy(phrase, role); err != nil {
 			return furniture{}, err
 		}
-		measured, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
+		measured, err := r.measure(ctx, ws, []string{phrase}, role.Weight, role.Tracking, r.family(role))
 		if err != nil {
 			return furniture{}, err
 		}
-		for text, box := range measured {
-			bounds[furnitureKey(name, text)] = box
-		}
+		bounds = measured[phrase]
 	}
-	return placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
+	return placeFurniture(canvas, ratio, phrase, bounds)
 }
 
-func furnitureKey(role, value string) string { return role + "\x00" + value }
-
-// placeFurniture puts the disclosure badge at its ratio's fixed corner and
-// stacks at most two chips from the priority it was given (CDS-31).
-func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string, bounds map[string]clip.Region) (furniture, error) {
+// placeFurniture puts the disclosure badge at its ratio's fixed corner (CDS-31).
+func placeFurniture(canvas clip.Canvas, ratio, phrase string, bounds clip.Region) (furniture, error) {
 	out := furniture{BadgeText: phrase}
 	l, ok := design.Layout(ratio)
 	if !ok {
 		return out, clip.ErrInvalid
 	}
-	badgeRole, labelRole, valueRole := design.Type["badge"], design.Type["label"], design.Type["caption"]
-	b := scaled(bounds[furnitureKey("badge", phrase)], badgeRole.Size/100)
+	badgeRole := design.Type["badge"]
+	b := scaled(bounds, badgeRole.Size/100)
 	out.BadgeBounds = b
-	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
-	badgeHeight := badgeRole.Size + 2*pad.V
+	pad := design.Spacing.PadChip
 	width := math.Ceil(b.Width + 2*pad.H)
 	if phrase != "" {
-		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: badgeHeight}
+		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: badgeRole.Size + 2*pad.V}
 	}
 	if phrase != "" && !inside(out.Badge, clip.Region{X: l.Anchor.Left, Y: canvas.Safe.Y, Width: l.Badge.Right - l.Anchor.Left, Height: canvas.Safe.Height}) {
 		return out, clip.ErrInvalid
 	}
-	x, y := l.Anchor.Left, l.Badge.Top
-	for _, label := range labels {
-		if len(out.Chips) >= maxChips {
-			break
-		}
-		value := strings.TrimSpace(answers[label])
-		if value == "" {
-			continue
-		}
-		lb := scaled(bounds[furnitureKey("label", label)], labelRole.Size/100)
-		vb := scaled(bounds[furnitureKey("caption", value)], valueRole.Size/100)
-		w := math.Ceil(math.Max(lb.Width, vb.Width))
-		h := math.Ceil(math.Max(lb.Height, labelRole.Size) + gap + math.Max(vb.Height, valueRole.Size))
-		if w > l.CopyMaxWidth {
-			return out, clip.ErrCopyTooLong
-		}
-		right := canvas.Safe.X + canvas.Safe.Width
-		if phrase != "" && y < out.Badge.Y+out.Badge.Height {
-			right = math.Min(right, out.Badge.X-gap)
-		}
-		if x+w > right {
-			x = l.Anchor.Left
-			y += h + gap
-		}
-		box := clip.Region{X: x, Y: y, Width: w, Height: h}
-		if !inside(box, canvas.Safe) {
-			return out, clip.ErrCopyTooLong
-		}
-		out.Chips = append(out.Chips, chip{Label: label, Value: value, LabelWidth: lb.Width, LabelBounds: lb, ValueBounds: vb, Region: box})
-		x += w + gap
-	}
-	rowHeight := badgeHeight
-	for _, c := range out.Chips {
-		if c.Region.Y == l.Badge.Top {
-			rowHeight = math.Max(rowHeight, c.Region.Height)
-		}
-	}
-	if phrase != "" {
-		out.Badge.Y += (rowHeight - badgeHeight) / 2
-	}
-
 	return out, nil
 }
-
-// A legacy plan shows at most two chips at once, and CDS-31 fixes the badge's
-// padding.
-const maxChips = 2
 
 func scaled(r clip.Region, factor float64) clip.Region {
 	return clip.Region{X: r.X * factor, Y: r.Y * factor, Width: r.Width * factor, Height: r.Height * factor}
 }
 
-// Elements places the badge for the whole clip and each chip for its own cut.
-func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) clip.Manifest {
+// Elements places the badge for the whole clip.
+func (f furniture) Elements(duration int) clip.Manifest {
 	m := clip.Manifest{}
 	if f.BadgeText != "" {
 		m = append(m, design.Element{
@@ -713,17 +638,6 @@ func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) c
 			Background: design.Color["badge_ad"].Hex, Fill: design.Color["text_white"].Hex,
 			Region: design.Bounds(f.Badge), StartMS: 0, EndMS: duration,
 		})
-	}
-	for _, c := range f.Chips {
-		for i, role := range []string{"label", "caption"} {
-			text, b, alpha, y := c.Label, c.LabelBounds, design.Color["text_muted"].Alpha, c.Region.Y
-			if i == 1 {
-				text, b, alpha, y = c.Value, c.ValueBounds, 1, y+math.Max(design.Type["label"].Size, c.LabelBounds.Height)+design.Spacing.GapStack
-			}
-			m = append(m, design.Element{Cut: chipCut, Kind: "chip", TypeRole: role, Text: text,
-				FontSize: design.Type[role].Size, Fill: design.Color["text_white"].Hex, Opacity: alpha,
-				Region: design.Bounds{X: c.Region.X + (c.Region.Width-b.Width)/2, Y: y, Width: b.Width, Height: b.Height}, StartMS: chipStart, EndMS: chipEnd})
-		}
 	}
 	return m
 }
@@ -744,10 +658,10 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("copy-%04d", index))
 }
 
-// furniturePlate is the fixed layer: the disclosure badge and this cut's chips,
-// drawn in CDS-45's order under the copy and never animated.
+// furniturePlate is the fixed layer: the disclosure badge, drawn in CDS-45's
+// order under the copy and never animated.
 func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, f furniture, index int) (string, error) {
-	if f.BadgeText == "" && len(f.Chips) == 0 {
+	if f.BadgeText == "" {
 		return "", nil
 	}
 	svg, err := r.overlays.Render("furniture", furnitureView(canvas, f))
@@ -785,37 +699,6 @@ func (r *Rendering) rasterizeTo(ctx context.Context, ws clip.MediaWorkspace, box
 		return err
 	}
 	return r.media.workspaceFile(ws, png)
-}
-
-// FixedElements places the disclosure badge and a cut's chips and returns them
-// as manifest elements, so the composer can keep copy off them (CDS-45). Like
-// CaptionSize it needs no source pixels and scopes its SVG to its own workspace.
-func (r *Rendering) FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer, hideDisclosure ...bool) (out clip.Manifest, err error) {
-	canvas, err := clip.ClipCanvas(ratio)
-	if err != nil {
-		return nil, err
-	}
-	phrase, ok := design.Disclosure[disclosure]
-	if !ok {
-		return nil, clip.ErrDisclosureRequired
-	}
-	if len(hideDisclosure) > 0 && hideDisclosure[0] {
-		phrase = ""
-	}
-	texts := map[string]string{}
-	for _, a := range answers {
-		texts[a.Label] = a.Text
-	}
-	err = r.media.WithWorkspace(ctx, "clip-fixed-elements", func(ws clip.MediaWorkspace) error {
-		f, err := r.badgeAndChips(ctx, ws, canvas, ratio, phrase, labels, texts)
-		if err != nil {
-			return err
-		}
-		// The window is the composer's concern; only the regions matter here.
-		out = f.Elements(1, 0, 0, 1)
-		return nil
-	})
-	return out, err
 }
 
 // CaptionSize uses precisely the same shaping and fit as the final PNG. It needs

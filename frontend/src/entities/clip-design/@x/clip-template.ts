@@ -3,16 +3,10 @@ export { CLIP_COMPOSITION_LIMITS, CLIP_COMPOSITION_PREVIEW } from '../config/cli
 export {
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
-  CLIP_PRESETS,
   CLIP_REGIONS,
   CLIP_RULES,
 } from '../config/clip-design'
-export type {
-  ClipCaptionPace,
-  ClipPresetId,
-  ClipRatioId,
-  ClipRegionPresets,
-} from '../config/clip-design'
+export type { ClipCaptionPace, ClipRatioId, ClipRegionPresets } from '../config/clip-design'
 export {
   clipLayoutRegion,
   clipRegionSlotAt,

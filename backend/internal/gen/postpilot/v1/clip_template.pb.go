@@ -101,17 +101,12 @@ func (x *ListVideoTemplatesResponse) GetTemplates() []*VideoTemplate {
 	return nil
 }
 
+// A request without an outline body is refused (CLIP-4, CLIP-14); the retired
+// category-preset recipe fields keep their numbers and names reserved.
 type CreateVideoTemplateRequest struct {
-	state             protoimpl.MessageState  `protogen:"open.v1"`
-	Name              string                  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	InformationFields []*ClipInformationField `protobuf:"bytes,2,rep,name=information_fields,json=informationFields,proto3" json:"information_fields,omitempty"`
-	CutGuidance       string                  `protobuf:"bytes,3,opt,name=cut_guidance,json=cutGuidance,proto3" json:"cut_guidance,omitempty"`
-	CopyStyles        []string                `protobuf:"bytes,4,rep,name=copy_styles,json=copyStyles,proto3" json:"copy_styles,omitempty"`
-	Accent            string                  `protobuf:"bytes,5,opt,name=accent,proto3" json:"accent,omitempty"`
-	// Required on create: one of the five presets.
-	Preset          string  `protobuf:"bytes,6,opt,name=preset,proto3" json:"preset,omitempty"`
-	CaptionPace     string  `protobuf:"bytes,7,opt,name=caption_pace,json=captionPace,proto3" json:"caption_pace,omitempty"`
-	CompositionBody *string `protobuf:"bytes,8,opt,name=composition_body,json=compositionBody,proto3,oneof" json:"composition_body,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	CompositionBody string                 `protobuf:"bytes,8,opt,name=composition_body,json=compositionBody,proto3" json:"composition_body,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -153,51 +148,9 @@ func (x *CreateVideoTemplateRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateVideoTemplateRequest) GetInformationFields() []*ClipInformationField {
-	if x != nil {
-		return x.InformationFields
-	}
-	return nil
-}
-
-func (x *CreateVideoTemplateRequest) GetCutGuidance() string {
-	if x != nil {
-		return x.CutGuidance
-	}
-	return ""
-}
-
-func (x *CreateVideoTemplateRequest) GetCopyStyles() []string {
-	if x != nil {
-		return x.CopyStyles
-	}
-	return nil
-}
-
-func (x *CreateVideoTemplateRequest) GetAccent() string {
-	if x != nil {
-		return x.Accent
-	}
-	return ""
-}
-
-func (x *CreateVideoTemplateRequest) GetPreset() string {
-	if x != nil {
-		return x.Preset
-	}
-	return ""
-}
-
-func (x *CreateVideoTemplateRequest) GetCaptionPace() string {
-	if x != nil {
-		return x.CaptionPace
-	}
-	return ""
-}
-
 func (x *CreateVideoTemplateRequest) GetCompositionBody() string {
-	if x != nil && x.CompositionBody != nil {
-		return *x.CompositionBody
+	if x != nil {
+		return x.CompositionBody
 	}
 	return ""
 }
@@ -247,17 +200,10 @@ func (x *CreateVideoTemplateResponse) GetTemplate() *VideoTemplate {
 }
 
 type UpdateVideoTemplateRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name              *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	InformationFields *ClipInformationFields `protobuf:"bytes,3,opt,name=information_fields,json=informationFields,proto3" json:"information_fields,omitempty"`
-	CutGuidance       *string                `protobuf:"bytes,4,opt,name=cut_guidance,json=cutGuidance,proto3,oneof" json:"cut_guidance,omitempty"`
-	CopyStyles        *ClipCopyStyles        `protobuf:"bytes,5,opt,name=copy_styles,json=copyStyles,proto3" json:"copy_styles,omitempty"`
-	Accent            *string                `protobuf:"bytes,6,opt,name=accent,proto3,oneof" json:"accent,omitempty"`
-	// Present means change it, and only one of the five is accepted.
-	Preset          *string `protobuf:"bytes,7,opt,name=preset,proto3,oneof" json:"preset,omitempty"`
-	CaptionPace     *string `protobuf:"bytes,8,opt,name=caption_pace,json=captionPace,proto3,oneof" json:"caption_pace,omitempty"`
-	CompositionBody *string `protobuf:"bytes,9,opt,name=composition_body,json=compositionBody,proto3,oneof" json:"composition_body,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name            *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	CompositionBody *string                `protobuf:"bytes,9,opt,name=composition_body,json=compositionBody,proto3,oneof" json:"composition_body,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -302,48 +248,6 @@ func (x *UpdateVideoTemplateRequest) GetId() string {
 func (x *UpdateVideoTemplateRequest) GetName() string {
 	if x != nil && x.Name != nil {
 		return *x.Name
-	}
-	return ""
-}
-
-func (x *UpdateVideoTemplateRequest) GetInformationFields() *ClipInformationFields {
-	if x != nil {
-		return x.InformationFields
-	}
-	return nil
-}
-
-func (x *UpdateVideoTemplateRequest) GetCutGuidance() string {
-	if x != nil && x.CutGuidance != nil {
-		return *x.CutGuidance
-	}
-	return ""
-}
-
-func (x *UpdateVideoTemplateRequest) GetCopyStyles() *ClipCopyStyles {
-	if x != nil {
-		return x.CopyStyles
-	}
-	return nil
-}
-
-func (x *UpdateVideoTemplateRequest) GetAccent() string {
-	if x != nil && x.Accent != nil {
-		return *x.Accent
-	}
-	return ""
-}
-
-func (x *UpdateVideoTemplateRequest) GetPreset() string {
-	if x != nil && x.Preset != nil {
-		return *x.Preset
-	}
-	return ""
-}
-
-func (x *UpdateVideoTemplateRequest) GetCaptionPace() string {
-	if x != nil && x.CaptionPace != nil {
-		return *x.CaptionPace
 	}
 	return ""
 }
@@ -487,96 +391,6 @@ func (x *DeleteVideoTemplateResponse) GetDetachedProjects() int32 {
 	return 0
 }
 
-// The reserved information fields a preset needs, in the order a form shows
-// them. Labels are exact Korean and the prompts are code-owned.
-type SeedPresetFieldsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Preset        string                 `protobuf:"bytes,1,opt,name=preset,proto3" json:"preset,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SeedPresetFieldsRequest) Reset() {
-	*x = SeedPresetFieldsRequest{}
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SeedPresetFieldsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SeedPresetFieldsRequest) ProtoMessage() {}
-
-func (x *SeedPresetFieldsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SeedPresetFieldsRequest.ProtoReflect.Descriptor instead.
-func (*SeedPresetFieldsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *SeedPresetFieldsRequest) GetPreset() string {
-	if x != nil {
-		return x.Preset
-	}
-	return ""
-}
-
-type SeedPresetFieldsResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Fields        []*ClipInformationField `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SeedPresetFieldsResponse) Reset() {
-	*x = SeedPresetFieldsResponse{}
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SeedPresetFieldsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SeedPresetFieldsResponse) ProtoMessage() {}
-
-func (x *SeedPresetFieldsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SeedPresetFieldsResponse.ProtoReflect.Descriptor instead.
-func (*SeedPresetFieldsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *SeedPresetFieldsResponse) GetFields() []*ClipInformationField {
-	if x != nil {
-		return x.Fields
-	}
-	return nil
-}
-
 // Version 0 means unavailable; storage support never implies execution support.
 type GetClipCapabilitiesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -586,7 +400,7 @@ type GetClipCapabilitiesRequest struct {
 
 func (x *GetClipCapabilitiesRequest) Reset() {
 	*x = GetClipCapabilitiesRequest{}
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[10]
+	mi := &file_postpilot_v1_clip_template_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +412,7 @@ func (x *GetClipCapabilitiesRequest) String() string {
 func (*GetClipCapabilitiesRequest) ProtoMessage() {}
 
 func (x *GetClipCapabilitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[10]
+	mi := &file_postpilot_v1_clip_template_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +425,7 @@ func (x *GetClipCapabilitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClipCapabilitiesRequest.ProtoReflect.Descriptor instead.
 func (*GetClipCapabilitiesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{8}
 }
 
 type GetClipCapabilitiesResponse struct {
@@ -624,7 +438,7 @@ type GetClipCapabilitiesResponse struct {
 
 func (x *GetClipCapabilitiesResponse) Reset() {
 	*x = GetClipCapabilitiesResponse{}
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[11]
+	mi := &file_postpilot_v1_clip_template_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -636,7 +450,7 @@ func (x *GetClipCapabilitiesResponse) String() string {
 func (*GetClipCapabilitiesResponse) ProtoMessage() {}
 
 func (x *GetClipCapabilitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_template_proto_msgTypes[11]
+	mi := &file_postpilot_v1_clip_template_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -649,7 +463,7 @@ func (x *GetClipCapabilitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClipCapabilitiesResponse.ProtoReflect.Descriptor instead.
 func (*GetClipCapabilitiesResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_clip_template_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetClipCapabilitiesResponse) GetCompositionVersion() int32 {
@@ -673,57 +487,33 @@ const file_postpilot_v1_clip_template_proto_rawDesc = "" +
 	" postpilot/v1/clip_template.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\"\x1b\n" +
 	"\x19ListVideoTemplatesRequest\"W\n" +
 	"\x1aListVideoTemplatesResponse\x129\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xdf\x02\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xae\x01\n" +
 	"\x1aCreateVideoTemplateRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12Q\n" +
-	"\x12information_fields\x18\x02 \x03(\v2\".postpilot.v1.ClipInformationFieldR\x11informationFields\x12!\n" +
-	"\fcut_guidance\x18\x03 \x01(\tR\vcutGuidance\x12\x1f\n" +
-	"\vcopy_styles\x18\x04 \x03(\tR\n" +
-	"copyStyles\x12\x16\n" +
-	"\x06accent\x18\x05 \x01(\tR\x06accent\x12\x16\n" +
-	"\x06preset\x18\x06 \x01(\tR\x06preset\x12!\n" +
-	"\fcaption_pace\x18\a \x01(\tR\vcaptionPace\x12.\n" +
-	"\x10composition_body\x18\b \x01(\tH\x00R\x0fcompositionBody\x88\x01\x01B\x13\n" +
-	"\x11_composition_body\"V\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12)\n" +
+	"\x10composition_body\x18\b \x01(\tR\x0fcompositionBodyJ\x04\b\x02\x10\bR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
 	"\x1bCreateVideoTemplateResponse\x127\n" +
-	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xe8\x03\n" +
+	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xe6\x01\n" +
 	"\x1aUpdateVideoTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12R\n" +
-	"\x12information_fields\x18\x03 \x01(\v2#.postpilot.v1.ClipInformationFieldsR\x11informationFields\x12&\n" +
-	"\fcut_guidance\x18\x04 \x01(\tH\x01R\vcutGuidance\x88\x01\x01\x12=\n" +
-	"\vcopy_styles\x18\x05 \x01(\v2\x1c.postpilot.v1.ClipCopyStylesR\n" +
-	"copyStyles\x12\x1b\n" +
-	"\x06accent\x18\x06 \x01(\tH\x02R\x06accent\x88\x01\x01\x12\x1b\n" +
-	"\x06preset\x18\a \x01(\tH\x03R\x06preset\x88\x01\x01\x12&\n" +
-	"\fcaption_pace\x18\b \x01(\tH\x04R\vcaptionPace\x88\x01\x01\x12.\n" +
-	"\x10composition_body\x18\t \x01(\tH\x05R\x0fcompositionBody\x88\x01\x01B\a\n" +
-	"\x05_nameB\x0f\n" +
-	"\r_cut_guidanceB\t\n" +
-	"\a_accentB\t\n" +
-	"\a_presetB\x0f\n" +
-	"\r_caption_paceB\x13\n" +
-	"\x11_composition_body\"V\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12.\n" +
+	"\x10composition_body\x18\t \x01(\tH\x01R\x0fcompositionBody\x88\x01\x01B\a\n" +
+	"\x05_nameB\x13\n" +
+	"\x11_composition_bodyJ\x04\b\x03\x10\tR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
 	"\x1bUpdateVideoTemplateResponse\x127\n" +
 	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\",\n" +
 	"\x1aDeleteVideoTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"J\n" +
 	"\x1bDeleteVideoTemplateResponse\x12+\n" +
-	"\x11detached_projects\x18\x01 \x01(\x05R\x10detachedProjects\"1\n" +
-	"\x17SeedPresetFieldsRequest\x12\x16\n" +
-	"\x06preset\x18\x01 \x01(\tR\x06preset\"V\n" +
-	"\x18SeedPresetFieldsResponse\x12:\n" +
-	"\x06fields\x18\x01 \x03(\v2\".postpilot.v1.ClipInformationFieldR\x06fields\"\x1c\n" +
+	"\x11detached_projects\x18\x01 \x01(\x05R\x10detachedProjects\"\x1c\n" +
 	"\x1aGetClipCapabilitiesRequest\"\x88\x01\n" +
 	"\x1bGetClipCapabilitiesResponse\x12/\n" +
 	"\x13composition_version\x18\x01 \x01(\x05R\x12compositionVersion\x128\n" +
-	"\x18composition_plan_version\x18\x02 \x01(\x05R\x16compositionPlanVersion2\x9d\x05\n" +
+	"\x18composition_plan_version\x18\x02 \x01(\x05R\x16compositionPlanVersion2\xb8\x04\n" +
 	"\x13ClipTemplateService\x12i\n" +
 	"\x12ListVideoTemplates\x12'.postpilot.v1.ListVideoTemplatesRequest\x1a(.postpilot.v1.ListVideoTemplatesResponse\"\x00\x12l\n" +
 	"\x13CreateVideoTemplate\x12(.postpilot.v1.CreateVideoTemplateRequest\x1a).postpilot.v1.CreateVideoTemplateResponse\"\x00\x12l\n" +
 	"\x13UpdateVideoTemplate\x12(.postpilot.v1.UpdateVideoTemplateRequest\x1a).postpilot.v1.UpdateVideoTemplateResponse\"\x00\x12l\n" +
-	"\x13DeleteVideoTemplate\x12(.postpilot.v1.DeleteVideoTemplateRequest\x1a).postpilot.v1.DeleteVideoTemplateResponse\"\x00\x12c\n" +
-	"\x10SeedPresetFields\x12%.postpilot.v1.SeedPresetFieldsRequest\x1a&.postpilot.v1.SeedPresetFieldsResponse\"\x00\x12l\n" +
+	"\x13DeleteVideoTemplate\x12(.postpilot.v1.DeleteVideoTemplateRequest\x1a).postpilot.v1.DeleteVideoTemplateResponse\"\x00\x12l\n" +
 	"\x13GetClipCapabilities\x12(.postpilot.v1.GetClipCapabilitiesRequest\x1a).postpilot.v1.GetClipCapabilitiesResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
@@ -738,7 +528,7 @@ func file_postpilot_v1_clip_template_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_template_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_template_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_postpilot_v1_clip_template_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_postpilot_v1_clip_template_proto_goTypes = []any{
 	(*ListVideoTemplatesRequest)(nil),   // 0: postpilot.v1.ListVideoTemplatesRequest
 	(*ListVideoTemplatesResponse)(nil),  // 1: postpilot.v1.ListVideoTemplatesResponse
@@ -748,40 +538,29 @@ var file_postpilot_v1_clip_template_proto_goTypes = []any{
 	(*UpdateVideoTemplateResponse)(nil), // 5: postpilot.v1.UpdateVideoTemplateResponse
 	(*DeleteVideoTemplateRequest)(nil),  // 6: postpilot.v1.DeleteVideoTemplateRequest
 	(*DeleteVideoTemplateResponse)(nil), // 7: postpilot.v1.DeleteVideoTemplateResponse
-	(*SeedPresetFieldsRequest)(nil),     // 8: postpilot.v1.SeedPresetFieldsRequest
-	(*SeedPresetFieldsResponse)(nil),    // 9: postpilot.v1.SeedPresetFieldsResponse
-	(*GetClipCapabilitiesRequest)(nil),  // 10: postpilot.v1.GetClipCapabilitiesRequest
-	(*GetClipCapabilitiesResponse)(nil), // 11: postpilot.v1.GetClipCapabilitiesResponse
-	(*VideoTemplate)(nil),               // 12: postpilot.v1.VideoTemplate
-	(*ClipInformationField)(nil),        // 13: postpilot.v1.ClipInformationField
-	(*ClipInformationFields)(nil),       // 14: postpilot.v1.ClipInformationFields
-	(*ClipCopyStyles)(nil),              // 15: postpilot.v1.ClipCopyStyles
+	(*GetClipCapabilitiesRequest)(nil),  // 8: postpilot.v1.GetClipCapabilitiesRequest
+	(*GetClipCapabilitiesResponse)(nil), // 9: postpilot.v1.GetClipCapabilitiesResponse
+	(*VideoTemplate)(nil),               // 10: postpilot.v1.VideoTemplate
 }
 var file_postpilot_v1_clip_template_proto_depIdxs = []int32{
-	12, // 0: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
-	13, // 1: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
-	12, // 2: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	14, // 3: postpilot.v1.UpdateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationFields
-	15, // 4: postpilot.v1.UpdateVideoTemplateRequest.copy_styles:type_name -> postpilot.v1.ClipCopyStyles
-	12, // 5: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	13, // 6: postpilot.v1.SeedPresetFieldsResponse.fields:type_name -> postpilot.v1.ClipInformationField
-	0,  // 7: postpilot.v1.ClipTemplateService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	2,  // 8: postpilot.v1.ClipTemplateService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	4,  // 9: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	6,  // 10: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	8,  // 11: postpilot.v1.ClipTemplateService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
-	10, // 12: postpilot.v1.ClipTemplateService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
-	1,  // 13: postpilot.v1.ClipTemplateService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	3,  // 14: postpilot.v1.ClipTemplateService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	5,  // 15: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	7,  // 16: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	9,  // 17: postpilot.v1.ClipTemplateService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
-	11, // 18: postpilot.v1.ClipTemplateService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
-	13, // [13:19] is the sub-list for method output_type
-	7,  // [7:13] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	10, // 0: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
+	10, // 1: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	10, // 2: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	0,  // 3: postpilot.v1.ClipTemplateService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	2,  // 4: postpilot.v1.ClipTemplateService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	4,  // 5: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	6,  // 6: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	8,  // 7: postpilot.v1.ClipTemplateService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
+	1,  // 8: postpilot.v1.ClipTemplateService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	3,  // 9: postpilot.v1.ClipTemplateService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	5,  // 10: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	7,  // 11: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	9,  // 12: postpilot.v1.ClipTemplateService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_template_proto_init() }
@@ -790,7 +569,6 @@ func file_postpilot_v1_clip_template_proto_init() {
 		return
 	}
 	file_postpilot_v1_clip_proto_init()
-	file_postpilot_v1_clip_template_proto_msgTypes[2].OneofWrappers = []any{}
 	file_postpilot_v1_clip_template_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -798,7 +576,7 @@ func file_postpilot_v1_clip_template_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_template_proto_rawDesc), len(file_postpilot_v1_clip_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -100,10 +100,4 @@ func TestPlanQuoteFollowsNarratedStylesAndOwnerOverrides(t *testing.T) {
 	if !cost.FromPlan || cost.Captions != 1 || cost.Frames != 60 || cost.AddedRenderMS != 60*cfg.SequenceFrameCostMS {
 		t.Fatal("the quote ignored narration or the owner's override", cost)
 	}
-	// Legacy freezes carried an old style, but still render in the first
-	// selected treatment. A quote must not resurrect that historical choice.
-	plan.Portable.Snapshot.Legacy = true
-	if cost := clip.SequenceCostOf(project, plan, true, cfg); cost.Captions != 0 || cost.AddedRenderMS != 0 {
-		t.Fatal("a legacy plan was charged sequence work it will not render", cost)
-	}
 }

@@ -167,9 +167,6 @@ type plannerFake struct {
 	stages                                                  []string
 	revisions                                               []clip.RevisionInput
 	gate, preparationErr, observeErr, errorPlan, narrateErr error
-	// A flow the narration call can be written over: the standard fixture is a
-	// legacy plan, and only the tests about the two calls need a portable one.
-	portableFlow bool
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -181,6 +178,11 @@ func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
 	}
 	return nil
 }
+
+// Every generation freezes a composition (CLIP-5), so the harness's writer and
+// renderer both speak the current plan version; a test about a missing
+// capability hides it behind incapable{}.
+func (*plannerFake) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 func (*plannerFake) Budgets() clip.CompletionBudgets {
 	return clip.CompletionBudgets{Observe: 8192, Flow: 32768, Narration: 32768}
 }
@@ -212,13 +214,15 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", CaptionSafe: p.captionSafe, Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
 }
 
-// The flow call and the single writer share one fake: what the generation is
-// tested for here is the stage around them, not which contract wrote the cuts.
+// The flow call writes the cuts through written(): what the generation is
+// tested for here is the stage around it, not the contract that wrote them.
 func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	p.flows++
 	p.stages = append(p.stages, "flow")
-	plan, usage, err := p.Plan(ctx, r, in)
-	if err != nil || !p.portableFlow || in.Composition == nil {
+	plan, usage, err := p.written(ctx, r, in)
+	// Every generation freezes a composition (CLIP-5), and the flow is always
+	// written into it.
+	if err != nil || in.Composition == nil {
 		return plan, usage, err
 	}
 	plan.Cuts[0].Copies = nil
@@ -275,7 +279,7 @@ func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.Narra
 	plan.Portable = &portable
 	return plan, llm.Usage{}, nil
 }
-func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
+func (p *plannerFake) written(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	frozen, err := clipapp.ConsumePolicy(ctx, "alice", p.id, r.String(), 32768, "write")
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
@@ -289,7 +293,7 @@ func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.Planning
 		return clip.EditPlan{}, llm.Usage{}, p.errorPlan
 	}
 	s := in.Analyses[0].Source
-	return clip.EditPlan{Ratio: in.Ratio, DurationMS: in.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: in.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "서울", Style: "clean", Anchor: "bottom", Align: "center"}}}}}, llm.Usage{}, nil
+	return clip.EditPlan{Ratio: in.Ratio, DurationMS: in.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: in.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "서울", Style: "bold", Anchor: "bottom", Align: "center"}}}}}, llm.Usage{}, nil
 }
 
 type rendererFake struct {
@@ -300,11 +304,25 @@ type rendererFake struct {
 	panicRender bool
 }
 
+func (*rendererFake) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
+
+// incapablePlanner and incapableRenderer expose the ports and nothing else, so
+// neither advertises a composition plan version.
+type incapablePlanner struct{ clip.Planner }
+type incapableRenderer struct{ clip.Renderer }
+
 func (r *rendererFake) CaptionSize(context.Context, string, clip.Caption) (float64, float64, error) {
 	return 10, 10, r.captionErr
 }
 
 func (r *rendererFake) Layout(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, clip.Manifest, error) {
+	return p, nil, r.captionErr
+}
+
+// LayoutComposition measures a composition plan and returns it unchanged: every
+// plan a generation writes is one, and these tests are about the stages around
+// the layout rather than the layout engine.
+func (r *rendererFake) LayoutComposition(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error) {
 	return p, nil, r.captionErr
 }
 
@@ -609,17 +627,16 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 		Version     int
 		Composition *clip.ProjectComposition
 		Template    clip.Recipe
-		Answers     []clip.Answer
 		Approval    *clip.GenerationApproval
 	}
 	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 5 || snapshot.Language != "ko" || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
 		t.Fatal(string(j.Payload))
 	}
-	guidance := "changed after enqueue"
-	if _, err = h.projects.UpdateTemplate(context.Background(), "alice", h.template.ID, clip.TemplatePatch{CutGuidance: &guidance}); err != nil {
+	changed := `<clip version="1"><field id="place" label="장소" required="true">changed after enqueue</field></clip>`
+	if _, err = h.projects.UpdateTemplate(context.Background(), "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &changed}); err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.Template.CutGuidance == guidance || len(snapshot.Answers) != 1 || snapshot.Answers[0].Text != "서울" {
+	if snapshot.Template.CompositionBody == changed || snapshot.Composition.Inputs.Values["place"] != "서울" {
 		t.Fatal(snapshot)
 	}
 	if err = h.projects.DeleteProject(context.Background(), "alice", h.project.ID); !errors.Is(err, clip.ErrBusy) {
@@ -634,7 +651,7 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 	if len(h.admitter.calls) != 1 || h.media.probes != 2 || h.planner.observe != 3 || h.planner.plans != 1 || h.renderer.calls != 0 || h.media.maxSources != 1 {
 		t.Fatal("incorrect prepare/admit/analyze/render counts")
 	}
-	if h.planner.input.Template.CutGuidance == guidance || h.planner.input.Policy != snapshot.Approval.Pricing.Plan {
+	if h.planner.input.Template.CompositionBody == changed || h.planner.input.Policy != snapshot.Approval.Pricing.Plan {
 		t.Fatal("used changed inputs")
 	}
 	// One download per source: preparation reads each original once and the

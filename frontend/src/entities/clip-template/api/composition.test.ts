@@ -12,23 +12,10 @@ describe('portable template projection', () => {
       create(VideoTemplateSchema, {
         name: 'source',
         compositionBody: body,
-        informationFields: [
-          { label: '가격', prompt: '' },
-          { label: '가격', prompt: '' },
-        ],
       }),
     )
     expect(recipeOf(value).compositionBody).toBe(body)
     expect(validateClipRecipe(value).valid).toBe(true)
     expect(validateClipRecipe({ ...value, compositionBody: '<clip/>' }).valid).toBe(false)
-  })
-  it('retains the server legacy marker through editing a converted recipe', () => {
-    const value = toClipTemplate(
-      create(VideoTemplateSchema, {
-        compositionBody: '<clip version="1"/>',
-        compositionLegacy: true,
-      }),
-    )
-    expect(recipeOf(value).compositionLegacy).toBe(true)
   })
 })

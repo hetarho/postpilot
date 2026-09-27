@@ -80,11 +80,11 @@ func TestMediaReleaseAPIProcess(t *testing.T) {
 		if err == nil {
 			err = as.CreateSession(ctx, auth.Session{Token: hash, UserID: "release-user", CreatedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)})
 		}
-		template, e := c.clip.CreateTemplate(ctx, "release-user", clip.Recipe{Name: "split fixture", Preset: "restaurant", InformationFields: []clip.InformationField{{Label: "상호", Prompt: "name"}, {Label: "위치", Prompt: "where"}, {Label: "place", Prompt: "place"}}})
+		template, e := c.clip.CreateTemplate(ctx, "release-user", clip.Recipe{Name: "split fixture", CompositionBody: releaseBody("")})
 		if err == nil {
 			err = e
 		}
-		project, e := c.clip.CreateProject(ctx, "release-user", clip.ProjectInput{Language: "ko", Title: "split release", VideoTemplateID: template.ID, Ratio: "horizontal", TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"}}})
+		project, e := c.clip.CreateProject(ctx, "release-user", clip.ProjectInput{Language: "ko", Title: "split release", VideoTemplateID: template.ID, Ratio: "horizontal", TargetDurationMS: 15000, Disclosure: "ad", CompositionInputs: releaseValues()})
 		if err == nil {
 			err = e
 		}

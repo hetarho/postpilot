@@ -2,7 +2,6 @@ import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
 import type {
-  ClipCTAId,
   ClipDisclosureId,
   ClipIntroPresetId,
   ClipOutroPresetId,
@@ -21,14 +20,10 @@ import {
 import { emptyCompositionInputs, validCompositionInputs } from './composition-inputs'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
-/** The five campaign types and three CTAs, read from the design system: the
- *  phrases are code-owned and only these ids ever travel (CDS-31). */
-import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/entities/clip-design/@x/clip-project'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export type ClipRenderKind = 'server' | 'browser'
 export const CLIP_PROJECT_LIMITS = {
   title: 100,
-  answer: 500,
   /** The project instruction's maximum, counted CDS-20's way (CLIP-121). */
   instruction: 1000,
   minSeconds: 15,
@@ -40,13 +35,10 @@ export interface ClipProjectDraft {
   videoTemplateId: string
   ratio: ClipRatio
   targetDurationMs: number
-  answers: Array<{ label: string; text: string }>
   /** The campaign type the disclosure badge shows. Empty is allowed while the
    *  clip is being set up; generation refuses it (CDS-5, CDS-31). */
   disclosure: ClipDisclosureId | ''
   hideDisclosure?: boolean
-  /** The closing call to action, or empty for the template preset's. */
-  cta: ClipCTAId | ''
   /** The owner's own instruction for this clip (CLIP-121). Optional, and an
    *  empty string is indistinguishable from never having written one. */
   instruction?: string
@@ -186,10 +178,8 @@ export function emptyClipProject(): ClipProjectDraft {
     videoTemplateId: '',
     ratio: 'vertical',
     targetDurationMs: 0,
-    answers: [],
     disclosure: '',
     hideDisclosure: false,
-    cta: '',
     instruction: '',
     captionPace: '',
     accent: '',
@@ -207,10 +197,8 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio,
     targetDurationMs: value.targetDurationMs,
-    answers: value.answers.map((a) => ({ ...a })),
     disclosure: value.disclosure,
     hideDisclosure: value.hideDisclosure ?? false,
-    cta: value.cta,
     instruction: value.instruction ?? '',
     captionPace: value.captionPace ?? '',
     accent: value.accent ?? '',
@@ -249,9 +237,6 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
           },
         }
       : {}),
-    answers: [...draft.answers].sort((a, b) =>
-      a.label < b.label ? -1 : a.label > b.label ? 1 : 0,
-    ),
     title: value.title.trim(),
   }
 }
@@ -282,34 +267,20 @@ export function savableClipProject(value: ClipProjectDraft): boolean {
       (Number.isInteger(value.targetDurationMs) &&
         value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
         value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000)) &&
-    (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
-    value.answers.every((a) => length(a.text) <= CLIP_PROJECT_LIMITS.answer) &&
     compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction
   )
 }
-export function validClipProject(
-  value: ClipProjectDraft,
-  fields: readonly { label: string }[] | undefined,
-  composition?: ClipComposition,
-): boolean {
+export function validClipProject(value: ClipProjectDraft, composition?: ClipComposition): boolean {
   const length = (s: string) => Array.from(s).length
   return (
+    !!composition &&
     !!value.title.trim() &&
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
-    (!!composition || !!fields) &&
-    // Campaign identity is required independently of badge visibility.
-    (!!composition || CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId)) &&
-    (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
     CLIP_RATIOS.includes(value.ratio) &&
     Number.isInteger(value.targetDurationMs) &&
     value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
     value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000 &&
-    value.answers.every((a) => length(a.text) <= CLIP_PROJECT_LIMITS.answer) &&
     compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction &&
-    (composition
-      ? validCompositionInputs(composition, value.compositionInputs ?? emptyCompositionInputs())
-      : fields!.every((field) =>
-          value.answers.some((a) => a.label === field.label && !!a.text.trim()),
-        ))
+    validCompositionInputs(composition, value.compositionInputs ?? emptyCompositionInputs())
   )
 }

@@ -2,8 +2,9 @@ package app
 
 import (
 	"context"
-	"github.com/postpilot/backend/internal/clip"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 // MediaStageStore is the atomic lease behavior needed by the internal worker

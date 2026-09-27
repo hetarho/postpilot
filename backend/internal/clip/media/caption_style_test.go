@@ -151,20 +151,3 @@ func TestCaptionStyleResolutionKeepsOwnerNarrationAndLegacyDefaults(t *testing.T
 		})
 	}
 }
-
-func TestFrozenLegacyCaptionKeepsTheSelectionsFirstStyle(t *testing.T) {
-	// A legacy freeze carries its old copy style in Element.Style. Prior
-	// renders ignored it, so teaching narration to use that field must not
-	// restyle an existing frozen legacy plan.
-	plan := declaredPlan(t, captionBody("여기 좋아요"), "vertical")
-	plan.Portable.Snapshot.Legacy = true
-	plan.CaptionStyles = []string{"keynote", "film"}
-	for i := range plan.Portable.Elements {
-		if plan.Portable.Elements[i].Resolved.Element.Role == "caption" {
-			plan.Portable.Elements[i].Resolved.Element.Style = "film"
-		}
-	}
-	if visual := captionVisual(t, measuredDeclared(t, plan)); visual.copy.Style != "keynote" {
-		t.Fatal("a frozen legacy caption changed style", visual.copy.Style)
-	}
-}

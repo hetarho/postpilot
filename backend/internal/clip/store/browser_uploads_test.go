@@ -138,6 +138,8 @@ func TestBrowserUploadFailureVerdictStalenessAndAtomicPromotion(t *testing.T) {
 				t.Fatal(v)
 			}
 			if failure == "revision" {
+				// A save that changes the plan, so the upload's revision is stale.
+				draft.Cuts[0].Copies[0].Text = "부산"
 				if _, err := h.service.SaveCorrection(t.Context(), "alice", p.ID, p.EditPlanRevision, draft); err != nil {
 					t.Fatal(err)
 				}

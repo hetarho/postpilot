@@ -424,7 +424,7 @@ func TestClipFinalizationResultIdentityDistinguishesSameRevisionRenders(t *testi
 
 func TestClipFinalizationSurvivesReusableTemplateDeletion(t *testing.T) {
 	h := newFinalizationHarness(t)
-	template, err := h.service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "template", Preset: "restaurant"})
+	template, err := h.service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "template", CompositionBody: `<clip version="1"/>`})
 	if err != nil {
 		t.Fatal(err)
 	}

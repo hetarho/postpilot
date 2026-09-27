@@ -30,7 +30,7 @@ func TestServiceStampsTemplatesFromItsClock(t *testing.T) {
 	s := NewService(store, clip.DefaultLimits(), NewSourceService(store, clockObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})), clockFinalizer{})
 	frozen := time.Date(2026, 9, 19, 12, 0, 0, 0, time.UTC)
 	s.now = func() time.Time { return frozen }
-	created, err := s.CreateTemplate(context.Background(), "alice", clip.Recipe{Name: "여행", Preset: "stay"})
+	created, err := s.CreateTemplate(context.Background(), "alice", clip.Recipe{Name: "여행", CompositionBody: `<clip version="1"/>`})
 	if err != nil {
 		t.Fatal(err)
 	}

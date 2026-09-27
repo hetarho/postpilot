@@ -15,7 +15,7 @@ import (
 func narrationInput(t *testing.T) clip.NarrationInput {
 	t.Helper()
 	in := flowInput()
-	s, _, _ := newService(t, defaultFlow(), true)
+	s, _ := newService(t, defaultFlow(), true)
 	flow, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func narrationResponse(captions ...map[string]any) string {
 
 func narrate(t *testing.T, in clip.NarrationInput, response string) (clip.EditPlan, map[string]any, string) {
 	t.Helper()
-	s, models, _ := newService(t, response, true)
+	s, models := newService(t, response, true)
 	plan, _, err := s.Narrate(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -281,7 +281,7 @@ func TestNarrationWritesTheTemplatesOwnSlotRows(t *testing.T) {
 		`<text id="hook" kind="fixed" role="hook" basis="output-start" start="0" end="2"><row kind="ai">한 줄</row><row><value field="place"/></row></text>`, 1)
 	in.Template.CompositionBody, in.Composition.Snapshot.Body = body, body
 	in.Flow.Portable.Snapshot.Body = body
-	s, _, _ := newService(t, defaultFlow(), true)
+	s, _ := newService(t, defaultFlow(), true)
 	flow, _, err := s.Flow(t.Context(), testRef(), in.PlanningInput)
 	if err != nil {
 		t.Fatal(err)
@@ -309,7 +309,7 @@ func TestNarrationWritesTheTemplatesOwnSlotRows(t *testing.T) {
 
 func TestNarrationRefusesAFlowItCannotWriteOver(t *testing.T) {
 	in := narrationInput(t)
-	s, models, _ := newService(t, narrationResponse(), true)
+	s, models := newService(t, narrationResponse(), true)
 	empty := in
 	empty.Flow = clip.EditPlan{}
 	if _, _, err := s.Narrate(t.Context(), testRef(), empty); err == nil || len(models.calls) != 0 {

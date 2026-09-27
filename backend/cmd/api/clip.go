@@ -61,7 +61,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	aiConfig := clipai.DefaultConfig(clipEnvironment(cfg))
-	planner, err := clipai.New(clipModels{models}, renderer, aiConfig)
+	planner, err := clipai.New(clipModels{models}, aiConfig)
 	if err != nil {
 		return nil, err
 	}

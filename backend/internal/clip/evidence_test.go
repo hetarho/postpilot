@@ -1,7 +1,6 @@
 package clip_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -31,74 +30,6 @@ func TestCutEvidenceRequiresFullObservedCoverageAndFingerprint(t *testing.T) {
 	cut.Fingerprint = "changed"
 	if _, covered = clip.CutEvidence(analyses, cut); covered {
 		t.Fatal("accepted different original")
-	}
-}
-
-func TestItemBindingUsesAllObservationsOrOwnerAssociation(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		change       func(*clip.CompositionInputs, []clip.SourceAnalysis)
-		item, reason string
-	}{
-		{"unique", func(*clip.CompositionInputs, []clip.SourceAnalysis) {}, "sea", ""},
-		{"reordered", func(in *clip.CompositionInputs, _ []clip.SourceAnalysis) { slices.Reverse(in.Items["menu"]) }, "sea", ""},
-		{"generic_filename_and_numbers", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) { a[0].Segments[0].Event = "음식 접시, 12" }, "", "item_unassigned"},
-		{"conflicting_adjacent_item", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			a[0].Segments[1].Subjects = []string{"치즈라면"}
-		}, "", "item_binding_conflict"},
-		// The fixture carries no status, so it is a legacy record and the prose
-		// heuristic still reads it (CLIP-93).
-		{"legacy_uncertain_prose", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			a[0].Segments[0].Quality = "uncertain identity"
-		}, "", "item_uncertain"},
-		// A v2 record states its own status, so the same prose no longer decides.
-		{"v2_certain_beats_prose", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			a[0].Segments[0].Quality = "uncertain identity"
-			for i := range a[0].Segments {
-				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyCertain, clip.UsabilityUsable
-			}
-		}, "sea", ""},
-		{"v2_uncertain", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			for i := range a[0].Segments {
-				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyUncertain, clip.UsabilityUsable
-			}
-		}, "", "item_uncertain"},
-		{"v2_unknown", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			for i := range a[0].Segments {
-				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyUnknown, clip.UsabilityUsable
-			}
-		}, "", "item_uncertain"},
-		{"v2_unusable", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			for i := range a[0].Segments {
-				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyCertain, clip.UsabilityUnusable
-			}
-		}, "", "item_uncertain"},
-		{"shared_alias", func(in *clip.CompositionInputs, _ []clip.SourceAnalysis) {
-			in.Items["menu"][1].Values["alias"] = "해물라면"
-		}, "", "item_unassigned"},
-		{"not_a_word", func(in *clip.CompositionInputs, a []clip.SourceAnalysis) {
-			in.Items["menu"][0].Values["name"] = "면"
-			a[0].Segments[0].Event = "화면이 보인다"
-		}, "", "item_unassigned"},
-		{"owner_overrides_appearance", func(in *clip.CompositionInputs, _ []clip.SourceAnalysis) {
-			in.Associations = []clip.SourceAssociation{{GroupID: "menu", ItemID: "cheese", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 10000}}
-		}, "cheese", ""},
-		{"partial_owner", func(in *clip.CompositionInputs, _ []clip.SourceAnalysis) {
-			in.Associations = []clip.SourceAssociation{{GroupID: "menu", ItemID: "cheese", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 5000}}
-		}, "", "item_binding_conflict"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			in, analyses, cut := bindingFixture()
-			tc.change(&in, analyses)
-			evidence, ok := clip.CutEvidence(analyses, cut)
-			if !ok {
-				t.Fatal("fixture")
-			}
-			got := clip.BindCutItem(in, evidence, cut, "menu")
-			if got.ItemID != tc.item || got.Reason != tc.reason {
-				t.Fatalf("%+v", got)
-			}
-		})
 	}
 }
 
@@ -195,38 +126,6 @@ func TestInstructionAdmitsExperienceButNeverAFigure(t *testing.T) {
 	}
 	if reason := clip.GroundScopedText("이 메뉴 12,000원", []composition.Fact{{Value: "12,000원"}}, inputs, clip.ItemBinding{}, "context", true); reason != "context_item_claim" {
 		t.Fatalf("an instruction admitted a context item claim: %s", reason)
-	}
-}
-
-// A whole-source binding made before generation reaches every cut taken from
-// that source, whether observation names no subject or several, while a source
-// the owner left unbound keeps today's automatic behaviour (CLIP-123).
-func TestWholeSourceBindingReachesEveryCutAndLeavesOthersAutomatic(t *testing.T) {
-	inputs, analyses, cut := bindingFixture()
-	whole := clip.SourceAssociation{GroupID: "menu", ItemID: "cheese", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 10000}
-
-	// Unbound, this footage names 해물라면, so the automatic rule settles on
-	// that item. The owner's binding is what has to outrank it.
-	if binding := clip.BindCutItem(inputs, evidenceFor(t, analyses, cut), cut, ""); binding.ItemID != "sea" || binding.Owner {
-		t.Fatalf("automatic association changed: %+v", binding)
-	}
-	bound := inputs
-	bound.Associations = []clip.SourceAssociation{whole}
-	for _, c := range []clip.Cut{
-		cut,
-		{ID: "early", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 5000},
-		{ID: "late", SourceID: "source", Fingerprint: "fp", StartMS: 5000, EndMS: 10000},
-	} {
-		binding := clip.BindCutItem(bound, evidenceFor(t, analyses, c), c, "")
-		if binding.ItemID != "cheese" || binding.GroupID != "menu" || !binding.Owner {
-			t.Fatalf("cut %s did not inherit the bound item: %+v", c.ID, binding)
-		}
-	}
-	// Another source is untouched by the binding and stays automatic.
-	other := clip.Cut{ID: "other", SourceID: "second", Fingerprint: "fp2", StartMS: 0, EndMS: 5000}
-	second := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "second", Fingerprint: "fp2"}}, Segments: []clip.Segment{{StartMS: 0, EndMS: 5000, Subjects: []string{"치즈라면"}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}
-	if binding := clip.BindCutItem(bound, evidenceFor(t, second, other), other, ""); binding.ItemID != "cheese" || binding.Owner {
-		t.Fatalf("an unbound source lost its automatic association: %+v", binding)
 	}
 }
 

@@ -49,5 +49,5 @@ func compositionProto(c *clip.ProjectComposition) *v1.ClipProjectComposition {
 	for _, a := range c.Inputs.Associations {
 		in.Associations = append(in.Associations, &v1.ClipSourceAssociation{GroupId: a.GroupID, ItemId: a.ItemID, SourceId: a.SourceID, Fingerprint: a.Fingerprint, StartMs: int32(a.StartMS), EndMs: int32(a.EndMS)})
 	}
-	return &v1.ClipProjectComposition{Snapshot: &v1.ClipCompositionSnapshot{Version: int32(c.Snapshot.Version), Body: c.Snapshot.Body, TemplateId: c.Snapshot.TemplateID, Legacy: c.Snapshot.Legacy}, Inputs: in}
+	return &v1.ClipProjectComposition{Snapshot: &v1.ClipCompositionSnapshot{Version: int32(c.Snapshot.Version), Body: c.Snapshot.Body, TemplateId: c.Snapshot.TemplateID}, Inputs: in}
 }

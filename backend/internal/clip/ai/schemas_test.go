@@ -14,7 +14,7 @@ func TestOutputSchemasRetainClosedShapeWithoutGrammarBounds(t *testing.T) {
 	for _, fixture := range []struct {
 		name             string
 		contract, output []byte
-	}{{"observe", chunkSchema, ChunkSchema()}, {"plan", planSchema, PlanSchema()}, {"composition", compositionPlanSchema, CompositionPlanSchema()}} {
+	}{{"observe", chunkSchema, ChunkSchema()}, {"flow", flowSchema, FlowSchema()}, {"narration", narrationSchema, NarrationSchema()}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			var full, wire map[string]any
 			if json.Unmarshal(fixture.contract, &full) != nil || json.Unmarshal(fixture.output, &wire) != nil {
@@ -80,7 +80,7 @@ func TestOutputProjectionSendsNoNonStringEnum(t *testing.T) {
 	for _, fixture := range []struct {
 		name   string
 		output []byte
-	}{{"observe", ChunkSchema()}, {"plan", PlanSchema()}, {"composition", CompositionPlanSchema()}} {
+	}{{"observe", ChunkSchema()}, {"flow", FlowSchema()}, {"narration", NarrationSchema()}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			var wire map[string]any
 			if json.Unmarshal(fixture.output, &wire) != nil {
@@ -120,27 +120,26 @@ func TestOutputProjectionKeepsConstraintNamedProperties(t *testing.T) {
 
 func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 	observe, _ := BuildObservePrompt(clip.ChunkInput{})
-	plan, _ := BuildPlanPrompt(clip.PlanningInput{}, 200, composition.Limits{})
-	if !strings.Contains(observe, compactContract(chunkSchema)) || !strings.Contains(plan, string(planSchema)) {
+	composed := clip.NoTemplateComposition()
+	flow, _ := BuildFlowPrompt(clip.PlanningInput{Composition: &composed}, 200, composition.Limits{})
+	narration, _ := BuildNarrationPrompt(clip.NarrationInput{PlanningInput: clip.PlanningInput{Composition: &composed}}, composition.Limits{})
+	if !strings.Contains(observe, compactContract(chunkSchema)) || !strings.Contains(flow, compactContract(flowSchema)) || !strings.Contains(narration, compactContract(narrationSchema)) {
 		t.Fatal("provider projection weakened the full prompt contracts")
 	}
-	if string(ChunkSchema()) == string(chunkSchema) || string(PlanSchema()) == string(planSchema) {
+	if string(ChunkSchema()) == string(chunkSchema) || string(FlowSchema()) == string(flowSchema) || string(NarrationSchema()) == string(narrationSchema) {
 		t.Fatal("provider output schema was not projected")
-	}
-	native, _ := BuildPlanPrompt(clip.PlanningInput{Composition: &clip.ProjectComposition{}}, 200, composition.Limits{})
-	if !strings.Contains(native, compactContract(compositionPlanSchema)) || string(CompositionPlanSchema()) == string(compositionPlanSchema) {
-		t.Fatal("native contract was weakened")
 	}
 }
 
-// Both writer contracts offer exactly CLIP-98's rate set, so a prompt can never
-// name a rate the parser would refuse and no rate the product supports can be
-// missing from the grammar the model answers in.
+// The flow contract, the one writer that chooses a rate, offers exactly
+// CLIP-98's rate set, so a prompt can never name a rate the parser would refuse
+// and no rate the product supports can be missing from the grammar the model
+// answers in.
 func TestWriterSchemasOfferExactlyTheSupportedRates(t *testing.T) {
 	for _, fixture := range []struct {
 		name     string
 		contract []byte
-	}{{"plan", planSchema}, {"composition", compositionPlanSchema}} {
+	}{{"flow", flowSchema}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			var document map[string]any
 			if err := json.Unmarshal(fixture.contract, &document); err != nil {

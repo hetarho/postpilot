@@ -24,7 +24,7 @@ func declaredNarrationInput(t *testing.T) clip.NarrationInput {
 	t.Helper()
 	in := flowInput()
 	setNativeBody(&in, declaredCaptionBody)
-	s, _, _ := newService(t, defaultFlow(), true)
+	s, _ := newService(t, defaultFlow(), true)
 	flow, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -190,7 +190,7 @@ func TestAFixedCaptionTheNamedStyleCannotHoldTakesTheFirstStyle(t *testing.T) {
 	const long = "창가 자리에서 내려다보는 골목 풍경이 참 좋아요"
 	in := flowInput()
 	setNativeBody(&in, strings.Replace(declaredCaptionBody, `<value field="place"/> 다녀왔어요`, long, 1))
-	s, _, _ := newService(t, defaultFlow(), true)
+	s, _ := newService(t, defaultFlow(), true)
 	flow, _, err := s.Flow(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)

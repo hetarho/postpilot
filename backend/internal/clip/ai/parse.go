@@ -60,41 +60,6 @@ type chunkJSON struct {
 	Segments *[]segmentJSON `json:"segments"`
 }
 
-func optional(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
-type captionJSON struct {
-	Text  *string `json:"text"`
-	Start *int    `json:"start_ms"`
-	End   *int    `json:"end_ms"`
-	// The same fact in 14 characters or fewer, and the one word the sentence
-	// turns on. The model no longer names a position, a style or an accent:
-	// those are the design system's, not a judgement (CDS-7).
-	ShortText *string `json:"short_text"`
-	Keyword   *string `json:"keyword"`
-}
-type cutJSON struct {
-	ID       *string         `json:"id"`
-	SourceID *string         `json:"source_id"`
-	Start    *int            `json:"start_ms"`
-	End      *int            `json:"end_ms"`
-	Rate     *int            `json:"rate_permille"`
-	Focal    *pointJSON      `json:"focal"`
-	Caption  *captionJSON    `json:"caption"`
-	Chips    *[]string       `json:"chips"`
-	Volume   json.RawMessage `json:"volume"`
-}
-type planJSON struct {
-	Ratio    *string `json:"ratio"`
-	Duration *int    `json:"duration_ms"`
-
-	Cuts *[]cutJSON `json:"cuts"`
-}
-
 // The embedded closed contract also guards exact key spelling and nulls: Go's
 // struct decoder alone accepts case-insensitive keys and null primitive values.
 type shape struct {
@@ -113,7 +78,6 @@ func readShape(data []byte) *shape {
 }
 
 var chunkShape = readShape(chunkSchema)
-var planShape = readShape(planSchema)
 
 func (s *shape) accepts(value any) bool {
 	if value == nil {
@@ -286,79 +250,6 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 	for i := range result.Segments {
 		result.Segments[i].StartMS += input.OffsetMS
 		result.Segments[i].EndMS += input.OffsetMS
-	}
-	return result, nil
-}
-func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan, error) {
-	var wire planJSON
-	if err := decode(raw, cfg.MaxResponseBytes, planShape, &wire); err != nil {
-		return clip.EditPlan{}, err
-	}
-	if wire.Ratio == nil || wire.Duration == nil || wire.Cuts == nil {
-		return clip.EditPlan{}, outputError("plan_required")
-	}
-	byID := map[string]clip.AnalysisSource{}
-	for _, analysis := range input.Analyses {
-		byID[analysis.Source.ID] = analysis.Source
-	}
-	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration}
-	for _, c := range *wire.Cuts {
-		focal, ok := c.Focal.domain()
-		if !ok || c.ID == nil || c.SourceID == nil || c.Start == nil || c.End == nil || c.Rate == nil || c.Caption == nil {
-			return clip.EditPlan{}, outputError("plan_cut_fields")
-		}
-		if utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes {
-			recordGeneratedNotice(&result, "plan_cut_identity", *c.ID, "", "removal")
-			continue
-		}
-		source := byID[*c.SourceID]
-		source.ID = *c.SourceID
-		p := c.Caption
-		if p.Text == nil || p.Start == nil || p.End == nil {
-			return clip.EditPlan{}, outputError("plan_caption_fields")
-		}
-		oversized := false
-		for _, text := range []string{*p.Text, optional(p.ShortText), optional(p.Keyword)} {
-			oversized = oversized || utf8.RuneCountInString(text) > cfg.Render.MaxCopyRunes
-		}
-		volume := 1.0
-		if len(c.Volume) != 0 {
-			if string(c.Volume) == "null" || json.Unmarshal(c.Volume, &volume) != nil {
-				return clip.EditPlan{}, outputError("output_field_type")
-			}
-		}
-		// A chip is one of the reserved fact labels and at most two show at
-		// once. A label outside that vocabulary (the model naming 상호, say,
-		// which the hook card already carries) is dropped, not refused: the
-		// renderer would place nothing for it, so refusing the whole plan
-		// would cost a paid retry for no visible difference.
-		chips := []string{}
-		if c.Chips != nil {
-			for _, label := range *c.Chips {
-				if !slices.Contains(design.Fact.Chips, label) || slices.Contains(chips, label) || len(chips) >= 2 {
-					check := "plan_chip_label"
-					if len(chips) >= 2 {
-						check = "plan_chip_count"
-					}
-					recordGeneratedNotice(&result, check, *c.ID, "chips", "removal")
-					continue
-				}
-				chips = append(chips, label)
-			}
-		}
-		// The caption arrives as WORDS only; the compiler places it.
-		written := clip.Written{Text: *p.Text, ShortText: optional(p.ShortText), Keyword: optional(p.Keyword)}
-		if oversized {
-			written = clip.Written{}
-			recordGeneratedNotice(&result, "plan_copy_chars", *c.ID, "caption", "removal")
-		}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, PlaybackRatePermille: *c.Rate, Focal: focal, Volume: &volume, Chips: chips, Copies: []clip.Caption{{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}}})
-		result.Written = append(result.Written, written)
-	}
-	// The timeline is compiled here; the design system's own decisions and the
-	// final validation happen in Plan, which owns the measurement port.
-	if err := composeTimeline(cfg, input, &result); err != nil {
-		return clip.EditPlan{}, err
 	}
 	return result, nil
 }

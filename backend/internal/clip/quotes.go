@@ -137,19 +137,6 @@ func ConservativeObservationCount(cfg MediaConfig, batch SourceBatch) (int, erro
 	return count, nil
 }
 
-func RequiredQuoteAnswers(p Project, t VideoTemplate) []Answer {
-	answers := make([]Answer, 0, len(t.InformationFields))
-	for _, f := range t.InformationFields {
-		for _, a := range p.Answers {
-			if a.Label == f.Label {
-				answers = append(answers, a)
-				break
-			}
-		}
-	}
-	return answers
-}
-
 // QuoteInputDigest is also recomputed inside the source-link transaction. Only
 // semantic inputs participate: no mutable lease state, timestamps, URL or bytes.
 func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing GenerationPricing) string {
@@ -163,16 +150,15 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 	}
 	input := struct {
 		User, Project, Batch, Title, TemplateID, Ratio string
-		Disclosure, CTA, Language                      string
+		Disclosure, Language                           string
 		Instruction                                    string
 		HideDisclosure                                 bool
 		Target                                         int
 		Recipe                                         Recipe
-		Answers                                        []Answer
 		Sources                                        []source
 		Pricing                                        GenerationPricing
 		Composition                                    *ProjectComposition
-	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, RequiredQuoteAnswers(p, t), sources, pricing, p.Composition}
+	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, sources, pricing, p.Composition}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])

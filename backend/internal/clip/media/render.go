@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -242,26 +241,14 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	return r.media.sourcePath(ws, path)
 }
 
-// preparePlan is shared by admission/layout and execution so legacy conversion
-// and rate refusals cannot first appear after a render has started.
+// preparePlan is shared by admission/layout and execution so rate refusals
+// cannot first appear after a render has started.
 func (r *Rendering) preparePlan(plan clip.EditPlan, sources []clip.RenderSource) (clip.EditPlan, error) {
-	var err error
 	// Every rate is rechecked against the ORIGINAL's own verified cadence before
 	// a single FFmpeg process starts. An unsuitable one is IDENTIFIED, never
 	// simulated and never quietly replaced by 1x (CLIP-99, CDS-68).
-	if err = clip.RefuseUnrenderableRates(plan, sources); err != nil {
+	if err := clip.RefuseUnrenderableRates(plan, sources); err != nil {
 		return plan, err
-	}
-	if plan.Portable == nil && (plan.Hook != "" || len(plan.Facts) > 0 || slices.ContainsFunc(plan.Cuts, func(c clip.Cut) bool { return len(c.Chips) > 0 })) {
-		if strings.ContainsAny(plan.Hook, "\r\n") || design.Chars(plan.Hook) > design.Type["hook"].Chars {
-			return plan, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
-		}
-		p := clip.Project{Answers: plan.Facts, Disclosure: plan.Disclosure, HideDisclosure: plan.HideDisclosure, CTA: plan.CTA}
-		recipe := clip.Recipe{Preset: plan.Preset, Accent: plan.Accent}
-		plan.Portable, err = clip.FreezeLegacyPlan(p, plan, recipe, r.cfg.Composition)
-		if err != nil {
-			return plan, err
-		}
 	}
 	return plan, nil
 }
@@ -512,16 +499,12 @@ func planTransitions(plan clip.EditPlan) []int {
 	return out
 }
 
-// layout measures and places every copy, the disclosure badge and the chips
-// without touching one source pixel, so the manifest and its verification come
-// before any download.
+// layout measures and places every copy and the disclosure badge without
+// touching one source pixel, so the manifest and its verification come before
+// any download.
 func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan) (composed, error) {
 	layouts, plates, manifest := make([][]copyLayout, len(plan.Cuts)), make([]furniture, len(plan.Cuts)), clip.Manifest{}
 	offsets := cutOffsets(plan)
-	answers := map[string]string{}
-	for _, a := range plan.Facts {
-		answers[a.Label] = a.Text
-	}
 	phrase, ok := design.Disclosure[plan.Disclosure]
 	if !ok {
 		// Campaign identity remains required independently of visibility.
@@ -530,24 +513,15 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 	if plan.HideDisclosure {
 		phrase = ""
 	}
-	badged := false
+	// The badge is drawn on every cut's furniture plate so it is present for
+	// the whole clip (CDS-5), and it is one element in the manifest.
+	f, err := r.badge(ctx, ws, canvas, plan.Ratio, phrase)
+	if err != nil {
+		return composed{}, err
+	}
+	manifest = append(manifest, f.Elements(plan.DurationMS)...)
 	for i, cut := range plan.Cuts {
-		labels := plan.ChipLabels(cut)
-		// The badge rides the first cut's furniture plate; every later cut gets
-		// one only if it carries chips, and the badge is drawn on all of them so
-		// it is present for the whole clip (CDS-5).
-		f, err := r.badgeAndChips(ctx, ws, canvas, plan.Ratio, phrase, labels, answers)
-		if err != nil {
-			return composed{}, err
-		}
 		plates[i] = f
-		start, end := offsets[i], offsets[i]+cut.OutputDurationMS()
-		elements := f.Elements(plan.DurationMS, i, start, end)
-		if badged && phrase != "" {
-			elements = elements[1:] // one badge in the manifest, one disclosure
-		}
-		badged = true
-		manifest = append(manifest, elements...)
 		// One layout per copy: a cut of 4 s or more may carry two, one after the
 		// other (CDS-43).
 		layouts[i] = make([]copyLayout, len(cut.Copies))

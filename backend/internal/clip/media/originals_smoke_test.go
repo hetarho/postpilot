@@ -47,8 +47,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "originals-overlap", func(ws clip.MediaWorkspace) error {
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 30000, Disclosure: "ad", Preset: "restaurant", Hook: "오늘의 한 끼", Accent: "coral",
-			Facts: []clip.Answer{{Label: "상호", Text: "클립 테스트"}, {Label: "위치", Text: "현장 영상"}}}
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 30000, Disclosure: "ad", Accent: "coral"}
 		ends := []int{4200, 3700, 1400, 4200, 4200, 4200, 4200, 4300}
 		if requested := os.Getenv("CLIP_ORIGINALS_DURATION_MS"); requested != "" {
 			duration, err := strconv.Atoi(requested)
@@ -72,7 +71,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 			id := fmt.Sprintf("source-%02d", i)
 			sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: info})
 			paths[id] = path
-			caption := clip.Copy{Text: "오늘의 한 끼", Style: "clean", Anchor: "lower_mid", Align: "center", Accent: "coral"}
+			caption := clip.Copy{Text: "오늘의 한 끼", Style: "bold", Anchor: "lower_mid", Align: "center", Accent: "coral"}
 			if i == 0 {
 				caption.Style, caption.Anchor = "bold", "upper_mid"
 			}
@@ -84,7 +83,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 				transition = design.Transition.FadeMS
 			}
 			plan.Cuts = append(plan.Cuts, clip.EditCut{ID: id, SourceID: id, Fingerprint: id, EndMS: ends[i], TransitionMS: transition,
-				Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{caption}, Chips: []string{"위치"}})
+				Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{caption}})
 			plan.Decisions = append(plan.Decisions, clip.Composition{Class: "DESC"})
 		}
 		// The same words survive initial generation and a later stored/manual plan.

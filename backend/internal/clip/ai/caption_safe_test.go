@@ -32,7 +32,7 @@ func TestOptionalCaptionSafeRegionsValidateAndRoundTrip(t *testing.T) {
 				}
 				firstSegment(v)["caption_safe"] = tc.boxes
 			}
-			service, _, _ := newService(t, raw(v), true)
+			service, _ := newService(t, raw(v), true)
 			got, _, err := service.ObserveChunk(t.Context(), testRef(), chunk())
 			if tc.invalid {
 				d, ok := clip.DiagnosticFromError(err)

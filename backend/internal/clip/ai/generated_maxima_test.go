@@ -2,39 +2,32 @@ package ai_test
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
+// A caption entry's declared maximum reaches the narration call beside the
+// entry it bounds; an entry that declares none carries none (CLIP-116).
 func TestWriterIsToldEachDeclaredTextMaximum(t *testing.T) {
 	in := nativeInput()
-	setNativeBody(&in, `<clip version="1" intro="a" caption="bold" outro="e"><text id="line" kind="ai" role="caption" basis="whole" chars="7">관찰</text><text id="pair" kind="ai" role="info" position="bottom" basis="whole"><row role="label">위치</row><row role="caption" chars="5">관찰</row></text><text id="free" kind="ai" role="caption" basis="whole">관찰</text><text id="opening" kind="fixed" role="hook" basis="output-start"><row>주제</row><row>부제</row></text><text id="closing" kind="fixed" role="ending" basis="output-end"><row>라벨</row><row>점수</row><row>마무리</row></text></clip>`)
-	_, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
+	setNativeBody(&in, `<clip version="1"><text id="line" kind="ai" role="caption" chars="7">관찰</text><text id="free" kind="ai" role="caption">관찰</text></clip>`)
+	in.Composition.Inputs = clip.CompositionInputs{Values: map[string]string{}, Items: map[string][]composition.Item{}}
+	flow := clip.EditPlan{Ratio: in.Ratio, DurationMS: 15000, Cuts: []clip.Cut{{ID: "whole", SourceID: "source", Fingerprint: in.Analyses[0].Source.Fingerprint, EndMS: 15000, PlaybackRatePermille: clip.RateUnitPermille}},
+		Portable: &clip.PortablePlan{Cuts: []composition.Cut{{ID: "whole", SourceID: "source", EndMS: 15000, PlaybackRatePermille: clip.RateUnitPermille}}}}
+	_, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in, Flow: flow}, clip.DefaultCompositionLimits())
 	var payload struct {
-		Limits []struct {
+		Declared []struct {
 			Element string `json:"element_id"`
 			Chars   int    `json:"chars"`
-			Row     *int   `json:"row_index"`
-		} `json:"generated_text_limits"`
+		} `json:"declared_captions"`
 	}
 	if err := json.Unmarshal([]byte(user), &payload); err != nil {
 		t.Fatal(err)
 	}
-	// Only declared maxima, and never a region row — those carry theirs in
-	// generated_region_slots with the single-line rule beside them.
-	if len(payload.Limits) != 2 {
-		t.Fatal(payload.Limits)
-	}
-	if payload.Limits[0].Element != "line" || payload.Limits[0].Chars != 7 || payload.Limits[0].Row != nil {
-		t.Fatal(payload.Limits[0])
-	}
-	if payload.Limits[1].Element != "pair" || payload.Limits[1].Chars != 5 || payload.Limits[1].Row == nil || *payload.Limits[1].Row != 1 {
-		t.Fatal(payload.Limits[1])
-	}
-	if !strings.Contains(user, "generated_text_limits") {
-		t.Fatal("the request never states the bound")
+	if len(payload.Declared) != 2 || payload.Declared[0].Element != "line" || payload.Declared[0].Chars != 7 || payload.Declared[1].Element != "free" || payload.Declared[1].Chars != 0 {
+		t.Fatal(payload.Declared)
 	}
 }

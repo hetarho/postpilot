@@ -15,8 +15,20 @@ import (
 
 func completedClip(t *testing.T) (*generationHarness, clip.Project, clip.CorrectionPlan) {
 	t.Helper()
+	return completed(t, seedCompletedGeneration)
+}
+
+// completedNativeClip is a completed clip whose plan is written into its
+// composition, which is what the native editor works on.
+func completedNativeClip(t *testing.T) (*generationHarness, clip.Project, clip.CorrectionPlan) {
+	t.Helper()
+	return completed(t, seedNativeGeneration)
+}
+
+func completed(t *testing.T, seed func(*testing.T, *generationHarness)) (*generationHarness, clip.Project, clip.CorrectionPlan) {
+	t.Helper()
 	h := generationSetup(t)
-	seedCompletedGeneration(t, h)
+	seed(t, h)
 	p, err := h.projects.GetProject(context.Background(), "alice", h.project.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -204,6 +216,8 @@ func TestConcurrentCorrectionSaveOnlyOneWinsAndInvalidCaptionDoesNotWrite(t *tes
 		t.Fatal("invalid save wrote")
 	}
 	h.renderer.captionErr = nil
+	// A save that changes the plan, so exactly one of two can win the revision.
+	draft.Cuts[0].Copies[0].Text = "부산"
 	var wg sync.WaitGroup
 	results := make(chan error, 2)
 	for range 2 {

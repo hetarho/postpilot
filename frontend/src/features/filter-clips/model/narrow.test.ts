@@ -14,8 +14,6 @@ const project = (over: Partial<ClipProject> & { id: string; title: string }): Cl
   ratio: 'vertical',
   targetDurationMs: 15000,
   disclosure: 'ad' as const,
-  cta: '' as const,
-  answers: [],
   createdAt: '2026-09-10T00:00:00Z',
   updatedAt: '2026-09-10T00:00:00Z',
   editPlanRevision: 0,

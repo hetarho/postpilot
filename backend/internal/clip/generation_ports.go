@@ -56,13 +56,12 @@ type Planner interface {
 	Budgets() CompletionBudgets
 	ObserveChunk(context.Context, llm.ModelRef, ChunkInput) (ChunkAnalysis, llm.Usage, error)
 	// The composition writer: the flow call, then the narration over it
-	// (CLIP-135). Plan is what a payload without a composition snapshot uses.
+	// (CLIP-135).
 	Flow(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 	Narrate(context.Context, llm.ModelRef, NarrationInput) (EditPlan, llm.Usage, error)
 	// One owner-written revision of a saved plan (CLIP-131), through the same
 	// two contracts.
 	Revise(context.Context, llm.ModelRef, RevisionInput) (EditPlan, llm.Usage, error)
-	Plan(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 }
 type GenerationStore interface {
 	GetSourceBatch(context.Context, string, string) (SourceBatch, error)

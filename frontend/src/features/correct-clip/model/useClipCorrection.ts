@@ -37,7 +37,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   const projectsKey = useClipProjectsKey(ownerId)
   const sources = useClipSourceCalls()
   const cache = useQueryClient()
-  const initial = project.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
+  const initial = project.editing?.plan ?? { durationMs: 0, cuts: [] }
   const [timeline, dispatch] = useReducer(clipTimelineReducer, initial, createClipTimeline)
   const [baseline, setBaseline] = useState(() => clipDraftKey(initial))
   const [revision, setRevision] = useState(project.editPlanRevision)
@@ -267,7 +267,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     mutationFn: async (keepDraft: boolean) => {
       const next = await projects.fetch(project.id)
       const batches = soundSources.current.size ? await sources.retained(project.id) : []
-      let accepted = next.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
+      let accepted = next.editing?.plan ?? { durationMs: 0, cuts: [] }
       for (const batch of batches.filter((b) => b.current))
         for (const source of batch.sources)
           if (soundSources.current.has(source.metadata.fingerprint))

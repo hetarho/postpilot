@@ -104,14 +104,10 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 func (c *nativeCorrection) rewritePortableInputs() error {
 	old, in := c.old, c.in
 	c.portable = *old.Portable
-	c.portable.NativeEditing = c.portable.NativeEditing || c.portable.Snapshot.Legacy
 	c.changed = []SourceAssociation{}
 	if in.Associations != nil {
 		c.portable.Inputs.Associations = slices.Clone(*in.Associations)
 		limits := c.cfg.Composition
-		if c.portable.Snapshot.Legacy {
-			limits = LegacyCompositionLimits(limits)
-		}
 		doc, problem := composition.ReadStored(c.portable.Snapshot.Body, limits)
 		if problem != nil {
 			return problem
@@ -192,7 +188,7 @@ func (c *nativeCorrection) applyCuts() error {
 		// source's verified cadence actually admits it (CDS-68).
 		prior.PlaybackRatePermille = cut.Rate()
 		// The portable declarations are the only visible content authority.
-		prior.Copies, prior.Chips = nil, nil
+		prior.Copies = nil
 		c.next.Cuts = append(c.next.Cuts, prior)
 	}
 	// A created cut carries no text of its own: a split leaves the parent's
@@ -308,7 +304,6 @@ func (c *nativeCorrection) validate(sources []AnalysisSource) (EditPlan, error) 
 		return EditPlan{}, err
 	}
 	geometry := resolved
-	geometry.Hook = ""
 	geometry.SourceAudio = nil
 	refs := make([]RenderSource, 0, len(sources))
 	for _, s := range sources {

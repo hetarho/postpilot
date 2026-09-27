@@ -274,7 +274,7 @@ func (r *generationRun) set(name string, done, total int) {
 // planningInput is the frozen brief every planner call reads.
 func (r *generationRun) planningInput() clip.PlanningInput {
 	p := r.p
-	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan}
+	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan}
 }
 
 // validatePreparation is the planner's own check of the models, the budgets and the
@@ -309,11 +309,13 @@ func (r *generationRun) accept(payload []byte) error {
 	if err := s.checkComposition(p.Composition); err != nil {
 		return err
 	}
-	if p.Template.CompositionBody != "" && !p.Template.CompositionLegacy && p.Composition == nil {
-		return clip.ErrInvalid
-	}
 	if !clip.SupportedGenerationPayload(p.Version) || (p.Version >= 4 && p.Composition == nil) || p.Approval == nil {
 		return clip.ErrQuoteRequired
+	}
+	// Every generation freezes a composition — its template's outline or the
+	// no-template document (CLIP-5) — and nothing writes a clip without one.
+	if p.Composition == nil {
+		return clip.ErrInvalid
 	}
 	if p.ProjectID != r.project || p.Batch.ProjectID != r.project || p.Batch.ID != b.ID || p.Batch.UserID != r.user || !clip.SameSourceManifest(p.Batch.Sources, b.Sources) {
 		return clip.ErrInvalid
@@ -366,7 +368,7 @@ func (r *generationRun) accept(payload []byte) error {
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, clip.PlanningInput) error
 	}); ok {
-		if err := validator.ValidateAuthoredInput(ctx, clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.Design()}); err != nil {
+		if err := validator.ValidateAuthoredInput(ctx, clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.Design()}); err != nil {
 			return err
 		}
 	}
@@ -540,19 +542,13 @@ func (r *generationRun) write() error {
 	var err error
 	if pricing.SkipFlow {
 		r.edit, err = clip.DecodeEditPlan(r.recovery.Plan)
-	} else if p.Composition != nil {
-		// A composition is written by the flow call and then the narration
-		// over it (CLIP-135); the single writer is what a payload with no
-		// composition snapshot still uses.
-		r.edit, _, err = s.planner.Flow(r.correcting("flow"), pricing.Plan.Ref, in)
 	} else {
-		r.edit, _, err = s.planner.Plan(r.correcting("flow"), pricing.Plan.Ref, in)
+		// A composition is written by the flow call and then the narration
+		// over it (CLIP-135).
+		r.edit, _, err = s.planner.Flow(r.correcting("flow"), pricing.Plan.Ref, in)
 	}
 	if err != nil {
 		return err
-	}
-	if r.edit.Portable == nil {
-		r.edit = r.edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 	}
 	// The project's caption pace and accent are render inputs too: a plan
 	// carries what was written, the project says how it is shown (CLIP-139).
@@ -563,9 +559,7 @@ func (r *generationRun) write() error {
 	// takes the setting as it stands now (CLIP-100, CDS-6).
 	r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
 	if !pricing.SkipFlow {
-		// The flow is written either way: a payload with no composition gets
-		// its whole plan from the one writer, and is ready to render at once.
-		if err := r.keep(true, r.edit.Portable == nil); err != nil {
+		if err := r.keep(true, false); err != nil {
 			return err
 		}
 	}
@@ -621,7 +615,7 @@ func (r *generationRun) layout() error {
 // ends HERE, on the plan: no media execution runs and no result file is produced; the
 // owner reads this plan in ②'s draft preview and starts the render they want (CLIP-151).
 func (r *generationRun) save() error {
-	s, ctx, p := r.s, r.ctx, r.p
+	s, ctx := r.s, r.ctx
 	r.set("save", 0, 1)
 	logAttemptDiagnostic(r.job, "save", r.checkpoint.Diagnostic)
 	r.recovery.PlanReady = true
@@ -634,12 +628,6 @@ func (r *generationRun) save() error {
 	}
 	if r.analysisJSON, err = json.Marshal(r.analyses); err != nil {
 		return err
-	}
-	if r.edit.Portable == nil && p.Composition != nil && p.Composition.Snapshot.Legacy {
-		projectSnapshot := clip.Project{VideoTemplateID: p.Composition.Snapshot.TemplateID, Answers: p.Answers, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA}
-		if r.edit.Portable, err = clip.FreezeLegacyPlan(projectSnapshot, r.edit, p.Template, s.projects.limits.Composition); err != nil {
-			return err
-		}
 	}
 	// The owner owns source sound, not the writer: the snapshot is taken
 	// from the live leases, so a reselected source keeps the choice already

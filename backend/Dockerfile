@@ -4,7 +4,7 @@
 # runtime is distroless/static (no shell, non-root) with the API, pinned static
 # media executables and the CA certs it needs for outbound TLS.
 
-ARG MEDIA_ASSET_DIGEST=8743e528dfa35418315d6cba57ff33248440dcc717d950f99b0c49936947cf7c
+ARG MEDIA_ASSET_DIGEST=8c60ba68e3a5fc7c4a80bd1f367ee8e2014ab996ea5f879b512adcf57f48d55f
 
 FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS media-build
 COPY backend/build/media-tools.sh /build-media-tools.sh

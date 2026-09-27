@@ -1,8 +1,7 @@
 /** What `clip-design` exposes to `clip-project` (ARCH-13 @x). */
 export { CLIP_COMPOSITION_LIMITS } from '../config/clip-composition'
-export { CLIP_CTAS, CLIP_DEFAULT_REGION_PRESETS, CLIP_DISCLOSURES } from '../config/clip-design'
+export { CLIP_DEFAULT_REGION_PRESETS } from '../config/clip-design'
 export type {
-  ClipCTAId,
   ClipDisclosureId,
   ClipIntroPresetId,
   ClipOutroPresetId,

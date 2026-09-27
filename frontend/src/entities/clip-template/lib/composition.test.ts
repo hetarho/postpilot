@@ -36,9 +36,6 @@ const corpus = JSON.parse(
     body: string
     /** Runs through parseClipTemplate, the grammar a saved template must satisfy. */
     template?: boolean
-    /** Server-only conversion expectations (ConvertLegacyTemplate); ignored here. */
-    converted?: string
-    changed?: boolean
     error?: { reason: string; elementId: string; line: number } & Partial<{
       label: string
       max: number

@@ -52,7 +52,7 @@ func TestOverlongInstructionIsRefusedBeforePaidWork(t *testing.T) {
 	system, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: base, Flow: ai.WidestFlow(cfg, base)}, l)
 	allowance := ai.PromptBytes(system, user, ai.NarrationSchema()) + 2048
 
-	s, models, _ := newService(t, defaultFlow(), true)
+	s, models := newService(t, defaultFlow(), true)
 	sources := []clip.AnalysisSource{flowInput().Analyses[0].Source}
 	base.Policy.InputTokens, withInstruction.Policy.InputTokens = allowance, allowance
 	if err := s.ValidatePreparation(testRef(), base, sources); err != nil {

@@ -30,16 +30,15 @@ func TestStyleGalleryExample(t *testing.T) {
 		style, anchor, align, text, keyword string
 		ms                                  int
 		rapid                               bool
-		chips                               []string
 	}
 	shots := []shot{
 		{ms: 2500},
-		{style: "clean", anchor: "bottom", align: "center", text: "오늘은 철판 요리를 먹었어요", ms: 3000, chips: []string{"메뉴"}},
-		{style: "memo", anchor: "top", align: "left", text: "토요일 오후 1시 방문", ms: 3000, chips: []string{"메뉴"}},
+		{style: "bold", anchor: "bottom", align: "center", text: "오늘은 철판 요리를 먹었어요", ms: 3000},
+		{style: "bold", anchor: "top", align: "left", text: "토요일 오후 1시 방문", ms: 3000},
 		{style: "bold", anchor: "upper_mid", align: "center", text: "겉은 바삭했어요", keyword: "바삭", ms: 3000},
-		{style: "mark", anchor: "bottom", align: "center", text: "1인분 18,000원", keyword: "18,000원", ms: 3000},
-		{style: "simple", anchor: "bottom", align: "center", text: "국물이 진하고 깔끔해요", ms: 3000},
-		{style: "simple", anchor: "bottom", align: "center", text: "지글지글 익어가면 한 입 더", ms: 3000, rapid: true},
+		{style: "bold", anchor: "bottom", align: "center", text: "1인분 18,000원", keyword: "18,000원", ms: 3000},
+		{style: "bold", anchor: "bottom", align: "center", text: "국물이 진하고 깔끔해요", ms: 3000},
+		{style: "bold", anchor: "bottom", align: "center", text: "지글지글 익어가면 한 입 더", ms: 3000, rapid: true},
 		{ms: 2500},
 	}
 	total := 0
@@ -63,10 +62,7 @@ func TestStyleGalleryExample(t *testing.T) {
 		}
 		plan := clip.EditPlan{
 			Ratio: "vertical", DurationMS: total,
-			Disclosure: "ad", Preset: "restaurant", Accent: "coral", CTA: "save",
-			Hook: "스타일 비교",
-
-			Facts: []clip.Answer{{Label: "상호", Text: "스타일 갤러리"}, {Label: "메뉴", Text: "철판 요리"}},
+			Disclosure: "ad", Accent: "coral",
 		}
 		sources := []clip.RenderSource{}
 		paths := map[string]string{}
@@ -74,7 +70,7 @@ func TestStyleGalleryExample(t *testing.T) {
 			id := fmt.Sprintf("green-%02d", i)
 			sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: info})
 			paths[id] = green
-			cut := clip.EditCut{ID: id, SourceID: id, Fingerprint: id, EndMS: s.ms, Focal: clip.Point{X: .5, Y: .5}, Chips: s.chips}
+			cut := clip.EditCut{ID: id, SourceID: id, Fingerprint: id, EndMS: s.ms, Focal: clip.Point{X: .5, Y: .5}}
 			if s.text != "" {
 				copy := clip.Copy{Text: s.text, Style: s.style, Anchor: s.anchor, Align: s.align, Accent: plan.Accent, Keyword: s.keyword}
 				if s.rapid {

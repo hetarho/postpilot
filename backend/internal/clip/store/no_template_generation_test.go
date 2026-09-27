@@ -24,12 +24,11 @@ func noTemplateProject(t *testing.T, h *generationHarness) clip.Project {
 
 func TestAClipIsMintedGeneratedAndRerenderedWithNoTemplate(t *testing.T) {
 	h := generationSetup(t)
-	// A project with no template freezes a NON-legacy document, which only runs
+	// A project with no template freezes the empty document, which only runs
 	// where planning and rendering both understand the current plan.
 	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
-	h.planner.portableFlow = true
 	p := noTemplateProject(t, h)
-	if p.VideoTemplateID != "" || p.Composition == nil || p.Composition.Snapshot.TemplateID != "" || p.Composition.Snapshot.Legacy {
+	if p.VideoTemplateID != "" || p.Composition == nil || p.Composition.Snapshot.TemplateID != "" {
 		t.Fatal("minting without a template did not freeze the empty document", p.VideoTemplateID, p.Composition)
 	}
 	if p.Composition.Snapshot.Body != clip.EmptyCompositionBody() {

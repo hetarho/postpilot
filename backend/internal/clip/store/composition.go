@@ -10,21 +10,10 @@ import (
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
 )
 
-type legacyRecipeJSON struct {
-	Name     string      `json:"name"`
-	Fields   []fieldJSON `json:"fields"`
-	Guidance string      `json:"guidance"`
-	Styles   []string    `json:"styles,omitempty"`
-	Accent   string      `json:"accent"`
-	Preset   string      `json:"preset"`
-	Pace     string      `json:"pace"`
-}
 type compositionSnapshotJSON struct {
-	LegacyRecipe *legacyRecipeJSON `json:"legacy_recipe,omitempty"`
-	Version      int               `json:"version"`
-	Body         string            `json:"body"`
-	TemplateID   string            `json:"template_id"`
-	Legacy       bool              `json:"legacy"`
+	Version    int    `json:"version"`
+	Body       string `json:"body"`
+	TemplateID string `json:"template_id"`
 }
 type compositionItemJSON struct {
 	ID     string            `json:"id"`
@@ -49,13 +38,7 @@ func encodeComposition(c *clip.ProjectComposition) (string, string, error) {
 	if c == nil {
 		return "", "", nil
 	}
-	s := compositionSnapshotJSON{Version: c.Snapshot.Version, Body: c.Snapshot.Body, TemplateID: c.Snapshot.TemplateID, Legacy: c.Snapshot.Legacy}
-	if r := c.Snapshot.LegacyRecipe; r != nil {
-		s.LegacyRecipe = &legacyRecipeJSON{Name: r.Name, Guidance: r.CutGuidance, Accent: r.Accent, Preset: r.Preset, Pace: r.CaptionPace}
-		for _, f := range r.InformationFields {
-			s.LegacyRecipe.Fields = append(s.LegacyRecipe.Fields, fieldJSON{f.Label, f.Prompt})
-		}
-	}
+	s := compositionSnapshotJSON{Version: c.Snapshot.Version, Body: c.Snapshot.Body, TemplateID: c.Snapshot.TemplateID}
 	in := compositionInputsJSON{Version: clip.CompositionVersion, Values: c.Inputs.Values, Items: map[string][]compositionItemJSON{}, Associations: []associationJSON{}}
 	if in.Values == nil {
 		in.Values = map[string]string{}
@@ -85,14 +68,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	if strictJSON(snapshot, &s) != nil || strictJSON(inputs, &in) != nil || s.Version != clip.CompositionVersion || in.Version != clip.CompositionVersion {
 		return nil, errors.New("invalid stored clip composition version")
 	}
-	c := &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: s.Version, Body: s.Body, TemplateID: s.TemplateID, Legacy: s.Legacy}, Inputs: clip.CompositionInputs{Values: in.Values, Items: map[string][]composition.Item{}}}
-	if r := s.LegacyRecipe; r != nil {
-		recipe := &clip.Recipe{Name: r.Name, CutGuidance: r.Guidance, Accent: r.Accent, Preset: r.Preset, CaptionPace: r.Pace, CompositionLegacy: true}
-		for _, f := range r.Fields {
-			recipe.InformationFields = append(recipe.InformationFields, clip.InformationField{Label: f.Label, Prompt: f.Prompt})
-		}
-		c.Snapshot.LegacyRecipe = recipe
-	}
+	c := &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: s.Version, Body: s.Body, TemplateID: s.TemplateID}, Inputs: clip.CompositionInputs{Values: in.Values, Items: map[string][]composition.Item{}}}
 	for g, items := range in.Items {
 		c.Inputs.Items[g] = []composition.Item{}
 		for _, item := range items {
@@ -102,11 +78,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	for _, a := range in.Associations {
 		c.Inputs.Associations = append(c.Inputs.Associations, clip.SourceAssociation{GroupID: a.GroupID, ItemID: a.ItemID, SourceID: a.SourceID, Fingerprint: a.Fingerprint, StartMS: a.StartMS, EndMS: a.EndMS})
 	}
-	limits := clip.DefaultCompositionLimits()
-	if s.Legacy {
-		limits = clip.LegacyCompositionLimits(limits)
-	}
-	d, e := composition.ReadStored(s.Body, limits)
+	d, e := composition.ReadStored(s.Body, clip.DefaultCompositionLimits())
 	if e != nil {
 		return nil, e
 	}
@@ -129,20 +101,18 @@ func hydrateComposition(ctx context.Context, q *sqlc.Queries, p *clip.Project) e
 	if p.Composition != nil {
 		return nil
 	}
-	r := clip.Recipe{}
-	if p.VideoTemplateID != "" {
-		t, e := getTemplate(ctx, q, p.UserID, p.VideoTemplateID)
-		if e != nil {
-			return e
-		}
-		r = t.Recipe
-	}
-	if r.CompositionBody != "" && !r.CompositionLegacy {
-		p.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: r.CompositionBody, TemplateID: p.VideoTemplateID}, Inputs: clip.CompositionInputs{Values: map[string]string{}, Items: map[string][]composition.Item{}}}
-	} else {
-		c := clip.LegacyProjectComposition(*p, r)
+	// A project that froze nothing reads its template's outline, or the empty
+	// document when it has none (CLIP-5).
+	if p.VideoTemplateID == "" {
+		c := clip.NoTemplateComposition()
 		p.Composition = &c
+		return nil
 	}
+	t, e := getTemplate(ctx, q, p.UserID, p.VideoTemplateID)
+	if e != nil {
+		return e
+	}
+	p.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: clip.CompositionVersion, Body: t.CompositionBody, TemplateID: p.VideoTemplateID}, Inputs: clip.CompositionInputs{Values: map[string]string{}, Items: map[string][]composition.Item{}}}
 	return nil
 }
 

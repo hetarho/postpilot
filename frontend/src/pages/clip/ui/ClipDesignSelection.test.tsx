@@ -9,11 +9,6 @@ import { chooseOption } from '@/test/listbox'
 const template = {
   id: 'template',
   name: '여행',
-  informationFields: [{ label: '장소', prompt: '어디인가요?' }],
-  cutGuidance: '',
-  accent: 'teal' as const,
-  preset: 'restaurant' as const,
-  captionPace: 'rapid' as const,
   compositionBody:
     '<clip version="1" intro="a" caption="bold" outro="b" accent="teal" pace="rapid">' +
     '<field id="place" label="장소">어디인가요?</field>' +
@@ -27,8 +22,6 @@ const project = {
   ratio: 'vertical' as const,
   targetDurationMs: 30000,
   disclosure: 'ad' as const,
-  cta: '' as const,
-  answers: [],
   introPreset: 'b' as const,
   outroPreset: 'e' as const,
   allowedCaptionStyles: [] as string[],

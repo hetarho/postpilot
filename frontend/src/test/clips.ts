@@ -35,7 +35,6 @@ import {
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
   ClipEditingStateSchema,
-  SeedPresetFieldsResponseSchema,
   type ProtoClipSourceBatch,
   type AppFailureReason,
 } from '@/shared/api'
@@ -62,8 +61,6 @@ import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 export interface FakeClipTemplate extends ClipRecipe {
-  /** The server converted this body from the old section grammar (CLIP-140). */
-  compositionConverted?: boolean
   id: string
   projectCount?: number
   ownerId?: string
@@ -204,7 +201,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const projects = new Map<string, FakeClipProject>(
     (options.projects ?? [])
       .filter((p) => !p.ownerId || p.ownerId === options.ownerId)
-      .map((p) => [p.id, { ...p, answers: p.answers.map((a) => ({ ...a })) }]),
+      .map((p) => [p.id, { ...p }]),
   )
   // `editing` is the domain shape, whose caption carries an anchor; the wire
   // still calls that field `position` (CDS-12), so it goes through the mapper.
@@ -253,28 +250,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   // What the server freezes for a project with no template: the grammar's own
   // minimum document (CLIP-5).
   const emptyCompositionBody = '<clip version="1"/>'
-  const fixtureBody = (row: FakeClipTemplate) => {
-    const escape = (v: string) =>
-      v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
-    return (
-      `<clip version="1" pace="${row.captionPace ?? 'steady'}">` +
-      row.informationFields
-        .map(
-          (f, i) =>
-            `<field id="legacy_field_${i}" label="${escape(f.label)}" required="true">${escape(f.prompt)}</field>`,
-        )
-        .join('') +
-      // The server reads a legacy body back converted (CLIP-140): its scene and
-      // scene-bound caption are carried into the guide, never handed back as markup.
-      `<guide>${escape(row.cutGuidance)}${escape(row.cutGuidance ? '\n\n' : '')}legacy-caption [ai]: Describe the selected scene.</guide><text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>`
-    )
-  }
   const toProto = (row: FakeClipTemplate) =>
     create(VideoTemplateSchema, {
       ...row,
-      compositionBody: row.compositionBody ?? fixtureBody(row),
-      compositionLegacy: row.compositionLegacy ?? !row.compositionBody,
-      compositionConverted: row.compositionConverted ?? !row.compositionBody,
       projectCount: row.projectCount ?? 0,
       createdAt: hoursAgo(48),
       updatedAt: hoursAgo(2),
@@ -295,17 +273,13 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   router.rpc(ClipTemplateService.method.createVideoTemplate, (req) => {
     options.calls?.push('CreateVideoTemplate')
     if (options.saveFails) throw connectAppError('CLIP_TEMPLATE_NAME_TAKEN', Code.AlreadyExists)
+    // A template is an outline body under a name; a request without one is refused (CLIP-14).
+    if (!req.compositionBody.trim())
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const row: FakeClipTemplate = {
       id: `video-template-${++next}`,
       name: req.name.trim(),
-      compositionBody: req.compositionBody || undefined,
-      compositionLegacy: false,
-      cutGuidance: req.cutGuidance,
-      informationFields: req.informationFields.map(({ label, prompt }) => ({ label, prompt })),
-
-      accent: req.accent as ClipRecipe['accent'],
-      preset: req.preset as ClipRecipe['preset'],
-      captionPace: (req.captionPace || 'steady') as ClipRecipe['captionPace'],
+      compositionBody: req.compositionBody,
     }
     options.writes?.push(row)
     rows.set(row.id, row)
@@ -317,35 +291,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const row = rows.get(req.id)
     if (!row) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (req.name !== undefined) row.name = req.name
-    if (req.compositionBody !== undefined) {
-      row.compositionBody = req.compositionBody
-      row.compositionLegacy = false
-    }
-    if (req.cutGuidance !== undefined) row.cutGuidance = req.cutGuidance
-    if (req.informationFields)
-      row.informationFields = req.informationFields.values.map(({ label, prompt }) => ({
-        label,
-        prompt,
-      }))
-
-    if (req.accent !== undefined) row.accent = req.accent as ClipRecipe['accent']
-    if (req.preset !== undefined) row.preset = req.preset as ClipRecipe['preset']
-    if (req.captionPace !== undefined)
-      row.captionPace = (req.captionPace || 'steady') as ClipRecipe['captionPace']
+    if (req.compositionBody !== undefined) row.compositionBody = req.compositionBody
     options.writes?.push({ ...row })
     return create(UpdateVideoTemplateResponseSchema, { template: toProto(row) })
-  })
-  router.rpc(ClipTemplateService.method.seedPresetFields, (req) => {
-    options.calls?.push('SeedPresetFields')
-    const preset = CLIP_DESIGN.presets[req.preset as keyof typeof CLIP_DESIGN.presets]
-    if (!preset) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
-    const labels = ['상호', ...preset.chips].filter((l, i, all) => all.indexOf(l) === i)
-    return create(SeedPresetFieldsResponseSchema, {
-      fields: labels.map((label) => ({
-        label,
-        prompt: CLIP_DESIGN.facts.prompts[label as keyof typeof CLIP_DESIGN.facts.prompts],
-      })),
-    })
   })
   router.rpc(ClipTemplateService.method.deleteVideoTemplate, (req) => {
     options.calls?.push('DeleteVideoTemplate')
@@ -480,10 +428,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       videoTemplateId: req.videoTemplateId,
       ratio: req.ratio as ClipProjectDraft['ratio'],
       targetDurationMs: req.targetDurationMs,
-      answers: req.answers.map((a) => ({ label: a.label, text: a.text })),
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
-      cta: req.cta as ClipProjectDraft['cta'],
       instruction: req.instruction,
       // A template seeds none of the design: a request naming no preset starts
       // at the new-project defaults, stored as ids (CLIP-14, CLIP-111, CLIP-139).
@@ -501,9 +447,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         composition: {
           snapshot: {
             version: 1,
-            body: template.compositionBody ?? fixtureBody(template),
+            body: template.compositionBody,
             templateId: template.id,
-            legacy: template.compositionLegacy ?? !template.compositionBody,
           },
           inputs: req.compositionInputs,
         },
@@ -528,7 +473,6 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.hideDisclosure !== undefined) p.hideDisclosure = req.hideDisclosure
     if (req.disclosure !== undefined)
       p.disclosure = req.disclosure as ClipProjectDraft['disclosure']
-    if (req.cta !== undefined) p.cta = req.cta as ClipProjectDraft['cta']
     if (req.instruction !== undefined) p.instruction = req.instruction
     if (req.captionPace !== undefined)
       p.captionPace = req.captionPace as ClipProjectDraft['captionPace']
@@ -538,30 +482,13 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.outroPreset !== undefined)
       p.outroPreset = req.outroPreset as ClipProjectDraft['outroPreset']
     if (req.allowedCaptionStyles) p.allowedCaptionStyles = [...req.allowedCaptionStyles.values]
-    for (const answer of req.answers)
-      p.answers = [
-        ...p.answers.filter((a) => a.label !== answer.label),
-        { label: answer.label, text: answer.text },
-      ]
     if (req.compositionInputs) {
       // A project with no template freezes the grammar's minimum document, and
       // there is no row to read a body from (CLIP-5, T218).
       const template = p.videoTemplateId ? rows.get(p.videoTemplateId)! : undefined
       const snapshot = !template
-        ? (p.composition?.snapshot ?? {
-            version: 1,
-            body: emptyCompositionBody,
-            legacy: false,
-          })
-        : p.composition?.snapshot.templateId === p.videoTemplateId &&
-            (!template.compositionBody || template.compositionLegacy)
-          ? p.composition.snapshot
-          : {
-              version: 1,
-              body: template.compositionBody ?? fixtureBody(template),
-              templateId: template.id,
-              legacy: template.compositionLegacy ?? !template.compositionBody,
-            }
+        ? (p.composition?.snapshot ?? { version: 1, body: emptyCompositionBody })
+        : { version: 1, body: template.compositionBody, templateId: template.id }
       const wire = create(ClipProjectSchema, {
         composition: { snapshot, inputs: req.compositionInputs },
       })

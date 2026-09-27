@@ -1,8 +1,9 @@
 package clip_test
 
 import (
-	"github.com/postpilot/backend/internal/clip"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 func TestMediaOriginalRebindChecksRecordedAudioAndCadence(t *testing.T) {

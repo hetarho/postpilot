@@ -23,7 +23,7 @@ func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan) {
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}, Filename: "a.mp4"}}}
 	volume := 1.0
 	plan := clip.EditPlan{Ratio: "vertical", Cuts: []clip.Cut{{ID: "one", SourceID: "a", Fingerprint: "fa", EndMS: 20000,
-		PlaybackRatePermille: rate, Volume: &volume, Copies: []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "clean"}}}}}
+		PlaybackRatePermille: rate, Volume: &volume, Copies: []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "bold"}}}}}
 	plan.DurationMS = plan.Cuts[0].OutputDurationMS()
 	// The snapshot is the server's: encoding derives it, so the expectation
 	// carries the same derived value a reload will.
@@ -190,36 +190,17 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The version-0 cut: no Volume field at all, which rendered at full original
-	// sound. Version 1–4 state the volume in permille instead.
-	type v0Cut struct {
-		ID, SourceID, Fingerprint string
-		StartMS, EndMS            int
-		TransitionMS              int
-		Focal                     clip.Point
-		Copy                      clip.Caption
-		Chips                     []string
-		Volume                    *float64
-	}
-	v0 := struct {
-		Ratio      string
-		DurationMS int
-		Cuts       []v0Cut
-	}{base.Ratio, base.DurationMS, nil}
-	for _, c := range base.Cuts {
-		v0.Cuts = append(v0.Cuts, v0Cut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Focal, c.FirstCopy(), c.Chips, nil})
-	}
-	rawV0, _ := json.Marshal(v0)
+	// Versions 1–4 state each cut's volume in permille.
 	silent := `{"Version":4,"Ratio":"vertical","Plan":{"DurationMS":20000,"Cuts":[` +
 		`{"ID":"one","SourceID":"s","Fingerprint":"f","StartMS":0,"EndMS":10000,"TransitionMS":0,` +
-		`"Copies":[{"Text":"조용한 골목","Anchor":"bottom","Align":"center","Style":"clean","Accent":"","Keyword":"","StartMS":0,"EndMS":0}],"Chips":null,"VolumePermille":0},` +
+		`"Copies":[{"Text":"조용한 골목","Anchor":"bottom","Align":"center","Style":"bold","Accent":"","Keyword":"","StartMS":0,"EndMS":0}],"VolumePermille":0},` +
 		`{"ID":"two","SourceID":"s","Fingerprint":"f","StartMS":10000,"EndMS":20000,"TransitionMS":0,` +
-		`"Copies":[{"Text":"9900원","Anchor":"top","Align":"left","Style":"memo","Accent":"","Keyword":"","StartMS":0,"EndMS":0}],"Chips":null,"VolumePermille":0}],"Hook":""},` +
-		`"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},"CopyStyles":["clean","memo"]}`
+		`"Copies":[{"Text":"9900원","Anchor":"top","Align":"left","Style":"bold","Accent":"","Keyword":"","StartMS":0,"EndMS":0}],"VolumePermille":0}]},` +
+		`"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},"CopyStyles":["bold"]}`
 	for _, c := range []struct {
 		name, raw string
 		retain    bool
-	}{{"v0 nil volume", string(rawV0), true}, {"v4 muted", silent, false}} {
+	}{{"v4 full", p.EditPlan, true}, {"v4 muted", silent, false}} {
 		decoded, err := clip.DecodeEditPlan(c.raw)
 		if err != nil {
 			t.Fatal(c.name, err)
@@ -233,7 +214,7 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 			}
 		}
 		// Per-cut volume is an independent gain and is left exactly as saved.
-		if c.name == "v0 nil volume" && decoded.Cuts[0].OriginalVolume() != 1 {
+		if c.name == "v4 full" && decoded.Cuts[0].OriginalVolume() != 1 {
 			t.Fatal("per-cut volume changed")
 		}
 		for _, cut := range decoded.Cuts {
@@ -257,7 +238,7 @@ func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
 	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}, Filename: "a.mp4"}}}
 	analysis, _ := json.Marshal(sources)
-	copies := []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "clean"}}
+	copies := []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "bold"}}
 	// Two cuts of the same footage that already share 2 s.
 	overlapping := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Cuts: []clip.Cut{
 		{ID: "one", SourceID: "a", Fingerprint: "fa", StartMS: 0, EndMS: 10000, Copies: copies},

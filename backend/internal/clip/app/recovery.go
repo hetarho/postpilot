@@ -26,17 +26,16 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 	// The owner's source-sound setting is deliberately absent — it is
 	// render-only and rides the render revision instead.
 	raw, _ := json.Marshal(struct {
-		Composition                             *clip.ProjectComposition
-		Template                                clip.Recipe
-		Answers                                 []clip.Answer
-		Ratio, Write, Disclosure, CTA, Language string
-		Instruction                             string
-		Target                                  int
-		Hide                                    bool
-		Version                                 int
-		Analysis                                string
-		Sources                                 [][2]string
-	}{p.Composition, p.Template, p.Answers, p.Ratio, p.Write, p.Disclosure, p.CTA, p.Language, p.Instruction, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
+		Composition                        *clip.ProjectComposition
+		Template                           clip.Recipe
+		Ratio, Write, Disclosure, Language string
+		Instruction                        string
+		Target                             int
+		Hide                               bool
+		Version                            int
+		Analysis                           string
+		Sources                            [][2]string
+	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }

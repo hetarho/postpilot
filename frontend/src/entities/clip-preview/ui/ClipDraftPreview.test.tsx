@@ -37,7 +37,6 @@ const overlay = (patch: Partial<ClipPreviewOverlay> = {}): ClipPreviewOverlay =>
 
 const draft: ClipEditPlan = {
   durationMs: 19800,
-  hook: '',
   cuts: [
     {
       id: 'a',
@@ -47,7 +46,6 @@ const draft: ClipEditPlan = {
       endMs: 12000,
       transitionMs: 0,
       copies: [],
-      chips: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
       focal: { x: 0, y: 0.5 },
@@ -60,7 +58,6 @@ const draft: ClipEditPlan = {
       endMs: 13000,
       transitionMs: 200,
       copies: [],
-      chips: [],
       volumePermille: 500,
       playbackRatePermille: 1000,
     },

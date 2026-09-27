@@ -131,7 +131,6 @@ func (f preparationFinisher) Complete(ctx context.Context, c clip.AttemptResult)
 func remoteGenerationSetup(t *testing.T) *remoteGeneration {
 	t.Helper()
 	h := generationSetup(t)
-	h.planner.portableFlow = true
 	if _, err := h.db.Writer.Exec(`CREATE TABLE media_test_holds(job_id TEXT PRIMARY KEY,receipt TEXT NOT NULL)`); err != nil {
 		t.Fatal(err)
 	}

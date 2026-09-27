@@ -16,7 +16,6 @@ import {
   minExposureMs,
   requiredClipSources,
   validateClipPlan,
-  withinHookLimits,
   type ClipCaption,
   type ClipEditCut,
   type ClipEditPlan,
@@ -211,11 +210,6 @@ it('checks caption limits and exposure without retired frequency guards', () => 
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(true)
   stepped[1] = cut({ id: 'b' }, { anchor: 'lower_mid' })
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
-  // At most two chips, from the reserved labels.
-  expect(check([cut({ id: 'a', chips: ['위치', '가격'] })]).cuts[0]!.chips).toBe(false)
-  expect(check([cut({ id: 'a', chips: ['위치', '가격', '메뉴'] })]).cuts[0]!.chips).toBe(true)
-  expect(check([cut({ id: 'a', chips: ['주차'] })]).cuts[0]!.chips).toBe(true)
-
   // The per-clip guards: 크게 강조 twice, and no style four in a row.
   const bolds = ['a', 'b', 'c'].map((id, i) =>
     cut({ id }, { style: 'bold', anchor: i === 0 ? 'upper_mid' : 'upper_mid', align: 'center' }),
@@ -236,19 +230,13 @@ it('checks caption limits and exposure without retired frequency guards', () => 
   ).toBe(false)
 })
 
-/** The hook card's own sentence (CDS-20, CDS-42). The field refuses what the
- *  compiler would drop, so the owner sees why rather than losing the card. */
-it("holds the hook to two lines of nine, grounded in the owner's answers", () => {
-  const state = clipEditingFixture(),
-    answers = [
-      { label: '상호', text: '해람 베이커리' },
-      { label: '가격', text: '9,900원' },
-    ]
-  expect(withinHookLimits('아홉 글자까지만')).toBe(true)
+/** CDS-42: a sentence states only the numbers and Latin names the owner's answers carry. */
+it("grounds a sentence in the owner's answers", () => {
+  const answers = [
+    { label: '상호', text: '해람 베이커리' },
+    { label: '가격', text: '9,900원' },
+  ]
   expect(copyChars('가'.repeat(18))).toBe(18)
-  expect(withinHookLimits('가'.repeat(18))).toBe(true)
-  expect(withinHookLimits('가'.repeat(19))).toBe(false)
-  expect(withinHookLimits('한 줄\n두 줄\n세 줄')).toBe(false)
 
   // A number or a Latin name has to come from step ①; ordinary prose does not.
   expect(groundedInAnswers('', answers)).toBe(true)
@@ -258,21 +246,6 @@ it("holds the hook to two lines of nine, grounded in the owner's answers", () =>
   expect(groundedInAnswers('해람 Bakery', answers)).toBe(false)
   expect(groundedInAnswers('역대급 빵집', answers)).toBe(false)
   expect(groundedInAnswers('빵집 🥐', answers)).toBe(false)
-
-  // The whole plan carries it, and an invalid hook invalidates the plan.
-  expect(validateClipPlan({ ...state.plan, hook: '아홉 글자까지만' }, state).hook).toBe(false)
-  const long = validateClipPlan({ ...state.plan, hook: '가'.repeat(19) }, state)
-  expect(long.hook).toBe(true)
-  expect(long.valid).toBe(false)
-  expect(editClipPlan(state.plan, { type: 'hook', hook: '갓 구운 빵' }).hook).toBe('갓 구운 빵')
-  expect(
-    toClipEditingState(
-      create(ClipEditingStateSchema, {
-        ...state,
-        plan: clipPlanToProto({ ...state.plan, hook: '갓 구운 빵' }),
-      }),
-    ).plan.hook,
-  ).toBe('갓 구운 빵')
 })
 
 // CDS-36: the duration is the footage less what each cut's own transition

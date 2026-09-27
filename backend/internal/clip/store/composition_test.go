@@ -58,7 +58,7 @@ func TestOldRoleStyleDraftCanBeReadAndExplicitlyCorrected(t *testing.T) {
 
 func (ownedPlanWriter) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 func (p ownedPlanWriter) Flow(ctx context.Context, model llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
-	plan, usage, err := p.plannerFake.Plan(ctx, model, in)
+	plan, usage, err := p.plannerFake.written(ctx, model, in)
 	if err != nil {
 		return plan, usage, err
 	}
@@ -88,7 +88,7 @@ func (ownedPlanRenderer) CompositionPlanVersion() int { return clip.CompositionP
 // before any render, which is the only place a generation reaches now that it
 // stops at the plan (CLIP-151), and it is what the draft preview then draws.
 func (ownedPlanRenderer) LayoutComposition(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error) {
-	if p.Portable == nil || p.Disclosure != "" || p.Hook != "" || len(p.Facts) != 0 {
+	if p.Portable == nil || p.Disclosure != "" {
 		return p, nil, errors.New("injected legacy content into native layout")
 	}
 	p.Portable.Elements[0].Resolved.Text = "짧은 문장"
@@ -97,7 +97,7 @@ func (ownedPlanRenderer) LayoutComposition(_ context.Context, p clip.EditPlan, _
 	return p, nil, nil
 }
 func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (clip.RenderedVideo, error) {
-	if p.Portable == nil || p.Disclosure != "" || p.Hook != "" || len(p.Facts) != 0 {
+	if p.Portable == nil || p.Disclosure != "" {
 		return clip.RenderedVideo{}, errors.New("injected legacy content into native render")
 	}
 	return r.rendererFake.Render(ctx, ws, p, sources, load)
@@ -139,7 +139,7 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	ctx := context.Background()
 	body := "\n" + nativeBody + "\n"
 	template, err := legacyTemplate(t, st, "alice", "native", body), error(nil)
-	if err != nil || template.CompositionBody != body || template.CompositionLegacy {
+	if err != nil || template.CompositionBody != body {
 		t.Fatal(template, err)
 	}
 	inputs := clip.CompositionInputs{Values: map[string]string{"a": "  12,000원 🥣\n", "b": ""}, Items: map[string][]composition.Item{"menu": {{ID: "dish-a", Values: map[string]string{"price": "9,000원"}}, {ID: "dish-b", Values: map[string]string{"price": "15,000원"}}}}}
@@ -211,62 +211,6 @@ func TestNativeSnapshotSurvivesTemplateEditAndDeletion(t *testing.T) {
 	}
 }
 
-func TestLegacyConversionKeepsProjectChoicesResultsAndFrozenRecipe(t *testing.T) {
-	s, raw, d := setup(t)
-	ctx := context.Background()
-	template, first := create(t, s)
-	second, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "hidden", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "ad", HideDisclosure: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	result := clip.Result{Key: "unchanged.mp4", ContentType: "video/mp4", Bytes: 123, DurationMS: 15000, CreatedAt: time.Now()}
-	if err = raw.SaveGeneration(ctx, "alice", first.ID, "[]", "plan", result); err != nil {
-		t.Fatal(err)
-	}
-	// Old rows have no new columns populated. Read conversion must not write.
-	if _, err = d.Writer.Exec(`UPDATE video_templates SET composition_body=NULL, preset='' WHERE id=?`, template.ID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = d.Writer.Exec(`UPDATE clip_projects SET composition_snapshot_json=NULL, composition_inputs_json=NULL WHERE user_id='alice'`); err != nil {
-		t.Fatal(err)
-	}
-	first, err = s.GetProject(ctx, "alice", first.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err = s.GetProject(ctx, "alice", second.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(first.Composition.Snapshot.Body, "협찬") || strings.Contains(second.Composition.Snapshot.Body, "legacy-disclosure") || strings.Count(first.Composition.Snapshot.Body, `role="hook"`) != 1 || strings.Count(first.Composition.Snapshot.Body, `role="ending"`) != 1 {
-		t.Fatal("visibility or empty cards changed", first.Composition, second.Composition)
-	}
-	var count int
-	if err = d.Reader.QueryRow(`SELECT count(*) FROM clip_projects WHERE composition_snapshot_json IS NOT NULL`).Scan(&count); err != nil || count != 0 {
-		t.Fatal("read conversion wrote rows", count, err)
-	}
-	newGuide := "new shared template"
-	if _, err = s.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CutGuidance: &newGuide}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = s.DeleteTemplate(ctx, "alice", template.ID); err != nil {
-		t.Fatal(err)
-	}
-	got, err := s.GetProject(ctx, "alice", first.ID)
-	if err != nil || got.EditPlan != "plan" || got.Analysis != "[]" || got.EditPlanRevision != first.EditPlanRevision || got.RenderedPlanRevision != first.RenderedPlanRevision || !reflect.DeepEqual(got.Result, first.Result) || !reflect.DeepEqual(got.Composition, first.Composition) {
-		t.Fatal("migration/detach changed retained output", got, err)
-	}
-	ad := "ad"
-	got, err = s.UpdateProject(ctx, "alice", got.ID, clip.ProjectPatch{Disclosure: &ad})
-	if err != nil || got.Composition.Snapshot.LegacyRecipe.CutGuidance == newGuide {
-		t.Fatal("project write used edited shared recipe", err)
-	}
-	again, err := s.GetProject(ctx, "alice", second.ID)
-	if err != nil || !reflect.DeepEqual(again.Composition, second.Composition) {
-		t.Fatal("shared disclosure leaked", err)
-	}
-}
-
 func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T) {
 	doc, err := composition.Parse(nativeBody, clip.DefaultCompositionLimits())
 	if err != nil {
@@ -313,6 +257,7 @@ func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T)
 
 func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T) {
 	h := generationSetup(t)
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, incapablePlanner{h.planner}, incapableRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	ctx := context.Background()
 	body := `<clip version="1"><repeat for="scenes"><scene id="shot" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	if _, err := h.store.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &body}, time.Now()); err != nil {
@@ -337,54 +282,6 @@ func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T)
 		t.Fatal("missing capability was not authoritative", err)
 	}
 	assertNoQuoteWork(t, h)
-}
-
-func TestLegacyEscapingKeepsMaximumValidGuidanceReadable(t *testing.T) {
-	s, _, _ := setup(t)
-	ctx := context.Background()
-	r := recipe()
-	r.CutGuidance = strings.Repeat("&", clip.DefaultLimits().GuidanceChars)
-	template, err := s.CreateTemplate(ctx, "alice", r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	values, err := s.ListTemplates(ctx, "alice")
-	if err != nil || len(values) != 1 || values[0].CompositionBody != template.CompositionBody {
-		t.Fatal("XML expansion hid an existing template", err)
-	}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "maximum guide", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = s.GetProject(ctx, "alice", p.ID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "authored too large", CompositionBody: template.CompositionBody}); err == nil {
-		t.Fatal("legacy expansion allowance enlarged native authoring")
-	}
-}
-
-func TestConvertedLegacyFieldsAcceptTypedUpdatesWithoutLosingHistoricalAnswers(t *testing.T) {
-	s, _, _ := setup(t)
-	ctx := context.Background()
-	_, p := create(t, s)
-	input := clip.CompositionInputs{Values: map[string]string{clip.LegacyFieldID("장소"): "  부산 & 바다\n"}}
-	got, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input})
-	if err != nil {
-		t.Fatal(err)
-	}
-	answers := map[string]string{}
-	for _, a := range got.Answers {
-		answers[a.Label] = a.Text
-	}
-	if answers["장소"] != "  부산 & 바다\n" || answers["이전 질문"] != "보존" || got.Composition.Inputs.Values[clip.LegacyFieldID("장소")] != answers["장소"] {
-		t.Fatal("typed and legacy inputs diverged", got)
-	}
-	cleared := clip.CompositionInputs{}
-	got, err = s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &cleared})
-	if err != nil || got.Composition.Inputs.Values[clip.LegacyFieldID("장소")] != "" {
-		t.Fatal("clear did not reach legacy fields", err)
-	}
 }
 
 type compositionPlanner struct{ *plannerFake }
@@ -430,7 +327,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 		Version     int
 		Composition *clip.ProjectComposition
 	}
-	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != 5 || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Snapshot.Legacy || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
+	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != 5 || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
 		t.Fatal("accepted payload lost composition")
 	}
 	changed := strings.Replace(nativeBody, "장면만 설명", "새 구성", 1)

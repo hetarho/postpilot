@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 type memoryStore struct {
@@ -32,21 +33,39 @@ func (s *memoryStore) UpdateTemplate(_ context.Context, _, _ string, p clip.Temp
 	s.patch = p
 	return s.last, nil
 }
-func TestTemplateValidationUsesScalarsAndPreservesExactGuidance(t *testing.T) {
+
+// A template is its name and its outline body (CLIP-4, CLIP-14): a create with
+// no body is refused rather than minted as a template of some other kind, and
+// the body is kept exactly as the owner wrote it.
+func TestTemplateIsItsNameAndOutlineBody(t *testing.T) {
 	ctx := context.Background()
 	store := &memoryStore{}
 	s := testProjects(store)
-	value, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: strings.Repeat("한", 40), Preset: "cafe", CutGuidance: "  Preserve exact\n안내  "})
+	for _, body := range []string{"", "  \n "} {
+		if _, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: "카페", CompositionBody: body}); !errors.Is(err, clip.ErrInvalid) {
+			t.Fatalf("a body-less template was created: %q %v", body, err)
+		}
+	}
+	if store.last.ID != "" {
+		t.Fatal("a refused template reached the store")
+	}
+	body := `<clip version="1"><field id="place" label="장소" required="true">  간판 그대로
+</field></clip>`
+	value, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: strings.Repeat("한", 40), CompositionBody: body})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bytes, err := hex.DecodeString(value.ID); err != nil || len(bytes) != 16 {
 		t.Fatal("invalid random id")
 	}
-	if value.CutGuidance != "  Preserve exact\n안내  " {
-		t.Fatal("guidance rewritten")
+	if value.CompositionBody != body || store.last.CompositionBody != body {
+		t.Fatal("body rewritten")
 	}
-	for _, patch := range []clip.TemplatePatch{{Name: ptr("")}, {CutGuidance: ptr(strings.Repeat("한", 4001))}, {Accent: ptr("arbitrary")}, {InformationFields: ptr([]clip.InformationField{{Label: "x", Prompt: " "}})}} {
+	var problem *composition.Problem
+	if _, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: "카페", CompositionBody: `<clip version="1"><scene id="s" scope="scene"/></clip>`}); !errors.As(err, &problem) {
+		t.Fatalf("a body outside the outline grammar was accepted: %v", err)
+	}
+	for _, patch := range []clip.TemplatePatch{{Name: ptr("")}, {CompositionBody: ptr("")}} {
 		if _, err := s.UpdateTemplate(ctx, "owner", value.ID, patch); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatalf("invalid patch accepted: %+v %v", patch, err)
 		}
@@ -58,47 +77,36 @@ func TestTemplateValidationUsesScalarsAndPreservesExactGuidance(t *testing.T) {
 		t.Fatal("presence or normalization lost")
 	}
 }
+
+// The generation gate is the outline's own required values: the current
+// template decides, and a blank value is missing (CLIP-5, CLIP-102).
 func TestCurrentTemplateControlsRequiredAnswers(t *testing.T) {
-	template := clip.VideoTemplate{Recipe: clip.Recipe{InformationFields: []clip.InformationField{{Label: "new"}}}}
-	// A clip may not be approved without its campaign type and two verifiable
-	// facts (CDS-1, CDS-5), so the fixture carries both.
-	project := clip.Project{Disclosure: "ad", Answers: []clip.Answer{
-		{Label: "old", Text: "saved"}, {Label: "new", Text: " \n "},
-		{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"},
-	}}
-	if err := clip.RequiredAnswers(template, project); !errors.Is(err, clip.ErrInvalid) {
+	limits := clip.DefaultCompositionLimits()
+	template := clip.VideoTemplate{ID: "t", Recipe: clip.Recipe{Name: "카페", CompositionBody: `<clip version="1"><field id="new" label="새 정보" required="true"/></clip>`}}
+	project := clip.Project{Disclosure: "ad", Composition: &clip.ProjectComposition{Inputs: clip.CompositionInputs{Values: map[string]string{"new": " \n "}}}}
+	var problem *composition.Problem
+	if err := clip.RequiredAnswers(template, project, limits); !errors.As(err, &problem) || problem.Reason != "required_binding" {
 		t.Fatal(err)
 	}
-	project.Answers[1].Text = "새 정보 / exact English"
-	if err := clip.RequiredAnswers(template, project); err != nil {
+	project.Composition.Inputs.Values["new"] = "새 정보 / exact English"
+	if err := clip.RequiredAnswers(template, project, limits); err != nil {
+		t.Fatal(err)
+	}
+	// With no template there is nothing declared to require (CLIP-5).
+	if err := clip.RequiredAnswers(clip.VideoTemplate{}, clip.Project{}, limits); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestConvertedRecipesHaveNoUndeclaredAdmissionRequirements(t *testing.T) {
-	template := clip.VideoTemplate{Recipe: clip.Recipe{InformationFields: []clip.InformationField{{Label: "경험", Prompt: "한 줄"}}}}
-	p := clip.Project{Answers: []clip.Answer{{Label: "경험", Text: "조용한 산책"}}}
-	if err := clip.RequiredAnswers(template, p); err != nil {
-		t.Fatal("undeclared campaign or business facts required", err)
-	}
-	p.Answers = nil
-	if err := clip.RequiredAnswers(template, p); !errors.Is(err, clip.ErrInvalid) {
-		t.Fatal("declared legacy field became optional", err)
-	}
-	// Every one of the five phrases is a valid campaign type, and every CTA id
-	// plus the empty one (meaning the preset's) is a valid CTA.
+// Every one of the five phrases is a valid campaign type and nothing else is.
+func TestDisclosureVocabulary(t *testing.T) {
 	for _, id := range []string{"ad", "sponsored", "provided", "paid", "self"} {
 		if !clip.ValidDisclosure(id) {
 			t.Fatal(id)
 		}
 	}
-	for _, id := range []string{"", "blog", "place", "save"} {
-		if !clip.ValidCTA(id) {
-			t.Fatal(id)
-		}
-	}
-	if clip.ValidCTA("subscribe") || clip.ValidPreset("") || !clip.ValidPreset("cafe") {
-		t.Fatal("preset or CTA vocabulary")
+	if clip.ValidDisclosure("") || clip.ValidDisclosure("blog") {
+		t.Fatal("disclosure vocabulary")
 	}
 }
 func ptr[T any](value T) *T { return &value }

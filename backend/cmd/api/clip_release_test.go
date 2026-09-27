@@ -145,6 +145,11 @@ func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
 // template grammar, not only the wider snapshot one. Checking it here keeps the
 // break inside `go test ./...` instead of the Docker gate beside the deploy.
 func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
+	for _, body := range []string{releaseBody(""), releaseBody("균등분할")} {
+		if _, problem := composition.ParseTemplate(body, clip.DefaultCompositionLimits()); problem != nil {
+			t.Fatal(problem)
+		}
+	}
 	doc, problem := composition.ParseTemplate(releaseDetailedBody(), clip.DefaultCompositionLimits())
 	if problem != nil {
 		t.Fatal(problem)
@@ -421,7 +426,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Fatal(err)
 	}
 	renderer := releaseRenderer{Rendering: render, metrics: metrics}
-	planner, err := clipai.New(clipModels{meteredRegistry{Registry: registry, ledger: ledger}}, renderer, clipai.DefaultConfig(clipEnvironment(cfg)))
+	planner, err := clipai.New(clipModels{meteredRegistry{Registry: registry, ledger: ledger}}, clipai.DefaultConfig(clipEnvironment(cfg)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,14 +516,14 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		client.Transport = h.aborted
 		h.client = newReleaseClipClient(&client, rpcServer.URL)
 	}
-	// The reserved labels a legacy recipe's chips and cards read. The project
-	// answers two of them and names a campaign type.
-	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{
-		{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"},
-	}}
+	// An outline with three required values, which the project answers, and a
+	// campaign type.
+	recipe := clip.Recipe{Name: "synthetic release", CompositionBody: releaseBody("")}
 	ratio := "horizontal"
+	var accent *string
 	if strings.HasPrefix(mode, "multi-source") {
-		recipe.Accent, recipe.CutGuidance, ratio = "amber", "균등분할", "vertical"
+		amber := "amber"
+		recipe.CompositionBody, accent, ratio = releaseBody("균등분할"), &amber, "vertical"
 	}
 	if mode == "detailed-input" {
 		recipe = clip.Recipe{Name: "detailed synthetic input", CompositionBody: releaseDetailedBody()}
@@ -527,11 +532,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectInput := clip.ProjectInput{Language: "ko", Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
-		{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"},
-	}}
+	projectInput := clip.ProjectInput{Language: "ko", Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Accent: accent, CompositionInputs: releaseValues()}
 	if mode == "detailed-input" {
-		projectInput.Answers = nil
+		projectInput.CompositionInputs = nil
 	}
 	p, err := projects.CreateProject(ctx, "release-user", projectInput)
 	if err != nil {

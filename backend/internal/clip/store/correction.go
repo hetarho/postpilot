@@ -3,10 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/store/sqlc"
 	"reflect"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/store/sqlc"
 )
 
 func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision int, raw string) (clip.Project, error) {

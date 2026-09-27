@@ -71,15 +71,10 @@ func (s *GenerationService) correctedPlan(p clip.Project, draft clip.CorrectionP
 		return clip.EditPlan{}, nil, err
 	}
 	next = next.WithDesign(p.DesignSelection())
+	// A draft is drawn from the composition it was written into; a plan
+	// with none cannot be drawn.
 	if next.Portable == nil {
-		recipe := clip.Recipe{}
-		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-			recipe = *p.Composition.Snapshot.LegacyRecipe
-		}
-		next.Portable, err = clip.FreezeLegacyPlan(p, next, recipe, s.cfg.Render.Composition)
-		if err != nil {
-			return clip.EditPlan{}, nil, err
-		}
+		return clip.EditPlan{}, nil, clip.ErrCompositionUnavailable
 	}
 	sources, err := clip.RetainedSources(p)
 	if err != nil {

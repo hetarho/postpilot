@@ -31,9 +31,7 @@ function fixture(): FakeClipProject {
     videoTemplateId: 'template',
     ratio: 'vertical',
     targetDurationMs: 19800,
-    answers: [],
     disclosure: 'ad',
-    cta: '',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
     editing: clipTimelineFixture(),
@@ -57,11 +55,7 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
         {
           id: 'template',
           name: '여행',
-          informationFields: [],
-          cutGuidance: '',
-
-          accent: '',
-          preset: 'restaurant',
+          compositionBody: '<clip version="1"/>',
         },
       ],
       projects: [fixture()],
@@ -444,7 +438,6 @@ it('adds observed footage through the page, then saves split/rate operations and
     endMs: 15000,
     playbackRatePermille: 1000,
     copies: [],
-    chips: [],
     focal: { x: 0.3, y: 0.6 },
   })
   expect(screen.queryByRole('dialog', { name: '원본 소스' })).not.toBeInTheDocument()

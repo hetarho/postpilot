@@ -17,7 +17,6 @@ export function toProjectComposition(
       version: snapshot.version,
       body: snapshot.body,
       templateId: snapshot.templateId,
-      legacy: snapshot.legacy,
     },
     inputs: {
       values: { ...inputs.values },

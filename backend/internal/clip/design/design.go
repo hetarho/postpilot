@@ -153,41 +153,6 @@ func (s StyleRule) Role() TypeRole { return Type[s.Type] }
 // face to the string that finds it.
 func FontFamily(face string) string { return Faces[face] }
 
-// One category preset. Its values live in configuration, never in code
-// (CDS-51), and every preset shares the badge, the two cards and normalisation.
-type Preset struct {
-	// The category the hook card shows on its chip. Korean and
-	// code-owned, like the disclosure phrases.
-	Label     string         `json:"label"`
-	Hook      string         `json:"hook"`
-	Chips     []string       `json:"chips"`
-	CTA       string         `json:"cta"`
-	Accent    string         `json:"accent"`
-	Styles    map[string]int `json:"styles"`
-	CutMinS   float64        `json:"cut_min_s"`
-	CutMaxS   float64        `json:"cut_max_s"`
-	Rhythm    string         `json:"rhythm"`
-	PriceNote string         `json:"price_note"`
-	Refuse    string         `json:"refuse"`
-}
-
-// The reserved fact labels, the five that may become a chip, the CDS-1 minimum
-// and the prompt shown for each. Labels are Korean and exact: a chip shows the
-// label itself, so renaming one makes the renderer find no fact under it.
-type Facts struct {
-	Labels  []string `json:"labels"`
-	Chips   []string `json:"chips"`
-	Minimum struct {
-		Labels []string `json:"labels"`
-		Count  int      `json:"count"`
-	} `json:"minimum"`
-	Prompts  map[string]string `json:"prompts"`
-	Defaults struct {
-		Chips []string `json:"chips"`
-		CTA   string   `json:"cta"`
-	} `json:"defaults"`
-}
-
 type VoiceRules struct {
 	Banned []string `json:"banned"`
 }
@@ -210,7 +175,6 @@ type TimingTokens struct {
 	OutroDefaultS   float64 `json:"outro_default_s"`
 	BadgeMinHeadS   float64 `json:"badge_min_head_s"`
 	BadgeMinTailS   float64 `json:"badge_min_tail_s"`
-	ChipMinS        float64 `json:"chip_min_s"`
 	CopyLeadMS      int     `json:"copy_lead_ms"`
 	SubExtendMS     int     `json:"sub_extend_ms"`
 	SubOccupancyMin float64 `json:"sub_occupancy_min"`
@@ -293,10 +257,7 @@ type system struct {
 	Accent      map[string]string      `json:"accent"`
 	Information InformationTokens      `json:"information"`
 	Spacing     SpacingTokens          `json:"spacing"`
-	Presets     map[string]Preset      `json:"presets"`
 	Disclosure  map[string]string      `json:"disclosure"`
-	CTA         map[string]string      `json:"cta"`
-	Facts       Facts                  `json:"facts"`
 	Faces       map[string]string      `json:"faces"`
 	Voice       VoiceRules             `json:"voice"`
 	Motion      MotionTokens           `json:"motion"`
@@ -353,10 +314,7 @@ var (
 	Accent      = loaded.Accent
 	Information = loaded.Information
 	Spacing     = loaded.Spacing
-	Presets     = loaded.Presets
 	Disclosure  = loaded.Disclosure
-	CTA         = loaded.CTA
-	Fact        = loaded.Facts
 	Faces       = loaded.Faces
 	Voice       = loaded.Voice
 	Motion      = loaded.Motion
@@ -367,50 +325,6 @@ var (
 	Audio       = loaded.Audio
 	Luma        = loaded.Luma
 )
-
-// PresetFields are the reserved information fields a preset needs, in the order
-// a form should show them: the business name first (every card carries it) and
-// then the facts its own chip priority names. Pure, so the RPC, the seed and the
-// renderer all read one answer.
-func PresetFields(preset string) []struct{ Label, Prompt string } {
-	out := []struct{ Label, Prompt string }{}
-	add := func(label string) {
-		for _, f := range out {
-			if f.Label == label {
-				return
-			}
-		}
-		if prompt, ok := Fact.Prompts[label]; ok {
-			out = append(out, struct{ Label, Prompt string }{label, prompt})
-		}
-	}
-	add("상호")
-	for _, label := range ChipPriority(preset) {
-		add(label)
-	}
-	return out
-}
-
-// ChipPriority is the preset's order, or the shared default (CDS-51) for a
-// project whose template predates presets.
-func ChipPriority(preset string) []string {
-	if p, ok := Presets[preset]; ok {
-		return p.Chips
-	}
-	return Fact.Defaults.Chips
-}
-
-// DefaultCTA resolves the empty CTA to the preset's, and a preset-less template
-// to the shared default.
-func DefaultCTA(preset, cta string) string {
-	if _, ok := CTA[cta]; ok {
-		return cta
-	}
-	if p, ok := Presets[preset]; ok {
-		return p.CTA
-	}
-	return Fact.Defaults.CTA
-}
 
 func Layout(ratio string) (RatioLayout, bool) {
 	l, ok := Ratios[ratio]

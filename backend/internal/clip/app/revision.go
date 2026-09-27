@@ -25,8 +25,7 @@ type revisionJobPayload struct {
 	Language                 string
 	Composition              *clip.ProjectComposition
 	Template                 clip.Recipe
-	Answers                  []clip.Answer
-	Disclosure, CTA          string
+	Disclosure               string
 	Instruction              string
 	CaptionPace, Accent      string
 	IntroPreset, OutroPreset string
@@ -189,8 +188,8 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	payload, err := json.Marshal(revisionJobPayload{
 		Version: revisionPayloadVersion, ProjectID: id, Write: write, Revision: p.EditPlanRevision,
 		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
-		Composition: p.Composition, Template: recipe, Answers: p.Answers,
-		Disclosure: p.Disclosure, CTA: p.CTA, Instruction: p.Instruction,
+		Composition: p.Composition, Template: recipe,
+		Disclosure: p.Disclosure, Instruction: p.Instruction,
 		CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, HideDisclosure: p.HideDisclosure,
 		TargetDurationMS: p.TargetDurationMS, SourceAudio: batchSourceAudio(b), Batch: b,
 		Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing},
@@ -256,9 +255,9 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 		return err
 	}
 	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
-		Answers: frozen.Answers, Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
+		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
-		CTA: frozen.CTA, Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio}
+		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio}
 	stage = "flow"
 	if frozen.Target == clip.RevisionNarration {
 		stage = "narrate"

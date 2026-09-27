@@ -83,28 +83,14 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 }
 
 func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
-	shadow := overlayShadow("text")
-	v := overlay.FurnitureView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Shadow: &shadow}
+	v := overlay.FurnitureView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}}
 	badge, badgeAlpha := paint("badge_ad")
 	white, _ := paint("text_white")
-	muted, mutedAlpha := paint("text_muted")
 	p := f.Badge
 	if f.BadgeText != "" {
 		box := overlayBox(p, design.Spacing.RadiusChip, badge, badgeAlpha)
 		label := overlayText(design.Type["badge"], f.BadgeText, p.X+design.Spacing.PadChip.H-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
 		v.Badge, v.Label = &box, &label
-	}
-	for _, c := range f.Chips {
-		labelRole := design.Type["label"]
-		labelRole.Tracking = design.Information.LabelTracking
-		x := c.Region.X + c.Region.Width/2
-		label := overlayText(labelRole, c.Label, x-c.LabelBounds.Width/2-c.LabelBounds.X, c.Region.Y-c.LabelBounds.Y, muted, mutedAlpha)
-		value := overlayText(design.Type["caption"], c.Value, x-c.ValueBounds.Width/2-c.ValueBounds.X, c.Region.Y+math.Max(labelRole.Size, c.LabelBounds.Height)+design.Spacing.GapStack-c.ValueBounds.Y, white, "")
-		label.Stroke, label.StrokeOpacity = paint("stroke_dark")
-		value.Stroke, value.StrokeOpacity = label.Stroke, label.StrokeOpacity
-		label.StrokeWidth, value.StrokeWidth = design.Spacing.StrokeSmall, design.Spacing.StrokeSmall
-		label.Shadow, value.Shadow = true, true
-		v.Chips = append(v.Chips, overlay.Chip{Label: label, Value: value})
 	}
 	return v
 }
@@ -158,7 +144,7 @@ func overlayProbe(view string) any {
 	case "info-v1":
 		return overlayProbe("copy-v1").(overlay.CopyView)
 	case "furniture-v1":
-		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
+		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text}
 	case "region-v1":
 		return overlay.RegionView{CopyView: overlayProbe("copy-v1").(overlay.CopyView), Rules: []overlay.Box{box}}
 	default:

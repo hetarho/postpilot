@@ -15,10 +15,7 @@ type corpusCase struct {
 	Name, Body string
 	// Template runs the case through ParseTemplate, the grammar a saved template
 	// must satisfy, instead of the snapshot grammar Parse.
-	Template bool
-	// Converted/Changed pin ConvertLegacyTemplate's projection of Body.
-	Converted        string
-	Changed          *bool
+	Template         bool
 	Error            *composition.Problem
 	Inputs           *composition.Inputs
 	Summary          map[string]any
@@ -144,26 +141,6 @@ func TestSharedCorpus(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			if c.Changed != nil {
-				converted, changed, problem := composition.ConvertLegacyTemplate(c.Body, l)
-				if problem != nil || changed != *c.Changed || converted != c.Converted {
-					t.Fatalf("conversion: %+v changed=%v\n%s", problem, changed, converted)
-				}
-				// The carry-over is what the conversion owes; an authoring error the
-				// owner still has to fix stays visible (CLIP-114, CLIP-140).
-				read, problem := composition.ReadStored(converted, l)
-				if problem != nil {
-					t.Fatalf("converted body unreadable: %+v", problem)
-				}
-				if len(read.Sections) > 0 {
-					t.Fatalf("converted body kept %d sections", len(read.Sections))
-				}
-				for _, e := range read.Elements {
-					if e.Role == "caption" || e.Role == "info" || e.Basis == "cut" {
-						t.Fatalf("converted body kept %s as %s/%s", e.ID, e.Role, e.Basis)
-					}
-				}
-			}
 			d, e := composition.Parse(c.Body, l)
 			if c.Template {
 				d, e = composition.ParseTemplate(c.Body, l)
@@ -306,39 +283,5 @@ func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 	}
 	if _, e = composition.ReplaceSpan(d, composition.Span{Start: 1, End: 3, Line: 1}, replacement, l); e == nil {
 		t.Fatal("arbitrary span accepted")
-	}
-}
-
-// The number of section instances a project admits comes from its own answers:
-// a repeated group gives one per item it holds, an unanswered group gives none
-// however much prose describes it, a section bound to no group gives one, and
-// `scenes` repetition is bound to no item at all.
-func TestAdmittedSectionsCountTheAnswersNotTheProse(t *testing.T) {
-	l := clip.DefaultCompositionLimits()
-	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="메뉴" required="true"/></group><group id="extra"><field id="note" label="메모"/></group><guide>두 묶음을 모두 길게 설명한다.</guide><scene id="opening" scope="scene"/><repeat for="menu"><scene id="dish" scope="item"/></repeat><repeat for="extra"><scene id="note" scope="item"/></repeat><repeat for="scenes"><scene id="loose" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
-	d, p := composition.Parse(body, l)
-	if p != nil {
-		t.Fatal(p)
-	}
-	items := map[string][]composition.Item{"menu": {{ID: "one"}, {ID: "two"}}}
-	want := []composition.AdmittedSection{
-		{ID: "opening", Scope: "scene", Instances: 1},
-		{ID: "dish", Scope: "item", Repeat: "menu", Instances: 2},
-		{ID: "loose", Scope: "scene", Repeat: "scenes", Instances: l.Cuts},
-	}
-	if got := composition.AdmittedSections(d, items, l); !reflect.DeepEqual(got, want) {
-		t.Fatalf("admitted %+v, want %+v", got, want)
-	}
-	// Answering the second group admits its section; answering neither admits
-	// neither, and no section is ever reported at zero instances.
-	items["extra"] = []composition.Item{{ID: "memo"}}
-	got := composition.AdmittedSections(d, items, l)
-	if len(got) != 4 || got[2].ID != "note" || got[2].Instances != 1 {
-		t.Fatalf("an answered optional section was not admitted: %+v", got)
-	}
-	for _, s := range composition.AdmittedSections(d, map[string][]composition.Item{}, l) {
-		if s.Repeat != "" && s.Repeat != "scenes" {
-			t.Fatalf("an unanswered group was still admitted: %+v", s)
-		}
 	}
 }

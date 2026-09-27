@@ -36,36 +36,28 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 		}
 	}
 	in.Analyses = nil
-	if nativeComposition(in) {
-		// BOTH writing calls are checked, the narration against the largest
-		// flow the flow call may hand it: the allowance has to hold the bigger
-		// of the two requests, not the smaller one (CLIP-90, CLIP-135).
-		limits := compositionLimits(s.cfg, in)
-		requests := [][2]string{}
-		system, user := BuildFlowPrompt(in, s.cfg.Render.FadeMS, limits)
-		requests = append(requests, [2]string{system, user})
-		system, user = BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in, Flow: WidestFlow(s.cfg, in)}, limits)
-		requests = append(requests, [2]string{system, user})
-		for i, request := range requests {
-			schema := json.RawMessage(nil)
-			if writer.StructuredOutput {
-				schema = FlowSchema()
-				if i == 1 {
-					schema = NarrationSchema()
-				}
-			}
-			if err := validatePrompt(request[0], request[1], schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
-				return err
+	// BOTH writing calls are checked, the narration against the largest flow
+	// the flow call may hand it: the allowance has to hold the bigger of the two
+	// requests, not the smaller one (CLIP-90, CLIP-135).
+	limits := compositionLimits(s.cfg, in)
+	requests := [][2]string{}
+	system, user := BuildFlowPrompt(in, s.cfg.Render.FadeMS, limits)
+	requests = append(requests, [2]string{system, user})
+	system, user = BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in, Flow: WidestFlow(s.cfg, in)}, limits)
+	requests = append(requests, [2]string{system, user})
+	for i, request := range requests {
+		schema := json.RawMessage(nil)
+		if writer.StructuredOutput {
+			schema = FlowSchema()
+			if i == 1 {
+				schema = NarrationSchema()
 			}
 		}
-		return nil
+		if err := validatePrompt(request[0], request[1], schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
+			return err
+		}
 	}
-	schema = nil
-	if writer.StructuredOutput {
-		schema = PlanSchema()
-	}
-	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS, compositionLimits(s.cfg, in))
-	return validatePrompt(system, user, schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit())
+	return nil
 }
 
 // widestFlow is the largest footage flow the narration request can be asked to

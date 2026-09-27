@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
-	"time"
 )
 
 var _ clip.GenerationStore = (*Store)(nil)

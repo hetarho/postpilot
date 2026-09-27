@@ -245,7 +245,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 		}
 	}
 	// Two lines, and the fit loop refusing rather than shrinking past the floor.
-	c := clip.Copy{Text: "one two", Style: "clean", Anchor: "top", Align: "left"}
+	c := clip.Copy{Text: "one two", Style: "bold", Anchor: "top", Align: "left"}
 	b := map[string]clip.Region{"one two": {Width: 2500, Height: 100}, "one ": {Width: 800, Height: 100}, "two": {Width: 800, Height: 100}}
 	l, err := fitCopy(canvas, c, [][]string{{"one two"}, {"one ", "two"}}, b)
 	if err != nil || len(l.Lines) != 2 || l.FontSize != design.Type["title"].Size {
@@ -352,7 +352,7 @@ func TestScrimAndAccentOnASampledGround(t *testing.T) {
 		}
 	}
 	// An unsampled ground draws exactly what it drew before the sampler existed.
-	c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: "mark", Accent: "amber"}
+	c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: "bold", Accent: "amber"}
 	l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 	if err != nil {
 		t.Fatal(err)
@@ -469,7 +469,7 @@ func TestRenderDoesNotLoadInvalidPlansOrLeakOnFailure(t *testing.T) {
 			a := newAdapter(t, fake)
 			r := testRenderer(t, a)
 			s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Style: "clean", Anchor: "bottom", Align: "center"}}}}}
+			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Style: "bold", Anchor: "bottom", Align: "center"}}}}}
 			if mode == "invalid" {
 				plan.DurationMS = 14000
 			}

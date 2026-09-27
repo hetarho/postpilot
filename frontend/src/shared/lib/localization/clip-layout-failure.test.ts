@@ -35,15 +35,4 @@ describe('clip design-system refusals', () => {
     }
     expect(seen.size).toBe(2)
   })
-
-  it('names the labels a clip is still missing', () => {
-    const failure = normalizeAppFailure({
-      reason: 'CLIP_FACTS_REQUIRED',
-      params: { labels: '상호, 가격' },
-    })
-    initializeI18n('ko')
-    expect(formatAppFailure(failure)).toContain('상호, 가격')
-    initializeI18n('en')
-    expect(formatAppFailure(failure, 'en')).toContain('상호, 가격')
-  })
 })

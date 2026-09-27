@@ -63,18 +63,16 @@ type MediaArtifactAccess struct {
 // MediaRenderInputs freezes the project-owned inputs intentionally absent from
 // the persisted editing plan. Workers must never load current project state.
 type MediaRenderInputs struct {
-	Disclosure, Preset, CTA, Accent, CaptionPace, IntroPreset, OutroPreset string
-	Facts                                                                  []Answer
-	CaptionStyles                                                          []string
-	Written                                                                []Written
-	Decisions                                                              []Composition
+	Disclosure, Accent, CaptionPace, IntroPreset, OutroPreset string
+	CaptionStyles                                             []string
+	Decisions                                                 []Composition
 }
 
 func FreezeMediaRenderInputs(p EditPlan) MediaRenderInputs {
-	return MediaRenderInputs{p.Disclosure, p.Preset, p.CTA, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset, p.Facts, p.CaptionStyles, p.Written, p.Decisions}
+	return MediaRenderInputs{p.Disclosure, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset, p.CaptionStyles, p.Decisions}
 }
 func (r MediaRenderInputs) Apply(p EditPlan) EditPlan {
-	p.Disclosure, p.Preset, p.CTA, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset = r.Disclosure, r.Preset, r.CTA, r.Accent, r.CaptionPace, r.IntroPreset, r.OutroPreset
-	p.Facts, p.CaptionStyles, p.Written, p.Decisions = r.Facts, r.CaptionStyles, r.Written, r.Decisions
+	p.Disclosure, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset = r.Disclosure, r.Accent, r.CaptionPace, r.IntroPreset, r.OutroPreset
+	p.CaptionStyles, p.Decisions = r.CaptionStyles, r.Decisions
 	return p
 }

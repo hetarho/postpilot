@@ -11,7 +11,7 @@ import (
 )
 
 func TestObservedPromptOverflowKeepsPrivateBoundedMeasurements(t *testing.T) {
-	s, models, _ := newService(t, "", true)
+	s, models := newService(t, "", true)
 	in := nativeInput()
 	in.Policy.InputTokens = llm.ClipPlanInputUnits
 	// Valid individual fields/observations whose complete aggregate exceeds 64k.

@@ -35,16 +35,10 @@ type CopyView struct {
 	Dot        *Circle
 	Lines      []Text
 }
-type Chip struct {
-	Box
-	Label, Value Text
-}
 type FurnitureView struct {
 	Canvas
-	Shadow *Shadow
-	Badge  *Box
-	Label  *Text
-	Chips  []Chip
+	Badge *Box
+	Label *Text
 }
 
 // RegionView is region-v2: region-v1's rules and lines plus a preset's neutral

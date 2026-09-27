@@ -4,46 +4,22 @@ import { emptyClipRecipe, normalizeRecipe, validateClipRecipe, type ClipRecipe }
 const valid = (): ClipRecipe => ({
   ...emptyClipRecipe(),
   name: '영상',
-  // A template names its category preset, which fixes chip priority, the
-  // default CTA and the default accent.
-  preset: 'restaurant',
-  informationFields: [{ label: '장소', prompt: '어디인가요?' }],
+  compositionBody: '<clip version="1"/>',
 })
 describe('clip recipe bounds', () => {
-  it('counts Unicode scalars and normalizes labels without rewriting guidance', () => {
+  it('counts Unicode scalars and trims the name without rewriting the body', () => {
     expect(validateClipRecipe({ ...valid(), name: '😀'.repeat(40) }).valid).toBe(true)
     expect(validateClipRecipe({ ...valid(), name: '😀'.repeat(41) }).name).toBe('tooLong')
-    expect(
-      normalizeRecipe({
-        ...valid(),
-        cutGuidance: '  exact\n글  ',
-        informationFields: [{ label: ' 이름 ', prompt: ' 안내 ' }],
-      }),
-    ).toMatchObject({
-      cutGuidance: '  exact\n글  ',
-      informationFields: [{ label: '이름', prompt: '안내' }],
+    const body = '\n<clip version="1"/>\n'
+    expect(normalizeRecipe({ name: ' 이름 ', compositionBody: body })).toEqual({
+      name: '이름',
+      compositionBody: body,
     })
   })
-  it.each([
-    { name: '' },
-    { cutGuidance: '가'.repeat(4001) },
-
-    { accent: 'custom' },
-    // Legacy recipe saves retain their category preset.
-    { preset: '' },
-    { preset: 'bakery' },
-
-    { informationFields: [{ label: '', prompt: 'p' }] },
-    { informationFields: [{ label: 'a'.repeat(41), prompt: 'p' }] },
-    { informationFields: [{ label: 'a', prompt: 'p'.repeat(201) }] },
-    {
-      informationFields: [
-        { label: ' a ', prompt: 'p' },
-        { label: 'a', prompt: 'p' },
-      ],
+  it.each([{ name: '' }, { name: '   ' }, { compositionBody: '' }, { compositionBody: '<clip/>' }])(
+    'rejects invalid recipe %j',
+    (patch) => {
+      expect(validateClipRecipe({ ...valid(), ...patch }).valid).toBe(false)
     },
-    { informationFields: Array.from({ length: 11 }, (_, i) => ({ label: `${i}`, prompt: 'p' })) },
-  ])('rejects invalid recipe %j', (patch) => {
-    expect(validateClipRecipe({ ...valid(), ...patch } as ClipRecipe).valid).toBe(false)
-  })
+  )
 })

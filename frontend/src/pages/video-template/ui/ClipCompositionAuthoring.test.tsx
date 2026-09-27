@@ -17,12 +17,6 @@ const template = {
   id: 'owned',
   name: '장면 템플릿',
   compositionBody: body,
-  compositionLegacy: false,
-  informationFields: [],
-  cutGuidance: '',
-
-  accent: '' as const,
-  preset: '' as const,
 }
 const mount = (clips: FakeClipsOptions = {}, path = '/video-templates/owned') =>
   renderAppAt(path, { user: { id: 'alice' }, clips: { templates: [template], ...clips } })
@@ -185,14 +179,9 @@ describe('composition template authoring', () => {
       version: '1',
     })
   })
-  it('opens converted content without writing and reports unavailable generation capability', async () => {
+  it('opens a template without writing and reports unavailable generation capability', async () => {
     const calls: string[] = []
-    mount({
-      templates: [{ ...template, compositionLegacy: true }],
-      compositionPlanVersion: 4,
-      calls,
-    })
-    expect(await screen.findByText(/이전 템플릿의 내용이/)).toBeInTheDocument()
+    mount({ compositionPlanVersion: 4, calls })
     expect(await screen.findByText(/서버에서 아직/)).toBeInTheDocument()
     expect(await source()).toHaveValue(body)
     expect(calls).not.toContain('UpdateVideoTemplate')
@@ -267,29 +256,6 @@ describe('composition template authoring', () => {
     expect(screen.queryByRole('combobox', { name: /표시 구간 기준/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '시작 (초)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '끝 (초)' })).not.toBeInTheDocument()
-  })
-  it('says a legacy template kept its scenes as guidance and clears the notice on save', async () => {
-    const user = userEvent.setup(),
-      writes: ClipRecipe[] = []
-    const converted =
-      '<clip version="1"><field id="place" label="장소"/><guide>가장 이른 클립으로 시작</guide><text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
-    mount({
-      templates: [{ ...template, compositionBody: converted, compositionConverted: true }],
-      writes,
-    })
-    expect(await screen.findByText(/구성 안내로 옮겼어요/)).toBeInTheDocument()
-    expect(await source()).toHaveValue(converted)
-    await user.click(screen.getByRole('tab', { name: '구성 편집' }))
-    await user.click(screen.getByRole('button', { name: '장소' }))
-    fireEvent.change(screen.getByRole('textbox', { name: '정보 이름' }), {
-      target: { value: '촬영 장소' },
-    })
-    await waitFor(() => expect(screen.queryByText(/구성 안내로 옮겼어요/)).not.toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await screen.findByText('저장했어요')
-    expect(parseClipTemplate(writes[0].compositionBody!).guidance).toEqual([
-      '가장 이른 클립으로 시작',
-    ])
   })
 })
 

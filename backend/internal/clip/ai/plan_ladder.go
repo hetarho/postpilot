@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"errors"
 	"math"
 	"slices"
 	"strings"
@@ -23,7 +22,7 @@ const (
 // only decoding or an unrenderable remainder can fail a generation.
 var planCheckTiers = map[string]planTier{
 	"plan_cut_scene": repairPlan, "plan_cut_rate": repairPlan, "plan_cut_usability": repairPlan,
-	"plan_accent": repairPlan, "plan_focal": repairPlan, "plan_volume": repairPlan,
+	"plan_focal": repairPlan, "plan_volume": repairPlan,
 	"plan_cut_fade": repairPlan, "plan_cut_transition": repairPlan, "plan_target_duration": repairPlan,
 	"plan_caption_time": repairPlan, "composition_cut_evidence": repairPlan, "plan_ratio": repairPlan,
 	"composition_section_order": removePlan, "composition_item_order": removePlan,
@@ -31,10 +30,10 @@ var planCheckTiers = map[string]planTier{
 	"composition_cut_identity": removePlan, "composition_observation_gap": removePlan,
 	"composition_generated_identity": removePlan, "composition_generated_rows": removePlan,
 	"composition_generated_bounds": removePlan, "composition_plan_bounds": removePlan, "plan_cut_count": removePlan,
-	"plan_cut_range": removePlan, "plan_source_metadata": removePlan, "plan_hook": removePlan,
+	"plan_cut_range": removePlan, "plan_source_metadata": removePlan,
 	"intro_slot_shortened": repairPlan, "outro_slot_shortened": repairPlan,
 	"intro_slot_omitted": removePlan, "outro_slot_omitted": removePlan,
-	"plan_chip_count": removePlan, "plan_chip_label": removePlan, "plan_copy_chars": removePlan,
+	"plan_copy_chars":   removePlan,
 	"plan_copy_classes": removePlan, "plan_copy_count": removePlan, "plan_copy_exposure": removePlan,
 	"plan_copy_format": removePlan, "plan_copy_keyword": removePlan, "plan_copy_lines": removePlan,
 	"plan_copy_second_cut": removePlan, "plan_copy_sequence": removePlan,
@@ -67,9 +66,8 @@ func narrowGeneratedCuts(cfg Config, in clip.PlanningInput, plan *clip.EditPlan)
 		recordGeneratedNotice(plan, "plan_ratio", "", "", "repair")
 	}
 	selected := make([]clip.Cut, 0, len(plan.Cuts))
-	written := []clip.Written{}
 	seen := map[string]bool{}
-	for i, original := range plan.Cuts {
+	for _, original := range plan.Cuts {
 		c := original
 		notice := func(check, action string) { recordGeneratedNotice(plan, check, c.ID, "", action) }
 		drop := ""
@@ -143,20 +141,10 @@ func narrowGeneratedCuts(cfg Config, in clip.PlanningInput, plan *clip.EditPlan)
 			if p.StartMS != start || p.EndMS != end {
 				notice("plan_caption_time", "repair")
 			}
-			if p.Accent != "" && p.Accent != in.Template.Accent {
-				p.Accent = in.Template.Accent
-				notice("plan_accent", "repair")
-			}
 		}
 		selected = append(selected, c)
-		if i < len(plan.Written) {
-			written = append(written, plan.Written[i])
-		}
 	}
 	plan.Cuts = selected
-	if plan.Written != nil {
-		plan.Written = written
-	}
 }
 
 func clampUnit(v float64) float64 {
@@ -234,54 +222,6 @@ func trimTail(plan *clip.EditPlan, target, minimum int) int {
 		}
 	}
 	return total
-}
-
-// Timing repair can leave an otherwise valid generated caption too short to
-// read. Validate each addition and omit only that text, keeping exact words on
-// the surviving captions. The owner-edit validator remains strict.
-func removeInvalidGeneratedCopies(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) {
-	sources := make([]clip.RenderSource, 0, len(in.Analyses))
-	for _, a := range in.Analyses {
-		sources = append(sources, a.Source.RenderSource)
-	}
-	bounds := cfg.Render
-	bounds.MinDurationMS = 1
-	for i := range plan.Cuts {
-		cut := &plan.Cuts[i]
-		kept := make([]clip.Copy, 0, len(cut.Copies))
-		for _, copy := range cut.Copies {
-			candidate := *cut
-			candidate.Copies = append(slices.Clone(kept), copy)
-			candidate.TransitionMS = 0
-			probe := clip.EditPlan{Ratio: plan.Ratio, DurationMS: candidate.OutputDurationMS(), Cuts: []clip.Cut{candidate}}
-			err := clip.ValidateEditPlan(bounds, probe, sources)
-			var cause interface{ OutputValidationCode() string }
-			code := ""
-			if errors.As(err, &cause) {
-				code = cause.OutputValidationCode()
-			}
-			if errors.Is(err, clip.ErrCopyTooLong) {
-				code = "plan_copy_chars"
-			}
-			if strings.HasPrefix(code, "plan_copy_") || code == "plan_caption_time" {
-				clip.AddPlanNotice(plan, code, cut.ID, "caption", "removal")
-				continue
-			}
-			kept = append(kept, copy)
-		}
-		if len(kept) != len(cut.Copies) {
-			cut.Copies = kept
-		}
-	}
-}
-
-// repairGeneratedText bounds generated text outside a region block by its
-// declared character maximum (CLIP-118): the text itself, then the first grounded
-// alternative within it, then removal.
-func repairGeneratedText(text string, alternatives []clip.CopyAlternative, limit int) (string, string) {
-	return repairWith(text, alternatives, func(value string) bool {
-		return strings.TrimSpace(value) != "" && !strings.ContainsAny(value, "\r\n") && design.Chars(value) <= limit
-	})
 }
 
 func repairWith(text string, alternatives []clip.CopyAlternative, fits func(string) bool) (string, string) {

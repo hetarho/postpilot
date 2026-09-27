@@ -10,10 +10,7 @@ afterEach(() => initializeI18n('ko'))
 const template = {
   id: 'template',
   name: '여행',
-  informationFields: [],
-  cutGuidance: '',
-  accent: '' as const,
-  preset: 'restaurant' as const,
+  compositionBody: '<clip version="1"/>',
 }
 const project: FakeClipProject = {
   id: 'clip',
@@ -21,9 +18,7 @@ const project: FakeClipProject = {
   videoTemplateId: 'template',
   ratio: 'vertical',
   targetDurationMs: 30000,
-  answers: [],
   disclosure: 'ad',
-  cta: '',
   // Newest first, exactly as the server answers (CLIP-133).
   requests: [
     { kind: 'revision:narration', body: '자막을 줄여줘', createdAt: '2026-09-16T04:00:00Z' },

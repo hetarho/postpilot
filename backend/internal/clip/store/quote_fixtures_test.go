@@ -8,6 +8,7 @@ import (
 	"time"
 
 	clipapp "github.com/postpilot/backend/internal/clip/app"
+	"github.com/postpilot/backend/internal/clip/composition"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
@@ -55,13 +56,31 @@ func (j generationJobs) Latest(ctx context.Context, user, id string) (*clip.Clip
 // temporarily unavailable AI runner. This makes their zero-credit checks exact.
 func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 	t.Helper()
+	seedGeneration(t, h, false)
+}
+
+// seedNativeGeneration is the same completed generation with its plan written
+// into the project's composition, the shape every generation writes today.
+func seedNativeGeneration(t *testing.T, h *generationHarness) {
+	t.Helper()
+	seedGeneration(t, h, true)
+}
+
+func seedGeneration(t *testing.T, h *generationHarness, native bool) {
+	t.Helper()
 	analyses := []clip.SourceAnalysis{}
 	for i, s := range h.batch.Sources {
 		info := clip.MediaInfo{DurationMS: h.media.durations[i], Width: s.Width, Height: s.Height}
 		analyses = append(analyses, clip.SourceAnalysis{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: info}, Filename: s.Filename}, Segments: []clip.Segment{{EndMS: info.DurationMS, Event: "scene", Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}})
 	}
 	s := h.batch.Sources[0]
-	p := clip.EditPlan{Ratio: h.project.Ratio, DurationMS: h.project.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: h.project.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "서울", Style: "clean", Anchor: "bottom", Align: "center"}}}}}
+	p := clip.EditPlan{Ratio: h.project.Ratio, DurationMS: h.project.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: h.project.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "서울", Style: "bold", Anchor: "bottom", Align: "center"}}}}}
+	if native {
+		c := h.project.Composition
+		p.Cuts[0].Copies = nil
+		p.Portable = &clip.PortablePlan{Snapshot: c.Snapshot, Inputs: c.Inputs, Observations: analyses,
+			Cuts: []composition.Cut{{ID: "cut", SourceID: s.ID, EndMS: h.project.TargetDurationMS, PlaybackRatePermille: clip.RateUnitPermille}}}
+	}
 	encoded, err := clip.EncodeEditPlan(p)
 	if err != nil {
 		t.Fatal(err)

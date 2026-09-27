@@ -89,8 +89,6 @@ export function clipNarrationFixture(): ClipEditingState {
 export function clipEditingFixture(): ClipEditingState {
   return {
     plan: {
-      // A hook only the owner can ground; the fixture opens on the footage.
-      hook: '',
       durationMs: 19800,
       cuts: ['a', 'b'].map((id, i) => ({
         id: `cut-${id}`,
@@ -113,7 +111,6 @@ export function clipEditingFixture(): ClipEditingState {
             endMs: 0,
           },
         ],
-        chips: [],
         volumePermille: 1000,
         playbackRatePermille: 1000,
       })),

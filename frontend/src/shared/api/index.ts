@@ -72,7 +72,6 @@ export {
   CreateVideoTemplateResponseSchema,
   DeleteVideoTemplateResponseSchema,
   ListVideoTemplatesResponseSchema,
-  SeedPresetFieldsResponseSchema,
   UpdateVideoTemplateResponseSchema,
 } from './gen/postpilot/v1/clip_template_pb'
 export type {
@@ -88,8 +87,6 @@ export type {
   ClipAttemptInspection as ProtoClipAttemptInspection,
   ClipEditPlan as ProtoClipEditPlan,
   ClipEditingState as ProtoClipEditingState,
-  ClipInformationField as ProtoClipInformationField,
-  ClipAnswer as ProtoClipAnswer,
   ClipSourceMetadata as ProtoClipSourceMetadata,
   ClipSourceBatch as ProtoClipSourceBatch,
   ClipSource as ProtoClipSource,

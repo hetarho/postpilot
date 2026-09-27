@@ -13,7 +13,7 @@ import (
 func revisionInput(t *testing.T, target, request string) clip.RevisionInput {
 	t.Helper()
 	in := narrationInput(t)
-	s, _, _ := newService(t, narrationResponse(narrationCaption("고기를 올렸어요", 1000, 5000)), true)
+	s, _ := newService(t, narrationResponse(narrationCaption("고기를 올렸어요", 1000, 5000)), true)
 	current, _, err := s.Narrate(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func revisionInput(t *testing.T, target, request string) clip.RevisionInput {
 
 func revise(t *testing.T, in clip.RevisionInput, responses ...string) (clip.EditPlan, []map[string]any, []string) {
 	t.Helper()
-	s, models, _ := newService(t, responses[0], true)
+	s, models := newService(t, responses[0], true)
 	models.responses = responses
 	plan, _, err := s.Revise(t.Context(), testRef(), in)
 	if err != nil {
@@ -126,7 +126,7 @@ func TestARevisionAnswersOnTheSameContractsAsAGeneration(t *testing.T) {
 }
 
 func TestARevisionRefusesWhatItCannotBeAbout(t *testing.T) {
-	s, models, _ := newService(t, narrationResponse(), true)
+	s, models := newService(t, narrationResponse(), true)
 	base := revisionInput(t, clip.RevisionNarration, "가격을 말해줘")
 	for name, broken := range map[string]func(clip.RevisionInput) clip.RevisionInput{
 		"no request at all":        func(in clip.RevisionInput) clip.RevisionInput { in.Request = ""; return in },

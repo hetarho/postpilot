@@ -10,7 +10,6 @@ import type { ClipEditPlan } from '@/entities/clip-plan'
 
 const plan: ClipEditPlan = {
   durationMs: 19800,
-  hook: '',
   cuts: [
     {
       id: 'a',
@@ -20,7 +19,6 @@ const plan: ClipEditPlan = {
       endMs: 12000,
       transitionMs: 0,
       copies: [],
-      chips: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
     },
@@ -32,7 +30,6 @@ const plan: ClipEditPlan = {
       endMs: 13000,
       transitionMs: 200,
       copies: [],
-      chips: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
     },

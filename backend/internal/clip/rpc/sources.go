@@ -1,11 +1,12 @@
 package rpc
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"time"
 )
 
 func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {

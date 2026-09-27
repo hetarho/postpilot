@@ -21,12 +21,8 @@ func TestRenderSmokeComposition(t *testing.T) {
 		t.Skip("real renderer gate runs inside Docker")
 	}
 	t.Parallel()
-	for _, variant := range []string{"vertical", "horizontal", "square", "converted"} {
-		t.Run(variant, func(t *testing.T) {
-			ratio := variant
-			if variant == "converted" {
-				ratio = "vertical"
-			}
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		t.Run(ratio, func(t *testing.T) {
 			cfg := mediaConfig(t)
 			cfg.OperationTimeout = 15 * time.Minute
 			a, err := New(cfg, nil)
@@ -48,18 +44,9 @@ func TestRenderSmokeComposition(t *testing.T) {
 				}
 				body := `<clip version="1" intro="b" caption="bold" outro="e"><text id="disclosure" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="14">제작비 일부 지원</text><text id="first" kind="fixed" role="info" position="bottom" basis="output-start" start="2" end="7">A 9,900원</text><text id="second" kind="fixed" role="info" position="bottom" basis="output-start" start="8" end="13">B 12,000원</text><text id="throughout" kind="fixed" role="caption" position="upper_mid" basis="whole">끝까지 표시</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 				plan := declaredPlan(t, body, ratio)
-				plan.Disclosure, plan.Hook, plan.Preset, plan.CTA = "ad", "must not appear", "restaurant", "profile"
+				plan.Disclosure = "ad"
 				plan.Cuts = []clip.Cut{{ID: "a", SourceID: "source", Fingerprint: "fp", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}}, {ID: "b", SourceID: "source", Fingerprint: "fp", StartMS: 7600, EndMS: 15200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}}}
 				plan.Portable.Cuts = []composition.Cut{{ID: "a", SourceID: "source", EndMS: 7600}, {ID: "b", SourceID: "source", StartMS: 7600, EndMS: 15200, TransitionMS: 200}}
-				if variant == "converted" {
-					plan.Portable = nil
-					plan.Hook, plan.CTA, plan.Preset = "", "", ""
-					plan.Cuts[0].Copies = []clip.Copy{{Text: "이전에 저장한 문장", Style: "clean", Anchor: "bottom", Align: "center", StartMS: 1000, EndMS: 6000}}
-					plan.Portable, err = clip.FreezeLegacyPlan(clip.Project{Disclosure: "ad"}, plan, clip.Recipe{}, r.cfg.Composition)
-					if err != nil {
-						return err
-					}
-				}
 				result, err := r.Render(t.Context(), ws, plan, []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: info}}, func(_ context.Context, _ string, consume func(clip.MediaSource) error) error {
 					return consume(clip.MediaSource{SourceID: "source", Fingerprint: "fp", Info: info, Path: path})
 				})
@@ -68,34 +55,6 @@ func TestRenderSmokeComposition(t *testing.T) {
 				}
 				if result.Plan == nil || result.Info.DurationMS != 15000 {
 					return fmt.Errorf("unexpected native result: %+v", result)
-				}
-				if variant == "converted" {
-					found := false
-					region := clip.Region{}
-					for _, e := range result.Elements {
-						if e.Text == "이전에 저장한 문장" && e.StartMS == 1000 && e.EndMS == 6000 {
-							found = true
-							region = e.Region
-						}
-					}
-					if !found || len(result.Elements) != 2 {
-						return fmt.Errorf("converted content changed: %+v", result.Elements)
-					}
-					for _, second := range []int{0, 2, 7} {
-						output := filepath.Join(ws.Path, fmt.Sprintf("converted-%d.png", second))
-						if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-ss", fmt.Sprint(second), "-i", result.Path, "-frames:v", "1", "-threads", "1", output); err != nil {
-							return err
-						}
-						img, err := readPNG(output)
-						if err != nil {
-							return err
-						}
-						visible := scan(img, region, func(red, green, blue, alpha uint32) bool { return red > 50000 && green > 50000 && blue > 50000 })
-						if visible != (second == 2) {
-							return fmt.Errorf("converted caption exposure at %d s", second)
-						}
-					}
-					return nil
 				}
 				if len(result.Elements) != 4 {
 					return fmt.Errorf("unexpected hidden elements: %d", len(result.Elements))

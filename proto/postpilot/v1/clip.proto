@@ -23,39 +23,21 @@ message ClipAnalysisModelEligibility {
   ModelRef model = 1;
   ClipAnalysisEligibility status = 2;
 }
-message ClipInformationField { string label = 1; string prompt = 2; }
-message ClipInformationFields { repeated ClipInformationField values = 1; }
-// Stable style ids, one per role: clean (깔끔하게) narrative, memo (메모) fact,
-// bold (크게 강조) emotion and hook, mark (형광펜) one number or keyword. A
-// template's approved set always contains clean: every fallback lands on it.
-message ClipCopyStyles { repeated string values = 1; }
 // Presence-aware caption style selection: absent leaves it as it is, present
 // replaces it whole, and present-and-empty is a selection of none (CLIP-142).
 message ClipCaptionStyles { repeated string values = 1; }
+// A template is an outline body under a name (CLIP-4). The retired category-preset
+// recipe and its conversion flags keep their numbers and names reserved.
 message VideoTemplate {
+  reserved 3 to 6, 10, 11, 13, 14;
+  reserved "information_fields", "cut_guidance", "copy_styles", "accent", "preset", "caption_pace", "composition_legacy", "composition_converted";
   string id = 1;
   string name = 2;
-  repeated ClipInformationField information_fields = 3;
-  string cut_guidance = 4;
-  repeated string copy_styles = 5;
-  // Empty is neutral; otherwise coral, amber, lime, teal, blue, violet or pink.
-  string accent = 6;
   int32 project_count = 7;
   string created_at = 8;
   string updated_at = 9;
-  // The category preset: restaurant, cafe, stay, beauty or home. Empty is a
-  // template written before presets existed and reads as the shared defaults.
-  string preset = 10;
-  // Empty or steady keeps sentence timing; rapid splits short phrase cues.
-  string caption_pace = 11;
   string composition_body = 12;
-  bool composition_legacy = 13;
-  // True when the stored body still declared footage sections or scene-bound
-  // text and composition_body is the converted read projection; the stored body
-  // changes only when the owner saves (CLIP-140).
-  bool composition_converted = 14;
 }
-message ClipAnswer { string label = 1; string text = 2; }
 enum ClipRenderKind {
   CLIP_RENDER_KIND_UNSPECIFIED = 0;
   CLIP_RENDER_KIND_SERVER = 1;
@@ -72,13 +54,16 @@ message ClipResult {
   string download_url = 6;
 }
 message ClipProject {
+  // The label-keyed answers to a category-preset recipe and the closing call to
+  // action are retired; an outline's values travel in `composition`.
+  reserved 6, 17;
+  reserved "answers", "cta";
   string id = 1;
   string title = 2;
   string video_template_id = 3;
   // Exactly vertical, horizontal or square; immutable after creation.
   string ratio = 4;
   int32 target_duration_ms = 5;
-  repeated ClipAnswer answers = 6;
   ClipResult result = 7;
   int32 edit_plan_revision = 8;
   int32 rendered_plan_revision = 9;
@@ -88,11 +73,9 @@ message ClipProject {
   // Detail only: retained metadata and a structured correction draft, never source URLs.
   ClipEditingState editing = 13;
   ClipAccounting accounting = 14;
-  // The owner's campaign type (ad | sponsored | provided | paid | self) and the
-  // closing call to action (blog | place | save, or empty for the preset's).
-  // The phrases are code-owned: only these ids travel.
+  // The owner's campaign type (ad | sponsored | provided | paid | self). The
+  // phrases are code-owned: only these ids travel.
   string disclosure = 16;
-  string cta = 17;
   // Independent visibility choice; older projects/clients keep the badge shown.
   bool hide_disclosure = 18;
   // Owner-only, byte-free identity for reconciling an ambiguous start response.
@@ -116,16 +99,15 @@ message ClipProject {
   // written. On content it outranks the template's authored guidance; the
   // declared structure stays the template's.
   string instruction = 30;
-  // The owner's caption pace and accent for THIS clip (CLIP-139). Empty is not
-  // chosen: the clip falls back to what its frozen template said.
+  // The owner's caption pace and accent for THIS clip (CLIP-139). Empty is the
+  // shared default: the steady pace and no accent.
   string caption_pace = 31;
   string accent = 32;
   // What the owner asked the AI for, newest first (CLIP-133).
   repeated ClipProjectRequest requests = 33;
   // The project's design selection (CLIP-139, CLIP-142): the presets the intro
-  // and the outro render in, and the caption styles this clip may use. Seeded
-  // from the template at creation and the project's to change afterwards; an
-  // empty style list is the default style alone.
+  // and the outro render in, and the caption styles this clip may use. The
+  // project's to change; an empty style list is the default style alone.
   string intro_preset = 34;
   string outro_preset = 35;
   repeated string allowed_caption_styles = 36;
@@ -289,6 +271,9 @@ message ClipCaption {
   string pace = 9;
 }
 message ClipEditCut {
+  // Fact chips are retired (CLIP-68).
+  reserved 8;
+  reserved "chips";
   string id = 1;
   string source_id = 2;
   string fingerprint = 3;
@@ -298,8 +283,6 @@ message ClipEditCut {
   // moved to `copies` still shows the sentence. `copies` is the authority.
   ClipCaption copy = 6;
   int32 volume_permille = 7;
-  // Reserved fact labels whose chips belong on this cut, at most two.
-  repeated string chips = 8;
   // The transition INTO this cut: 0 is a hard cut, 200 the fade a scene change
   // earns and 300 the fade-through-black nothing offers yet. The first cut of a
   // plan always carries 0.
@@ -399,11 +382,11 @@ message ClipCaptionPlacement {
 // may add — every other one is a template declaration.
 message ClipTextCreation { string kind = 1; }
 message ClipEditPlan {
+  // The legacy opening sentence is retired: an intro is an outline entry.
+  reserved 3;
+  reserved "hook";
   int32 duration_ms = 1;
   repeated ClipEditCut cuts = 2;
-  // A legacy plan's opening sentence, drawn as the first line of its intro
-  // block (CDS-70). Empty draws no intro block.
-  string hook = 3;
   bool native_composition = 4;
   repeated ClipEditableText elements = 5;
   ClipSourceAssociations associations = 6;
@@ -474,9 +457,10 @@ message ClipRetainedSource {
   repeated int32 allowed_rate_permille = 7;
 }
 message ClipEditingState {
+  reserved 3;
+  reserved "copy_styles";
   ClipEditPlan plan = 1;
   repeated ClipRetainedSource sources = 2;
-  repeated string copy_styles = 3;
   // Retained for one release so a client that has not moved to each cut's own
   // `transition_ms` still reads a number. Nothing computes a duration from it.
   int32 fade_ms = 4;
@@ -520,10 +504,12 @@ message ClipCompositionInputs {
   repeated ClipSourceAssociation associations = 3;
 }
 message ClipCompositionSnapshot {
+  // Snapshots synthesized from a category-preset recipe are retired.
+  reserved 4;
+  reserved "legacy";
   int32 version = 1;
   string body = 2;
   string template_id = 3;
-  bool legacy = 4;
 }
 message ClipProjectComposition {
   ClipCompositionSnapshot snapshot = 1;

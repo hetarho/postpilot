@@ -17,7 +17,7 @@ func designedBody(intro, outro string) string {
 // template, and may change every one of them.
 func TestDesignSelectionStartsAtTheDefaultsAndIsOwnedByTheProject(t *testing.T) {
 	service, _, _ := setup(t)
-	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "디자인", Preset: "stay", Accent: "teal", CompositionBody: designedBody("b", "e")})
+	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "디자인", CompositionBody: designedBody("b", "e")})
 	if err != nil {
 		t.Fatal(err)
 	}

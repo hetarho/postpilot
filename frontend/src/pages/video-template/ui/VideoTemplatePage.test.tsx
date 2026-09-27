@@ -7,14 +7,7 @@ import type { FakeClipsOptions } from '@/test/clips'
 const template = {
   id: 'owned',
   name: '여행',
-  cutGuidance: '풍경 위주',
-  informationFields: [
-    { label: '장소', prompt: '어디인가요?' },
-    { label: '음식', prompt: '무엇을 먹었나요?' },
-  ],
-
-  accent: '' as const,
-  preset: 'restaurant' as const,
+  compositionBody: '<clip version="1"/>',
   projectCount: 2,
 }
 const mount = (path: string, clips: FakeClipsOptions = {}) =>

@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"slices"
 
@@ -53,16 +52,7 @@ func (s *GenerationService) resolveLegacyRenderTask(ctx context.Context, p clip.
 		return clip.MediaTask{}, err
 	}
 	if plan.Portable == nil {
-		t := clip.VideoTemplate{}
-		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
-			t.Recipe = *p.Composition.Snapshot.LegacyRecipe
-		} else if p.VideoTemplateID != "" {
-			t, err = s.projects.store.GetTemplate(ctx, p.UserID, p.VideoTemplateID)
-			if err != nil && !errors.Is(err, clip.ErrNotFound) {
-				return clip.MediaTask{}, err
-			}
-		}
-		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure)
+		plan = plan.WithDisclosure(p.Disclosure, frozen.HideDisclosure)
 	}
 	plan = plan.WithDesign(p.DesignSelection())
 	plan.HideDisclosure = frozen.HideDisclosure

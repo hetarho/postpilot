@@ -18,8 +18,6 @@ describe('clip source Connect boundary', () => {
             ratio: 'vertical',
             targetDurationMs: 30000,
             disclosure: 'ad',
-            cta: '',
-            answers: [],
           },
         ],
       },
