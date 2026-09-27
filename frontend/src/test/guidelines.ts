@@ -26,6 +26,8 @@ type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 export interface FakeGuidelineRow {
   id: string
+  /** Omitted means a post's 지침; `clip` is a 영상 지침 (GUIDE-2). */
+  kind?: 'post' | 'clip'
   text: string
   /** A `templates` scope with an empty array is the orphaned state. */
   templateRefs?: Array<{ id: string; name: string }>
@@ -52,9 +54,13 @@ export interface FakeDefaultGuidelineRow {
 
 export interface FakeGuidelineCandidateRow {
   id: string
+  /** Omitted means a post's candidate; `clip` is a 영상 지침 후보. */
+  kind?: 'post' | 'clip'
   text: string
   /** Omitted or empty means the source post is gone — the text survives, the link does not. */
   postSlug?: string
+  /** A clip candidate's source project; omitted or empty means it is gone. */
+  clipId?: string
   /** Omitted means 1. Above 1 it is what the 후보 row shows as "N번 요청함". */
   occurrences?: number
   lastSeenAt?: string
@@ -64,6 +70,8 @@ export interface FakeGuidelinesOptions {
   guidelines?: FakeGuidelineRow[]
   /** The post kind's 기본 지침. Omitted, the list carries none. */
   defaults?: FakeDefaultGuidelineRow[]
+  /** The clip kind's 기본 지침. Omitted, the clip list carries none. */
+  clipDefaults?: FakeDefaultGuidelineRow[]
   /** Refuse every SetDefaultGuidelineEnabled as naming no 기본 지침. */
   refuseDefaultSwitch?: boolean
   /** Records every SetDefaultGuidelineEnabled as it arrived. */
@@ -98,6 +106,8 @@ export interface FakeGuidelinesOptions {
   /** Records every CreateGuideline, including the ones the capture dialog and an approval send.
    *  `fromCandidateId` is present only when the approved candidate's text was edited first. */
   creates?: Array<{
+    /** Present only for a 영상 지침's create, so a post assertion stays as it was. */
+    kind?: 'clip'
     text: string
     scope: ProtoGuidelineScope
     templateIds: string[]
@@ -112,6 +122,7 @@ const DEFAULT_AT = '2026-09-01T12:00:00Z'
 
 interface Row {
   id: string
+  kind: 'post' | 'clip'
   text: string
   scope: 'global' | 'templates' | 'fields'
   templates: Array<{ id: string; name: string }>
@@ -131,7 +142,11 @@ function scopeKind(
   scope: ProtoGuidelineScope,
   templateIds: string[],
   fields: ProtoBlogField[],
+  kind: Row['kind'] = 'post',
 ): Row['scope'] {
+  // A 영상 지침 has no 분야 (GUIDE-5).
+  if (kind === 'clip' && scope === ProtoGuidelineScope.FIELDS)
+    throw connectAppError('GUIDELINE_SCOPE_INVALID', Code.InvalidArgument)
   const valid =
     scope === ProtoGuidelineScope.GLOBAL
       ? templateIds.length === 0 && fields.length === 0
@@ -148,6 +163,11 @@ function scopeKind(
     : scope === ProtoGuidelineScope.TEMPLATES
       ? 'templates'
       : 'fields'
+}
+
+/** The wire kind a request names, UNSPECIFIED reading as a post's, like the server. */
+function kindOf(kind: ProtoGuidelineKind): Row['kind'] {
+  return kind === ProtoGuidelineKind.CLIP ? 'clip' : 'post'
 }
 
 function toFieldIds(fields: ProtoBlogField[]): BlogFieldId[] {
@@ -168,6 +188,7 @@ export function registerGuidelineService(
   for (const row of options.guidelines ?? []) {
     rows.set(row.id, {
       id: row.id,
+      kind: row.kind ?? 'post',
       text: row.text,
       scope: row.scope ?? (row.fields ? 'fields' : row.templateRefs ? 'templates' : 'global'),
       templates: row.templateRefs ?? [],
@@ -180,6 +201,7 @@ export function registerGuidelineService(
   const toProto = (row: Row) =>
     create(GuidelineSchema, {
       id: row.id,
+      kind: row.kind === 'clip' ? ProtoGuidelineKind.CLIP : ProtoGuidelineKind.POST,
       text: row.text,
       scope: row.wireScope ?? SCOPE_TO_PROTO[row.scope],
       templates: row.templates,
@@ -191,8 +213,10 @@ export function registerGuidelineService(
   /** Injection order: the global group, then the template group, then the 분야 group, each in
    *  creation order — exactly what the server returns (GUIDE-14), so a test can assert the screen
    *  never reorders it. */
-  const listed = () => {
-    const all = order.map((id) => rows.get(id)).filter((row): row is Row => row !== undefined)
+  const listed = (kind: Row['kind']) => {
+    const all = order
+      .map((id) => rows.get(id))
+      .filter((row): row is Row => row !== undefined && row.kind === kind)
     return [
       ...all.filter((row) => row.scope === 'global'),
       ...all.filter((row) => row.scope === 'templates'),
@@ -206,8 +230,11 @@ export function registerGuidelineService(
   for (const candidate of options.candidates ?? []) candidates.set(candidate.id, candidate)
 
   // The 기본 지침 and this account's switches, kept across reads like the server's off rows.
-  const defaults = (options.defaults ?? []).map((row) => ({ ...row, enabled: row.enabled ?? true }))
-  const toProtoDefault = (row: (typeof defaults)[number]) =>
+  const defaultsOf = {
+    post: (options.defaults ?? []).map((row) => ({ ...row, enabled: row.enabled ?? true })),
+    clip: (options.clipDefaults ?? []).map((row) => ({ ...row, enabled: row.enabled ?? true })),
+  }
+  const toProtoDefault = (row: (typeof defaultsOf.post)[number]) =>
     create(DefaultGuidelineSchema, {
       key: row.key,
       enabled: row.enabled,
@@ -219,19 +246,20 @@ export function registerGuidelineService(
       koreanTargetOnly: row.koreanTargetOnly ?? false,
     })
 
-  rpc(GuidelineService.method.listGuidelines, () => {
+  rpc(GuidelineService.method.listGuidelines, (req) => {
     calls?.push('ListGuidelines')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const kind = kindOf(req.kind)
     return create(ListGuidelinesResponseSchema, {
-      guidelines: listed().map(toProto),
-      defaults: defaults.map(toProtoDefault),
+      guidelines: listed(kind).map(toProto),
+      defaults: defaultsOf[kind].map(toProtoDefault),
     })
   })
 
   rpc(GuidelineService.method.setDefaultGuidelineEnabled, (req) => {
     calls?.push('SetDefaultGuidelineEnabled')
     options.defaultSwitches?.push({ kind: req.kind, key: req.key, enabled: req.enabled })
-    const row = defaults.find((candidate) => candidate.key === req.key)
+    const row = defaultsOf[kindOf(req.kind)].find((candidate) => candidate.key === req.key)
     if (!row || options.refuseDefaultSwitch) {
       throw connectAppError('GUIDELINE_DEFAULT_NOT_FOUND', Code.NotFound)
     }
@@ -244,6 +272,7 @@ export function registerGuidelineService(
   rpc(GuidelineService.method.createGuideline, (req) => {
     calls?.push('CreateGuideline')
     options.creates?.push({
+      ...(req.kind === ProtoGuidelineKind.CLIP ? { kind: 'clip' as const } : {}),
       text: req.text,
       scope: req.scope,
       templateIds: [...req.templateIds],
@@ -262,15 +291,21 @@ export function registerGuidelineService(
     if (options.createAtCap) {
       throw connectAppError('GUIDELINE_LIMIT_REACHED', Code.FailedPrecondition, { max: '100' })
     }
-    if (options.createDuplicates || [...rows.values()].some((row) => row.text === text)) {
+    const kind = kindOf(req.kind)
+    // Unique within a kind, free across kinds (GUIDE-10).
+    if (
+      options.createDuplicates ||
+      [...rows.values()].some((row) => row.kind === kind && row.text === text)
+    ) {
       throw connectAppError('GUIDELINE_TEXT_TAKEN', Code.AlreadyExists)
     }
-    const scope = scopeKind(req.scope, req.templateIds, req.fields)
+    const scope = scopeKind(req.scope, req.templateIds, req.fields, kind)
     if (options.refuseFields && scope === 'fields')
       throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
     sequence += 1
     const row: Row = {
       id: `guideline-${sequence}`,
+      kind,
       text,
       scope,
       templates: req.templateIds.map((id) => ({ id, name: id })),
@@ -282,7 +317,8 @@ export function registerGuidelineService(
     // the candidate an on-the-spot 지침으로 저장 recorded, without the client knowing its id.
     if (req.fromCandidateId) candidates.delete(req.fromCandidateId)
     for (const [id, candidate] of candidates) {
-      if (candidate.text.trim() === text) candidates.delete(id)
+      if ((candidate.kind ?? 'post') === kind && candidate.text.trim() === text)
+        candidates.delete(id)
     }
     return create(CreateGuidelineResponseSchema, { guideline: toProto(row) })
   })
@@ -304,7 +340,8 @@ export function registerGuidelineService(
     if (!row) throw connectAppError('GUIDELINE_NOT_FOUND', Code.NotFound)
     // Presence, like the server: an absent part is not part of the edit at all. The scope is
     // validated before the text is written, so a refused patch changes nothing.
-    const scope = req.scope && scopeKind(req.scope.scope, req.scope.templateIds, req.scope.fields)
+    const scope =
+      req.scope && scopeKind(req.scope.scope, req.scope.templateIds, req.scope.fields, row.kind)
     if (options.refuseFields && scope === 'fields')
       throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
     if (req.text !== undefined) {
@@ -328,20 +365,25 @@ export function registerGuidelineService(
 
   // The list is served in the order it was given: the review order is the server's, and a test
   // asserting it proves the screen does not reorder.
-  rpc(GuidelineService.method.listGuidelineCandidates, () => {
+  rpc(GuidelineService.method.listGuidelineCandidates, (req) => {
     calls?.push('ListGuidelineCandidates')
     if (options.candidateListFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const kind = kindOf(req.kind)
     return create(ListGuidelineCandidatesResponseSchema, {
-      candidates: [...candidates.values()].map((candidate) =>
-        create(GuidelineCandidateSchema, {
-          id: candidate.id,
-          text: candidate.text,
-          postSlug: candidate.postSlug ?? '',
-          occurrences: candidate.occurrences ?? 1,
-          firstSeenAt: DEFAULT_AT,
-          lastSeenAt: candidate.lastSeenAt ?? DEFAULT_AT,
-        }),
-      ),
+      candidates: [...candidates.values()]
+        .filter((candidate) => (candidate.kind ?? 'post') === kind)
+        .map((candidate) =>
+          create(GuidelineCandidateSchema, {
+            id: candidate.id,
+            kind: kind === 'clip' ? ProtoGuidelineKind.CLIP : ProtoGuidelineKind.POST,
+            text: candidate.text,
+            postSlug: candidate.postSlug ?? '',
+            clipId: candidate.clipId ?? '',
+            occurrences: candidate.occurrences ?? 1,
+            firstSeenAt: DEFAULT_AT,
+            lastSeenAt: candidate.lastSeenAt ?? DEFAULT_AT,
+          }),
+        ),
       queueFull: options.candidateQueueFull ?? false,
     })
   })

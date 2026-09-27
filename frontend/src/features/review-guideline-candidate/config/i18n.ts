@@ -8,6 +8,8 @@ export const i18n = {
       summary: '지침 후보 {{count}}개',
       // GUIDE-22: a full queue is said while the disclosure is still closed.
       summaryFull: '지침 후보 {{count}}개 · 가득 참',
+      summaryClip: '영상 지침 후보 {{count}}개',
+      summaryClipFull: '영상 지침 후보 {{count}}개 · 가득 참',
       approveAll: '전부 수락',
       dismissAll: '전부 거절',
       dismissAllTitle: '후보 {{count}}개를 전부 거절할까요?',
@@ -18,11 +20,15 @@ export const i18n = {
       section: '후보 지침',
       sectionHelp:
         'AI 수정을 끝낼 때 보낸 요청을 그대로 모아 둔 목록이에요. 여기 있는 동안에는 어떤 글에도 적용되지 않고, 승인할 때 적용 범위를 고르면 지침으로 저장돼요.',
+      sectionHelpClip:
+        '영상을 다시 구성할 때 보낸 요청을 그대로 모아 둔 목록이에요. 여기 있는 동안에는 어떤 영상에도 적용되지 않고, 승인할 때 적용 범위를 고르면 영상 지침으로 저장돼요.',
       occurrences: '{{count}}번 요청함',
       occurrences_one: '{{count}}번 요청함',
       occurrences_other: '{{count}}번 요청함',
       source: '요청한 글 보기',
       sourceGone: '요청한 글이 삭제됐어요',
+      sourceClip: '요청한 영상 보기',
+      sourceClipGone: '요청한 영상이 삭제됐어요',
       queueFull:
         '후보가 가득 차서 새로 들어온 요청은 기록되지 않아요. 하나를 승인하거나 무시하면 다시 기록돼요.',
       approve: '승인',
@@ -38,6 +44,8 @@ export const i18n = {
     candidate: {
       summary: 'Guideline candidates ({{count}})',
       summaryFull: 'Guideline candidates ({{count}}) · full',
+      summaryClip: 'Video guideline candidates ({{count}})',
+      summaryClipFull: 'Video guideline candidates ({{count}}) · full',
       approveAll: 'Accept all',
       dismissAll: 'Dismiss all',
       dismissAllTitle: 'Dismiss all {{count}} candidates?',
@@ -48,11 +56,15 @@ export const i18n = {
       section: 'Candidates',
       sectionHelp:
         'What your finished AI revisions asked for, recorded word for word. Nothing here reaches a post while it sits in this list — approving one is where you choose what it applies to.',
+      sectionHelpClip:
+        'What your clip revision requests asked for, recorded word for word. Nothing here reaches a clip while it sits in this list — approving one is where you choose what it applies to.',
       occurrences: 'asked {{count}} times',
       occurrences_one: 'asked {{count}} time',
       occurrences_other: 'asked {{count}} times',
       source: 'View the post',
       sourceGone: 'That post was deleted',
+      sourceClip: 'View the clip',
+      sourceClipGone: 'That clip was deleted',
       queueFull:
         'The candidate list is full, so new requests are no longer recorded. Approve or dismiss one to start recording again.',
       approve: 'Approve',

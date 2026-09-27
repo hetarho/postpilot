@@ -10,6 +10,7 @@ import {
   Film,
   LayoutTemplate,
   ListChecks,
+  ListVideo,
   Scissors,
   Speech,
 } from 'lucide-react'
@@ -75,6 +76,7 @@ export const CONTENT_GROUPS = {
   video: [
     { to: '/clips', labelKey: 'myVideos', icon: Scissors },
     { to: '/video-templates', labelKey: 'videoTemplates', icon: Clapperboard },
+    { to: '/video-guidelines', labelKey: 'videoGuidelines', icon: ListVideo },
   ],
 } as const
 

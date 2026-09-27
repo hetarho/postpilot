@@ -45,8 +45,9 @@ export function ApproveGuidelineCandidateButton({
   const [text, setText] = useState(candidate.text)
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const [duplicate, setDuplicate] = useState(false)
-  const create = useCreateGuidelineCall(ownerId)
-  const invalidateCandidates = useInvalidateGuidelineCandidates(ownerId)
+  // The candidate's own kind: a 영상 지침 candidate becomes a 영상 지침 (GUIDE-11).
+  const create = useCreateGuidelineCall(ownerId, candidate.kind)
+  const invalidateCandidates = useInvalidateGuidelineCandidates(ownerId, candidate.kind)
 
   // Seeded on OPEN, not from an effect on the candidate: a refetch that bumps this candidate's
   // occurrence count must not overwrite what someone is editing, and reopening starts from the
@@ -133,6 +134,7 @@ export function ApproveGuidelineCandidateButton({
             offer the same scopes, and the whole template directory belongs in both. */}
         <GuidelineScopeField
           ownerId={ownerId}
+          kind={candidate.kind}
           value={scope}
           onChange={setScope}
           disabled={create.isPending}

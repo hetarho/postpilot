@@ -1,6 +1,7 @@
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { invalidateGuidelines } from '@/entities/guideline/@x/clip-template'
 import { ClipTemplateService, type ProtoVideoTemplate } from '@/shared/api'
 import { normalizeRecipe, type ClipTemplate, type ClipRecipe } from '../model/types'
 
@@ -40,6 +41,8 @@ export function useClipTemplateMutations(ownerId: string) {
       // Both clip list and detail share this owner-scoped family in T072.
       cache.invalidateQueries({ queryKey: ['clip-projects', transport, ownerId] }),
     ])
+    // A 영상 지침's chips are this template's name, and a deleted one leaves it 적용 대상 없음.
+    invalidateGuidelines(cache, transport, ownerId, 'clip')
   }
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {

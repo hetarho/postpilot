@@ -16,6 +16,9 @@ export interface GuidelineTemplateRef {
  *  Authored text only — nothing here is learned, inferred, or written by a model. */
 export interface Guideline {
   id: string
+  /** A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
+   *  video templates. */
+  kind: GuidelineKind
   text: string
   scope: GuidelineScopeKind
   /** Empty for `global`, and also empty for an orphaned `templates` scope. */
@@ -58,12 +61,15 @@ export interface DefaultGuideline {
  *  approval time. That absence is what lets recording be automatic. */
 export interface GuidelineCandidate {
   id: string
+  kind: GuidelineKind
   /** Stored at the REVISION bound (500), which is wider than a guideline's, so a long correction
    *  is kept rather than refused. Approving one past the guideline bound is refused by the
    *  server, which is why a candidate opens for editing with the live count. */
   text: string
   /** Empty when the source post was deleted: the text survives, the link does not. */
   postSlug: string
+  /** A clip candidate's project, empty once that project was deleted. */
+  clipId: string
   /** How many completed revisions carried this exact text — the signal that a one-off correction
    *  has become a standing rule. */
   occurrences: number

@@ -65,6 +65,7 @@ export function toGuideline(guideline: ProtoGuideline): Guideline {
   if (!scope) throw new Error(`unsupported guideline scope enum: ${String(guideline.scope)}`)
   return {
     id: guideline.id,
+    kind: guideline.kind === ProtoGuidelineKind.CLIP ? 'clip' : 'post',
     text: guideline.text,
     scope,
     templates: guideline.templates.map(toTemplateRef),
@@ -111,8 +112,10 @@ export function localizeDefaultGuideline(
 export function toGuidelineCandidate(candidate: ProtoGuidelineCandidate): GuidelineCandidate {
   return {
     id: candidate.id,
+    kind: candidate.kind === ProtoGuidelineKind.CLIP ? 'clip' : 'post',
     text: candidate.text,
     postSlug: candidate.postSlug,
+    clipId: candidate.clipId,
     occurrences: candidate.occurrences,
     firstSeenAt: candidate.firstSeenAt,
     lastSeenAt: candidate.lastSeenAt,
@@ -134,12 +137,23 @@ export function guidelinesQueryKey(transport: Transport, ownerId: string) {
   return ['guidelines', transport, ownerId] as const
 }
 
-/** The list a kind's 기본 지침 arrive with. A post's are the 지침 screen's own list; a clip's sit
- *  under the same root so one invalidation of the account's guidelines reaches both. */
+/** The list of one kind: a post's 지침 under the key it always had, a clip's 영상 지침 under a root
+ *  of its own, so a post-template rename refreshes the one list whose chips name it (GUIDE-44). */
 export function guidelineKindQueryKey(transport: Transport, ownerId: string, kind: GuidelineKind) {
   return kind === 'post'
     ? guidelinesQueryKey(transport, ownerId)
-    : (['guidelines', transport, ownerId, kind] as const)
+    : (['video-guidelines', transport, ownerId] as const)
+}
+
+/** The candidate queue of one kind, keyed like the list. */
+export function guidelineCandidatesKindQueryKey(
+  transport: Transport,
+  ownerId: string,
+  kind: GuidelineKind,
+) {
+  return kind === 'post'
+    ? guidelineCandidatesQueryKey(transport, ownerId)
+    : (['video-guideline-candidates', transport, ownerId] as const)
 }
 
 /** Per account for the same reason, and a root of its own rather than a child of the saved list's

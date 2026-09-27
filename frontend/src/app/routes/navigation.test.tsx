@@ -34,6 +34,7 @@ const video = [
   ['/video-templates', '/video-templates'],
   ['/video-templates/new', '/video-templates'],
   ['/video-templates/one', '/video-templates'],
+  ['/video-guidelines', '/video-guidelines'],
 ] as const
 const models = [
   ['/ai-models', '/ai-models'],
@@ -235,12 +236,14 @@ it('restores both active levels through browser history and keeps ko/en parity',
     'primary:/clips',
     'group:/clips',
     'group:/video-templates',
+    'group:/video-guidelines',
     'primary:/ai-models',
   ])
   const menu = await openGroupMenu('Video navigation')
   expect(menu.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
     'My videos',
     'Video templates',
+    'Video guidelines',
   ])
   expect(menu.getByRole('menuitemradio', { name: 'My videos' })).toHaveAttribute(
     'aria-checked',
@@ -253,7 +256,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
 // place of a row of pill links that read as buttons rather than as a menu.
 it.each([
   ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침', '기억'], '/voices'],
-  ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿'], '/video-templates'],
+  ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿', '영상 지침'], '/video-templates'],
   [
     '/ai-models',
     'AI 모델 메뉴',
@@ -348,7 +351,11 @@ it('moves the open group in the sidebar when the primary destination changes', a
   await user.click(within(rail()).getByRole('link', { name: '영상' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
 
-  expect(rows('group').map((l) => l.getAttribute('href'))).toEqual(['/clips', '/video-templates'])
+  expect(rows('group').map((l) => l.getAttribute('href'))).toEqual([
+    '/clips',
+    '/video-templates',
+    '/video-guidelines',
+  ])
   assertPrimary('/clips')
   assertGroup('영상 메뉴', '/clips')
   // A group destination of the group that closed is no longer anywhere in the sidebar.

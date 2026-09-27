@@ -1,8 +1,9 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useClipTemplates } from '@/entities/clip-template/@x/guideline'
 import { useTemplates } from '@/entities/template/@x/guideline'
 import { Checkbox, FieldLabel, SegmentedControl, Typography } from '@/shared/ui'
-import type { GuidelineScope, GuidelineScopeKind } from '../model/types'
+import type { GuidelineKind, GuidelineScope, GuidelineScopeKind } from '../model/types'
 import { GuidelineFieldPicker } from './GuidelineFieldPicker'
 
 /** The scope editor, shared by the create form and the whole-scope edit.
@@ -16,15 +17,19 @@ import { GuidelineFieldPicker } from './GuidelineFieldPicker'
  *  never hold a mixed one. The pickers are checkbox lists rather than a native multi-select — a
  *  multiple-choice select needs ctrl-click on a desktop and is close to unusable on a phone
  *  (THEME-10).
+ *
+ *  A 영상 지침's scope is 전역 or its video templates, and it has no 분야 (GUIDE-5).
  */
 export function GuidelineScopeField({
   ownerId,
+  kind = 'post',
   value,
   onChange,
   disabled = false,
   className,
 }: {
   ownerId: string
+  kind?: GuidelineKind
   value: GuidelineScope
   onChange: (next: GuidelineScope) => void
   disabled?: boolean
@@ -32,7 +37,11 @@ export function GuidelineScopeField({
 }) {
   const { t } = useTranslation('guidelines')
   const id = useId()
-  const { templates } = useTemplates(ownerId)
+  const clip = kind === 'clip'
+  // Only the kind's own directory is read: the other one's owner id is empty, which disables it.
+  const postTemplates = useTemplates(clip ? '' : ownerId).templates
+  const videoTemplates = useClipTemplates(clip ? ownerId : '').templates
+  const templates = clip ? videoTemplates : postTemplates
 
   const setKind = (kind: GuidelineScopeKind) => {
     switch (kind) {
@@ -51,8 +60,8 @@ export function GuidelineScopeField({
     onChange({ kind: 'templates', templateIds: next, fields: [] })
   }
   const help = {
-    global: t('scope.globalHelp'),
-    templates: t('scope.templatesHelp'),
+    global: t(clip ? 'scope.clipGlobalHelp' : 'scope.globalHelp'),
+    templates: t(clip ? 'scope.videoTemplatesHelp' : 'scope.templatesHelp'),
     fields: t('scope.fieldsHelp'),
   }[value.kind]
 
@@ -63,11 +72,18 @@ export function GuidelineScopeField({
       </Typography>
       <SegmentedControl
         value={value.kind}
-        options={[
-          { value: 'global', label: t('scope.global') },
-          { value: 'templates', label: t('scope.templates') },
-          { value: 'fields', label: t('scope.fields') },
-        ]}
+        options={
+          clip
+            ? [
+                { value: 'global', label: t('scope.global') },
+                { value: 'templates', label: t('scope.videoTemplates') },
+              ]
+            : [
+                { value: 'global', label: t('scope.global') },
+                { value: 'templates', label: t('scope.templates') },
+                { value: 'fields', label: t('scope.fields') },
+              ]
+        }
         onChange={setKind}
         ariaLabel={t('scope.label')}
         className="mt-2"
@@ -78,10 +94,10 @@ export function GuidelineScopeField({
 
       {value.kind === 'templates' && (
         <fieldset className="mt-3" disabled={disabled}>
-          <legend className="sr-only">{t('scope.pick')}</legend>
+          <legend className="sr-only">{t(clip ? 'scope.pickVideoTemplates' : 'scope.pick')}</legend>
           {templates.length === 0 ? (
             <Typography variant="body" as="p" className="text-content-tertiary">
-              {t('scope.templatesEmpty')}
+              {t(clip ? 'scope.videoTemplatesEmpty' : 'scope.templatesEmpty')}
             </Typography>
           ) : (
             <ul className="space-y-1">
@@ -100,7 +116,7 @@ export function GuidelineScopeField({
         </fieldset>
       )}
 
-      {value.kind === 'fields' && (
+      {value.kind === 'fields' && !clip && (
         <GuidelineFieldPicker
           value={value.fields}
           onChange={(fields) => onChange({ kind: 'fields', templateIds: [], fields })}

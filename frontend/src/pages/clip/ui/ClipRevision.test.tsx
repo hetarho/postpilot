@@ -2,10 +2,11 @@ import { afterEach, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { Stage } from '@/shared/api'
+import { ProtoGuidelineScope, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
+import type { FakeGuidelinesOptions } from '@/test/guidelines'
 import type { FakeJobsOptions } from '@/test/jobs'
 import type { FakeProvidersOptions } from '@/test/providers'
 
@@ -199,4 +200,62 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
   expect(screen.getByLabelText('편집 타임라인')).toBeInTheDocument()
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
+})
+
+// GUIDE-45: once the request THIS session started completes, its words can become a standing
+// 영상 지침 — seeded with the request, 전역 by default or the project's own video template.
+it('offers 영상 지침으로 저장 after a completed revision started here, seeded with the request', async () => {
+  const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+  renderAppAt('/clips/clip', {
+    user: { id: 'alice' },
+    providers: models,
+    jobs: {
+      jobs: [
+        {
+          id: 'revision-job',
+          kind: 'revise_clip',
+          status: 'done',
+          stage: 'narration',
+          clipProjectId: 'clip',
+        },
+      ],
+    },
+    clips: {
+      templates: [{ id: 'template', name: '여행', compositionBody: '<clip version="1"/>' }],
+      projects: [fixture()],
+      revisionJobId: 'revision-job',
+    },
+    guidelines: { creates },
+  })
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  // Nothing was asked in this session yet, so there is nothing to save.
+  expect(screen.queryByRole('button', { name: '영상 지침으로 저장' })).not.toBeInTheDocument()
+
+  await write('자막을 더 짧게')
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
+  await userEvent.click(
+    await screen.findByRole(
+      'button',
+      { name: '최대 8 크레딧 · 승인하고 수정 요청' },
+      { timeout: 3000 },
+    ),
+  )
+  await userEvent.click(
+    await panel().findByRole('button', { name: '영상 지침으로 저장' }, { timeout: 3000 }),
+  )
+  const dialog = within(await screen.findByRole('dialog', { name: '영상 지침으로 저장' }))
+  expect(dialog.getByLabelText('영상 지침')).toHaveValue('자막을 더 짧게')
+  expect(dialog.getByRole('tab', { name: '전역' })).toHaveAttribute('aria-selected', 'true')
+  await userEvent.click(await dialog.findByRole('tab', { name: '이 영상의 템플릿 「여행」에만' }))
+  await userEvent.click(dialog.getByRole('button', { name: '저장' }))
+
+  await waitFor(() => expect(creates).toHaveLength(1))
+  expect(creates[0]).toEqual({
+    kind: 'clip',
+    text: '자막을 더 짧게',
+    scope: ProtoGuidelineScope.TEMPLATES,
+    templateIds: ['template'],
+    fields: [],
+  })
+  expect(await panel().findByText('영상 지침으로 저장했어요.')).toBeInTheDocument()
 })

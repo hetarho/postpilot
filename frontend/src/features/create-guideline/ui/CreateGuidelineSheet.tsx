@@ -6,6 +6,7 @@ import {
   globalScope,
   remainingGuidelineChars,
   useCreateGuidelineCall,
+  type GuidelineKind,
   type GuidelineScope,
 } from '@/entities/guideline'
 import { Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@/shared/ui'
@@ -15,9 +16,12 @@ import { Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@
  *  there is exactly one of each at every width. */
 export function CreateGuidelineSheet({
   ownerId,
+  kind = 'post',
   className,
 }: {
   ownerId: string
+  /** A post's 지침 or a clip's 영상 지침; the copy and the scope follow it. */
+  kind?: GuidelineKind
   className?: string
 }) {
   const { t } = useTranslation('guidelines')
@@ -25,16 +29,26 @@ export function CreateGuidelineSheet({
   return (
     <>
       <Button variant="cta" className={className} onClick={() => setOpen(true)}>
-        {t('create.open')}
+        {t(kind === 'clip' ? 'create.openClip' : 'create.open')}
       </Button>
-      {open && <CreateGuidelinePanel ownerId={ownerId} onClose={() => setOpen(false)} />}
+      {open && (
+        <CreateGuidelinePanel ownerId={ownerId} kind={kind} onClose={() => setOpen(false)} />
+      )}
     </>
   )
 }
 
 /** Mounted only while the sheet is open, so the rule starts blank on each visit and a refused
  *  attempt's message does not greet the next one. */
-function CreateGuidelinePanel({ ownerId, onClose }: { ownerId: string; onClose: () => void }) {
+function CreateGuidelinePanel({
+  ownerId,
+  kind,
+  onClose,
+}: {
+  ownerId: string
+  kind: GuidelineKind
+  onClose: () => void
+}) {
   const { t } = useTranslation(['guidelines', 'common'])
   const id = useId()
   const titleId = `${id}-title`
@@ -45,7 +59,7 @@ function CreateGuidelinePanel({ ownerId, onClose }: { ownerId: string; onClose: 
   const [text, setText] = useState('')
   // 전역 is the default because a guideline is meant to apply everywhere unless it is narrowed.
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
-  const create = useCreateGuidelineCall(ownerId)
+  const create = useCreateGuidelineCall(ownerId, kind)
 
   const textExceeded = remainingGuidelineChars(text) < 0
   const disabled = !canSaveGuideline(text, scope) || create.isPending
@@ -65,7 +79,7 @@ function CreateGuidelinePanel({ ownerId, onClose }: { ownerId: string; onClose: 
   return (
     <Sheet open labelledBy={titleId} onClose={create.isPending ? () => {} : onClose}>
       <Typography variant="title" as="h2" id={titleId}>
-        {t('create.title', { ns: 'guidelines' })}
+        {t(kind === 'clip' ? 'create.openClip' : 'create.title', { ns: 'guidelines' })}
       </Typography>
       <form onSubmit={(event) => void submit(event)} className="mt-4">
         <FieldLabel htmlFor={textId}>{t('create.text', { ns: 'guidelines' })}</FieldLabel>
@@ -89,6 +103,7 @@ function CreateGuidelinePanel({ ownerId, onClose }: { ownerId: string; onClose: 
 
         <GuidelineScopeField
           ownerId={ownerId}
+          kind={kind}
           value={scope}
           onChange={setScope}
           disabled={create.isPending}

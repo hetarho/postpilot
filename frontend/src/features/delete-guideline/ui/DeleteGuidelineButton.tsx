@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDeleteGuidelineCall } from '@/entities/guideline'
+import { useDeleteGuidelineCall, type GuidelineKind } from '@/entities/guideline'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
 /** Deletes a guideline after the sheet states what is and is not affected: work already enqueued
@@ -8,13 +8,16 @@ import { Button, Dialog, FieldMessage } from '@/shared/ui'
  *  a guideline. */
 export function DeleteGuidelineButton({
   ownerId,
+  kind = 'post',
   guidelineId,
 }: {
   ownerId: string
+  /** The guideline kind the action is for; a post's by default. */
+  kind?: GuidelineKind
   guidelineId: string
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
-  const remove = useDeleteGuidelineCall(ownerId)
+  const remove = useDeleteGuidelineCall(ownerId, kind)
   const [confirming, setConfirming] = useState(false)
 
   const confirm = async () => {

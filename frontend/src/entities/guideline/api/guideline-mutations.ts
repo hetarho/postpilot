@@ -3,21 +3,21 @@ import { createClient } from '@connectrpc/connect'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { GuidelineService } from '@/shared/api'
-import { globalScope, type GuidelineScope } from '../model/types'
+import { globalScope, type GuidelineKind, type GuidelineScope } from '../model/types'
 import { invalidateGuidelineCandidates, invalidateGuidelines } from './guideline-cache'
 import { guidelineErrorMessage } from './guideline-errors'
-import { toScopePatch } from './guideline-queries'
+import { fromGuidelineKind, toScopePatch } from './guideline-queries'
 
 /** The three write callers live with the entity rather than in the action slices because the
  *  revision capture needs the create one too, and a feature may not import a sibling feature.
  *  They are plain CRUD over the entity's own cache: no guideline write calls a model or enqueues a
  *  job ([I5]), and none of them touches a post, job or experiment cache — nothing references a
  *  guideline, so nothing else can go stale. */
-export function useCreateGuidelineCall(ownerId: string) {
+export function useCreateGuidelineCall(ownerId: string, kind: GuidelineKind = 'post') {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(GuidelineService.method.createGuideline, {
-    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId),
+    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId, kind),
   })
   return {
     ...mutation,
@@ -27,18 +27,23 @@ export function useCreateGuidelineCall(ownerId: string) {
      *  transaction as the insert, which is also what keeps an on-the-spot 지침으로 저장 from
      *  reappearing as a candidate — that path matches by text and needs no id. */
     create: (text: string, scope: GuidelineScope, fromCandidateId?: string) =>
-      mutation.mutateAsync({ text: text.trim(), ...toScopePatch(scope), fromCandidateId }),
+      mutation.mutateAsync({
+        text: text.trim(),
+        ...toScopePatch(scope),
+        fromCandidateId,
+        kind: fromGuidelineKind(kind),
+      }),
   }
 }
 
 /** 무시. It marks the row rather than deleting it — the dismissed row is what keeps the same
  *  instruction from being recorded again — so nothing here is a delete and nothing is undoable
  *  beyond writing the guideline by hand. */
-export function useDismissGuidelineCandidateCall(ownerId: string) {
+export function useDismissGuidelineCandidateCall(ownerId: string, kind: GuidelineKind = 'post') {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(GuidelineService.method.dismissGuidelineCandidate, {
-    onSuccess: () => invalidateGuidelineCandidates(queryClient, transport, ownerId),
+    onSuccess: () => invalidateGuidelineCandidates(queryClient, transport, ownerId, kind),
   })
   return {
     ...mutation,
@@ -53,11 +58,15 @@ export function useDismissGuidelineCandidateCall(ownerId: string) {
  *
  *  The scope goes as ONE patch because a scope is a kind plus a set: replacing them separately
  *  would leave a window where `global` still carries links. */
-export function useUpdateGuidelineCall(ownerId: string, guidelineId: string) {
+export function useUpdateGuidelineCall(
+  ownerId: string,
+  guidelineId: string,
+  kind: GuidelineKind = 'post',
+) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(GuidelineService.method.updateGuideline, {
-    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId),
+    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId, kind),
   })
   return {
     ...mutation,
@@ -68,11 +77,11 @@ export function useUpdateGuidelineCall(ownerId: string, guidelineId: string) {
   }
 }
 
-export function useDeleteGuidelineCall(ownerId: string) {
+export function useDeleteGuidelineCall(ownerId: string, kind: GuidelineKind = 'post') {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(GuidelineService.method.deleteGuideline, {
-    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId),
+    onSuccess: () => invalidateGuidelines(queryClient, transport, ownerId, kind),
   })
   return {
     ...mutation,
@@ -96,29 +105,31 @@ export interface BulkReviewOutcome {
  *  transaction per create, so concurrent creates race the cap. A refusal is collected and the walk
  *  continues — one over-long candidate must not hold back the rest — and the caches are
  *  invalidated once at the end rather than once per row. */
-export function useBulkReviewGuidelineCandidates(ownerId: string) {
+export function useBulkReviewGuidelineCandidates(ownerId: string, kind: GuidelineKind = 'post') {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const [running, setRunning] = useState<'approve' | 'dismiss' | null>(null)
 
+  const guidelineKind = kind
   const walk = async (
-    kind: 'approve' | 'dismiss',
+    action: 'approve' | 'dismiss',
     ids: readonly { id: string; text: string }[],
   ): Promise<BulkReviewOutcome> => {
     const client = createClient(GuidelineService, transport)
     const failures: BulkReviewOutcome['failures'] = []
     let moved = 0
-    setRunning(kind)
+    setRunning(action)
     try {
       for (const candidate of ids) {
         try {
-          if (kind === 'approve') {
+          if (action === 'approve') {
             // 전역, because a scope is a decision per rule and the ones that need a narrower one
             // are exactly the ones worth opening 승인 for.
             await client.createGuideline({
               text: candidate.text.trim(),
               ...toScopePatch(globalScope()),
               fromCandidateId: candidate.id,
+              kind: fromGuidelineKind(guidelineKind),
             })
           } else {
             await client.dismissGuidelineCandidate({ id: candidate.id })
@@ -130,8 +141,9 @@ export function useBulkReviewGuidelineCandidates(ownerId: string) {
       }
     } finally {
       setRunning(null)
-      invalidateGuidelineCandidates(queryClient, transport, ownerId)
-      if (kind === 'approve' && moved > 0) invalidateGuidelines(queryClient, transport, ownerId)
+      invalidateGuidelineCandidates(queryClient, transport, ownerId, guidelineKind)
+      if (action === 'approve' && moved > 0)
+        invalidateGuidelines(queryClient, transport, ownerId, guidelineKind)
     }
     return { moved, failures }
   }

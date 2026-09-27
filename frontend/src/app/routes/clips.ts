@@ -41,6 +41,12 @@ export const videoTemplateRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
 })
 
+export const videoGuidelinesRoute = createRoute({
+  getParentRoute: () => videoGroupRoute,
+  path: '/video-guidelines',
+  component: lazyRouteComponent(() => import('@/pages/video-guidelines'), 'VideoGuidelinesPage'),
+})
+
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
 export const clipRoutes = [
@@ -50,4 +56,5 @@ export const clipRoutes = [
   videoTemplatesRoute,
   newVideoTemplateRoute,
   videoTemplateRoute,
+  videoGuidelinesRoute,
 ]

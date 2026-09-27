@@ -72,6 +72,9 @@ export function useClipRevision({
     return () => window.clearTimeout(timer)
   }, [request, settled])
   const [failure, setFailure] = useState<AppFailure>()
+  // The request this mount started and the job it minted: 영상 지침으로 저장 is offered only for a
+  // run started in this session, once that very job is done (GUIDE-45).
+  const [sent, setSent] = useState<{ jobId: string; request: string }>()
   const mine = job?.kind === 'revise_clip' ? job : undefined
   const text = settled.trim()
   const binding = revisionBinding(project, text, target, observe, write)
@@ -139,6 +142,9 @@ export function useClipRevision({
     failure: failure ?? (mine?.status === 'failed' ? mine.failure : undefined),
     cancelled: mine?.status === 'cancelled',
     job: mine,
+    /** The request of the run this mount started, once that job completed. */
+    completedRequest:
+      sent && mine?.id === sent.jobId && mine.status === 'done' ? sent.request : undefined,
     refresh: () => void query.refetch(),
     /** Sends the approved request. `flush` writes the owner's unsaved edits
      *  first and answers with the plan revision they landed on: the writer is
@@ -162,7 +168,8 @@ export function useClipRevision({
         return
       }
       try {
-        await mutation.mutateAsync(quote)
+        const { jobId } = await mutation.mutateAsync(quote)
+        setSent({ jobId, request: text })
       } catch (error) {
         setFailure(appFailureFromConnect(error))
       }

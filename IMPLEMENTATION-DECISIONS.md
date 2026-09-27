@@ -205,3 +205,10 @@ choice would be expensive to undo are listed at the end.
   place for them.
 - **A guideline or candidate stored without a kind reads as `post`** in the store (the service always
   sets one).
+
+## T439 — /video-guidelines, 영상 지침 후보, 영상 지침으로 저장 (frontend)
+- **One screen, one widget.** `/guidelines` and `/video-guidelines` both render `widgets/guideline-directory` with a `kind` prop (FSD forbids a page importing a page). The page copy moved from `pages/guidelines/config` into the widget.
+- **Clip copy I wrote:** the page description ("영상 지침은 영상의 구성과 자막에서 피해야 할 내용과 주의할 점을 정해요…"), the empty state example `자막에 가격을 적지 않기`, `저장된 영상 지침`, candidate `요청한 영상 보기` / `요청한 영상이 삭제됐어요`, and the save dialog description. The create sheet's field label and submit stay `지침` / `지침 만들기`; only the trigger and the title say `새 영상 지침`.
+- **When 영상 지침으로 저장 appears:** only after the `revise_clip` job that this mounted dock started (matched by job id) reaches `done`. After a reload, or for a job started in another tab, the button is not offered. The request remains in the 영상 지침 후보 queue instead.
+- **Save-as scope:** 전역 by default. 이 영상의 템플릿 「name」에만 appears only while the project's video template still exists in the directory.
+- **Nav icon:** lucide `ListVideo`.

@@ -58,7 +58,6 @@
 |---|---|---|---|---|
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | T441 | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T439 | /video-guidelines, 영상 지침 후보 and 영상 지침으로 저장 (frontend) | GUIDE CLIP | T438 T432 | todo |
 | T440 | Clip writing calls carry 영상 지침, and the server checks no caption's content | CLIP CDS GUIDE QUOTA | T438 T414 | todo |
 | T441 | A video template carries a starting design selection, and a project takes it on selection | CLIP CDS | T443 | todo |
 | T442 | The video-template preview plays an illustrative timed clip | CLIP | T441 | todo |
@@ -70,11 +69,13 @@
 | T448 | Clip ②'s storyline actions: the AI request, 다시 만들기 and building from it (frontend) | CLIP | T447 | todo |
 
 ## next
-- implement-task T439 · T440 → T445 → T446 → T447 → T448 for 영상 지침 and the clip storyline; independent starts T443 (→ T441 → T442, T415) and T444
+- implement-task T440 → T445 → T446 → T447 → T448 for 영상 지침 and the clip storyline; independent starts T443 (→ T441 → T442, T415) and T444
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); implement-task T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260928 T439 done: decisions in /IMPLEMENTATION-DECISIONS.md
+- 260928 T439 claimed (ia)
 - 260928 T438 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T438 claimed (ia)
 - 260928 T437 done: decisions in /IMPLEMENTATION-DECISIONS.md
@@ -93,5 +94,3 @@
 - 260928 T429 claimed (ia)
 - 260928 T431 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T431 claimed (ia)
-- 260928 T430 done
-- 260928 T430 claimed (ia)

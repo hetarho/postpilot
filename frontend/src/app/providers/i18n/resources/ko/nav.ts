@@ -19,6 +19,7 @@ export const nav = {
   myPosts: '내 글',
   myVideos: '내 영상',
   videoTemplates: '영상 템플릿',
+  videoGuidelines: '영상 지침',
   writingGroup: '글 메뉴',
   videoGroup: '영상 메뉴',
   voices: '말투',

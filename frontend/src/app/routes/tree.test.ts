@@ -55,6 +55,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/templates/$templateId',
     '/templates/new',
     '/verify-email',
+    '/video-guidelines',
     '/video-templates',
     '/video-templates/$templateId',
     '/video-templates/new',

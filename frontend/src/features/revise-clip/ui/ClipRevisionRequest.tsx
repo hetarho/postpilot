@@ -15,6 +15,7 @@ import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
 import { Popover, ProgressBar, SegmentedControl, Textarea, Typography } from '@/shared/ui'
 import { useClipRevision } from '../api/useClipRevision'
+import { SaveAsVideoGuidelineButton } from './SaveAsVideoGuidelineButton'
 
 /** ②'s dock, in the post editor's shape (CLIP-40 →POST-45): the field's own heading row with the
  *  step's actions at its right, then one field and one send control. The target — footage flow,
@@ -170,6 +171,15 @@ export function ClipRevisionRequest({
         <Typography variant="body" role="status">
           {t('revision.cancelled')}
         </Typography>
+      )}
+      {/* After the run THIS session started completes: its request, in the owner's own words,
+          can become a standing 영상 지침 (GUIDE-45). */}
+      {!running && revision.completedRequest && (
+        <SaveAsVideoGuidelineButton
+          ownerId={ownerId}
+          request={revision.completedRequest}
+          videoTemplateId={project.videoTemplateId}
+        />
       )}
       <ClipFailureNotice failure={revision.failure} />
     </div>

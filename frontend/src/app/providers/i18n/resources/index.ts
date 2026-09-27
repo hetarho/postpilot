@@ -24,7 +24,10 @@ import { i18n as finalizeClipClipsI18n } from '@/features/finalize-clip/config/i
 import { i18n as generateClipClipsI18n } from '@/features/generate-clip/config/i18n'
 import { i18n as inspectClipObservationsClipsI18n } from '@/features/inspect-clip-observations/config/i18n'
 import { i18n as renderClipBrowserClipsI18n } from '@/features/render-clip-browser/config/i18n'
-import { i18n as reviseClipClipsI18n } from '@/features/revise-clip/config/i18n'
+import {
+  i18n as reviseClipClipsI18n,
+  guidelinesI18n as reviseClipGuidelinesI18n,
+} from '@/features/revise-clip/config/i18n'
 import { i18n as uploadClipSourcesClipsI18n } from '@/features/upload-clip-sources/config/i18n'
 import { i18n as videoTemplatesClipsI18n } from '@/pages/video-templates/config/i18n'
 // The fragments are imported as MODULES rather than through their slices' public APIs, and
@@ -61,7 +64,7 @@ import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/config/i18n'
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
-import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
+import { i18n as guidelinesI18n } from '@/widgets/guideline-directory/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
 import { i18n as extractMemoriesI18n } from '@/features/extract-memories/config/i18n'
 import { i18n as usePostMemoriesI18n } from '@/features/use-post-memories/config/i18n'
@@ -159,6 +162,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   inspectClipObservationsClipsI18n,
   renderClipBrowserClipsI18n,
   reviseClipClipsI18n,
+  reviseClipGuidelinesI18n,
   uploadClipSourcesClipsI18n,
   videoTemplatesClipsI18n,
   accountMenuI18n,
@@ -287,6 +291,7 @@ export const resources = {
       ...editWithAiGuidelinesI18n.ko,
       ...guidelineI18n.ko,
       ...guidelinesI18n.ko,
+      ...reviseClipGuidelinesI18n.ko,
       ...reviewGuidelineCandidateI18n.ko,
     },
     memories: {
@@ -405,6 +410,7 @@ export const resources = {
       ...editWithAiGuidelinesI18n.en,
       ...guidelineI18n.en,
       ...guidelinesI18n.en,
+      ...reviseClipGuidelinesI18n.en,
       ...reviewGuidelineCandidateI18n.en,
     },
     memories: {

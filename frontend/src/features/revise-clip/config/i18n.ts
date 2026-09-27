@@ -40,3 +40,36 @@ export const i18n = {
     },
   },
 } as const satisfies I18nFragment
+
+/** This slice's share of the `guidelines` namespace (ARCH-16). */
+export const guidelinesI18n = {
+  namespace: 'guidelines',
+  ko: {
+    clipCapture: {
+      action: '영상 지침으로 저장',
+      description:
+        '이 수정 요청을 다음 영상에도 계속 적용할 규칙으로 저장해요. 저장 전에 고칠 수 있어요.',
+      text: '영상 지침',
+      scope: '적용 범위',
+      scopeGlobal: '전역',
+      scopeTemplate: '이 영상의 템플릿 「{{name}}」에만',
+      submit: '저장',
+      saved: '영상 지침으로 저장했어요.',
+      duplicate: '이미 같은 영상 지침이 있어요.',
+    },
+  },
+  en: {
+    clipCapture: {
+      action: 'Save as video guideline',
+      description:
+        'Save this revision request as a rule to keep applying to future clips. You can edit it before saving.',
+      text: 'Video guideline',
+      scope: 'Applies to',
+      scopeGlobal: 'Everything',
+      scopeTemplate: 'Only this clip’s template “{{name}}”',
+      submit: 'Save',
+      saved: 'Saved as a video guideline.',
+      duplicate: 'You already have the same video guideline.',
+    },
+  },
+} as const satisfies I18nFragment

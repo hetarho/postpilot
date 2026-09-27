@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useDismissGuidelineCandidateCall } from '@/entities/guideline'
+import { useDismissGuidelineCandidateCall, type GuidelineKind } from '@/entities/guideline'
 import { Button, FieldMessage } from '@/shared/ui'
 
 /** 무시 — marks the candidate dismissed and takes it out of the review list.
@@ -9,15 +9,18 @@ import { Button, FieldMessage } from '@/shared/ui'
  *  correction can still be written by hand at any time. */
 export function DismissGuidelineCandidateButton({
   ownerId,
+  kind = 'post',
   candidateId,
   disabled = false,
 }: {
   ownerId: string
+  /** The guideline kind the action is for; a post's by default. */
+  kind?: GuidelineKind
   candidateId: string
   disabled?: boolean
 }) {
   const { t } = useTranslation('guidelines')
-  const dismiss = useDismissGuidelineCandidateCall(ownerId)
+  const dismiss = useDismissGuidelineCandidateCall(ownerId, kind)
 
   const run = async () => {
     try {

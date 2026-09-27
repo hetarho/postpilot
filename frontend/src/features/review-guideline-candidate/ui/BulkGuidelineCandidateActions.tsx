@@ -4,6 +4,7 @@ import {
   useBulkReviewGuidelineCandidates,
   type BulkReviewOutcome,
   type GuidelineCandidate,
+  type GuidelineKind,
 } from '@/entities/guideline'
 import { Button, Dialog, Typography } from '@/shared/ui'
 
@@ -18,11 +19,14 @@ import { Button, Dialog, Typography } from '@/shared/ui'
  *  dialog-free (GUIDE-12) — one row is a small, deliberate act, and fifty is not. */
 export function BulkGuidelineCandidateActions({
   ownerId,
+  kind = 'post',
   candidates,
   onFailures,
   onFinished,
 }: {
   ownerId: string
+  /** The guideline kind the action is for; a post's by default. */
+  kind?: GuidelineKind
   candidates: readonly GuidelineCandidate[]
   /** The refusals belong to the rows, which the page renders, so they are reported upward. */
   onFailures: (failures: BulkReviewOutcome['failures']) => void
@@ -31,7 +35,7 @@ export function BulkGuidelineCandidateActions({
   onFinished: (outcome: { kind: 'approve' | 'dismiss'; moved: number; attempted: number }) => void
 }) {
   const { t } = useTranslation('guidelines')
-  const bulk = useBulkReviewGuidelineCandidates(ownerId)
+  const bulk = useBulkReviewGuidelineCandidates(ownerId, kind)
   const [confirming, setConfirming] = useState(false)
 
   if (candidates.length === 0) return null

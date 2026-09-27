@@ -19,6 +19,7 @@ export const nav = {
   myPosts: 'My posts',
   myVideos: 'My videos',
   videoTemplates: 'Video templates',
+  videoGuidelines: 'Video guidelines',
   writingGroup: 'Writing navigation',
   videoGroup: 'Video navigation',
   voices: 'Voices',

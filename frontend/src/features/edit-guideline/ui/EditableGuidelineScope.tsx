@@ -23,7 +23,7 @@ export function EditableGuidelineScope({
   className,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'> & Partial<Pick<Guideline, 'kind'>>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -58,7 +58,7 @@ export function EditableGuidelineScope({
 export function GuidelineScopeBadges({
   guideline,
 }: {
-  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'> & Partial<Pick<Guideline, 'kind'>>
 }) {
   const { t } = useTranslation(['guidelines', 'posts'])
   if (isOrphanedScope(guideline)) {
@@ -66,7 +66,9 @@ export function GuidelineScopeBadges({
       <div>
         <Badge tone="warning">{t('scope.orphaned', { ns: 'guidelines' })}</Badge>
         <Typography variant="body" as="p" className="text-content-secondary mt-1">
-          {t('scope.orphanedHelp', { ns: 'guidelines' })}
+          {t(guideline.kind === 'clip' ? 'scope.clipOrphanedHelp' : 'scope.orphanedHelp', {
+            ns: 'guidelines',
+          })}
         </Typography>
       </div>
     )
@@ -107,7 +109,7 @@ function ScopeEditor({
   exit,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'> & Partial<Pick<Guideline, 'kind'>>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -140,7 +142,13 @@ function ScopeEditor({
 
   return (
     <div>
-      <GuidelineScopeField ownerId={ownerId} value={draft} onChange={setDraft} disabled={pending} />
+      <GuidelineScopeField
+        ownerId={ownerId}
+        kind={guideline.kind}
+        value={draft}
+        onChange={setDraft}
+        disabled={pending}
+      />
       {failed && errorMessage && <FieldMessage className="mt-2">{errorMessage}</FieldMessage>}
       <div className="mt-3 flex gap-2">
         <Button onClick={() => void commit()} disabled={disabled} pending={pending}>

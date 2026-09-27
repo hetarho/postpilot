@@ -3,8 +3,12 @@ import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import { GuidelineService } from '@/shared/api'
-import type { GuidelineCandidate } from '../model/types'
-import { guidelineCandidatesQueryKey, toGuidelineCandidate } from './guideline-queries'
+import type { GuidelineCandidate, GuidelineKind } from '../model/types'
+import {
+  fromGuidelineKind,
+  guidelineCandidatesKindQueryKey,
+  toGuidelineCandidate,
+} from './guideline-queries'
 
 /** The pending candidates, in the server's review order. A read and nothing else: mounting it
  *  records no candidate, calls no model and starts no job ([I5]).
@@ -12,16 +16,26 @@ import { guidelineCandidatesQueryKey, toGuidelineCandidate } from './guideline-q
  *  `staleTime: 0` + `refetchOnMount: 'always'` against the app's 60s default, like the saved list:
  *  a candidate arrives from a revision the user ran in another tab, so a cached empty list is the
  *  wrong answer to "what is waiting for me". */
-export function guidelineCandidateListQuery(transport: Transport, ownerId: string) {
+export function guidelineCandidateListQuery(
+  transport: Transport,
+  ownerId: string,
+  kind: GuidelineKind = 'post',
+) {
   return {
-    queryKey: guidelineCandidatesQueryKey(transport, ownerId),
-    queryFn: () => createClient(GuidelineService, transport).listGuidelineCandidates({}),
+    queryKey: guidelineCandidatesKindQueryKey(transport, ownerId, kind),
+    queryFn: () =>
+      createClient(GuidelineService, transport).listGuidelineCandidates({
+        kind: fromGuidelineKind(kind),
+      }),
     staleTime: 0,
     refetchOnMount: 'always' as const,
   }
 }
 
-export function useGuidelineCandidates(ownerId: string): {
+export function useGuidelineCandidates(
+  ownerId: string,
+  kind: GuidelineKind = 'post',
+): {
   candidates: GuidelineCandidate[]
   /** The pending queue is at its server-side bound, so further revisions record nothing. The
    *  client owns no copy of the bound; this is the server's answer. */
@@ -33,7 +47,7 @@ export function useGuidelineCandidates(ownerId: string): {
 } {
   const transport = useTransport()
   const query = useQuery({
-    ...guidelineCandidateListQuery(transport, ownerId),
+    ...guidelineCandidateListQuery(transport, ownerId, kind),
     enabled: ownerId !== '',
   })
   // The server returns them in review order — most-repeated first, then most recent — and the
