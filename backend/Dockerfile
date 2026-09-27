@@ -38,7 +38,7 @@ ARG TARGETARCH
 ARG MEDIA_ASSET_DIGEST
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
-      org.postpilot.media.protocol="1" \
+      org.postpilot.media.protocol="2" \
       org.postpilot.media.renderer="cpu-v1" \
       org.postpilot.media.assets="assets-v3" \
       org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST
@@ -161,7 +161,7 @@ ARG MEDIA_ASSET_DIGEST
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
       org.opencontainers.image.title="Postpilot NVIDIA candidate worker" \
-      org.postpilot.media.protocol="1" org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.protocol="2" org.postpilot.media.renderer="cpu-v1" \
       org.postpilot.media.assets="assets-v3" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
       org.postpilot.media.gpu-production-approved="false"
