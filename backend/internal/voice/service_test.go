@@ -421,9 +421,9 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	if err != nil || formalProfile.Rules != "formal rule" || len(formalProfile.Samples) != 1 || formalProfile.Samples[0].ID != "formal-sample" || formalProfile.ActiveJobID != "" {
 		t.Fatalf("formal profile leaked/missing: %+v err=%v", formalProfile, err)
 	}
-	_, excerpts, rules, empty, err := h.svc.ProfileForPrompt(ctx, "alice", formal.ID)
-	if err != nil || empty || rules != "formal rule" || len(excerpts) != 1 || !strings.HasPrefix(excerpts[0], "습") {
-		t.Fatalf("formal prompt borrowed from casual: rules=%q excerpts=%v err=%v", rules, excerpts, err)
+	formalPrompt, err := h.svc.PromptProfileForTopic(ctx, "alice", formal.ID, "", nil)
+	if err != nil || formalPrompt.Empty || formalPrompt.ManualRules != "formal rule" || len(formalPrompt.Excerpts) != 1 || !strings.HasPrefix(formalPrompt.Excerpts[0], "습") {
+		t.Fatalf("formal prompt borrowed from casual: rules=%q excerpts=%v err=%v", formalPrompt.ManualRules, formalPrompt.Excerpts, err)
 	}
 	// A same-account sample id from the other voice is unreachable, as is a foreign voice.
 	if _, err := h.svc.DeleteSample(ctx, "alice", formal.ID, "casual-sample"); !errors.Is(err, voice.ErrSampleNotFound) {
@@ -577,12 +577,15 @@ func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing
 	}
 }
 
+// VOICE-46: the projection carries FewShotMax excerpts, newest first, each cut at the excerpt
+// maximum when no sentence ends near the target.
 func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	style, excerpts, rules, empty, err := h.svc.ProfileForPrompt(context.Background(), "alice", alice)
-	if err != nil || style != "" || rules != "" || len(excerpts) != 0 || !empty {
-		t.Fatalf("empty profile = %q %+v %q %v err=%v", style, excerpts, rules, empty, err)
+	limits := voice.PersonalizationThresholds()
+	projection, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
+	if err != nil || projection.Styleguide != "" || projection.ManualRules != "" || len(projection.Excerpts) != 0 || !projection.Empty {
+		t.Fatalf("empty profile = %+v err=%v", projection, err)
 	}
 	if err := h.svc.AppendRule(context.Background(), "alice", alice, "RULES"); err != nil {
 		t.Fatal(err)
@@ -590,18 +593,19 @@ func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 	base := time.Now().Add(-time.Hour)
 	markers := []rune{'가', '나', '다', '라'}
 	for i := range 4 {
-		body := strings.Repeat(string(markers[i]), voice.ExcerptChars+10)
+		body := strings.Repeat(string(markers[i]), limits.FewShotExcerptMaxChars+10)
 		h.addSample(t, "alice", alice, string(rune('a'+i)), "sample", body, base.Add(time.Duration(i)*time.Minute))
 	}
-	_, excerpts, rules, empty, err = h.svc.ProfileForPrompt(context.Background(), "alice", alice)
-	if err != nil || rules != "RULES" || empty || len(excerpts) != voice.ExcerptCount {
-		t.Fatalf("profile prompt = lens=%d %q %v err=%v", len(excerpts), rules, empty, err)
+	projection, err = h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
+	excerpts := projection.Excerpts
+	if err != nil || projection.ManualRules != "RULES" || projection.Empty || len(excerpts) != limits.FewShotMax {
+		t.Fatalf("profile prompt = lens=%d %q %v err=%v", len(excerpts), projection.ManualRules, projection.Empty, err)
 	}
 	if []rune(excerpts[0])[0] != '라' {
 		t.Fatalf("first excerpt is not most recent: %q", []rune(excerpts[0])[0])
 	}
 	for _, excerpt := range excerpts {
-		if len([]rune(excerpt)) != voice.ExcerptChars {
+		if len([]rune(excerpt)) != limits.FewShotExcerptMaxChars {
 			t.Fatalf("excerpt length = %d", len([]rune(excerpt)))
 		}
 	}

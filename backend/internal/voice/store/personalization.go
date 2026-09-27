@@ -725,6 +725,12 @@ func (s *Store) ApplyLearningResult(ctx context.Context, event voice.LearningEve
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
+	// Built over another head: an override, restore or rule publish landed while the provider
+	// was working. Nothing of this pass is kept — the rollback takes the source and the
+	// evidence too — and the caller builds it again over the newest head (VOICE-22).
+	if current != result.BaseVersion {
+		return voice.ErrProfileHeadMoved
+	}
 	result.Profile.Version = current + 1
 	result.Profile.UpdatedAt = now
 	result.Profile.Empty = false

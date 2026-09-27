@@ -8,7 +8,7 @@ import "time"
 // all evaluation is request-time and user-initiated.
 func PersonalizationThresholds() PersonalizationConfig {
 	return PersonalizationConfig{
-		FewShotTargetCount: 2, FewShotMax: 3,
+		FewShotMax:                3,
 		FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800,
 		EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2,
 		RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour,

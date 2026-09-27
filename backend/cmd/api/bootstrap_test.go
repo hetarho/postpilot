@@ -620,7 +620,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	}
 
 	voiceSvc.ConfigurePersonalization(adapter, voice.PersonalizationConfig{
-		FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800,
+		FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800,
 		EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3,
 		RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: voice.DefaultValidationPostCount, EndingMaxConsecutive: 2,
 	})

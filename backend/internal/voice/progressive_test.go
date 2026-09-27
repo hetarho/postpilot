@@ -23,7 +23,7 @@ func (p learningPosts) LearningSnapshot(context.Context, string, string) (voice.
 }
 
 func personalizationConfig() voice.PersonalizationConfig {
-	return voice.PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2}
+	return voice.PersonalizationConfig{FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: 3, EndingMaxConsecutive: 2}
 }
 
 func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePrompts(t *testing.T) {
@@ -170,9 +170,9 @@ func TestZeroHistoryFinalizeLearnsOneSourceOnlyAfterExplicitJob(t *testing.T) {
 	if err != nil || profile.Structured.Version != 1 || profile.SourceCount != 1 || profile.Structured.Empty {
 		t.Fatalf("profile=%+v err=%v", profile, err)
 	}
-	_, excerpts, _, empty, err := h.svc.ProfileForPromptForTopic(context.Background(), "alice", alice, "다른 주제", nil)
-	if err != nil || empty || len(excerpts) != 1 || !strings.Contains(excerpts[0], "천천히") {
-		t.Fatalf("prompt excerpts=%v empty=%v err=%v", excerpts, empty, err)
+	projection, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "다른 주제", nil)
+	if err != nil || projection.Empty || len(projection.Excerpts) != 1 || !strings.Contains(projection.Excerpts[0], "천천히") {
+		t.Fatalf("prompt excerpts=%v empty=%v err=%v", projection.Excerpts, projection.Empty, err)
 	}
 	// The source, version and excerpt belong to the learned voice alone.
 	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
@@ -271,6 +271,34 @@ func TestManualOverrideClearAndRestorePublishImmutableWholeVersions(t *testing.T
 	}
 }
 
+// VOICE-28: an analysis replays the overrides into the snapshot it publishes, and clearing one
+// afterwards still returns its field to what the analysis said — the baked override is stripped
+// before the remaining ones are replayed, so 직접 설정 해제 is never a no-op.
+func TestClearingAnOverrideAfterAnAnalysisRestoresTheAnalyzedValue(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
+	manual := "직접 정한 값"
+	if _, err := h.svc.UpdateOverride(context.Background(), "alice", alice, voice.LayerLexical, "description", &manual); err != nil {
+		t.Fatal(err)
+	}
+	h.models.response = "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
+	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	analyzed, err := h.store.GetProfile(context.Background(), "alice", alice)
+	if err != nil || analyzed.Structured.Lexical.Description.Value != manual || analyzed.Structured.Lexical.Description.Source != voice.SourceManual {
+		t.Fatalf("the analysis did not replay the override: %+v err=%v", analyzed.Structured.Lexical.Description, err)
+	}
+	cleared, err := h.svc.UpdateOverride(context.Background(), "alice", alice, voice.LayerLexical, "description", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cleared.Structured.Lexical.Description; got.Value != h.models.response || got.Source != voice.SourceAnalyzed {
+		t.Fatalf("cleared description = %+v, want the analysis's own value", got)
+	}
+}
+
 func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
@@ -284,7 +312,7 @@ func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testin
 		if err := h.store.InsertLearningEvent(context.Background(), event); err != nil {
 			t.Fatal(err)
 		}
-		result := voice.LearningResult{Source: voice.AuthoredSource{ID: "rule-source-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, LearningEventID: event.ID, Title: slug, Body: slug, Excerpt: slug, CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean}, Rules: []voice.ExtractedRule{{Statement: statement, Layer: voice.LayerEndings}}}
+		result := voice.LearningResult{Source: voice.AuthoredSource{ID: "rule-source-" + string(rune('0'+i)), UserID: "alice", VoiceID: alice, PostSlug: slug, LearningEventID: event.ID, Title: slug, Body: slug, Excerpt: slug, CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean}, Rules: []voice.ExtractedRule{{Statement: statement, Layer: voice.LayerEndings}}, BaseVersion: int64(i - 1)}
 		if err := h.store.ApplyLearningResult(context.Background(), event, result, voice.PersonalizationConfig{RuleActivationEvidence: 3}, nowTime); err != nil {
 			t.Fatal(err)
 		}
@@ -300,14 +328,14 @@ func TestIndependentLearningEventsPromoteRuleAtConfiguredEvidenceCount(t *testin
 			t.Fatalf("after event %d status=%s want=%s", i, rules[0].Status, want)
 		}
 	}
-	_, _, projected, _, err := h.svc.ProfileForPrompt(context.Background(), "alice", alice)
-	if err != nil || projected != statement {
-		t.Fatalf("active projection=%q err=%v", projected, err)
+	projected, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
+	if err != nil || projected.ActiveRules != statement {
+		t.Fatalf("active projection=%q err=%v", projected.ActiveRules, err)
 	}
 	// The same statement in a sibling voice is a different rule with its own evidence.
 	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
-	if _, _, projectedOther, _, err := h.svc.ProfileForPrompt(context.Background(), "alice", other.ID); err != nil || projectedOther != "" {
-		t.Fatalf("active rule leaked into another voice: %q err=%v", projectedOther, err)
+	if projectedOther, err := h.svc.PromptProfileForTopic(context.Background(), "alice", other.ID, "", nil); err != nil || projectedOther.ActiveRules != "" {
+		t.Fatalf("active rule leaked into another voice: %q err=%v", projectedOther.ActiveRules, err)
 	}
 }
 
@@ -630,5 +658,90 @@ func TestRuleStatusChangesStayInsideTheRulesVoice(t *testing.T) {
 	}
 	if _, err := h.svc.ChangeRuleStatus(context.Background(), "alice", "formal-rule", voice.RuleRetired); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("rule change in deleted voice = %v", err)
+	}
+}
+
+// headMovingModels answers as fakeModels does and, on its first call, runs a hook — a
+// publication that lands while the provider is working.
+type headMovingModels struct {
+	*fakeModels
+	hook func()
+}
+
+func (m *headMovingModels) Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error) {
+	if m.hook != nil {
+		hook := m.hook
+		m.hook = nil
+		hook()
+	}
+	return m.fakeModels.Complete(ctx, ref, request)
+}
+
+// VOICE-22: a learning result built over one head is published only while that is still the
+// head. An override published during the provider call sends the same job round again, and the
+// version it finally publishes is built over the override.
+func TestLearningBuiltOverAMovedHeadIsBuiltAgain(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	ctx := context.Background()
+	insertPost(t, h, "first", "alice", alice, "첫 글", time.Now().UTC().Format(time.RFC3339Nano))
+	raw := `{"title":"첫 글","summary":"","tags":["산책"],"blocks":[{"type":"TEXT","content":"오늘은 천천히 걸어요. 바람이 참 좋아요."}]}`
+	snapshot := voice.FinalizationInput{PostSlug: "first", UserID: "alice", VoiceID: alice, BaselineVoiceID: alice, BaselineJSON: raw, FinalJSON: raw, BaselineRevision: 1, ContentRevision: 1, ContentLanguage: voice.LanguageKorean, VoiceSourceLanguage: voice.LanguageKorean}
+	h.models.response = `{"lexical_description":"담백한 어휘","base_register":"해요","connective_style":"","intro_pattern":"","closing_pattern":"","heading_habit":"","list_habit":"","emoji_use":"","axes":{"involvement":1,"narrativity":1,"persuasion_overtness":0,"abstractness":0,"addressee_focus":0,"humor":0}}`
+	moving := &headMovingModels{fakeModels: h.models}
+	svc := voice.NewService(h.store, moving, h.jobs)
+	svc.ConfigurePersonalization(learningPosts{snapshot: snapshot}, personalizationConfig())
+	event, _, _, err := svc.LearnFromFinalizedPost(ctx, "alice", "first", analyzeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manual := "직접 정한 연결"
+	moving.hook = func() {
+		if _, err := svc.UpdateOverride(ctx, "alice", alice, voice.LayerSyntax, "connective_style", &manual); err != nil {
+			t.Error(err)
+		}
+	}
+	if err := svc.Learn(ctx, voice.LearningJob{UserID: "alice", EventID: event.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if h.models.completeCalls != 2 {
+		t.Fatalf("provider calls = %d, want the pass built again over the moved head", h.models.completeCalls)
+	}
+	profile, err := svc.Get(ctx, "alice", alice)
+	if err != nil || profile.Structured.Version != 2 || profile.Structured.Syntax.ConnectiveStyle.Value != manual || profile.SourceCount != 1 {
+		t.Fatalf("profile = v%d %+v sources=%d err=%v", profile.Structured.Version, profile.Structured.Syntax.ConnectiveStyle, profile.SourceCount, err)
+	}
+}
+
+// The store refuses a result built over a head that is no longer the head and keeps nothing
+// of it: no version, no authored source, and the event still open.
+func TestApplyLearningResultRefusesAStaleHead(t *testing.T) {
+	h := newVoiceHarness(t)
+	alice := h.voice("alice")
+	ctx := context.Background()
+	nowTime := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	insertPost(t, h, "stale", "alice", alice, "오래된", nowTime.Format(time.RFC3339Nano))
+	if _, err := h.store.PublishProfileVersion(ctx, "alice", alice, voice.StructuredProfile{}, "analysis", 0, nowTime); err != nil {
+		t.Fatal(err)
+	}
+	event := voice.LearningEvent{ID: "event-stale", UserID: "alice", VoiceID: alice, PostSlug: "stale", BaselineRevision: 1, InputHash: "stale-hash", BaselineJSON: `{}`, FinalJSON: `{}`, ModelRef: analyzeRef.String(), Status: "running", CreatedAt: nowTime, ContentLanguage: voice.LanguageKorean, SourceLanguage: voice.LanguageKorean}
+	if err := h.store.InsertLearningEvent(ctx, event); err != nil {
+		t.Fatal(err)
+	}
+	result := voice.LearningResult{Source: voice.AuthoredSource{ID: "source-stale", UserID: "alice", VoiceID: alice, PostSlug: "stale", LearningEventID: event.ID, Title: "오래된", Body: "본문", Excerpt: "본문", CreatedAt: nowTime, SourceLanguage: voice.LanguageKorean}, BaseVersion: 0}
+	if err := h.store.ApplyLearningResult(ctx, event, result, voice.PersonalizationConfig{RuleActivationEvidence: 3}, nowTime); !errors.Is(err, voice.ErrProfileHeadMoved) {
+		t.Fatalf("stale head = %v, want ErrProfileHeadMoved", err)
+	}
+	profile, err := h.store.GetProfile(ctx, "alice", alice)
+	if err != nil || profile.Structured.Version != 1 {
+		t.Fatalf("a stale result moved the head: v%d err=%v", profile.Structured.Version, err)
+	}
+	sources, err := h.store.ListAuthoredSources(ctx, "alice", alice)
+	if err != nil || len(sources) != 0 {
+		t.Fatalf("a stale result kept its source: %+v err=%v", sources, err)
+	}
+	stored, err := h.store.GetLearningEvent(ctx, "alice", event.ID)
+	if err != nil || stored.Status == "done" {
+		t.Fatalf("a stale result closed the event: %+v err=%v", stored, err)
 	}
 }

@@ -41,12 +41,11 @@ type Service struct {
 	validations           ProfileValidationStore
 	personalizationJobs   PersonalizationJobs
 	personalizationModels PersonalizationModels
-	personalizationReady  bool
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
 	svc := &Service{directory: store, profiles: store, samples: store, versionSamples: store, models: models, jobs: jobs, now: time.Now, newID: newID,
-		config: PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: DefaultValidationPostCount, EndingMaxConsecutive: 2}}
+		config: PersonalizationThresholds()}
 	if p, ok := store.(PersonalizationStorage); ok {
 		svc.personalization = p
 		svc.versions, svc.overrides, svc.learning = p, p, p
@@ -60,7 +59,6 @@ func (s *Service) ConfigurePersonalization(posts Posts, config PersonalizationCo
 		panic("voice: invalid personalization configuration")
 	}
 	s.posts, s.config = posts, config
-	s.personalizationReady = true
 	if s.personalization == nil {
 		panic("voice: personalization store is not configured")
 	}

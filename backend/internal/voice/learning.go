@@ -76,7 +76,9 @@ func mergeQualitativeProfile(profile *StructuredProfile, qualitative qualitative
 	if language != LanguageEnglish {
 		// Keep the Korean merge order byte-for-byte equivalent to the original analyzer.
 		profile.Lexical.Description = unknown(qualitative.LexicalDescription)
-		if profile.Endings.BaseRegister.Unknown || qualitative.BaseRegister == "" {
+		// The measured register wins (VOICE-26, VOICE-27): the model fills it only where
+		// measurement had none, and an empty answer adds nothing.
+		if profile.Endings.BaseRegister.Unknown {
 			profile.Endings.BaseRegister = unknown(qualitative.BaseRegister)
 		}
 		profile.Syntax.ConnectiveStyle = unknown(qualitative.ConnectiveStyle)
@@ -317,9 +319,30 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
+	// The pass is built over the head it read first and published only while that is still
+	// the head (VOICE-22): an override, restore or rule publish landing during the provider
+	// calls sends the same job round again over the newest state rather than overwriting it.
+	for {
+		retry, err := s.learnOnce(ctx, job, event, final, body, baselineBody, progress)
+		if !retry {
+			return err
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+	}
+}
+
+// learnOnce is one pass of Learn. It reports retry when the profile head moved while the pass
+// ran, which leaves nothing written.
+func (s *Service) learnOnce(ctx context.Context, job LearningJob, event *LearningEvent, final authoredContentJSON, body, baselineBody string, progress Progress) (bool, error) {
+	head, err := s.profiles.GetProfile(ctx, job.UserID, event.VoiceID)
+	if err != nil {
+		return false, s.failLearning(ctx, *event, err)
+	}
 	sources, err := s.learning.ListAuthoredSources(ctx, job.UserID, event.VoiceID)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	sources = authoredSourcesForLanguage(sources, event.SourceLanguage)
 	var corpus strings.Builder
@@ -330,7 +353,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	corpus.WriteString(body)
 	ref, err := parseModelRef(job.WriteModel)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 0, 1)
 	request := llm.Request{System: structuredAnalysisPromptForLanguage(event.SourceLanguage), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(corpus.String())}}}, Stage: llm.StageNameAnalyze}
@@ -339,11 +362,11 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	}
 	response, err := s.models.Complete(ctx, ref, request)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	var qualitative qualitativeJSON
 	if err = json.Unmarshal([]byte(strings.TrimSpace(response.Text)), &qualitative); err != nil {
-		return s.failLearning(ctx, *event, fmt.Errorf("typed voice analysis returned invalid JSON: %w", err))
+		return false, s.failLearning(ctx, *event, fmt.Errorf("typed voice analysis returned invalid JSON: %w", err))
 	}
 	profile := MeasuredProfileForLanguage(corpus.String(), event.SourceLanguage, s.now)
 	unknown := func(v string) VoiceValue {
@@ -354,38 +377,41 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	}
 	mergeQualitativeProfile(&profile, qualitative, event.SourceLanguage, unknown)
 	if err = validateAxes(profile.Axes); err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	overrides, err := s.overrides.ListManualOverrides(ctx, job.UserID, event.VoiceID)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	for _, override := range overrides {
 		if err = applyOverride(&profile, override.Layer, override.Field, override.Value); err != nil {
-			return s.failLearning(ctx, *event, err)
+			return false, s.failLearning(ctx, *event, err)
 		}
 	}
 	excerpt := excerptAroundTarget(body, s.config.FewShotExcerptTargetChars, s.config.FewShotExcerptMaxChars)
 	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now(), SourceLanguage: event.SourceLanguage}
 	profile.Rules, err = s.rules.ListRules(ctx, job.UserID, event.VoiceID)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	rules, err := s.extractStyleRulesForLanguage(ctx, ref, AlignSentences(baselineBody, body), event.SourceLanguage)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	rules, err = s.classifyRuleRelationsForLanguage(ctx, ref, rules, profile.Rules, event.SourceLanguage)
 	if err != nil {
-		return s.failLearning(ctx, *event, err)
+		return false, s.failLearning(ctx, *event, err)
 	}
 	profile.SourceCount = len(sources) + 1
 	profile.Sources = append([]AuthoredSource{source}, sources...)
-	if err = s.learning.ApplyLearningResult(ctx, *event, LearningResult{Source: source, Profile: profile, Rules: rules}, s.config, s.now()); err != nil {
-		return s.failLearning(ctx, *event, err)
+	if err = s.learning.ApplyLearningResult(ctx, *event, LearningResult{Source: source, Profile: profile, Rules: rules, BaseVersion: head.Structured.Version}, s.config, s.now()); err != nil {
+		if errors.Is(err, ErrProfileHeadMoved) {
+			return true, nil
+		}
+		return false, s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 1, 1)
-	return nil
+	return false, nil
 }
 
 func validateAxes(a AxesProfile) error {

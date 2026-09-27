@@ -6,30 +6,6 @@ import (
 	"strings"
 )
 
-// ProfileForPrompt publishes the stable prefix parts. The return order is deliberate:
-// consumers append styleguide, excerpts, then user-owned rules last.
-func (s *Service) ProfileForPrompt(ctx context.Context, userID, voiceID string) (string, []string, string, bool, error) {
-	return s.ProfileForPromptForTopic(ctx, userID, voiceID, "", nil)
-}
-
-func (s *Service) ProfileForPromptForTopic(ctx context.Context, userID, voiceID, topic string, tags []string) (string, []string, string, bool, error) {
-	projection, err := s.PromptProfileForTopic(ctx, userID, voiceID, topic, tags)
-	if err != nil {
-		return "", nil, "", false, err
-	}
-	// Earned rules FIRST now: the free-text position ahead of them is gone with the section
-	// that owned it (VOICE-6), and what remains of ManualRules is the refine step's
-	// "save as rule" text.
-	rules := projection.ActiveRules
-	if projection.ManualRules != "" {
-		if rules != "" {
-			rules += "\n"
-		}
-		rules += projection.ManualRules
-	}
-	return projection.Styleguide, projection.Excerpts, rules, projection.Empty, nil
-}
-
 type PromptProfile struct {
 	Styleguide, ActiveRules, ManualRules string
 	Excerpts                             []string
@@ -96,19 +72,13 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 		return PromptProfile{}, fmt.Errorf("list authored excerpts: %w", err)
 	}
 	sources = authoredSourcesForLanguage(sources, voice.SourceLanguage)
-	excerptLimit, excerptChars := s.config.FewShotMax, s.config.FewShotExcerptMaxChars
-	if !s.personalizationReady {
-		excerptLimit, excerptChars = ExcerptCount, ExcerptChars
-	}
-	excerpts := rankExcerpts(sources, topic, tags, excerptLimit)
+	// One excerpt budget: FewShotMax excerpts cut near the target length (VOICE-46).
+	excerpts := rankExcerpts(sources, topic, tags, s.config.FewShotMax)
 	for _, sample := range samples {
-		if len(excerpts) >= excerptLimit {
+		if len(excerpts) >= s.config.FewShotMax {
 			break
 		}
-		candidate := excerptAroundTarget(sample.Body, s.config.FewShotExcerptTargetChars, excerptChars)
-		if !s.personalizationReady {
-			candidate = firstRunes(sample.Body, excerptChars)
-		}
+		candidate := excerptAroundTarget(sample.Body, s.config.FewShotExcerptTargetChars, s.config.FewShotExcerptMaxChars)
 		if !containsString(excerpts, candidate) {
 			excerpts = append(excerpts, candidate)
 		}

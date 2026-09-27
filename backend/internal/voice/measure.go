@@ -45,16 +45,9 @@ func Measure(text string) Measurements {
 	for _, sentence := range sentences {
 		plain := strings.TrimRightFunc(strings.TrimSpace(sentence), func(r rune) bool { return unicode.IsPunct(r) || unicode.IsSpace(r) })
 		totalChars += utf8.RuneCountInString(plain)
-		switch {
-		case strings.HasSuffix(plain, "습니다") || strings.HasSuffix(plain, "ㅂ니다"):
-			counts["습니다"]++
-		case strings.HasSuffix(plain, "해요") || strings.HasSuffix(plain, "어요") || strings.HasSuffix(plain, "아요") || strings.HasSuffix(plain, "요"):
-			counts["해요"]++
-		case strings.HasSuffix(plain, "다"):
-			counts["다"]++
-		default:
-			counts["기타"]++
-		}
+		// One ending reader for the measurement and the diff (VOICE-37): composed Hangul ends
+		// 합니다 in 니다, never in the jamo ㅂ니다, so a jamo suffix test counted it as 다.
+		counts[endingOf(plain)]++
 	}
 	distribution := make([]EndingRatio, 0, 4)
 	for _, ending := range []string{"다", "해요", "습니다", "기타"} {

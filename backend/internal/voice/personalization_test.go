@@ -247,6 +247,14 @@ func TestAnalysisModelExtractsOnlyStrictRepeatedStyleRules(t *testing.T) {
 	if _, err = svc.extractStyleRules(context.Background(), llm.ModelRef{ProviderID: "fake", ModelID: "analyze"}, edits); err == nil {
 		t.Fatal("duplicate citations were accepted as independent evidence")
 	}
+	// VOICE-37: a duplicate or out-of-range citation is rejected, not dropped, even when enough
+	// valid ones remain beside it.
+	for _, indexes := range []string{"[0,1,1]", "[0,1,7]", "[-1,0,1]"} {
+		models.responses = append(models.responses, `{"rules":[{"statement":"LLM does formal endings, but I do polite endings","layer":"endings","citation_indexes":`+indexes+`}]}`)
+		if _, err = svc.extractStyleRules(context.Background(), llm.ModelRef{ProviderID: "fake", ModelID: "analyze"}, edits); err == nil {
+			t.Fatalf("citations %s were accepted", indexes)
+		}
+	}
 }
 
 func TestSemanticRuleClassificationUsesExactChecksBeforeModel(t *testing.T) {

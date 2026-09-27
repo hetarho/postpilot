@@ -68,6 +68,9 @@ var (
 	// ErrContentLanguageMismatch protects every post-derived learning boundary: content
 	// may teach only a voice whose immutable source language is the same.
 	ErrContentLanguageMismatch = errors.New("post content language does not match voice source language")
+	// ErrProfileHeadMoved: a result built over one profile head found another at publication,
+	// so it wrote nothing and has to be built again (VOICE-22).
+	ErrProfileHeadMoved = errors.New("the voice profile head moved while the result was built")
 )
 
 // Language is the voice context's pure canonical source/target language. Conversion to
@@ -299,6 +302,9 @@ type StructuredProfile struct {
 	Rules       []ContrastRule
 	Sources     []AuthoredSource
 	Feedback    []Feedback
+	// OverrideBase holds, per overridden field ("layer.field"), the value it held before the
+	// override replaced it, so clearing the override can return it (VOICE-28).
+	OverrideBase map[string]VoiceValue `json:",omitempty"`
 }
 type ProfileVersion struct {
 	ID, UserID, VoiceID string
@@ -335,10 +341,10 @@ type ManualOverride struct {
 }
 
 type PersonalizationConfig struct {
-	FewShotTargetCount, FewShotMax, FewShotExcerptTargetChars, FewShotExcerptMaxChars int
-	EmbeddingSwitchPosts, DiffMaxRules, DiffMinPatternEdits, RuleActivationEvidence   int
-	RuleRetireAfter                                                                   time.Duration
-	ValidationPostCount, EndingMaxConsecutive                                         int
+	FewShotMax, FewShotExcerptTargetChars, FewShotExcerptMaxChars                   int
+	EmbeddingSwitchPosts, DiffMaxRules, DiffMinPatternEdits, RuleActivationEvidence int
+	RuleRetireAfter                                                                 time.Duration
+	ValidationPostCount, EndingMaxConsecutive                                       int
 }
 
 // FinalizationInput is the post context's ownership-checked hand-off. VoiceID is the post's
@@ -368,6 +374,9 @@ type LearningResult struct {
 	Source  AuthoredSource
 	Profile StructuredProfile
 	Rules   []ExtractedRule
+	// BaseVersion is the profile head the result was built over; it is published only while
+	// that is still the head (VOICE-22).
+	BaseVersion int64
 }
 type ExtractedRule struct {
 	Statement         string

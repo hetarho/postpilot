@@ -250,7 +250,10 @@ func (s *Service) extractStyleRulesForLanguage(ctx context.Context, ref llm.Mode
 		if layer != LayerLexical && layer != LayerEndings && layer != LayerSyntax && layer != LayerStructure {
 			return nil, fmt.Errorf("diff rule has an invalid layer")
 		}
-		indexes := uniqueValidIndexes(candidate.CitationIndexes, len(eligible))
+		indexes, ok := validCitationIndexes(candidate.CitationIndexes, len(eligible))
+		if !ok {
+			return nil, fmt.Errorf("diff rule has duplicate or out-of-range citations")
+		}
 		if len(indexes) < s.config.DiffMinPatternEdits {
 			return nil, fmt.Errorf("diff rule has insufficient cited edits")
 		}
@@ -271,21 +274,23 @@ func (s *Service) extractStyleRulesForLanguage(ctx context.Context, ref llm.Mode
 	return out, nil
 }
 
-func uniqueValidIndexes(values []int, length int) []int {
+// validCitationIndexes is the cited edits, sorted, or false when one is out of range or cited
+// twice: the model's answer is rejected rather than trimmed into one it did not give (VOICE-37).
+func validCitationIndexes(values []int, length int) ([]int, bool) {
 	seen := map[int]struct{}{}
 	out := make([]int, 0, len(values))
 	for _, value := range values {
 		if value < 0 || value >= length {
-			continue
+			return nil, false
 		}
 		if _, duplicate := seen[value]; duplicate {
-			continue
+			return nil, false
 		}
 		seen[value] = struct{}{}
 		out = append(out, value)
 	}
 	sort.Ints(out)
-	return out
+	return out, true
 }
 
 func citationsHaveSameStylePattern(layer RuleLayer, edits []SentenceEdit, indexes []int) bool {
