@@ -118,6 +118,32 @@ func TestToProtoPostCarriesThePublication(t *testing.T) {
 	}
 }
 
+// POST-99: the storyline reaches the wire with what was added and what was taken out, read
+// against the post's attachments as they stand; a post without one carries none.
+func TestToProtoPostCarriesTheStoryline(t *testing.T) {
+	storied := toProtoPost(post.Post{
+		Slug:   "20260928-seongsu",
+		Images: []post.Image{{Filename: "a.jpg"}, {Filename: "b.jpg"}, {Filename: "new.jpg"}},
+		Videos: []post.Video{{Filename: "clip.mp4"}},
+		Storyline: &post.Storyline{
+			Paragraphs:   []post.StorylineParagraph{{Text: "가게 앞", Files: []string{"a.jpg", "clip.mp4"}}, {Text: "마무리"}},
+			EditedByHand: true,
+			MadeWith:     []string{"a.jpg", "b.jpg", "clip.mp4"},
+		},
+	})
+	story := storied.GetStoryline()
+	if story == nil || len(story.GetParagraphs()) != 2 || !story.GetEditedByHand() ||
+		!reflect.DeepEqual(story.GetParagraphs()[0].GetFiles(), []string{"a.jpg", "clip.mp4"}) || story.GetParagraphs()[1].GetText() != "마무리" {
+		t.Fatalf("storyline = %+v", story)
+	}
+	if !reflect.DeepEqual(story.GetAddedFiles(), []string{"new.jpg"}) || !reflect.DeepEqual(story.GetTakenOutFiles(), []string{"b.jpg"}) {
+		t.Fatalf("added %v, taken out %v", story.GetAddedFiles(), story.GetTakenOutFiles())
+	}
+	if none := toProtoPost(post.Post{Slug: "20260928-plain"}); none.GetStoryline() != nil {
+		t.Fatalf("a post without a storyline carries %+v", none.GetStoryline())
+	}
+}
+
 // An unexpected failure must not put a SQL string or a bucket name on the wire.
 func TestToConnectErrorHidesUnexpectedDetail(t *testing.T) {
 	got := toConnectError("save draft", errors.New("no such table: posts (file /data/postpilot.db)"))

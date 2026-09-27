@@ -722,9 +722,20 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err != nil {
 		return err
 	}
-	next := WriteAnnotations{Nouns: found.ContentNouns}
+	next := WriteAnnotations{Nouns: found.ContentNouns, Storyline: found.Storyline}
 	if annotations != nil {
-		next = *annotations
+		next.Nouns = annotations.Nouns
+		// A new storyline is the write's own, never an owner edit (POST-99); nil keeps the
+		// post's, which is what a revision and an older comparison candidate hand over.
+		// A write that planned no paragraph leaves the post with none rather than an empty plan
+		// that would read every attachment as taken out.
+		if annotations.Storyline != nil {
+			next.Storyline = nil
+			if len(annotations.Storyline.Paragraphs) > 0 {
+				storyline := annotations.Storyline.normalized()
+				next.Storyline = &storyline
+			}
+		}
 	}
 	if generatedAlready(found, content, language, next) {
 		return nil
@@ -769,7 +780,8 @@ func generatedAlready(p Post, content PostContent, language Language, annotation
 	return p.Status == StatusReview && p.MachineBaselineRevision == p.ContentRevision &&
 		p.Content != nil && p.ContentLanguage != nil && *p.ContentLanguage == language &&
 		reflect.DeepEqual(*p.Content, content) &&
-		slices.Equal(p.ContentNouns, annotations.Nouns)
+		slices.Equal(p.ContentNouns, annotations.Nouns) &&
+		reflect.DeepEqual(p.Storyline, annotations.Storyline)
 }
 
 // SaveContent optimistically saves only canonical content. The machine baseline is
@@ -1439,7 +1451,7 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	// alone, and a filename is only taken while its photo is attached — so a leftover entry
 	// would become reusable eyesight for whatever different photo is uploaded under that name
 	// next. Nothing shows a stale entry today; a generation would silently write from it.
-	if err := s.dropObservation(ctx, found, image.Filename); err != nil {
+	if err := s.dropAttachmentTraces(ctx, found, image.Filename); err != nil {
 		return err
 	}
 	return nil
@@ -1472,26 +1484,32 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 	} else if err := s.blobs.Delete(ctx, video.Key); err != nil {
 		slog.WarnContext(ctx, "could not delete a removed clip's object; the stray-object sweep reclaims it", "key", video.Key, "err", err)
 	}
-	if err := s.dropObservation(ctx, found, video.Filename); err != nil {
+	if err := s.dropAttachmentTraces(ctx, found, video.Filename); err != nil {
 		return err
 	}
 	return nil
 }
 
-// dropObservation removes one attachment's entry from the post's snapshot, leaving the rest
-// as it was. A post with no snapshot has nothing to drop, which is the ordinary case.
-func (s *Service) dropObservation(ctx context.Context, found Post, filename string) error {
+// dropAttachmentTraces removes what the post still says about one deleted attachment: its
+// observation entry and its name in the storyline's paragraphs and MadeWith (POST-18), in one
+// statement. A post that says nothing about it has nothing to drop, the ordinary case.
+func (s *Service) dropAttachmentTraces(ctx context.Context, found Post, filename string) error {
 	kept := make([]Observation, 0, len(found.Observations))
 	for _, observation := range found.Observations {
 		if observation.File != filename {
 			kept = append(kept, observation)
 		}
 	}
-	if len(kept) == len(found.Observations) {
+	storyline := found.Storyline
+	if storyline != nil {
+		without := storyline.WithoutFile(filename)
+		storyline = &without
+	}
+	if len(kept) == len(found.Observations) && reflect.DeepEqual(storyline, found.Storyline) {
 		return nil
 	}
-	if _, err := s.drafts.UpdateObservations(ctx, found.Slug, found.UserID, kept, s.now()); err != nil {
-		return fmt.Errorf("drop observation for deleted photo: %w", err)
+	if _, err := s.drafts.UpdateAttachmentTraces(ctx, found.Slug, found.UserID, kept, storyline, s.now()); err != nil {
+		return fmt.Errorf("drop the deleted attachment's observation and storyline name: %w", err)
 	}
 	return nil
 }

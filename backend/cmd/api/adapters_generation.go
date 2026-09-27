@@ -284,7 +284,16 @@ func postAnnotations(annotations *generation.WriteAnnotations) *post.WriteAnnota
 	if annotations == nil {
 		return nil
 	}
-	return &post.WriteAnnotations{Nouns: append([]string(nil), annotations.Nouns...)}
+	out := &post.WriteAnnotations{Nouns: append([]string(nil), annotations.Nouns...)}
+	if story := annotations.Storyline; story != nil {
+		out.Storyline = &post.Storyline{MadeWith: append([]string(nil), story.MadeWith...)}
+		for _, paragraph := range story.Paragraphs {
+			out.Storyline.Paragraphs = append(out.Storyline.Paragraphs, post.StorylineParagraph{
+				Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
+			})
+		}
+	}
+	return out
 }
 
 func generationPostError(err error) error {

@@ -465,7 +465,33 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Field:                  protoField(p.Field),
 		QualityRules:           protoQualityRules(p.QualityRules),
 		PublishedAt:            formatOptionalTime(p.PublishedAt),
+		Storyline:              toProtoStoryline(p),
 	}
+}
+
+// toProtoStoryline leaves the field unset when the post has none. What was added and what was
+// taken out are read against the post's attachments as they stand now (POST-99).
+func toProtoStoryline(p post.Post) *postpilotv1.Storyline {
+	if p.Storyline == nil {
+		return nil
+	}
+	attached := make([]string, 0, len(p.Images)+len(p.Videos))
+	for _, image := range p.Images {
+		attached = append(attached, image.Filename)
+	}
+	for _, video := range p.Videos {
+		attached = append(attached, video.Filename)
+	}
+	out := &postpilotv1.Storyline{
+		Paragraphs:    make([]*postpilotv1.StorylineParagraph, 0, len(p.Storyline.Paragraphs)),
+		EditedByHand:  p.Storyline.EditedByHand,
+		AddedFiles:    p.Storyline.AddedFiles(attached),
+		TakenOutFiles: p.Storyline.TakenOutFiles(attached),
+	}
+	for _, paragraph := range p.Storyline.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, &postpilotv1.StorylineParagraph{Text: paragraph.Text, Files: paragraph.Files})
+	}
+	return out
 }
 
 // toProtoTemplateRef leaves the field unset when the post has no template: 없음 is the

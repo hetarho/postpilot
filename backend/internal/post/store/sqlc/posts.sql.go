@@ -257,7 +257,7 @@ const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline
 FROM posts WHERE slug = ?
 `
 
@@ -292,6 +292,7 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.Field,
 		&i.ContentNouns,
 		&i.QualityRules,
+		&i.Storyline,
 	)
 	return i, err
 }
@@ -604,14 +605,16 @@ const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
 UPDATE posts SET content = ?1, machine_baseline = ?2, machine_baseline_voice_id = voice_id,
     content_language = ?3,
     content_nouns = ?4,
+    storyline = ?5,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?5
-WHERE slug = ?6 AND user_id = ?7 AND status <> 'published'
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?6
+WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
   AND (content IS NULL OR content <> ?1 OR status <> 'review'
        OR machine_baseline_revision <> content_revision
        OR content_language IS NULL OR content_language <> ?3
-       OR content_nouns IS NOT ?4)
+       OR content_nouns IS NOT ?4
+       OR storyline IS NOT ?5)
 `
 
 type UpdateGeneratedContentParams struct {
@@ -619,20 +622,51 @@ type UpdateGeneratedContentParams struct {
 	MachineBaseline sql.NullString
 	ContentLanguage sql.NullString
 	ContentNouns    sql.NullString
+	Storyline       sql.NullString
 	UpdatedAt       string
 	Slug            string
 	UserID          string
 }
 
-// The write's nouns ride the same statement, beside the content and never inside it (GEN-55).
-// The service resolves them first, so NULL here always means none, and an identical content
-// with different ones is a new machine write.
+// The write's nouns and storyline ride the same statement, beside the content and never inside
+// it (GEN-55, GEN-67). The service resolves them first, so NULL here always means none, and an
+// identical content with different ones is a new machine write.
 func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
 		arg.Content,
 		arg.MachineBaseline,
 		arg.ContentLanguage,
 		arg.ContentNouns,
+		arg.Storyline,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updatePostAttachmentTraces = `-- name: UpdatePostAttachmentTraces :execrows
+UPDATE posts SET observations = ?1, storyline = ?2, updated_at = ?3
+WHERE slug = ?4 AND user_id = ?5 AND status <> 'published'
+`
+
+type UpdatePostAttachmentTracesParams struct {
+	Observations sql.NullString
+	Storyline    sql.NullString
+	UpdatedAt    string
+	Slug         string
+	UserID       string
+}
+
+// What a deleted attachment leaves behind, the observations and the storyline, in one statement
+// (POST-18). NULL storyline is none.
+func (q *Queries) UpdatePostAttachmentTraces(ctx context.Context, arg UpdatePostAttachmentTracesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updatePostAttachmentTraces,
+		arg.Observations,
+		arg.Storyline,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

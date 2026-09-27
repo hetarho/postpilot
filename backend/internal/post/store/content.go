@@ -136,6 +136,69 @@ func marshalNouns(nouns []string) (sql.NullString, error) {
 	return sql.NullString{String: string(encoded), Valid: true}, nil
 }
 
+// storylineJSON is the storyline column's shape (POST-99). Every list is written as an array,
+// never null, so the column reads the same whichever way the domain spelled "none".
+type storylineJSON struct {
+	Paragraphs   []storylineParagraphJSON `json:"paragraphs"`
+	EditedByHand bool                     `json:"edited_by_hand"`
+	MadeWith     []string                 `json:"made_with"`
+}
+
+type storylineParagraphJSON struct {
+	Text  string   `json:"text"`
+	Files []string `json:"files"`
+}
+
+// marshalStoryline stores a storyline as JSON, NULL for none.
+func marshalStoryline(storyline *post.Storyline) (sql.NullString, error) {
+	if storyline == nil {
+		return sql.NullString{}, nil
+	}
+	wire := storylineJSON{
+		Paragraphs:   make([]storylineParagraphJSON, 0, len(storyline.Paragraphs)),
+		EditedByHand: storyline.EditedByHand,
+		MadeWith:     orEmpty(storyline.MadeWith),
+	}
+	for _, paragraph := range storyline.Paragraphs {
+		wire.Paragraphs = append(wire.Paragraphs, storylineParagraphJSON{Text: paragraph.Text, Files: orEmpty(paragraph.Files)})
+	}
+	encoded, err := json.Marshal(wire)
+	if err != nil {
+		return sql.NullString{}, fmt.Errorf("encode storyline: %w", err)
+	}
+	return sql.NullString{String: string(encoded), Valid: true}, nil
+}
+
+// unmarshalStoryline reads the column back, an empty list as nil like the domain spells none.
+func unmarshalStoryline(value sql.NullString) (*post.Storyline, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	var wire storylineJSON
+	if err := json.Unmarshal([]byte(value.String), &wire); err != nil {
+		return nil, fmt.Errorf("decode storyline: %w", err)
+	}
+	storyline := &post.Storyline{EditedByHand: wire.EditedByHand, MadeWith: orNil(wire.MadeWith)}
+	for _, paragraph := range wire.Paragraphs {
+		storyline.Paragraphs = append(storyline.Paragraphs, post.StorylineParagraph{Text: paragraph.Text, Files: orNil(paragraph.Files)})
+	}
+	return storyline, nil
+}
+
+func orEmpty(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
+}
+
+func orNil(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
+}
+
 // marshalQualityRules stores the ticks as JSON, NULL for none: an empty set and "never ticked"
 // read back the same way.
 func marshalQualityRules(ids []string) (sql.NullString, error) {

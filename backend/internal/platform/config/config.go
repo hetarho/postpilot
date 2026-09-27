@@ -103,6 +103,11 @@ const (
 	writeBudgetCeilingFactor = 4
 )
 
+// StorylineCompletionAllowance is what the direct write adds to its budget for the storyline it
+// answers first (GEN-67): a few hundred output tokens a write already at the 8,192 floor has no
+// room for. It is added to what the target length derives, so the post keeps its own budget.
+const StorylineCompletionAllowance = 1024
+
 // The queue is deliberately single-consumer at this scale: SQLite has one writer and
 // parallel provider calls would only make rate limits and ordering less predictable.
 const WorkerConcurrency = 1
@@ -130,11 +135,11 @@ type LLMCompletionBudget struct {
 	Ceiling int
 }
 
-// Write is the writing stage's budget for a post's requested target length. No target keeps
-// the floor; a longer requested draft is given more room, bounded by the ceiling so a
-// mistyped target cannot ask a provider for an unbounded completion.
+// Write is the writing stage's budget for a post's requested target length plus the storyline
+// allowance. No target keeps the floor; a longer requested draft is given more room, bounded by
+// the ceiling so a mistyped target cannot ask a provider for an unbounded completion.
 func (b LLMCompletionBudget) Write(targetLength *int, nativeEffort bool) int {
-	return b.withReasoningHeadroom(b.forChars(charsOf(targetLength)), nativeEffort)
+	return b.withReasoningHeadroom(min(b.forChars(charsOf(targetLength))+StorylineCompletionAllowance, b.Ceiling), nativeEffort)
 }
 
 // Revise is a revision's budget. A revision re-emits the WHOLE PostContent, so what it must

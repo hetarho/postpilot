@@ -267,6 +267,17 @@ type outputPost struct {
 	// noun-less candidate's bytes what they were, and an output recorded before they existed
 	// decodes as none.
 	Nouns []string `json:"nouns,omitempty"`
+	// The candidate's storyline, so an applied winner brings its own (GEN-72). An output recorded
+	// before it existed decodes as nil and the post keeps its storyline.
+	Storyline *outputStoryline `json:"storyline,omitempty"`
+}
+type outputStoryline struct {
+	Paragraphs []outputStorylineParagraph `json:"paragraphs"`
+	MadeWith   []string                   `json:"made_with"`
+}
+type outputStorylineParagraph struct {
+	Text  string   `json:"text"`
+	Files []string `json:"files"`
 }
 type outputBlock struct {
 	Type    string   `json:"type"`
@@ -296,6 +307,12 @@ func toOutputPost(answer generation.WriteAnswer) outputPost {
 	for _, block := range content.Blocks {
 		out.Blocks = append(out.Blocks, outputBlock{Type: string(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
 	}
+	if story := answer.Storyline; story != nil {
+		out.Storyline = &outputStoryline{MadeWith: story.MadeWith}
+		for _, paragraph := range story.Paragraphs {
+			out.Storyline.Paragraphs = append(out.Storyline.Paragraphs, outputStorylineParagraph{Text: paragraph.Text, Files: paragraph.Files})
+		}
+	}
 	return out
 }
 
@@ -307,6 +324,12 @@ func fromOutputPost(value outputPost) generation.WriteAnswer {
 	}
 	for _, block := range value.Blocks {
 		out.Content.Blocks = append(out.Content.Blocks, generation.Block{Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+	}
+	if story := value.Storyline; story != nil {
+		out.Storyline = &generation.Storyline{MadeWith: story.MadeWith}
+		for _, paragraph := range story.Paragraphs {
+			out.Storyline.Paragraphs = append(out.Storyline.Paragraphs, generation.StorylineParagraph{Text: paragraph.Text, Files: paragraph.Files})
+		}
 	}
 	return out
 }

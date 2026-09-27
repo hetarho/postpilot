@@ -123,6 +123,9 @@ type PostCatalog interface {
 type DraftWriter interface {
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
+	// UpdateAttachmentTraces writes the observations and the storyline (nil for none) together:
+	// what a deleted attachment leaves behind goes in one statement (POST-18).
+	UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error)
 	// UpdateGeneratedContent receives the annotations already resolved: the service decides what
 	// a nil means, so the store writes exactly what it is given, NULL for none.
 	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, annotations WriteAnnotations, updatedAt time.Time) (bool, error)

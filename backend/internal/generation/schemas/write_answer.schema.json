@@ -1,8 +1,20 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["title", "summary", "tags", "blocks", "nouns"],
+  "required": ["storyline", "title", "summary", "tags", "blocks", "nouns"],
   "properties": {
+    "storyline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "files"],
+        "properties": {
+          "text": {"type": "string"},
+          "files": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
     "title": {"type": "string"},
     "summary": {"type": "string"},
     "tags": {"type": "array", "items": {"type": "string"}},

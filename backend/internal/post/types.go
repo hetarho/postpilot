@@ -6,6 +6,7 @@ package post
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -278,6 +279,8 @@ type Post struct {
 	// canonical order, nil for none (POST-81).
 	QualityRules []string
 	Observations []Observation
+	// Storyline is the post's storyline, nil when it has none (POST-99).
+	Storyline *Storyline
 
 	// TemplateAnswers is what this post answers to its template's data fields, by label,
 	// ordered by label. Populated by Get like Images and Videos are.
@@ -297,9 +300,100 @@ func (p Post) FinalizedAtCurrentRevision() bool {
 }
 
 // WriteAnnotations is what a machine write says about its content beside it: the nouns it
-// used (GEN-55). Empty is a real answer — none — and clears what the post held.
+// used (GEN-55) and the storyline it answered first (GEN-67). Empty nouns are a real answer —
+// none — and clear what the post held. A nil Storyline keeps the post's: a revision writes none
+// (GEN-71), and a comparison candidate recorded before the storyline existed brings none.
 type WriteAnnotations struct {
-	Nouns []string
+	Nouns     []string
+	Storyline *Storyline
+}
+
+// Storyline is the plan a write answered before the post (GEN-67, POST-99): its paragraphs in
+// order, each naming the attachments it uses. EditedByHand is whether the owner changed it
+// since the write; MadeWith is the attachment names the writing stage was shown (GEN-12), so an
+// attachment confirmed later reads as added.
+type Storyline struct {
+	Paragraphs   []StorylineParagraph
+	EditedByHand bool
+	MadeWith     []string
+}
+
+// StorylineParagraph is one part of the storyline: a short plan of what it shows and says, and
+// the attachment names it uses.
+type StorylineParagraph struct {
+	Text  string
+	Files []string
+}
+
+// WithoutFile is the storyline with one attachment name taken out of every paragraph and out
+// of MadeWith (POST-18): a deleted attachment neither reads as used nor as taken out. The
+// paragraphs stay, even one left with no file.
+func (s Storyline) WithoutFile(name string) Storyline {
+	out := Storyline{EditedByHand: s.EditedByHand, MadeWith: withoutName(s.MadeWith, name)}
+	for _, paragraph := range s.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, StorylineParagraph{Text: paragraph.Text, Files: withoutName(paragraph.Files, name)})
+	}
+	return out
+}
+
+// Holds reports whether any paragraph uses the attachment name.
+func (s Storyline) Holds(name string) bool {
+	for _, paragraph := range s.Paragraphs {
+		if slices.Contains(paragraph.Files, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// AddedFiles are the attached names the write was not shown, in attachment order.
+func (s Storyline) AddedFiles(attached []string) []string {
+	var out []string
+	for _, name := range attached {
+		if !slices.Contains(s.MadeWith, name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// TakenOutFiles are the names the write was shown, still attached, that no paragraph holds:
+// the owner took them out of the storyline. In MadeWith order.
+func (s Storyline) TakenOutFiles(attached []string) []string {
+	var out []string
+	for _, name := range s.MadeWith {
+		if slices.Contains(attached, name) && !s.Holds(name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// normalized is the storyline as a machine write stores it: not edited by hand, and every empty
+// list spelled nil the way the store reads it back, so an identical retry compares equal.
+func (s Storyline) normalized() Storyline {
+	out := Storyline{MadeWith: noneIfEmpty(s.MadeWith)}
+	for _, paragraph := range s.Paragraphs {
+		out.Paragraphs = append(out.Paragraphs, StorylineParagraph{Text: paragraph.Text, Files: noneIfEmpty(paragraph.Files)})
+	}
+	return out
+}
+
+func noneIfEmpty(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
+}
+
+func withoutName(names []string, name string) []string {
+	var out []string
+	for _, value := range names {
+		if value != name {
+			out = append(out, value)
+		}
+	}
+	return out
 }
 
 // ContentSnapshot is one owned post's current content with what a reader that measures it needs

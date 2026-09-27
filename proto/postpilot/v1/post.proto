@@ -190,6 +190,24 @@ message Post {
   reserved "replacement_candidates";
   // The quality rules ticked for this post's runs, saved as a generation option (POST-81).
   repeated QualityMetric quality_rules = 31;
+  // The storyline the write answered first, unset when the post has none (POST-99).
+  Storyline storyline = 32;
+}
+
+// One part of a storyline: what it shows and says, and the attachment names it uses.
+message StorylineParagraph {
+  string text = 1;
+  repeated string files = 2;
+}
+
+// A post's storyline (POST-99). added_files are the attached names the write was not shown;
+// taken_out_files are names it was shown, still attached, that no paragraph holds. Both are
+// computed on read, never stored.
+message Storyline {
+  repeated StorylineParagraph paragraphs = 1;
+  bool edited_by_hand = 2;
+  repeated string added_files = 3;
+  repeated string taken_out_files = 4;
 }
 
 message Image {

@@ -237,6 +237,27 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	return n > 0, nil
 }
 
+// UpdateAttachmentTraces writes a deleted attachment's leftovers away, the observations and the
+// storyline together (POST-18).
+func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []post.Observation, storyline *post.Storyline, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalObservations(observations)
+	if err != nil {
+		return false, fmt.Errorf("encode observations: %w", err)
+	}
+	story, err := marshalStoryline(storyline)
+	if err != nil {
+		return false, err
+	}
+	n, err := s.write.UpdatePostAttachmentTraces(ctx, sqlc.UpdatePostAttachmentTracesParams{
+		Observations: sql.NullString{String: encoded, Valid: true}, Storyline: story,
+		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update attachment traces: %w", err)
+	}
+	return n > 0, nil
+}
+
 func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, language post.Language, annotations post.WriteAnnotations, updatedAt time.Time) (bool, error) {
 	if !language.Valid() {
 		return false, post.ErrLanguageRequired
@@ -249,10 +270,14 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	if err != nil {
 		return false, err
 	}
+	storyline, err := marshalStoryline(annotations.Storyline)
+	if err != nil {
+		return false, err
+	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
 		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
 		ContentLanguage: sql.NullString{String: string(language), Valid: true},
-		ContentNouns:    nouns, UpdatedAt: formatTime(updatedAt),
+		ContentNouns:    nouns, Storyline: storyline, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -939,6 +964,10 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
+	storyline, err := unmarshalStoryline(row.Storyline)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
 	targetLanguage, err := post.ParseLanguage(row.TargetLanguage)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
@@ -976,6 +1005,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		Field:                   row.Field.String,
 		QualityRules:            qualityRules,
 		Observations:            observations,
+		Storyline:               storyline,
 	}, nil
 }
 

@@ -74,18 +74,75 @@ func ParseContent(raw string, tagCount int) (*PostContent, error) {
 }
 
 // ParseWriteAnswer is ParseContent for the write pass, whose answer also carries `nouns`
-// (GEN-55). The content comes from the same helper, so it is exactly what ParseContent would
-// return. The nouns never fail a paid write: a missing, null or malformed member is none, the
-// way a tag miscount is accepted rather than refused (GEN-46).
-func ParseWriteAnswer(raw string, tagCount int) (*WriteAnswer, error) {
+// (GEN-55) and `storyline` (GEN-67). The content comes from the same helper, so it is exactly
+// what ParseContent would return. Neither member fails a paid write: a missing, null or
+// malformed one is none, the way a tag miscount is accepted rather than refused (GEN-46).
+// attachments are the names the run was shown; a storyline file outside them is dropped.
+func ParseWriteAnswer(raw string, tagCount int, attachments []string) (*WriteAnswer, error) {
 	content, fields, err := parseContentFields(raw, tagCount)
 	if err != nil {
 		return nil, err
 	}
 	return &WriteAnswer{
-		Content: *content,
-		Nouns:   boundedNouns(fields["nouns"]),
+		Content:   *content,
+		Nouns:     boundedNouns(fields["nouns"]),
+		Storyline: &Storyline{Paragraphs: boundedStoryline(fields["storyline"], attachments)},
 	}, nil
+}
+
+type storylineParagraphJSON struct {
+	Text  string   `json:"text"`
+	Files []string `json:"files"`
+}
+
+// boundedStoryline is the authoritative bound on the write answer's storyline. Each paragraph's
+// text is trimmed and cut at StorylineTextMaxChars runes; its files keep only the run's exact
+// attachment names, and a name given again keeps its first paragraph; a paragraph left with
+// neither text nor a file is dropped; at most StorylineParagraphMax survive, in model order.
+func boundedStoryline(raw json.RawMessage, attachments []string) []StorylineParagraph {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var values []storylineParagraphJSON
+	if err := json.Unmarshal(raw, &values); err != nil {
+		slog.Warn("dropping a malformed generated storyline", "err", err)
+		return nil
+	}
+	attached := make(map[string]bool, len(attachments))
+	for _, name := range attachments {
+		attached[name] = true
+	}
+	placed := make(map[string]bool, len(attachments))
+	var paragraphs []StorylineParagraph
+	for _, value := range values {
+		paragraph := StorylineParagraph{Text: cutRunes(strings.TrimSpace(value.Text), StorylineTextMaxChars)}
+		for _, file := range value.Files {
+			if attached[file] && !placed[file] {
+				placed[file] = true
+				paragraph.Files = append(paragraph.Files, file)
+			}
+		}
+		if paragraph.Text == "" && len(paragraph.Files) == 0 {
+			continue
+		}
+		paragraphs = append(paragraphs, paragraph)
+		if len(paragraphs) == StorylineParagraphMax {
+			break
+		}
+	}
+	return paragraphs
+}
+
+// cutRunes keeps at most max runes of text, never splitting one.
+func cutRunes(text string, max int) string {
+	count := 0
+	for i := range text {
+		if count == max {
+			return text[:i]
+		}
+		count++
+	}
+	return text
 }
 
 // parseContentFields is what both parsers share: the candidate extraction, the four required

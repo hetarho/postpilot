@@ -26,17 +26,22 @@ var writeAnnotationsAnswer = generation.WriteAnswer{
 		Blocks: []generation.Block{{Type: generation.BlockText, Content: "성수 카페에 갔다."}},
 	},
 	Nouns: []string{"성수", "카페"},
+	Storyline: &generation.Storyline{
+		Paragraphs: []generation.StorylineParagraph{{Text: "성수 카페에 간 이유를 보여줍니다.", Files: []string{}}},
+		MadeWith:   []string{},
+	},
 }
 
-// A lab candidate's output carries the answer's nouns, so the winner brings its own once it is
-// applied (GEN-55).
-func TestCandidateOutputCarriesTheNouns(t *testing.T) {
+// A lab candidate's output carries the answer's nouns and storyline, so the winner brings its
+// own once it is applied (GEN-55, GEN-72).
+func TestCandidateOutputCarriesTheNounsAndStoryline(t *testing.T) {
 	encoded, err := json.Marshal(toOutputPost(writeAnnotationsAnswer))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(encoded), `"nouns":["성수","카페"]`) {
-		t.Fatalf("output %s lacks the nouns", encoded)
+	if !strings.Contains(string(encoded), `"nouns":["성수","카페"]`) ||
+		!strings.Contains(string(encoded), `"storyline":{"paragraphs":[{"text":"성수 카페에 간 이유를 보여줍니다.","files":[]}],"made_with":[]}`) {
+		t.Fatalf("output %s lacks the nouns or the storyline", encoded)
 	}
 	var value outputPost
 	if err := json.Unmarshal(encoded, &value); err != nil {
@@ -51,7 +56,7 @@ func TestCandidateOutputCarriesTheNouns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(plain), `"nouns"`) {
+	if strings.Contains(string(plain), `"nouns"`) || strings.Contains(string(plain), `"storyline"`) {
 		t.Fatalf("a plain candidate grew members: %s", plain)
 	}
 }
@@ -73,8 +78,8 @@ func TestALegacyCandidateOutputDecodesAsNone(t *testing.T) {
 	if answer.Content.Title != "옛 후보" || answer.Nouns != nil {
 		t.Fatalf("legacy output = %+v", answer)
 	}
-	if annotations := answer.Annotations(); annotations == nil || annotations.Nouns != nil {
-		t.Fatalf("a legacy winner hands %+v, want a non-nil none", annotations)
+	if annotations := answer.Annotations(); annotations == nil || annotations.Nouns != nil || annotations.Storyline != nil {
+		t.Fatalf("a legacy winner hands %+v, want a non-nil none that keeps the post's storyline", annotations)
 	}
 
 	withNouns := strings.TrimSuffix(legacy, "}") + `,"nouns":["후보"]}`
@@ -125,6 +130,10 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	if !reflect.DeepEqual(got.ContentNouns, []string{"성수", "카페"}) {
 		t.Fatalf("stored nouns %v", got.ContentNouns)
 	}
+	wantStoryline := &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "성수 카페에 간 이유를 보여줍니다."}}}
+	if !reflect.DeepEqual(got.Storyline, wantStoryline) {
+		t.Fatalf("stored storyline %+v", got.Storyline)
+	}
 	var content, baseline string
 	if err := handle.Reader.QueryRow("SELECT content, machine_baseline FROM posts WHERE slug = ?", saved.Slug).Scan(&content, &baseline); err != nil {
 		t.Fatal(err)
@@ -145,7 +154,8 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kept.ContentRevision != got.ContentRevision+1 || !reflect.DeepEqual(kept.ContentNouns, got.ContentNouns) {
-		t.Fatalf("after a revision: revision %d nouns %v", kept.ContentRevision, kept.ContentNouns)
+	if kept.ContentRevision != got.ContentRevision+1 || !reflect.DeepEqual(kept.ContentNouns, got.ContentNouns) ||
+		!reflect.DeepEqual(kept.Storyline, wantStoryline) {
+		t.Fatalf("after a revision: revision %d nouns %v storyline %+v", kept.ContentRevision, kept.ContentNouns, kept.Storyline)
 	}
 }

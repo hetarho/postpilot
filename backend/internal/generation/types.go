@@ -42,20 +42,40 @@ type PostContent struct {
 type WriteAnswer struct {
 	Content PostContent
 	Nouns   []string
+	// Storyline is the plan the write answered before the post (GEN-67), bounded by the parser.
+	// nil only for a comparison candidate recorded before the storyline existed, which then
+	// keeps the post's own (GEN-72).
+	Storyline *Storyline
 	// ProfileVersion is the voice profile version the prompt was built from (VOICE-29).
 	ProfileVersion int64
 }
 
-// WriteAnnotations is what a write hands the post beside its content: its nouns. Handed as a
-// pointer, where nil keeps what the post holds.
+// Storyline is a write's storyline: its paragraphs in order, and the attachment names the
+// writing stage was shown (GEN-12), which is what the post reads an added attachment against.
+type Storyline struct {
+	Paragraphs []StorylineParagraph
+	MadeWith   []string
+}
+
+// StorylineParagraph is one part of the storyline: a short plan of what it shows and says, and
+// the attachment names it uses.
+type StorylineParagraph struct {
+	Text  string
+	Files []string
+}
+
+// WriteAnnotations is what a write hands the post beside its content: its nouns and its
+// storyline. Handed as a pointer, where nil keeps what the post holds; a nil Storyline inside
+// keeps the post's storyline alone.
 type WriteAnnotations struct {
-	Nouns []string
+	Nouns     []string
+	Storyline *Storyline
 }
 
 // Annotations is this answer's, always non-nil: a write replaces what the last one said, and
 // a write with no nouns clears them rather than keeping stale ones (GEN-55).
 func (a WriteAnswer) Annotations() *WriteAnnotations {
-	return &WriteAnnotations{Nouns: a.Nouns}
+	return &WriteAnnotations{Nouns: a.Nouns, Storyline: a.Storyline}
 }
 
 type Observation struct {

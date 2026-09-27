@@ -8,9 +8,10 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// An answer with nouns, plus a replacements member a model may still send: the write answer
-// carries nouns only (GEN-55), so the parse ignores it.
-const annotatedAnswer = `{"title":"성수 카페 투어","summary":"s","tags":["성수"],"nouns":["성수","카페"],
+// An answer with a storyline and nouns, plus a replacements member a model may still send: the
+// write answer carries the storyline and nouns only (GEN-55, GEN-67), so the parse ignores it.
+const annotatedAnswer = `{"storyline":[{"text":"성수 카페에 간 이유를 보여줍니다.","files":[]}],
+	"title":"성수 카페 투어","summary":"s","tags":["성수"],"nouns":["성수","카페"],
 	"blocks":[{"type":"TEXT","content":"성수 카페에 갔다."}],
 	"replacements":[{"surface":"title","index":0,"source":"성수 카페","phrases":["분위기 좋은 카페"]}]}`
 
@@ -35,7 +36,8 @@ func annotatedService(posts *fakePosts, models *fakeModels) *Service {
 	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 }
 
-// GEN-55: a generation hands the post the write's nouns beside its content, and nothing else.
+// GEN-55, GEN-67: a generation hands the post the write's nouns and storyline beside its
+// content, and nothing else.
 func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 	posts := annotatedPost()
 	svc := annotatedService(posts, annotatingModels(annotatedAnswer))
@@ -45,8 +47,33 @@ func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 	if len(posts.annotations) != 1 {
 		t.Fatalf("annotations = %+v", posts.annotations)
 	}
-	if got := posts.annotations[0]; !reflect.DeepEqual(got, &WriteAnnotations{Nouns: annotatedNouns}) {
-		t.Fatalf("the post was handed %+v", got)
+	want := &WriteAnnotations{Nouns: annotatedNouns, Storyline: &Storyline{
+		Paragraphs: []StorylineParagraph{{Text: "성수 카페에 간 이유를 보여줍니다."}},
+	}}
+	if got := posts.annotations[0]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("the post was handed %+v (storyline %+v)", got, got.Storyline)
+	}
+}
+
+// GEN-67, GEN-12: the write keeps its storyline's files against what the run was shown, and
+// hands those names on as what the storyline was made with.
+func TestTheWriteStorylineIsMadeWithTheAttachmentsItWasShown(t *testing.T) {
+	models := annotatingModels(`{"storyline":[{"text":"가게 앞","files":["a.jpg","ghost.jpg"]},{"text":"영상","files":["clip.mp4","a.jpg"]}],
+		"title":"t","summary":"s","tags":["a"],"blocks":[{"type":"TEXT","content":"ok"}],"nouns":[]}`)
+	svc := annotatedService(annotatedPost(), models)
+	answer, err := svc.write(context.Background(), PostInput{
+		UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean,
+		Images: []Image{{Filename: "a.jpg", Key: "k1"}, {Filename: "clip.mp4", Key: "k2", Kind: AttachmentVideo}, {Filename: "b.jpg", Key: "k3"}},
+	}, nil, writeRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &Storyline{
+		Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"a.jpg"}}, {Text: "영상", Files: []string{"clip.mp4"}}},
+		MadeWith:   []string{"a.jpg", "b.jpg", "clip.mp4"},
+	}
+	if !reflect.DeepEqual(answer.Storyline, want) {
+		t.Fatalf("storyline = %+v, want %+v", answer.Storyline, want)
 	}
 }
 

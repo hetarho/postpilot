@@ -26,13 +26,20 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 UPDATE posts SET observations = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published';
 
+-- name: UpdatePostAttachmentTraces :execrows
+-- What a deleted attachment leaves behind, the observations and the storyline, in one statement
+-- (POST-18). NULL storyline is none.
+UPDATE posts SET observations = sqlc.arg(observations), storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
+
 -- name: UpdateGeneratedContent :execrows
--- The write's nouns ride the same statement, beside the content and never inside it (GEN-55).
--- The service resolves them first, so NULL here always means none, and an identical content
--- with different ones is a new machine write.
+-- The write's nouns and storyline ride the same statement, beside the content and never inside
+-- it (GEN-55, GEN-67). The service resolves them first, so NULL here always means none, and an
+-- identical content with different ones is a new machine write.
 UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline), machine_baseline_voice_id = voice_id,
     content_language = sqlc.arg(content_language),
     content_nouns = sqlc.narg(content_nouns),
+    storyline = sqlc.narg(storyline),
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
@@ -40,7 +47,8 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
   AND (content IS NULL OR content <> sqlc.arg(content) OR status <> 'review'
        OR machine_baseline_revision <> content_revision
        OR content_language IS NULL OR content_language <> sqlc.arg(content_language)
-       OR content_nouns IS NOT sqlc.narg(content_nouns));
+       OR content_nouns IS NOT sqlc.narg(content_nouns)
+       OR storyline IS NOT sqlc.narg(storyline));
 
 -- name: SavePostContent :execrows
 UPDATE posts SET content = sqlc.arg(content), content_revision = content_revision + 1,
@@ -69,7 +77,7 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline
 FROM posts WHERE slug = ?;
 
 -- name: PublishPost :execrows

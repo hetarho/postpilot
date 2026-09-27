@@ -47,6 +47,7 @@ type Post struct {
 	Field                   sql.NullString
 	ContentNouns            sql.NullString
 	QualityRules            sql.NullString
+	Storyline               sql.NullString
 }
 
 type Upload struct {

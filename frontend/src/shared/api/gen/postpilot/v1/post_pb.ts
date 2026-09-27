@@ -20,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/post.proto.
  */
 export const file_postpilot_v1_post: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvcG9zdC5wcm90bxIMcG9zdHBpbG90LnYxIpUBCgVCbG9jaxIlCgR0eXBlGAEgASgOMhcucG9zdHBpbG90LnYxLkJsb2NrVHlwZRIPCgdjb250ZW50GAIgASgJEg0KBWxldmVsGAMgASgFEgwKBGZpbGUYBCABKAkSCwoDYWx0GAUgASgJEg8KB2NhcHRpb24YBiABKAkSDQoFaXRlbXMYByADKAlKBAgIEAlSBHNsb3QiYAoLUG9zdENvbnRlbnQSDQoFdGl0bGUYASABKAkSDwoHc3VtbWFyeRgCIAEoCRIMCgR0YWdzGAMgAygJEiMKBmJsb2NrcxgEIAMoCzITLnBvc3RwaWxvdC52MS5CbG9jayKmAQoLT2JzZXJ2YXRpb24SDAoEZmlsZRgBIAEoCRINCgVzY2VuZRgCIAEoCRIMCgRtb29kGAMgASgJEhQKDHZpc2libGVfdGV4dBgEIAEoCRIPCgdvYmplY3RzGAUgAygJEhYKDnBlb3BsZV9wcmVzZW50GAYgASgIEg0KBW1vZGVsGAcgASgJEg4KBmV2ZW50cxgIIAMoCRIOCgZzcGVlY2gYCSABKAkibQoIVm9pY2VSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIPCgdkZWxldGVkGAMgASgIEjYKD3NvdXJjZV9sYW5ndWFnZRgEIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2UilAgKBFBvc3QSDAoEc2x1ZxgBIAEoCRINCgV0aXRsZRgCIAEoCRIMCgRtZW1vGAMgASgJEg4KBnN0YXR1cxgEIAEoCRIjCgZpbWFnZXMYBSADKAsyEy5wb3N0cGlsb3QudjEuSW1hZ2USEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEi8KCmFjdGl2ZV9qb2IYCCABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYhIqCgdjb250ZW50GAkgASgLMhkucG9zdHBpbG90LnYxLlBvc3RDb250ZW50Ei8KDG9ic2VydmF0aW9ucxgKIAMoCzIZLnBvc3RwaWxvdC52MS5PYnNlcnZhdGlvbhIdChVwZW5kaW5nX2V4cGVyaW1lbnRfaWQYCyABKAkSGAoQY29udGVudF9yZXZpc2lvbhgMIAEoAxIhChltYWNoaW5lX2Jhc2VsaW5lX3JldmlzaW9uGA0gASgDEhQKDGNhbl9maW5hbGl6ZRgOIAEoCBIaCg10YXJnZXRfbGVuZ3RoGA8gASgFSACIAQESGgoSZmluYWxpemVkX3JldmlzaW9uGBAgASgDEhQKDGZpbmFsaXplZF9hdBgRIAEoCRIlCgV2b2ljZRgSIAEoCzIWLnBvc3RwaWxvdC52MS5Wb2ljZVJlZhIhChltYWNoaW5lX2Jhc2VsaW5lX3ZvaWNlX2lkGBMgASgJEisKCHRlbXBsYXRlGBQgASgLMhkucG9zdHBpbG90LnYxLlRlbXBsYXRlUmVmEjYKD3RhcmdldF9sYW5ndWFnZRgVIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2USNwoQY29udGVudF9sYW5ndWFnZRgWIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2USIwoGdmlkZW9zGBcgAygLMhMucG9zdHBpbG90LnYxLlZpZGVvEjYKEHRlbXBsYXRlX2Fuc3dlcnMYGCADKAsyHC5wb3N0cGlsb3QudjEuVGVtcGxhdGVBbnN3ZXISFgoJdGFnX2NvdW50GBkgASgFSAGIAQESEgoKdXNlX21lbW9yeRgaIAEoCBIVCg1wdWJsaXNoZWRfdXJsGBsgASgJEhQKDHB1Ymxpc2hlZF9hdBgcIAEoCRImCgVmaWVsZBgdIAEoDjIXLnBvc3RwaWxvdC52MS5CbG9nRmllbGQSMgoNcXVhbGl0eV9ydWxlcxgfIAMoDjIbLnBvc3RwaWxvdC52MS5RdWFsaXR5TWV0cmljQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnRKBAgeEB9SFnJlcGxhY2VtZW50X2NhbmRpZGF0ZXMiZQoFSW1hZ2USCgoCaWQYASABKAkSEAoIZmlsZW5hbWUYAiABKAkSDQoFd2lkdGgYAyABKAUSDgoGaGVpZ2h0GAQgASgFEg0KBWJ5dGVzGAUgASgDEhAKCHZpZXdfdXJsGAYgASgJIpABCgVWaWRlbxIKCgJpZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRINCgV3aWR0aBgDIAEoBRIOCgZoZWlnaHQYBCABKAUSDQoFYnl0ZXMYBSABKAMSEAoIdmlld191cmwYBiABKAkSEwoLZHVyYXRpb25fbXMYByABKAMSFAoMY29udGVudF90eXBlGAggASgJIvECCgtQb3N0U3VtbWFyeRIMCgRzbHVnGAEgASgJEg0KBXRpdGxlGAIgASgJEg4KBnN0YXR1cxgDIAEoCRISCgp1cGRhdGVkX2F0GAQgASgJEi8KCmFjdGl2ZV9qb2IYBSABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYhIdChVwZW5kaW5nX2V4cGVyaW1lbnRfaWQYBiABKAkSJQoFdm9pY2UYByABKAsyFi5wb3N0cGlsb3QudjEuVm9pY2VSZWYSKwoIdGVtcGxhdGUYCCABKAsyGS5wb3N0cGlsb3QudjEuVGVtcGxhdGVSZWYSNgoPdGFyZ2V0X2xhbmd1YWdlGAkgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZRI3ChBjb250ZW50X2xhbmd1YWdlGAogASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZRIMCgR0YWdzGAsgAygJIvADCg1HZW5lcmF0aW9uSm9iEgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkSDgoGc3RhdHVzGAMgASgJEg0KBXN0YWdlGAQgASgJEhUKDXByb2dyZXNzX2RvbmUYBSABKAUSFgoOcHJvZ3Jlc3NfdG90YWwYBiABKAUSEQoFZXJyb3IYByABKAlCAhgBEhEKCXBvc3Rfc2x1ZxgIIAEoCRItCg1vYnNlcnZlX21vZGVsGAkgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAogASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhIKCmNyZWF0ZWRfYXQYCyABKAkSEgoKdXBkYXRlZF9hdBgMIAEoCRI2Cg90YXJnZXRfbGFuZ3VhZ2UYDSABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlEiYKB2ZhaWx1cmUYDiABKAsyFS5wb3N0cGlsb3QudjEuRmFpbHVyZRIXCg9jbGlwX3Byb2plY3RfaWQYDyABKAkSGwoTY2FuY2VsX3JlcXVlc3RlZF9hdBgQIAEoCRIjChtjYW5jZWxsYXRpb25fcG9saWN5X3ZlcnNpb24YESABKAUSEgoKY2FuX2NhbmNlbBgSIAEoCCIiChRHZXRHZW5lcmF0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCSJBChVHZXRHZW5lcmF0aW9uUmVzcG9uc2USKAoDam9iGAEgASgLMhsucG9zdHBpbG90LnYxLkdlbmVyYXRpb25Kb2IiIwoSUmVvYnNlcnZlU2VsZWN0aW9uEg0KBWZpbGVzGAEgAygJIkAKEFF1YWxpdHlSdWxlVGlja3MSLAoHbWV0cmljcxgBIAMoDjIbLnBvc3RwaWxvdC52MS5RdWFsaXR5TWV0cmljIuoBChZTdGFydEdlbmVyYXRpb25SZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCRItCg1vYnNlcnZlX21vZGVsGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIzCglyZW9ic2VydmUYBSABKAsyIC5wb3N0cGlsb3QudjEuUmVvYnNlcnZlU2VsZWN0aW9uQhAKDl90YXJnZXRfbGVuZ3RoIikKF1N0YXJ0R2VuZXJhdGlvblJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSKBAQoUU3RhcnRSZXZpc2lvblJlcXVlc3QSEQoJcG9zdF9zbHVnGAEgASgJEhMKC2luc3RydWN0aW9uGAIgASgJEhQKDHNhdmVfYXNfcnVsZRgDIAEoCBIrCgt3cml0ZV9tb2RlbBgEIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiInChVTdGFydFJldmlzaW9uUmVzcG9uc2USDgoGam9iX2lkGAEgASgJIj4KDlRlbXBsYXRlQW5zd2VyEg0KBWxhYmVsGAEgASgJEgwKBHRleHQYAiABKAkSDwoHZW5hYmxlZBgDIAEoCCLPAgoUU2F2ZVBvc3REcmFmdFJlcXVlc3QSDAoEc2x1ZxgBIAEoCRINCgV0aXRsZRgCIAEoCRIMCgRtZW1vGAMgASgJEhUKCHZvaWNlX2lkGAQgASgJSACIAQESGAoLdGVtcGxhdGVfaWQYBSABKAlIAYgBARI7Cg90YXJnZXRfbGFuZ3VhZ2UYBiABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlSAKIAQESNgoQdGVtcGxhdGVfYW5zd2VycxgHIAMoCzIcLnBvc3RwaWxvdC52MS5UZW1wbGF0ZUFuc3dlchIrCgVmaWVsZBgIIAEoDjIXLnBvc3RwaWxvdC52MS5CbG9nRmllbGRIA4gBAUILCglfdm9pY2VfaWRCDgoMX3RlbXBsYXRlX2lkQhIKEF90YXJnZXRfbGFuZ3VhZ2VCCAoGX2ZpZWxkIjkKFVNhdmVQb3N0RHJhZnRSZXNwb25zZRIgCgRwb3N0GAEgASgLMhIucG9zdHBpbG90LnYxLlBvc3QiiwEKFlNhdmVQb3N0Q29udGVudFJlcXVlc3QSDAoEc2x1ZxgBIAEoCRIqCgdjb250ZW50GAIgASgLMhkucG9zdHBpbG90LnYxLlBvc3RDb250ZW50EhkKEWV4cGVjdGVkX3JldmlzaW9uGAMgASgDSgQIBBAFSgQIBRAGUhB0YWtlbl9jYW5kaWRhdGVzIjsKF1NhdmVQb3N0Q29udGVudFJlc3BvbnNlEiAKBHBvc3QYASABKAsyEi5wb3N0cGlsb3QudjEuUG9zdCKaAgogU2F2ZVBvc3RHZW5lcmF0aW9uT3B0aW9uc1JlcXVlc3QSDAoEc2x1ZxgBIAEoCRIaCg10YXJnZXRfbGVuZ3RoGAIgASgFSACIAQESFgoJdGFnX2NvdW50GAMgASgFSAGIAQESFwoKdXNlX21lbW9yeRgEIAEoCEgCiAEBEjUKDXF1YWxpdHlfcnVsZXMYBSABKAsyHi5wb3N0cGlsb3QudjEuUXVhbGl0eVJ1bGVUaWNrcxIrCgVmaWVsZBgGIAEoDjIXLnBvc3RwaWxvdC52MS5CbG9nRmllbGRIA4gBAUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC191c2VfbWVtb3J5QggKBl9maWVsZCJFCiFTYXZlUG9zdEdlbmVyYXRpb25PcHRpb25zUmVzcG9uc2USIAoEcG9zdBgBIAEoCzISLnBvc3RwaWxvdC52MS5Qb3N0Ij4KE0ZpbmFsaXplUG9zdFJlcXVlc3QSDAoEc2x1ZxgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoAyI4ChRGaW5hbGl6ZVBvc3RSZXNwb25zZRIgCgRwb3N0GAEgASgLMhIucG9zdHBpbG90LnYxLlBvc3QiOAobU2F2ZVBvc3RQdWJsaXNoZWRVcmxSZXF1ZXN0EgwKBHNsdWcYASABKAkSCwoDdXJsGAIgASgJIkAKHFNhdmVQb3N0UHVibGlzaGVkVXJsUmVzcG9uc2USIAoEcG9zdBgBIAEoCzISLnBvc3RwaWxvdC52MS5Qb3N0Ih4KDkdldFBvc3RSZXF1ZXN0EgwKBHNsdWcYASABKAkiMwoPR2V0UG9zdFJlc3BvbnNlEiAKBHBvc3QYASABKAsyEi5wb3N0cGlsb3QudjEuUG9zdCJYChBMaXN0UG9zdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg0KBXF1ZXJ5GAMgASgJEg4KBnN0YXR1cxgEIAEoCSJWChFMaXN0UG9zdHNSZXNwb25zZRIoCgVwb3N0cxgBIAMoCzIZLnBvc3RwaWxvdC52MS5Qb3N0U3VtbWFyeRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIQoRRGVsZXRlUG9zdFJlcXVlc3QSDAoEc2x1ZxgBIAEoCSIUChJEZWxldGVQb3N0UmVzcG9uc2UiZgoTQ3JlYXRlVXBsb2FkUmVxdWVzdBIRCglwb3N0X3NsdWcYASABKAkSEAoIZmlsZW5hbWUYAiABKAkSKgoEa2luZBgDIAEoDjIcLnBvc3RwaWxvdC52MS5BdHRhY2htZW50S2luZCJkChRDcmVhdGVVcGxvYWRSZXNwb25zZRIRCgl1cGxvYWRfaWQYASABKAkSDwoHcHV0X3VybBgCIAEoCRIUCgxjb250ZW50X3R5cGUYAyABKAkSEgoKZXhwaXJlc19hdBgEIAEoCSJdChRDb25maXJtVXBsb2FkUmVxdWVzdBIRCgl1cGxvYWRfaWQYASABKAkSDQoFd2lkdGgYAiABKAUSDgoGaGVpZ2h0GAMgASgFEhMKC2R1cmF0aW9uX21zGAQgASgDIl8KFUNvbmZpcm1VcGxvYWRSZXNwb25zZRIiCgVpbWFnZRgBIAEoCzITLnBvc3RwaWxvdC52MS5JbWFnZRIiCgV2aWRlbxgCIAEoCzITLnBvc3RwaWxvdC52MS5WaWRlbyImChJEZWxldGVJbWFnZVJlcXVlc3QSEAoIaW1hZ2VfaWQYASABKAkiFQoTRGVsZXRlSW1hZ2VSZXNwb25zZSImChJEZWxldGVWaWRlb1JlcXVlc3QSEAoIdmlkZW9faWQYASABKAkiFQoTRGVsZXRlVmlkZW9SZXNwb25zZSppCglCbG9ja1R5cGUSGgoWQkxPQ0tfVFlQRV9VTlNQRUNJRklFRBAAEggKBFRFWFQQARILCgdIRUFESU5HEAISCQoFSU1BR0UQAxIJCgVRVU9URRAEEggKBExJU1QQBRIJCgVWSURFTxAGKmcKDkF0dGFjaG1lbnRLaW5kEh8KG0FUVEFDSE1FTlRfS0lORF9VTlNQRUNJRklFRBAAEhkKFUFUVEFDSE1FTlRfS0lORF9QSE9UTxABEhkKFUFUVEFDSE1FTlRfS0lORF9WSURFTxACKqUCCglCbG9nRmllbGQSGgoWQkxPR19GSUVMRF9VTlNQRUNJRklFRBAAEhkKFUJMT0dfRklFTERfUkVTVEFVUkFOVBABEhMKD0JMT0dfRklFTERfQ0FGRRACEh4KGkJMT0dfRklFTERfRE9NRVNUSUNfVFJBVkVMEAMSHQoZQkxPR19GSUVMRF9GQVNISU9OX0JFQVVUWRAEEh0KGUJMT0dfRklFTERfUFJPRFVDVF9SRVZJRVcQBRIhCh1CTE9HX0ZJRUxEX1BBUkVOVElOR19NQVJSSUFHRRAGEhMKD0JMT0dfRklFTERfUEVUUxAHEhsKF0JMT0dfRklFTERfSU5URVJJT1JfRElZEAgSGQoVQkxPR19GSUVMRF9EQUlMWV9MSUZFEAky4wgKC1Bvc3RTZXJ2aWNlEloKDVNhdmVQb3N0RHJhZnQSIi5wb3N0cGlsb3QudjEuU2F2ZVBvc3REcmFmdFJlcXVlc3QaIy5wb3N0cGlsb3QudjEuU2F2ZVBvc3REcmFmdFJlc3BvbnNlIgASYAoPU2F2ZVBvc3RDb250ZW50EiQucG9zdHBpbG90LnYxLlNhdmVQb3N0Q29udGVudFJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU2F2ZVBvc3RDb250ZW50UmVzcG9uc2UiABJ+ChlTYXZlUG9zdEdlbmVyYXRpb25PcHRpb25zEi4ucG9zdHBpbG90LnYxLlNhdmVQb3N0R2VuZXJhdGlvbk9wdGlvbnNSZXF1ZXN0Gi8ucG9zdHBpbG90LnYxLlNhdmVQb3N0R2VuZXJhdGlvbk9wdGlvbnNSZXNwb25zZSIAElcKDEZpbmFsaXplUG9zdBIhLnBvc3RwaWxvdC52MS5GaW5hbGl6ZVBvc3RSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkZpbmFsaXplUG9zdFJlc3BvbnNlIgASbwoUU2F2ZVBvc3RQdWJsaXNoZWRVcmwSKS5wb3N0cGlsb3QudjEuU2F2ZVBvc3RQdWJsaXNoZWRVcmxSZXF1ZXN0GioucG9zdHBpbG90LnYxLlNhdmVQb3N0UHVibGlzaGVkVXJsUmVzcG9uc2UiABJICgdHZXRQb3N0EhwucG9zdHBpbG90LnYxLkdldFBvc3RSZXF1ZXN0Gh0ucG9zdHBpbG90LnYxLkdldFBvc3RSZXNwb25zZSIAEk4KCUxpc3RQb3N0cxIeLnBvc3RwaWxvdC52MS5MaXN0UG9zdHNSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkxpc3RQb3N0c1Jlc3BvbnNlIgASUQoKRGVsZXRlUG9zdBIfLnBvc3RwaWxvdC52MS5EZWxldGVQb3N0UmVxdWVzdBogLnBvc3RwaWxvdC52MS5EZWxldGVQb3N0UmVzcG9uc2UiABJXCgxDcmVhdGVVcGxvYWQSIS5wb3N0cGlsb3QudjEuQ3JlYXRlVXBsb2FkUmVxdWVzdBoiLnBvc3RwaWxvdC52MS5DcmVhdGVVcGxvYWRSZXNwb25zZSIAEloKDUNvbmZpcm1VcGxvYWQSIi5wb3N0cGlsb3QudjEuQ29uZmlybVVwbG9hZFJlcXVlc3QaIy5wb3N0cGlsb3QudjEuQ29uZmlybVVwbG9hZFJlc3BvbnNlIgASVAoLRGVsZXRlSW1hZ2USIC5wb3N0cGlsb3QudjEuRGVsZXRlSW1hZ2VSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkRlbGV0ZUltYWdlUmVzcG9uc2UiABJUCgtEZWxldGVWaWRlbxIgLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1JlcXVlc3QaIS5wb3N0cGlsb3QudjEuRGVsZXRlVmlkZW9SZXNwb25zZSIAMq0CChFHZW5lcmF0aW9uU2VydmljZRJgCg9TdGFydEdlbmVyYXRpb24SJC5wb3N0cGlsb3QudjEuU3RhcnRHZW5lcmF0aW9uUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TdGFydEdlbmVyYXRpb25SZXNwb25zZSIAEloKDVN0YXJ0UmV2aXNpb24SIi5wb3N0cGlsb3QudjEuU3RhcnRSZXZpc2lvblJlcXVlc3QaIy5wb3N0cGlsb3QudjEuU3RhcnRSZXZpc2lvblJlc3BvbnNlIgASWgoNR2V0R2VuZXJhdGlvbhIiLnBvc3RwaWxvdC52MS5HZXRHZW5lcmF0aW9uUmVxdWVzdBojLnBvc3RwaWxvdC52MS5HZXRHZW5lcmF0aW9uUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_provider, file_postpilot_v1_template, file_postpilot_v1_error, file_postpilot_v1_language, file_postpilot_v1_quality]);
+  fileDesc("Chdwb3N0cGlsb3QvdjEvcG9zdC5wcm90bxIMcG9zdHBpbG90LnYxIpUBCgVCbG9jaxIlCgR0eXBlGAEgASgOMhcucG9zdHBpbG90LnYxLkJsb2NrVHlwZRIPCgdjb250ZW50GAIgASgJEg0KBWxldmVsGAMgASgFEgwKBGZpbGUYBCABKAkSCwoDYWx0GAUgASgJEg8KB2NhcHRpb24YBiABKAkSDQoFaXRlbXMYByADKAlKBAgIEAlSBHNsb3QiYAoLUG9zdENvbnRlbnQSDQoFdGl0bGUYASABKAkSDwoHc3VtbWFyeRgCIAEoCRIMCgR0YWdzGAMgAygJEiMKBmJsb2NrcxgEIAMoCzITLnBvc3RwaWxvdC52MS5CbG9jayKmAQoLT2JzZXJ2YXRpb24SDAoEZmlsZRgBIAEoCRINCgVzY2VuZRgCIAEoCRIMCgRtb29kGAMgASgJEhQKDHZpc2libGVfdGV4dBgEIAEoCRIPCgdvYmplY3RzGAUgAygJEhYKDnBlb3BsZV9wcmVzZW50GAYgASgIEg0KBW1vZGVsGAcgASgJEg4KBmV2ZW50cxgIIAMoCRIOCgZzcGVlY2gYCSABKAkibQoIVm9pY2VSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIPCgdkZWxldGVkGAMgASgIEjYKD3NvdXJjZV9sYW5ndWFnZRgEIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2UiwAgKBFBvc3QSDAoEc2x1ZxgBIAEoCRINCgV0aXRsZRgCIAEoCRIMCgRtZW1vGAMgASgJEg4KBnN0YXR1cxgEIAEoCRIjCgZpbWFnZXMYBSADKAsyEy5wb3N0cGlsb3QudjEuSW1hZ2USEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEi8KCmFjdGl2ZV9qb2IYCCABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYhIqCgdjb250ZW50GAkgASgLMhkucG9zdHBpbG90LnYxLlBvc3RDb250ZW50Ei8KDG9ic2VydmF0aW9ucxgKIAMoCzIZLnBvc3RwaWxvdC52MS5PYnNlcnZhdGlvbhIdChVwZW5kaW5nX2V4cGVyaW1lbnRfaWQYCyABKAkSGAoQY29udGVudF9yZXZpc2lvbhgMIAEoAxIhChltYWNoaW5lX2Jhc2VsaW5lX3JldmlzaW9uGA0gASgDEhQKDGNhbl9maW5hbGl6ZRgOIAEoCBIaCg10YXJnZXRfbGVuZ3RoGA8gASgFSACIAQESGgoSZmluYWxpemVkX3JldmlzaW9uGBAgASgDEhQKDGZpbmFsaXplZF9hdBgRIAEoCRIlCgV2b2ljZRgSIAEoCzIWLnBvc3RwaWxvdC52MS5Wb2ljZVJlZhIhChltYWNoaW5lX2Jhc2VsaW5lX3ZvaWNlX2lkGBMgASgJEisKCHRlbXBsYXRlGBQgASgLMhkucG9zdHBpbG90LnYxLlRlbXBsYXRlUmVmEjYKD3RhcmdldF9sYW5ndWFnZRgVIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2USNwoQY29udGVudF9sYW5ndWFnZRgWIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2USIwoGdmlkZW9zGBcgAygLMhMucG9zdHBpbG90LnYxLlZpZGVvEjYKEHRlbXBsYXRlX2Fuc3dlcnMYGCADKAsyHC5wb3N0cGlsb3QudjEuVGVtcGxhdGVBbnN3ZXISFgoJdGFnX2NvdW50GBkgASgFSAGIAQESEgoKdXNlX21lbW9yeRgaIAEoCBIVCg1wdWJsaXNoZWRfdXJsGBsgASgJEhQKDHB1Ymxpc2hlZF9hdBgcIAEoCRImCgVmaWVsZBgdIAEoDjIXLnBvc3RwaWxvdC52MS5CbG9nRmllbGQSMgoNcXVhbGl0eV9ydWxlcxgfIAMoDjIbLnBvc3RwaWxvdC52MS5RdWFsaXR5TWV0cmljEioKCXN0b3J5bGluZRggIAEoCzIXLnBvc3RwaWxvdC52MS5TdG9yeWxpbmVCEAoOX3RhcmdldF9sZW5ndGhCDAoKX3RhZ19jb3VudEoECB4QH1IWcmVwbGFjZW1lbnRfY2FuZGlkYXRlcyIxChJTdG9yeWxpbmVQYXJhZ3JhcGgSDAoEdGV4dBgBIAEoCRINCgVmaWxlcxgCIAMoCSKHAQoJU3RvcnlsaW5lEjQKCnBhcmFncmFwaHMYASADKAsyIC5wb3N0cGlsb3QudjEuU3RvcnlsaW5lUGFyYWdyYXBoEhYKDmVkaXRlZF9ieV9oYW5kGAIgASgIEhMKC2FkZGVkX2ZpbGVzGAMgAygJEhcKD3Rha2VuX291dF9maWxlcxgEIAMoCSJlCgVJbWFnZRIKCgJpZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRINCgV3aWR0aBgDIAEoBRIOCgZoZWlnaHQYBCABKAUSDQoFYnl0ZXMYBSABKAMSEAoIdmlld191cmwYBiABKAkikAEKBVZpZGVvEgoKAmlkGAEgASgJEhAKCGZpbGVuYW1lGAIgASgJEg0KBXdpZHRoGAMgASgFEg4KBmhlaWdodBgEIAEoBRINCgVieXRlcxgFIAEoAxIQCgh2aWV3X3VybBgGIAEoCRITCgtkdXJhdGlvbl9tcxgHIAEoAxIUCgxjb250ZW50X3R5cGUYCCABKAki8QIKC1Bvc3RTdW1tYXJ5EgwKBHNsdWcYASABKAkSDQoFdGl0bGUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhIKCnVwZGF0ZWRfYXQYBCABKAkSLwoKYWN0aXZlX2pvYhgFIAEoCzIbLnBvc3RwaWxvdC52MS5HZW5lcmF0aW9uSm9iEh0KFXBlbmRpbmdfZXhwZXJpbWVudF9pZBgGIAEoCRIlCgV2b2ljZRgHIAEoCzIWLnBvc3RwaWxvdC52MS5Wb2ljZVJlZhIrCgh0ZW1wbGF0ZRgIIAEoCzIZLnBvc3RwaWxvdC52MS5UZW1wbGF0ZVJlZhI2Cg90YXJnZXRfbGFuZ3VhZ2UYCSABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlEjcKEGNvbnRlbnRfbGFuZ3VhZ2UYCiABKA4yHS5wb3N0cGlsb3QudjEuQ29udGVudExhbmd1YWdlEgwKBHRhZ3MYCyADKAki8AMKDUdlbmVyYXRpb25Kb2ISCgoCaWQYASABKAkSDAoEa2luZBgCIAEoCRIOCgZzdGF0dXMYAyABKAkSDQoFc3RhZ2UYBCABKAkSFQoNcHJvZ3Jlc3NfZG9uZRgFIAEoBRIWCg5wcm9ncmVzc190b3RhbBgGIAEoBRIRCgVlcnJvchgHIAEoCUICGAESEQoJcG9zdF9zbHVnGAggASgJEi0KDW9ic2VydmVfbW9kZWwYCSABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYCiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEgoKY3JlYXRlZF9hdBgLIAEoCRISCgp1cGRhdGVkX2F0GAwgASgJEjYKD3RhcmdldF9sYW5ndWFnZRgNIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2USJgoHZmFpbHVyZRgOIAEoCzIVLnBvc3RwaWxvdC52MS5GYWlsdXJlEhcKD2NsaXBfcHJvamVjdF9pZBgPIAEoCRIbChNjYW5jZWxfcmVxdWVzdGVkX2F0GBAgASgJEiMKG2NhbmNlbGxhdGlvbl9wb2xpY3lfdmVyc2lvbhgRIAEoBRISCgpjYW5fY2FuY2VsGBIgASgIIiIKFEdldEdlbmVyYXRpb25SZXF1ZXN0EgoKAmlkGAEgASgJIkEKFUdldEdlbmVyYXRpb25SZXNwb25zZRIoCgNqb2IYASABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYiIjChJSZW9ic2VydmVTZWxlY3Rpb24SDQoFZmlsZXMYASADKAkiQAoQUXVhbGl0eVJ1bGVUaWNrcxIsCgdtZXRyaWNzGAEgAygOMhsucG9zdHBpbG90LnYxLlF1YWxpdHlNZXRyaWMi6gEKFlN0YXJ0R2VuZXJhdGlvblJlcXVlc3QSEQoJcG9zdF9zbHVnGAEgASgJEi0KDW9ic2VydmVfbW9kZWwYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSGgoNdGFyZ2V0X2xlbmd0aBgEIAEoBUgAiAEBEjMKCXJlb2JzZXJ2ZRgFIAEoCzIgLnBvc3RwaWxvdC52MS5SZW9ic2VydmVTZWxlY3Rpb25CEAoOX3RhcmdldF9sZW5ndGgiKQoXU3RhcnRHZW5lcmF0aW9uUmVzcG9uc2USDgoGam9iX2lkGAEgASgJIoEBChRTdGFydFJldmlzaW9uUmVxdWVzdBIRCglwb3N0X3NsdWcYASABKAkSEwoLaW5zdHJ1Y3Rpb24YAiABKAkSFAoMc2F2ZV9hc19ydWxlGAMgASgIEisKC3dyaXRlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIicKFVN0YXJ0UmV2aXNpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkiPgoOVGVtcGxhdGVBbnN3ZXISDQoFbGFiZWwYASABKAkSDAoEdGV4dBgCIAEoCRIPCgdlbmFibGVkGAMgASgIIs8CChRTYXZlUG9zdERyYWZ0UmVxdWVzdBIMCgRzbHVnGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBG1lbW8YAyABKAkSFQoIdm9pY2VfaWQYBCABKAlIAIgBARIYCgt0ZW1wbGF0ZV9pZBgFIAEoCUgBiAEBEjsKD3RhcmdldF9sYW5ndWFnZRgGIAEoDjIdLnBvc3RwaWxvdC52MS5Db250ZW50TGFuZ3VhZ2VIAogBARI2ChB0ZW1wbGF0ZV9hbnN3ZXJzGAcgAygLMhwucG9zdHBpbG90LnYxLlRlbXBsYXRlQW5zd2VyEisKBWZpZWxkGAggASgOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZEgDiAEBQgsKCV92b2ljZV9pZEIOCgxfdGVtcGxhdGVfaWRCEgoQX3RhcmdldF9sYW5ndWFnZUIICgZfZmllbGQiOQoVU2F2ZVBvc3REcmFmdFJlc3BvbnNlEiAKBHBvc3QYASABKAsyEi5wb3N0cGlsb3QudjEuUG9zdCKLAQoWU2F2ZVBvc3RDb250ZW50UmVxdWVzdBIMCgRzbHVnGAEgASgJEioKB2NvbnRlbnQYAiABKAsyGS5wb3N0cGlsb3QudjEuUG9zdENvbnRlbnQSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAyABKANKBAgEEAVKBAgFEAZSEHRha2VuX2NhbmRpZGF0ZXMiOwoXU2F2ZVBvc3RDb250ZW50UmVzcG9uc2USIAoEcG9zdBgBIAEoCzISLnBvc3RwaWxvdC52MS5Qb3N0IpoCCiBTYXZlUG9zdEdlbmVyYXRpb25PcHRpb25zUmVxdWVzdBIMCgRzbHVnGAEgASgJEhoKDXRhcmdldF9sZW5ndGgYAiABKAVIAIgBARIWCgl0YWdfY291bnQYAyABKAVIAYgBARIXCgp1c2VfbWVtb3J5GAQgASgISAKIAQESNQoNcXVhbGl0eV9ydWxlcxgFIAEoCzIeLnBvc3RwaWxvdC52MS5RdWFsaXR5UnVsZVRpY2tzEisKBWZpZWxkGAYgASgOMhcucG9zdHBpbG90LnYxLkJsb2dGaWVsZEgDiAEBQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnRCDQoLX3VzZV9tZW1vcnlCCAoGX2ZpZWxkIkUKIVNhdmVQb3N0R2VuZXJhdGlvbk9wdGlvbnNSZXNwb25zZRIgCgRwb3N0GAEgASgLMhIucG9zdHBpbG90LnYxLlBvc3QiPgoTRmluYWxpemVQb3N0UmVxdWVzdBIMCgRzbHVnGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgDIjgKFEZpbmFsaXplUG9zdFJlc3BvbnNlEiAKBHBvc3QYASABKAsyEi5wb3N0cGlsb3QudjEuUG9zdCI4ChtTYXZlUG9zdFB1Ymxpc2hlZFVybFJlcXVlc3QSDAoEc2x1ZxgBIAEoCRILCgN1cmwYAiABKAkiQAocU2F2ZVBvc3RQdWJsaXNoZWRVcmxSZXNwb25zZRIgCgRwb3N0GAEgASgLMhIucG9zdHBpbG90LnYxLlBvc3QiHgoOR2V0UG9zdFJlcXVlc3QSDAoEc2x1ZxgBIAEoCSIzCg9HZXRQb3N0UmVzcG9uc2USIAoEcG9zdBgBIAEoCzISLnBvc3RwaWxvdC52MS5Qb3N0IlgKEExpc3RQb3N0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDQoFcXVlcnkYAyABKAkSDgoGc3RhdHVzGAQgASgJIlYKEUxpc3RQb3N0c1Jlc3BvbnNlEigKBXBvc3RzGAEgAygLMhkucG9zdHBpbG90LnYxLlBvc3RTdW1tYXJ5EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIhChFEZWxldGVQb3N0UmVxdWVzdBIMCgRzbHVnGAEgASgJIhQKEkRlbGV0ZVBvc3RSZXNwb25zZSJmChNDcmVhdGVVcGxvYWRSZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRIqCgRraW5kGAMgASgOMhwucG9zdHBpbG90LnYxLkF0dGFjaG1lbnRLaW5kImQKFENyZWF0ZVVwbG9hZFJlc3BvbnNlEhEKCXVwbG9hZF9pZBgBIAEoCRIPCgdwdXRfdXJsGAIgASgJEhQKDGNvbnRlbnRfdHlwZRgDIAEoCRISCgpleHBpcmVzX2F0GAQgASgJIl0KFENvbmZpcm1VcGxvYWRSZXF1ZXN0EhEKCXVwbG9hZF9pZBgBIAEoCRINCgV3aWR0aBgCIAEoBRIOCgZoZWlnaHQYAyABKAUSEwoLZHVyYXRpb25fbXMYBCABKAMiXwoVQ29uZmlybVVwbG9hZFJlc3BvbnNlEiIKBWltYWdlGAEgASgLMhMucG9zdHBpbG90LnYxLkltYWdlEiIKBXZpZGVvGAIgASgLMhMucG9zdHBpbG90LnYxLlZpZGVvIiYKEkRlbGV0ZUltYWdlUmVxdWVzdBIQCghpbWFnZV9pZBgBIAEoCSIVChNEZWxldGVJbWFnZVJlc3BvbnNlIiYKEkRlbGV0ZVZpZGVvUmVxdWVzdBIQCgh2aWRlb19pZBgBIAEoCSIVChNEZWxldGVWaWRlb1Jlc3BvbnNlKmkKCUJsb2NrVHlwZRIaChZCTE9DS19UWVBFX1VOU1BFQ0lGSUVEEAASCAoEVEVYVBABEgsKB0hFQURJTkcQAhIJCgVJTUFHRRADEgkKBVFVT1RFEAQSCAoETElTVBAFEgkKBVZJREVPEAYqZwoOQXR0YWNobWVudEtpbmQSHwobQVRUQUNITUVOVF9LSU5EX1VOU1BFQ0lGSUVEEAASGQoVQVRUQUNITUVOVF9LSU5EX1BIT1RPEAESGQoVQVRUQUNITUVOVF9LSU5EX1ZJREVPEAIqpQIKCUJsb2dGaWVsZBIaChZCTE9HX0ZJRUxEX1VOU1BFQ0lGSUVEEAASGQoVQkxPR19GSUVMRF9SRVNUQVVSQU5UEAESEwoPQkxPR19GSUVMRF9DQUZFEAISHgoaQkxPR19GSUVMRF9ET01FU1RJQ19UUkFWRUwQAxIdChlCTE9HX0ZJRUxEX0ZBU0hJT05fQkVBVVRZEAQSHQoZQkxPR19GSUVMRF9QUk9EVUNUX1JFVklFVxAFEiEKHUJMT0dfRklFTERfUEFSRU5USU5HX01BUlJJQUdFEAYSEwoPQkxPR19GSUVMRF9QRVRTEAcSGwoXQkxPR19GSUVMRF9JTlRFUklPUl9ESVkQCBIZChVCTE9HX0ZJRUxEX0RBSUxZX0xJRkUQCTLjCAoLUG9zdFNlcnZpY2USWgoNU2F2ZVBvc3REcmFmdBIiLnBvc3RwaWxvdC52MS5TYXZlUG9zdERyYWZ0UmVxdWVzdBojLnBvc3RwaWxvdC52MS5TYXZlUG9zdERyYWZ0UmVzcG9uc2UiABJgCg9TYXZlUG9zdENvbnRlbnQSJC5wb3N0cGlsb3QudjEuU2F2ZVBvc3RDb250ZW50UmVxdWVzdBolLnBvc3RwaWxvdC52MS5TYXZlUG9zdENvbnRlbnRSZXNwb25zZSIAEn4KGVNhdmVQb3N0R2VuZXJhdGlvbk9wdGlvbnMSLi5wb3N0cGlsb3QudjEuU2F2ZVBvc3RHZW5lcmF0aW9uT3B0aW9uc1JlcXVlc3QaLy5wb3N0cGlsb3QudjEuU2F2ZVBvc3RHZW5lcmF0aW9uT3B0aW9uc1Jlc3BvbnNlIgASVwoMRmluYWxpemVQb3N0EiEucG9zdHBpbG90LnYxLkZpbmFsaXplUG9zdFJlcXVlc3QaIi5wb3N0cGlsb3QudjEuRmluYWxpemVQb3N0UmVzcG9uc2UiABJvChRTYXZlUG9zdFB1Ymxpc2hlZFVybBIpLnBvc3RwaWxvdC52MS5TYXZlUG9zdFB1Ymxpc2hlZFVybFJlcXVlc3QaKi5wb3N0cGlsb3QudjEuU2F2ZVBvc3RQdWJsaXNoZWRVcmxSZXNwb25zZSIAEkgKB0dldFBvc3QSHC5wb3N0cGlsb3QudjEuR2V0UG9zdFJlcXVlc3QaHS5wb3N0cGlsb3QudjEuR2V0UG9zdFJlc3BvbnNlIgASTgoJTGlzdFBvc3RzEh4ucG9zdHBpbG90LnYxLkxpc3RQb3N0c1JlcXVlc3QaHy5wb3N0cGlsb3QudjEuTGlzdFBvc3RzUmVzcG9uc2UiABJRCgpEZWxldGVQb3N0Eh8ucG9zdHBpbG90LnYxLkRlbGV0ZVBvc3RSZXF1ZXN0GiAucG9zdHBpbG90LnYxLkRlbGV0ZVBvc3RSZXNwb25zZSIAElcKDENyZWF0ZVVwbG9hZBIhLnBvc3RwaWxvdC52MS5DcmVhdGVVcGxvYWRSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkNyZWF0ZVVwbG9hZFJlc3BvbnNlIgASWgoNQ29uZmlybVVwbG9hZBIiLnBvc3RwaWxvdC52MS5Db25maXJtVXBsb2FkUmVxdWVzdBojLnBvc3RwaWxvdC52MS5Db25maXJtVXBsb2FkUmVzcG9uc2UiABJUCgtEZWxldGVJbWFnZRIgLnBvc3RwaWxvdC52MS5EZWxldGVJbWFnZVJlcXVlc3QaIS5wb3N0cGlsb3QudjEuRGVsZXRlSW1hZ2VSZXNwb25zZSIAElQKC0RlbGV0ZVZpZGVvEiAucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvUmVxdWVzdBohLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1Jlc3BvbnNlIgAyrQIKEUdlbmVyYXRpb25TZXJ2aWNlEmAKD1N0YXJ0R2VuZXJhdGlvbhIkLnBvc3RwaWxvdC52MS5TdGFydEdlbmVyYXRpb25SZXF1ZXN0GiUucG9zdHBpbG90LnYxLlN0YXJ0R2VuZXJhdGlvblJlc3BvbnNlIgASWgoNU3RhcnRSZXZpc2lvbhIiLnBvc3RwaWxvdC52MS5TdGFydFJldmlzaW9uUmVxdWVzdBojLnBvc3RwaWxvdC52MS5TdGFydFJldmlzaW9uUmVzcG9uc2UiABJaCg1HZXRHZW5lcmF0aW9uEiIucG9zdHBpbG90LnYxLkdldEdlbmVyYXRpb25SZXF1ZXN0GiMucG9zdHBpbG90LnYxLkdldEdlbmVyYXRpb25SZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_provider, file_postpilot_v1_template, file_postpilot_v1_error, file_postpilot_v1_language, file_postpilot_v1_quality]);
 
 /**
  * @generated from message postpilot.v1.Block
@@ -392,6 +392,13 @@ export type Post = Message<"postpilot.v1.Post"> & {
    * @generated from field: repeated postpilot.v1.QualityMetric quality_rules = 31;
    */
   qualityRules: QualityMetric[];
+
+  /**
+   * The storyline the write answered first, unset when the post has none (POST-99).
+   *
+   * @generated from field: postpilot.v1.Storyline storyline = 32;
+   */
+  storyline?: Storyline | undefined;
 };
 
 /**
@@ -400,6 +407,66 @@ export type Post = Message<"postpilot.v1.Post"> & {
  */
 export const PostSchema: GenMessage<Post> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_post, 4);
+
+/**
+ * One part of a storyline: what it shows and says, and the attachment names it uses.
+ *
+ * @generated from message postpilot.v1.StorylineParagraph
+ */
+export type StorylineParagraph = Message<"postpilot.v1.StorylineParagraph"> & {
+  /**
+   * @generated from field: string text = 1;
+   */
+  text: string;
+
+  /**
+   * @generated from field: repeated string files = 2;
+   */
+  files: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.StorylineParagraph.
+ * Use `create(StorylineParagraphSchema)` to create a new message.
+ */
+export const StorylineParagraphSchema: GenMessage<StorylineParagraph> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_post, 5);
+
+/**
+ * A post's storyline (POST-99). added_files are the attached names the write was not shown;
+ * taken_out_files are names it was shown, still attached, that no paragraph holds. Both are
+ * computed on read, never stored.
+ *
+ * @generated from message postpilot.v1.Storyline
+ */
+export type Storyline = Message<"postpilot.v1.Storyline"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.StorylineParagraph paragraphs = 1;
+   */
+  paragraphs: StorylineParagraph[];
+
+  /**
+   * @generated from field: bool edited_by_hand = 2;
+   */
+  editedByHand: boolean;
+
+  /**
+   * @generated from field: repeated string added_files = 3;
+   */
+  addedFiles: string[];
+
+  /**
+   * @generated from field: repeated string taken_out_files = 4;
+   */
+  takenOutFiles: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.Storyline.
+ * Use `create(StorylineSchema)` to create a new message.
+ */
+export const StorylineSchema: GenMessage<Storyline> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_post, 6);
 
 /**
  * @generated from message postpilot.v1.Image
@@ -450,7 +517,7 @@ export type Image = Message<"postpilot.v1.Image"> & {
  * Use `create(ImageSchema)` to create a new message.
  */
 export const ImageSchema: GenMessage<Image> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 5);
+  messageDesc(file_postpilot_v1_post, 7);
 
 /**
  * A video attached to a post. The bytes live in object storage exactly as the user
@@ -519,7 +586,7 @@ export type Video = Message<"postpilot.v1.Video"> & {
  * Use `create(VideoSchema)` to create a new message.
  */
 export const VideoSchema: GenMessage<Video> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 6);
+  messageDesc(file_postpilot_v1_post, 8);
 
 /**
  * @generated from message postpilot.v1.PostSummary
@@ -589,7 +656,7 @@ export type PostSummary = Message<"postpilot.v1.PostSummary"> & {
  * Use `create(PostSummarySchema)` to create a new message.
  */
 export const PostSummarySchema: GenMessage<PostSummary> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 7);
+  messageDesc(file_postpilot_v1_post, 9);
 
 /**
  * @generated from message postpilot.v1.GenerationJob
@@ -692,7 +759,7 @@ export type GenerationJob = Message<"postpilot.v1.GenerationJob"> & {
  * Use `create(GenerationJobSchema)` to create a new message.
  */
 export const GenerationJobSchema: GenMessage<GenerationJob> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 8);
+  messageDesc(file_postpilot_v1_post, 10);
 
 /**
  * @generated from message postpilot.v1.GetGenerationRequest
@@ -709,7 +776,7 @@ export type GetGenerationRequest = Message<"postpilot.v1.GetGenerationRequest"> 
  * Use `create(GetGenerationRequestSchema)` to create a new message.
  */
 export const GetGenerationRequestSchema: GenMessage<GetGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 9);
+  messageDesc(file_postpilot_v1_post, 11);
 
 /**
  * @generated from message postpilot.v1.GetGenerationResponse
@@ -726,7 +793,7 @@ export type GetGenerationResponse = Message<"postpilot.v1.GetGenerationResponse"
  * Use `create(GetGenerationResponseSchema)` to create a new message.
  */
 export const GetGenerationResponseSchema: GenMessage<GetGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 10);
+  messageDesc(file_postpilot_v1_post, 12);
 
 /**
  * The re-observation picker's answer. It is a MESSAGE rather than a bare `repeated string`
@@ -754,7 +821,7 @@ export type ReobserveSelection = Message<"postpilot.v1.ReobserveSelection"> & {
  * Use `create(ReobserveSelectionSchema)` to create a new message.
  */
 export const ReobserveSelectionSchema: GenMessage<ReobserveSelection> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 11);
+  messageDesc(file_postpilot_v1_post, 13);
 
 /**
  * The quality rules ticked on the writing brief (POST-81). A MESSAGE so presence is visible:
@@ -774,7 +841,7 @@ export type QualityRuleTicks = Message<"postpilot.v1.QualityRuleTicks"> & {
  * Use `create(QualityRuleTicksSchema)` to create a new message.
  */
 export const QualityRuleTicksSchema: GenMessage<QualityRuleTicks> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 12);
+  messageDesc(file_postpilot_v1_post, 14);
 
 /**
  * @generated from message postpilot.v1.StartGenerationRequest
@@ -811,7 +878,7 @@ export type StartGenerationRequest = Message<"postpilot.v1.StartGenerationReques
  * Use `create(StartGenerationRequestSchema)` to create a new message.
  */
 export const StartGenerationRequestSchema: GenMessage<StartGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 13);
+  messageDesc(file_postpilot_v1_post, 15);
 
 /**
  * @generated from message postpilot.v1.StartGenerationResponse
@@ -828,7 +895,7 @@ export type StartGenerationResponse = Message<"postpilot.v1.StartGenerationRespo
  * Use `create(StartGenerationResponseSchema)` to create a new message.
  */
 export const StartGenerationResponseSchema: GenMessage<StartGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 14);
+  messageDesc(file_postpilot_v1_post, 16);
 
 /**
  * @generated from message postpilot.v1.StartRevisionRequest
@@ -860,7 +927,7 @@ export type StartRevisionRequest = Message<"postpilot.v1.StartRevisionRequest"> 
  * Use `create(StartRevisionRequestSchema)` to create a new message.
  */
 export const StartRevisionRequestSchema: GenMessage<StartRevisionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 15);
+  messageDesc(file_postpilot_v1_post, 17);
 
 /**
  * @generated from message postpilot.v1.StartRevisionResponse
@@ -877,7 +944,7 @@ export type StartRevisionResponse = Message<"postpilot.v1.StartRevisionResponse"
  * Use `create(StartRevisionResponseSchema)` to create a new message.
  */
 export const StartRevisionResponseSchema: GenMessage<StartRevisionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 16);
+  messageDesc(file_postpilot_v1_post, 18);
 
 /**
  * One answer a post gives to a data field its template declared (POST-62, TMPL-43).
@@ -913,7 +980,7 @@ export type TemplateAnswer = Message<"postpilot.v1.TemplateAnswer"> & {
  * Use `create(TemplateAnswerSchema)` to create a new message.
  */
 export const TemplateAnswerSchema: GenMessage<TemplateAnswer> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 17);
+  messageDesc(file_postpilot_v1_post, 19);
 
 /**
  * @generated from message postpilot.v1.SavePostDraftRequest
@@ -987,7 +1054,7 @@ export type SavePostDraftRequest = Message<"postpilot.v1.SavePostDraftRequest"> 
  * Use `create(SavePostDraftRequestSchema)` to create a new message.
  */
 export const SavePostDraftRequestSchema: GenMessage<SavePostDraftRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 18);
+  messageDesc(file_postpilot_v1_post, 20);
 
 /**
  * @generated from message postpilot.v1.SavePostDraftResponse
@@ -1004,7 +1071,7 @@ export type SavePostDraftResponse = Message<"postpilot.v1.SavePostDraftResponse"
  * Use `create(SavePostDraftResponseSchema)` to create a new message.
  */
 export const SavePostDraftResponseSchema: GenMessage<SavePostDraftResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 19);
+  messageDesc(file_postpilot_v1_post, 21);
 
 /**
  * @generated from message postpilot.v1.SavePostContentRequest
@@ -1031,7 +1098,7 @@ export type SavePostContentRequest = Message<"postpilot.v1.SavePostContentReques
  * Use `create(SavePostContentRequestSchema)` to create a new message.
  */
 export const SavePostContentRequestSchema: GenMessage<SavePostContentRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 20);
+  messageDesc(file_postpilot_v1_post, 22);
 
 /**
  * @generated from message postpilot.v1.SavePostContentResponse
@@ -1048,7 +1115,7 @@ export type SavePostContentResponse = Message<"postpilot.v1.SavePostContentRespo
  * Use `create(SavePostContentResponseSchema)` to create a new message.
  */
 export const SavePostContentResponseSchema: GenMessage<SavePostContentResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 21);
+  messageDesc(file_postpilot_v1_post, 23);
 
 /**
  * The writing brief's run options, saved together by its 저장 (POST-89). A whole set: every
@@ -1108,7 +1175,7 @@ export type SavePostGenerationOptionsRequest = Message<"postpilot.v1.SavePostGen
  * Use `create(SavePostGenerationOptionsRequestSchema)` to create a new message.
  */
 export const SavePostGenerationOptionsRequestSchema: GenMessage<SavePostGenerationOptionsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 22);
+  messageDesc(file_postpilot_v1_post, 24);
 
 /**
  * @generated from message postpilot.v1.SavePostGenerationOptionsResponse
@@ -1125,7 +1192,7 @@ export type SavePostGenerationOptionsResponse = Message<"postpilot.v1.SavePostGe
  * Use `create(SavePostGenerationOptionsResponseSchema)` to create a new message.
  */
 export const SavePostGenerationOptionsResponseSchema: GenMessage<SavePostGenerationOptionsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 23);
+  messageDesc(file_postpilot_v1_post, 25);
 
 /**
  * @generated from message postpilot.v1.FinalizePostRequest
@@ -1147,7 +1214,7 @@ export type FinalizePostRequest = Message<"postpilot.v1.FinalizePostRequest"> & 
  * Use `create(FinalizePostRequestSchema)` to create a new message.
  */
 export const FinalizePostRequestSchema: GenMessage<FinalizePostRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 24);
+  messageDesc(file_postpilot_v1_post, 26);
 
 /**
  * @generated from message postpilot.v1.FinalizePostResponse
@@ -1164,7 +1231,7 @@ export type FinalizePostResponse = Message<"postpilot.v1.FinalizePostResponse"> 
  * Use `create(FinalizePostResponseSchema)` to create a new message.
  */
 export const FinalizePostResponseSchema: GenMessage<FinalizePostResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 25);
+  messageDesc(file_postpilot_v1_post, 27);
 
 /**
  * @generated from message postpilot.v1.SavePostPublishedUrlRequest
@@ -1188,7 +1255,7 @@ export type SavePostPublishedUrlRequest = Message<"postpilot.v1.SavePostPublishe
  * Use `create(SavePostPublishedUrlRequestSchema)` to create a new message.
  */
 export const SavePostPublishedUrlRequestSchema: GenMessage<SavePostPublishedUrlRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 26);
+  messageDesc(file_postpilot_v1_post, 28);
 
 /**
  * @generated from message postpilot.v1.SavePostPublishedUrlResponse
@@ -1205,7 +1272,7 @@ export type SavePostPublishedUrlResponse = Message<"postpilot.v1.SavePostPublish
  * Use `create(SavePostPublishedUrlResponseSchema)` to create a new message.
  */
 export const SavePostPublishedUrlResponseSchema: GenMessage<SavePostPublishedUrlResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 27);
+  messageDesc(file_postpilot_v1_post, 29);
 
 /**
  * @generated from message postpilot.v1.GetPostRequest
@@ -1222,7 +1289,7 @@ export type GetPostRequest = Message<"postpilot.v1.GetPostRequest"> & {
  * Use `create(GetPostRequestSchema)` to create a new message.
  */
 export const GetPostRequestSchema: GenMessage<GetPostRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 28);
+  messageDesc(file_postpilot_v1_post, 30);
 
 /**
  * @generated from message postpilot.v1.GetPostResponse
@@ -1239,7 +1306,7 @@ export type GetPostResponse = Message<"postpilot.v1.GetPostResponse"> & {
  * Use `create(GetPostResponseSchema)` to create a new message.
  */
 export const GetPostResponseSchema: GenMessage<GetPostResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 29);
+  messageDesc(file_postpilot_v1_post, 31);
 
 /**
  * @generated from message postpilot.v1.ListPostsRequest
@@ -1280,7 +1347,7 @@ export type ListPostsRequest = Message<"postpilot.v1.ListPostsRequest"> & {
  * Use `create(ListPostsRequestSchema)` to create a new message.
  */
 export const ListPostsRequestSchema: GenMessage<ListPostsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 30);
+  messageDesc(file_postpilot_v1_post, 32);
 
 /**
  * @generated from message postpilot.v1.ListPostsResponse
@@ -1306,7 +1373,7 @@ export type ListPostsResponse = Message<"postpilot.v1.ListPostsResponse"> & {
  * Use `create(ListPostsResponseSchema)` to create a new message.
  */
 export const ListPostsResponseSchema: GenMessage<ListPostsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 31);
+  messageDesc(file_postpilot_v1_post, 33);
 
 /**
  * @generated from message postpilot.v1.DeletePostRequest
@@ -1323,7 +1390,7 @@ export type DeletePostRequest = Message<"postpilot.v1.DeletePostRequest"> & {
  * Use `create(DeletePostRequestSchema)` to create a new message.
  */
 export const DeletePostRequestSchema: GenMessage<DeletePostRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 32);
+  messageDesc(file_postpilot_v1_post, 34);
 
 /**
  * @generated from message postpilot.v1.DeletePostResponse
@@ -1336,7 +1403,7 @@ export type DeletePostResponse = Message<"postpilot.v1.DeletePostResponse"> & {
  * Use `create(DeletePostResponseSchema)` to create a new message.
  */
 export const DeletePostResponseSchema: GenMessage<DeletePostResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 33);
+  messageDesc(file_postpilot_v1_post, 35);
 
 /**
  * @generated from message postpilot.v1.CreateUploadRequest
@@ -1365,7 +1432,7 @@ export type CreateUploadRequest = Message<"postpilot.v1.CreateUploadRequest"> & 
  * Use `create(CreateUploadRequestSchema)` to create a new message.
  */
 export const CreateUploadRequestSchema: GenMessage<CreateUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 34);
+  messageDesc(file_postpilot_v1_post, 36);
 
 /**
  * @generated from message postpilot.v1.CreateUploadResponse
@@ -1402,7 +1469,7 @@ export type CreateUploadResponse = Message<"postpilot.v1.CreateUploadResponse"> 
  * Use `create(CreateUploadResponseSchema)` to create a new message.
  */
 export const CreateUploadResponseSchema: GenMessage<CreateUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 35);
+  messageDesc(file_postpilot_v1_post, 37);
 
 /**
  * @generated from message postpilot.v1.ConfirmUploadRequest
@@ -1437,7 +1504,7 @@ export type ConfirmUploadRequest = Message<"postpilot.v1.ConfirmUploadRequest"> 
  * Use `create(ConfirmUploadRequestSchema)` to create a new message.
  */
 export const ConfirmUploadRequestSchema: GenMessage<ConfirmUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 36);
+  messageDesc(file_postpilot_v1_post, 38);
 
 /**
  * @generated from message postpilot.v1.ConfirmUploadResponse
@@ -1461,7 +1528,7 @@ export type ConfirmUploadResponse = Message<"postpilot.v1.ConfirmUploadResponse"
  * Use `create(ConfirmUploadResponseSchema)` to create a new message.
  */
 export const ConfirmUploadResponseSchema: GenMessage<ConfirmUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 37);
+  messageDesc(file_postpilot_v1_post, 39);
 
 /**
  * @generated from message postpilot.v1.DeleteImageRequest
@@ -1478,7 +1545,7 @@ export type DeleteImageRequest = Message<"postpilot.v1.DeleteImageRequest"> & {
  * Use `create(DeleteImageRequestSchema)` to create a new message.
  */
 export const DeleteImageRequestSchema: GenMessage<DeleteImageRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 38);
+  messageDesc(file_postpilot_v1_post, 40);
 
 /**
  * @generated from message postpilot.v1.DeleteImageResponse
@@ -1491,7 +1558,7 @@ export type DeleteImageResponse = Message<"postpilot.v1.DeleteImageResponse"> & 
  * Use `create(DeleteImageResponseSchema)` to create a new message.
  */
 export const DeleteImageResponseSchema: GenMessage<DeleteImageResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 39);
+  messageDesc(file_postpilot_v1_post, 41);
 
 /**
  * @generated from message postpilot.v1.DeleteVideoRequest
@@ -1508,7 +1575,7 @@ export type DeleteVideoRequest = Message<"postpilot.v1.DeleteVideoRequest"> & {
  * Use `create(DeleteVideoRequestSchema)` to create a new message.
  */
 export const DeleteVideoRequestSchema: GenMessage<DeleteVideoRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 40);
+  messageDesc(file_postpilot_v1_post, 42);
 
 /**
  * @generated from message postpilot.v1.DeleteVideoResponse
@@ -1521,7 +1588,7 @@ export type DeleteVideoResponse = Message<"postpilot.v1.DeleteVideoResponse"> & 
  * Use `create(DeleteVideoResponseSchema)` to create a new message.
  */
 export const DeleteVideoResponseSchema: GenMessage<DeleteVideoResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_post, 41);
+  messageDesc(file_postpilot_v1_post, 43);
 
 /**
  * @generated from enum postpilot.v1.BlockType

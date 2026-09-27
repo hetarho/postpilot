@@ -170,9 +170,10 @@ func TestLoadDefaults(t *testing.T) {
 		t.Errorf("observation budget = %d, want %d for a batch of 4", got, want)
 	}
 	// The effective write budget was raised to 8,192 to stop write-stage truncation (GEN-22).
-	// A post that requests no length must still be sent exactly that.
-	if got := cfg.LLMCompletionBudget.Write(nil, false); got != 8192 {
-		t.Errorf("no-target write budget = %d, want the configured fallback 8192", got)
+	// A post that requests no length must still be sent exactly that, plus the storyline's
+	// allowance (GEN-67).
+	if got := cfg.LLMCompletionBudget.Write(nil, false); got != 8192+StorylineCompletionAllowance {
+		t.Errorf("no-target write budget = %d, want the configured fallback 8192 plus %d", got, StorylineCompletionAllowance)
 	}
 }
 
@@ -317,12 +318,13 @@ func TestRevisionBudgetFitsTheContentItReEmits(t *testing.T) {
 	}
 	budget := cfg.LLMCompletionBudget
 
-	if got := budget.Revise(0, nil, false); got != budget.Write(nil, false) {
-		t.Errorf("an empty revision = %d, want the writer's floor %d", got, budget.Write(nil, false))
+	// A revision writes no storyline (GEN-71), so it keeps the floor without the allowance.
+	if got := budget.Revise(0, nil, false); got != budget.WriteFloor {
+		t.Errorf("an empty revision = %d, want the writer's floor %d", got, budget.WriteFloor)
 	}
 	long := budget.Revise(6000, nil, false)
-	if long <= budget.Write(nil, false) {
-		t.Errorf("a 6,000-character post to re-emit got %d, no more than the floor %d", long, budget.Write(nil, false))
+	if long <= budget.WriteFloor {
+		t.Errorf("a 6,000-character post to re-emit got %d, no more than the floor %d", long, budget.WriteFloor)
 	}
 	// The larger of the two wins, in both directions.
 	if got := budget.Revise(6000, intPointer(500), false); got != long {
@@ -347,11 +349,15 @@ func TestWritingBudgetFollowsTheRequestedLength(t *testing.T) {
 	}
 	budget := cfg.LLMCompletionBudget
 
-	if got := budget.Write(nil, false); got != 8192 {
-		t.Errorf("no target = %d, want the configured fallback 8192", got)
+	// GEN-67: every write carries the storyline's allowance on top of what the length derives.
+	if got := budget.Write(nil, false); got != 8192+StorylineCompletionAllowance {
+		t.Errorf("no target = %d, want the configured fallback 8192 plus the storyline allowance", got)
 	}
-	if got := budget.Write(intPointer(500), false); got != 8192 {
-		t.Errorf("a short target = %d, want the fallback floor 8192", got)
+	if got := budget.Write(intPointer(500), false); got != 8192+StorylineCompletionAllowance {
+		t.Errorf("a short target = %d, want the fallback floor 8192 plus the storyline allowance", got)
+	}
+	if got, derived := budget.Write(intPointer(6000), false), 6000*budget.WritePerChar; derived < budget.Ceiling && got != derived+StorylineCompletionAllowance {
+		t.Errorf("a 6,000-character target = %d, want the derived %d plus the storyline allowance", got, derived)
 	}
 	// A6: a longer requested draft is sent a larger budget. The comparison is made where the
 	// derivation is above the floor, which is what "a longer draft raises the ceiling instead
@@ -371,8 +377,8 @@ func TestWritingBudgetFollowsTheRequestedLength(t *testing.T) {
 	if budget.Observation() >= budget.Write(nil, false) {
 		t.Errorf("observation %d is not smaller than the writer's floor %d", budget.Observation(), budget.Write(nil, false))
 	}
-	if got := budget.Write(nil, true); got != 16384 {
-		t.Errorf("a native-effort writer got %d, want the 16,384-token headroom", got)
+	if got := budget.Write(nil, true); got != 2*(8192+StorylineCompletionAllowance) {
+		t.Errorf("a native-effort writer got %d, want twice the floor and allowance", got)
 	}
 	if visible := budget.Write(nil, true) - 8116; visible <= 0 {
 		t.Errorf("the reproduced 8,116-token reasoning pass left %d visible tokens", visible)
@@ -397,7 +403,7 @@ func TestInvalidCompletionCapIsRefused(t *testing.T) {
 	}
 	// The resolved value is the registry's fallback AND the writer's floor, and the ceiling is
 	// a bounded multiple of it — so one env value moves the whole policy.
-	if cfg.LLMMaxTokensDefault != 16384 || cfg.LLMCompletionBudget.Write(nil, false) != 16384 {
+	if cfg.LLMMaxTokensDefault != 16384 || cfg.LLMCompletionBudget.Write(nil, false) != 16384+StorylineCompletionAllowance {
 		t.Errorf("a resolved cap did not reach the budget: %d / %d", cfg.LLMMaxTokensDefault, cfg.LLMCompletionBudget.Write(nil, false))
 	}
 	if cfg.LLMCompletionBudget.Ceiling != 16384*writeBudgetCeilingFactor {

@@ -23,20 +23,21 @@ func TestGenerationPricingCallsUseTheBudgetsTheStagesWillSend(t *testing.T) {
 	if calls[0].Count != 2 || calls[0].CompletionTokens != 1024 {
 		t.Errorf("observe call = %+v", calls[0])
 	}
-	if calls[1].Count != 1 || calls[1].CompletionTokens != 24000 {
+	// The write is priced with the storyline's allowance, the budget it will send (GEN-67).
+	if calls[1].Count != 1 || calls[1].CompletionTokens != 24000+config.StorylineCompletionAllowance {
 		t.Errorf("write call = %+v", calls[1])
 	}
 	native := generationPricingCalls(generation.StartRequest{
 		WriteModel: "openrouter/reasoner", WriteNativeEffort: true,
 	}, testCompletionBudget())
-	if len(native) != 1 || native[0].CompletionTokens != 16384 {
+	if len(native) != 1 || native[0].CompletionTokens != 2*(8192+config.StorylineCompletionAllowance) {
 		t.Fatalf("native-effort pricing calls = %+v, want frozen headroom", native)
 	}
 
 	reused := generationPricingCalls(generation.StartRequest{
 		ObserveModel: "openrouter/shared", WriteModel: "openrouter/shared", ObserveCalls: 0,
 	}, testCompletionBudget())
-	if len(reused) != 1 || reused[0].CompletionTokens != 8192 {
+	if len(reused) != 1 || reused[0].CompletionTokens != 8192+config.StorylineCompletionAllowance {
 		t.Fatalf("reuse-everything calls = %+v, want only the write floor", reused)
 	}
 }

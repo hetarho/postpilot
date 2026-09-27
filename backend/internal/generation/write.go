@@ -45,10 +45,13 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	if err != nil {
 		return WriteAnswer{}, response.Usage, providerCallError("글 작성", err)
 	}
-	answer, err := ParseWriteAnswer(response.Text, tagCount)
+	shown := append(append([]string(nil), photos...), videos...)
+	answer, err := ParseWriteAnswer(response.Text, tagCount, shown)
 	if err != nil {
 		return WriteAnswer{}, response.Usage, responseParseError(response, err)
 	}
+	// What the writing stage was shown is what the post reads a later attachment against.
+	answer.Storyline.MadeWith = shown
 	answer.Content.Blocks = ValidateBlocks(answer.Content.Blocks)
 	answer.Content = FilterAttachments(answer.Content, photos, videos)
 	return *answer, response.Usage, nil

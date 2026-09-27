@@ -110,6 +110,21 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 	return true, nil
 }
 
+func (f *fakeStore) UpdateAttachmentTraces(_ context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
+		return false, nil
+	}
+	existing.Observations = append([]Observation(nil), observations...)
+	existing.Storyline = storyline
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, language Language, annotations WriteAnnotations, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
@@ -127,6 +142,7 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	existing.ContentLanguage = &language
 	// NULL for none, as the column stores it.
 	existing.ContentNouns = nilIfEmpty(annotations.Nouns)
+	existing.Storyline = annotations.Storyline
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
 	existing.MachineBaselineVoiceID = existing.VoiceID

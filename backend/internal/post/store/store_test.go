@@ -834,6 +834,57 @@ func TestAssignPostFieldWritesOnlyAChange(t *testing.T) {
 	}
 }
 
+// POST-99: a write's storyline rides the generated-content statement in its own column, NULL for
+// none; an identical one is no write and another over the same content is; the attachment-traces
+// statement writes the observations and the storyline together.
+func TestStorylineRoundTripsBesideTheContent(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStoreWithHandle(t)
+	p := seedPost(t, s, "storied", "alice", testNow)
+	content := post.PostContent{Title: "성수 카페", Blocks: []post.Block{{Type: post.BlockText, Content: "본문"}}}
+
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
+		t.Fatalf("write without a storyline: updated=%v err=%v", updated, err)
+	}
+	none, err := s.GetPost(ctx, p.Slug)
+	if err != nil || none.Storyline != nil {
+		t.Fatalf("a write without a storyline read back %+v (%v)", none.Storyline, err)
+	}
+
+	storyline := &post.Storyline{
+		Paragraphs: []post.StorylineParagraph{{Text: "가게 앞을 보여줍니다.", Files: []string{"a.jpg"}}, {Text: "마무리"}},
+		MadeWith:   []string{"a.jpg", "b.jpg"},
+	}
+	annotations := post.WriteAnnotations{Storyline: storyline}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || !updated {
+		t.Fatalf("a storyline over the same content: updated=%v err=%v", updated, err)
+	}
+	got, err := s.GetPost(ctx, p.Slug)
+	if err != nil || !reflect.DeepEqual(got.Storyline, storyline) {
+		t.Fatalf("storyline = %+v, want %+v (%v)", got.Storyline, storyline, err)
+	}
+	var stored string
+	if err := handle.Reader.QueryRow("SELECT storyline FROM posts WHERE slug = ?", p.Slug).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	const want = `{"paragraphs":[{"text":"가게 앞을 보여줍니다.","files":["a.jpg"]},{"text":"마무리","files":[]}],"edited_by_hand":false,"made_with":["a.jpg","b.jpg"]}`
+	if stored != want {
+		t.Fatalf("stored storyline = %s\nwant %s", stored, want)
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || updated {
+		t.Fatalf("an identical write: updated=%v err=%v", updated, err)
+	}
+
+	taken := &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞을 보여줍니다."}, {Text: "마무리"}}, MadeWith: []string{"b.jpg"}}
+	if updated, err := s.UpdateAttachmentTraces(ctx, p.Slug, p.UserID, nil, taken, testNow); err != nil || !updated {
+		t.Fatalf("attachment traces: updated=%v err=%v", updated, err)
+	}
+	after, err := s.GetPost(ctx, p.Slug)
+	if err != nil || !reflect.DeepEqual(after.Storyline, taken) || after.Content == nil || after.ContentRevision != got.ContentRevision {
+		t.Fatalf("after the traces write: storyline %+v, revision %d (%v)", after.Storyline, after.ContentRevision, err)
+	}
+}
+
 // GEN-55, R29: the write's nouns ride the generated-content statement in a column of their own,
 // never inside the content or the machine baseline, and NULL is the one "none". Identical
 // values are no write; different ones are, even over identical content.

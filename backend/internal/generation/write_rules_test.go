@@ -90,6 +90,47 @@ func TestStaticRulesHoldTheFormatAlone(t *testing.T) {
 	}
 }
 
+// GEN-67: the direct write asks for the storyline first and places the attachments along it, in
+// both languages, once; the revise writes no storyline and carries neither line, and the old
+// "most natural position" placement line is gone everywhere.
+func TestTheWriteAsksForAStorylineAndPlacesAlongIt(t *testing.T) {
+	placement := map[Language]string{
+		LanguageKorean:  "첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록으로 정확히 한 번씩 놓으세요.",
+		LanguageEnglish: "Place every attached photo exactly once, as an IMAGE block where its storyline paragraph stands",
+	}
+	rule := map[Language]string{LanguageKorean: koreanStorylineRule, LanguageEnglish: englishStorylineRule}
+	videoLine := map[Language]string{
+		LanguageKorean:  "storyline에서 그 영상이 놓인 문단의 자리에 놓으세요.",
+		LanguageEnglish: "Place it where its storyline paragraph stands.",
+	}
+	for _, language := range []Language{LanguageKorean, LanguageEnglish} {
+		write, _ := BuildWritePromptForLanguage(WritePromptInput{
+			Language: language, Profile: goldenProfile(), Photos: []string{"IMG_1.jpg"}, Videos: []string{"a.mp4"}, TagCount: 4,
+		})
+		for _, line := range []string{rule[language], placement[language], videoLine[language], `{"storyline":[{"text":"...","files":[]}],"title"`} {
+			if strings.Count(write, line) != 1 {
+				t.Errorf("%s write carries %q %d times, want once", language, line, strings.Count(write, line))
+			}
+		}
+		revise, _ := BuildRevisePromptForLanguage(language, goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "고쳐줘", nil, 4, nil, FrozenGuidelines{})
+		if strings.Contains(revise, "storyline") {
+			t.Errorf("%s revise mentions the storyline:\n%s", language, revise)
+		}
+		for _, gone := range []string{"가장 자연스러운 위치", "fits most naturally"} {
+			if strings.Contains(write, gone) || strings.Contains(revise, gone) {
+				t.Errorf("%s still carries %q", language, gone)
+			}
+		}
+	}
+	for _, sentence := range []string{"출력 언어는 한국어입니다. storyline, title", "Write the storyline, title"} {
+		ko, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, TagCount: 4})
+		en, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, TagCount: 4})
+		if !strings.Contains(ko+en, sentence) {
+			t.Errorf("the output-language sentence does not name the storyline: %q", sentence)
+		}
+	}
+}
+
 // GUIDE-41, GUIDE-43: each moved rule reaches the write and the revise once as its 기본 지침 while
 // it is on, inside [작문 지침], and not at all once it is switched off.
 func TestEachMovedRuleIsItsDefaultOnceWhenOnAndAbsentWhenOff(t *testing.T) {

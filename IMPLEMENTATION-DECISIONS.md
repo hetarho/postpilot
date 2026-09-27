@@ -57,3 +57,23 @@ choice would be expensive to undo are listed at the end.
   (`write_prompt_no_template`, `revise_prompt_no_template`, `write_prompt_memories`) carry no
   `[작문 지침]` section, so they pin the format-only static rules; the 11 defaults are pinned by the
   default and section tests instead.
+
+## T429 — the direct write opens with a storyline
+
+- **A storyline with no paragraph is stored as none.** An answer without `storyline`, a malformed
+  one, or one whose paragraphs all drop leaves the post with no storyline (NULL), because an empty
+  plan would list every attachment under `taken_out_files`. *If you want "the write had no plan"
+  kept distinct from "no storyline yet":* store the empty plan and have the read model skip
+  `taken_out_files` when `paragraphs` is empty.
+- **Parser details the task left open:** a paragraph with neither text nor a file after bounding
+  is dropped (before the 30 cap), and file names match exactly, so `A.JPG` is not `a.jpg`.
+- **`StorylineCompletionAllowance` (1,024) lives in `platform/config` beside the write budget**,
+  since the write call and the credit hold are both computed there. It is added before the
+  native-effort doubling and capped at the ceiling, so a no-target write asks for 9,216 tokens
+  and a native-effort one for 18,432. Revisions keep their budget.
+- **`MadeWith` lists photos first, then videos**, each in attachment order: the order the write
+  prompt names them.
+- **A deleted attachment's traces go in one statement, which still follows the row delete.** The
+  observation and the storyline name are written together (`UpdatePostAttachmentTraces`), but
+  as before this is not the same transaction as the row delete. *If you want it atomic with the
+  row:* move both into the store's delete transaction.

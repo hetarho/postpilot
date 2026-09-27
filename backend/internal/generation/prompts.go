@@ -19,10 +19,10 @@ const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사�
 // which is what every golden pins and what the provider's prefix cache rests on — and a model
 // is never told about a block type the post has no file for, which is an invitation to invent
 // one (VIDEO-12).
-const videoWriteInstructions = "\nVIDEO 블록은 첨부 영상 파일명만 쓰고, 영상이 보여주는 내용이 글에서 언급되는 위치에 놓으세요." +
+const videoWriteInstructions = "\nVIDEO 블록은 첨부 영상 파일명만 쓰고, storyline에서 그 영상이 놓인 문단의 자리에 놓으세요." +
 	"\nblock의 type에는 VIDEO도 쓸 수 있습니다."
 
-const englishVideoWriteInstructions = "\nA VIDEO block may use only an attached video filename. Place it where the post mentions what the clip shows." +
+const englishVideoWriteInstructions = "\nA VIDEO block may use only an attached video filename. Place it where its storyline paragraph stands." +
 	"\nA block's type may also be VIDEO."
 
 // ObserveVideoPrompt is the photo prompt's facts-only rule for one clip. One video per call
@@ -45,25 +45,36 @@ const koreanNounsRule = "nouns에는 제목과 본문에 쓴 명사를 중복 �
 
 const englishNounsRule = "List in nouns the distinct nouns the title and the body use, at most 40, in English, each as a bare word without an article."
 
+// koreanStorylineRule / englishStorylineRule ask for the storyline first (GEN-67): the plan of
+// the post, paragraph by paragraph, each naming the attachments it uses, written before the
+// post and followed by it. The storyline is its own JSON member, the first one, so the model
+// writes the plan before a single block.
+const koreanStorylineRule = "storyline에는 본문을 쓰기 전에 이 글을 어떤 순서로 이야기할지 문단별로 정하세요. 각 문단은 그 부분에서 무엇을 보여주고 말할지 두세 문장의 계획(…를 보여줍니다)으로 쓰고, files에는 그 부분에 놓을 첨부 파일명을 적으세요. 첨부 사진과 영상은 모두 정확히 한 문단에 한 번씩 넣고, 템플릿이 있으면 템플릿의 자리 순서를 따르세요. 본문은 이 storyline을 따라 쓰세요."
+
+const englishStorylineRule = "Before writing, set in storyline how this post will tell things, paragraph by paragraph: each paragraph is a plan of two or three sentences saying what that part shows and says, and files names the attachments that part uses. Put every attached photo and video in exactly one paragraph, following the template's places in order when there is a template. Then write the post along this storyline."
+
 // WritePrompt / englishWritePrompt are the write pass's static rules, and they hold the input
 // and output format alone (GUIDE-1, GEN-14): the task, one paragraph per TEXT block, attached
-// filenames only, the IMAGE placement, the answer shape and its fields. Every rule about what
+// filenames only, the storyline and the IMAGE placement along it, the answer shape and its
+// fields. Every rule about what
 // may be written — grounding, impressions, naming, altitude, the story rules, the title and tag
 // rules and the Korean naturalness baseline — is a 기본 지침 the owner can switch off, rendered
 // in [작문 지침] (GUIDE-41).
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 한국어 블로그 글을 작성하세요.
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
 IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
-IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오도록 배치하세요.
-출력은 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
+` + koreanStorylineRule + `
+첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록으로 정확히 한 번씩 놓으세요. 템플릿의 사진 자리에는 그 자리 주변이 다루는 내용에 맞는 사진을 놓으세요.
+출력은 설명이나 마크다운 없이 {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.
 ` + koreanNounsRule
 
 const englishWritePrompt = `Write an English blog post from the photo observations and memo.
 Use exactly one TEXT block for each paragraph.
 IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
-Place each IMAGE block where the photo fits most naturally in the flow of the post.
-Return exactly one JSON object shaped as {"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
+` + englishStorylineRule + `
+Place every attached photo exactly once, as an IMAGE block where its storyline paragraph stands; at a template's photo place, put the photos that fit what the section around it is about.
+Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
 Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.
 ` + englishNounsRule
 
@@ -305,14 +316,14 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	case LanguageKorean:
 		stable.WriteString(writeStaticRules(input.Language))
 		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", input.TagCount)
-		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		stable.WriteString("\n출력 언어는 한국어입니다. storyline, title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(input.Videos) > 0 {
 			stable.WriteString(videoWriteInstructions)
 		}
 	case LanguageEnglish:
 		stable.WriteString(writeStaticRules(input.Language))
 		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", input.TagCount)
-		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
+		stable.WriteString("\nThe output language is English. Write the storyline, title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
 		if len(input.Videos) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)
 		}
