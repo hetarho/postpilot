@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -86,11 +87,8 @@ func serve(ctx context.Context, c *contexts) error {
 	if cfg.BillingEnabled {
 		go runBillingWorker(ctx, c.billing)
 	}
-	workerCtx, cancelWorkers := context.WithCancel(ctx)
-	defer cancelWorkers()
-	for range config.WorkerConcurrency {
-		go c.jobs.Run(workerCtx)
-	}
+	serving, stopWorkers := startWorkers(ctx, config.WorkerConcurrency, c.jobs.Run)
+	defer stopWorkers()
 
 	servers := []*http.Server{server}
 	if cfg.MediaInternalAddr != "" {
@@ -107,7 +105,30 @@ func serve(ctx context.Context, c *contexts) error {
 		servers = append(servers, private)
 	}
 	slog.Info("server starting", "port", cfg.Port, "version", version)
-	return rpcserver.Serve(ctx, servers...)
+	return rpcserver.Serve(serving, servers...)
+}
+
+// startWorkers runs n in-process workers until ctx ends or stop is called, and returns the
+// context the HTTP servers serve on: it ends only once every worker has returned. Graceful
+// shutdown therefore stops the worker before HTTP shutdown (GEN-33), and a handler's one
+// bounded terminal write is never raced by the listeners closing.
+func startWorkers(ctx context.Context, n int, run func(context.Context)) (serving context.Context, stop context.CancelFunc) {
+	workerCtx, stopWorkers := context.WithCancel(ctx)
+	serving, stopServing := context.WithCancel(context.WithoutCancel(ctx))
+	var workers sync.WaitGroup
+	for range n {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			run(workerCtx)
+		}()
+	}
+	go func() {
+		<-workerCtx.Done()
+		workers.Wait()
+		stopServing()
+	}()
+	return serving, stopWorkers
 }
 
 // handlers is every Connect service the server exposes, each over its own context.

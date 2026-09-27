@@ -138,7 +138,7 @@ func (freezeRules) AppendRule(context.Context, string, string, string) error { r
 func (freezeImages) Read(context.Context, string) ([]byte, error) {
 	return nil, errors.New("no images in this test")
 }
-func (freezeExperiments) PendingForPost(context.Context, string, string) (string, error) {
+func (freezeExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
 	return "", nil
 }
 func (freezeMemories) ForPost(context.Context, string, []string) ([]string, error) { return nil, nil }

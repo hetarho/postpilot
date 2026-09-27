@@ -112,6 +112,17 @@ func (s *Store) PendingForPost(ctx context.Context, userID, postSlug string) (*e
 	return &found, err
 }
 
+func (s *Store) BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error) {
+	id, err := s.read.BlockingWriteForPost(ctx, sqlc.BlockingWriteForPostParams{UserID: userID, PostSlug: nullString(postSlug)})
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("blocking experiment: %w", err)
+	}
+	return id, nil
+}
+
 func (s *Store) SetJob(ctx context.Context, id, userID, jobID string) error {
 	return s.write.SetExperimentJob(ctx, sqlc.SetExperimentJobParams{JobID: nullString(jobID), ID: id, UserID: userID})
 }

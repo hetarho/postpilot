@@ -52,7 +52,8 @@ func TestMigration0038PreservesExistingJobsAndGuards(t *testing.T) {
 		t.Fatal(err)
 	}
 	rows.Close()
-	if err := Migrate(ctx, d.Writer); err != nil {
+	// 0091 rebuilds the voice-kind index to add seed_voice, so the guards are pinned up to it.
+	if err := migrate(ctx, d.Writer, migrationsBefore(t, "0091_")); err != nil {
 		t.Fatal(err)
 	}
 	var ready int

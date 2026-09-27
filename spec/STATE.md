@@ -58,7 +58,6 @@
 | T414 | Template authoring, the 형식 안내 and paste follow the outline grammar alone | CLIP | T413 | todo |
 | T415 | Clip ① and ② behave and speak as CLIP-14, CLIP-21/23, CLIP-39 and CLIP-121 decide | CLIP | - | todo |
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
-| T417 | Generation's preconditions, voice re-check and shutdown order match GEN | GEN | - | doing@260927.ia |
 | T418 | Experiments: voice deletion, retention, leaderboard scoring, retry and adoption follow MODEL | MODEL VOICE | T417 | todo |
 | T419 | The model lab and leaderboard screens follow MODEL-31, MODEL-62/63 and MODEL-65 | MODEL | T418 | todo |
 | T420 | Voice measurement, overrides and publication are correct | VOICE | - | todo |
@@ -77,11 +76,12 @@
 - create-task CLIP CDS (CLIP r48 CDS r28): video templates carry the design selection a project takes on selection; the template preview's 15–90 s timing, 3–4 s captions and last frame; builder entries open in place with their own delete; ②'s flow simulation over still cut frames — also refresh T414 (its preview-select removal and builder items meet CLIP-166/169/172) and T415 (F58/F59/F73's copy assumed a template carries no design) before they are implemented
 - implement-task T428 after T424 (template photo places unbound), then T429 (the write sets the day's flow first); T430 after T425 (builder copy)
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable
-- implement-task the P1-bearing tasks T417 T418 T420 T422 T423 T424 T426, then T419 T421 T425 T427 (review/conformance-all-260927); T414 T415 after their refresh
+- implement-task the P1-bearing tasks T418 T420 T422 T423 T424 T426, then T419 T421 T425 T427 (review/conformance-all-260927); T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP narration — captions read as a shot list, one observation caption per cut (no story step before the flow, every claim must cite an observation, visit/taste markers dropped without an instruction, none of the post writer's memo/voice/memory); update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 T417 done
 - 260927 T413 done
 - 260927 T417 claimed (ia): base GEN@14→16 (r15/r16 changed GEN-14/47/67 only)
 - 260927 T416 blocked (ia): CDS-84's fallback target is itself Paperlogy — 크게 강조 draws 2,780 of 11,172 syllables (갂 쎯 empty), so an ink-aware check leaves a Paperlogy caption nothing to fall back to; update-ssot CDS decides
@@ -101,4 +101,3 @@
 - 260927 create-task review/conformance-all-260927 done (hc): 70 code findings → T413–T427; the SSOT side (CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE VIDEO QUAL) consumed into them or no-op (docs caught up with the code); ARCH CLIP CDS THEME keep their older pending
 - 260927 update-ssot conformance done (hc): CLIP r46 CDS r27 GEN r14 MEM r4 POST r17 EXPORT r6 LANG r6 TMPL r12 GUIDE r8 MKT r7 THEME r19 ARCH r12 AUTH r9 MODEL r18 VOICE r4 VIDEO r4 carry the SSOT side of review/conformance-all-260927 (55 findings closed as SSOT-follows-code; 69 code findings open; F2 F55 await the owner)
 - 260927 update-ssot GEN TMPL POST start (sp): photos grouped into spaces after observation, owner reviews the groups before writing, the write builds the day's story first, template photo positions follow the confirmed spaces instead of attachment order
-- 260927 update-ssot conformance start (hc): SSOT side of review/conformance-all-260927 across CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE; F2 and F55 await the owner

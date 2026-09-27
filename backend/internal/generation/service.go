@@ -146,12 +146,12 @@ func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug 
 	if s.experiments == nil {
 		return nil
 	}
-	id, err := s.experiments.PendingForPost(ctx, userID, postSlug)
+	id, err := s.experiments.BlockingWriteForPost(ctx, userID, postSlug)
 	if err != nil {
 		return err
 	}
 	if id != "" {
-		return &JobAlreadyInProgressError{ActiveID: id}
+		return &ExperimentPendingError{ExperimentID: id}
 	}
 	return nil
 }

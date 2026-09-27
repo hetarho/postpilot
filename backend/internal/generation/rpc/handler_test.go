@@ -40,6 +40,8 @@ func TestGenerationErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"instruction too long":    {"start revision", generation.ErrRevisionInstructionTooLong, connect.CodeInvalidArgument, "REVISION_INSTRUCTION_TOO_LONG", map[string]string{"max": "500"}},
 		"target length":           {"start generation", generation.ErrInvalidTargetLength, connect.CodeInvalidArgument, "GENERATION_TARGET_LENGTH_INVALID", nil},
 		"already running wrapped": {"start generation", errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "GENERATION_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
+		// A comparison holding the post is named as one, never as an active job (GEN-23).
+		"comparison holds the post": {"start revision", errors.Join(errors.New("private queue detail"), &generation.ExperimentPendingError{ExperimentID: "experiment-1"}), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"experiment_id": "experiment-1"}},
 	}
 
 	for name, test := range tests {

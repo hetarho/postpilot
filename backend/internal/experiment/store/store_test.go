@@ -187,6 +187,67 @@ func TestStoreOwnershipStableSidesAndUnresolvedWriteGuard(t *testing.T) {
 	}
 }
 
+// GEN-23, GEN-38: only an editor write comparison still queued, running, partial or in review,
+// or decided with a requested application or adoption pending, holds the post's generation and
+// revision. A lab comparison and a failed one never do, though both stay the post's unresolved
+// comparison (MODEL-34), and a resolved one releases it.
+func TestBlockingWriteForPostIsTheEditorComparisonStillInFlight(t *testing.T) {
+	for name, tc := range map[string]struct {
+		origin, status string
+		apply, applied bool
+		adopt, adopted bool
+		blocks         bool
+	}{
+		"queued":                {origin: "editor", status: "queued", blocks: true},
+		"running":               {origin: "editor", status: "running", blocks: true},
+		"partial":               {origin: "editor", status: "partial", blocks: true},
+		"review":                {origin: "editor", status: "review", blocks: true},
+		"failed":                {origin: "editor", status: "failed"},
+		"decided, apply due":    {origin: "editor", status: "decided", apply: true, blocks: true},
+		"decided, adoption due": {origin: "editor", status: "decided", apply: true, applied: true, adopt: true, blocks: true},
+		"decided and applied":   {origin: "editor", status: "decided", apply: true, applied: true},
+		"dismissed":             {origin: "editor", status: "dismissed"},
+		"lab queued":            {origin: "lab", status: "queued"},
+		"lab review":            {origin: "lab", status: "review"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			store, handle := testStore(t)
+			ctx := context.Background()
+			now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+			if err := store.Create(ctx, sample("exp-1", "alice", "post-a", now)); err != nil {
+				t.Fatal(err)
+			}
+			at := func(set bool) any {
+				if set {
+					return now.Format(time.RFC3339)
+				}
+				return nil
+			}
+			flag := func(set bool) int {
+				if set {
+					return 1
+				}
+				return 0
+			}
+			if _, err := handle.Writer.ExecContext(ctx,
+				`UPDATE model_experiments SET origin=?, status=?, apply_requested=?, applied_at=?, adoption_requested=?, adopted_at=? WHERE id='exp-1'`,
+				tc.origin, tc.status, flag(tc.apply), at(tc.applied), flag(tc.adopt), at(tc.adopted)); err != nil {
+				t.Fatal(err)
+			}
+			id, err := store.BlockingWriteForPost(ctx, "alice", "post-a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (id == "exp-1") != tc.blocks || (id != "" && id != "exp-1") {
+				t.Fatalf("blocking = %q, want blocks=%v", id, tc.blocks)
+			}
+			if foreign, err := store.BlockingWriteForPost(ctx, "bob", "post-a"); err != nil || foreign != "" {
+				t.Fatalf("foreign blocking = %q, %v", foreign, err)
+			}
+		})
+	}
+}
+
 // The service checks the voice before creating the experiment, but deletion may commit
 // between that read and this write. Preserve the trigger's lifecycle error at the context
 // boundary so callers receive FailedPrecondition rather than Internal.

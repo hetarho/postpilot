@@ -107,6 +107,7 @@ func toConnectError(op string, err error) error {
 		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, credits)
 	}
 	var active *generation.JobAlreadyInProgressError
+	var comparison *generation.ExperimentPendingError
 	switch {
 	case errors.Is(err, generation.ErrNotFound):
 		if op == "get generation" {
@@ -158,13 +159,20 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "target length must be positive", postpilotv1.FailureReason_GENERATION_TARGET_LENGTH_INVALID, nil)
 	case errors.As(err, &active):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "generation is already in progress", postpilotv1.FailureReason_GENERATION_ALREADY_RUNNING, activeJobParams(active.ActiveID))
+	case errors.As(err, &comparison):
+		// The comparison is named under its own key: it is not a job, and GetGeneration would
+		// answer NotFound for it (GEN-23).
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a write comparison holds the post", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, idParams("experiment_id", comparison.ExperimentID))
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "generation request failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
-func activeJobParams(id string) map[string]string {
+func activeJobParams(id string) map[string]string { return idParams("active_job_id", id) }
+
+// idParams carries one opaque identifier, and nothing when it is not one.
+func idParams(key, id string) map[string]string {
 	if id == "" || len(id) > 128 {
 		return nil
 	}
@@ -175,7 +183,7 @@ func activeJobParams(id string) map[string]string {
 			return nil
 		}
 	}
-	return map[string]string{"active_job_id": id}
+	return map[string]string{key: id}
 }
 
 func modelRefValue(ref *postpilotv1.ModelRef) string {

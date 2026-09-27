@@ -154,6 +154,15 @@ func (s *Service) PendingForPost(ctx context.Context, userID, postSlug string) (
 	return s.runs.PendingForPost(ctx, userID, postSlug)
 }
 
+// BlockingWriteForPost is the id of the editor write comparison that holds the post's
+// generation and revision, or empty (GEN-23, GEN-38). It is narrower than PendingForPost: a
+// lab comparison is a reading of the post (MODEL-66) and a failed one has nothing to apply,
+// so neither holds the post, although both stay the post's unresolved comparison until
+// resolved (MODEL-34).
+func (s *Service) BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error) {
+	return s.runs.BlockingWriteForPost(ctx, userID, postSlug)
+}
+
 func (s *Service) PurgePost(ctx context.Context, userID, postSlug string) error {
 	return s.purge.PurgePost(ctx, userID, postSlug)
 }

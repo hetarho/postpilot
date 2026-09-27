@@ -67,10 +67,11 @@ type Jobs interface {
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 
-// PendingExperiments is the experiment context's published post guard. Generation
-// asks only whether unresolved write output exists; it never reads experiment rows.
+// PendingExperiments is the experiment context's published post guard. Generation asks
+// only for the editor write comparison that holds the post (GEN-23); it never reads
+// experiment rows.
 type PendingExperiments interface {
-	PendingForPost(ctx context.Context, userID, postSlug string) (string, error)
+	BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error)
 }
 
 // TemplateBriefs is the template context's published render, consumed only at enqueue time.

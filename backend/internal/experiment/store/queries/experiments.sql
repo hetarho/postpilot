@@ -46,6 +46,21 @@ WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   )
 ORDER BY created_at DESC, id DESC LIMIT 1;
 
+-- name: BlockingWriteForPost :one
+-- The editor write comparison that holds a post's generation and revision (GEN-23, GEN-38):
+-- still queued, running, partial or in review, or decided with a requested application or
+-- adoption not yet complete. A lab comparison and a failed one never hold the post.
+SELECT id FROM model_experiments
+WHERE user_id = ? AND post_slug = ? AND stage = 'write' AND origin = 'editor'
+  AND (
+    status IN ('queued', 'running', 'review', 'partial')
+    OR (status = 'decided' AND (
+          (apply_requested = 1 AND applied_at IS NULL)
+          OR (adoption_requested = 1 AND adopted_at IS NULL)
+       ))
+  )
+ORDER BY created_at DESC, id DESC LIMIT 1;
+
 -- name: CountPublishableForVoice :one
 -- An experiment frozen to the voice that could still publish into it (a styleguide for an
 -- analyze comparison, a machine baseline for a write one): unfinished, awaiting a verdict, or

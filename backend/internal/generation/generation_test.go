@@ -482,6 +482,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	}
 }
 
+// GEN-23, GEN-38: the refusal names the comparison that holds the post, never as a job.
 func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("existing"),
@@ -494,15 +495,16 @@ func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testi
 	_, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 	})
+	var pending *ExperimentPendingError
 	var active *JobAlreadyInProgressError
-	if !errors.As(err, &active) || active.ActiveID != "experiment-pending" {
+	if !errors.As(err, &pending) || pending.ExperimentID != "experiment-pending" || errors.As(err, &active) {
 		t.Fatalf("ordinary generation error = %v", err)
 	}
 	_, err = svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "더 짧게",
 		WriteModel: writeRef.String(), SaveAsRule: true,
 	})
-	if !errors.As(err, &active) || active.ActiveID != "experiment-pending" {
+	if !errors.As(err, &pending) || pending.ExperimentID != "experiment-pending" || errors.As(err, &active) {
 		t.Fatalf("revision error = %v", err)
 	}
 	if jobs.enqueues != 0 || len(rules.lines) != 0 {
@@ -709,7 +711,7 @@ type fakePendingExperiments struct {
 	err error
 }
 
-func (f fakePendingExperiments) PendingForPost(context.Context, string, string) (string, error) {
+func (f fakePendingExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
 	return f.id, f.err
 }
 

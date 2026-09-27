@@ -32,7 +32,7 @@ func (neutralQualityRules) RulesFor(context.Context, string, string, []string, L
 
 type neutralExperiments struct{}
 
-func (neutralExperiments) PendingForPost(context.Context, string, string) (string, error) {
+func (neutralExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
 	return "", nil
 }
 

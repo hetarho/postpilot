@@ -248,7 +248,7 @@ export const appFailureSpecs = {
   EXPERIMENT_RETRY_MODEL_UNAVAILABLE: {},
   EXPERIMENT_VOICE_REQUIRED: {},
   EXPERIMENT_VOICE_UNAVAILABLE: {},
-  EXPERIMENT_ALREADY_RUNNING: { optional: ['active_job_id'] },
+  EXPERIMENT_ALREADY_RUNNING: { optional: ['active_job_id', 'experiment_id'] },
   EXPERIMENT_POST_FINALIZED: {},
   EXPERIMENT_BADGES_INVALID: {},
   JOB_NOT_FOUND: {},

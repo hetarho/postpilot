@@ -119,6 +119,36 @@ func TestRevisionDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 	}
 }
 
+// GEN-27: Generate rechecks the frozen voice on a fresh snapshot before it writes, as Revise
+// does, so a reassignment or a deletion that lands during the write call drops the output.
+func TestGenerateDropsOutputWhenThePostMovesMidCall(t *testing.T) {
+	for name, tc := range map[string]struct {
+		moved VoiceRef
+		want  error
+	}{
+		"reassigned": {VoiceRef{ID: "voice-other", Name: "리뷰"}, ErrVoiceMismatch},
+		"deleted":    {deletedVoice, ErrVoiceDeleted},
+	} {
+		t.Run(name, func(t *testing.T) {
+			voice := liveVoice
+			if tc.moved.ID == deletedVoice.ID {
+				voice = VoiceRef{ID: deletedVoice.ID, Name: deletedVoice.Name}
+			}
+			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: voice}}
+			models := newFakeModels()
+			models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
+				posts.input.Voice = tc.moved
+				return okContent(), nil
+			}
+			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+			err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: voice.ID, WriteModel: writeRef.String()}, func(string, int, int) {})
+			if !errors.Is(err, tc.want) || len(posts.contents) != 0 {
+				t.Fatalf("mid-call %s: err=%v contents=%d", name, err, len(posts.contents))
+			}
+		})
+	}
+}
+
 // ARCH-34 [I4]: two voices with contradictory profiles each receive only their own
 // projection, through generation and through five repeated revisions.
 func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {

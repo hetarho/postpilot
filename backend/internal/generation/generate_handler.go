@@ -25,7 +25,8 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if post.Published {
 		return ErrPostPublished
 	}
-	if _, err := frozenVoice(post, job.VoiceID); err != nil {
+	voiceID, err := frozenVoice(post, job.VoiceID)
+	if err != nil {
 		return err
 	}
 	// Generation options are frozen when the job is enqueued — language, length, tag count,
@@ -81,12 +82,22 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return err
 	}
+	// The voice is rechecked on a fresh snapshot, as Revise does: a reassignment or deletion
+	// that slipped in during the provider calls must not persist output into the wrong
+	// profile (GEN-27).
+	current, err := s.posts.AttachedImages(ctx, job.UserID, job.PostSlug)
+	if err != nil {
+		return fmt.Errorf("reload generation voice: %w", err)
+	}
+	if _, err := frozenVoice(current, voiceID); err != nil {
+		return err
+	}
 	// The answer's annotations replace the post's, a noun-less write's included: its nil nouns
 	// clear the ones the last generation stored (GEN-55).
 	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations()); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
-	s.recordVersionSample(ctx, post.UserID, post.Voice.ID, answer.Content)
+	s.recordVersionSample(ctx, post.UserID, voiceID, answer.Content)
 	progress("write", 1, 1)
 	return nil
 }

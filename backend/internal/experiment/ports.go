@@ -18,6 +18,7 @@ type RunLedger interface {
 	Get(ctx context.Context, id string) (Experiment, error)
 	List(ctx context.Context, userID string, stage Stage) ([]Experiment, error)
 	PendingForPost(ctx context.Context, userID, postSlug string) (*Experiment, error)
+	BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error)
 	SetJob(ctx context.Context, id, userID, jobID string) error
 	SetSnapshot(ctx context.Context, id string, snapshot Snapshot, hash string) error
 	SetStatus(ctx context.Context, id string, status Status, finishedAt *time.Time) error

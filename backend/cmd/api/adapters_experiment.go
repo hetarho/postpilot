@@ -91,6 +91,10 @@ func (a postExperiments) PendingForPost(ctx context.Context, userID, slug string
 	return found.ID, nil
 }
 
+func (a postExperiments) BlockingWriteForPost(ctx context.Context, userID, slug string) (string, error) {
+	return a.service().BlockingWriteForPost(ctx, userID, slug)
+}
+
 func (a postExperiments) PurgePost(ctx context.Context, userID, slug string) error {
 	return a.service().PurgePost(ctx, userID, slug)
 }

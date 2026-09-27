@@ -83,6 +83,21 @@ func (s *memoryStore) PendingForPost(_ context.Context, userID, slug string) (*E
 	}
 	return nil, nil
 }
+func (s *memoryStore) BlockingWriteForPost(_ context.Context, userID, slug string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, row := range s.rows {
+		if row.UserID != userID || row.PostSlug != slug || row.Stage != StageWrite || row.Origin != OriginEditor {
+			continue
+		}
+		switch {
+		case row.Status == StatusQueued, row.Status == StatusRunning, row.Status == StatusReview, row.Status == StatusPartial,
+			row.Status == StatusDecided && ((row.ApplyRequested && row.AppliedAt == nil) || (row.AdoptionRequested && row.AdoptedAt == nil)):
+			return row.ID, nil
+		}
+	}
+	return "", nil
+}
 func (s *memoryStore) SetJob(_ context.Context, id, userID, jobID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

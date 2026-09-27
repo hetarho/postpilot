@@ -10,6 +10,34 @@ import (
 	"database/sql"
 )
 
+const blockingWriteForPost = `-- name: BlockingWriteForPost :one
+SELECT id FROM model_experiments
+WHERE user_id = ? AND post_slug = ? AND stage = 'write' AND origin = 'editor'
+  AND (
+    status IN ('queued', 'running', 'review', 'partial')
+    OR (status = 'decided' AND (
+          (apply_requested = 1 AND applied_at IS NULL)
+          OR (adoption_requested = 1 AND adopted_at IS NULL)
+       ))
+  )
+ORDER BY created_at DESC, id DESC LIMIT 1
+`
+
+type BlockingWriteForPostParams struct {
+	UserID   string
+	PostSlug sql.NullString
+}
+
+// The editor write comparison that holds a post's generation and revision (GEN-23, GEN-38):
+// still queued, running, partial or in review, or decided with a requested application or
+// adoption not yet complete. A lab comparison and a failed one never hold the post.
+func (q *Queries) BlockingWriteForPost(ctx context.Context, arg BlockingWriteForPostParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, blockingWriteForPost, arg.UserID, arg.PostSlug)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const clearVerdictBadges = `-- name: ClearVerdictBadges :exec
 DELETE FROM model_experiment_badges WHERE experiment_id = ?
 `
