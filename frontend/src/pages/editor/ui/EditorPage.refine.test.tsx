@@ -6,6 +6,7 @@ import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { USER, finalize, openFinalize, openStep, resetEditorTest } from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import type { FakeGenerationStart } from '@/test/jobs'
 import { finalizedPostRow, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
@@ -501,6 +502,58 @@ describe('the storyline space', () => {
     })
     expect(await screen.findByRole('listitem', { name: '1번째 문단' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
+  })
+
+  // POST-98: over a post edited by hand, 이 스토리로 다시 쓰기 asks first, then saves and writes along
+  // the storyline; ②'s own dock keeps the revision composer and 확정하기.
+  it('rewrites from the storyline after asking, over a post edited by hand', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const starts: FakeGenerationStart[] = []
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      calls,
+      posts: {
+        posts: [
+          {
+            slug,
+            status: 'review',
+            content: POST_CONTENT_FIXTURE,
+            images: POST_IMAGES_FIXTURE,
+            contentRevision: 3n,
+            machineBaselineRevision: 2n,
+            storyline,
+          },
+        ],
+      },
+      jobs: { starts },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+    const rewrite = await screen.findByRole('button', { name: '이 스토리로 다시 쓰기' })
+    await waitFor(() => expect(rewrite).toBeEnabled())
+    // Closed over a post that already has content, and the dock is still ②'s own.
+    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    const dock = screen.getByLabelText('글 작업')
+    expect(within(dock).getByRole('button', { name: /확정/ })).toBeInTheDocument()
+
+    await user.click(rewrite)
+    const dialog = await screen.findByRole('dialog', { name: '이 스토리로 다시 쓸까요?' })
+    expect(calls).not.toContain('StartGeneration')
+    await user.click(within(dialog).getByRole('button', { name: '다시 쓰기' }))
+    await waitFor(() => expect(starts).toHaveLength(1))
+    expect(starts[0]).toMatchObject({ postSlug: slug, fromStoryline: true })
   })
 
   it('shows no space for a post written before storylines existed', async () => {

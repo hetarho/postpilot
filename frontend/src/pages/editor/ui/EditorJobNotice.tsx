@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { FailureNotice } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import type { GenerationActionsHandle } from '@/features/generate-post'
+import type { GenerationActionsHandle, StorylineActionsHandle } from '@/features/generate-post'
 import type { ReviseFormHandle } from '@/features/edit-with-ai'
 import type { EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
@@ -21,12 +21,15 @@ export function EditorJobNotice({
   jobView,
   generateRef,
   reviseRef,
+  storylineRef,
 }: {
   post: PostDraft
   step: EditorStep
   jobView: EditorJobView
   generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
+  /** The storyline space's actions, which retry the storyline jobs ② owns. */
+  storylineRef: RefObject<StorylineActionsHandle | null>
 }) {
   const { t } = useTranslation('posts')
   const navigate = useNavigate()
@@ -38,25 +41,28 @@ export function EditorJobNotice({
       failure={job.failure}
       onRetry={
         step !== jobStep ||
-        (job.kind === 'revise' && jobView.startedStep === undefined) ||
-        // The storyline space's own jobs retry from the space (T437); until it offers the
-        // handle, a retry here would reach nothing.
-        job.kind === 'revise_storyline' ||
-        (job.kind === 'storyline' && jobStep !== 'generate')
+        // A revision and a storyline request retry with the text they carried, which only a job
+        // started in this session still has.
+        ((job.kind === 'revise' || job.kind === 'revise_storyline') &&
+          jobView.startedStep === undefined)
           ? undefined
           : () =>
               job.kind === 'revise'
                 ? reviseRef.current?.start()
-                : job.kind === 'storyline'
-                  ? generateRef.current?.startStoryline()
-                  : job.kind === 'model_experiment'
-                    ? post.pendingExperimentId
-                      ? void navigate({
-                          to: '/posts/experiments/$id',
-                          params: { id: post.pendingExperimentId },
-                        })
-                      : undefined
-                    : generateRef.current?.startGeneration()
+                : job.kind === 'revise_storyline'
+                  ? storylineRef.current?.retryRequest()
+                  : job.kind === 'storyline'
+                    ? jobStep === 'refine'
+                      ? storylineRef.current?.remake()
+                      : generateRef.current?.startStoryline()
+                    : job.kind === 'model_experiment'
+                      ? post.pendingExperimentId
+                        ? void navigate({
+                            to: '/posts/experiments/$id',
+                            params: { id: post.pendingExperimentId },
+                          })
+                        : undefined
+                      : generateRef.current?.startGeneration()
       }
     />
   ) : null

@@ -16,6 +16,7 @@ export function Disclosure({
   onOpenChange,
   headingLevel = 2,
   aside,
+  lead,
   children,
   className,
 }: {
@@ -24,8 +25,10 @@ export function Disclosure({
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
   headingLevel?: 2 | 3 | 4
-  /** Beside the heading's button, outside it — a count, a status. */
+  /** Beside the heading's button, outside it — a count, a status, the space's own actions. */
   aside?: ReactNode
+  /** Under the heading row and always shown, open or closed — a field that acts on the region. */
+  lead?: ReactNode
   children: ReactNode
   className?: string
 }) {
@@ -69,6 +72,7 @@ export function Disclosure({
         </Heading>
         {aside}
       </div>
+      {lead}
       {open && (
         <div id={regionId} role="region" aria-labelledby={buttonId}>
           {children}

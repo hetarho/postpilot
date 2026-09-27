@@ -3,6 +3,13 @@ export { GenerationOptions } from './ui/GenerationOptions'
 export type { RunOptionsForm } from './ui/GenerationOptions'
 export { ReobservePicker } from './ui/ReobservePicker'
 export type { GenerationActionsHandle } from './ui/GenerationActions'
+export {
+  StorylineActionBlocker,
+  StorylineActionButtons,
+  StorylineActionsProvider,
+  StorylineRequestComposer,
+  type StorylineActionsHandle,
+} from './ui/StorylineActions'
 export { needsPicker } from './model/reobserve'
 export {
   ordinaryGenerationPreconditions,

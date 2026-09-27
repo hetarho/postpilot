@@ -7,6 +7,7 @@ import {
   StartGenerationResponseSchema,
   StartRevisionResponseSchema,
   StartStorylineResponseSchema,
+  StartStorylineRevisionResponseSchema,
   type ProtoGenerationJob,
   contentLanguageToProto,
   type AppFailureReason,
@@ -43,6 +44,10 @@ export interface FakeJobsOptions {
   starts?: FakeGenerationStart[]
   /** Every StartStoryline, in the shape of a generation start (no target length). */
   storylineStarts?: FakeGenerationStart[]
+  /** Every StartStorylineRevision as it arrived. */
+  storylineRequests?: Array<{ postSlug: string; request: string }>
+  /** Refuse every StartStorylineRevision with this reason. */
+  storylineRequestRefusal?: AppFailureReason
   revisions?: FakeRevisionStart[]
   onRead?: (job: FakeGenerationJobRow) => void
 }
@@ -55,6 +60,8 @@ export interface FakeGenerationStart {
   /** The re-observation picker's answer, with its presence preserved: `undefined` is a start
    *  that expressed no decision, and an empty array is the decision to observe nothing. */
   reobserveFiles?: string[]
+  /** Whether the run writes along the stored storyline (GEN-70). */
+  fromStoryline?: boolean
 }
 
 export interface FakeRevisionStart {
@@ -101,6 +108,8 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
         : undefined,
       targetLength: req.targetLength,
       reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
+      // Only when set, so a test asserting an ordinary start's exact shape is untouched.
+      ...(req.fromStoryline ? { fromStoryline: true } : {}),
     })
     return create(StartGenerationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })
@@ -118,6 +127,16 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
       reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
     })
     return create(StartStorylineResponseSchema, { jobId: options.startJobId ?? 'job-started' })
+  })
+  router.rpc(GenerationService.method.startStorylineRevision, (req) => {
+    options.calls?.push('StartStorylineRevision')
+    if (options.startFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (options.storylineRequestRefusal)
+      throw connectAppError(options.storylineRequestRefusal, Code.FailedPrecondition)
+    options.storylineRequests?.push({ postSlug: req.postSlug, request: req.request })
+    return create(StartStorylineRevisionResponseSchema, {
+      jobId: options.startJobId ?? 'job-started',
+    })
   })
   router.rpc(GenerationService.method.startRevision, (req) => {
     options.calls?.push('StartRevision')

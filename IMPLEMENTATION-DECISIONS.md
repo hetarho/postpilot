@@ -176,3 +176,18 @@ choice would be expensive to undo are listed at the end.
 - **When a storyline job replaces the storyline, an unsaved local edit of the old one is
   dropped** (the space is read-only while the job runs, so this only affects an edit that was
   already saved).
+
+## T437 — ②'s storyline actions
+
+- **The AI request field stays visible under the heading row even when the space is closed**
+  (the dock's heading-row / field / send shape); only the paragraphs fold away.
+- **Dialog titles I added:** remake "스토리라인을 다시 만들까요?" with your sentence as the body and
+  confirm 다시 만들기; rewrite "이 스토리로 다시 쓸까요?" with your sentence and confirm 다시 쓰기.
+  English: "Make the storyline again?" / "Rewrite from this storyline?".
+- **The rewrite confirmation is decided from the saved revisions** (`contentRevision !==
+  machineBaselineRevision`); block edits not yet autosaved at the moment of the press are flushed
+  first but do not by themselves trigger the dialog.
+- **A setup refusal (no model chosen) keeps the buttons live and opens the brief**, like ①;
+  other refusals disable them with the reason above the row.
+- **Send button name:** "스토리라인 수정 요청 보내기" / "Send the storyline request"; the field shows
+  a live `n/500` count.

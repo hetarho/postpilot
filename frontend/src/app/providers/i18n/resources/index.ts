@@ -53,6 +53,7 @@ import { i18n as editVoiceProfileI18n } from '@/features/edit-voice-profile/conf
 import { i18n as exportPanelI18n } from '@/widgets/export-panel/config/i18n'
 import { i18n as finalizePostI18n } from '@/features/finalize-post/config/i18n'
 import { i18n as editStorylineI18n } from '@/features/edit-storyline/config/i18n'
+import { i18n as generatePostI18n } from '@/features/generate-post/config/i18n'
 import { i18n as storylineSpaceI18n } from '@/widgets/storyline-space/config/i18n'
 import { i18n as recordPublishedUrlI18n } from '@/features/record-published-url/config/i18n'
 import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config/i18n'
@@ -200,6 +201,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   exportPanelI18n,
   finalizePostI18n,
   editStorylineI18n,
+  generatePostI18n,
   storylineSpaceI18n,
   recordPublishedUrlI18n,
   selectPostFieldI18n,
@@ -245,6 +247,7 @@ export const resources = {
       ...exportPanelI18n.ko,
       ...finalizePostI18n.ko,
       ...editStorylineI18n.ko,
+      ...generatePostI18n.ko,
       ...storylineSpaceI18n.ko,
       ...recordPublishedUrlI18n.ko,
       ...selectPostFieldI18n.ko,
@@ -362,6 +365,7 @@ export const resources = {
       ...exportPanelI18n.en,
       ...finalizePostI18n.en,
       ...editStorylineI18n.en,
+      ...generatePostI18n.en,
       ...storylineSpaceI18n.en,
       ...recordPublishedUrlI18n.en,
       ...selectPostFieldI18n.en,

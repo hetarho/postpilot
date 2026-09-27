@@ -11,7 +11,11 @@ import {
 import { voiceContentLanguageMismatch } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
 import { useVoiceLearning } from '@/features/finalize-post'
-import type { GenerationActionsHandle, GenerationMode } from '@/features/generate-post'
+import type {
+  GenerationActionsHandle,
+  GenerationMode,
+  StorylineActionsHandle,
+} from '@/features/generate-post'
 import type { BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import type { SaveState } from '@/features/save-draft'
@@ -76,6 +80,7 @@ export function LifecycleSteps({
   const { t } = useTranslation('posts')
   const generateRef = useRef<GenerationActionsHandle>(null)
   const reviseRef = useRef<ReviseFormHandle>(null)
+  const storylineRef = useRef<StorylineActionsHandle>(null)
   const contentEditorRef = useRef<BlockEditorHandle>(null)
   // A view URL is presigned and short-lived, and this screen outlives one: the post query is
   // refetched on mount and never again while the editor sits open, and a draft save deliberately
@@ -126,11 +131,22 @@ export function LifecycleSteps({
   const storylineSpace =
     post.storyline && storyline.paragraphs ? (
       <StorylineSpace
+        ref={storylineRef}
         post={post}
         paragraphs={storyline.paragraphs}
         onChange={storyline.onChange}
         readOnly={storylineReadOnly}
         hasContent={Boolean(result)}
+        actions={{
+          targetLength,
+          activeJob: job,
+          jobPending: jobView.isPending,
+          onStarted: (id) => jobView.onStarted(id, 'refine'),
+          beforeStart,
+          // Nothing to save when no block editor is mounted — a post with no content yet.
+          flushContent: () => contentEditorRef.current?.flush() ?? Promise.resolve(),
+          onOpenBrief,
+        }}
       />
     ) : undefined
   const refinePanel = (
@@ -165,6 +181,7 @@ export function LifecycleSteps({
       jobView={jobView}
       generateRef={generateRef}
       reviseRef={reviseRef}
+      storylineRef={storylineRef}
     />
   )
   const hasJobNotice = Boolean(

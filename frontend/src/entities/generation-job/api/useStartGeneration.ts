@@ -27,15 +27,20 @@ export function useStartGeneration() {
       writeModel: ModelRef,
       targetLength?: number,
       reobserveFiles?: readonly string[],
+      /** 이 스토리로 글 쓰기 / 다시 쓰기: write along the stored storyline, which observes exactly
+       *  what it holds, so no re-observation answer goes with it (GEN-70). */
+      fromStoryline = false,
     ) =>
       mutation.mutateAsync({
         postSlug,
         observeModel: observeModel ? create(ModelRefSchema, observeModel) : undefined,
         writeModel: create(ModelRefSchema, writeModel),
         targetLength,
-        reobserve: reobserveFiles
-          ? create(ReobserveSelectionSchema, { files: [...reobserveFiles] })
-          : undefined,
+        reobserve:
+          reobserveFiles && !fromStoryline
+            ? create(ReobserveSelectionSchema, { files: [...reobserveFiles] })
+            : undefined,
+        fromStoryline,
       }),
   }
 }
