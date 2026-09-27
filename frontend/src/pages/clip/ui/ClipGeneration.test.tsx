@@ -1,15 +1,18 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { create } from '@bufbuild/protobuf'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { endSession } from '@/app/model/end-session'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
-import { GenerationService, Stage, ProtoPlan } from '@/shared/api'
+import { ClipSourceBatchSchema, GenerationService, Stage, ProtoPlan } from '@/shared/api'
 import { clipProjectsKey, type ClipAccounting } from '@/entities/clip-project'
 import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
+import { clipObservationsFixture } from '@/test/clip-observations'
+import { clipTimelineFixture } from '@/test/clip-editing'
 import type { FakeGenerationJobRow, FakeJobsOptions } from '@/test/jobs'
 import type { FakeProvidersOptions } from '@/test/providers'
 import type { FakePlansOptions } from '@/test/plans'
@@ -923,4 +926,164 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
   await waitFor(() => expect(storylineStarts).toHaveLength(1))
   expect(storylineStarts[0]).toMatchObject({ approvedMaxCredits: 12 })
   expect(generationStarts).toHaveLength(0)
+})
+
+function withStoryline(extra: Partial<FakeClipProject> = {}): FakeClipProject {
+  return {
+    ...project,
+    observations: clipObservationsFixture(),
+    storyline: {
+      paragraphs: [{ text: '음식을 가까이 보여줘요.', observationIds: ['a/0'] }],
+      editedByHand: false,
+      addedSourceIds: [],
+      takenOutObservationIds: [],
+    },
+    ...extra,
+  }
+}
+
+/** A clip holding a storyline opens ②; an upload in ① gives the build its batch. */
+async function storylineSpace(extra: Partial<FakeClipProject> = {}, clips: FakeClipsOptions = {}) {
+  mount({ projects: [withStoryline(extra)], ...clips })
+  await screen.findByRole('button', { name: '스토리라인' })
+  await goToStep('생성')
+  const { user } = await selectSource()
+  await goToStep('수정')
+  return user
+}
+
+async function approveFrom(
+  user: ReturnType<typeof userEvent.setup>,
+  action: string,
+  approve: RegExp,
+) {
+  const trigger = await screen.findByRole('button', { name: action })
+  await waitFor(() => expect(trigger).toBeEnabled())
+  await user.click(trigger)
+  const panel = within(await screen.findByRole('dialog', { name: action }))
+  await user.click(await panel.findByRole('button', { name: approve }))
+}
+
+// CLIP-180, CLIP-181: the space's heading row carries 다시 만들기 and the build — 이 스토리로
+// 만들기 with no plan — each approved from itself and starting its own work, with nothing to
+// confirm while nothing was edited by hand.
+it('builds from the storyline and makes it again, each from its own approval', async () => {
+  const generationStarts: Array<{ fromStoryline?: boolean }> = []
+  const storylineStarts: unknown[] = []
+  const user = await storylineSpace({}, { generationStarts, storylineStarts })
+  expect(screen.getByRole('button', { name: '다시 만들기' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: '이 스토리로 다시 만들기' })).not.toBeInTheDocument()
+  await approveFrom(user, '이 스토리로 만들기', /승인하고 생성/)
+  await waitFor(() => expect(generationStarts).toHaveLength(1))
+  expect(generationStarts[0]!.fromStoryline).toBe(true)
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  expect(storylineStarts).toHaveLength(0)
+})
+
+it('makes the storyline again from 다시 만들기', async () => {
+  const storylineStarts: unknown[] = []
+  const user = await storylineSpace({}, { storylineStarts })
+  await approveFrom(user, '다시 만들기', /승인하고 스토리라인 만들기/)
+  await waitFor(() => expect(storylineStarts).toHaveLength(1))
+})
+
+// CLIP-180: work edited by hand is replaced only after one confirmation that says what goes.
+it('confirms before remaking a storyline edited by hand', async () => {
+  const storylineStarts: unknown[] = []
+  const user = await storylineSpace(
+    { storyline: { ...withStoryline().storyline!, editedByHand: true } },
+    { storylineStarts },
+  )
+  await approveFrom(user, '다시 만들기', /승인하고 스토리라인 만들기/)
+  const confirm = within(await screen.findByRole('dialog', { name: '스토리라인을 다시 만들까요?' }))
+  expect(confirm.getByText('직접 고친 스토리라인이 새로 만든 것으로 바뀌어요.')).toBeVisible()
+  expect(storylineStarts).toHaveLength(0)
+  await user.click(confirm.getByRole('button', { name: '다시 만들기' }))
+  await waitFor(() => expect(storylineStarts).toHaveLength(1))
+})
+
+it('confirms before rebuilding over a plan edited by hand, and cancels cleanly', async () => {
+  const generationStarts: unknown[] = []
+  const editing = clipTimelineFixture()
+  // The plan's own originals, still retained: the batch the rebuild is quoted against.
+  const batch = create(ClipSourceBatchSchema, {
+    id: 'retained',
+    projectId: project.id,
+    state: 'ready',
+    current: true,
+    expiresAt: '2099-01-01T00:00:00Z',
+    sources: editing.sources.map((source) => ({
+      id: source.id,
+      state: 'ready',
+      availability: 'available',
+      retentionExpiresAt: '2099-01-01T00:00:00Z',
+      metadata: { ...source, contentType: 'video/mp4', bytes: 5n },
+    })),
+  })
+  mount({
+    projects: [
+      withStoryline({
+        editPlanRevision: 2,
+        renderedPlanRevision: 1,
+        editing,
+        planEditedByHand: true,
+      }),
+    ],
+    retainedBatches: [batch],
+    generationStarts,
+  })
+  const user = userEvent.setup()
+  await screen.findByRole('button', { name: '스토리라인' })
+  await approveFrom(user, '이 스토리로 다시 만들기', /승인하고 생성/)
+  const confirm = within(await screen.findByRole('dialog', { name: '이 스토리로 다시 만들까요?' }))
+  expect(
+    confirm.getByText('직접 고친 흐름과 자막이 사라지고 이 스토리로 새로 만들어요.'),
+  ).toBeVisible()
+  await user.click(confirm.getByRole('button', { name: '취소' }))
+  expect(generationStarts).toHaveLength(0)
+})
+
+// CLIP-181: the request field sends the owner's words through its own approval.
+it('sends a storyline request through its own approval', async () => {
+  const storylineRequestStarts: Array<{ request?: string }> = []
+  const user = await storylineSpace({}, { storylineRequestStarts })
+  await user.type(screen.getByLabelText('스토리라인 수정 요청'), '가게 소개를 먼저')
+  await approveFrom(user, '스토리라인 수정 요청 보내기', /승인하고 스토리라인 고치기/)
+  await waitFor(() => expect(storylineRequestStarts).toHaveLength(1))
+  expect(storylineRequestStarts[0]!.request).toBe('가게 소개를 먼저')
+})
+
+// CLIP-133: the request record lists storyline requests with the others.
+it('lists a storyline request in the request record', async () => {
+  mount({
+    projects: [
+      withStoryline({
+        requests: [
+          { kind: 'storyline', body: '가게 소개를 먼저', createdAt: '2026-09-28T00:00:00Z' },
+        ],
+      }),
+    ],
+  })
+  await screen.findByRole('button', { name: '스토리라인' })
+  await goToStep('생성')
+  await userEvent.click(await screen.findByText(/AI에 요청한 내용 1건/))
+  expect(screen.getByText(/스토리라인 수정 요청/)).toBeVisible()
+  expect(screen.getByText('가게 소개를 먼저')).toBeVisible()
+})
+
+// CLIP-131: ②'s revision composer keeps its three targets and never targets the storyline.
+it('keeps the revision composer on the flow and the narration', async () => {
+  const user = await storylineSpace({
+    editPlanRevision: 1,
+    renderedPlanRevision: 1,
+    editing: clipTimelineFixture(),
+  })
+  await user.type(screen.getByLabelText('요청 내용'), '자막을 짧게')
+  await user.click(screen.getByRole('button', { name: 'AI에 수정 요청' }))
+  const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))
+  expect(
+    within(sheet.getByRole('tablist', { name: '고칠 대상' }))
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent),
+  ).toEqual(['영상 흐름', '자막', '둘 다'])
 })

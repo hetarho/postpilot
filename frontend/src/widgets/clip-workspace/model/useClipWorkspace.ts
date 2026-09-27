@@ -84,7 +84,9 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   // A revision runs WITHOUT the focused job view: it rewrites the plan the owner
   // is looking at, and ② is where that change shows up (CLIP-131). Every other
   // clip job still takes the whole screen (CLIP-78).
-  const revising = job?.kind === 'revise_clip' && !isTerminal(job)
+  // ② owns a revision and a storyline request: both run with ② on screen (CLIP-131, CLIP-181).
+  const revising =
+    (job?.kind === 'revise_clip' || job?.kind === 'revise_storyline_clip') && !isTerminal(job)
   const focused = !project.finalized && generation.busy && !revising
   const pending = generation.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)

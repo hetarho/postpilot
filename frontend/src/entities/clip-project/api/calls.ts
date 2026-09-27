@@ -22,6 +22,10 @@ export interface ClipProjectCalls {
   startGeneration(input: ClipStartInput & { fromStoryline?: boolean }): Promise<{ jobId: string }>
   /** Starting the approved storyline call: 스토리라인 먼저 and 다시 만들기 (CLIP-177). */
   startStoryline(input: ClipStartInput): Promise<{ jobId: string }>
+  /** Starting an approved storyline request (CLIP-181). */
+  startStorylineRevision(
+    input: Omit<ClipStartInput, 'batchId'> & { request: string },
+  ): Promise<{ jobId: string }>
 }
 
 export interface ClipStartInput {
@@ -49,6 +53,11 @@ export function clipProjectCalls(transport: Transport): ClipProjectCalls {
     },
     async startStoryline(input) {
       const response = await client.startClipStoryline(input)
+      if (!response.jobId) throw new Error('Missing durable clip job')
+      return { jobId: response.jobId }
+    },
+    async startStorylineRevision(input) {
+      const response = await client.startClipStorylineRevision(input)
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
     },

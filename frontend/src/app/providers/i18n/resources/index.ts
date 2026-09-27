@@ -21,6 +21,7 @@ import { i18n as deleteClipTemplateClipsI18n } from '@/features/delete-clip-temp
 import { i18n as editClipProjectClipsI18n } from '@/features/edit-clip-project/config/i18n'
 import { i18n as editClipTemplateClipsI18n } from '@/features/edit-clip-template/config/i18n'
 import { i18n as editClipStorylineClipsI18n } from '@/features/edit-clip-storyline/config/i18n'
+import { i18n as requestClipStorylineClipsI18n } from '@/features/request-clip-storyline/config/i18n'
 import { i18n as finalizeClipClipsI18n } from '@/features/finalize-clip/config/i18n'
 import { i18n as generateClipClipsI18n } from '@/features/generate-clip/config/i18n'
 import { i18n as inspectClipObservationsClipsI18n } from '@/features/inspect-clip-observations/config/i18n'
@@ -159,6 +160,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   editClipProjectClipsI18n,
   editClipTemplateClipsI18n,
   editClipStorylineClipsI18n,
+  requestClipStorylineClipsI18n,
   finalizeClipClipsI18n,
   generateClipClipsI18n,
   inspectClipObservationsClipsI18n,
@@ -355,6 +357,7 @@ export const resources = {
       ...renderClipBrowserClipsI18n.ko,
       ...reviseClipClipsI18n.ko,
       ...editClipStorylineClipsI18n.ko,
+      ...requestClipStorylineClipsI18n.ko,
       ...uploadClipSourcesClipsI18n.ko,
       ...videoTemplatesClipsI18n.ko,
     },
@@ -475,6 +478,7 @@ export const resources = {
       ...renderClipBrowserClipsI18n.en,
       ...reviseClipClipsI18n.en,
       ...editClipStorylineClipsI18n.en,
+      ...requestClipStorylineClipsI18n.en,
       ...uploadClipSourcesClipsI18n.en,
       ...videoTemplatesClipsI18n.en,
     },

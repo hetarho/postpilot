@@ -74,4 +74,8 @@ export {
   useRefreshClipProjects,
 } from './api/calls'
 export type { ClipProjectCalls, ClipSourceCalls, ClipStartInput } from './api/calls'
-export { useClipGenerationQuote, type ClipQuoteMode } from './api/credits'
+export {
+  useClipGenerationQuote,
+  useClipStorylineRevisionQuote,
+  type ClipQuoteMode,
+} from './api/credits'

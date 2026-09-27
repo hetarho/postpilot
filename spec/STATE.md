@@ -62,14 +62,15 @@
 | T442 | The video-template preview plays an illustrative timed clip | CLIP | T441 | todo |
 | T443 | Every video-template builder entry opens in place with its own delete | CLIP | T414 | todo |
 | T444 | ②'s flow simulation over still cut frames | CLIP | - | todo |
-| T448 | Clip ②'s storyline actions: the AI request, 다시 만들기 and building from it (frontend) | CLIP | T447 | todo |
 
 ## next
-- implement-task T448 for the clip storyline; independent starts T443 (→ T441 → T442, T415) and T444
+- implement-task T443 (→ T441 → T442, T415) and T444
 - update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); implement-task T414 T415 after their refresh
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260928 T448 done: decisions in /IMPLEMENTATION-DECISIONS.md
+- 260928 T448 claimed (ia)
 - 260928 T447 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T447 claimed (ia)
 - 260928 T446 done: decisions in /IMPLEMENTATION-DECISIONS.md
@@ -88,5 +89,3 @@
 - 260928 T436 claimed (ia)
 - 260928 T435 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T435 claimed (ia)
-- 260928 T434 done: decisions in /IMPLEMENTATION-DECISIONS.md
-- 260928 T434 claimed (ia)

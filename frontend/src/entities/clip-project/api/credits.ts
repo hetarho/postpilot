@@ -212,3 +212,42 @@ export function useClipGenerationQuote(
     },
   })
 }
+
+/** A storyline request's quote (CLIP-181): one writing call on the stored observations, bound to
+ *  the storyline the owner is looking at and the words they wrote. */
+export function useClipStorylineRevisionQuote(
+  ownerId: string,
+  input: {
+    projectId: string
+    request: string
+    observeModel?: { providerId: string; modelId: string } | null
+    writeModel?: { providerId: string; modelId: string } | null
+  },
+  binding: string,
+  enabled: boolean,
+) {
+  const transport = useTransport()
+  return useQuery({
+    queryKey: ['clip-storyline-revision-quote', transport, ownerId, binding],
+    enabled,
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async ({ signal }) =>
+      toClipQuote(
+        await createClient(ClipGenerationService, transport).quoteClipStorylineRevision(
+          {
+            projectId: input.projectId,
+            request: input.request,
+            observeModel: input.observeModel ?? undefined,
+            writeModel: input.writeModel ?? undefined,
+          },
+          { signal },
+        ),
+        binding,
+      ),
+  })
+}

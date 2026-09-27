@@ -9,12 +9,15 @@ export type ClipRevisionTarget = (typeof CLIP_REVISION_TARGETS)[number]
  *  it named. An empty `body` under `instruction` is the record of a clip written
  *  without one — the absence is itself the answer. */
 export interface ClipProjectRequest {
-  kind: 'instruction' | `revision:${ClipRevisionTarget}`
+  /** `storyline` is a storyline request's words (CLIP-181). */
+  kind: 'instruction' | 'storyline' | `revision:${ClipRevisionTarget}`
   body: string
   createdAt: string
 }
 export function isClipRequestKind(kind: string): kind is ClipProjectRequest['kind'] {
   return (
-    kind === 'instruction' || CLIP_REVISION_TARGETS.some((target) => kind === `revision:${target}`)
+    kind === 'instruction' ||
+    kind === 'storyline' ||
+    CLIP_REVISION_TARGETS.some((target) => kind === `revision:${target}`)
   )
 }

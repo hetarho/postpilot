@@ -21,11 +21,13 @@ export function ClipRequestRecord({ requests = [] }: { requests?: readonly ClipP
         {requests.map((request, index) => (
           <li key={`${request.createdAt}-${index}`} className="space-y-1">
             <Typography variant="meta" as="p">
-              {t(`record.kind.${request.kind === 'instruction' ? 'instruction' : 'revision'}`, {
-                target: t(
-                  `revision.targets.${request.kind.replace('revision:', '') as 'flow' | 'narration' | 'both'}`,
-                ),
-              })}
+              {request.kind === 'instruction' || request.kind === 'storyline'
+                ? t(`record.kind.${request.kind}`)
+                : t('record.kind.revision', {
+                    target: t(
+                      `revision.targets.${request.kind.replace('revision:', '') as 'flow' | 'narration' | 'both'}`,
+                    ),
+                  })}
               {' · '}
               {formatDateTime(request.createdAt)}
             </Typography>

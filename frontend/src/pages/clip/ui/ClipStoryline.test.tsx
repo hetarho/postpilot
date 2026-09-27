@@ -171,6 +171,9 @@ it.each([
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
   expect(paragraph(1).queryByRole('button', { name: '장면 1 옮기기' })).not.toBeInTheDocument()
+  // A finalized clip carries none of the space's actions (CLIP-160).
+  expect(screen.queryByRole('button', { name: '다시 만들기' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('스토리라인 수정 요청')).not.toBeInTheDocument()
 })
 
 // A job that ② owns keeps ② on screen, and the storyline is read-only under it.
@@ -196,6 +199,10 @@ it('reads the storyline without controls while a job runs', async () => {
   await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
+  // Every action is held while the job runs (CLIP-181).
+  expect(screen.getByRole('button', { name: '다시 만들기' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '이 스토리로 다시 만들기' })).toBeDisabled()
+  expect(screen.getByLabelText('스토리라인 수정 요청')).toBeDisabled()
 })
 
 // CLIP-38: the focused run view and the status line name the storyline call's stage.

@@ -247,3 +247,9 @@ choice would be expensive to undo are listed at the end.
 - **Scene frames:** T444's still-frame helper doesn't exist yet, so a scene tile is a muted `<video>` seeked to the scene's start, the way `ClipCutSourceFrame` works. With no footage it shows the scene's number and observed event. "장면 N" counts across all sources in analysis order.
 - **Autosave:** 600 ms after the last edit, and on leaving. A new storyline from the server replaces the draft whenever no owner edit is waiting to be saved. The space is read-only while any job runs, not only storyline jobs.
 - **Layout:** the space sits above the correction workspace when there is a plan, and replaces the "no plan yet" message when there isn't one. The ②/③ waiting messages now name ①'s two actions.
+
+## T448 — clip ②'s storyline actions (frontend)
+- **Order:** approve first, then confirm. The confirmation dialog appears after the approval, when the approved work would replace hand edits; cancelling leaves the quote unused. A build with no plan never asks.
+- **Only the two confirmations the spec names:** 다시 만들기 over a hand-edited storyline, and 이 스토리로 다시 만들기 over a hand-edited plan. The AI storyline request asks nothing, even over a hand-edited storyline.
+- **The storyline request** runs with ② on screen, like a plan revision, and shows its progress where the field was. Its approve label is `최대 N 크레딧 · 승인하고 스토리라인 고치기`, and the request record labels it `스토리라인 수정 요청`.
+- **Batch:** 다시 만들기 and the build are quoted against the project's ready batch (this session's upload or the retained originals). They are disabled while there is none.

@@ -57,6 +57,7 @@ export const i18n = {
       title: 'AI에 요청한 내용 {{count}}건',
       kind: {
         instruction: '생성 지시',
+        storyline: '스토리라인 수정 요청',
         revision: '수정 요청 · {{target}}',
       },
       noInstruction: '지시 없이 생성했어요.',
@@ -183,6 +184,7 @@ export const i18n = {
       title: 'What you asked the AI for ({{count}})',
       kind: {
         instruction: 'Generation instruction',
+        storyline: 'Storyline request',
         revision: 'Revision · {{target}}',
       },
       noInstruction: 'Generated with no instruction.',

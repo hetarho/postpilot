@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { ClipStorylineSpace } from '@/features/edit-clip-storyline'
+import { ClipStorylineRequest } from '@/features/request-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
@@ -11,6 +12,7 @@ import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
 import {
   ClipGenerationActions,
+  ClipStorylineBuildActions,
   ClipCreditSettlement,
   ClipDownloadAction,
   ClipResult,
@@ -272,6 +274,45 @@ export function ClipWorkspace({
       readOnly={reading || generation.busy}
       localSources={reading ? [] : sources.localSources}
       resolvePlayback={reading ? undefined : sources.resolvePlayback}
+      // Its actions and its request are absent on a finalized clip and held while a job runs
+      // (CLIP-160, CLIP-181).
+      aside={
+        reading ? undefined : (
+          <ClipStorylineBuildActions
+            ownerId={ownerId}
+            project={project}
+            batch={upload.readyBatch}
+            observe={generation.observeRef}
+            write={generation.writeRef}
+            observeStatus={generation.observeStatus}
+            ready={generation.canQuote && !render.browser.busy}
+            pending={generation.starting}
+            hasPlan={!!plan}
+            disabled={generation.busy || uploading}
+            onApprove={(mode, quote) => {
+              void save
+                .flush()
+                .then(() => correction.flush())
+                .then(() =>
+                  generation.start(upload.readyBatch, true, quote, generation.ownership, mode),
+                )
+                .catch(() => undefined)
+            }}
+          />
+        )
+      }
+      lead={
+        reading ? undefined : (
+          <ClipStorylineRequest
+            ownerId={ownerId}
+            project={project}
+            observe={generation.observeRef}
+            write={generation.writeRef}
+            job={job}
+            disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
+          />
+        )
+      }
     />
   ) : null
 

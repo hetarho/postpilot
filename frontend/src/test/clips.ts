@@ -133,6 +133,9 @@ export interface FakeClipsOptions {
   storylineEdits?: Array<Array<{ text: string; observationIds: string[] }>>
   /** Refuse every storyline edit as not keeping its shape. */
   storylineEditFails?: boolean
+  /** Every QuoteClipStorylineRevision and StartClipStorylineRevision as it arrived (CLIP-181). */
+  storylineRequestQuotes?: unknown[]
+  storylineRequestStarts?: unknown[]
   generationFails?: boolean
   generationAmbiguous?: boolean
   generationReject?: AppFailureReason
@@ -849,6 +852,45 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'storyline', stage: 'write', calls: 1 },
       ],
     })
+  })
+  // The storyline request (CLIP-181): one writing call, bound to the stored storyline.
+  const storylineRequestQuotes = new Map<string, { id: string; max: number; request: string }>()
+  router.rpc(ClipGenerationService.method.quoteClipStorylineRevision, (req) => {
+    options.calls?.push('QuoteClipStorylineRevision')
+    options.storylineRequestQuotes?.push(req)
+    const p = projects.get(req.projectId)
+    if (!p?.storyline) throw connectAppError('CLIP_STORYLINE_MISSING', Code.FailedPrecondition)
+    const q = { id: `quote-${++quoteNumber}`, max: 4, request: req.request }
+    storylineRequestQuotes.set(p.id, q)
+    return create(QuoteClipGenerationResponseSchema, {
+      quoteId: q.id,
+      maxCredits: q.max,
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      pricedCalls: [{ label: 'storyline', stage: 'write', calls: 1 }],
+    })
+  })
+  router.rpc(ClipGenerationService.method.startClipStorylineRevision, (req) => {
+    options.calls?.push('StartClipStorylineRevision')
+    options.storylineRequestStarts?.push(req)
+    const p = projects.get(req.projectId)
+    const q = p && storylineRequestQuotes.get(p.id)
+    if (!p || !q || q.id !== req.quoteId || q.request !== req.request)
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
+    const jobId = 'clip-storyline-request-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'revise_storyline_clip',
+      status: 'queued',
+      stage: 'prepare',
+      clipProjectId: p.id,
+    }
+    return create(StartClipGenerationResponseSchema, { jobId })
   })
   router.rpc(ClipGenerationService.method.startClipStoryline, (req) => {
     options.calls?.push('StartClipStoryline')

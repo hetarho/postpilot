@@ -10,6 +10,7 @@ export const i18n = {
       retry: '다시 생성',
       storylineFirst: '스토리라인 먼저',
       makeNow: '바로 만들기',
+
       running: '클립을 만드는 중이에요',
       stage: {
         flow_retry: '컷 구성 응답 형식 다시 확인 중',
@@ -57,6 +58,15 @@ export const i18n = {
       hasResult: '영상 있음',
       noResult: '아직 생성 전',
     },
+    storylineActions: {
+      remake: '다시 만들기',
+      build: '이 스토리로 만들기',
+      rebuild: '이 스토리로 다시 만들기',
+      remakeTitle: '스토리라인을 다시 만들까요?',
+      remakeBody: '직접 고친 스토리라인이 새로 만든 것으로 바뀌어요.',
+      rebuildTitle: '이 스토리로 다시 만들까요?',
+      rebuildBody: '직접 고친 흐름과 자막이 사라지고 이 스토리로 새로 만들어요.',
+    },
   },
   en: {
     generation: {
@@ -65,6 +75,7 @@ export const i18n = {
       retry: 'Generate again',
       storylineFirst: 'Storyline first',
       makeNow: 'Make now',
+
       running: 'Creating your clip',
       stage: {
         flow_retry: 'Correcting the flow response format',
@@ -114,6 +125,16 @@ export const i18n = {
       refreshing: 'Refreshing the preview link',
       hasResult: 'Video ready',
       noResult: 'Not generated yet',
+    },
+    storylineActions: {
+      remake: 'Make again',
+      build: 'Make from this storyline',
+      rebuild: 'Remake from this storyline',
+      remakeTitle: 'Make the storyline again?',
+      remakeBody: 'The storyline you edited by hand is replaced by a newly made one.',
+      rebuildTitle: 'Remake from this storyline?',
+      rebuildBody:
+        'The flow and captions you edited by hand are removed and made again from this storyline.',
     },
   },
 } as const satisfies I18nFragment
