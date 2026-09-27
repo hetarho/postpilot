@@ -3,7 +3,7 @@ SELECT * FROM video_templates WHERE user_id = ? ORDER BY name, id;
 -- name: GetVideoTemplate :one
 SELECT * FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: InsertVideoTemplate :exec
-INSERT INTO video_templates(id, user_id, name, composition_body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO video_templates(id, user_id, name, composition_body, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: CountTemplateProjects :one
 SELECT count(*) FROM clip_projects WHERE video_template_id = ? AND user_id = ?;
 -- name: ProjectsForTemplate :many
@@ -33,6 +33,9 @@ SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
+-- The template's starting design selection (CLIP-166); a project made with it keeps its own.
+-- name: UpdateVideoTemplateDesign :execrows
+UPDATE video_templates SET intro_preset = ?, outro_preset = ?, allowed_caption_styles = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateVideoTemplateName :execrows
 UPDATE video_templates SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateClipTitle :execrows

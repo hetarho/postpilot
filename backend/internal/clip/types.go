@@ -38,11 +38,32 @@ type Recipe struct {
 type VideoTemplate struct {
 	ID, UserID string
 	Recipe
+	// The template's starting design selection (CLIP-166): what a project created with it, or
+	// switched to it, takes (CLIP-168). It is never part of the recipe a generation freezes —
+	// the design is the project's.
+	Design               TemplateDesign
 	ProjectCount         int
 	CreatedAt, UpdatedAt time.Time
 }
+
+// TemplateDesign is a video template's starting design selection, in the project's shapes: the
+// two region presets and the caption styles, empty being the shared default.
+type TemplateDesign struct {
+	IntroPreset, OutroPreset string
+	CaptionStyles            []string
+}
+
+// Valid is the project's own rule for the three (CLIP-139, CLIP-142): one validation serves both.
+func (d TemplateDesign) Valid() bool {
+	return (d.IntroPreset == "" || ValidIntroPreset(d.IntroPreset)) &&
+		(d.OutroPreset == "" || ValidOutroPreset(d.OutroPreset)) && ValidCaptionStyles(d.CaptionStyles)
+}
+
 type TemplatePatch struct {
 	Name, CompositionBody *string
+	// The design selection's three, supplied only when they change (CLIP-166).
+	IntroPreset, OutroPreset *string
+	CaptionStyles            *[]string
 }
 type Answer struct{ Label, Text string }
 type RenderKind string

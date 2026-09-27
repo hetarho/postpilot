@@ -11,10 +11,9 @@ describe('clip recipe bounds', () => {
     expect(validateClipRecipe({ ...valid(), name: '😀'.repeat(40) }).valid).toBe(true)
     expect(validateClipRecipe({ ...valid(), name: '😀'.repeat(41) }).name).toBe('tooLong')
     const body = '\n<clip version="1"/>\n'
-    expect(normalizeRecipe({ name: ' 이름 ', compositionBody: body })).toEqual({
-      name: '이름',
-      compositionBody: body,
-    })
+    expect(
+      normalizeRecipe({ ...emptyClipRecipe(), name: ' 이름 ', compositionBody: body }),
+    ).toEqual({ ...emptyClipRecipe(), name: '이름', compositionBody: body })
   })
   it.each([{ name: '' }, { name: '   ' }, { compositionBody: '' }, { compositionBody: '<clip/>' }])(
     'rejects invalid recipe %j',

@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { VideoTemplate } from "./clip_pb";
+import type { ClipCaptionStyles, VideoTemplate } from "./clip_pb";
 import { file_postpilot_v1_clip } from "./clip_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_template.proto.
  */
 export const file_postpilot_v1_clip_template: GenFile = /*@__PURE__*/
-  fileDesc("CiBwb3N0cGlsb3QvdjEvY2xpcF90ZW1wbGF0ZS5wcm90bxIMcG9zdHBpbG90LnYxIhsKGUxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QiTAoaTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2USLgoJdGVtcGxhdGVzGAEgAygLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUilwEKGkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSGAoQY29tcG9zaXRpb25fYm9keRgIIAEoCUoECAIQCFISaW5mb3JtYXRpb25fZmllbGRzUgxjdXRfZ3VpZGFuY2VSC2NvcHlfc3R5bGVzUgZhY2NlbnRSBnByZXNldFIMY2FwdGlvbl9wYWNlIkwKG0NyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIssBChpVcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESHQoQY29tcG9zaXRpb25fYm9keRgJIAEoCUgBiAEBQgcKBV9uYW1lQhMKEV9jb21wb3NpdGlvbl9ib2R5SgQIAxAJUhJpbmZvcm1hdGlvbl9maWVsZHNSDGN1dF9ndWlkYW5jZVILY29weV9zdHlsZXNSBmFjY2VudFIGcHJlc2V0UgxjYXB0aW9uX3BhY2UiTAobVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUiKAoaRGVsZXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QSCgoCaWQYASABKAkiOAobRGVsZXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEhkKEWRldGFjaGVkX3Byb2plY3RzGAEgASgFIhwKGkdldENsaXBDYXBhYmlsaXRpZXNSZXF1ZXN0IlwKG0dldENsaXBDYXBhYmlsaXRpZXNSZXNwb25zZRIbChNjb21wb3NpdGlvbl92ZXJzaW9uGAEgASgFEiAKGGNvbXBvc2l0aW9uX3BsYW5fdmVyc2lvbhgCIAEoBTK4BAoTQ2xpcFRlbXBsYXRlU2VydmljZRJpChJMaXN0VmlkZW9UZW1wbGF0ZXMSJy5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5MaXN0VmlkZW9UZW1wbGF0ZXNSZXNwb25zZSIAEmwKE0NyZWF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTVXBkYXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJsChNEZWxldGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmwKE0dldENsaXBDYXBhYmlsaXRpZXMSKC5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1JlcXVlc3QaKS5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip]);
+  fileDesc("CiBwb3N0cGlsb3QvdjEvY2xpcF90ZW1wbGF0ZS5wcm90bxIMcG9zdHBpbG90LnYxIhsKGUxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QiTAoaTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2USLgoJdGVtcGxhdGVzGAEgAygLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUisAIKGkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSGAoQY29tcG9zaXRpb25fYm9keRgIIAEoCRIZCgxpbnRyb19wcmVzZXQYCSABKAlIAIgBARIZCgxvdXRyb19wcmVzZXQYCiABKAlIAYgBARI/ChZhbGxvd2VkX2NhcHRpb25fc3R5bGVzGAsgASgLMh8ucG9zdHBpbG90LnYxLkNsaXBDYXB0aW9uU3R5bGVzQg8KDV9pbnRyb19wcmVzZXRCDwoNX291dHJvX3ByZXNldEoECAIQCFISaW5mb3JtYXRpb25fZmllbGRzUgxjdXRfZ3VpZGFuY2VSC2NvcHlfc3R5bGVzUgZhY2NlbnRSBnByZXNldFIMY2FwdGlvbl9wYWNlIkwKG0NyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIuQCChpVcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESHQoQY29tcG9zaXRpb25fYm9keRgJIAEoCUgBiAEBEhkKDGludHJvX3ByZXNldBgKIAEoCUgCiAEBEhkKDG91dHJvX3ByZXNldBgLIAEoCUgDiAEBEj8KFmFsbG93ZWRfY2FwdGlvbl9zdHlsZXMYDCABKAsyHy5wb3N0cGlsb3QudjEuQ2xpcENhcHRpb25TdHlsZXNCBwoFX25hbWVCEwoRX2NvbXBvc2l0aW9uX2JvZHlCDwoNX2ludHJvX3ByZXNldEIPCg1fb3V0cm9fcHJlc2V0SgQIAxAJUhJpbmZvcm1hdGlvbl9maWVsZHNSDGN1dF9ndWlkYW5jZVILY29weV9zdHlsZXNSBmFjY2VudFIGcHJlc2V0UgxjYXB0aW9uX3BhY2UiTAobVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUiKAoaRGVsZXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QSCgoCaWQYASABKAkiOAobRGVsZXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEhkKEWRldGFjaGVkX3Byb2plY3RzGAEgASgFIhwKGkdldENsaXBDYXBhYmlsaXRpZXNSZXF1ZXN0IlwKG0dldENsaXBDYXBhYmlsaXRpZXNSZXNwb25zZRIbChNjb21wb3NpdGlvbl92ZXJzaW9uGAEgASgFEiAKGGNvbXBvc2l0aW9uX3BsYW5fdmVyc2lvbhgCIAEoBTK4BAoTQ2xpcFRlbXBsYXRlU2VydmljZRJpChJMaXN0VmlkZW9UZW1wbGF0ZXMSJy5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5MaXN0VmlkZW9UZW1wbGF0ZXNSZXNwb25zZSIAEmwKE0NyZWF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTVXBkYXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJsChNEZWxldGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmwKE0dldENsaXBDYXBhYmlsaXRpZXMSKC5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1JlcXVlc3QaKS5wb3N0cGlsb3QudjEuR2V0Q2xpcENhcGFiaWxpdGllc1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.ListVideoTemplatesRequest
@@ -60,6 +60,23 @@ export type CreateVideoTemplateRequest = Message<"postpilot.v1.CreateVideoTempla
    * @generated from field: string composition_body = 8;
    */
   compositionBody: string;
+
+  /**
+   * The starting design selection (CLIP-166); absent is the shared default.
+   *
+   * @generated from field: optional string intro_preset = 9;
+   */
+  introPreset?: string | undefined;
+
+  /**
+   * @generated from field: optional string outro_preset = 10;
+   */
+  outroPreset?: string | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ClipCaptionStyles allowed_caption_styles = 11;
+   */
+  allowedCaptionStyles?: ClipCaptionStyles | undefined;
 };
 
 /**
@@ -104,6 +121,24 @@ export type UpdateVideoTemplateRequest = Message<"postpilot.v1.UpdateVideoTempla
    * @generated from field: optional string composition_body = 9;
    */
   compositionBody?: string | undefined;
+
+  /**
+   * Supplied only when they change (CLIP-166). A change moves no project already made with the
+   * template (CLIP-168).
+   *
+   * @generated from field: optional string intro_preset = 10;
+   */
+  introPreset?: string | undefined;
+
+  /**
+   * @generated from field: optional string outro_preset = 11;
+   */
+  outroPreset?: string | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ClipCaptionStyles allowed_caption_styles = 12;
+   */
+  allowedCaptionStyles?: ClipCaptionStyles | undefined;
 };
 
 /**

@@ -126,7 +126,11 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if !r.CompositionBody.Valid {
 		return clip.VideoTemplate{}, errors.New("stored template has no outline body")
 	}
-	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CompositionBody: r.CompositionBody.String}, CreatedAt: created, UpdatedAt: updated}
+	styles, err := decodeCaptionStyles(r.AllowedCaptionStyles)
+	if err != nil {
+		return clip.VideoTemplate{}, err
+	}
+	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CompositionBody: r.CompositionBody.String}, Design: clip.TemplateDesign{IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles}, CreatedAt: created, UpdatedAt: updated}
 	if _, e := composition.ReadStored(t.CompositionBody, clip.DefaultCompositionLimits()); e != nil {
 		return t, e
 	}
@@ -170,7 +174,7 @@ func (s *Store) ListTemplates(ctx context.Context, user string) ([]clip.VideoTem
 }
 func (s *Store) InsertTemplate(ctx context.Context, t clip.VideoTemplate) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		return struct{}{}, q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, CompositionBody: nullable(t.CompositionBody), CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)})
+		return struct{}{}, q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, CompositionBody: nullable(t.CompositionBody), IntroPreset: t.Design.IntroPreset, OutroPreset: t.Design.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(t.Design.CaptionStyles), CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)})
 	})
 	return err
 }
@@ -185,6 +189,25 @@ func (s *Store) UpdateTemplate(ctx context.Context, user, id string, p clip.Temp
 		if p.Name != nil {
 			if err := affected(q.UpdateVideoTemplateName(ctx, sqlc.UpdateVideoTemplateNameParams{Name: *p.Name, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.VideoTemplate{}, err
+			}
+		}
+		if p.IntroPreset != nil || p.OutroPreset != nil || p.CaptionStyles != nil {
+			current, err := getTemplate(ctx, q, user, id)
+			if err != nil {
+				return clip.VideoTemplate{}, err
+			}
+			design := current.Design
+			if p.IntroPreset != nil {
+				design.IntroPreset = *p.IntroPreset
+			}
+			if p.OutroPreset != nil {
+				design.OutroPreset = *p.OutroPreset
+			}
+			if p.CaptionStyles != nil {
+				design.CaptionStyles = *p.CaptionStyles
+			}
+			if e := affected(q.UpdateVideoTemplateDesign(ctx, sqlc.UpdateVideoTemplateDesignParams{IntroPreset: design.IntroPreset, OutroPreset: design.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(design.CaptionStyles), UpdatedAt: stamp(now), ID: id, UserID: user})); e != nil {
+				return clip.VideoTemplate{}, e
 			}
 		}
 		if p.CompositionBody != nil {

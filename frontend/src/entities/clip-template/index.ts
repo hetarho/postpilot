@@ -12,7 +12,13 @@ export {
   recipeOf,
   validateClipRecipe,
 } from './model/types'
-export type { ClipTemplate, ClipRecipe, ClipAccent, FieldError } from './model/types'
+export type {
+  ClipTemplate,
+  ClipRecipe,
+  ClipTemplateDesign,
+  ClipAccent,
+  FieldError,
+} from './model/types'
 export { CompositionBuilder } from './ui/CompositionBuilder'
 export { CompositionPreview } from './ui/CompositionPreview'
 export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'

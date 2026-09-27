@@ -22,9 +22,9 @@ export const CLIP_DEFAULT_CAPTION_STYLE = 'bold'
 export type ClipIntroPresetId = keyof typeof design.regions.intro
 export type ClipOutroPresetId = keyof typeof design.regions.outro
 export type ClipRegionPresets = { intro: ClipIntroPresetId; outro: ClipOutroPresetId }
-/** The presets a new project starts in (CLIP-111). A template carries no design at
- *  all, so every surface that draws a region without a project's selection draws
- *  these (CLIP-14). */
+/** The presets a new project starts in where no template gives it others (CLIP-111,
+ *  CLIP-168), a new template starts in (CLIP-166), and every surface that draws a region
+ *  without a selection draws. */
 export const CLIP_DEFAULT_REGION_PRESETS: ClipRegionPresets = { intro: 'a', outro: 'b' }
 /** Every approved caption style, in the order the design spec names them. The
  *  set a project may actually assign from is its own selection (CLIP-142). */

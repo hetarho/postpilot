@@ -157,47 +157,78 @@ describe('① chooses the design, the caption styles and an optional template', 
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('chips'), { timeout: 4000 })
   })
 
-  it('takes no design from a template and keeps its own on either side of the choice', async () => {
+  // CLIP-168: choosing a template takes its selection in the same write, silently, and the form
+  // shows it; the pace and the accent stay the project's own; 없음 carries nothing away.
+  it('takes the template’s design selection on choosing it and keeps it on 없음', async () => {
     const user = userEvent.setup()
     const writes: ClipProjectDraft[] = []
+    const designed = {
+      ...template,
+      introPreset: 'cover' as const,
+      outroPreset: 'e' as const,
+      allowedCaptionStyles: ['neon'],
+    }
     renderAppAt('/clips/project', {
       user: { id: 'alice' },
-      clips: { templates: [template], projects: [project], projectWrites: writes },
+      clips: { templates: [designed], projects: [project], projectWrites: writes },
     })
-    // The project's own selection, made before any template is chosen.
     const outro = await screen.findByRole('radiogroup', { name: '아웃트로 디자인' })
     await user.click(within(outro).getByRole('radio', { name: '원형 도장' }))
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('stamp'), { timeout: 4000 })
-    // Choosing a template changes what the clip collects, not how it looks
-    // (CLIP-14, CLIP-139).
     const picker = screen.getByRole('combobox', { name: /^영상 템플릿/ })
     await chooseOption(user, picker, '여행')
     await waitFor(
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('template')
-        expect(last?.outroPreset).toBe('stamp')
-        // The project's own values, untouched by the template that names others.
-        expect(last?.introPreset).toBe('b')
-        expect(last?.allowedCaptionStyles).toEqual([])
+        expect(last?.introPreset).toBe('cover')
+        expect(last?.outroPreset).toBe('e')
+        expect(last?.allowedCaptionStyles).toEqual(['neon'])
         expect(last?.captionPace).toBe('')
         expect(last?.accent).toBe('')
       },
       { timeout: 4000 },
     )
-    // Clearing it carries nothing away either.
+    const intro = screen.getByRole('radiogroup', { name: '인트로 디자인' })
+    expect(within(intro).getByRole('radio', { name: '매거진 커버' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    expect(within(outro).getByRole('radio', { name: 'E 점수 강조' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    const styles = screen.getByRole('group', { name: '자막 스타일' })
+    expect(within(styles).getByRole('checkbox', { name: /네온 사인/ })).toBeChecked()
+    // The settled form is in sync: no further write pushes the old selection back.
+    const settled = writes.length
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    expect(writes).toHaveLength(settled)
     await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '없음')
     await waitFor(
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('')
-        expect(last?.outroPreset).toBe('stamp')
+        expect(last?.introPreset).toBe('cover')
+        expect(last?.allowedCaptionStyles).toEqual(['neon'])
       },
       { timeout: 4000 },
     )
-    expect(within(outro).getByRole('radio', { name: '원형 도장' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
+  })
+
+  it('mints a project in the chosen template’s selection', async () => {
+    const user = userEvent.setup()
+    const writes: ClipProjectDraft[] = []
+    const designed = { ...template, introPreset: 'serif' as const, outroPreset: 'chips' as const }
+    renderAppAt('/clips/new', {
+      user: { id: 'alice' },
+      clips: { templates: [designed], projectWrites: writes },
+    })
+    await chooseOption(user, await screen.findByRole('combobox', { name: /^영상 템플릿/ }), '여행')
+    await user.type(screen.getByLabelText('클립 제목'), '고기')
+    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0].introPreset).toBe('serif')
+    expect(writes[0].outroPreset).toBe('chips')
   })
 })

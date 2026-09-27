@@ -5,8 +5,8 @@ import { chooseOption } from '@/test/listbox'
 import { parseClipComposition } from '../lib/composition-parse'
 import { CompositionPreview } from './CompositionPreview'
 
-// A template carries no design (CLIP-14), so the preview itself offers every intro
-// and outro preset to look at the outline in, starting at a new project's.
+// Left to itself the preview offers every intro and outro preset to look at the outline in,
+// starting at a new project's; the editor hands it the template's own (CLIP-166).
 it('draws the outline in whichever intro and outro preset the preview chooses', async () => {
   const user = userEvent.setup()
   const document = parseClipComposition(

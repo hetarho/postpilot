@@ -257,3 +257,10 @@ choice would be expensive to undo are listed at the end.
 ## T443 — video-template builder rows open in place
 - **The open row follows its entry when moved.** It stays open on the entry it belongs to, including a row inside a moved group. Before, a reorder closed everything.
 - **A new entry opens and focuses its first field**, which for a text entry is its first control. Pressing its row button after adding closes it, like any open row.
+
+## T441 — a video template's starting design selection
+- **Migration 0102 stores `''` / `''` / `[]` for existing templates**, as 0062 does for projects. The wire answers a template's unnamed preset as the shared default (intro A, outro B), which is also what a project made with it takes. The editor never sees "none", and old rows need no backfill.
+- **When a request names both a template change and presets, the template wins.** ① sends its whole draft on every autosave, so the old presets always travel with a template change. The server copies the template's three over them in the same write, and the ① draft adopts them on the spot, so the next autosave does not push the old selection back. At creation, an explicit preset still beats the template's; /clips/new sends none, so it mints in the template's selection.
+- **Caption pace and accent stay the project's own.** A template gives only the two presets and the styles, per the task. The legacy `intro`/`pace`/`accent` root attributes still in some template bodies are not read for this.
+- **The editor's caption-style checkboxes show names only.** ①'s style samples are drawn for a project (`GetClipCaptionStyleSamples` takes a project id), and a template has none. The list sits inside the preview section, under its intro/outro selectors. As with ①'s list, ticking keeps the catalogue order. Following the no-help-copy rule, there is no "none selected means bold" line. *If you want samples:* the sample RPC needs a project-less variant.
+- **The docked 저장 always sends all three**, even when unchanged, the same way it always sends the name and the body.

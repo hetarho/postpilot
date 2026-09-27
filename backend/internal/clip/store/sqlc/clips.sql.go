@@ -117,7 +117,7 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 }
 
 const getVideoTemplate = `-- name: GetVideoTemplate :one
-SELECT id, user_id, name, created_at, updated_at, composition_body FROM video_templates WHERE id = ? AND user_id = ?
+SELECT id, user_id, name, created_at, updated_at, composition_body, intro_preset, outro_preset, allowed_caption_styles FROM video_templates WHERE id = ? AND user_id = ?
 `
 
 type GetVideoTemplateParams struct {
@@ -135,6 +135,9 @@ func (q *Queries) GetVideoTemplate(ctx context.Context, arg GetVideoTemplatePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CompositionBody,
+		&i.IntroPreset,
+		&i.OutroPreset,
+		&i.AllowedCaptionStyles,
 	)
 	return i, err
 }
@@ -187,16 +190,19 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 }
 
 const insertVideoTemplate = `-- name: InsertVideoTemplate :exec
-INSERT INTO video_templates(id, user_id, name, composition_body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO video_templates(id, user_id, name, composition_body, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertVideoTemplateParams struct {
-	ID              string
-	UserID          string
-	Name            string
-	CompositionBody sql.NullString
-	CreatedAt       string
-	UpdatedAt       string
+	ID                   string
+	UserID               string
+	Name                 string
+	CompositionBody      sql.NullString
+	IntroPreset          string
+	OutroPreset          string
+	AllowedCaptionStyles string
+	CreatedAt            string
+	UpdatedAt            string
 }
 
 func (q *Queries) InsertVideoTemplate(ctx context.Context, arg InsertVideoTemplateParams) error {
@@ -205,6 +211,9 @@ func (q *Queries) InsertVideoTemplate(ctx context.Context, arg InsertVideoTempla
 		arg.UserID,
 		arg.Name,
 		arg.CompositionBody,
+		arg.IntroPreset,
+		arg.OutroPreset,
+		arg.AllowedCaptionStyles,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -317,7 +326,7 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 }
 
 const listVideoTemplates = `-- name: ListVideoTemplates :many
-SELECT id, user_id, name, created_at, updated_at, composition_body FROM video_templates WHERE user_id = ? ORDER BY name, id
+SELECT id, user_id, name, created_at, updated_at, composition_body, intro_preset, outro_preset, allowed_caption_styles FROM video_templates WHERE user_id = ? ORDER BY name, id
 `
 
 func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]VideoTemplate, error) {
@@ -336,6 +345,9 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CompositionBody,
+			&i.IntroPreset,
+			&i.OutroPreset,
+			&i.AllowedCaptionStyles,
 		); err != nil {
 			return nil, err
 		}
@@ -797,6 +809,35 @@ type UpdateClipVideoTemplateIDParams struct {
 func (q *Queries) UpdateClipVideoTemplateID(ctx context.Context, arg UpdateClipVideoTemplateIDParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateClipVideoTemplateID,
 		arg.VideoTemplateID,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateVideoTemplateDesign = `-- name: UpdateVideoTemplateDesign :execrows
+UPDATE video_templates SET intro_preset = ?, outro_preset = ?, allowed_caption_styles = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateVideoTemplateDesignParams struct {
+	IntroPreset          string
+	OutroPreset          string
+	AllowedCaptionStyles string
+	UpdatedAt            string
+	ID                   string
+	UserID               string
+}
+
+// The template's starting design selection (CLIP-166); a project made with it keeps its own.
+func (q *Queries) UpdateVideoTemplateDesign(ctx context.Context, arg UpdateVideoTemplateDesignParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateVideoTemplateDesign,
+		arg.IntroPreset,
+		arg.OutroPreset,
+		arg.AllowedCaptionStyles,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

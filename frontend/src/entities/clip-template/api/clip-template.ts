@@ -2,6 +2,7 @@ import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invalidateGuidelines } from '@/entities/guideline/@x/clip-template'
+import { CLIP_DEFAULT_REGION_PRESETS } from '@/entities/clip-design/@x/clip-template'
 import { ClipTemplateService, type ProtoVideoTemplate } from '@/shared/api'
 import { normalizeRecipe, type ClipTemplate, type ClipRecipe } from '../model/types'
 
@@ -12,6 +13,13 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
     id: value.id,
     name: value.name,
     compositionBody: value.compositionBody,
+    // The server answers the selection a project would take; an older answer naming none is
+    // the shared default (CLIP-166).
+    introPreset: (value.introPreset ||
+      CLIP_DEFAULT_REGION_PRESETS.intro) as ClipTemplate['introPreset'],
+    outroPreset: (value.outroPreset ||
+      CLIP_DEFAULT_REGION_PRESETS.outro) as ClipTemplate['outroPreset'],
+    allowedCaptionStyles: [...value.allowedCaptionStyles],
     projectCount: value.projectCount,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
@@ -46,10 +54,20 @@ export function useClipTemplateMutations(ownerId: string) {
   }
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {
-      const { name, compositionBody } = normalizeRecipe(recipe)
+      const { name, compositionBody, introPreset, outroPreset, allowedCaptionStyles } =
+        normalizeRecipe(recipe)
+      // The docked 저장 sends the whole draft, the selection included; an empty style list is
+      // a selection of none, which is why it travels in its wrapper (CLIP-142, CLIP-166).
+      const fields = {
+        name,
+        compositionBody,
+        introPreset,
+        outroPreset,
+        allowedCaptionStyles: { values: allowedCaptionStyles },
+      }
       const response = id
-        ? await client.updateVideoTemplate({ id, name, compositionBody })
-        : await client.createVideoTemplate({ name, compositionBody })
+        ? await client.updateVideoTemplate({ id, ...fields })
+        : await client.createVideoTemplate(fields)
       if (!response.template?.id) throw new Error('Missing saved video template')
       return toClipTemplate(response.template)
     },

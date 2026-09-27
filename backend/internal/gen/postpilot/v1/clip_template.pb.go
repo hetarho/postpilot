@@ -107,8 +107,12 @@ type CreateVideoTemplateRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	CompositionBody string                 `protobuf:"bytes,8,opt,name=composition_body,json=compositionBody,proto3" json:"composition_body,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The starting design selection (CLIP-166); absent is the shared default.
+	IntroPreset          *string            `protobuf:"bytes,9,opt,name=intro_preset,json=introPreset,proto3,oneof" json:"intro_preset,omitempty"`
+	OutroPreset          *string            `protobuf:"bytes,10,opt,name=outro_preset,json=outroPreset,proto3,oneof" json:"outro_preset,omitempty"`
+	AllowedCaptionStyles *ClipCaptionStyles `protobuf:"bytes,11,opt,name=allowed_caption_styles,json=allowedCaptionStyles,proto3" json:"allowed_caption_styles,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateVideoTemplateRequest) Reset() {
@@ -153,6 +157,27 @@ func (x *CreateVideoTemplateRequest) GetCompositionBody() string {
 		return x.CompositionBody
 	}
 	return ""
+}
+
+func (x *CreateVideoTemplateRequest) GetIntroPreset() string {
+	if x != nil && x.IntroPreset != nil {
+		return *x.IntroPreset
+	}
+	return ""
+}
+
+func (x *CreateVideoTemplateRequest) GetOutroPreset() string {
+	if x != nil && x.OutroPreset != nil {
+		return *x.OutroPreset
+	}
+	return ""
+}
+
+func (x *CreateVideoTemplateRequest) GetAllowedCaptionStyles() *ClipCaptionStyles {
+	if x != nil {
+		return x.AllowedCaptionStyles
+	}
+	return nil
 }
 
 type CreateVideoTemplateResponse struct {
@@ -204,8 +229,13 @@ type UpdateVideoTemplateRequest struct {
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name            *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	CompositionBody *string                `protobuf:"bytes,9,opt,name=composition_body,json=compositionBody,proto3,oneof" json:"composition_body,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Supplied only when they change (CLIP-166). A change moves no project already made with the
+	// template (CLIP-168).
+	IntroPreset          *string            `protobuf:"bytes,10,opt,name=intro_preset,json=introPreset,proto3,oneof" json:"intro_preset,omitempty"`
+	OutroPreset          *string            `protobuf:"bytes,11,opt,name=outro_preset,json=outroPreset,proto3,oneof" json:"outro_preset,omitempty"`
+	AllowedCaptionStyles *ClipCaptionStyles `protobuf:"bytes,12,opt,name=allowed_caption_styles,json=allowedCaptionStyles,proto3" json:"allowed_caption_styles,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateVideoTemplateRequest) Reset() {
@@ -257,6 +287,27 @@ func (x *UpdateVideoTemplateRequest) GetCompositionBody() string {
 		return *x.CompositionBody
 	}
 	return ""
+}
+
+func (x *UpdateVideoTemplateRequest) GetIntroPreset() string {
+	if x != nil && x.IntroPreset != nil {
+		return *x.IntroPreset
+	}
+	return ""
+}
+
+func (x *UpdateVideoTemplateRequest) GetOutroPreset() string {
+	if x != nil && x.OutroPreset != nil {
+		return *x.OutroPreset
+	}
+	return ""
+}
+
+func (x *UpdateVideoTemplateRequest) GetAllowedCaptionStyles() *ClipCaptionStyles {
+	if x != nil {
+		return x.AllowedCaptionStyles
+	}
+	return nil
 }
 
 type UpdateVideoTemplateResponse struct {
@@ -487,18 +538,30 @@ const file_postpilot_v1_clip_template_proto_rawDesc = "" +
 	" postpilot/v1/clip_template.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\"\x1b\n" +
 	"\x19ListVideoTemplatesRequest\"W\n" +
 	"\x1aListVideoTemplatesResponse\x129\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xae\x01\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xf7\x02\n" +
 	"\x1aCreateVideoTemplateRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12)\n" +
-	"\x10composition_body\x18\b \x01(\tR\x0fcompositionBodyJ\x04\b\x02\x10\bR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
+	"\x10composition_body\x18\b \x01(\tR\x0fcompositionBody\x12&\n" +
+	"\fintro_preset\x18\t \x01(\tH\x00R\vintroPreset\x88\x01\x01\x12&\n" +
+	"\foutro_preset\x18\n" +
+	" \x01(\tH\x01R\voutroPreset\x88\x01\x01\x12U\n" +
+	"\x16allowed_caption_styles\x18\v \x01(\v2\x1f.postpilot.v1.ClipCaptionStylesR\x14allowedCaptionStylesB\x0f\n" +
+	"\r_intro_presetB\x0f\n" +
+	"\r_outro_presetJ\x04\b\x02\x10\bR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
 	"\x1bCreateVideoTemplateResponse\x127\n" +
-	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xe6\x01\n" +
+	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xaf\x03\n" +
 	"\x1aUpdateVideoTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12.\n" +
-	"\x10composition_body\x18\t \x01(\tH\x01R\x0fcompositionBody\x88\x01\x01B\a\n" +
+	"\x10composition_body\x18\t \x01(\tH\x01R\x0fcompositionBody\x88\x01\x01\x12&\n" +
+	"\fintro_preset\x18\n" +
+	" \x01(\tH\x02R\vintroPreset\x88\x01\x01\x12&\n" +
+	"\foutro_preset\x18\v \x01(\tH\x03R\voutroPreset\x88\x01\x01\x12U\n" +
+	"\x16allowed_caption_styles\x18\f \x01(\v2\x1f.postpilot.v1.ClipCaptionStylesR\x14allowedCaptionStylesB\a\n" +
 	"\x05_nameB\x13\n" +
-	"\x11_composition_bodyJ\x04\b\x03\x10\tR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
+	"\x11_composition_bodyB\x0f\n" +
+	"\r_intro_presetB\x0f\n" +
+	"\r_outro_presetJ\x04\b\x03\x10\tR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_pace\"V\n" +
 	"\x1bUpdateVideoTemplateResponse\x127\n" +
 	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\",\n" +
 	"\x1aDeleteVideoTemplateRequest\x12\x0e\n" +
@@ -541,26 +604,29 @@ var file_postpilot_v1_clip_template_proto_goTypes = []any{
 	(*GetClipCapabilitiesRequest)(nil),  // 8: postpilot.v1.GetClipCapabilitiesRequest
 	(*GetClipCapabilitiesResponse)(nil), // 9: postpilot.v1.GetClipCapabilitiesResponse
 	(*VideoTemplate)(nil),               // 10: postpilot.v1.VideoTemplate
+	(*ClipCaptionStyles)(nil),           // 11: postpilot.v1.ClipCaptionStyles
 }
 var file_postpilot_v1_clip_template_proto_depIdxs = []int32{
 	10, // 0: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
-	10, // 1: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	10, // 2: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	0,  // 3: postpilot.v1.ClipTemplateService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	2,  // 4: postpilot.v1.ClipTemplateService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	4,  // 5: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	6,  // 6: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	8,  // 7: postpilot.v1.ClipTemplateService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
-	1,  // 8: postpilot.v1.ClipTemplateService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	3,  // 9: postpilot.v1.ClipTemplateService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	5,  // 10: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	7,  // 11: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	9,  // 12: postpilot.v1.ClipTemplateService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	11, // 1: postpilot.v1.CreateVideoTemplateRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
+	10, // 2: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	11, // 3: postpilot.v1.UpdateVideoTemplateRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
+	10, // 4: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	0,  // 5: postpilot.v1.ClipTemplateService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	2,  // 6: postpilot.v1.ClipTemplateService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	4,  // 7: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	6,  // 8: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	8,  // 9: postpilot.v1.ClipTemplateService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
+	1,  // 10: postpilot.v1.ClipTemplateService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	3,  // 11: postpilot.v1.ClipTemplateService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	5,  // 12: postpilot.v1.ClipTemplateService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	7,  // 13: postpilot.v1.ClipTemplateService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	9,  // 14: postpilot.v1.ClipTemplateService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_template_proto_init() }
@@ -569,6 +635,7 @@ func file_postpilot_v1_clip_template_proto_init() {
 		return
 	}
 	file_postpilot_v1_clip_proto_init()
+	file_postpilot_v1_clip_template_proto_msgTypes[2].OneofWrappers = []any{}
 	file_postpilot_v1_clip_template_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

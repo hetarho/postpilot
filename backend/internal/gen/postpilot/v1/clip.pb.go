@@ -293,8 +293,14 @@ type VideoTemplate struct {
 	CreatedAt       string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       string                 `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	CompositionBody string                 `protobuf:"bytes,12,opt,name=composition_body,json=compositionBody,proto3" json:"composition_body,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The template's starting design selection (CLIP-166, CLIP-168), ClipProject's shapes (34–36):
+	// a project created with the template, or switched to it, takes these three. Empty is the
+	// shared default.
+	IntroPreset          string   `protobuf:"bytes,15,opt,name=intro_preset,json=introPreset,proto3" json:"intro_preset,omitempty"`
+	OutroPreset          string   `protobuf:"bytes,16,opt,name=outro_preset,json=outroPreset,proto3" json:"outro_preset,omitempty"`
+	AllowedCaptionStyles []string `protobuf:"bytes,17,rep,name=allowed_caption_styles,json=allowedCaptionStyles,proto3" json:"allowed_caption_styles,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *VideoTemplate) Reset() {
@@ -367,6 +373,27 @@ func (x *VideoTemplate) GetCompositionBody() string {
 		return x.CompositionBody
 	}
 	return ""
+}
+
+func (x *VideoTemplate) GetIntroPreset() string {
+	if x != nil {
+		return x.IntroPreset
+	}
+	return ""
+}
+
+func (x *VideoTemplate) GetOutroPreset() string {
+	if x != nil {
+		return x.OutroPreset
+	}
+	return ""
+}
+
+func (x *VideoTemplate) GetAllowedCaptionStyles() []string {
+	if x != nil {
+		return x.AllowedCaptionStyles
+	}
+	return nil
 }
 
 type ClipResult struct {
@@ -4542,7 +4569,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x05model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12=\n" +
 	"\x06status\x18\x02 \x01(\x0e2%.postpilot.v1.ClipAnalysisEligibilityR\x06status\"+\n" +
 	"\x11ClipCaptionStyles\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\tR\x06values\"\xd7\x02\n" +
+	"\x06values\x18\x01 \x03(\tR\x06values\"\xd3\x03\n" +
 	"\rVideoTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -4551,7 +4578,10 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"created_at\x18\b \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\t \x01(\tR\tupdatedAt\x12)\n" +
-	"\x10composition_body\x18\f \x01(\tR\x0fcompositionBodyJ\x04\b\x03\x10\aJ\x04\b\n" +
+	"\x10composition_body\x18\f \x01(\tR\x0fcompositionBody\x12!\n" +
+	"\fintro_preset\x18\x0f \x01(\tR\vintroPreset\x12!\n" +
+	"\foutro_preset\x18\x10 \x01(\tR\voutroPreset\x124\n" +
+	"\x16allowed_caption_styles\x18\x11 \x03(\tR\x14allowedCaptionStylesJ\x04\b\x03\x10\aJ\x04\b\n" +
 	"\x10\vJ\x04\b\v\x10\fJ\x04\b\r\x10\x0eJ\x04\b\x0e\x10\x0fR\x12information_fieldsR\fcut_guidanceR\vcopy_stylesR\x06accentR\x06presetR\fcaption_paceR\x12composition_legacyR\x15composition_converted\"\x92\x02\n" +
 	"\n" +
 	"ClipResult\x12=\n" +

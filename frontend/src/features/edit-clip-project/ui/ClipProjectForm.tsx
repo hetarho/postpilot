@@ -153,13 +153,23 @@ export function ClipProjectForm({
   }
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) =>
     patch(
-      // Choosing or clearing a template changes what this project collects and
-      // nothing about how it looks: the design selection is the project's own
-      // and a template carries none of it (CLIP-14, CLIP-139).
       key === 'videoTemplateId' && value !== draft.videoTemplateId
-        ? { [key]: value, compositionInputs: emptyCompositionInputs() }
+        ? { [key]: value, compositionInputs: emptyCompositionInputs(), ...designOf(String(value)) }
         : { [key]: value },
     )
+  // Choosing a template takes its design selection, silently — the owner saw that design in its
+  // preview — and the server does the same in the same write, so the draft already says what the
+  // save answers. Clearing to 없음 keeps the project's own (CLIP-168).
+  const designOf = (id: string): Partial<ClipProjectDraft> => {
+    const template = templates.templates.find((v) => v.id === id)
+    return template
+      ? {
+          introPreset: template.introPreset,
+          outroPreset: template.outroPreset,
+          allowedCaptionStyles: [...template.allowedCaptionStyles],
+        }
+      : {}
+  }
   const failure = save.error
   /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it
    *  a beat after each pause — and the ratio is why this one stayed explicit (CLIP-9). */

@@ -2,6 +2,7 @@
 package rpc
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
@@ -215,8 +216,17 @@ func captionStyles(m *v1.ClipCaptionStyles) *[]string {
 	}
 	return &values
 }
+
+// templateProto answers a template's selection as a project made with it would take it: an
+// unnamed preset is the shared default, so the editor never shows a selection of none (CLIP-166).
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	return &v1.VideoTemplate{CompositionBody: t.CompositionBody, Id: t.ID, Name: t.Name, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	styles := t.Design.CaptionStyles
+	if styles == nil {
+		styles = []string{}
+	}
+	defaults := composition.DefaultDesign()
+	intro, outro := cmp.Or(t.Design.IntroPreset, defaults.Intro), cmp.Or(t.Design.OutroPreset, defaults.Outro)
+	return &v1.VideoTemplate{CompositionBody: t.CompositionBody, Id: t.ID, Name: t.Name, ProjectCount: int32(t.ProjectCount), IntroPreset: intro, OutroPreset: outro, AllowedCaptionStyles: styles, CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 }
 func projectProto(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
@@ -279,7 +289,11 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 	if strings.TrimSpace(m.CompositionBody) == "" {
 		return nil, toConnectError(&composition.Problem{ElementID: "clip", Line: 1, Reason: "root"})
 	}
-	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.CompositionBody, Name: m.Name})
+	design := clip.TemplateDesign{IntroPreset: m.GetIntroPreset(), OutroPreset: m.GetOutroPreset()}
+	if styles := captionStyles(m.AllowedCaptionStyles); styles != nil {
+		design.CaptionStyles = *styles
+	}
+	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.CompositionBody, Name: m.Name}, design)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -291,7 +305,7 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.TemplatePatch{CompositionBody: m.CompositionBody, Name: m.Name}
+	p := clip.TemplatePatch{CompositionBody: m.CompositionBody, Name: m.Name, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)}
 	value, err := h.service.UpdateTemplate(ctx, user, m.Id, p)
 	if err != nil {
 		return nil, toConnectError(err)

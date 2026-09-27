@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CLIP_COMPOSITION_LIMITS,
@@ -20,14 +20,28 @@ import { CompositionDesignFrame } from './CompositionDesignFrame'
 const INTRO_IDS = Object.keys(CLIP_REGIONS.intro) as ClipRegionPresets['intro'][]
 const OUTRO_IDS = Object.keys(CLIP_REGIONS.outro) as ClipRegionPresets['outro'][]
 
-export function CompositionPreview({ document }: { document: ClipComposition }) {
+/** The template's preview (CLIP-42). Its intro and outro selectors are the template's own
+ *  starting design (CLIP-166) where the editor hands them in — the preview draws the draft's
+ *  selection and each choice edits the draft — and `children` is the rest of that selection,
+ *  standing beside them. Without them the selectors only choose what this preview draws in. */
+export function CompositionPreview({
+  document,
+  presets: chosen,
+  onPresetsChange,
+  children,
+}: {
+  document: ClipComposition
+  presets?: ClipRegionPresets
+  onPresetsChange?: (next: ClipRegionPresets) => void
+  children?: ReactNode
+}) {
   const { t } = useTranslation('clips')
   const [duration, setDuration] = useState<number>(CLIP_COMPOSITION_PREVIEW.durationMs)
   const [time, setTime] = useState(0)
   const [ratio, setRatio] = useState<ClipRatioId>('vertical')
-  // A template carries no design (CLIP-14): these only choose what this preview
-  // draws the outline in, starting at a new project's presets, and are never saved.
-  const [presets, setPresets] = useState<ClipRegionPresets>(CLIP_DEFAULT_REGION_PRESETS)
+  const [local, setLocal] = useState<ClipRegionPresets>(CLIP_DEFAULT_REGION_PRESETS)
+  const presets = chosen ?? local
+  const setPresets = onPresetsChange ?? setLocal
   let timeline: CompositionTimeline | undefined, error: CompositionProblem | undefined
   try {
     timeline = sampleClipComposition(
@@ -76,6 +90,7 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
         }))}
         onChange={(value) => setPresets({ ...presets, outro: value as ClipRegionPresets['outro'] })}
       />
+      {children}
       <Slider
         label={t('composition.sampleDuration')}
         min={CLIP_COMPOSITION_PREVIEW.minDurationMs}

@@ -149,13 +149,15 @@ describe('composition template authoring', () => {
       false,
     )
   })
-  it('creates a template with one save and no design anywhere on the screen', async () => {
+  it('creates a template with one save and its design only beside the preview', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
     const { router } = mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
-    expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
-    // The design belongs to the clip, so the editor offers none of it (CLIP-42).
+    // The design selection stands beside the preview, never in front of the body (CLIP-42).
+    const preview = screen.getByRole('region', { name: '구성 미리보기' })
+    expect(within(preview).getByRole('group', { name: '자막 스타일' })).toBeInTheDocument()
+    expect(screen.getAllByRole('group', { name: '자막 스타일' })).toHaveLength(1)
     for (const name of ['B 위아래 가로선', '크게 강조', 'E 점수 강조'])
       expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument()
     // 원문 and the builder are there from the first keystroke, over an empty body.
@@ -173,10 +175,14 @@ describe('composition template authoring', () => {
     )
     expect(writes).toHaveLength(1)
     expect(writes[0]).not.toHaveProperty('copyStyles')
-    // A saved body names no design at all: the presets are the project's
-    // (CLIP-14, CLIP-139).
+    // A saved body names no design at all: the selection travels beside it (CLIP-166, CLIP-167).
     expect(parseClipComposition(writes[0].compositionBody!).root.attributes).toEqual({
       version: '1',
+    })
+    expect(writes[0]).toMatchObject({
+      introPreset: 'a',
+      outroPreset: 'b',
+      allowedCaptionStyles: [],
     })
   })
   it('opens a template without writing and reports unavailable generation capability', async () => {

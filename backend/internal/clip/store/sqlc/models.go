@@ -203,10 +203,13 @@ type ClipSourceLease struct {
 }
 
 type VideoTemplate struct {
-	ID              string
-	UserID          string
-	Name            string
-	CreatedAt       string
-	UpdatedAt       string
-	CompositionBody sql.NullString
+	ID                   string
+	UserID               string
+	Name                 string
+	CreatedAt            string
+	UpdatedAt            string
+	CompositionBody      sql.NullString
+	IntroPreset          string
+	OutroPreset          string
+	AllowedCaptionStyles string
 }

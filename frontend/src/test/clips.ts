@@ -38,7 +38,7 @@ import {
   type ProtoClipSourceBatch,
   type AppFailureReason,
 } from '@/shared/api'
-import type { ClipRecipe } from '@/entities/clip-template'
+import type { ClipRecipe, ClipTemplateDesign } from '@/entities/clip-template'
 import {
   CLIP_CAPTION_STYLES,
   CLIP_DEFAULT_REGION_PRESETS,
@@ -60,10 +60,21 @@ import { toFakeProto, type FakeGenerationJobRow } from './jobs'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
-export interface FakeClipTemplate extends ClipRecipe {
+/** A template row; a fixture naming no design stands at the shared defaults, as a migrated
+ *  row does (CLIP-166). */
+export interface FakeClipTemplate
+  extends Omit<ClipRecipe, keyof ClipTemplateDesign>, Partial<ClipTemplateDesign> {
   id: string
   projectCount?: number
   ownerId?: string
+}
+function designed(row: FakeClipTemplate): FakeClipTemplate & ClipTemplateDesign {
+  return {
+    ...row,
+    introPreset: row.introPreset ?? CLIP_DEFAULT_REGION_PRESETS.intro,
+    outroPreset: row.outroPreset ?? CLIP_DEFAULT_REGION_PRESETS.outro,
+    allowedCaptionStyles: [...(row.allowedCaptionStyles ?? [])],
+  }
 }
 export interface FakeClipProject extends ClipProjectDraft {
   id: string
@@ -263,11 +274,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const rows = new Map(
     (options.templates ?? [])
       .filter((r) => !r.ownerId || r.ownerId === options.ownerId)
-      .map((r) => [r.id, { ...r }]),
+      .map((r) => [r.id, designed(r)]),
   )
   // What the server freezes for a project with no template: the grammar's own
   // minimum document (CLIP-5).
   const emptyCompositionBody = '<clip version="1"/>'
+  const templateFor = (id: string) => (id ? rows.get(id) : undefined)
   const toProto = (row: FakeClipTemplate) =>
     create(VideoTemplateSchema, {
       ...row,
@@ -294,11 +306,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     // A template is an outline body under a name; a request without one is refused (CLIP-14).
     if (!req.compositionBody.trim())
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
-    const row: FakeClipTemplate = {
+    const row = designed({
       id: `video-template-${++next}`,
       name: req.name.trim(),
       compositionBody: req.compositionBody,
-    }
+      ...(req.introPreset
+        ? { introPreset: req.introPreset as ClipTemplateDesign['introPreset'] }
+        : {}),
+      ...(req.outroPreset
+        ? { outroPreset: req.outroPreset as ClipTemplateDesign['outroPreset'] }
+        : {}),
+      ...(req.allowedCaptionStyles
+        ? { allowedCaptionStyles: [...req.allowedCaptionStyles.values] }
+        : {}),
+    })
     options.writes?.push(row)
     rows.set(row.id, row)
     return create(CreateVideoTemplateResponseSchema, { template: toProto(row) })
@@ -310,6 +331,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!row) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (req.name !== undefined) row.name = req.name
     if (req.compositionBody !== undefined) row.compositionBody = req.compositionBody
+    if (req.introPreset !== undefined)
+      row.introPreset = req.introPreset as ClipTemplateDesign['introPreset']
+    if (req.outroPreset !== undefined)
+      row.outroPreset = req.outroPreset as ClipTemplateDesign['outroPreset']
+    if (req.allowedCaptionStyles) row.allowedCaptionStyles = [...req.allowedCaptionStyles.values]
     options.writes?.push({ ...row })
     return create(UpdateVideoTemplateResponseSchema, { template: toProto(row) })
   })
@@ -440,6 +466,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   router.rpc(ClipGenerationService.method.createClipProject, (req) => {
     options.calls?.push('CreateClipProject')
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    const template = templateFor(req.videoTemplateId)
+    const styles = req.allowedCaptionStyles?.values ?? template?.allowedCaptionStyles
     const p: FakeClipProject = {
       id: `clip-${++next}`,
       title: req.title,
@@ -449,15 +477,15 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
       instruction: req.instruction,
-      // A template seeds none of the design: a request naming no preset starts
-      // at the new-project defaults, stored as ids (CLIP-14, CLIP-111, CLIP-139).
+      // A request naming no preset takes the template's selection, or the new-project defaults
+      // where there is no template, stored as ids (CLIP-111, CLIP-139, CLIP-168).
       introPreset: (req.introPreset ||
+        template?.introPreset ||
         CLIP_DEFAULT_REGION_PRESETS.intro) as ClipProjectDraft['introPreset'],
       outroPreset: (req.outroPreset ||
+        template?.outroPreset ||
         CLIP_DEFAULT_REGION_PRESETS.outro) as ClipProjectDraft['outroPreset'],
-      ...(req.allowedCaptionStyles
-        ? { allowedCaptionStyles: [...req.allowedCaptionStyles.values] }
-        : {}),
+      ...(styles ? { allowedCaptionStyles: [...styles] } : {}),
     }
     if (req.compositionInputs) {
       const template = rows.get(p.videoTemplateId)!
@@ -486,6 +514,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (req.title !== undefined) p.title = req.title
+    // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).
+    const switchedTo =
+      req.videoTemplateId !== undefined && req.videoTemplateId !== p.videoTemplateId
+        ? templateFor(req.videoTemplateId)
+        : undefined
     if (req.videoTemplateId !== undefined) p.videoTemplateId = req.videoTemplateId
     if (req.targetDurationMs !== undefined) p.targetDurationMs = req.targetDurationMs
     if (req.hideDisclosure !== undefined) p.hideDisclosure = req.hideDisclosure
@@ -500,6 +533,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.outroPreset !== undefined)
       p.outroPreset = req.outroPreset as ClipProjectDraft['outroPreset']
     if (req.allowedCaptionStyles) p.allowedCaptionStyles = [...req.allowedCaptionStyles.values]
+    if (switchedTo) {
+      p.introPreset = switchedTo.introPreset
+      p.outroPreset = switchedTo.outroPreset
+      p.allowedCaptionStyles = [...switchedTo.allowedCaptionStyles]
+    }
     if (req.storyline) {
       const paragraphs = req.storyline.paragraphs.map((paragraph) => ({
         text: paragraph.text,

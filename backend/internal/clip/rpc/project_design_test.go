@@ -89,3 +89,33 @@ func TestAnUnchosenSelectionCrossesTheWireAsWhatItRenders(t *testing.T) {
 		t.Fatal(out.IntroPreset, out.OutroPreset)
 	}
 }
+
+// CLIP-166: a template's selection crosses the wire as a project's does — absent leaves it,
+// present changes it — and the template answers with the selection it keeps, an empty style
+// list as a list, never as absent.
+func TestATemplatesDesignSelectionCrossesTheWire(t *testing.T) {
+	s := &rpcStore{}
+	h := NewHandler(testProjects(s))
+	ctx := auth.WithUser(context.Background(), "alice")
+	if _, err := h.UpdateVideoTemplate(ctx, connect.NewRequest(&v1.UpdateVideoTemplateRequest{Id: "owned"})); err != nil {
+		t.Fatal(err)
+	}
+	if s.templatePatch.IntroPreset != nil || s.templatePatch.OutroPreset != nil || s.templatePatch.CaptionStyles != nil {
+		t.Fatalf("an untouched selection was sent as a change: %+v", s.templatePatch)
+	}
+	intro := "cover"
+	request := &v1.UpdateVideoTemplateRequest{Id: "owned", IntroPreset: &intro, AllowedCaptionStyles: &v1.ClipCaptionStyles{}}
+	if _, err := h.UpdateVideoTemplate(ctx, connect.NewRequest(request)); err != nil {
+		t.Fatal(err)
+	}
+	if s.templatePatch.IntroPreset == nil || *s.templatePatch.IntroPreset != "cover" || s.templatePatch.OutroPreset != nil || s.templatePatch.CaptionStyles == nil || len(*s.templatePatch.CaptionStyles) != 0 {
+		t.Fatalf("the selection did not cross the wire: %+v", s.templatePatch)
+	}
+	answer := templateProto(clip.VideoTemplate{ID: "t", Design: clip.TemplateDesign{IntroPreset: "cover", OutroPreset: "e", CaptionStyles: []string{"neon"}}})
+	if answer.IntroPreset != "cover" || answer.OutroPreset != "e" || len(answer.AllowedCaptionStyles) != 1 || answer.AllowedCaptionStyles[0] != "neon" {
+		t.Fatalf("the template's answer lost its selection: %+v", answer)
+	}
+	if bare := templateProto(clip.VideoTemplate{ID: "t"}); bare.AllowedCaptionStyles == nil || bare.IntroPreset != "a" || bare.OutroPreset != "b" {
+		t.Fatalf("a template with no selection did not answer the one a project would take: %+v", bare)
+	}
+}

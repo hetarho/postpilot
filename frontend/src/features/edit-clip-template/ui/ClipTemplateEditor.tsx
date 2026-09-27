@@ -18,12 +18,14 @@ import {
   type ClipTemplate,
 } from '@/entities/clip-template'
 import { useClipCapabilities } from '@/entities/clip-project'
+import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { copyText } from '@/shared/lib'
 import {
   ActionBar,
   AppFailureMessage,
   Button,
+  Checkbox,
   Dialog,
   FieldLabel,
   FieldMessage,
@@ -221,7 +223,20 @@ export function ClipTemplateEditor({
                 />
               )}
             </div>
-            {document && <CompositionPreview document={document} />}
+            {document && (
+              <CompositionPreview
+                document={document}
+                presets={{ intro: draft.introPreset, outro: draft.outroPreset }}
+                onPresetsChange={({ intro, outro }) =>
+                  change({ introPreset: intro, outroPreset: outro })
+                }
+              >
+                <ClipTemplateCaptionStyles
+                  selected={draft.allowedCaptionStyles}
+                  onChange={(allowedCaptionStyles) => change({ allowedCaptionStyles })}
+                />
+              </CompositionPreview>
+            )}
           </>
         </fieldset>
       </form>
@@ -271,5 +286,48 @@ export function ClipTemplateEditor({
         {t('editor.leaveBody')}
       </Dialog>
     </>
+  )
+}
+
+/** The caption styles a project made with this template may use (CLIP-166), the checkboxes ①'s
+ *  design selection shows, in the catalogue's order. A template has no project to draw samples
+ *  from, so each style is its name. */
+function ClipTemplateCaptionStyles({
+  selected,
+  onChange,
+}: {
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  const { t } = useTranslation('clips')
+  const toggle = (style: string, on: boolean) =>
+    onChange(
+      on
+        ? CLIP_CAPTION_STYLES.filter((id) => id === style || selected.includes(id))
+        : selected.filter((id) => id !== style),
+    )
+  return (
+    <div className="space-y-2">
+      <Typography variant="fieldTitle" as="p">
+        {t('project.captionStyles')}
+      </Typography>
+      <div
+        role="group"
+        aria-label={t('project.captionStyles')}
+        className="grid gap-2 sm:grid-cols-2"
+      >
+        {CLIP_CAPTION_STYLES.map((style) => (
+          <label key={style} className="flex min-h-11 min-w-0 items-center gap-3">
+            <Checkbox
+              checked={selected.includes(style)}
+              onChange={(event) => toggle(style, event.target.checked)}
+            />
+            <Typography variant="body" as="span" className="min-w-0 break-words">
+              {t(`captionStyles.${style}`)}
+            </Typography>
+          </label>
+        ))}
+      </div>
+    </div>
   )
 }

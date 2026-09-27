@@ -60,16 +60,25 @@ func (s *Service) ListTemplates(ctx context.Context, user string) ([]clip.VideoT
 
 // CreateTemplate saves a name and an outline body; a request without a body is
 // refused, because a template is its outline and nothing else (CLIP-4, CLIP-14).
-func (s *Service) CreateTemplate(ctx context.Context, user string, recipe clip.Recipe) (clip.VideoTemplate, error) {
+// CreateTemplate saves a video template, and its starting design selection when one is given
+// (CLIP-166); without one the template starts at the shared defaults.
+func (s *Service) CreateTemplate(ctx context.Context, user string, recipe clip.Recipe, design ...clip.TemplateDesign) (clip.VideoTemplate, error) {
 	recipe.Name = strings.TrimSpace(recipe.Name)
-	if !clip.BoundedText(recipe.Name, 1, s.limits.NameChars) || strings.TrimSpace(recipe.CompositionBody) == "" {
+	if !clip.BoundedText(recipe.Name, 1, s.limits.NameChars) || strings.TrimSpace(recipe.CompositionBody) == "" || len(design) > 1 {
+		return clip.VideoTemplate{}, clip.ErrInvalid
+	}
+	var chosen clip.TemplateDesign
+	if len(design) == 1 {
+		chosen = design[0]
+	}
+	if !chosen.Valid() {
 		return clip.VideoTemplate{}, clip.ErrInvalid
 	}
 	if err := s.authoredBody(recipe.CompositionBody); err != nil {
 		return clip.VideoTemplate{}, err
 	}
 	now := s.now()
-	t := clip.VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, CreatedAt: now, UpdatedAt: now}
+	t := clip.VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, Design: chosen, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertTemplate(ctx, t); err != nil {
 		return clip.VideoTemplate{}, err
 	}
@@ -86,6 +95,20 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p clip.Te
 			return clip.VideoTemplate{}, clip.ErrInvalid
 		}
 		p.Name = &name
+	}
+	// The design selection answers to the project's own rule (CLIP-166); empty is the default.
+	patched := clip.TemplateDesign{}
+	if p.IntroPreset != nil {
+		patched.IntroPreset = *p.IntroPreset
+	}
+	if p.OutroPreset != nil {
+		patched.OutroPreset = *p.OutroPreset
+	}
+	if p.CaptionStyles != nil {
+		patched.CaptionStyles = *p.CaptionStyles
+	}
+	if !patched.Valid() {
+		return clip.VideoTemplate{}, clip.ErrInvalid
 	}
 	if p.CompositionBody != nil {
 		if strings.TrimSpace(*p.CompositionBody) == "" {
@@ -165,8 +188,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	// The pace and the accent are the PROJECT's alone and start unset, which is
-	// the shared default: a template carries none of the five design values any
-	// more (CLIP-14, CLIP-139).
+	// the shared default; a template gives only the presets and the styles (CLIP-139, CLIP-166).
 	pace, accent := "", ""
 	if input.CaptionPace != nil {
 		pace = *input.CaptionPace
@@ -177,12 +199,12 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if !clip.ValidCaptionPace(pace) || !clip.ValidAccent(accent) {
 		return clip.Project{}, clip.ErrInvalid
 	}
-	// The two presets and the allowed styles are the project's alone and start
-	// at the new-project defaults whether or not a template was chosen: a
-	// template carries no design at all (CLIP-14, CLIP-139). The ids are stored,
-	// so a later change of defaults never restyles this project (CLIP-111).
+	// The two presets and the allowed styles are the project's own. Chosen with a template, they
+	// start at that template's selection (CLIP-168), otherwise at the new-project defaults; an
+	// explicit value wins either way. The ids are stored, so a later change of defaults — or of
+	// the template — never restyles this project (CLIP-111).
 	defaults := composition.DefaultDesign()
-	intro, outro, styles := defaults.Intro, defaults.Outro, []string(nil)
+	intro, outro, styles := template.Design.IntroPreset, template.Design.OutroPreset, template.Design.CaptionStyles
 	if input.IntroPreset != nil {
 		intro = *input.IntroPreset
 	}
@@ -289,6 +311,22 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		p.Composition, err = s.projectComposition(t, p.CompositionInputs, next)
 		if err != nil {
 			return clip.Project{}, err
+		}
+		// Choosing a template takes its design selection in the same write, silently: the owner
+		// saw that design in the template's preview (CLIP-168). Clearing to 없음 moves nothing.
+		if t.ID != "" {
+			defaults := composition.DefaultDesign()
+			intro, outro, styles := t.Design.IntroPreset, t.Design.OutroPreset, t.Design.CaptionStyles
+			if intro == "" {
+				intro = defaults.Intro
+			}
+			if outro == "" {
+				outro = defaults.Outro
+			}
+			if styles == nil {
+				styles = []string{}
+			}
+			p.IntroPreset, p.OutroPreset, p.CaptionStyles = &intro, &outro, &styles
 		}
 	} else if p.CompositionInputs != nil {
 		if old.Composition == nil {

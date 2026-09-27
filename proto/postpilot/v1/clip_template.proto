@@ -25,6 +25,10 @@ message CreateVideoTemplateRequest {
   reserved "information_fields", "cut_guidance", "copy_styles", "accent", "preset", "caption_pace";
   string name = 1;
   string composition_body = 8;
+  // The starting design selection (CLIP-166); absent is the shared default.
+  optional string intro_preset = 9;
+  optional string outro_preset = 10;
+  ClipCaptionStyles allowed_caption_styles = 11;
 }
 
 message CreateVideoTemplateResponse { VideoTemplate template = 1; }
@@ -35,6 +39,11 @@ message UpdateVideoTemplateRequest {
   string id = 1;
   optional string name = 2;
   optional string composition_body = 9;
+  // Supplied only when they change (CLIP-166). A change moves no project already made with the
+  // template (CLIP-168).
+  optional string intro_preset = 10;
+  optional string outro_preset = 11;
+  ClipCaptionStyles allowed_caption_styles = 12;
 }
 
 message UpdateVideoTemplateResponse { VideoTemplate template = 1; }

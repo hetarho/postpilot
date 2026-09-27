@@ -37,6 +37,12 @@ message VideoTemplate {
   string created_at = 8;
   string updated_at = 9;
   string composition_body = 12;
+  // The template's starting design selection (CLIP-166, CLIP-168), ClipProject's shapes (34–36):
+  // a project created with the template, or switched to it, takes these three. Empty is the
+  // shared default.
+  string intro_preset = 15;
+  string outro_preset = 16;
+  repeated string allowed_caption_styles = 17;
 }
 enum ClipRenderKind {
   CLIP_RENDER_KIND_UNSPECIFIED = 0;
