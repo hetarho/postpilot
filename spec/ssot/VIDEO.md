@@ -38,4 +38,3 @@
 
 ## chg
 - r5 260927 VIDEO-11✎ post generation and write experiments→photo analysis and lab write comparisons; explained beside 생성 / A/B 비교→beside the action that would observe the clip
-- r4 260927 VIDEO-6✎ delete removes the object before the row→the row, then the object, a leftover left to the orphan sweep (→POST-39)

@@ -20,18 +20,18 @@
 |---|---|---|---|---|
 | ARCH | 12 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 9 | 9 | - | 0 |
-| QUOTA | 20 | 20 | - | 0 |
-| POST | 18 | 18 | - | 0 |
+| QUOTA | 21 | 20 | QUOTA-13✎ | 0 |
+| POST | 19 | 18 | POST-18✎ POST-46✎ POST-48✎ POST-52✎ POST-53✎ POST-54✎ POST-74✎ POST-86✎ POST-94+ flow✎ constraints✎ | 0 |
 | VOICE | 4 | 4 | - | 1 |
-| GEN | 14 | 14 | - | 0 |
+| GEN | 15 | 14 | GEN-5✎ GEN-7✎ GEN-8✎ GEN-9✎ GEN-11✎ GEN-12✎ GEN-13✎ GEN-14✎ GEN-18✎ GEN-19✎ GEN-22✎ GEN-23✎ GEN-24✎ GEN-25✎ GEN-29✎ GEN-30✎ GEN-56✎ GEN-58+ GEN-59+ GEN-60+ GEN-61+ GEN-62+ GEN-63+ GEN-64+ GEN-65+ GEN-66+ flow✎ constraints✎ | 0 |
 | MODEL | 18 | 18 | - | 0 |
-| TMPL | 12 | 12 | - | 1 |
+| TMPL | 13 | 12 | TMPL-11✎ TMPL-15✎ TMPL-18✎ TMPL-21✎ TMPL-34✎ TMPL-38✎ TMPL-40✎ TMPL-45✎ TMPL-56+ flow✎ constraints✎ | 1 |
 | GUIDE | 8 | 8 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 6 | 6 | - | 0 |
 | THEME | 19 | 15 | THEME-19✎ | 0 |
 | MKT | 7 | 7 | - | 0 |
-| VIDEO | 4 | 4 | - | 0 |
+| VIDEO | 5 | 4 | VIDEO-11✎ | 0 |
 | CLIP | 46 | 40 | CLIP-13✎ CLIP-163+ | 2 |
 | CDS | 27 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
@@ -72,11 +72,14 @@
 | T427 | CI runs gofmt, plan mapping fails closed, catalog tokens resolve, refunds are labelled, VerifyEmail is throttled | ARCH BILL AUTH THEME | - | todo |
 
 ## next
+- create-task GEN TMPL POST QUOTA VIDEO (photo spaces): group_photos job with the grouping call, the space board, the story plan with repair and `[오늘의 흐름]`, plan-bound template photos (TMPL-21) and the unbound revision brief, capture time; the same SSOTs also carry hc's conformance deltas
 - implement-task T413 → T414 (clip legacy path), then the P1-bearing tasks T415 T416 T417 T418 T420 T422 T423 T424 T426, then T419 T421 T425 T427 (review/conformance-all-260927)
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached
 - Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
 
 ## log
+- 260927 update-ssot GEN TMPL POST QUOTA VIDEO done (sp): GEN r15 TMPL r13 POST r19 QUOTA r21 VIDEO r5 on top of hc's conformance revs — 사진 분석 is group_photos (observe in 4s, then one grouping call into spaces: a place or one menu item's food, named from the material else 공간 n, the rest 그외); the space board replaces the contact sheet (top-right dropdown or drag, 새 공간, rename, reorder); 글 쓰기 plans (story in the confirmed order + a position per photo, repaired) then writes with `[오늘의 흐름]`; template photos bind from the plan, never upload order, and TEMPLATE_MAX_REPEAT_EXPANSION is gone; capture time recorded; no doing task affected
+- 260927 update-ssot CLIP CDS start (ve): clip preview/editor — intro/outro carry no other text (preview too), the preview shows the frame at 30s end, preview captions split into 3–4s phrases, caption style editable, template outro removable
 - 260927 note (hc → sp): GEN, POST, TMPL and VIDEO also hold uncommitted hc edits beside your in-progress r15/r13/r5 work — consumed chg lines removed and POST r18's POST-13✎ (finalize refuses a missing photo); please commit them with yours, and add your deltas to those STATE rows (hc set GEN 14/14, TMPL 12/12, POST 18/18, VIDEO 4/4)
 - 260927 create-task review/conformance-all-260927 done (hc): 70 code findings → T413–T427; the SSOT side (CLIP CDS GEN MEM POST EXPORT LANG TMPL GUIDE MKT THEME ARCH AUTH MODEL VOICE VIDEO QUAL) consumed into them or no-op (docs caught up with the code); ARCH CLIP CDS THEME keep their older pending
 - 260927 update-ssot conformance done (hc): CLIP r46 CDS r27 GEN r14 MEM r4 POST r17 EXPORT r6 LANG r6 TMPL r12 GUIDE r8 MKT r7 THEME r19 ARCH r12 AUTH r9 MODEL r18 VOICE r4 VIDEO r4 carry the SSOT side of review/conformance-all-260927 (55 findings closed as SSOT-follows-code; 69 code findings open; F2 F55 await the owner)
@@ -95,5 +98,3 @@
 - 260926 T407 done (hc): ② renders plain prose with no replacement marks or takes, /guidelines drops the preset row, and the FE stops reading replacement_candidates/preset and sending taken_candidates/UpdateGuidelinePreset; the queue, autosave, BlockEditor and BlockList return to their pre-T351/T363 form; FE gates green
 - 260926 T407 claimed (hc)
 - 260926 T406 done (rp): the TS port mirrors Go LayoutRegion for all 15 presets (decoration, chips, list, stamp arcs, rotation) against a 135-case fixture; CompositionDesignFrame draws shapes, textPath arcs, outline text and the turn group; the template preview offers intro/outro presets (preview only); checked in Chrome; FE/BE gates green
-- 260926 create-task QUAL GEN GUIDE POST done (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 → T407 (FE marks + preset row) → T408 (frozen phrases, candidates, post.proto, drop column) → T409 (preset, guideline.proto, drop tables) → T410 (phrase batch, naversearch, config, drop table); T411/T412 cite current spec in BE/FE code; T400–T405 restored to tasks/done after deletion at done
-- 260926 create-task QUAL GEN GUIDE POST start (hc): QUAL r5 GEN r13 GUIDE r7 POST r16 (분야 phrase feature removal) + stale spec citations in code
