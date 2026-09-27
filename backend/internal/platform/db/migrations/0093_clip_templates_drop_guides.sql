@@ -13,6 +13,11 @@ UPDATE video_templates SET composition_body = (
     SELECT b FROM strip WHERE NOT (instr(b, '<guide>') > 0 AND instr(b, '</guide>') > instr(b, '<guide>')) LIMIT 1
 ) WHERE instr(composition_body, '<guide') > 0;
 
+-- A finalized project's frozen snapshot is stripped too, because no reader accepts `<guide>` any
+-- more; clip_finalized_content would refuse that rewrite, so it stands aside for it and returns
+-- unchanged, as in 0090.
+DROP TRIGGER clip_finalized_content;
+
 UPDATE clip_projects SET composition_snapshot_json = json_set(composition_snapshot_json, '$.body', (
     WITH RECURSIVE strip(b) AS (
         SELECT replace(json_extract(clip_projects.composition_snapshot_json, '$.body'), '<guide/>', '')
@@ -22,6 +27,12 @@ UPDATE clip_projects SET composition_snapshot_json = json_set(composition_snapsh
     )
     SELECT b FROM strip WHERE NOT (instr(b, '<guide>') > 0 AND instr(b, '</guide>') > instr(b, '<guide>')) LIMIT 1
 )) WHERE json_valid(composition_snapshot_json) AND instr(json_extract(composition_snapshot_json, '$.body'), '<guide') > 0;
+
+-- +goose StatementBegin
+CREATE TRIGGER clip_finalized_content BEFORE UPDATE OF title,ratio,target_duration_ms,disclosure,hide_disclosure,analysis_json,edit_plan_json,edit_plan_revision,rendered_plan_revision,result_key,result_id,result_content_type,result_bytes,result_duration_ms,result_created_at,composition_snapshot_json,composition_inputs_json ON clip_projects
+WHEN OLD.finalized_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT,'clip finalized'); END;
+-- +goose StatementEnd
 
 -- +goose Down
 -- The removed guides are gone; there is nothing to restore.
