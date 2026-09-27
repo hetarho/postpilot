@@ -2,6 +2,8 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   CreateGuidelineResponseSchema,
+  DefaultGuidelineCopySchema,
+  DefaultGuidelineSchema,
   DeleteGuidelineResponseSchema,
   DismissGuidelineCandidateResponseSchema,
   GuidelineCandidateSchema,
@@ -9,8 +11,10 @@ import {
   GuidelineService,
   ListGuidelineCandidatesResponseSchema,
   ListGuidelinesResponseSchema,
+  ProtoGuidelineKind,
   ProtoGuidelineScope,
   ProtoBlogField,
+  SetDefaultGuidelineEnabledResponseSchema,
   UpdateGuidelineResponseSchema,
 } from '@/shared/api'
 import { BLOG_FIELD_IDS, type BlogFieldId } from '@/entities/blog-field'
@@ -34,6 +38,18 @@ export interface FakeGuidelineRow {
   wireScope?: number
 }
 
+/** One 기본 지침 the fake serves, in the order given — the registry order the screen must keep. */
+export interface FakeDefaultGuidelineRow {
+  key: string
+  name: string
+  text: string
+  /** The English copy; omitted, it is the Korean one with "EN " in front. */
+  en?: { name: string; text: string }
+  /** Omitted means on, as for a new account (GUIDE-43). */
+  enabled?: boolean
+  koreanTargetOnly?: boolean
+}
+
 export interface FakeGuidelineCandidateRow {
   id: string
   text: string
@@ -46,6 +62,12 @@ export interface FakeGuidelineCandidateRow {
 
 export interface FakeGuidelinesOptions {
   guidelines?: FakeGuidelineRow[]
+  /** The post kind's 기본 지침. Omitted, the list carries none. */
+  defaults?: FakeDefaultGuidelineRow[]
+  /** Refuse every SetDefaultGuidelineEnabled as naming no 기본 지침. */
+  refuseDefaultSwitch?: boolean
+  /** Records every SetDefaultGuidelineEnabled as it arrived. */
+  defaultSwitches?: Array<{ kind: ProtoGuidelineKind; key: string; enabled: boolean }>
   /** Pending candidates, given in the SERVER's review order so a test can prove the screen never
    *  reorders them. */
   candidates?: FakeGuidelineCandidateRow[]
@@ -183,10 +205,40 @@ export function registerGuidelineService(
   const candidates = new Map<string, FakeGuidelineCandidateRow>()
   for (const candidate of options.candidates ?? []) candidates.set(candidate.id, candidate)
 
+  // The 기본 지침 and this account's switches, kept across reads like the server's off rows.
+  const defaults = (options.defaults ?? []).map((row) => ({ ...row, enabled: row.enabled ?? true }))
+  const toProtoDefault = (row: (typeof defaults)[number]) =>
+    create(DefaultGuidelineSchema, {
+      key: row.key,
+      enabled: row.enabled,
+      ko: create(DefaultGuidelineCopySchema, { name: row.name, text: row.text }),
+      en: create(
+        DefaultGuidelineCopySchema,
+        row.en ?? { name: `EN ${row.name}`, text: `EN ${row.text}` },
+      ),
+      koreanTargetOnly: row.koreanTargetOnly ?? false,
+    })
+
   rpc(GuidelineService.method.listGuidelines, () => {
     calls?.push('ListGuidelines')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    return create(ListGuidelinesResponseSchema, { guidelines: listed().map(toProto) })
+    return create(ListGuidelinesResponseSchema, {
+      guidelines: listed().map(toProto),
+      defaults: defaults.map(toProtoDefault),
+    })
+  })
+
+  rpc(GuidelineService.method.setDefaultGuidelineEnabled, (req) => {
+    calls?.push('SetDefaultGuidelineEnabled')
+    options.defaultSwitches?.push({ kind: req.kind, key: req.key, enabled: req.enabled })
+    const row = defaults.find((candidate) => candidate.key === req.key)
+    if (!row || options.refuseDefaultSwitch) {
+      throw connectAppError('GUIDELINE_DEFAULT_NOT_FOUND', Code.NotFound)
+    }
+    row.enabled = req.enabled
+    return create(SetDefaultGuidelineEnabledResponseSchema, {
+      defaultGuideline: toProtoDefault(row),
+    })
   })
 
   rpc(GuidelineService.method.createGuideline, (req) => {

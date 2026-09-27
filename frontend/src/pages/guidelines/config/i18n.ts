@@ -8,6 +8,7 @@ export const i18n = {
     page: {
       description:
         '지침은 글에서 피해야 할 내용과 주의할 점을 정해요. 저장하면 이 계정의 모든 글에 적용되고, 특정 템플릿이나 분야에만 적용되게 좁힐 수도 있어요. 문체와 종결어미는 그대로 말투 프로필을 따릅니다.',
+      defaults: '기본 지침',
       saved: '저장된 지침',
       empty: '아직 저장된 지침이 없어요',
       emptyHelp:
@@ -22,6 +23,7 @@ export const i18n = {
     page: {
       description:
         'A guideline says what a post must avoid or watch out for. Saved guidelines apply to every post of this account, and can be narrowed to specific templates or categories. Tone and sentence endings still follow your voice profile.',
+      defaults: 'Default guidelines',
       saved: 'Saved guidelines',
       empty: 'No guidelines saved yet',
       emptyHelp:

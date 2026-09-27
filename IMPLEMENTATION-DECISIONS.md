@@ -77,3 +77,14 @@ choice would be expensive to undo are listed at the end.
   observation and the storyline name are written together (`UpdatePostAttachmentTraces`), but
   as before this is not the same transaction as the row delete. *If you want it atomic with the
   row:* move both into the store's delete transaction.
+
+## T432 — the 지침 screen lists the 기본 지침
+
+- **The defaults get their own section headed `기본 지침` / `Default guidelines`**, above
+  `저장된 지침`, with no help line (per your "no help copy on simple controls" preference). The
+  task named no heading.
+- **Switched-off rows are dimmed by fading the name and text (`opacity-60`)**; the switch itself
+  stays at full strength so its state is readable. A switch is disabled while its save is in flight.
+- **The switch hook is `useSetDefaultGuidelineEnabled(ownerId, kind)`**: the task wrote
+  `(kind)`, but the cache key is per account. For the clip kind (T439) the cache key currently
+  sits under the same `['guidelines', …]` root.

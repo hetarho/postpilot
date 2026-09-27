@@ -369,11 +369,16 @@ export {
   GuidelineCandidateSchema,
   ListGuidelineCandidatesResponseSchema,
   DismissGuidelineCandidateResponseSchema,
+  DefaultGuidelineSchema,
+  DefaultGuidelineCopySchema,
+  GuidelineKind as ProtoGuidelineKind,
+  SetDefaultGuidelineEnabledResponseSchema,
 } from './gen/postpilot/v1/guideline_pb'
 export type {
   Guideline as ProtoGuideline,
   GuidelineTemplateRef as ProtoGuidelineTemplateRef,
   GuidelineCandidate as ProtoGuidelineCandidate,
+  DefaultGuideline as ProtoDefaultGuideline,
 } from './gen/postpilot/v1/guideline_pb'
 export {
   MemoryService,

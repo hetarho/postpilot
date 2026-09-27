@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
+  DefaultGuidelineRow,
   useGuidelineCandidates,
   useGuidelines,
+  useSetDefaultGuidelineEnabled,
   useUpdateGuidelineCall,
   type BulkReviewOutcome,
+  type DefaultGuideline,
   type Guideline,
   type GuidelineCandidate,
 } from '@/entities/guideline'
@@ -39,7 +42,7 @@ export function GuidelinesPage() {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const { guidelines, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
+  const { guidelines, defaults, isPending, isError, isFetching, refetch } = useGuidelines(ownerId)
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -69,6 +72,26 @@ export function GuidelinesPage() {
 
       {!isError && !isPending && (
         <>
+          {/* The product's 기본 지침 come first, in registry order, because the writer is given
+              them first (GUIDE-14, GUIDE-19). They are not the owner's rows, so the owner list
+              below keeps its own empty state. */}
+          {defaults.length > 0 && (
+            <section aria-labelledby="default-guidelines-heading" className="mt-8">
+              <Typography variant="title" id="default-guidelines-heading">
+                {t('page.defaults', { ns: 'guidelines' })}
+              </Typography>
+              <ul className="divide-divider mt-3 divide-y">
+                {defaults.map((guideline) => (
+                  <DefaultGuidelineItem
+                    key={guideline.key}
+                    ownerId={ownerId}
+                    guideline={guideline}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
           {guidelines.length === 0 ? (
             <EmptyState />
           ) : (
@@ -303,6 +326,28 @@ function EmptyState() {
         {t('page.example')}
       </Typography>
     </section>
+  )
+}
+
+/** One 기본 지침 with its switch. One mutation per row, so a refusal is said under the row it was
+ *  refused for (GUIDE-43). */
+function DefaultGuidelineItem({
+  ownerId,
+  guideline,
+}: {
+  ownerId: string
+  guideline: DefaultGuideline
+}) {
+  const toggle = useSetDefaultGuidelineEnabled(ownerId, 'post')
+  return (
+    <DefaultGuidelineRow
+      guideline={guideline}
+      // The refusal is shown under the row from the mutation's own error; the rejected promise
+      // has nothing more to say.
+      onToggle={(enabled) => void toggle.setEnabled(guideline.key, enabled).catch(() => {})}
+      pending={toggle.isPending}
+      errorMessage={toggle.errorMessage}
+    />
   )
 }
 

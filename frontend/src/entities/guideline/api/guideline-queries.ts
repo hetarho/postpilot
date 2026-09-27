@@ -6,15 +6,21 @@ import {
   type BlogFieldId,
 } from '@/entities/blog-field/@x/guideline'
 import {
+  ProtoGuidelineKind,
   ProtoGuidelineScope,
   type ProtoBlogField,
+  type ProtoDefaultGuideline,
   type ProtoGuideline,
   type ProtoGuidelineCandidate,
   type ProtoGuidelineTemplateRef,
 } from '@/shared/api'
+import type { Locale } from '@/shared/lib'
 import type {
+  DefaultGuideline,
+  DefaultGuidelineEntry,
   Guideline,
   GuidelineCandidate,
+  GuidelineKind,
   GuidelineScope,
   GuidelineScopeKind,
 } from '../model/types'
@@ -68,6 +74,40 @@ export function toGuideline(guideline: ProtoGuideline): Guideline {
   }
 }
 
+const KIND_TO_PROTO: Record<GuidelineKind, ProtoGuidelineKind> = {
+  post: ProtoGuidelineKind.POST,
+  clip: ProtoGuidelineKind.CLIP,
+}
+
+export function fromGuidelineKind(kind: GuidelineKind): ProtoGuidelineKind {
+  return KIND_TO_PROTO[kind]
+}
+
+export function toDefaultGuidelineEntry(value: ProtoDefaultGuideline): DefaultGuidelineEntry {
+  return {
+    key: value.key,
+    enabled: value.enabled,
+    ko: { name: value.ko?.name ?? '', text: value.ko?.text ?? '' },
+    en: { name: value.en?.name ?? '', text: value.en?.text ?? '' },
+    koreanTargetOnly: value.koreanTargetOnly,
+  }
+}
+
+/** The copy the UI language reads; the server sends both (GUIDE-19). */
+export function localizeDefaultGuideline(
+  entry: DefaultGuidelineEntry,
+  locale: Locale,
+): DefaultGuideline {
+  const copy = locale === 'en' ? entry.en : entry.ko
+  return {
+    key: entry.key,
+    enabled: entry.enabled,
+    name: copy.name,
+    text: copy.text,
+    koreanTargetOnly: entry.koreanTargetOnly,
+  }
+}
+
 export function toGuidelineCandidate(candidate: ProtoGuidelineCandidate): GuidelineCandidate {
   return {
     id: candidate.id,
@@ -92,6 +132,14 @@ export function toScopePatch(scope: GuidelineScope) {
  *  the previous account's rules. */
 export function guidelinesQueryKey(transport: Transport, ownerId: string) {
   return ['guidelines', transport, ownerId] as const
+}
+
+/** The list a kind's 기본 지침 arrive with. A post's are the 지침 screen's own list; a clip's sit
+ *  under the same root so one invalidation of the account's guidelines reaches both. */
+export function guidelineKindQueryKey(transport: Transport, ownerId: string, kind: GuidelineKind) {
+  return kind === 'post'
+    ? guidelinesQueryKey(transport, ownerId)
+    : (['guidelines', transport, ownerId, kind] as const)
 }
 
 /** Per account for the same reason, and a root of its own rather than a child of the saved list's

@@ -1,7 +1,10 @@
 export * from './config'
 export type {
+  DefaultGuideline,
+  DefaultGuidelineEntry,
   Guideline,
   GuidelineCandidate,
+  GuidelineKind,
   GuidelineTemplateRef,
   GuidelineScope,
   GuidelineScopeKind,
@@ -15,10 +18,15 @@ export {
   remainingGuidelineChars,
 } from './model/types'
 export { guidelineListQuery, useGuidelines } from './api/useGuidelines'
+export type { GuidelineListData } from './api/useGuidelines'
+export { useSetDefaultGuidelineEnabled } from './api/useSetDefaultGuidelineEnabled'
 export { guidelineCandidateListQuery, useGuidelineCandidates } from './api/useGuidelineCandidates'
 export {
   guidelineCandidatesQueryKey,
+  guidelineKindQueryKey,
   guidelinesQueryKey,
+  localizeDefaultGuideline,
+  toDefaultGuidelineEntry,
   toGuideline,
   toGuidelineCandidate,
   toScopePatch,
@@ -39,3 +47,5 @@ export {
 export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-errors'
 export { GuidelineScopeField } from './ui/GuidelineScopeField'
 export { GuidelineFieldPicker } from './ui/GuidelineFieldPicker'
+export { DefaultGuidelineRow } from './ui/DefaultGuidelineRow'
+export type { DefaultGuidelineRowProps } from './ui/DefaultGuidelineRow'

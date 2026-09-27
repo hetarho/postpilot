@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoBlogField, ProtoGuidelineScope } from '@/shared/api'
+import { ProtoBlogField, ProtoGuidelineKind, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
+import type {
+  FakeDefaultGuidelineRow,
+  FakeGuidelineRow,
+  FakeGuidelinesOptions,
+} from '@/test/guidelines'
 import type { FakeTemplateRow } from '@/test/templates'
 
 const USER = { id: 'alice' }
@@ -297,6 +301,91 @@ describe('the guideline list', () => {
     renderGuidelines({ listFails: true })
     expect(await screen.findByText('지침 목록을 불러오지 못했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+})
+
+const DEFAULTS: FakeDefaultGuidelineRow[] = [
+  { key: 'facts', name: '재료에 있는 사실만', text: '메모와 사진 관찰에 없는 사실은 쓰지 마세요.' },
+  { key: 'naming', name: '메모의 이름으로', text: '메모에 적힌 이름으로 쓰세요.', enabled: false },
+  {
+    key: 'natural_korean',
+    name: '자연스러운 한국어 문체',
+    text: '상투적인 대조를 줄이세요.',
+    koreanTargetOnly: true,
+  },
+]
+
+/** GUIDE-19, GUIDE-20, GUIDE-43: the 지침 screen lists the product's 기본 지침 first, each with 추천
+ *  and a switch that saves on change. */
+describe('the 기본 지침', () => {
+  it('lists the defaults first, in registry order, above the owner’s rows', async () => {
+    renderGuidelines({ defaults: DEFAULTS })
+
+    const defaults = await section('기본 지침')
+    const items = defaults.getAllByRole('listitem')
+    expect(items).toHaveLength(3)
+    expect(within(items[0]).getByText('재료에 있는 사실만')).toBeInTheDocument()
+    expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
+    expect(within(items[2]).getByText('한국어 글에만 적용돼요')).toBeInTheDocument()
+    expect(defaults.getAllByText('추천')).toHaveLength(3)
+    expect(defaults.getByRole('switch', { name: '재료에 있는 사실만 사용' })).toBeChecked()
+    // Switched off is still listed.
+    expect(defaults.getByRole('switch', { name: '메모의 이름으로 사용' })).not.toBeChecked()
+
+    // Above the owner's list, which is unchanged.
+    const saved = await section('저장된 지침')
+    expect(
+      screen
+        .getByRole('region', { name: '기본 지침' })
+        .compareDocumentPosition(screen.getByRole('region', { name: '저장된 지침' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(saved.getAllByRole('listitem')).toHaveLength(GUIDELINES.length)
+  })
+
+  // The defaults are not the owner's rows: an account with none still reads the empty state.
+  it('keeps the owner list’s empty state beside the defaults', async () => {
+    renderGuidelines({ defaults: DEFAULTS, guidelines: [] })
+    expect(await section('기본 지침')).toBeTruthy()
+    expect(await section('아직 저장된 지침이 없어요')).toBeTruthy()
+  })
+
+  it('saves a switch on change, and the change survives a refetch', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const defaultSwitches: FakeGuidelinesOptions['defaultSwitches'] = []
+    const { queryClient, transport } = renderGuidelines(
+      { defaults: DEFAULTS, defaultSwitches },
+      calls,
+    )
+
+    const facts = await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })
+    await user.click(facts)
+    expect(facts).not.toBeChecked()
+    await waitFor(() =>
+      expect(defaultSwitches).toEqual([
+        { kind: ProtoGuidelineKind.POST, key: 'facts', enabled: false },
+      ]),
+    )
+
+    const reads = calls.filter((call) => call === 'ListGuidelines').length
+    await queryClient.invalidateQueries({ queryKey: ['guidelines', transport, USER.id] })
+    await waitFor(() =>
+      expect(calls.filter((call) => call === 'ListGuidelines').length).toBeGreaterThan(reads),
+    )
+    expect(await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })).not.toBeChecked()
+  })
+
+  it('puts a refused switch back and says why', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ defaults: DEFAULTS, refuseDefaultSwitch: true })
+
+    const facts = await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })
+    await user.click(facts)
+    expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByRole('switch', { name: '재료에 있는 사실만 사용' })).toBeChecked(),
+    )
   })
 })
 

@@ -1,9 +1,24 @@
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { GuidelineService } from '@/shared/api'
-import type { Guideline } from '../model/types'
-import { guidelinesQueryKey, toGuideline } from './guideline-queries'
+import { activeLocale } from '@/shared/lib'
+import type { DefaultGuideline, DefaultGuidelineEntry, Guideline } from '../model/types'
+import {
+  fromGuidelineKind,
+  guidelinesQueryKey,
+  localizeDefaultGuideline,
+  toDefaultGuidelineEntry,
+  toGuideline,
+} from './guideline-queries'
+
+/** What the 지침 screen's one list read holds: the owner's guidelines, and the post kind's 기본
+ *  지침 with this account's switches (GUIDE-19). */
+export interface GuidelineListData {
+  guidelines: Guideline[]
+  defaults: DefaultGuidelineEntry[]
+}
 
 /** The one query behind the list. A read and nothing else: mounting it creates no guideline,
  *  calls no model and starts no job ([I5]).
@@ -16,30 +31,42 @@ export function guidelineListQuery(transport: Transport, ownerId: string) {
     queryKey: guidelinesQueryKey(transport, ownerId),
     // Mapped here, not in the hook: a scope this build cannot read throws, and inside the query it
     // is a read failure the page shows with its retry rather than a crash.
-    queryFn: () =>
+    queryFn: (): Promise<GuidelineListData> =>
       createClient(GuidelineService, transport)
-        .listGuidelines({})
-        .then((response) => ({ guidelines: response.guidelines.map(toGuideline) })),
+        .listGuidelines({ kind: fromGuidelineKind('post') })
+        .then((response) => ({
+          guidelines: response.guidelines.map(toGuideline),
+          defaults: response.defaults.map(toDefaultGuidelineEntry),
+        })),
     staleTime: 0,
     refetchOnMount: 'always' as const,
   }
 }
 
 const NO_GUIDELINES: Guideline[] = []
+const NO_DEFAULTS: DefaultGuidelineEntry[] = []
 
 export function useGuidelines(ownerId: string): {
   guidelines: Guideline[]
+  /** The 기본 지침 in registry order, in the UI language. */
+  defaults: DefaultGuideline[]
   isPending: boolean
   isError: boolean
   isFetching: boolean
   refetch: () => void
 } {
   const transport = useTransport()
+  // Subscribed so a language switch re-renders the defaults in the other copy.
+  useTranslation()
   const query = useQuery({ ...guidelineListQuery(transport, ownerId), enabled: ownerId !== '' })
+  const locale = activeLocale()
   // The server returns them in injection order; the client never reorders them, so the screen
   // shows exactly the order the writer will be given.
   return {
     guidelines: query.data?.guidelines ?? NO_GUIDELINES,
+    defaults: (query.data?.defaults ?? NO_DEFAULTS).map((entry) =>
+      localizeDefaultGuideline(entry, locale),
+    ),
     isPending: query.isPending,
     isError: query.isError,
     isFetching: query.isFetching,

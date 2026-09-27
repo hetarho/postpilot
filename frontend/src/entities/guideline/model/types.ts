@@ -26,6 +26,30 @@ export interface Guideline {
   updatedAt: string
 }
 
+/** Which writer a guideline is for (GUIDE-16): a post's 지침 or a clip's 영상 지침. */
+export type GuidelineKind = 'post' | 'clip'
+
+/** One 기본 지침 as the server answers it (GUIDE-41): the product's own rule, with both copies,
+ *  because the client holds no copy of its text — the screen shows exactly what the writer is
+ *  given (GUIDE-14). Held in the cache as it came, so a language switch needs no refetch. */
+export interface DefaultGuidelineEntry {
+  key: string
+  enabled: boolean
+  ko: { name: string; text: string }
+  en: { name: string; text: string }
+  koreanTargetOnly: boolean
+}
+
+/** A 기본 지침 in the UI language: its name, its text, whether this account runs it, and whether
+ *  it reaches only a Korean post (GUIDE-19, GUIDE-43). */
+export interface DefaultGuideline {
+  key: string
+  enabled: boolean
+  name: string
+  text: string
+  koreanTargetOnly: boolean
+}
+
 /** A recorded revision instruction awaiting review (GUIDE-7). It is a receipt for something the
  *  user typed — nothing rewrites, summarizes, generalizes or ranks it, and it reaches no prompt
  *  until it is approved as a guideline.
