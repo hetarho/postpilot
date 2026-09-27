@@ -322,6 +322,10 @@ message StartGenerationRequest {
   ModelRef write_model = 3;
   optional int32 target_length = 4;
   ReobserveSelection reobserve = 5;
+  // 이 스토리로 글 쓰기 / 다시 쓰기: the run writes along the post's stored storyline, which
+  // decides what the post covers and in what order (GEN-70). It observes only the attachments the
+  // storyline holds that have no reusable observation, so it takes no reobserve selection.
+  bool from_storyline = 6;
 }
 
 message StartGenerationResponse { string job_id = 1; }
@@ -399,6 +403,16 @@ message SavePostDraftRequest {
   // template_id: absent keeps the stored 분야, UNSPECIFIED clears it to 없음, and any other
   // value assigns it.
   optional BlogField field = 8;
+  // The owner's own storyline edits (POST-96): the paragraphs' texts and files as one whole
+  // value. Absent preserves the stored storyline; present replaces its texts and files and
+  // marks it edited by hand.
+  StorylineEdit storyline = 9;
+}
+
+// The paragraphs as the owner edited them: the count is the stored one, the files are the
+// attachments the storyline was made with, each in at most one paragraph.
+message StorylineEdit {
+  repeated StorylineParagraph paragraphs = 1;
 }
 
 message SavePostDraftResponse {

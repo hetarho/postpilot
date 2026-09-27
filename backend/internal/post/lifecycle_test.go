@@ -279,6 +279,10 @@ var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture
 			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "새 제목", Memo: "새 메모"})
 			return err
 		},
+		"a storyline edit": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "새 제목", Storyline: &StorylineEdit{}})
+			return err
+		},
 		"voice": func(svc *Service, f publishedFixture) error {
 			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", VoiceID: &lockedReview})
 			return err

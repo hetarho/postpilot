@@ -147,6 +147,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Observations = fixture.observations
 	fixture.post.WriteNativeEffort = true
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
+	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
 	// The profile version rides the snapshot so an applied winner files under it (VOICE-29).
 	fixture.profile.Version = 7
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
@@ -166,10 +167,10 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := snapshot
-	// unfrozen: inputs to resolve, never part of the frozen input. The stored storyline is read
-	// only by the storyline request (GEN-69); a write answers its own.
+	// unfrozen: inputs to resolve, never part of the frozen input. A comparison never reads the
+	// storyline, stored or followed (GEN-72).
 	want.Post.Field, want.Post.QualityRuleIDs, want.Post.Published = "", nil, false
-	want.Post.Storyline = nil
+	want.Post.Storyline, want.Post.FollowStoryline = nil, nil
 	if !reflect.DeepEqual(decoded, want) {
 		t.Fatalf("a snapshot member did not round-trip:\n got %+v\nwant %+v", decoded, want)
 	}

@@ -166,7 +166,7 @@ func TestATitleFormChangesNoStaticRule(t *testing.T) {
 		build := func(brief *TemplateBrief) string {
 			return firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: language, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, Template: brief}))
 		}
-		static := writeStaticRules(language)
+		static := writeStaticRules(language, false)
 		for label, brief := range map[string]*TemplateBrief{"no template": nil, "no title area": testBrief(), "a title form": titleAreaBrief()} {
 			if !strings.HasPrefix(build(brief), static) {
 				t.Errorf("%s, %s: the static prefix moved", language, label)

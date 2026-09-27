@@ -21,6 +21,12 @@ var postContentSchema []byte
 //go:embed schemas/write_answer.schema.json
 var writeAnswerSchema []byte
 
+// A run along the stored storyline answers the write's members without `storyline`: the post
+// follows the one it already holds (GEN-70).
+//
+//go:embed schemas/write_along_storyline_answer.schema.json
+var writeAlongStorylineAnswerSchema []byte
+
 // A storyline job's answer is the storyline alone, in the write answer's paragraph shape
 // (GEN-68, GEN-69).
 //
@@ -32,3 +38,6 @@ func VideoObservationsSchema() []byte { return append([]byte(nil), videoObservat
 func PostContentSchema() []byte       { return append([]byte(nil), postContentSchema...) }
 func WriteAnswerSchema() []byte       { return append([]byte(nil), writeAnswerSchema...) }
 func StorylineAnswerSchema() []byte   { return append([]byte(nil), storylineAnswerSchema...) }
+func WriteAlongStorylineAnswerSchema() []byte {
+	return append([]byte(nil), writeAlongStorylineAnswerSchema...)
+}

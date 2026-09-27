@@ -461,3 +461,127 @@ func TestTheStorylinePromptHasNoVoiceAndItsOwnPrecedence(t *testing.T) {
 		t.Fatalf("english storyline prompt:\n%s", english)
 	}
 }
+
+func alongStorylinePost() PostInput {
+	input := storylinePost()
+	input.Images = append(input.Images, Image{Filename: "IMG_3.jpg", Key: "k3"})
+	// IMG_1 has a reusable observation; IMG_2 has none; IMG_3 is not in the storyline at all.
+	input.Observations = []Observation{{File: "IMG_1.jpg", Scene: "가게", Model: observeRef.String()}, {File: "IMG_3.jpg", Scene: "간판", Model: observeRef.String()}}
+	input.Storyline = &Storyline{
+		Paragraphs: []StorylineParagraph{{Text: "가게 앞을 보여줍니다.", Files: []string{"IMG_1.jpg"}}, {Text: "커피를 이야기합니다.", Files: []string{"IMG_2.jpg"}}},
+		MadeWith:   []string{"IMG_1.jpg", "IMG_2.jpg", "IMG_3.jpg"},
+	}
+	return input
+}
+
+// GEN-70: a run along the storyline needs one, takes no picker, freezes the paragraphs, and
+// observes exactly the held attachments with no reusable observation.
+func TestAFromStorylineStartFreezesTheStorylineAndItsObserveSet(t *testing.T) {
+	jobs := &fakeJobs{id: "job"}
+	posts := &fakePosts{input: alongStorylinePost()}
+	svc := storylineService(posts, jobs, storylineModels(storylineAnswer), testDeps())
+	files := []string{"IMG_3.jpg"}
+	if _, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+		FromStoryline: true, ObserveFiles: &files,
+	}); !errors.Is(err, ErrStorylineReobserve) || posts.reads != 0 {
+		t.Fatalf("a picker beside the storyline: %v (%d reads)", err, posts.reads)
+	}
+	bare := storylinePost()
+	if _, err := storylineService(&fakePosts{input: bare}, jobs, storylineModels(storylineAnswer), testDeps()).Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(), FromStoryline: true,
+	}); !errors.Is(err, ErrStorylineMissing) {
+		t.Fatalf("a post without a storyline: %v", err)
+	}
+
+	if _, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(), FromStoryline: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	options, err := decodeGenerationPayload(jobs.generatePayloads[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(options.FollowStoryline, posts.input.Storyline.Paragraphs) {
+		t.Fatalf("followed = %+v", options.FollowStoryline)
+	}
+	if options.ObserveFiles == nil || !reflect.DeepEqual(*options.ObserveFiles, []string{"IMG_2.jpg"}) || len(options.Observations) != 2 {
+		t.Fatalf("observe set = %v, snapshot %+v", options.ObserveFiles, options.Observations)
+	}
+	if jobs.generations[0].ObserveCalls != 1 {
+		t.Fatalf("priced %d observe calls, want the one", jobs.generations[0].ObserveCalls)
+	}
+}
+
+// GEN-70, GEN-2, GEN-71: the write is shown only what the storyline holds, an attachment it does
+// not hold never reaches the prompt or the post, and the stored storyline is left as it was.
+func TestAFromStorylineRunShowsOnlyTheHeldAttachments(t *testing.T) {
+	jobs := &fakeJobs{id: "job"}
+	posts := &fakePosts{input: alongStorylinePost()}
+	models := storylineModels(`{"title":"성수 카페","summary":"s","tags":["a"],"nouns":["카페"],"blocks":[` +
+		`{"type":"TEXT","content":"가게 앞"},{"type":"IMAGE","file":"IMG_1.jpg"},{"type":"IMAGE","file":"IMG_3.jpg"},{"type":"IMAGE","file":"IMG_2.jpg"}]}`)
+	svc := storylineService(posts, jobs, models, testDeps())
+	if _, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(), FromStoryline: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Generate(context.Background(), GenerateJob{
+		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+		Payload: jobs.generatePayloads[0],
+	}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	write := models.calls[len(models.calls)-1].request
+	user := write.Messages[0].Parts[0].Text
+	if strings.Contains(user, "IMG_3.jpg") || !strings.Contains(user, "IMG_1.jpg") || !strings.Contains(user, "IMG_2.jpg") {
+		t.Fatalf("the write was shown:\n%s", user)
+	}
+	if !strings.HasSuffix(user, "[스토리라인]\n1. 가게 앞을 보여줍니다. (파일: IMG_1.jpg)\n2. 커피를 이야기합니다. (파일: IMG_2.jpg)") {
+		t.Fatalf("the storyline section:\n%s", user)
+	}
+	if !bytes.Equal(write.JSONSchema, WriteAlongStorylineAnswerSchema()) || !strings.Contains(write.System, koreanWriteAlongStorylineRule) ||
+		strings.Contains(write.System, koreanStorylineRule) || strings.Contains(write.System, `"storyline":`) {
+		t.Fatalf("the storyline-path write asked:\n%s", write.System)
+	}
+	content := posts.contents[len(posts.contents)-1]
+	for _, block := range content.Blocks {
+		if block.File == "IMG_3.jpg" {
+			t.Fatal("an attachment the storyline does not hold reached the post")
+		}
+	}
+	annotations := posts.annotations[len(posts.annotations)-1]
+	if annotations == nil || annotations.Storyline != nil || !reflect.DeepEqual(annotations.Nouns, []string{"카페"}) {
+		t.Fatalf("annotations = %+v, want the nouns and the storyline kept", annotations)
+	}
+}
+
+// GEN-70: the storyline path differs from the direct write only where it asks for no storyline
+// and follows [스토리라인]; its prompt is pinned.
+func TestTheStorylinePathRulesAndPrompt(t *testing.T) {
+	for name, pair := range map[string][2]string{
+		"Korean": {WritePrompt, writeAlongStorylinePrompt}, "English": {englishWritePrompt, englishWriteAlongStorylinePrompt},
+	} {
+		direct, along := pair[0], pair[1]
+		if along == direct || strings.Contains(along, `"storyline":`) || strings.Count(along, "스토리라인]") < 1 {
+			t.Errorf("%s: the storyline-path rules:\n%s", name, along)
+		}
+	}
+	input := WritePromptInput{
+		Language: LanguageKorean, Profile: goldenProfile(), Observations: goldenObservations(), Memo: "MEMO 본문", Title: "가제 TITLE",
+		Photos: []string{"IMG_1.jpg"}, TagCount: 4,
+		FollowStoryline: []StorylineParagraph{{Text: "바다를\n보여줍니다.", Files: []string{"IMG_1.jpg"}}, {Text: "마무리합니다."}},
+	}
+	system, user := BuildWritePromptForLanguage(input)
+	if os.Getenv("STORYLINE_GOLDEN_REGEN") == "1" {
+		if err := os.WriteFile("testdata/write_prompt_along_storyline.golden", []byte(system+"\n@@USER@@\n"+user+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	wantSystem, wantUser := loadGolden(t, "write_prompt_along_storyline.golden")
+	if system != wantSystem || user != wantUser {
+		t.Errorf("the storyline-path prompt drifted:\n--- system ---\n%s\n--- user ---\n%s", system, user)
+	}
+}

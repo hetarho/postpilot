@@ -21,7 +21,10 @@ var (
 	// ErrStorylineMissing: the storyline request rewrites the stored storyline, so a post that
 	// holds none has nothing to ask about (GEN-69).
 	ErrStorylineMissing = errors.New("the post holds no storyline to revise")
-	ErrVoiceRequired    = errors.New("the post has no voice")
+	// ErrStorylineReobserve: a run along the storyline observes exactly what the storyline holds,
+	// so a picker answer beside it is a contradiction (GEN-70).
+	ErrStorylineReobserve = errors.New("a storyline run takes no re-observation selection")
+	ErrVoiceRequired      = errors.New("the post has no voice")
 	// ErrVoiceDeleted refuses AI work for a post whose voice is a tombstone; the post stays
 	// readable and exportable, and restoring the voice or reassigning the post lifts it.
 	ErrVoiceDeleted = errors.New("the post's voice is deleted; restore it or assign another voice first")

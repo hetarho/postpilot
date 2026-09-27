@@ -227,6 +227,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 }
 
 func (s *Service) Start(ctx context.Context, request StartRequest) (string, error) {
+	// A run along the storyline observes exactly what the storyline holds (GEN-70); a picker
+	// answer beside it is refused before anything is read.
+	if request.FromStoryline && request.ObserveFiles != nil {
+		return "", ErrStorylineReobserve
+	}
 	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
 	if err != nil {
 		return "", err
@@ -234,6 +239,13 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	// Before anything is frozen, held or queued (GEN-56).
 	if post.Published {
 		return "", ErrPostPublished
+	}
+	var followed []StorylineParagraph
+	if request.FromStoryline {
+		if post.Storyline == nil || len(post.Storyline.Paragraphs) == 0 {
+			return "", ErrStorylineMissing
+		}
+		followed = cloneParagraphs(post.Storyline.Paragraphs)
 	}
 	if !post.TargetLanguage.Valid() {
 		return "", ErrLanguageRequired
@@ -286,9 +298,13 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		// and frozen into the payload. Attaching a photo, deleting one or switching the
 		// observation model afterwards cannot reach the queued run.
 		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
+		if followed != nil {
+			files, carried = freezeStorylineObserveSelection(post.Images, post.Observations, followed)
+		}
 		options.ObserveFiles = &files
 		options.Observations = carried
 	}
+	options.FollowStoryline = followed
 	// Priced over the FROZEN set, never over the attached count: a run that reuses every
 	// observation makes no observation call and must not be held for fifteen of them.
 	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, options.ObserveFiles))
@@ -301,6 +317,48 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", fmt.Errorf("enqueue generation: %w", err)
 	}
 	return id, nil
+}
+
+// freezeStorylineObserveSelection is a from-storyline run's observe decision (GEN-70): exactly
+// the attachments the storyline holds that have no reusable observation, with no picker. The
+// frozen snapshot is still the whole reusable one, so the entries of attachments the storyline
+// does not hold survive the run's merge.
+func freezeStorylineObserveSelection(images []Image, stored []Observation, paragraphs []StorylineParagraph) ([]string, []Observation) {
+	none := []string{}
+	files, _ := freezeObserveSelection(heldAttachments(images, paragraphs), stored, &none)
+	return files, attachedObservations(images, stored)
+}
+
+// heldAttachments narrows attachments to the ones a storyline's paragraphs hold, in post order.
+func heldAttachments(images []Image, paragraphs []StorylineParagraph) []Image {
+	held := make(map[string]struct{})
+	for _, paragraph := range paragraphs {
+		for _, file := range paragraph.Files {
+			held[file] = struct{}{}
+		}
+	}
+	out := make([]Image, 0, len(images))
+	for _, image := range images {
+		if _, ok := held[image.Filename]; ok {
+			out = append(out, image)
+		}
+	}
+	return out
+}
+
+// heldObservations keeps the observations of the attachments that remain.
+func heldObservations(images []Image, observations []Observation) []Observation {
+	kept := make(map[string]struct{}, len(images))
+	for _, image := range images {
+		kept[image.Filename] = struct{}{}
+	}
+	out := make([]Observation, 0, len(observations))
+	for _, observation := range observations {
+		if _, ok := kept[observation.File]; ok {
+			out = append(out, observation)
+		}
+	}
+	return out
 }
 
 // observeCalls is how many observation calls a frozen selection takes: the photo batches at

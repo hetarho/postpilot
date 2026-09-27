@@ -68,6 +68,9 @@ type generationPayload struct {
 	// from. ObserveFiles alone decides which of these entries the run replaces.
 	Observations      []observationPayload `json:"observations,omitempty"`
 	WriteNativeEffort bool                 `json:"write_native_effort,omitempty"`
+	// The storyline a from-storyline run writes along (GEN-70). Absent is an ordinary run, which
+	// is what every payload queued before it decodes as.
+	Storyline []storylineParagraphJSON `json:"storyline,omitempty"`
 }
 
 // generationOptions is what a durable generate job froze at enqueue. Every field is an
@@ -89,6 +92,8 @@ type generationOptions struct {
 	ObserveFiles      *[]string
 	Observations      []Observation
 	WriteNativeEffort bool
+	// FollowStoryline is the frozen storyline a from-storyline run follows, empty otherwise.
+	FollowStoryline []StorylineParagraph
 }
 
 // encodeGenerationPayload freezes generation-only options in the durable job.
@@ -108,7 +113,16 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
+		Storyline:         encodeFollowedStoryline(options.FollowStoryline),
 	})
+}
+
+// encodeFollowedStoryline is nil for an ordinary run, so its payload keeps the bytes it had.
+func encodeFollowedStoryline(paragraphs []StorylineParagraph) []storylineParagraphJSON {
+	if len(paragraphs) == 0 {
+		return nil
+	}
+	return storylineForPrompt(paragraphs)["storyline"]
 }
 
 // decodeGenerationPayload accepts an empty payload for jobs queued before this
@@ -149,7 +163,19 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),
 		WriteNativeEffort: payload.WriteNativeEffort,
+		FollowStoryline:   decodeFollowedStoryline(payload.Storyline),
 	}, nil
+}
+
+func decodeFollowedStoryline(wire []storylineParagraphJSON) []StorylineParagraph {
+	if len(wire) == 0 {
+		return nil
+	}
+	out := make([]StorylineParagraph, 0, len(wire))
+	for _, paragraph := range wire {
+		out = append(out, StorylineParagraph{Text: paragraph.Text, Files: cloneTexts(paragraph.Files)})
+	}
+	return out
 }
 
 // onto lays the frozen options over the post the run read live, so the prompt is built from
@@ -161,6 +187,10 @@ func (o generationOptions) onto(post PostInput) PostInput {
 	post.TargetLength = cloneOptionalInt(o.TargetLength)
 	post.TagCount = resolveTagCount(o.TagCount)
 	post.WriteNativeEffort = o.WriteNativeEffort
+	post.FollowStoryline = cloneParagraphs(o.FollowStoryline)
+	if len(post.FollowStoryline) == 0 {
+		post.FollowStoryline = nil
+	}
 	return o.writeMaterial.onto(post)
 }
 

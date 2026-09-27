@@ -292,6 +292,15 @@ const (
 	FailureReason_GUIDELINE_DEFAULT_NOT_FOUND FailureReason = 251
 	// StartStorylineRevision on a post that holds no storyline yet (GEN-69).
 	FailureReason_POST_STORYLINE_MISSING FailureReason = 252
+	// A storyline edit names an attachment the storyline was not made with or that is no longer
+	// attached (POST-96). params: file.
+	FailureReason_POST_STORYLINE_FILE_UNKNOWN FailureReason = 253
+	// A storyline edit changes the paragraph count, puts a file in two paragraphs, or carries a
+	// paragraph past the text ceiling (POST-96). params: max, when it is the ceiling.
+	FailureReason_POST_STORYLINE_INVALID FailureReason = 254
+	// StartGeneration asked to write along the storyline and sent a reobserve selection beside
+	// it; a storyline run observes exactly what the storyline holds (GEN-70).
+	FailureReason_GENERATION_STORYLINE_REOBSERVE FailureReason = 255
 )
 
 // Enum value maps for FailureReason.
@@ -528,6 +537,9 @@ var (
 		250: "POST_PHOTO_MISSING",
 		251: "GUIDELINE_DEFAULT_NOT_FOUND",
 		252: "POST_STORYLINE_MISSING",
+		253: "POST_STORYLINE_FILE_UNKNOWN",
+		254: "POST_STORYLINE_INVALID",
+		255: "GENERATION_STORYLINE_REOBSERVE",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -761,6 +773,9 @@ var (
 		"POST_PHOTO_MISSING":                         250,
 		"GUIDELINE_DEFAULT_NOT_FOUND":                251,
 		"POST_STORYLINE_MISSING":                     252,
+		"POST_STORYLINE_FILE_UNKNOWN":                253,
+		"POST_STORYLINE_INVALID":                     254,
+		"GENERATION_STORYLINE_REOBSERVE":             255,
 	}
 )
 
@@ -931,7 +946,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe46\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xc87\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1165,7 +1180,10 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x1aPOST_TARGET_LENGTH_INVALID\x10\xf9\x01\x12\x17\n" +
 	"\x12POST_PHOTO_MISSING\x10\xfa\x01\x12 \n" +
 	"\x1bGUIDELINE_DEFAULT_NOT_FOUND\x10\xfb\x01\x12\x1b\n" +
-	"\x16POST_STORYLINE_MISSING\x10\xfc\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x16POST_STORYLINE_MISSING\x10\xfc\x01\x12 \n" +
+	"\x1bPOST_STORYLINE_FILE_UNKNOWN\x10\xfd\x01\x12\x1b\n" +
+	"\x16POST_STORYLINE_INVALID\x10\xfe\x01\x12#\n" +
+	"\x1eGENERATION_STORYLINE_REOBSERVE\x10\xff\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

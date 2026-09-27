@@ -197,9 +197,14 @@ type PostInput struct {
 	// selection and what it carries over can both be frozen there. No handler reads a live
 	// snapshot: it reads the payload, which is what makes the frozen decision hold.
 	Observations []Observation
-	// Storyline is the post's stored storyline, nil for none. Only the storyline request reads
-	// it, at enqueue for its paragraphs and at the write for what it was made with (GEN-69).
-	Storyline       *Storyline
+	// Storyline is the post's stored storyline, nil for none. It is read at enqueue — by the
+	// storyline request for its paragraphs and by a from-storyline start to freeze them — and by
+	// the storyline request's write for what it was made with (GEN-69, GEN-70).
+	Storyline *Storyline
+	// FollowStoryline is the frozen storyline a from-storyline run writes along (GEN-70), empty
+	// for every other run. Only the generate payload carries it: a comparison never reads the
+	// storyline (GEN-72).
+	FollowStoryline []StorylineParagraph
 	Content         *PostContent
 	TargetLanguage  Language
 	ContentLanguage *Language
@@ -258,6 +263,9 @@ type StartRequest struct {
 	// the payload, not here.
 	ObserveFiles      *[]string
 	WriteNativeEffort bool
+	// FromStoryline is 이 스토리로 글 쓰기 / 다시 쓰기: the run writes along the stored storyline
+	// and observes exactly what it holds (GEN-70).
+	FromStoryline bool
 }
 
 // GenerateJob is one queued generate as the worker hands it over: the row's routing plus the

@@ -22,6 +22,9 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 		"TagCount":     func(in *WritePromptInput) { in.TagCount = 7 },
 		"Template":     func(in *WritePromptInput) { in.Template = testBrief() },
 		"Guidelines":   func(in *WritePromptInput) { in.Guidelines = testGuidelines() },
+		"FollowStoryline": func(in *WritePromptInput) {
+			in.FollowStoryline = []StorylineParagraph{{Text: "가게 앞을 보여줍니다.", Files: []string{"IMG_1.jpg"}}}
+		},
 		"DefaultGuidelines": func(in *WritePromptInput) {
 			in.DefaultGuidelines = []string{"메모의 이름으로 쓰세요"}
 		},

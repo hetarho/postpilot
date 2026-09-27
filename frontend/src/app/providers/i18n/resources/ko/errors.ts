@@ -222,6 +222,10 @@ export const errors = {
   POST_PHOTO_MISSING:
     '글에 사진이 없는 자리가 {{count}}곳 남아 있어요. ②에서 그 사진 블록을 지우거나 사진을 다시 올린 뒤 완성해 주세요.',
   POST_STORYLINE_MISSING: '아직 스토리라인이 없어요. 먼저 스토리라인을 만들어 주세요.',
+  POST_STORYLINE_FILE_UNKNOWN:
+    '{{file}} 파일은 이 스토리라인에 넣을 수 없어요. 스토리라인을 다시 만들어 주세요.',
+  POST_STORYLINE_INVALID: '스토리라인을 저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요.',
+  GENERATION_STORYLINE_REOBSERVE: '스토리라인으로 쓸 때는 다시 볼 사진을 고를 수 없어요.',
   GENERATION_ALREADY_RUNNING: '이 글에서 AI 작업이 이미 진행 중이에요.',
   GENERATION_VOICE_MISMATCH: '글에 저장된 말투와 선택한 말투가 달라요.',
   REVISION_INSTRUCTION_REQUIRED: '수정 요청을 입력해 주세요.',

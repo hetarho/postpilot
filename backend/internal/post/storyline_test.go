@@ -2,7 +2,9 @@ package post
 
 import (
 	"context"
+	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -157,5 +159,142 @@ func TestSetStorylineReplacesTheStorylineAlone(t *testing.T) {
 	}
 	if cleared, _ := svc.Get(ctx, alice, p.Slug); cleared.Storyline != nil {
 		t.Fatalf("an answer with no paragraph left %+v", cleared.Storyline)
+	}
+}
+
+// storylinePost is a post with two photos, a video and a storyline made with the photos and the
+// video, plus a photo attached after it was made.
+func storylineFixture(t *testing.T) (*Service, *fakeBlobs, Post) {
+	t.Helper()
+	svc, _, blobs := newTestService(t)
+	ctx := context.Background()
+	p := mustCreatePost(t, svc, alice, "성수")
+	attachPhoto(t, svc, blobs, p.Slug, "a.jpg")
+	attachPhoto(t, svc, blobs, p.Slug, "b.jpg")
+	mustAttachVideo(t, svc, blobs, alice, p.Slug, "clip.mp4", 5_000)
+	content := PostContent{Title: "성수 카페", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
+	if err := svc.SetGeneratedContent(ctx, alice, p.Slug, content, LanguageKorean, &WriteAnnotations{Storyline: &Storyline{
+		Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"a.jpg", "clip.mp4"}}, {Text: "커피", Files: []string{"b.jpg"}}},
+		MadeWith:   []string{"a.jpg", "b.jpg", "clip.mp4"},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	attachPhoto(t, svc, blobs, p.Slug, "later.jpg")
+	found, err := svc.Get(ctx, alice, p.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return svc, blobs, found
+}
+
+func saveStoryline(svc *Service, p Post, paragraphs ...StorylineParagraph) (Post, error) {
+	return svc.SaveDraft(context.Background(), alice, DraftSave{
+		Slug: p.Slug, Title: p.Title, Memo: p.Memo, Storyline: &StorylineEdit{Paragraphs: paragraphs},
+	})
+}
+
+// POST-96: the owner's edit replaces the texts and files, marks the storyline edited by hand, and
+// changes no status, revision or baseline; an identical save sets no mark.
+func TestADraftSaveEditsTheStorylineByHand(t *testing.T) {
+	svc, _, p := storylineFixture(t)
+	same, err := saveStoryline(svc, p, p.Storyline.Paragraphs...)
+	if err != nil || same.Storyline.EditedByHand {
+		t.Fatalf("an identical save = %+v, %v", same.Storyline, err)
+	}
+	saved, err := saveStoryline(svc, p,
+		StorylineParagraph{Text: "가게 앞과 영상", Files: []string{"clip.mp4"}},
+		StorylineParagraph{Text: "커피와 간판", Files: []string{"b.jpg", "a.jpg"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &Storyline{
+		Paragraphs:   []StorylineParagraph{{Text: "가게 앞과 영상", Files: []string{"clip.mp4"}}, {Text: "커피와 간판", Files: []string{"b.jpg", "a.jpg"}}},
+		EditedByHand: true,
+		MadeWith:     []string{"a.jpg", "b.jpg", "clip.mp4"},
+	}
+	if !reflect.DeepEqual(saved.Storyline, want) {
+		t.Fatalf("storyline = %+v, want %+v", saved.Storyline, want)
+	}
+	if saved.ContentRevision != p.ContentRevision || saved.MachineBaselineRevision != p.MachineBaselineRevision || saved.Status != p.Status {
+		t.Fatalf("the edit moved the post: %+v", saved)
+	}
+	// Taking a file out is an edit too; it then reads as taken out.
+	out, err := saveStoryline(svc, saved,
+		StorylineParagraph{Text: "가게 앞과 영상", Files: []string{"clip.mp4"}},
+		StorylineParagraph{Text: "커피와 간판", Files: []string{"b.jpg"}},
+	)
+	if err != nil || out.Storyline.TakenOutFiles([]string{"a.jpg", "b.jpg", "clip.mp4", "later.jpg"})[0] != "a.jpg" {
+		t.Fatalf("taking a.jpg out = %+v, %v", out.Storyline, err)
+	}
+}
+
+// POST-96, POST-74: an edit is refused whole — while a job targets the post, on a published post,
+// with another paragraph count, a file in two paragraphs, a paragraph past the ceiling, or a file
+// the storyline was not made with or that is no longer attached — and nothing else in the save
+// is applied.
+func TestADraftSaveRefusesAStorylineEditItCannotTake(t *testing.T) {
+	long := strings.Repeat("가", StorylineTextMaxChars+1)
+	var fileUnknown *StorylineFileUnknownError
+	var tooLong *StorylineTextTooLongError
+	for name, test := range map[string]struct {
+		paragraphs []StorylineParagraph
+		busy       bool
+		check      func(error) bool
+	}{
+		"a job targets the post": {
+			paragraphs: []StorylineParagraph{{Text: "하나"}, {Text: "둘"}}, busy: true,
+			check: func(err error) bool { return errors.Is(err, ErrPostBusy) },
+		},
+		"another count": {
+			paragraphs: []StorylineParagraph{{Text: "하나"}},
+			check:      func(err error) bool { return errors.Is(err, ErrStorylineInvalid) },
+		},
+		"a file in two paragraphs": {
+			paragraphs: []StorylineParagraph{{Text: "하나", Files: []string{"a.jpg"}}, {Text: "둘", Files: []string{"a.jpg"}}},
+			check:      func(err error) bool { return errors.Is(err, ErrStorylineInvalid) },
+		},
+		"past the ceiling": {
+			paragraphs: []StorylineParagraph{{Text: long}, {Text: "둘"}},
+			check:      func(err error) bool { return errors.As(err, &tooLong) && tooLong.Max == StorylineTextMaxChars },
+		},
+		"attached after it was made": {
+			paragraphs: []StorylineParagraph{{Text: "하나", Files: []string{"later.jpg"}}, {Text: "둘"}},
+			check:      func(err error) bool { return errors.As(err, &fileUnknown) && fileUnknown.File == "later.jpg" },
+		},
+		"not attached": {
+			paragraphs: []StorylineParagraph{{Text: "하나", Files: []string{"ghost.jpg"}}, {Text: "둘"}},
+			check:      func(err error) bool { return errors.As(err, &fileUnknown) && fileUnknown.File == "ghost.jpg" },
+		},
+	} {
+		svc, _, p := storylineFixture(t)
+		if test.busy {
+			svc.jobs = fakeActiveJobs{p.Slug: {ID: "job-1", Status: "running"}}
+		}
+		_, err := svc.SaveDraft(context.Background(), alice, DraftSave{
+			Slug: p.Slug, Title: "바뀐 제목", Memo: p.Memo, Storyline: &StorylineEdit{Paragraphs: test.paragraphs},
+		})
+		if !test.check(err) {
+			t.Errorf("%s: err = %v", name, err)
+		}
+		svc.jobs = neutralJobs{}
+		after, _ := svc.Get(context.Background(), alice, p.Slug)
+		if after.Title != p.Title || !reflect.DeepEqual(after.Storyline, p.Storyline) {
+			t.Errorf("%s: a refused save changed the post: title %q, storyline %+v", name, after.Title, after.Storyline)
+		}
+	}
+
+	// A post with no storyline, the one being created included, has none to edit.
+	svc, _, _ := newTestService(t)
+	plain := mustCreatePost(t, svc, alice, "그냥")
+	if _, err := saveStoryline(svc, plain, StorylineParagraph{Text: "하나"}); !errors.Is(err, ErrStorylineMissing) {
+		t.Fatalf("an edit without a storyline: %v", err)
+	}
+	language := LanguageKorean
+	voice := defaultVoiceFor(alice)
+	if _, err := svc.SaveDraft(context.Background(), alice, DraftSave{
+		Title: "새 글", VoiceID: &voice, TargetLanguage: &language, Storyline: &StorylineEdit{},
+	}); !errors.Is(err, ErrStorylineMissing) {
+		t.Fatalf("a create with a storyline edit: %v", err)
 	}
 }

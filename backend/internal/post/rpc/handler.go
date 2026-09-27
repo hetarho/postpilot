@@ -61,6 +61,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		Slug: req.Msg.GetSlug(), Title: req.Msg.GetTitle(), Memo: req.Msg.GetMemo(),
 		VoiceID: req.Msg.VoiceId, TemplateID: req.Msg.TemplateId, Field: field,
 		TargetLanguage: targetLanguage, Answers: fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()),
+		Storyline: fromProtoStorylineEdit(req.Msg.GetStoryline()),
 	})
 	if err != nil {
 		return nil, toConnectError("save draft", err)
@@ -316,6 +317,18 @@ func toConnectError(op string, err error) error {
 			"count": strconv.Itoa(photoMissing.Count),
 		})
 	}
+	var storylineTooLong *post.StorylineTextTooLongError
+	if errors.As(err, &storylineTooLong) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "a storyline paragraph is too long", postpilotv1.FailureReason_POST_STORYLINE_INVALID, map[string]string{
+			"max": strconv.Itoa(storylineTooLong.Max),
+		})
+	}
+	var storylineFile *post.StorylineFileUnknownError
+	if errors.As(err, &storylineFile) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the storyline cannot hold that attachment", postpilotv1.FailureReason_POST_STORYLINE_FILE_UNKNOWN, map[string]string{
+			"file": storylineFile.File,
+		})
+	}
 	var answerTooLong *post.TemplateAnswerTooLongError
 	if errors.As(err, &answerTooLong) {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long", postpilotv1.FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG, map[string]string{
@@ -352,6 +365,10 @@ func toConnectError(op string, err error) error {
 		// FailedPrecondition, not NotFound: the upload record is fine, the object just
 		// is not there yet — the client should retry the PUT, not give up.
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", postpilotv1.FailureReason_UPLOAD_OBJECT_MISSING, nil)
+	case errors.Is(err, post.ErrStorylineMissing):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
+	case errors.Is(err, post.ErrStorylineInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the storyline edit is invalid", postpilotv1.FailureReason_POST_STORYLINE_INVALID, nil)
 	case errors.Is(err, post.ErrPostBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has an active job", postpilotv1.FailureReason_POST_BUSY, nil)
 	case errors.Is(err, post.ErrStaleContentRevision):
@@ -467,6 +484,20 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		PublishedAt:            formatOptionalTime(p.PublishedAt),
 		Storyline:              toProtoStoryline(p),
 	}
+}
+
+// fromProtoStorylineEdit is nil for an absent edit, which keeps the stored storyline.
+func fromProtoStorylineEdit(edit *postpilotv1.StorylineEdit) *post.StorylineEdit {
+	if edit == nil {
+		return nil
+	}
+	out := &post.StorylineEdit{Paragraphs: make([]post.StorylineParagraph, 0, len(edit.GetParagraphs()))}
+	for _, paragraph := range edit.GetParagraphs() {
+		out.Paragraphs = append(out.Paragraphs, post.StorylineParagraph{
+			Text: paragraph.GetText(), Files: append([]string(nil), paragraph.GetFiles()...),
+		})
+	}
+	return out
 }
 
 // toProtoStoryline leaves the field unset when the post has none. What was added and what was

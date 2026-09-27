@@ -23,6 +23,7 @@ func filledGenerationOptions() generationOptions {
 			PeoplePresent: true, Model: "p/observer", Events: []string{"문이 열린다"}, Speech: "어서 오세요",
 		}},
 		WriteNativeEffort: true,
+		FollowStoryline:   []StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg"}}},
 		writeMaterial: writeMaterial{Template: &TemplateBrief{
 			Name: "하루 기록", Body: "<write>인트로</write>네이버 지도",
 			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
@@ -125,8 +126,10 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean, TagCount: 7,
 		TemplateID: "tmpl", UseMemory: true, QualityRuleIDs: []string{"composition"}, Field: "cafe",
-		Images:       []Image{{Filename: "IMG_1.jpg", Key: "key-1"}},
+		Images:       []Image{{Filename: "IMG_1.jpg", Key: "key-1"}, {Filename: "IMG_2.jpg", Key: "key-2"}},
 		Observations: []Observation{observation},
+		// Along a storyline holding both: IMG_1 is reused, IMG_2 is observed (GEN-70).
+		Storyline: &Storyline{Paragraphs: []StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg", "IMG_2.jpg"}}}},
 	}}
 	models := newFakeModels()
 	info := models.infos[writeRef]
@@ -141,10 +144,9 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 
 	target := 1500
-	files := []string{"IMG_1.jpg"}
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		TargetLength: &target, ObserveFiles: &files,
+		TargetLength: &target, FromStoryline: true,
 	}); err != nil {
 		t.Fatal(err)
 	}

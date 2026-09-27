@@ -78,6 +78,47 @@ Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}
 Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.
 ` + englishNounsRule
 
+// koreanWriteAlongStorylineRule / englishWriteAlongStorylineRule replace the storyline rule on
+// the storyline path (GEN-70): the frozen [스토리라인] decides what the post covers and in what
+// order, and the material only fills in its details.
+const koreanWriteAlongStorylineRule = "[스토리라인]이 이 글이 다룰 내용과 순서를 정합니다. 스토리라인에 없는 내용은 메모에 있어도 쓰지 말고, 재료는 스토리라인이 다루는 내용의 세부를 채우는 데만 쓰세요. 각 사진과 영상은 스토리라인에서 그 파일이 놓인 문단의 자리에 한 번씩 놓으세요."
+
+const englishWriteAlongStorylineRule = "[스토리라인] sets what this post covers and in what order. Do not write anything the storyline does not cover, even when the memo has it, and use the material only to fill in the details of what the storyline covers. Place each photo and video once, where the paragraph holding it stands."
+
+// The storyline path's static rules are the direct write's with the storyline asked for no more:
+// the rule becomes the storyline-path rule, the answer shape loses its `storyline` member, and
+// the placement lines point at [스토리라인] (GEN-70). Derived here so the two can differ in
+// nothing else.
+var (
+	writeAlongStorylinePrompt = strings.NewReplacer(
+		koreanStorylineRule, koreanWriteAlongStorylineRule,
+		`{"storyline":[{"text":"...","files":[]}],"title"`, `{"title"`,
+		"첨부 사진은 storyline에서", "첨부 사진은 [스토리라인]에서",
+	).Replace(WritePrompt)
+	englishWriteAlongStorylinePrompt = strings.NewReplacer(
+		englishStorylineRule, englishWriteAlongStorylineRule,
+		`{"storyline":[{"text":"...","files":[]}],"title"`, `{"title"`,
+	).Replace(englishWritePrompt)
+)
+
+// storylineSection renders the frozen storyline a from-storyline run follows (GEN-70) at the end
+// of the per-post half, after the observations: one numbered line per paragraph with its files.
+// Empty for every other run, so their prompts keep their bytes.
+func storylineSection(paragraphs []StorylineParagraph) string {
+	if len(paragraphs) == 0 {
+		return ""
+	}
+	var out strings.Builder
+	out.WriteString("\n\n[스토리라인]")
+	for i, paragraph := range paragraphs {
+		fmt.Fprintf(&out, "\n%d. %s", i+1, strings.Join(strings.Fields(paragraph.Text), " "))
+		if len(paragraph.Files) > 0 {
+			fmt.Fprintf(&out, " (파일: %s)", strings.Join(paragraph.Files, ", "))
+		}
+	}
+	return out.String()
+}
+
 // templateLegend explains the grammar the rendered body uses. It ships with the section
 // rather than living in the template text because it is OUR contract with the model, not the
 // author's: a user editing a template must not be able to change what a tag means.
@@ -321,23 +362,39 @@ type WritePromptInput struct {
 	// QualityRules are the frozen ticked rule texts (GEN-51), empty for a run that ticked none;
 	// they open the per-post half, never the stable prefix (GEN-14).
 	QualityRules []string
+	// FollowStoryline is the frozen storyline a from-storyline run follows (GEN-70): it selects
+	// the storyline-path static rules and closes the per-post half as [스토리라인].
+	FollowStoryline []StorylineParagraph
 }
 
 // BuildWritePromptForLanguage builds the write pass's system and user prompts from one input.
 func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	var stable strings.Builder
+	following := len(input.FollowStoryline) > 0
 	switch input.Language {
 	case LanguageKorean:
-		stable.WriteString(writeStaticRules(input.Language))
+		stable.WriteString(writeStaticRules(input.Language, following))
 		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", input.TagCount)
-		stable.WriteString("\n출력 언어는 한국어입니다. storyline, title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		members := "storyline, title"
+		if following {
+			members = "title"
+		}
+		stable.WriteString("\n출력 언어는 한국어입니다. " + members + ", summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(input.Videos) > 0 {
-			stable.WriteString(videoWriteInstructions)
+			video := videoWriteInstructions
+			if following {
+				video = strings.Replace(video, "storyline에서", "[스토리라인]에서", 1)
+			}
+			stable.WriteString(video)
 		}
 	case LanguageEnglish:
-		stable.WriteString(writeStaticRules(input.Language))
+		stable.WriteString(writeStaticRules(input.Language, following))
 		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", input.TagCount)
-		stable.WriteString("\nThe output language is English. Write the storyline, title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
+		members := "the storyline, title"
+		if following {
+			members = "the title"
+		}
+		stable.WriteString("\nThe output language is English. Write " + members + ", summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
 		if len(input.Videos) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)
 		}
@@ -353,17 +410,22 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
 	// The memory section sits between the memo and the attachments and renders to the empty
 	// string when it has nothing — which is what keeps a post without it byte-identical.
-	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), photoMaterial)
+	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), photoMaterial) +
+		storylineSection(input.FollowStoryline)
 	return stable.String(), perPost
 }
 
 // writeStaticRules is the fixed write prompt for a target: one stable prefix per target. How a
 // title form outranks the title rules is the titles 기본 지침's own text now (TMPL-52).
-func writeStaticRules(language Language) string {
-	switch language {
-	case LanguageKorean:
+func writeStaticRules(language Language, followingStoryline bool) string {
+	switch {
+	case language == LanguageKorean && followingStoryline:
+		return writeAlongStorylinePrompt
+	case language == LanguageKorean:
 		return WritePrompt
-	case LanguageEnglish:
+	case language == LanguageEnglish && followingStoryline:
+		return englishWriteAlongStorylinePrompt
+	case language == LanguageEnglish:
 		return englishWritePrompt
 	default:
 		return ""

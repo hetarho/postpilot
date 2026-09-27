@@ -287,6 +287,15 @@ enum FailureReason {
   GUIDELINE_DEFAULT_NOT_FOUND = 251;
   // StartStorylineRevision on a post that holds no storyline yet (GEN-69).
   POST_STORYLINE_MISSING = 252;
+  // A storyline edit names an attachment the storyline was not made with or that is no longer
+  // attached (POST-96). params: file.
+  POST_STORYLINE_FILE_UNKNOWN = 253;
+  // A storyline edit changes the paragraph count, puts a file in two paragraphs, or carries a
+  // paragraph past the text ceiling (POST-96). params: max, when it is the ceiling.
+  POST_STORYLINE_INVALID = 254;
+  // StartGeneration asked to write along the storyline and sent a reobserve selection beside
+  // it; a storyline run observes exactly what the storyline holds (GEN-70).
+  GENERATION_STORYLINE_REOBSERVE = 255;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

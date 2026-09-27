@@ -30,10 +30,11 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 	}
 	id, err := h.service.Start(ctx, generation.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
-		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
-		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
-		TargetLength: optionalTargetLength(req.Msg.TargetLength),
-		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
+		ObserveModel:  modelRefValue(req.Msg.GetObserveModel()),
+		WriteModel:    modelRefValue(req.Msg.GetWriteModel()),
+		TargetLength:  optionalTargetLength(req.Msg.TargetLength),
+		ObserveFiles:  reobserveFiles(req.Msg.GetReobserve()),
+		FromStoryline: req.Msg.GetFromStoryline(),
 	})
 	if err != nil {
 		return nil, toConnectError("start generation", err)
@@ -172,6 +173,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrContentLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
+	case errors.Is(err, generation.ErrStorylineReobserve):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "a storyline run takes no re-observation selection", postpilotv1.FailureReason_GENERATION_STORYLINE_REOBSERVE, nil)
 	case errors.Is(err, generation.ErrStorylineMissing):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
 	case errors.Is(err, generation.ErrRevisionContentRequired):

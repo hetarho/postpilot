@@ -30,6 +30,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
 		DefaultGuidelines: post.DefaultGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
+		FollowStoryline: post.FollowStoryline,
 	})
 	request := llm.Request{
 		System:    system,
@@ -38,8 +39,12 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		Stage:     llm.StageNameWrite,
 		MaxTokens: s.budget.Write(post.TargetLength, post.WriteNativeEffort),
 	}
+	following := len(post.FollowStoryline) > 0
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = WriteAnswerSchema()
+		if following {
+			request.JSONSchema = WriteAlongStorylineAnswerSchema()
+		}
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -50,8 +55,14 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	if err != nil {
 		return WriteAnswer{}, response.Usage, responseParseError(response, err)
 	}
-	// What the writing stage was shown is what the post reads a later attachment against.
-	answer.Storyline.MadeWith = shown
+	if following {
+		// The run followed the stored storyline and answered none: nil keeps it exactly as it
+		// was, the owner's edit mark included (GEN-70, GEN-71).
+		answer.Storyline = nil
+	} else {
+		// What the writing stage was shown is what the post reads a later attachment against.
+		answer.Storyline.MadeWith = shown
+	}
 	answer.Content.Blocks = ValidateBlocks(answer.Content.Blocks)
 	answer.Content = FilterAttachments(answer.Content, photos, videos)
 	return *answer, response.Usage, nil

@@ -32,6 +32,8 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"object", "confirm upload", post.ErrObjectMissing, connect.CodeFailedPrecondition, "UPLOAD_OBJECT_MISSING"},
 		{"image", "confirm upload", post.ErrInvalidImage, connect.CodeInvalidArgument, "UPLOAD_INVALID"},
 		{"busy", "save draft", post.ErrPostBusy, connect.CodeFailedPrecondition, "POST_BUSY"},
+		{"no storyline", "save draft", post.ErrStorylineMissing, connect.CodeFailedPrecondition, "POST_STORYLINE_MISSING"},
+		{"storyline edit", "save draft", post.ErrStorylineInvalid, connect.CodeInvalidArgument, "POST_STORYLINE_INVALID"},
 		{"stale", "save post content", post.ErrStaleContentRevision, connect.CodeAborted, "POST_CONTENT_STALE"},
 		{"baseline", "finalize post", post.ErrNoMachineBaseline, connect.CodeFailedPrecondition, "POST_MACHINE_BASELINE_REQUIRED"},
 		{"not finalized", "publish", post.ErrPostNotFinalized, connect.CodeFailedPrecondition, "POST_NOT_FINALIZED"},
@@ -337,8 +339,9 @@ func TestToProtoSummaryCarriesTags(t *testing.T) {
 	}
 }
 
-// The two numbers the surface needs travel as params: the range a length missed, and how many
-// image places still name a detached photo (POST-13, POST-20).
+// The numbers and names the surface needs travel as params: the range a length missed, how many
+// image places still name a detached photo, a storyline paragraph's ceiling and the file a
+// storyline edit may not place (POST-13, POST-20, POST-96).
 func TestTheRangeAndTheMissingCountTravelAsParams(t *testing.T) {
 	for _, tc := range []struct {
 		err    error
@@ -348,6 +351,8 @@ func TestTheRangeAndTheMissingCountTravelAsParams(t *testing.T) {
 	}{
 		{&post.TargetLengthError{Min: 100, Max: 10_000}, connect.CodeInvalidArgument, "POST_TARGET_LENGTH_INVALID", map[string]string{"min": "100", "max": "10000"}},
 		{&post.PhotoMissingError{Count: 2}, connect.CodeFailedPrecondition, "POST_PHOTO_MISSING", map[string]string{"count": "2"}},
+		{&post.StorylineTextTooLongError{Max: 1000}, connect.CodeInvalidArgument, "POST_STORYLINE_INVALID", map[string]string{"max": "1000"}},
+		{&post.StorylineFileUnknownError{File: "later.jpg"}, connect.CodeInvalidArgument, "POST_STORYLINE_FILE_UNKNOWN", map[string]string{"file": "later.jpg"}},
 	} {
 		mapped := toConnectError("op", errors.Join(errors.New("private context"), tc.err))
 		if connect.CodeOf(mapped) != tc.code {
@@ -357,5 +362,19 @@ func TestTheRangeAndTheMissingCountTravelAsParams(t *testing.T) {
 		if detail.GetReason() != tc.reason || !reflect.DeepEqual(detail.GetParams(), tc.want) {
 			t.Fatalf("%v detail = %v %v, want %s %v", tc.err, detail.GetReason(), detail.GetParams(), tc.reason, tc.want)
 		}
+	}
+}
+
+// POST-96: an absent edit keeps the stored storyline; a present one arrives whole.
+func TestTheStorylineEditTravelsWhole(t *testing.T) {
+	if fromProtoStorylineEdit(nil) != nil {
+		t.Fatal("an absent edit arrived as one")
+	}
+	got := fromProtoStorylineEdit(&postpilotv1.StorylineEdit{Paragraphs: []*postpilotv1.StorylineParagraph{
+		{Text: "가게 앞", Files: []string{"a.jpg"}}, {Text: "마무리"},
+	}})
+	want := &post.StorylineEdit{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞", Files: []string{"a.jpg"}}, {Text: "마무리"}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("edit = %+v, want %+v", got, want)
 	}
 }

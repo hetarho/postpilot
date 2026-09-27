@@ -887,8 +887,8 @@ func TestStorylineRoundTripsBesideTheContent(t *testing.T) {
 	}
 }
 
-// GEN-71: a storyline changes only through a write, a storyline job and a deleted attachment
-// (the owner's own edits arrive with T434), so exactly those statements write the column.
+// GEN-71: a storyline changes only through a write, a storyline job or the owner's edit (one
+// statement), and a deleted attachment, so exactly those statements write the column.
 func TestOnlyTheStorylineWritersWriteTheColumn(t *testing.T) {
 	writes := regexp.MustCompile(`(?i)\bstoryline\s*=`)
 	var writers []string

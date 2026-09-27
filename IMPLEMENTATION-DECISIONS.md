@@ -116,3 +116,31 @@ choice would be expensive to undo are listed at the end.
   they are, and keep every attached photo and video in exactly one paragraph."
 - **Error copy for `POST_STORYLINE_MISSING`:** "아직 스토리라인이 없어요. 먼저 스토리라인을
   만들어 주세요." / "This post has no storyline yet. Make one first."
+
+## T434 — writing from the storyline; the owner's storyline edits
+
+- **The from-storyline write keeps the storyline but updates the nouns.** The acceptance said
+  `SetGeneratedContent(..., nil)`, which would also keep the *previous* write's nouns next to new
+  content. I pass the new nouns with a nil storyline instead, which leaves the storyline untouched,
+  `EditedByHand` included.
+- **Storyline-path static rules:** the direct write's rules with the storyline rule swapped for
+  your storyline-path rule, the `storyline` member dropped from the answer shape, and "storyline에서"
+  in the IMAGE/VIDEO placement lines changed to "[스토리라인]에서". English twin: "[스토리라인] sets
+  what this post covers and in what order. Do not write anything the storyline does not cover,
+  even when the memo has it, and use the material only to fill in the details of what the
+  storyline covers. Place each photo and video once, where the paragraph holding it stands."
+- **`[스토리라인]` renders as `1. text (파일: a.jpg, b.jpg)`**; a paragraph with no file omits the
+  bracket; line breaks inside a paragraph are folded to spaces.
+- **Still requires an observe model whenever the post has attachments**, even if every held
+  attachment already has an observation (same rule as an ordinary start).
+- **The write budget still includes the 1,024-token storyline allowance** on this path, although no
+  storyline is written; the hold is slightly generous rather than a second budget rule.
+- **Three new failure reasons:** `POST_STORYLINE_INVALID` (count change, file in two paragraphs,
+  text past 1,000, the last with `max`), `POST_STORYLINE_FILE_UNKNOWN` (`file`: not attached, or
+  attached after the storyline was made), `GENERATION_STORYLINE_REOBSERVE`. Copy: "스토리라인을
+  저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요." / "{{file}} 파일은 이 스토리라인에 넣을 수 없어요.
+  스토리라인을 다시 만들어 주세요." / "스토리라인으로 쓸 때는 다시 볼 사진을 고를 수 없어요."
+- **An identical storyline save is a no-op** (no write, no "edited by hand" mark), so an autosave
+  that resends the stored value cannot flip the mark.
+- **"Busy" means any active job on the post** (not only content-writing ones), since a storyline job
+  would overwrite the edit.

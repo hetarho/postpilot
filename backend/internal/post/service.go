@@ -167,6 +167,12 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 	if err != nil {
 		return Post{}, err
 	}
+	// A storyline edit's shape is checked ahead of every write too.
+	if save.Storyline != nil {
+		if err := save.Storyline.validShape(); err != nil {
+			return Post{}, err
+		}
+	}
 	// The same for the 분야: an id the product does not know mints nothing and changes nothing.
 	field := ""
 	if save.Field != nil {
@@ -177,6 +183,10 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 	}
 
 	if slug == "" {
+		// A post being created holds no storyline to edit.
+		if save.Storyline != nil {
+			return Post{}, ErrStorylineMissing
+		}
 		if targetLanguage == nil {
 			return Post{}, ErrLanguageRequired
 		}
@@ -203,6 +213,13 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 	found, err := s.writablePost(ctx, userID, slug)
 	if err != nil {
 		return Post{}, err
+	}
+	// Checked before any of the draft's writes, so a refused edit changes nothing else either.
+	var storyline *Storyline
+	if save.Storyline != nil {
+		if storyline, err = s.checkStorylineEdit(ctx, found, *save.Storyline); err != nil {
+			return Post{}, err
+		}
 	}
 	if voiceID != nil && *voiceID != found.VoiceID {
 		if err := s.reassignVoice(ctx, found, *voiceID); err != nil {
@@ -253,6 +270,17 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		// statements or was published in between. Report which rather than inventing a post.
 		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 	}
+	// The owner's storyline edit: the texts and files, marked edited by hand, and nothing about
+	// the content, its revision, baseline or learning (POST-96).
+	if storyline != nil {
+		written, err := s.drafts.UpdateStoryline(ctx, slug, userID, storyline, now)
+		if err != nil {
+			return Post{}, fmt.Errorf("save storyline edit: %w", err)
+		}
+		if !written {
+			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
+		}
+	}
 
 	return s.Get(ctx, userID, slug)
 }
@@ -265,6 +293,8 @@ type DraftSave struct {
 	VoiceID, TemplateID, Field *string
 	TargetLanguage             *Language
 	Answers                    []TemplateAnswer
+	// Storyline is the owner's storyline edit, nil to keep the stored one (POST-96).
+	Storyline *StorylineEdit
 }
 
 // validTemplateAnswers trims what a label may not carry and bounds both halves. It is a pure

@@ -38,6 +38,12 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return err
 	}
+	if len(post.FollowStoryline) > 0 {
+		// A run along the storyline is shown only what the storyline holds (GEN-70), so the
+		// attachment filter keeps no other (GEN-2).
+		post.Images = heldAttachments(post.Images, post.FollowStoryline)
+		observations = heldObservations(post.Images, observations)
+	}
 	writeModel, ok := parseModelRef(job.WriteModel)
 	if !ok {
 		return ErrWriteModelRequired
