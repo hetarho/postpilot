@@ -8,7 +8,11 @@ import { endSession } from '@/app/model/end-session'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { ClipSourceBatchSchema, GenerationService, Stage, ProtoPlan } from '@/shared/api'
-import { clipProjectsKey, type ClipAccounting } from '@/entities/clip-project'
+import {
+  clipProjectsKey,
+  type ClipAccounting,
+  type ClipProjectDraft,
+} from '@/entities/clip-project'
 import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
 import { clipObservationsFixture } from '@/test/clip-observations'
@@ -398,6 +402,52 @@ it('keeps an older result visible on a durable credit refusal and requires a new
   await selectSource()
   expect(await openApproval(20)).toBeEnabled()
 })
+// F64, CLIP-21/23: reselection is asked for only once the retained originals are gone; inside the
+// retention window the retained batch is what the next generation uses.
+it.each([
+  ['available', false],
+  ['expired', true],
+  ['missing', true],
+] as const)(
+  'asks to reselect the originals only when they are gone (%s)',
+  async (availability, asked) => {
+    const batch = create(ClipSourceBatchSchema, {
+      id: 'retained',
+      projectId: project.id,
+      state: 'ready',
+      current: true,
+      expiresAt: '2099-01-01T00:00:00Z',
+      sources: [
+        {
+          id: 'source',
+          state: 'ready',
+          availability,
+          retentionExpiresAt:
+            availability === 'available' ? '2099-01-01T00:00:00Z' : '2020-01-01T00:00:00Z',
+          metadata: {
+            filename: 'clip.mp4',
+            contentType: 'video/mp4',
+            bytes: 5n,
+            width: 1920,
+            height: 1080,
+            durationMs: 15000,
+            fingerprint: 'a'.repeat(64),
+          },
+        },
+      ],
+    })
+    mount({ projects: [{ ...project, result }], retainedBatches: [batch] })
+    await goToStep('생성')
+    await screen.findByText('clip.mp4')
+    const line =
+      '보관 기간이 지나 원본 영상이 없어요. 다시 만들려면 원본 영상을 새로 선택해 주세요.'
+    if (asked) expect(await screen.findByText(line)).toBeInTheDocument()
+    else {
+      await waitFor(() => expect(screen.getByRole('button', { name: '바로 만들기' })).toBeEnabled())
+      expect(screen.queryByText(line)).not.toBeInTheDocument()
+    }
+  },
+)
 it('reloads saved results without originals and refreshes an expired preview only once automatically', async () => {
   let reads = 0
   const view = mount({
@@ -641,21 +691,24 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
   view.unmount()
 })
 
-it('invalidates a quote for dirty settings, even when reverted, without generating', async () => {
-  const quotes: unknown[] = [],
-    starts: unknown[] = []
-  mount({ quoteRequests: quotes, generationStarts: starts })
+// F62, CLIP-39: ① gates nothing on unsaved settings — typing never takes the open quote away and
+// the source picker stays usable — and approving writes the settings before the run starts.
+it('keeps the open quote while ① is typed in and saves the settings before starting', async () => {
+  const calls: string[] = [],
+    starts: unknown[] = [],
+    writes: ClipProjectDraft[] = []
+  mount({ calls, generationStarts: starts, projectWrites: writes })
   const { user } = await selectSource()
   await openApproval(20)
-  expect(quotes).toHaveLength(1)
-  const title = screen.getByLabelText('클립 제목')
-  await user.type(title, 'x')
-  expect(screen.queryByRole('button', { name: /승인하고 생성/ })).not.toBeInTheDocument()
-  expect(quotes).toHaveLength(1)
-  await user.keyboard('{Backspace}')
-  await openApproval(20)
-  expect(quotes).toHaveLength(2)
-  expect(starts).toHaveLength(0)
+  fireEvent.change(screen.getByLabelText('클립 제목'), { target: { value: '제주 여행 2' } })
+  expect(screen.getByRole('button', { name: /승인하고 생성/ })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeEnabled()
+  const approve = await screen.findByRole('button', { name: /승인하고 생성/ })
+  await waitFor(() => expect(approve).toBeEnabled())
+  await user.click(approve)
+  await waitFor(() => expect(starts).toHaveLength(1))
+  expect(writes.at(-1)?.title).toBe('제주 여행 2')
+  expect(calls.lastIndexOf('UpdateClipProject')).toBeLessThan(calls.indexOf('StartClipGeneration'))
 })
 
 it('refreshes the quote after a model change and never starts while that choice is saving', async () => {
@@ -797,6 +850,40 @@ it.each([false, true])(
     expect(starts).toHaveLength(0)
   },
 )
+
+// F67, CLIP-96: what the approval resumes is part of what is approved, so it stands outside the
+// fold — the reuse line, or, when the prior attempt left nothing reusable, what restarts.
+it('states the reuse, or what restarts, without opening the breakdown', async () => {
+  const failed: FakeGenerationJobRow = {
+    id: 'failed',
+    kind: 'generate_clip',
+    clipProjectId: 'clip',
+    status: 'failed',
+    stage: 'observe',
+  }
+  const view = mount(
+    {
+      projects: [{ ...project, latestJob: failed }],
+      quoteRecovery: { reusedChunks: 2, remainingChunks: 1, responseRetries: 3 },
+    },
+    { jobs: [failed] },
+  )
+  await selectSource()
+  await openApproval(20)
+  expect(screen.getByRole('button', { name: '요금 자세히' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  )
+  expect(screen.getByText(/완료된 분석 2개를 재사용하고 1개를 분석해요/)).toBeVisible()
+  view.unmount()
+
+  mount({ projects: [{ ...project, latestJob: failed }] }, { jobs: [failed] })
+  await selectSource()
+  await openApproval(20)
+  expect(
+    screen.getByText('이전 시도에서 이어 쓸 수 있는 작업이 없어 분석부터 다시 해요.'),
+  ).toBeVisible()
+})
 
 it('displays a pricing refusal beside generation while leaving the previous result downloadable', async () => {
   mount({ projects: [{ ...project, result }], quoteFails: 'CLIP_MODEL_PRICING_UNAVAILABLE' })

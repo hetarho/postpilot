@@ -20,7 +20,7 @@ describe('video template workflow', () => {
     expect(
       await screen.findByRole('heading', { name: '아직 저장된 영상 템플릿이 없어요' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/클립을 만들 때 받을 정보와 컷 구성/)).toBeInTheDocument()
+    expect(screen.getByText(/받을 정보와 구성의 순서, 시작 디자인/)).toBeInTheDocument()
     empty.unmount()
     mount('/video-templates', { listFails: true })
     expect(await screen.findByRole('alert')).toHaveTextContent('영상 템플릿을 불러오지 못했어요.')

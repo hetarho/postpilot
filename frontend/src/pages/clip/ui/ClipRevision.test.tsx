@@ -103,8 +103,8 @@ it('keeps one composer in the dock and opens the target and the approval from se
   // The counter appears with the first character, not before.
   expect(dock.queryByText(/1000자/)).not.toBeInTheDocument()
   await write('자막을 더 짧게')
-  // Counted CDS-20's way, like every other bounded clip field.
-  expect(panel().getByText('6 / 1000자')).toBeInTheDocument()
+  // Counted in every character, spaces included, as the server bounds it (CLIP-121).
+  expect(panel().getByText('8 / 1000자')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /승인하고 수정 요청/ })).not.toBeInTheDocument()
   await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
   const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))

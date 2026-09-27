@@ -4,7 +4,6 @@ import type { GenerationJob } from '@/entities/generation-job'
 import {
   useDiscardQueueWhenFinalized,
   useSoundBatchHandoff,
-  useUnsavedNotice,
   useUploadAttemptLifecycle,
 } from './lifecycle'
 
@@ -49,16 +48,4 @@ it('drops the save queue when the project is finalized, and not before', () => {
   expect(discard).not.toHaveBeenCalled()
   view.rerender({ finalized: { at: '2026-09-20T00:00:00Z' } })
   expect(discard).toHaveBeenCalledWith('clip')
-})
-
-it('tells the page when work is held, and releases it on unmount', () => {
-  const report = vi.fn()
-  const view = renderHook(({ unsaved }) => useUnsavedNotice(unsaved, report), {
-    initialProps: { unsaved: false },
-  })
-  expect(report).toHaveBeenLastCalledWith(false)
-  view.rerender({ unsaved: true })
-  expect(report).toHaveBeenLastCalledWith(true)
-  view.unmount()
-  expect(report).toHaveBeenLastCalledWith(false)
 })

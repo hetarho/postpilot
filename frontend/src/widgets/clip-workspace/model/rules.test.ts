@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import { clipEditingFixture } from '@/test/clip-editing'
-import { requiredSourcesForStep, soundRetryAction, unsavedCorrection } from './rules'
+import { requiredSourcesForStep, soundRetryAction } from './rules'
 
 it('asks for every source in ① and only the plan’s own sources in ②', () => {
   const plan = clipEditingFixture()
@@ -25,10 +25,4 @@ it('re-applies a sound setting the server moved past, and re-sends anything else
   soundRetryAction(correction)()
   expect(correction.save).toHaveBeenCalledTimes(2)
   expect(correction.reapply).toHaveBeenCalledTimes(1)
-})
-
-it('holds nothing back once the project is finalized', () => {
-  expect(unsavedCorrection(true, undefined)).toBe(true)
-  expect(unsavedCorrection(true, { at: '2026-09-20T00:00:00Z' })).toBe(false)
-  expect(unsavedCorrection(false, undefined)).toBe(false)
 })

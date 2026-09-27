@@ -5,9 +5,10 @@ import {
   CLIP_PROJECT_LIMITS,
   CLIP_RATIOS,
   ClipCompositionInputFields,
-  boundedText,
+  boundedFreeText,
   emptyClipProject,
   emptyCompositionInputs,
+  freeTextLength,
   matchingCompositionInputs,
   normalizeClipProject,
   projectCompositionDocument,
@@ -19,7 +20,7 @@ import {
   validClipProject,
   validNewClipProject,
 } from '@/entities/clip-project'
-import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
+import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
@@ -133,9 +134,13 @@ export function ClipProjectForm({
     enableBeforeUnload: guard,
     withResolver: true,
   })
+  // Neither the source picker nor ①'s committing actions wait for the autosave: gating them on
+  // unsaved state unmounted the open quote on every keystroke. Each committing action flushes the
+  // queue before it starts instead, so nothing is committed against settings the server has not
+  // taken (CLIP-39).
   useEffect(() => {
-    onUploadAllowed?.(savable && !dirty && synced && !pending && !templateChanged)
-  }, [savable, dirty, synced, pending, templateChanged, onUploadAllowed])
+    onUploadAllowed?.(savable && !disabled && !templateChanged)
+  }, [savable, disabled, templateChanged, onUploadAllowed])
   /** The queue's one way to reach the server, and the one place `baseline` moves for an autosave.
    *  A form unmounted before the answer lands simply does not move it — the next mount derives it
    *  from the refreshed `stored` instead. */
@@ -318,14 +323,12 @@ export function ClipProjectForm({
                 onChange={(event) =>
                   change(
                     'instruction',
-                    boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+                    boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
                   )
                 }
               />
               <FieldCount
-                left={
-                  CLIP_PROJECT_LIMITS.instruction - compositionCharacters(draft.instruction ?? '')
-                }
+                left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
               />
             </div>
           )}
@@ -471,7 +474,7 @@ export function ClipProjectForm({
                 {t('project.create')}
               </Button>
             )}
-            {actions?.(valid && !dirty && synced && !pending && !templateChanged, dirty)}
+            {actions?.(valid && !disabled && !templateChanged, dirty)}
           </div>
         </ActionBar>
       )}

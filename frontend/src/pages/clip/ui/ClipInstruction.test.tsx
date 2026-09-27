@@ -69,4 +69,26 @@ describe("the project's own instruction", () => {
     fireEvent.change(instruction, { target: { value: '가'.repeat(max - 3) } })
     expect(screen.getByText('3자 남음')).toBeInTheDocument()
   })
+
+  // F61: the instruction is counted the way the server bounds it — every character, the spaces
+  // and the punctuation included — so a text the counter shows as fitting is always saved
+  // (CLIP-121).
+  it('counts every character the server counts, so a text that fits is saved', async () => {
+    const writes: ClipProjectDraft[] = []
+    renderAppAt('/clips/project', {
+      user: { id: 'alice' },
+      clips: { templates: [savedTemplate], projects: [project], projectWrites: writes },
+    })
+    const max = CLIP_PROJECT_LIMITS.instruction
+    const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)
+    // 1200 characters, only 600 of them syllables.
+    const pasted = '가 '.repeat(600)
+    fireEvent.change(instruction, { target: { value: pasted } })
+    expect(instruction).toHaveValue(pasted.slice(0, max))
+    expect(screen.getByText('0자 남음')).toBeInTheDocument()
+    await waitFor(() => expect(writes.at(-1)?.instruction).toBe(pasted.slice(0, max)), {
+      timeout: 4000,
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

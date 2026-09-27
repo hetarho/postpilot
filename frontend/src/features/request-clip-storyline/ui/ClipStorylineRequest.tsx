@@ -5,10 +5,10 @@ import {
   CLIP_PROJECT_LIMITS,
   ClipFailureNotice,
   ClipQuoteApproval,
-  boundedText,
+  boundedFreeText,
+  freeTextLength,
   type ClipProject,
 } from '@/entities/clip-project'
-import { compositionCharacters } from '@/entities/clip-template'
 import { progressLabel, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
@@ -25,6 +25,7 @@ export function ClipStorylineRequest({
   write,
   job,
   disabled = false,
+  flush,
 }: {
   ownerId: string
   project: ClipProject
@@ -34,6 +35,9 @@ export function ClipStorylineRequest({
   job?: GenerationJob
   /** Another clip job holds the project. */
   disabled?: boolean
+  /** Writes ①'s unsaved settings before the request starts: the storyline call reads the
+   *  instruction and the answers (CLIP-39). A refusal stops the start. */
+  flush?: () => Promise<unknown>
 }) {
   const { t } = useTranslation('clips')
   const [request, setRequest] = useState('')
@@ -64,7 +68,7 @@ export function ClipStorylineRequest({
               className="max-h-24 min-w-0 flex-1"
               value={request}
               onChange={(event) =>
-                setRequest(boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
+                setRequest(boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
               }
             />
             <Popover
@@ -93,7 +97,7 @@ export function ClipStorylineRequest({
                   }
                   onRefresh={storyline.refresh}
                   onApprove={(quote) => {
-                    void storyline.start(quote)
+                    void storyline.start(quote, flush)
                     close()
                   }}
                 />
@@ -103,7 +107,7 @@ export function ClipStorylineRequest({
           {request && (
             <Typography variant="meta" as="p">
               {t('storylineRequest.count', {
-                used: compositionCharacters(request),
+                used: freeTextLength(request),
                 max: CLIP_PROJECT_LIMITS.instruction,
               })}
             </Typography>

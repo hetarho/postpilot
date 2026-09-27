@@ -51,6 +51,7 @@ import {
   withSourceSound,
 } from '@/entities/clip-plan'
 import {
+  CLIP_PROJECT_LIMITS,
   compositionInputsToProto,
   toProjectComposition,
   type ClipProject,
@@ -202,6 +203,13 @@ export interface FakeClipsOptions {
   projectListFails?: boolean
   sourceRequests?: unknown[]
   retainedBatches?: ProtoClipSourceBatch[]
+  /** What a generation quote reports it can reuse from the previous attempt (CLIP-96). */
+  quoteRecovery?: {
+    reusedChunks?: number
+    remainingChunks?: number
+    renderOnly?: boolean
+    responseRetries?: number
+  }
   sourceJobStatus?: (id: string) => string | undefined
   reserveFails?: boolean
   confirmFails?: boolean
@@ -513,6 +521,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    // The server bounds the instruction in every Unicode character (clip.BoundedText).
+    if (
+      req.instruction !== undefined &&
+      Array.from(req.instruction).length > CLIP_PROJECT_LIMITS.instruction
+    )
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     if (req.title !== undefined) p.title = req.title
     // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).
     const switchedTo =
@@ -646,6 +660,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'narration', stage: 'write', calls: 1 },
       ],
       sequenceCaptions: sequenceCost(projects.get(req.projectId)),
+      ...options.quoteRecovery,
     })
   })
   // A revision is quoted and started like a generation, but against the SAVED

@@ -24,7 +24,7 @@ import {
   useSoundBatchHandoff,
   useUploadAttemptLifecycle,
 } from './lifecycle'
-import { requiredSourcesForStep, soundRetryAction, unsavedCorrection } from './rules'
+import { requiredSourcesForStep, soundRetryAction } from './rules'
 import { stepForProject, type ClipStep } from './steps'
 
 /** Every hook the workspace runs on lives HERE, above the panels: the steps are panels of ONE
@@ -95,8 +95,6 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     fingerprint: entry.metadata.fingerprint,
     url: entry.previewURL,
   }))
-  /** The plan the owner may still leave behind, watched by the page's navigation guard. */
-  const unsaved = unsavedCorrection(correction.dirty, project.finalized)
   /** Everything a run has to say while it owns the screen. */
   const run = {
     focused,
@@ -219,7 +217,6 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     run,
     pending,
     uploading,
-    unsaved,
   }
 }
 

@@ -30,8 +30,3 @@ export function soundRetryAction(correction: {
     else void correction.save()
   }
 }
-
-/** Whether the step the owner is looking at may still be left without losing work. */
-export function unsavedCorrection(dirty: boolean, finalized: unknown) {
-  return dirty && !finalized
-}

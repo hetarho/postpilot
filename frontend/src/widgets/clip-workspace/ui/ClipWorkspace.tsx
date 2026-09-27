@@ -23,7 +23,7 @@ import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
 import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
-import { useRunFocus, useUnsavedNotice } from '../model/lifecycle'
+import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps } from '../model/steps'
 import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
@@ -31,19 +31,9 @@ import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipSt
 
 /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
-export function ClipWorkspace({
-  ownerId,
-  project,
-  onUnsavedChange,
-}: {
-  ownerId: string
-  project: ClipProject
-  /** Told whenever the workspace starts or stops holding work the owner has not saved. */
-  onUnsavedChange?: (unsaved: boolean) => void
-}) {
+export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: ClipProject }) {
   const { t } = useTranslation('clips')
   const workspace = useClipWorkspace(ownerId, project)
-  useUnsavedNotice(workspace.unsaved, onUnsavedChange)
   // The run view takes the screen, so it takes the focus: the ref stays OUT of the handles,
   // because a ref reached through an object is a ref read during render.
   const runRoot = useRunFocus(workspace.run.focused)
@@ -90,6 +80,14 @@ export function ClipWorkspace({
     />
   )
 
+  // Reselection is asked for only once the retained originals are gone — expired, missing or
+  // being cleaned up — never inside the retention window the picker discloses (CLIP-21, CLIP-23).
+  const originalsGone =
+    !upload.readyBatch &&
+    upload.entries.some(
+      (entry) =>
+        !entry.file && ['expired', 'missing', 'cleanup_pending'].includes(entry.availability ?? ''),
+    )
   const generatePanel = (
     <ClipProjectForm
       ownerId={ownerId}
@@ -127,11 +125,13 @@ export function ClipWorkspace({
             )
       }
     >
-      {!reading && (project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
-        <Typography variant="body" className="text-content-secondary mt-6">
-          {t('generation.reselection')}
-        </Typography>
-      )}
+      {!reading &&
+        originalsGone &&
+        (project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
+          <Typography variant="body" className="text-content-secondary mt-6">
+            {t('generation.reselection')}
+          </Typography>
+        )}
       {/* Bind a whole source to an item before generating, where footage of one
           cut of meat carries nothing that tells it from another (CLIP-123). */}
       {!reading && (
@@ -310,6 +310,7 @@ export function ClipWorkspace({
             write={generation.writeRef}
             job={job}
             disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
+            flush={() => save.flush()}
           />
         )
       }

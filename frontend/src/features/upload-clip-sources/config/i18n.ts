@@ -14,7 +14,7 @@ export const i18n = {
         '위에서 아래로가 아니라, 왼쪽에서 오른쪽 순서로 영상이 이어져요. 지시문을 쓰면 지시문이 우선해요.',
       originalSound: '원본 소리 유지',
       originalSoundName: '{{filename}} 원본 소리 유지',
-      boundItem: '이 원본은 어느 메뉴인가요? (선택)',
+      boundItem: '이 원본은 어느 항목인가요? (선택)',
       boundItemHelp: '자막이 항목 이름을 말할 수 있게 도와주는 힌트예요. 비워 두어도 됩니다.',
       boundItemName: '{{filename}}의 항목',
       boundItemNone: '자동으로 연결',
@@ -44,7 +44,7 @@ export const i18n = {
       select: '원본 영상 선택',
       replace: '원본 영상 다시 선택',
       cancel: '선택 취소',
-      saveFirst: '영상 템플릿과 답변을 입력하고 설정을 저장한 뒤 원본 영상을 선택해 주세요.',
+      saveFirst: '클립 설정을 마치면 원본 영상을 선택할 수 있어요.',
       confirmed: '업로드 확인 완료',
       completed: '처리가 끝난 원본 목록',
       outcome: {
@@ -118,8 +118,7 @@ export const i18n = {
       select: 'Select source videos',
       replace: 'Reselect source videos',
       cancel: 'Cancel selection',
-      saveFirst:
-        'Choose a template, fill in its answers and save the setup before selecting source videos.',
+      saveFirst: 'Finish the clip’s setup to choose source videos.',
       confirmed: 'Upload confirmed',
       completed: 'Processed source filenames',
       outcome: {

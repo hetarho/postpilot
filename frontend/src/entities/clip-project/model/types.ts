@@ -12,11 +12,8 @@ import type {
   ClipAttemptInspection,
   ClipObservations,
 } from '@/entities/clip-observation/@x/clip-project'
-import {
-  compositionCharacters,
-  type ClipAccent,
-  type ClipComposition,
-} from '@/entities/clip-template/@x/clip-project'
+import { type ClipAccent, type ClipComposition } from '@/entities/clip-template/@x/clip-project'
+import { freeTextLength } from '../lib/bounded-text'
 import { emptyCompositionInputs, validCompositionInputs } from './composition-inputs'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
@@ -24,7 +21,8 @@ export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export type ClipRenderKind = 'server' | 'browser'
 export const CLIP_PROJECT_LIMITS = {
   title: 100,
-  /** The project instruction's maximum, counted CDS-20's way (CLIP-121). */
+  /** The project instruction's maximum, and the owner's requests', in every Unicode character
+   *  as the server counts them (CLIP-121). */
   instruction: 1000,
   minSeconds: 15,
   maxSeconds: 90,
@@ -288,7 +286,7 @@ export function savableClipProject(value: ClipProjectDraft): boolean {
       (Number.isInteger(value.targetDurationMs) &&
         value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
         value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000)) &&
-    compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction
+    freeTextLength(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction
   )
 }
 export function validClipProject(value: ClipProjectDraft, composition?: ClipComposition): boolean {
@@ -301,7 +299,7 @@ export function validClipProject(value: ClipProjectDraft, composition?: ClipComp
     Number.isInteger(value.targetDurationMs) &&
     value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
     value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000 &&
-    compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction &&
+    freeTextLength(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction &&
     validCompositionInputs(composition, value.compositionInputs ?? emptyCompositionInputs())
   )
 }

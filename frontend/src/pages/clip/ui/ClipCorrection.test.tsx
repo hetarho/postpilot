@@ -138,6 +138,19 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
 })
 
+// F72, CLIP-39: ② has no leave-confirmation dialog; an edit still waiting for its autosave is
+// sent as the owner leaves.
+it('leaves ② without a dialog and saves the edit waiting for its autosave', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const view = await mount({ planWrites: writes })
+  await selectText()
+  setField('자막 원문', '떠나기 전 장면')
+  await act(() => view.router.navigate({ to: '/clips' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips'))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('떠나기 전 장면'))
+})
+
 // CLIP-53: one selection is ONE sheet. The page behind keeps the preview and the
 // timeline, the item's own controls open over them, and the notice naming that
 // item rides inside its sheet rather than anywhere in ②'s flow.
@@ -149,7 +162,7 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
     { code: 'plan_target_duration', cutId: '', elementId: '', action: 'shortfall' },
   ]
   const cutNotice = '이 장면은 원래 속도인 1배속으로 담았어요.'
-  const captionNotice = '이 문구는 템플릿에서 정한 디자인으로 담았어요.'
+  const captionNotice = '이 문구는 이 클립에서 고른 디자인으로 담았어요.'
   await mount({ projects: [p] })
   const page = () => within(screen.getByRole('region', { name: '컷·자막 수정' }))
 

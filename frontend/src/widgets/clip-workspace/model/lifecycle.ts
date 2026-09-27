@@ -50,12 +50,3 @@ export function useDiscardQueueWhenFinalized(
     if (finalized) discard(projectId)
   }, [finalized, projectId, discard])
 }
-
-/** The workspace holds the draft, and the ROUTE is what may refuse to leave it behind, so the
- *  one fact the page needs travels up as it changes rather than as a state the page duplicates. */
-export function useUnsavedNotice(unsaved: boolean, report?: (unsaved: boolean) => void) {
-  useEffect(() => {
-    report?.(unsaved)
-    return () => report?.(false)
-  }, [unsaved, report])
-}

@@ -34,6 +34,7 @@ export const i18n = {
       reuse:
         '완료된 분석 {{done}}개를 재사용하고 {{remaining}}개를 분석해요. 응답 형식이 잘못되면 각 요청을 최대 {{retries}}회 추가 시도해요. 사용하지 않은 예약액은 반환돼요.',
       resumeRender: '렌더링 이어서 하기',
+      restart: '이전 시도에서 이어 쓸 수 있는 작업이 없어 분석부터 다시 해요.',
 
       title: '이번 작업의 크레딧',
       quoting: '최대 사용 크레딧을 확인하는 중이에요',
@@ -96,8 +97,8 @@ export const i18n = {
       sceneTrimmed: '관찰된 한 장면 안으로 이 컷을 줄였어요.',
       normalSpeed: '이 장면은 원래 속도인 1배속으로 담았어요.',
       captionStyleFallback: '이 자막은 프로젝트의 기본 자막 스타일로 담았어요.',
-      approvedStyle: '이 문구는 템플릿에서 정한 디자인으로 담았어요.',
-      approvedAccent: '이 문구는 템플릿에서 정한 강조색으로 담았어요.',
+      approvedStyle: '이 문구는 이 클립에서 고른 디자인으로 담았어요.',
+      approvedAccent: '이 문구는 이 클립에서 고른 강조색으로 담았어요.',
       cropAdjusted: '이 장면의 화면 중심을 영상 안으로 맞췄어요.',
       volumeAdjusted: '이 장면의 소리 크기를 원본의 0~100% 안으로 맞췄어요.',
       hardCut: '이 장면은 페이드 없이 바로 이어져요.',
@@ -160,6 +161,8 @@ export const i18n = {
       reuse:
         'Reuse {{done}} completed analyses and analyze {{remaining}} remaining chunks. Invalid responses allow up to {{retries}} additional attempts per request. Unused reservation is refunded.',
       resumeRender: 'Resume rendering',
+      restart:
+        'Nothing from the previous attempt can be reused, so this starts over from the analysis.',
 
       title: 'Credits for this attempt',
       quoting: 'Checking the maximum credit charge',
@@ -224,8 +227,8 @@ export const i18n = {
       sceneTrimmed: 'This cut was shortened to one observed scene.',
       normalSpeed: 'This cut uses its original 1× speed.',
       captionStyleFallback: 'This caption uses the project’s default caption style.',
-      approvedStyle: 'This text follows the template’s selected design.',
-      approvedAccent: 'This text uses the template’s accent colour.',
+      approvedStyle: 'This text follows the design chosen for this clip.',
+      approvedAccent: 'This text uses the accent colour chosen for this clip.',
       cropAdjusted: 'The crop centre was moved inside this frame.',
       volumeAdjusted: 'This cut’s volume was kept within 0–100% of the original.',
       hardCut: 'This cut joins directly without a fade.',

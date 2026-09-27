@@ -26,7 +26,7 @@ export const i18n = {
       name: '클립 제목',
       template: '영상 템플릿',
       templateOptional:
-        '템플릿 없이도 만들 수 있어요. 고르면 디자인·말투 설정이 그 값으로 채워지고, 뒤에서 하나씩 바꿀 수 있어요.',
+        '템플릿 없이도 만들 수 있어요. 고르면 그 구성과 시작 디자인을 따르고, 디자인은 뒤에서 하나씩 바꿀 수 있어요.',
       chooseTemplate: '없음',
       captionStyles: '자막 스타일',
       captionStylesHelp:
@@ -130,7 +130,7 @@ export const i18n = {
       name: 'Clip title',
       template: 'Video template',
       templateOptional:
-        'A clip can be made without one. Choosing a template fills the design and voice settings with its values, and every one stays editable.',
+        'A clip can be made without one. Choosing one takes its outline and its starting design, and the design stays editable.',
       chooseTemplate: 'None',
       captionStyles: 'Caption styles',
       captionStylesHelp:

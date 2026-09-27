@@ -16,3 +16,16 @@ export function boundedText(text: string, max: number) {
   }
   return text
 }
+
+/** A free text's length as the server bounds it (`clip.BoundedText`): every Unicode character,
+ *  spaces and punctuation included. The instruction and the owner's requests are counted this
+ *  way on both sides, so a text the counter shows as fitting is one the server accepts
+ *  (CLIP-121). */
+export function freeTextLength(text: string) {
+  return Array.from(text).length
+}
+/** The longest prefix of a free text within `max` characters, counted as `freeTextLength`. */
+export function boundedFreeText(text: string, max: number) {
+  const characters = Array.from(text)
+  return characters.length <= max ? text : characters.slice(0, max).join('')
+}

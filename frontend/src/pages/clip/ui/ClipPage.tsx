@@ -1,12 +1,11 @@
-import { useRef, useState } from 'react'
-import { useBlocker, useParams } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useClipProject } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
 import { ClipProjectForm } from '@/features/edit-clip-project'
 import { ClipTopRow, ClipStatusLine, ClipWorkspace } from '@/widgets/clip-workspace'
 import { appFailureFromConnect } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, Typography, pageStyles } from '@/shared/ui'
+import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
 
 /** `/clips/new` — a project that does not exist yet. It has no lifecycle, so it shows no step
  *  bar and no delete: just the settings and the one committing action that mints it, which stays
@@ -37,18 +36,8 @@ export function ClipPage() {
   const { t } = useTranslation('clips')
   const { user } = useSession()
   const { clipId } = useParams({ strict: false })
+  // No leave dialog: ② autosaves and sends a waiting edit as it is left (CLIP-39).
   const query = useClipProject(user?.id ?? '', clipId)
-  // The unsaved-correction guard belongs to the PAGE, because leaving is a ROUTE change: the
-  // workspace says whether it still holds work (its draft outlives a step change), and the page
-  // is what may refuse the navigation.
-  const [unsaved, setUnsaved] = useState(false)
-  const leaving = useRef(false)
-  const guard = () => unsaved && !leaving.current
-  const blocker = useBlocker({
-    shouldBlockFn: guard,
-    enableBeforeUnload: guard,
-    withResolver: true,
-  })
   return (
     // `flex-1 flex-col` here plus `mt-auto` on a dock is what puts the bar at the BOTTOM of a
     // short panel: `sticky` can only pull an element up toward the scrollport edge, never push
@@ -61,7 +50,6 @@ export function ClipPage() {
           key={`${user?.id}-${clipId}`}
           ownerId={user?.id ?? ''}
           project={query.data}
-          onUnsavedChange={setUnsaved}
         />
       ) : query.isPending ? (
         <>
@@ -81,18 +69,6 @@ export function ClipPage() {
           </div>
         </>
       )}
-      <Dialog
-        open={blocker.status === 'blocked'}
-        title={t('correction.leaveTitle')}
-        confirmLabel={t('project.leave')}
-        onClose={() => blocker.reset?.()}
-        onConfirm={() => {
-          leaving.current = true
-          blocker.proceed?.()
-        }}
-      >
-        {t('correction.leaveBody')}
-      </Dialog>
     </main>
   )
 }

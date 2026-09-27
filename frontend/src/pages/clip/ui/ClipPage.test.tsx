@@ -219,10 +219,10 @@ describe('clip directory and setup', () => {
     // A project minted before this opens ① with the length it already had (CLIP-130).
     expect(screen.getByLabelText('목표 길이 (초)')).toHaveValue(30)
     await user.type(title, ' 기록')
-    // Nothing is pressed: the settings save themselves a beat after the typing stops (CLIP-39),
-    // and the picker simply waits for the server to have them.
+    // Nothing is pressed: the settings save themselves a beat after the typing stops, and the
+    // picker does not wait for them (CLIP-39).
     expect(screen.queryByRole('button', { name: '설정 저장' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
+    expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
     expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
     expect(projectWrites[0]).toMatchObject({
       title: '제주 여행 기록',

@@ -48,7 +48,8 @@ export const i18n = {
       creditPolicy:
         '표시된 최대 크레딧을 승인해야 생성해요. 모든 원본과 분석용 영상을 검증한 뒤 필요한 크레딧을 한 번 예약하며, 승인액과 예약액을 넘겨 청구하지 않아요. 실패한 작업에 확인된 유료 사용이 없으면 기본 비용도 차감하지 않아요.',
       plans: '크레딧·요금제 확인',
-      reselection: '다시 만들려면 원본 영상을 새로 선택해 주세요. 이전 원본은 보관하지 않아요.',
+      reselection:
+        '보관 기간이 지나 원본 영상이 없어요. 다시 만들려면 원본 영상을 새로 선택해 주세요.',
       pollingFailed: '작업 상태를 불러오지 못했어요. 새 작업을 시작하지 않고 다시 확인해 주세요.',
       result: '완성된 클립',
       preview: '클립 미리보기',
@@ -116,7 +117,7 @@ export const i18n = {
         'Generation requires approval of the displayed maximum. After every original and analysis copy is verified, credits are reserved once. Your charge never exceeds either approval or reservation. Failed work without confirmed billable usage costs nothing, including the base charge.',
       plans: 'Check credits and plans',
       reselection:
-        'Select your source videos again to generate another clip. Previous originals are not retained.',
+        'The retained source videos are no longer available. Select them again to generate another clip.',
       pollingFailed: 'Unable to check this job. Check again without starting a new job.',
       result: 'Finished clip',
       preview: 'Clip preview',

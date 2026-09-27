@@ -6,11 +6,11 @@ export const i18n = {
   ko: {
     directory: {
       title: '영상 템플릿',
-      description: '필요한 정보와 컷 구성, 영상 디자인을 저장해 두세요.',
+      description: '클립에 받을 정보, 순서대로 담을 구성과 시작 디자인을 저장해 두세요.',
       saved: '저장된 영상 템플릿',
       empty: '아직 저장된 영상 템플릿이 없어요',
       emptyHelp:
-        '클립을 만들 때 받을 정보와 컷 구성, 영상 디자인을 한 번 정해 두면 매번 다시 정하지 않아도 돼요.',
+        '받을 정보와 구성의 순서, 시작 디자인을 한 번 정해 두면 이 템플릿을 고른 클립이 그대로 시작해요.',
       newDockAria: '새 영상 템플릿 만들기',
       loadFailed: '영상 템플릿을 불러오지 못했어요.',
       projectCount: '클립 {{count}}개',
@@ -21,11 +21,12 @@ export const i18n = {
   en: {
     directory: {
       title: 'Video templates',
-      description: 'Save the information to collect, the outline and video design.',
+      description:
+        'Save what a clip asks for, the outline it follows in order and the design it starts in.',
       saved: 'Saved video templates',
       empty: 'No video templates yet',
       emptyHelp:
-        'Decide once what a clip should ask for, how its cuts are composed and how its copy looks, and every clip reuses it.',
+        'Decide once what a clip asks for, the order it follows and the design it starts in, and a clip that picks this template starts that way.',
       newDockAria: 'Create a new video template',
       loadFailed: 'Could not load your video templates.',
       projectCount: '{{count}} clips',

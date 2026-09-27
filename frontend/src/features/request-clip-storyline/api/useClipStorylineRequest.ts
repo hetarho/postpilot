@@ -92,9 +92,15 @@ export function useClipStorylineRequest({
     failure: failure ?? (mine?.status === 'failed' ? mine.failure : undefined),
     job: mine,
     refresh: () => void query.refetch(),
-    start: async (quote: ClipQuote) => {
+    start: async (quote: ClipQuote, flush?: () => Promise<unknown>) => {
       if (running || !text) return
       setFailure(undefined)
+      try {
+        await flush?.()
+      } catch {
+        // The failed save states itself on ①'s own line; the request stays put.
+        return
+      }
       try {
         await mutation.mutateAsync(quote)
       } catch (error) {

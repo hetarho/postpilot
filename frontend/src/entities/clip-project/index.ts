@@ -22,7 +22,7 @@ export {
   setClipSourceOriginalSound,
   useReorderClipSources,
 } from './api/sources'
-export { boundedText } from './lib/bounded-text'
+export { boundedFreeText, boundedText, freeTextLength } from './lib/bounded-text'
 export type { ClipSourceAssociation } from './model/composition'
 export {
   emptyCompositionInputs,

@@ -6,10 +6,10 @@ import {
   CLIP_PROJECT_LIMITS,
   ClipFailureNotice,
   ClipQuoteApproval,
-  boundedText,
+  boundedFreeText,
+  freeTextLength,
   type ClipProject,
 } from '@/entities/clip-project'
-import { compositionCharacters } from '@/entities/clip-template'
 import { progressLabel, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
@@ -52,7 +52,7 @@ export function ClipRevisionRequest({
   const [target, setTarget] = useState<ClipRevisionTarget>('narration')
   const { myPlan } = useMyPlan()
   const revision = useClipRevision({ ownerId, project, request, target, observe, write, job })
-  const used = compositionCharacters(request)
+  const used = freeTextLength(request)
   const running = revision.running
   const progress = revision.job ? progressRatio(revision.job) : undefined
   const title = revision.job ? progressLabel(revision.job) : t('revision.running')
@@ -104,7 +104,7 @@ export function ClipRevisionRequest({
               autoGrow
               value={request}
               onChange={(event) =>
-                setRequest(boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
+                setRequest(boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
               }
             />
             <Popover

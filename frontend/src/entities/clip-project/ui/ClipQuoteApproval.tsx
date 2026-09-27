@@ -31,8 +31,8 @@ export function ClipQuoteApproval({
   approveDisabled?: boolean
   onRefresh: () => void
   onApprove: (quote: ClipQuote) => void
-  /** What this particular action adds to the ceiling — a resumed generation's
-   *  reuse line, for one. */
+  /** What this particular action says about the work it resumes — the reuse line, or what
+   *  restarts — which stands outside the fold: it is part of what the owner approves (CLIP-96). */
   children?: ReactNode
 }) {
   const { t } = useTranslation('clips')
@@ -100,9 +100,9 @@ export function ClipQuoteApproval({
               ))}
           </ul>
         )}
-        {children}
         {balance?.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
       </div>
+      {children}
       {/* What the sequence-rendered captions add to the render this approval
           leads to (CDS-81). It states work, never a limit: nothing is refused
           for the count (CLIP-145) and the render itself is credit-free

@@ -204,7 +204,7 @@ function QuotedAction({
       onRefresh={() => void query.refetch()}
       onApprove={onApprove}
     >
-      {quote?.recovery && (
+      {quote?.recovery ? (
         <Typography variant="body" role="status">
           {quote.recovery.renderOnly
             ? t('credits.renderOnly')
@@ -214,6 +214,15 @@ function QuotedAction({
                 retries: quote.recovery.responseRetries,
               })}
         </Typography>
+      ) : (
+        // A prior attempt that left no compatible recovery data says what restarts rather than
+        // implying its work carries over (CLIP-96).
+        quote &&
+        (project.latestJob?.status === 'failed' || project.latestJob?.status === 'cancelled') && (
+          <Typography variant="body" role="status">
+            {t('credits.restart')}
+          </Typography>
+        )
       )}
     </ClipQuoteApproval>
   )

@@ -226,6 +226,19 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   useLayoutEffect(() => {
     saveRef.current = save
   })
+  // No dialog guards leaving ② (CLIP-39): an edit still waiting for its autosave is sent when the
+  // correction unmounts or the page is hidden, so leaving never takes it along. The send outlives
+  // the component; only its answer is dropped.
+  useEffect(() => {
+    const leave = () => {
+      if (current.current.dirty) void saveRef.current()
+    }
+    window.addEventListener('pagehide', leave)
+    return () => {
+      window.removeEventListener('pagehide', leave)
+      leave()
+    }
+  }, [])
   const active =
     !!project.finalized ||
     project.latestJob?.status === 'queued' ||
