@@ -8,12 +8,16 @@ export const i18n = {
       responseRetryCount: '{{stage}} ({{current}}/{{total}})',
       generate: '생성',
       retry: '다시 생성',
+      storylineFirst: '스토리라인 먼저',
+      makeNow: '바로 만들기',
       running: '클립을 만드는 중이에요',
       stage: {
         flow_retry: '컷 구성 응답 형식 다시 확인 중',
         narrate_retry: '자막 응답 형식 다시 확인 중',
         flow: '컷 구성',
         narrate: '자막 작성',
+        storyline: '스토리라인 작성 중',
+        storyline_retry: '스토리라인 응답 형식 다시 확인 중',
         analyze_retry: '영상 분석 응답 형식 다시 확인 중',
         plan_retry: '컷·자막 응답 형식 다시 확인 중',
 
@@ -59,12 +63,16 @@ export const i18n = {
       responseRetryCount: '{{stage}} ({{current}}/{{total}})',
       generate: 'Generate',
       retry: 'Generate again',
+      storylineFirst: 'Storyline first',
+      makeNow: 'Make now',
       running: 'Creating your clip',
       stage: {
         flow_retry: 'Correcting the flow response format',
         narrate_retry: 'Correcting the narration response format',
         flow: 'Footage flow',
         narrate: 'Narration',
+        storyline: 'Writing the storyline',
+        storyline_retry: 'Correcting the storyline response format',
         analyze_retry: 'Correcting the analysis response format',
         plan_retry: 'Correcting the composition response format',
 

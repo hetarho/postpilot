@@ -14,6 +14,14 @@ import type { FakeGenerationJobRow, FakeJobsOptions } from '@/test/jobs'
 import type { FakeProvidersOptions } from '@/test/providers'
 import type { FakePlansOptions } from '@/test/plans'
 
+/** ①'s 바로 만들기 opens its own quote and approval (CLIP-177): open it, then the approve button. */
+async function openApproval(amount: number) {
+  const trigger = await screen.findByRole('button', { name: '바로 만들기' })
+  await waitFor(() => expect(trigger).toBeEnabled())
+  if (trigger.getAttribute('aria-expanded') !== 'true') await userEvent.click(trigger)
+  return screen.findByRole('button', { name: `최대 ${amount} 크레딧 · 승인하고 생성` })
+}
+
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
   ...(await original<object>()),
   readSourceManifest: vi.fn(),
@@ -167,15 +175,13 @@ it.each(['CLIP_MEDIA_UNAVAILABLE', 'CLIP_MEDIA_RETRY_EXHAUSTED', 'CLIP_MEDIA_TIM
     expect(
       await screen.findByText(/잠시 후 다시 시도하세요\. 완료된 분석과 이전 결과는 유지됩니다/),
     ).toBeVisible()
-    expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
     expect(starts).toHaveLength(0)
     await goToStep('수정')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
     await goToStep('생성')
     await selectSource()
-    expect(
-      await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
-    ).toBeEnabled()
+    expect(await openApproval(20)).toBeEnabled()
     expect(starts).toHaveLength(0)
   },
 )
@@ -216,9 +222,7 @@ it('states the sequence-rendered captions on the approval surface', async () => 
     },
   })
   await selectSource()
-  const approve = await screen.findByRole('button', {
-    name: '최대 20 크레딧 · 승인하고 생성',
-  })
+  const approve = await openApproval(20)
   expect(screen.getByText('프레임마다 그리는 자막 2개 · 렌더링에 약 3초 더 걸려요')).toBeVisible()
   await waitFor(() => expect(approve).toBeEnabled())
 })
@@ -249,7 +253,7 @@ it('approves once, retains local previews after terminal and refetches the resul
     },
   )
   const { user, revoke } = await selectSource()
-  const generate = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  const generate = await openApproval(20)
   await waitFor(() => expect(generate).toBeEnabled())
   // The owner approves TWO writing calls: the footage flow, then the narration. The breakdown
   // folds away by default so the docked panel does not cover the step behind it; the ceiling
@@ -313,9 +317,7 @@ it('approves once, retains local previews after terminal and refetches the resul
   expect(screen.getByText('clip.mp4 · 처리 완료')).toBeInTheDocument()
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
-  expect(
-    await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
-  ).toBeEnabled()
+  expect(await openApproval(20)).toBeEnabled()
 })
 
 it.each(['done', 'failed', 'cancelled'])(
@@ -342,7 +344,7 @@ it.each(['done', 'failed', 'cancelled'])(
       { jobs: [job] },
     )
     const { user } = await selectSource()
-    await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+    await user.click(await openApproval(20))
     await screen.findByRole('progressbar', { name: '영상 분석' })
     job.status = status
     await act(() =>
@@ -355,7 +357,7 @@ it.each(['done', 'failed', 'cancelled'])(
         }),
       }),
     )
-    const approve = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+    const approve = await openApproval(20)
     await waitFor(() => expect(approve).toBeEnabled())
     expect(starts).toHaveLength(1)
     expect(quotes).toHaveLength(2)
@@ -385,15 +387,13 @@ it('keeps an older result visible on a durable credit refusal and requires a new
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 준비 중 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
-  expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
   await goToStep('수정')
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   await goToStep('생성')
   await selectSource()
-  expect(
-    await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
-  ).toBeEnabled()
+  expect(await openApproval(20)).toBeEnabled()
 })
 it('reloads saved results without originals and refreshes an expired preview only once automatically', async () => {
   let reads = 0
@@ -427,7 +427,7 @@ it('blocks an observer the server refuses, says why, and never substitutes anoth
     eligibility: [{ providerId: 'p', modelId: 'o', status: 'video_input_absent' }],
   })
   await selectSource()
-  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   expect(starts).toHaveLength(0)
   expect(calls).not.toContain('QuoteClipGeneration')
   // The saved choice stays selected and the reason sits beside the field and in the
@@ -468,7 +468,7 @@ it('enables a non-Google observer the server qualified even without static proce
     qwen,
   )
   await selectSource()
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   expect(quotes[0]).toMatchObject({ observeModel: { providerId: 'p', modelId: 'qwen/vl' } })
 })
 it('greys every ineligible observer with its one reason and keeps the refused saved choice', async () => {
@@ -534,13 +534,13 @@ it('fails the clip action closed while eligibility loads or cannot be read, and 
   const calls: string[] = []
   mount({ eligibilityFails: () => down, calls })
   await selectSource()
-  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   await screen.findAllByText(/관찰 모델이 클립 분석에 쓸 수 있는지 확인하지 못했어요/)
   expect(calls).not.toContain('QuoteClipGeneration')
   expect(screen.queryByText(/NETWORK_UNAVAILABLE/)).not.toBeInTheDocument()
   down = false
   await userEvent.setup().click(screen.getByRole('button', { name: '다시 확인' }))
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
 })
 it('never treats an unspecified, unknown or duplicated status as eligible', async () => {
   for (const eligibility of [
@@ -554,7 +554,7 @@ it('never treats an unspecified, unknown or duplicated status as eligible', asyn
     const calls: string[] = []
     const view = mount({ eligibility, calls })
     await selectSource()
-    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
     expect(calls).not.toContain('QuoteClipGeneration')
     expect(
       screen.getAllByText(
@@ -569,7 +569,7 @@ it('does not automatically retry a failed start request', async () => {
   const calls: string[] = []
   mount({ calls, generationFails: true })
   const { user } = await selectSource()
-  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.click(await openApproval(20))
   await screen.findByRole('alert')
   expect(calls.filter((c) => c === 'StartClipGeneration')).toHaveLength(1)
 })
@@ -589,7 +589,7 @@ it('resolves a lost accepted response by owned identity reads without replaying 
     { jobs: [job] },
   )
   const { user, revoke } = await selectSource()
-  await user.dblClick(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.dblClick(await openApproval(20))
   await screen.findByText('영상 분석')
   await waitFor(() => expect(screen.queryByText(/요청의 접수 여부를 확인/)).not.toBeInTheDocument())
   expect(starts).toHaveLength(1)
@@ -626,7 +626,7 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
     { jobs: [other] },
   )
   const { user, revoke } = await selectSource()
-  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.click(await openApproval(20))
   await screen.findByText(/요청의 접수 여부를 확인/)
   await user.click(screen.getByRole('button', { name: '접수된 작업 다시 확인' }))
   expect(starts).toHaveLength(1)
@@ -643,14 +643,14 @@ it('invalidates a quote for dirty settings, even when reverted, without generati
     starts: unknown[] = []
   mount({ quoteRequests: quotes, generationStarts: starts })
   const { user } = await selectSource()
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   expect(quotes).toHaveLength(1)
   const title = screen.getByLabelText('클립 제목')
   await user.type(title, 'x')
   expect(screen.queryByRole('button', { name: /승인하고 생성/ })).not.toBeInTheDocument()
   expect(quotes).toHaveLength(1)
   await user.keyboard('{Backspace}')
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   expect(quotes).toHaveLength(2)
   expect(starts).toHaveLength(0)
 })
@@ -670,7 +670,7 @@ it('refreshes the quote after a model change and never starts while that choice 
     },
   )
   const { user } = await selectSource()
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   await user.click(screen.getByRole('combobox', { name: /작성/ }))
   await user.click(screen.getByRole('option', { name: 'Writer two' }))
   await waitFor(() => expect(quotes).toHaveLength(2))
@@ -699,7 +699,7 @@ it('finishes the locally owned job even when another tab becomes the latest proj
     { jobs: [own, other] },
   )
   const { user, revoke } = await selectSource()
-  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.click(await openApproval(20))
   await screen.findByText('영상 분석')
   replaceLatest = true
   await act(() =>
@@ -736,10 +736,10 @@ it('replaces source-bound quotes and sends only the newly displayed quote', asyn
     starts: unknown[] = []
   mount({ quoteRequests: quotes, generationStarts: starts })
   await selectSource()
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   const { user } = await selectSource()
   await waitFor(() => expect(quotes).toHaveLength(2))
-  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.click(await openApproval(20))
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(starts[0]).toMatchObject({
     quoteId: 'quote-2',
@@ -758,7 +758,7 @@ it('expires approval and requires a refreshed displayed maximum and another expl
   }
   mount(options)
   const { user } = await selectSource()
-  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  await openApproval(20)
   vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000)
   await act(() => initializeI18n('en'))
   fireEvent(window, new Event('focus'))
@@ -780,7 +780,7 @@ it.each([false, true])(
       balance: { credits: 12, unlimited: master, renewsAt: '2026-09-30T15:00:00Z' },
     })
     await selectSource()
-    const button = await screen.findByRole('button', { name: '최대 79 크레딧 · 승인하고 생성' })
+    const button = await openApproval(79)
     if (master) {
       expect(button).toBeEnabled()
       // Folded away with the rest of the breakdown until the owner asks for it.
@@ -803,8 +803,13 @@ it('displays a pricing refusal beside generation while leaving the previous resu
   expect(screen.getByRole('link', { name: /렌더 \d+ 다운로드/ })).toBeEnabled()
   await goToStep('생성')
   await selectSource()
-  await screen.findByRole('alert')
-  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  // The quote is read from the action that asks for it (CLIP-177), and its refusal is said there.
+  const trigger = await screen.findByRole('button', { name: '바로 만들기' })
+  await waitFor(() => expect(trigger).toBeEnabled())
+  await userEvent.click(trigger)
+  const panel = within(await screen.findByRole('dialog', { name: '바로 만들기' }))
+  await panel.findByRole('alert')
+  expect(panel.queryByRole('button', { name: /승인하고 생성/ })).not.toBeInTheDocument()
 })
 
 it.each([0, 7])(
@@ -876,7 +881,7 @@ it('releases previews immediately on logout and pagehide without discarding an a
     },
   )
   const { user, revoke } = await selectSource()
-  await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+  await user.click(await openApproval(20))
   await screen.findByRole('progressbar', { name: '원본 준비 중' })
   expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
     'src',
@@ -890,4 +895,32 @@ it('releases previews immediately on logout and pagehide without discarding an a
   fireEvent(window, new Event('pagehide'))
   expect(revoke).toHaveBeenCalledTimes(1)
   expect(calls).not.toContain('DiscardClipSourceBatch')
+})
+
+// CLIP-177: ① offers 스토리라인 먼저 beside 바로 만들기, the careful path first, and each opens its
+// own quote and approval from itself: the storyline call is one writing call, priced as such, and
+// its approval starts StartClipStoryline — never the generation.
+it('opens a separate approval for 스토리라인 먼저 and starts the storyline call from it', async () => {
+  const storylineStarts: unknown[] = []
+  const generationStarts: unknown[] = []
+  mount({ storylineStarts, generationStarts })
+  await goToStep('생성')
+  await selectSource()
+  const dock = (await screen.findByRole('button', { name: '바로 만들기' })).closest('div.grid')!
+  expect(
+    within(dock as HTMLElement)
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['스토리라인 먼저', '바로 만들기'])
+  const trigger = screen.getByRole('button', { name: '스토리라인 먼저' })
+  await waitFor(() => expect(trigger).toBeEnabled())
+  await userEvent.click(trigger)
+  const panel = within(await screen.findByRole('dialog', { name: '스토리라인 먼저' }))
+  const approve = await panel.findByRole('button', {
+    name: '최대 12 크레딧 · 승인하고 스토리라인 만들기',
+  })
+  await userEvent.click(approve)
+  await waitFor(() => expect(storylineStarts).toHaveLength(1))
+  expect(storylineStarts[0]).toMatchObject({ approvedMaxCredits: 12 })
+  expect(generationStarts).toHaveLength(0)
 })

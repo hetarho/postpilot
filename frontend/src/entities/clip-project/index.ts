@@ -6,6 +6,7 @@ export {
   useClipProject,
   useClipProjectMutations,
   useClipProjects,
+  useSaveClipStoryline,
 } from './api/clip-project'
 export {
   compositionInputsToProto,
@@ -55,6 +56,8 @@ export type {
   ClipSourceAvailability,
   ClipSourceBatch,
   ClipSourceMetadata,
+  ClipStoryline,
+  ClipStorylineParagraph,
   ReadyClipBatch,
 } from './model/types'
 export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'
@@ -70,5 +73,5 @@ export {
   useClipSourceCalls,
   useRefreshClipProjects,
 } from './api/calls'
-export type { ClipProjectCalls, ClipSourceCalls } from './api/calls'
-export { useClipGenerationQuote } from './api/credits'
+export type { ClipProjectCalls, ClipSourceCalls, ClipStartInput } from './api/calls'
+export { useClipGenerationQuote, type ClipQuoteMode } from './api/credits'

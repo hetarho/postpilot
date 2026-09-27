@@ -332,7 +332,7 @@ describe('clip page local upload lifecycle', () => {
     expect(json).not.toMatch(/blob:|clip.mp4|storage.test/)
     expect(calls.filter((c) => c === 'CreateClipSourceBatch')).toHaveLength(1)
     expect(calls.filter((c) => c === 'ConfirmClipSource')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: '선택 취소' }))
     // Back to idle: the status line falls silent and the picker asks for a fresh selection
     // rather than a replacement.

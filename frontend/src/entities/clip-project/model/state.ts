@@ -7,12 +7,14 @@ import type { ClipProject } from './types'
  *  three values as the detail does. */
 export type ClipState = 'draft' | 'refining' | 'finished'
 
-/** Only explicit confirmation completes a project; a render stays editable. */
+/** Only explicit confirmation completes a project; a render stays editable. A storyline written
+ *  before any plan is already ② (CLIP-36, CLIP-177): it is refined there, then built from. */
 export function clipState(
-  project: Pick<ClipProject, 'editPlanRevision' | 'renderedPlanRevision' | 'result' | 'finalized'>,
+  project: Pick<ClipProject, 'editPlanRevision' | 'renderedPlanRevision' | 'result' | 'finalized'> &
+    Partial<Pick<ClipProject, 'storyline'>>,
 ): ClipState {
   if (project.finalized) return 'finished'
-  if (project.editPlanRevision > 0 || project.result) return 'refining'
+  if (project.editPlanRevision > 0 || project.result || project.storyline) return 'refining'
   return 'draft'
 }
 

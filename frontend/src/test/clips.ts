@@ -85,6 +85,14 @@ export interface FakeClipProject extends ClipProjectDraft {
   notices?: ClipProject['notices']
   editPlanRevision?: number
   renderedPlanRevision?: number
+  /** The clip's storyline (CLIP-178), in the wire's shape. */
+  storyline?: {
+    paragraphs: Array<{ text: string; observationIds: string[] }>
+    editedByHand: boolean
+    addedSourceIds: string[]
+    takenOutObservationIds: string[]
+  }
+  planEditedByHand?: boolean
 }
 export type FakeClipEligibility =
   | 'unspecified'
@@ -118,6 +126,13 @@ export interface FakeClipsOptions {
   readProject?: (project: FakeClipProject) => FakeClipProject
   generationStarts?: unknown[]
   generationJobId?: string
+  /** Every StartClipStoryline as it arrived, and the job id it answers with (CLIP-177). */
+  storylineStarts?: unknown[]
+  storylineJobId?: string
+  /** Every storyline edit an UpdateClipProject carried (CLIP-178). */
+  storylineEdits?: Array<Array<{ text: string; observationIds: string[] }>>
+  /** Refuse every storyline edit as not keeping its shape. */
+  storylineEditFails?: boolean
   generationFails?: boolean
   generationAmbiguous?: boolean
   generationReject?: AppFailureReason
@@ -482,6 +497,27 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.outroPreset !== undefined)
       p.outroPreset = req.outroPreset as ClipProjectDraft['outroPreset']
     if (req.allowedCaptionStyles) p.allowedCaptionStyles = [...req.allowedCaptionStyles.values]
+    if (req.storyline) {
+      const paragraphs = req.storyline.paragraphs.map((paragraph) => ({
+        text: paragraph.text,
+        observationIds: [...paragraph.observationIds],
+      }))
+      options.storylineEdits?.push(paragraphs)
+      if (options.storylineEditFails)
+        throw connectAppError('CLIP_STORYLINE_INVALID', Code.InvalidArgument)
+      if (!p.storyline) throw connectAppError('CLIP_STORYLINE_MISSING', Code.FailedPrecondition)
+      const held = new Set(paragraphs.flatMap((paragraph) => paragraph.observationIds))
+      const madeWith = [
+        ...p.storyline.paragraphs.flatMap((paragraph) => paragraph.observationIds),
+        ...p.storyline.takenOutObservationIds,
+      ]
+      p.storyline = {
+        ...p.storyline,
+        paragraphs,
+        editedByHand: true,
+        takenOutObservationIds: [...new Set(madeWith)].filter((id) => !held.has(id)),
+      }
+    }
     if (req.compositionInputs) {
       // A project with no template freezes the grammar's minimum document, and
       // there is no row to read a body from (CLIP-5, T218).
@@ -787,6 +823,54 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     p.latestAttempt = { jobId, batchId: b.id, quoteId: '' }
     return create(StartClipRenderResponseSchema, { jobId })
+  })
+  // 스토리라인 먼저 (CLIP-177): quoted like a generation, one writing call instead of two.
+  router.rpc(ClipGenerationService.method.quoteClipStoryline, (req) => {
+    options.calls?.push('QuoteClipStoryline')
+    options.quoteRequests?.push(req)
+    if (options.quoteFails) throw connectAppError(options.quoteFails, Code.FailedPrecondition)
+    const batch = batches.get(req.batchId)
+    if (!batch || batch.projectId !== req.projectId || batch.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const q = { id: `quote-${++quoteNumber}`, max: options.quoteMaxCredits ?? 12 }
+    quotes.set(batch.id, q)
+    return create(QuoteClipGenerationResponseSchema, {
+      quoteId: q.id,
+      maxCredits: q.max,
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      pricedCalls: [
+        { label: 'observe', stage: 'observe', calls: 3 },
+        { label: 'storyline', stage: 'write', calls: 1 },
+      ],
+    })
+  })
+  router.rpc(ClipGenerationService.method.startClipStoryline, (req) => {
+    options.calls?.push('StartClipStoryline')
+    options.storylineStarts?.push(req)
+    const p = projects.get(req.projectId)
+    const b = batches.get(req.batchId)
+    if (!p || !b || b.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const quote = quotes.get(b.id)
+    if (!quote || quote.id !== req.quoteId || quote.max !== req.approvedMaxCredits)
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
+    b.state = 'consuming'
+    const jobId = options.storylineJobId ?? 'clip-storyline-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'storyline_clip',
+      status: 'queued',
+      stage: 'prepare',
+      clipProjectId: p.id,
+    }
+    p.latestAttempt = { jobId, batchId: b.id, quoteId: quote.id }
+    return create(StartClipGenerationResponseSchema, { jobId })
   })
   router.rpc(ClipGenerationService.method.startClipGeneration, (req) => {
     options.calls?.push('StartClipGeneration')

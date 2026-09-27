@@ -27,6 +27,7 @@ export const i18n = {
       call: {
         flow: '컷 구성 {{calls}}회',
         narration: '자막 작성 {{calls}}회',
+        storyline: '스토리라인 작성 {{calls}}회',
       },
       renderOnly:
         '완료된 분석과 편집안을 재사용해 렌더링부터 이어가요. AI 요청과 추가 크레딧 차감은 없어요.',
@@ -40,6 +41,7 @@ export const i18n = {
       detailsShow: '요금 자세히',
       detailsHide: '요금 접기',
       approve: '최대 {{amount, number}} 크레딧 · 승인하고 생성',
+      approveStoryline: '최대 {{amount, number}} 크레딧 · 승인하고 스토리라인 만들기',
       expired: '승인 가능한 시간이 지났어요. 새 상한을 확인해 주세요.',
       refresh: '최대 크레딧 다시 확인',
       exempt: '마스터는 크레딧을 차감하지 않아요. 모델 호환성과 실행 한도는 그대로 적용돼요.',
@@ -150,6 +152,7 @@ export const i18n = {
       call: {
         flow: 'Footage flow ×{{calls}}',
         narration: 'Narration ×{{calls}}',
+        storyline: 'Storyline ×{{calls}}',
       },
       renderOnly:
         'Resume rendering with the completed analysis and edit plan. No AI requests or additional credit charge.',
@@ -163,6 +166,7 @@ export const i18n = {
       detailsShow: 'Charge details',
       detailsHide: 'Hide details',
       approve: 'Maximum {{amount, number}} credits · approve and generate',
+      approveStoryline: 'Maximum {{amount, number}} credits · approve and write the storyline',
       expired: 'This approval window expired. Check a new ceiling.',
       refresh: 'Refresh maximum credits',
       exempt:

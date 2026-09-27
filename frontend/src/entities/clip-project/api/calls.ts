@@ -18,16 +18,20 @@ import { toClipSourceBatch } from './clip-project'
 export interface ClipProjectCalls {
   /** The server's full projection of one project — editing, notices, finalization and all. */
   fetch(projectId: string, signal?: AbortSignal): Promise<ClipProject>
-  /** Starting the AI run the owner approved a quote for. */
-  startGeneration(input: {
-    projectId: string
-    batchId: string
-    observeModel: { providerId: string; modelId: string }
-    writeModel: { providerId: string; modelId: string }
-    quoteId: string
-    approvedMaxCredits: number
-    cancellationPolicyVersion?: number
-  }): Promise<{ jobId: string }>
+  /** Starting the AI run the owner approved a quote for; `fromStoryline` is 이 스토리로 만들기. */
+  startGeneration(input: ClipStartInput & { fromStoryline?: boolean }): Promise<{ jobId: string }>
+  /** Starting the approved storyline call: 스토리라인 먼저 and 다시 만들기 (CLIP-177). */
+  startStoryline(input: ClipStartInput): Promise<{ jobId: string }>
+}
+
+export interface ClipStartInput {
+  projectId: string
+  batchId: string
+  observeModel: { providerId: string; modelId: string }
+  writeModel: { providerId: string; modelId: string }
+  quoteId: string
+  approvedMaxCredits: number
+  cancellationPolicyVersion?: number
 }
 
 export function clipProjectCalls(transport: Transport): ClipProjectCalls {
@@ -40,6 +44,11 @@ export function clipProjectCalls(transport: Transport): ClipProjectCalls {
     },
     async startGeneration(input) {
       const response = await client.startClipGeneration(input)
+      if (!response.jobId) throw new Error('Missing durable clip job')
+      return { jobId: response.jobId }
+    },
+    async startStoryline(input) {
+      const response = await client.startClipStoryline(input)
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
     },

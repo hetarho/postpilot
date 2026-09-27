@@ -92,9 +92,9 @@ export function ClipQuoteApproval({
               .map((call) => (
                 <li key={call.label}>
                   <Typography variant="meta">
-                    {call.label === 'flow'
-                      ? t('credits.call.flow', { calls: call.calls })
-                      : t('credits.call.narration', { calls: call.calls })}
+                    {t(WRITING_CALL_KEYS[call.label as keyof typeof WRITING_CALL_KEYS], {
+                      calls: call.calls,
+                    })}
                   </Typography>
                 </li>
               ))}
@@ -147,3 +147,11 @@ export function ClipQuoteApproval({
     </div>
   )
 }
+
+// Each writing call's line: the flow and the narration a generation makes, or the one storyline
+// call (CLIP-177).
+const WRITING_CALL_KEYS = {
+  flow: 'credits.call.flow',
+  narration: 'credits.call.narration',
+  storyline: 'credits.call.storyline',
+} as const

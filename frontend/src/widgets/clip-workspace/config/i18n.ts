@@ -14,8 +14,10 @@ export const i18n = {
       finish: '완성',
       aria: '클립 단계',
       goGenerate: '생성으로 가기',
-      refineWaiting: '아직 다듬을 편집안이 없어요. 먼저 클립을 생성해 주세요.',
-      finishWaiting: '아직 완성된 영상이 없어요. 먼저 클립을 생성해 주세요.',
+      refineWaiting:
+        '아직 다듬을 편집안이 없어요. ①에서 스토리라인 먼저나 바로 만들기로 시작해 주세요.',
+      finishWaiting:
+        '아직 완성된 영상이 없어요. ①에서 스토리라인 먼저나 바로 만들기로 시작해 주세요.',
       finishDockAria: '완성된 클립 내려받기',
     },
   },
@@ -30,8 +32,9 @@ export const i18n = {
       finish: 'Finish',
       aria: 'Clip steps',
       goGenerate: 'Go to Create',
-      refineWaiting: 'There is no edit plan to refine yet. Generate the clip first.',
-      finishWaiting: 'There is no finished video yet. Generate the clip first.',
+      refineWaiting:
+        'There is no edit plan to refine yet. Start in ① with Storyline first or Make now.',
+      finishWaiting: 'There is no finished video yet. Start in ① with Storyline first or Make now.',
       finishDockAria: 'Download the finished clip',
     },
   },

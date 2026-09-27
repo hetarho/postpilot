@@ -39,3 +39,15 @@ it('finishes only after explicit confirmation', () => {
     }),
   ).toBe('finished')
 })
+
+// CLIP-36, CLIP-177: a storyline written before any plan is already ②'s work.
+it('derives refining from a storyline with no plan', () => {
+  const storyline = {
+    paragraphs: [{ text: '앞', observationIds: [] }],
+    editedByHand: false,
+    addedSourceIds: [],
+    takenOutObservationIds: [],
+  }
+  expect(clipState({ editPlanRevision: 0, renderedPlanRevision: 0, storyline })).toBe('refining')
+  expect(clipState({ editPlanRevision: 0, renderedPlanRevision: 0 })).toBe('draft')
+})

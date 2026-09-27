@@ -240,3 +240,10 @@ choice would be expensive to undo are listed at the end.
 - **`plan_edited_by_hand`** follows the spec formula (`edit_plan_revision != generated_plan_revision`). Caption pace, accent and preset changes already bump the plan revision, so they also read as "edited by hand" and trigger CLIP-180's confirmation. Tell me if only cut/caption edits should count.
 - **Infrastructure the new job kinds needed:** migration 0101 rebuilds `generation_jobs` (0063's method) so the cancellation CHECKs and the quote trigger admit `storyline_clip` and `revise_storyline_clip`. The job queue gives both kinds the `prepare` first stage. The new reasons are `CLIP_STORYLINE_MISSING` (256) and `CLIP_STORYLINE_INVALID` (257), with ko/en copy.
 - **Removing a source** happens when a new batch leaves it out: in the same transaction, its scenes leave every paragraph and it leaves `MadeWithSources`. Paragraph texts stay.
+
+## T447 — clip ①'s 스토리라인 먼저 · 바로 만들기, ②'s storyline space (frontend)
+- **When the quote is read:** only when its button's popover opens (a sheet on a phone). The old inline approval quoted as soon as ① was ready. ①'s buttons are always `스토리라인 먼저` and `바로 만들기`; the `생성`/`다시 생성` labels are gone from ①.
+- **Approve labels:** `최대 N 크레딧 · 승인하고 스토리라인 만들기` for the storyline call; 바로 만들기 keeps `…승인하고 생성`. The priced line reads `스토리라인 작성 1회`.
+- **Scene frames:** T444's still-frame helper doesn't exist yet, so a scene tile is a muted `<video>` seeked to the scene's start, the way `ClipCutSourceFrame` works. With no footage it shows the scene's number and observed event. "장면 N" counts across all sources in analysis order.
+- **Autosave:** 600 ms after the last edit, and on leaving. A new storyline from the server replaces the draft whenever no owner edit is waiting to be saved. The space is read-only while any job runs, not only storyline jobs.
+- **Layout:** the space sits above the correction workspace when there is a plan, and replaces the "no plan yet" message when there isn't one. The ②/③ waiting messages now name ①'s two actions.

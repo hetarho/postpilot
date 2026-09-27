@@ -7,6 +7,7 @@ import {
   useClipProjectsKey,
   type ClipProject,
   type ClipQuote,
+  type ClipQuoteMode,
   type ReadyClipBatch,
 } from '@/entities/clip-project'
 import { useClipRenderCalls } from '@/entities/clip-preview'
@@ -34,7 +35,15 @@ interface Ownership {
   rejected(batchId: string): void
 }
 type StartInput =
-  | { kind: 'generate'; batchId: string; quote: ClipQuote; observe: ModelRef; write: ModelRef }
+  | {
+      kind: 'generate'
+      /** Which approved work: 바로 만들기, 이 스토리로 만들기 or the storyline call (CLIP-177). */
+      mode: ClipQuoteMode
+      batchId: string
+      quote: ClipQuote
+      observe: ModelRef
+      write: ModelRef
+    }
   | { kind: 'render'; batchId: string; revision: number }
 const DEFINITE_REFUSALS = new Set([
   'CLIP_QUOTE_REQUIRED',
@@ -127,15 +136,26 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
               batchId: input.batchId,
               expectedRevision: input.revision,
             })
-          : await calls.startGeneration({
-              projectId: project.id,
-              batchId: input.batchId,
-              observeModel: input.observe,
-              writeModel: input.write,
-              quoteId: input.quote.quoteId,
-              approvedMaxCredits: input.quote.maxCredits,
-              cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
-            })
+          : input.mode === 'storyline'
+            ? await calls.startStoryline({
+                projectId: project.id,
+                batchId: input.batchId,
+                observeModel: input.observe,
+                writeModel: input.write,
+                quoteId: input.quote.quoteId,
+                approvedMaxCredits: input.quote.maxCredits,
+                cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
+              })
+            : await calls.startGeneration({
+                projectId: project.id,
+                batchId: input.batchId,
+                observeModel: input.observe,
+                writeModel: input.write,
+                quoteId: input.quote.quoteId,
+                approvedMaxCredits: input.quote.maxCredits,
+                cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
+                ...(input.mode === 'fromStoryline' ? { fromStoryline: true } : {}),
+              })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return response
     },
@@ -245,6 +265,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     settingsReady: boolean,
     quote: ClipQuote,
     ownership: Ownership,
+    mode: ClipQuoteMode = 'generate',
   ) {
     if (
       starting.current ||
@@ -275,6 +296,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     await submit(
       {
         kind: 'generate',
+        mode,
         batchId: batch.id,
         quote,
         observe: observe.selected,

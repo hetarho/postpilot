@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
+import { ClipStorylineSpace } from '@/features/edit-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
@@ -9,7 +10,7 @@ import { ClipProjectForm } from '@/features/edit-clip-project'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
 import {
-  ClipApprovalAction,
+  ClipGenerationActions,
   ClipCreditSettlement,
   ClipDownloadAction,
   ClipResult,
@@ -99,7 +100,7 @@ export function ClipWorkspace({
         reading
           ? undefined
           : (ready) => (
-              <ClipApprovalAction
+              <ClipGenerationActions
                 ownerId={ownerId}
                 project={project}
                 batch={upload.readyBatch}
@@ -111,12 +112,12 @@ export function ClipWorkspace({
                 // The queue is flushed BEFORE the run starts, so an approval can never be committed
                 // against settings the server has not taken (CLIP-39). A refusal stops the start; the
                 // status line is already saying the save failed.
-                onApprove={(quote) => {
+                onApprove={(mode, quote) => {
                   void save
                     .flush()
                     .then(() => correction.flush())
                     .then(() =>
-                      generation.start(upload.readyBatch, ready, quote, generation.ownership),
+                      generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
                     )
                     .catch(() => undefined)
                 }}
@@ -261,110 +262,128 @@ export function ClipWorkspace({
     </>
   )
 
+  // The storyline space leads ② whenever the clip has one (CLIP-178): the whole step while there is
+  // no plan yet, and above the plan once there is one.
+  const storylineSpace = project.storyline ? (
+    <ClipStorylineSpace
+      ownerId={ownerId}
+      project={{ ...project, storyline: project.storyline }}
+      hasPlan={!!plan}
+      readOnly={reading || generation.busy}
+      localSources={reading ? [] : sources.localSources}
+      resolvePlayback={reading ? undefined : sources.resolvePlayback}
+    />
+  ) : null
+
   const refinePanel = plan ? (
-    <ClipCorrectionWorkspace
-      project={{
-        id: project.id,
-        state: plan,
-        captionStyles: project.allowedCaptionStyles,
-        notices: project.notices,
-        language: project.language,
-      }}
-      correction={correction}
-      readOnly={reading}
-      render={{
-        ready: render.ready,
-        pending: render.pending,
-        failure: render.failure,
-        progress: render.browser.state.phase !== 'idle' ? browserStatus : undefined,
-        lastKind: render.lastKind,
-        current: render.current,
-        capability: render.capability,
-        start: render.start,
-      }}
-      footage={{
-        localSources: reading ? [] : sources.localSources,
-        resolvePlayback: reading ? undefined : sources.resolvePlayback,
-      }}
-      disabled={pending || reading}
-      slots={{
-        preview: (controls) =>
-          reading ? (
-            <ClipResult ownerId={ownerId} project={project} />
-          ) : (
-            <ClipDraftPreviewPanel
-              {...controls}
-              projectId={project.id}
-              revision={correction.revision}
-              plan={correction.previewPlan}
-              ratio={project.ratio}
-              sources={plan.sources}
-              resolvePlayback={sources.resolvePlayback}
-            />
-          ),
-        comparison: !reading && project.result && (
-          <details className="mt-4">
-            <summary className="text-content-secondary cursor-pointer">
-              {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
-            </summary>
-            <ClipResult ownerId={ownerId} project={project} />
-          </details>
-        ),
-        revision: reading
-          ? undefined
-          : (actions) => (
-              <ClipRevisionRequest
-                ownerId={ownerId}
-                project={project}
-                observe={generation.observeRef}
-                write={generation.writeRef}
-                job={job}
-                disabled={revision.disabled}
-                flush={revision.flush}
-                cancelAction={
-                  <CancelClipAction
-                    action={revision.cancellation}
-                    job={job}
-                    accounting={generation.accounting}
-                  />
-                }
-                action={actions}
+    <>
+      {storylineSpace}
+      <ClipCorrectionWorkspace
+        project={{
+          id: project.id,
+          state: plan,
+          captionStyles: project.allowedCaptionStyles,
+          notices: project.notices,
+          language: project.language,
+        }}
+        correction={correction}
+        readOnly={reading}
+        render={{
+          ready: render.ready,
+          pending: render.pending,
+          failure: render.failure,
+          progress: render.browser.state.phase !== 'idle' ? browserStatus : undefined,
+          lastKind: render.lastKind,
+          current: render.current,
+          capability: render.capability,
+          start: render.start,
+        }}
+        footage={{
+          localSources: reading ? [] : sources.localSources,
+          resolvePlayback: reading ? undefined : sources.resolvePlayback,
+        }}
+        disabled={pending || reading}
+        slots={{
+          preview: (controls) =>
+            reading ? (
+              <ClipResult ownerId={ownerId} project={project} />
+            ) : (
+              <ClipDraftPreviewPanel
+                {...controls}
+                projectId={project.id}
+                revision={correction.revision}
+                plan={correction.previewPlan}
+                ratio={project.ratio}
+                sources={plan.sources}
+                resolvePlayback={sources.resolvePlayback}
               />
             ),
-        downloadAction:
-          !reading && project.result?.downloadUrl ? (
-            <ClipDownloadAction icon project={project} />
-          ) : undefined,
-        // 확정하기 stands only once the project has a render to confirm (CLIP-40, CLIP-152):
-        // before that the dock's one action is the render, and a disabled 확정하기 beside it
-        // only said so in smaller type.
-        finalizeAction:
-          !reading && project.result ? (
-            <FinalizeClipAction
-              action={finalization}
-              project={project}
-              disabled={
-                uploading ||
-                generation.busy ||
-                render.browser.busy ||
-                !correction.validation?.saveable
-              }
-              localRefusal={
-                uploading || generation.busy || render.browser.busy
-                  ? 'busy'
-                  : !correction.validation?.saveable
-                    ? 'invalid_plan'
-                    : undefined
-              }
-            />
-          ) : undefined,
-        referenceAction,
-      }}
-    />
+          comparison: !reading && project.result && (
+            <details className="mt-4">
+              <summary className="text-content-secondary cursor-pointer">
+                {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
+              </summary>
+              <ClipResult ownerId={ownerId} project={project} />
+            </details>
+          ),
+          revision: reading
+            ? undefined
+            : (actions) => (
+                <ClipRevisionRequest
+                  ownerId={ownerId}
+                  project={project}
+                  observe={generation.observeRef}
+                  write={generation.writeRef}
+                  job={job}
+                  disabled={revision.disabled}
+                  flush={revision.flush}
+                  cancelAction={
+                    <CancelClipAction
+                      action={revision.cancellation}
+                      job={job}
+                      accounting={generation.accounting}
+                    />
+                  }
+                  action={actions}
+                />
+              ),
+          downloadAction:
+            !reading && project.result?.downloadUrl ? (
+              <ClipDownloadAction icon project={project} />
+            ) : undefined,
+          // 확정하기 stands only once the project has a render to confirm (CLIP-40, CLIP-152):
+          // before that the dock's one action is the render, and a disabled 확정하기 beside it
+          // only said so in smaller type.
+          finalizeAction:
+            !reading && project.result ? (
+              <FinalizeClipAction
+                action={finalization}
+                project={project}
+                disabled={
+                  uploading ||
+                  generation.busy ||
+                  render.browser.busy ||
+                  !correction.validation?.saveable
+                }
+                localRefusal={
+                  uploading || generation.busy || render.browser.busy
+                    ? 'busy'
+                    : !correction.validation?.saveable
+                      ? 'invalid_plan'
+                      : undefined
+                }
+              />
+            ) : undefined,
+          referenceAction,
+        }}
+      />
+    </>
   ) : (
     <>
       <ClipFailureNotice failure={generation.failure} />
-      <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
+      {storylineSpace ?? (
+        <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
+      )}
       {project.result && (
         <>
           <Typography variant="meta">

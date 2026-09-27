@@ -115,7 +115,7 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
       : {}),
     calls: value.pricedCalls
       .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
-        ['observe', 'flow', 'narration'].includes(call.label),
+        ['observe', 'flow', 'narration', 'storyline'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
@@ -163,7 +163,7 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
       : {}),
     calls: value.pricedCalls
       .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
-        ['observe', 'flow', 'narration'].includes(call.label),
+        ['observe', 'flow', 'narration', 'storyline'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
@@ -177,6 +177,9 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
 /** The price a generation is approved against. A quote binds the exact settings it was taken
  *  for (CLIP-131), so it is read fresh for every binding and never served from a cache — the
  *  binding string the caller computes IS the identity of the request. */
+/** Which work a clip quote prices: 바로 만들기, 이 스토리로 만들기, or the storyline call. */
+export type ClipQuoteMode = 'generate' | 'fromStoryline' | 'storyline'
+
 export function useClipGenerationQuote(
   ownerId: string,
   input: {
@@ -186,19 +189,26 @@ export function useClipGenerationQuote(
     writeModel: { providerId: string; modelId: string }
   },
   binding: string,
+  mode: ClipQuoteMode = 'generate',
 ) {
   const transport = useTransport()
   return useQuery({
-    queryKey: ['clip-quote', transport, ownerId, binding],
+    queryKey: ['clip-quote', transport, ownerId, mode, binding],
     gcTime: 0,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    queryFn: async ({ signal }) =>
-      toClipQuote(
-        await createClient(ClipGenerationService, transport).quoteClipGeneration(input, { signal }),
-        binding,
-      ),
+    queryFn: async ({ signal }) => {
+      const client = createClient(ClipGenerationService, transport)
+      const response =
+        mode === 'storyline'
+          ? await client.quoteClipStoryline(input, { signal })
+          : await client.quoteClipGeneration(
+              { ...input, fromStoryline: mode === 'fromStoryline' },
+              { signal },
+            )
+      return toClipQuote(response, binding)
+    },
   })
 }

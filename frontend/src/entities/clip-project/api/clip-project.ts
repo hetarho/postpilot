@@ -26,6 +26,7 @@ import {
   type ClipRatio,
   type ClipSourceBatch,
   type ClipSourceAvailability,
+  type ClipStorylineParagraph,
 } from '../model/types'
 
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
@@ -114,6 +115,18 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
       ? toClipAttemptInspection(value.attemptInspection)
       : undefined,
     observations: value.observations ? toClipObservations(value.observations) : undefined,
+    storyline: value.storyline
+      ? {
+          paragraphs: value.storyline.paragraphs.map((p) => ({
+            text: p.text,
+            observationIds: [...p.observationIds],
+          })),
+          editedByHand: value.storyline.editedByHand,
+          addedSourceIds: [...value.storyline.addedSourceIds],
+          takenOutObservationIds: [...value.storyline.takenOutObservationIds],
+        }
+      : undefined,
+    planEditedByHand: value.planEditedByHand,
     result: value.result
       ? {
           ...(value.result.id ? { id: value.result.id } : {}),
@@ -200,7 +213,7 @@ export function useClipProject(ownerId: string, id: string | undefined) {
       const job = project?.latestJob
       if (!job) return false
       if (job.status === 'queued' || job.status === 'running') return POLL_INTERVAL_MS
-      return job.kind === 'generate_clip' &&
+      return CHARGED_CLIP_KINDS.has(job.kind) &&
         (!project.accounting || project.accounting.jobId !== job.id || !project.accounting.settled)
         ? POLL_INTERVAL_MS
         : false
@@ -215,6 +228,29 @@ export function useClipProject(ownerId: string, id: string | undefined) {
     },
   })
 }
+// The charged clip work whose settlement the detail keeps polling for after it ends.
+const CHARGED_CLIP_KINDS = new Set(['generate_clip', 'storyline_clip', 'revise_storyline_clip'])
+
+/** Saves the owner's storyline edit (CLIP-178): the same paragraphs with their texts and scenes
+ *  replaced. The server marks it edited by hand; the answer replaces the cached project. */
+export function useSaveClipStoryline(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { projectId: string; paragraphs: ClipStorylineParagraph[] }) => {
+      const response = await createClient(ClipGenerationService, transport).updateClipProject({
+        id: input.projectId,
+        storyline: { paragraphs: input.paragraphs },
+      })
+      if (!response.project) throw new Error('Missing saved clip')
+      return toClipProject(response.project)
+    },
+    onSuccess: (project) => {
+      cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project)
+    },
+  })
+}
+
 export function useClipProjectMutations(ownerId: string) {
   const transport = useTransport()
   const client = createClient(ClipGenerationService, transport)

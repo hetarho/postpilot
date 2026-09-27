@@ -38,7 +38,13 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
 /** The clip jobs: they report the clip stages and are read in the clips
  *  namespace. A revision is one of them — it makes the same writing calls a
  *  generation does, just over a plan that already exists (CLIP-131). */
-const CLIP_KINDS = new Set(['generate_clip', 'render_clip', 'revise_clip'])
+const CLIP_KINDS = new Set([
+  'generate_clip',
+  'render_clip',
+  'revise_clip',
+  'storyline_clip',
+  'revise_storyline_clip',
+])
 
 /** WHICH STAGE is running, and nothing else. The numbers are the progress bar's value
  *  (`progressRatio`), so spelling them out here would print the same fact twice in two
@@ -56,6 +62,9 @@ const GENERATION_CLIP_STAGES = [
   'flow_retry',
   'narrate',
   'narrate_retry',
+  // The storyline call (CLIP-177).
+  'storyline',
+  'storyline_retry',
   // The single writing call this build no longer makes: a job queued before it
   // split into two still shows a stage the owner can read.
   'plan',
@@ -86,7 +95,9 @@ export function progressLabel(
       { ns: 'clips' },
     )
     if (
-      ['analyze_retry', 'flow_retry', 'narrate_retry', 'plan_retry'].includes(job.stage) &&
+      ['analyze_retry', 'flow_retry', 'narrate_retry', 'storyline_retry', 'plan_retry'].includes(
+        job.stage,
+      ) &&
       job.progressTotal === 3 &&
       job.progressDone &&
       job.progressDone >= 1 &&

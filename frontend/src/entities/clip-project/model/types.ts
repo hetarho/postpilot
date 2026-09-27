@@ -81,6 +81,10 @@ export interface ClipProject extends ClipProjectDraft {
   editing?: ClipEditingState
   attemptInspection?: ClipAttemptInspection
   observations?: ClipObservations
+  /** The clip's storyline (CLIP-178); absent when it has none. */
+  storyline?: ClipStoryline
+  /** Whether the owner changed the plan since a writer last wrote it (CLIP-180). */
+  planEditedByHand?: boolean
   result?: {
     renderKind?: ClipRenderKind
     id?: string
@@ -110,10 +114,27 @@ export interface ClipAccounting {
   settled: boolean
 }
 /** One priced line of the quote. A generation makes two writing calls on the
- *  same model, so the label — not the stage — says which line is which. */
+ *  same model, so the label — not the stage — says which line is which; the storyline
+ *  call is one writing call of its own (CLIP-177). */
 export interface ClipPricedCall {
-  label: 'observe' | 'flow' | 'narration'
+  label: 'observe' | 'flow' | 'narration' | 'storyline'
   calls: number
+}
+
+/** One paragraph of the clip's storyline and the observed scenes it uses, each an observation id
+ *  (`sourceId/index`) of the project's analysis. */
+export interface ClipStorylineParagraph {
+  text: string
+  observationIds: string[]
+}
+
+/** The clip's storyline (CLIP-178) with what changed since it was written: the sources added and
+ *  the scenes of the sources it was made with that no paragraph holds. */
+export interface ClipStoryline {
+  paragraphs: ClipStorylineParagraph[]
+  editedByHand: boolean
+  addedSourceIds: string[]
+  takenOutObservationIds: string[]
 }
 export interface ClipQuote {
   calls: ClipPricedCall[]

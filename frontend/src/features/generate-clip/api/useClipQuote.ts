@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   useClipGenerationQuote,
   type ClipEligibilityStatus,
+  type ClipQuoteMode,
   type ClipProject,
   type ReadyClipBatch,
 } from '@/entities/clip-project'
@@ -18,12 +19,14 @@ export function useClipQuote(
   observe: ModelRef,
   write: ModelRef,
   status: ClipEligibilityStatus | undefined,
+  mode: ClipQuoteMode = 'generate',
 ) {
   const binding = clipQuoteBinding(project, batch, observe, write, status)
   const query = useClipGenerationQuote(
     ownerId,
     { projectId: project.id, batchId: batch.id, observeModel: observe, writeModel: write },
     binding,
+    mode,
   )
   const [now, setNow] = useState(Date.now)
   const expires = Math.min(Date.parse(query.data?.expiresAt ?? ''), Date.parse(batch.expiresAt))
