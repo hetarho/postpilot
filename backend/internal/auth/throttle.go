@@ -12,6 +12,7 @@ const (
 	ThrottleResetRequest = "reset_request"
 	ThrottleReset        = "reset"
 	ThrottleGoogle       = "google"
+	ThrottleVerify       = "verify"
 	// ThrottleWebhook bounds the anonymous provider webhook. It is not an authentication
 	// write, but it is the same shape of exposure: an unauthenticated POST that costs the
 	// product an outbound provider call.
@@ -30,6 +31,9 @@ var throttleRules = map[string]throttleRule{
 	ThrottleResetRequest: {max: 5, window: time.Hour},
 	ThrottleReset:        {max: 10, window: time.Hour},
 	ThrottleGoogle:       {max: 10, window: 5 * time.Minute},
+	// A verification link is opened once, maybe twice; the bound is what stops an IP from
+	// spending token lookups as fast as it can open connections (AUTH-36).
+	ThrottleVerify: {max: 10, window: time.Hour},
 	// Far above what the provider's own deliveries and retries produce for one account's
 	// worth of payment events, and still a bound: a hostile IP can spend 60 provider calls
 	// a minute rather than as many as it can open connections.

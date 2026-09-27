@@ -1,5 +1,5 @@
 import { Code, createRouterTransport } from '@connectrpc/connect'
-import { create } from '@bufbuild/protobuf'
+import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import {
   BillingService,
   CancelScheduledChangeResponseSchema,
@@ -57,6 +57,8 @@ export interface FakeBillingOptions {
   refundRequests?: string[]
   purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'PURCHASE_TOO_SMALL'
   refundFailure?: 'PURCHASE_SPENT' | 'REFUND_WINDOW_CLOSED' | 'REFUND_FAILED' | 'PURCHASE_NOT_FOUND'
+  /** Rows listed above the populated history, newest first, e.g. a refund. */
+  extraHistory?: NonNullable<MessageInitShape<typeof GetMyBillingResponseSchema>['history']>
 }
 
 export function registerBillingService(router: ConnectRouter, options: FakeBillingOptions = {}) {
@@ -77,6 +79,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     refundRequests,
     purchaseFailure,
     refundFailure,
+    extraHistory = [],
   } = options
   let subscribed = Boolean(populated || subscription)
   let hasPaymentMethod = Boolean(populated || paymentMethod)
@@ -121,6 +124,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
         : undefined,
       history: subscribed
         ? [
+            ...extraHistory,
             {
               id: 2n,
               kind: 'tier_change',

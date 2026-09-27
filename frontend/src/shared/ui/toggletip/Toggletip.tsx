@@ -7,7 +7,7 @@ import { useAnchoredContentPanel } from '../anchored-panel/useAnchoredContentPan
 interface ToggletipProps {
   /** The button's name: what the tip explains. */
   label: string
-  /** Plain text only. A tip with anything to press in it is an `InlinePopover`. */
+  /** Plain text only: a tip is never a place to press anything. */
   children: ReactNode
   className?: string
 }

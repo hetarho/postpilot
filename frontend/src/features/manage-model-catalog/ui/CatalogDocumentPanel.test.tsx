@@ -42,6 +42,9 @@ describe('the 일괄 편집 document panel', () => {
     expect(current.textContent).toContain('[writing]')
     expect(current.textContent).toContain('anthropic/claude-x')
     expect(current.textContent).toContain('[image-generation]')
+    // THEME-12, THEME-25: a stepped surface with no border and no scroller of its own.
+    expect(current.className).not.toMatch(/\bborder\b|overflow-|max-h-/)
+    expect(current).toHaveClass('bg-surface-recessed')
   })
 
   // MODEL-52 + MODEL-54: the diff separates what would be added from what the omission drops,
@@ -97,6 +100,8 @@ describe('the 일괄 편집 document panel', () => {
     expect(gate!).toHaveTextContent('이 용도에 필요한 기능이 없는 모델이에요.')
     const malformed = rows.find((row) => within(row).queryByText('5번째 줄'))
     expect(malformed!).toHaveTextContent('한 줄에 모델 아이디 하나')
+    // Rows are split by the list's hairline, never boxed as cards (THEME-12).
+    expect(gate!.className).not.toMatch(/\bborder\b/)
     expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
     // No diff is offered beside a refusal — there is nothing that would be applied.
     expect(screen.queryByText('적용하면 이렇게 바뀌어요')).not.toBeInTheDocument()

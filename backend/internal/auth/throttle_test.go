@@ -18,6 +18,7 @@ func TestThrottleBoundaryRetryAndIsolation(t *testing.T) {
 		{ThrottleResetRequest, 5, time.Hour},
 		{ThrottleReset, 10, time.Hour},
 		{ThrottleGoogle, 10, 5 * time.Minute},
+		{ThrottleVerify, 10, time.Hour},
 	} {
 		t.Run(tc.class, func(t *testing.T) {
 			throttle := NewThrottle()

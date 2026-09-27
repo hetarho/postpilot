@@ -19,10 +19,10 @@ const PLACEMENT: AnchoredPanelPlacement = {
   maxViewportRatio: ANCHORED_PANEL_MAX_VIEWPORT_RATIO,
 }
 
-/** The wiring every content-width anchored panel shares — `InlinePopover`'s and `Toggletip`'s: the
- *  press-or-hover disclosure (THEME-32), the measured placement (THEME-30) and the props the
- *  portalled panel carries. The trigger's props stay with each caller, because they differ.
- *  `enabled: false` keeps the panel from being placed while its disclosure would still be open. */
+/** The wiring a content-width anchored panel (`Toggletip`'s) needs: the press-or-hover
+ *  disclosure (THEME-32), the measured placement (THEME-30) and the props the portalled panel
+ *  carries. The trigger's props stay with the caller. `enabled: false` keeps the panel from
+ *  being placed while its disclosure would still be open. */
 export function useAnchoredContentPanel<T extends HTMLElement>({
   enabled = true,
 }: { enabled?: boolean } = {}) {

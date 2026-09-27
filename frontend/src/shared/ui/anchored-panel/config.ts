@@ -1,4 +1,4 @@
-/** Placement and hover tuning for the anchored panels `InlinePopover` and `Toggletip` open,
+/** Placement and hover tuning for the anchored panel `Toggletip` opens,
  *  beside the hook that measures with them (ARCH-21). `Listbox` keeps its own numbers in
  *  `listbox/config.ts`. */
 

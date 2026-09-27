@@ -178,4 +178,22 @@ describe('BillingPage', () => {
     expect(rows[1]).toHaveTextContent('$5.00 · 7,000원')
     expect(rows[1]).toHaveTextContent('1달러당 1,400원')
   })
+
+  // BILL-15, F118: a refund row is labelled as a refund, not as a generic subscription event.
+  it('labels a refund row in the history', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      billing: {
+        populated: true,
+        extraHistory: [
+          { id: 3n, kind: 'refund', createdAt: '2026-09-09T00:00:00Z', usdCents: 500, krw: 7000n },
+        ],
+      },
+    })
+
+    const heading = await screen.findByRole('heading', { name: '결제 및 지급 기록' })
+    const rows = within(heading.parentElement as HTMLElement).getAllByRole('listitem')
+    expect(rows[0]).toHaveTextContent('환불')
+    expect(rows[0]).not.toHaveTextContent('구독 기록')
+  })
 })

@@ -115,8 +115,9 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
             className={typographyStyles({
               variant: 'meta',
               mono: true,
-              className:
-                'border-line bg-surface-sunken mt-2 max-h-64 overflow-auto rounded-md border p-3',
+              // A stepped surface, not a bordered box (THEME-12), and no scroller of its own: the
+              // sheet's body is the one that scrolls (THEME-25), so long lines wrap.
+              className: 'bg-surface-recessed mt-2 rounded-md p-3 break-all whitespace-pre-wrap',
             })}
           >
             {exported.isPending ? t('document.currentLoading') : exported.document}
@@ -156,7 +157,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
           <Notice tone="danger" role="alert">
             {t('document.rejected', { count: plan.issues.length })}
           </Notice>
-          <ul className="mt-3 grid gap-2">
+          <ul className="divide-divider mt-3 divide-y">
             {plan.issues.map((issue) => (
               <IssueRow key={`${issue.line}-${issue.cause}`} issue={issue} />
             ))}
@@ -207,7 +208,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
 function IssueRow({ issue }: { issue: CatalogDocumentIssue }) {
   const { t } = useTranslation('models')
   return (
-    <li className="border-line rounded-md border p-3">
+    <li className="py-3">
       <Typography variant="label" className="block">
         {t('document.issueLine', { line: issue.line })}
       </Typography>

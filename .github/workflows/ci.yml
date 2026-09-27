@@ -54,6 +54,9 @@ jobs:
           python3 -m venv /tmp/postpilot-deploy-checks
           /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt
           /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v
+      # ARCH-26's formatter check, the same command the local gate runs (ARCH-31).
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go build ./...
       # Bounded rather than left on Go's ten-minute per-package default (ARCH-26): cmd/api and

@@ -257,6 +257,39 @@ func TestLoginThrottleIsPerIPAndRunsBeforeAccountAccounting(t *testing.T) {
 	}
 }
 
+// AUTH-36, F127: VerifyEmail is an unauthenticated write, so it spends one per-IP attempt
+// before any token lookup and is refused with the instant the window lifts.
+func TestVerifyEmailIsThrottledPerIP(t *testing.T) {
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+		authrpc.NewHandler(svc, sessionTTL),
+		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "X-Forwarded-For")),
+	))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+
+	verify := func(ip string) error {
+		req := connect.NewRequest(&postpilotv1.VerifyEmailRequest{Token: "not-a-token"})
+		req.Header().Set("X-Forwarded-For", ip)
+		_, err := client.VerifyEmail(context.Background(), req)
+		return err
+	}
+	for attempt := 1; attempt <= 10; attempt++ {
+		if err := verify("203.0.113.20"); connect.CodeOf(err) == connect.CodeResourceExhausted {
+			t.Fatalf("verify %d was throttled: %v", attempt, err)
+		}
+	}
+	refused := verify("203.0.113.20")
+	if connect.CodeOf(refused) != connect.CodeResourceExhausted || authAppErrorDetail(t, refused).GetReason() != "TOO_MANY_ATTEMPTS" {
+		t.Fatalf("11th verify = %v, want TOO_MANY_ATTEMPTS", refused)
+	}
+	if err := verify("203.0.113.21"); connect.CodeOf(err) == connect.CodeResourceExhausted {
+		t.Fatalf("another peer was throttled: %v", err)
+	}
+}
+
 func TestLockedAccountIsWireIdenticalToWrongPassword(t *testing.T) {
 	client, _ := newServer(t)
 	firstWrong := loginError(t, client, "alice", "wrong")

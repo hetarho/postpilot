@@ -263,6 +263,8 @@ function eventKindKey(kind: string) {
       return 'history.kind.change_scheduled' as const
     case 'method_registered':
       return 'history.kind.method_registered' as const
+    case 'refund':
+      return 'history.kind.refund' as const
     default:
       return 'history.kind.other' as const
   }

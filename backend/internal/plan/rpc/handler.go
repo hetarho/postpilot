@@ -17,42 +17,33 @@ import (
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
-// ToProto maps a domain plan onto the wire enum. An unknown plan becomes UNSPECIFIED
+// planWire is the one proto↔domain table for the ladder. It is a table rather than a switch
+// with a default branch (ARCH-3): TestPlanMappingCoversGeneratedEnum walks the generated enum
+// and the domain ladder against it, so a tier added on either side fails a test instead of
+// travelling as UNSPECIFIED.
+var planWire = map[plan.Plan]postpilotv1.Plan{
+	plan.Free:   postpilotv1.Plan_PLAN_FREE,
+	plan.Basic:  postpilotv1.Plan_PLAN_BASIC,
+	plan.Pro:    postpilotv1.Plan_PLAN_PRO,
+	plan.Max:    postpilotv1.Plan_PLAN_MAX,
+	plan.Master: postpilotv1.Plan_PLAN_MASTER,
+}
+
+// ToProto maps a domain plan onto the wire enum. A plan outside the table is UNSPECIFIED
 // rather than a tier: a client that cannot read the value must not be told it is free.
 func ToProto(p plan.Plan) postpilotv1.Plan {
-	switch p {
-	case plan.Free:
-		return postpilotv1.Plan_PLAN_FREE
-	case plan.Basic:
-		return postpilotv1.Plan_PLAN_BASIC
-	case plan.Pro:
-		return postpilotv1.Plan_PLAN_PRO
-	case plan.Max:
-		return postpilotv1.Plan_PLAN_MAX
-	case plan.Master:
-		return postpilotv1.Plan_PLAN_MASTER
-	default:
-		return postpilotv1.Plan_PLAN_UNSPECIFIED
-	}
+	return planWire[p]
 }
 
 // FromProto maps the wire enum inward. UNSPECIFIED and unknown values are refused rather
 // than defaulted, so an old client cannot set a tier by omission.
-func FromProto(p postpilotv1.Plan) (plan.Plan, bool) {
-	switch p {
-	case postpilotv1.Plan_PLAN_FREE:
-		return plan.Free, true
-	case postpilotv1.Plan_PLAN_BASIC:
-		return plan.Basic, true
-	case postpilotv1.Plan_PLAN_PRO:
-		return plan.Pro, true
-	case postpilotv1.Plan_PLAN_MAX:
-		return plan.Max, true
-	case postpilotv1.Plan_PLAN_MASTER:
-		return plan.Master, true
-	default:
-		return "", false
+func FromProto(wire postpilotv1.Plan) (plan.Plan, bool) {
+	for p, mapped := range planWire {
+		if mapped == wire {
+			return p, true
+		}
 	}
+	return "", false
 }
 
 // Balance is what this edge publishes about an account's credits, declared by the consumer:

@@ -54,6 +54,7 @@ var throttledProcedures = map[string]string{
 	postpilotv1connect.AuthServiceRequestPasswordResetProcedure: auth.ThrottleResetRequest,
 	postpilotv1connect.AuthServiceResetPasswordProcedure:        auth.ThrottleReset,
 	postpilotv1connect.AuthServiceSignInWithGoogleProcedure:     auth.ThrottleGoogle,
+	postpilotv1connect.AuthServiceVerifyEmailProcedure:          auth.ThrottleVerify,
 }
 
 // masterProcedures may be called only by the operator tier.

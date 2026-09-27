@@ -31,6 +31,13 @@ class WorkflowBoundaries(unittest.TestCase):
         self.assertTrue(any("unittest discover -s deploy -p '*_test.py'" in command for command in checks))
         self.assertFalse(any('unittest discover' in s.get('run','') for s in self.jobs['build']['steps']))
 
+    def test_ci_backend_runs_the_formatter_check_before_vet(self):
+        # ARCH-26, ARCH-31: CI runs the same gofmt gate the local verify does.
+        ci = yaml.safe_load((WORKFLOW.parent / 'ci.yml').read_text())
+        checks = [s.get('run', '') for s in ci['jobs']['backend']['steps']]
+        self.assertIn('test -z "$(gofmt -l .)"', checks)
+        self.assertLess(checks.index('test -z "$(gofmt -l .)"'), checks.index('go vet ./...'))
+
     def test_only_server_rollout_holds_the_non_cancellable_deployment_lock(self):
         self.assertNotIn('concurrency', self.deploy)
         build = self.jobs['build']['concurrency']

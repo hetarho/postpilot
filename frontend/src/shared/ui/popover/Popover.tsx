@@ -182,8 +182,8 @@ export const Popover = forwardRef<
       // its open option list to the body so no scroller can clip it, which puts the option the
       // user is choosing outside this root. Closing here would unmount the field mid-choice.
       if (target?.closest?.('[role="listbox"]')) return
-      // Nor on the panel of an `InlinePopover` or a `Toggletip` opened from inside this one, which
-      // are portalled for the same reason and carry the anchored-panel attribute.
+      // Nor on the panel of a `Toggletip` opened from inside this one, which is portalled for the
+      // same reason and carries the anchored-panel attribute.
       if (target?.closest?.(`[${ANCHORED_PANEL_ATTRIBUTE}]`)) return
       if (!rootRef.current?.contains(target)) dismiss()
     }
