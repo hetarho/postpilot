@@ -17,9 +17,12 @@ SSOT가 비어 있으면 finding이 아니라 notes다. 코드를 직접 고치�
 
 ## 공통 규칙 (모든 spec 스킬)
 1. 먼저 spec/STATE.md를 읽는다. 없으면 중단하고 create-architecture 실행을 안내한다.
-2. **문서 먼저**: 질문·추론·구현을 시작하기 전에 STATE.md에 시작을 기록하고(log 1줄 + 해당 st), 상태가 바뀔 때마다 즉시 반영한다. 병렬 세션은 STATE.md로만 서로를 안다.
+2. **문서 먼저**: 쓰기 전에 `npx haeram-spec-creator work status --json`으로 배정을 확인한다(CLI가 없으면 Git checkout과 사용자의 배정을 확인). 단독/기획 공간에서는 STATE에 시작과 상태 변화를 기록한다. 작업 묶음의 워커는 STATE·SSOT를 수정하지 않고 실행 상태를 CLI로 기록하며, 자신의 태스크 acceptance·result만 갱신한다. 리뷰 공간에서는 코드·spec을 수정하지 않고 리뷰 runtime만 갱신한다. 브랜치명은 소유권 근거가 아니다.
 3. 산출 문서는 spec/FORMAT.md 표기를 따른다. 규칙에 없는 표기는 만들지 않는다.
 4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용.
+5. **읽기**(FORMAT Reading): 한 번에 한 문서씩, 큰 문서는 섹션 단위로 읽는다. 마지막 섹션(ssot=`## chg`, task=`## result`)이 안 보이면 출력이 잘린 것이다 — 누락 범위를 다시 읽고 나서 판단한다. tasks/done/은 역사 기록이라 일괄로 읽지 않고, 특정 태스크·회귀 원인·이전 검증을 찾을 때만 연다.
+
+작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다.
 
 ## 1. 시작
 - STATE 읽기 → 스코프 확정: 사용자가 준 경로·도메인·태스크(T###이면 그 태스크의 변경 파일), 없으면 저장소 전체. slug=`<scope>-<YYMMDD>`(영문 kebab, 예: `auth-260906`, `all-260906`).
@@ -32,7 +35,7 @@ SSOT가 비어 있으면 finding이 아니라 notes다. 코드를 직접 고치�
 ## 3. 점검 관점
 컨벤션 위반(ARCH-n 대비) · 중복(같은 로직 N곳) · 복잡도(긴 함수, 깊은 분기, 하나가 너무 많이 아는 모듈) · 의존 방향(레이어·모듈 경계 침범, 순환) · 죽은 코드·미사용 의존성 · 테스트 공백(ARCH 테스트 정책 대비 빠진 곳, 깨지기 쉬운 테스트) · 에러 처리 일관성 · 명백한 성능 낭비(N+1, 반복 I/O) · 보안 위생(하드코딩 비밀값, 입력 검증 누락) · 의존성 노후·중복.
 - finding의 조건 — 셋 다 있어야 finding이다: **위치**(파일·심볼) / **무엇이** 문제인지 / **왜**(이대로 두면 어떤 변경이 어떻게 아파지는지). "느낌이 안 좋다"는 finding이 아니다.
-- finding이 아닌 것: 코드가 SSOT와 다름 → notes에 update-ssot 제안(기획 확인이 먼저) / 기준 자체가 ARCH에 없어서 생긴 불일치 → notes에 create-architecture(ARCH 개정) 제안 — 기준 없이 "통일하자"는 finding은 만들지 않는다.
+- finding이 아닌 것: 코드가 SSOT와 다름 → notes에 update-ssot 제안(기획 확인이 먼저) / 기준 자체가 ARCH에 없어서 생긴 불일치 → notes에 create-architecture(ARCH 개정) 제안 — 기준 없이 "통일하자"는 finding은 만들지 않는다 / SSOT가 길거나 중복이라 기준을 읽기 어려움 → notes에 doc-review 제안(문서 품질은 코드 finding이 아니다).
 - 버그(기능이 틀림)는 finding으로 올리되 내용 앞에 `bug:`를 붙여 구분한다. 보통 P1이다.
 - 우선순위: P1 = 정확성·보안 위험이거나 모든 변경을 막음 / P2 = 모든 변경을 느리게 함 / P3 = 있으면 좋음.
 

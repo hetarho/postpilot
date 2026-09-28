@@ -1,5 +1,5 @@
 # T<###> <title>
-> st:todo | ssot:<ID>-<n> <ID>-<n> | base:<ID>@<rev> | dep:-
+> st:todo | ssot:<ID>-<n> <ID>-<n> | base:<ID>@<rev> | dep:- | touches:-
 
 ## goal
 <one line>
@@ -12,3 +12,7 @@
 - <schema/contract/library decided at create-task, with reason>
 
 ## result
+- outcome: <what works now>
+- at: <git commit SHA the checks ran on, or ->
+- verified: <the checks that actually ran>
+- limits: <what is still open, or ->

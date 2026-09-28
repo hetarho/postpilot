@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "haeram-spec-creator": "^0.2.3"
+    "haeram-spec-creator": "^0.2.4"
   },
   "packageManager": "pnpm@10.30.3",
   "engines": {
