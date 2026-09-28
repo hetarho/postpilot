@@ -17,6 +17,11 @@ type PreviewConfig struct {
 	// has to decode the sheet whole and blit cells out of it (CLIP-159).
 	MaxFrameCells, MaxSheetPixels int
 	Timeout                       time.Duration
+	// A browser render's caption frames are not an interactive preview: the
+	// owner is waiting on a render, and a heavy sequence style draws a frame in
+	// a few hundred milliseconds, so a run gets longer than a preview page. It
+	// stays inside the API server's 30 s write timeout.
+	FrameTimeout time.Duration
 }
 type PreviewAsset struct {
 	Key, InstanceID                    string

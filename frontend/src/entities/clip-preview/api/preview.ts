@@ -3,6 +3,7 @@ import { create, toBinary, toJsonString } from '@bufbuild/protobuf'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import {
+  appFailureFromConnect,
   ClipEditPlanSchema,
   ClipPreviewParity,
   ClipRenderService,
@@ -14,6 +15,31 @@ import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import type { PreviewPage } from '../model/draft-preview'
 import type { CaptionFramePage } from '../model/caption-sheets'
 import { clipPlanToProto } from '@/entities/clip-plan/@x/clip-preview'
+
+/** A browser render asks for its caption frames while the page's own preview may be
+ *  drawing, and the server draws one owner's preview at a time, refusing the other as busy
+ *  rather than queueing it. A refused run is asked for again once the other has had time
+ *  to finish (0.25 s, doubling to 2 s, eight times); every other failure stays final. */
+async function askAgainWhenBusy<T>(call: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call()
+    } catch (error) {
+      if (attempt >= 8 || appFailureFromConnect(error).reason !== 'CLIP_PREVIEW_BUSY') throw error
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, Math.min(2000, 250 * 2 ** attempt))
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer)
+            reject(signal.reason)
+          },
+          { once: true },
+        )
+      })
+    }
+  }
+}
 
 export async function clipPreviewRequest(
   transport: Transport,
@@ -44,9 +70,10 @@ export async function clipPreviewRequest(
         instanceId,
         frameOffset,
       })
-      const value = await createClient(ClipRenderService, transport).prepareClipCaptionFrames(
-        request,
-        { signal },
+      const value = await askAgainWhenBusy(
+        () =>
+          createClient(ClipRenderService, transport).prepareClipCaptionFrames(request, { signal }),
+        signal,
       )
       return {
         sheet: value.sheet,

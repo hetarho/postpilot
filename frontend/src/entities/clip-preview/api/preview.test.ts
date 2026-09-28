@@ -1,7 +1,8 @@
 import { webcrypto } from 'node:crypto'
-import { createRouterTransport } from '@connectrpc/connect'
+import { Code, createRouterTransport } from '@connectrpc/connect'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ClipRenderService } from '@/shared/api'
+import { connectAppError } from '@/test/app-error'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import { clipPreviewRequest } from './preview'
 
@@ -48,4 +49,46 @@ it('refuses an oversized Connect JSON body before sending or truncating the curr
   )
   expect(send).not.toHaveBeenCalled()
   expect(JSON.stringify(plan)).toBe(before)
+})
+
+const smallPlan: ClipEditPlan = {
+  nativeComposition: true,
+  durationMs: 15000,
+  cuts: [],
+  elements: [],
+}
+
+// The page's own preview can hold the owner's preview lock while a browser render asks for
+// its caption frames; the run is asked for again rather than failing the render.
+it('asks again for a caption frame run the preview lock refused as busy', async () => {
+  vi.stubGlobal('crypto', webcrypto)
+  let calls = 0
+  const transport = createRouterTransport((router) =>
+    router.service(ClipRenderService, {
+      prepareClipCaptionFrames: () => {
+        if (++calls === 1) throw connectAppError('CLIP_PREVIEW_BUSY', Code.ResourceExhausted)
+        return { cells: 3, cellWidth: 10, cellHeight: 10, columns: 3, nextOffset: -1 }
+      },
+    }),
+  )
+  const request = await clipPreviewRequest(transport, 'owned', 1, smallPlan)
+  const page = await request.frames('caption', 0, new AbortController().signal)
+  expect(page.cells).toBe(3)
+  expect(calls).toBe(2)
+})
+
+it('keeps any other caption frame refusal final', async () => {
+  vi.stubGlobal('crypto', webcrypto)
+  let calls = 0
+  const transport = createRouterTransport((router) =>
+    router.service(ClipRenderService, {
+      prepareClipCaptionFrames: () => {
+        calls++
+        throw connectAppError('CLIP_PREVIEW_TIMEOUT', Code.DeadlineExceeded)
+      },
+    }),
+  )
+  const request = await clipPreviewRequest(transport, 'owned', 1, smallPlan)
+  await expect(request.frames('caption', 0, new AbortController().signal)).rejects.toThrow()
+  expect(calls).toBe(1)
 })

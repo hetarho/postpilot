@@ -97,14 +97,14 @@ func (s *GenerationService) PrepareCaptionFrames(ctx context.Context, user, id s
 	}
 	cfg := s.cfg.Preview
 	renderer, ok := s.renderer.(clip.CaptionFramePreparer)
-	if !ok || cfg.Timeout <= 0 || cfg.MaxFrameCells <= 0 {
+	if !ok || cfg.FrameTimeout <= 0 || cfg.MaxFrameCells <= 0 {
 		return clip.CaptionFrames{}, clip.ErrPreviewUnavailable
 	}
 	if _, loaded := s.previewOwners.LoadOrStore(user, struct{}{}); loaded {
 		return clip.CaptionFrames{}, clip.ErrPreviewBusy
 	}
 	defer s.previewOwners.Delete(user)
-	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, cfg.FrameTimeout)
 	defer cancel()
 	next, refs, err := s.correctedPlan(p, draft)
 	if err != nil {
