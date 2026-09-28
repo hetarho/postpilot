@@ -34,17 +34,26 @@ func TestFinalizedProjectStillCarriesItsPlanAndObservations(t *testing.T) {
 	}
 	project := clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", Analysis: string(analysis), EditPlan: plan,
 		EditPlanRevision: 3, RenderedPlanRevision: 3, Result: &clip.Result{ID: "result", Key: "private-result-key"},
-		Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 3, ResultID: "result"}}
+		Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 3, ResultID: "result"},
+		Storyline: &clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "음식을 먼저", ObservationIDs: []string{"source/0"}}}, MadeWithSources: []string{"source"}}}
 	store := &observationStore{project: project}
 	service := testProjects(store)
 	generation := clipapp.NewGenerationService(nil, service, nil, neutralProcessing{}, nil, nil, nil, neutralJobs{},
 		clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Minute, OrphanMinAge: time.Minute}, neutralGenerationDeps())
-	h := NewHandler(service).WithGeneration(generation, nil)
+	// Finalizing revoked the originals, so the source listing the storyline
+	// reads against is refused (CLIP-178).
+	sources := clipapp.NewSourceService(revokedSources{store}, rpcSourceObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
+	h := NewHandler(service).WithGeneration(generation, nil).WithSources(sources)
 	ctx := auth.WithUser(context.Background(), "alice")
 
 	got, err := h.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: "owned"}))
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Its storyline still reads, against the sources it was analyzed from, so
+	// nothing shows as added since.
+	if storyline := got.Msg.Project.GetStoryline(); len(storyline.GetParagraphs()) != 1 || storyline.GetParagraphs()[0].GetText() != "음식을 먼저" || len(storyline.GetAddedSourceIds()) != 0 {
+		t.Fatalf("the storyline the clip was made from is gone: %v", storyline)
 	}
 	editing := got.Msg.Project.GetEditing()
 	if editing == nil || len(editing.GetPlan().GetCuts()) != 1 || editing.GetPlan().GetCuts()[0].GetId() != "cut" {
@@ -68,4 +77,11 @@ func TestFinalizedProjectStillCarriesItsPlanAndObservations(t *testing.T) {
 	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("a finalized plan accepted a save: %v", err)
 	}
+}
+
+// revokedSources is the source store once finalization revoked the originals.
+type revokedSources struct{ *observationStore }
+
+func (revokedSources) ProjectSourceBatches(context.Context, string, string) ([]clip.SourceBatch, error) {
+	return nil, clip.ErrSourceState
 }

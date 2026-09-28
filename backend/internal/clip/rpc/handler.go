@@ -395,10 +395,18 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	// this read looks up (CLIP-178).
 	if value.Storyline != nil && h.sources != nil {
 		batches, err := h.sources.GetSources(ctx, user, value.ID)
-		if err != nil {
+		// A finalized project, or one whose originals were revoked, has no
+		// current sources: its storyline reads against the sources it was
+		// analyzed from, as it does with no source reader, rather than taking
+		// the whole project down with it.
+		var current []string
+		switch {
+		case err == nil:
+			current = currentSourceIDs(batches)
+		case !errors.Is(err, clip.ErrSourceState):
 			return nil, toConnectError(err)
 		}
-		out.Storyline = storylineProto(value, currentSourceIDs(batches))
+		out.Storyline = storylineProto(value, current)
 	}
 	// A finalized project is read in ① and ② as well as played in ③ (CLIP-160),
 	// and both readings are projections of the stored plan and evidence: no
