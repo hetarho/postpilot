@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Trash2 } from 'lucide-react'
 import { useDeleteMemoryCall } from '@/entities/memory'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 
-/** Deletes a memory after the sheet says the one thing that matters: there is no undo (MEM-24).
+/** Deletes a memory after the sheet says the one thing that matters: there is no undo (MEM-30).
+ *  An icon at the end of the row's text line; its failure message takes a line of its own below
+ *  (`w-full` in the row's wrapping flex line).
  *
  *  Nothing references a memory — a generation froze the TEXTS it selected at enqueue (MEM-19) —
  *  so there is no count to name and nothing in flight changes. */
@@ -26,12 +29,14 @@ export function DeleteMemoryButton({ ownerId, memoryId }: { ownerId: string; mem
   return (
     <>
       <Button
-        variant="danger"
+        variant="ghost"
+        size="icon"
         disabled={remove.isPending}
         onClick={() => setConfirming(true)}
         aria-label={t('delete.aria', { ns: 'memories' })}
+        className="shrink-0"
       >
-        {t('action.delete', { ns: 'common' })}
+        <Trash2 className="size-4" aria-hidden />
       </Button>
       {remove.isError && <FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
       <Dialog

@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Pencil } from 'lucide-react'
 import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
 import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
-import { EditableMemoryFacets, EditableMemoryText } from '@/features/edit-memory'
-import { ActionBar, Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import { MemoryEditForm } from '@/features/edit-memory'
+import { ActionBar, Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
 
 /** The account's 기억 (MEM-24). Composition only — every action is its own feature.
  *
@@ -98,28 +100,60 @@ function EmptyState() {
   )
 }
 
-/** One saved memory: its text, and its kind and tags, each read-first and each saving on its own
- *  so the two edited from two places cannot overwrite each other. One mutation hook serves both —
- *  they never run at the same time, and sharing it keeps one refusal message under one field. */
+/** One saved memory (MEM-30): its text with 수정 and 삭제 at the end of the text line, over one
+ *  line of its kind and tags. The list is read to see what the account knows, so a fact keeps to
+ *  one short row; 수정 turns the whole row into one form for the text, the kind and the tags. */
 function MemoryRow({ ownerId, memory }: { ownerId: string; memory: Memory }) {
+  const { t } = useTranslation(['memories', 'common'])
   const update = useUpdateMemoryCall(ownerId, memory.id)
+  const [editing, setEditing] = useState(false)
+
+  if (editing)
+    return (
+      <li className="py-3">
+        <MemoryEditForm
+          memory={memory}
+          save={update.save}
+          errorMessage={update.errorMessage}
+          pending={update.isPending}
+          onDone={() => setEditing(false)}
+        />
+      </li>
+    )
+
   return (
-    <li className="py-4">
-      <EditableMemoryText
-        value={memory.text}
-        save={update.saveText}
-        errorMessage={update.errorMessage}
-        pending={update.isPending}
-      />
-      <EditableMemoryFacets
-        memory={memory}
-        save={update.saveFacets}
-        errorMessage={update.errorMessage}
-        pending={update.isPending}
-        className="mt-3"
-      />
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+    <li className="py-3">
+      <div className="flex flex-wrap items-start gap-1">
+        <Typography
+          variant="body"
+          className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
+        >
+          {memory.text}
+        </Typography>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t('action.editNamed', {
+            ns: 'common',
+            name: t('edit.text', { ns: 'memories' }),
+          })}
+          onClick={() => setEditing(true)}
+          className="shrink-0"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
         <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} />
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
+        {memory.tags.map((tag) => (
+          <Badge key={tag}>{tag}</Badge>
+        ))}
+        {memory.tags.length === 0 && (
+          <Typography variant="meta" as="span">
+            {t('page.noTags', { ns: 'memories' })}
+          </Typography>
+        )}
       </div>
     </li>
   )

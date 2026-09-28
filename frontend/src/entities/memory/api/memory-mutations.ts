@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { MemoryService } from '@/shared/api'
-import type { MemoryKind } from '../model/types'
+import type { MemoryKind, MemoryPatch } from '../model/types'
 import { invalidateMemories } from './memory-cache'
 import { memoryErrorMessage } from './memory-errors'
 import { toProtoKind } from './memory-queries'
@@ -28,9 +28,10 @@ export function useCreateMemoryCall(ownerId: string) {
   }
 }
 
-/** Presence is the edit unit: the text saver sends no tags and the facet saver sends no text, so
- *  two edits from two places cannot overwrite each other. The tags go as one patch because the
- *  set is replaced whole — which is also what lets every tag be cleared. */
+/** Presence is the edit unit: a save carries only the parts the row's one form changed (MEM-30),
+ *  so an edit never rewrites a part another tab changed meanwhile, and the server applies all of
+ *  them in one update. The tags go as one patch because the set is replaced whole — which is also
+ *  what lets every tag be cleared. */
 export function useUpdateMemoryCall(ownerId: string, memoryId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
@@ -40,9 +41,13 @@ export function useUpdateMemoryCall(ownerId: string, memoryId: string) {
   return {
     ...mutation,
     errorMessage: memoryErrorMessage(mutation.error),
-    saveText: (text: string) => mutation.mutateAsync({ id: memoryId, text: text.trim() }),
-    saveFacets: (kind: MemoryKind, tags: string[]) =>
-      mutation.mutateAsync({ id: memoryId, kind: toProtoKind(kind), tags: { tags } }),
+    save: (patch: MemoryPatch) =>
+      mutation.mutateAsync({
+        id: memoryId,
+        ...(patch.text !== undefined && { text: patch.text.trim() }),
+        ...(patch.kind !== undefined && { kind: toProtoKind(patch.kind) }),
+        ...(patch.tags !== undefined && { tags: { tags: patch.tags } }),
+      }),
   }
 }
 

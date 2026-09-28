@@ -38,8 +38,8 @@ export interface FakeMemoriesOptions {
    *  evicts nothing (MEM-11). */
   createAtCap?: boolean
   calls?: string[]
-  /** Records every UpdateMemory exactly as it arrived, so a test can prove a text edit carried
-   *  no tags and a facet edit carried no text. */
+  /** Records every UpdateMemory exactly as it arrived, so a test can prove a save carried only
+   *  the parts the row's form changed. */
   updates?: Array<{
     id: string
     text: string | undefined

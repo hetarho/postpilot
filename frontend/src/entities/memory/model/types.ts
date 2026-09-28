@@ -9,6 +9,13 @@ export type MemoryKind = (typeof MEMORY_KINDS)[number]
 
 /** One atomic fact about the author's world, authored by the user — never inferred, scored or
  *  ranked by a model (MEM-23). */
+/** What one edit changes: each part present only when it differs from the memory as loaded. */
+export interface MemoryPatch {
+  text?: string
+  kind?: MemoryKind
+  tags?: string[]
+}
+
 export interface Memory {
   id: string
   text: string

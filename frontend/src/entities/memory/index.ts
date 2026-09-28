@@ -1,5 +1,5 @@
 export * from './config'
-export type { Memory, MemoryKind } from './model/types'
+export type { Memory, MemoryKind, MemoryPatch } from './model/types'
 export {
   MEMORY_KINDS,
   MEMORY_LIMITS,

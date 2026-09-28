@@ -84,45 +84,94 @@ describe('the memory directory', () => {
     expect(screen.queryByRole('region', { name: '저장된 기억' })).not.toBeInTheDocument()
   })
 
-  // Read first: the text is prose until the pencil is pressed, and a text edit carries no tags,
-  // so two edits from two places cannot overwrite each other.
-  it('edits a memory text on request and sends only the text', async () => {
+  // MEM-30: one short row — the text with one pencil and one trash, over one badge line.
+  it('keeps a row to its text, one 수정 and one 삭제, and a badge line', async () => {
+    renderMemories()
+    const place = await row('연남동에 자주 간다')
+    expect(place.getAllByRole('button')).toHaveLength(2)
+    expect(place.getByRole('button', { name: '기억 수정' })).toBeInTheDocument()
+    expect(place.getByRole('button', { name: '이 기억 삭제' })).toBeInTheDocument()
+    expect(place.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  // One 수정 opens the text, the kind and the tags together, and one 저장 sends only what changed.
+  it('edits the text, the kind and the tags in one form and sends them in one request', async () => {
     const user = userEvent.setup()
     const updates: FakeMemoriesOptions['updates'] = []
     renderMemories({ updates })
 
     const place = await row('연남동에 자주 간다')
-    expect(place.queryByRole('textbox')).not.toBeInTheDocument()
     await user.click(place.getByRole('button', { name: '기억 수정' }))
-    const field = place.getByRole('textbox')
+    const field = place.getByLabelText('기억')
     await user.clear(field)
     await user.type(field, '연남동에서 산책한다')
+    await user.click(place.getByRole('combobox', { name: /^종류/ }))
+    await user.click(await screen.findByRole('option', { name: '취향' }))
+    const tags = place.getByLabelText('태그')
+    await user.clear(tags)
+    await user.type(tags, '연남동, 연남동, 저녁')
     await user.click(place.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(updates).toHaveLength(1))
-    expect(updates[0]).toMatchObject({ id: 'memory-place', text: '연남동에서 산책한다' })
-    expect(updates[0]?.tags).toBeUndefined()
-    expect(updates[0]?.kind).toBeUndefined()
-    expect(await screen.findByText('연남동에서 산책한다')).toBeInTheDocument()
+    expect(updates[0]).toEqual({
+      id: 'memory-place',
+      text: '연남동에서 산책한다',
+      kind: ProtoMemoryKind.PREFERENCE,
+      // Duplicates collapse before they are sent, exactly as the server collapses them.
+      tags: ['연남동', '저녁'],
+    })
+    const edited = await row('연남동에서 산책한다')
+    expect(edited.getByText('취향')).toBeInTheDocument()
+    expect(edited.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
-  // The kind and the tags are ONE edit: the kind decides whether tags gate the fact at all, so
-  // saving one without the other would leave a place fact reachable by nothing (MEM-6).
-  it('edits the kind and the tags together and sends no text with them', async () => {
+  it('sends only the parts that changed, and nothing when nothing did', async () => {
     const user = userEvent.setup()
     const updates: FakeMemoriesOptions['updates'] = []
     renderMemories({ updates })
 
     const preference = await row('매운 음식을 못 먹는다')
-    await user.click(preference.getByRole('button', { name: '종류와 태그 수정' }))
-    await user.type(preference.getByLabelText('태그'), '음식, 음식, 저녁')
+    await user.click(preference.getByRole('button', { name: '기억 수정' }))
     await user.click(preference.getByRole('button', { name: '저장' }))
+    expect(preference.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(updates).toEqual([])
+
+    await user.click(preference.getByRole('button', { name: '기억 수정' }))
+    await user.type(preference.getByLabelText('태그'), '음식')
+    await user.click(preference.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]).toEqual({
+      id: 'memory-preference',
+      text: undefined,
+      kind: undefined,
+      tags: ['음식'],
+    })
+  })
+
+  it('keeps every typed value on a refused save, and 취소 drops the draft', async () => {
+    const user = userEvent.setup()
+    const updates: FakeMemoriesOptions['updates'] = []
+    renderMemories({ updates })
+
+    const place = await row('연남동에 자주 간다')
+    await user.click(place.getByRole('button', { name: '기억 수정' }))
+    const field = place.getByLabelText('기억')
+    await user.clear(field)
+    // Another memory already holds this text, so the server refuses it.
+    await user.type(field, '매운 음식을 못 먹는다')
+    await user.type(place.getByLabelText('태그'), ', 저녁')
+    await user.click(place.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(updates).toHaveLength(1))
-    expect(updates[0]?.text).toBeUndefined()
-    expect(updates[0]?.kind).toBe(ProtoMemoryKind.PREFERENCE)
-    // Duplicates collapse before they are sent, exactly as the server collapses them.
-    expect(updates[0]?.tags).toEqual(['음식', '저녁'])
+    expect(await place.findByText('이미 같은 기억이 있어요.')).toBeInTheDocument()
+    expect(place.getByLabelText('기억')).toHaveValue('매운 음식을 못 먹는다')
+    expect(place.getByLabelText('태그')).toHaveValue('연남동, 산책, 저녁')
+    expect(place.getByLabelText('기억')).toHaveAttribute('aria-invalid', 'true')
+
+    await user.click(place.getByRole('button', { name: '취소' }))
+    expect(place.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(await row('연남동에 자주 간다')).toBeTruthy()
+    expect(updates).toHaveLength(1)
   })
 
   it('creates a memory from the sheet and re-reads the list', async () => {

@@ -15,6 +15,7 @@ export const i18n = {
       emptyHelp:
         '글을 완성한 뒤 ③에서 기억으로 저장을 눌러 뽑아내거나, 여기서 직접 적을 수 있어요.',
       example: '예: 매운 음식을 잘 못 먹는다',
+      noTags: '태그 없음',
     },
   },
   en: {
@@ -29,6 +30,7 @@ export const i18n = {
       emptyHelp:
         'Finish a post and press 기억으로 저장 in ③ to extract some, or write one here by hand.',
       example: 'For example: cannot handle spicy food',
+      noTags: 'No tags',
     },
   },
 } as const satisfies I18nFragment

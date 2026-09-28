@@ -1,2 +1,1 @@
-export { EditableMemoryFacets } from './ui/EditableMemoryFacets'
-export { EditableMemoryText } from './ui/EditableMemoryText'
+export { MemoryEditForm } from './ui/MemoryEditForm'
