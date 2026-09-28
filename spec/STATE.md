@@ -33,8 +33,8 @@
 | THEME | 19 | 19 | - | 0 |
 | MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 50 | 43 | CLIP-163+ | 2 |
-| CDS | 30 | 30 | - | 1 |
+| CLIP | 51 | 51 | - | 2 |
+| CDS | 31 | 31 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 4 | 4 | - | 2 |
 | QUAL | 6 | 6 | - | 0 |
@@ -56,12 +56,25 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T450 | Project-owned intro and outro state | CLIP ARCH | - | todo |
+| T451 | Synchronize project slots with the current clip plan | CLIP CDS ARCH | T450 | todo |
+| T452 | Draft region slots in the approved storyline calls | CLIP CDS ARCH | T451 | todo |
+| T453 | Edit intro and outro slots in the storyline space | CLIP CDS ARCH | T452 | todo |
+| T454 | Validate manual caption styles independently of the AI set | CLIP CDS ARCH | - | todo |
+| T455 | Select and style individual captions in the draft preview | CLIP CDS ARCH | T454 | todo |
+| T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | todo |
 
 ## next
+- implement-task T450: project region state; then T451 → T452 → T453; caption branch T454 → T455; T456 verifies both complete flows
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260928 create-task CLIP r51 CDS r31 → T450–T456; lint/check passed (42 warnings, 13 review hints); 44 changed decisions covered and dependency graph verified
+- 260928 CLIP task cursor reconciled through r50: completed T441–T448 and recorded r50 no-op; r44 no-op (open CLIP-163 creates no code work; GPU acceptance remains undecided)
+- 260928 create-task CLIP CDS start (project region slots and caption appearance)
+- 260928 update-ssot CLIP r51 CDS r31: project regions and storyline slots; manual caption styling across the approved set; no active task/worker affected
+- 260928 update-ssot CLIP CDS start (project-owned intro/outro slots and per-caption preview styling)
 - 260928 fix: a browser render's caption frame runs are also cut to half the preview deadline left, costed from two frames drawn alone (heavy styles timed out as CLIP_PREVIEW_TIMEOUT at 5 s)
 - 260928 fix: a browser render's caption frame sheets are cut to what one JSON response carries (a neon or ember caption's run was refused as CLIP_PREVIEW_TOO_LARGE)
 - 260928 fix done: regenerated backend/Dockerfile's media asset digest for the T416 caption preset; pnpm test:dev passes all 5 tests
@@ -77,8 +90,3 @@
 - 260928 update-ssot CDS AUTH start (T416's decision; the stale doc rows)
 - 260928 T449 done: 기억을 통한 감상 추가 (memory_impressions) with the 취향: label and the /guidelines note
 - 260928 T449 claimed (mi)
-- 260928 create-task T449 (GEN r18, GUIDE r10); POST r22 MKT r8 MODEL r19 TMPL r16 CLIP r50 ARCH r13 no-op (no code impact)
-- 260928 create-task POST GEN GUIDE CLIP ARCH MKT MODEL TMPL start (260928 deltas)
-- 260928 update-ssot POST-64✎ POST-45✎ POST-51✎ GEN-16✎ GEN-73+ GUIDE-41✎ CLIP-40✎ ARCH-30✎ MKT-5✎ MODEL-25✎ TMPL-6✎
-- 260928 update-ssot POST GEN GUIDE CLIP ARCH MKT MODEL TMPL start (the doc-review holds, answered)
-- 260928 doc-review QUAL MEM GIFT AUTH BILL tidied (rev unchanged); all 20 SSOTs reviewed, lint candidates 209 → 14
