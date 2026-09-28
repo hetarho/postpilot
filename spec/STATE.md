@@ -56,7 +56,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T450 | Project-owned intro and outro state | CLIP ARCH | - | todo |
 | T451 | Synchronize project slots with the current clip plan | CLIP CDS ARCH | T450 | todo |
 | T452 | Draft region slots in the approved storyline calls | CLIP CDS ARCH | T451 | todo |
 | T453 | Edit intro and outro slots in the storyline space | CLIP CDS ARCH | T452 | todo |
@@ -65,11 +64,16 @@
 | T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | todo |
 
 ## next
-- implement-task T450: project region state; then T451 → T452 → T453; caption branch T454 → T455; T456 verifies both complete flows
+- next session: implement-task T451 (synchronize project regions with the current plan); T451–T456 remain unstarted at the owner's request
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260928 T450 done: project region persistence/API and compatibility verified with all local gates; commit/push requested, stop here and leave T451–T456 unstarted
+- 260928 T450 verification: ff900701 fixes recovery writes rejected after wall-clock rollback; the deterministic regression and repeated recovery tests pass
+- 260928 finding (T450 verification): attempt-checkpoint read/write recency also uses wall-clock ordering; retained as a follow-up outside the region-state task
+- 260928 implementation scope narrowed: finish and commit T450 only; leave T451–T456 unstarted for the next session
+- 260928 T450 claimed (cr); sequential T450–T456 implementation and per-task commits
 - 260928 create-task CLIP r51 CDS r31 → T450–T456; lint/check passed (42 warnings, 13 review hints); 44 changed decisions covered and dependency graph verified
 - 260928 CLIP task cursor reconciled through r50: completed T441–T448 and recorded r50 no-op; r44 no-op (open CLIP-163 creates no code work; GPU acceptance remains undecided)
 - 260928 create-task CLIP CDS start (project region slots and caption appearance)
@@ -85,8 +89,3 @@
 - 260928 finding (T416): backend/examples/overlays/shorts-editorial no longer loads (card-v1 views, no keynote/film/region/info bindings); only its caption template was brought to the runs contract
 - 260928 T416 claimed (gs)
 - 260928 create-task CDS r30 → T416 revised (unblocked); AUTH r10 no-op (T427 throttles VerifyEmail); THEME r16..r19 no-op (Wanted Sans Variable already first in --font-sans, the renderer's pinned file; r17..r19 consumed by T356 T412 T427)
-- 260928 create-task CDS AUTH THEME start
-- 260928 update-ssot CDS-84✎ CDS-17✎ CDS-52✎ AUTH-36✎ (a caption character its face does not draw is set in Wanted Sans Variable; VerifyEmail named among the throttled writes)
-- 260928 update-ssot CDS AUTH start (T416's decision; the stale doc rows)
-- 260928 T449 done: 기억을 통한 감상 추가 (memory_impressions) with the 취향: label and the /guidelines note
-- 260928 T449 claimed (mi)
