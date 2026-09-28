@@ -15,6 +15,7 @@
 | post-quality-and-related-links | converted@260923 |
 | searchable-details | open@260926 |
 | storyline-first | converted@260927 |
+| voice-tidy | open@260929 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -64,9 +65,11 @@
 ## next
 - next: implement-task T453 (edit intro and outro slots in the storyline space), then T454–T456 in order, one commit per task
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451), then review-code the clip wave
-- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
+- ideation voice-tidy continues (open: the axis set under the owner's Korean-research rule, readiness-meter numbers, the prompt photo source, the VOICE-49 analyze experiment, existing voices), then update-ssot VOICE GEN POST GUIDE AUTH QUOTA; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 ideation voice-tidy open: 말투 learns only from prose the owner wrote (pasted posts, per-분야 photo/situation prompts, a readiness meter, one analysis at 100%); read-only 말투 분석 with research-defined axes; 검증 beside the owner's answer; optional voice and 기본; drops 대조 규칙, finished-post learning, 문장 의견, the 버전 기록 tab, the seed and 규칙으로 저장
+- 260929 ideation voice-tidy start (does the voice apply; what 말투/프로필/버전/측정·분석/여섯 성향/대조 규칙/검증 mean; list and detail pages)
 - 260929 T460 done: one closed-row guideline list (기본 지침 in use, then the owner's) with a 기본 지침 sheet and a one-form edit
 - 260929 T460 claimed (sm)
 - 260929 T459 done: guidelines carry an optional title (≤40, migration 0104) offered on every create surface and never in a prompt
@@ -85,5 +88,3 @@
 - 260928 create-task POST GUIDE MEM start
 - 260928 update-ssot POST r23 GUIDE r11 MEM r5: storyline tiles open large; memory rows compact with one edit form; guidelines one closed-row list with optional titles and a 기본 지침 sheet (추가 / 적용 안함); no active task/worker affected
 - 260928 update-ssot POST MEM GUIDE start (enlarge storyline photos; compact memory cards with one edit mode; guideline title list, preset picker modal)
-- 260928 T451 done: region slots project into the plan on slot/preset/correction/generation writes; owner-fixed overflow refuses by slot; ambiguous calls in IMPLEMENTATION-DECISIONS.md
-- 260928 T451 claimed (p15); owner asked to run T451–T456 in order, one commit per task
