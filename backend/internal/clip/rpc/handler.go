@@ -234,12 +234,10 @@ func projectProto(p clip.Project) *v1.ClipProject {
 	// "unchosen" and shows another look than the renderer draws (CLIP-111).
 	presets := p.DesignSelection().RegionPresets()
 	out := &v1.ClipProject{Regions: regionsProto(p), CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: presets.Intro, OutroPreset: presets.Outro, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
-	if p.EditPlan != "" {
-		if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
-			for _, n := range clip.ActivePlanNotices(plan, p.DesignSelection().RegionPresets()) {
-				out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, CutId: n.CutID, ElementId: n.ElementID, Action: n.Action})
-			}
-		}
+	// The plan's notices and the region slots' own, which a project holds
+	// before it has a plan (CLIP-147).
+	for _, n := range clip.ProjectNotices(p) {
+		out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, CutId: n.CutID, ElementId: n.ElementID, Action: n.Action})
 	}
 	if f := p.Finalized; f != nil {
 		out.FinalizedAt = f.At.UTC().Format(time.RFC3339Nano)

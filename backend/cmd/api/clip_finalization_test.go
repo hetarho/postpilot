@@ -160,7 +160,7 @@ func TestClipFinalizationPreservesMatchingResultAndFencesEveryMutation(t *testin
 	if _, err := h.service.UpdateProject(t.Context(), "alice", "clip", clip.ProjectPatch{Title: &title}); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal(err)
 	}
-	if _, err := h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, h.project.EditPlan); !errors.Is(err, clip.ErrFinalized) {
+	if _, err := h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, h.project.EditPlan, nil); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal("no-op edit bypassed finalization", err)
 	}
 	if _, err := h.generation.StartRender(t.Context(), "alice", "clip", h.batch.ID, h.project.EditPlanRevision, clip.RenderServer); !errors.Is(err, clip.ErrFinalized) {
@@ -364,7 +364,7 @@ func TestClipFinalizationCompetesWithEditStartAndDelete(t *testing.T) {
 							results <- e
 							return
 						}
-						_, err = h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, raw)
+						_, err = h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, raw, nil)
 					case "start":
 						_, err = h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindRender, NonMetered: true}, "clip"))
 					case "delete":

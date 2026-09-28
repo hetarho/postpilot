@@ -67,3 +67,35 @@ it('offers text, placement and timing edits, and the styles the project allows',
     expect.any(String),
   )
 })
+
+it('edits an intro by its slot rows alone', () => {
+  const state = clipTimelineFixture(),
+    change = vi.fn()
+  const intro = {
+    ...state.plan.elements![0],
+    instanceId: 'project-intro',
+    elementId: 'project-intro',
+    cutId: '',
+    role: 'hook',
+    text: '',
+    rows: [
+      { role: '', text: '성수 골목' },
+      { role: '', text: '' },
+    ],
+  }
+  render(<ClipTextControls plan={state.plan} text={intro} change={change} invalid={false} />)
+  expect(screen.queryByLabelText('자막 원문')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('문구 1행')).toHaveValue('성수 골목')
+  fireEvent.change(screen.getByLabelText('문구 2행'), { target: { value: '저녁 영업' } })
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      patch: {
+        rows: [
+          { role: '', text: '성수 골목' },
+          { role: '', text: '저녁 영업' },
+        ],
+      },
+    }),
+    expect.any(String),
+  )
+})

@@ -21,7 +21,7 @@ func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved, err := h.store.SaveCorrection(t.Context(), "alice", p.ID, p.EditPlanRevision, raw)
+	saved, err := h.store.SaveCorrection(t.Context(), "alice", p.ID, p.EditPlanRevision, raw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

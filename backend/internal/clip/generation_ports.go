@@ -76,7 +76,8 @@ type Planner interface {
 type GenerationStore interface {
 	GetSourceBatch(context.Context, string, string) (SourceBatch, error)
 	LinkRenderSourceJob(context.Context, string, string, string, int, time.Time) error
-	SaveCorrection(context.Context, string, string, int, string) (Project, error)
+	// The regions a correction changed, read at their revision, or nil.
+	SaveCorrection(ctx context.Context, user, id string, revision int, raw string, regions *ProjectRegions) (Project, error)
 	BatchForJob(context.Context, string, string) (SourceBatch, error)
 	ListConsumingBatches(context.Context) ([]SourceBatch, error)
 	ResultKeys(context.Context) ([]string, error)

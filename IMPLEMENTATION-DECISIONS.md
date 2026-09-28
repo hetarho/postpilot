@@ -1,4 +1,4 @@
-# Implementation decisions to review (T414–T448, 260928)
+# Implementation decisions to review (T414–T456, 260928)
 
 Ambiguous points the spec did not settle, resolved in code so the wave could keep moving. Each
 line says what was decided and what to change if you want the other way. Tasks skipped because a
@@ -286,6 +286,37 @@ choice would be expensive to undo are listed at the end.
 - **In a transition overlap the still is the incoming cut**, since a still has no fade.
 - **Overlays are the server's own assets**, the ones the video preview already fetches. Each is drawn whole and at rest while its interval holds the playhead. A sequence style is its one representative frame, which is how the server hands it over.
 - **The info control's new line** (`멈춘 장면으로 흐름만 보여줘요. 실제 렌더와 다를 수 있어요.`) stands in both views, next to the existing parity line.
+
+## T451 — the project's intro/outro slots are what the plan draws
+
+- **Deleting the intro or outro in ②'s timeline switches that region off.** Its slot drafts and its
+  interval are kept, and undo switches it back on with the same words. The spec says region edits
+  in ② reach the storyline slots (CLIP-188) but does not say what deleting one means; switching the
+  region off is the only reading that keeps a single set of region words. *If you want deletion
+  refused instead:* return an error from `ReconcileRegionCorrection` when a region entry disappears.
+- **A slot the owner typed, whose text its slot cannot draw, refuses the whole save** and names the
+  slot (`project-intro-1`, reason `copy_limit` or `unsupported_glyph`). That includes choosing a
+  narrower preset: the choice is refused and the old preset stays until the words are shortened.
+  Text from a template or an answer is not refused on save, because the owner may not have typed
+  it. It is drawn as written, and the layout refuses it by element at render.
+- **Generated slot text too wide for a newly chosen preset is left out of the video, not refused.**
+  The slot gets an `intro_slot_omitted` / `outro_slot_omitted` notice, and the draft keeps the words
+  for a wider preset.
+- **Sending the preset a region already renders in does not switch that region on.** ①'s autosave
+  sends both presets on every save, so under T450's rule ("a preset turns its region on") a single
+  title keystroke would have turned both regions back on. Choosing a different preset still
+  switches the region on (CLIP-111).
+- **An enabled region with nothing to draw has no element in the plan.** Its interval is kept in the
+  plan's archive and comes back when the words do. T453's storyline space is where such a region
+  shows as unresolved.
+- **A revision request from ②'s composer no longer changes intro/outro words.** Its writer still
+  rebuilds the region entries, but the saved plan draws the slots as they stand. A new generation
+  still takes the words its writer drafted for the generated slots, until T452 has the writing
+  calls fill the slots themselves.
+- **Plans saved before this change keep their template entries until something about the regions
+  changes.** A title edit or a caption correction does not rewrite them, because that would stale a
+  matching render over nothing visible. The first slot edit, preset change or generation replaces
+  them with the one project element.
 
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.

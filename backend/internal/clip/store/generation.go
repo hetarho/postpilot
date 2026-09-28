@@ -139,11 +139,19 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 // rendered from stay exactly as they are, so a regenerated project keeps the
 // clip it already has while the new plan waits for the render the owner asks
 // for (CLIP-151, CLIP-152, CLIP-26). A storyline the flow call opened with is written in the
-// same transaction (CLIP-178); "" leaves the stored one as it is.
+// same transaction (CLIP-178); "" leaves the stored one as it is. The plan draws the project's
+// region slots, with the words the writer drafted for its generated ones (CLIP-187).
 func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan, storyline string, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		old, err := getProject(ctx, q, user, id)
 		if err != nil {
+			return struct{}{}, err
+		}
+		plan, regions, projected, err := projectWrittenPlan(old, plan, true)
+		if err != nil {
+			return struct{}{}, err
+		}
+		if err := saveRegionState(ctx, q, old, regions, now, projected); err != nil {
 			return struct{}{}, err
 		}
 		n, err := q.SaveGeneratedPlan(ctx, sqlc.SaveGeneratedPlanParams{AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), UpdatedAt: stamp(now), UserID: user, ID: id})

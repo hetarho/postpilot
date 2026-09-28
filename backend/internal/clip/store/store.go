@@ -410,20 +410,13 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 
 		if p.Regions != nil {
-			current := clip.EffectiveProjectRegions(before)
-			if p.ExpectedRegionRevision == nil || *p.ExpectedRegionRevision != current.Revision {
+			if p.ExpectedRegionRevision == nil {
 				return clip.Project{}, clip.ErrPlanConflict
 			}
 			next := p.Regions.Clone()
-			next.Revision = current.Revision
-			if !reflect.DeepEqual(next, current) {
-				next.Revision++
-				updated := before
-				updated.Regions = &next
-				updated.UpdatedAt = now
-				if err := saveRegions(ctx, q, updated); err != nil {
-					return clip.Project{}, err
-				}
+			next.Revision = *p.ExpectedRegionRevision
+			if err := saveRegionState(ctx, q, before, next, now, false); err != nil {
+				return clip.Project{}, err
 			}
 		}
 		if p.Title != nil {
@@ -480,6 +473,14 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.CaptionStyles != nil {
 			if err := affected(q.UpdateClipAllowedCaptionStyles(ctx, sqlc.UpdateClipAllowedCaptionStylesParams{AllowedCaptionStyles: encodeCaptionStyles(*p.CaptionStyles), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		// Every region edit, preset change and seeding reaches the plan in this
+		// same write, and the project's regions are the only words it draws there
+		// (CLIP-188).
+		if p.Regions != nil {
+			if err := syncPlanRegions(ctx, q, before, now); err != nil {
 				return clip.Project{}, err
 			}
 		}

@@ -42,6 +42,16 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	}
 	next = next.WithDesign(p.DesignSelection())
 	if next.Portable != nil {
+		// Region lines the owner corrected are the project's slots in the same
+		// save, and the plan draws those slots and nothing else (CLIP-188).
+		old, err := clip.DecodeEditPlan(p.EditPlan)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		var regions *clip.ProjectRegions
+		if next, regions, err = clip.CorrectRegions(p, old, next); err != nil {
+			return clip.Project{}, err
+		}
 		layout, ok := s.renderer.(clip.CompositionLayouter)
 		if !ok {
 			return clip.Project{}, clip.ErrCompositionUnavailable
@@ -62,7 +72,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 		if err != nil {
 			return clip.Project{}, err
 		}
-		return s.store.SaveCorrection(ctx, user, id, revision, raw)
+		return s.store.SaveCorrection(ctx, user, id, revision, raw, regions)
 	}
 	sizer, ok := s.renderer.(clip.CaptionSizer)
 	if !ok {
@@ -83,7 +93,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return clip.Project{}, err
 	}
-	return s.store.SaveCorrection(ctx, user, id, revision, raw)
+	return s.store.SaveCorrection(ctx, user, id, revision, raw, nil)
 }
 
 type renderPayload struct {

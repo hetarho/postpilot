@@ -256,7 +256,7 @@ func TestThePlanReadsAsEditedByHandOnlyAfterTheOwnerChangesIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	edited, err := h.store.SaveCorrection(t.Context(), "alice", h.project.ID, p.EditPlanRevision, raw)
+	edited, err := h.store.SaveCorrection(t.Context(), "alice", h.project.ID, p.EditPlanRevision, raw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

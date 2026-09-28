@@ -247,6 +247,9 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if err := clip.ApplyRegionPatch(&regions.Outro, input.OutroRegion, s.limits); err != nil {
 		return clip.Project{}, err
 	}
+	if err := clip.ValidateOwnerRegions(regions, p.DesignSelection().RegionPresets(), p.Ratio); err != nil {
+		return clip.Project{}, err
+	}
 	p.Regions = &regions
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return clip.Project{}, err
@@ -387,19 +390,30 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		if p.ExpectedRegionRevision != nil && *p.ExpectedRegionRevision != regions.Revision {
 			return clip.Project{}, clip.ErrPlanConflict
 		}
+		// Words a writer left in the plan's template entries are the generated
+		// slots' own before any edit lands on them (CLIP-190).
+		if old.EditPlan != "" {
+			if plan, e := clip.DecodeEditPlan(old.EditPlan); e == nil {
+				clip.AbsorbWrittenRegions(&regions, plan)
+			}
+		}
 		revision := regions.Revision
 		p.ExpectedRegionRevision = &revision
 		next := old
 		if p.Composition != nil {
 			next.Composition = p.Composition
 		}
+		// Choosing a preset switches its region on (CLIP-111); a save carrying
+		// the preset the region already renders in chooses nothing, so ①'s
+		// autosave never turns a region back on.
+		current := old.DesignSelection().RegionPresets()
 		if p.IntroPreset != nil {
 			next.IntroPreset = *p.IntroPreset
-			regions.Intro.Enabled = true
+			regions.Intro.Enabled = regions.Intro.Enabled || *p.IntroPreset != current.Intro
 		}
 		if p.OutroPreset != nil {
 			next.OutroPreset = *p.OutroPreset
-			regions.Outro.Enabled = true
+			regions.Outro.Enabled = regions.Outro.Enabled || *p.OutroPreset != current.Outro
 		}
 		if p.VideoTemplateID != nil && *p.VideoTemplateID != "" && *p.VideoTemplateID != old.VideoTemplateID {
 			regions, err = clip.SeedProjectRegions(next, &regions)

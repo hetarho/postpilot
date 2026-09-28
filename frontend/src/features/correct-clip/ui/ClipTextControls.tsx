@@ -27,6 +27,8 @@ import {
 } from '@/shared/ui'
 import { ClipTimeField } from './ClipTimeField'
 
+const regionRole = (role: string) => role === 'hook' || role === 'ending'
+
 export function ClipTextControls({
   plan,
   text,
@@ -105,15 +107,19 @@ export function ClipTextControls({
         </div>
       )}
       <ClipNoticeList notices={textNotices} language={language} />
-      <div>
-        <FieldLabel htmlFor="clip-selected-text">{t('correction.copy')}</FieldLabel>
-        <Textarea
-          id="clip-selected-text"
-          autoGrow
-          value={text.text}
-          onChange={(e) => patch({ text: e.target.value }, 'text')}
-        />
-      </div>
+      {/* An intro or outro draws its slots, one row each, and no text of its
+          own beside them (CLIP-188). */}
+      {!(regionRole(text.role) && text.rows.length > 0) && (
+        <div>
+          <FieldLabel htmlFor="clip-selected-text">{t('correction.copy')}</FieldLabel>
+          <Textarea
+            id="clip-selected-text"
+            autoGrow
+            value={text.text}
+            onChange={(e) => patch({ text: e.target.value }, 'text')}
+          />
+        </div>
+      )}
       {text.rows.map((row, index) => (
         <div key={index}>
           <FieldLabel htmlFor={`clip-text-row-${index}`}>

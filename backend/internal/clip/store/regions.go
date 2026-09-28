@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -65,4 +67,101 @@ func saveRegions(ctx context.Context, q *sqlc.Queries, p clip.Project) error {
 		return err
 	}
 	return affected(q.SaveClipRegions(ctx, sqlc.SaveClipRegionsParams{ID: p.ID, UserID: p.UserID, RegionsJson: nullable(raw), UpdatedAt: stamp(p.UpdatedAt)}))
+}
+
+// syncPlanRegions keeps a project's plan drawing exactly its regions after a
+// write that changed them or their presets (CLIP-188), inside that write's
+// transaction and from the plan as it stands there, so a concurrent correction
+// is never overwritten. The plan revision advances only when what the plan
+// holds changed, which makes a matching render stale (CLIP-139), and an
+// owner-fixed text its slot cannot draw refuses the whole write (CDS-64). A
+// write that left both the regions and the presets as they were — ①'s autosave
+// of its other fields — touches no plan.
+func syncPlanRegions(ctx context.Context, q *sqlc.Queries, before clip.Project, now time.Time) error {
+	user, id := before.UserID, before.ID
+	p, err := getProject(ctx, q, user, id)
+	if err != nil {
+		return err
+	}
+	regions := clip.EffectiveProjectRegions(p)
+	presets := p.DesignSelection().RegionPresets()
+	if reflect.DeepEqual(regions, clip.EffectiveProjectRegions(before)) && presets == before.DesignSelection().RegionPresets() {
+		return nil
+	}
+	if err := clip.ValidateOwnerRegions(regions, presets, p.Ratio); err != nil {
+		return err
+	}
+	// A plan this version cannot read has nothing to project into; every
+	// reader of it refuses it on its own.
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
+	if p.EditPlan == "" || err != nil {
+		return nil
+	}
+	synced, changed, err := clip.ProjectPlanRegions(plan, regions, presets)
+	if err != nil || !changed {
+		return err
+	}
+	raw, err := clip.EncodeEditPlan(synced)
+	if err != nil {
+		return err
+	}
+	n, err := q.SaveCorrection(ctx, sqlc.SaveCorrectionParams{EditPlanJson: nullable(raw), UpdatedAt: stamp(now), ID: id, UserID: user, EditPlanRevision: int64(p.EditPlanRevision)})
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return clip.ErrPlanConflict
+	}
+	return saveRegionState(ctx, q, p, regions, now, true)
+}
+
+// saveRegionState saves region state computed from the revision it carries: a
+// region edit made since refuses it rather than being overwritten, and changed
+// state advances the revision. State equal to what is stored writes nothing and
+// keeps the revision, unless pin asks for it to be stored anyway — once a plan
+// has been projected from regions that were only ever derived from it, they are
+// recorded, since the projected element no longer says which template entry or
+// answer each slot came from (CLIP-190).
+func saveRegionState(ctx context.Context, q *sqlc.Queries, before clip.Project, next clip.ProjectRegions, now time.Time, pin bool) error {
+	current := clip.EffectiveProjectRegions(before)
+	if next.Revision != current.Revision {
+		return clip.ErrPlanConflict
+	}
+	next = next.Clone()
+	if !reflect.DeepEqual(next, current) {
+		next.Revision++
+	} else if !pin {
+		return nil
+	}
+	updated := before
+	updated.Regions, updated.UpdatedAt = &next, now
+	return saveRegions(ctx, q, updated)
+}
+
+// projectWrittenPlan is a writer's plan as it is saved (CLIP-187): the plan
+// draws the project's slots, so an owner-fixed slot keeps its words, a region
+// that is off draws nothing and an enabled one draws without a template entry.
+// Words the stored plan still holds in template entries become the generated
+// slots' own first; with drafts — a generation, not a revision of the plan
+// (CLIP-131) — so do the words the writer left in the new plan's entries. It
+// returns the plan to save, the regions it draws at the revision they were read
+// at, and whether the projection rewrote the plan.
+func projectWrittenPlan(p clip.Project, raw string, drafts bool) (string, clip.ProjectRegions, bool, error) {
+	regions := clip.EffectiveProjectRegions(p)
+	plan, err := clip.DecodeEditPlan(raw)
+	if err != nil || plan.Portable == nil {
+		return raw, regions, false, nil
+	}
+	if stored, err := clip.DecodeEditPlan(p.EditPlan); p.EditPlan != "" && err == nil {
+		clip.AbsorbWrittenRegions(&regions, stored)
+	}
+	if drafts {
+		clip.AbsorbWrittenRegions(&regions, plan)
+	}
+	synced, changed, err := clip.ProjectPlanRegions(plan, regions, p.DesignSelection().RegionPresets())
+	if err != nil || !changed {
+		return raw, regions, false, err
+	}
+	raw, err = clip.EncodeEditPlan(synced)
+	return raw, regions, true, err
 }
