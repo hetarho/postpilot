@@ -108,7 +108,7 @@ func TestTheStorylineCallAsksForTheStorylineAlone(t *testing.T) {
 // The answer is the storyline, held to its bounds and to observed scenes; one that keeps
 // nothing is bad output the correction retries, never an empty storyline.
 func TestTheStorylineAnswerIsBoundedAndNeverEmpty(t *testing.T) {
-	answer := raw(map[string]any{"storyline": []any{paragraph("가게 앞", clip.ObservationID("source", 0), "nowhere/9")}})
+	answer := raw(map[string]any{"storyline": []any{paragraph("가게 앞", clip.ObservationID("source", 0), "nowhere/9")}, "region_slots": []any{}})
 	s, _ := newService(t, answer, true)
 	got, _, err := s.Storyline(t.Context(), testRef(), clip.StorylineInput{PlanningInput: twoScenes()})
 	if err != nil {
@@ -117,7 +117,7 @@ func TestTheStorylineAnswerIsBoundedAndNeverEmpty(t *testing.T) {
 	if len(got.Paragraphs) != 1 || len(got.Paragraphs[0].ObservationIDs) != 1 || got.Paragraphs[0].ObservationIDs[0] != clip.ObservationID("source", 0) {
 		t.Fatalf("the storyline kept an unknown scene or lost its own: %+v", got)
 	}
-	empty, _ := newService(t, raw(map[string]any{"storyline": []any{}}), true)
+	empty, _ := newService(t, raw(map[string]any{"storyline": []any{}, "region_slots": []any{}}), true)
 	if _, _, err := empty.Storyline(t.Context(), testRef(), clip.StorylineInput{PlanningInput: twoScenes()}); err == nil {
 		t.Fatal("an empty storyline was accepted")
 	}

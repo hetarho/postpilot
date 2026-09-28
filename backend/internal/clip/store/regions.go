@@ -17,6 +17,7 @@ type regionSlotJSON struct {
 	InstructionEdited, OwnerFixed    bool
 	Binding                          []composition.Part
 	Row                              int
+	Notice                           string `json:",omitempty"`
 }
 type regionJSON struct {
 	Enabled bool
@@ -34,7 +35,7 @@ func encodeRegions(r *clip.ProjectRegions) (string, error) {
 	region := func(r clip.ProjectRegion) regionJSON {
 		out := regionJSON{Enabled: r.Enabled}
 		for _, s := range r.Slots {
-			out.Slots = append(out.Slots, regionSlotJSON{s.ID, s.Instruction, s.Text, s.ElementID, s.InstructionEdited, s.OwnerFixed, s.Binding, s.Row})
+			out.Slots = append(out.Slots, regionSlotJSON{s.ID, s.Instruction, s.Text, s.ElementID, s.InstructionEdited, s.OwnerFixed, s.Binding, s.Row, s.Notice})
 		}
 		return out
 	}
@@ -52,7 +53,7 @@ func decodeRegions(raw string) (*clip.ProjectRegions, error) {
 	region := func(r regionJSON) clip.ProjectRegion {
 		out := clip.ProjectRegion{Enabled: r.Enabled}
 		for _, s := range r.Slots {
-			out.Slots = append(out.Slots, clip.RegionSlot{ID: s.ID, Instruction: s.Instruction, Text: s.Text, ElementID: s.ElementID, InstructionEdited: s.InstructionEdited, OwnerFixed: s.OwnerFixed, Binding: s.Binding, Row: s.Row})
+			out.Slots = append(out.Slots, clip.RegionSlot{ID: s.ID, Instruction: s.Instruction, Text: s.Text, ElementID: s.ElementID, InstructionEdited: s.InstructionEdited, OwnerFixed: s.OwnerFixed, Binding: s.Binding, Row: s.Row, Notice: s.Notice})
 		}
 		return out
 	}
@@ -139,24 +140,16 @@ func saveRegionState(ctx context.Context, q *sqlc.Queries, before clip.Project, 
 }
 
 // projectWrittenPlan is a writer's plan as it is saved (CLIP-187): the plan
-// draws the project's slots, so an owner-fixed slot keeps its words, a region
-// that is off draws nothing and an enabled one draws without a template entry.
-// Words the stored plan still holds in template entries become the generated
-// slots' own first; with drafts — a generation, not a revision of the plan
-// (CLIP-131) — so do the words the writer left in the new plan's entries. It
-// returns the plan to save, the regions it draws at the revision they were read
-// at, and whether the projection rewrote the plan.
-func projectWrittenPlan(p clip.Project, raw string, drafts bool) (string, clip.ProjectRegions, bool, error) {
-	regions := clip.EffectiveProjectRegions(p)
+// draws the regions WrittenRegions leaves — the owner's words kept, the drafts
+// in the generated slots — so a region that is off draws nothing and an enabled
+// one draws without a template entry. A revision passes no drafts: it rewrites
+// no region word (CLIP-131). It returns the plan to save, the regions at the
+// revision they were read at, and whether the projection rewrote the plan.
+func projectWrittenPlan(p clip.Project, raw string, drafts []clip.RegionDraft) (string, clip.ProjectRegions, bool, error) {
+	regions := clip.WrittenRegions(p, drafts)
 	plan, err := clip.DecodeEditPlan(raw)
 	if err != nil || plan.Portable == nil {
 		return raw, regions, false, nil
-	}
-	if stored, err := clip.DecodeEditPlan(p.EditPlan); p.EditPlan != "" && err == nil {
-		clip.AbsorbWrittenRegions(&regions, stored)
-	}
-	if drafts {
-		clip.AbsorbWrittenRegions(&regions, plan)
 	}
 	synced, changed, err := clip.ProjectPlanRegions(plan, regions, p.DesignSelection().RegionPresets())
 	if err != nil || !changed {

@@ -60,6 +60,12 @@ func TestProjectedRegionsRenderTheirExactSlotsOnEveryRatio(t *testing.T) {
 			if slices.ContainsFunc(layout.visuals, func(v declaredVisual) bool { return v.manifest.Role == "ending" }) {
 				t.Fatal("a region that is off was drawn")
 			}
+			// The laid-out plan already draws these slots: projecting the same
+			// regions again changes nothing, so a later write that leaves them
+			// alone moves no revision (CLIP-139).
+			if _, changed, err := clip.ProjectPlanRegions(layout.plan, regions, plan.Design().RegionPresets()); err != nil || changed {
+				t.Fatal("the laid-out plan does not read as drawing its own regions", changed, err)
+			}
 		})
 	}
 }

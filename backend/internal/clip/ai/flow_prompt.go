@@ -31,13 +31,14 @@ Return only one JSON object following this closed contract:
 `
 
 // storylineFlowPrompt is the 바로 만들기 flow call (CLIP-178): the same contract, opening with
-// the storyline — the clip told in order — and choosing the cuts along it. A revision's flow
-// rewrite reads flowPrompt itself and writes none (CLIP-131).
+// the storyline — the clip told in order — with the words of its generated intro and outro
+// slots (CLIP-187), and choosing the cuts along it. A revision's flow rewrite reads flowPrompt
+// itself and writes neither (CLIP-131).
 var storylineFlowPrompt = strings.NewReplacer(
 	"from supplied real footage: ordered cuts, and nothing else.",
 	"from supplied real footage: its storyline, then ordered cuts, and nothing else.",
 	"Write no caption, title, label or sentence of any kind: this response carries no text.",
-	"Write no caption, title or label: beyond the storyline, this response carries no text.\n"+storylineFlowRule,
+	"Write no caption, title or label: beyond the storyline and the intro and outro slots, this response carries no text.\n"+storylineFlowRule+"\n"+strings.TrimSuffix(regionSlotRule, "\n"),
 ).Replace(flowPrompt)
 
 // followStorylineRule is 이 스토리로 만들기 (CLIP-178, CDS-37): the flow is built along the
@@ -75,7 +76,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 		// bounds it cannot express are repeated here.
 		contract = "Use the supplied response schema. Additional bounds: cuts 1..100; observation_refs at most 120 per cut. Focal x/y and volume are 0..1. rate_permille is one value from that source's allowed_rate_permille."
 		if withStoryline {
-			contract += " storyline at most 30 paragraphs; text at most 1000 characters."
+			contract += " storyline at most 30 paragraphs; text at most 1000 characters; region_slots at most 30, each text and short_text at most 500 characters."
 		}
 	}
 	groups := map[string][]map[string]any{}
@@ -108,6 +109,13 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	}
 	if following {
 		payload["storyline"] = storylinePayload(*in.FollowStoryline)
+	}
+	// 바로 만들기 drafts the generated intro and outro slots with the storyline (CLIP-187);
+	// built from a storyline, their words are the reviewed ones and the flow writes none.
+	if withStoryline {
+		if slots := regionSlotsPayload(in, limits, false); len(slots) > 0 {
+			payload["intro_outro"] = slots
+		}
 	}
 	return prompt + responseContract + contract, promptJSON(payload)
 }

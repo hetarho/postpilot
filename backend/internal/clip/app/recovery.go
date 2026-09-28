@@ -26,7 +26,12 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 	// The owner's source-sound setting is deliberately absent — it is
 	// render-only and rides the render revision instead. The 영상 지침 join the
 	// instruction as writer input (GUIDE-15), by their digest so a project with
-	// none keeps the digest it had before they existed.
+	// none keeps the digest it had before they existed; so do the intro/outro
+	// slots the calls draft and write around (CLIP-187), empty while both are off.
+	regions := ""
+	if p.Regions != nil {
+		regions = p.Regions.WritingDigest(p.Design().RegionPresets())
+	}
 	raw, _ := json.Marshal(struct {
 		Composition                        *clip.ProjectComposition
 		Template                           clip.Recipe
@@ -34,12 +39,13 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 		Instruction                        string
 		Guidelines                         string `json:",omitempty"`
 		FollowStoryline                    string `json:",omitempty"`
+		Regions                            string `json:",omitempty"`
 		Target                             int
 		Hide                               bool
 		Version                            int
 		Analysis                           string
 		Sources                            [][2]string
-	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
+	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), regions, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }
@@ -113,7 +119,7 @@ func (s *GenerationService) selectRecovery(r *clip.RecoveryState, b clip.SourceB
 		return cmp.Compare(a.SourceID, b.SourceID)
 	})
 	if len(out.Chunks) == len(r.Chunks) && len(out.Sources) == len(r.Sources) {
-		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady, out.Storyline = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady, r.Storyline
+		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady, out.Storyline, out.RegionDrafts = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady, r.Storyline, r.RegionDrafts
 	}
 	return out
 }

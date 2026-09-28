@@ -207,10 +207,10 @@ func TestCorrectedRegionTextIsTheSlotInTheSameSave(t *testing.T) {
 	}
 }
 
-// A writer's plan is saved drawing the project's regions: the words it left in
-// template entries become the generated slots', an owner-fixed slot keeps its
-// own, and a region that is off is not drawn whatever the entries held
-// (CLIP-68, CLIP-187).
+// A writer's plan is saved drawing the project's regions: the words the calls
+// drafted become the generated slots', an owner-fixed slot keeps its own, no
+// template entry the plan carries is drawn, and a region that is off is not
+// drawn whatever the entries held (CLIP-68, CLIP-187).
 func TestAWrittenPlanIsSavedDrawingTheProjectRegions(t *testing.T) {
 	h, before, _ := completedNativeClip(t)
 	ctx := t.Context()
@@ -245,7 +245,8 @@ func TestAWrittenPlanIsSavedDrawingTheProjectRegions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := h.store.SaveGeneratedPlan(ctx, "alice", p.ID, p.Analysis, raw, "", p.UpdatedAt); err != nil {
+	drafts := []clip.RegionDraft{{SlotID: "project-intro-1", Text: "덮어쓰기"}, {SlotID: "project-intro-2", Text: "writer second"}, {SlotID: "project-outro-1", Text: "꺼진 아웃트로"}}
+	if err := h.store.SaveGeneratedPlan(ctx, "alice", p.ID, p.Analysis, raw, "", drafts, p.UpdatedAt); err != nil {
 		t.Fatal(err)
 	}
 	saved, err := h.projects.GetProject(ctx, "alice", p.ID)

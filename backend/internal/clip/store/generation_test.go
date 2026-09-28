@@ -175,6 +175,8 @@ type plannerFake struct {
 	storylines      []clip.StorylineInput
 	storylineAnswer *clip.Storyline
 	storylineErr    error
+	// The intro/outro words the storyline call and 바로 만들기's flow call draft (CLIP-187).
+	regionDrafts []clip.RegionDraft
 }
 
 func (p *plannerFake) Storyline(ctx context.Context, r llm.ModelRef, in clip.StorylineInput) (clip.Storyline, llm.Usage, error) {
@@ -191,10 +193,14 @@ func (p *plannerFake) Storyline(ctx context.Context, r llm.ModelRef, in clip.Sto
 		return clip.Storyline{}, llm.Usage{}, p.storylineErr
 	}
 	if p.storylineAnswer != nil {
-		return *p.storylineAnswer, llm.Usage{}, nil
+		answer := *p.storylineAnswer
+		if answer.RegionDrafts == nil {
+			answer.RegionDrafts = p.regionDrafts
+		}
+		return answer, llm.Usage{}, nil
 	}
 	s := in.Analyses[0].Source
-	return clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "가게 앞에서 시작해요.", ObservationIDs: []string{clip.ObservationID(s.ID, 0)}}}}, llm.Usage{}, nil
+	return clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "가게 앞에서 시작해요.", ObservationIDs: []string{clip.ObservationID(s.ID, 0)}}}, RegionDrafts: p.regionDrafts}, llm.Usage{}, nil
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -258,6 +264,15 @@ func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.Planning
 	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs,
 		Cuts: []composition.Cut{{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, PlaybackRatePermille: cut.Rate()}}}
 	plan.Storyline = p.storyline
+	// 바로 만들기 drafts the slots with its storyline; a build from one writes none.
+	if in.FollowStoryline == nil && p.regionDrafts != nil {
+		opened := clip.Storyline{}
+		if p.storyline != nil {
+			opened = *p.storyline
+		}
+		opened.RegionDrafts = p.regionDrafts
+		plan.Storyline = &opened
+	}
 	return plan, usage, nil
 }
 

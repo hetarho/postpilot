@@ -32,7 +32,7 @@ func multiSourceFlow() (clip.PlanningInput, map[string]any) {
 		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "rate_permille": 1000, "volume": 1,
 			"focal": map[string]any{"x": .5, "y": .5}, "observation_refs": []string{clip.ObservationID(id, 0)}})
 	}
-	return in, map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
+	return in, map[string]any{"storyline": []any{}, "region_slots": []any{}, "ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 }
 
 func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {

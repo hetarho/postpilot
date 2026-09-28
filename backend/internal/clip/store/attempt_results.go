@@ -93,7 +93,7 @@ func (s *Store) ApplyAttemptResult(ctx context.Context, c clip.AttemptResult) er
 		// A generation carries no result of its own any more: it saves the plan it
 		// validated and leaves the stored result where it is (CLIP-151).
 		if c.Result.Key == "" {
-			return s.SaveGeneratedPlan(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Storyline, time.Now())
+			return s.SaveGeneratedPlan(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Storyline, c.RegionDrafts, time.Now())
 		}
 		return s.SaveGeneration(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Result)
 	}

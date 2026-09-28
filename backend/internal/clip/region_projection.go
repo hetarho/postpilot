@@ -136,7 +136,7 @@ func ReconcileRegionCorrection(r *ProjectRegions, before PortablePlan, after []P
 			}
 			if line != prior {
 				slot := regionSlot(region, kind, i)
-				slot.Text, slot.OwnerFixed, slot.Binding = line, true, nil
+				slot.Text, slot.OwnerFixed, slot.Binding, slot.Notice = line, true, nil, ""
 			}
 		}
 	}
@@ -182,13 +182,19 @@ func regionCapacity(kind string, presets composition.DesignSelection) int {
 // as written and refused where the plan is laid out, and a region that is off
 // draws nothing to check.
 func ValidateOwnerRegions(r ProjectRegions, presets composition.DesignSelection, ratio string) error {
+	return validateRegions(r, presets, ratio, func(s RegionSlot) bool { return s.OwnerFixed })
+}
+
+// validateRegions is the fit of every active slot of an enabled region the
+// check selects.
+func validateRegions(r ProjectRegions, presets composition.DesignSelection, ratio string, check func(RegionSlot) bool) error {
 	for _, kind := range []string{"intro", "outro"} {
 		region := r.Region(kind)
 		if !region.Enabled {
 			continue
 		}
 		for i, slot := range region.Slots[:min(regionCapacity(kind, presets), len(region.Slots))] {
-			if !slot.OwnerFixed {
+			if !check(slot) {
 				continue
 			}
 			if reason := regionSlotFit(kind, RegionPresetID(presets, kind), ratio, i, slot.Text); reason != "" {
@@ -266,7 +272,15 @@ func ProjectPlanRegions(plan EditPlan, r ProjectRegions, presets composition.Des
 		if authored {
 			e.Kind = "fixed"
 		}
-		text := PortableText{OwnerEdited: owned, Resolved: composition.ResolvedElement{InstanceID: id, Element: e, AuthoredTiming: true}}
+		// Built on the element the plan already draws the region with, so what a
+		// layout wrote on it — the project's pace and accent — survives a
+		// projection that changes nothing it draws.
+		text := PortableText{}
+		if prior != nil && prior.Resolved.InstanceID == id {
+			text = *prior
+		}
+		text.OwnerEdited = owned
+		text.Resolved = composition.ResolvedElement{InstanceID: id, Element: e, AuthoredTiming: true, StartMS: text.Resolved.StartMS, EndMS: text.Resolved.EndMS}
 		for _, row := range rows {
 			text.Resolved.Rows = append(text.Resolved.Rows, composition.ResolvedRow{Text: row})
 		}
@@ -327,11 +341,12 @@ func ProjectPlanRegions(plan EditPlan, r ProjectRegions, presets composition.Des
 	return plan, true, nil
 }
 
-// regionSlotNotices is one notice per slot of an enabled region holding words
-// the video does not show: content past the chosen preset's slots (CLIP-147,
-// CLIP-189) and a generated text its slot cannot fit (CDS-77). Each names its
-// slot and is derived rather than stored, so the edit or the preset that
-// removes its cause clears it.
+// regionSlotNotices is one notice per slot of an enabled region whose words the
+// video does not show as written: a writer's words the slot shortened or left
+// out when they were drafted, content past the chosen preset's slots (CLIP-147,
+// CLIP-189) and a generated text too wide for the preset chosen since (CDS-77).
+// Each names its slot, and the edit, the rewrite or the preset that removes its
+// cause clears it.
 func regionSlotNotices(region ProjectRegion, kind string, presets composition.DesignSelection, ratio string) []PlanNotice {
 	if !region.Enabled {
 		return nil
@@ -339,18 +354,26 @@ func regionSlotNotices(region ProjectRegion, kind string, presets composition.De
 	var out []PlanNotice
 	capacity := regionCapacity(kind, presets)
 	for i, slot := range region.Slots {
-		reason := ""
+		reason, action := "", "removal"
 		switch {
+		// What the writer's words became when the slot could not take them
+		// (CDS-77): stored with the slot until an edit or a rewrite replaces
+		// them.
+		case i < capacity && !authoredSlot(slot) && slot.Notice != "":
+			reason = slot.Notice
+			if reason == NoticeShortened(kind) {
+				action = "repair"
+			}
 		case strings.TrimSpace(slot.Text) == "":
 			continue
 		case i >= capacity:
 			reason = NoticeRegionLineSurplus
 		case !authoredSlot(slot) && regionSlotFit(kind, RegionPresetID(presets, kind), ratio, i, slot.Text) != "":
-			reason = kind + "_slot_omitted"
+			reason = NoticeOmitted(kind)
 		default:
 			continue
 		}
-		out = append(out, PlanNotice{CopyFallback: CopyFallback{ElementID: slot.ID, Reason: reason}, Action: "removal"})
+		out = append(out, PlanNotice{CopyFallback: CopyFallback{ElementID: slot.ID, Reason: reason}, Action: action})
 	}
 	return out
 }

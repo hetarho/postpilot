@@ -3,6 +3,7 @@
   "additionalProperties": false,
   "required": [
     "storyline",
+    "region_slots",
     "ratio",
     "duration_ms",
     "cuts"
@@ -28,6 +29,33 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      }
+    },
+    "region_slots": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot_id",
+          "text",
+          "short_text"
+        ],
+        "properties": {
+          "slot_id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "short_text": {
+            "type": "string",
+            "maxLength": 500
           }
         }
       }

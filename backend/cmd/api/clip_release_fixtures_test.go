@@ -512,7 +512,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// no anchor can hold silently drops. A caption cites nothing and is
 			// admitted on its form alone (CLIP-184); its window is far wider than
 			// CDS-41's reading floor for nine characters.
-			content = map[string]any{"slots": []any{}, "captions": []any{map[string]any{
+			content = map[string]any{"captions": []any{map[string]any{
 				"id": "", "text": releaseCaption, "short_text": "흐르는 장면", "keyword": "",
 				"start_ms": 1000, "end_ms": 6000,
 			}}}
@@ -605,6 +605,9 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			content.(map[string]any)["storyline"] = []any{map[string]any{
 				"text": "관찰한 장면을 차분히 따라간다", "observation_ids": first["observation_refs"],
 			}}
+			// The fixture templates' intro and outro rows are fixed or bound to an
+			// answer, so the flow has no slot to write (CLIP-187).
+			content.(map[string]any)["region_slots"] = []any{}
 		}
 	} else {
 		p.reject(w, "wrong observation/plan budget or modality")

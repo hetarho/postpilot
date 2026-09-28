@@ -177,8 +177,12 @@ type generationRun struct {
 	analyses           []clip.SourceAnalysis
 	edit               clip.EditPlan
 	// The storyline the flow call opened with (CLIP-178), or the one the kept flow did;
-	// nil when the flow wrote none.
-	storyline     *clip.Storyline
+	// nil when the flow wrote none. Its RegionDrafts are the intro/outro words the call
+	// drafted with it (CLIP-187).
+	storyline *clip.Storyline
+	// The project as the job found it: the slots the plan is drawn with before it is
+	// laid out, which no edit can change while the job holds the project.
+	current       clip.Project
 	analysisJSON  []byte
 	planJSON      string
 	storylineJSON string
@@ -194,8 +198,10 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 
 // RunStoryline is the 스토리라인 먼저 and 다시 만들기 job (CLIP-177): Run's prepare, admission
 // and analysis, then ONE storyline call in place of the flow and the narration, and the
-// storyline saved alone with the analysis it read — the saved plan and the result stay as
-// they are. Cancellation and failure settle as a generation's do.
+// storyline saved with the analysis it read and the words it drafted for the generated
+// intro/outro slots (CLIP-187). An existing plan draws the changed slot words and nothing else
+// of it changes; the result stays as it is (CLIP-188). Cancellation and failure settle as a
+// generation's do.
 func (s *GenerationService) RunStoryline(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
 	return s.run(ctx, user, job, project, payload, progress, true)
 }
@@ -208,7 +214,7 @@ func (s *GenerationService) run(ctx context.Context, user, job, project string, 
 	if err != nil {
 		return err
 	}
-	r := &generationRun{s: s, ctx: ctx, user: user, job: job, project: project, progress: progress, stage: "prepare", checkpoint: clip.AttemptCheckpoint{Version: 1, JobID: job, Stage: "prepare"}}
+	r := &generationRun{s: s, ctx: ctx, user: user, job: job, project: project, progress: progress, current: currentProject, stage: "prepare", checkpoint: clip.AttemptCheckpoint{Version: 1, JobID: job, Stage: "prepare"}}
 	// The failure is recorded after it has been wrapped with its stage (defers run last
 	// registered first), so the checkpoint names the stage the diagnostic belongs to.
 	defer func() {
@@ -282,11 +288,12 @@ func (r *generationRun) writeStoryline() error {
 	for _, a := range r.analyses {
 		made = append(made, a.Source.ID)
 	}
-	r.storyline = &clip.Storyline{Paragraphs: written.Paragraphs, MadeWithSources: made}
+	r.storyline = &clip.Storyline{Paragraphs: written.Paragraphs, MadeWithSources: made, RegionDrafts: written.RegionDrafts}
 	return nil
 }
 
-// saveStoryline saves the storyline alone, with the analysis it was written from (CLIP-177).
+// saveStoryline saves the storyline, with the analysis it was written from and the words it
+// drafted for the generated intro/outro slots (CLIP-177, CLIP-187).
 func (r *generationRun) saveStoryline() error {
 	r.set("save", 0, 1)
 	store, ok := r.s.store.(clip.StorylineStore)
@@ -301,7 +308,7 @@ func (r *generationRun) saveStoryline() error {
 	if err != nil {
 		return err
 	}
-	if _, err := store.SaveStoryline(r.ctx, r.user, r.project, string(analysis), raw, r.s.now()); err != nil {
+	if _, err := store.SaveStoryline(r.ctx, r.user, r.project, string(analysis), raw, r.storyline.RegionDrafts, r.s.now()); err != nil {
 		return err
 	}
 	r.set("cleanup", 0, 1)
@@ -362,7 +369,7 @@ func (r *generationRun) set(name string, done, total int) {
 // planningInput is the frozen brief every planner call reads.
 func (r *generationRun) planningInput() clip.PlanningInput {
 	p := r.p
-	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines, FollowStoryline: p.FollowStoryline}
+	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines, FollowStoryline: p.FollowStoryline, Regions: p.Regions}
 }
 
 // validatePreparation is the planner's own check of the models, the budgets and the
@@ -441,7 +448,7 @@ func (r *generationRun) accept(payload []byte) error {
 		return clip.ErrQuoteChanged
 	}
 	if !pricing.SkipFlow {
-		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady, recovery.Storyline = "", "", false, false, nil
+		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady, recovery.Storyline, recovery.RegionDrafts = "", "", false, false, nil, nil
 	}
 	r.p, r.b, r.pricing, r.recovery = p, b, pricing, recovery
 	if !pricing.RenderOnly() {
@@ -614,10 +621,31 @@ func (r *generationRun) keep(flowReady, planReady bool) error {
 	}
 	r.recovery.Plan, r.recovery.PlanDigest = raw, planRecoveryDigest(r.p)
 	r.recovery.FlowReady, r.recovery.PlanReady = flowReady, planReady
-	// The plan's own encoding does not carry the storyline, so the recovery does: a
-	// continuation that resumes on this flow keeps what it opened with.
-	r.recovery.Storyline = r.storyline
+	// The plan's own encoding does not carry the storyline or the slot words drafted with
+	// it, so the recovery does: a continuation that resumes on this flow keeps both.
+	r.recovery.Storyline, r.recovery.RegionDrafts = r.storyline, r.drafts()
 	return r.s.saveRecovery(r.ctx, r.user, r.project, r.recovery)
+}
+
+// drafts are the intro/outro words this job's calls wrote (CLIP-187); none on a build from a
+// reviewed storyline, whose slot words are the reviewed ones.
+func (r *generationRun) drafts() []clip.RegionDraft {
+	if r.storyline == nil {
+		return nil
+	}
+	return r.storyline.RegionDrafts
+}
+
+// drawRegions makes the plan draw the project's slots with this job's drafts before it is laid
+// out (CLIP-147, CLIP-187), so the layout places the captions around the intro and outro the
+// clip will show and the save stores exactly the plan laid out here.
+func (r *generationRun) drawRegions() error {
+	edit, _, err := clip.ProjectPlanRegions(r.edit, clip.WrittenRegions(r.current, r.drafts()), r.p.Design().RegionPresets())
+	if err != nil {
+		return err
+	}
+	r.edit = edit
+	return nil
 }
 
 // write asks the writer for the flow (or resumes the kept one), then the narration over
@@ -634,6 +662,14 @@ func (r *generationRun) write() error {
 	if pricing.SkipFlow {
 		r.edit, err = clip.DecodeEditPlan(r.recovery.Plan)
 		r.edit.Storyline = r.recovery.Storyline
+		if len(r.recovery.RegionDrafts) > 0 {
+			kept := clip.Storyline{}
+			if r.recovery.Storyline != nil {
+				kept = *r.recovery.Storyline
+			}
+			kept.RegionDrafts = r.recovery.RegionDrafts
+			r.edit.Storyline = &kept
+		}
 	} else {
 		// A composition is written by the flow call and then the narration
 		// over it (CLIP-135).
@@ -677,6 +713,9 @@ func (r *generationRun) write() error {
 		}
 	}
 	r.checkpoint.Diagnostic = clip.AttemptDiagnostic{Ranges: clip.AttemptRangeDiagnostics(r.edit, r.analyses), Values: map[string]int{"cut_count": len(r.edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": r.edit.DurationMS, "transition_ms": r.edit.TransitionTotal()}}
+	if err := r.drawRegions(); err != nil {
+		return err
+	}
 	return r.layout()
 }
 
@@ -752,7 +791,7 @@ func (r *generationRun) save() error {
 // the render is asked for, which is what leaves that result standing as a stale one
 // (CLIP-26, CLIP-152).
 func (r *generationRun) finish(currentProject clip.Project) error {
-	if err := r.s.finisher.Complete(r.ctx, clip.AttemptResult{JobID: r.job, UserID: r.user, ProjectID: r.project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(r.analysisJSON), EditPlan: r.planJSON, Storyline: r.storylineJSON}); err != nil {
+	if err := r.s.finisher.Complete(r.ctx, clip.AttemptResult{JobID: r.job, UserID: r.user, ProjectID: r.project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(r.analysisJSON), EditPlan: r.planJSON, Storyline: r.storylineJSON, RegionDrafts: r.drafts()}); err != nil {
 		return err
 	}
 	r.set("cleanup", 0, 1)

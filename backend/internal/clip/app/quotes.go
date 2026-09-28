@@ -97,6 +97,11 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 			return p, t, b, pricing, guidelines, err
 		}
 	}
+	// The intro/outro words the owner or an answer supplies are drawn as written, so words
+	// their slot cannot draw are refused by that slot before anything is paid (CDS-77).
+	if err := clip.ValidateAuthoredRegions(clip.EffectiveProjectRegions(p), p.DesignSelection().RegionPresets(), p.Ratio); err != nil {
+		return p, t, b, pricing, guidelines, err
+	}
 	b, err = s.sources.AvailableBatch(ctx, user, batch)
 	if err != nil {
 		return p, t, b, pricing, guidelines, err
@@ -128,7 +133,8 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if guidelines, err = s.videoGuidelines(ctx, p); err != nil {
 		return p, t, b, pricing, guidelines, err
 	}
-	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines}
+	regions := clip.EffectiveProjectRegions(p)
+	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset}
 	if mode == quoteFromStoryline {
 		seed.FollowStoryline = p.Storyline
 	}
@@ -321,7 +327,8 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	regions := clip.EffectiveProjectRegions(p)
+	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

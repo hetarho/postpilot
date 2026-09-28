@@ -49,7 +49,7 @@ func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revisi
 		if written {
 			var drawn clip.ProjectRegions
 			var projected bool
-			if raw, drawn, projected, err = projectWrittenPlan(p, raw, false); err != nil {
+			if raw, drawn, projected, err = projectWrittenPlan(p, raw, nil); err != nil {
 				return clip.Project{}, err
 			}
 			if err := saveRegionState(ctx, q, p, drawn, now, projected); err != nil {

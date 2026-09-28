@@ -36,6 +36,10 @@ type Storyline struct {
 	// MadeWithSources are the sources whose analyses it was written from, so a source added
 	// afterwards reads as added and a scene no paragraph holds as taken out.
 	MadeWithSources []string `json:",omitempty"`
+	// RegionDrafts are the words the call that wrote this storyline left for the project's
+	// generated intro/outro slots (CLIP-187), carried to the save that writes them into the
+	// slots. They are never stored with the storyline: the slots are where the words live.
+	RegionDrafts []RegionDraft `json:"-"`
 }
 
 // The bounds a written storyline is held to. The byte cap keeps the widest narration request —
@@ -251,10 +255,13 @@ func (s *Storyline) Digest() string {
 	return hex.EncodeToString(sum[:])
 }
 
-// StorylineStore saves what the storyline call wrote (CLIP-177): the analysis it read and the
-// storyline, and no plan. An empty analysis keeps the stored one.
+// StorylineStore saves what the storyline call wrote (CLIP-177): the analysis it read, the
+// storyline and the generated slot words; an existing plan draws the changed slot words and
+// nothing else of it changes (CLIP-188). An empty analysis keeps the stored one.
 type StorylineStore interface {
-	SaveStoryline(ctx context.Context, user, id, analysis, storyline string, now time.Time) (Project, error)
+	// The storyline with the words its call drafted for the generated intro/outro slots
+	// (CLIP-187), saved together.
+	SaveStoryline(ctx context.Context, user, id, analysis, storyline string, drafts []RegionDraft, now time.Time) (Project, error)
 }
 
 // ObservationSource is the source an observation id belongs to.

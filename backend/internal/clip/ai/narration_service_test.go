@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
@@ -32,7 +33,7 @@ func narrationResponse(captions ...map[string]any) string {
 	for _, c := range captions {
 		values = append(values, c)
 	}
-	return raw(map[string]any{"captions": values, "slots": []any{}})
+	return raw(map[string]any{"captions": values})
 }
 
 func narrate(t *testing.T, in clip.NarrationInput, response string) (clip.EditPlan, map[string]any, string) {
@@ -74,7 +75,7 @@ func TestNarrationRequestCarriesTheResolvedFlowAndNothingToChangeIt(t *testing.T
 	in := narrationInput(t)
 	in.Instruction = "고기 이야기를 해줘"
 	_, payload, system := narrate(t, in, narrationResponse(narrationCaption("고기를 올렸어요", 1000, 4000)))
-	for _, key := range []string{"project_instruction", "template_outline", "global_values", "item_groups", "item_hints", "analyses", "generated_region_slots", "cuts", "output_duration_ms"} {
+	for _, key := range []string{"project_instruction", "template_outline", "global_values", "item_groups", "item_hints", "analyses", "cuts", "output_duration_ms"} {
 		if _, ok := payload[key]; !ok {
 			t.Fatal("the narration request lost " + key)
 		}
@@ -259,11 +260,10 @@ func TestNarrationRecordsNothingForWhatTheWriterSimplyDidNotSay(t *testing.T) {
 	}
 }
 
-func TestNarrationIgnoresCutsAndUnknownSlotIdentities(t *testing.T) {
+func TestNarrationIgnoresTheCutsItEchoes(t *testing.T) {
 	in := narrationInput(t)
 	response := raw(map[string]any{
 		"captions": []any{narrationCaption("고기를 올렸어요", 1000, 5000)},
-		"slots":    []any{map[string]any{"element_id": "nobody", "rows": []string{"x"}, "short_rows": []string{}}},
 		"cuts":     []any{map[string]any{"id": "cut-one", "start_ms": 0, "end_ms": 1000}},
 	})
 	plan, _, _ := narrate(t, in, response)
@@ -271,44 +271,45 @@ func TestNarrationIgnoresCutsAndUnknownSlotIdentities(t *testing.T) {
 		t.Fatal("the response changed the flow", plan.Cuts)
 	}
 	if !hasNotice(plan, "composition_generated_identity") {
-		t.Fatal("the ignored identities were not recorded", clip.ActivePlanNotices(plan, composition.DefaultDesign()))
+		t.Fatal("the ignored cuts were not recorded", clip.ActivePlanNotices(plan, composition.DefaultDesign()))
 	}
 	if len(narrationOf(plan)) != 1 {
 		t.Fatal("the captions beside them were lost", narrationOf(plan))
 	}
 }
 
-func TestNarrationWritesTheTemplatesOwnSlotRows(t *testing.T) {
+// The intro and the outro are the project's slots, already written when the
+// narration runs (CLIP-135, CLIP-187): the narration is told their words so it
+// does not say them again, writes no region of its own, and draws no template
+// entry of either region into the plan — the server draws the slots.
+func TestNarrationWritesAroundTheProjectRegions(t *testing.T) {
 	in := narrationInput(t)
 	body := strings.Replace(flowBody,
 		`<text id="hook" kind="fixed" role="hook" basis="output-start" start="0" end="2"><row><value field="place"/></row></text>`,
 		`<text id="hook" kind="fixed" role="hook" basis="output-start" start="0" end="2"><row kind="ai">한 줄</row><row><value field="place"/></row></text>`, 1)
 	in.Template.CompositionBody, in.Composition.Snapshot.Body = body, body
 	in.Flow.Portable.Snapshot.Body = body
-	s, _ := newService(t, defaultFlow(), true)
-	flow, _, err := s.Flow(t.Context(), testRef(), in.PlanningInput)
-	if err != nil {
-		t.Fatal(err)
+	in.Design = clip.ProjectDesign{IntroPreset: "a", OutroPreset: "b"}
+	in.Regions = &clip.ProjectRegions{Intro: clip.ProjectRegion{Enabled: true, Slots: []clip.RegionSlot{{ID: "project-intro-1", Text: "성수 곱창"}, {ID: "project-intro-2", Text: "골목 저녁", OwnerFixed: true}}},
+		Outro: clip.ProjectRegion{Slots: []clip.RegionSlot{{ID: "project-outro-1", Text: "꺼진 말"}, {ID: "project-outro-2"}}}}
+	plan, payload, system := narrate(t, in, raw(map[string]any{"captions": []any{narrationCaption("고기를 올렸어요", 3000, 6000)}}))
+	shown, ok := payload["intro_outro"].([]any)
+	if !ok || len(shown) != 2 || shown[0].(map[string]any)["text"] != "성수 곱창" || shown[1].(map[string]any)["text"] != "골목 저녁" {
+		t.Fatal("the narration was not told what the intro shows", payload["intro_outro"])
 	}
-	in.Flow = flow
-	response := raw(map[string]any{
-		"captions": []any{},
-		"slots":    []any{map[string]any{"element_id": "hook", "rows": []string{"성수 곱창", ""}, "short_rows": []string{}}},
-	})
-	plan, payload, _ := narrate(t, in, response)
-	if len(payload["generated_region_slots"].([]any)) != 1 {
-		t.Fatal("the writer was not told which slot to write", payload["generated_region_slots"])
+	if _, present := payload["generated_region_slots"]; present || strings.Contains(system, "generated slot") || strings.Contains(string(ai.NarrationSchema()), "slots") {
+		t.Fatal("the narration still writes region rows", system)
 	}
 	for _, text := range plan.Portable.Elements {
-		if text.Resolved.Element.ID != "hook" {
-			continue
+		if clip.RegionRole(text.Resolved.Element.Role) {
+			t.Fatal("the narration drew a template region entry", text.Resolved.Element.ID)
 		}
-		if len(text.Resolved.Rows) != 2 || text.Resolved.Rows[0].Text != "성수 곱창" || text.Resolved.Rows[1].Text != "성수 곱창" {
-			t.Fatal("the written slot row or its fixed neighbour is wrong", text.Resolved.Rows)
-		}
-		return
 	}
-	t.Fatal("the region with a written row is missing", plan.Portable.Elements)
+	// With both regions off the section is not sent at all.
+	in.Regions.Intro.Enabled = false
+	if _, quiet, _ := narrate(t, in, raw(map[string]any{"captions": []any{narrationCaption("고기를 올렸어요", 3000, 6000)}})); hasKey(quiet, "intro_outro") {
+		t.Fatal("a clip showing no intro or outro sent their words", quiet["intro_outro"])
+	}
 }
 
 func TestNarrationRefusesAFlowItCannotWriteOver(t *testing.T) {

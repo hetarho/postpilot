@@ -25,6 +25,10 @@ type RegionSlot struct {
 	Binding                       []composition.Part
 	ElementID                     string
 	Row                           int
+	// Notice is what the server did to the writer's words for this slot when
+	// they were drafted — NoticeShortened or NoticeOmitted — and empty when they
+	// stand as written or the owner has since written the slot (CDS-77).
+	Notice string
 }
 type RegionPatch struct {
 	Enabled *bool
@@ -209,7 +213,7 @@ func ApplyRegionPatch(region *ProjectRegion, patch *RegionPatch, limits Limits) 
 			if !BoundedText(*edit.Text, 0, limits.Composition.CopyChars) {
 				return ErrInvalid
 			}
-			slot.Text, slot.OwnerFixed, slot.Binding = *edit.Text, true, nil
+			slot.Text, slot.OwnerFixed, slot.Binding, slot.Notice = *edit.Text, true, nil, ""
 		}
 	}
 	return nil

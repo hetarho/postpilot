@@ -76,6 +76,10 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if err != nil || before.Result == nil || before.EditPlanRevision != before.RenderedPlanRevision {
 		t.Fatal("the fixture has no rendered result to stale", err)
 	}
+	kept, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+	if err != nil || !kept.Pricing.RenderOnly() || kept.Pricing.MaxCredits != 0 {
+		t.Fatalf("the kept plan was not quoted as a render: %+v %v", kept.Pricing, err)
+	}
 	intro := "cover"
 	after, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{IntroPreset: &intro})
 	if err != nil {
@@ -87,9 +91,12 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if after.EditPlan != before.EditPlan || after.Analysis != before.Analysis {
 		t.Fatal("the plan or the observations were rewritten by a render-only change")
 	}
+	// Choosing the preset switched the intro on, and an enabled region's slots are
+	// what the writing calls draft (CLIP-111, CLIP-187): the kept plan no longer
+	// answers them, so a generation is priced to write again.
 	q, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
-	if err != nil || !q.Pricing.RenderOnly() || q.Pricing.MaxCredits != 0 {
-		t.Fatalf("a preset change repriced the writing: %+v %v", q.Pricing, err)
+	if err != nil || q.Pricing.RenderOnly() || q.Pricing.MaxCredits == 0 {
+		t.Fatalf("an intro to draft was quoted as a render: %+v %v", q.Pricing, err)
 	}
 	same, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{IntroPreset: &intro})
 	if err != nil || same.EditPlanRevision != after.EditPlanRevision {

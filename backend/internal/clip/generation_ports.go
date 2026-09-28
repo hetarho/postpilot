@@ -93,7 +93,10 @@ type AttemptResult struct {
 	Analysis, EditPlan       string
 	// The storyline saved with the plan, stored form; "" leaves the stored one as it is.
 	Storyline string
-	Result    Result
+	// The words the writing calls drafted for the generated intro/outro slots, written into
+	// them with the plan (CLIP-187).
+	RegionDrafts []RegionDraft
+	Result       Result
 }
 type ClipFinisher interface {
 	Complete(context.Context, AttemptResult) error

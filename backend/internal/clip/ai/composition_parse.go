@@ -6,16 +6,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-// generatedJSON is one generated region entry's answer: its rows, and the shorter rows it
-// falls back to. It cites nothing (CLIP-134).
-type generatedJSON struct {
-	ElementID string
-	Text      string
-	ShortText string
-	Rows      []string
-	ShortRows []string
-}
-
 var writerIdentity = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 
 // A reference must identify an actual overlapping observation. For cut selection

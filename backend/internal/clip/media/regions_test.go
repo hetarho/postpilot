@@ -204,29 +204,14 @@ func TestDeclaredRegionsUseTheProjectSelection(t *testing.T) {
 	}
 }
 
-// A slot is bounded by its width, not a character count (CDS-86): nine
-// syllables shrink into intro A's headline, and only text too wide at the floor
-// even on two lines is refused before generation (CDS-77).
-func TestAuthoredAdmissionRefusesOnlyWhatCannotFit(t *testing.T) {
+// The intro and the outro draw the project's slots, so their words are checked
+// as those slots before generation (CDS-77): a template entry of either only
+// seeds them, and a line it holds that no slot could draw refuses nothing here.
+func TestAuthoredAdmissionLeavesTheRegionsToTheirSlots(t *testing.T) {
 	_, r := measured(t)
-	for _, intro := range []string{"a", "b"} {
-		for _, c := range []struct {
-			text string
-			fits bool
-		}{{"하나둘셋넷다섯여섯", true}, {strings.Repeat("하나둘셋넷", 5), false}} {
-			body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>` + c.text + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-			err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: intro, OutroPreset: "e"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
-			if c.fits {
-				if err != nil {
-					t.Fatal(intro, c.text, err)
-				}
-				continue
-			}
-			var problem *composition.Problem
-			if !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
-				t.Fatal("an unbreakable line wider than the floor was admitted", intro, err)
-			}
-		}
+	body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>` + strings.Repeat("하나둘셋넷", 5) + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+	if err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: "a", OutroPreset: "e"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}); err != nil {
+		t.Fatal("a template region entry was admitted as if it drew", err)
 	}
 }
 
@@ -330,22 +315,6 @@ func TestRegionPresetsRealFontSmoke(t *testing.T) {
 	checkRegionPresets(t, a, r, true)
 }
 
-func TestAuthoredRegionAdmissionChecksOnlyFixedRows(t *testing.T) {
-	_, r := measured(t)
-	for _, kind := range []string{"fixed", "ai"} {
-		body := `<clip version="1" intro="b" caption="bold" outro="e"><text id="intro" kind="` + kind + `" role="hook" basis="output-start"><row kind="fixed">직접 입력</row><row kind="ai">Write a grounded phrase that is much longer than the generated slot limit.</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-		in := clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}
-		if err := r.ValidateAuthoredInput(t.Context(), in); err != nil {
-			t.Fatal(err)
-		}
-		in.Composition.Snapshot.Body = strings.Replace(body, "직접 입력", strings.Repeat("하나둘셋넷", 5), 1)
-		var problem *composition.Problem
-		if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
-			t.Fatal(err)
-		}
-	}
-}
-
 // CDS-32 and CDS-44: a block on a bright ground takes its own scrim — an
 // ellipse 1360 px wide and 560 px taller than a centred block, or its edge's
 // band reaching 150 px past an edge-anchored one — drawn once, by the entry
@@ -446,28 +415,5 @@ func TestRegionBlocksTakeTheirOwnScrim(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
-	}
-}
-
-// CDS-84 and CDS-77: an authored slot holding a character its preset's face
-// lacks is identified by entry before generation, not substituted.
-func TestAuthoredRegionMissingGlyphIsRefusedByEntry(t *testing.T) {
-	_, r := regionMeasured(t)
-	missing := ""
-	for c := rune(0xAC00); c <= 0xD7A3; c++ {
-		if !design.Covers("jua", 400, string(c)) && design.Covers("paperlogy", 800, string(c)) {
-			missing = string(c)
-			break
-		}
-	}
-	body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>맛집 ` + missing + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-	in := clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: "sticker", OutroPreset: "b"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}
-	var problem *composition.Problem
-	if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "unsupported_glyph" {
-		t.Fatal(err)
-	}
-	in.Design.IntroPreset = "a"
-	if err := r.ValidateAuthoredInput(t.Context(), in); err != nil {
-		t.Fatal("Paperlogy draws the syllable, so intro A admits it", err)
 	}
 }

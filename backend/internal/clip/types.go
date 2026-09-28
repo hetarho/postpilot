@@ -194,8 +194,9 @@ type ProjectPatch struct {
 	Instruction                        *string
 	CaptionPace, Accent                *string
 	// Presence-aware like the pace and the accent: changing any of the three
-	// marks the result stale and invalidates no observation and no plan
-	// (CLIP-139).
+	// marks the result stale and invalidates no observation (CLIP-139). A
+	// preset is also what its region's slots are written for, so choosing one
+	// switches that region on and redraws it in the plan (CLIP-111, CLIP-188).
 	IntroPreset, OutroPreset *string
 	CaptionStyles            *[]string
 	TargetDurationMS         *int

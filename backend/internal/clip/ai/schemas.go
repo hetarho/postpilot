@@ -28,8 +28,9 @@ func compactContract(value []byte) string {
 }
 
 // revisionFlowSchema is the flow contract a revision's flow rewrite answers: the same
-// document without the storyline, which a revision never writes (CLIP-131, CLIP-178).
-var revisionFlowSchema = withoutProperty(flowSchema, "storyline")
+// document without the storyline and the intro/outro words that come with it, which a
+// revision never writes (CLIP-131, CLIP-178, CLIP-188).
+var revisionFlowSchema = withoutProperty(withoutProperty(flowSchema, "storyline"), "region_slots")
 
 // withoutProperty is a code-owned contract with one top-level property and its requirement
 // removed.

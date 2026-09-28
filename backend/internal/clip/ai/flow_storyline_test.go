@@ -111,7 +111,7 @@ func TestARevisionsFlowRewriteWritesNoStoryline(t *testing.T) {
 	if strings.Contains(systems[0], "set storyline") || !strings.Contains(systems[0], "this response carries no text") {
 		t.Fatal("the revision's flow call was asked for a storyline")
 	}
-	if strings.Contains(string(ai.RevisionFlowSchema()), "storyline") || !strings.Contains(string(ai.FlowSchema()), "storyline") {
+	if strings.Contains(string(ai.RevisionFlowSchema()), "storyline") || strings.Contains(string(ai.RevisionFlowSchema()), "region_slots") || !strings.Contains(string(ai.FlowSchema()), "storyline") || !strings.Contains(string(ai.FlowSchema()), "region_slots") {
 		t.Fatal("the two flow schemas are not the direct one and the storyline-free one")
 	}
 	s, models := newService(t, storylineFlow(paragraph("다시 쓴 이야기")), true)

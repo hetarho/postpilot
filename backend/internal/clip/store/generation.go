@@ -141,13 +141,13 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 // for (CLIP-151, CLIP-152, CLIP-26). A storyline the flow call opened with is written in the
 // same transaction (CLIP-178); "" leaves the stored one as it is. The plan draws the project's
 // region slots, with the words the writer drafted for its generated ones (CLIP-187).
-func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan, storyline string, now time.Time) error {
+func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan, storyline string, drafts []clip.RegionDraft, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		old, err := getProject(ctx, q, user, id)
 		if err != nil {
 			return struct{}{}, err
 		}
-		plan, regions, projected, err := projectWrittenPlan(old, plan, true)
+		plan, regions, projected, err := projectWrittenPlan(old, plan, drafts)
 		if err != nil {
 			return struct{}{}, err
 		}
@@ -176,8 +176,10 @@ func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan,
 }
 
 // SaveStoryline is what the storyline call finishes with (CLIP-177): the analysis it read and
-// the storyline, and no plan — the saved plan and the result stay exactly as they are.
-func (s *Store) SaveStoryline(ctx context.Context, user, id, analysis, storyline string, now time.Time) (clip.Project, error) {
+// the storyline, with the words it drafted in the generated intro/outro slots (CLIP-187). An
+// existing plan then draws those slots — its footage and captions untouched, its revision moving
+// only if what it draws changed (CLIP-188) — while its body waits for an explicit build.
+func (s *Store) SaveStoryline(ctx context.Context, user, id, analysis, storyline string, drafts []clip.RegionDraft, now time.Time) (clip.Project, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.Project, error) {
 		p, err := getProject(ctx, q, user, id)
 		if err != nil {
@@ -192,6 +194,28 @@ func (s *Store) SaveStoryline(ctx context.Context, user, id, analysis, storyline
 		n, err := q.SaveClipStorylineAnalysis(ctx, sqlc.SaveClipStorylineAnalysisParams{AnalysisJson: nullable(analysis), StorylineJson: nullable(storyline), UpdatedAt: stamp(now), UserID: user, ID: id})
 		if e := affected(n, err); e != nil {
 			return clip.Project{}, e
+		}
+		regions := clip.WrittenRegions(p, drafts)
+		plan, err := clip.DecodeEditPlan(p.EditPlan)
+		projected := false
+		if p.EditPlan != "" && err == nil {
+			synced, changed, err := clip.ProjectPlanRegions(plan, regions, p.DesignSelection().RegionPresets())
+			if err != nil {
+				return clip.Project{}, err
+			}
+			if changed {
+				raw, err := clip.EncodeEditPlan(synced)
+				if err != nil {
+					return clip.Project{}, err
+				}
+				if err := affected(q.SaveCorrection(ctx, sqlc.SaveCorrectionParams{EditPlanJson: nullable(raw), UpdatedAt: stamp(now), ID: id, UserID: user, EditPlanRevision: int64(p.EditPlanRevision)})); err != nil {
+					return clip.Project{}, err
+				}
+				projected = true
+			}
+		}
+		if err := saveRegionState(ctx, q, p, regions, now, projected); err != nil {
+			return clip.Project{}, err
 		}
 		return getProject(ctx, q, user, id)
 	})

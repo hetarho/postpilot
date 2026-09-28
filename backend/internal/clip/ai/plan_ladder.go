@@ -238,14 +238,3 @@ func repairWith(text string, alternatives []clip.CopyAlternative, fits func(stri
 	}
 	return "", "removal"
 }
-
-// Alternatives reaching this rung already passed the same scoped grounding as
-// the original. A row is judged by the slot's own fit (CDS-86): one that shrinks
-// or wraps is kept as written, and only one still too wide at the floor — or
-// holding a glyph the slot's face lacks — takes the shorter alternative. A
-// row's declared maximum stays the author's stricter bound (CLIP-116).
-func repairGeneratedSlot(text string, alternatives []clip.CopyAlternative, spec design.SlotSpec, width float64, declared int) (string, string) {
-	return repairWith(text, alternatives, func(value string) bool {
-		return strings.TrimSpace(value) != "" && !strings.ContainsAny(value, "\r\n") && !design.FitRegionSlot(spec, value, width).Over && (declared <= 0 || design.Chars(value) <= declared)
-	})
-}

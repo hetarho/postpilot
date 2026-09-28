@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -245,7 +246,7 @@ func TestFinishCommitsThePlanWithTheJobThenReportsCleanup(t *testing.T) {
 	if err := r.finish(clip.Project{EditPlanRevision: 4}); err != nil {
 		t.Fatal(err)
 	}
-	if len(finisher.completed) != 1 || finisher.completed[0] != (clip.AttemptResult{JobID: "job", UserID: "alice", ProjectID: "clip", ExpectedRevision: 4, Analysis: "[]", EditPlan: "plan"}) {
+	if len(finisher.completed) != 1 || !reflect.DeepEqual(finisher.completed[0], clip.AttemptResult{JobID: "job", UserID: "alice", ProjectID: "clip", ExpectedRevision: 4, Analysis: "[]", EditPlan: "plan"}) {
 		t.Fatalf("commit = %+v", finisher.completed)
 	}
 	if len(stages) != 1 || stages[0] != "cleanup" || r.stage != "cleanup" {

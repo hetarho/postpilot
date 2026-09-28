@@ -22,8 +22,9 @@ var ErrBusy = errors.New("clip busy")
 // project composition. Version 5 freezes the observation language; accepted
 // version-3/4 jobs retain Korean, the legacy project language. Version 6 freezes the clip's
 // 영상 지침; an accepted version-3..5 job ran with none and keeps running with none. Version 7
-// freezes the storyline 이 스토리로 만들기 builds along.
-const GenerationPayloadVersion = 7
+// freezes the storyline 이 스토리로 만들기 builds along. Version 8 freezes the project's
+// intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
+const GenerationPayloadVersion = 8
 
 type GenerationPayload struct {
 	Language                         string
@@ -47,6 +48,9 @@ type GenerationPayload struct {
 	// The storyline 이 스토리로 만들기 builds along (CLIP-178), frozen with its approval so an
 	// edit afterwards changes nothing in flight. Nil is 바로 만들기.
 	FollowStoryline *Storyline `json:",omitempty"`
+	// The project's intro/outro slots the writing calls read and draft (CLIP-69, CLIP-187),
+	// frozen with the approval that priced them.
+	Regions *ProjectRegions `json:",omitempty"`
 	// The project's caption pace and accent (CLIP-139), frozen with the rest of
 	// the render inputs. They are deliberately absent from planRecoveryDigest
 	// and from the quote: changing either re-renders the same plan and costs no

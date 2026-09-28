@@ -44,7 +44,7 @@ func declaredResponse(declared []map[string]any, captions ...map[string]any) str
 	for _, d := range declared {
 		entries = append(entries, d)
 	}
-	return raw(map[string]any{"captions": values, "slots": []any{}, "declared_captions": entries})
+	return raw(map[string]any{"captions": values, "declared_captions": entries})
 }
 
 // A declared caption is a caption like any other once it is placed, so it is

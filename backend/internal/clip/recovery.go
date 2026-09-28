@@ -29,9 +29,11 @@ type RecoveryState struct {
 	// The storyline the kept flow opened with, so a continuation that resumes on
 	// the flow keeps it (CLIP-178).
 	Storyline *Storyline `json:",omitempty"`
-	Sources   []AnalysisSource
-	Chunks    []ChunkAnalysis
-	Legacy    *AttemptCheckpoint
+	// The intro/outro words the kept flow drafted with that storyline (CLIP-187).
+	RegionDrafts []RegionDraft `json:",omitempty"`
+	Sources      []AnalysisSource
+	Chunks       []ChunkAnalysis
+	Legacy       *AttemptCheckpoint
 }
 type RecoveryStore interface {
 	GetRecovery(context.Context, string, string) (*RecoveryState, error)

@@ -269,11 +269,14 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	if err != nil {
 		return err
 	}
+	// A revision rewrites no intro/outro word (CLIP-131, CLIP-188): the narration is told what
+	// the slots show and the plan draws them as they stand.
+	regions := clip.WrittenRegions(p, nil)
 	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
 		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,
-		Guidelines: frozen.Guidelines}
+		Guidelines: frozen.Guidelines, Regions: &regions}
 	stage = "flow"
 	if frozen.Target == clip.RevisionNarration {
 		stage = "narrate"
@@ -287,6 +290,9 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	}
 	next = next.WithDesign(frozen.Design())
 	next.SourceAudio = clip.FreezeSourceAudio(frozen.Batch, next.Cuts)
+	if next, _, err = clip.ProjectPlanRegions(next, regions, frozen.Design().RegionPresets()); err != nil {
+		return err
+	}
 	if layout, ok := s.renderer.(clip.CompositionLayouter); ok {
 		refs := make([]clip.RenderSource, 0, len(analyses))
 		for _, a := range analyses {

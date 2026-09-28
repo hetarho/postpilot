@@ -23,6 +23,9 @@ func regionKind(role string) string {
 	return ""
 }
 
+// RegionRole reports whether a role is drawn in the intro or the outro.
+func RegionRole(role string) bool { return regionKind(role) != "" }
+
 // regionLines is how many lines one region entry carries: its rows, or the one
 // line its own text is. An empty line keeps its slot (CDS-73).
 func regionLines(e composition.ResolvedElement) int {

@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -49,40 +48,16 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 				if problem != nil {
 					return problem
 				}
-				// The lines each region entry draws under the project's own
-				// presets, so admission checks the layout the render will do
-				// (CLIP-147).
-				placements := clip.RegionPlacements(timeline.Elements, in.Design.RegionPresets())
-				// Every region entry with its generated rows blanked: the block the
-				// authored rows are checked in holds only what is known now.
-				authored := slices.Clone(timeline.Elements)
-				for k, element := range authored {
-					if element.Element.Role != "hook" && element.Element.Role != "ending" {
-						continue
-					}
-					authored[k].Rows = slices.Clone(element.Rows)
-					for i, row := range element.Element.Rows {
-						if composition.RowKind(element.Element, row) == "ai" && i < len(authored[k].Rows) {
-							authored[k].Rows[i].Text = ""
-						}
-					}
-				}
 				for _, element := range timeline.Elements {
-					region := element.Element.Role == "hook" || element.Element.Role == "ending"
-					if !region && element.Element.Kind != "fixed" {
+					// The intro and the outro draw the project's slots, whose words
+					// are checked as the slots they are (CLIP-147, CDS-77); a
+					// template entry of either only seeds them and draws nothing.
+					if clip.RegionRole(element.Element.Role) || element.Element.Kind != "fixed" {
 						continue
 					}
 					text := clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent}
-					if region {
-						text.Resolved.Rows = slices.Clone(element.Rows)
-						for i, row := range element.Element.Rows {
-							if composition.RowKind(element.Element, row) == "ai" {
-								text.Resolved.Rows[i].Text = ""
-							}
-						}
-					}
 					if element.Element.Role != "caption" {
-						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets(), placements[element.InstanceID], authored)
+						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets(), clip.RegionPlacement{}, timeline.Elements)
 						if err != nil {
 							return err
 						}

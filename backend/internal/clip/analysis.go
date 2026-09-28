@@ -124,6 +124,11 @@ type PlanningInput struct {
 	// the scenes it holds and keeps its order and pace, and writes no storyline of its own.
 	// Nil is 바로 만들기.
 	FollowStoryline *Storyline
+	// The project's intro/outro slots as the approval froze them (CLIP-69, CLIP-186): the
+	// storyline call and 바로 만들기's flow call draft the generated ones, and every call reads
+	// the owner's and the answers' words as written. Nil is a job frozen before slots existed,
+	// which drafts none.
+	Regions *ProjectRegions
 }
 
 // VideoGuidelines are a clip's frozen 영상 지침: the enabled clip 기본 지침 in the project's

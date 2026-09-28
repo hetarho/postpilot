@@ -22,7 +22,7 @@ func revisionInput(t *testing.T, target, request string) clip.RevisionInput {
 }
 
 // revisionFlow is a flow answer as a revision's rewrite gives it: the contract without the
-// storyline, which only 바로 만들기 writes (CLIP-131, CLIP-178).
+// storyline and the intro/outro words, which only 바로 만들기 writes (CLIP-131, CLIP-178).
 func revisionFlow(response string) string {
 	var fields map[string]any
 	if json.Unmarshal([]byte(response), &fields) != nil {
@@ -32,6 +32,7 @@ func revisionFlow(response string) string {
 		return response
 	}
 	delete(fields, "storyline")
+	delete(fields, "region_slots")
 	return raw(fields)
 }
 

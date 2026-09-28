@@ -2,8 +2,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "captions",
-    "slots"
+    "captions"
   ],
   "properties": {
     "captions": {
@@ -47,40 +46,6 @@
           },
           "style": {
             "type": "string"
-          }
-        }
-      }
-    },
-    "slots": {
-      "type": "array",
-      "maxItems": 100,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "element_id",
-          "rows",
-          "short_rows"
-        ],
-        "properties": {
-          "element_id": {
-            "type": "string"
-          },
-          "rows": {
-            "type": "array",
-            "maxItems": 8,
-            "items": {
-              "type": "string",
-              "maxLength": 500
-            }
-          },
-          "short_rows": {
-            "type": "array",
-            "maxItems": 8,
-            "items": {
-              "type": "string",
-              "maxLength": 500
-            }
           }
         }
       }

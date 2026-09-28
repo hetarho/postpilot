@@ -318,6 +318,31 @@ choice would be expensive to undo are listed at the end.
   matching render over nothing visible. The first slot edit, preset change or generation replaces
   them with the one project element.
 
+## T452 — the approved storyline calls draft the intro/outro slots
+
+- **The narration no longer writes any intro/outro words.** The storyline call and 바로 만들기's flow
+  call draft the generated slots. The narration is shown what the regions say, as read-only
+  `intro_outro`, and told not to repeat it; the server draws the slots. Its old `slots` response
+  field and `generated_region_slots` input are gone.
+- **A draft that does not fit its slot is shortened or dropped once, when it is written.** It keeps
+  the words if they fit, takes the writer's `short_text` if only that fits (`intro_slot_shortened`),
+  and otherwise leaves the slot empty (`intro_slot_omitted`). The notice is stored on the slot and is
+  cleared by the owner's next edit or the next rewrite. A slot the writer leaves empty gets no notice,
+  because the writer chose that and the server changed nothing.
+- **An answer's words that are too wide for their slot are refused at the quote, not when the answer
+  is saved.** Typing the answer stays possible; generation names the slot first
+  (`project-intro-1`, `copy_limit`). The template's region entries are no longer checked by the media
+  admission, since they only seed the slots.
+- **Choosing a preset makes a kept candidate plan stale.** Presets, enablement, instructions and
+  slot words are now writing input, so the quote after a preset change prices the writing again
+  rather than offering the old render-only continuation. Caption style, pace and accent stay
+  render-only.
+- **A revision request keeps even the generated slot words.** Only 스토리라인 먼저, 다시 만들기,
+  a storyline request and 바로 만들기 write them.
+- **Also fixed from T451:** re-projecting a plan the real layout had already drawn rewrote the
+  region element over the pace and accent the layout records, so an instruction-only slot edit would
+  have staled a matching render. The projection now keeps those fields.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

@@ -22,10 +22,11 @@ type flowStorylineJSON struct {
 	ObservationIDs []string `json:"observation_ids"`
 }
 type flowJSON struct {
-	Storyline  []flowStorylineJSON `json:"storyline"`
-	Ratio      string              `json:"ratio"`
-	DurationMS int                 `json:"duration_ms"`
-	Cuts       []flowCutJSON       `json:"cuts"`
+	Storyline   []flowStorylineJSON `json:"storyline"`
+	RegionSlots []regionSlotJSON    `json:"region_slots"`
+	Ratio       string              `json:"ratio"`
+	DurationMS  int                 `json:"duration_ms"`
+	Cuts        []flowCutJSON       `json:"cuts"`
 }
 
 var flowShape = readShape(flowSchema)
@@ -153,8 +154,10 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string, withStoryli
 	// answers (CLIP-138).
 	for _, resolved := range timeline.Elements {
 		// A caption entry of the outline is placed by the narration call, whatever
-		// its text already says, so the flow leaves it alone (CLIP-112).
-		if generatesText(resolved.Element) || resolved.Element.Role == "caption" && resolved.CutID == "" {
+		// its text already says, so the flow leaves it alone (CLIP-112). The intro
+		// and the outro draw the project's slots, never a template entry of their
+		// own (CLIP-147).
+		if generatesText(resolved.Element) || resolved.Element.Role == "caption" && resolved.CutID == "" || clip.RegionRole(resolved.Element.Role) {
 			continue
 		}
 		portable.Elements = append(portable.Elements, clip.PortableText{Resolved: resolved, Scope: "context", Accent: doc.Accent, Pace: doc.Pace})
@@ -169,9 +172,12 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string, withStoryli
 		for _, p := range wire.Storyline {
 			paragraphs = append(paragraphs, clip.StorylineParagraph{Text: p.Text, ObservationIDs: p.ObservationIDs})
 		}
-		// A storyline that keeps nothing is none; the flow itself stands either way.
-		if kept := clip.BoundStoryline(paragraphs, clip.ObservedScenes(input.Analyses)); len(kept) > 0 {
-			plan.Storyline = &clip.Storyline{Paragraphs: kept}
+		// A storyline that keeps nothing is none; the flow itself stands either way. The
+		// generated slots' words come with it, fitted once (CLIP-187).
+		kept := clip.BoundStoryline(paragraphs, clip.ObservedScenes(input.Analyses))
+		drafts := regionDrafts(input, wire.RegionSlots, compositionLimits(cfg, input))
+		if len(kept) > 0 || len(drafts) > 0 {
+			plan.Storyline = &clip.Storyline{Paragraphs: kept, RegionDrafts: drafts}
 		}
 	}
 	return plan, nil

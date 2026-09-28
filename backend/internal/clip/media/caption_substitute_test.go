@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -187,17 +186,5 @@ func TestRendererRefusesACopyTemplateWithoutRuns(t *testing.T) {
 	}
 	if _, err := NewRenderer(a, cfg); err != nil {
 		t.Fatalf("the example caption template does not draw runs: %v", err)
-	}
-}
-
-// A region slot takes no substitute: Paperlogy's empty 갂 in an intro is
-// identified by entry before generation (CDS-77, CDS-84).
-func TestARegionSlotTakesNoSubstitute(t *testing.T) {
-	_, r := regionMeasured(t)
-	body := `<clip version="1" caption="bold"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>맛집 ` + paperlogyGap + `</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-	in := clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: "a", OutroPreset: "b"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}
-	var problem *composition.Problem
-	if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "unsupported_glyph" {
-		t.Fatal(err)
 	}
 }

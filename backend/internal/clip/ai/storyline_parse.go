@@ -5,14 +5,16 @@ import (
 )
 
 type storylineJSON struct {
-	Storyline []flowStorylineJSON `json:"storyline"`
+	Storyline   []flowStorylineJSON `json:"storyline"`
+	RegionSlots []regionSlotJSON    `json:"region_slots"`
 }
 
 var storylineShape = readShape(storylineSchema)
 
-// parseStoryline reads the storyline call's answer (CLIP-177): the storyline is the whole
-// output, so one that keeps nothing after its bounds is bad output and goes to the correction
-// like any other — there is nothing else the job could keep.
+// parseStoryline reads the storyline call's answer (CLIP-177): the body is what the call is
+// for, so one that keeps nothing after its bounds is bad output and goes to the correction
+// like any other — there is nothing else the job could keep. The slot words it drafted ride
+// with it (CLIP-187).
 func parseStoryline(cfg Config, input clip.StorylineInput, raw string) (clip.Storyline, error) {
 	var wire storylineJSON
 	if err := decode(raw, cfg.MaxResponseBytes, storylineShape, &wire); err != nil {
@@ -26,5 +28,7 @@ func parseStoryline(cfg Config, input clip.StorylineInput, raw string) (clip.Sto
 	if len(kept) == 0 {
 		return clip.Storyline{}, outputError("storyline_empty")
 	}
-	return clip.Storyline{Paragraphs: kept}, nil
+	// The generated slots' words, fitted once and carried to the save (CLIP-187).
+	drafts := regionDrafts(input.PlanningInput, wire.RegionSlots, compositionLimits(cfg, input.PlanningInput))
+	return clip.Storyline{Paragraphs: kept, RegionDrafts: drafts}, nil
 }

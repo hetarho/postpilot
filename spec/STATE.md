@@ -56,7 +56,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T452 | Draft region slots in the approved storyline calls | CLIP CDS ARCH | T451 | todo |
 | T453 | Edit intro and outro slots in the storyline space | CLIP CDS ARCH | T452 | todo |
 | T454 | Validate manual caption styles independently of the AI set | CLIP CDS ARCH | - | todo |
 | T455 | Select and style individual captions in the draft preview | CLIP CDS ARCH | T454 | todo |
@@ -65,11 +64,12 @@
 | T460 | One closed-row guideline list with a 기본 지침 sheet | GUIDE | T459 | todo |
 
 ## next
-- next: implement-task T452 (draft region slots in the approved storyline calls), then T453–T456 in order, one commit per task; independently implement-task T459 then T460 (guideline title, closed-row guideline list), one commit per task
+- next: implement-task T453 (edit intro and outro slots in the storyline space), then T454–T456 in order, one commit per task; independently implement-task T459 then T460 (guideline title, closed-row guideline list), one commit per task
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451), then review-code the clip wave
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 T452 done: the storyline call and 바로 만들기's flow call draft the generated intro/outro slots in their one approved call; builds and revisions copy the slot words; region inputs join quotes, payloads and recovery
 - 260929 T461 done: ① is 가제 → template fields → memo → photos; the 가제's Enter goes to the next field on screen
 - 260929 T461 claimed (sm)
 - 260929 create-task POST r24 → T461
@@ -77,6 +77,7 @@
 - 260929 T458 done: a memory row is its text over one badge line with 수정/삭제 icons; one form saves text, kind and tags
 - 260929 T458 claimed (sm)
 - 260929 T457 done: a storyline tile opens its attachment large in a wide sheet, walking paragraphs then 빠진 사진
+- 260928 T452 claimed (p15)
 - 260928 T457 claimed (sm); owner asked to run T457–T460 in order, one commit per task
 - 260928 create-task POST r23 GUIDE r11 MEM r5 → T457–T460; T460 waits on T459
 - 260928 create-task POST GUIDE MEM start
@@ -88,5 +89,3 @@
 - 260928 T450 verification: ff900701 fixes recovery writes rejected after wall-clock rollback; the deterministic regression and repeated recovery tests pass
 - 260928 finding (T450 verification): attempt-checkpoint read/write recency also uses wall-clock ordering; retained as a follow-up outside the region-state task
 - 260928 implementation scope narrowed: finish and commit T450 only; leave T451–T456 unstarted for the next session
-- 260928 T450 claimed (cr); sequential T450–T456 implementation and per-task commits
-- 260928 create-task CLIP r51 CDS r31 → T450–T456; lint/check passed (42 warnings, 13 review hints); 44 changed decisions covered and dependency graph verified

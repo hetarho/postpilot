@@ -51,7 +51,7 @@ func flowResponse(cuts ...map[string]any) string {
 	for _, c := range cuts {
 		values = append(values, c)
 	}
-	return raw(map[string]any{"storyline": []any{}, "ratio": "vertical", "duration_ms": 22500, "cuts": values})
+	return raw(map[string]any{"storyline": []any{}, "region_slots": []any{}, "ratio": "vertical", "duration_ms": 22500, "cuts": values})
 }
 func defaultFlow() string {
 	return flowResponse(flowCut("cut-one", 0, 7500, 1000), flowCut("cut-two", 7500, 15000, 1000), flowCut("cut-three", 15000, 22500, 1000))
@@ -104,9 +104,10 @@ func TestFlowRequestCarriesWhatTheOrderIsMadeFrom(t *testing.T) {
 	if segment["observation_id"] != clip.ObservationID("source", 0) {
 		t.Fatal("observations carry no reference the cuts can cite", segment)
 	}
-	// Nothing about a section, an item's place or a sentence: this call writes
-	// the flow, and the response carries no text at all.
-	if strings.Contains(system, "template_section_id") || strings.Contains(system, "admitted_sections") || strings.Contains(system, "short_text") {
+	// Nothing about a section, an item's place or a caption: this call writes
+	// the flow, and beside the storyline its only text is the intro and outro
+	// slots it drafts (CLIP-187).
+	if strings.Contains(system, "template_section_id") || strings.Contains(system, "admitted_sections") || strings.Contains(system, "keyword") {
 		t.Fatal("the retired section and copy contract survived in the flow prompt")
 	}
 }
@@ -144,7 +145,10 @@ func TestFlowPlansAnOverShareAndASpeechRateAsWritten(t *testing.T) {
 	}
 }
 
-func TestFlowResolvesTheFixedRegionsAndWritesNoNarration(t *testing.T) {
+// The flow resolves what the template states in full — its badge — and writes no
+// narration; the intro and the outro are the project's slots, which the server
+// draws, so no template entry of either reaches the plan (CLIP-147).
+func TestFlowResolvesTheFixedElementsAndWritesNoNarration(t *testing.T) {
 	plan, _, _ := flowRequest(t, flowInput(), defaultFlow())
 	roles := map[string]int{}
 	for _, text := range plan.Portable.Elements {
@@ -153,11 +157,11 @@ func TestFlowResolvesTheFixedRegionsAndWritesNoNarration(t *testing.T) {
 			t.Fatal("the flow call wrote a caption", text.Resolved)
 		}
 		if text.Resolved.CutID != "" {
-			t.Fatal("a region was bound to a cut", text.Resolved)
+			t.Fatal("an element was bound to a cut", text.Resolved)
 		}
 	}
-	if roles["badge"] != 1 || roles["hook"] != 1 || roles["ending"] != 1 || len(plan.Portable.Elements) != 3 {
-		t.Fatal("the template's fixed regions did not resolve", roles)
+	if roles["badge"] != 1 || len(plan.Portable.Elements) != 1 {
+		t.Fatal("the template's fixed badge did not resolve alone", roles)
 	}
 	for _, cut := range plan.Portable.Cuts {
 		if cut.SectionID != "" || cut.GroupID != "" || cut.ItemID != "" {

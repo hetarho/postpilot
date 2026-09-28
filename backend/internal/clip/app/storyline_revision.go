@@ -13,23 +13,29 @@ import (
 
 // A storyline request (CLIP-181) is a clip job like a revision: approved before it runs,
 // charged for its ONE writing call, cancellable, and settled the same way. It reads the
-// observations already stored, rewrites the storyline as the owner asked, and touches neither
-// the plan nor the result.
-const storylineRevisionPayloadVersion = 1
+// observations already stored and rewrites the storyline as the owner asked, with the words of
+// the generated intro/outro slots (CLIP-187); an existing plan then draws the changed slot words
+// and nothing else of it changes, and the result stays as it is (CLIP-188).
+//
+// Version 2 freezes the intro/outro slots and their presets; an accepted version-1 job drafts no
+// slot.
+const storylineRevisionPayloadVersion = 2
 
 type storylineRevisionPayload struct {
-	Version          int
-	ProjectID, Write string
-	Request          string
-	Current          clip.Storyline
-	Language         string
-	Composition      *clip.ProjectComposition
-	Template         clip.Recipe
-	Instruction      string
-	Guidelines       clip.VideoGuidelines `json:",omitzero"`
-	Ratio            string
-	TargetDurationMS int
-	Approval         *clip.GenerationApproval
+	Version                  int
+	ProjectID, Write         string
+	Request                  string
+	Current                  clip.Storyline
+	Language                 string
+	Composition              *clip.ProjectComposition
+	Template                 clip.Recipe
+	Instruction              string
+	Guidelines               clip.VideoGuidelines `json:",omitzero"`
+	Ratio                    string
+	TargetDurationMS         int
+	Regions                  *clip.ProjectRegions `json:",omitempty"`
+	IntroPreset, OutroPreset string               `json:",omitempty"`
+	Approval                 *clip.GenerationApproval
 }
 
 // storylineRevisionInputs is what a storyline request is about: the stored storyline, the
@@ -94,7 +100,8 @@ func (s *GenerationService) storylineRevisionPricing(ctx context.Context, observ
 }
 
 // StorylineRevisionInputDigest binds a quote to the storyline the owner was looking at and the
-// exact words they wrote: an edit or another storyline saved after the quote invalidates it.
+// exact words they wrote: an edit or another storyline saved after the quote invalidates it, and
+// so does an edit of the intro/outro slots the call rewrites with it (CLIP-187).
 func StorylineRevisionInputDigest(p clip.Project, request, write string, pricing clip.GenerationPricing) string {
 	input := struct {
 		User, Project, Write, Request string
@@ -103,7 +110,8 @@ func StorylineRevisionInputDigest(p clip.Project, request, write string, pricing
 		Composition                   *clip.ProjectComposition
 		Instruction, Language         string
 		Target                        int
-	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS}
+		Regions                       string `json:",omitempty"`
+	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS, clip.EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets())}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
@@ -193,10 +201,11 @@ func (s *GenerationService) StartStorylineRevision(ctx context.Context, user, id
 	if t, err := s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID); err == nil {
 		recipe = t.Recipe
 	}
+	regions := clip.EffectiveProjectRegions(p)
 	payload, err := json.Marshal(storylineRevisionPayload{
 		Version: storylineRevisionPayloadVersion, ProjectID: id, Write: write, Request: request, Current: *p.Storyline,
 		Language: p.Language, Composition: p.Composition, Template: recipe, Instruction: p.Instruction, Guidelines: guidelines,
-		Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS,
+		Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset,
 		Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing},
 	})
 	if err != nil {
@@ -208,7 +217,8 @@ func (s *GenerationService) StartStorylineRevision(ctx context.Context, user, id
 
 // RunStorylineRevision is the whole storyline request job: check the storyline is still the
 // one the request was approved against, reserve the one writing call, rewrite the storyline and
-// save it. A failure leaves the stored storyline exactly as it was.
+// its generated slot words and save them together. A failure leaves the stored storyline, the
+// slots and the plan exactly as they were.
 func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
 	stage := "prepare"
 	defer func() {
@@ -217,7 +227,7 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 		}
 	}()
 	var frozen storylineRevisionPayload
-	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version != storylineRevisionPayloadVersion || frozen.ProjectID != project || frozen.Approval == nil || strings.TrimSpace(frozen.Request) == "" {
+	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version < 1 || frozen.Version > storylineRevisionPayloadVersion || frozen.ProjectID != project || frozen.Approval == nil || strings.TrimSpace(frozen.Request) == "" {
 		return clip.ErrInvalid
 	}
 	pricing := frozen.Approval.Pricing
@@ -256,7 +266,8 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 	}
 	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Ratio: frozen.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan,
-		Instruction: frozen.Instruction, Guidelines: frozen.Guidelines}
+		Instruction: frozen.Instruction, Guidelines: frozen.Guidelines, Regions: frozen.Regions,
+		Design: clip.ProjectDesign{IntroPreset: frozen.IntroPreset, OutroPreset: frozen.OutroPreset}}
 	current := frozen.Current
 	written, _, err := s.planner.Storyline(ctx, pricing.Plan.Ref, clip.StorylineInput{PlanningInput: in, Current: &current, Request: frozen.Request})
 	if err != nil {
@@ -275,6 +286,6 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 	if !ok {
 		return clip.ErrCompositionUnavailable
 	}
-	_, err = store.SaveStoryline(ctx, user, project, "", raw, s.now())
+	_, err = store.SaveStoryline(ctx, user, project, "", raw, written.RegionDrafts, s.now())
 	return err
 }

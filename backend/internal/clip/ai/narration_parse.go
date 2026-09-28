@@ -25,14 +25,6 @@ type narrationCaptionJSON struct {
 	EndMS      int    `json:"end_ms"`
 }
 
-// A caption and a generated slot row cite nothing (CLIP-134): what copy may state is the
-// 영상 지침's to say, and the server checks only its format (CLIP-184).
-type narrationSlotJSON struct {
-	ElementID string   `json:"element_id"`
-	Rows      []string `json:"rows"`
-	ShortRows []string `json:"short_rows"`
-}
-
 // narrationDeclaredJSON places one caption the template's outline already
 // carries: where it plays, and — for an `ai` entry alone — what it says.
 type narrationDeclaredJSON struct {
@@ -47,7 +39,6 @@ type narrationDeclaredJSON struct {
 type narrationJSON struct {
 	Captions []narrationCaptionJSON  `json:"captions"`
 	Declared []narrationDeclaredJSON `json:"declared_captions"`
-	Slots    []narrationSlotJSON     `json:"slots"`
 	// The flow is final. A response that echoes it is admitted and ignored
 	// rather than refused, so one stray key cannot cost a whole writing call.
 	Cuts []json.RawMessage `json:"cuts"`
@@ -55,8 +46,8 @@ type narrationJSON struct {
 
 var narrationShape = readShape(narrationSchema)
 
-// parseNarration writes the captions and the generated slot rows onto the flow
-// the server resolved, and changes nothing else about it. Every removal it
+// parseNarration writes the captions onto the flow the server resolved, and
+// changes nothing else about it. Every removal it
 // makes is the server's own and is recorded; a moment the writer left silent, a
 // fact it did not state and a source it did not use record nothing (CLIP-138).
 func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip.EditPlan, err error) {
@@ -91,46 +82,23 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 	}
 	portable.Fallbacks = fallbacks
 
-	slots := map[string]narrationSlotJSON{}
-	for _, slot := range wire.Slots {
-		if _, exists := slots[slot.ElementID]; exists {
-			recordGeneratedNotice(&plan, "composition_generated_identity", "", slot.ElementID, "removal")
-			continue
-		}
-		slots[slot.ElementID] = slot
-	}
-	declared := map[string]bool{}
 	// The outline's caption entries are placed by this call, not resolved into
 	// the plan with an interval of their own (CLIP-112).
 	captionEntries := map[string]composition.ResolvedElement{}
 	for _, entry := range clip.DeclaredCaptions(timeline) {
 		captionEntries[entry.Element.ID] = entry
 	}
-	// The slot each region entry's rows land in (CLIP-147).
-	placements := clip.RegionPlacements(timeline.Elements, input.Design.RegionPresets())
 	for _, resolved := range timeline.Elements {
-		declared[resolved.Element.ID] = true
 		if _, isCaption := captionEntries[resolved.Element.ID]; isCaption {
 			continue
 		}
-		text := clip.PortableText{Resolved: resolved, Scope: "context", Accent: doc.Accent, Pace: doc.Pace}
-		if !generatesText(resolved.Element) {
-			portable.Elements = append(portable.Elements, text)
+		// The intro and the outro draw the project's slots, which the server
+		// copies in as they stand (CLIP-135, CLIP-147): a template entry of
+		// either is never drawn beside them, and nothing here writes one.
+		if clip.RegionRole(resolved.Element.Role) || generatesText(resolved.Element) {
 			continue
 		}
-		// A generated region row goes through the ladder it already had: the
-		// shorter row, then an empty row with its own notice.
-		slot, exists := slots[resolved.Element.ID]
-		entry := generatedJSON{ElementID: slot.ElementID, Rows: slot.Rows, ShortRows: slot.ShortRows}
-		attachRegionRows(input.Design.RegionPresets(), input.Ratio, placements[resolved.InstanceID].Offset, entry, exists, &text, &plan)
-		if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
-			portable.Elements = append(portable.Elements, text)
-		}
-	}
-	for id := range slots {
-		if !declared[id] {
-			recordGeneratedNotice(&plan, "composition_generated_identity", "", id, "removal")
-		}
+		portable.Elements = append(portable.Elements, clip.PortableText{Resolved: resolved, Scope: "context", Accent: doc.Accent, Pace: doc.Pace})
 	}
 
 	admitNarration(cfg, input, &plan, &portable, narrationCaptions(&plan, wire, timeline), doc.Pace)
