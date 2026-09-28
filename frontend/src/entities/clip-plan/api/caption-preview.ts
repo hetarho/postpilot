@@ -3,6 +3,7 @@ import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import {
+  appFailureFromConnect,
   ClipEditPlanSchema,
   ClipPlanService,
   GetClipCaptionPreviewRequestSchema,
@@ -112,6 +113,15 @@ export function useClipCaptionPreview(
   })
 }
 
+/** ① asks for the style samples and the preset samples together, and the server draws one
+ *  owner's samples at a time, refusing the one that arrives second as busy rather than queueing
+ *  it. Nothing on ① asks again, so a busy refusal is retried once the other has had time to
+ *  finish (0.25 s, doubling, five times); every other failure stays final. */
+function retryWhenBusy(failures: number, error: unknown) {
+  return failures < 5 && appFailureFromConnect(error).reason === 'CLIP_PREVIEW_BUSY'
+}
+const busyRetryDelay = (failures: number) => 250 * 2 ** failures
+
 /** Every approved caption style, drawn once by the renderer itself (CDS-83), so
  *  ① offers the set by its own look rather than by a picture of it. It asks the
  *  project for nothing but its ratio, so the answer is the same for every
@@ -122,7 +132,8 @@ export function useClipCaptionStyleSamples(projectId: string | undefined, enable
     queryKey: ['clip-caption-style-samples', transport, projectId],
     enabled: enabled && !!projectId,
     staleTime: Infinity,
-    retry: false,
+    retry: retryWhenBusy,
+    retryDelay: busyRetryDelay,
     queryFn: async ({ signal }) => {
       const value = await createClient(ClipPlanService, transport).getClipCaptionStyleSamples(
         create(GetClipCaptionStyleSamplesRequestSchema, { projectId }),
@@ -169,7 +180,8 @@ export function useClipRegionPresetSamples(projectId: string | undefined, slotLa
     queryKey: ['clip-region-preset-samples', transport, projectId, slotLabel],
     enabled: !!projectId,
     staleTime: Infinity,
-    retry: false,
+    retry: retryWhenBusy,
+    retryDelay: busyRetryDelay,
     queryFn: async ({ signal }) => {
       const value = await createClient(ClipPlanService, transport).getClipRegionPresetSamples(
         create(GetClipRegionPresetSamplesRequestSchema, { projectId, slotLabel }),

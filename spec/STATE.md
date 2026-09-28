@@ -62,6 +62,7 @@
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260928 fix: ①'s style and preset samples retry a CLIP_PREVIEW_BUSY refusal (fired together, the owner's preview lock refused the second, and the tiles stayed black)
 - 260928 T416 done: a caption character its face does not draw is set in Wanted Sans Variable inside its own style
 - 260928 finding (T416): backend/examples/overlays/shorts-editorial no longer loads (card-v1 views, no keynote/film/region/info bindings); only its caption template was brought to the runs contract
 - 260928 T416 claimed (gs)
@@ -81,4 +82,3 @@
 - 260928 doc-review MKT LANG VIDEO EXPORT QUOTA start
 - 260928 doc-review ARCH VOICE CDS tidied (rev unchanged); MODEL-37 now points at VOICE-13 for DeleteVoice
 - 260928 doc-review ARCH VOICE CDS start
-- 260928 doc-review CLIP tidied (rev unchanged)
