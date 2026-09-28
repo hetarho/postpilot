@@ -1,6 +1,7 @@
 package media
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -127,5 +128,51 @@ func TestACaptionSheetPagesALongCaption(t *testing.T) {
 	}
 	if seen != want || runs < 2 {
 		t.Fatalf("a paged caption delivered %d of %d frames in %d runs", seen, want, runs)
+	}
+}
+
+// A run that fits the sheet's pixels but not one response's bytes is cut to
+// what does and drawn again, never refused, and the paging still covers every
+// frame; a single frame over the budget is the one refusal (CLIP-159). The
+// budget is the response's own, less base64's third, because the browser reads
+// the sheet out of a JSON response.
+func TestACaptionSheetIsCutToWhatOneResponseCarries(t *testing.T) {
+	_, r := measured(t)
+	plan, _ := framesPlan(t, "ember")
+	sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 30000, Width: 1920, Height: 1080}}}
+	cfg := clip.DefaultGenerationConfig(clip.Environment{}).Preview
+	whole, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", 0, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if whole.Cells < 6 {
+		t.Fatalf("the fixture's first run holds %d frames", whole.Cells)
+	}
+	cfg.MaxResponseBytes = len(whole.Sheet)/3*4/3 + 1024
+	budget := sheetByteBudget(cfg)
+	visual := captionVisual(t, measuredDeclared(t, plan))
+	first := visual.manifest.StartMS * 30 / 1000
+	want := (visual.manifest.EndMS*30+999)/1000 - first
+	seen, offset, runs := 0, 0, 0
+	for offset != -1 {
+		frames, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", offset, cfg)
+		if err != nil {
+			t.Fatalf("run at %d: %v", offset, err)
+		}
+		if len(frames.Sheet) > budget || frames.Cells >= whole.Cells || frames.FrameOffset != offset {
+			t.Fatalf("run at %d: %d cells, %d bytes against %d", offset, frames.Cells, len(frames.Sheet), budget)
+		}
+		seen += frames.Cells
+		offset = frames.NextOffset
+		if runs++; runs > want {
+			t.Fatal("the paging did not end")
+		}
+	}
+	if seen != want {
+		t.Fatalf("the cut runs delivered %d of %d frames", seen, want)
+	}
+	cfg.MaxResponseBytes = 2048
+	if _, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", 0, cfg); !errors.Is(err, clip.ErrPreviewTooLarge) {
+		t.Fatalf("a frame larger than a response was not refused: %v", err)
 	}
 }

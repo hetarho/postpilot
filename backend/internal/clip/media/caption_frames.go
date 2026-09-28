@@ -89,12 +89,53 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 	if cells <= 0 {
 		return out, clip.ErrPreviewTooLarge
 	}
-	columns = min(columns, cells)
-	rows = (cells + columns - 1) / columns
+	// The bytes bound the run too. A style with a wide bleed and a busy texture
+	// (ember, neon) compresses badly, so a run that fits the pixels can still be
+	// more than one response carries; it is then cut in proportion and drawn
+	// again rather than refused, and the browser asks for the rest from
+	// NextOffset as it does for any run.
+	budget := sheetByteBudget(cfg)
+	var data []byte
+	for {
+		var err error
+		data, columns, err = r.drawCaptionSheet(ctx, ws, canvas, visual, crop, offset, count, cells, cfg)
+		if err != nil {
+			return out, err
+		}
+		if len(data) <= budget {
+			break
+		}
+		if cells == 1 {
+			return out, clip.ErrPreviewTooLarge
+		}
+		cells = max(1, min(cells-1, cells*budget/len(data)))
+	}
+	next := offset + cells
+	if next >= count {
+		next = -1
+	}
+	return clip.CaptionFrames{Sheet: data, CellWidth: cellW, CellHeight: cellH, Columns: columns, Cells: cells,
+		X: int(math.Round(crop.X)), Y: int(math.Round(crop.Y)), FirstFrame: first, FrameOffset: offset, NextOffset: next}, nil
+}
+
+// sheetByteBudget is the most PNG one sheet may hold. The sheet travels in a
+// response bounded by MaxResponseBytes, and the browser reads that response as
+// JSON, where the bytes are base64: four characters for every three, plus the
+// run's few other fields.
+func sheetByteBudget(cfg clip.PreviewConfig) int {
+	return (cfg.MaxResponseBytes - 1024) / 4 * 3
+}
+
+// drawCaptionSheet rasterises `cells` frames from `offset` onto one sheet and
+// returns its PNG and its column count.
+func (r *Rendering) drawCaptionSheet(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual declaredVisual, crop clip.Region, offset, count, cells int, cfg clip.PreviewConfig) ([]byte, int, error) {
+	cellW, cellH := int(crop.Width), int(crop.Height)
+	columns := min(max(1, min(cfg.MaxSheetPixels/cellW, cfg.MaxFrameCells)), cells)
+	rows := (cells + columns - 1) / columns
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, columns*cellW, rows*cellH)
 	var defs, body strings.Builder
-	duration := endMS - startMS
+	duration := visual.manifest.EndMS - visual.manifest.StartMS
 	for i := range cells {
 		// The same progress the render's own frame carries, so a browser-drawn
 		// frame and a server-drawn one are the same picture (CDS-7).
@@ -104,7 +145,7 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 		}
 		frameDefs, frameBody, ok := design.DrawCaptionFrame(captionFrame(canvas, visual.copy, visual.caption, duration, progress))
 		if !ok {
-			return out, elementProblem(visual.text, "invalid_design")
+			return nil, 0, elementProblem(visual.text, "invalid_design")
 		}
 		// Two cells of one document cannot share a filter or clip id, so each
 		// cell's ids carry its own index, exactly as a fragment carries its
@@ -123,19 +164,8 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 	png := filepath.Join(ws.Path, fmt.Sprintf("caption-sheet-%d.png", offset))
 	defer os.Remove(png)
 	if err := r.rasterizeTo(ctx, ws, clip.Region{Width: float64(columns * cellW), Height: float64(rows * cellH)}, b.String(), png); err != nil {
-		return out, err
+		return nil, 0, err
 	}
 	data, err := os.ReadFile(png)
-	if err != nil {
-		return out, err
-	}
-	if len(data) > cfg.MaxResponseBytes {
-		return out, clip.ErrPreviewTooLarge
-	}
-	next := offset + cells
-	if next >= count {
-		next = -1
-	}
-	return clip.CaptionFrames{Sheet: data, CellWidth: cellW, CellHeight: cellH, Columns: columns, Cells: cells,
-		X: int(math.Round(crop.X)), Y: int(math.Round(crop.Y)), FirstFrame: first, FrameOffset: offset, NextOffset: next}, nil
+	return data, columns, err
 }
