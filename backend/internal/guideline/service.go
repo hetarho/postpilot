@@ -77,11 +77,15 @@ func (s *Service) List(ctx context.Context, userID string, kind Kind) ([]Guideli
 // The scope is one value — a kind with both sets — so a templates set and a 분야 set cannot be
 // passed in each other's place. kind is the guideline's for good; an approval creates one of its
 // candidate's kind, and a candidate of another kind reads as missing (GUIDE-11).
-func (s *Service) Create(ctx context.Context, userID string, kind Kind, text string, scope ScopePatch, fromCandidateID string) (Guideline, error) {
+func (s *Service) Create(ctx context.Context, userID string, kind Kind, title, text string, scope ScopePatch, fromCandidateID string) (Guideline, error) {
 	if !kind.Valid() {
 		kind = KindPost
 	}
-	text, err := s.validText(text)
+	title, err := s.validTitle(title)
+	if err != nil {
+		return Guideline{}, err
+	}
+	text, err = s.validText(text)
 	if err != nil {
 		return Guideline{}, err
 	}
@@ -91,7 +95,7 @@ func (s *Service) Create(ctx context.Context, userID string, kind Kind, text str
 	}
 	now := s.now()
 	created := Guideline{
-		ID: s.newID(), UserID: userID, Kind: kind, Text: text, Scope: valid.Scope, TemplateIDs: valid.TemplateIDs,
+		ID: s.newID(), UserID: userID, Kind: kind, Title: title, Text: text, Scope: valid.Scope, TemplateIDs: valid.TemplateIDs,
 		Fields: valid.Fields, CreatedAt: now, UpdatedAt: now,
 	}
 	approval := CandidateApproval{ID: strings.TrimSpace(fromCandidateID), Text: text}
@@ -194,6 +198,13 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (G
 	current, err := s.store.Get(ctx, userID, id)
 	if err != nil {
 		return Guideline{}, err
+	}
+	if patch.Title != nil {
+		title, err := s.validTitle(*patch.Title)
+		if err != nil {
+			return Guideline{}, err
+		}
+		patch.Title = &title
 	}
 	if patch.Text != nil {
 		text, err := s.validText(*patch.Text)
@@ -389,6 +400,16 @@ func (s *Service) validText(value string) (string, error) {
 	}
 	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.TextMaxChars {
 		return "", &TextTooLongError{Chars: chars, Max: s.limits.TextMaxChars}
+	}
+	return trimmed, nil
+}
+
+// validTitle trims a title and bounds it (GUIDE-46). Empty is allowed and means none; a title
+// is never unique, because it is only the list's name for a rule.
+func (s *Service) validTitle(value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
+	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.TitleMaxChars {
+		return "", &TitleTooLongError{Chars: chars, Max: s.limits.TitleMaxChars}
 	}
 	return trimmed, nil
 }

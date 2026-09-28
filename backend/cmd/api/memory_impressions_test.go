@@ -45,7 +45,7 @@ func TestTheMemoriesDefaultFreezesOnlyBesideAMatchingMemory(t *testing.T) {
 	guidelines := guideline.NewService(
 		guidelinestore.New(d.Writer, d.Reader),
 		blogFields{},
-		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100},
 		50,
 	)
 	memoryAdapter := generationMemories{service: memories}

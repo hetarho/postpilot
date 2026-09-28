@@ -1,5 +1,5 @@
 import type { BlogFieldId } from '@/entities/blog-field/@x/guideline'
-import { GUIDELINE_TEXT_MAX_CHARS } from '../config'
+import { GUIDELINE_TEXT_MAX_CHARS, GUIDELINE_TITLE_MAX_CHARS } from '../config'
 /** What a guideline applies to (GUIDE-5). `templates` with an empty set is a real state, not a
  *  missing value: every template it named was deleted, so it reaches no post until it is
  *  rescoped. `fields` never empties that way — a 분야 is the product's and is never deleted. */
@@ -19,6 +19,8 @@ export interface Guideline {
   /** A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
    *  video templates. */
   kind: GuidelineKind
+  /** The owner's name for the rule in the list, `''` for none (GUIDE-46). Never part of a prompt. */
+  title: string
   text: string
   scope: GuidelineScopeKind
   /** Empty for `global`, and also empty for an orphaned `templates` scope. */
@@ -91,7 +93,10 @@ export interface GuidelineScope {
 /** Mirrored from the backend so the field can count down before the round trip; the server stays
  *  authoritative and its message is what a refusal shows. The per-account cap is deliberately not
  *  mirrored — the create form relays the server's refusal rather than predicting it. */
-export const GUIDELINE_LIMITS = { text: GUIDELINE_TEXT_MAX_CHARS } as const
+export const GUIDELINE_LIMITS = {
+  text: GUIDELINE_TEXT_MAX_CHARS,
+  title: GUIDELINE_TITLE_MAX_CHARS,
+} as const
 
 export function globalScope(): GuidelineScope {
   return { kind: 'global', templateIds: [], fields: [] }
@@ -105,6 +110,12 @@ export function guidelineChars(value: string): number {
 
 export function remainingGuidelineChars(value: string): number {
   return GUIDELINE_LIMITS.text - guidelineChars(value)
+}
+
+/** Room left in a title. An empty title is fine — it is optional — so only a negative count stops
+ *  a save. */
+export function remainingGuidelineTitleChars(value: string): number {
+  return GUIDELINE_LIMITS.title - guidelineChars(value)
 }
 
 /** True when a scoped guideline reaches no post at all — every template it named was deleted. */

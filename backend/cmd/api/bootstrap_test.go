@@ -673,7 +673,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		blogFields{},
-		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100},
 		50,
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
@@ -686,14 +686,14 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", "CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Scoped to the OTHER template, so it must never reach this post's prompt.
-	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "협찬 표기를 빠뜨리지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{other.ID}}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", "협찬 표기를 빠뜨리지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{other.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -817,7 +817,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	guidelineSvc = guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		blogFields{},
-		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100},
 		2,
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
@@ -881,7 +881,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, candidates[0].ID)
+	created, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, candidates[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1002,7 +1002,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 		testTemplateLimits(),
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
-	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
+	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100}, 50)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
 	review, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "카페 리뷰", Body: "분위기를 쓰세요"})
@@ -1019,7 +1019,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 		// Scoped to ANOTHER 분야, so it must never reach this post.
 		{"반려동물 이름을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"pets"}}},
 	} {
-		if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, create.text, create.scope, ""); err != nil {
+		if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", create.text, create.scope, ""); err != nil {
 			t.Fatalf("create %q: %v", create.text, err)
 		}
 	}
@@ -1077,6 +1077,80 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	}
 }
 
+// GUIDE-46: a title is the list's name for a rule and nothing else — naming every guideline
+// changes neither a post's write prompt nor what a clip freezes, byte for byte.
+func TestAGuidelineTitleNeverReachesAPromptOrAClipFreeze(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-title.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	guidelineSvc := guideline.NewService(
+		guidelinestore.New(handle.Writer, handle.Reader),
+		blogFields{},
+		guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100},
+		50,
+	)
+	for _, create := range []struct {
+		kind guideline.Kind
+		text string
+	}{
+		{guideline.KindPost, "없는 사실을 쓰지 않기"},
+		{guideline.KindPost, "가격은 원 단위까지 그대로"},
+		{guideline.KindClip, "자막은 두 줄까지"},
+	} {
+		if _, err := guidelineSvc.Create(ctx, "alice", create.kind, "", create.text, guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	posts := generationGuidelines{service: guidelineSvc}
+	clips := clipGuidelineCandidates{service: guidelineSvc}
+	snapshot := func() (string, []string) {
+		t.Helper()
+		frozen, err := posts.ForPrompt(ctx, "alice", nil, nil, generation.LanguageKorean, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, frozen.Owner)
+		clip, err := clips.ForClip(ctx, "alice", "", string(guideline.LanguageKorean))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return system, append(append([]string{}, clip.Defaults...), clip.Owner...)
+	}
+	untitledPrompt, untitledClip := snapshot()
+
+	for _, kind := range []guideline.Kind{guideline.KindPost, guideline.KindClip} {
+		listed, err := guidelineSvc.List(ctx, "alice", kind)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, g := range listed {
+			title := "이름: " + g.Text
+			if _, err := guidelineSvc.Update(ctx, "alice", g.ID, guideline.Patch{Title: &title}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	titledPrompt, titledClip := snapshot()
+	if titledPrompt != untitledPrompt {
+		t.Fatalf("a title changed the write prompt:\n%s", titledPrompt)
+	}
+	if strings.Contains(titledPrompt, "이름: ") {
+		t.Fatal("a title reached the write prompt")
+	}
+	if !slices.Equal(titledClip, untitledClip) {
+		t.Fatalf("a title changed the clip freeze: %q", titledClip)
+	}
+}
+
 // GUIDE-15, GUIDE-17: the clip context's 영상 지침 port resolves the clip kind — its enabled
 // 기본 지침 in the project's language and the owner's global clip guidelines — and never a
 // post's guideline.
@@ -1096,13 +1170,13 @@ func TestClipGuidelineAdapterResolvesTheClipKind(t *testing.T) {
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		blogFields{},
-		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
+		guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100},
 		50,
 	)
-	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindClip, "자막은 두 줄까지", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindClip, "", "자막은 두 줄까지", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", guideline.KindPost, "", "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
 	adapter := clipGuidelineCandidates{service: guidelineSvc}

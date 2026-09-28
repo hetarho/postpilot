@@ -48,7 +48,7 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 		return &guideline.AccountCapError{Max: maxPerAccount}
 	}
 	err = q.InsertGuideline(ctx, sqlc.InsertGuidelineParams{
-		ID: g.ID, UserID: g.UserID, Kind: string(g.Kind), Text: g.Text, Scope: string(g.Scope),
+		ID: g.ID, UserID: g.UserID, Kind: string(g.Kind), Title: g.Title, Text: g.Text, Scope: string(g.Scope),
 		CreatedAt: formatTime(g.CreatedAt), UpdatedAt: formatTime(g.UpdatedAt),
 	})
 	if err != nil {
@@ -317,6 +317,16 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 	// The first statement that runs also answers "does this guideline exist and is it mine":
 	// zero rows means the id is unknown or belongs to another account, which read the same.
 	touched := false
+	if patch.Title != nil {
+		n, err := q.UpdateGuidelineTitle(ctx, sqlc.UpdateGuidelineTitleParams{Title: *patch.Title, UpdatedAt: stamp, ID: id, UserID: userID})
+		if err != nil {
+			return guideline.Guideline{}, fmt.Errorf("update guideline title: %w", err)
+		}
+		if n == 0 {
+			return guideline.Guideline{}, guideline.ErrNotFound
+		}
+		touched = true
+	}
 	if patch.Text != nil {
 		n, err := q.UpdateGuidelineText(ctx, sqlc.UpdateGuidelineTextParams{Text: *patch.Text, UpdatedAt: stamp, ID: id, UserID: userID})
 		if err != nil {
@@ -501,7 +511,7 @@ func toGuideline(row sqlc.Guideline) (guideline.Guideline, error) {
 		return guideline.Guideline{}, fmt.Errorf("unknown guideline kind %q", row.Kind)
 	}
 	return guideline.Guideline{
-		ID: row.ID, UserID: row.UserID, Kind: kind, Text: row.Text, Scope: scope,
+		ID: row.ID, UserID: row.UserID, Kind: kind, Title: row.Title, Text: row.Text, Scope: scope,
 		CreatedAt: created, UpdatedAt: updated,
 	}, nil
 }

@@ -1,10 +1,12 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  GuidelineTitleField,
   canSaveGuideline,
   globalScope,
   isDuplicateGuideline,
   remainingGuidelineChars,
+  remainingGuidelineTitleChars,
   useCreateGuidelineCall,
   type GuidelineScope,
 } from '@/entities/guideline'
@@ -50,6 +52,7 @@ export function SaveAsGuidelineButton({
   const countId = `${id}-count`
   const errorId = `${id}-error`
   const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
   const [text, setText] = useState(instruction)
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const [saved, setSaved] = useState(false)
@@ -59,6 +62,7 @@ export function SaveAsGuidelineButton({
   // must not overwrite what someone is editing here, and reopening starts from the current
   // instruction rather than from the previous attempt's draft.
   const openDialog = () => {
+    setTitle('')
     setText(instruction)
     setScope(globalScope())
     setSaved(false)
@@ -68,12 +72,13 @@ export function SaveAsGuidelineButton({
   const left = remainingGuidelineChars(text)
   const exceeded = left < 0
   const showCreateError = create.isError && !isDuplicateGuideline(create.error)
-  const blocked = !canSaveGuideline(text, scope) || create.isPending
+  const blocked =
+    !canSaveGuideline(text, scope) || remainingGuidelineTitleChars(title) < 0 || create.isPending
 
   const confirm = async () => {
     if (blocked) return
     try {
-      await create.create(text, scope)
+      await create.create({ title, text, scope })
       setSaved(true)
       setOpen(false)
     } catch (cause) {
@@ -111,6 +116,13 @@ export function SaveAsGuidelineButton({
         <Typography variant="body" className="text-content-secondary">
           {t('capture.description', { ns: 'guidelines' })}
         </Typography>
+        <GuidelineTitleField
+          id={`${id}-name`}
+          value={title}
+          onChange={setTitle}
+          disabled={create.isPending}
+          className="mt-4"
+        />
         <FieldLabel htmlFor={fieldId} className="mt-4 block">
           {t('create.text', { ns: 'guidelines' })}
         </FieldLabel>

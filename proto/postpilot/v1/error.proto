@@ -300,6 +300,8 @@ enum FailureReason {
   CLIP_STORYLINE_MISSING = 256;
   // CLIP-178: an owner storyline edit that does not keep its shape.
   CLIP_STORYLINE_INVALID = 257;
+  // GUIDE-46: a guideline title past GUIDELINE_TITLE_MAX_CHARS.
+  GUIDELINE_TITLE_TOO_LONG = 258;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

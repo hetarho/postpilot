@@ -337,7 +337,10 @@ type Guideline struct {
 	Fields []BlogField `protobuf:"varint,7,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
 	// A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
 	// video templates. UNSPECIFIED reads as POST.
-	Kind          GuidelineKind `protobuf:"varint,8,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
+	Kind GuidelineKind `protobuf:"varint,8,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
+	// The owner's name for the rule in the list, empty for none (GUIDE-46). It is never part of a
+	// prompt: only `text` is frozen and injected.
+	Title         string `protobuf:"bytes,9,opt,name=title,proto3" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -426,6 +429,13 @@ func (x *Guideline) GetKind() GuidelineKind {
 		return x.Kind
 	}
 	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
+}
+
+func (x *Guideline) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
 }
 
 type ListGuidelinesRequest struct {
@@ -645,7 +655,9 @@ type CreateGuidelineRequest struct {
 	Fields []BlogField `protobuf:"varint,5,rep,packed,name=fields,proto3,enum=postpilot.v1.BlogField" json:"fields,omitempty"`
 	// The guideline's kind; for CLIP the template ids name video templates and FIELDS is refused.
 	// An approval sends its candidate's kind. UNSPECIFIED reads as POST.
-	Kind          GuidelineKind `protobuf:"varint,6,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
+	Kind GuidelineKind `protobuf:"varint,6,opt,name=kind,proto3,enum=postpilot.v1.GuidelineKind" json:"kind,omitempty"`
+	// Optional; empty is none. Trimmed, and refused past GUIDELINE_TITLE_MAX_CHARS (GUIDE-46).
+	Title         string `protobuf:"bytes,7,opt,name=title,proto3" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -720,6 +732,13 @@ func (x *CreateGuidelineRequest) GetKind() GuidelineKind {
 		return x.Kind
 	}
 	return GuidelineKind_GUIDELINE_KIND_UNSPECIFIED
+}
+
+func (x *CreateGuidelineRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
 }
 
 type CreateGuidelineResponse struct {
@@ -830,10 +849,12 @@ func (x *GuidelineScopePatch) GetFields() []BlogField {
 }
 
 type UpdateGuidelineRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Text          *string                `protobuf:"bytes,2,opt,name=text,proto3,oneof" json:"text,omitempty"`
-	Scope         *GuidelineScopePatch   `protobuf:"bytes,3,opt,name=scope,proto3" json:"scope,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Text  *string                `protobuf:"bytes,2,opt,name=text,proto3,oneof" json:"text,omitempty"`
+	Scope *GuidelineScopePatch   `protobuf:"bytes,3,opt,name=scope,proto3" json:"scope,omitempty"`
+	// Absent leaves the title alone; present replaces it, and an empty string clears it.
+	Title         *string `protobuf:"bytes,4,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -887,6 +908,13 @@ func (x *UpdateGuidelineRequest) GetScope() *GuidelineScopePatch {
 		return x.Scope
 	}
 	return nil
+}
+
+func (x *UpdateGuidelineRequest) GetTitle() string {
+	if x != nil && x.Title != nil {
+		return *x.Title
+	}
+	return ""
 }
 
 type UpdateGuidelineResponse struct {
@@ -1328,7 +1356,7 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\rmemories_only\x18\x06 \x01(\bR\fmemoriesOnly\":\n" +
 	"\x14GuidelineTemplateRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xc5\x02\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xdb\x02\n" +
 	"\tGuideline\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x122\n" +
@@ -1339,7 +1367,8 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\tR\tupdatedAt\x12/\n" +
 	"\x06fields\x18\a \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\x12/\n" +
-	"\x04kind\x18\b \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\"H\n" +
+	"\x04kind\x18\b \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\x12\x14\n" +
+	"\x05title\x18\t \x01(\tR\x05title\"H\n" +
 	"\x15ListGuidelinesRequest\x12/\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\"\x9b\x01\n" +
 	"\x16ListGuidelinesResponse\x127\n" +
@@ -1352,26 +1381,29 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x18\n" +
 	"\aenabled\x18\x03 \x01(\bR\aenabled\"q\n" +
 	"\"SetDefaultGuidelineEnabledResponse\x12K\n" +
-	"\x11default_guideline\x18\x01 \x01(\v2\x1e.postpilot.v1.DefaultGuidelineR\x10defaultGuideline\"\xac\x02\n" +
+	"\x11default_guideline\x18\x01 \x01(\v2\x1e.postpilot.v1.DefaultGuidelineR\x10defaultGuideline\"\xc2\x02\n" +
 	"\x16CreateGuidelineRequest\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x122\n" +
 	"\x05scope\x18\x02 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
 	"\ftemplate_ids\x18\x03 \x03(\tR\vtemplateIds\x12/\n" +
 	"\x11from_candidate_id\x18\x04 \x01(\tH\x00R\x0ffromCandidateId\x88\x01\x01\x12/\n" +
 	"\x06fields\x18\x05 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\x12/\n" +
-	"\x04kind\x18\x06 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kindB\x14\n" +
+	"\x04kind\x18\x06 \x01(\x0e2\x1b.postpilot.v1.GuidelineKindR\x04kind\x12\x14\n" +
+	"\x05title\x18\a \x01(\tR\x05titleB\x14\n" +
 	"\x12_from_candidate_id\"P\n" +
 	"\x17CreateGuidelineResponse\x125\n" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"\x9d\x01\n" +
 	"\x13GuidelineScopePatch\x122\n" +
 	"\x05scope\x18\x01 \x01(\x0e2\x1c.postpilot.v1.GuidelineScopeR\x05scope\x12!\n" +
 	"\ftemplate_ids\x18\x02 \x03(\tR\vtemplateIds\x12/\n" +
-	"\x06fields\x18\x03 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"\x83\x01\n" +
+	"\x06fields\x18\x03 \x03(\x0e2\x17.postpilot.v1.BlogFieldR\x06fields\"\xa8\x01\n" +
 	"\x16UpdateGuidelineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04text\x18\x02 \x01(\tH\x00R\x04text\x88\x01\x01\x127\n" +
-	"\x05scope\x18\x03 \x01(\v2!.postpilot.v1.GuidelineScopePatchR\x05scopeB\a\n" +
-	"\x05_text\"P\n" +
+	"\x05scope\x18\x03 \x01(\v2!.postpilot.v1.GuidelineScopePatchR\x05scope\x12\x19\n" +
+	"\x05title\x18\x04 \x01(\tH\x01R\x05title\x88\x01\x01B\a\n" +
+	"\x05_textB\b\n" +
+	"\x06_title\"P\n" +
 	"\x17UpdateGuidelineResponse\x125\n" +
 	"\tguideline\x18\x01 \x01(\v2\x17.postpilot.v1.GuidelineR\tguideline\"(\n" +
 	"\x16DeleteGuidelineRequest\x12\x0e\n" +

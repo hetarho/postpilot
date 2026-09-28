@@ -2,10 +2,12 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   GuidelineScopeField,
+  GuidelineTitleField,
   canSaveGuideline,
   globalScope,
   isDuplicateGuideline,
   remainingGuidelineChars,
+  remainingGuidelineTitleChars,
   useCreateGuidelineCall,
   useInvalidateGuidelineCandidates,
   type GuidelineCandidate,
@@ -42,6 +44,8 @@ export function ApproveGuidelineCandidateButton({
   const countId = `${id}-count`
   const errorId = `${id}-error`
   const [open, setOpen] = useState(false)
+  // A candidate carries no title (GUIDE-46), so the field always opens empty.
+  const [title, setTitle] = useState('')
   const [text, setText] = useState(candidate.text)
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const [duplicate, setDuplicate] = useState(false)
@@ -53,6 +57,7 @@ export function ApproveGuidelineCandidateButton({
   // occurrence count must not overwrite what someone is editing, and reopening starts from the
   // recorded text rather than from the previous attempt's draft.
   const openDialog = () => {
+    setTitle('')
     setText(candidate.text)
     setScope(globalScope())
     setDuplicate(false)
@@ -65,14 +70,15 @@ export function ApproveGuidelineCandidateButton({
   const left = remainingGuidelineChars(text)
   const exceeded = left < 0
   const showCreateError = create.isError && !isDuplicateGuideline(create.error)
-  const blocked = !canSaveGuideline(text, scope) || create.isPending
+  const blocked =
+    !canSaveGuideline(text, scope) || remainingGuidelineTitleChars(title) < 0 || create.isPending
 
   const confirm = async () => {
     if (blocked) return
     try {
       // The id names the row this approval approves, rather than leaving it to the server's
       // text match — which cannot find it once the text has been edited here.
-      await create.create(text, scope, candidate.id)
+      await create.create({ title, text, scope, fromCandidateId: candidate.id })
       setOpen(false)
     } catch (cause) {
       // An exact duplicate means this text is already a saved guideline, so no create can
@@ -105,6 +111,13 @@ export function ApproveGuidelineCandidateButton({
         <Typography variant="body" className="text-content-secondary">
           {t('candidate.approveDescription', { ns: 'guidelines' })}
         </Typography>
+        <GuidelineTitleField
+          id={`${id}-name`}
+          value={title}
+          onChange={setTitle}
+          disabled={create.isPending}
+          className="mt-4"
+        />
         <FieldLabel htmlFor={fieldId} className="mt-4 block">
           {t('create.text', { ns: 'guidelines' })}
         </FieldLabel>

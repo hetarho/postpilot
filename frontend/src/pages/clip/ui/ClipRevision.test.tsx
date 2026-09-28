@@ -247,11 +247,14 @@ it('offers 영상 지침으로 저장 after a completed revision started here, s
   expect(dialog.getByLabelText('영상 지침')).toHaveValue('자막을 더 짧게')
   expect(dialog.getByRole('tab', { name: '전역' })).toHaveAttribute('aria-selected', 'true')
   await userEvent.click(await dialog.findByRole('tab', { name: '이 영상의 템플릿 「여행」에만' }))
+  // GUIDE-46: the optional title rides the create when one is typed.
+  await userEvent.type(dialog.getByLabelText('제목'), '짧은 자막')
   await userEvent.click(dialog.getByRole('button', { name: '저장' }))
 
   await waitFor(() => expect(creates).toHaveLength(1))
   expect(creates[0]).toEqual({
     kind: 'clip',
+    title: '짧은 자막',
     text: '자막을 더 짧게',
     scope: ProtoGuidelineScope.TEMPLATES,
     templateIds: ['template'],

@@ -77,6 +77,17 @@ func (e *TextTooLongError) Error() string {
 	return fmt.Sprintf("guideline text has %d characters; at most %d are allowed", e.Chars, e.Max)
 }
 
+// TitleTooLongError is a title past the bound (GUIDE-46). An empty title is not an error: it is
+// the defined "no title".
+type TitleTooLongError struct {
+	Chars int
+	Max   int
+}
+
+func (e *TitleTooLongError) Error() string {
+	return fmt.Sprintf("guideline title has %d characters; at most %d are allowed", e.Chars, e.Max)
+}
+
 // AccountCapError refuses a create past the per-account ceiling. It names the cap because
 // the message the user reads has to say the number.
 type AccountCapError struct{ Max int }
@@ -91,10 +102,13 @@ func (e *AccountCapError) Error() string {
 // frontend already refused.
 type Limits struct {
 	TextMaxChars  int
+	TitleMaxChars int
 	MaxPerAccount int
 }
 
-func (l Limits) valid() bool { return l.TextMaxChars > 0 && l.MaxPerAccount > 0 }
+func (l Limits) valid() bool {
+	return l.TextMaxChars > 0 && l.TitleMaxChars > 0 && l.MaxPerAccount > 0
+}
 
 // TemplateRef is a template as this context needs it: an id it can validate ownership of and a
 // name it can show. Names are always a live projection through TemplateDirectory, never a
@@ -112,7 +126,10 @@ type Guideline struct {
 	UserID string
 	// Kind is the writer the guideline is for, a post's or a clip's, for good (GUIDE-2). A clip
 	// guideline's TemplateIDs name video templates.
-	Kind        Kind
+	Kind Kind
+	// Title is the owner's name for the rule in the list, empty for none (GUIDE-46). It is never
+	// frozen or injected: only Text reaches a prompt.
+	Title       string
 	Text        string
 	Scope       Scope
 	TemplateIDs []string
@@ -133,8 +150,9 @@ type ScopePatch struct {
 // Patch is a presence-based update: a nil field is not part of the edit. A text-only edit
 // therefore cannot disturb a scope saved concurrently from elsewhere.
 type Patch struct {
+	Title *string
 	Text  *string
 	Scope *ScopePatch
 }
 
-func (p Patch) empty() bool { return p.Text == nil && p.Scope == nil }
+func (p Patch) empty() bool { return p.Title == nil && p.Text == nil && p.Scope == nil }

@@ -177,6 +177,8 @@ export const errors = {
   GUIDELINE_TEXT_REQUIRED: 'Enter the guideline text.',
   GUIDELINE_TEXT_TOO_LONG:
     'A guideline must be no more than {{max}} characters. It is currently {{actual}}.',
+  GUIDELINE_TITLE_TOO_LONG:
+    'A title can be at most {{max}} characters. It is currently {{actual}}.',
   GUIDELINE_TEXT_TAKEN: 'You already have the same guideline.',
   MEMORY_NOT_FOUND: 'Memory not found.',
   MEMORY_TEXT_REQUIRED: 'Enter what to remember.',

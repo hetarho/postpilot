@@ -7,3 +7,9 @@ export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.guidelineTextMaxChars,
   300,
 )
+
+/** A guideline's optional title ceiling (GUIDE-46), mirrored from `GUIDELINE_TITLE_MAX_CHARS`. */
+export const GUIDELINE_TITLE_MAX_CHARS = positiveIntEnv(
+  ENV_LIMIT_OVERRIDES.guidelineTitleMaxChars,
+  40,
+)

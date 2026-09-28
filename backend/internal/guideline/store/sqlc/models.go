@@ -16,6 +16,7 @@ type Guideline struct {
 	Scope     string
 	CreatedAt string
 	UpdatedAt string
+	Title     string
 }
 
 type GuidelineCandidate struct {

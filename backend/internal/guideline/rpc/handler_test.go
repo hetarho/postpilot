@@ -35,6 +35,7 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 		"blank text":         {guideline.ErrInvalidText, connect.CodeInvalidArgument, "GUIDELINE_TEXT_REQUIRED"},
 		"scope shape":        {guideline.ErrScopeShape, connect.CodeInvalidArgument, "GUIDELINE_SCOPE_INVALID"},
 		"text too long":      {&guideline.TextTooLongError{Chars: 301, Max: 300}, connect.CodeInvalidArgument, "GUIDELINE_TEXT_TOO_LONG"},
+		"title too long":     {&guideline.TitleTooLongError{Chars: 41, Max: 40}, connect.CodeInvalidArgument, "GUIDELINE_TITLE_TOO_LONG"},
 		"account cap":        {&guideline.AccountCapError{Max: 100}, connect.CodeFailedPrecondition, "GUIDELINE_LIMIT_REACHED"},
 		"unknown candidate":  {guideline.ErrCandidateNotFound, connect.CodeNotFound, "GUIDELINE_CANDIDATE_NOT_FOUND"},
 		"unknown 분야":         {guideline.ErrFieldNotFound, connect.CodeNotFound, "GUIDELINE_FIELD_NOT_FOUND"},
@@ -55,6 +56,10 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 				t.Fatalf("reason = %q, want %q", got, tc.reason)
 			}
 			switch tc.reason {
+			case "GUIDELINE_TITLE_TOO_LONG":
+				if detail.GetParams()["max"] != "40" || detail.GetParams()["actual"] != "41" {
+					t.Fatalf("params = %#v", detail.GetParams())
+				}
 			case "GUIDELINE_TEXT_TOO_LONG":
 				if detail.GetParams()["max"] != "300" || detail.GetParams()["actual"] != "301" {
 					t.Fatalf("params = %#v", detail.GetParams())
@@ -100,7 +105,7 @@ func appErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 // A1: the account comes from the session on every procedure, and the contract gives a caller
 // nowhere to claim one.
 func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) {
-	handler := NewHandler(guideline.NewService(nil, knownFields{}, guideline.Limits{TextMaxChars: 1, MaxPerAccount: 1}, 1))
+	handler := NewHandler(guideline.NewService(nil, knownFields{}, guideline.Limits{TextMaxChars: 1, TitleMaxChars: 40, MaxPerAccount: 1}, 1))
 	anonymous := context.Background()
 
 	if _, err := handler.ListGuidelines(anonymous, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
@@ -268,7 +273,7 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	handler := NewHandler(guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 10}, 5))
+	handler := NewHandler(guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 10}, 5))
 	alice, bob := auth.WithUser(ctx, "alice"), auth.WithUser(ctx, "bob")
 	create := func(user context.Context, request *postpilotv1.CreateGuidelineRequest) {
 		t.Helper()
@@ -279,7 +284,7 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	fields := postpilotv1.GuidelineScope_GUIDELINE_SCOPE_FIELDS
 	global := postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL
 	create(alice, &postpilotv1.CreateGuidelineRequest{Text: "메뉴 가격은 쓰지 않기", Scope: fields, Fields: []postpilotv1.BlogField{postpilotv1.BlogField_BLOG_FIELD_CAFE}})
-	create(alice, &postpilotv1.CreateGuidelineRequest{Text: "과장 금지", Scope: global})
+	create(alice, &postpilotv1.CreateGuidelineRequest{Text: "과장 금지", Title: "  과장  ", Scope: global})
 	create(bob, &postpilotv1.CreateGuidelineRequest{Text: "bob의 지침", Scope: global})
 
 	listed, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{}))
@@ -292,6 +297,19 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	}
 	if want := []string{"과장 금지", "메뉴 가격은 쓰지 않기"}; !reflect.DeepEqual(texts, want) {
 		t.Fatalf("listed = %q, want %q", texts, want)
+	}
+	// GUIDE-46: the title is trimmed on the way in and read back; an untitled rule reads empty, and
+	// the update applies it by presence.
+	exaggeration := listed.Msg.GetGuidelines()[0]
+	if exaggeration.GetTitle() != "과장" || listed.Msg.GetGuidelines()[1].GetTitle() != "" {
+		t.Fatalf("titles = %q, %q", exaggeration.GetTitle(), listed.Msg.GetGuidelines()[1].GetTitle())
+	}
+	renamed, err := handler.UpdateGuideline(alice, connect.NewRequest(&postpilotv1.UpdateGuidelineRequest{Id: exaggeration.GetId(), Title: proto.String("과장 표현")}))
+	if err != nil || renamed.Msg.GetGuideline().GetTitle() != "과장 표현" || renamed.Msg.GetGuideline().GetText() != "과장 금지" {
+		t.Fatalf("rename = %v, %v", renamed, err)
+	}
+	if _, err := handler.UpdateGuideline(alice, connect.NewRequest(&postpilotv1.UpdateGuidelineRequest{Id: exaggeration.GetId(), Title: proto.String(strings.Repeat("가", 41))})); connect.CodeOf(err) != connect.CodeInvalidArgument || appErrorDetail(t, err).GetReason() != "GUIDELINE_TITLE_TOO_LONG" {
+		t.Fatalf("an over-long title = %v", err)
 	}
 	response := listed.Msg.ProtoReflect().Descriptor().Fields()
 	if response.Len() != 2 || response.Get(0).Name() != "guidelines" || response.Get(1).Name() != "defaults" {
@@ -350,7 +368,7 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 		t.Fatalf("a 분야 scope on a 영상 지침 = %v", err)
 	}
 	// GUIDE-7: the candidate queue is per kind and a clip candidate names its project.
-	service := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 10}, 5)
+	service := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 10}, 5)
 	if err := service.RecordCandidate(ctx, "alice", guideline.KindClip, "project-1", "자막은 짧게"); err != nil {
 		t.Fatal(err)
 	}

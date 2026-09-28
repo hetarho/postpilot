@@ -220,6 +220,58 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 	}
 }
 
+// GUIDE-46: the title is stored and read back, a text-only edit leaves it, and a title edit
+// that rides with a refused text is rolled back with it.
+func TestTitleRoundTripsAndRollsBackWithARefusedText(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	titled := newGuideline("g1", "alice", "가격은 원 단위까지", guideline.ScopeGlobal, testNow)
+	titled.Title = "가격 표기"
+	if err := s.Insert(ctx, titled, 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Insert(ctx, newGuideline("g2", "alice", "CCTV 언급 금지", guideline.ScopeGlobal, testNow.Add(time.Second)), 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	listed, err := s.List(ctx, "alice", guideline.KindPost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 2 || listed[0].Title != "가격 표기" || listed[1].Title != "" {
+		t.Fatalf("listed titles = %+v", listed)
+	}
+
+	text := "가격은 그대로"
+	updated, err := s.Update(ctx, "alice", "g1", guideline.Patch{Text: &text}, testNow.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Title != "가격 표기" {
+		t.Fatalf("a text-only edit changed the title to %q", updated.Title)
+	}
+
+	title, taken := "새 이름", "CCTV 언급 금지"
+	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{Title: &title, Text: &taken}, testNow.Add(2*time.Minute)); !errors.Is(err, guideline.ErrDuplicateText) {
+		t.Fatalf("duplicate text err = %v", err)
+	}
+	after, err := s.Get(ctx, "alice", "g1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Title != "가격 표기" || after.Text != "가격은 그대로" {
+		t.Fatalf("a refused edit left %+v", after)
+	}
+
+	cleared := ""
+	updated, err = s.Update(ctx, "alice", "g1", guideline.Patch{Title: &cleared}, testNow.Add(3*time.Minute))
+	if err != nil || updated.Title != "" {
+		t.Fatalf("clearing the title: %+v, %v", updated, err)
+	}
+	if _, err := s.Update(ctx, "bob", "g1", guideline.Patch{Title: &title}, testNow.Add(4*time.Minute)); !errors.Is(err, guideline.ErrNotFound) {
+		t.Fatalf("a foreign title edit err = %v", err)
+	}
+}
+
 // A3: a scope patch replaces kind and set together, and a refused link rolls the whole
 // replacement back rather than leaving a half-applied scope.
 func TestUpdateScopeReplacesAtomically(t *testing.T) {

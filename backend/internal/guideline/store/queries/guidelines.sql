@@ -15,20 +15,20 @@
 -- within the kind (GUIDE-5).
 
 -- name: InsertGuideline :exec
-INSERT INTO guidelines (id, user_id, kind, text, scope, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO guidelines (id, user_id, kind, title, text, scope, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: CountGuidelines :one
 SELECT count(*) FROM guidelines WHERE user_id = ? AND kind = ?;
 
 -- name: ListGuidelines :many
-SELECT id, user_id, kind, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at, title
 FROM guidelines
 WHERE user_id = ? AND kind = ?
 ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id;
 
 -- name: GetGuideline :one
-SELECT id, user_id, kind, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at, title
 FROM guidelines
 WHERE id = ? AND user_id = ?;
 
@@ -59,9 +59,14 @@ FROM guideline_fields
 WHERE guideline_id = ? AND user_id = ?
 ORDER BY field;
 
--- A text edit and a scope replacement are separate statements run in one transaction, so an
--- edit that carries only one of them never names the other at all, and two tabs editing the two
--- halves cannot overwrite each other, and no read-modify-write can put a stale value back.
+-- A title edit, a text edit and a scope replacement are separate statements run in one
+-- transaction, so an edit that carries only some of them never names the others at all, two tabs
+-- editing different parts cannot overwrite each other, and no read-modify-write can put a stale
+-- value back. The title is never selected by the applicable-texts queries below: it is the
+-- list's name for a rule, not part of any prompt (GUIDE-46).
+
+-- name: UpdateGuidelineTitle :execrows
+UPDATE guidelines SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 
 -- name: UpdateGuidelineText :execrows
 UPDATE guidelines SET text = ?, updated_at = ? WHERE id = ? AND user_id = ?;

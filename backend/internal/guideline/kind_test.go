@@ -25,7 +25,7 @@ func clipService(t *testing.T) (*Service, *fakeStore) {
 func TestAClipGuidelineIsScopedToVideoTemplatesAndNeverToFields(t *testing.T) {
 	ctx := context.Background()
 	svc, store := clipService(t)
-	created, err := svc.Create(ctx, "alice", KindClip, "자막은 짧게", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"vt"}}, "")
+	created, err := svc.Create(ctx, "alice", KindClip, "", "자막은 짧게", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"vt"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,10 +35,10 @@ func TestAClipGuidelineIsScopedToVideoTemplatesAndNeverToFields(t *testing.T) {
 	if store.inserted[0].Kind != KindClip {
 		t.Fatalf("stored kind = %q", store.inserted[0].Kind)
 	}
-	if _, err := svc.Create(ctx, "alice", KindClip, "배경음 없이", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"post-tpl"}}, ""); !errors.Is(err, ErrTemplateNotFound) {
+	if _, err := svc.Create(ctx, "alice", KindClip, "", "배경음 없이", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"post-tpl"}}, ""); !errors.Is(err, ErrTemplateNotFound) {
 		t.Fatalf("a post template on a clip guideline: %v", err)
 	}
-	if _, err := svc.Create(ctx, "alice", KindClip, "가격 크게", ScopePatch{Scope: ScopeFields, Fields: []string{"cafe"}}, ""); !errors.Is(err, ErrScopeShape) {
+	if _, err := svc.Create(ctx, "alice", KindClip, "", "가격 크게", ScopePatch{Scope: ScopeFields, Fields: []string{"cafe"}}, ""); !errors.Is(err, ErrScopeShape) {
 		t.Fatalf("a 분야 scope on a clip guideline: %v", err)
 	}
 	// A rescope follows the guideline's own kind.

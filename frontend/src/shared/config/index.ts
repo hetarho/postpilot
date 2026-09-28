@@ -31,6 +31,7 @@ export const ENV_LIMIT_OVERRIDES = {
   templateAskMaxPerBody: import.meta.env.VITE_TEMPLATE_ASK_MAX_PER_BODY,
   templateTitleAreaMaxChars: import.meta.env.VITE_TEMPLATE_TITLE_AREA_MAX_CHARS,
   guidelineTextMaxChars: import.meta.env.VITE_GUIDELINE_TEXT_MAX_CHARS,
+  guidelineTitleMaxChars: import.meta.env.VITE_GUIDELINE_TITLE_MAX_CHARS,
   memoryTextMaxChars: import.meta.env.VITE_MEMORY_TEXT_MAX_CHARS,
   memoryTagsMax: import.meta.env.VITE_MEMORY_TAGS_MAX,
   memoryMaxPerAccount: import.meta.env.VITE_MEMORY_MAX_PER_ACCOUNT,

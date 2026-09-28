@@ -98,7 +98,7 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
-	created, err := h.service.Create(ctx, userID, fromProtoKind(req.Msg.GetKind()), req.Msg.GetText(), guideline.ScopePatch{
+	created, err := h.service.Create(ctx, userID, fromProtoKind(req.Msg.GetKind()), req.Msg.GetTitle(), req.Msg.GetText(), guideline.ScopePatch{
 		Scope: scope, TemplateIDs: req.Msg.GetTemplateIds(), Fields: fields,
 	}, req.Msg.GetFromCandidateId())
 	if err != nil {
@@ -115,6 +115,9 @@ func (h *Handler) UpdateGuideline(ctx context.Context, req *connect.Request[post
 	// Presence is the edit unit. For the scope that means MESSAGE presence: an absent patch
 	// leaves the scope alone, and a present one replaces the kind and the whole set together.
 	patch := guideline.Patch{}
+	if req.Msg.Title != nil {
+		patch.Title = req.Msg.Title
+	}
 	if req.Msg.Text != nil {
 		patch.Text = req.Msg.Text
 	}
@@ -251,8 +254,13 @@ func toProtoFields(ids []string) []postpilotv1.BlogField {
 // and a 분야 the product does not list.
 func toConnectError(op string, err error) error {
 	var tooLong *guideline.TextTooLongError
+	var titleTooLong *guideline.TitleTooLongError
 	var atCap *guideline.AccountCapError
 	switch {
+	case errors.As(err, &titleTooLong):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline title is too long", postpilotv1.FailureReason_GUIDELINE_TITLE_TOO_LONG, map[string]string{
+			"max": strconv.Itoa(titleTooLong.Max), "actual": strconv.Itoa(titleTooLong.Chars),
+		})
 	case errors.As(err, &tooLong):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline text is too long", postpilotv1.FailureReason_GUIDELINE_TEXT_TOO_LONG, map[string]string{
 			"max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
@@ -292,7 +300,7 @@ func toProtoGuideline(g guideline.Guideline) *postpilotv1.Guideline {
 		templates = append(templates, &postpilotv1.GuidelineTemplateRef{Id: ref.ID, Name: ref.Name})
 	}
 	return &postpilotv1.Guideline{
-		Id: g.ID, Kind: toProtoKind(g.Kind), Text: g.Text, Scope: toProtoScope(g.Scope), Templates: templates, Fields: toProtoFields(g.Fields),
+		Id: g.ID, Kind: toProtoKind(g.Kind), Title: g.Title, Text: g.Text, Scope: toProtoScope(g.Scope), Templates: templates, Fields: toProtoFields(g.Fields),
 		CreatedAt: g.CreatedAt.UTC().Format(timeLayout), UpdatedAt: g.UpdatedAt.UTC().Format(timeLayout),
 	}
 }

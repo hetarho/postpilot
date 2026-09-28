@@ -347,6 +347,9 @@ type Config struct {
 	// storage one, so it stays server-side and the frontend only relays the refusal.
 	GuidelineTextMaxChars  int
 	GuidelineMaxPerAccount int
+	// GuidelineTitleMaxChars bounds a guideline's optional title, the list's name for the rule
+	// (GUIDE-46). The browser mirrors it; the title never reaches a prompt.
+	GuidelineTitleMaxChars int
 	// GuidelineCandidateMaxPending bounds how many pending candidates an account may hold.
 	// Recording stops at the bound rather than evicting the oldest, so nothing the user
 	// might still approve is discarded on their behalf. Server-side only: the frontend
@@ -551,6 +554,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.GuidelineTextMaxChars = guidelineText
+	guidelineTitle, err := positiveInt("GUIDELINE_TITLE_MAX_CHARS", "40")
+	if err != nil {
+		return nil, err
+	}
+	cfg.GuidelineTitleMaxChars = guidelineTitle
 	guidelineCap, err := positiveInt("GUIDELINE_MAX_PER_ACCOUNT", "100")
 	if err != nil {
 		return nil, err

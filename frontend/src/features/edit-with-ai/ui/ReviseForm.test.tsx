@@ -245,10 +245,15 @@ it('seeds the dialog with the instruction and saves it scoped to the post templa
   await user.clear(field)
   await user.type(field, '무인 매장 글에서 주인 이야기를 쓰지 않기')
   await user.click(within(dialog).getByRole('tab', { name: /무인가게 리뷰/ }))
+  // GUIDE-46: the optional title opens empty and rides the create when one is typed.
+  const title = within(dialog).getByLabelText('제목')
+  expect(title).toHaveValue('')
+  await user.type(title, '주인 이야기 빼기')
   await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
   await waitFor(() => expect(creates).toHaveLength(1))
   expect(creates[0]).toEqual({
+    title: '주인 이야기 빼기',
     text: '무인 매장 글에서 주인 이야기를 쓰지 않기',
     scope: ProtoGuidelineScope.TEMPLATES,
     templateIds: ['template-review'],

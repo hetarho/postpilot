@@ -26,8 +26,20 @@ export function useCreateGuidelineCall(ownerId: string, kind: GuidelineKind = 'p
      *  the row can no longer be matched by text. The server marks it approved in the same
      *  transaction as the insert, which is also what keeps an on-the-spot 지침으로 저장 from
      *  reappearing as a candidate — that path matches by text and needs no id. */
-    create: (text: string, scope: GuidelineScope, fromCandidateId?: string) =>
+    create: ({
+      title = '',
+      text,
+      scope,
+      fromCandidateId,
+    }: {
+      /** Optional (GUIDE-46); empty is none. */
+      title?: string
+      text: string
+      scope: GuidelineScope
+      fromCandidateId?: string
+    }) =>
       mutation.mutateAsync({
+        title: title.trim(),
         text: text.trim(),
         ...toScopePatch(scope),
         fromCandidateId,
@@ -52,9 +64,10 @@ export function useDismissGuidelineCandidateCall(ownerId: string, kind: Guidelin
   }
 }
 
-/** Presence is the edit unit (GUIDE-6): the text saver sends no scope and the
- *  scope saver sends no text, so the two edited from two tabs cannot overwrite each other. Sending
- *  both every time would be a read-modify-write and would put back whatever the other tab changed.
+/** Presence is the edit unit (GUIDE-6): a save carries only the parts it names, so an edit never
+ *  rewrites a part another tab changed meanwhile. Sending every part every time would be a
+ *  read-modify-write and would put back whatever the other tab changed; `save` takes the parts a
+ *  form changed and sends them in one request, which the server applies in one transaction.
  *
  *  The scope goes as ONE patch because a scope is a kind plus a set: replacing them separately
  *  would leave a window where `global` still carries links. */
@@ -71,6 +84,13 @@ export function useUpdateGuidelineCall(
   return {
     ...mutation,
     errorMessage: guidelineErrorMessage(mutation.error),
+    save: (patch: { title?: string; text?: string; scope?: GuidelineScope }) =>
+      mutation.mutateAsync({
+        id: guidelineId,
+        ...(patch.title !== undefined && { title: patch.title.trim() }),
+        ...(patch.text !== undefined && { text: patch.text.trim() }),
+        ...(patch.scope !== undefined && { scope: toScopePatch(patch.scope) }),
+      }),
     saveText: (text: string) => mutation.mutateAsync({ id: guidelineId, text: text.trim() }),
     saveScope: (scope: GuidelineScope) =>
       mutation.mutateAsync({ id: guidelineId, scope: toScopePatch(scope) }),

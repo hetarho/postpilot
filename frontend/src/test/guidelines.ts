@@ -18,7 +18,7 @@ import {
   UpdateGuidelineResponseSchema,
 } from '@/shared/api'
 import { BLOG_FIELD_IDS, type BlogFieldId } from '@/entities/blog-field'
-import { GUIDELINE_TEXT_MAX_CHARS } from '@/entities/guideline'
+import { GUIDELINE_TEXT_MAX_CHARS, GUIDELINE_TITLE_MAX_CHARS } from '@/entities/guideline'
 import { connectAppError } from './app-error'
 import { fromWire, toWire } from './wire-enum'
 
@@ -28,6 +28,8 @@ export interface FakeGuidelineRow {
   id: string
   /** Omitted means a post's 지침; `clip` is a 영상 지침 (GUIDE-2). */
   kind?: 'post' | 'clip'
+  /** Omitted means none (GUIDE-46). */
+  title?: string
   text: string
   /** A `templates` scope with an empty array is the orphaned state. */
   templateRefs?: Array<{ id: string; name: string }>
@@ -100,6 +102,8 @@ export interface FakeGuidelinesOptions {
    *  carried no scope and a scope patch carried no text (GUIDE-6). */
   updates?: Array<{
     id: string
+    /** Present only when the update carried a title, so a text or scope assertion stays as it was. */
+    title?: string
     text: string | undefined
     scope:
       { scope: ProtoGuidelineScope; templateIds: string[]; fields: ProtoBlogField[] } | undefined
@@ -109,6 +113,8 @@ export interface FakeGuidelinesOptions {
   creates?: Array<{
     /** Present only for a 영상 지침's create, so a post assertion stays as it was. */
     kind?: 'clip'
+    /** Present only when the create named a title, for the same reason. */
+    title?: string
     text: string
     scope: ProtoGuidelineScope
     templateIds: string[]
@@ -124,6 +130,7 @@ const DEFAULT_AT = '2026-09-01T12:00:00Z'
 interface Row {
   id: string
   kind: 'post' | 'clip'
+  title: string
   text: string
   scope: 'global' | 'templates' | 'fields'
   templates: Array<{ id: string; name: string }>
@@ -177,6 +184,16 @@ function toFieldIds(fields: ProtoBlogField[]): BlogFieldId[] {
     .filter((field): field is BlogFieldId => field !== undefined)
 }
 
+/** The server's title bound (GUIDE-46), mirrored so an over-long title is refused, not cut. */
+function refuseLongTitle(title: string) {
+  if ([...title].length > GUIDELINE_TITLE_MAX_CHARS) {
+    throw connectAppError('GUIDELINE_TITLE_TOO_LONG', Code.InvalidArgument, {
+      max: String(GUIDELINE_TITLE_MAX_CHARS),
+      actual: String([...title].length),
+    })
+  }
+}
+
 export function registerGuidelineService(
   router: ConnectRouter,
   options: FakeGuidelinesOptions = {},
@@ -190,6 +207,7 @@ export function registerGuidelineService(
     rows.set(row.id, {
       id: row.id,
       kind: row.kind ?? 'post',
+      title: row.title ?? '',
       text: row.text,
       scope: row.scope ?? (row.fields ? 'fields' : row.templateRefs ? 'templates' : 'global'),
       templates: row.templateRefs ?? [],
@@ -203,6 +221,7 @@ export function registerGuidelineService(
     create(GuidelineSchema, {
       id: row.id,
       kind: row.kind === 'clip' ? ProtoGuidelineKind.CLIP : ProtoGuidelineKind.POST,
+      title: row.title,
       text: row.text,
       scope: row.wireScope ?? SCOPE_TO_PROTO[row.scope],
       templates: row.templates,
@@ -275,12 +294,15 @@ export function registerGuidelineService(
     calls?.push('CreateGuideline')
     options.creates?.push({
       ...(req.kind === ProtoGuidelineKind.CLIP ? { kind: 'clip' as const } : {}),
+      ...(req.title ? { title: req.title } : {}),
       text: req.text,
       scope: req.scope,
       templateIds: [...req.templateIds],
       fields: [...req.fields],
       fromCandidateId: req.fromCandidateId,
     })
+    const title = req.title.trim()
+    refuseLongTitle(title)
     const text = req.text.trim()
     if (!text) throw connectAppError('GUIDELINE_TEXT_REQUIRED', Code.InvalidArgument)
     // The server's bound, mirrored so an over-long approval is refused rather than truncated.
@@ -308,6 +330,7 @@ export function registerGuidelineService(
     const row: Row = {
       id: `guideline-${sequence}`,
       kind,
+      title,
       text,
       scope,
       templates: req.templateIds.map((id) => ({ id, name: id })),
@@ -329,6 +352,7 @@ export function registerGuidelineService(
     calls?.push('UpdateGuideline')
     options.updates?.push({
       id: req.id,
+      ...(req.title !== undefined ? { title: req.title } : {}),
       text: req.text,
       scope: req.scope
         ? {
@@ -346,11 +370,15 @@ export function registerGuidelineService(
       req.scope && scopeKind(req.scope.scope, req.scope.templateIds, req.scope.fields, row.kind)
     if (options.refuseFields && scope === 'fields')
       throw connectAppError('GUIDELINE_FIELD_NOT_FOUND', Code.NotFound)
-    if (req.text !== undefined) {
-      const text = req.text.trim()
-      if (!text) throw connectAppError('GUIDELINE_TEXT_REQUIRED', Code.InvalidArgument)
-      row.text = text
-    }
+    const title = req.title?.trim()
+    if (title !== undefined) refuseLongTitle(title)
+    const text = req.text?.trim()
+    if (text !== undefined && !text)
+      throw connectAppError('GUIDELINE_TEXT_REQUIRED', Code.InvalidArgument)
+    // Every part is validated before any is written, so a refused edit changes nothing — the
+    // server runs the parts in one transaction.
+    if (title !== undefined) row.title = title
+    if (text !== undefined) row.text = text
     if (req.scope && scope) {
       row.scope = scope
       row.templates = req.scope.templateIds.map((id) => ({ id, name: id }))

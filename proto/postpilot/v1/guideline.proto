@@ -91,6 +91,9 @@ message Guideline {
   // A post's 지침 or a clip's 영상 지침, for good (GUIDE-2). A clip guideline's `templates` are
   // video templates. UNSPECIFIED reads as POST.
   GuidelineKind kind = 8;
+  // The owner's name for the rule in the list, empty for none (GUIDE-46). It is never part of a
+  // prompt: only `text` is frozen and injected.
+  string title = 9;
 }
 
 message ListGuidelinesRequest {
@@ -129,6 +132,8 @@ message CreateGuidelineRequest {
   // The guideline's kind; for CLIP the template ids name video templates and FIELDS is refused.
   // An approval sends its candidate's kind. UNSPECIFIED reads as POST.
   GuidelineKind kind = 6;
+  // Optional; empty is none. Trimmed, and refused past GUIDELINE_TITLE_MAX_CHARS (GUIDE-46).
+  string title = 7;
 }
 message CreateGuidelineResponse { Guideline guideline = 1; }
 
@@ -145,6 +150,8 @@ message UpdateGuidelineRequest {
   string id = 1;
   optional string text = 2;
   GuidelineScopePatch scope = 3;
+  // Absent leaves the title alone; present replaces it, and an empty string clears it.
+  optional string title = 4;
 }
 message UpdateGuidelineResponse { Guideline guideline = 1; }
 

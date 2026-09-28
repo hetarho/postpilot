@@ -229,7 +229,7 @@ func (q *Queries) DropCandidatePostSlug(ctx context.Context, arg DropCandidatePo
 }
 
 const getGuideline = `-- name: GetGuideline :one
-SELECT id, user_id, kind, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at, title
 FROM guidelines
 WHERE id = ? AND user_id = ?
 `
@@ -250,6 +250,7 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 		&i.Scope,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
@@ -329,14 +330,15 @@ func (q *Queries) InsertDefaultOff(ctx context.Context, arg InsertDefaultOffPara
 const insertGuideline = `-- name: InsertGuideline :exec
 
 
-INSERT INTO guidelines (id, user_id, kind, text, scope, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO guidelines (id, user_id, kind, title, text, scope, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertGuidelineParams struct {
 	ID        string
 	UserID    string
 	Kind      string
+	Title     string
 	Text      string
 	Scope     string
 	CreatedAt string
@@ -362,6 +364,7 @@ func (q *Queries) InsertGuideline(ctx context.Context, arg InsertGuidelineParams
 		arg.ID,
 		arg.UserID,
 		arg.Kind,
+		arg.Title,
 		arg.Text,
 		arg.Scope,
 		arg.CreatedAt,
@@ -762,7 +765,7 @@ func (q *Queries) ListGuidelineVideoTemplates(ctx context.Context, arg ListGuide
 }
 
 const listGuidelines = `-- name: ListGuidelines :many
-SELECT id, user_id, kind, text, scope, created_at, updated_at
+SELECT id, user_id, kind, text, scope, created_at, updated_at, title
 FROM guidelines
 WHERE user_id = ? AND kind = ?
 ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id
@@ -790,6 +793,7 @@ func (q *Queries) ListGuidelines(ctx context.Context, arg ListGuidelinesParams) 
 			&i.Scope,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -925,7 +929,6 @@ func (q *Queries) UpdateGuidelineScope(ctx context.Context, arg UpdateGuidelineS
 }
 
 const updateGuidelineText = `-- name: UpdateGuidelineText :execrows
-
 UPDATE guidelines SET text = ?, updated_at = ? WHERE id = ? AND user_id = ?
 `
 
@@ -936,12 +939,39 @@ type UpdateGuidelineTextParams struct {
 	UserID    string
 }
 
-// A text edit and a scope replacement are separate statements run in one transaction, so an
-// edit that carries only one of them never names the other at all, and two tabs editing the two
-// halves cannot overwrite each other, and no read-modify-write can put a stale value back.
 func (q *Queries) UpdateGuidelineText(ctx context.Context, arg UpdateGuidelineTextParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGuidelineText,
 		arg.Text,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateGuidelineTitle = `-- name: UpdateGuidelineTitle :execrows
+
+UPDATE guidelines SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateGuidelineTitleParams struct {
+	Title     string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+// A title edit, a text edit and a scope replacement are separate statements run in one
+// transaction, so an edit that carries only some of them never names the others at all, two tabs
+// editing different parts cannot overwrite each other, and no read-modify-write can put a stale
+// value back. The title is never selected by the applicable-texts queries below: it is the
+// list's name for a rule, not part of any prompt (GUIDE-46).
+func (q *Queries) UpdateGuidelineTitle(ctx context.Context, arg UpdateGuidelineTitleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateGuidelineTitle,
+		arg.Title,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

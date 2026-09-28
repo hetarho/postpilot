@@ -238,7 +238,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		guidelinestore.New(handle.Writer, handle.Reader),
 		// The same 분야 directory post uses: one adapter over quality's list, not a second.
 		blogFields{},
-		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
+		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, TitleMaxChars: cfg.GuidelineTitleMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 		cfg.GuidelineCandidateMaxPending,
 	)
 	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline})

@@ -16,6 +16,7 @@ export {
   guidelineChars,
   isOrphanedScope,
   remainingGuidelineChars,
+  remainingGuidelineTitleChars,
 } from './model/types'
 export { guidelineListQuery, useGuidelines } from './api/useGuidelines'
 export type { GuidelineListData } from './api/useGuidelines'
@@ -46,6 +47,7 @@ export {
 } from './api/guideline-mutations'
 export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-errors'
 export { GuidelineScopeField } from './ui/GuidelineScopeField'
+export { GuidelineTitleField } from './ui/GuidelineTitleField'
 export { GuidelineFieldPicker } from './ui/GuidelineFieldPicker'
 export { DefaultGuidelineRow } from './ui/DefaultGuidelineRow'
 export type { DefaultGuidelineRowProps } from './ui/DefaultGuidelineRow'

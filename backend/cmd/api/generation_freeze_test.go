@@ -215,7 +215,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(templatestore.New(handle.Writer, handle.Reader), testTemplateLimits())
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
-	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
+	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, TitleMaxChars: 40, MaxPerAccount: 100}, 50)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
 	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})

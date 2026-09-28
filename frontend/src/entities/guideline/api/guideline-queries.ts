@@ -66,6 +66,7 @@ export function toGuideline(guideline: ProtoGuideline): Guideline {
   return {
     id: guideline.id,
     kind: guideline.kind === ProtoGuidelineKind.CLIP ? 'clip' : 'post',
+    title: guideline.title,
     text: guideline.text,
     scope,
     templates: guideline.templates.map(toTemplateRef),

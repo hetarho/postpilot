@@ -160,6 +160,7 @@ export const appFailureSpecs = {
   GUIDELINE_NOT_FOUND: {},
   GUIDELINE_TEXT_REQUIRED: {},
   GUIDELINE_TEXT_TOO_LONG: { required: ['actual', 'max'] },
+  GUIDELINE_TITLE_TOO_LONG: { required: ['actual', 'max'] },
   GUIDELINE_TEXT_TAKEN: {},
   GUIDELINE_SCOPE_INVALID: {},
   GUIDELINE_TEMPLATE_NOT_FOUND: {},

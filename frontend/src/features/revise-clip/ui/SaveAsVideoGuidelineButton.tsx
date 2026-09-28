@@ -2,10 +2,12 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClipTemplates } from '@/entities/clip-template'
 import {
+  GuidelineTitleField,
   canSaveGuideline,
   globalScope,
   isDuplicateGuideline,
   remainingGuidelineChars,
+  remainingGuidelineTitleChars,
   useCreateGuidelineCall,
   type GuidelineScope,
 } from '@/entities/guideline'
@@ -44,6 +46,7 @@ export function SaveAsVideoGuidelineButton({
   const countId = `${id}-count`
   const errorId = `${id}-error`
   const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
   const [text, setText] = useState(request)
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const [saved, setSaved] = useState(false)
@@ -54,6 +57,7 @@ export function SaveAsVideoGuidelineButton({
   // Seeded on OPEN, not from an effect on `request`: a refetch must not overwrite what is being
   // edited here, and reopening starts from the current request rather than the last draft.
   const openDialog = () => {
+    setTitle('')
     setText(request)
     setScope(globalScope())
     setSaved(false)
@@ -63,12 +67,13 @@ export function SaveAsVideoGuidelineButton({
   const left = remainingGuidelineChars(text)
   const exceeded = left < 0
   const showCreateError = create.isError && !isDuplicateGuideline(create.error)
-  const blocked = !canSaveGuideline(text, scope) || create.isPending
+  const blocked =
+    !canSaveGuideline(text, scope) || remainingGuidelineTitleChars(title) < 0 || create.isPending
 
   const confirm = async () => {
     if (blocked) return
     try {
-      await create.create(text, scope)
+      await create.create({ title, text, scope })
       setSaved(true)
       setOpen(false)
     } catch (cause) {
@@ -104,6 +109,13 @@ export function SaveAsVideoGuidelineButton({
         <Typography variant="body" className="text-content-secondary">
           {t('clipCapture.description', { ns: 'guidelines' })}
         </Typography>
+        <GuidelineTitleField
+          id={`${id}-name`}
+          value={title}
+          onChange={setTitle}
+          disabled={create.isPending}
+          className="mt-4"
+        />
         <FieldLabel htmlFor={fieldId} className="mt-4 block">
           {t('clipCapture.text', { ns: 'guidelines' })}
         </FieldLabel>

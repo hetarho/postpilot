@@ -2,9 +2,11 @@ import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   GuidelineScopeField,
+  GuidelineTitleField,
   canSaveGuideline,
   globalScope,
   remainingGuidelineChars,
+  remainingGuidelineTitleChars,
   useCreateGuidelineCall,
   type GuidelineKind,
   type GuidelineScope,
@@ -56,19 +58,21 @@ function CreateGuidelinePanel({
   const countId = `${id}-count`
   const helpId = `${id}-help`
   const errorId = `${id}-error`
+  const [title, setTitle] = useState('')
   const [text, setText] = useState('')
   // 전역 is the default because a guideline is meant to apply everywhere unless it is narrowed.
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const create = useCreateGuidelineCall(ownerId, kind)
 
   const textExceeded = remainingGuidelineChars(text) < 0
-  const disabled = !canSaveGuideline(text, scope) || create.isPending
+  const disabled =
+    !canSaveGuideline(text, scope) || remainingGuidelineTitleChars(title) < 0 || create.isPending
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (disabled) return
     try {
-      await create.create(text, scope)
+      await create.create({ title, text, scope })
       onClose()
     } catch {
       // The mutation's message renders under the field, inside the still-open sheet: a refusal
@@ -82,14 +86,24 @@ function CreateGuidelinePanel({
         {t(kind === 'clip' ? 'create.openClip' : 'create.title', { ns: 'guidelines' })}
       </Typography>
       <form onSubmit={(event) => void submit(event)} className="mt-4">
-        <FieldLabel htmlFor={textId}>{t('create.text', { ns: 'guidelines' })}</FieldLabel>
+        {/* Optional and first: the list shows a rule by its title (GUIDE-46), while the text below
+            is what the writer is given. */}
+        <GuidelineTitleField
+          id={`${id}-name`}
+          value={title}
+          onChange={setTitle}
+          disabled={create.isPending}
+          autoFocus
+        />
+        <FieldLabel htmlFor={textId} className="mt-4">
+          {t('create.text', { ns: 'guidelines' })}
+        </FieldLabel>
         <Textarea
           id={textId}
           value={text}
           onChange={(event) => setText(event.target.value)}
           rows={3}
           autoGrow
-          autoFocus
           disabled={create.isPending}
           placeholder={t('create.textPlaceholder', { ns: 'guidelines' })}
           aria-invalid={textExceeded || create.isError || undefined}

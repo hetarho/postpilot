@@ -171,6 +171,7 @@ export const errors = {
   GUIDELINE_DEFAULT_NOT_FOUND: '기본 지침을 찾을 수 없어요.',
   GUIDELINE_TEXT_REQUIRED: '지침 내용을 입력해 주세요.',
   GUIDELINE_TEXT_TOO_LONG: '지침은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  GUIDELINE_TITLE_TOO_LONG: '제목은 {{max}}자까지 쓸 수 있어요. 현재 {{actual}}자예요.',
   GUIDELINE_TEXT_TAKEN: '이미 같은 지침이 있어요.',
   MEMORY_NOT_FOUND: '기억을 찾을 수 없어요.',
   MEMORY_TEXT_REQUIRED: '기억할 내용을 입력해 주세요.',

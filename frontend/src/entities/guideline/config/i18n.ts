@@ -36,6 +36,9 @@ export const i18n = {
       help: '한 줄에 규칙 하나씩, 짧게 적어 주세요. 지침이 템플릿의 요구와 충돌하면 지침을 우선합니다.',
       submit: '지침 만들기',
     },
+    titleField: {
+      label: '제목',
+    },
     defaults: {
       badge: '추천',
       koreanOnly: '한국어 글에만 적용돼요',
@@ -75,6 +78,9 @@ export const i18n = {
       textPlaceholder: 'e.g. In unmanned-store posts, do not mention CCTV',
       help: 'One short rule per guideline. A guideline wins over a conflicting template instruction.',
       submit: 'Create guideline',
+    },
+    titleField: {
+      label: 'Title',
     },
     defaults: {
       badge: 'Recommended',

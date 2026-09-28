@@ -148,6 +148,33 @@ describe('the guideline list', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  // GUIDE-46: the title is optional, sent trimmed, and past its bound it blocks the save.
+  it('names a new guideline with an optional title and bounds it', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+    renderGuidelines({ guidelines: [], creates })
+    const form = await openCreateSheet(user)
+
+    const title = form.getByLabelText('제목')
+    expect(title).toHaveFocus()
+    await user.type(title, '가'.repeat(41))
+    await user.type(form.getByLabelText('지침'), '가격을 지어내지 않기')
+    expect(form.getByText('1자 초과')).toBeInTheDocument()
+    expect(form.getByRole('button', { name: '지침 만들기' })).toBeDisabled()
+
+    await user.clear(title)
+    await user.type(title, '  가격 표기  ')
+    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+    await waitFor(() => expect(creates).toHaveLength(1))
+    expect(creates[0]).toEqual({
+      title: '가격 표기',
+      text: '가격을 지어내지 않기',
+      scope: ProtoGuidelineScope.GLOBAL,
+      templateIds: [],
+      fields: [],
+    })
+  })
+
   // A2/A14: a scoped create must name at least one owned template, picked from the directory.
   it('creates a template-scoped guideline from the scope control', async () => {
     const user = userEvent.setup()
@@ -668,6 +695,8 @@ describe('the guideline candidate section', () => {
     expect(creates.every((call) => call.scope === ProtoGuidelineScope.GLOBAL)).toBe(true)
     expect(creates.every((call) => call.templateIds.length === 0)).toBe(true)
     expect(creates.every((call) => call.fields.length === 0)).toBe(true)
+    // A candidate has no title and the bulk path asks for none (GUIDE-46).
+    expect(creates.every((call) => call.title === undefined)).toBe(true)
     expect(
       await screen.findByText('3개를 지침으로 저장했어요. 0개는 그대로 남았어요.'),
     ).toBeInTheDocument()
@@ -784,10 +813,14 @@ describe('the guideline candidate section', () => {
       '특정 템플릿',
       '특정 분야',
     ])
+    // A candidate carries no title, so the approval's title field opens empty (GUIDE-46).
+    expect(dialog.getByLabelText('제목')).toHaveValue('')
+    await user.type(dialog.getByLabelText('제목'), '광고 같은 문장')
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
 
     await waitFor(() => expect(creates).toHaveLength(1))
     expect(creates[0]).toMatchObject({
+      title: '광고 같은 문장',
       text: '여기 너무 광고 같아',
       scope: ProtoGuidelineScope.GLOBAL,
       templateIds: [],
