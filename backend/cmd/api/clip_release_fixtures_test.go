@@ -598,6 +598,13 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				cut["observation_refs"] = refs
 			}
+			// 바로 만들기's flow answer opens with the storyline (CLIP-178): one
+			// paragraph over the scenes the first cut shows, so the smoke carries a
+			// storyline the parser keeps rather than one it bounds away.
+			first := content.(map[string]any)["cuts"].([]any)[0].(map[string]any)
+			content.(map[string]any)["storyline"] = []any{map[string]any{
+				"text": "관찰한 장면을 차분히 따라간다", "observation_ids": first["observation_refs"],
+			}}
 		}
 	} else {
 		p.reject(w, "wrong observation/plan budget or modality")
