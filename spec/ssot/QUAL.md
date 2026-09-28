@@ -18,7 +18,19 @@
 - QUAL-14 [o] M1's and M2's rule texts name the measured phrase itself rather than instructing against overlap in the abstract; at the account level M2 names the run standing in the most of the last 20 발행됨 posts, ties broken by the longer run and then the earliest ← a model acts on a named string reliably and on "겹치는 표현" barely at all
 - QUAL-15 [o] a phrase is named by M1 only while it stands in the account's own recent titles, so an account with nothing published bans nothing
 - QUAL-16 [o] a measurement calls no provider and costs no credit; the nouns it reads ride the write call the owner already pays for (→GEN-55)
-- QUAL-23 [o] the 분야 list is the product's own, taking Naver Blog's 주제 categories as its reference rather than its contract; v1 is 맛집 · 카페 · 국내여행 · 패션·미용 · 상품리뷰 · 육아·결혼 · 반려동물 · 인테리어·DIY · 일상·생각, and each carries a stable ASCII id (restaurant, cafe, domestic_travel, fashion_beauty, product_review, parenting_marriage, pets, interior_diy, daily_life) ← the names have to be stable identifiers the product controls, and Naver's picker is neither versioned nor published as a list
+- QUAL-23 [o] the 분야 list is the product's own, taking Naver Blog's 주제 categories as its reference rather than its contract ← the names have to be stable identifiers the product controls, and Naver's picker is neither versioned nor published as a list
+  - v1 is these, each carrying a stable ASCII id:
+  | 분야 | id |
+  |---|---|
+  | 맛집 | restaurant |
+  | 카페 | cafe |
+  | 국내여행 | domestic_travel |
+  | 패션·미용 | fashion_beauty |
+  | 상품리뷰 | product_review |
+  | 육아·결혼 | parenting_marriage |
+  | 반려동물 | pets |
+  | 인테리어·DIY | interior_diy |
+  | 일상·생각 | daily_life |
 - QUAL-25 [o] Naver is the only platform measured; a second platform arrives whole, with its own metrics
 - QUAL-26 [o] the nouns come from the write pass for both languages and the containment rule follows the post's `content_language`, a post with none being treated as Korean ← content without the language field is Korean
 - QUAL-27 [x] a composite quality score across the metrics

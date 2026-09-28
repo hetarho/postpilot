@@ -33,7 +33,7 @@
 - credits stay QUOTA's: the ladder and grants (QUOTA-7), the par purchase rate (QUOTA-34), lot kinds and consumption order (QUOTA-12), the grant effect of a tier change (QUOTA-35) and of starting one (→QUOTA-42); the anchor window (→QUOTA-37), the term's neutrality toward the grant (→QUOTA-38) and the payment-method bonus (→QUOTA-9) are decided there
 - the KRW/USD rate source must be a published daily base rate whose value for a given day is reproducible after the fact, and the rate used is stored on the charge row
 - the product is architecturally a paid public one (→ARCH-1, →ARCH-23)
-- placement: a new `backend/internal/billing` context and `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and the billing route; the provider adapter sits behind a consumer-declared port like every other outside service (→ARCH-6, →ARCH-7)
+- placement: a `backend/internal/billing` context and `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and the billing route; the provider adapter sits behind a consumer-declared port like every other outside service (→ARCH-6, →ARCH-7)
 
 ## chg
 -

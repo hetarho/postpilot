@@ -3,10 +3,17 @@
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
-- MEM-2 [o] memory is the fourth authored layer beside the three that exist: VOICE decides how sentences sound, TMPL decides shape and required content, GUIDE decides what to avoid, MEM supplies facts no single post carries ← without it a post is confined to what one memo and one photo set can prove, which no voice rule, template brief or prohibition can widen
+- MEM-2 [o] memory is the fourth authored layer beside the three TMPL-1 names — VOICE, TMPL and GUIDE (→TMPL-1) — and supplies facts no single post carries ← without it a post is confined to what one memo and one photo set can prove, which no voice rule, template brief or prohibition can widen
 - MEM-3 [o] a memory is account-owned: not voice-scoped, not template-scoped, and carrying no per-post enable ← a fact about the author holds across every voice they write in, and `kind` plus tags already separate subject matter without partitioning the store
 - MEM-4 [o] a memory carries `text`, one `kind`, zero or more tags, zero or more source-post links and timestamps; nothing else is authored and nothing is scored, ranked or weighted by a model
-- MEM-5 [o] `kind` is a closed enum of five — `preference` 취향 · `persona` 설정 · `place` 장소 · `person` 인물 · `history` 이력 — with no user-defined kinds and no sub-kinds ← retrieval behaviour and prompt grouping both rest on the enum being closed; anything finer is a tag
+- MEM-5 [o] `kind` is a closed enum of five, with no user-defined kinds and no sub-kinds ← retrieval behaviour and prompt grouping both rest on the enum being closed; anything finer is a tag
+  | kind | ko |
+  |---|---|
+  | `preference` | 취향 |
+  | `persona` | 설정 |
+  | `place` | 장소 |
+  | `person` | 인물 |
+  | `history` | 이력 |
 - MEM-6 [o] retrieval treats the enum in two halves: `preference` and `persona` are candidates for every post regardless of tags, while `place`, `person` and `history` are candidates only on tag overlap ← a standing fact about the author is what lets a post leave the frame, and an unfiltered place or person fact staples an unrelated shop to the next post
 - MEM-7 [o] the retrieval key is built from the post's memo, 가제, template answers and the observation `objects` and `visible_text` of its photos and videos as stored at enqueue, so a post's first generation, whose observations do not exist yet, carries no observation terms; score is tag overlap, ties break by the most recent sighting (`last_seen_at`, which re-approval advances →MEM-9) then creation, and at most `MEMORY_INJECT_MAX` (8) are selected
 - MEM-8 [o] retrieval is deterministic and lexical, using the Go standard library alone — no vector, embedding, similarity or third-party dependency (→VOICE-51) ← at this corpus size tag overlap answers the only question asked of it, and an embedding call per generation would cost credits for no measurable gain
