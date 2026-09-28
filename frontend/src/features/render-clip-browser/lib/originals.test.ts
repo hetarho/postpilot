@@ -34,3 +34,28 @@ it('never reads bytes after access resolution was cancelled', async () => {
   await expect(originals.get('remote')).rejects.toMatchObject({ name: 'AbortError' })
   expect(load).not.toHaveBeenCalled()
 })
+
+// A server-held original's entry carries whatever URL the page last showed — empty
+// until a scene asked for it, or a presigned read that may have expired — so only a
+// blob URL is read as local and everything else is resolved afresh.
+it('resolves a server-held original rather than reading its stale or empty URL', async () => {
+  const resolve = vi.fn(async (fingerprint: string) => `signed-${fingerprint}`)
+  const load = vi.fn(async (url: string) => new Blob([url]))
+  const originals = new BrowserOriginals(
+    [
+      { fingerprint: 'unseen', url: '' },
+      { fingerprint: 'shown', url: 'http://storage.example/expired?X-Amz-Expires=60' },
+      { fingerprint: 'held', url: 'blob:held' },
+    ],
+    resolve,
+    new AbortController().signal,
+    load,
+  )
+  await Promise.all([originals.get('unseen'), originals.get('shown'), originals.get('held')])
+  expect(load.mock.calls.map(([url]) => url).sort()).toEqual([
+    'blob:held',
+    'signed-shown',
+    'signed-unseen',
+  ])
+  expect(resolve.mock.calls.map(([fingerprint]) => fingerprint).sort()).toEqual(['shown', 'unseen'])
+})

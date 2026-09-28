@@ -16,9 +16,12 @@ export class BrowserOriginals {
     let blob = this.blobs.get(fingerprint)
     if (!blob) {
       blob = (async () => {
-        const url =
-          this.local.find((source) => source.fingerprint === fingerprint)?.url ??
-          (await this.resolvePlayback(fingerprint))
+        // Only a file this page holds is read from its object URL. A server-held
+        // original's URL in that list is whatever the page last showed: empty until
+        // a scene asked for it, or a presigned read that may have expired. Fetching
+        // the empty one reads the app's own page, which no demuxer opens.
+        const local = this.local.find((source) => source.fingerprint === fingerprint)?.url
+        const url = local?.startsWith('blob:') ? local : await this.resolvePlayback(fingerprint)
         this.signal.throwIfAborted()
         return this.load(url, this.signal)
       })()
