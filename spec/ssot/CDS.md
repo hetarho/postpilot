@@ -11,15 +11,57 @@
 - CDS-7 [o] every placement and style choice follows the rule tables below with no randomness; equal inputs render equal outputs
 - CDS-8 [o] the base canvas is 9:16 at 1080×1920 and every dimension below is stated on it; 16:9 and 1:1 derive by CDS-46 through CDS-48
 - CDS-9 [o] the 9:16 design safe area is x 64, y 40, w 952, h 1380 (x ≤ 1016, y ≤ 1420) with equal left and right insets; the top inset is 40 px and TOP elements add a further 40 px gap; centred copy keeps a 856 px measure that bounds a caption's characters (CDS-20) and a region slot's width (CDS-86) ← reading width is a typographic choice, not an avoidance of anything on screen
-- CDS-12 [o] 9:16 anchors inside the design safe area: `TOP` plate top y 80 · `UPPER_MID` plate centre y 700 · `LOWER_MID` plate centre y 1100 · `BOTTOM` plate bottom y 1380 (default) · horizontal `CENTER` x 540 · `LEFT` x 96 · `RIGHT` x 984; a nine-cell grid is not used ← subtle offsets between cells break the consistency CDS-7 promises
+- CDS-12 [o] 9:16 anchors inside the design safe area:
+  | anchor | position |
+  |---|---|
+  | `TOP` | plate top y 80 |
+  | `UPPER_MID` | plate centre y 700 |
+  | `LOWER_MID` | plate centre y 1100 |
+  | `BOTTOM` (default) | plate bottom y 1380 |
+  | horizontal `CENTER` | x 540 |
+  | horizontal `LEFT` | x 96 |
+  | horizontal `RIGHT` | x 984 |
+  - a nine-cell grid is not used ← subtle offsets between cells break the consistency CDS-7 promises
 - CDS-13 [o] the 16:9 safe area is (96, 72, 1728, 936) on 1920×1080 and the 1:1 safe area is (64, 72, 952, 936) on 1080×1080 ← the margins are broadcast title-safe practice plus a bottom player control bar
-- CDS-14 [o] colour tokens: `text.white` #FFFFFF · `text.muted` #FFFFFF α0.72 · `stroke.dark` #0B0B0B α0.85 · `shadow.text` #000000 α0.55 blur 12 offset (0, 4) · `scrim.bottom` #000000 α0 → 0.55 over y 1040–1420 · `scrim.top` #000000 α0.45 → 0 over y 40–350 · `scrim.radial` #000000 α0.5 at the centre → α0.3 at 55 % → 0 at the edge · `badge.ad` #111111 α0.80 under white text
-- CDS-15 [o] the accent offers eight choices, one per project chosen in ① (→CLIP-14 →CLIP-139): 기본, the design's own default and the choice a project starts at, and the seven approved colours coral #FF6B57 · amber #FFB020 · lime #9BD53A · teal #2BB8A6 · blue #3D7BFF · violet #8A63FF · pink #FF6FB5; an accent appears only as the caption's accent word on a dark ground (→CDS-25) — never in the intro or outro or on the disclosure — and every rule and bar is white ← saturation belongs to the footage, so one coloured word is a clip's whole accent budget
+- CDS-14 [o] colour tokens:
+  | token | value |
+  |---|---|
+  | `text.white` | #FFFFFF |
+  | `text.muted` | #FFFFFF α0.72 |
+  | `stroke.dark` | #0B0B0B α0.85 |
+  | `shadow.text` | #000000 α0.55 blur 12 offset (0, 4) |
+  | `scrim.bottom` | #000000 α0 → 0.55 over y 1040–1420 |
+  | `scrim.top` | #000000 α0.45 → 0 over y 40–350 |
+  | `scrim.radial` | #000000 α0.5 at the centre → α0.3 at 55 % → 0 at the edge |
+  | `badge.ad` | #111111 α0.80 under white text |
+- CDS-15 [o] the accent offers eight choices, one per project chosen in ① (→CLIP-14 →CLIP-139): 기본, the design's own default and the choice a project starts at, and the seven approved colours
+  - coral #FF6B57 · amber #FFB020 · lime #9BD53A · teal #2BB8A6 · blue #3D7BFF · violet #8A63FF · pink #FF6FB5
+  - an accent appears only as the caption's accent word on a dark ground (→CDS-25) — never in the intro or outro or on the disclosure — and every rule and bar is white ← saturation belongs to the footage, so one coloured word is a clip's whole accent budget
 - CDS-17 [o] typography: Wanted Sans Variable (weights 400–1000) sets information and copy, Paperlogy sets region text unless a region preset names NanumMyeongjo 800 or Jua, Jua and NanumMyeongjo (400 and 800) are also caption faces, and Noto Sans KR 700 stays the fallback; all are product-bundled at a fixed version and a caption takes the face its style names (→CLIP-13 →CDS-80 →CDS-88)
 - CDS-18 [o] the face is fixed per region preset and type role, and a caption's face arrives with the style the project allowed (→CDS-80 →CLIP-142); no font file is ever supplied by a project or a user (→CLIP-28)
-- CDS-19 [o] type scale on 9:16: `t.display` 132 Paperlogy 800, +0.04em, 1.0 (region floor 80) · `t.headline` 96 Paperlogy 800, -0.02em, 1.1 (region floor 60) · `t.hook` 84 Paperlogy 800, -0.02em, 1.15 (caption min 72, region floor 56) · `t.title` 72 Paperlogy 800, -0.02em, 1.2 (caption min 64, region floor 52) · `t.body` 56 Wanted Sans 700, -0.01em, 1.3 (min 48) · `t.caption` 44 Wanted Sans 600, 0, 1.3 (min 40) · `t.label` 36 Wanted Sans 600, +0.02em, 1.2 (min 34) · `t.badge` 36 Wanted Sans 800, +0.02em, 1.0 (fixed); a region preset may set a slot at another size of its role with its own floor, never below CDS-3 (→CDS-86) ← 48 px on a 1080-wide phone is ≈ 17 pt, the iOS body size, and still ≈ 10 pt in a 0.6× home-feed tile
+- CDS-19 [o] type scale on 9:16:
+  | role | spec |
+  |---|---|
+  | `t.display` | 132 Paperlogy 800, +0.04em, 1.0 (region floor 80) |
+  | `t.headline` | 96 Paperlogy 800, -0.02em, 1.1 (region floor 60) |
+  | `t.hook` | 84 Paperlogy 800, -0.02em, 1.15 (caption min 72, region floor 56) |
+  | `t.title` | 72 Paperlogy 800, -0.02em, 1.2 (caption min 64, region floor 52) |
+  | `t.body` | 56 Wanted Sans 700, -0.01em, 1.3 (min 48) |
+  | `t.caption` | 44 Wanted Sans 600, 0, 1.3 (min 40) |
+  | `t.label` | 36 Wanted Sans 600, +0.02em, 1.2 (min 34) |
+  | `t.badge` | 36 Wanted Sans 800, +0.02em, 1.0 (fixed) |
+  - a region preset may set a slot at another size of its role with its own floor, never below CDS-3 (→CDS-86) ← 48 px on a 1080-wide phone is ≈ 17 pt, the iOS body size, and still ≈ 10 pt in a 0.6× home-feed tile
 - CDS-20 [o] a caption's characters per line inside 856 px: `t.hook` 9 · `t.title` 11 (Korean), wrapping by word (어절) and never beyond 2 lines; a region slot is bounded by its width under CDS-86, never by a character count (→CDS-77)
-- CDS-21 [o] spacing tokens: `pad.chip` 16 vertical / 28 horizontal · `gap.stack` 16 vertical · `radius.chip` 12 (disclosure only) · `stroke.text` 6 px round-joined stroke painted under a Paperlogy fill · `stroke.small` 4 px under a Wanted Sans fill · `rule.hair` 520 × 2 px `text.white` α0.55 · `rule.bar` 160 × 6 px `text.white`
+- CDS-21 [o] spacing tokens:
+  | token | value |
+  |---|---|
+  | `pad.chip` | 16 vertical / 28 horizontal |
+  | `gap.stack` | 16 vertical |
+  | `radius.chip` | 12 (disclosure only) |
+  | `stroke.text` | 6 px round-joined stroke painted under a Paperlogy fill |
+  | `stroke.small` | 4 px under a Wanted Sans fill |
+  | `rule.hair` | 520 × 2 px `text.white` α0.55 |
+  | `rule.bar` | 160 × 6 px `text.white` |
 - CDS-22 [o] on-screen text sits in three regions — intro, caption, outro; the intro offers eight presets and the outro seven, chosen in ①, and the caption draws from the style set the project allowed, while the intro and outro keep no per-element style choice (→CLIP-111 →CLIP-142 →CDS-70 →CDS-80)
 - CDS-25 [o] the default caption style is 크게 강조: no plate, `text.white` with `stroke.dark` 6 px and `shadow.text`, `t.title` 72 in Paperlogy, ≤ 2 lines × 11 characters, one word may take the accent colour on a dark ground, a scrim when CDS-44 finds a bright ground; an empty style selection resolves to it alone (→CDS-80 →CLIP-142)
 - CDS-27 [o] a caption's interval is the narration's own absolute interval on the transformed output timeline and is never derived from a cut; a caption may begin or end inside a transition, and output-relative fixed text may span a cut transition (→CLIP-134 →CLIP-66)
@@ -41,14 +83,39 @@
 - CDS-48 [o] 1:1: copy width ≤ 952 (15 characters), TOP 112, BOTTOM 968, UPPER_MID / LOWER_MID 420 / 660, the intro and outro blocks placed by CDS-79, badge right edge x 1016 top y 112, scrims 260 / 200
 - CDS-49 [o] 9:16 is the product default because every short-form feed takes it; 16:9 suits horizontal upload and blog or site embedding, and 1:1 suits square feed placements (→CLIP-8)
 - CDS-51 [o] templates reuse the product's visual components, readability rules and audio normalisation without inheriting content, campaign type or exposure from a preset
-- CDS-52 [o] the renderer emits a resolved-element manifest and checks V1 safe-area/header breach 0 px, owner placement included · V2 body ≥ 48 px, caption ≥ 40 px, label ≥ 34 px, badge = 36 px · V3 contrast ≥ 4.5:1 measured under CDS-44, a scrimmed shortfall and an owner-placed shortfall recorded as notices rather than failures · V4 readable exposure within the declared interval · V5 a caption's line and character limits and every region slot inside its width at no less than its floor (CDS-86) · V6 exact declared disclosure text and interval, or absence when undeclared · V7 advisory component overlap · V8 automatic subject-cover target ≤ 15 % · V9 every caption's motion matches the style it names, rapid phrases hold 0/0 ms and 0 px, and every caption carries its own style's drawing whatever its pace and whichever kind rendered it · V10 supported text/visual vocabulary, source audio absent unless its source setting is on, one simultaneous source-audio track at most and no background music · V11 a collected fact behind every number and exact authored literals · V12 output 1080×1920 | 1920×1080 | 1080×1080, 30 fps, H.264 High, AAC 48 kHz when audio exists, −16 LUFS ±1 and a decoded video-track duration within one output frame of the edited output timeline (→CDS-62), read from the video track alone because a container or audio-track declaration carries codec padding and always reads longer than the clip plays · V13 automatic anchor-step target ≤ 1 except the readable-text rule, not applied to an owner-placed caption · V15 every cut uses one CLIP-98 rate and its source span, rate and pre-transition output duration agree · V16 every caption and element interval lies on the transformed output timeline · V17 preview and export agree on source ranges, cut order, timing, rates and source-audio state · V19 every text renders in the face its type role or caption style names, a substituted family failing the check rather than rendering · V20 the intro and outro render the project's selected presets — slot count, order, each slot's role, face and fitted size, gap geometry around the anchor and white-only colour · V18 captions hold disjoint windows on the output timeline at every caption pace, whatever cuts lie beneath them; a failed V15–V17 check identifies the cut or element and prevents rendering without substituting 1x, changing audio state, dropping a cut or retiming authored content
+- CDS-52 [o] the renderer emits a resolved-element manifest and checks:
+  | check | rule |
+  |---|---|
+  | V1 | safe-area/header breach 0 px, owner placement included |
+  | V2 | body ≥ 48 px, caption ≥ 40 px, label ≥ 34 px, badge = 36 px |
+  | V3 | contrast ≥ 4.5:1 measured under CDS-44, a scrimmed shortfall and an owner-placed shortfall recorded as notices rather than failures |
+  | V4 | readable exposure within the declared interval |
+  | V5 | a caption's line and character limits and every region slot inside its width at no less than its floor (CDS-86) |
+  | V6 | exact declared disclosure text and interval, or absence when undeclared |
+  | V7 | advisory component overlap |
+  | V8 | automatic subject-cover target ≤ 15 % |
+  | V9 | every caption's motion matches the style it names, rapid phrases hold 0/0 ms and 0 px, and every caption carries its own style's drawing whatever its pace and whichever kind rendered it |
+  | V10 | supported text/visual vocabulary, source audio absent unless its source setting is on, one simultaneous source-audio track at most and no background music |
+  | V11 | a collected fact behind every number and exact authored literals |
+  | V12 | output 1080×1920 \| 1920×1080 \| 1080×1080, 30 fps, H.264 High, AAC 48 kHz when audio exists, −16 LUFS ±1 and a decoded video-track duration within one output frame of the edited output timeline (→CDS-62), read from the video track alone because a container or audio-track declaration carries codec padding and always reads longer than the clip plays |
+  | V13 | automatic anchor-step target ≤ 1 except the readable-text rule, not applied to an owner-placed caption |
+  | V15 | every cut uses one CLIP-98 rate and its source span, rate and pre-transition output duration agree |
+  | V16 | every caption and element interval lies on the transformed output timeline |
+  | V17 | preview and export agree on source ranges, cut order, timing, rates and source-audio state |
+  | V19 | every text renders in the face its type role or caption style names, a substituted family failing the check rather than rendering |
+  | V20 | the intro and outro render the project's selected presets — slot count, order, each slot's role, face and fitted size, gap geometry around the anchor and white-only colour |
+  | V18 | captions hold disjoint windows on the output timeline at every caption pace, whatever cuts lie beneath them |
+  - a failed V15–V17 check identifies the cut or element and prevents rendering without substituting 1x, changing audio state, dropping a cut or retiming authored content
 - CDS-55 [o] automatic generated-copy repair tries a grounded shorter sentence, then an allowed automatic anchor, then omits that generated copy with its reason recorded; explicit styles, positions, fixed text and fixed timing never enter this repair ladder (→CDS-64)
 - CDS-53 [o] release QA prioritizes deterministic owner review over decorative complexity and reviews every full clip both muted and with its configured source audio; same-source splits, every rate preset, transition overlaps, captions crossing cuts, narration over footage it does not describe, differently priced items, missing optional fields and a template with no badge, intro or outro must remain coherent and preview-equivalent without unintended audio, temporal gaps, stale captions, invented text or silent repair (→CLIP-72)
 - CDS-56 [o] overlap never prevents automatic generation or manual rerendering, including caption, disclosure and region-block collisions and crossfade windows; preserve the selected text, placement and timing when overlap is the only issue, deliver the preview and download, and let the owner revise it in step ②; diagnostic overlap checks remain available, and all other delivery checks still run even when overlap is present ← a reviewable video is preferable to losing the whole result over text placement
 
 - CDS-57 [o] a header-placed disclosure keeps equal outer margins — 9:16 x 96/984, 16:9 x 96/1824 and 1:1 x 64/1016 — with glyphs measured by weight/tracking and optically centred, reserving its visible width plus one stack gap only while shown; authored text follows CDS-64, and other selected positions inherit no hidden header reservation
 
-- CDS-59 [o] rapid captions are independent of copy style, occupy explicit sequential absolute output windows of 300–1000 ms inside their caption's own interval and replace each other without a gap or motion; generation preserves a first short word as its own opening beat and groups following adjacent words into short phrases, prefers 300 ms for ≤3 characters, 500 ms for ≤9, 800 ms for longer phrases, and may compress within the 300 ms floor to fit that interval; at most 24 phrases per caption, one line of ≤14 characters per phrase, no sentence-class or 60% occupancy requirement; insufficient room uses the grounded short alternative or preserves sentence mode rather than losing the video (→CLIP-134)
+- CDS-59 [o] rapid captions are independent of copy style, occupy explicit sequential absolute output windows of 300–1000 ms inside their caption's own interval and replace each other without a gap or motion
+  - generation preserves a first short word as its own opening beat and groups following adjacent words into short phrases, prefers 300 ms for ≤3 characters, 500 ms for ≤9, 800 ms for longer phrases, and may compress within the 300 ms floor to fit that interval
+  - at most 24 phrases per caption, one line of ≤14 characters per phrase, no sentence-class or 60% occupancy requirement
+  - insufficient room uses the grounded short alternative or preserves sentence mode rather than losing the video (→CLIP-134)
 - CDS-60 [o] step ② exposes each phrase's text, absolute transformed-output start and end time, add/remove, and split-to-rapid or merge-to-sentence actions; manual windows persist exactly in output milliseconds and are revalidated after any edit that changes the output length, adjacent windows may touch but may not overlap, and invalid limits are reported before rendering without proportional retiming
 
 - CDS-61 [o] the design system owns reusable typography, contrast, safe areas, approved visual styles and output quality; the template owns the outline — each entry's text and the disclosure's presence and position — and the starting design selection a project takes from it (→CLIP-166 →CLIP-168), and the storyline and the owner instruction own the flow and the narration, written under the 영상 지침 (→CLIP-59 →CLIP-65 →CLIP-121 →CLIP-134 →GUIDE-42)

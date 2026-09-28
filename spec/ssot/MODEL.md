@@ -90,7 +90,7 @@
   - observe apply replaces observations
   - a `lab` content application is offered and accepted only while the source post is `draft` or `review` (→MODEL-36) ← a finalized post's confirmed content is not rewritten from a comparison
   - analyze apply requires confirmation and publishes a structured version to the experiment's own still-active voice (→VOICE-49), refused when that voice was deleted
-  - of the experiments, DeleteVoice is refused only while a publishable analyze experiment exists — a write-stage experiment, and a pick whose output was purged or can no longer be applied, never blocks it (→VOICE-13)
+  - which experiments block DeleteVoice follows →VOICE-13
   - observe and analyze adoption stay separate explicit actions
   - `둘 다 사용하지 않기` dismisses, counting one loss for each candidate against the fixed reference opponent (→MODEL-38), and opens no badge sheet ← forcing a winner from two bad outputs adds noise
   - an unpaired survivor may be applied under the same gates but contributes no quality match
