@@ -183,4 +183,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
-- r19 260928 MODEL-25✎ never applied on mount, login or account creation, read inside the ← reason→its own rule: applied only by an explicit apply
+-

@@ -264,5 +264,4 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
-- r50 260928 CLIP-40✎ ②'s dock modeled on →POST-45→→POST-56
 - r44 260924 CLIP-163+ open CPU/GPU output acceptance

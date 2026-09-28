@@ -52,4 +52,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
-- r8 260928 MKT-5✎ master never an obtainable tier or a fourth row→never an obtainable tier or a row of the ladder, however many rows it has
+-

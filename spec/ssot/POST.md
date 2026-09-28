@@ -150,4 +150,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r22 260928 POST-64✎ 새 글 full-bleed on a phone, natural width from sm:→natural width, right-aligned and plane-less at every width (dock="list") · POST-45✎ progress bar sticky at top-0 / sm:top-16→at the top-chrome token · POST-51✎ the brief's list +태그 수
+-

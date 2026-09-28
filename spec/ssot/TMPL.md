@@ -159,4 +159,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r16 260928 TMPL-6✎ +title_area: trimmed at the edges, may be empty, ≤ TEMPLATE_TITLE_AREA_MAX_CHARS (200), must parse
+-

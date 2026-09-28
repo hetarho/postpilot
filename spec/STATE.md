@@ -19,21 +19,21 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 13 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-30✎ | 0 |
+| ARCH | 13 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 9 | 9 | - | 0 |
 | QUOTA | 23 | 23 | - | 0 |
-| POST | 22 | 21 | POST-64✎ POST-45✎ POST-51✎ | 0 |
+| POST | 22 | 22 | - | 0 |
 | VOICE | 4 | 4 | - | 1 |
-| GEN | 18 | 17 | GEN-16✎ GEN-73+ | 0 |
-| MODEL | 19 | 18 | MODEL-25✎ | 0 |
-| TMPL | 16 | 15 | TMPL-6✎ | 1 |
-| GUIDE | 10 | 9 | GUIDE-41✎ | 0 |
+| GEN | 18 | 18 | - | 0 |
+| MODEL | 19 | 19 | - | 0 |
+| TMPL | 16 | 16 | - | 1 |
+| GUIDE | 10 | 10 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 6 | 6 | - | 0 |
 | THEME | 19 | 15 | THEME-19✎ | 0 |
-| MKT | 8 | 7 | MKT-5✎ | 0 |
+| MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 50 | 43 | CLIP-163+ CLIP-40✎ | 2 |
+| CLIP | 50 | 43 | CLIP-163+ | 2 |
 | CDS | 29 | 29 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 4 | 4 | - | 2 |
@@ -57,13 +57,16 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
+| T449 | The 기억을 통한 감상 추가 기본 지침 | GEN GUIDE MEM | - | todo |
 
 ## next
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
-- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); create-task POST GEN GUIDE CLIP ARCH MKT MODEL TMPL: GEN-73's 기억을 통한 감상 추가 is new work, and every other delta of this rev already matches the code
+- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); implement-task T449 (the 기억을 통한 감상 추가 기본 지침)
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26); THEME's row says tasked 15 though T356 and T412 finished on THEME@18
 
 ## log
+- 260928 create-task T449 (GEN r18, GUIDE r10); POST r22 MKT r8 MODEL r19 TMPL r16 CLIP r50 ARCH r13 no-op (no code impact)
+- 260928 create-task POST GEN GUIDE CLIP ARCH MKT MODEL TMPL start (260928 deltas)
 - 260928 update-ssot POST-64✎ POST-45✎ POST-51✎ GEN-16✎ GEN-73+ GUIDE-41✎ CLIP-40✎ ARCH-30✎ MKT-5✎ MODEL-25✎ TMPL-6✎
 - 260928 update-ssot POST GEN GUIDE CLIP ARCH MKT MODEL TMPL start (the doc-review holds, answered)
 - 260928 doc-review QUAL MEM GIFT AUTH BILL tidied (rev unchanged); all 20 SSOTs reviewed, lint candidates 209 → 14
@@ -82,5 +85,3 @@
 - 260928 T444 claimed (ia)
 - 260928 T415 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T415 found (out of scope): a storyline paragraph edit waiting for its 600 ms autosave is not flushed before 이 스토리로 만들기 or a storyline request
-- 260928 T415 claimed (ia)
-- 260928 T442 done: decisions in /IMPLEMENTATION-DECISIONS.md

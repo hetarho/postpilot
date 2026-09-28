@@ -128,4 +128,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r10 260928 GUIDE-41✎ +기억을 통한 감상 추가 (→GEN-73) after 감상은 내가 쓴 것만, whose gist→→GEN-16
+-
