@@ -713,6 +713,9 @@ func (r *generationRun) write() error {
 		}
 	}
 	r.checkpoint.Diagnostic = clip.AttemptDiagnostic{Ranges: clip.AttemptRangeDiagnostics(r.edit, r.analyses), Values: map[string]int{"cut_count": len(r.edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": r.edit.DurationMS, "transition_ms": r.edit.TransitionTotal()}}
+	// A plan kept from an earlier attempt chose its caption styles from that
+	// attempt's AI set; this generation holds them to the set allowed now (CDS-66).
+	clip.RestrictGeneratedCaptionStyles(&r.edit, p.Design().AllowedCaptionStyles())
 	if err := r.drawRegions(); err != nil {
 		return err
 	}

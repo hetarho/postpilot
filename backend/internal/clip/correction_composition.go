@@ -227,11 +227,11 @@ func (c *nativeCorrection) applyElements() error {
 		}
 		// The owner's own placement is admitted and clamped BEFORE the edit is
 		// compared with what the plan holds, so a drag that the safe area pulls
-		// back to where the caption already stood is not an edit at all.
-		// The allowed styles are the PROJECT's own selection (CLIP-142), not the
-		// plan's: a stored plan carries the design only as a render input, and
-		// a save must be judged against what the project allows today.
-		owner, err := ValidateOwnerCaption(edit.Owner, edit.Role, c.next.Ratio, c.p.DesignSelection().AllowedCaptionStyles())
+		// back to where the caption already stood is not an edit at all. Any
+		// approved style is the owner's to choose, whatever the project's AI
+		// set says (CLIP-142); the set only says what a caption naming none
+		// renders in, whose role bounds the size.
+		owner, err := ValidateOwnerCaption(edit.Owner, r.Element, c.next.Ratio, c.p.DesignSelection().AllowedCaptionStyles())
 		if err != nil {
 			return err
 		}

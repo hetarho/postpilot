@@ -70,9 +70,11 @@ UPDATE clip_projects SET intro_preset = sqlc.arg(intro_preset),
 UPDATE clip_projects SET outro_preset = sqlc.arg(outro_preset),
     edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND outro_preset != sqlc.arg(outro_preset) THEN 1 ELSE 0 END,
     updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
+-- The AI set limits what a writer may choose, not what a saved plan draws, so the
+-- plan revision moves only when the caller found a caption it restyles (CLIP-191).
 -- name: UpdateClipAllowedCaptionStyles :execrows
 UPDATE clip_projects SET allowed_caption_styles = sqlc.arg(allowed_caption_styles),
-    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND allowed_caption_styles != sqlc.arg(allowed_caption_styles) THEN 1 ELSE 0 END,
+    edit_plan_revision = edit_plan_revision + sqlc.arg(revision_step),
     updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
 -- name: UpdateClipHideDisclosure :execrows
 UPDATE clip_projects SET hide_disclosure = sqlc.arg(hide_disclosure),

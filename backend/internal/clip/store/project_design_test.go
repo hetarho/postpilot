@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -102,12 +103,50 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if err != nil || same.EditPlanRevision != after.EditPlanRevision {
 		t.Fatal("an unchanged value still staled the result", same.EditPlanRevision, err)
 	}
-	// The styles are the same kind of choice: selecting one is a change the
-	// render has to be redone for, even where the default it replaces draws the
-	// same caption.
+	// The styles stale a render where a caption takes the selection's first
+	// entry — this fixture's narration names no style ("auto") — so a new first
+	// entry redraws it.
 	styles := []string{"keynote"}
 	restyled, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{CaptionStyles: &styles})
 	if err != nil || restyled.EditPlanRevision != after.EditPlanRevision+1 {
 		t.Fatal("changing the allowed styles did not stale the result", restyled.EditPlanRevision, err)
+	}
+	// A caption with a style of its own is not the selection's to redraw
+	// (CLIP-142, CLIP-191): once the owner gives it one outside the selection,
+	// changing the selection again leaves a render of it current.
+	plan, err := clip.DecodeEditPlan(restyled.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := clip.CorrectionFromPlan(plan)
+	for i := range draft.Elements {
+		if draft.Elements[i].Role == "caption" {
+			draft.Elements[i].Owner.Style = "film"
+		}
+	}
+	calls := h.planner.observe + h.planner.plans + h.planner.flows + h.planner.narrations + len(h.planner.revisions)
+	if _, err := h.service.SaveCorrection(t.Context(), "alice", h.project.ID, restyled.EditPlanRevision, draft); err != nil {
+		t.Fatal("an owner style outside the selection was refused:", err)
+	}
+	owned, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
+	if err != nil || !slices.Equal(owned.CaptionStyles, styles) {
+		t.Fatal("the owner's choice widened the AI selection", owned.CaptionStyles, err)
+	}
+	// The style edit is a plan edit like any other (CLIP-191): a new revision, the
+	// earlier render kept as it was and left stale, and no writing call, even
+	// for a sequence style dearer than the AI estimate (CLIP-20, CLIP-145).
+	if owned.EditPlanRevision != restyled.EditPlanRevision+1 || owned.RenderedPlanRevision != restyled.RenderedPlanRevision || owned.Result == nil || owned.Result.Key != before.Result.Key {
+		t.Fatal("the style edit did not stale the kept render", owned.EditPlanRevision, owned.RenderedPlanRevision)
+	}
+	if h.planner.observe+h.planner.plans+h.planner.flows+h.planner.narrations+len(h.planner.revisions) != calls {
+		t.Fatal("a style edit called a model")
+	}
+	narrowed := []string{"neon"}
+	unstaled, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{CaptionStyles: &narrowed})
+	if err != nil || unstaled.EditPlanRevision != owned.EditPlanRevision || unstaled.RenderedPlanRevision != owned.RenderedPlanRevision {
+		t.Fatal("a selection change moved the revision of a plan it does not redraw", unstaled.EditPlanRevision, owned.EditPlanRevision, err)
+	}
+	if unstaled.EditPlan != owned.EditPlan {
+		t.Fatal("a selection change rewrote the plan")
 	}
 }

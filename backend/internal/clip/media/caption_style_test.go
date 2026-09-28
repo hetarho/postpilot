@@ -80,7 +80,13 @@ func TestCaptionStyleResolutionKeepsOwnerNarrationAndLegacyDefaults(t *testing.T
 		{"legacy absent", "", "", "keynote", []string{"keynote", "film"}, false},
 		{"single style", "auto", "", "film", []string{"film"}, false},
 		{"empty selection", "auto", "", "bold", nil, false},
-		{"narrowed selection", "film", "", "keynote", []string{"keynote"}, true},
+		// The selection limits what a writer picks, not what the plan holds: an
+		// approved style it no longer offers is kept, and changing it restyles
+		// nothing (CLIP-142, CLIP-191). Only a style the product does not carry
+		// falls back, and says so.
+		{"narrowed selection", "film", "", "film", []string{"keynote"}, false},
+		{"owner outside the selection", "film", "neon", "neon", []string{"keynote"}, false},
+		{"unknown style", "retired-style", "", "keynote", []string{"keynote"}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			caption := narrationText("narration-1", "여기 좋아요", 1000, 5000)

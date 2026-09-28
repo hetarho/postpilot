@@ -101,3 +101,18 @@ func TestPlanQuoteFollowsNarratedStylesAndOwnerOverrides(t *testing.T) {
 		t.Fatal("the quote ignored narration or the owner's override", cost)
 	}
 }
+
+// CLIP-145: a sequence style the owner chose outside a static-only AI set counts
+// as what it draws. The set bounds the AI estimate, never what the owner picks,
+// and the choice asks for no new approval.
+func TestAnOwnerSequenceStyleOutsideTheSetCountsAsWhatItDraws(t *testing.T) {
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
+	project := clip.Project{CaptionStyles: []string{design.DefaultCaptionStyle}}
+	plan := clip.EditPlan{Portable: &clip.PortablePlan{Elements: []clip.PortableText{
+		captionElement("owner", "neon", 0, 2000),
+	}}}
+	cost := clip.SequenceCostOf(project, plan, true, cfg)
+	if cost.Captions != 1 || cost.Frames != 60 || cost.SelectedStyles != 0 {
+		t.Fatalf("the owner's sequence style was not counted as drawn: %+v", cost)
+	}
+}

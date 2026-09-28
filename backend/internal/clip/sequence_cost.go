@@ -1,10 +1,6 @@
 package clip
 
-import (
-	"slices"
-
-	"github.com/postpilot/backend/internal/clip/design"
-)
+import "github.com/postpilot/backend/internal/clip/design"
 
 // SequenceCaptionCost is what the sequence-rendered captions of a clip add to
 // its render (CDS-81): a static style is rasterised once however long it is on
@@ -26,9 +22,9 @@ type SequenceCaptionCost struct {
 	SelectedStyles int
 }
 
-// SequenceCostOf counts what a project's CURRENT plan and selection imply. The
-// style is the owner's choice, then the narration's, then the selection's
-// first entry, as in layout. With no plan, non-overlapping captions can cover
+// SequenceCostOf counts what a project's CURRENT plan and selection imply. Each
+// caption counts in the style it renders in (CaptionStyleOf), so an owner's
+// choice outside the AI set counts as what it draws (CLIP-145). With no plan, non-overlapping captions can cover
 // at most the whole target timeline, regardless of how many styles are selected.
 func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) SequenceCaptionCost {
 	allowed := p.DesignSelection().AllowedCaptionStyles()
@@ -50,16 +46,7 @@ func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) Se
 		if text.Resolved.Element.Role != "caption" {
 			continue
 		}
-		id := allowed[0]
-		if text.Resolved.Element.Style != "" && text.Resolved.Element.Style != "auto" {
-			id = text.Resolved.Element.Style
-		}
-		if text.Owner.Style != "" {
-			id = text.Owner.Style
-		}
-		if !slices.Contains(allowed, id) {
-			id = allowed[0]
-		}
+		id, _ := CaptionStyleOf(text, allowed)
 		style, ok := design.LookupCaptionStyle(id)
 		if !ok || style.Static() {
 			continue

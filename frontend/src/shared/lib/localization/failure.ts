@@ -43,6 +43,23 @@ export function formatAppFailure(
       actual: failure.params.actual,
     })
   }
+  // A caption size its style cannot take says which caption and the range that
+  // style admits, so the owner corrects the size rather than guessing (CDS-100).
+  if (
+    failure.reason === 'CLIP_COMPOSITION_INVALID' &&
+    failure.params.reason === 'caption_size' &&
+    failure.params.min &&
+    failure.params.max
+  ) {
+    const caption = /^narration-([1-9][0-9]*)$/.exec(failure.params.element_id ?? '')
+    if (caption)
+      return i18next.getFixedT(locale, 'clips')('composition.errors.caption_size', {
+        n: caption[1],
+        min: failure.params.min,
+        max: failure.params.max,
+        actual: failure.params.actual,
+      })
+  }
   // A narration caption is the model's, not a template line's, so it carries no
   // line to point at: say which caption instead, and never show a line 0.
   if (failure.reason === 'CLIP_COMPOSITION_INVALID') {

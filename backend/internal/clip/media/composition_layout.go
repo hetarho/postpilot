@@ -303,23 +303,17 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			return visual, elementProblem(text, "invalid_design")
 		}
 	}
-	// Only an explicit choice outranks the selection's first entry. Old plans
-	// carrying "auto" keep that entry, and the owner's choice always wins.
+	// The owner's choice wins, then the style the plan names; only a caption
+	// naming none takes the selection's first entry. An approved style outside
+	// the selection is kept: the selection limits what a writer may choose, not
+	// what the plan already holds (CLIP-142, CDS-66).
 	owner := text.Owner
-	style := candidates[0]
-	if e.Style != "" && e.Style != "auto" {
-		style = e.Style
-	}
 	if owner.Style != "" {
-		if !slices.Contains(candidates, owner.Style) {
+		if _, ok := design.CaptionRule(owner.Style); !ok {
 			return visual, elementProblem(text, "invalid_design")
 		}
-		style = owner.Style
 	}
-	styleFallback := !slices.Contains(candidates, style)
-	if styleFallback {
-		style = candidates[0]
-	}
+	style, styleFallback := clip.CaptionStyleOf(text, candidates)
 	candidates = []string{style}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {

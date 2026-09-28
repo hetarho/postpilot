@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -140,5 +141,24 @@ func TestOwnerPlacementSurvivesTheWire(t *testing.T) {
 		if !reflect.DeepEqual(out.Owner, owner) {
 			t.Fatalf("the wire changed the placement: %+v want %+v", out.Owner, owner)
 		}
+	}
+}
+
+// CDS-100 over the wire: a size the owner's style cannot take is refused as a
+// composition problem naming the caption, with the range that style admits and
+// the size asked for, so the editor can say what to correct.
+func TestAnOwnerSizeRefusalCarriesItsRangeOverTheWire(t *testing.T) {
+	err := toConnectError(&composition.Problem{ElementID: "narration-2", Reason: "caption_size", Min: 72, Max: 84, Actual: 64})
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatal(err)
+	}
+	detail, e := err.(*connect.Error).Details()[0].Value()
+	if e != nil {
+		t.Fatal(e)
+	}
+	got := detail.(*v1.AppErrorDetail)
+	want := map[string]string{"element_id": "narration-2", "line": "0", "reason": "caption_size", "min": "72", "max": "84", "actual": "64"}
+	if got.Reason != "CLIP_COMPOSITION_INVALID" || !reflect.DeepEqual(got.Params, want) {
+		t.Fatalf("%s %v", got.Reason, got.Params)
 	}
 }

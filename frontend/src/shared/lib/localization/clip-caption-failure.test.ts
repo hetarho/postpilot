@@ -45,3 +45,29 @@ describe('narration caption refusal', () => {
     expect(formatAppFailure(lined)).toBe('영상 구성의 15번째 줄(intro)을 확인해 주세요.')
   })
 })
+
+// CDS-100: a caption size its style cannot take names the caption and the range
+// that style admits, in either language, instead of a bare "check it".
+describe('caption size refusal', () => {
+  const failure = normalizeAppFailure({
+    reason: 'CLIP_COMPOSITION_INVALID',
+    params: {
+      element_id: 'narration-3',
+      line: '0',
+      reason: 'caption_size',
+      min: '72',
+      max: '84',
+      actual: '64',
+    },
+  })
+
+  it('says which caption and what size it may take', () => {
+    expect(failure.reason).toBe('CLIP_COMPOSITION_INVALID')
+    initializeI18n('ko')
+    expect(formatAppFailure(failure)).toBe(
+      '영상의 3번째 자막 크기를 72~84 사이로 맞춰 주세요(지금 64).',
+    )
+    initializeI18n('en')
+    expect(formatAppFailure(failure, 'en')).toBe('Caption 3 must be sized 72–84; it is 64.')
+  })
+})

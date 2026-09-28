@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -251,6 +252,34 @@ func (s *Store) DeleteTemplate(ctx context.Context, user, id string) (int, error
 // whole, nothing queries across projects, and the set is small and closed
 // (CDS-80). An empty array is a selection of none, which resolves to the
 // default style alone rather than to no captions at all.
+// captionSetRestyles is whether a new AI set changes how the saved plan draws
+// any caption, which is what moves its revision and leaves a render stale. Only
+// a caption naming no style, or one the product no longer carries, takes the
+// set's first entry (CaptionStyleOf); every other caption keeps its drawing, so
+// a render of it stays current (CLIP-191). A plan this build cannot read counts
+// as restyled, as every set change did before.
+func captionSetRestyles(p clip.Project, next []string) bool {
+	if p.EditPlan == "" || slices.Equal(p.CaptionStyles, next) {
+		return false
+	}
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil || plan.Portable == nil {
+		return true
+	}
+	before, after := clip.ResolvedCaptionStyles(p.CaptionStyles), clip.ResolvedCaptionStyles(next)
+	for _, text := range plan.Portable.Elements {
+		if text.Resolved.Element.Role != "caption" {
+			continue
+		}
+		was, _ := clip.CaptionStyleOf(text, before)
+		now, _ := clip.CaptionStyleOf(text, after)
+		if was != now {
+			return true
+		}
+	}
+	return false
+}
+
 func encodeCaptionStyles(styles []string) string {
 	if styles == nil {
 		styles = []string{}
@@ -472,7 +501,11 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 			}
 		}
 		if p.CaptionStyles != nil {
-			if err := affected(q.UpdateClipAllowedCaptionStyles(ctx, sqlc.UpdateClipAllowedCaptionStylesParams{AllowedCaptionStyles: encodeCaptionStyles(*p.CaptionStyles), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+			step := int64(0)
+			if captionSetRestyles(before, *p.CaptionStyles) {
+				step = 1
+			}
+			if err := affected(q.UpdateClipAllowedCaptionStyles(ctx, sqlc.UpdateClipAllowedCaptionStylesParams{AllowedCaptionStyles: encodeCaptionStyles(*p.CaptionStyles), RevisionStep: step, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.Project{}, err
 			}
 		}

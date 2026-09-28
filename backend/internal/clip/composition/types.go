@@ -18,7 +18,8 @@ type Problem struct {
 	Line      int
 	Reason    string
 	// The refused input's owner-visible label and counts. answer_limit carries
-	// Max, items_required carries Min, so a refusal can say what was asked for
+	// Max, items_required carries Min, caption_size carries the style's Min and
+	// Max beside the Actual size, so a refusal can say what was asked for
 	// and what was given rather than point at a line the owner never sees
 	// (CLIP-102).
 	Label            string
@@ -32,6 +33,11 @@ func (p *Problem) Error() string { return p.Reason }
 // same refusal differently (CLIP-102).
 func (p *Problem) FailureParams() map[string]string {
 	params := map[string]string{"element_id": p.ElementID, "line": strconv.Itoa(p.Line), "reason": p.Reason}
+	// An owner's caption size outside its style's role says the range that style
+	// admits and the size asked for, so the editor can say what to correct (CDS-100).
+	if p.Reason == "caption_size" {
+		params["min"], params["max"], params["actual"] = strconv.Itoa(p.Min), strconv.Itoa(p.Max), strconv.Itoa(p.Actual)
+	}
 	if p.Label != "" {
 		switch p.Reason {
 		case "answer_limit":

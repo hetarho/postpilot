@@ -377,6 +377,31 @@ choice would be expensive to undo are listed at the end.
 - **Slot notices appear in their block only.** They are left out of the correction's own notice
   list, where they used to show as a bare "문구 · …" line.
 
+## T454 — owner caption styles outside the AI set
+
+- **One rule decides the style a caption is drawn in, and the layout and the sequence-cost count
+  both use it.** The owner's choice comes first, then the style the plan names. A caption naming
+  no style (`auto`, from older plans) takes the AI set's first entry. The rule used to push any
+  named style outside the AI set back to that first entry; now only a style the product no
+  longer carries falls back, and it keeps the `composition_caption_style` notice.
+- **So changing the AI set no longer restyles captions that already name a style.** The plan
+  revision now moves only when the change actually redraws a caption, which today means an
+  `auto` caption whose first entry changed, so an unaffected render stays current. If you want
+  `auto` captions to stop following the set as well, resolve them to the default style instead.
+- **A plan kept from an earlier attempt is held to the AI set of the generation that uses it.**
+  A plan reused for render-only continuation skips the narration, so its caption choices
+  were never checked against a set changed since. Choices outside the set are now replaced
+  before layout, with the same notice the narration records.
+- **A size the caption's style cannot take is refused as `caption_size`.** The size is checked
+  against the style the caption is drawn in. Before, a caption with no owner style was checked
+  against the default style even when the AI had drawn it in another. The refusal names the
+  caption and carries the style's `min`/`max` and the `actual` size (for example: "영상의
+  3번째 자막 크기를 72~84 사이로 맞춰 주세요(지금 64)"). The frontend's
+  CLIP_COMPOSITION_INVALID contract now allows `min`. Before this, `items_required` with a
+  `min` fell back to an unknown failure.
+- **Words the owner's style cannot hold are refused with `copy_limit` on that caption.** No
+  shorter alternative stands in for them.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

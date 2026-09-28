@@ -592,20 +592,24 @@ func (q *Queries) UpdateClipAccent(ctx context.Context, arg UpdateClipAccentPara
 
 const updateClipAllowedCaptionStyles = `-- name: UpdateClipAllowedCaptionStyles :execrows
 UPDATE clip_projects SET allowed_caption_styles = ?1,
-    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND allowed_caption_styles != ?1 THEN 1 ELSE 0 END,
-    updated_at = ?2 WHERE id = ?3 AND user_id = ?4 AND finalized_at IS NULL
+    edit_plan_revision = edit_plan_revision + ?2,
+    updated_at = ?3 WHERE id = ?4 AND user_id = ?5 AND finalized_at IS NULL
 `
 
 type UpdateClipAllowedCaptionStylesParams struct {
 	AllowedCaptionStyles string
+	RevisionStep         int64
 	UpdatedAt            string
 	ID                   string
 	UserID               string
 }
 
+// The AI set limits what a writer may choose, not what a saved plan draws, so the
+// plan revision moves only when the caller found a caption it restyles (CLIP-191).
 func (q *Queries) UpdateClipAllowedCaptionStyles(ctx context.Context, arg UpdateClipAllowedCaptionStylesParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateClipAllowedCaptionStyles,
 		arg.AllowedCaptionStyles,
+		arg.RevisionStep,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

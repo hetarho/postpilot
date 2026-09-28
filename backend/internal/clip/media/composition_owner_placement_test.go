@@ -1,10 +1,12 @@
 package media
 
 import (
+	"errors"
 	"math"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -58,9 +60,10 @@ func TestOwnerSizeIsSetExactlyAsWritten(t *testing.T) {
 	}
 }
 
-// CLIP-142: the styles a caption may take are the project's own selection, and
-// an owner style outside it is an authoring error rather than a quiet swap.
-func TestOwnerStyleMustBeOneTheProjectAllows(t *testing.T) {
+// CLIP-142, CDS-66: the owner may give a caption any approved style, inside the
+// project's AI selection or not, and it renders in that style's own face; a
+// style the product does not carry is an authoring error rather than a swap.
+func TestAnOwnerStyleRendersWhetherOrNotTheSelectionOffersIt(t *testing.T) {
 	plan := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: "film"})
 	plan.CaptionStyles = []string{design.DefaultCaptionStyle, "film"}
 	layout := measuredDeclared(t, plan)
@@ -72,15 +75,26 @@ func TestOwnerStyleMustBeOneTheProjectAllows(t *testing.T) {
 	if face := layout.visuals[0].caption.Caption.Face; face != style.Face || face == design.DefaultCaption().Face {
 		t.Fatalf("the owner's style was set in %q, not its own %q", face, style.Face)
 	}
-	refused := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: "film"})
-	refused.CaptionStyles = []string{design.DefaultCaptionStyle}
+	outside := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: "film"})
+	outside.CaptionStyles = []string{design.DefaultCaptionStyle}
+	elsewhere := measuredDeclared(t, outside)
+	if got := elsewhere.elements()[0].Style; got != "film" || elsewhere.visuals[0].caption.Caption.Face != style.Face {
+		t.Fatalf("an owner style outside the selection was swapped: %q", got)
+	}
+	for _, n := range elsewhere.plan.Notices {
+		if n.Reason == "composition_caption_style" {
+			t.Fatal("an approved owner style was reported as a fallback:", n)
+		}
+	}
+	refused := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: "no-such-style"})
 	a, r := measured(t)
 	err := a.WithWorkspace(t.Context(), "owner-style", func(ws clip.MediaWorkspace) error {
 		_, err := r.layoutComposition(t.Context(), ws, refused)
 		return err
 	})
-	if err == nil {
-		t.Fatal("a style outside the allowed set rendered")
+	var problem *composition.Problem
+	if !errors.As(err, &problem) || problem.Reason != "invalid_design" {
+		t.Fatal("a style the product does not carry rendered:", err)
 	}
 }
 

@@ -364,6 +364,28 @@ func TestNarrationStyleFallbackNeedsNoCorrectionCall(t *testing.T) {
 	}
 }
 
+// CLIP-142, CDS-66: an owner's choice outside the AI set never widens it. Over a
+// plan whose caption the owner styled so, the writer is still offered the set
+// alone, and a caption naming the owner's style is held to the set.
+func TestAnOwnersStyleOutsideTheSetIsNotTheWritersToChoose(t *testing.T) {
+	in := narrationInput(t)
+	in.Design.CaptionStyles = []string{"keynote", "film"}
+	owned := clip.NarrationCaption("narration-9", "직접 고른 자막", 8000, 9000)
+	owned.Owner.Style = "neon"
+	in.Flow.Portable.Elements = append(in.Flow.Portable.Elements, owned)
+	caption := narrationCaption("첫 장면입니다", 1000, 5000)
+	caption["style"] = "neon"
+	plan, payload, _ := narrate(t, in, narrationResponse(caption))
+	offered, _ := json.Marshal(payload["allowed_caption_styles"])
+	if strings.Contains(string(offered), `"neon"`) || !strings.Contains(string(offered), `"keynote"`) {
+		t.Fatalf("the writer was offered the owner's style: %s", offered)
+	}
+	captions := narrationOf(plan)
+	if len(captions) == 0 || captions[0].Resolved.Element.Style != "keynote" {
+		t.Fatal("the writer's choice of the owner's style was not held to the set", captions)
+	}
+}
+
 // A caption is bounded by the style it names, not by the default: 이리데센트
 // holds 9 characters a line where 크게 강조 holds 11. The grounded shorter
 // sentence comes first, then no caption at all — never a refused clip.
