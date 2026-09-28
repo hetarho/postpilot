@@ -22,12 +22,12 @@
 | ARCH | 13 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 10 | 10 | - | 0 |
 | QUOTA | 23 | 23 | - | 0 |
-| POST | 22 | 22 | - | 0 |
+| POST | 23 | 23 | - | 0 |
 | VOICE | 4 | 4 | - | 1 |
 | GEN | 18 | 18 | - | 0 |
 | MODEL | 19 | 19 | - | 0 |
 | TMPL | 16 | 16 | - | 1 |
-| GUIDE | 10 | 10 | - | 0 |
+| GUIDE | 11 | 11 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 6 | 6 | - | 0 |
 | THEME | 19 | 19 | - | 0 |
@@ -36,7 +36,7 @@
 | CLIP | 51 | 51 | - | 2 |
 | CDS | 31 | 31 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 4 | 4 | - | 2 |
+| MEM | 5 | 5 | - | 2 |
 | QUAL | 6 | 6 | - | 0 |
 | GIFT | 2 | 2 | - | 0 |
 
@@ -61,13 +61,21 @@
 | T454 | Validate manual caption styles independently of the AI set | CLIP CDS ARCH | - | todo |
 | T455 | Select and style individual captions in the draft preview | CLIP CDS ARCH | T454 | todo |
 | T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | todo |
+| T457 | Open a storyline attachment large from its tile | POST | - | todo |
+| T458 | Compact memory rows with one edit form | MEM | - | todo |
+| T459 | Give a guideline an optional title | GUIDE ARCH | - | todo |
+| T460 | One closed-row guideline list with a 기본 지침 sheet | GUIDE | T459 | todo |
 
 ## next
-- next: implement-task T452 (draft region slots in the approved storyline calls), then T453–T456 in order, one commit per task
+- next: implement-task T452 (draft region slots in the approved storyline calls), then T453–T456 in order, one commit per task; independently implement-task T457–T460 (storyline large view, compact memory rows, guideline title, closed-row guideline list), one commit per task
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451), then review-code the clip wave
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260928 create-task POST r23 GUIDE r11 MEM r5 → T457–T460; T460 waits on T459
+- 260928 create-task POST GUIDE MEM start
+- 260928 update-ssot POST r23 GUIDE r11 MEM r5: storyline tiles open large; memory rows compact with one edit form; guidelines one closed-row list with optional titles and a 기본 지침 sheet (추가 / 적용 안함); no active task/worker affected
+- 260928 update-ssot POST MEM GUIDE start (enlarge storyline photos; compact memory cards with one edit mode; guideline title list, preset picker modal)
 - 260928 T451 done: region slots project into the plan on slot/preset/correction/generation writes; owner-fixed overflow refuses by slot; ambiguous calls in IMPLEMENTATION-DECISIONS.md
 - 260928 T451 claimed (p15); owner asked to run T451–T456 in order, one commit per task
 - 260928 T450 done: project region persistence/API and compatibility verified with all local gates; commit/push requested, stop here and leave T451–T456 unstarted
@@ -84,7 +92,3 @@
 - 260928 fix: a browser render's caption frame sheets are cut to what one JSON response carries (a neon or ember caption's run was refused as CLIP_PREVIEW_TOO_LARGE)
 - 260928 fix done: regenerated backend/Dockerfile's media asset digest for the T416 caption preset; pnpm test:dev passes all 5 tests
 - 260928 fix start: refresh the stale media asset digest after the T416 caption preset change
-- 260928 fix: a finalized clip with a storyline opens again (GetClipProject failed the whole read when the storyline's source listing hit the revoked originals)
-- 260928 fix: ①'s style and preset samples retry a CLIP_PREVIEW_BUSY refusal (fired together, the owner's preview lock refused the second, and the tiles stayed black)
-- 260928 T416 done: a caption character its face does not draw is set in Wanted Sans Variable inside its own style
-- 260928 finding (T416): backend/examples/overlays/shorts-editorial no longer loads (card-v1 views, no keynote/film/region/info bindings); only its caption template was brought to the runs contract

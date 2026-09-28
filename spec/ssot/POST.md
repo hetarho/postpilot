@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r22 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r23 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -132,11 +132,14 @@
 - POST-97 [o] the space's controls take the dock's shape (→POST-56): a heading row carrying 다시 만들기 and the write action — `이 스토리로 글 쓰기` while there is no draft, `이 스토리로 다시 쓰기` once there is — over one AI request field with its send control (→GEN-69); ②'s dock stays the post's revision composer and 확정하기, and neither reaches the other's target ← a storyline request and a revision request change different things
 - POST-98 [o] `이 스토리로 다시 쓰기` over a draft edited by hand since its last machine result (→POST-16) opens one confirmation saying those edits will be lost, while an untouched draft is rewritten at once; 다시 만들기 over a storyline edited by hand confirms the same way; ①'s actions replace the storyline without asking ← ① starts the post over, while ② refines it
 - POST-99 [o] once an attachment is added after the storyline was made, the space says attachments were added since and offers 다시 만들기, and writing from the storyline as it stands leaves them out (→GEN-70); a deleted attachment leaves its paragraph without a word (→POST-18)
+- POST-100 [o] pressing an attachment's tile in the storyline space — in a paragraph or under `빠진 사진` — opens it large over the page: a photo fitted to the screen, a video playing with its own controls, a close, and the previous and next attachment of the space one press away in its order (paragraph by paragraph, then `빠진 사진`) ← a thumbnail small enough to sit inside a paragraph cannot show what the photo holds, and placing it is the decision the space exists for
+  - the large view only shows: moving, taking out and putting back stay on the tile (→POST-96), and opening or closing it changes nothing
+
 ## flow
 - new post: `/posts/new` (voice picker seeded with the default) → type or pick photos → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(storyline job) draft holding a storyline, on ② →(machine result) review →(FinalizePost) finalized →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
-- storyline: ① 스토리라인 먼저 → storyline job → ② space open, no draft → edit text · move, take out or put back attachments · AI request · 다시 만들기(confirm over hand edits) → 이 스토리로 글 쓰기 → generation → review; ② 이 스토리로 다시 쓰기(confirm over a hand-edited draft) → review
+- storyline: ① 스토리라인 먼저 → storyline job → ② space open, no draft → edit text · move, take out or put back attachments · press a tile → large view(previous | next | close) · AI request · 다시 만들기(confirm over hand edits) → 이 스토리로 글 쓰기 → generation → review; ② 이 스토리로 다시 쓰기(confirm over a hand-edited draft) → review
 - list: `/posts` → first `POSTS_PAGE_SIZE` rows of the narrowed answer → end nears the viewport → next rows (… | failed → 다시 시도) · `q` or `status` changes → first rows of the new narrowing
 - delete: 글 삭제하기 → dialog → DeletePost(generation active → refuse | purge experiment content → row + cascades + objects → detach guideline candidates → detach memory links, each detach logged on failure) → end queues → `/posts`
 
