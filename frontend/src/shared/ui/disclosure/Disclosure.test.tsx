@@ -28,6 +28,18 @@ describe('Disclosure', () => {
     expect(screen.queryByRole('region')).not.toBeInTheDocument()
   })
 
+  it('reads as a list entry, not a section heading, at the row size', () => {
+    render(
+      <Disclosure title="재료에 있는 사실만" size="row" headingLevel={3}>
+        <p>본문</p>
+      </Disclosure>,
+    )
+    const button = screen.getByRole('button', { name: '재료에 있는 사실만' })
+    expect(button).toHaveClass('text-sm', 'font-medium', 'min-h-11')
+    expect(button).not.toHaveClass('text-lg')
+    expect(screen.getByRole('heading', { level: 3 })).toContainElement(button)
+  })
+
   it('starts open from defaultOpen and reports every toggle', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()

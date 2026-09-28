@@ -15,6 +15,7 @@ export function Disclosure({
   defaultOpen = false,
   onOpenChange,
   headingLevel = 2,
+  size = 'title',
   aside,
   lead,
   children,
@@ -25,6 +26,9 @@ export function Disclosure({
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
   headingLevel?: 2 | 3 | 4
+  /** `row` for one entry of a list that opens in place — body-sized, so a column of them reads
+   *  as a list rather than as a stack of section headings. */
+  size?: 'title' | 'row'
   /** Beside the heading's button, outside it — a count, a status, the space's own actions. */
   aside?: ReactNode
   /** Under the heading row and always shown, open or closed — a field that acts on the region. */
@@ -55,15 +59,18 @@ export function Disclosure({
             aria-controls={open ? regionId : undefined}
             onClick={toggle}
             className={typographyStyles({
-              variant: 'title',
-              className:
+              variant: size === 'row' ? 'body' : 'title',
+              className: clsx(
                 'hover:text-content-primary flex min-h-11 w-full items-center gap-2 text-left',
+                size === 'row' && 'text-content-primary font-medium',
+              ),
             })}
           >
             <ChevronDown
               aria-hidden="true"
               className={clsx(
-                'duration-fast ease-standard size-5 shrink-0 transition-transform',
+                'duration-fast ease-standard shrink-0 transition-transform',
+                size === 'row' ? 'size-4' : 'size-5',
                 !open && '-rotate-90',
               )}
             />

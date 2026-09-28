@@ -44,7 +44,8 @@ async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
 
 describe('/video-guidelines', () => {
   // GUIDE-44: the clip kind's own directory, in /guidelines' shape; reading it asks no model.
-  it('lists the clip 기본 지침 and the owner’s 영상 지침, never a post’s', async () => {
+  it('lists the clip 기본 지침 and the owner’s 영상 지침 in one list, never a post’s', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     renderVideoGuidelines(
       {
@@ -55,23 +56,26 @@ describe('/video-guidelines', () => {
     )
 
     expect(await screen.findByRole('heading', { level: 1, name: '영상 지침' })).toBeInTheDocument()
-    const defaults = await section('기본 지침')
-    expect(defaults.getByText('과장 금지')).toBeInTheDocument()
-    expect(defaults.queryByText('글 기본')).not.toBeInTheDocument()
-    const list = await section('저장된 영상 지침')
+    const list = await section('영상 지침 목록')
     const items = list.getAllByRole('listitem')
-    expect(items).toHaveLength(3)
-    expect(within(items[0]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
-    expect(within(items[0]).getByText('전역')).toBeInTheDocument()
-    expect(within(items[1]).getByText('가게 소개')).toBeInTheDocument()
-    expect(within(items[2]).getByText('적용 대상 없음')).toBeInTheDocument()
+    // The clip 기본 지침 in use first, then the owner's, as one list (GUIDE-44).
+    expect(items).toHaveLength(4)
+    expect(within(items[0]).getByText('과장 금지')).toBeInTheDocument()
+    expect(within(items[0]).getByText('추천')).toBeInTheDocument()
+    expect(list.queryByText('글 기본')).not.toBeInTheDocument()
+    expect(within(items[1]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
+    expect(within(items[1]).getByText('전역')).toBeInTheDocument()
+    expect(within(items[2]).getByText('영상 템플릿')).toBeInTheDocument()
+    expect(within(items[3]).getByText('적용 대상 없음')).toBeInTheDocument()
+    await user.click(within(items[2]).getByRole('button', { expanded: false }))
+    expect(within(items[2]).getByText('가게 소개')).toBeInTheDocument()
     expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument()
 
     const allowed = ['GetMe', 'GetMyPlan', 'ListGuidelines', 'ListGuidelineCandidates']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 
-  it('switches a clip 기본 지침 off for the clip kind', async () => {
+  it('takes a clip 기본 지침 out of use for the clip kind', async () => {
     const user = userEvent.setup()
     const defaultSwitches: NonNullable<FakeGuidelinesOptions['defaultSwitches']> = []
     renderVideoGuidelines({
@@ -79,7 +83,9 @@ describe('/video-guidelines', () => {
       defaultSwitches,
     })
 
-    await user.click(await screen.findByRole('switch', { name: /과장 금지/ }))
+    const list = await section('영상 지침 목록')
+    await user.click(list.getByRole('button', { name: /과장 금지/, expanded: false }))
+    await user.click(list.getByRole('button', { name: '과장 금지 적용 안함' }))
     await waitFor(() => expect(defaultSwitches).toHaveLength(1))
     expect(defaultSwitches[0]).toEqual({
       kind: ProtoGuidelineKind.CLIP,
@@ -110,8 +116,30 @@ describe('/video-guidelines', () => {
       templateIds: [],
       fields: [],
     })
-    const list = await section('저장된 영상 지침')
+    const list = await section('영상 지침 목록')
     await waitFor(() => expect(list.getByText('자막은 두 줄까지')).toBeInTheDocument())
+  })
+
+  it('offers the clip 기본 지침 in its own sheet from the dock', async () => {
+    const user = userEvent.setup()
+    const defaultSwitches: NonNullable<FakeGuidelinesOptions['defaultSwitches']> = []
+    renderVideoGuidelines({
+      defaults: [{ key: 'post-default', name: '글 기본', text: '글에만' }],
+      clipDefaults: [
+        { key: 'clip-default', name: '과장 금지', text: '자막을 과장하지 않기', enabled: false },
+      ],
+      defaultSwitches,
+    })
+
+    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
+    expect(sheet.queryByText('글 기본')).not.toBeInTheDocument()
+    await user.click(sheet.getByRole('button', { name: '과장 금지 추가' }))
+    await waitFor(() =>
+      expect(defaultSwitches).toEqual([
+        { kind: ProtoGuidelineKind.CLIP, key: 'clip-default', enabled: true },
+      ]),
+    )
   })
 
   it('creates a 영상 지침 scoped to a video template', async () => {
@@ -193,7 +221,7 @@ describe('the 영상 지침 후보 section', () => {
       scope: ProtoGuidelineScope.GLOBAL,
       fromCandidateId: 'clip-repeated',
     })
-    const saved = await section('저장된 영상 지침')
+    const saved = await section('영상 지침 목록')
     await waitFor(() => expect(saved.getByText('자막 더 짧게')).toBeInTheDocument())
     await waitFor(async () =>
       expect((await section('후보 지침')).getAllByRole('listitem')).toHaveLength(1),

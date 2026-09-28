@@ -45,34 +45,48 @@ async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
   return within(await screen.findByRole('dialog'))
 }
 
-/** One row of the list, by its text. Every row carries the same pencils, so a query has to be
- *  scoped to a row to mean anything. */
-async function row(text: string) {
-  const list = await section('저장된 지침')
+/** One row of the list, by what its closed line shows (GUIDE-20). Every row carries the same
+ *  controls, so a query has to be scoped to a row to mean anything. */
+async function row(label: string) {
+  const list = await section('지침 목록')
   const found = list
     .getAllByRole('listitem')
-    .find((item) => within(item).queryByText(text) !== null)
-  if (!found) throw new Error(`no row with text ${text}`)
+    .find((item) => within(item).queryAllByText(label).length > 0)
+  if (!found) throw new Error(`no row showing ${label}`)
   return within(found)
+}
+
+/** Rows start closed (GUIDE-47): every action on one starts by opening it. */
+async function openRow(user: ReturnType<typeof userEvent.setup>, label: string) {
+  const found = await row(label)
+  await user.click(found.getByRole('button', { expanded: false }))
+  return found
 }
 
 describe('the guideline list', () => {
   // A14/A15: the screen reads and edits authored text and nothing else.
   it('lists the guidelines in injection order with their scope and asks no model anything', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     renderGuidelines({}, calls)
 
     expect(await screen.findByRole('heading', { level: 1, name: '지침' })).toBeInTheDocument()
-    const list = await section('저장된 지침')
+    const list = await section('지침 목록')
     const items = list.getAllByRole('listitem')
     // The server's order IS the injection order: global group first, then scoped.
     expect(items).toHaveLength(3)
-    expect(within(items[0]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
-    expect(within(items[0]).getByText('전역')).toBeInTheDocument()
+    // GUIDE-20: closed, a row is one line — the text (no title here) and its scope's kind.
+    expect(within(items[0]).getByRole('button', { expanded: false })).toHaveTextContent(
+      '없는 사실을 쓰지 않기전역',
+    )
     expect(within(items[1]).getByText('CCTV를 언급하지 않기')).toBeInTheDocument()
-    expect(within(items[1]).getByText('무인가게 리뷰')).toBeInTheDocument()
-    // A12: an orphaned scope says so in words, not by colour alone.
+    expect(within(items[1]).getByText('템플릿')).toBeInTheDocument()
+    expect(within(items[1]).queryByText('무인가게 리뷰')).not.toBeInTheDocument()
+    // A12: an orphaned scope says so in words, not by colour alone, even closed.
     expect(within(items[2]).getByText('적용 대상 없음')).toBeInTheDocument()
+    // Open, the row names its templates in full.
+    await user.click(within(items[1]).getByRole('button', { expanded: false }))
+    expect(within(items[1]).getByText('무인가게 리뷰')).toBeInTheDocument()
 
     // A15: mounting the screen starts no job and calls no provider ([I5]).
     const allowed = [
@@ -90,13 +104,13 @@ describe('the guideline list', () => {
     const calls: string[] = []
     renderGuidelines({ guidelines: [] }, calls)
 
-    const empty = await section('아직 저장된 지침이 없어요')
+    const empty = await section('아직 적용 중인 지침이 없어요')
     expect(
       empty.getByText('무인 매장 글에서 직원·주인과의 상호작용이나 CCTV를 언급하지 않기'),
     ).toBeInTheDocument()
     // A row would carry a delete button; the example carries none.
     expect(empty.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: '저장된 지침' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '지침 목록' })).not.toBeInTheDocument()
     expect(calls.filter((call) => call === 'CreateGuideline')).toEqual([])
   })
 
@@ -142,7 +156,7 @@ describe('the guideline list', () => {
       templateIds: [],
       fields: [],
     })
-    const list = await section('저장된 지침')
+    const list = await section('지침 목록')
     await waitFor(() => expect(list.getByText('가격을 지어내지 않기')).toBeInTheDocument())
     // A saved rule closes the sheet: the page is the list, and the next rule is a new decision.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -219,7 +233,7 @@ describe('the guideline list', () => {
     const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
     renderGuidelines({ updates })
 
-    const scoped = await row('CCTV를 언급하지 않기')
+    const scoped = await openRow(user, 'CCTV를 언급하지 않기')
     await user.click(scoped.getByRole('button', { name: '지침 수정' }))
     const editor = scoped.getByLabelText('지침')
     await user.clear(editor)
@@ -244,8 +258,8 @@ describe('the guideline list', () => {
     const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
     renderGuidelines({ updates })
 
-    const global = await row('없는 사실을 쓰지 않기')
-    await user.click(global.getByRole('button', { name: '적용 범위 수정' }))
+    const global = await openRow(user, '없는 사실을 쓰지 않기')
+    await user.click(global.getByRole('button', { name: '지침 수정' }))
     await user.click(global.getByRole('tab', { name: '특정 템플릿' }))
     await user.click(global.getByLabelText('무인가게 리뷰'))
     await user.click(global.getByRole('button', { name: '저장' }))
@@ -268,9 +282,9 @@ describe('the guideline list', () => {
     const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
     renderGuidelines({ updates })
 
-    const orphan = await row('주인 이야기를 쓰지 않기')
-    expect(orphan.getByText('적용 대상 없음')).toBeInTheDocument()
-    await user.click(orphan.getByRole('button', { name: '적용 범위 수정' }))
+    const orphan = await openRow(user, '주인 이야기를 쓰지 않기')
+    expect(orphan.getAllByText('적용 대상 없음').length).toBeGreaterThan(0)
+    await user.click(orphan.getByRole('button', { name: '지침 수정' }))
     await user.click(orphan.getByRole('tab', { name: '전역' }))
     await user.click(orphan.getByRole('button', { name: '저장' }))
 
@@ -286,7 +300,7 @@ describe('the guideline list', () => {
     const user = userEvent.setup()
     renderGuidelines()
 
-    const scoped = await row('CCTV를 언급하지 않기')
+    const scoped = await openRow(user, 'CCTV를 언급하지 않기')
     await user.click(scoped.getByRole('button', { name: '지침 수정' }))
     const editor = scoped.getByLabelText('지침')
     await user.clear(editor)
@@ -302,7 +316,7 @@ describe('the guideline list', () => {
     const user = userEvent.setup()
     renderGuidelines()
 
-    const global = await row('없는 사실을 쓰지 않기')
+    const global = await openRow(user, '없는 사실을 쓰지 않기')
     await user.click(global.getByRole('button', { name: '지침 삭제' }))
 
     const dialog = within(await screen.findByRole('dialog'))
@@ -342,42 +356,56 @@ const DEFAULTS: FakeDefaultGuidelineRow[] = [
   },
 ]
 
-/** GUIDE-19, GUIDE-20, GUIDE-43: the 지침 screen lists the product's 기본 지침 first, each with 추천
- *  and a switch that saves on change. */
+/** GUIDE-20, GUIDE-43, GUIDE-47, GUIDE-48: the 기본 지침 in use are rows of the one list, first and
+ *  in registry order; one leaves it by 적용 안함 and comes back from the 기본 지침 sheet. */
 describe('the 기본 지침', () => {
-  it('lists the defaults first, in registry order, above the owner’s rows', async () => {
+  it('lists the ones in use first, in registry order, in the same list as the owner’s rows', async () => {
     renderGuidelines({ defaults: DEFAULTS })
 
-    const defaults = await section('기본 지침')
-    const items = defaults.getAllByRole('listitem')
-    expect(items).toHaveLength(3)
-    expect(within(items[0]).getByText('재료에 있는 사실만')).toBeInTheDocument()
-    expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
-    expect(within(items[2]).getByText('한국어 글에만 적용돼요')).toBeInTheDocument()
-    expect(defaults.getAllByText('추천')).toHaveLength(3)
-    expect(defaults.getByRole('switch', { name: '재료에 있는 사실만 사용' })).toBeChecked()
-    // Switched off is still listed.
-    expect(defaults.getByRole('switch', { name: '메모의 이름으로 사용' })).not.toBeChecked()
+    const list = await section('지침 목록')
+    const items = list.getAllByRole('listitem')
+    // naming is out of use, so it is not a row at all.
+    expect(items).toHaveLength(2 + GUIDELINES.length)
+    expect(within(items[0]).getByRole('button', { expanded: false })).toHaveTextContent(
+      '재료에 있는 사실만추천',
+    )
+    expect(within(items[1]).getByText('자연스러운 한국어 문체')).toBeInTheDocument()
+    expect(within(items[2]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
+    expect(list.queryByText('메모의 이름으로')).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    // Closed rows carry no text and no action.
+    expect(list.queryByText('메모와 사진 관찰에 없는 사실은 쓰지 마세요.')).not.toBeInTheDocument()
+    expect(list.queryByRole('button', { name: /적용 안함/ })).not.toBeInTheDocument()
+  })
 
-    // Above the owner's list, which is unchanged.
-    const saved = await section('저장된 지침')
+  it('opens rows independently, each showing what it says and its action', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ defaults: DEFAULTS })
+
+    const korean = await openRow(user, '자연스러운 한국어 문체')
+    expect(korean.getByText('상투적인 대조를 줄이세요.')).toBeInTheDocument()
+    expect(korean.getByText('한국어 글에만 적용돼요')).toBeInTheDocument()
     expect(
-      screen
-        .getByRole('region', { name: '기본 지침' })
-        .compareDocumentPosition(screen.getByRole('region', { name: '저장된 지침' })) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(saved.getAllByRole('listitem')).toHaveLength(GUIDELINES.length)
+      korean.getByRole('button', { name: '자연스러운 한국어 문체 적용 안함' }),
+    ).toBeInTheDocument()
+    const owner = await openRow(user, '없는 사실을 쓰지 않기')
+    expect(owner.getByRole('button', { name: '지침 수정' })).toBeInTheDocument()
+    expect(owner.getByRole('button', { name: '지침 삭제' })).toBeInTheDocument()
+    // Opening the second left the first open.
+    expect(korean.getByText('상투적인 대조를 줄이세요.')).toBeInTheDocument()
+
+    await user.click(korean.getByRole('button', { expanded: true }))
+    expect(korean.queryByText('상투적인 대조를 줄이세요.')).not.toBeInTheDocument()
   })
 
-  // The defaults are not the owner's rows: an account with none still reads the empty state.
-  it('keeps the owner list’s empty state beside the defaults', async () => {
+  // The empty state is for a list with nothing in it; 기본 지침 in use are in the list.
+  it('shows the list rather than the empty state while a 기본 지침 is in use', async () => {
     renderGuidelines({ defaults: DEFAULTS, guidelines: [] })
-    expect(await section('기본 지침')).toBeTruthy()
-    expect(await section('아직 저장된 지침이 없어요')).toBeTruthy()
+    expect(await section('지침 목록')).toBeTruthy()
+    expect(screen.queryByRole('region', { name: '아직 적용 중인 지침이 없어요' })).toBeNull()
   })
 
-  it('saves a switch on change, and the change survives a refetch', async () => {
+  it('takes one out of use at once with 적용 안함, and the change survives a refetch', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const defaultSwitches: FakeGuidelinesOptions['defaultSwitches'] = []
@@ -386,13 +414,17 @@ describe('the 기본 지침', () => {
       calls,
     )
 
-    const facts = await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })
-    await user.click(facts)
-    expect(facts).not.toBeChecked()
+    const facts = await openRow(user, '재료에 있는 사실만')
+    await user.click(facts.getByRole('button', { name: '재료에 있는 사실만 적용 안함' }))
+    // No dialog: putting it back is one press in the sheet.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() =>
       expect(defaultSwitches).toEqual([
         { kind: ProtoGuidelineKind.POST, key: 'facts', enabled: false },
       ]),
+    )
+    await waitFor(async () =>
+      expect((await section('지침 목록')).queryByText('재료에 있는 사실만')).toBeNull(),
     )
 
     const reads = calls.filter((call) => call === 'ListGuidelines').length
@@ -400,19 +432,119 @@ describe('the 기본 지침', () => {
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListGuidelines').length).toBeGreaterThan(reads),
     )
-    expect(await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })).not.toBeChecked()
+    expect((await section('지침 목록')).queryByText('재료에 있는 사실만')).toBeNull()
   })
 
-  it('puts a refused switch back and says why', async () => {
+  it('puts a refused 적용 안함 back and says why above the list', async () => {
     const user = userEvent.setup()
     renderGuidelines({ defaults: DEFAULTS, refuseDefaultSwitch: true })
 
-    const facts = await screen.findByRole('switch', { name: '재료에 있는 사실만 사용' })
-    await user.click(facts)
+    const facts = await openRow(user, '재료에 있는 사실만')
+    await user.click(facts.getByRole('button', { name: '재료에 있는 사실만 적용 안함' }))
     expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()
-    await waitFor(() =>
-      expect(screen.getByRole('switch', { name: '재료에 있는 사실만 사용' })).toBeChecked(),
+    await waitFor(async () =>
+      expect((await section('지침 목록')).getByText('재료에 있는 사실만')).toBeInTheDocument(),
     )
+  })
+
+  it('lists every one in the sheet and adds one there without closing it', async () => {
+    const user = userEvent.setup()
+    const defaultSwitches: FakeGuidelinesOptions['defaultSwitches'] = []
+    renderGuidelines({ defaults: DEFAULTS, defaultSwitches })
+
+    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
+    const options = sheet.getAllByRole('listitem')
+    expect(options.map((option) => within(option).getByRole('heading').textContent)).toEqual([
+      '재료에 있는 사실만',
+      '메모의 이름으로',
+      '자연스러운 한국어 문체',
+    ])
+    // Each with its text, so the choice is informed; the ones in use carry no control.
+    expect(sheet.getByText('메모에 적힌 이름으로 쓰세요.')).toBeInTheDocument()
+    expect(within(options[0]).getByText('적용 중')).toBeInTheDocument()
+    expect(within(options[0]).queryByRole('button')).toBeNull()
+
+    await user.click(sheet.getByRole('button', { name: '메모의 이름으로 추가' }))
+    await waitFor(() =>
+      expect(defaultSwitches).toEqual([
+        { kind: ProtoGuidelineKind.POST, key: 'naming', enabled: true },
+      ]),
+    )
+    expect(screen.getByRole('dialog', { name: '기본 지침' })).toBeInTheDocument()
+    await waitFor(() => expect(within(options[1]).getByText('적용 중')).toBeInTheDocument())
+
+    await user.click(sheet.getByRole('button', { name: '닫기' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    // In the list at its product position: after facts, before natural_korean.
+    const items = (await section('지침 목록')).getAllByRole('listitem')
+    expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
+  })
+
+  it('says why a refused 추가 failed under its row in the sheet', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ defaults: DEFAULTS, refuseDefaultSwitch: true })
+
+    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
+    await user.click(sheet.getByRole('button', { name: '메모의 이름으로 추가' }))
+    const naming = within(sheet.getAllByRole('listitem')[1])
+    expect(await naming.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()
+    expect(naming.getByRole('button', { name: '메모의 이름으로 추가' })).toBeInTheDocument()
+  })
+})
+
+/** GUIDE-46, GUIDE-47: a row shows its title closed, and 수정 edits title, text and scope in one
+ *  form whose one 저장 sends only what changed. */
+describe('the one-form edit', () => {
+  it('shows the title on the closed row and the text once opened', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({
+      guidelines: [
+        { id: 'guideline-titled', title: '가격 표기', text: '가격은 원 단위까지 그대로' },
+      ],
+    })
+    const titled = await row('가격 표기')
+    expect(titled.queryByText('가격은 원 단위까지 그대로')).toBeNull()
+    await user.click(titled.getByRole('button', { expanded: false }))
+    expect(titled.getByText('가격은 원 단위까지 그대로')).toBeInTheDocument()
+  })
+
+  it('renames a rule in one request that carries only the title, and a no-op save sends nothing', async () => {
+    const user = userEvent.setup()
+    const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
+    renderGuidelines({ updates })
+
+    const global = await openRow(user, '없는 사실을 쓰지 않기')
+    await user.click(global.getByRole('button', { name: '지침 수정' }))
+    await user.click(global.getByRole('button', { name: '저장' }))
+    expect(global.queryByLabelText('제목')).not.toBeInTheDocument()
+    expect(updates).toEqual([])
+
+    await user.click(global.getByRole('button', { name: '지침 수정' }))
+    await user.type(global.getByLabelText('제목'), '사실만')
+    await user.click(global.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]).toEqual({
+      id: 'guideline-global',
+      title: '사실만',
+      text: undefined,
+      scope: undefined,
+    })
+    expect(await row('사실만')).toBeTruthy()
+  })
+
+  it('blocks a title past its bound, and 취소 leaves the form', async () => {
+    const user = userEvent.setup()
+    renderGuidelines()
+
+    const global = await openRow(user, '없는 사실을 쓰지 않기')
+    await user.click(global.getByRole('button', { name: '지침 수정' }))
+    await user.type(global.getByLabelText('제목'), '가'.repeat(41))
+    expect(global.getByText('1자 초과')).toBeInTheDocument()
+    expect(global.getByRole('button', { name: '저장' })).toBeDisabled()
+    await user.click(global.getByRole('button', { name: '취소' }))
+    expect(global.queryByLabelText('제목')).not.toBeInTheDocument()
   })
 })
 
@@ -481,8 +613,8 @@ describe('the 분야 scope', () => {
     const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
     renderGuidelines({ updates })
 
-    const scoped = await row('CCTV를 언급하지 않기')
-    await user.click(scoped.getByRole('button', { name: '적용 범위 수정' }))
+    const scoped = await openRow(user, 'CCTV를 언급하지 않기')
+    await user.click(scoped.getByRole('button', { name: '지침 수정' }))
     await user.click(scoped.getByRole('tab', { name: '특정 분야' }))
     await user.click(scoped.getByLabelText('카페'))
     await user.click(scoped.getByRole('button', { name: '저장' }))
@@ -546,8 +678,8 @@ describe('the 분야 scope', () => {
       ],
     })
 
-    const fields = await row('메뉴 가격을 지어내지 않기')
-    await user.click(fields.getByRole('button', { name: '적용 범위 수정' }))
+    const fields = await openRow(user, '메뉴 가격을 지어내지 않기')
+    await user.click(fields.getByRole('button', { name: '지침 수정' }))
     expect(fields.getByRole('tab', { name: '특정 분야' })).toHaveAttribute('aria-selected', 'true')
     expect(fields.getByLabelText('카페')).toBeChecked()
     expect(fields.getByLabelText('맛집')).not.toBeChecked()
@@ -564,6 +696,7 @@ describe('the 분야 scope', () => {
   })
 
   it('badges a 분야 guideline with one chip per 분야, in catalogue order', async () => {
+    const user = userEvent.setup()
     renderGuidelines({
       guidelines: [
         {
@@ -575,6 +708,9 @@ describe('the 분야 scope', () => {
     })
 
     const fields = await row('메뉴 가격을 지어내지 않기')
+    // Closed, the row says only that it is scoped to 분야; open, it names them.
+    expect(fields.getByText('분야')).toBeInTheDocument()
+    await user.click(fields.getByRole('button', { expanded: false }))
     const chips = fields.getAllByText(/^(맛집|카페)$/)
     expect(chips.map((chip) => chip.textContent)).toEqual(['맛집', '카페'])
     expect(fields.queryByText('전역')).toBeNull()
@@ -591,10 +727,10 @@ describe('the 분야 scope', () => {
       ],
     })
 
-    const list = await section('저장된 지침')
+    const list = await section('지침 목록')
     await waitFor(() => expect(list.getAllByRole('listitem')).toHaveLength(4))
     expect(
-      screen.getByText('지침은 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.'),
+      screen.getByText('지침은 기본 지침, 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/특정 템플릿이나 분야에만 적용되게 좁힐 수도 있어요/),
@@ -667,7 +803,7 @@ describe('the guideline candidate section', () => {
 
     const details = await disclosure()
     expect(details).not.toHaveAttribute('open')
-    const saved = await screen.findByRole('region', { name: '저장된 지침' })
+    const saved = await screen.findByRole('region', { name: '지침 목록' })
     // Below the list, not above it: DOCUMENT_POSITION_FOLLOWING.
     expect(saved.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -700,7 +836,7 @@ describe('the guideline candidate section', () => {
     expect(
       await screen.findByText('3개를 지침으로 저장했어요. 0개는 그대로 남았어요.'),
     ).toBeInTheDocument()
-    const list = await section('저장된 지침')
+    const list = await section('지침 목록')
     await waitFor(() => expect(list.getByText('여기 너무 광고 같아')).toBeInTheDocument())
   })
 
@@ -832,9 +968,10 @@ describe('the guideline candidate section', () => {
     await waitFor(async () =>
       expect((await section('후보 지침')).getAllByRole('listitem')).toHaveLength(2),
     )
-    const saved = await section('저장된 지침')
+    const saved = await section('지침 목록')
     expect(saved.getAllByRole('listitem')).toHaveLength(4)
-    expect(saved.getByText('여기 너무 광고 같아')).toBeInTheDocument()
+    // The approval named it, so its closed row shows the title (GUIDE-46).
+    expect(saved.getByText('광고 같은 문장')).toBeInTheDocument()
   })
 
   // A5 with a narrowed scope, and A7's edit path: an edited approval carries the candidate id,
@@ -1001,7 +1138,7 @@ describe('the guideline candidate section', () => {
   // screen, not its subject, so their failure adds no second error region.
   it('renders no section when the candidate list cannot be read', async () => {
     renderGuidelines({ candidateListFails: true })
-    expect(await screen.findByRole('region', { name: '저장된 지침' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '지침 목록' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '후보 지침' })).not.toBeInTheDocument()
   })
 

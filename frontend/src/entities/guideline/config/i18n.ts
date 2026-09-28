@@ -25,6 +25,9 @@ export const i18n = {
       videoTemplatesEmpty: '먼저 영상 템플릿을 하나 만들어 주세요.',
       clipOrphanedHelp:
         '지정했던 영상 템플릿이 삭제돼서 지금은 어떤 영상에도 적용되지 않아요. 범위를 다시 고르거나 삭제해 주세요.',
+      templatesShort: '템플릿',
+      fieldsShort: '분야',
+      videoTemplatesShort: '영상 템플릿',
     },
     create: {
       open: '새 지침',
@@ -43,7 +46,13 @@ export const i18n = {
       badge: '추천',
       koreanOnly: '한국어 글에만 적용돼요',
       memoriesOnly: '기억 사용을 켠 글에만 적용돼요',
-      use: '{{name}} 사용',
+      open: '기본 지침',
+      sheetTitle: '기본 지침',
+      add: '추가',
+      addNamed: '{{name}} 추가',
+      inUse: '적용 중',
+      stop: '적용 안함',
+      stopNamed: '{{name}} 적용 안함',
     },
   },
   en: {
@@ -68,6 +77,9 @@ export const i18n = {
       videoTemplatesEmpty: 'Create a video template first.',
       clipOrphanedHelp:
         'Every video template this was scoped to has been deleted, so it currently reaches no video. Pick a scope again, or delete it.',
+      templatesShort: 'Templates',
+      fieldsShort: 'Categories',
+      videoTemplatesShort: 'Video templates',
     },
     create: {
       open: 'New guideline',
@@ -86,7 +98,13 @@ export const i18n = {
       badge: 'Recommended',
       koreanOnly: 'Applies to Korean posts only',
       memoriesOnly: 'Applies only to posts that use memories',
-      use: 'Use {{name}}',
+      open: 'Default guidelines',
+      sheetTitle: 'Default guidelines',
+      add: 'Add',
+      addNamed: 'Add {{name}}',
+      inUse: 'In use',
+      stop: "Don't apply",
+      stopNamed: "Don't apply {{name}}",
     },
   },
 } as const satisfies I18nFragment

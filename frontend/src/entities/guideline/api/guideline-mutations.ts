@@ -91,9 +91,6 @@ export function useUpdateGuidelineCall(
         ...(patch.text !== undefined && { text: patch.text.trim() }),
         ...(patch.scope !== undefined && { scope: toScopePatch(patch.scope) }),
       }),
-    saveText: (text: string) => mutation.mutateAsync({ id: guidelineId, text: text.trim() }),
-    saveScope: (scope: GuidelineScope) =>
-      mutation.mutateAsync({ id: guidelineId, scope: toScopePatch(scope) }),
   }
 }
 

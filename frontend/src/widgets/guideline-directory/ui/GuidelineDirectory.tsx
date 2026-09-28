@@ -1,12 +1,14 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { Pencil } from 'lucide-react'
 import {
-  DefaultGuidelineRow,
+  DefaultGuidelineDetail,
+  GuidelineScopeBadge,
+  GuidelineScopeBadges,
   useGuidelineCandidates,
   useGuidelines,
-  useSetDefaultGuidelineEnabled,
   useUpdateGuidelineCall,
   type BulkReviewOutcome,
   type DefaultGuideline,
@@ -17,16 +19,21 @@ import {
 import { useSession } from '@/entities/session'
 import { CreateGuidelineSheet } from '@/features/create-guideline'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
-import { EditableGuidelineScope, EditableGuidelineText } from '@/features/edit-guideline'
+import { GuidelineEditForm } from '@/features/edit-guideline'
 import {
   ApproveGuidelineCandidateButton,
   BulkGuidelineCandidateActions,
   DismissGuidelineCandidateButton,
 } from '@/features/review-guideline-candidate'
 import {
+  DefaultGuidelineSheet,
+  StopDefaultGuidelineButton,
+} from '@/features/toggle-default-guideline'
+import {
   ActionBar,
   Badge,
   Button,
+  Disclosure,
   FieldMessage,
   Notice,
   Typography,
@@ -38,9 +45,13 @@ import {
  *  지침 on /video-guidelines (GUIDE-44). One component with a kind rather than two pages, so the
  *  two screens stay one shape. Composition only — every action is its own feature.
  *
+ *  ONE list in the server's order, because that order IS the injection order the writer will see
+ *  (GUIDE-14): the 기본 지침 in use first, then the owner's own. Every row is closed to one line —
+ *  a name or a title and one badge — because the screen is scanned for which rules apply, and a
+ *  rule's text is read only once it is the one in question (GUIDE-47).
+ *
  *  Nothing on this screen calls a model or enqueues a job: a guideline is authored text, and
- *  reading, editing or deleting one is a plain CRUD round trip ([I5]). The list is rendered in the
- *  server's order because that order IS the injection order the writer will see. */
+ *  reading, editing or deleting one is a plain CRUD round trip ([I5]). */
 export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
@@ -50,6 +61,10 @@ export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
     kind,
   )
   const page = kind === 'clip' ? 'clipPage' : 'page'
+  const inUse = defaults.filter((guideline) => guideline.enabled)
+  // A refused 적용 안함 is said here, not on its row: the write is optimistic, so the row it was
+  // pressed on has already left the list when the refusal arrives (GUIDE-43).
+  const [stopRefusal, setStopRefusal] = useState('')
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -79,38 +94,26 @@ export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
 
       {!isError && !isPending && (
         <>
-          {/* The product's 기본 지침 come first, in registry order, because the writer is given
-              them first (GUIDE-14, GUIDE-19). They are not the owner's rows, so the owner list
-              below keeps its own empty state. */}
-          {defaults.length > 0 && (
-            <section aria-labelledby="default-guidelines-heading" className="mt-8">
-              <Typography variant="title" id="default-guidelines-heading">
-                {t(`${page}.defaults`, { ns: 'guidelines' })}
+          <div role="status" className="mt-6 empty:hidden">
+            {stopRefusal && <FieldMessage>{stopRefusal}</FieldMessage>}
+          </div>
+          {inUse.length === 0 && guidelines.length === 0 ? (
+            <EmptyState kind={kind} />
+          ) : (
+            <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
+              <Typography variant="body" as="p" className="text-content-secondary">
+                {t(`${page}.order`, { ns: 'guidelines' })}
               </Typography>
               <ul className="divide-divider mt-3 divide-y">
-                {defaults.map((guideline) => (
+                {inUse.map((guideline) => (
                   <DefaultGuidelineItem
                     key={guideline.key}
                     ownerId={ownerId}
                     kind={kind}
                     guideline={guideline}
+                    onRefused={setStopRefusal}
                   />
                 ))}
-              </ul>
-            </section>
-          )}
-
-          {guidelines.length === 0 ? (
-            <EmptyState kind={kind} />
-          ) : (
-            <section aria-labelledby="guidelines-heading" className="mt-8">
-              <Typography variant="title" id="guidelines-heading">
-                {t(`${page}.saved`, { ns: 'guidelines' })}
-              </Typography>
-              <Typography variant="body" as="p" className="text-content-secondary mt-1">
-                {t(`${page}.order`, { ns: 'guidelines' })}
-              </Typography>
-              <ul className="divide-divider mt-3 divide-y">
                 {guidelines.map((guideline) => (
                   <GuidelineRow key={guideline.id} ownerId={ownerId} guideline={guideline} />
                 ))}
@@ -120,19 +123,150 @@ export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
 
           <CandidateSection ownerId={ownerId} kind={kind} />
 
-          {/* The page is the list; authoring happens behind this one trigger, the shape every
+          {/* The page is the list; authoring happens behind these triggers, the shape every
               sibling directory uses (GUIDE-20, THEME-24). `mt-auto` puts the bar below a short
               list and `sticky` keeps it in reach once the list is long enough to scroll. */}
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'guidelines' })}
-            className="mt-auto"
+            className="mt-auto flex gap-2"
           >
+            <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
             <CreateGuidelineSheet ownerId={ownerId} kind={kind} />
           </ActionBar>
         </>
       )}
     </main>
+  )
+}
+
+/** A closed row's one line: the name or title cut to the row, then its badge. The whole line is
+ *  the disclosure's button, so its name is what a screen reader lists. */
+function RowTitle({ label, badge }: { label: string; badge: ReactNode }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="min-w-0 truncate">{label}</span>
+      <span className="shrink-0">{badge}</span>
+    </span>
+  )
+}
+
+/** One 기본 지침 in use (GUIDE-47): closed, its name and 추천; open, its text, its target note and
+ *  `적용 안함`. */
+function DefaultGuidelineItem({
+  ownerId,
+  kind,
+  guideline,
+  onRefused,
+}: {
+  ownerId: string
+  kind: GuidelineKind
+  guideline: DefaultGuideline
+  onRefused: (message: string) => void
+}) {
+  const { t } = useTranslation('guidelines')
+  return (
+    <li>
+      <Disclosure
+        size="row"
+        headingLevel={3}
+        title={
+          <RowTitle
+            label={guideline.name}
+            badge={<Badge tone="accent">{t('defaults.badge')}</Badge>}
+          />
+        }
+      >
+        <div className="pb-3 pl-6">
+          <DefaultGuidelineDetail
+            guideline={guideline}
+            action={
+              <StopDefaultGuidelineButton
+                ownerId={ownerId}
+                kind={kind}
+                guideline={guideline}
+                onRefused={onRefused}
+              />
+            }
+          />
+        </div>
+      </Disclosure>
+    </li>
+  )
+}
+
+/** One of the owner's guidelines (GUIDE-47): closed, its title — or its text when it has none —
+ *  and its scope's kind; open, the text, the scope in full, and 수정 · 삭제. 수정 turns the open
+ *  row into one form for the title, the text and the scope. */
+function GuidelineRow({ ownerId, guideline }: { ownerId: string; guideline: Guideline }) {
+  const { t } = useTranslation(['guidelines', 'common'])
+  const update = useUpdateGuidelineCall(ownerId, guideline.id, guideline.kind)
+  const [editing, setEditing] = useState(false)
+  return (
+    <li>
+      <Disclosure
+        size="row"
+        headingLevel={3}
+        // Closing a row leaves its form: the next opening reads the saved rule first.
+        onOpenChange={(open) => {
+          if (!open) setEditing(false)
+        }}
+        title={
+          <RowTitle
+            label={guideline.title || guideline.text}
+            badge={<GuidelineScopeBadge guideline={guideline} />}
+          />
+        }
+      >
+        <div className="pb-3 pl-6">
+          {editing ? (
+            <GuidelineEditForm
+              ownerId={ownerId}
+              guideline={guideline}
+              save={update.save}
+              errorMessage={update.errorMessage}
+              pending={update.isPending}
+              onDone={() => setEditing(false)}
+            />
+          ) : (
+            <>
+              <div className="flex flex-wrap items-start gap-1">
+                <Typography
+                  variant="body"
+                  className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
+                >
+                  {guideline.text}
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('action.editNamed', {
+                    ns: 'common',
+                    name: t('edit.text', { ns: 'guidelines' }),
+                  })}
+                  onClick={() => setEditing(true)}
+                  className="shrink-0"
+                >
+                  <Pencil className="size-4" aria-hidden />
+                </Button>
+                <DeleteGuidelineButton
+                  ownerId={ownerId}
+                  kind={guideline.kind}
+                  guidelineId={guideline.id}
+                />
+              </div>
+              {/* 전역 is already the closed line's whole story; a narrower scope names its members
+                  here, and a scope that reaches nothing says what to do about it. */}
+              {guideline.scope !== 'global' && (
+                <div className="mt-1">
+                  <GuidelineScopeBadges guideline={guideline} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Disclosure>
+    </li>
   )
 }
 
@@ -359,58 +493,6 @@ function EmptyState({ kind }: { kind: GuidelineKind }) {
         {t(`${page}.example`)}
       </Typography>
     </section>
-  )
-}
-
-/** One 기본 지침 with its switch. One mutation per row, so a refusal is said under the row it was
- *  refused for (GUIDE-43). */
-function DefaultGuidelineItem({
-  ownerId,
-  kind,
-  guideline,
-}: {
-  ownerId: string
-  kind: GuidelineKind
-  guideline: DefaultGuideline
-}) {
-  const toggle = useSetDefaultGuidelineEnabled(ownerId, kind)
-  return (
-    <DefaultGuidelineRow
-      guideline={guideline}
-      // The refusal is shown under the row from the mutation's own error; the rejected promise
-      // has nothing more to say.
-      onToggle={(enabled) => void toggle.setEnabled(guideline.key, enabled).catch(() => {})}
-      pending={toggle.isPending}
-      errorMessage={toggle.errorMessage}
-    />
-  )
-}
-
-/** One saved guideline: its text and its scope, each read-first and each saving on its own so the
- *  two edited from two places cannot overwrite each other. One mutation hook serves both — they
- *  never run at the same time, and sharing it keeps one refusal message under one field. */
-function GuidelineRow({ ownerId, guideline }: { ownerId: string; guideline: Guideline }) {
-  const update = useUpdateGuidelineCall(ownerId, guideline.id, guideline.kind)
-  return (
-    <li className="py-4">
-      <EditableGuidelineText
-        value={guideline.text}
-        save={update.saveText}
-        errorMessage={update.errorMessage}
-        pending={update.isPending}
-      />
-      <EditableGuidelineScope
-        ownerId={ownerId}
-        guideline={guideline}
-        save={update.saveScope}
-        errorMessage={update.errorMessage}
-        pending={update.isPending}
-        className="mt-3"
-      />
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <DeleteGuidelineButton ownerId={ownerId} kind={guideline.kind} guidelineId={guideline.id} />
-      </div>
-    </li>
   )
 }
 

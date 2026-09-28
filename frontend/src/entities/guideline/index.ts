@@ -49,5 +49,5 @@ export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-err
 export { GuidelineScopeField } from './ui/GuidelineScopeField'
 export { GuidelineTitleField } from './ui/GuidelineTitleField'
 export { GuidelineFieldPicker } from './ui/GuidelineFieldPicker'
-export { DefaultGuidelineRow } from './ui/DefaultGuidelineRow'
-export type { DefaultGuidelineRowProps } from './ui/DefaultGuidelineRow'
+export { DefaultGuidelineDetail } from './ui/DefaultGuidelineDetail'
+export { GuidelineScopeBadge, GuidelineScopeBadges } from './ui/GuidelineScopeBadges'
