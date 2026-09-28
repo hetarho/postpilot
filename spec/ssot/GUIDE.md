@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r9 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r10 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the direction layer: it says what kind of writing is wanted — what a post or a clip states and leaves out, the order it tells things in and how its sentences are written beyond their register — beside the voice (how sentences sound, VOICE), the template (the form, TMPL) and the system prompt, which holds the input and output format alone (→GEN-14); a guideline outranks the template on content while leaving register to the voice ← a rule about what may be written, fixed in the system prompt, would forbid every kind of writing that needs its opposite
@@ -85,7 +85,8 @@
   | 기본 지침 | rule |
   |---|---|
   | 재료에 있는 사실만 | →GEN-16 |
-  | 감상은 내가 쓴 것만 | an impression, a taste or a verdict only as the owner gave it in the memo, a data field or the storyline (→GEN-16) |
+  | 감상은 내가 쓴 것만 | →GEN-16 |
+  | 기억을 통한 감상 추가, only in a prompt carrying `[기억]` | →GEN-73 |
   | 메모의 이름으로 | →GEN-44 |
   | 일어난 순서대로 | told in the order it happened, inside each template place when the post has a template |
   | 첫머리에 이유와 기대 | opening with why the owner went or what they expected, when the memo says so |
@@ -127,4 +128,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r10 260928 GUIDE-41✎ +기억을 통한 감상 추가 (→GEN-73) after 감상은 내가 쓴 것만, whose gist→→GEN-16

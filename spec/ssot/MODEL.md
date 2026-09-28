@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r18 | One vendor-neutral LLM port behind which a single OpenRouter connection serves an operator-curated, purpose-registered model catalog; per-account per-stage selections the app never fills in; blind one-stage A/B experiments whose verdicts carry badges and feed windowed private and server-wide Elo leaderboards.
+> r19 | One vendor-neutral LLM port behind which a single OpenRouter connection serves an operator-curated, purpose-registered model catalog; per-account per-stage selections the app never fills in; blind one-stage A/B experiments whose verdicts carry badges and feed windowed private and server-wide Elo leaderboards.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; the model is an input to every call (`Registry.Complete(ctx, ref, req)`), the port reads no default, and the observe, write and analyze stages each carry their own ModelRef (I3, →ARCH-9)
@@ -57,7 +57,8 @@
 - MODEL-24 [o] `GetSelections` reports a saved ref that is no longer registered to the stage's purpose as `missing` and clears the row in the same call, conditionally on the row still holding that ref so a choice made in between survives; the client shows the old entry greyed with 등록된 모델 목록에서 사라졌어요 once and the user chooses again; a ref whose provider lost its key is greyed with the key reason and `selected = null`; while the catalog is loading or failed to load nothing is judged; a model the caller cannot afford is never `missing` and its row is never touched (→QUOTA-20)
 - MODEL-25 [o] `SaveSelection` accepts only a known stage and a model registered to that stage's purpose whose provider is not disabled (`InvalidArgument` / `NotFound` / `FailedPrecondition`) — observe's vision requirement is subsumed by the registration gate — and consults no tier
   - a pair must contain two distinct refs registered to the purpose
-  - `ApplyRecommendationSet` validates the complete three-stage nine-slot set before one transaction, refuses naming every offending ref grouped by cause (unregistered · disabled · not registered to its stage's purpose) ← a set is applied whole and discovering its problems one attempt at a time is nine round trips, and is never applied on mount, login or account creation
+  - `ApplyRecommendationSet` validates the complete three-stage nine-slot set before one transaction, refuses naming every offending ref grouped by cause (unregistered · disabled · not registered to its stage's purpose) ← a set is applied whole and discovering its problems one attempt at a time is nine round trips
+  - a recommendation set is applied only by the owner's explicit apply, never on mount, login or account creation
 - MODEL-26 [o] recommendation-set refs are validated at apply time against the catalog as it then is; boot keeps shape validation only (three distinct stages, complete refs, differing candidates) ← the catalog changes while the process runs; the shipped opt-in `balanced-2026-08` set pins six model ids — Gemini vs Qwen for observation, GPT vs DeepSeek for analysis, Claude vs Grok for writing — and any tier may apply it; removed models stay readable in experiment snapshots but cannot be newly selected; a CI test asserts every shipped ref names a model the seed migration inserts
 - MODEL-27 [o] what crosses to the browser: ids, labels, capability flags, the registration's level (→MODEL-57) and display metadata (plus public descriptions and prices on the operator surface); no key, SDK payload or base URL — the proto has no field for them
 - MODEL-28 [o] `/admin` is four routed tabs — 계정 관리 (the user-plan table, QUOTA), 모델 관리, 편수 기준 조합 (estimator-combo assignment, →QUOTA-25 →QUOTA-39) and 이용권 (the voucher list, GIFT)
@@ -182,4 +183,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
--
+- r19 260928 MODEL-25✎ never applied on mount, login or account creation, read inside the ← reason→its own rule: applied only by an explicit apply

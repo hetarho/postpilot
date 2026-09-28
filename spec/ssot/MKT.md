@@ -1,5 +1,5 @@
 # MKT the public /about page
-> r7 | The product's one public explanation surface: a localized, themed, read-only `/about` route reached from the login page, with Get started as its only CTA, describing only shipped behaviour and collecting nothing.
+> r8 | The product's one public explanation surface: a localized, themed, read-only `/about` route reached from the login page, with Get started as its only CTA, describing only shipped behaviour and collecting nothing.
 
 ## decisions
 - MKT-1 [o] `/about` is a direct child of the root route beside `/login` and deliberately not a child of the authenticated pathless layout ← being public is structural, not a check someone has to remember; it has no `beforeLoad`, loader, session branch or query, and mounting it issues no Connect call at all — not even GetMe — because the page exists for a visitor with no account; it is refreshable and deep-linkable through the Cloudflare `single-page-application` fallback with no SSR, prerender, marketing deployment or metadata worker
@@ -10,7 +10,7 @@
   - the monthly credit grant and the intended monthly price of `free`, `basic`, `pro` and `max` as QUOTA-7 lists them, model access stated once as the same for every tier, and what a plan decides stated as that monthly grant alone — never as a number of jobs per day, a daily or monthly spend allowance, or a range of selectable models, none of which the product has (→QUOTA-2, →QUOTA-19)
   - it is presented as the same promotional plan cards `/plans` shows (→QUOTA-28, →THEME-37) — the compact phone summaries from `widgets/plan-ladder` on their `PromoStage`, with price beside name, monthly grant and inline bonus, `pro` marked recommended, no action on any card — fed from a static code-owned ladder table in `pages/about` (tier, monthly grant, whole-dollar price, the recommended flag) with the tier names and figure formats from the `plans` namespace, not a GetMyPlan read ← a visitor with no account has no plan to read
   - the values are duplicated in the page test so a drift fails a test rather than shipping, and changing the ladder means changing this table in the same change
-  - `master` appears only as prose describing the operator tier (unlimited, owns administration) and is never presented as an obtainable tier or a fourth row
+  - `master` appears only as prose describing the operator tier (unlimited, owns administration) and is never presented as an obtainable tier or as a row of the ladder
 - MKT-6 [o] no collection, no selling, no tracking:
   - no signup, invitation, waitlist, contact or sales FORM on this page, no newsletter, comment field or CMS — it contains no `<form>` and no input of any kind, so the way in is always a link to a page that owns it
   - plans are presented, never sold — no price tag beyond the shipped figures and no purchase, upgrade or checkout affordance
@@ -52,4 +52,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
--
+- r8 260928 MKT-5✎ master never an obtainable tier or a fourth row→never an obtainable tier or a row of the ladder, however many rows it has

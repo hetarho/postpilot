@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r49 | Account-owned footage becomes a downloadable, reviewable clip through bounded full-timeline scene observation, a storyline — set inside the flow call, or made first for the owner to change in ② — a footage flow and a narration written along it under the account's 영상 지침, deterministic source transforms and owner-placed captions in a correction step that reviews the plan before the owner renders it in the browser or on the server, with the video template an optional ordered outline of the clip's form rather than a precondition.
+> r50 | Account-owned footage becomes a downloadable, reviewable clip through bounded full-timeline scene observation, a storyline — set inside the flow call, or made first for the owner to change in ② — a footage flow and a narration written along it under the account's 영상 지침, deterministic source transforms and owner-placed captions in a correction step that reviews the plan before the owner renders it in the browser or on the server, with the video template an optional ordered outline of the clip's form rather than a precondition.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, owner instruction, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -52,7 +52,7 @@
 - CLIP-39 [o] ①'s settings and ②'s edit draft both autosave on a pause as a draft's title and memo do (→POST-4): neither step carries a 저장 button, no dirty gate stands on ①'s actions, 렌더하기, a storyline action or a revision request, there is no leave-confirmation dialog, every committing action flushes the queue before it starts, and a draft the validation refuses is held unsaved while the surface names the cut or caption to correct (→CLIP-67 →CLIP-109); `/clips/new` keeps exactly one committing action, 클립 만들기, in its dock ← the ratio it carries can never be changed again (CLIP-9), so the project may not be minted by an incidental first keystroke
 - CLIP-40 [o] each editable step has one ActionBar:
   - ① `스토리라인 먼저` and `바로 만들기`, split as ①'s post dock is (→POST-53), with model refusals and the approved ceiling
-  - ② the post editor's dock (→POST-45): the revision composer's heading row names the field and carries the step's actions at its right — 렌더하기, the step's primary action until the project has a render, then secondary beside primary 확정하기, which stands only once a render exists — and under it one field and one send control
+  - ② the post editor's dock (→POST-56): the revision composer's heading row names the field and carries the step's actions at its right — 렌더하기, the step's primary action until the project has a render, then secondary beside primary 확정하기, which stands only once a render exists — and under it one field and one send control
   - 렌더하기 opens the choice of kind, the last successful kind first (the browser on a project with none), a browser the device cannot render on kept as a refused option with its reason, and reads 다시 렌더 once a render of the current plan exists (→CLIP-153 →CLIP-155)
   - sending opens the target choice with the credit approval over the composer
   - ③ offers result download only
@@ -264,4 +264,5 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r50 260928 CLIP-40✎ ②'s dock modeled on →POST-45→→POST-56
 - r44 260924 CLIP-163+ open CPU/GPU output acceptance

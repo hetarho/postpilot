@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r15 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one or several side by side), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder or by an outside AI handed the format guide, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
+> r16 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one or several side by side), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder or by an outside AI handed the format guide, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines exactly one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -10,6 +10,7 @@
   - `name` trimmed, non-empty, ≤ `TEMPLATE_NAME_MAX_CHARS` (40), unique among the account's templates after trim (`AlreadyExists`, `TEMPLATE_NAME_TAKEN`)
   - `description` trimmed, may be empty, ≤ `TEMPLATE_DESCRIPTION_MAX_CHARS` (200), management copy that never reaches a prompt
   - `body` trimmed at the edges only, non-empty, ≤ `TEMPLATE_BODY_MAX_CHARS` (4000) and it must parse
+  - `title_area` trimmed at the edges only, may be empty, ≤ `TEMPLATE_TITLE_AREA_MAX_CHARS` (200) and it must parse under the title area's grammar (→TMPL-50)
   - creating beyond `TEMPLATE_MAX_PER_ACCOUNT` (50) is `FailedPrecondition`, checked inside the insert transaction
   - `target_length` and `tag_count` are nullable and NULL is 값 없음, a present `target_length` is within `POST_TARGET_LENGTH_MIN` … `POST_TARGET_LENGTH_MAX` (100 … 10,000) and a present `tag_count` within `POST_TAG_COUNT_MIN` … `POST_TAG_COUNT_MAX` (→POST-20 →POST-63), each range the same on both sides, a violation being `InvalidArgument` `TEMPLATE_NUMBER_OUT_OF_RANGE` with `field` `min` `actual` params and `max` when the field has a ceiling
   - limits are Unicode scalar-value counts on both sides
@@ -158,4 +159,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
--
+- r16 260928 TMPL-6✎ +title_area: trimmed at the edges, may be empty, ≤ TEMPLATE_TITLE_AREA_MAX_CHARS (200), must parse
