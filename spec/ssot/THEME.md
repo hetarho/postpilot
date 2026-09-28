@@ -224,7 +224,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at 360 / 390 / 430 px, 320 px reflow, 200 % zoom, keyboard and screen reader, both themes
 
 ## chg
-- r19 260927 THEME-38✎ below the desk the group level a sticky row on the page's plane above the first content→a single control in the middle of the brand row, the primary level a band under it from sm: · THEME-26✎ two rails, the outer primary one on surface-lowest and the inner group one on surface-recessed, in four planes→one collapsible rail on surface-lowest holding both levels, folded from a toggle beside the brand mark · THEME-38✎ the desk draws the levels as two rails, the second narrower→one rail with the group's rows indented under their primary row, a primary row planed at rest and a group row not · THEME-6✎ the Menu pair in every shell→below lg the authenticated shell draws both preferences in the account panel as compact SegmentedControls · THEME-29✎ Button cta/secondary/ghost/danger and SegmentedControl in one size→+Button `scrim` for controls on footage, +SegmentedControl `compact` 32/36 px · constraints✎ LISTBOX_* and POPOVER_MIN_PANEL_PX in `shared/config`→beside their primitives in `shared/ui/listbox/config.ts` and `shared/ui/popover/config.ts`, as PROMO_* in `promo-frame/config.ts`
-- r18 260924 THEME-42+ Tab moves through an anchored panel's controls and leaves it past either end
-- r17 260921 THEME-38✎ tablet primary row on the desktop rail's lowest plane→one raised header background shared with the brand bar, including one translucent layer on /plans
-- r16 260921 THEME-19✎ one family from the system stack with no web-font download→the product's own self-hosted Wanted Sans Variable named ahead of that stack
+-

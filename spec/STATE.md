@@ -20,7 +20,7 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 13 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
-| AUTH | 9 | 9 | - | 0 |
+| AUTH | 10 | 10 | - | 0 |
 | QUOTA | 23 | 23 | - | 0 |
 | POST | 22 | 22 | - | 0 |
 | VOICE | 4 | 4 | - | 1 |
@@ -30,11 +30,11 @@
 | GUIDE | 10 | 10 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 6 | 6 | - | 0 |
-| THEME | 19 | 15 | THEME-19✎ | 0 |
+| THEME | 19 | 19 | - | 0 |
 | MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 50 | 43 | CLIP-163+ | 2 |
-| CDS | 29 | 29 | - | 1 |
+| CDS | 30 | 30 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 4 | 4 | - | 2 |
 | QUAL | 6 | 6 | - | 0 |
@@ -56,14 +56,18 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T416 | A caption face's coverage is the set of characters it actually draws | CDS | - | blocked@260927 |
+| T416 | A caption character its face does not draw is set in Wanted Sans Variable | CDS | - | todo |
 
 ## next
+- implement-task T416
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
-- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it)
-- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26); THEME's row says tasked 15 though T356 and T412 finished on THEME@18
+- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260928 create-task CDS r30 → T416 revised (unblocked); AUTH r10 no-op (T427 throttles VerifyEmail); THEME r16..r19 no-op (Wanted Sans Variable already first in --font-sans, the renderer's pinned file; r17..r19 consumed by T356 T412 T427)
+- 260928 create-task CDS AUTH THEME start
+- 260928 update-ssot CDS-84✎ CDS-17✎ CDS-52✎ AUTH-36✎ (a caption character its face does not draw is set in Wanted Sans Variable; VerifyEmail named among the throttled writes)
+- 260928 update-ssot CDS AUTH start (T416's decision; the stale doc rows)
 - 260928 T449 done: 기억을 통한 감상 추가 (memory_impressions) with the 취향: label and the /guidelines note
 - 260928 T449 claimed (mi)
 - 260928 create-task T449 (GEN r18, GUIDE r10); POST r22 MKT r8 MODEL r19 TMPL r16 CLIP r50 ARCH r13 no-op (no code impact)
@@ -80,7 +84,3 @@
 - 260928 doc-review CLIP start
 - 260928 doc-review POST GEN GUIDE tidied (rev unchanged)
 - 260928 doc-review POST GEN GUIDE start
-- 260928 doc-review THEME MODEL TMPL tidied (rev unchanged): long decisions → decision blocks; FORMAT gains the block notation and the no-rev wording rule
-- 260928 doc-review ssot/ start: scope and FORMAT decision-block adoption asked
-- 260928 T444 done: decisions in /IMPLEMENTATION-DECISIONS.md
-- 260928 T444 claimed (ia)
