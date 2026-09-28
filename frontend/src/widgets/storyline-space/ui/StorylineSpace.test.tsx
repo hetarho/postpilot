@@ -237,6 +237,85 @@ describe('StorylineSpace', () => {
     expect(screen.getByRole('region', { name: '빠진 사진' })).toBeInTheDocument()
   })
 
+  // POST-100: a tile opens its attachment large, walking the paragraphs and then 빠진 사진.
+  it('opens a tile large and walks the space in order without changing the storyline', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    renderSpace({ onChange })
+
+    const tile = paragraph(1).getByRole('button', { name: 'a.jpg 크게 보기' })
+    await user.click(tile)
+    const viewer = screen.getByRole('dialog', { name: 'a.jpg' })
+    expect(within(viewer).getByRole('img', { name: 'a.jpg' })).toHaveAttribute('src', 'blob:a.jpg')
+    // clip.mp4 has no view URL, so the walk is a.jpg, b.jpg, then the taken-out c.jpg.
+    expect(within(viewer).getByText('1 / 3')).toBeInTheDocument()
+    expect(within(viewer).getByRole('button', { name: '이전' })).toBeDisabled()
+
+    await user.click(within(viewer).getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('dialog', { name: 'b.jpg' })).toBeInTheDocument()
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+
+    await user.keyboard('{ArrowRight}')
+    const last = screen.getByRole('dialog', { name: 'c.jpg' })
+    expect(within(last).getByText('3 / 3')).toBeInTheDocument()
+    expect(within(last).getByRole('button', { name: '다음' })).toBeDisabled()
+
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByRole('dialog', { name: 'b.jpg' })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(tile).toHaveFocus()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('moves focus off a step that lands on an end', async () => {
+    const user = userEvent.setup()
+    renderSpace()
+    await user.click(paragraph(2).getByRole('button', { name: 'b.jpg 크게 보기' }))
+    const viewer = screen.getByRole('dialog', { name: 'b.jpg' })
+    await user.click(within(viewer).getByRole('button', { name: '이전' }))
+    expect(
+      within(screen.getByRole('dialog', { name: 'a.jpg' })).getByRole('button', { name: '다음' }),
+    ).toHaveFocus()
+  })
+
+  it('opens a taken-out file and a clip, whose tile carries no scrubber of its own', async () => {
+    const user = userEvent.setup()
+    const source = post()
+    source.videos = [{ ...source.videos[0]!, viewUrl: 'blob:clip.mp4' }]
+    renderSpace({ source })
+
+    const clipTile = paragraph(1).getByRole('button', { name: 'clip.mp4 크게 보기' })
+    expect(clipTile.closest('figure')?.querySelector('video')).not.toHaveAttribute('controls')
+    await user.click(clipTile)
+    const viewer = screen.getByRole('dialog', { name: 'clip.mp4' })
+    expect(viewer.querySelector('video')).toHaveAttribute('controls')
+    expect(within(viewer).getByText('2 / 4')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await user.click(
+      within(screen.getByRole('region', { name: '빠진 사진' })).getByRole('button', {
+        name: 'c.jpg 크게 보기',
+      }),
+    )
+    expect(
+      within(screen.getByRole('dialog', { name: 'c.jpg' })).getByText('4 / 4'),
+    ).toBeInTheDocument()
+  })
+
+  it('never makes a tile with nothing to show a button, and views on a read-only space too', async () => {
+    const user = userEvent.setup()
+    renderSpace({ readOnly: true })
+    expect(screen.queryByRole('button', { name: 'clip.mp4 크게 보기' })).not.toBeInTheDocument()
+    await user.click(paragraph(1).getByRole('button', { name: 'a.jpg 크게 보기' }))
+    const viewer = screen.getByRole('dialog', { name: 'a.jpg' })
+    expect(
+      within(viewer).queryByRole('button', { name: /옮기기|넣기|빼기/ }),
+    ).not.toBeInTheDocument()
+  })
+
   // POST-97: 다시 만들기 saves the draft first and starts a storyline job with the chosen models.
   it('makes the storyline again after saving the draft', async () => {
     const user = userEvent.setup()

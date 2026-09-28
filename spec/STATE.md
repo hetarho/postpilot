@@ -61,7 +61,6 @@
 | T454 | Validate manual caption styles independently of the AI set | CLIP CDS ARCH | - | todo |
 | T455 | Select and style individual captions in the draft preview | CLIP CDS ARCH | T454 | todo |
 | T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | todo |
-| T457 | Open a storyline attachment large from its tile | POST | - | todo |
 | T458 | Compact memory rows with one edit form | MEM | - | todo |
 | T459 | Give a guideline an optional title | GUIDE ARCH | - | todo |
 | T460 | One closed-row guideline list with a 기본 지침 sheet | GUIDE | T459 | todo |
@@ -72,6 +71,8 @@
 - ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 T457 done: a storyline tile opens its attachment large in a wide sheet, walking paragraphs then 빠진 사진
+- 260928 T457 claimed (sm); owner asked to run T457–T460 in order, one commit per task
 - 260928 create-task POST r23 GUIDE r11 MEM r5 → T457–T460; T460 waits on T459
 - 260928 create-task POST GUIDE MEM start
 - 260928 update-ssot POST r23 GUIDE r11 MEM r5: storyline tiles open large; memory rows compact with one edit form; guidelines one closed-row list with optional titles and a 기본 지침 sheet (추가 / 적용 안함); no active task/worker affected
@@ -90,5 +91,3 @@
 - 260928 update-ssot CLIP CDS start (project-owned intro/outro slots and per-caption preview styling)
 - 260928 fix: a browser render's caption frame runs are also cut to half the preview deadline left, costed from two frames drawn alone (heavy styles timed out as CLIP_PREVIEW_TIMEOUT at 5 s)
 - 260928 fix: a browser render's caption frame sheets are cut to what one JSON response carries (a neon or ember caption's run was refused as CLIP_PREVIEW_TOO_LARGE)
-- 260928 fix done: regenerated backend/Dockerfile's media asset digest for the T416 caption preset; pnpm test:dev passes all 5 tests
-- 260928 fix start: refresh the stale media asset digest after the T416 caption preset change

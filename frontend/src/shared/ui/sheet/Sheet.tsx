@@ -21,6 +21,9 @@ interface SheetProps {
   bodyClassName?: string
   /** Pinned below the scrolling body, so a committing action never scrolls out of reach. */
   footer?: ReactNode
+  /** `wide` for content that is looked at rather than filled in — a photo, a clip — which a
+   *  form's `md:max-w-md` would squeeze. The phone shape is the same either way. */
+  size?: 'default' | 'wide'
   onClose: () => void
 }
 
@@ -55,6 +58,7 @@ export function Sheet({
   children,
   bodyClassName,
   footer,
+  size = 'default',
   onClose,
 }: SheetProps) {
   const panel = useRef<HTMLDivElement>(null)
@@ -182,7 +186,8 @@ export function Sheet({
         // bare inset won — 0 in every desktop browser — which left the sheet's last control flush
         // against its bottom edge. The token ADDS the inset to `p-5`'s own 20px.
         className={clsx(
-          'bg-surface-highest max-h-sheet pb-sheet-b flex w-full flex-col rounded-t-xl p-5 shadow-lg md:max-w-md md:rounded-xl md:p-6 md:pb-6',
+          'bg-surface-highest max-h-sheet pb-sheet-b flex w-full flex-col rounded-t-xl p-5 shadow-lg md:rounded-xl md:p-6 md:pb-6',
+          size === 'wide' ? 'md:max-w-4xl' : 'md:max-w-md',
           closing
             ? 'animate-sheet-out md:animate-dialog-out'
             : 'animate-sheet-in md:animate-dialog-in',

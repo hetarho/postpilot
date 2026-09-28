@@ -540,6 +540,11 @@
      so a `vh`-sized sheet is clipped on every phone — THEME-31. */
   --spacing-sheet: 85dvh;
 
+  /* A media view's ceiling inside that sheet: the photo or clip gets what is left once the pinned
+     header and footer rows and the panel's padding are taken, so the whole picture shows without
+     the body scrolling — `object-contain` fits it inside this box (POST-100). */
+  --spacing-media-view: calc(var(--spacing-sheet) - 9.5rem);
+
   /* An open listbox panel has NO token ceiling: a dropdown anchored to a docked bar and one
      anchored to a field at the top of the page have completely different room, and a single
      `dvh` number opens the first one straight off the bottom edge. `shared/ui/listbox` measures

@@ -13,12 +13,15 @@ export function TakenOutFiles({
   attachments,
   readOnly,
   onChange,
+  onView,
 }: {
   files: readonly string[]
   paragraphs: readonly PostStorylineParagraph[]
   attachments: ReadonlyMap<string, StorylineAttachment>
   readOnly: boolean
   onChange: (paragraphs: PostStorylineParagraph[]) => void
+  /** Opens one attachment large (POST-100). */
+  onView?: (file: string) => void
 }) {
   const { t } = useTranslation('posts')
   if (files.length === 0) return null
@@ -30,7 +33,11 @@ export function TakenOutFiles({
       <ul className="mt-2 flex flex-wrap gap-3">
         {files.map((file) => (
           <li key={file} className="flex flex-col items-start gap-1">
-            <StorylineTile attachment={attachments.get(file)} filename={file} />
+            <StorylineTile
+              attachment={attachments.get(file)}
+              filename={file}
+              onView={onView && (() => onView(file))}
+            />
             {!readOnly && (
               <ActionMenu
                 label={t('storylineEdit.putBack', { file })}

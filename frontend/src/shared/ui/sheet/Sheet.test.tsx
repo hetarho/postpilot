@@ -26,6 +26,24 @@ describe('Sheet', () => {
     expect(document.body.style.overflow).toBe('')
   })
 
+  it('is a form’s width from md: up, and a wider one for something looked at', () => {
+    const { rerender } = render(
+      <Sheet open label="옵션" onClose={() => undefined}>
+        내용
+      </Sheet>,
+    )
+    expect(screen.getByRole('dialog', { name: '옵션' })).toHaveClass('md:max-w-md')
+
+    rerender(
+      <Sheet open label="옵션" size="wide" onClose={() => undefined}>
+        내용
+      </Sheet>,
+    )
+    const panel = screen.getByRole('dialog', { name: '옵션' })
+    expect(panel).toHaveClass('md:max-w-4xl', 'rounded-t-xl')
+    expect(panel).not.toHaveClass('md:max-w-md')
+  })
+
   it('takes its name from a visible heading when one is given', () => {
     render(
       <Sheet

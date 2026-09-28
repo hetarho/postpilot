@@ -33,12 +33,15 @@ export function StorylineParagraphEditor({
   attachments,
   readOnly,
   onChange,
+  onView,
 }: {
   paragraphs: readonly PostStorylineParagraph[]
   index: number
   attachments: ReadonlyMap<string, StorylineAttachment>
   readOnly: boolean
   onChange: (paragraphs: PostStorylineParagraph[]) => void
+  /** Opens one attachment large (POST-100). Viewing is not editing, so a read-only space has it. */
+  onView?: (file: string) => void
 }) {
   const { t } = useTranslation('posts')
   const paragraph = paragraphs[index]!
@@ -113,7 +116,11 @@ export function StorylineParagraphEditor({
                 event.dataTransfer.effectAllowed = 'move'
               }}
             >
-              <StorylineTile attachment={attachments.get(file)} filename={file} />
+              <StorylineTile
+                attachment={attachments.get(file)}
+                filename={file}
+                onView={onView && (() => onView(file))}
+              />
               {!readOnly && (
                 <Menu
                   label={t('storylineEdit.move', { file })}
@@ -137,16 +144,22 @@ export function StorylineParagraphEditor({
   )
 }
 
-/** A small photo or clip tile; the filename stands in while there is no view URL. */
+/** A small photo or clip tile; the filename stands in while there is no view URL. With `onView`
+ *  the tile is a button that opens the attachment large (POST-100) — laid over the picture, inside
+ *  the tile, and ringed inward because the tile clips anything drawn outside its corners. A tile
+ *  with nothing to show is never that button. */
 export function StorylineTile({
   attachment,
   filename,
+  onView,
 }: {
   attachment: StorylineAttachment | undefined
   filename: string
+  onView?: () => void
 }) {
+  const { t } = useTranslation('posts')
   const missing = !attachment?.viewUrl
-  const name = missing ? (
+  const overlay = missing ? (
     <span
       className={typographyStyles({
         variant: 'meta',
@@ -155,6 +168,13 @@ export function StorylineTile({
     >
       {filename}
     </span>
+  ) : onView ? (
+    <button
+      type="button"
+      aria-label={t('storylineEdit.view', { file: filename })}
+      onClick={onView}
+      className="absolute inset-0 cursor-zoom-in rounded-lg focus-visible:-outline-offset-2"
+    />
   ) : undefined
   if (attachment?.kind === 'video')
     return (
@@ -163,8 +183,9 @@ export function StorylineTile({
         src={attachment.viewUrl}
         durationMs={attachment.durationMs ?? 0}
         contentType={attachment.contentType}
+        controls={!onView}
       >
-        {name}
+        {overlay}
       </VideoTile>
     )
   return (
@@ -175,7 +196,7 @@ export function StorylineTile({
       width={attachment?.width}
       height={attachment?.height}
     >
-      {name}
+      {overlay}
     </Thumbnail>
   )
 }

@@ -17,6 +17,9 @@ interface VideoTileProps {
   onError?: () => void
   /** `small` for a clip named inside other content — a storyline paragraph — rather than a strip. */
   size?: 'strip' | 'small'
+  /** The native controls. Off where the tile is itself a control — a storyline tile opens the
+   *  clip large (POST-100), and a scrubber under the thumb would take that press. */
+  controls?: boolean
 }
 
 /** One square tile of the strip, for a clip.
@@ -34,6 +37,7 @@ export function VideoTile({
   dimmed,
   onError,
   size = 'strip',
+  controls = true,
 }: VideoTileProps) {
   return (
     <figure
@@ -45,7 +49,7 @@ export function VideoTile({
       {src && (
         <video
           src={src}
-          controls
+          controls={controls}
           preload="metadata"
           playsInline
           onError={onError}

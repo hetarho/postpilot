@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft, PostStorylineParagraph } from '@/entities/post'
 import {
+  StorylineAttachmentViewer,
   StorylineParagraphEditor,
   TakenOutFiles,
   storylineAttachments,
+  storylineViewOrder,
   takenOutFiles,
 } from '@/features/edit-storyline'
 import {
@@ -72,9 +74,17 @@ export const StorylineSpace = forwardRef<
     setOpen(false)
   }, [hasContent])
   const attachments = useMemo(() => storylineAttachments(post), [post])
+  // One large view for the whole space, because its previous and next walk every paragraph and
+  // the taken-out row (POST-100).
+  const [viewing, setViewing] = useState<string | null>(null)
   const storyline = post.storyline
   if (!storyline) return null
   const takenOut = takenOutFiles(storyline, paragraphs)
+  const viewOrder = storylineViewOrder(
+    paragraphs,
+    takenOut,
+    (file) => !!attachments.get(file)?.viewUrl,
+  )
 
   return (
     <StorylineActionsProvider ref={ref} post={post} {...actions}>
@@ -101,6 +111,7 @@ export const StorylineSpace = forwardRef<
                 attachments={attachments}
                 readOnly={readOnly}
                 onChange={onChange}
+                onView={setViewing}
               />
             ))}
           </ol>
@@ -110,8 +121,16 @@ export const StorylineSpace = forwardRef<
             attachments={attachments}
             readOnly={readOnly}
             onChange={onChange}
+            onView={setViewing}
           />
         </Disclosure>
+        <StorylineAttachmentViewer
+          files={viewOrder}
+          attachments={attachments}
+          viewing={viewing}
+          onView={setViewing}
+          onClose={() => setViewing(null)}
+        />
       </div>
     </StorylineActionsProvider>
   )
