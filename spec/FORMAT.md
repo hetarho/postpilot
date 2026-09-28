@@ -3,7 +3,7 @@
 
 ## Principles
 1. Primary reader is AI. No background prose, no fillers, no repetition. Decisions and reasons only.
-2. One line = one decision/fact. If something is ambiguous, don't write prose — register it as a [?] decision.
+2. One decision = one policy unit: a rule that can be read, applied and verified on its own. Split when two policies can change independently; keep together what must change together. Structure conditions as sub-lines or a table — never by joining them into one longer line. Removing line breaks is not concision. If something is ambiguous, don't write prose — register it as a [?] decision.
 3. Short ≠ omitted. Everything needed to decide (decisions, reasons, constraints, open items) must be present.
 4. Docs first. Record state changes in STATE.md before reasoning or implementing.
 5. Truth order: content → ssot/*.md, progress → STATE.md, history → git log and tasks/done/ (STATE log is a hint, not truth). Fix mismatches on sight.
@@ -21,12 +21,16 @@
 ## Notation
 - decision line: `- <ID>-<n> [o|?|x] <content>` + ` ← <reason>` only when there was a trade-off
   e.g. `- AUTH-2 [o] session: JWT 15m + refresh 30d ← minimize mobile re-login`
+- decision block = the decision line plus the indented (2 spaces) sub-lines under it — sub-bullets or a table — carrying conditions, exceptions, enumerated values. Sub-lines have no ID of their own: the block is one decision, revised and referenced as one. Use them when the conditions do not fit one readable line; two reasons (` ← ` twice) or three or more ` · ` groups mean two decisions, not one long one.
+  e.g. `- AUTH-4 [o] rate limit per account ← abuse without blocking shared offices`
+       `  - login 5/min, password reset 3/hour`
+       `  - over limit ⇒ 429 + retry-after, never a silent drop`
 - [o] decided / [?] open / [x] rejected·deferred — a standing decision not to do something the product does not have; a decision whose feature was removed is deleted, not marked [x]
 - change kind: + added / ✎ modified / - removed (e.g. `AUTH-2✎`)
 - reference: →AUTH-3
 - finding line: `- Fn [?|o|x] P1|P2|P3 <where>: <what>` + ` ← <why it matters>`; append ` →T###` once a task exists. P1 = correctness/security risk or blocks every change · P2 = slows every change · P3 = nice to have. A functional bug is a finding whose <what> starts with `bug:`
 - acceptance check: `- [ ]` open → `- [v]` done (never mark done with x — [x] means rejected in SSOT)
-- rev: rN. +1 per content change, one chg line (`- rN YYMMDD <ID>-n✎ summary`). First write: `- r1 YYMMDD initial`. A ✎ summary MUST keep the old value as `old→new` (e.g. `BM-11✎ limit 100→50`); a `-` summary states what was removed. chg holds only changes not yet consumed into tasks (revs tasked+1..rev): create-task deletes the lines it consumes, and an empty chg is `-`
+- rev: rN. +1 per policy change, one chg line (`- rN YYMMDD <ID>-n✎ summary`). First write: `- r1 YYMMDD initial`. A ✎ summary MUST keep the old value as `old→new` (e.g. `BM-11✎ limit 100→50`); a `-` summary states what was removed. Wording-only editing (doc-review) is not a policy change: no rev, no chg line. chg holds only changes not yet consumed into tasks (revs tasked+1..rev): create-task deletes the lines it consumes, and an empty chg is `-`
 - date: YYMMDD (260905)
 - task st: `todo` → `doing@date.tag` → `done@date`. Stuck: `blocked@date` (one-line reason in the task's ## result). tag = 2-4 chars chosen by the claiming session
 - empty value: `-` (never leave a cell blank)
@@ -48,6 +52,7 @@
 - doing·done tasks are immutable. Exception: the implementing session updating its own task's st·checks·result. Content changes become a new task.
 - STATE tasks table holds remaining work only (todo·doing·blocked). At done: set st `done@date` in the file, move it to tasks/done/, delete the STATE row, leave one log line. A dep absent from the table is satisfied iff tasks/done/ holds that task's file.
 - Planning changes go only through update-ssot(rev+1) → STATE pending → create-task. Never edit tasks directly.
+- doc-review touches ssot/ wording only: no rev, no chg, no pending, no task — so editing never invents work. Anything that changes a condition, number, negation, obligation or scope is a planning change and belongs to update-ssot; anything ambiguous stays as written and is reported.
 - ideation st: `open@date` → `ready@date` → `converted@date` (in the quote line + STATE ideation row `id|st`). Explored items reuse [o]/[x]/[?]. A domains line converted into a SSOT gets `→<ID>`; the doc becomes converted when every [o] domain has one.
 - review st: `open@date` → `ready@date` → `converted@date` (in the quote line + STATE review row `id|st`). Findings start as [?]; the user adopts [o] / rejects [x] ← reason. A [o] finding turned into a task gets `→T###`; the doc becomes converted when every [o] finding has one (no [o] at all ⇒ converted at once).
 - review-sourced tasks: ssot = the ARCH decisions the change enforces, `-` if none; base = ARCH@rev always; first impl-notes line `- from review/<slug> Fn`; acceptance keeps behavior unchanged (existing tests still pass). They never move ssot rev/tasked/pending.

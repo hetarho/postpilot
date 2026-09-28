@@ -60,10 +60,12 @@
 
 ## next
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448), then review-code the clip wave
-- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it)
-- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results)
+- update-ssot CDS for T416 (blocked): what a caption does when its face — the default 크게 강조 included — has no ink for a syllable; update-ssot AUTH-36: name VerifyEmail among the throttled writes (T427 throttles it); update-ssot MODEL-25 (its never-applied-on-mount/login/account-creation rule sits after the ← reason, rule or reason?) and TMPL-6 (no field rule for title_area)
+- ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); create-task MKT THEME (/about overflow) and CLIP CDS THEME (Wanted Sans delta); ARCH-5's context list is stale (lacks clip, quality, voucher and others); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; finding (T400): Paperlogy's cmap maps all 11,172 syllables but draws 8,392 empty (e.g. 갂), so the cmap-based faceCoverage passes them and a Paperlogy caption renders them blank; update-ssot POST-39 (DeleteImage drops the row before the object since T358, see T411 result); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review the other 17 SSOTs (POST GEN GUIDE next; THEME-24 THEME-38 MODEL-37 stayed blocks, split candidates); THEME's row says tasked 15 though T356 and T412 finished on THEME@18
 
 ## log
+- 260928 doc-review THEME MODEL TMPL tidied (rev unchanged): long decisions → decision blocks; FORMAT gains the block notation and the no-rev wording rule
+- 260928 doc-review ssot/ start: scope and FORMAT decision-block adoption asked
 - 260928 T444 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T444 claimed (ia)
 - 260928 T415 done: decisions in /IMPLEMENTATION-DECISIONS.md
@@ -82,5 +84,3 @@
 - 260928 T446 done: decisions in /IMPLEMENTATION-DECISIONS.md
 - 260928 T446 claimed (ia)
 - 260928 T445 done: decisions in /IMPLEMENTATION-DECISIONS.md
-- 260928 T445 claimed (ia)
-- 260928 T440 done: decisions in /IMPLEMENTATION-DECISIONS.md
