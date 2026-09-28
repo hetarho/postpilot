@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
@@ -89,12 +90,35 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 	if cells <= 0 {
 		return out, clip.ErrPreviewTooLarge
 	}
-	// The bytes bound the run too. A style with a wide bleed and a busy texture
-	// (ember, neon) compresses badly, so a run that fits the pixels can still be
-	// more than one response carries; it is then cut in proportion and drawn
-	// again rather than refused, and the browser asks for the rest from
-	// NextOffset as it does for any run.
+	// The bytes and the request's time bound the run too. A style with a wide
+	// bleed and a busy texture (ember, neon) is slow to draw and compresses
+	// badly, so a run that fits the pixels can be more than one response carries
+	// or than the preview's deadline allows. Two frames drawn alone say what a
+	// frame of this style costs here: the run's first and the caption's middle,
+	// because a style spends its drawing in different places — ember and neon
+	// peak once the caption is up, serif in its entrance — and the dearer of the
+	// two cuts the run to what the bytes and half the time left can hold. The
+	// browser asks for the rest from NextOffset as it does for any run.
 	budget := sheetByteBudget(cfg)
+	frameCost, frameBytes := time.Duration(0), 0
+	for _, at := range []int{offset, count / 2} {
+		start := time.Now()
+		sample, _, err := r.drawCaptionSheet(ctx, ws, canvas, visual, crop, at, count, 1, cfg)
+		if err != nil {
+			return out, err
+		}
+		if len(sample) > budget {
+			return out, clip.ErrPreviewTooLarge
+		}
+		frameCost, frameBytes = max(frameCost, time.Since(start)), max(frameBytes, len(sample))
+		if at == count/2 {
+			break
+		}
+	}
+	cells = min(cells, max(1, budget*8/10/frameBytes))
+	if deadline, ok := ctx.Deadline(); ok {
+		cells = min(cells, max(1, int(time.Until(deadline)/2/max(frameCost, time.Millisecond))))
+	}
 	var data []byte
 	for {
 		var err error

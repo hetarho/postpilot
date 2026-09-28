@@ -1,12 +1,15 @@
 package media
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -174,5 +177,40 @@ func TestACaptionSheetIsCutToWhatOneResponseCarries(t *testing.T) {
 	cfg.MaxResponseBytes = 2048
 	if _, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", 0, cfg); !errors.Is(err, clip.ErrPreviewTooLarge) {
 		t.Fatalf("a frame larger than a response was not refused: %v", err)
+	}
+}
+
+// slowDrawing makes every rasterisation cost what a heavy style costs on a slow
+// box, leaving measurement as it was.
+type slowDrawing struct {
+	inner Runner
+	cost  time.Duration
+}
+
+func (s slowDrawing) Run(ctx context.Context, c Command) ([]byte, error) {
+	if !slices.Contains(c.Args, "--query-all") {
+		time.Sleep(s.cost)
+	}
+	return s.inner.Run(ctx, c)
+}
+
+// A run is cut to what the request's deadline leaves, so a style that is slow
+// to draw pages in smaller runs instead of timing the browser render out.
+func TestACaptionSheetIsCutToTheTimeLeft(t *testing.T) {
+	a, r := measured(t)
+	a.runner = slowDrawing{inner: a.runner, cost: 60 * time.Millisecond}
+	plan, _ := framesPlan(t, "neon")
+	sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 30000, Width: 1920, Height: 1080}}}
+	cfg := clip.DefaultGenerationConfig(clip.Environment{}).Preview
+	ctx, cancel := context.WithTimeout(t.Context(), 700*time.Millisecond)
+	defer cancel()
+	frames, err := r.PrepareCaptionFrames(ctx, plan, sources, "caption/cut", 0, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// At 60 ms a drawing, 700 ms leaves room for a handful of frames, not the
+	// thirty the pixels would allow.
+	if frames.Cells < 1 || frames.Cells > 10 || frames.NextOffset != frames.Cells {
+		t.Fatalf("a slow style's run: %d cells, next %d", frames.Cells, frames.NextOffset)
 	}
 }
