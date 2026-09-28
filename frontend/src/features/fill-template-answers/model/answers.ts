@@ -55,3 +55,9 @@ export function withAnswer(
 ): AnswerField[] {
   return fields.map((field) => (field.label === label ? { ...field, ...change } : field))
 }
+
+/** The first field the author can type into — a switched-off one is greyed and skipped, the way the
+ *  browser's own focus order skips it. Undefined when no field takes typing. */
+export function firstEnabledAnswer(fields: readonly AnswerField[]): AnswerField | undefined {
+  return fields.find((field) => field.enabled)
+}

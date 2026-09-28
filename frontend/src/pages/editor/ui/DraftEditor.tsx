@@ -13,6 +13,7 @@ import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
 import {
   TemplateAnswerFields,
   answerFields,
+  firstEnabledAnswer,
   toAnswerPatch,
   withAnswer,
 } from '@/features/fill-template-answers'
@@ -59,6 +60,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   // screen, so it wraps instead).
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const memoRef = useRef<HTMLTextAreaElement>(null)
+  const firstAnswerRef = useRef<HTMLTextAreaElement>(null)
   const caretFields = useMemo(() => ({ title: titleRef, memo: memoRef }), [])
   const caret = useCaretHandoff(post?.slug, caretFields)
 
@@ -119,7 +121,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       value={autosave.title}
       onChange={autosave.setTitle}
       fieldRef={titleRef}
-      nextRef={memoRef}
+      // The next field on screen: ① is 가제 → the template's fields → memo (POST-54).
+      nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : memoRef}
       readOnly={published}
     />
   )
@@ -134,6 +137,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const answerFieldsPanel = (
     <TemplateAnswerFields
       fields={fields}
+      firstFieldRef={firstAnswerRef}
       disabled={published}
       onChange={(label, change) =>
         autosave.setAnswers(toAnswerPatch(withAnswer(fields, label, change)))
@@ -275,8 +279,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
         <>
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
           {titleField}
-          {memoField}
           {answerFieldsPanel}
+          {memoField}
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           <EditorVoiceWarning ownerId={ownerId} voice={assignments.voice} />
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the

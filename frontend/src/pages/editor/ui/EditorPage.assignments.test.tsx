@@ -427,8 +427,9 @@ describe('the post template', () => {
   })
 })
 
-// POST-54 · POST-62: the selected template's data fields belong to ①, under the memo, because
-// they are the material 글 생성 works from. They autosave on the memo's own queue.
+// POST-54 · POST-62: the selected template's data fields belong to ①, between the 가제 and the
+// memo, because they are the material 글 생성 works from and the memo carries what they did not
+// ask. They autosave on the memo's own queue.
 describe('the template data fields in ①', () => {
   const AUTOSAVED = { timeout: 4_000 }
   const WITH_FIELDS = [
@@ -469,6 +470,61 @@ describe('the template data fields in ①', () => {
     // A mount is not an edit: the fields the post has not answered read as their default, so
     // nothing is queued and no save goes out.
     expect(draftSaves).toEqual([])
+  })
+
+  function renderJeju(templateAnswers: { label: string; text: string; enabled: boolean }[] = []) {
+    renderAppAt('/posts/20260301-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260301-jeju',
+            title: '제주',
+            memo: '갔다',
+            template: { id: 'template-review', name: '정보성 식당 리뷰' },
+            templateAnswers,
+          },
+        ],
+        templates: [{ id: 'template-review', name: '정보성 식당 리뷰' }],
+      },
+      templates: { templates: WITH_FIELDS },
+    })
+  }
+
+  const before = (a: Element, b: Element) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+  it('lays out 가제, the fields in body order, then the memo', async () => {
+    renderJeju()
+    const visited = await screen.findByLabelText('방문일')
+    const rated = screen.getByLabelText('총평 별점')
+    const title = screen.getByLabelText('제목')
+    const memo = screen.getByLabelText('메모')
+    expect(before(title, visited)).toBe(true)
+    expect(before(visited, rated)).toBe(true)
+    expect(before(rated, memo)).toBe(true)
+  })
+
+  it('moves Enter in the 가제 to the first field that takes typing', async () => {
+    const user = userEvent.setup()
+    renderJeju([{ label: '방문일', text: '', enabled: false }])
+    await screen.findByLabelText('방문일')
+    await user.click(screen.getByLabelText('제목'))
+    await user.keyboard('{Enter}')
+    // 방문일 is switched off, so the next field on screen that takes typing is 총평 별점.
+    expect(screen.getByLabelText('총평 별점')).toHaveFocus()
+    expect(screen.getByLabelText('제목')).toHaveValue('제주')
+  })
+
+  it('moves Enter in the 가제 to the memo when the post has no field to fill', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260301-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260301-jeju', title: '제주', memo: '갔다' }] },
+    })
+    await user.click(await screen.findByLabelText('제목'))
+    await user.keyboard('{Enter}')
+    expect(screen.getByLabelText('메모')).toHaveFocus()
   })
 
   it('autosaves an answer on the memo’s own queue', async () => {

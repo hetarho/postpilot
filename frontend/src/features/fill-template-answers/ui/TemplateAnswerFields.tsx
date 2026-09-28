@@ -1,10 +1,10 @@
-import { useId } from 'react'
+import { useId, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { remainingChars, TEMPLATE_LIMITS } from '@/entities/template'
 import { FieldCount, FieldLabel, Switch, Textarea, Toggletip, Typography } from '@/shared/ui'
-import type { AnswerField } from '../model/answers'
+import { firstEnabledAnswer, type AnswerField } from '../model/answers'
 
-/** The selected template's data fields, under ①'s memo (POST-54, POST-62).
+/** The selected template's data fields, between ①'s 가제 and its memo (POST-54, POST-62).
  *
  *  They belong to ① for the same reason the memo does: they are the material the next run is
  *  written from. A field switched off stays visible, greyed, with its text kept and readable —
@@ -17,13 +17,18 @@ export function TemplateAnswerFields({
   fields,
   disabled = false,
   onChange,
+  firstFieldRef,
 }: {
   fields: readonly AnswerField[]
   disabled?: boolean
   onChange: (label: string, change: { text?: string; enabled?: boolean }) => void
+  /** Attached to the first field that takes typing, so the 가제's Enter lands on the next field on
+   *  screen (`firstEnabledAnswer`). */
+  firstFieldRef?: RefObject<HTMLTextAreaElement | null>
 }) {
   const { t } = useTranslation('posts')
   const id = useId()
+  const first = firstEnabledAnswer(fields)
 
   if (fields.length === 0) return null
 
@@ -57,6 +62,7 @@ export function TemplateAnswerFields({
             </div>
             <Textarea
               id={fieldId}
+              ref={field.label === first?.label ? firstFieldRef : undefined}
               value={field.text}
               // Off is not empty: the text stays readable, which is what makes the switch a
               // decision the author can take back.

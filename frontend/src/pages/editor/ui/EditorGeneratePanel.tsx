@@ -8,8 +8,8 @@ import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
 
-/** ①'s panel: the post's own material — 제목 · 메모 · 템플릿 답변 · 사진 · the voice caveat
- *  (POST-54). Everything that DESCRIBES the next AI run, 분야 and 기억 사용 included, lives in the
+/** ①'s panel: the post's own material — 제목 · 템플릿 답변 · 메모 · 사진 · the voice caveat
+ *  (POST-54). The memo follows the template's fields because it carries what they did not ask. Everything that DESCRIBES the next AI run, 분야 and 기억 사용 included, lives in the
  *  dock's brief instead (POST-89). */
 export function EditorGeneratePanel({
   post,
@@ -32,8 +32,8 @@ export function EditorGeneratePanel({
   return (
     <>
       {titleField}
-      {memoField}
       {answerFields}
+      {memoField}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 
