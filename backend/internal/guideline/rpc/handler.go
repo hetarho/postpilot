@@ -79,7 +79,7 @@ func toProtoKind(kind guideline.Kind) postpilotv1.GuidelineKind {
 func toProtoDefault(state guideline.DefaultState) *postpilotv1.DefaultGuideline {
 	d := state.Default
 	return &postpilotv1.DefaultGuideline{
-		Key: d.Key, Enabled: state.Enabled, KoreanTargetOnly: d.KoreanTargetOnly,
+		Key: d.Key, Enabled: state.Enabled, KoreanTargetOnly: d.KoreanTargetOnly, MemoriesOnly: d.MemoriesOnly,
 		Ko: &postpilotv1.DefaultGuidelineCopy{Name: d.Ko.Name, Text: d.Ko.Text},
 		En: &postpilotv1.DefaultGuidelineCopy{Name: d.En.Name, Text: d.En.Text},
 	}

@@ -22,11 +22,14 @@ type fakeGuidelines struct {
 	askedTemplate *string
 	askedField    *string
 	askedLanguage Language
+	// askedMemories is whether the last caller said its run carries [기억] (GEN-73).
+	askedMemories bool
 }
 
-func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, target Language) (FrozenGuidelines, error) {
+func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, target Language, withMemories bool) (FrozenGuidelines, error) {
 	f.calls++
 	f.askedLanguage = target
+	f.askedMemories = withMemories
 	if templateID == nil {
 		f.askedTemplate = nil
 	} else {
@@ -378,6 +381,56 @@ func TestEveryEntryPointAsksWithThePostsField(t *testing.T) {
 	if guidelines.askedField != nil {
 		t.Fatalf("a post with no 분야 asked for %q", *guidelines.askedField)
 	}
+}
+
+// GEN-73: every entry point asks for the 지침 saying whether its own prompt will carry [기억] —
+// the write and the comparison exactly when their frozen memories are non-empty, the revision
+// never (MEM-22) — so the memories-only 기본 지침 follows the section and nothing else.
+func TestEveryEntryPointAsksWhetherItsRunCarriesMemories(t *testing.T) {
+	ctx := context.Background()
+	guidelines := &fakeGuidelines{texts: testGuidelines()}
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, UseMemory: true, Memo: "연남동에서 점심",
+		Content: revisionContent("body"),
+	}}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := guidelineAwareService(t, guidelines, nil, posts, &fakeJobs{id: "job"}, models)
+	recorder := &recordingMemories{texts: testMemories()}
+	svc.memories = recorder
+	asked := func(entry string, want bool) {
+		t.Helper()
+		if guidelines.askedMemories != want {
+			t.Fatalf("%s asked withMemories = %v, want %v", entry, guidelines.askedMemories, want)
+		}
+	}
+
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	asked("Start with memories", true)
+	if _, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false); err != nil {
+		t.Fatal(err)
+	}
+	asked("SnapshotWriteInput with memories", true)
+	if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	asked("StartRevision", false)
+
+	// A retrieval that matched nothing renders no [기억], and neither does a post that never
+	// opted in.
+	recorder.texts = nil
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	asked("Start with no matching memory", false)
+	recorder.texts = testMemories()
+	posts.input.UseMemory = false
+	if _, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false); err != nil {
+		t.Fatal(err)
+	}
+	asked("SnapshotWriteInput without 기억 사용", false)
 }
 
 // GEN-18, MEM-19, MODEL-30: a comparison freezes exactly the write material Start freezes — one

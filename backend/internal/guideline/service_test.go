@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -400,7 +401,7 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	svc, store := newTestService(t, nil)
 	store.texts = []string{"전역 1", "템플릿 1", "분야 1"}
 
-	got, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, nil, LanguageKorean)
+	got, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, nil, LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +417,7 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 		t.Fatalf("texts = %q, want %q", texts, want)
 	}
 	id, field := "  p1  ", "  pets  "
-	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, &id, &field, LanguageKorean); err != nil {
+	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, &id, &field, LanguageKorean, false); err != nil {
 		t.Fatal(err)
 	}
 	if store.askedTemplate != "p1" || store.askedField != "pets" {
@@ -424,7 +425,7 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	}
 	// A blank 분야 is none, not the empty-string id of one.
 	blank := "   "
-	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, &blank, LanguageKorean); err != nil || store.askedField != "" {
+	if _, err := svc.ForPrompt(context.Background(), "alice", KindPost, nil, &blank, LanguageKorean, false); err != nil || store.askedField != "" {
 		t.Fatalf("a blank 분야 asked for %q (%v)", store.askedField, err)
 	}
 }
@@ -436,30 +437,67 @@ func TestForPromptPutsTheEnabledDefaultsFirst(t *testing.T) {
 	ctx := context.Background()
 	svc, store := newTestService(t, nil)
 	store.texts = []string{"사용자 지침"}
-	korean, err := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean)
+	korean, err := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(korean.Defaults) != 11 || korean.Defaults[0] != Defaults(KindPost)[0].Ko.Text || korean.Defaults[10] != Defaults(KindPost)[10].Ko.Text {
-		t.Fatalf("Korean defaults = %d, first %q", len(korean.Defaults), korean.Defaults)
+	var koreanWithoutMemories []string
+	for _, d := range Defaults(KindPost) {
+		if !d.MemoriesOnly {
+			koreanWithoutMemories = append(koreanWithoutMemories, d.Ko.Text)
+		}
+	}
+	if !reflect.DeepEqual(korean.Defaults, koreanWithoutMemories) || len(korean.Defaults) != 11 {
+		t.Fatalf("Korean defaults = %d, %q", len(korean.Defaults), korean.Defaults)
 	}
 	if !reflect.DeepEqual(korean.Owner, []string{"사용자 지침"}) {
 		t.Fatalf("owner = %q", korean.Owner)
 	}
-	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish)
+	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish, false)
 	if len(english.Defaults) != 10 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
 		t.Fatalf("English defaults = %q", english.Defaults)
 	}
 	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "facts", false); err != nil {
 		t.Fatal(err)
 	}
-	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean)
+	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
 	if len(off.Defaults) != 10 || off.Defaults[0] != Defaults(KindPost)[1].Ko.Text {
 		t.Fatalf("a switched-off default still reached the run: %q", off.Defaults)
 	}
-	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean)
+	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean, false)
 	if len(clip.Defaults) != 7 || clip.Owner != nil {
 		t.Fatalf("clip = %+v", clip)
+	}
+}
+
+// GEN-73: 기억을 통한 감상 추가 reaches a run that carries memories alone, directly after 감상은
+// 내가 쓴 것만, in the run's target language — and never while the account has it switched off.
+func TestForPromptSendsTheMemoriesDefaultWithMemoriesAlone(t *testing.T) {
+	ctx := context.Background()
+	svc, _ := newTestService(t, nil)
+	memories, _ := DefaultFor(KindPost, "memory_impressions")
+	without, err := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(without.Defaults, memories.Ko.Text) {
+		t.Fatal("a run without memories received the memories default")
+	}
+	with, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, true)
+	impressions, _ := DefaultFor(KindPost, "impressions")
+	if len(with.Defaults) != len(without.Defaults)+1 || with.Defaults[1] != impressions.Ko.Text || with.Defaults[2] != memories.Ko.Text {
+		t.Fatalf("with memories = %q", with.Defaults)
+	}
+	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish, true)
+	if len(english.Defaults) < 3 || english.Defaults[2] != memories.En.Text {
+		t.Fatalf("English with memories = %q", english.Defaults)
+	}
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "memory_impressions", false); err != nil {
+		t.Fatal(err)
+	}
+	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, true)
+	if slices.Contains(off.Defaults, memories.Ko.Text) || len(off.Defaults) != len(without.Defaults) {
+		t.Fatalf("a switched-off memories default still reached the run: %q", off.Defaults)
 	}
 }
 
@@ -476,7 +514,7 @@ func TestDefaultSwitchesAreIdempotentAndKnownOnly(t *testing.T) {
 	}
 	store.off["post/retired_key"] = true
 	states, err := svc.Defaults(ctx, "alice", KindPost)
-	if err != nil || len(states) != 11 {
+	if err != nil || len(states) != len(Defaults(KindPost)) {
 		t.Fatalf("defaults = %d, %v", len(states), err)
 	}
 	for _, s := range states {

@@ -12,6 +12,7 @@ const NAMING: DefaultGuideline = {
   name: '메모의 이름으로',
   text: '가게와 메뉴는 메모에 적힌 이름으로 쓰세요.',
   koreanTargetOnly: false,
+  memoriesOnly: false,
 }
 
 function renderRow(guideline: DefaultGuideline, props: { errorMessage?: string } = {}) {
@@ -36,6 +37,7 @@ it('shows the name, the text, 추천 and a switch named after the guideline', as
   const control = screen.getByRole('switch', { name: '메모의 이름으로 사용' })
   expect(control).toBeChecked()
   expect(screen.queryByText('한국어 글에만 적용돼요')).not.toBeInTheDocument()
+  expect(screen.queryByText('기억 사용을 켠 글에만 적용돼요')).not.toBeInTheDocument()
 
   await user.click(control)
   expect(onToggle).toHaveBeenCalledWith(false)
@@ -60,4 +62,17 @@ it('says a Korean-only default applies only to a Korean post, and shows a refusa
   )
   expect(screen.getByText('한국어 글에만 적용돼요')).toBeInTheDocument()
   expect(screen.getByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()
+})
+
+// GEN-73: the memories default says it reaches only a post that uses memories, as the
+// Korean-only one says its own condition.
+it('says a memories-only default applies only to a post that uses memories', () => {
+  renderRow({
+    ...NAMING,
+    key: 'memory_impressions',
+    name: '기억을 통한 감상 추가',
+    memoriesOnly: true,
+  })
+  expect(screen.getByText('기억 사용을 켠 글에만 적용돼요')).toBeInTheDocument()
+  expect(screen.queryByText('한국어 글에만 적용돼요')).not.toBeInTheDocument()
 })

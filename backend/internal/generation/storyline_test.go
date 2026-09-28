@@ -119,7 +119,8 @@ func TestStartStorylineFreezesTheMaterialAndTheSelection(t *testing.T) {
 	jobs := &fakeJobs{id: "job"}
 	deps := testDeps()
 	deps.Templates = &fakeTemplateBriefs{brief: *testBrief()}
-	deps.Guidelines = &fakeGuidelines{texts: []string{"CCTV를 언급하지 않기"}, defaults: []string{"메모의 이름으로 쓰세요"}}
+	guidelines := &fakeGuidelines{texts: []string{"CCTV를 언급하지 않기"}, defaults: []string{"메모의 이름으로 쓰세요"}}
+	deps.Guidelines = guidelines
 	deps.Memories = &recordingMemories{texts: []string{"매운 음식을 못 먹는다"}}
 	svc := storylineService(posts, jobs, storylineModels(storylineAnswer), deps)
 
@@ -141,6 +142,10 @@ func TestStartStorylineFreezesTheMaterialAndTheSelection(t *testing.T) {
 	}
 	if options.TargetLanguage != LanguageEnglish || options.Template == nil || options.Template.Name != testBrief().Name {
 		t.Fatalf("options = %+v", options)
+	}
+	// GEN-73: the storyline prompt carries the frozen [기억], so it asked for the 지침 with it.
+	if !guidelines.askedMemories {
+		t.Fatal("a storyline carrying memories asked for the 지침 without them")
 	}
 	if !reflect.DeepEqual(options.Guidelines, []string{"CCTV를 언급하지 않기"}) || !reflect.DeepEqual(options.DefaultGuidelines, []string{"메모의 이름으로 쓰세요"}) ||
 		!reflect.DeepEqual(options.Memories, []string{"매운 음식을 못 먹는다"}) {

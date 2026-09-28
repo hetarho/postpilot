@@ -712,7 +712,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	adapter := generationGuidelines{service: guidelineSvc}
-	frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean)
+	frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,9 +726,18 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 			t.Fatalf("resolved %v, want %v", texts, want)
 		}
 	}
-	// GUIDE-19: a new account runs every post default, the Korean-only one included.
-	if got, all := len(frozen.Defaults), len(guideline.Defaults(guideline.KindPost)); got != all {
-		t.Fatalf("a new account froze %d defaults, want all %d", got, all)
+	// GUIDE-19: a new account runs every post default, the Korean-only one included; the
+	// memories one waits for a run that carries memories (GEN-73).
+	memoriesDefault, _ := guideline.DefaultFor(guideline.KindPost, "memory_impressions")
+	if got, all := len(frozen.Defaults), len(guideline.Defaults(guideline.KindPost)); got != all-1 || slices.Contains(frozen.Defaults, memoriesDefault.Ko.Text) {
+		t.Fatalf("a new account froze %d defaults without memories, want %d", got, all-1)
+	}
+	withMemories, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(withMemories.Defaults) != len(guideline.Defaults(guideline.KindPost)) || withMemories.Defaults[2] != memoriesDefault.Ko.Text {
+		t.Fatalf("a run with memories froze %q", withMemories.Defaults)
 	}
 	system, _ := generation.BuildWritePromptForLanguage(generation.WritePromptInput{
 		Language: generation.LanguageKorean, DefaultGuidelines: frozen.Defaults, Guidelines: texts,
@@ -746,7 +755,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if _, err := guidelineSvc.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "tags", false); err != nil {
 		t.Fatal(err)
 	}
-	off, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean)
+	off, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -763,7 +772,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolved, err := adapter.ForPrompt(ctx, "alice", nil, nil, generation.LanguageKorean)
+	resolved, err := adapter.ForPrompt(ctx, "alice", nil, nil, generation.LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -905,7 +914,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 
 	// A4: with candidates recorded and only the approved guideline saved, the prompt carries the
 	// guideline and nothing else — no candidate text reaches it.
-	frozen, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil, generation.LanguageKorean)
+	frozen, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil, generation.LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1033,7 +1042,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	adapter := generationGuidelines{service: guidelineSvc}
 	resolve := func() []string {
 		t.Helper()
-		frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field, generation.LanguageKorean)
+		frozen, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field, generation.LanguageKorean, false)
 		if err != nil {
 			t.Fatal(err)
 		}

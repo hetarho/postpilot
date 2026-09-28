@@ -88,7 +88,7 @@ func TestAClipResolvesItsDefaultsThenItsOwnerTexts(t *testing.T) {
 	svc, store := clipService(t)
 	store.clipTexts = []string{"자막은 짧게", "가격은 크게"}
 	vt := "vt"
-	got, err := svc.ForPrompt(ctx, "alice", KindClip, &vt, nil, LanguageKorean)
+	got, err := svc.ForPrompt(ctx, "alice", KindClip, &vt, nil, LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}

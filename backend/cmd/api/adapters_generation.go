@@ -47,12 +47,13 @@ type generationGuidelines struct{ service *guideline.Service }
 
 // ForPrompt asks for a post's 지침 in the run's target language. Generation receives the texts
 // alone (ARCH-7): the kind is always a post's here, and the language is mapped at this seam.
-func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, target generation.Language) (generation.FrozenGuidelines, error) {
+// withMemories passes through as generation states it: whether the run carries [기억] (GEN-73).
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, target generation.Language, withMemories bool) (generation.FrozenGuidelines, error) {
 	language := guideline.LanguageKorean
 	if target == generation.LanguageEnglish {
 		language = guideline.LanguageEnglish
 	}
-	resolved, err := a.service.ForPrompt(ctx, userID, guideline.KindPost, templateID, field, language)
+	resolved, err := a.service.ForPrompt(ctx, userID, guideline.KindPost, templateID, field, language, withMemories)
 	if err != nil {
 		return generation.FrozenGuidelines{}, err
 	}
@@ -62,7 +63,9 @@ func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, temp
 // generationMemories hands the generation context the memory context's retrieval. What
 // crosses is the post's own words and, coming back, TEXTS — the generation context never
 // learns that a memory has a kind, tags or an id, and the memory context never learns what a
-// job is. It is consulted once per enqueue, and only for a post that opted in.
+// job is. A preference comes back labelled `취향:` inside its text, which is prompt framing the
+// memories-only 기본 지침 reads rather than a kind (GEN-73). It is consulted once per enqueue,
+// and only for a post that opted in.
 type generationMemories struct{ service *memory.Service }
 
 func (a generationMemories) ForPost(ctx context.Context, userID string, keyParts []string) ([]string, error) {
@@ -98,7 +101,8 @@ func (a clipGuidelineCandidates) ForClip(ctx context.Context, userID, videoTempl
 	if videoTemplateID != "" {
 		templateID = &videoTemplateID
 	}
-	got, err := a.service.ForPrompt(ctx, userID, guideline.KindClip, templateID, nil, guideline.Language(language))
+	// A clip carries no memories (MEM-29), so no memories-only 기본 지침 reaches it.
+	got, err := a.service.ForPrompt(ctx, userID, guideline.KindClip, templateID, nil, guideline.Language(language), false)
 	if err != nil {
 		return clip.VideoGuidelines{}, err
 	}

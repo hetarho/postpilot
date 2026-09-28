@@ -7,7 +7,8 @@ import (
 )
 
 // GUIDE-41, GUIDE-42: exactly the product's 기본 지침, in their order, each with a stable key and
-// both languages, and only 자연스러운 한국어 문체 kept to a Korean target.
+// both languages, only 자연스러운 한국어 문체 kept to a Korean target and only 기억을 통한 감상
+// 추가 kept to a run that carries memories (GEN-73).
 func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 	keys := func(kind Kind) []string {
 		var out []string
@@ -16,7 +17,7 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		}
 		return out
 	}
-	if got, want := keys(KindPost), []string{"facts", "impressions", "naming", "order", "opening", "photo_moments", "closing", "no_listing", "titles", "tags", "natural_korean"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "closing", "no_listing", "titles", "tags", "natural_korean"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("post defaults = %v, want %v", got, want)
 	}
 	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
@@ -35,13 +36,24 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 			if d.KoreanTargetOnly != (d.Key == "natural_korean") {
 				t.Errorf("%q KoreanTargetOnly = %v", d.Key, d.KoreanTargetOnly)
 			}
+			if d.MemoriesOnly != (d.Key == "memory_impressions") {
+				t.Errorf("%q MemoriesOnly = %v", d.Key, d.MemoriesOnly)
+			}
 		}
 	}
 	if _, ok := DefaultFor(KindPost, "clip_facts"); ok {
 		t.Error("a clip key resolved as a post default")
 	}
-	if text, ok := Defaults(KindPost)[10].Text(LanguageEnglish); ok || text != "" {
+	natural, _ := DefaultFor(KindPost, "natural_korean")
+	if text, ok := natural.Text(LanguageEnglish); ok || text != "" {
 		t.Error("the Korean-target-only default reached an English target")
+	}
+	// GEN-73: the memories default names itself the exception to 감상은 내가 쓴 것만 and reads the
+	// 취향: label memory retrieval puts on a taste, in both languages.
+	memories, _ := DefaultFor(KindPost, "memory_impressions")
+	if memories.Ko.Name != "기억을 통한 감상 추가" || !strings.Contains(memories.Ko.Text, "'감상은 내가 쓴 것만'의 예외") ||
+		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") {
+		t.Errorf("memory_impressions = %+v", memories)
 	}
 	if text, ok := Defaults(KindPost)[0].Text(LanguageEnglish); !ok || !strings.HasPrefix(text, "State no concrete fact") {
 		t.Errorf("the English text of facts = %q", text)

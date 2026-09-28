@@ -102,9 +102,10 @@ type FrozenGuidelines struct {
 // enqueue time: the enabled 기본 지침 of a post, then the owner's texts — the global group, the
 // template group, then the 분야 group, each by created_at then id (GUIDE-14). templateID and
 // field are nil for a post with none, which yields only the groups the post has — an empty
-// result is the ordinary case, not an error.
+// result is the ordinary case, not an error. withMemories says whether the run's prompt
+// carries a [기억] section, which a memories-only 기본 지침 needs to be sent at all (GEN-73).
 type GuidelinesForPrompt interface {
-	ForPrompt(ctx context.Context, userID string, templateID, field *string, target Language) (FrozenGuidelines, error)
+	ForPrompt(ctx context.Context, userID string, templateID, field *string, target Language, withMemories bool) (FrozenGuidelines, error)
 }
 
 // MemoriesForPrompt is the memory context's published retrieval, consumed only at enqueue

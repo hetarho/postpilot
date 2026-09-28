@@ -55,6 +55,8 @@ message DefaultGuideline {
   DefaultGuidelineCopy en = 4;
   // Reaches a Korean-target run alone (GUIDE-41).
   bool korean_target_only = 5;
+  // Reaches a run whose prompt carries memories alone (GEN-73).
+  bool memories_only = 6;
 }
 
 enum GuidelineScope {

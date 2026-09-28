@@ -50,6 +50,7 @@ export interface FakeDefaultGuidelineRow {
   /** Omitted means on, as for a new account (GUIDE-43). */
   enabled?: boolean
   koreanTargetOnly?: boolean
+  memoriesOnly?: boolean
 }
 
 export interface FakeGuidelineCandidateRow {
@@ -244,6 +245,7 @@ export function registerGuidelineService(
         row.en ?? { name: `EN ${row.name}`, text: `EN ${row.text}` },
       ),
       koreanTargetOnly: row.koreanTargetOnly ?? false,
+      memoriesOnly: row.memoriesOnly ?? false,
     })
 
   rpc(GuidelineService.method.listGuidelines, (req) => {

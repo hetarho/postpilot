@@ -301,8 +301,14 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	// GUIDE-14, GUIDE-43: the post list carries every 기본 지침 with its switch, both copies, and a
 	// switch saves on change and reads back; the clip kind lists its own defaults and no owner row.
 	defaults := listed.Msg.GetDefaults()
-	if len(defaults) != 11 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[10].GetKoreanTargetOnly() {
+	if len(defaults) != 12 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[11].GetKoreanTargetOnly() {
 		t.Fatalf("defaults = %v", defaults)
+	}
+	// GEN-73: the memories default says so on the wire, and it alone does.
+	for i, d := range defaults {
+		if d.GetMemoriesOnly() != (i == 2 && d.GetKey() == "memory_impressions") {
+			t.Errorf("%s memories_only = %v at %d", d.GetKey(), d.GetMemoriesOnly(), i)
+		}
 	}
 	switched, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "tags", Enabled: false}))
 	if err != nil || switched.Msg.GetDefaultGuideline().GetKey() != "tags" || switched.Msg.GetDefaultGuideline().GetEnabled() {
@@ -314,8 +320,11 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 			t.Errorf("%s enabled = %v after the switch", d.GetKey(), d.GetEnabled())
 		}
 	}
-	if other, _ := handler.ListGuidelines(bob, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{})); !other.Msg.GetDefaults()[9].GetEnabled() {
-		t.Fatal("alice's switch reached bob")
+	other, _ := handler.ListGuidelines(bob, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{}))
+	for _, d := range other.Msg.GetDefaults() {
+		if d.GetKey() == "tags" && !d.GetEnabled() {
+			t.Fatal("alice's switch reached bob")
+		}
 	}
 	clip, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
 	if err != nil || len(clip.Msg.GetDefaults()) != 7 || len(clip.Msg.GetGuidelines()) != 0 {

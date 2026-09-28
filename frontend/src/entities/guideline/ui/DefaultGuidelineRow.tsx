@@ -41,6 +41,11 @@ export function DefaultGuidelineRow({
               {t('defaults.koreanOnly')}
             </Typography>
           )}
+          {guideline.memoriesOnly && (
+            <Typography variant="meta" as="p" className="mt-1">
+              {t('defaults.memoriesOnly')}
+            </Typography>
+          )}
         </div>
         <Switch
           aria-label={t('defaults.use', { name: guideline.name })}

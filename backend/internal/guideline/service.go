@@ -227,24 +227,27 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 
 // ForPrompt is this context's published behavior for prompt builders: the texts one run is
 // given (GUIDE-14). First the enabled 기본 지침 of the kind, in the product's order and in the
-// target language — a Korean-target-only one reaching a Korean target alone — then the owner's
-// texts that apply to the post, resolved from its CURRENT template and 분야: global, then
-// template, then 분야, each by created_at then id. The write and the revision are given the same
-// texts. Absence is not an error: a prompt with no guidelines is a valid prompt.
+// target language — a Korean-target-only one reaching a Korean target alone, a memories-only
+// one reaching a run that carries memories alone — then the owner's texts that apply to the
+// post, resolved from its CURRENT template and 분야: global, then template, then 분야, each by
+// created_at then id. Absence is not an error: a prompt with no guidelines is a valid prompt.
+//
+// withMemories says whether the run's prompt carries a [기억] section — the caller froze its
+// memories first and knows (GEN-73); a revision and a clip never carry one (MEM-22).
 //
 // A clip's owner texts are its kind's: global, then those linked to its video template —
 // templateID is then the video template's id and field is unused.
 //
 // templateID and field are pointers because "the post has none" and "the post has X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
-func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templateID, field *string, target Language) (PromptGuidelines, error) {
+func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templateID, field *string, target Language, withMemories bool) (PromptGuidelines, error) {
 	defaults, err := s.Defaults(ctx, userID, kind)
 	if err != nil {
 		return PromptGuidelines{}, err
 	}
 	var out PromptGuidelines
 	for _, d := range defaults {
-		if !d.Enabled {
+		if !d.Enabled || (d.Default.MemoriesOnly && !withMemories) {
 			continue
 		}
 		if text, ok := d.Default.Text(target); ok {

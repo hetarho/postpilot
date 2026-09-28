@@ -104,7 +104,8 @@ func TestATagOfPunctuationAloneMatchesNothing(t *testing.T) {
 }
 
 // TextsForPost is what the generation context sees: texts, in injection order, and never a
-// row. The port is what keeps the kind, the tags and the id out of the prompt builder.
+// row. The port is what keeps the kind, the tags and the id out of the prompt builder — a
+// preference crosses as its 취향:-labelled text, never as a kind (GEN-73).
 func TestTextsForPostAnswersTextsInInjectionOrder(t *testing.T) {
 	store := &fakeStore{list: listed(
 		Memory{ID: "a", Text: "매운 음식을 못 먹는다", Kind: KindPreference},
@@ -117,7 +118,7 @@ func TestTextsForPostAnswersTextsInInjectionOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(texts) != 2 || texts[0] != "연남동에 자주 간다" || texts[1] != "매운 음식을 못 먹는다" {
+	if len(texts) != 2 || texts[0] != "연남동에 자주 간다" || texts[1] != "취향: 매운 음식을 못 먹는다" {
 		t.Fatalf("texts = %v", texts)
 	}
 
@@ -129,6 +130,36 @@ func TestTextsForPostAnswersTextsInInjectionOrder(t *testing.T) {
 	}
 	if len(texts) != 3 {
 		t.Fatalf("texts = %d, want the configured InjectMax of 3", len(texts))
+	}
+}
+
+// GEN-73: only a preference is labelled — the label is what the memories 기본 지침 reads a
+// taste from — and the stored text stays as the user approved it.
+func TestTextsForPostLabelsAPreferenceAlone(t *testing.T) {
+	store := &fakeStore{list: listed(
+		Memory{ID: "pref", Text: "매운 음식을 좋아한다", Kind: KindPreference},
+		Memory{ID: "persona", Text: "두 아이를 키운다", Kind: KindPersona},
+		Memory{ID: "place", Text: "연남동 단골집이 있다", Kind: KindPlace, Tags: []string{"연남동"}},
+	)}
+	service := newTestService(store)
+	texts, err := service.TextsForPost(context.Background(), "alice", []string{"연남동"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labelled := 0
+	for _, text := range texts {
+		if strings.HasPrefix(text, "취향: ") {
+			labelled++
+			if text != "취향: 매운 음식을 좋아한다" {
+				t.Errorf("labelled %q", text)
+			}
+		}
+	}
+	if len(texts) != 3 || labelled != 1 {
+		t.Fatalf("texts = %q", texts)
+	}
+	if store.list[0].Text != "매운 음식을 좋아한다" {
+		t.Fatalf("the stored text changed: %q", store.list[0].Text)
 	}
 }
 

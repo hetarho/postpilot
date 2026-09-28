@@ -44,7 +44,7 @@ func (neutralBriefs) RenderedFor(context.Context, string, string, bool, []Templa
 
 type neutralGuidelines struct{}
 
-func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string, Language) (FrozenGuidelines, error) {
+func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string, Language, bool) (FrozenGuidelines, error) {
 	return FrozenGuidelines{}, nil
 }
 

@@ -18,6 +18,13 @@ import (
 // in injection order. The caller hands over the post's own words — its memo, its 가제, its
 // template answers and the `objects` and `visible_text` of its observations (MEM-7) — and
 // receives texts. A memory row never leaves this package.
+//
+// A preference is handed over as `취향: <text>`: the 기억을 통한 감상 추가 기본 지침 may read
+// an impression from a taste and nothing else, and it can only name which lines are tastes
+// through this label (GEN-73, MEM-5). The label is prompt framing, Korean for every target
+// like every other section label, and the stored text stays exactly as the user approved it.
+// With that 기본 지침 switched off the label licenses nothing: 감상은 내가 쓴 것만 names its
+// own sources.
 func (s *Service) TextsForPost(ctx context.Context, userID string, keyParts []string) ([]string, error) {
 	memories, err := s.store.List(ctx, userID)
 	if err != nil {
@@ -26,9 +33,20 @@ func (s *Service) TextsForPost(ctx context.Context, userID string, keyParts []st
 	selected := Select(memories, keyParts, s.limits.InjectMax)
 	texts := make([]string, 0, len(selected))
 	for _, m := range selected {
-		texts = append(texts, m.Text)
+		texts = append(texts, promptText(m))
 	}
 	return texts, nil
+}
+
+// preferenceLabel marks a taste inside [기억] (GEN-73). Fixed prompt text, so it lives in code.
+const preferenceLabel = "취향: "
+
+// promptText is a memory as a prompt line: a preference labelled, every other kind as stored.
+func promptText(m Memory) string {
+	if m.Kind == KindPreference {
+		return preferenceLabel + m.Text
+	}
+	return m.Text
 }
 
 // Select is the retrieval rule itself, over memories the caller already holds in the order

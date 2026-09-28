@@ -39,6 +39,7 @@ export const i18n = {
     defaults: {
       badge: '추천',
       koreanOnly: '한국어 글에만 적용돼요',
+      memoriesOnly: '기억 사용을 켠 글에만 적용돼요',
       use: '{{name}} 사용',
     },
   },
@@ -78,6 +79,7 @@ export const i18n = {
     defaults: {
       badge: 'Recommended',
       koreanOnly: 'Applies to Korean posts only',
+      memoriesOnly: 'Applies only to posts that use memories',
       use: 'Use {{name}}',
     },
   },

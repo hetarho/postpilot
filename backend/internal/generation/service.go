@@ -210,7 +210,8 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Template = brief
-	guidelines, err := s.freezeGuidelines(ctx, post, request.ContentLanguage)
+	// A revision carries no [기억] (MEM-22), so no memories-only 기본 지침 either.
+	guidelines, err := s.freezeGuidelines(ctx, post, request.ContentLanguage, false)
 	if err != nil {
 		return "", err
 	}
@@ -439,7 +440,9 @@ func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*Template
 // from and the post's 분야 — one read, one consistent view. Editing, rescoping, deleting or
 // switching a guideline afterwards cannot reach the queued work, including across a
 // restart-resume or an explicit retry, because the handlers read only the payload (GUIDE-17).
-func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, target Language) (FrozenGuidelines, error) {
+// withMemories is whether the run's own prompt will carry a [기억] section, so the caller
+// freezes its memories first (GEN-73).
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, target Language, withMemories bool) (FrozenGuidelines, error) {
 	if s.guidelines == nil {
 		return FrozenGuidelines{}, nil
 	}
@@ -452,7 +455,7 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, target L
 		id := post.Field
 		field = &id
 	}
-	guidelines, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, target)
+	guidelines, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, target, withMemories)
 	if err != nil {
 		return FrozenGuidelines{}, fmt.Errorf("load applicable guidelines: %w", err)
 	}
@@ -484,17 +487,19 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 // freezeWriteMaterial resolves everything a write freezes, once. Start and SnapshotWriteInput
 // both call it, so a comparison can never freeze less than the run it compares — the drop that
 // left a comparison of a post with 기억 사용 on without its memories. The 지침 are the enabled
-// 기본 지침 and the owner's texts, in the target language (GUIDE-14, GUIDE-17).
+// 기본 지침 and the owner's texts, in the target language (GUIDE-14, GUIDE-17). The memories
+// freeze before the 지침, whose memories-only 기본 지침 follows a [기억] section into the prompt
+// and nowhere else (GEN-73).
 func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writeMaterial, error) {
 	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	guidelines, err := s.freezeGuidelines(ctx, post, post.TargetLanguage)
+	memories, err := s.freezeMemories(ctx, post)
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	memories, err := s.freezeMemories(ctx, post)
+	guidelines, err := s.freezeGuidelines(ctx, post, post.TargetLanguage, len(memories) > 0)
 	if err != nil {
 		return writeMaterial{}, err
 	}

@@ -313,11 +313,13 @@ func (s *Service) freezeStorylineMaterial(ctx context.Context, post PostInput) (
 	if err != nil {
 		return storylineMaterial{}, err
 	}
-	guidelines, err := s.freezeGuidelines(ctx, post, post.TargetLanguage)
+	memories, err := s.freezeMemories(ctx, post)
 	if err != nil {
 		return storylineMaterial{}, err
 	}
-	memories, err := s.freezeMemories(ctx, post)
+	// The storyline prompt carries the same [기억] section, so it gets the same memories-only
+	// 기본 지침 exactly when that section exists (GEN-73).
+	guidelines, err := s.freezeGuidelines(ctx, post, post.TargetLanguage, len(memories) > 0)
 	if err != nil {
 		return storylineMaterial{}, err
 	}

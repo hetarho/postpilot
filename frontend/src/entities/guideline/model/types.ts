@@ -41,16 +41,19 @@ export interface DefaultGuidelineEntry {
   ko: { name: string; text: string }
   en: { name: string; text: string }
   koreanTargetOnly: boolean
+  memoriesOnly: boolean
 }
 
-/** A 기본 지침 in the UI language: its name, its text, whether this account runs it, and whether
- *  it reaches only a Korean post (GUIDE-19, GUIDE-43). */
+/** A 기본 지침 in the UI language: its name, its text, whether this account runs it, whether it
+ *  reaches only a Korean post and whether only a post that uses memories (GUIDE-19, GUIDE-43,
+ *  GEN-73). */
 export interface DefaultGuideline {
   key: string
   enabled: boolean
   name: string
   text: string
   koreanTargetOnly: boolean
+  memoriesOnly: boolean
 }
 
 /** A recorded revision instruction awaiting review (GUIDE-7). It is a receipt for something the

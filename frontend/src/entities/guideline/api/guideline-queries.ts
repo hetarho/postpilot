@@ -91,6 +91,7 @@ export function toDefaultGuidelineEntry(value: ProtoDefaultGuideline): DefaultGu
     ko: { name: value.ko?.name ?? '', text: value.ko?.text ?? '' },
     en: { name: value.en?.name ?? '', text: value.en?.text ?? '' },
     koreanTargetOnly: value.koreanTargetOnly,
+    memoriesOnly: value.memoriesOnly,
   }
 }
 
@@ -106,6 +107,7 @@ export function localizeDefaultGuideline(
     name: copy.name,
     text: copy.text,
     koreanTargetOnly: entry.koreanTargetOnly,
+    memoriesOnly: entry.memoriesOnly,
   }
 }
 

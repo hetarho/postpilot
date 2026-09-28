@@ -36,6 +36,9 @@ type DefaultGuideline struct {
 	En   DefaultCopy
 	// KoreanTargetOnly entries reach a Korean-target run alone (GUIDE-41).
 	KoreanTargetOnly bool
+	// MemoriesOnly entries reach a run whose prompt carries a [기억] section alone (GEN-73): a
+	// line about a source the post has none of must not be sent (MEM-21).
+	MemoriesOnly bool
 }
 
 // Text is the entry's prompt text for a target language, and false when the entry does not
@@ -100,6 +103,14 @@ var postDefaults = []DefaultGuideline{
 		"감상, 맛, 평가는 글쓴이가 메모, 템플릿 입력란, 스토리라인에 직접 적은 것만 쓰고, 적혀 있지 않은 감상을 지어내지 마세요.",
 		"Impressions only as I gave them",
 		"Write an impression, a taste or a verdict only as the author gave it in the memo, the template's fields or the storyline, and invent none."),
+	// memory_impressions names itself the exception to impressions: guidelinePrecedence lets the
+	// earlier of two conflicting 기본 지침 win, and an exception is not a conflict (GEN-73). It
+	// reads the 취향: label memory retrieval puts on a preference memory.
+	{
+		Key: "memory_impressions", Kind: KindPost, MemoriesOnly: true,
+		Ko: DefaultCopy{"기억을 통한 감상 추가", "기억에서 '취향:'으로 적힌 것은 글쓴이가 직접 준 감상으로 봅니다. 재료에 적힌 사실에 글쓴이가 감상을 적지 않았다면, 그 취향이 뜻하는 감상을 덧붙여도 됩니다. 예를 들어 매운 음식을 좋아한다는 취향이 있고 메모에 '매웠다'가 있으면 '매워서 좋았다'처럼 쓰세요. 감상을 붙일 사실은 재료에 적힌 것이어야 하고, 취향만으로 사실을 만들지 마세요. 글쓴이가 이 글에 적은 감상이 있으면 그 감상을 따르세요. 이 지침은 '감상은 내가 쓴 것만'의 예외입니다."},
+		En: DefaultCopy{"Impressions from memories", "A memory marked '취향:' is a taste the author gave. Where the material states a fact and the author gave no impression of it, you may add the impression that taste implies: with a taste for spicy food and a memo saying it was spicy, write that it was spicy and good. The fact must come from the material; never make one up from a taste alone. Where the author wrote an impression for this post, follow theirs. This is the exception to 'Impressions only as I gave them'."},
+	},
 	post("naming", "메모의 이름으로",
 		"사진 관찰은 사진을 한 장씩 따로 본 결과라 그 대상이 무엇인지 모르는 채 적혀 있습니다. 메모나 템플릿 입력란이 그 대상의 정체나 이름을 알려주면 — 관찰의 \"콘크리트 건물\"이 메모의 \"별채\"라면 — 본문과 IMAGE alt 및 caption에서 관찰의 일반적인 표현 대신 그쪽을 쓰세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요.",
 		"The memo's names",
