@@ -7,7 +7,7 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { renderAppAt } from '@/test/app'
-import { clipTimelineFixture } from '@/test/clip-editing'
+import { clipNarrationFixture, clipTimelineFixture } from '@/test/clip-editing'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
 import type { FakeJobsOptions } from '@/test/jobs'
 
@@ -563,4 +563,93 @@ it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', 
   // The edit reached the server BEFORE the render started.
   expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')
   expect(calls.indexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('StartClipRender'))
+})
+
+const styleRadio = (name: string) =>
+  within(screen.getByRole('radiogroup', { name: '자막 스타일' })).getByRole('radio', { name })
+
+// CLIP-142, CLIP-143, CLIP-191: the owner gives ONE caption a style outside the project's AI set.
+// Only that caption changes — its words and window stay — the AI set is not touched, and the
+// draft saves itself.
+it('styles one caption outside the AI set and saves only that change', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const projectWrites: NonNullable<FakeClipsOptions['projectWrites']> = []
+  await mount({ planWrites: writes, projectWrites })
+  await selectText()
+  await userEvent.click(styleRadio('네온 사인'))
+  await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].ownerStyle).toBe('neon'), AUTOSAVE)
+  const [styled, other] = writes.at(-1)!.plan.elements!
+  const [was, otherWas] = clipTimelineFixture().plan.elements!
+  expect(styled).toMatchObject({ text: was.text, startMs: was.startMs, endMs: was.endMs })
+  expect(other.ownerStyle).toBeFalsy()
+  expect(other.text).toBe(otherWas.text)
+  expect(projectWrites).toEqual([])
+})
+
+// CDS-100: a size the new style cannot take stays, is reported where the size is set, and holds
+// the save and the render until it is corrected; undo steps back out of it.
+it('keeps a size the new style cannot take, reports it and holds the render', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const project = fixture()
+  project.editing!.plan.elements![0].ownerSizePx = 64
+  await mount({ planWrites: writes, projects: [project] })
+  await select()
+  await selectText()
+  await userEvent.click(styleRadio('키노트'))
+  const size = screen.getByLabelText('글자 크기 (px)')
+  expect(size).toHaveValue('64')
+  expect(size).toHaveAttribute('aria-invalid', 'true')
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)))
+  expect(writes.some((write) => write.plan.elements?.[0].ownerStyle === 'keynote')).toBe(false)
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  expect(styleRadio('기본 스타일')).toHaveAttribute('aria-checked', 'true')
+  expect(screen.getByLabelText('글자 크기 (px)')).not.toHaveAttribute('aria-invalid')
+  await userEvent.click(screen.getByRole('button', { name: '다시 실행' }))
+  setField('글자 크기 (px)', '76')
+  fireEvent.blur(screen.getByLabelText('글자 크기 (px)'))
+  await waitFor(
+    () =>
+      expect(writes.at(-1)?.plan.elements?.[0]).toMatchObject({
+        ownerStyle: 'keynote',
+        ownerSizePx: 76,
+      }),
+    AUTOSAVE,
+  )
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+})
+
+// CLIP-134: captions are selected by their own identity — two on one cut, one across cuts — and
+// a style given to one of them is that caption's alone.
+it('selects each caption by its identity, several on one cut and one across cuts', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const editing = clipNarrationFixture()
+  const first = editing.plan.elements!.find((t) => t.instanceId === 'narration-1')!
+  editing.plan.elements!.push({
+    ...first,
+    instanceId: 'narration-3',
+    elementId: 'narration-3',
+    text: '같은 컷의 둘째 자막',
+    startMs: 5500,
+    endMs: 7500,
+    resolvedStartMs: 5500,
+    resolvedEndMs: 7500,
+  })
+  await mount({ planWrites: writes, projects: [{ ...fixture(), editing }] })
+  await userEvent.click(timeline().getByRole('button', { name: '같은 컷의 둘째 자막' }))
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('같은 컷의 둘째 자막')
+  await userEvent.click(styleRadio('필름 자막'))
+  await waitFor(
+    () =>
+      expect(
+        writes.at(-1)?.plan.elements?.find((t) => t.instanceId === 'narration-3')?.ownerStyle,
+      ).toBe('film'),
+    AUTOSAVE,
+  )
+  const saved = writes.at(-1)!.plan.elements!
+  expect(saved.find((t) => t.instanceId === 'narration-1')?.ownerStyle).toBeFalsy()
+  expect(saved.find((t) => t.instanceId === 'narration-2')?.ownerStyle).toBeFalsy()
+  await userEvent.click(timeline().getByRole('button', { name: '컷을 건너가는 자막' }))
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('컷을 건너가는 자막')
+  expect(styleRadio('기본 스타일')).toHaveAttribute('aria-checked', 'true')
 })

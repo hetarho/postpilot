@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  type ClipCaptionFragment,
+  ClipCaptionStyleSample,
   type ClipRegionPresetSample,
   useClipCaptionStyleSamples,
   useClipRegionPresetSamples,
@@ -15,23 +15,6 @@ import {
   CLIP_DESIGN,
 } from '@/entities/clip-design'
 import { Checkbox, Typography } from '@/shared/ui'
-
-/** One style as the RENDERER draws it, scaled into the row (CDS-83). The
- *  fragment is already at the origin, so its own box is the whole viewBox. */
-function StyleSample({ fragment }: { fragment?: ClipCaptionFragment }) {
-  if (!fragment || fragment.box.width <= 0 || fragment.box.height <= 0) return null
-  return (
-    <svg
-      viewBox={`0 0 ${fragment.box.width} ${fragment.box.height}`}
-      className="h-8 w-full"
-      preserveAspectRatio="xMinYMid meet"
-      aria-hidden="true"
-      /* The server's own drawing of this style: there is no other way to show
-         the very SVG the renderer produces (CDS-83). */
-      dangerouslySetInnerHTML={{ __html: fragment.svg }}
-    />
-  )
-}
 
 /** The tile that turns a region off (CLIP-111): it draws nothing, and choosing it keeps the
  *  region's slot draft for when a preset is chosen again (CLIP-189). */
@@ -228,7 +211,7 @@ export function ClipDesignSelection({
                     </Typography>
                   )}
                 </Typography>
-                <StyleSample fragment={fragment} />
+                <ClipCaptionStyleSample fragment={fragment} />
               </span>
             </label>
           )

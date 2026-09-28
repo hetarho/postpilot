@@ -451,6 +451,29 @@ describe('the flow view', () => {
     )
   })
 
+  // CLIP-173, CLIP-191: a caption restyled in ② stands in the flow in its new drawing — the
+  // overlay prepared for the style it has now, never the one before it.
+  it('stands a restyled caption in its new drawing', () => {
+    const drawn = (key: string) =>
+      overlay({
+        assets: [{ ...overlay().assets[0], key, instanceId: 'caption', url: `blob:${key}` }],
+      })
+    const view = mount('vertical', undefined, { preview: drawn('film') })
+    fireEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
+    const caption = () => view.container.querySelector('img[data-flow-asset="caption"]')
+    expect(caption()).toHaveAttribute('src', 'blob:film')
+    view.rerender(
+      <ClipDraftPreview
+        plan={draft}
+        ratio="vertical"
+        sources={sources}
+        resolvePlayback={view.access}
+        preview={drawn('word-pop')}
+      />,
+    )
+    expect(caption()).toHaveAttribute('src', 'blob:word-pop')
+  })
+
   it('stands a cut whose frame cannot be had as its number on a neutral ground', async () => {
     const view = mount(
       'vertical',

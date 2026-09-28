@@ -29,6 +29,12 @@ export type {
   ClipEditingState,
   RetainedClipSource,
 } from './model/edit-plan'
+export {
+  clipAICaptionSet,
+  clipCaptionSizeRange,
+  clipCaptionStyleOf,
+  clipOwnerSizeFits,
+} from './model/caption-style'
 export { CLIP_REVISION_TARGETS } from './model/revision'
 export {
   CLIP_REGION_ROLES,
@@ -39,6 +45,7 @@ export {
 export type { ClipRevisionTarget } from './model/revision'
 export {
   acknowledgeClipCuts,
+  captionStartCut,
   clipDraftKey,
   clipSeconds,
   clipSourceSound,
@@ -55,4 +62,5 @@ export {
 } from './model/timeline'
 export type { ClipSelection, TimelineEdit } from './model/timeline'
 export { useClipPlanCalls, useClipRevisionQuote } from './api/calls'
+export { ClipCaptionStyleSample } from './ui/ClipCaptionStyleSample'
 export type { ClipPlanCalls } from './api/calls'

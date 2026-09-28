@@ -57,7 +57,12 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   const draft = timeline.plan
   const dirty = clipDraftKey(draft) !== baseline
   const validation = project.editing
-    ? validateTimelinePlan(draft, project.editing, project.observations)
+    ? validateTimelinePlan(
+        draft,
+        project.editing,
+        project.observations,
+        project.allowedCaptionStyles,
+      )
     : undefined
   const current = useRef({
     draft,

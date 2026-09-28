@@ -9,6 +9,7 @@ import {
   type ClipEditPlan,
   type ClipEditableText,
 } from '@/entities/clip-plan'
+import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
 import { Typography } from '@/shared/ui'
 
 /** One line of the reading: what it is, and the value the clip was made with. */
@@ -117,7 +118,11 @@ export function ClipTextReading({
 }) {
   const { t } = useTranslation('clips')
   const interval = textInterval(plan, text)
-  const style = text.ownerStyle || text.style
+  // The owner's style is read out by its name, whether or not the AI set offers it (CLIP-142).
+  const id = text.ownerStyle || text.style
+  const style = (CLIP_CAPTION_STYLES as readonly string[]).includes(id)
+    ? t(`captionStyles.${id as (typeof CLIP_CAPTION_STYLES)[number]}`)
+    : id
   return (
     <div className="space-y-4">
       <Typography variant="body" className="break-words">

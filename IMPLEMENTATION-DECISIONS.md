@@ -402,6 +402,24 @@ choice would be expensive to undo are listed at the end.
 - **Words the owner's style cannot hold are refused with `copy_limit` on that caption.** No
   shorter alternative stands in for them.
 
+## T455 — ②'s caption style picker
+
+- **The picker is a radiogroup of tiles: 기본 스타일 first, then all 16 approved styles.** Each
+  tile shows the renderer's sample drawing and the style's name. Sequence-rendered styles add
+  "움직이는 스타일". 기본 스타일 means "no style of the owner's": the caption takes the style
+  its plan names. It is drawn in that style, so its tile shows the look the caption has now.
+- **The picker gets its drawings from the workspace, not from its own query.** The workspace
+  fetches `useClipCaptionStyleSamples`, the same session-long query ① uses, and passes them in.
+  That keeps `ClipTextControls` presentational and testable without a query client.
+- **A style change no longer clears the owner's size.** The size range shown is the role of the
+  style the caption is drawn in. It follows a rule shared with the server, now in
+  `entities/clip-plan`. A kept size outside the new range is marked invalid on the size field and
+  makes the draft unsaveable, so autosave and render wait. Undo, or correcting the size, clears
+  it. The size field also now follows undo and redo.
+- **A save refused on the selected caption is also shown on its sheet.** The dock alert stays as
+  it was. The sheet copy appears only when the refusal names this caption.
+- **The read-only caption view gives a style's name instead of its id.**
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

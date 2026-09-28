@@ -20,6 +20,7 @@ import {
 } from './edit-plan'
 import type { ClipSourceAssociation } from '@/entities/clip-design/@x/clip-plan'
 import { splitRapid } from './caption-pace'
+import { clipOwnerSizeFits } from './caption-style'
 import { clipDraftKey } from './draft-key'
 import { withClipRegionsOf } from './region-rebase'
 
@@ -109,7 +110,7 @@ export function textInterval(plan: ClipEditPlan, text: ClipEditableText) {
   return { startMs, endMs, valid, cutOffsetMs: cut?.startMs ?? 0 }
 }
 
-export function nativeTextErrors(plan: ClipEditPlan) {
+export function nativeTextErrors(plan: ClipEditPlan, aiSet: readonly string[] = []) {
   return (plan.elements ?? []).map((text) => {
     const interval = textInterval(plan, text)
     const phrases = text.phrases ?? []
@@ -130,6 +131,9 @@ export function nativeTextErrors(plan: ClipEditPlan) {
       keyword: !!text.keyword && !text.text.includes(text.keyword),
       accent: !CLIP_ACCENTS.some((a) => a === text.accent),
       stale: !!text.staleEvidence && !text.evidenceReviewed,
+      // The owner's size against the role of the style the caption is drawn in (CDS-100): a
+      // style change that leaves it outside is reported on the caption, not reset.
+      size: text.role === 'caption' && !clipOwnerSizeFits(text, aiSet),
       // A caption of the narration owns its own window: the output must hold
       // it and no other caption may claim the same moment (CLIP-66, CLIP-67).
       // Nothing is retimed for the owner — they move it themselves.
@@ -204,6 +208,8 @@ export function validateTimelinePlan(
   plan: ClipEditPlan,
   state: ClipEditingState,
   observations?: ClipCutEvidence,
+  /** The project's AI caption set, which only says what a caption naming no style draws. */
+  aiSet: readonly string[] = [],
 ) {
   const legacy = validateClipPlan(plan, state)
   if (!plan.nativeComposition)
@@ -239,7 +245,7 @@ export function validateTimelinePlan(
     copyClasses: false,
     copies: [],
   }))
-  const elements = nativeTextErrors(plan)
+  const elements = nativeTextErrors(plan, aiSet)
   const geometry = timelineCuts(plan)
   const invalidSeam = geometry.some(
     ({ cut, startMs, endMs }, i) =>
@@ -410,6 +416,14 @@ export function withSourceSound(plan: ClipEditPlan, setting: ClipSourceAudioSett
         )
       : [...settings, setting],
   }
+}
+
+/** The cut a caption's interval STARTS in: a caption may cross several, or sit with others on
+ *  one, and it is placed once, over the frame it opens on (CLIP-134, CLIP-143). */
+export function captionStartCut(plan: ClipEditPlan, text: ClipEditableText) {
+  const interval = textInterval(plan, text)
+  const cuts = timelineCuts(plan)
+  return cuts.find((c) => c.startMs <= interval.startMs && interval.startMs < c.endMs) ?? cuts[0]
 }
 
 export function selectedTime(plan: ClipEditPlan, selection: ClipSelection) {

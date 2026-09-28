@@ -1,22 +1,23 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  clipCaptionSizeRange,
+  clipCaptionStyleOf,
+  clipOwnerSizeFits,
   clipSeconds,
   splitTextPhrases,
   textInterval,
+  type ClipCaptionFragment,
   type ClipEditPlan,
   type ClipEditableText,
   type TimelineEdit,
 } from '@/entities/clip-plan'
 import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import { CLIP_ACCENTS } from '@/entities/clip-template'
+import { CLIP_RAPID } from '@/entities/clip-design'
+import type { AppFailure } from '@/shared/api'
 import {
-  CLIP_CAPTION_STYLES,
-  CLIP_DEFAULT_CAPTION_STYLE,
-  CLIP_RAPID,
-  clipCaptionSizes,
-} from '@/entities/clip-design'
-import {
+  AppFailureMessage,
   Button,
   FieldLabel,
   FieldMessage,
@@ -25,6 +26,7 @@ import {
   TextField,
   Typography,
 } from '@/shared/ui'
+import { ClipCaptionStylePicker } from './ClipCaptionStylePicker'
 import { ClipTimeField } from './ClipTimeField'
 
 const regionRole = (role: string) => role === 'hook' || role === 'ending'
@@ -37,6 +39,9 @@ export function ClipTextControls({
   notices = [],
   language,
   captionStyles = [],
+  styleSamples,
+  samplesUnavailable,
+  failure,
 }: {
   notices?: readonly ClipNotice[]
   language?: 'ko' | 'en'
@@ -44,9 +49,14 @@ export function ClipTextControls({
   text: ClipEditableText
   change: (edit: TimelineEdit, group?: string) => void
   invalid: boolean
-  /** The styles THIS project allows a caption to take (CLIP-142). Empty is a
-   *  project that selected none, which is the default style alone. */
+  /** The project's AI caption set (CLIP-142). It bounds what a writer picks, not the owner:
+   *  here it only says what a caption naming no style is drawn in. */
   captionStyles?: readonly string[]
+  /** The renderer's drawing of every approved style, once it has arrived (CDS-83). */
+  styleSamples?: readonly ClipCaptionFragment[]
+  samplesUnavailable?: boolean
+  /** The last save's refusal; shown here when it names this caption. */
+  failure?: AppFailure
 }) {
   const { t } = useTranslation('clips')
   const textNotices = notices.filter(
@@ -69,16 +79,27 @@ export function ClipTextControls({
       { type: 'text', id: text.instanceId, patch: value },
       group ? `${text.instanceId}:${group}` : undefined,
     )
-  // The project's own selection, narrowed to styles this build actually knows:
-  // an id it does not carry is one the server would refuse anyway (CLIP-142).
-  const allowed = CLIP_CAPTION_STYLES.filter((id) =>
-    captionStyles.length ? captionStyles.includes(id) : id === CLIP_DEFAULT_CAPTION_STYLE,
-  )
-  const sizes = clipCaptionSizes(text.ownerStyle)
+  // The size is bounded by the role of the style the caption is DRAWN in — the owner's
+  // choice, else the one its plan names (CDS-82, CDS-100).
+  const drawn = clipCaptionStyleOf({ style: text.style }, captionStyles)
+  const sizes = clipCaptionSizeRange(text, captionStyles)
   const [size, setSize] = useState(text.ownerSizePx ? String(text.ownerSizePx) : '')
+  // The field follows the caption's own size when something other than typing moves it — an
+  // undo, a redo, another caption selected — so it never shows a size the draft does not hold.
+  const held = `${text.instanceId}:${text.ownerSizePx ?? ''}`
+  const [shown, setShown] = useState(held)
+  if (shown !== held) {
+    setShown(held)
+    setSize(text.ownerSizePx ? String(text.ownerSizePx) : '')
+  }
   const typed = Number(size)
   const sizeRefused =
-    size.trim() !== '' && (!Number.isFinite(typed) || typed < sizes.min || typed > sizes.max)
+    (size.trim() !== '' && (!Number.isFinite(typed) || typed < sizes.min || typed > sizes.max)) ||
+    !clipOwnerSizeFits(text, captionStyles)
+  const refusal =
+    failure?.reason === 'CLIP_COMPOSITION_INVALID' && failure.params.element_id === text.elementId
+      ? failure
+      : undefined
   const phrases = text.phrases?.length
     ? text.phrases
     : text.pace === 'rapid'
@@ -98,6 +119,11 @@ export function ClipTextControls({
         })}
       </Typography>
       {invalid && <FieldMessage>{t('timeline.textInvalid')}</FieldMessage>}
+      {refusal && (
+        <div role="alert">
+          <AppFailureMessage failure={refusal} />
+        </div>
+      )}
       {text.staleEvidence && !text.evidenceReviewed && (
         <div role="alert" className="space-y-2">
           <FieldMessage>{t('timeline.stale')}</FieldMessage>
@@ -264,18 +290,15 @@ export function ClipTextControls({
       )}
       {text.role === 'caption' && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <FieldLabel id="clip-caption-style-label">{t('placement.style')}</FieldLabel>
-            <Listbox
-              aria-labelledby="clip-caption-style-label"
-              value={text.ownerStyle ?? ''}
-              options={[
-                { value: '', label: t('placement.styleDefault') },
-                ...allowed.map((value) => ({ value, label: t(`captionStyles.${value}`) })),
-              ]}
-              onChange={(ownerStyle) =>
-                patch({ ownerStyle: ownerStyle || undefined, ownerSizePx: undefined })
-              }
+          <div className="sm:col-span-2">
+            {/* A new style keeps the owner's size and place: a size it cannot take is reported
+                on the size field below and holds the save, never quietly cleared (CDS-100). */}
+            <ClipCaptionStylePicker
+              value={text.ownerStyle}
+              drawn={drawn}
+              samples={styleSamples}
+              unavailable={samplesUnavailable}
+              onChange={(ownerStyle) => patch({ ownerStyle })}
             />
           </div>
           <div>
@@ -283,6 +306,8 @@ export function ClipTextControls({
             <TextField
               id="clip-caption-size"
               inputMode="numeric"
+              aria-invalid={sizeRefused || undefined}
+              aria-describedby="clip-caption-size-range"
               value={size}
               onChange={(e) => setSize(e.target.value)}
               onBlur={() => {
@@ -295,11 +320,11 @@ export function ClipTextControls({
               }}
             />
             {sizeRefused ? (
-              <FieldMessage>
+              <FieldMessage id="clip-caption-size-range">
                 {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
               </FieldMessage>
             ) : (
-              <Typography variant="meta">
+              <Typography variant="meta" id="clip-caption-size-range">
                 {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
               </Typography>
             )}

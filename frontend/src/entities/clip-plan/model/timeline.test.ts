@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { clipTimelineFixture } from '@/test/clip-editing'
+import { clipNarrationFixture, clipTimelineFixture } from '@/test/clip-editing'
 import {
   applyTimelineEdit,
+  captionStartCut,
   clipDraftKey,
   clipTimelineReducer,
   createClipTimeline,
@@ -385,6 +386,70 @@ it('carries an owner placement through the draft queue and undo', () => {
   state = clipTimelineReducer(state, { type: 'undo' })
   expect(state.plan.elements!.find((text) => text.instanceId === id)!.ownerPosition).toBeUndefined()
   expect(clipDraftKey(state.plan)).toBe(before)
+})
+
+// CLIP-55, CLIP-191, CDS-100: a style, a size and a place are edits like any other. A new style
+// that leaves the kept size outside its role makes the draft unsaveable on that caption — never
+// clears the size — and undo steps back out of it; redo brings it back, still reported.
+it('undoes and redoes a caption’s style and size, out of a size the new style cannot take', () => {
+  const plan = clipTimelineFixture().plan
+  const id = plan.elements![0].instanceId
+  const state0 = createClipTimeline(plan)
+  const edit = (state: typeof state0, patch: Partial<ClipEditableText>) =>
+    clipTimelineReducer(state, { type: 'edit', edit: { type: 'text', id, patch }, at: 0 })
+  const caption = (state: typeof state0) => state.plan.elements!.find((t) => t.instanceId === id)!
+  const sized = edit(state0, { ownerSizePx: 64 })
+  expect(validateTimelinePlan(sized.plan, editing(plan)).saveable).toBe(true)
+  // keynote sets captions at 72–84: the kept 64 is reported, not reset.
+  const restyled = edit(sized, { ownerStyle: 'keynote' })
+  expect(caption(restyled)).toMatchObject({ ownerStyle: 'keynote', ownerSizePx: 64 })
+  const refused = validateTimelinePlan(restyled.plan, editing(plan))
+  expect(refused.saveable).toBe(false)
+  expect(refused.elements.find((e) => e.id === id)?.size).toBe(true)
+  const undone = clipTimelineReducer(restyled, { type: 'undo' })
+  expect(caption(undone).ownerStyle).toBeUndefined()
+  expect(caption(undone).ownerSizePx).toBe(64)
+  expect(validateTimelinePlan(undone.plan, editing(plan)).saveable).toBe(true)
+  const redone = clipTimelineReducer(undone, { type: 'redo' })
+  expect(caption(redone).ownerStyle).toBe('keynote')
+  expect(validateTimelinePlan(redone.plan, editing(plan)).saveable).toBe(false)
+  // Correcting the size is what clears it.
+  expect(validateTimelinePlan(edit(redone, { ownerSizePx: 72 }).plan, editing(plan)).saveable).toBe(
+    true,
+  )
+})
+
+// The size is checked against the style the caption is DRAWN in: a caption the owner gave no
+// style takes its plan's, or the AI set's first where it names none.
+it('bounds an owner size by the style the caption is drawn in', () => {
+  const plan = clipTimelineFixture().plan
+  const id = plan.elements![0].instanceId
+  const with64 = (style: string) => ({
+    ...plan,
+    elements: plan.elements!.map((t) =>
+      t.instanceId === id ? { ...t, style, ownerSizePx: 64 } : t,
+    ),
+  })
+  const size = (candidate: ClipEditPlan, aiSet: string[]) =>
+    validateTimelinePlan(candidate, editing(plan), undefined, aiSet).elements.find(
+      (e) => e.id === id,
+    )?.size
+  expect(size(with64('keynote'), ['bold'])).toBe(true)
+  expect(size(with64('auto'), ['keynote'])).toBe(true)
+  expect(size(with64('auto'), ['bold'])).toBe(false)
+  expect(size(with64('film'), ['keynote'])).toBe(false)
+})
+
+// CLIP-134, CLIP-143: a caption is placed over the frame of the cut its interval opens in —
+// one crossing a cut boundary over the cut it starts in, several on one cut over that cut.
+it('places a caption over the cut its interval starts in', () => {
+  const plan = clipNarrationFixture().plan
+  const caption = (id: string) => plan.elements!.find((t) => t.instanceId === id)!
+  expect(captionStartCut(plan, caption('narration-1'))?.cut.id).toBe('cut-a')
+  // 8–12 s crosses the cut boundary at 9.8 s: it opens over cut a.
+  expect(captionStartCut(plan, caption('narration-2'))?.cut.id).toBe('cut-a')
+  const late = { ...caption('narration-2'), instanceId: 'late', startMs: 10000, endMs: 12000 }
+  expect(captionStartCut(plan, late)?.cut.id).toBe('cut-b')
 })
 
 describe('timeline label geometry', () => {

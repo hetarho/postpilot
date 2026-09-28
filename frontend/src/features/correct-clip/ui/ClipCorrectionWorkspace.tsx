@@ -8,10 +8,11 @@ import {
   outputToSourceMs,
   snapClipTime,
   sourceToOutputMs,
-  textInterval,
   timelineCuts,
   type ClipEditingState,
+  captionStartCut,
   useClipCaptionPreview,
+  useClipCaptionStyleSamples,
 } from '@/entities/clip-plan'
 import { type ClipDisplayedFrame } from '@/entities/clip-preview'
 import { Info, X } from 'lucide-react'
@@ -260,14 +261,12 @@ export function ClipCorrectionWorkspace({
     text?.role === 'caption' && !readOnly,
   )
   const fragment = captionPreview.data?.captions.find((c) => c.instanceId === text?.instanceId)
+  // Every approved style, drawn once by the renderer for the caption sheet's picker (CDS-83);
+  // the same session-long query ① reads, retried only while the renderer is busy.
+  const styleSamples = useClipCaptionStyleSamples(projectId, text?.role === 'caption' && !readOnly)
   // The cut the caption's interval STARTS in: a caption may cross several, and
   // it is placed once, against the frame it opens over (CLIP-143).
-  const captionInterval = text ? textInterval(draft, text) : undefined
-  const captionCut = captionInterval
-    ? (timelineCuts(draft).find(
-        (c) => c.startMs <= captionInterval.startMs && captionInterval.startMs < c.endMs,
-      ) ?? timelineCuts(draft)[0])
-    : undefined
+  const captionCut = text ? captionStartCut(draft, text) : undefined
   const failure = correction.failure ?? renderFailure
   return (
     <section
@@ -851,6 +850,9 @@ export function ClipCorrectionWorkspace({
                 plan={draft}
                 text={text}
                 captionStyles={captionStyles}
+                styleSamples={styleSamples.data?.captions}
+                samplesUnavailable={styleSamples.isError}
+                failure={correction.failure}
                 notices={notices}
                 language={language}
                 change={change}

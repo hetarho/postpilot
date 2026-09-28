@@ -117,3 +117,52 @@ it('cancels the preparation in flight when the plan it was for is gone', async (
   view.unmount()
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:glyph')
 })
+
+// CLIP-56, CLIP-191: the preview draws a caption in the owner's own style — one outside the AI
+// set, static or sequence-rendered alike — and a new style asks again rather than leaving the
+// earlier drawing on screen.
+it('prepares the owner’s style and asks again when it changes', async () => {
+  const styles: string[] = []
+  const transport = createRouterTransport((router) =>
+    router.service(ClipRenderService, {
+      prepareClipPreview: async (req) => {
+        styles.push(req.plan?.elements?.[0]?.ownerStyle ?? '')
+        return create(PrepareClipPreviewResponseSchema, {
+          draftHash: req.draftHash,
+          canvasWidth: 1080,
+          canvasHeight: 1920,
+          nextOffset: -1,
+          assets: [
+            {
+              key: `glyph-${styles.length}`,
+              instanceId: 'fixed',
+              png: new Uint8Array([1]),
+              width: 1,
+              height: 1,
+              startMs: 0,
+              endMs: 10000,
+            },
+          ],
+        })
+      },
+    }),
+  )
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <TransportProvider transport={transport}>{children}</TransportProvider>
+  )
+  const styled = (ownerStyle: string) =>
+    ({
+      ...plan,
+      elements: plan.elements!.map((element) => ({ ...element, ownerStyle })),
+    }) as ClipEditPlan
+  const view = renderHook(
+    (props: { plan: ClipEditPlan }) =>
+      useClipDraftPreview({ projectId: 'project', revision: 1, plan: props.plan, timeMs: 0 }),
+    { wrapper, initialProps: { plan: styled('film') } },
+  )
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  view.rerender({ plan: styled('word-pop') })
+  expect(view.result.current.ready).toBe(false)
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  expect(styles).toEqual(['film', 'word-pop'])
+})
