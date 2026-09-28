@@ -18,6 +18,12 @@ export {
   clipCaptionSizes,
 } from './config/clip-design'
 export {
+  clipRegionSlotFit,
+  clipRegionSlots,
+  type ClipRegionKind,
+  type ClipRegionRatio,
+} from './model/region-layout'
+export {
   CLIP_SOURCE_CONTAINERS,
   CLIP_SOURCE_FINGERPRINT_CHUNK_BYTES,
   CLIP_SOURCE_MAX_BATCH_BYTES,

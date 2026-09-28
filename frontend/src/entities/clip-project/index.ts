@@ -24,6 +24,7 @@ export {
   useReorderClipSources,
 } from './api/sources'
 export { boundedFreeText, boundedText, freeTextLength } from './lib/bounded-text'
+export { serialClipWrite } from './lib/write-lane'
 export type { ClipSourceAssociation } from './model/composition'
 export {
   emptyCompositionInputs,

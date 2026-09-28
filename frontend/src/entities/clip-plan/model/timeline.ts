@@ -20,6 +20,10 @@ import {
 } from './edit-plan'
 import type { ClipSourceAssociation } from '@/entities/clip-design/@x/clip-plan'
 import { splitRapid } from './caption-pace'
+import { clipDraftKey } from './draft-key'
+import { withClipRegionsOf } from './region-rebase'
+
+export { clipDraftKey }
 
 export type ClipSelection =
   { kind: 'cut'; id: string } | { kind: 'text'; id: string; phrase?: number }
@@ -408,27 +412,6 @@ export function withSourceSound(plan: ClipEditPlan, setting: ClipSourceAudioSett
   }
 }
 
-export function clipDraftKey(plan: ClipEditPlan) {
-  return JSON.stringify(plan, (key, value: unknown) => {
-    if (
-      [
-        'resolvedStartMs',
-        'resolvedEndMs',
-        'effectiveStartMs',
-        'effectiveEndMs',
-        'evidence',
-        'fallbackReason',
-      ].includes(key)
-    )
-      return undefined
-    // Object insertion order can change across a transport round trip or clone.
-    // Only semantic changes should enter history or schedule another save.
-    if (value && typeof value === 'object' && !Array.isArray(value))
-      return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
-    return typeof value === 'number' && !Number.isFinite(value) ? String(value) : value
-  })
-}
-
 export function selectedTime(plan: ClipEditPlan, selection: ClipSelection) {
   if (selection.kind === 'cut')
     return timelineCuts(plan).find((c) => c.cut.id === selection.id)?.startMs ?? 0
@@ -563,7 +546,14 @@ export type ClipTimelineAction =
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'endTransaction' }
-  | { type: 'adopt'; plan: ClipEditPlan; clearHistory?: boolean }
+  | {
+      type: 'adopt'
+      plan: ClipEditPlan
+      clearHistory?: boolean
+      /** A server plan whose region elements the history takes as well: set when the server
+       *  moved the regions under the draft, so no undo brings their older words back. */
+      regionsFrom?: ClipEditPlan
+    }
   | { type: 'acknowledge'; plan: ClipEditPlan }
 
 /** Once accepted, an identity stays known even after delete/save/undo. */
@@ -635,7 +625,12 @@ export function clipTimelineReducer(
     }
   }
   if (action.type === 'endTransaction') return { ...state, group: undefined }
-  if (action.type === 'adopt' || action.type === 'acknowledge')
+  if (action.type === 'adopt' || action.type === 'acknowledge') {
+    const regions = action.type === 'adopt' ? action.regionsFrom : undefined
+    const followed = (plan: ClipEditPlan) => {
+      const known = acknowledgeClipCuts(plan, action.plan)
+      return regions ? withClipRegionsOf(known, regions) : known
+    }
     return {
       ...state,
       plan:
@@ -647,10 +642,11 @@ export function clipTimelineReducer(
           ? survivingSelection(state.plan, action.plan, state.selection)
           : state.selection,
       group: undefined,
-      past: state.past.map((s) => ({ ...s, plan: acknowledgeClipCuts(s.plan, action.plan) })),
-      future: state.future.map((s) => ({ ...s, plan: acknowledgeClipCuts(s.plan, action.plan) })),
+      past: state.past.map((s) => ({ ...s, plan: followed(s.plan) })),
+      future: state.future.map((s) => ({ ...s, plan: followed(s.plan) })),
       ...(action.type === 'adopt' && action.clearHistory ? { past: [], future: [] } : {}),
     }
+  }
   if (action.type === 'undo' || action.type === 'redo') {
     const stack = action.type === 'undo' ? state.past : state.future
     const next = stack.at(-1)

@@ -14,12 +14,13 @@ import { ClipStorylineParagraphEditor } from './ClipStorylineParagraphEditor'
 // A beat after the last edit, so one save carries a word, not every keystroke.
 const SAVE_DELAY_MS = 600
 
-/** ②'s storyline space (CLIP-178, CLIP-179): the clip's storyline as paragraphs with their scenes
- *  as frames, edited and rearranged by hand. Open while the project has no plan, and closed when ②
- *  first shows one — the plan is then what the owner works on. Every edit saves itself through the
- *  project update with no dirty gate (CLIP-39); a running job or a finalized project leaves it
- *  read-only (CLIP-160). `aside` and `lead` are the heading row's actions and the field under it,
- *  which the storyline actions fill. */
+/** ②'s storyline space (CLIP-178, CLIP-179): the intro, the clip's storyline as paragraphs with
+ *  their scenes as frames, edited and rearranged by hand, and the outro. Open while the project has
+ *  no plan, and closed when ② first shows one — the plan is then what the owner works on. Every
+ *  edit saves itself through the project update with no dirty gate (CLIP-39); a running job or a
+ *  finalized project leaves it read-only (CLIP-160). `aside` and `lead` are the heading row's
+ *  actions and the field under it, which the storyline actions fill; `intro` and `outro` are the
+ *  region blocks, which stand here before any storyline exists (CLIP-179). */
 export function ClipStorylineSpace({
   ownerId,
   project,
@@ -29,15 +30,19 @@ export function ClipStorylineSpace({
   resolvePlayback,
   aside,
   lead,
+  intro,
+  outro,
 }: {
   ownerId: string
-  project: ClipProject & { storyline: NonNullable<ClipProject['storyline']> }
+  project: ClipProject
   hasPlan: boolean
   readOnly: boolean
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
   aside?: ReactNode
   lead?: ReactNode
+  intro?: ReactNode
+  outro?: ReactNode
 }) {
   const { t } = useTranslation('clips')
   const storyline = project.storyline
@@ -49,10 +54,10 @@ export function ClipStorylineSpace({
   }, [hasPlan])
 
   const save = useSaveClipStoryline(ownerId)
-  const [draft, setDraft] = useState<ClipStorylineParagraph[]>(storyline.paragraphs)
+  const [draft, setDraft] = useState<ClipStorylineParagraph[]>(storyline?.paragraphs ?? [])
   const timer = useRef<number | undefined>(undefined)
   const pending = useRef<ClipStorylineParagraph[] | undefined>(undefined)
-  const server = JSON.stringify(storyline.paragraphs)
+  const server = JSON.stringify(storyline?.paragraphs ?? [])
   // The server's storyline replaces the draft whenever nothing of the owner's is waiting to be
   // saved: a storyline job, a request or another tab wrote a new one.
   useEffect(() => {
@@ -82,7 +87,7 @@ export function ClipStorylineSpace({
   }
 
   const scenes = useMemo(() => clipScenes(project.observations), [project.observations])
-  const takenOut = takenOutScenes(storyline, draft)
+  const takenOut = storyline ? takenOutScenes(storyline, draft) : []
   return (
     <Disclosure
       title={t('storylineSpace.title')}
@@ -92,25 +97,28 @@ export function ClipStorylineSpace({
       lead={lead}
       className="mb-6"
     >
-      {storyline.addedSourceIds.length > 0 && (
+      {!!storyline?.addedSourceIds.length && (
         <Notice tone="info" role="status" className="mt-2">
           {t('storylineSpace.added')}
         </Notice>
       )}
-      <ol className="divide-divider divide-y">
-        {draft.map((_, index) => (
-          <ClipStorylineParagraphEditor
-            key={index}
-            paragraphs={draft}
-            index={index}
-            scenes={scenes}
-            readOnly={readOnly}
-            localSources={localSources}
-            resolvePlayback={resolvePlayback}
-            onChange={change}
-          />
-        ))}
-      </ol>
+      {intro}
+      {draft.length > 0 && (
+        <ol className="divide-divider divide-y">
+          {draft.map((_, index) => (
+            <ClipStorylineParagraphEditor
+              key={index}
+              paragraphs={draft}
+              index={index}
+              scenes={scenes}
+              readOnly={readOnly}
+              localSources={localSources}
+              resolvePlayback={resolvePlayback}
+              onChange={change}
+            />
+          ))}
+        </ol>
+      )}
       {takenOut.length > 0 && (
         <section aria-labelledby="clip-storyline-taken-out" className="mt-4">
           <Typography variant="label" as="h3" id="clip-storyline-taken-out">
@@ -145,6 +153,7 @@ export function ClipStorylineSpace({
           </ul>
         </section>
       )}
+      {outro}
       {save.isError && (
         <div role="alert" className="mt-3">
           <AppFailureMessage failure={appFailureFromConnect(save.error)} />

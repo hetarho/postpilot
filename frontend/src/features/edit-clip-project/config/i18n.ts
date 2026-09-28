@@ -28,6 +28,7 @@ export const i18n = {
       templateOptional:
         '템플릿 없이도 만들 수 있어요. 고르면 그 구성과 시작 디자인을 따르고, 디자인은 뒤에서 하나씩 바꿀 수 있어요.',
       chooseTemplate: '없음',
+      regionOff: '사용 안 함',
       captionStyles: '자막 스타일',
       captionStylesHelp:
         '고른 스타일 중에서 자막마다 하나씩 쓰여요. ②에서 자막마다 바꿀 수 있어요.',
@@ -132,6 +133,7 @@ export const i18n = {
       templateOptional:
         'A clip can be made without one. Choosing one takes its outline and its starting design, and the design stays editable.',
       chooseTemplate: 'None',
+      regionOff: 'Off',
       captionStyles: 'Caption styles',
       captionStylesHelp:
         'Each caption takes one of the selected styles, and ② can change any caption to another.',

@@ -929,3 +929,21 @@ export function clipRegionSlotAt(
   const { width, one } = slotWidth(preset, ratio, index)
   return { spec: slotSpec(slot, ratio, one), width }
 }
+
+/** Why slot `index` of a preset cannot draw a text on a ratio, or '' when it can (Go
+ *  `regionSlotFit`): wider than its width at its floor, or holding a character its face lacks
+ *  (CDS-77, CDS-86). An empty text draws nothing and always fits (CDS-73). */
+export function clipRegionSlotFit(
+  kind: ClipRegionKind,
+  id: string,
+  ratio: ClipRegionRatio,
+  index: number,
+  text: string,
+): '' | 'copy_limit' | 'unsupported_glyph' | 'invalid_design' {
+  if (text.trim() === '') return ''
+  if (/[\r\n]/.test(text)) return 'copy_limit'
+  const at = clipRegionSlotAt(kind, id, ratio, index)
+  if (!at) return 'invalid_design'
+  if (!clipFitRegionSlot(at.spec, text, at.width).over) return ''
+  return clipCovers(at.spec.face, at.spec.weight, text) ? 'copy_limit' : 'unsupported_glyph'
+}

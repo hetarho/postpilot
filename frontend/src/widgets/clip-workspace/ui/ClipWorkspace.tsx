@@ -10,6 +10,7 @@ import { CancelClipAction } from '@/features/cancel-clip'
 import { ClipProjectForm } from '@/features/edit-clip-project'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
+import { ClipRegionEditor, discardClipRegionQueue } from '@/features/edit-clip-regions'
 import {
   ClipGenerationActions,
   ClipStorylineBuildActions,
@@ -39,7 +40,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   const runRoot = useRunFocus(workspace.run.focused)
   const { correction, generation, finalization, render, sources, revision, observations, run } =
     workspace
-  const { pending, uploading, plan, save } = workspace
+  const { pending, uploading, plan, save, regions, flushAll } = workspace
   const upload = sources.upload
   const step = workspace.step.value
   const setStep = workspace.step.set
@@ -95,6 +96,12 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       disabled={pending || reading}
       readOnly={reading}
       onUploadAllowed={sources.allow}
+      regions={
+        regions.regions && {
+          enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
+          setEnabled: regions.setEnabled,
+        }
+      }
       refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
       actions={
         reading
@@ -107,15 +114,19 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
                 observe={generation.observeRef}
                 write={generation.writeRef}
                 observeStatus={generation.observeStatus}
-                ready={ready && generation.canQuote && !generation.busy && !render.browser.busy}
+                ready={
+                  ready &&
+                  generation.canQuote &&
+                  !generation.busy &&
+                  !render.browser.busy &&
+                  !regions.invalid
+                }
                 pending={generation.starting}
                 // The queue is flushed BEFORE the run starts, so an approval can never be committed
                 // against settings the server has not taken (CLIP-39). A refusal stops the start; the
                 // status line is already saying the save failed.
                 onApprove={(mode, quote) => {
-                  void save
-                    .flush()
-                    .then(() => correction.flush())
+                  void flushAll()
                     .then(() =>
                       generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
                     )
@@ -264,58 +275,65 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
     </>
   )
 
-  // The storyline space leads ② whenever the clip has one (CLIP-178): the whole step while there is
-  // no plan yet, and above the plan once there is one.
-  const storylineSpace = project.storyline ? (
-    <ClipStorylineSpace
-      ownerId={ownerId}
-      project={{ ...project, storyline: project.storyline }}
-      hasPlan={!!plan}
-      readOnly={reading || generation.busy}
-      localSources={reading ? [] : sources.localSources}
-      resolvePlayback={reading ? undefined : sources.resolvePlayback}
-      // Its actions and its request are absent on a finalized clip and held while a job runs
-      // (CLIP-160, CLIP-181).
-      aside={
-        reading ? undefined : (
-          <ClipStorylineBuildActions
-            ownerId={ownerId}
-            project={project}
-            batch={upload.readyBatch}
-            observe={generation.observeRef}
-            write={generation.writeRef}
-            observeStatus={generation.observeStatus}
-            ready={generation.canQuote && !render.browser.busy}
-            pending={generation.starting}
-            hasPlan={!!plan}
-            disabled={generation.busy || uploading}
-            onApprove={(mode, quote) => {
-              void save
-                .flush()
-                .then(() => correction.flush())
-                .then(() =>
-                  generation.start(upload.readyBatch, true, quote, generation.ownership, mode),
-                )
-                .catch(() => undefined)
-            }}
-          />
-        )
-      }
-      lead={
-        reading ? undefined : (
-          <ClipStorylineRequest
-            ownerId={ownerId}
-            project={project}
-            observe={generation.observeRef}
-            write={generation.writeRef}
-            job={job}
-            disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
-            flush={() => save.flush()}
-          />
-        )
-      }
-    />
-  ) : null
+  // The storyline space leads ② whenever the clip has a storyline or intro/outro slots to write
+  // (CLIP-178, CLIP-179): the whole step while there is no plan yet, and above the plan once there
+  // is one. The region blocks stand in it before any storyline or plan exists.
+  const regionBlock = (kind: 'intro' | 'outro') => (
+    <ClipRegionEditor editor={regions} kind={kind} projectId={project.id} ratio={project.ratio} />
+  )
+  const storylineSpace =
+    project.storyline || regions.regions ? (
+      <ClipStorylineSpace
+        ownerId={ownerId}
+        project={project}
+        hasPlan={!!plan}
+        readOnly={reading || generation.busy}
+        localSources={reading ? [] : sources.localSources}
+        resolvePlayback={reading ? undefined : sources.resolvePlayback}
+        intro={regionBlock('intro')}
+        outro={regionBlock('outro')}
+        // Its actions and its request are absent on a finalized clip and held while a job runs
+        // (CLIP-160, CLIP-181); both build on a storyline, so neither stands without one.
+        aside={
+          reading || !project.storyline ? undefined : (
+            <ClipStorylineBuildActions
+              ownerId={ownerId}
+              project={project}
+              batch={upload.readyBatch}
+              observe={generation.observeRef}
+              write={generation.writeRef}
+              observeStatus={generation.observeStatus}
+              ready={generation.canQuote && !render.browser.busy && !regions.invalid}
+              pending={generation.starting}
+              hasPlan={!!plan}
+              disabled={generation.busy || uploading}
+              onApprove={(mode, quote) => {
+                void flushAll()
+                  .then(() =>
+                    generation.start(upload.readyBatch, true, quote, generation.ownership, mode),
+                  )
+                  .catch(() => undefined)
+              }}
+            />
+          )
+        }
+        lead={
+          reading || !project.storyline ? undefined : (
+            <ClipStorylineRequest
+              ownerId={ownerId}
+              project={project}
+              observe={generation.observeRef}
+              write={generation.writeRef}
+              job={job}
+              disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
+              // A storyline request writes the slots too, from their instructions and exact words
+              // (CLIP-178): both land before it is priced.
+              flush={() => save.flush().then(() => regions.flush())}
+            />
+          )
+        }
+      />
+    ) : null
 
   const refinePanel = plan ? (
     <>
@@ -325,7 +343,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           id: project.id,
           state: plan,
           captionStyles: project.allowedCaptionStyles,
-          notices: project.notices,
+          // A slot's notice stands in its storyline block, beside the words it is about.
+          notices: project.notices?.filter((notice) => !regions.slotIds.has(notice.elementId)),
           language: project.language,
         }}
         correction={correction}
@@ -405,12 +424,13 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
                   uploading ||
                   generation.busy ||
                   render.browser.busy ||
-                  !correction.validation?.saveable
+                  !correction.validation?.saveable ||
+                  regions.invalid
                 }
                 localRefusal={
                   uploading || generation.busy || render.browser.busy
                     ? 'busy'
-                    : !correction.validation?.saveable
+                    : !correction.validation?.saveable || regions.invalid
                       ? 'invalid_plan'
                       : undefined
                 }
@@ -423,7 +443,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   ) : (
     <>
       <ClipFailureNotice failure={generation.failure} />
-      {storylineSpace ?? (
+      {storylineSpace}
+      {!project.storyline && (
         <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
       )}
       {project.result && (
@@ -481,7 +502,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
               job={job}
               upload={upload}
               correction={correctionStatus}
-              save={save}
+              save={workspace.saveStatus}
               className="order-last w-full"
             />
           )
@@ -509,7 +530,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
               disabled={pending}
               // A queue outlives its form, so a retry left running would keep saving an id the
               // server no longer has. Stopped before the navigation unmounts the page.
-              onDeleted={() => discardClipDraftQueue(project.id)}
+              onDeleted={() => {
+                discardClipDraftQueue(project.id)
+                discardClipRegionQueue(project.id)
+              }}
             />
           )
         }

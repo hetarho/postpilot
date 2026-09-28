@@ -343,6 +343,40 @@ choice would be expensive to undo are listed at the end.
   region element over the pace and accent the layout records, so an instruction-only slot edit would
   have staled a matching render. The projection now keeps those fields.
 
+## T453 — ②'s intro/outro blocks, ①'s 사용 안 함
+
+- **A slot's words have one home at a time.** While the plan draws a region, the words of its
+  active slots are the plan's rows. Typing them in the storyline block makes the same edit that
+  ②'s row fields make, so the correction queue saves them and the draft preview updates on each
+  keystroke. Everything else goes through a separate region queue: enablement, instructions,
+  unused words, and a region the plan does not draw yet.
+- **Words a slot cannot draw never reach the plan.** They stay in the field with the error the
+  server would give (a browser port of `regionSlotFit`), and they are not sent. The status line
+  says there is unsaved intro/outro text, and generation, both renders, revision and 확정하기 are
+  held until it is fixed.
+- **One write lane per project.** The settings, region and correction saves run one at a time,
+  and each reads the revision the previous one left in the cache. When a region or preset save
+  moves the plan under an unsaved correction, the correction takes the server's intro/outro
+  elements and keeps its other edits, merging row by row. Its undo history takes the new region
+  words too. Any other server change is still a conflict, as before.
+- **Committing actions flush in one order: settings, then slots, then correction.** The server
+  render used to skip the settings flush; it now uses the same chain as the other actions. A
+  storyline request flushes the settings and the slots, but not the correction.
+- **A region conflict is retried once over the winning revision.** The patch carries only the
+  fields the owner changed, so it is safe to resend. If it conflicts again, the queue stops as
+  refused and the status line says so.
+- **Moving unused words swaps them.** The active slot takes the unused words, and its old words
+  become the unused line, so no word is lost.
+- **① gains a 사용 안 함 tile before the presets.** Choosing the preset a region already has while
+  it is off sends an explicit enable, because the server turns a region on only when the preset
+  changes. A region save waits for pending settings, so a preset picked before a switch lands
+  first.
+- **No hint text says when an instruction takes effect.** The owner removed hint lines from simple
+  controls. An instruction edit is simply used by the next storyline or generation call and
+  triggers nothing on its own.
+- **Slot notices appear in their block only.** They are left out of the correction's own notice
+  list, where they used to show as a bare "문구 · …" line.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

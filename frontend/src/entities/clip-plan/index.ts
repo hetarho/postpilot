@@ -30,6 +30,12 @@ export type {
   RetainedClipSource,
 } from './model/edit-plan'
 export { CLIP_REVISION_TARGETS } from './model/revision'
+export {
+  CLIP_REGION_ROLES,
+  clipRegionElementId,
+  clipRegionRows,
+  rebaseClipRegions,
+} from './model/region-rebase'
 export type { ClipRevisionTarget } from './model/revision'
 export {
   acknowledgeClipCuts,

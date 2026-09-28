@@ -325,7 +325,13 @@ export function useClipProjectMutations(ownerId: string) {
       if (!response.project) throw new Error('Missing saved clip')
       return toClipProject(response.project)
     },
-    onSuccess: invalidate,
+    // The answer is the project as saved — its plan and regions included, since a preset
+    // change projects into both — so the next write in the lane starts from it (CLIP-188).
+    onSuccess: async (project, { id }) => {
+      if (id)
+        cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project)
+      await invalidate()
+    },
   })
   const remove = useMutation({
     mutationFn: (id: string) => client.deleteClipProject({ id }),

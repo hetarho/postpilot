@@ -33,8 +33,12 @@ function StyleSample({ fragment }: { fragment?: ClipCaptionFragment }) {
   )
 }
 
-/** One region's presets as a radiogroup of tiles (CLIP-111, CLIP-165): each tile is
- *  the renderer's drawing of the preset's numbered slots on the whole canvas, so an
+/** The tile that turns a region off (CLIP-111): it draws nothing, and choosing it keeps the
+ *  region's slot draft for when a preset is chosen again (CLIP-189). */
+const OFF = 'off'
+
+/** One region's presets as a radiogroup of tiles (CLIP-111, CLIP-165): 사용 안 함 first, then
+ *  each preset as the renderer's drawing of its numbered slots on the whole canvas, so an
  *  edge-anchored preset shows at its true place, above the preset's name. Only the
  *  chosen tile is tabbable and the arrows move focus and choice together (WAI-APG
  *  radio group). While the drawings load, or when they fail, the tiles show names
@@ -49,16 +53,17 @@ function PresetPicker<T extends string>({
   onChange,
 }: {
   kind: 'intro' | 'outro'
-  ids: readonly T[]
-  value: T
+  /** The presets; 사용 안 함 is offered first when the picker can turn the region off. */
+  ids: readonly (T | typeof OFF)[]
+  value: T | typeof OFF
   samples?: ClipRegionPresetSample[]
   canvas: { width: number; height: number }
-  name: (id: T) => string
-  onChange: (next: T) => void
+  name: (id: T | typeof OFF) => string
+  onChange: (next: T | typeof OFF) => void
 }) {
   const { t } = useTranslation('clips')
   const label = useId()
-  const drawing = new Map((samples ?? []).map((s) => [s.preset, s.svg]))
+  const drawing = new Map<string, string>((samples ?? []).map((s) => [s.preset, s.svg]))
   return (
     <div
       role="radiogroup"
@@ -133,23 +138,35 @@ const OUTRO_IDS = Object.keys(
   CLIP_DESIGN.regions.outro,
 ) as (keyof typeof CLIP_DESIGN.regions.outro)[]
 
-/** The rest of ①'s design selection (CLIP-111, CLIP-139, CLIP-142): the preset
- *  the intro is drawn in, the preset the outro is drawn in and the caption
- *  styles this clip may use. Each is the project's own and each change re-renders
- *  the same plan without a writing call, so nothing here asks for approval. */
+/** Whether each region is on, as the server holds it with the owner's pending switch over it,
+ *  and the switch itself: the region slots' own save carries it, not the settings (CLIP-111). */
+export interface ClipRegionSwitches {
+  enabled: Record<'intro' | 'outro', boolean>
+  setEnabled: (kind: 'intro' | 'outro', enabled: boolean) => void
+}
+
+/** The rest of ①'s design selection (CLIP-111, CLIP-139, CLIP-142): whether the intro is used
+ *  and in which preset, the same for the outro, and the caption styles this clip may use. Each
+ *  is the project's own and each change re-renders the same plan without a writing call, so
+ *  nothing here asks for approval. 사용 안 함 keeps the region's slots; choosing a preset turns
+ *  it back on even where the template has no entry for it. */
 export function ClipDesignSelection({
   projectId,
   draft,
   onChange,
+  regions,
 }: {
   projectId: string
   draft: ClipProjectDraft
   onChange: (next: Partial<ClipProjectDraft>) => void
+  regions?: ClipRegionSwitches
 }) {
   const { t } = useTranslation('clips')
   const samples = useClipCaptionStyleSamples(projectId, true)
-  const regions = useClipRegionPresetSamples(projectId, t('composition.design.slotLabel'))
+  const drawings = useClipRegionPresetSamples(projectId, t('composition.design.slotLabel'))
   const canvas = CLIP_DESIGN.ratios[draft.ratio].canvas
+  const intro = draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro
+  const outro = draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro
   const byStyle = new Map((samples.data?.captions ?? []).map((c) => [c.style, c]))
   const selected = draft.allowedCaptionStyles ?? []
   const toggle = (style: string, on: boolean) =>
@@ -162,21 +179,29 @@ export function ClipDesignSelection({
     <div className="space-y-3">
       <PresetPicker
         kind="intro"
-        ids={INTRO_IDS}
-        value={draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}
-        samples={regions.data?.intro}
+        ids={regions ? [OFF, ...INTRO_IDS] : INTRO_IDS}
+        value={regions && !regions.enabled.intro ? OFF : intro}
+        samples={drawings.data?.intro}
         canvas={canvas}
-        name={(id) => t(`composition.design.intro_${id}`)}
-        onChange={(introPreset) => onChange({ introPreset })}
+        name={(id) => (id === OFF ? t('project.regionOff') : t(`composition.design.intro_${id}`))}
+        onChange={(next) => {
+          if (next === OFF) return regions?.setEnabled('intro', false)
+          if (next !== intro) onChange({ introPreset: next })
+          if (regions && !regions.enabled.intro) regions.setEnabled('intro', true)
+        }}
       />
       <PresetPicker
         kind="outro"
-        ids={OUTRO_IDS}
-        value={draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}
-        samples={regions.data?.outro}
+        ids={regions ? [OFF, ...OUTRO_IDS] : OUTRO_IDS}
+        value={regions && !regions.enabled.outro ? OFF : outro}
+        samples={drawings.data?.outro}
         canvas={canvas}
-        name={(id) => t(`composition.design.outro_${id}`)}
-        onChange={(outroPreset) => onChange({ outroPreset })}
+        name={(id) => (id === OFF ? t('project.regionOff') : t(`composition.design.outro_${id}`))}
+        onChange={(next) => {
+          if (next === OFF) return regions?.setEnabled('outro', false)
+          if (next !== outro) onChange({ outroPreset: next })
+          if (regions && !regions.enabled.outro) regions.setEnabled('outro', true)
+        }}
       />
       <Typography variant="fieldTitle" as="p">
         {t('project.captionStyles')}

@@ -14,6 +14,7 @@ import {
   projectCompositionDocument,
   projectDraft,
   savableClipProject,
+  serialClipWrite,
   type ClipProject,
   type ClipProjectDraft,
   useClipProjectMutations,
@@ -24,7 +25,7 @@ import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
-import { ClipDesignSelection } from './ClipDesignSelection'
+import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
 import {
   ActionBar,
   AppFailureMessage,
@@ -57,9 +58,13 @@ export function ClipProjectForm({
   readOnly = false,
   actions,
   refusal,
+  regions,
 }: {
   ownerId: string
   stored?: ClipProject
+  /** Whether each region is used, and its switch — held by the workspace, which saves region
+   *  edits for ① and ② alike (CLIP-111). */
+  regions?: ClipRegionSwitches
   onUploadAllowed?: (allowed: boolean) => void
   children?: ReactNode
   disabled?: boolean
@@ -146,7 +151,11 @@ export function ClipProjectForm({
    *  from the refreshed `stored` instead. */
   const send = async (next: ClipProjectDraft) => {
     if (!stored) return
-    const value = await save.mutateAsync({ id: stored.id, draft: next })
+    // In the project's write lane: a preset change projects into the plan and the regions, so
+    // it must not cross a correction or slot save in flight (CLIP-188).
+    const value = await serialClipWrite(stored.id, () =>
+      save.mutateAsync({ id: stored.id, draft: next }),
+    )
     setBaseline(JSON.stringify(normalizeClipProject(value)))
   }
   const patch = (fields: Partial<ClipProjectDraft>) => {
@@ -384,7 +393,12 @@ export function ClipProjectForm({
               <Typography variant="body" className="text-content-secondary">
                 {t('project.accentHelp')}
               </Typography>
-              <ClipDesignSelection projectId={stored.id} draft={draft} onChange={patch} />
+              <ClipDesignSelection
+                projectId={stored.id}
+                draft={draft}
+                onChange={patch}
+                regions={regions}
+              />
             </div>
           )}
           <div>

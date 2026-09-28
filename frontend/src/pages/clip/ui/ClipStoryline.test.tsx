@@ -1,16 +1,35 @@
-import { afterEach, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
+import { clipRegionRows } from '@/entities/clip-plan'
+import { discardClipDraftQueues } from '@/features/edit-clip-project'
+import { discardClipRegionQueues } from '@/features/edit-clip-regions'
+import { readSourceManifest } from '@/features/upload-clip-sources'
+import { putBlobWithProgress } from '@/shared/lib/upload'
 import { renderAppAt } from '@/test/app'
 import { clipObservationsFixture } from '@/test/clip-observations'
 import { clipTimelineFixture } from '@/test/clip-editing'
-import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
+import { projectFakeRegions, type FakeClipProject, type FakeClipsOptions } from '@/test/clips'
 import type { FakeJobsOptions } from '@/test/jobs'
+import { chooseOption } from '@/test/listbox'
 import type { FakeProvidersOptions } from '@/test/providers'
 
-afterEach(() => initializeI18n('ko'))
+vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
+  ...(await original<object>()),
+  readSourceManifest: vi.fn(),
+}))
+vi.mock('@/shared/lib/upload', async (original) => ({
+  ...(await original<object>()),
+  putBlobWithProgress: vi.fn(),
+}))
+afterEach(() => {
+  vi.restoreAllMocks()
+  discardClipDraftQueues()
+  discardClipRegionQueues()
+  initializeI18n('ko')
+})
 
 const models: FakeProvidersOptions = {
   models: [
@@ -77,6 +96,60 @@ async function mount(
 
 const heading = () => screen.getByRole('button', { name: '스토리라인' })
 const paragraph = (n: number) => within(screen.getByRole('listitem', { name: `${n}번째 문단` }))
+const AUTOSAVE = { timeout: 3000 }
+
+type Kind = 'intro' | 'outro'
+const slot = (kind: Kind, n: number, text = '', extra = {}) => ({
+  id: `project-${kind}-${n}`,
+  instruction: '',
+  text,
+  instructionEdited: false,
+  ownerFixed: false,
+  bound: false,
+  ...extra,
+})
+type Regions = NonNullable<FakeClipProject['regions']>
+function regions(intro: Partial<Regions['intro']> = {}, outro: Partial<Regions['outro']> = {}) {
+  return {
+    revision: 1,
+    intro: { enabled: true, slots: [slot('intro', 1), slot('intro', 2)], ...intro },
+    outro: {
+      enabled: false,
+      slots: [slot('outro', 1, '다시 만나요', { ownerFixed: true }), slot('outro', 2)],
+      ...outro,
+    },
+  }
+}
+/** A project with its slots and nothing else yet: no template, no storyline, no plan. */
+function bare(extra: Partial<FakeClipProject> = {}): FakeClipProject {
+  return {
+    id: 'clip',
+    title: '성수',
+    videoTemplateId: '',
+    ratio: 'vertical',
+    targetDurationMs: 19800,
+    disclosure: 'ad',
+    introPreset: 'a',
+    outroPreset: 'b',
+    regions: regions(),
+    ...extra,
+  }
+}
+const block = (name: '인트로' | '아웃트로') => within(screen.getByRole('region', { name }))
+const line = (name: '인트로' | '아웃트로', n: number) =>
+  within(block(name).getAllByRole('listitem')[n - 1])
+/** What the region writes asked for, folded per slot into its latest fields. */
+function sent(writes: NonNullable<FakeClipsOptions['regionWrites']>, kind: Kind) {
+  const out: Record<string, { instruction?: string; text?: string }> = {}
+  for (const write of writes)
+    for (const edit of write[kind]?.slots ?? [])
+      out[edit.id] = {
+        ...out[edit.id],
+        ...(edit.instruction !== undefined ? { instruction: edit.instruction } : {}),
+        ...(edit.text !== undefined ? { text: edit.text } : {}),
+      }
+  return out
+}
 
 // CLIP-36, CLIP-177: a storyline without a plan is already ②, where its space is open — the
 // storyline is what the owner works on until something is built from it.
@@ -153,6 +226,7 @@ it.each([
       renderedPlanRevision: 1,
       editing: clipTimelineFixture(),
       finalized: { at: '2026-09-12T00:00:00Z', planRevision: 1, resultId: 'result' },
+      regions: regions(),
       result: {
         id: 'result',
         contentType: 'video/mp4',
@@ -174,6 +248,9 @@ it.each([
   // A finalized clip carries none of the space's actions (CLIP-160).
   expect(screen.queryByRole('button', { name: '다시 만들기' })).not.toBeInTheDocument()
   expect(screen.queryByLabelText('스토리라인 수정 요청')).not.toBeInTheDocument()
+  // Its slots are read where they stand, with nothing to switch or type (CLIP-179).
+  expect(block('인트로').queryByRole('switch')).not.toBeInTheDocument()
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveAttribute('readonly')
 })
 
 // A job that ② owns keeps ② on screen, and the storyline is read-only under it.
@@ -191,6 +268,7 @@ it('reads the storyline without controls while a job runs', async () => {
       renderedPlanRevision: 1,
       editing: clipTimelineFixture(),
       latestJob: job,
+      regions: regions(),
     }),
     {},
     { jobs: [job] },
@@ -199,6 +277,8 @@ it('reads the storyline without controls while a job runs', async () => {
   await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
+  expect(block('인트로').queryByRole('switch')).not.toBeInTheDocument()
+  expect(line('인트로', 1).getByLabelText('1번째 줄 들어갈 내용')).toHaveAttribute('readonly')
   // Every action is held while the job runs (CLIP-181).
   expect(screen.getByRole('button', { name: '다시 만들기' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '이 스토리로 다시 만들기' })).toBeDisabled()
@@ -216,4 +296,368 @@ it('names the storyline stage while the storyline call runs', async () => {
   }
   await mount(storylined({ latestJob: job }), {}, { jobs: [job] }, 'none')
   expect(await screen.findAllByText('스토리라인 작성 중')).not.toHaveLength(0)
+})
+
+// CLIP-179, CLIP-186: the slots stand in ② before any template, storyline or plan, and an edit
+// saves itself as a region edit naming the revision it was made over.
+it('writes the slots on ② before any template, storyline or plan', async () => {
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  await mount(bare(), { regionWrites, templates: [] }, {}, 'tab')
+  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  expect(heading()).toHaveAttribute('aria-expanded', 'true')
+  expect(block('인트로').getByText('A 크기만')).toBeVisible()
+  // The renderer's own numbered drawing of the chosen preset, as ① shows it (CLIP-165).
+  await waitFor(() =>
+    expect(
+      screen.getByRole('region', { name: '인트로' }).querySelector('svg [data-preset="intro-a"]'),
+    ).toHaveTextContent('슬롯 1'),
+  )
+  expect(block('아웃트로').getByText('사용 안 함')).toBeVisible()
+  expect(block('아웃트로').queryByLabelText('1번째 줄 문구')).not.toBeInTheDocument()
+  // No body to edit and no storyline action to build one from: ① starts that.
+  expect(screen.queryByRole('listitem', { name: '1번째 문단' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '다시 만들기' })).not.toBeInTheDocument()
+  expect(screen.getByText(/아직 다듬을 편집안이 없어요/)).toBeVisible()
+  expect(block('인트로').getByText('아직 영상에 보일 문구가 없어요.')).toBeVisible()
+
+  const user = userEvent.setup()
+  await user.type(line('인트로', 1).getByLabelText('1번째 줄 문구'), '성수 로컬')
+  await user.type(line('인트로', 2).getByLabelText('2번째 줄 들어갈 내용'), '영업 시간')
+  await waitFor(
+    () =>
+      expect(sent(regionWrites, 'intro')).toEqual({
+        'project-intro-1': { text: '성수 로컬' },
+        'project-intro-2': { instruction: '영업 시간' },
+      }),
+    AUTOSAVE,
+  )
+  expect(regionWrites[0].expectedRegionRevision).toBe(1)
+  expect(line('인트로', 1).getByText('직접 입력')).toBeVisible()
+  // An instruction alone leaves the slot waiting for words (CLIP-186).
+  expect(line('인트로', 2).getByText('생성 대기')).toBeVisible()
+  expect(block('인트로').queryByText('아직 영상에 보일 문구가 없어요.')).not.toBeInTheDocument()
+})
+
+// CLIP-111: ① offers 사용 안 함 beside the presets. Off keeps the slots; choosing the preset
+// the region already has turns it back on explicitly, since no preset change would.
+it('turns a region off and on from ①, keeping its slots', async () => {
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  await mount(bare(), { regionWrites }, {}, 'tab')
+  const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+  const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
+  expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  expect(within(outro).getByRole('radio', { name: '사용 안 함' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await userEvent.click(within(intro).getByRole('radio', { name: '사용 안 함' }))
+  await waitFor(() => expect(regionWrites.at(-1)?.intro?.enabled).toBe(false), AUTOSAVE)
+  await userEvent.click(within(outro).getByRole('radio', { name: 'B 가로선 구분' }))
+  await waitFor(() => expect(regionWrites.at(-1)?.outro?.enabled).toBe(true), AUTOSAVE)
+  expect(
+    regionWrites.flatMap((write) => [write.intro, write.outro]).flatMap((r) => r?.slots ?? []),
+  ).toEqual([])
+  expect(within(intro).getByRole('radio', { name: '사용 안 함' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  expect(block('인트로').getByText('사용 안 함')).toBeVisible()
+  expect(line('아웃트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('다시 만나요')
+})
+
+// CLIP-168, T450: what a template seeds is the server's to decide — the browser shows its
+// answer, with the owner's own words kept over the template's.
+it('shows the server’s seed when ① chooses a template, the owner’s words kept', async () => {
+  const user = userEvent.setup()
+  await mount(
+    bare({
+      regions: regions({
+        enabled: false,
+        slots: [slot('intro', 1, '내가 쓴 첫 줄', { ownerFixed: true }), slot('intro', 2)],
+      }),
+    }),
+    { templateRegions: { template: { intro: ['템플릿 첫 줄', '템플릿 둘째 줄'] } } },
+    {},
+    'tab',
+  )
+  const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+  expect(within(intro).getByRole('radio', { name: '사용 안 함' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '여행')
+  await waitFor(
+    () =>
+      expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
+    AUTOSAVE,
+  )
+  await user.click(screen.getByRole('tab', { name: '수정' }))
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('내가 쓴 첫 줄')
+  expect(line('인트로', 1).getByText('직접 입력')).toBeVisible()
+  expect(line('인트로', 2).getByLabelText('2번째 줄 문구')).toHaveValue('템플릿 둘째 줄')
+  expect(line('인트로', 2).getByText('생성됨')).toBeVisible()
+})
+
+// CLIP-186, CDS-73: clearing a slot's words is the owner's choice of an empty line, told apart
+// from a slot still waiting for words.
+it('keeps a deliberate blank apart from a slot awaiting words', async () => {
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  await mount(
+    bare({ regions: regions({ slots: [slot('intro', 1, '생성된 첫 줄'), slot('intro', 2)] }) }),
+    { regionWrites },
+    {},
+    'tab',
+  )
+  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  expect(line('인트로', 1).getByText('생성됨')).toBeVisible()
+  await userEvent.clear(line('인트로', 1).getByLabelText('1번째 줄 문구'))
+  expect(line('인트로', 1).getByText('비워 둠')).toBeVisible()
+  expect(line('인트로', 2).getByText('생성 대기')).toBeVisible()
+  await waitFor(
+    () => expect(sent(regionWrites, 'intro')).toEqual({ 'project-intro-1': { text: '' } }),
+    AUTOSAVE,
+  )
+  expect(line('인트로', 1).getByText('비워 둠')).toBeVisible()
+})
+
+// CLIP-147, CLIP-189: words past the preset's slots stay as unused content with their notice;
+// moving them into a slot keeps the words they replace, and a preset with room restores them.
+it('keeps unused words, moves them into a slot and restores them with room', async () => {
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  const user = userEvent.setup()
+  await mount(
+    bare({
+      regions: regions({
+        slots: [
+          slot('intro', 1, '첫 줄', { ownerFixed: true }),
+          slot('intro', 2, '둘째 줄', { ownerFixed: true }),
+          slot('intro', 3, '셋째 줄', { ownerFixed: true }),
+        ],
+      }),
+      notices: [
+        { code: 'region_line_surplus', cutId: '', elementId: 'project-intro-3', action: 'removal' },
+      ],
+    }),
+    { regionWrites },
+    {},
+    'tab',
+  )
+  await user.click(screen.getByRole('tab', { name: '수정' }))
+  const unused = () => within(screen.getByRole('region', { name: '쓰지 않는 문구' }))
+  expect(unused().getByLabelText('쓰지 않는 문구 1')).toHaveValue('셋째 줄')
+  expect(unused().getByText(/담을 수 있는 줄 수를 넘겨서/)).toBeVisible()
+  await user.click(unused().getByRole('button', { name: '쓰지 않는 문구 1 옮기기' }))
+  await user.click(await screen.findByRole('menuitem', { name: '1번째 줄로 옮기기' }))
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('셋째 줄')
+  expect(unused().getByLabelText('쓰지 않는 문구 1')).toHaveValue('첫 줄')
+  await waitFor(
+    () =>
+      expect(sent(regionWrites, 'intro')).toEqual({
+        'project-intro-1': { text: '셋째 줄' },
+        'project-intro-3': { text: '첫 줄' },
+      }),
+    AUTOSAVE,
+  )
+
+  // Off and on again: every word is where it was (CLIP-189).
+  await user.click(block('인트로').getByRole('switch', { name: '인트로 사용' }))
+  expect(block('인트로').queryByLabelText('1번째 줄 문구')).not.toBeInTheDocument()
+  await user.click(block('인트로').getByRole('switch', { name: '인트로 사용' }))
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('셋째 줄')
+
+  // A preset with three slots draws the third again.
+  await user.click(screen.getByRole('tab', { name: '생성' }))
+  const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+  await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
+  await user.click(screen.getByRole('tab', { name: '수정' }))
+  await waitFor(
+    () => expect(line('인트로', 3).getByLabelText('3번째 줄 문구')).toHaveValue('첫 줄'),
+    AUTOSAVE,
+  )
+  expect(screen.queryByRole('region', { name: '쓰지 않는 문구' })).not.toBeInTheDocument()
+})
+
+// CLIP-189, CDS-64: words the slot cannot draw are refused in their field and kept there, and
+// they are not sent; the rest of the edit is.
+it('refuses words a slot cannot draw in its field and keeps them', async () => {
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  await mount(bare(), { regionWrites }, {}, 'tab')
+  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  const field = line('인트로', 1).getByLabelText('1번째 줄 문구')
+  // Paperlogy does not draw 갂 (CDS-17).
+  fireEvent.change(field, { target: { value: '갂' } })
+  fireEvent.change(line('인트로', 1).getByLabelText('1번째 줄 들어갈 내용'), {
+    target: { value: '가게 이름' },
+  })
+  expect(field).toHaveAttribute('aria-invalid', 'true')
+  expect(field).toHaveAccessibleDescription('이 줄의 글꼴로 쓸 수 없는 글자가 있어요.')
+  await waitFor(
+    () =>
+      expect(sent(regionWrites, 'intro')).toEqual({
+        'project-intro-1': { instruction: '가게 이름' },
+      }),
+    AUTOSAVE,
+  )
+  expect(field).toHaveValue('갂')
+  fireEvent.change(field, { target: { value: '가게' } })
+  expect(field).not.toHaveAttribute('aria-invalid')
+  await waitFor(
+    () => expect(sent(regionWrites, 'intro')['project-intro-1']?.text).toBe('가게'),
+    AUTOSAVE,
+  )
+})
+
+const RENDER = /^(렌더하기|다시 렌더)$/
+async function selectSources(ids = ['a', 'b']) {
+  const files = ids.map((id) => new File(['clip'], `source-${id}.mp4`, { type: 'video/mp4' }))
+  vi.mocked(readSourceManifest).mockResolvedValue(
+    files.map((f, i) => ({
+      filename: f.name,
+      contentType: f.type,
+      bytes: f.size,
+      width: 1920,
+      height: 1080,
+      durationMs: 40000,
+      fingerprint: ids[i]!.repeat(64),
+    })),
+  )
+  vi.mocked(putBlobWithProgress).mockResolvedValue()
+  vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${(blob as File).name}`)
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
+  await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
+  const input = screen.getByLabelText('원본 영상 선택')
+  await waitFor(() => expect(input).toBeEnabled())
+  await userEvent.upload(input, files)
+  await userEvent.keyboard('{Escape}')
+}
+
+// CLIP-39, CLIP-188: a render flushes every queue in order. A slot save held in flight lands
+// first and moves the plan; the correction typed meanwhile is carried onto that plan rather than
+// refused as a conflict or sent with the old region words; the render names what both left.
+it('lands a delayed slot save before the correction and the render it precedes', async () => {
+  const calls: string[] = []
+  const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
+  const renderStarts: unknown[] = []
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const project = storylined({
+    videoTemplateId: '',
+    introPreset: 'a',
+    outroPreset: 'b',
+    editPlanRevision: 1,
+    renderedPlanRevision: 1,
+    editing: clipTimelineFixture(),
+    regions: regions({
+      slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
+    }),
+    result: {
+      contentType: 'video/mp4',
+      bytes: 5,
+      durationMs: 19800,
+      createdAt: '2026-09-10T00:00:00Z',
+      viewUrl: 'https://private.test/old',
+    },
+  })
+  // The plan already draws the intro, as the server projected it (T451).
+  projectFakeRegions(project)
+  project.renderedPlanRevision = project.editPlanRevision
+  await mount(project, { calls, planWrites, renderStarts, regionSaveGate: () => held }, {}, 'tab')
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  await selectSources()
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+
+  await userEvent.click(heading())
+  await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
+  await userEvent.click(
+    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
+  )
+  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '렌더 직전 수정' } })
+  await userEvent.click(screen.getByRole('button', { name: RENDER }))
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+
+  // The slot save is out and held; nothing that depends on it has gone.
+  await waitFor(() => expect(calls).toContain('UpdateClipProject'))
+  expect(calls).not.toContain('SaveClipEditPlan')
+  expect(calls).not.toContain('StartClipRender')
+  release()
+  await waitFor(() => expect(calls).toContain('StartClipRender'), AUTOSAVE)
+  expect(calls.indexOf('UpdateClipProject')).toBeLessThan(calls.indexOf('SaveClipEditPlan'))
+  expect(calls.lastIndexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('StartClipRender'))
+  const saved = planWrites.at(-1)!.plan
+  expect(saved.elements?.find((t) => t.instanceId === 'caption-a')?.text).toBe('렌더 직전 수정')
+  expect(clipRegionRows(saved, 'outro')).toEqual(['다시 만나요', ''])
+  expect(clipRegionRows(saved, 'intro')).toEqual(['성수 로컬', ''])
+  expect(renderStarts.at(-1)).toMatchObject({ expectedRevision: planWrites.at(-1)!.revision + 1 })
+  expect(screen.queryByText(/저장된 수정본이 변경되었어요/)).not.toBeInTheDocument()
+})
+
+// CLIP-188: the storyline block and the edit plan hold one set of region words. A slot typed in
+// the block is the plan's row — the correction saves it and the draft preview has it at once —
+// and a row typed in correction is the slot's words.
+it('shares one set of region words between the storyline block and the correction', async () => {
+  const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
+  const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
+  const project = storylined({
+    videoTemplateId: '',
+    introPreset: 'a',
+    outroPreset: 'b',
+    editPlanRevision: 1,
+    renderedPlanRevision: 1,
+    editing: clipTimelineFixture(),
+    regions: regions({
+      slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
+    }),
+  })
+  projectFakeRegions(project)
+  await mount(project, { planWrites, regionWrites }, {}, 'tab')
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  await userEvent.click(heading())
+  // The space reads 인트로 → body → 아웃트로 (CLIP-179).
+  const [intro, body, outro] = [
+    screen.getByRole('region', { name: '인트로' }),
+    screen.getByRole('listitem', { name: '1번째 문단' }),
+    screen.getByRole('region', { name: '아웃트로' }),
+  ]
+  expect(intro.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(body.compareDocumentPosition(outro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  fireEvent.change(line('인트로', 2).getByLabelText('2번째 줄 문구'), {
+    target: { value: '저녁 영업' },
+  })
+  expect(line('인트로', 2).getByText('직접 입력')).toBeVisible()
+  await waitFor(
+    () =>
+      expect(planWrites.at(-1) && clipRegionRows(planWrites.at(-1)!.plan, 'intro')).toEqual([
+        '성수 로컬',
+        '저녁 영업',
+      ]),
+    AUTOSAVE,
+  )
+  // The words went as the plan's row, not as a second copy in a region edit.
+  expect(sent(regionWrites, 'intro')).toEqual({})
+
+  await userEvent.click(
+    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: /성수 로컬/ }),
+  )
+  expect(screen.getByLabelText('문구 2행')).toHaveValue('저녁 영업')
+  fireEvent.change(screen.getByLabelText('문구 1행'), { target: { value: '성수 로컬 가이드' } })
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
+  await waitFor(
+    () =>
+      expect(clipRegionRows(planWrites.at(-1)!.plan, 'intro')).toEqual([
+        '성수 로컬 가이드',
+        '저녁 영업',
+      ]),
+    AUTOSAVE,
+  )
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
 })

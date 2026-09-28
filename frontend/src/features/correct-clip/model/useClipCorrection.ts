@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   acknowledgeClipCuts,
@@ -8,6 +8,7 @@ import {
   copyClipPlan,
   createClipTimeline,
   ownerCutId,
+  rebaseClipRegions,
   type ClipEditPlan,
   type TimelineEdit,
   validateTimelinePlan,
@@ -15,6 +16,7 @@ import {
 } from '@/entities/clip-plan'
 import { type ClipAddCutSelection } from '@/entities/clip-observation'
 import {
+  serialClipWrite,
   useClipProjectCalls,
   useClipProjectsKey,
   useClipSourceCalls,
@@ -118,10 +120,31 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   }
   function adopt(next: ClipProject, clearHistory = false) {
     if (!next.editing) return
-    dispatch({ type: 'adopt', plan: next.editing.plan, clearHistory })
+    dispatch({
+      type: 'adopt',
+      plan: next.editing.plan,
+      clearHistory,
+      regionsFrom: next.editing.plan,
+    })
     setBaseline(clipDraftKey(next.editing.plan))
     setRevision(next.editPlanRevision)
     setRemoteConflict(false)
+  }
+  /** A newer saved plan under a draft the owner is still correcting. A slot, preset or
+   *  enablement save moves only the region elements (CLIP-188): the draft takes them and keeps
+   *  every other correction, rather than sending the old region words back as the owner's own.
+   *  Anything else the server moved is a real conflict, left for the owner to resolve. */
+  function rebase(next: ClipProject, local: ClipEditPlan, base: string) {
+    if (!next.editing) return undefined
+    const plan = rebaseClipRegions(local, JSON.parse(base) as ClipEditPlan, next.editing.plan)
+    if (!plan) {
+      setRemoteConflict(true)
+      return undefined
+    }
+    dispatch({ type: 'adopt', plan, regionsFrom: next.editing.plan })
+    setBaseline(clipDraftKey(next.editing.plan))
+    setRevision(next.editPlanRevision)
+    return plan
   }
   // Never let an older query response replace a newer accepted save or draft.
   if (
@@ -131,7 +154,37 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     project.editPlanRevision > revision
   ) {
     if (!dirty) adopt(project)
-    else if (!remoteConflict) setRemoteConflict(true)
+    else if (!remoteConflict) rebase(project, draft, baseline)
+  }
+  /** Takes whatever the lane's earlier writes left in the cache before this draft is sent or
+   *  counted as saved: a settings or slot save that landed a moment ago has not re-rendered
+   *  this hook yet, and its revision is the one the next save must name. */
+  function incorporateLatest() {
+    const latest = cache.getQueryData<ClipProject>([...projectsKey, 'detail', project.id])
+    const known = current.current
+    if (!latest?.editing || latest.editPlanRevision <= known.revision || known.remoteConflict)
+      return
+    const saved = clipDraftKey(latest.editing.plan)
+    if (!known.dirty) {
+      adopt(latest)
+      current.current = {
+        ...known,
+        draft: latest.editing.plan,
+        baseline: saved,
+        revision: latest.editPlanRevision,
+      }
+      return
+    }
+    const plan = rebase(latest, known.draft, known.baseline)
+    current.current = plan
+      ? {
+          ...known,
+          draft: plan,
+          baseline: saved,
+          revision: latest.editPlanRevision,
+          dirty: clipDraftKey(plan) !== saved,
+        }
+      : { ...known, remoteConflict: true }
   }
   const change = (edit: TimelineEdit, group?: string) => {
     if ((!project.editing && edit.type !== 'sourceSound') || active) return
@@ -141,82 +194,89 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   }
   function saveOne(): Promise<number> {
     if (saving.current) return saving.current
-    const submitted = current.current
-    if (submitted.remoteConflict) return Promise.reject(new Error('Conflicting clip draft'))
-    if (!submitted.dirty) return Promise.resolve(submitted.revision)
-    const accepted = JSON.parse(submitted.baseline) as ClipEditPlan
-    const source = [...soundSources.current.values()].find(
-      (source) =>
-        clipSourceSound(submitted.draft, source, source.retainOriginalAudio) !==
-        clipSourceSound(accepted, source, source.retainOriginalAudio),
-    )
-    if ((!submitted.valid && !source) || active)
-      return Promise.reject(new Error('Invalid clip draft'))
-    const sound = source
-      ? {
-          ...source,
-          retainOriginalAudio: clipSourceSound(submitted.draft, source, source.retainOriginalAudio),
-        }
-      : undefined
-    const snapshot = copyClipPlan(submitted.draft)
-    const key = clipDraftKey(snapshot)
-    const operation = (async () => {
-      try {
-        const result = await mutation.mutateAsync({
-          plan: snapshot,
-          expectedRevision: submitted.revision,
-          sound,
-        })
-        if (!mounted.current) throw new Error('Correction was unmounted')
-        let acceptedPlan = result.editing?.plan ?? accepted
-        // Unused current sources have durable settings too, but are absent from
-        // the server's cut-only render snapshot. Keep them in local history only.
-        for (const setting of accepted.sourceAudio ?? []) {
-          if (
-            !acceptedPlan.cuts.some(
-              (c) => c.sourceId === setting.sourceId && c.fingerprint === setting.fingerprint,
-            )
-          )
-            acceptedPlan = withSourceSound(acceptedPlan, setting)
-        }
-        if (sound) acceptedPlan = withSourceSound(acceptedPlan, sound)
-        let queued = current.current.draft
-        if (sound) {
-          // The audio RPC saves only permission. Preserve cuts/text typed before or
-          // during IO, and any newer permission intent (including undo during IO).
-          const intended = [...soundSources.current.values()].map((source) => ({
+    // The snapshot is taken INSIDE the lane: a slot or settings save queued ahead of this one
+    // moves the revision this save has to name.
+    const operation = serialClipWrite(project.id, async () => {
+      incorporateLatest()
+      const submitted = current.current
+      if (submitted.remoteConflict) throw new Error('Conflicting clip draft')
+      if (!submitted.dirty) return submitted.revision
+      const accepted = JSON.parse(submitted.baseline) as ClipEditPlan
+      const source = [...soundSources.current.values()].find(
+        (source) =>
+          clipSourceSound(submitted.draft, source, source.retainOriginalAudio) !==
+          clipSourceSound(accepted, source, source.retainOriginalAudio),
+      )
+      if ((!submitted.valid && !source) || active) throw new Error('Invalid clip draft')
+      const sound = source
+        ? {
             ...source,
-            retainOriginalAudio: clipSourceSound(queued, source, source.retainOriginalAudio),
-          }))
-          queued = { ...queued, sourceAudio: acceptedPlan.sourceAudio }
-          for (const setting of intended) queued = withSourceSound(queued, setting)
-        } else {
-          queued =
-            clipDraftKey(queued) === key ? acceptedPlan : acknowledgeClipCuts(queued, acceptedPlan)
-        }
-        dispatch({ type: 'adopt', plan: queued })
-        const acceptedKey = clipDraftKey(acceptedPlan)
-        current.current = {
-          ...current.current,
-          draft: queued,
-          baseline: acceptedKey,
-          revision: result.editPlanRevision,
-          dirty: clipDraftKey(queued) !== acceptedKey,
-        }
-        setBaseline(acceptedKey)
-        setRevision(result.editPlanRevision)
-        publish(result)
-        return result.editPlanRevision
-      } finally {
-        saving.current = undefined
+            retainOriginalAudio: clipSourceSound(
+              submitted.draft,
+              source,
+              source.retainOriginalAudio,
+            ),
+          }
+        : undefined
+      const snapshot = copyClipPlan(submitted.draft)
+      const key = clipDraftKey(snapshot)
+      const result = await mutation.mutateAsync({
+        plan: snapshot,
+        expectedRevision: submitted.revision,
+        sound,
+      })
+      if (!mounted.current) throw new Error('Correction was unmounted')
+      let acceptedPlan = result.editing?.plan ?? accepted
+      // Unused current sources have durable settings too, but are absent from
+      // the server's cut-only render snapshot. Keep them in local history only.
+      for (const setting of accepted.sourceAudio ?? []) {
+        if (
+          !acceptedPlan.cuts.some(
+            (c) => c.sourceId === setting.sourceId && c.fingerprint === setting.fingerprint,
+          )
+        )
+          acceptedPlan = withSourceSound(acceptedPlan, setting)
       }
-    })()
+      if (sound) acceptedPlan = withSourceSound(acceptedPlan, sound)
+      let queued = current.current.draft
+      if (sound) {
+        // The audio RPC saves only permission. Preserve cuts/text typed before or
+        // during IO, and any newer permission intent (including undo during IO).
+        const intended = [...soundSources.current.values()].map((source) => ({
+          ...source,
+          retainOriginalAudio: clipSourceSound(queued, source, source.retainOriginalAudio),
+        }))
+        queued = { ...queued, sourceAudio: acceptedPlan.sourceAudio }
+        for (const setting of intended) queued = withSourceSound(queued, setting)
+      } else {
+        queued =
+          clipDraftKey(queued) === key ? acceptedPlan : acknowledgeClipCuts(queued, acceptedPlan)
+      }
+      dispatch({ type: 'adopt', plan: queued })
+      const acceptedKey = clipDraftKey(acceptedPlan)
+      current.current = {
+        ...current.current,
+        draft: queued,
+        baseline: acceptedKey,
+        revision: result.editPlanRevision,
+        dirty: clipDraftKey(queued) !== acceptedKey,
+      }
+      setBaseline(acceptedKey)
+      setRevision(result.editPlanRevision)
+      publish(result)
+      return result.editPlanRevision
+    }).finally(() => {
+      saving.current = undefined
+    })
     saving.current = operation
     return operation
   }
   // UI autosave keeps the draft on failure; a committing action must receive the failure.
   const save = () => flush().catch(() => undefined)
   async function flush(): Promise<number> {
+    // Every write already in the lane lands first, and its revision is taken: a committing
+    // action renders or finalizes the plan as the LAST of them left it.
+    await serialClipWrite(project.id, async () => incorporateLatest())
     if (saving.current) await saving.current
     while (current.current.dirty) await saveOne()
     if (current.current.remoteConflict) throw new Error('Conflicting clip draft')
@@ -307,6 +367,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
       publish(next)
     },
   })
+  const saved = useMemo(() => JSON.parse(baseline) as ClipEditPlan, [baseline])
   const audioPlan =
     mutation.error || remoteConflict
       ? { ...draft, sourceAudio: (JSON.parse(baseline) as ClipEditPlan).sourceAudio }
@@ -391,6 +452,8 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
       change({ type: 'splitCut', id, newId: createCutId(), sourceMs })
     },
     draft,
+    /** The plan as the server last accepted it: what an unsaved edit is measured against. */
+    saved,
     timeline,
     dispatch,
     revision,

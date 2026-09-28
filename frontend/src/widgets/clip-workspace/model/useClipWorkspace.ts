@@ -10,10 +10,16 @@ import {
   type ClipProject,
   type ClipRenderKind,
 } from '@/entities/clip-project'
+import { clipRegionElementId, clipRegionRows } from '@/entities/clip-plan'
 import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
 import { useClipCorrection } from '@/features/correct-clip'
 import { useCancelClip } from '@/features/cancel-clip'
 import { discardClipDraftQueue, useClipDraftSave } from '@/features/edit-clip-project'
+import {
+  discardClipRegionQueue,
+  useClipRegionsEditor,
+  type ClipRegionPlan,
+} from '@/features/edit-clip-regions'
 import { useFinalizeClip } from '@/features/finalize-clip'
 import { useGenerateClip } from '@/features/generate-clip'
 import { useBrowserRender } from '@/features/render-clip-browser'
@@ -76,10 +82,43 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   )
   useUploadAttemptLifecycle(job, upload)
   const uploading = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
-  const finalization = useFinalizeClip(ownerId, project, async () => {
-    await save.flush(true)
-    return correction.flush()
+  // While the plan draws a region, its rows are the active slots' words, and a slot typed in ②'s
+  // storyline block is the same edit the correction's own row fields make (CLIP-188).
+  const regionPlan: ClipRegionPlan | undefined = plan
+    ? {
+        rows: (kind) => clipRegionRows(correction.draft, kind),
+        savedRows: (kind) => clipRegionRows(correction.saved, kind),
+        setRow: (kind, index, text) => {
+          const id = clipRegionElementId(kind)
+          const element = correction.draft.elements?.find((t) => t.instanceId === id)
+          if (!element) return
+          correction.change(
+            {
+              type: 'text',
+              id,
+              patch: { rows: element.rows.map((r, i) => (i === index ? { ...r, text } : r)) },
+            },
+            `${id}:row-${index}`,
+          )
+        },
+      }
+    : undefined
+  const regions = useClipRegionsEditor(ownerId, project, {
+    plan: regionPlan,
+    failures: [save.failure, correction.failure],
+    readOnly: !!project.finalized || generation.busy,
+    before: () => save.flush(true),
   })
+  /** Every queue the owner types into, in the order their writes depend on each other: the
+   *  settings (a preset reshapes the regions), the region slots (they project into the plan),
+   *  then the correction, whose revision is what a committing action runs against (CLIP-39,
+   *  CLIP-188). An invalid slot or plan refuses the action and keeps its error. */
+  const flushAll = async (failFast = false) => {
+    await save.flush(failFast)
+    await regions.flush(failFast)
+    return correction.flush()
+  }
+  const finalization = useFinalizeClip(ownerId, project, () => flushAll(true))
   const cancellation = useCancelClip(ownerId, project.id, job)
   // A revision runs WITHOUT the focused job view: it rewrites the plan the owner
   // is looking at, and ② is where that change shows up (CLIP-131). Every other
@@ -90,6 +129,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const focused = !project.finalized && generation.busy && !revising
   const pending = generation.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
+  useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
   const reorderSources = useReorderClipSources()
   const localSources = upload.entries.map((entry) => ({
     fingerprint: entry.metadata.fingerprint,
@@ -141,7 +181,9 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const render = {
     browser,
     capability: browserCapability.data as ClipBrowserRenderCapability | undefined,
-    ready: !!upload.readyBatch && correction.revision === project.editPlanRevision,
+    // A slot whose words its preset cannot draw holds every committing action (CLIP-188).
+    ready:
+      !!upload.readyBatch && correction.revision === project.editPlanRevision && !regions.invalid,
     pending: generation.starting || browser.busy,
     lastKind: project.lastRenderKind,
     current:
@@ -160,15 +202,11 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
           batchId: upload.readyBatch.id,
           localSources,
           resolvePlayback: upload.ensurePlayback,
-          flush: async () => {
-            await save.flush(true)
-            return correction.flush()
-          },
+          flush: () => flushAll(true),
         })
         return
       }
-      void correction
-        .flush()
+      void flushAll(true)
         .then((revision) => generation.render(upload.readyBatch, revision, ownership))
         .catch(() => undefined)
     },
@@ -178,13 +216,15 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     revising,
     // A revision is refused while any other clip job holds the project, and after finalization;
     // its own run is not a reason, since the composer then shows that run instead of the field.
-    disabled: uploading || finalization.busy || browser.busy || (generation.busy && !revising),
+    disabled:
+      uploading ||
+      finalization.busy ||
+      browser.busy ||
+      regions.invalid ||
+      (generation.busy && !revising),
     // The same chain a generation runs before it starts (CLIP-39): the writer answers from the
     // SAVED plan, so an unflushed edit would be silently dropped from what it rewrites.
-    flush: async () => {
-      await save.flush()
-      return correction.flush()
-    },
+    flush: () => flushAll(),
     cancellation,
   }
   const observations = {
@@ -201,12 +241,21 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
           source.metadata.fingerprint === selection.source.fingerprint,
       )?.retainOriginalAudio,
   }
+  // The one status line hears the region slots' save as it hears the settings' (CLIP-38): a
+  // failing save first, then whichever is saying something.
+  const saveStatus =
+    save.failing || (!regions.status.failing && (save.label || !regions.status.label))
+      ? save
+      : regions.status
   return {
     project,
     ownerId,
     plan,
     step: { value: step, set: setStep },
     save,
+    saveStatus,
+    flushAll,
+    regions,
     correction,
     generation: { ...generation, ownership },
     sources,

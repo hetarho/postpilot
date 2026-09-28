@@ -8,6 +8,7 @@ import {
   clipLayoutRegion,
   clipRegionSlotAt,
   clipRegionSlotBudget,
+  clipRegionSlotFit,
   clipRegionSlots,
   type ClipRegionKind,
   type ClipRegionRatio,
@@ -164,6 +165,21 @@ describe('the region layout port', () => {
       expect(close(at!.width, c.width), `${name} width`).toBe(true)
     }
     expect(clipRegionSlots('outro', 'chips')).toHaveLength(6)
+  })
+
+  // The Go `regionSlotFit`'s answers, so ② refuses in the field what the server would refuse on
+  // save (CLIP-189): too wide at its floor, a character its face does not draw, and a break the
+  // slot has no second line for.
+  it('names why a slot cannot draw a text, as the server does (CDS-77, CDS-86)', () => {
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 1, '성수 로컬')).toBe('')
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 1, '   ')).toBe('')
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 1, '하나둘셋넷'.repeat(8))).toBe(
+      'copy_limit',
+    )
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 1, '두 줄\n문구')).toBe('copy_limit')
+    // Paperlogy draws 2,886 syllables, and 갂 is not one of them (CDS-17).
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 1, '갂')).toBe('unsupported_glyph')
+    expect(clipRegionSlotFit('intro', 'cover', 'vertical', 9, '성수')).toBe('invalid_design')
   })
 
   it('lays out every preset in design.json, none left to the renderer alone', () => {

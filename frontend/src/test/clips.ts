@@ -43,11 +43,13 @@ import {
   CLIP_CAPTION_STYLES,
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
+  clipRegionSlots,
 } from '@/entities/clip-design'
 import {
   clipPlanToProto,
   toClipEditingState,
   type ClipEditPlan,
+  type ClipEditableText,
   withSourceSound,
 } from '@/entities/clip-plan'
 import {
@@ -105,6 +107,8 @@ export interface FakeClipProject extends ClipProjectDraft {
     takenOutObservationIds: string[]
   }
   planEditedByHand?: boolean
+  /** The project's intro and outro slots (CLIP-186), in the domain's shape. */
+  regions?: ClipProject['regions']
 }
 export type FakeClipEligibility =
   | 'unspecified'
@@ -179,6 +183,19 @@ export interface FakeClipsOptions {
   soundWrites?: Array<{ sourceId: string; expectedRevision: number; retainOriginalAudio: boolean }>
   soundFails?: boolean
   planSaveConflict?: boolean
+  /** Holds SaveClipEditPlan open until the test releases it. */
+  planSaveGate?: () => Promise<unknown>
+  /** Every region edit an UpdateClipProject carried, with the revision it named (CLIP-188). */
+  regionWrites?: Array<{
+    expectedRegionRevision?: number
+    intro?: { enabled?: boolean; slots: { id: string; instruction?: string; text?: string }[] }
+    outro?: { enabled?: boolean; slots: { id: string; instruction?: string; text?: string }[] }
+  }>
+  /** Holds an UpdateClipProject that carries region edits open until the test releases it. */
+  regionSaveGate?: () => Promise<unknown>
+  /** What choosing a template seeds into the slots the owner has not fixed, by template id
+   *  (CLIP-168); a region it seeds is turned on. */
+  templateRegions?: Record<string, { intro?: string[]; outro?: string[] }>
   projectWrites?: ClipProjectDraft[]
   /** Which styles the samples call back as sequence-rendered, and whether it fails at all. */
   sequenceStyles?: string[]
@@ -233,6 +250,94 @@ export interface FakeClipsOptions {
  *  server last returned against its own baseline to decide whether it is in sync (CLIP-39). */
 const LOADED_AT = Date.now()
 const hoursAgo = (hours: number) => new Date(LOADED_AT - hours * 60 * 60 * 1000).toISOString()
+
+const REGION_KINDS = ['intro', 'outro'] as const
+const regionRole = (kind: 'intro' | 'outro') => (kind === 'intro' ? 'hook' : 'ending')
+const presetOf = (p: FakeClipProject, kind: 'intro' | 'outro') =>
+  (kind === 'intro' ? p.introPreset : p.outroPreset) || CLIP_DEFAULT_REGION_PRESETS[kind]
+
+/** The element the server projects a region's slots into (T451): one row per active slot. */
+function regionElement(kind: 'intro' | 'outro'): ClipEditableText {
+  return {
+    instanceId: `project-${kind}`,
+    elementId: `project-${kind}`,
+    cutId: '',
+    kind: 'fixed',
+    role: regionRole(kind),
+    text: '',
+    rows: [],
+    style: 'auto',
+    position: 'auto',
+    align: 'center',
+    basis: kind === 'intro' ? 'output-start' : 'output-end',
+    startMs: kind === 'intro' ? 0 : -3000,
+    endMs: kind === 'intro' ? 2500 : 0,
+    pace: '',
+    accent: '',
+    keyword: '',
+    resolvedStartMs: 0,
+    resolvedEndMs: 0,
+    groupId: '',
+    itemId: '',
+  }
+}
+
+/** The server's projection of the slots into the plan (CLIP-188): an enabled region with text
+ *  draws its active slots as one element's rows, and anything else draws none. The plan's
+ *  revision moves only when the drawing does. */
+export function projectFakeRegions(p: FakeClipProject): boolean {
+  if (!p.regions || !p.editing) return false
+  const elements = [...(p.editing.plan.elements ?? [])]
+  const before = JSON.stringify(elements)
+  for (const kind of REGION_KINDS) {
+    const id = `project-${kind}`
+    const specs = clipRegionSlots(kind, presetOf(p, kind))
+    const region = p.regions[kind]
+    const rows = region.slots.slice(0, specs.length).map((slot, i) => ({
+      role: specs[i].role,
+      text: slot.text,
+    }))
+    const at = elements.findIndex((t) => t.instanceId === id)
+    if (!region.enabled || !rows.some((row) => row.text.trim())) {
+      if (at >= 0) elements.splice(at, 1)
+      continue
+    }
+    const element = { ...(at >= 0 ? elements[at] : regionElement(kind)), rows }
+    if (at >= 0) elements[at] = element
+    else if (kind === 'intro') elements.unshift(element)
+    else elements.push(element)
+  }
+  if (JSON.stringify(elements) === before) return false
+  p.editing = { ...p.editing, plan: { ...p.editing.plan, elements } }
+  p.editPlanRevision = (p.editPlanRevision ?? 0) + 1
+  return true
+}
+
+/** A correction's region rows written back into their slots (T451): a changed row is the
+ *  owner's, and a removed element turns its region off. */
+function reconcileFakeRegions(p: FakeClipProject, before: ClipEditPlan, after: ClipEditPlan) {
+  const regions = p.regions
+  if (!regions) return
+  const next = { ...regions }
+  for (const kind of REGION_KINDS) {
+    const id = `project-${kind}`
+    const old = before.elements?.find((t) => t.instanceId === id)
+    const saved = after.elements?.find((t) => t.instanceId === id)
+    const region = regions[kind]
+    if (old && !saved) next[kind] = { ...region, enabled: false }
+    if (!saved) continue
+    next[kind] = {
+      ...region,
+      slots: region.slots.map((slot, i) => {
+        const row = saved.rows[i]
+        if (!row || row.text === (old?.rows[i]?.text ?? '')) return slot
+        return { ...slot, text: row.text, ownerFixed: true, bound: false }
+      }),
+    }
+  }
+  if (JSON.stringify(next) !== JSON.stringify(regions))
+    p.regions = { ...next, revision: regions.revision + 1 }
+}
 
 export function registerClipService(router: ConnectRouter, options: FakeClipsOptions = {}) {
   const projects = new Map<string, FakeClipProject>(
@@ -516,6 +621,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   })
   router.rpc(ClipGenerationService.method.updateClipProject, async (req) => {
     options.calls?.push('UpdateClipProject')
+    if ((req.introRegion || req.outroRegion) && options.regionSaveGate)
+      await options.regionSaveGate()
     if (options.projectSaveGate) await options.projectSaveGate()
     if (options.projectSaveError) throw options.projectSaveError
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
@@ -551,7 +658,68 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       p.introPreset = switchedTo.introPreset
       p.outroPreset = switchedTo.outroPreset
       p.allowedCaptionStyles = [...switchedTo.allowedCaptionStyles]
+      const seeds = options.templateRegions?.[switchedTo.id]
+      if (seeds && p.regions) {
+        const regions = p.regions
+        const seeded = { ...regions }
+        for (const kind of REGION_KINDS) {
+          const words = seeds[kind]
+          if (!words) continue
+          seeded[kind] = {
+            enabled: true,
+            slots: regions[kind].slots.map((slot, i) =>
+              slot.ownerFixed || words[i] === undefined
+                ? slot
+                : { ...slot, text: words[i], bound: false },
+            ),
+          }
+        }
+        p.regions = { ...seeded, revision: regions.revision + 1 }
+      }
     }
+    if (req.introRegion || req.outroRegion) {
+      options.regionWrites?.push({
+        expectedRegionRevision: req.expectedRegionRevision,
+        ...(req.introRegion
+          ? { intro: { enabled: req.introRegion.enabled, slots: req.introRegion.slots } }
+          : {}),
+        ...(req.outroRegion
+          ? { outro: { enabled: req.outroRegion.enabled, slots: req.outroRegion.slots } }
+          : {}),
+      })
+      if (!p.regions) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+      if (
+        req.expectedRegionRevision !== undefined &&
+        req.expectedRegionRevision !== p.regions.revision
+      )
+        throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+      const regions = p.regions
+      const patched = { ...regions }
+      for (const kind of REGION_KINDS) {
+        const edit = kind === 'intro' ? req.introRegion : req.outroRegion
+        if (!edit) continue
+        patched[kind] = {
+          enabled: edit.enabled ?? regions[kind].enabled,
+          slots: regions[kind].slots.map((slot) => {
+            const change = edit.slots.find((one) => one.id === slot.id)
+            if (!change) return slot
+            return {
+              ...slot,
+              ...(change.instruction !== undefined
+                ? { instruction: change.instruction, instructionEdited: true }
+                : {}),
+              ...(change.text !== undefined
+                ? { text: change.text, ownerFixed: true, bound: false }
+                : {}),
+            }
+          }),
+        }
+      }
+      if (JSON.stringify(patched) !== JSON.stringify(regions))
+        p.regions = { ...patched, revision: regions.revision + 1 }
+    }
+    // A preset or a slot moves the drawing; the plan follows it (CLIP-188).
+    projectFakeRegions(p)
     if (req.storyline) {
       const paragraphs = req.storyline.paragraphs.map((paragraph) => ({
         text: paragraph.text,
@@ -780,13 +948,16 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     return { project: projectProto(p), batch: b }
   })
-  router.rpc(ClipPlanService.method.saveClipEditPlan, (req) => {
+  router.rpc(ClipPlanService.method.saveClipEditPlan, async (req) => {
     options.calls?.push('SaveClipEditPlan')
+    if (options.planSaveGate) await options.planSaveGate()
     const p = projects.get(req.projectId)
     if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (options.planSaveConflict || req.expectedRevision !== p.editPlanRevision)
       throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    const before = p.editing.plan
     p.editing = toClipEditingState(create(ClipEditingStateSchema, { ...p.editing, plan: req.plan }))
+    reconcileFakeRegions(p, before, p.editing.plan)
     options.planWrites?.push({ revision: req.expectedRevision, plan: p.editing.plan })
     p.editPlanRevision = (p.editPlanRevision ?? 0) + 1
     return create(SaveClipEditPlanResponseSchema, { project: projectProto(p) })
