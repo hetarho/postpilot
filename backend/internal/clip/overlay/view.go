@@ -26,6 +26,16 @@ type Text struct {
 	Value, Prefix, Keyword, Suffix, Accent       string
 	Colored, Shadow                              bool
 	Highlight                                    *Box
+	// Runs, when present, is the whole line in order and replaces Value and the
+	// Prefix/Keyword/Suffix split: a run naming a Family or a Fill is drawn in
+	// its own tspan, every other run as plain text. It carries a caption whose
+	// face does not draw one of its characters (CDS-84).
+	Runs []Run
+}
+
+// Run is one stretch of a line; an empty Family or Fill inherits the line's.
+type Run struct {
+	Text, Family, Fill string
 }
 type CopyView struct {
 	Canvas

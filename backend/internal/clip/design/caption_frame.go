@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"math"
 	"strconv"
+	"strings"
 )
 
 // What a caption style is handed to draw one layer. Everything here is already
@@ -48,6 +49,9 @@ type CaptionFrame struct {
 	// opacity and offset.
 	Progress   float64
 	DurationMS int
+	// The caption's characters its style's face does not draw, set in Wanted
+	// Sans Variable inside the style's own drawing (CDS-84).
+	Substitute map[rune]bool
 }
 
 // Bleed is how far outside the caption's own box this style paints, so the
@@ -76,6 +80,54 @@ func esc(value string) string {
 	var b bytes.Buffer
 	_ = xml.EscapeText(&b, []byte(value))
 	return b.String()
+}
+
+// CaptionMarkup is a caption string as the content of its <text>: escaped, with
+// each run of characters its style's face does not draw set in Wanted Sans
+// Variable (CDS-84). The run inherits the element's weight, size, tracking and
+// paint, so only the letterform changes. With nothing to substitute it is the
+// escaped text alone, byte for byte what a caption always carried.
+func CaptionMarkup(text string, substitute map[rune]bool) string {
+	var b strings.Builder
+	for _, run := range SplitSubstituted(text, substitute) {
+		if run.Substituted {
+			b.WriteString(`<tspan font-family="` + FontFamily("wantedsans") + `">` + esc(run.Text) + `</tspan>`)
+		} else {
+			b.WriteString(esc(run.Text))
+		}
+	}
+	return b.String()
+}
+
+// A stretch of a caption string that is, or is not, set in the substitute.
+type SubstitutedRun struct {
+	Text        string
+	Substituted bool
+}
+
+// SplitSubstituted cuts text into maximal runs by whether each character is in
+// the substitute set. An empty set yields the whole text as one plain run.
+func SplitSubstituted(text string, substitute map[rune]bool) []SubstitutedRun {
+	if len(substitute) == 0 {
+		if text == "" {
+			return nil
+		}
+		return []SubstitutedRun{{Text: text}}
+	}
+	var out []SubstitutedRun
+	start, current := 0, false
+	for i, c := range text {
+		sub := substitute[c]
+		if i > start && sub != current {
+			out = append(out, SubstitutedRun{Text: text[start:i], Substituted: current})
+			start = i
+		}
+		current = sub
+	}
+	if start < len(text) {
+		out = append(out, SubstitutedRun{Text: text[start:], Substituted: current})
+	}
+	return out
 }
 
 // num formats a coordinate the same way everywhere, so two runs of one frame are

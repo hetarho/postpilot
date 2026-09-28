@@ -116,6 +116,45 @@ func TestRenderSmoke(t *testing.T) {
 		if alpha != 0 {
 			t.Fatal("copy plate background is not transparent")
 		}
+		// CDS-84: Paperlogy maps 갂 to a glyph with no outline, so 크게 강조 sets
+		// it in Wanted Sans Variable. The real resvg has to honour that run: the
+		// plate paints it, and the same plate without the substitute paints
+		// nothing at all.
+		gap := clip.Copy{Text: "갂갂갂", Style: "bold", Anchor: "bottom", Align: "center"}
+		gapLayout, err := r.layoutCopy(t.Context(), ws, canvas, gap)
+		if err != nil {
+			return fmt.Errorf("substituted caption: %w", err)
+		}
+		if gapLayout.Caption.ID != "bold" || !gapLayout.Substitute['갂'] {
+			t.Fatalf("갂 was not substituted inside 크게 강조: %s %v", gapLayout.Caption.ID, gapLayout.Substitute)
+		}
+		painted := func(index int, l copyLayout) int {
+			t.Helper()
+			plate, err := r.copyPlate(t.Context(), ws, canvas, gap, l, index, Luminance{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			img, err := readPNG(plate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			count := 0
+			for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
+				for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+					if _, _, _, a := img.At(x, y).RGBA(); a > 0 {
+						count++
+					}
+				}
+			}
+			return count
+		}
+		if n := painted(90, gapLayout); n < 1000 {
+			t.Fatalf("the substituted 갂 painted %d pixels", n)
+		}
+		gapLayout.Substitute = nil
+		if n := painted(91, gapLayout); n != 0 {
+			t.Fatalf("Paperlogy's own 갂 painted %d pixels, so the empty-glyph premise no longer holds", n)
+		}
 		// Every style, rasterized by the real resvg against the real font, is
 		// checked in pixels: a plated style paints its plate token and its accent
 		// where CDS puts it, an unplated one paints the stroke instead, and

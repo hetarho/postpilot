@@ -76,10 +76,56 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 			at := strings.Index(line, l.Keyword.Text)
 			t.Colored, t.Prefix, t.Keyword, t.Suffix, t.Accent = true, line[:at], l.Keyword.Text, line[at+len(l.Keyword.Text):], word
 		}
+		t.Runs = captionRuns(t, line, l.Substitute)
 		v.Lines = append(v.Lines, t)
 		top += bounds.Height + l.FontSize*(l.Role.LineHeight-1)
 	}
 	return v
+}
+
+// captionRuns splits a caption line for a face that does not draw one of its
+// characters: those run in Wanted Sans Variable, and a coloured keyword keeps
+// its accent across the split (CDS-84). A line with nothing to substitute keeps
+// no runs, so its template output is what it always was.
+func captionRuns(t overlay.Text, line string, substitute map[rune]bool) []overlay.Run {
+	if !strings.ContainsFunc(line, func(c rune) bool { return substitute[c] }) {
+		return nil
+	}
+	parts := []overlay.Run{{Text: line}}
+	if t.Colored {
+		parts = []overlay.Run{{Text: t.Prefix}, {Text: t.Keyword, Fill: t.Accent}, {Text: t.Suffix}}
+	}
+	out := []overlay.Run{}
+	for _, part := range parts {
+		for _, run := range design.SplitSubstituted(part.Text, substitute) {
+			next := overlay.Run{Text: run.Text, Fill: part.Fill}
+			if run.Substituted {
+				next.Family = design.FontFamily("wantedsans")
+			}
+			out = append(out, next)
+		}
+	}
+	return out
+}
+
+// drawsSubstitution holds a copy template to CDS-84: a caption line carrying a
+// substituted run must come out with that run in the substitute's tspan. A
+// catalog written before runs existed would draw the style's own face there,
+// which for Paperlogy is an empty glyph, so it is refused at boot instead.
+func drawsSubstitution(catalog *overlay.Catalog, binding string) error {
+	family := design.FontFamily("wantedsans")
+	view := overlayProbe("copy-v1").(overlay.CopyView)
+	line := view.Lines[0]
+	line.Family, line.Runs = design.FontFamily("paperlogy"), []overlay.Run{{Text: "한"}, {Text: "갂", Family: family}}
+	view.Lines = []overlay.Text{line}
+	svg, err := catalog.Render(binding, view)
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(svg, `font-family="`+family+`">갂</tspan>`) {
+		return fmt.Errorf("overlay binding %s does not draw a substituted caption run", binding)
+	}
+	return nil
 }
 
 func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
@@ -122,6 +168,13 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 	for _, style := range design.CaptionStyles() {
 		if _, err := catalog.Render("copy."+style.ID, overlayProbe("copy-v1")); err != nil {
 			return nil, err
+		}
+		// A static style is drawn by its template, so the template has to draw
+		// the characters its face does not (CDS-84).
+		if style.Static() {
+			if err := drawsSubstitution(catalog, "copy."+style.ID); err != nil {
+				return nil, err
+			}
 		}
 	}
 	for binding, view := range map[string]string{"furniture": "furniture-v1", "region": "region-v2", "info": "info-v1"} {

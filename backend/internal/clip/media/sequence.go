@@ -60,6 +60,7 @@ func captionFrame(canvas clip.Canvas, c clip.Copy, l copyLayout, durationMS int,
 		Canvas: design.Size{Width: canvas.Width, Height: canvas.Height}, Style: l.Caption,
 		Family: design.FontFamily(l.Caption.Face), Size: l.FontSize, Tracking: l.Role.Tracking,
 		Region: design.Bounds(l.Region), Accent: accent, Progress: progress, DurationMS: durationMS,
+		Substitute: l.Substitute,
 	}
 	for i, text := range l.Lines {
 		bounds := l.Bounds[i]

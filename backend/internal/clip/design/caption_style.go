@@ -90,8 +90,8 @@ func (s CaptionStyle) DarkStroke() bool { return s.Paint.Stroke == Color["stroke
 func (s CaptionStyle) Rule() StyleRule { return s.rule }
 
 // DefaultCaptionStyle is the treatment an empty selection resolves to, and the
-// one a caption falls back to when its own face cannot set a syllable (CDS-25,
-// CDS-84).
+// one a caption falls back to when neither its own face nor the substitute
+// draws one of its characters (CDS-25, CDS-84).
 const DefaultCaptionStyle = "bold"
 
 var captionStyles = buildCaptionStyles()
@@ -210,7 +210,8 @@ func CaptionRule(id string) (StyleRule, bool) {
 func Caption() StyleRule { return DefaultCaption().rule }
 
 // DefaultCaption is the whole default style — what an empty selection resolves
-// to, and what a caption whose own face lacks a syllable falls back to (CDS-84).
+// to, and what a caption falls back to when neither its own face nor the
+// substitute draws one of its characters (CDS-84).
 func DefaultCaption() CaptionStyle {
 	style, _ := LookupCaptionStyle(DefaultCaptionStyle)
 	return style

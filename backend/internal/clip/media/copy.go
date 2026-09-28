@@ -148,6 +148,33 @@ func escaped(value string) string {
 	return b.String()
 }
 func (r *Rendering) checkCopy(text string, role design.TypeRole) error {
+	if err := checkCharacters(text); err != nil {
+		return err
+	}
+	// Region, information and badge text is set in its own face alone: a
+	// character that face does not draw overflows the slot or refuses the
+	// render, and no other family is substituted for it (CDS-77, CDS-84).
+	if r.MissingGlyph(text, role) != 0 {
+		return clip.ErrInvalid
+	}
+	return nil
+}
+
+// checkCaption is checkCopy for a caption, whose characters its style's face
+// does not draw are set in Wanted Sans Variable (CDS-84). One neither draws is
+// a style problem the caller resolves by falling back to the default style;
+// reaching the rasteriser with one left is invalid input.
+func (r *Rendering) checkCaption(text string, role design.TypeRole) error {
+	if err := checkCharacters(text); err != nil {
+		return err
+	}
+	if r.MissingCaptionGlyph(text, role) != 0 {
+		return clip.ErrInvalid
+	}
+	return nil
+}
+
+func checkCharacters(text string) error {
 	for _, c := range text {
 		if c == '\n' || c == '\u200d' || c == '\ufe0e' || c == '\ufe0f' {
 			continue
@@ -155,12 +182,6 @@ func (r *Rendering) checkCopy(text string, role design.TypeRole) error {
 		if unicode.IsControl(c) || c == '\ufffe' || c == '\uffff' {
 			return clip.ErrInvalid
 		}
-	}
-	// A face that cannot set a syllable is a style problem the caller resolves
-	// by falling back to the default style (CDS-84); reaching the rasteriser
-	// with one left is invalid input, because nothing may substitute a glyph.
-	if r.MissingGlyph(text, role) != 0 {
-		return clip.ErrInvalid
 	}
 	return nil
 }
@@ -209,12 +230,14 @@ func copyCandidates(text string, maxLines int) ([][]string, []string, error) {
 }
 
 // Measured at 100 px with the role's tracking expressed in px, so scaling the
-// result by size/100 gives exactly the tracking the final SVG asks for.
-func measureSVG(values []string, weight int, tracking float64, family string) string {
+// result by size/100 gives exactly the tracking the final SVG asks for. A
+// caption's substituted characters are measured in the family they will be
+// drawn in, through the same markup the drawing uses (CDS-84).
+func measureSVG(values []string, weight int, tracking float64, family string, substitute map[rune]bool) string {
 	var b strings.Builder
 	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="500">`)
 	for i, text := range values {
-		fmt.Fprintf(&b, `<text id="m%d" x="0" y="200" xml:space="preserve" font-family="%s" font-weight="%d" font-size="100" letter-spacing="%.4f">%s</text>`, i, family, weight, tracking*100, escaped(text))
+		fmt.Fprintf(&b, `<text id="m%d" x="0" y="200" xml:space="preserve" font-family="%s" font-weight="%d" font-size="100" letter-spacing="%.4f">%s</text>`, i, family, weight, tracking*100, design.CaptionMarkup(text, substitute))
 	}
 	b.WriteString(`</svg>`)
 	return b.String()
@@ -228,8 +251,11 @@ func (r *Rendering) resvg(ctx context.Context, ws clip.MediaWorkspace, args ...s
 	return r.media.run(ctx, ws, r.cfg.ResvgPath, append(head, args...)...)
 }
 func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string) (map[string]clip.Region, error) {
+	return r.measureWith(ctx, ws, values, weight, tracking, family, nil)
+}
+func (r *Rendering) measureWith(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string, substitute map[rune]bool) (map[string]clip.Region, error) {
 	path := filepath.Join(ws.Path, "copy-measure.svg")
-	data := []byte(measureSVG(values, weight, tracking, family))
+	data := []byte(measureSVG(values, weight, tracking, family, substitute))
 	if err := r.media.capacity(ws, int64(len(data))); err != nil {
 		return nil, err
 	}
@@ -286,6 +312,10 @@ type copyLayout struct {
 	Keyword  keywordSpan
 	// Per line, the words a per-word style needs; empty for every other style.
 	Words [][]wordSpan
+	// The caption's characters its style's face does not draw, set in Wanted
+	// Sans Variable wherever this layout is measured or drawn (CDS-84); nil
+	// when the face draws every one of them.
+	Substitute map[rune]bool
 }
 
 // One measured word on its line, for the styles that light words one at a time.
@@ -416,7 +446,7 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 						words = append(words, wordsOn(line, bounds, factor))
 					}
 				}
-				best = copyLayout{caption, style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor), words}
+				best = copyLayout{caption, style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor), words, nil}
 				bestWidth, bestClean = width, clean
 			}
 			// Prefer a single line whenever it fits at the current size.
@@ -492,7 +522,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
 	caption := captionStyle(c.Style)
 	style := caption.Rule()
-	if err := r.checkCopy(c.Text, caption.Role()); err != nil {
+	if err := r.checkCaption(c.Text, caption.Role()); err != nil {
 		return copyLayout{}, err
 	}
 	candidates, values, err := copyCandidates(c.Text, style.Lines)
@@ -518,11 +548,14 @@ func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canv
 		}
 	}
 	role := caption.Role()
-	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
+	substitute := r.substitutes(c.Text, role)
+	bounds, err := r.measureWith(ctx, ws, values, role.Weight, role.Tracking, r.family(role), substitute)
 	if err != nil {
 		return copyLayout{}, err
 	}
-	return fitCopy(canvas, c, candidates, bounds)
+	layout, err := fitCopy(canvas, c, candidates, bounds)
+	layout.Substitute = substitute
+	return layout, err
 }
 
 // wordsOn measures each word of a line the way keywordOn measures the keyword:
@@ -711,7 +744,7 @@ func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Captio
 	if strings.TrimSpace(c.Text) == "" {
 		return 0, 0, nil
 	}
-	if err := r.checkCopy(c.Text, captionStyle(c.Style).Role()); err != nil {
+	if err := r.checkCaption(c.Text, captionStyle(c.Style).Role()); err != nil {
 		return 0, 0, err
 	}
 	err = r.media.WithWorkspace(ctx, "clip-caption-size", func(ws clip.MediaWorkspace) error {

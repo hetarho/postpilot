@@ -269,3 +269,28 @@ it('draws each new preset with its own decoration', () => {
   // The caption under the stamp stays upright.
   expect(stamp.querySelector(':scope > text[data-slot="4"]')).not.toBeNull()
 })
+
+// CDS-84: a caption syllable its face does not draw is set in Wanted Sans Variable, in the
+// caption's own style, and a syllable the face draws is left alone.
+it('sets a caption syllable its face does not draw in the substitute', () => {
+  const document = parseClipComposition(
+    '<clip version="1" intro="a" caption="bold" outro="b"><text id="caption" kind="fixed" role="caption" basis="whole">갂 뷁 맛집</text></clip>',
+  )
+  const timeline = sampleClipComposition(document, 15000, () => '예시')
+  const view = render(
+    <CompositionDesignFrame
+      document={document}
+      entries={timeline.elements}
+      ratio="vertical"
+      label="Preview"
+      sampleAI="문구"
+    />,
+  )
+  const caption = view.container.querySelector('[data-role="caption"] text')!
+  expect(caption).toHaveAttribute('font-family', CLIP_DESIGN.faces.paperlogy)
+  const runs = caption.querySelectorAll('tspan')
+  expect(runs).toHaveLength(1)
+  expect(runs[0]).toHaveAttribute('font-family', CLIP_DESIGN.faces.wantedsans)
+  expect(runs[0].textContent).toBe('갂')
+  expect(caption.textContent).toBe('갂 뷁 맛집')
+})

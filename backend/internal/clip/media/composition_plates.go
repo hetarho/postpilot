@@ -295,8 +295,9 @@ func (layout *declaredLayout) recordContrastNotices() {
 		if visual.ground.Sampled() && !design.Legible(visual.manifest.Parts) {
 			clip.AddPlanNotice(&layout.plan, "composition_contrast", visual.manifest.CutID, visual.manifest.ElementID, "shortfall")
 		}
-		// A caption drawn in the default style because its own face could not
-		// set one of its syllables says so by name (CDS-84, CLIP-108).
+		// A caption drawn in another style says so by name: its own was not in
+		// the selection, or neither its face nor the substitute draws one of its
+		// characters (CDS-84, CLIP-108).
 		if visual.styleFallback {
 			clip.AddPlanNotice(&layout.plan, "composition_caption_style", visual.manifest.CutID, visual.manifest.ElementID, "style_fallback")
 		}

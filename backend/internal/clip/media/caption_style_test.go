@@ -1,7 +1,6 @@
 package media
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
@@ -65,43 +64,6 @@ func TestACaptionIsSetInTheFaceItsStyleNames(t *testing.T) {
 			if face != style.Face && strings.Contains(svg, `font-family="`+family+`"`) {
 				t.Fatalf("%s reached for %s", id, family)
 			}
-		}
-	}
-}
-
-// CDS-84: a face that cannot set one syllable loses that caption to the default
-// style, with a CLIP-108 notice naming it — and keeps every other caption.
-func TestACaptionFallsBackWhenItsFaceLacksASyllable(t *testing.T) {
-	plan := declaredPlan(t, captionBody(juaGap+"이 최고"), "vertical")
-	plan.CaptionStyles = []string{"pop"}
-	layout := measuredDeclared(t, plan)
-	visual := captionVisual(t, layout)
-	if !visual.glyphFallback {
-		t.Fatal("Jua set a syllable it has no glyph for")
-	}
-	if visual.copy.Style != design.DefaultCaptionStyle {
-		t.Fatalf("the caption fell back to %q rather than to the default style", visual.copy.Style)
-	}
-	if visual.caption.Role.Face != design.DefaultCaption().Face {
-		t.Fatalf("the fallback was not set in the default style's face: %+v", visual.caption.Role)
-	}
-	layout.recordContrastNotices()
-	want := clip.PlanNotice{CopyFallback: clip.CopyFallback{ElementID: visual.manifest.ElementID, CutID: visual.manifest.CutID, Reason: "composition_caption_glyph"}, Action: "style_fallback"}
-	if !slices.Contains(layout.plan.Notices, want) {
-		t.Fatalf("no notice named the caption that fell back: %+v", layout.plan.Notices)
-	}
-	// The same project's other caption keeps the style it asked for: the swap
-	// is one caption's, never the project's.
-	kept := declaredPlan(t, captionBody("여기 진짜 좋아요"), "vertical")
-	kept.CaptionStyles = []string{"pop"}
-	keptLayout := measuredDeclared(t, kept)
-	if visual := captionVisual(t, keptLayout); visual.glyphFallback || visual.copy.Style != "pop" {
-		t.Fatalf("a caption Jua can set was taken away from it: %q", visual.copy.Style)
-	}
-	keptLayout.recordContrastNotices()
-	for _, notice := range keptLayout.plan.Notices {
-		if notice.Reason == "composition_caption_glyph" {
-			t.Fatal("a caption that set cleanly still recorded a glyph notice")
 		}
 	}
 }

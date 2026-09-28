@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -12,6 +13,8 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
 )
+
+var markupTag = regexp.MustCompile(`<[^>]*>`)
 
 // measured is a renderer whose face reports one box per queried text: 40 px a
 // character at the 100 px measuring size, close enough to the real face that a
@@ -37,6 +40,9 @@ func measured(t *testing.T) (*Adapter, *Rendering) {
 		out := ""
 		for i, part := range strings.Split(string(data), `id="m`)[1:] {
 			text := part[strings.Index(part, ">")+1 : strings.Index(part, "</text>")]
+			// A substituted run is a tspan inside the text (CDS-84): count its
+			// characters, not its markup.
+			text = markupTag.ReplaceAllString(text, "")
 			out += fmt.Sprintf("m%d,1,320,%d,100\n", i, 40*len([]rune(text)))
 		}
 		return []byte(out), nil

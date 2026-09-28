@@ -24,9 +24,9 @@ type declaredVisual struct {
 	// The region block an intro or outro entry belongs to (CDS-32, CDS-44).
 	block *regionBlock
 	cues  []declaredVisual
-	// The caption's own style could not set one of its syllables, so it was
-	// drawn in the default style instead (CDS-84). Recorded as a notice once
-	// the whole layout is settled.
+	// Neither the caption's own face nor the substitute draws one of its
+	// characters, so it was drawn in the default style instead (CDS-84).
+	// Recorded as a notice once the whole layout is settled.
 	glyphFallback bool
 	styleFallback bool
 }
@@ -335,13 +335,13 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			continue
 		}
 		for _, style := range candidates {
-			// CDS-84: a style whose face has no glyph for one of this caption's
-			// syllables draws this caption in the default style instead. The
-			// swap is per caption, never per project, and no glyph is ever
-			// taken from another family.
+			// CDS-84: a character this style's face does not draw is set in
+			// Wanted Sans Variable inside the style. Only a character the
+			// substitute does not draw either sends this caption to the default
+			// style, per caption and never per project.
 			caption, _ := design.LookupCaptionStyle(style)
 			glyphFallback := false
-			if r.MissingGlyph(candidate.Text, caption.Role()) != 0 {
+			if r.MissingCaptionGlyph(candidate.Text, caption.Role()) != 0 {
 				caption, glyphFallback = design.DefaultCaption(), true
 			}
 			style = caption.ID

@@ -69,7 +69,7 @@ func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
 // batch: a face may map a code point to a glyph it never draws.
 func lenientMeasure(r *Rendering, ws clip.MediaWorkspace, values []string, weight int, family string) (map[string]float64, error) {
 	path := filepath.Join(ws.Path, "metrics-measure.svg")
-	if err := os.WriteFile(path, []byte(measureSVG(values, weight, 0, family)), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(measureSVG(values, weight, 0, family, nil)), 0o600); err != nil {
 		return nil, err
 	}
 	defer os.Remove(path)

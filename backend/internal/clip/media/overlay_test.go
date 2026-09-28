@@ -69,7 +69,7 @@ func TestRendererUsesNewPresetFromFilesWithoutAnotherStyleSwitch(t *testing.T) {
 		}
 	}
 	write("editorial/preset.json", `{"id":"editorial","view":"copy-v1","template":"overlay.svg"}`)
-	write("editorial/overlay.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}" data-preset="editorial">{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}">{{.Value}}</text>{{end}}</svg>`)
+	write("editorial/overlay.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}" data-preset="editorial">{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}">{{if .Runs}}{{range .Runs}}{{if .Family}}<tspan font-family="{{.Family}}">{{.Text}}</tspan>{{else}}{{.Text}}{{end}}{{end}}{{else}}{{.Value}}{{end}}</text>{{end}}</svg>`)
 	data, err := os.ReadFile(filepath.Join(directory, "bindings.json"))
 	if err != nil {
 		t.Fatal(err)

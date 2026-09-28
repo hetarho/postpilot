@@ -126,6 +126,22 @@ export function clipCovers(face: string, weight: number, text: string) {
   return true
 }
 
+/** A caption line cut into runs by whether its face draws each syllable: the ones it does not
+ *  are set in Wanted Sans Variable, inside the caption's own style (CDS-84). Only Hangul is
+ *  judged, because the table lists every syllable a partial face draws — Paperlogy maps all
+ *  of them and draws 2,780 — and a face the table does not carry draws everything. */
+export function clipCaptionRuns(face: string, weight: number, text: string) {
+  const m = faceOf(face, weight)
+  const runs: { text: string; substituted: boolean }[] = []
+  for (const c of text) {
+    const substituted = !!m && !(m.hangul > 0) && isHangul(c) && m.glyphs[c] === undefined
+    const last = runs[runs.length - 1]
+    if (last && last.substituted === substituted) last.text += c
+    else runs.push({ text: c, substituted })
+  }
+  return runs
+}
+
 export type ClipSlotSpec = {
   role: string
   size: number

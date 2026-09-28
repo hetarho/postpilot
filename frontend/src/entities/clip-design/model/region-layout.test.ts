@@ -3,6 +3,7 @@ import fixture from './region-layouts.fixture.json'
 import slotFixture from './region-slots.fixture.json'
 import design from '../config/clip-design.json'
 import {
+  clipCaptionRuns,
   clipFitRegionSlot,
   clipLayoutRegion,
   clipRegionSlotAt,
@@ -174,4 +175,17 @@ describe('the region layout port', () => {
       }
     }
   })
+})
+
+// CDS-84: Paperlogy maps 갂 to an empty glyph and draws 뷁, so only 갂 runs in the substitute;
+// Wanted Sans draws every syllable and substitutes nothing.
+it('cuts a caption into the runs its face does not draw', () => {
+  expect(clipCaptionRuns('paperlogy', 800, '갂갂 뷁 좋다')).toEqual([
+    { text: '갂갂', substituted: true },
+    { text: ' 뷁 좋다', substituted: false },
+  ])
+  expect(clipCaptionRuns('wantedsans', 600, '갂 좋다')).toEqual([
+    { text: '갂 좋다', substituted: false },
+  ])
+  expect(clipCaptionRuns('nosuchface', 800, '갂')).toEqual([{ text: '갂', substituted: false }])
 })

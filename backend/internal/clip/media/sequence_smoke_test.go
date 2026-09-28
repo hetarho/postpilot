@@ -24,10 +24,12 @@ func TestRenderSmokeSequenceCaption(t *testing.T) {
 		t.Skip("real renderer gate runs inside Docker")
 	}
 	t.Parallel()
-	// Jua sets one of these captions and not the other, so one render carries a
-	// sequence-rendered caption and a static one at once: 똠얌꿍's first syllable
-	// is outside the 2,367 Jua covers, and that caption falls back to the
-	// default style (CDS-84).
+	// Jua keeps one of these captions and not the other, so one render carries
+	// a sequence-rendered caption and a static one at once (CDS-84): 똠얌꿍 is
+	// outside the 2,367 syllables Jua draws, so the first caption stays in its
+	// style with those syllables in Wanted Sans Variable on every frame, while
+	// neither Jua nor Wanted Sans draws ㎏, so the second falls back to the
+	// default style, which does.
 	style, ok := design.LookupCaptionStyle("pop")
 	if !ok || style.Static() || style.Face != "jua" {
 		t.Fatal("the fixture no longer names a sequence-rendered Jua style")
@@ -52,8 +54,8 @@ func TestRenderSmokeSequenceCaption(t *testing.T) {
 	body := `<clip version="1" intro="a" caption="bold" outro="e">` +
 		`<text id="disclosure" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="14">제작비 일부 지원</text>` +
 		`<text id="hello" kind="fixed" role="hook" basis="output-start"><row>오늘의 장면</row><row>남긴 기록</row></text>` +
-		`<text id="moving" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="2" end="6">여기 진짜 좋아요</text>` +
-		`<text id="settled" kind="fixed" role="caption" position="lower_mid" basis="output-start" start="8" end="12">똠얌꿍이 최고</text>` +
+		`<text id="moving" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="2" end="6">똠얌꿍이 최고</text>` +
+		`<text id="settled" kind="fixed" role="caption" position="lower_mid" basis="output-start" start="8" end="12">한우 3㎏</text>` +
 		`<text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 
 	deliver := func(name string) string {

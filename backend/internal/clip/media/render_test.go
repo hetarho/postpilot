@@ -135,8 +135,10 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 	if got := r.MissingGlyph("쎯은 없다", jua); got != '쎯' {
 		t.Fatalf("Jua reported %q rather than the syllable it lacks", got)
 	}
-	if got := r.MissingGlyph("쎯은 없다", design.DefaultCaption().Role()); got != 0 {
-		t.Fatalf("the default style's face lacks %q, so nothing could fall back to it", got)
+	// Paperlogy draws no 쎯 either, but a caption sets it in the substitute
+	// rather than leaving its style (CDS-84).
+	if got := r.MissingCaptionGlyph("쎯은 없다", design.DefaultCaption().Role()); got != 0 {
+		t.Fatalf("neither the default style's face nor the substitute draws %q", got)
 	}
 }
 

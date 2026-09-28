@@ -1,8 +1,9 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react'
 import {
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
   CLIP_REGIONS,
+  clipCaptionRuns,
   clipLayoutRegion,
   clipRegionSlots,
 } from '@/entities/clip-design/@x/clip-template'
@@ -39,6 +40,8 @@ type Line = {
   rotated?: boolean
   /** Drawn as a white outline of this width with no fill (CDS-92). */
   outline?: number
+  /** A caption line, whose syllables its face does not draw are set in the substitute (CDS-84). */
+  caption?: boolean
 }
 type Visual = {
   entry: ResolvedCompositionElement
@@ -116,6 +119,24 @@ function typeLine(
     shadow: false,
     ...options,
   }
+}
+
+/** A caption's text with each syllable its face does not draw in Wanted Sans Variable, as the
+ *  renderer sets it (CDS-84); every other line's text unchanged. */
+function lineText(line: Line, text: string) {
+  if (!line.caption) return text
+  const role = CLIP_DESIGN.type[line.type]
+  const runs = clipCaptionRuns(line.face ?? role.face, line.weight ?? role.weight, text)
+  if (!runs.some((run) => run.substituted)) return text
+  return runs.map((run, i) =>
+    run.substituted ? (
+      <tspan key={i} fontFamily={CLIP_DESIGN.faces.wantedsans}>
+        {run.text}
+      </tspan>
+    ) : (
+      <Fragment key={i}>{run.text}</Fragment>
+    ),
+  )
 }
 
 type CaptionStyleId = keyof typeof CLIP_REGIONS.caption
@@ -267,6 +288,7 @@ export function CompositionDesignFrame({
                   ? style.stroke
                   : CLIP_DESIGN.spacing.stroke_text,
           shadow: e.role === 'caption' ? style.shadow : e.role !== 'badge',
+          caption: e.role === 'caption',
         })
       })
       .filter((line) => line.text.trim() !== '')
@@ -468,12 +490,12 @@ export function CompositionDesignFrame({
       {accented && document.accent ? (
         <>
           <tspan fill={CLIP_DESIGN.accent[document.accent as keyof typeof CLIP_DESIGN.accent]}>
-            {line.text.split(/\s/)[0]}
+            {lineText(line, line.text.split(/\s/)[0])}
           </tspan>
-          {line.text.slice(line.text.split(/\s/)[0].length)}
+          {lineText(line, line.text.slice(line.text.split(/\s/)[0].length))}
         </>
       ) : (
-        line.text
+        lineText(line, line.text)
       )}
     </text>
   )
@@ -504,7 +526,7 @@ export function CompositionDesignFrame({
       <g visibility="hidden" aria-hidden="true">
         {lines.map((line) => (
           <text key={line.key} data-measure={line.key} x={0} y={0} {...props(line)}>
-            {line.text}
+            {lineText(line, line.text)}
           </text>
         ))}
       </g>

@@ -176,4 +176,4 @@
 - worked SVG for each region and component, the measurement method and the research sources behind the ← reasons: `docs/design/clip-output-design-spec-v1.md`
 
 ## chg
-- r30 260928 CDS-84✎ a face lacking a character sends the caption to the default style, no glyph substituted→the character (no glyph or no outline) is set in Wanted Sans Variable in the caption's own style · CDS-17✎ Noto Sans KR 700 the fallback→Wanted Sans Variable the one caption substitute · CDS-52✎ V19 any substituted family fails→CDS-84's substitute passes
+-

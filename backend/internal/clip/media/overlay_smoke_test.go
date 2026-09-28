@@ -23,7 +23,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 		"info/preset.json":      `{"id":"info","view":"info-v1","template":"overlay.svg"}`,
 		"info/overlay.svg":      `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"proof/preset.json":     `{"id":"proof","view":"copy-v1","template":"overlay.svg"}`,
-		"proof/overlay.svg":     `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">{{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="{{.Radius}}" fill="#FF00FF"/>{{end}}{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FF00FF">{{.Value}}</text>{{end}}</svg>`,
+		"proof/overlay.svg":     `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">{{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="{{.Radius}}" fill="#FF00FF"/>{{end}}{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FF00FF">{{if .Runs}}{{range .Runs}}{{if .Family}}<tspan font-family="{{.Family}}">{{.Text}}</tspan>{{else}}{{.Text}}{{end}}{{end}}{{else}}{{.Value}}{{end}}</text>{{end}}</svg>`,
 		"furniture/preset.json": `{"id":"furniture","view":"furniture-v1","template":"overlay.svg"}`,
 		"furniture/overlay.svg": `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"region/preset.json":    `{"id":"region","view":"region-v1","template":"overlay.svg"}`,

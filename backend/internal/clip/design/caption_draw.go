@@ -59,11 +59,12 @@ func SequenceStylesAreDrawable() bool {
 	return true
 }
 
-// text emits one line in the frame's own face, size and tracking. Only the paint
+// text emits one line in the frame's own face, size and tracking, with any
+// character that face does not draw in the substitute (CDS-84). Only the paint
 // and the extra attributes differ between styles.
 func (f CaptionFrame) text(l CaptionLine, x, y float64, extra string) string {
 	return fmt.Sprintf(`<text x="%s" y="%s" xml:space="preserve" font-family="%s" font-size="%s" font-weight="%d" letter-spacing="%s"%s>%s</text>`,
-		num(x), num(y), f.Family, num(f.Size), f.Style.Weight, num(f.Tracking*f.Size), extra, esc(l.Text))
+		num(x), num(y), f.Family, num(f.Size), f.Style.Weight, num(f.Tracking*f.Size), extra, CaptionMarkup(l.Text, f.Substitute))
 }
 
 // stroke is the style's own outline at the width CDS-21's token fixes.

@@ -9,6 +9,7 @@ export {
 } from '../config/clip-design'
 export type { ClipCaptionPace, ClipRatioId, ClipRegionPresets } from '../config/clip-design'
 export {
+  clipCaptionRuns,
   clipLayoutRegion,
   clipRegionSlotAt,
   clipRegionSlotBudget,
