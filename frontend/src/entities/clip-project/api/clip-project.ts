@@ -27,6 +27,7 @@ import {
   type ClipSourceBatch,
   type ClipSourceAvailability,
   type ClipStorylineParagraph,
+  type ClipRegionEdit,
 } from '../model/types'
 
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
@@ -126,6 +127,38 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
           takenOutObservationIds: [...value.storyline.takenOutObservationIds],
         }
       : undefined,
+    regions:
+      value.regions?.intro && value.regions.outro
+        ? {
+            revision: value.regions.revision,
+            intro: {
+              enabled: value.regions.intro.enabled,
+              slots: value.regions.intro.slots.map(
+                ({ id, instruction, text, instructionEdited, ownerFixed, bound }) => ({
+                  id,
+                  instruction,
+                  text,
+                  instructionEdited,
+                  ownerFixed,
+                  bound,
+                }),
+              ),
+            },
+            outro: {
+              enabled: value.regions.outro.enabled,
+              slots: value.regions.outro.slots.map(
+                ({ id, instruction, text, instructionEdited, ownerFixed, bound }) => ({
+                  id,
+                  instruction,
+                  text,
+                  instructionEdited,
+                  ownerFixed,
+                  bound,
+                }),
+              ),
+            },
+          }
+        : undefined,
     planEditedByHand: value.planEditedByHand,
     result: value.result
       ? {
@@ -316,4 +349,24 @@ export function useClipProjectMutations(ownerId: string) {
     },
   })
   return { save, remove, finalize }
+}
+
+/** Region updates preserve omitted, false and explicitly empty values. */
+export function useSaveClipRegions(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      expectedRegionRevision: number
+      introRegion?: ClipRegionEdit
+      outroRegion?: ClipRegionEdit
+    }) => {
+      const response = await createClient(ClipGenerationService, transport).updateClipProject(input)
+      if (!response.project) throw new Error('Missing saved clip')
+      return toClipProject(response.project)
+    },
+    onSuccess: (project) =>
+      cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project),
+  })
 }

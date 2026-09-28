@@ -157,6 +157,7 @@ type ClipProject struct {
 	RenderKind               string
 	StorylineJson            sql.NullString
 	GeneratedPlanRevision    int64
+	RegionsJson              sql.NullString
 }
 
 type ClipSourceAttempt struct {

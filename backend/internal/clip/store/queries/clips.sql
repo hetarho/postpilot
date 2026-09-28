@@ -85,3 +85,6 @@ UPDATE clip_projects SET hide_disclosure = sqlc.arg(hide_disclosure),
 INSERT INTO clip_project_requests(id, project_id, user_id, kind, body, created_at) VALUES (?, ?, ?, ?, ?, ?);
 -- name: ListClipProjectRequests :many
 SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY created_at DESC, rowid DESC;
+
+-- name: SaveClipRegions :execrows
+UPDATE clip_projects SET regions_json = sqlc.arg(regions_json), updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id);

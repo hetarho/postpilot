@@ -304,6 +304,13 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return p, err
 	}
+	if p.Regions, err = decodeRegions(r.RegionsJson.String); err != nil {
+		return p, err
+	}
+	if p.Regions == nil {
+		regions := clip.EffectiveProjectRegions(p)
+		p.Regions = &regions
+	}
 	if p.Storyline, err = clip.DecodeStoryline(r.StorylineJson.String); err != nil {
 		return p, err
 	}
@@ -347,6 +354,9 @@ func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 		if err == nil {
 			err = saveComposition(ctx, q, p)
 		}
+		if err == nil {
+			err = saveRegions(ctx, q, p)
+		}
 		return struct{}{}, err
 	})
 	return err
@@ -360,7 +370,7 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if before.Finalized != nil {
 			return clip.Project{}, clip.ErrFinalized
 		}
-		if p.Composition != nil {
+		if p.Composition != nil || p.Regions != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))
 			if e != nil {
 				return clip.Project{}, e
@@ -396,6 +406,24 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 			}
 			if e := affected(q.SetClipStoryline(ctx, sqlc.SetClipStorylineParams{StorylineJson: nullable(raw), UserID: user, ID: id})); e != nil {
 				return clip.Project{}, e
+			}
+		}
+
+		if p.Regions != nil {
+			current := clip.EffectiveProjectRegions(before)
+			if p.ExpectedRegionRevision == nil || *p.ExpectedRegionRevision != current.Revision {
+				return clip.Project{}, clip.ErrPlanConflict
+			}
+			next := p.Regions.Clone()
+			next.Revision = current.Revision
+			if !reflect.DeepEqual(next, current) {
+				next.Revision++
+				updated := before
+				updated.Regions = &next
+				updated.UpdatedAt = now
+				if err := saveRegions(ctx, q, updated); err != nil {
+					return clip.Project{}, err
+				}
 			}
 		}
 		if p.Title != nil {

@@ -230,6 +230,24 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if err != nil {
 		return clip.Project{}, err
 	}
+
+	regions, err := clip.SeedProjectRegions(p, nil)
+	if err != nil {
+		return clip.Project{}, err
+	}
+	if input.IntroPreset != nil {
+		regions.Intro.Enabled = true
+	}
+	if input.OutroPreset != nil {
+		regions.Outro.Enabled = true
+	}
+	if err := clip.ApplyRegionPatch(&regions.Intro, input.IntroRegion, s.limits); err != nil {
+		return clip.Project{}, err
+	}
+	if err := clip.ApplyRegionPatch(&regions.Outro, input.OutroRegion, s.limits); err != nil {
+		return clip.Project{}, err
+	}
+	p.Regions = &regions
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return clip.Project{}, err
 	}
@@ -360,6 +378,45 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	if p.Composition != nil {
 		v := old.EditPlanRevision
 		p.ExpectedCompositionRevision = &v
+	}
+
+	// The service owns seeding; callers submit presence-aware edits only.
+	p.Regions = nil
+	if p.IntroRegion != nil || p.OutroRegion != nil || p.IntroPreset != nil || p.OutroPreset != nil || p.Composition != nil {
+		regions := clip.EffectiveProjectRegions(old)
+		if p.ExpectedRegionRevision != nil && *p.ExpectedRegionRevision != regions.Revision {
+			return clip.Project{}, clip.ErrPlanConflict
+		}
+		revision := regions.Revision
+		p.ExpectedRegionRevision = &revision
+		next := old
+		if p.Composition != nil {
+			next.Composition = p.Composition
+		}
+		if p.IntroPreset != nil {
+			next.IntroPreset = *p.IntroPreset
+			regions.Intro.Enabled = true
+		}
+		if p.OutroPreset != nil {
+			next.OutroPreset = *p.OutroPreset
+			regions.Outro.Enabled = true
+		}
+		if p.VideoTemplateID != nil && *p.VideoTemplateID != "" && *p.VideoTemplateID != old.VideoTemplateID {
+			regions, err = clip.SeedProjectRegions(next, &regions)
+			if err != nil {
+				return clip.Project{}, err
+			}
+		} else if p.CompositionInputs != nil {
+			clip.RefreshRegionBindings(&regions, *p.CompositionInputs)
+		}
+		clip.EnsureRegionSlots(&regions, next)
+		if err := clip.ApplyRegionPatch(&regions.Intro, p.IntroRegion, s.limits); err != nil {
+			return clip.Project{}, err
+		}
+		if err := clip.ApplyRegionPatch(&regions.Outro, p.OutroRegion, s.limits); err != nil {
+			return clip.Project{}, err
+		}
+		p.Regions = &regions
 	}
 	return s.store.UpdateProject(ctx, user, id, p, s.now())
 }

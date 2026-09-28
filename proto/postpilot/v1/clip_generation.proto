@@ -58,6 +58,8 @@ message CreateClipProjectRequest {
   optional string intro_preset = 14;
   optional string outro_preset = 15;
   ClipCaptionStyles allowed_caption_styles = 16;
+  ClipRegionEdit intro_region = 17;
+  ClipRegionEdit outro_region = 18;
 }
 
 message CreateClipProjectResponse { ClipProject project = 1; }
@@ -89,6 +91,9 @@ message UpdateClipProjectRequest {
   ClipCaptionStyles allowed_caption_styles = 15;
   // The owner's storyline edit (CLIP-178); absent leaves the storyline as it is.
   ClipStorylineEdit storyline = 16;
+  ClipRegionEdit intro_region = 17;
+  ClipRegionEdit outro_region = 18;
+  optional int32 expected_region_revision = 19;
 }
 
 // The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.

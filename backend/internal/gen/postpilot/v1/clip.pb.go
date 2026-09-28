@@ -557,7 +557,8 @@ type ClipProject struct {
 	Storyline *ClipStoryline `protobuf:"bytes,38,opt,name=storyline,proto3" json:"storyline,omitempty"`
 	// Whether the owner changed the plan since a writer last wrote it (CLIP-180): what
 	// 이 스토리로 만들기 confirms before replacing it.
-	PlanEditedByHand bool `protobuf:"varint,39,opt,name=plan_edited_by_hand,json=planEditedByHand,proto3" json:"plan_edited_by_hand,omitempty"`
+	PlanEditedByHand bool                `protobuf:"varint,39,opt,name=plan_edited_by_hand,json=planEditedByHand,proto3" json:"plan_edited_by_hand,omitempty"`
+	Regions          *ClipProjectRegions `protobuf:"bytes,40,opt,name=regions,proto3" json:"regions,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -849,6 +850,13 @@ func (x *ClipProject) GetPlanEditedByHand() bool {
 		return x.PlanEditedByHand
 	}
 	return false
+}
+
+func (x *ClipProject) GetRegions() *ClipProjectRegions {
+	if x != nil {
+		return x.Regions
+	}
+	return nil
 }
 
 // One paragraph of a clip's storyline: what that part of the clip shows and says, and the
@@ -4560,6 +4568,315 @@ func (x *ClipAttemptRange) GetValid() bool {
 	return false
 }
 
+// Project-owned region slots; empty final text is distinct from an unedited draft.
+type ClipRegionSlot struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Instruction       string                 `protobuf:"bytes,2,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	Text              string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	InstructionEdited bool                   `protobuf:"varint,4,opt,name=instruction_edited,json=instructionEdited,proto3" json:"instruction_edited,omitempty"`
+	OwnerFixed        bool                   `protobuf:"varint,5,opt,name=owner_fixed,json=ownerFixed,proto3" json:"owner_fixed,omitempty"`
+	Bound             bool                   `protobuf:"varint,6,opt,name=bound,proto3" json:"bound,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ClipRegionSlot) Reset() {
+	*x = ClipRegionSlot{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipRegionSlot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipRegionSlot) ProtoMessage() {}
+
+func (x *ClipRegionSlot) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipRegionSlot.ProtoReflect.Descriptor instead.
+func (*ClipRegionSlot) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ClipRegionSlot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ClipRegionSlot) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
+	}
+	return ""
+}
+
+func (x *ClipRegionSlot) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *ClipRegionSlot) GetInstructionEdited() bool {
+	if x != nil {
+		return x.InstructionEdited
+	}
+	return false
+}
+
+func (x *ClipRegionSlot) GetOwnerFixed() bool {
+	if x != nil {
+		return x.OwnerFixed
+	}
+	return false
+}
+
+func (x *ClipRegionSlot) GetBound() bool {
+	if x != nil {
+		return x.Bound
+	}
+	return false
+}
+
+type ClipProjectRegion struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Slots         []*ClipRegionSlot      `protobuf:"bytes,2,rep,name=slots,proto3" json:"slots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipProjectRegion) Reset() {
+	*x = ClipProjectRegion{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipProjectRegion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipProjectRegion) ProtoMessage() {}
+
+func (x *ClipProjectRegion) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipProjectRegion.ProtoReflect.Descriptor instead.
+func (*ClipProjectRegion) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ClipProjectRegion) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *ClipProjectRegion) GetSlots() []*ClipRegionSlot {
+	if x != nil {
+		return x.Slots
+	}
+	return nil
+}
+
+type ClipProjectRegions struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Revision      int32                  `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
+	Intro         *ClipProjectRegion     `protobuf:"bytes,2,opt,name=intro,proto3" json:"intro,omitempty"`
+	Outro         *ClipProjectRegion     `protobuf:"bytes,3,opt,name=outro,proto3" json:"outro,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipProjectRegions) Reset() {
+	*x = ClipProjectRegions{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipProjectRegions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipProjectRegions) ProtoMessage() {}
+
+func (x *ClipProjectRegions) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipProjectRegions.ProtoReflect.Descriptor instead.
+func (*ClipProjectRegions) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ClipProjectRegions) GetRevision() int32 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *ClipProjectRegions) GetIntro() *ClipProjectRegion {
+	if x != nil {
+		return x.Intro
+	}
+	return nil
+}
+
+func (x *ClipProjectRegions) GetOutro() *ClipProjectRegion {
+	if x != nil {
+		return x.Outro
+	}
+	return nil
+}
+
+type ClipRegionSlotEdit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Instruction   *string                `protobuf:"bytes,2,opt,name=instruction,proto3,oneof" json:"instruction,omitempty"`
+	Text          *string                `protobuf:"bytes,3,opt,name=text,proto3,oneof" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipRegionSlotEdit) Reset() {
+	*x = ClipRegionSlotEdit{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipRegionSlotEdit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipRegionSlotEdit) ProtoMessage() {}
+
+func (x *ClipRegionSlotEdit) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipRegionSlotEdit.ProtoReflect.Descriptor instead.
+func (*ClipRegionSlotEdit) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *ClipRegionSlotEdit) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ClipRegionSlotEdit) GetInstruction() string {
+	if x != nil && x.Instruction != nil {
+		return *x.Instruction
+	}
+	return ""
+}
+
+func (x *ClipRegionSlotEdit) GetText() string {
+	if x != nil && x.Text != nil {
+		return *x.Text
+	}
+	return ""
+}
+
+type ClipRegionEdit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       *bool                  `protobuf:"varint,1,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
+	Slots         []*ClipRegionSlotEdit  `protobuf:"bytes,2,rep,name=slots,proto3" json:"slots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipRegionEdit) Reset() {
+	*x = ClipRegionEdit{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipRegionEdit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipRegionEdit) ProtoMessage() {}
+
+func (x *ClipRegionEdit) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipRegionEdit.ProtoReflect.Descriptor instead.
+func (*ClipRegionEdit) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ClipRegionEdit) GetEnabled() bool {
+	if x != nil && x.Enabled != nil {
+		return *x.Enabled
+	}
+	return false
+}
+
+func (x *ClipRegionEdit) GetSlots() []*ClipRegionSlotEdit {
+	if x != nil {
+		return x.Slots
+	}
+	return nil
+}
+
 var File_postpilot_v1_clip_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_proto_rawDesc = "" +
@@ -4595,7 +4912,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xa6\x0e\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xe2\x0e\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -4641,7 +4958,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x16allowed_caption_styles\x18$ \x03(\tR\x14allowedCaptionStyles\x12K\n" +
 	"\x10last_render_kind\x18% \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindH\x02R\x0elastRenderKind\x88\x01\x01\x129\n" +
 	"\tstoryline\x18& \x01(\v2\x1b.postpilot.v1.ClipStorylineR\tstoryline\x12-\n" +
-	"\x13plan_edited_by_hand\x18' \x01(\bR\x10planEditedByHandB\v\n" +
+	"\x13plan_edited_by_hand\x18' \x01(\bR\x10planEditedByHand\x12:\n" +
+	"\aregions\x18( \x01(\v2 .postpilot.v1.ClipProjectRegionsR\aregionsB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalizeB\x13\n" +
 	"\x11_last_render_kindJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"U\n" +
@@ -5001,7 +5319,33 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x06source\x18\x02 \x01(\x05R\x06source\x12\x19\n" +
 	"\bstart_ms\x18\x03 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x04 \x01(\x05R\x05endMs\x12\x14\n" +
-	"\x05valid\x18\x05 \x01(\bR\x05valid*\xd1\x02\n" +
+	"\x05valid\x18\x05 \x01(\bR\x05valid\"\xbc\x01\n" +
+	"\x0eClipRegionSlot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
+	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\x12-\n" +
+	"\x12instruction_edited\x18\x04 \x01(\bR\x11instructionEdited\x12\x1f\n" +
+	"\vowner_fixed\x18\x05 \x01(\bR\n" +
+	"ownerFixed\x12\x14\n" +
+	"\x05bound\x18\x06 \x01(\bR\x05bound\"a\n" +
+	"\x11ClipProjectRegion\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x122\n" +
+	"\x05slots\x18\x02 \x03(\v2\x1c.postpilot.v1.ClipRegionSlotR\x05slots\"\x9e\x01\n" +
+	"\x12ClipProjectRegions\x12\x1a\n" +
+	"\brevision\x18\x01 \x01(\x05R\brevision\x125\n" +
+	"\x05intro\x18\x02 \x01(\v2\x1f.postpilot.v1.ClipProjectRegionR\x05intro\x125\n" +
+	"\x05outro\x18\x03 \x01(\v2\x1f.postpilot.v1.ClipProjectRegionR\x05outro\"}\n" +
+	"\x12ClipRegionSlotEdit\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
+	"\vinstruction\x18\x02 \x01(\tH\x00R\vinstruction\x88\x01\x01\x12\x17\n" +
+	"\x04text\x18\x03 \x01(\tH\x01R\x04text\x88\x01\x01B\x0e\n" +
+	"\f_instructionB\a\n" +
+	"\x05_text\"s\n" +
+	"\x0eClipRegionEdit\x12\x1d\n" +
+	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x126\n" +
+	"\x05slots\x18\x02 \x03(\v2 .postpilot.v1.ClipRegionSlotEditR\x05slotsB\n" +
+	"\n" +
+	"\b_enabled*\xd1\x02\n" +
 	"\x17ClipAnalysisEligibility\x12)\n" +
 	"%CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"CLIP_ANALYSIS_ELIGIBILITY_ELIGIBLE\x10\x01\x120\n" +
@@ -5032,7 +5376,7 @@ func file_postpilot_v1_clip_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_clip_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
+var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_postpilot_v1_clip_proto_goTypes = []any{
 	(ClipAnalysisEligibility)(0),         // 0: postpilot.v1.ClipAnalysisEligibility
 	(ClipRenderKind)(0),                  // 1: postpilot.v1.ClipRenderKind
@@ -5086,75 +5430,85 @@ var file_postpilot_v1_clip_proto_goTypes = []any{
 	(*ClipProjectComposition)(nil),       // 49: postpilot.v1.ClipProjectComposition
 	(*ClipAttemptInspection)(nil),        // 50: postpilot.v1.ClipAttemptInspection
 	(*ClipAttemptRange)(nil),             // 51: postpilot.v1.ClipAttemptRange
-	nil,                                  // 52: postpilot.v1.ClipSourceUpload.HeadersEntry
-	nil,                                  // 53: postpilot.v1.ClipCompositionItem.ValuesEntry
-	nil,                                  // 54: postpilot.v1.ClipCompositionInputs.ValuesEntry
-	nil,                                  // 55: postpilot.v1.ClipCompositionInputs.ItemsEntry
-	nil,                                  // 56: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	(*ModelRef)(nil),                     // 57: postpilot.v1.ModelRef
-	(*GenerationJob)(nil),                // 58: postpilot.v1.GenerationJob
-	(ContentLanguage)(0),                 // 59: postpilot.v1.ContentLanguage
+	(*ClipRegionSlot)(nil),               // 52: postpilot.v1.ClipRegionSlot
+	(*ClipProjectRegion)(nil),            // 53: postpilot.v1.ClipProjectRegion
+	(*ClipProjectRegions)(nil),           // 54: postpilot.v1.ClipProjectRegions
+	(*ClipRegionSlotEdit)(nil),           // 55: postpilot.v1.ClipRegionSlotEdit
+	(*ClipRegionEdit)(nil),               // 56: postpilot.v1.ClipRegionEdit
+	nil,                                  // 57: postpilot.v1.ClipSourceUpload.HeadersEntry
+	nil,                                  // 58: postpilot.v1.ClipCompositionItem.ValuesEntry
+	nil,                                  // 59: postpilot.v1.ClipCompositionInputs.ValuesEntry
+	nil,                                  // 60: postpilot.v1.ClipCompositionInputs.ItemsEntry
+	nil,                                  // 61: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	(*ModelRef)(nil),                     // 62: postpilot.v1.ModelRef
+	(*GenerationJob)(nil),                // 63: postpilot.v1.GenerationJob
+	(ContentLanguage)(0),                 // 64: postpilot.v1.ContentLanguage
 }
 var file_postpilot_v1_clip_proto_depIdxs = []int32{
-	57, // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
+	62, // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
 	0,  // 1: postpilot.v1.ClipAnalysisModelEligibility.status:type_name -> postpilot.v1.ClipAnalysisEligibility
 	1,  // 2: postpilot.v1.ClipResult.render_kind:type_name -> postpilot.v1.ClipRenderKind
 	6,  // 3: postpilot.v1.ClipProject.result:type_name -> postpilot.v1.ClipResult
-	58, // 4: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
+	63, // 4: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
 	42, // 5: postpilot.v1.ClipProject.editing:type_name -> postpilot.v1.ClipEditingState
 	16, // 6: postpilot.v1.ClipProject.accounting:type_name -> postpilot.v1.ClipAccounting
 	15, // 7: postpilot.v1.ClipProject.latest_attempt:type_name -> postpilot.v1.ClipAttempt
 	12, // 8: postpilot.v1.ClipProject.observations:type_name -> postpilot.v1.ClipObservations
 	49, // 9: postpilot.v1.ClipProject.composition:type_name -> postpilot.v1.ClipProjectComposition
 	50, // 10: postpilot.v1.ClipProject.attempt_inspection:type_name -> postpilot.v1.ClipAttemptInspection
-	59, // 11: postpilot.v1.ClipProject.language:type_name -> postpilot.v1.ContentLanguage
+	64, // 11: postpilot.v1.ClipProject.language:type_name -> postpilot.v1.ContentLanguage
 	11, // 12: postpilot.v1.ClipProject.notices:type_name -> postpilot.v1.ClipNotice
 	10, // 13: postpilot.v1.ClipProject.requests:type_name -> postpilot.v1.ClipProjectRequest
 	1,  // 14: postpilot.v1.ClipProject.last_render_kind:type_name -> postpilot.v1.ClipRenderKind
 	9,  // 15: postpilot.v1.ClipProject.storyline:type_name -> postpilot.v1.ClipStoryline
-	8,  // 16: postpilot.v1.ClipStoryline.paragraphs:type_name -> postpilot.v1.ClipStorylineParagraph
-	13, // 17: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
-	41, // 18: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
-	14, // 19: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
-	29, // 20: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
-	17, // 21: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
-	18, // 22: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
-	52, // 23: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
-	57, // 24: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
-	24, // 25: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
-	24, // 26: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
-	29, // 27: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
-	26, // 28: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
-	27, // 29: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
-	30, // 30: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
-	31, // 31: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
-	32, // 32: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
-	35, // 33: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
-	34, // 34: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
-	25, // 35: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
-	33, // 36: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
-	37, // 37: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
-	28, // 38: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
-	46, // 39: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
-	38, // 40: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
-	36, // 41: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
-	41, // 42: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	53, // 43: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
-	44, // 44: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
-	54, // 45: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
-	55, // 46: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
-	46, // 47: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
-	48, // 48: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
-	47, // 49: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	12, // 50: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
-	51, // 51: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
-	56, // 52: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	45, // 53: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
-	54, // [54:54] is the sub-list for method output_type
-	54, // [54:54] is the sub-list for method input_type
-	54, // [54:54] is the sub-list for extension type_name
-	54, // [54:54] is the sub-list for extension extendee
-	0,  // [0:54] is the sub-list for field type_name
+	54, // 16: postpilot.v1.ClipProject.regions:type_name -> postpilot.v1.ClipProjectRegions
+	8,  // 17: postpilot.v1.ClipStoryline.paragraphs:type_name -> postpilot.v1.ClipStorylineParagraph
+	13, // 18: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
+	41, // 19: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
+	14, // 20: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
+	29, // 21: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
+	17, // 22: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
+	18, // 23: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
+	57, // 24: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
+	62, // 25: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
+	24, // 26: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
+	24, // 27: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
+	29, // 28: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
+	26, // 29: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
+	27, // 30: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
+	30, // 31: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
+	31, // 32: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
+	32, // 33: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
+	35, // 34: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
+	34, // 35: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
+	25, // 36: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
+	33, // 37: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
+	37, // 38: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
+	28, // 39: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
+	46, // 40: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
+	38, // 41: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
+	36, // 42: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
+	41, // 43: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
+	58, // 44: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
+	44, // 45: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
+	59, // 46: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
+	60, // 47: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
+	46, // 48: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
+	48, // 49: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
+	47, // 50: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	12, // 51: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
+	51, // 52: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
+	61, // 53: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	52, // 54: postpilot.v1.ClipProjectRegion.slots:type_name -> postpilot.v1.ClipRegionSlot
+	53, // 55: postpilot.v1.ClipProjectRegions.intro:type_name -> postpilot.v1.ClipProjectRegion
+	53, // 56: postpilot.v1.ClipProjectRegions.outro:type_name -> postpilot.v1.ClipProjectRegion
+	55, // 57: postpilot.v1.ClipRegionEdit.slots:type_name -> postpilot.v1.ClipRegionSlotEdit
+	45, // 58: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
+	59, // [59:59] is the sub-list for method output_type
+	59, // [59:59] is the sub-list for method input_type
+	59, // [59:59] is the sub-list for extension type_name
+	59, // [59:59] is the sub-list for extension extendee
+	0,  // [0:59] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }
@@ -5170,13 +5524,15 @@ func file_postpilot_v1_clip_proto_init() {
 	file_postpilot_v1_clip_proto_msgTypes[22].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[30].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[40].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[52].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[53].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_proto_rawDesc), len(file_postpilot_v1_clip_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   54,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

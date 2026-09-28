@@ -7,6 +7,7 @@ export {
   useClipProjectMutations,
   useClipProjects,
   useSaveClipStoryline,
+  useSaveClipRegions,
 } from './api/clip-project'
 export {
   compositionInputsToProto,
@@ -58,6 +59,10 @@ export type {
   ClipSourceMetadata,
   ClipStoryline,
   ClipStorylineParagraph,
+  ClipProjectRegions,
+  ClipProjectRegion,
+  ClipRegionSlot,
+  ClipRegionEdit,
   ReadyClipBatch,
 } from './model/types'
 export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'

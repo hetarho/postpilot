@@ -55,7 +55,29 @@ export interface ClipProjectDraft {
    *  "unset": it resolves to the default style alone, in ② and in the render. */
   allowedCaptionStyles?: string[]
 }
+export interface ClipRegionSlot {
+  id: string
+  instruction: string
+  text: string
+  instructionEdited: boolean
+  ownerFixed: boolean
+  bound: boolean
+}
+export interface ClipProjectRegion {
+  enabled: boolean
+  slots: ClipRegionSlot[]
+}
+export interface ClipProjectRegions {
+  revision: number
+  intro: ClipProjectRegion
+  outro: ClipProjectRegion
+}
+export interface ClipRegionEdit {
+  enabled?: boolean
+  slots?: { id: string; instruction?: string; text?: string }[]
+}
 export interface ClipProject extends ClipProjectDraft {
+  regions?: ClipProjectRegions
   notices?: ClipNotice[]
   /** What the owner asked the AI for, newest first (CLIP-133). */
   requests?: ClipProjectRequest[]

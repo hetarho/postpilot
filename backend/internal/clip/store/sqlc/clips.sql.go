@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -112,6 +112,7 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.RenderKind,
 		&i.StorylineJson,
 		&i.GeneratedPlanRevision,
+		&i.RegionsJson,
 	)
 	return i, err
 }
@@ -259,7 +260,7 @@ func (q *Queries) ListClipProjectRequests(ctx context.Context, arg ListClipProje
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -311,6 +312,7 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.RenderKind,
 			&i.StorylineJson,
 			&i.GeneratedPlanRevision,
+			&i.RegionsJson,
 		); err != nil {
 			return nil, err
 		}
@@ -363,7 +365,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 }
 
 const projectsForTemplate = `-- name: ProjectsForTemplate :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
 `
 
 type ProjectsForTemplateParams struct {
@@ -420,6 +422,7 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 			&i.RenderKind,
 			&i.StorylineJson,
 			&i.GeneratedPlanRevision,
+			&i.RegionsJson,
 		); err != nil {
 			return nil, err
 		}
@@ -460,6 +463,30 @@ func (q *Queries) RecordClipProjectRequest(ctx context.Context, arg RecordClipPr
 		arg.CreatedAt,
 	)
 	return err
+}
+
+const saveClipRegions = `-- name: SaveClipRegions :execrows
+UPDATE clip_projects SET regions_json = ?1, updated_at = ?2 WHERE id = ?3 AND user_id = ?4
+`
+
+type SaveClipRegionsParams struct {
+	RegionsJson sql.NullString
+	UpdatedAt   string
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) SaveClipRegions(ctx context.Context, arg SaveClipRegionsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveClipRegions,
+		arg.RegionsJson,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const saveProjectComposition = `-- name: SaveProjectComposition :execrows

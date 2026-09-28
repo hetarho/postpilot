@@ -124,6 +124,7 @@ message ClipProject {
   // Whether the owner changed the plan since a writer last wrote it (CLIP-180): what
   // 이 스토리로 만들기 confirms before replacing it.
   bool plan_edited_by_hand = 39;
+  ClipProjectRegions regions = 40;
 }
 
 // One paragraph of a clip's storyline: what that part of the clip shows and says, and the
@@ -566,4 +567,32 @@ message ClipAttemptRange {
   int32 start_ms = 3;
   int32 end_ms = 4;
   bool valid = 5;
+}
+
+// Project-owned region slots; empty final text is distinct from an unedited draft.
+message ClipRegionSlot {
+  string id = 1;
+  string instruction = 2;
+  string text = 3;
+  bool instruction_edited = 4;
+  bool owner_fixed = 5;
+  bool bound = 6;
+}
+message ClipProjectRegion {
+  bool enabled = 1;
+  repeated ClipRegionSlot slots = 2;
+}
+message ClipProjectRegions {
+  int32 revision = 1;
+  ClipProjectRegion intro = 2;
+  ClipProjectRegion outro = 3;
+}
+message ClipRegionSlotEdit {
+  string id = 1;
+  optional string instruction = 2;
+  optional string text = 3;
+}
+message ClipRegionEdit {
+  optional bool enabled = 1;
+  repeated ClipRegionSlotEdit slots = 2;
 }

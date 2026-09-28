@@ -94,6 +94,7 @@ func (r Result) RenderKind() RenderKind {
 }
 
 type Project struct {
+	Regions                                   *ProjectRegions
 	Language                                  string
 	Finalized                                 *Finalization
 	Composition                               *ProjectComposition
@@ -163,6 +164,7 @@ func ValidRequestKind(kind string) bool {
 }
 
 type ProjectInput struct {
+	IntroRegion, OutroRegion      *RegionPatch
 	Language                      string
 	CompositionInputs             *CompositionInputs
 	HideDisclosure                bool
@@ -180,6 +182,9 @@ type ProjectInput struct {
 
 // Ratio deliberately has no update representation.
 type ProjectPatch struct {
+	IntroRegion, OutroRegion    *RegionPatch
+	Regions                     *ProjectRegions // Service-computed canonical state, never accepted from the wire.
+	ExpectedRegionRevision      *int
 	ExpectedCompositionRevision *int
 	CompositionInputs           *CompositionInputs
 	// The service creates the snapshot; the caller cannot replace frozen content.
