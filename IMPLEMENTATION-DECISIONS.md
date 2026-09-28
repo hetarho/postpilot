@@ -420,6 +420,28 @@ choice would be expensive to undo are listed at the end.
   it was. The sheet copy appears only when the refusal names this caption.
 - **The read-only caption view gives a style's name instead of its id.**
 
+## T456 — region and caption edits through preview and both renders
+
+- **The real-renderer evidence is the Docker media smoke, and only for the server render.** A new
+  smoke renders the edited clip in two ratio/pace pairs (vertical steady, horizontal rapid) and
+  checks the file. The regions are the project's slots with one left blank; one owner caption
+  uses a sequence style outside the AI set at the owner's size and place; one caption crosses a
+  cut; one cut has no caption. The checks are the file's duration, the drawn elements, and
+  actual pixels in three frames: the intro over its opening, nothing over the uncaptioned cut,
+  the outro over its close. The provider side is a fixture. The other four pairs, and every
+  preview-versus-export comparison, are checked by measured-layout tests, not by a render.
+- **No real browser render was run.** WebCodecs needs Chrome, and a clip needs a plan, which only
+  a generation call makes. The dev backend has no provider double, and spending credits needs
+  your explicit yes. *If you want that evidence:* approve one small real run (a measured full
+  run is about $0.012) or add a fixture provider to the dev backend; the Playwright and
+  system-Chrome recipe is ready.
+- **Cross-feature checks sit in the existing suites.** They are in media (preview/export
+  parity on all three ratios at both paces), store (the no-template workflow from slots to both
+  render kinds, and the older-project compatibility fixtures), `pages/clip/ui` (flush-before-render
+  with failed and conflicting saves, holds for unfit words, a stale render that cannot be
+  confirmed) and `features/render-clip-browser/api` (the flush and revision boundaries). No
+  parallel harness was added.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

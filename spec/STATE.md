@@ -57,14 +57,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | todo |
+| T456 | Verify region and caption edits across preview and both renders | CLIP CDS ARCH | T453 T455 | blocked@260929 |
 
 ## next
-- next: implement-task T456 (verify region and caption edits across preview and both renders)
-- owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T455), then review-code the clip wave
+- next: owner decision for T456 — approve one small real generation run (a measured full run ≈ $0.012) or a dev fixture provider, so its real browser render check can run; every other T456 check passes
+- owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
 - ideation voice-tidy continues (open: the axis set under the owner's Korean-research rule, readiness-meter numbers, the prompt photo source, the VOICE-49 analyze experiment, existing voices), then update-ssot VOICE GEN POST GUIDE AUTH QUOTA; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 T456 blocked: preview/export parity on every ratio and pace, the no-template workflow to both render kinds, older-project fixtures, flush-before-render regressions and a real CPU render smoke of the edited clip all pass; the real browser render needs a plan, which needs a paid generation call or a dev provider double
+- 260929 T456 claimed (p15)
 - 260929 T455 done: ②'s caption sheet picks any approved style from renderer-drawn tiles, keeps the owner size (a size the drawn style cannot take holds the save on that field), and follows undo/redo
 - 260929 T455 claimed (p15)
 - 260929 T454 done: an owner may give a caption any approved style outside the AI set; one rule draws every caption, so a set change restyles only captions naming no style and moves the revision only then; a size the drawn style cannot take is refused as caption_size with its range
@@ -83,5 +85,3 @@
 - 260929 create-task POST r24 → T461
 - 260929 update-ssot POST r24: ①'s memo moves below the template data fields; no active task/worker affected
 - 260929 T458 done: a memory row is its text over one badge line with 수정/삭제 icons; one form saves text, kind and tags
-- 260929 T458 claimed (sm)
-- 260929 T457 done: a storyline tile opens its attachment large in a wide sheet, walking paragraphs then 빠진 사진

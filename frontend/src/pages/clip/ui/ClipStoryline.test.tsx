@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
+import { Code } from '@connectrpc/connect'
 import { Stage } from '@/shared/api'
 import { clipRegionRows } from '@/entities/clip-plan'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
@@ -9,6 +10,7 @@ import { discardClipRegionQueues } from '@/features/edit-clip-regions'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { renderAppAt } from '@/test/app'
+import { connectAppError } from '@/test/app-error'
 import { clipObservationsFixture } from '@/test/clip-observations'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { projectFakeRegions, type FakeClipProject, type FakeClipsOptions } from '@/test/clips'
@@ -660,4 +662,114 @@ it('shares one set of region words between the storyline block and the correctio
     AUTOSAVE,
   )
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
+})
+
+/** A clip whose plan draws its intro and whose current render matches it, with an id a
+ *  finalization can name: the state every committing action below starts from. */
+function rendered(): FakeClipProject {
+  const project = storylined({
+    videoTemplateId: '',
+    introPreset: 'a',
+    outroPreset: 'b',
+    editPlanRevision: 1,
+    renderedPlanRevision: 1,
+    editing: clipTimelineFixture(),
+    regions: regions({
+      slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
+    }),
+    canFinalize: true,
+    result: {
+      id: 'result-1',
+      contentType: 'video/mp4',
+      bytes: 5,
+      durationMs: 19800,
+      createdAt: '2026-09-10T00:00:00Z',
+      viewUrl: 'https://private.test/old',
+    },
+  })
+  projectFakeRegions(project)
+  project.renderedPlanRevision = project.editPlanRevision
+  return project
+}
+async function editCaption(text: string) {
+  await userEvent.click(
+    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
+  )
+  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: text } })
+}
+async function renderOnServer() {
+  await userEvent.click(screen.getByRole('button', { name: RENDER }))
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+}
+
+// CLIP-39, CLIP-188: a render flushes every queue first; a slot save that fails stops it, and
+// the edits that were not saved stay where the owner left them.
+it('launches no render past a slot save that fails, keeping both edits', async () => {
+  const calls: string[] = []
+  await mount(
+    rendered(),
+    { calls, projectSaveError: connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable) },
+    {},
+    'tab',
+  )
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  await selectSources()
+  await userEvent.click(heading())
+  await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
+  await editCaption('렌더 직전 수정')
+  await renderOnServer()
+  await waitFor(() => expect(calls).toContain('UpdateClipProject'), AUTOSAVE)
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  expect(calls).not.toContain('StartClipRender')
+  expect(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' })).toBeChecked()
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('렌더 직전 수정')
+})
+
+// A correction the server refuses as a conflict stops the render too, and says so.
+it('launches no render past a correction save the server refuses as a conflict', async () => {
+  const calls: string[] = []
+  await mount(rendered(), { calls, planSaveConflict: true }, {}, 'tab')
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  await selectSources()
+  await editCaption('충돌하는 수정')
+  await renderOnServer()
+  await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
+  expect(await screen.findByText(/저장된 수정본이 변경되었어요/)).toBeInTheDocument()
+  expect(calls).not.toContain('StartClipRender')
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('충돌하는 수정')
+})
+
+// CDS-64, CLIP-188: words a slot cannot draw stay in the field and hold every committing
+// action — the render cannot even be asked for.
+it('holds the render while a slot holds words it cannot draw', async () => {
+  const calls: string[] = []
+  await mount(rendered(), { calls }, {}, 'tab')
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  await selectSources()
+  await editCaption('다시 렌더할 수정')
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled(), AUTOSAVE)
+  await userEvent.click(heading())
+  const field = line('인트로', 1).getByLabelText('1번째 줄 문구')
+  fireEvent.change(field, { target: { value: '갂' } })
+  expect(field).toHaveAttribute('aria-invalid', 'true')
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
+  expect(field).toHaveValue('갂')
+  expect(calls).not.toContain('StartClipRender')
+})
+
+// CLIP-152, CLIP-188: once a slot edit moves the plan past the render, that render is named by
+// its own revision and cannot be confirmed as the clip.
+it('never confirms an earlier render for a plan a slot edit moved', async () => {
+  await mount(rendered(), {}, {}, 'tab')
+  await screen.findByRole('region', { name: '컷·자막 수정' })
+  expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
+  await userEvent.click(heading())
+  fireEvent.change(line('인트로', 2).getByLabelText('2번째 줄 문구'), {
+    target: { value: '저녁 영업' },
+  })
+  await waitFor(
+    () => expect(screen.getByRole('button', { name: '확정하기' })).toBeDisabled(),
+    AUTOSAVE,
+  )
+  expect(screen.getByText('렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.')).toBeInTheDocument()
 })
