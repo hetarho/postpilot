@@ -45,7 +45,13 @@
   - Biber's scores are computed from ~60 counted linguistic features; here the analysis model estimates -3..3 with no definition of either pole, and the writer receives bare `key=N`
 - [o] every axis is defined as its source research defines it, and both the analysis model and the writer receive that definition (poles and what a value means) instead of a bare name and number ← owner: 논문에서 쓰는대로 정의를 제대로 해서 전달
   - [o] source rule: research on Korean only; a paper older than 10 years is used only when highly cited (a classic, judged by citation count); an old paper that is not well cited is dropped and the product defines its own axes instead ← owner rule
-  - [?] which set passes the rule: research running 260929 (Kim & Biber 1994 is 32 years old; Biber 1988 is English, 4 of the 6 axes; addressee focus and humor are the product's own)
+  - [?] which set passes the rule — research 260929 (web; citation counts from Google Scholar via a summarising fetch, not re-checked):
+    - Kim & Biber 1994 (OUP chapter): ~126 citations, borderline; its Korean dimensions are reported in Biber 1995 *Dimensions of Register Variation* §6.3 (~2,815 citations, a classic ⇒ passes)
+    - Korean dimensions (Biber 1995, read through an unofficial excerpt; loadings for D2–D6 unseen): D1 on-line interaction vs planned exposition · D2 overt vs implicit logical cohesion · D3 overt expression of personal stance · D4 narrative vs non-narrative · D5 on-line reportage of events (sportscasts, tentative) · D6 honorification
+    - Biber 1995: a persuasion dimension exists only in English and Somali, an abstract-style dimension only in English ⇒ the product's persuasion, abstractness and humor axes have no Korean research behind them
+    - post-2016: Kang Beomil 2024 (언어과학 31(1), 59 features, 17 registers) — 대화적/비공식적 스타일 · 학술적/격식적 담화 대 정보성 담화 · 공적 견해 표출 · 감정적 상호작용 · 서술적 이야기; the features per dimension are behind a paywall (unverified)
+    - no study defines dimensions for Korean blog or review writing
+    - none of these papers uses a -3..3 scale; they report factor scores
 - [o] 규칙으로 저장 leaves the voice entirely; 지침으로 저장 (GUIDE-21) stays the only way to keep a revision instruction ← owner: it has nothing to do with the voice (resolves VOICE-7)
 - [o] 말투 list uses 내 글's row: the whole row is one link, name + 기본 / language badges + a meta line; 기본으로 설정 and 삭제 move to the voice page ← one list design across the app
 - [o] a 학습 글 (pasted post or answered prompt) opens to its full text; today the body is never returned (VOICE-8) and the row is a truncated label with only 삭제 ← owner: "상세보기 할 수가 없고 삭제만돼"
