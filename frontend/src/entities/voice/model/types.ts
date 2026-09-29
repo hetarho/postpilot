@@ -1,5 +1,4 @@
 import i18next from 'i18next'
-import type { PostContent } from '@/shared/api'
 
 /** What a 학습 글 is: a post the owner wrote by hand and pasted, or an answer to one of the shared
  *  prompts (VOICE-59). */
@@ -46,58 +45,107 @@ export interface VoiceReadiness {
   needed: number
   missingParts: VoicePromptPart[]
 }
-export type VoiceSourceKind = 'unknown' | 'measured' | 'analyzed' | 'manual'
-export interface VoiceValue {
-  value: string
-  source: VoiceSourceKind
-  unknown: boolean
+/** The sentence an item is shown with and the 학습 글 it came from ('' for a measured text). */
+export interface VoiceExample {
+  sentence: string
+  materialId: string
 }
-/** Every axis is optional because absence is a real answer: an axis the analysis never measured is
- *  missing, not 0, and the screen shows it as 알 수 없음 next to the other unknown-capable fields. */
-export interface VoiceAxes {
-  involvement?: number
-  narrativity?: number
-  persuasionOvertness?: number
-  abstractness?: number
-  addresseeFocus?: number
-  humor?: number
-}
-export interface StructuredVoiceProfile {
-  version: bigint
-  updatedAt: string
-  sourceCount: number
-  empty: boolean
-  lexical: {
-    description: VoiceValue
-    preferredWords: Array<{ word: string; alternatives: string[]; weight: number }>
-    bannedWords: Array<{ value: string; reason: string }>
-    bannedPatterns: Array<{ value: string; reason: string }>
-  }
+
+/** The fingerprint's eight counted items (VOICE-24), each in its own unit: shares are 0…1,
+ *  rates are per 100 sentences, and an item below its threshold is unknown rather than 0. */
+export interface VoiceFingerprint {
+  sentences: number
   endings: {
-    baseRegister: VoiceValue
-    distribution: Array<{ ending: string; ratio: number }>
-    bannedEndings: string[]
-    signatureEndings: string[]
-    constraints: string[]
+    unknown: boolean
+    da: number
+    haeyo: number
+    seumnida: number
+    other: number
+    suffixes: Array<{ text: string; count: number }>
+    example?: VoiceExample
   }
-  syntax: {
-    averageSentenceChars: number
-    sentenceLength: VoiceValue
-    connectiveStyle: VoiceValue
-    preferredConnectives: string[]
-    nominalization: VoiceValue
-    passiveTendency: VoiceValue
+  marks: {
+    unknown: boolean
+    exclaim: number
+    question: number
+    tilde: number
+    ellipsis: number
+    period: number
+    none: number
+    repeat: number
+    example?: VoiceExample
   }
-  structure: {
-    introPattern: VoiceValue
-    closingPattern: VoiceValue
-    paragraphSentencesMin: number
-    paragraphSentencesMax: number
-    headingHabit: VoiceValue
-    listHabit: VoiceValue
-    emojiUse: VoiceValue
+  emoji: {
+    unknown: boolean
+    emoji: number
+    hh: number
+    kk: number
+    tears: number
+    example?: VoiceExample
   }
-  axes: VoiceAxes
+  shape: {
+    unknown: boolean
+    averageChars: number
+    paragraphAverage: number
+    paragraphMin: number
+    paragraphMax: number
+    lineBreakShare: number
+    ownLine: boolean
+    example?: VoiceExample
+  }
+  openings: { unknown: boolean; openings: string[]; closings: string[]; example?: VoiceExample }
+  adverbs: {
+    unknown: boolean
+    /** A real answer: no lexicon word repeats. */
+    none: boolean
+    words: Array<{ word: string; perHundred: number }>
+    example?: VoiceExample
+  }
+  person: {
+    unknown: boolean
+    jeo: number
+    uri: number
+    na: number
+    /** 저, 우리 or 나; '' when no form is frequent enough. */
+    dominant: string
+    example?: VoiceExample
+  }
+  headings: {
+    unknown: boolean
+    count: number
+    emojiShare: number
+    questionShare: number
+    numberedShare: number
+    listShare: number
+    marker: string
+    example?: VoiceExample
+  }
+}
+
+/** Which part of the AI's reading an example shows. */
+export type VoiceAiField = 'impression' | 'tics' | 'signature_phrases'
+
+/** What the analysis call wrote: only what cannot be counted (VOICE-24). */
+export interface VoiceAiPart {
+  impression: string
+  tics: Array<{ phrase: string; when: string }>
+  signaturePhrases: string[]
+  examples: Array<{ field: VoiceAiField; sentence: string; materialId: string }>
+}
+
+/** One analysis (VOICE-26). */
+export interface VoiceAnalysis {
+  counted: VoiceFingerprint
+  ai: VoiceAiPart
+  materialCount: number
+  analyzeModel: string
+  createdAt: string
+}
+
+/** How the 학습 글 moved since the current analysis read them (VOICE-21). */
+export interface VoiceNotice {
+  kind: 'none' | 'added' | 'changed'
+  count: number
 }
 
 /** One of an account's writing voices (VOICE-1). A voice owns exactly one profile and
@@ -138,27 +186,13 @@ export interface VoiceProfile {
   /** Whether an analysis is published (VOICE-25). */
   made: boolean
   readiness: VoiceReadiness
-  updatedAt: string
   samples: VoiceSample[]
   activeJobId: string
-  structured: StructuredVoiceProfile
-}
-export interface VoiceVersion {
-  version: bigint
-  profile: StructuredVoiceProfile
-  origin: string
-  restoredFromVersion: bigint
-  createdAt: string
-  /** Whether this version carries a generation snapshot that can be previewed. Presence only —
-   *  the snapshot is fetched per version, when the row is opened (VOICE-30). */
-  hasSample: boolean
-}
-
-/** A copy of the raw AI output of the last post one profile version produced. It is what makes
- *  a version readable BEFORE it is adopted; a version that never produced a post has none. */
-export interface VoiceVersionSample {
-  content: PostContent
-  createdAt: string
+  /** The current analysis, absent until the voice is made. */
+  analysis?: VoiceAnalysis
+  /** Whether 이전 분석으로 되돌리기 has something to return to (VOICE-30). */
+  hasPrevious: boolean
+  notice: VoiceNotice
 }
 
 export function emptyVoice(): Voice {
@@ -174,47 +208,6 @@ export function emptyVoice(): Voice {
     materialCount: 0,
     analyzedAt: '',
     readinessPercent: 0,
-  }
-}
-
-const unknownValue = (): VoiceValue => ({ value: '', source: 'unknown', unknown: true })
-export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
-  return {
-    version: 0n,
-    updatedAt: '',
-    sourceCount: 0,
-    empty: true,
-    lexical: {
-      description: unknownValue(),
-      preferredWords: [],
-      bannedWords: [],
-      bannedPatterns: [],
-    },
-    endings: {
-      baseRegister: unknownValue(),
-      distribution: [],
-      bannedEndings: [],
-      signatureEndings: [],
-      constraints: [],
-    },
-    syntax: {
-      averageSentenceChars: 0,
-      sentenceLength: unknownValue(),
-      connectiveStyle: unknownValue(),
-      preferredConnectives: [],
-      nominalization: unknownValue(),
-      passiveTendency: unknownValue(),
-    },
-    structure: {
-      introPattern: unknownValue(),
-      closingPattern: unknownValue(),
-      paragraphSentencesMin: 0,
-      paragraphSentencesMax: 0,
-      headingHabit: unknownValue(),
-      listHabit: unknownValue(),
-      emojiUse: unknownValue(),
-    },
-    axes: {},
   }
 }
 

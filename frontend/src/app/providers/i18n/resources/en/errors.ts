@@ -58,6 +58,7 @@ export const errors = {
   VOICE_PROMPT_ANSWERED: 'You already answered this prompt. Delete the answer to write it again.',
   VOICE_ANSWER_REQUIRED: 'Write an answer.',
   VOICE_PHOTO_REQUIRED: 'Choose a photo first.',
+  VOICE_NO_PREVIOUS_ANALYSIS: 'There is no previous analysis to return to.',
   VOICE_NAME_REQUIRED: 'Enter a voice name.',
   VOICE_NAME_TOO_LONG:
     'The voice name must be no more than {{max}} characters. It is currently {{actual}} characters.',
@@ -66,9 +67,7 @@ export const errors = {
   VOICE_SAMPLE_TOO_SHORT:
     'A sample must contain at least {{min}} characters. It currently contains {{actual}}.',
   VOICE_SAMPLE_NOT_FOUND: 'Could not find the voice sample.',
-  VOICE_PROFILE_FIELD_REQUIRED: 'Enter the voice profile content.',
   VOICE_ANALYZE_MODEL_REQUIRED: 'Select a voice-analysis model.',
-  VOICE_LEARNING_NOT_FOUND: 'Could not find the voice-learning record.',
   VOICE_INVALID_LIFECYCLE: "This action is not available in the voice's current state.",
   CLIP_INVALID_INPUT: 'Check the clip or video template fields and their limits.',
   CLIP_QUOTE_REQUIRED: 'Review and approve the maximum credits before starting generation.',

@@ -63,8 +63,7 @@ func fullSnapshotFixture() snapshotFixture {
 			Field: "cafe", QualityRuleIDs: []string{"composition"}, Published: true,
 		},
 		profile: Profile{
-			Styleguide: "스타일", Excerpts: []string{"발췌"},
-			EndingMaxConsecutive: 2, TargetLanguage: LanguageKorean, Portable: true,
+			Text: "스타일", Excerpts: []string{"발췌"}, Portable: true,
 		},
 		observations: []Observation{{
 			File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},
@@ -163,8 +162,6 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.WriteNativeEffort = true
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
 	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
-	// The profile version rides the snapshot so an applied winner files under it (VOICE-29).
-	fixture.profile.Version = 7
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
 	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200}}
 	fixture.post.Content.Blocks = []Block{{

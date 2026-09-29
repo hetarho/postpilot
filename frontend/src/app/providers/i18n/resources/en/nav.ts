@@ -28,14 +28,12 @@ export const nav = {
   memories: 'Memories',
   models: 'AI models',
   voice: {
-    profile: 'Profile',
-    versions: 'Version history',
+    analysis: 'Voice analysis',
     materials: 'Writing',
     settings: 'Voice settings',
     backToList: '← Voices',
     short: {
-      profile: 'Profile',
-      versions: 'Versions',
+      analysis: 'Analysis',
       materials: 'Writing',
     },
   },

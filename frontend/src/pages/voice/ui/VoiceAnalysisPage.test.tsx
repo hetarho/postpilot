@@ -2,111 +2,147 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { BlockType, VoiceValueSource } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
-/** A learned profile whose axes are partly unanswered — the state the analysis produces once it
- *  stops fabricating a neutral 0 for an axis the model never addressed. */
-const LEARNED = {
-  empty: false,
-  meta: { version: 3n, sourceCount: 2 },
-  lexical: {
-    description: { value: '담백한 어휘', source: VoiceValueSource.ANALYZED, unknown: false },
+/** A made voice's analysis with one unknown item and the owner's own examples (VOICE-63). */
+const ANALYSIS = {
+  counted: {
+    sentences: 120,
+    endings: {
+      da: 0.28,
+      haeyo: 0.31,
+      seumnida: 0.07,
+      other: 0.34,
+      suffixes: [{ text: '더라구요', count: 9 }],
+    },
+    marks: {
+      exclaim: 0.32,
+      question: 0.05,
+      tilde: 0.1,
+      period: 0.4,
+      repeat: 0.08,
+      example: { sentence: '정말 맛있었어요!', materialId: 'sample-1' },
+    },
+    emoji: { unknown: true },
+    shape: { averageChars: 24, paragraphMin: 1, paragraphMax: 3, ownLine: true },
+    openings: { openings: ['안녕하세요!'], closings: ['다음에 또 만나요~'] },
+    adverbs: { none: true },
+    person: {
+      jeo: 6,
+      dominant: '저',
+      example: { sentence: '저는 또 갈 거예요.', materialId: 'gone' },
+    },
+    headings: { count: 4, emojiShare: 0.5, questionShare: 0.25, marker: '-' },
   },
-  endings: {
-    baseRegister: { value: '해요체', source: VoiceValueSource.MEASURED, unknown: false },
+  ai: {
+    impression: '들뜬 목소리로 친구에게 말하듯 써요.',
+    tics: [{ phrase: '진짜', when: '맛에 감탄할 때' }],
+    signaturePhrases: ['완전 추천'],
+    examples: [{ field: 1, sentence: '진짜 대박이었어요.', materialId: 'sample-1' }],
   },
-  axes: { involvement: 2 },
+  materialCount: 3,
 }
 
 const DEFAULT = '/voices/voice-default'
 
 afterEach(() => initializeI18n('ko'))
 
-describe('the 프로필 tab', () => {
-  // VOICE-54: the layout names the voice, the tab keeps its title.
-  it('renders the profile and none of the other tabs’ panels', async () => {
-    renderAppAt(DEFAULT, { user: { id: 'alice' }, voice: { structured: LEARNED } })
-
-    expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { level: 2, name: '프로필' })).toBeInTheDocument()
-    expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '복원' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('문체 규칙')).not.toBeInTheDocument()
-    expect(screen.queryByText('학습 샘플')).not.toBeInTheDocument()
-  })
-
-  // VOICE-54: the version list belongs to the tab that displays it.
-  it('issues no version request on mount', async () => {
-    const calls: string[] = []
-    renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { structured: LEARNED } })
-
-    await screen.findByText('현재 말투 프로필')
-    await waitFor(() => expect(calls).toContain('GetVoiceProfile'))
-    expect(calls).not.toContain('ListVoiceProfileVersions')
-  })
-
-  // VOICE-27, frontend half: an axis the analysis never answered is not a measurement.
-  it('shows an unanswered axis as 알 수 없음 rather than 0', async () => {
-    renderAppAt(DEFAULT, { user: { id: 'alice' }, voice: { structured: LEARNED } })
-
-    const axes = (await screen.findByText('여섯 성향 (-3~3)')).closest('section')!
-    expect(within(axes).getByText('관여도').nextElementSibling).toHaveTextContent('2')
-    expect(within(axes).getByText('서사성').nextElementSibling).toHaveTextContent('알 수 없음')
-    expect(within(axes).queryByText('0')).not.toBeInTheDocument()
-  })
-
-  it('keeps Korean syntax measurement in characters', async () => {
+describe('the 말투 분석 tab', () => {
+  // VOICE-63: 숫자로 본 습관 in eight rows, 알 수 없음 where unknown, each with its example, then
+  // AI가 읽은 인상; nothing to edit.
+  it("reads the analysis back in two groups with the owner's own sentences", async () => {
     renderAppAt(DEFAULT, {
       user: { id: 'alice' },
-      voice: {
-        structured: { ...LEARNED, syntax: { averageSentenceChars: 14 } },
-      },
+      voice: { analysis: ANALYSIS, samples: [{ id: 'sample-1', label: '국숫집' }] },
     })
 
-    const label = await screen.findByText('평균 문장 길이(글자)')
-    expect(label.nextElementSibling).toHaveTextContent('14자')
-    expect(screen.getByText('주 종결어미')).toBeInTheDocument()
+    const counted = within(await screen.findByRole('region', { name: '숫자로 본 습관' }))
+    const rows = counted.getAllByRole('listitem')
+    expect(rows).toHaveLength(8)
+    expect(rows[1]).toHaveTextContent('문장의 32%를 느낌표로')
+    expect(rows[1]).toHaveTextContent('“정말 맛있었어요!”')
+    expect(rows[2]).toHaveTextContent('알 수 없음')
+    expect(rows[5]).toHaveTextContent('눈에 띄게 반복하는 부사는 없어요.')
+    // VOICE-21: the 학습 글 the first-person example came from is gone, and so is its sentence.
+    expect(rows[6]).toHaveTextContent('저')
+    expect(rows[6]).not.toHaveTextContent('저는 또 갈 거예요.')
+    expect(rows[0]).toHaveTextContent("'~다'")
+    expect(rows[0]).toHaveTextContent('~더라구요')
+    const ai = within(screen.getByRole('region', { name: 'AI가 읽은 인상' }))
+    expect(ai.getByText('들뜬 목소리로 친구에게 말하듯 써요.')).toBeInTheDocument()
+    expect(ai.getByText('“진짜 대박이었어요.”')).toBeInTheDocument()
+    expect(ai.getByText('‘진짜’ — 맛에 감탄할 때')).toBeInTheDocument()
+    // Read-only: no field to edit, no provenance badge.
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByText('측정값')).not.toBeInTheDocument()
   })
 
-  // VOICE-10: another voice of the same account is genuinely empty.
-  it('shows a second voice as empty even while the default has learned', async () => {
-    renderAppAt('/voices/voice-review', {
+  // VOICE-63: until the voice is made, the meter, the way to 학습 글 and 말투 만들기.
+  it('shows the meter and the way to 학습 글 for a voice not yet made', async () => {
+    renderAppAt(DEFAULT, {
       user: { id: 'alice' },
+      voice: { voices: [{ id: 'voice-default', name: '기본 말투', made: false }] },
+    })
+
+    expect(await screen.findByText('말투 학습에 필요한 정보')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '학습 글 모으기' })).toHaveAttribute(
+      'href',
+      `${DEFAULT}/materials`,
+    )
+    expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
+    expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
+  })
+
+  // VOICE-21: the notice sits above the groups with 다시 분석.
+  it('says the 학습 글 changed, with 다시 분석, above the groups', async () => {
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      voice: { analysis: ANALYSIS, notice: { kind: 'added', count: 2 } },
+    })
+    expect(await screen.findByText('새 학습 글 2편')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 분석' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이전 분석으로 되돌리기' })).not.toBeInTheDocument()
+  })
+
+  // VOICE-30: 이전 분석으로 되돌리기 returns to the previous analysis once.
+  it('returns to the previous analysis after the sheet says there is no redo', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      calls,
       voice: {
-        structured: LEARNED,
-        voices: [
-          { id: 'voice-default', name: '기본 말투', isDefault: true },
-          { id: 'voice-review', name: '리뷰' },
-        ],
+        analysis: ANALYSIS,
+        previousAnalysis: { ...ANALYSIS, ai: { ...ANALYSIS.ai, impression: '담담한 말투예요.' } },
       },
     })
 
-    expect(await screen.findByRole('heading', { level: 1, name: '리뷰' })).toBeInTheDocument()
-    expect(await screen.findByText(/아직 배운 말투가 없어요/)).toBeInTheDocument()
-    expect(screen.queryByText('담백한 어휘')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: '이전 분석으로 되돌리기' }))
+    const sheet = await screen.findByRole('dialog', { name: '이전 분석으로 되돌릴까요?' })
+    await user.click(within(sheet).getByRole('button', { name: '이전 분석으로 되돌리기' }))
+
+    await waitFor(() => expect(calls).toContain('RestorePreviousVoiceAnalysis'))
+    expect(await screen.findByText('담담한 말투예요.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이전 분석으로 되돌리기' })).not.toBeInTheDocument()
   })
 
   it('says so for a voice the account does not have', async () => {
-    renderAppAt('/voices/nope', { user: { id: 'alice' } })
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('없는 말투예요.')
-    expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
+    renderAppAt('/voices/voice-missing', { user: { id: 'alice' } })
+    expect(await screen.findByText('없는 말투예요.')).toBeInTheDocument()
   })
 
-  it('keeps a deleted profile readable but removes its edit affordances', async () => {
-    renderAppAt('/voices/voice-default', {
+  it("keeps a deleted voice's analysis readable without its undo", async () => {
+    renderAppAt('/voices/voice-old', {
       user: { id: 'alice' },
       voice: {
-        structured: LEARNED,
-        voices: [{ id: 'voice-default', name: '옛 말투', isDefault: true, deleted: true }],
+        voices: [
+          { id: 'voice-default', name: '기본 말투' },
+          { id: 'voice-old', name: '옛 말투', deleted: true },
+        ],
       },
     })
-
-    expect(await screen.findByText('현재 말투 프로필')).toBeInTheDocument()
-    expect(screen.getByText('담백한 어휘')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /수정$/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '복원' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '숫자로 본 습관' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이전 분석으로 되돌리기' })).not.toBeInTheDocument()
   })
 })
 
@@ -119,11 +155,7 @@ describe('the voice tab row', () => {
       'link',
     )
     // Three tabs: the 규칙 and 검증 tabs left with contrast rules and profile validation.
-    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
-      DEFAULT,
-      `${DEFAULT}/materials`,
-      `${DEFAULT}/versions`,
-    ])
+    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([DEFAULT, `${DEFAULT}/materials`])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
     // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its Korean
     // labels, and every tab keeps the 44px floor.
@@ -141,16 +173,16 @@ describe('the voice tab row', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
   })
 
-  it.each([
-    [`${DEFAULT}/versions`, '버전 기록'],
-    [`${DEFAULT}/materials`, '학습 글'],
-  ])('renders %s as its own screen on reload', async (path, heading) => {
-    const { router } = renderAppAt(path, { user: { id: 'alice' } })
+  it.each([[`${DEFAULT}/materials`, '학습 글']])(
+    'renders %s as its own screen on reload',
+    async (path, heading) => {
+      const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe(path)
-    expect(screen.queryByText('현재 말투 프로필')).not.toBeInTheDocument()
-  })
+      expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe(path)
+      expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
+    },
+  )
 })
 
 // VOICE-12, VOICE-13, VOICE-54: the title row carries the rename, 기본으로 설정 or 기본 해제 on
@@ -228,8 +260,9 @@ describe('the legacy /voice address', () => {
   it.each([
     ['/voice', DEFAULT],
     ['/voice/materials', `${DEFAULT}/materials`],
-    // The old 가져오기 tab is gone and lands on the profile, like any tab that never existed.
+    // The old 가져오기 and 버전 기록 tabs are gone and land on 말투 분석, like any that never existed.
     ['/voice/import', DEFAULT],
+    ['/voice/versions', DEFAULT],
     // A tab that no longer exists lands on the profile, like one that never did.
     ['/voice/rules', DEFAULT],
     ['/voice/whatever', DEFAULT],
@@ -287,7 +320,7 @@ describe('the 학습 글 tab', () => {
       user: { id: 'alice' },
       voice: {
         activeJobId: 'voice-job',
-        analysisAfterAnalysis: '# 종결어미\n~다를 자주 사용',
+        analysisAfterAnalysis: '~다를 자주 쓰는 담백한 말투예요.',
       },
       jobs: {
         jobs: [
@@ -303,9 +336,10 @@ describe('the 학습 글 tab', () => {
       },
     })
 
-    // The analysis lands in the structured profile's lexical description now — there is no
-    // free-text styleguide field left for it to appear in (VOICE-25).
-    await waitFor(() => expect(screen.getByText(/~다를 자주 사용/)).toBeInTheDocument())
+    // The finished analysis is read back once the job is done (VOICE-31).
+    await waitFor(() =>
+      expect(screen.getByText('~다를 자주 쓰는 담백한 말투예요.')).toBeInTheDocument(),
+    )
   })
 
   // VOICE-6: the 이전 수동 안내 section and both of its editors are gone from every tab.
@@ -325,50 +359,6 @@ describe('the 학습 글 tab', () => {
     const sheet = within(await screen.findByRole('dialog'))
     expect(sheet.getAllByRole('textbox')[0]).toBe(sheet.getByLabelText('제목 (선택)'))
     expect(sheet.queryByLabelText('라벨 (선택)')).not.toBeInTheDocument()
-  })
-
-  // VOICE-30: a version is READ before it is taken, and the preview is the confirmation.
-  it('opens a version, previews what it wrote, and adopts it without a dialog', async () => {
-    const calls: string[] = []
-    renderAppAt(`${DEFAULT}/versions`, {
-      user: { id: 'alice' },
-      calls,
-      voice: {
-        structured: { meta: { version: 3n }, empty: false },
-        versions: [
-          { version: 3n, origin: 'analysis', hasSample: true },
-          { version: 2n, origin: 'manual', hasSample: true },
-          { version: 1n, origin: 'analysis', hasSample: false },
-        ],
-        versionSamples: {
-          '2': {
-            title: '비 오는 제주',
-            blocks: [{ type: BlockType.TEXT, content: '우산을 두고 나왔다.' }],
-          },
-        },
-      },
-    })
-    const user = userEvent.setup()
-
-    // The list itself carries no post bodies — presence only.
-    await screen.findByRole('button', { name: /v3 · 분석/ })
-    expect(calls).not.toContain('GetVoiceProfileVersionSample')
-
-    // The head is openable and offers no way to adopt itself.
-    await user.click(screen.getByRole('button', { name: /v3 · 분석/ }))
-    expect(screen.queryByRole('button', { name: '이 버전으로 변경' })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /v2 · 직접 수정/ }))
-    expect(await screen.findByText('비 오는 제주')).toBeInTheDocument()
-    expect(screen.getByText('우산을 두고 나왔다.')).toBeInTheDocument()
-
-    // No confirmation dialog stands between the preview and the change: the preview IS it.
-    await user.click(screen.getByRole('button', { name: '이 버전으로 변경' }))
-    await waitFor(() => expect(calls).toContain('RestoreVoiceProfile'))
-
-    // A version that never produced a post says so, with no empty preview box.
-    await user.click(screen.getByRole('button', { name: /v1 · 분석/ }))
-    expect(await screen.findByText('이 버전으로 쓴 글이 아직 없어요.')).toBeInTheDocument()
   })
 
   // VOICE-31: the voice's queued or running analysis reports on its tab.
@@ -392,7 +382,7 @@ describe('the 학습 글 tab', () => {
       },
     })
 
-    await screen.findByRole('heading', { level: 2, name: '프로필' })
+    await screen.findByRole('heading', { level: 2, name: '말투 분석' })
     await waitFor(() => expect(calls).toContain('GetGeneration'))
     expect(screen.getByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
   })
@@ -416,8 +406,8 @@ describe('the 학습 글 tab', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    // The profile is simply empty; nothing partial was written.
-    expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
+    // The analysis stays as it was; nothing partial was published.
+    expect(screen.getByRole('region', { name: '숫자로 본 습관' })).toBeInTheDocument()
   })
 
   // VOICE-54: renaming lives on the voice, not on the directory row that leads here.

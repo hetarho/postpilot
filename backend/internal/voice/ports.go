@@ -30,9 +30,17 @@ type VoiceDirectoryStore interface {
 	RestoreVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
 }
 
-// ProfileStore is the voice's current profile.
-type ProfileStore interface {
-	GetProfile(ctx context.Context, userID, voiceID string) (Profile, error)
+// AnalysisStore is a voice's current analysis and at most one previous (VOICE-30).
+type AnalysisStore interface {
+	// CurrentAnalysis is the current analysis, or nil for a voice not yet made.
+	CurrentAnalysis(ctx context.Context, userID, voiceID string) (*Analysis, error)
+	HasPreviousAnalysis(ctx context.Context, userID, voiceID string) (bool, error)
+	// PublishAnalysis moves the current analysis to previous — discarding the one there — and
+	// stores the new current, in one transaction (VOICE-25).
+	PublishAnalysis(ctx context.Context, userID, voiceID string, analysis Analysis) error
+	// RestorePreviousAnalysis makes the previous analysis current and discards the one it
+	// replaced; ErrNoPreviousAnalysis without one.
+	RestorePreviousAnalysis(ctx context.Context, userID, voiceID string) error
 }
 
 // SampleStore is the 학습 글 a voice is made from (VOICE-59).
@@ -93,49 +101,14 @@ type ObjectStore interface {
 	List(ctx context.Context, prefix string) ([]StoredObject, error)
 }
 
-// VersionSampleStore is the per-version generation snapshot (VOICE-29): what a profile
-// version produced, kept as opaque text.
-type VersionSampleStore interface {
-	// The per-version generation snapshot (VOICE-29). `content` is OPAQUE TEXT to this
-	// context: voice records what a profile version produced without learning the shape of a
-	// post's content. One row per (voice, version) — a later generation replaces it.
-	UpsertVersionSample(ctx context.Context, sample VersionSample) error
-	GetVersionSample(ctx context.Context, userID, voiceID string, version int64) (VersionSample, error)
-}
-
 // Storage is every behaviour the voice context's SQL store happens to implement. It is the
 // composition root's handle, NOT a port: each use-case below holds only the narrow interfaces
 // it calls (ARCH-6).
 type Storage interface {
 	VoiceDirectoryStore
-	ProfileStore
+	AnalysisStore
 	SampleStore
-	VersionSampleStore
 	PhotoUploadStore
-}
-
-// ProfileVersionStore is the published history of a voice's structured profile.
-type ProfileVersionStore interface {
-	ListProfileVersions(ctx context.Context, userID, voiceID string) ([]ProfileVersion, error)
-	GetProfileVersion(ctx context.Context, userID, voiceID string, version int64) (ProfileVersion, error)
-	PublishProfileVersion(ctx context.Context, userID, voiceID string, profile StructuredProfile, origin string, restoredFrom int64, now time.Time) (ProfileVersion, error)
-	PublishProfileVersionIfHead(ctx context.Context, userID, voiceID string, profile StructuredProfile, origin string, expectedHead int64, now time.Time) (ProfileVersion, bool, error)
-}
-
-// ManualOverrideStore is what the owner said by hand about their own voice.
-type ManualOverrideStore interface {
-	ListManualOverrides(ctx context.Context, userID, voiceID string) ([]ManualOverride, error)
-	SetManualOverride(ctx context.Context, value ManualOverride) error
-	DeleteManualOverride(ctx context.Context, userID, voiceID string, layer RuleLayer, field string) (bool, error)
-	ApplyOverrideAndPublish(ctx context.Context, override ManualOverride, value *string, profile StructuredProfile, now time.Time) error
-}
-
-// PersonalizationStorage is the versioned profile store as the composition root hands it
-// over. Like Storage it is a handle, not a port: the use-cases hold the narrow interfaces
-// above.
-type PersonalizationStorage interface {
-	ProfileVersionStore
-	ManualOverrideStore
 }
 
 // Models resolves a model the request names and performs calls through the provider-neutral

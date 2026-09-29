@@ -135,7 +135,7 @@ func TestNoGuidelinesLeavesThePromptAtTheBaseline(t *testing.T) {
 	// The voice prefix is byte-identical either way: guidelines are appended after it, so the
 	// cached prefix of PRD §5 stays stable.
 	profilePrefix := func(prompt string) string {
-		return prompt[:strings.Index(prompt, "[종결어미 제약]")]
+		return prompt[:strings.Index(prompt, "예시의 고유 사실")]
 	}
 	with, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, testGuidelines())
 	if profilePrefix(with) != profilePrefix(baseline) {

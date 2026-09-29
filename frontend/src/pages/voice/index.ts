@@ -1,3 +1,2 @@
-export { VoicePage } from './ui/VoicePage'
-export { VoiceVersionsPage } from './ui/VoiceVersionsPage'
+export { VoiceAnalysisPage } from './ui/VoiceAnalysisPage'
 export { VoiceMaterialsPage } from './ui/VoiceMaterialsPage'

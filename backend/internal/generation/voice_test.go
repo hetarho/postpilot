@@ -159,8 +159,8 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 	casual := VoiceRef{ID: "voice-casual", Name: "일상", Made: true}
 	formal := VoiceRef{ID: "voice-formal", Name: "격식", Made: true}
 	profiles := voiceProfiles{
-		casual.ID: {Styleguide: "CASUAL-STYLE ~해요", Excerpts: []string{"CASUAL-EXCERPT"}},
-		formal.ID: {Styleguide: "FORMAL-STYLE ~습니다", Excerpts: []string{"FORMAL-EXCERPT"}},
+		casual.ID: {Text: "CASUAL-STYLE ~해요", Excerpts: []string{"CASUAL-EXCERPT"}},
+		formal.ID: {Text: "FORMAL-STYLE ~습니다", Excerpts: []string{"FORMAL-EXCERPT"}},
 	}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
@@ -182,10 +182,10 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 		own, foreign := profiles[voice.ID], profiles[other.ID]
 		for _, call := range models.calls {
 			system := call.request.System
-			if !strings.Contains(system, own.Styleguide) || !strings.Contains(system, own.Excerpts[0]) {
+			if !strings.Contains(system, own.Text) || !strings.Contains(system, own.Excerpts[0]) {
 				t.Fatalf("%s prompt lost its own projection: %s", voice.Name, system)
 			}
-			for _, leak := range []string{foreign.Styleguide, foreign.Excerpts[0]} {
+			for _, leak := range []string{foreign.Text, foreign.Excerpts[0]} {
 				if strings.Contains(system, leak) {
 					t.Fatalf("%s prompt contains %s's %q", voice.Name, other.Name, leak)
 				}
@@ -233,33 +233,4 @@ func (p voiceProfiles) ProfileForPrompt(_ context.Context, _, voiceID string, _ 
 		return Profile{}, fmt.Errorf("no profile for voice %q", voiceID)
 	}
 	return profile, nil
-}
-
-type recordedSample struct {
-	voiceID string
-	version int64
-}
-
-type recordingSamples struct{ got []recordedSample }
-
-func (r *recordingSamples) RecordVersionSample(_ context.Context, _, voiceID string, version int64, _ PostContent) error {
-	r.got = append(r.got, recordedSample{voiceID: voiceID, version: version})
-	return nil
-}
-
-// VOICE-29: the generated post is filed under the profile version its prompt was built from.
-func TestGenerateFilesTheSampleUnderThePromptsProfileVersion(t *testing.T) {
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
-	models := newFakeModels()
-	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
-	samples := &recordingSamples{}
-	deps := testDeps()
-	deps.Samples = samples
-	svc := NewService(posts, fakeProfiles{profile: Profile{Version: 5}}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
-		t.Fatal(err)
-	}
-	if len(samples.got) != 1 || samples.got[0] != (recordedSample{voiceID: liveVoice.ID, version: 5}) {
-		t.Fatalf("recorded samples = %+v, want one under version 5", samples.got)
-	}
 }

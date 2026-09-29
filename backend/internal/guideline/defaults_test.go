@@ -17,7 +17,7 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		}
 		return out
 	}
-	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "closing", "no_listing", "titles", "tags", "natural_korean"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "closing", "no_listing", "titles", "tags", "ending_run", "natural_korean"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("post defaults = %v, want %v", got, want)
 	}
 	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
@@ -33,7 +33,7 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 					t.Errorf("%q lacks a name or a text in one language: %+v", d.Key, d)
 				}
 			}
-			if d.KoreanTargetOnly != (d.Key == "natural_korean") {
+			if d.KoreanTargetOnly != (d.Key == "natural_korean" || d.Key == "ending_run") {
 				t.Errorf("%q KoreanTargetOnly = %v", d.Key, d.KoreanTargetOnly)
 			}
 			if d.MemoriesOnly != (d.Key == "memory_impressions") {
@@ -47,6 +47,12 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 	natural, _ := DefaultFor(KindPost, "natural_korean")
 	if text, ok := natural.Text(LanguageEnglish); ok || text != "" {
 		t.Error("the Korean-target-only default reached an English target")
+	}
+	// VOICE-47: no run of identical endings is voice text; it is this 기본 지침, and its text
+	// states EndingMaxConsecutive in words.
+	endings, _ := DefaultFor(KindPost, "ending_run")
+	if endings.Ko.Name != "같은 종결어미 세 번 잇지 않기" || !strings.Contains(endings.Ko.Text, "두 번까지는 괜찮습니다") || EndingMaxConsecutive != 2 {
+		t.Errorf("ending_run = %+v, max %d", endings, EndingMaxConsecutive)
 	}
 	// GEN-73: the memories default names itself the exception to 감상은 내가 쓴 것만 and reads the
 	// 취향: label memory retrieval puts on a taste, in both languages.

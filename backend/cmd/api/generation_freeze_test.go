@@ -126,7 +126,6 @@ type (
 	freezeExperiments struct{}
 	freezeMemories    struct{}
 	freezeCandidates  struct{}
-	freezeSamples     struct{}
 	freezeLinker      struct{}
 )
 
@@ -141,9 +140,6 @@ func (freezeExperiments) BlockingWriteForPost(context.Context, string, string) (
 }
 func (freezeMemories) ForPost(context.Context, string, []string) ([]string, error) { return nil, nil }
 func (freezeCandidates) Record(context.Context, string, string, string) error      { return nil }
-func (freezeSamples) RecordVersionSample(context.Context, string, string, int64, generation.PostContent) error {
-	return nil
-}
 func (freezeLinker) PresignGet(context.Context, string, time.Duration) (string, error) {
 	return "", nil
 }
@@ -231,7 +227,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 		generation.Deps{
 			Experiments: freezeExperiments{}, Templates: generationTemplates{service: templateSvc},
 			Guidelines: generationGuidelines{service: guidelineSvc}, Memories: freezeMemories{},
-			Candidates: freezeCandidates{}, Samples: freezeSamples{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute,
+			Candidates: freezeCandidates{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute,
 			QualityRules: generationQuality{service: qualitySvc},
 		},
 	)

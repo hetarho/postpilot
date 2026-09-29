@@ -29,21 +29,14 @@ func New(writer, reader *sql.DB) *Store {
 
 // --- directory ---
 
-// InsertVoice writes the voice and its empty profile row in one transaction. The partial
-// unique indexes on active name and active default are the arbiter of a race between two
-// creates; either failure surfaces as ErrVoiceNameTaken.
+// InsertVoice writes the directory row; a voice has no analysis until its first 말투 만들기. The
+// partial unique index on active name is the arbiter of a race between two creates.
 func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
-	tx, err := s.writer.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin insert voice: %w", err)
-	}
-	defer tx.Rollback()
-	q := s.write.WithTx(tx)
 	isDefault := int64(0)
 	if v.IsDefault {
 		isDefault = 1
 	}
-	if err := q.InsertVoice(ctx, sqlc.InsertVoiceParams{
+	if err := s.write.InsertVoice(ctx, sqlc.InsertVoiceParams{
 		ID: v.ID, UserID: v.UserID, Name: v.Name, IsDefault: isDefault,
 		CreatedAt: formatTime(v.CreatedAt), UpdatedAt: formatTime(v.UpdatedAt),
 	}); err != nil {
@@ -51,14 +44,6 @@ func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
 			return voice.ErrVoiceNameTaken
 		}
 		return fmt.Errorf("insert voice: %w", err)
-	}
-	if err := q.InsertEmptyProfile(ctx, sqlc.InsertEmptyProfileParams{
-		VoiceID: v.ID, UserID: v.UserID, UpdatedAt: formatTime(v.CreatedAt),
-	}); err != nil {
-		return fmt.Errorf("insert voice profile: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit insert voice: %w", err)
 	}
 	return nil
 }
@@ -195,60 +180,6 @@ func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 }
 
 // --- profile and samples ---
-
-func (s *Store) GetProfile(ctx context.Context, userID, voiceID string) (voice.Profile, error) {
-	row, err := s.read.GetProfile(ctx, sqlc.GetProfileParams{VoiceID: voiceID, UserID: userID})
-	if errors.Is(err, sql.ErrNoRows) {
-		return voice.Profile{UserID: userID, VoiceID: voiceID, Structured: voice.StructuredProfile{Empty: true}}, nil
-	}
-	if err != nil {
-		return voice.Profile{}, fmt.Errorf("select profile: %w", err)
-	}
-	updated, err := parseTime(row.UpdatedAt)
-	if err != nil {
-		return voice.Profile{}, fmt.Errorf("profile updated_at: %w", err)
-	}
-	structured := voice.StructuredProfile{Empty: true}
-	if row.CurrentVersion > 0 {
-		version, versionErr := s.GetProfileVersion(ctx, userID, voiceID, row.CurrentVersion)
-		if versionErr != nil {
-			return voice.Profile{}, fmt.Errorf("profile head %d: %w", row.CurrentVersion, versionErr)
-		}
-		structured = version.Profile
-	}
-	return voice.Profile{UserID: row.UserID, VoiceID: row.VoiceID,
-		UpdatedAt: updated, Structured: structured}, nil
-}
-
-func (s *Store) UpsertVersionSample(ctx context.Context, sample voice.VersionSample) error {
-	if err := s.write.UpsertVersionSample(ctx, sqlc.UpsertVersionSampleParams{
-		VoiceID: sample.VoiceID, UserID: sample.UserID, Version: sample.Version,
-		Content: sample.Content, CreatedAt: formatTime(sample.CreatedAt),
-	}); err != nil {
-		return fmt.Errorf("upsert version sample: %w", err)
-	}
-	return nil
-}
-
-func (s *Store) GetVersionSample(ctx context.Context, userID, voiceID string, version int64) (voice.VersionSample, error) {
-	row, err := s.read.GetVersionSample(ctx, sqlc.GetVersionSampleParams{
-		VoiceID: voiceID, UserID: userID, Version: version,
-	})
-	if errors.Is(err, sql.ErrNoRows) {
-		return voice.VersionSample{}, voice.ErrVersionSampleNotFound
-	}
-	if err != nil {
-		return voice.VersionSample{}, fmt.Errorf("select version sample: %w", err)
-	}
-	created, err := parseTime(row.CreatedAt)
-	if err != nil {
-		return voice.VersionSample{}, err
-	}
-	return voice.VersionSample{
-		UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version,
-		Content: row.Content, CreatedAt: created,
-	}, nil
-}
 
 func (s *Store) InsertSample(ctx context.Context, sample voice.Sample) error {
 	if err := s.write.InsertSample(ctx, sampleParams(sample)); err != nil {

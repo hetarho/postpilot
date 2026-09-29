@@ -457,41 +457,27 @@ func writeStaticRules(language Language, followingStoryline bool) string {
 	}
 }
 
+// writeProfileSection renders the voice's projection as given (VOICE-46): a Korean target's
+// `[말투]` section with its excerpts, another target's portable section, or nothing for 말투 없음
+// (GEN-74). The length stands on its own [길이] line in every case; no run of identical endings
+// is voice text any more — it is the ending_run 기본 지침 (VOICE-47).
 func writeProfileSection(stable *strings.Builder, language Language, profile Profile, targetLength *int) {
-	// 말투 없음 carries no voice bytes (GEN-74); a Korean target's length stands on its own
-	// [길이] line like every other language's.
 	if profile.NoVoice {
 		writeGenericLength(stable, language, targetLength)
 		return
 	}
-	if profile.Portable {
-		stable.WriteString("\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n")
-		stable.WriteString(profile.Styleguide)
-		stable.WriteString("\n이 섹션에는 언어를 넘어 유지 가능한 구조와 수치 축만 포함됩니다. 출력 언어 지시를 우선하고 제외된 원문 표현을 추측하거나 번역해 보충하지 마세요.")
-		writeGenericLength(stable, language, targetLength)
-		return
+	if profile.Text != "" {
+		stable.WriteString("\n\n")
+		stable.WriteString(profile.Text)
 	}
-
-	stable.WriteString("\n\n[스타일가이드]\n")
-	stable.WriteString(profile.Styleguide)
-	stable.WriteString("\n\n[글 예시 발췌]")
-	for i, excerpt := range profile.Excerpts {
-		fmt.Fprintf(stable, "\n%d. %s", i+1, excerpt)
+	if !profile.Portable && len(profile.Excerpts) > 0 {
+		stable.WriteString("\n\n[글 예시 발췌]")
+		for i, excerpt := range profile.Excerpts {
+			fmt.Fprintf(stable, "\n%d. %s", i+1, excerpt)
+		}
+		stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
 	}
-	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
-	if language != LanguageKorean {
-		writeGenericLength(stable, language, targetLength)
-		return
-	}
-	endingMax := profile.EndingMaxConsecutive
-	if endingMax <= 0 {
-		endingMax = 2
-	}
-	stable.WriteString("\n\n[종결어미 제약]\n")
-	if targetLength != nil {
-		fmt.Fprintf(stable, "목표 길이: 약 %d자. ", *targetLength)
-	}
-	fmt.Fprintf(stable, "프로필의 측정된 종결어미 분포를 따르고 같은 종결어미를 %d문장보다 많이 연속 사용하지 마세요.", endingMax)
+	writeGenericLength(stable, language, targetLength)
 }
 
 func writeGenericLength(stable *strings.Builder, language Language, targetLength *int) {

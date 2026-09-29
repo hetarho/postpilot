@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { VoicePromptPart, VoiceSampleKind } from '@/shared/api'
-import { requirePromptPart, requireSampleKind } from './voice-enums'
+import { VoiceAiField, VoiceNoticeKind, VoicePromptPart, VoiceSampleKind } from '@/shared/api'
+import {
+  requireAiField,
+  requireNoticeKind,
+  requirePromptPart,
+  requireSampleKind,
+} from './voice-enums'
 
 const wireValues = <T extends number>(enumObject: object) =>
   Object.values(enumObject).filter((value): value is T => typeof value === 'number')
@@ -21,5 +26,17 @@ describe('the voice enum mirrors', () => {
       .map(requireSampleKind)
     expect(kinds).toEqual(['post', 'answer'])
     expect(() => requireSampleKind(VoiceSampleKind.UNSPECIFIED)).toThrow()
+  })
+
+  it('maps every AI field and notice kind the wire names', () => {
+    const fields = wireValues<VoiceAiField>(VoiceAiField)
+      .filter((value) => value !== VoiceAiField.UNSPECIFIED)
+      .map(requireAiField)
+    expect(fields).toEqual(['impression', 'tics', 'signature_phrases'])
+    expect(wireValues<VoiceNoticeKind>(VoiceNoticeKind).map(requireNoticeKind)).toEqual([
+      'none',
+      'added',
+      'changed',
+    ])
   })
 })

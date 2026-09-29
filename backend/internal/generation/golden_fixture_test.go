@@ -4,9 +4,8 @@ package generation
 // contract, so they move only with an explicitly accepted prompt-fixture change.
 func goldenProfile() Profile {
 	return Profile{
-		Styleguide:           "STYLE 스타일가이드",
-		Excerpts:             []string{"EXCERPT-1", "EXCERPT-2"},
-		EndingMaxConsecutive: 2,
+		Text:     "[말투]\nSTYLE 말투",
+		Excerpts: []string{"EXCERPT-1", "EXCERPT-2"},
 	}
 }
 

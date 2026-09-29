@@ -31,3 +31,18 @@ func TestEveryPromptPartMapsBothWays(t *testing.T) {
 		}
 	}
 }
+
+// ARCH-3: every generated AI field but UNSPECIFIED is one the domain has.
+func TestEveryAIFieldMaps(t *testing.T) {
+	seen := map[postpilotv1.VoiceAiField]bool{}
+	for _, field := range []voice.AIField{voice.AIImpression, voice.AITics, voice.AISignaturePhrases} {
+		mapped := toProtoAIField(field)
+		if mapped == postpilotv1.VoiceAiField_VOICE_AI_FIELD_UNSPECIFIED || seen[mapped] {
+			t.Fatalf("%q maps to %v", field, mapped)
+		}
+		seen[mapped] = true
+	}
+	if len(seen) != len(postpilotv1.VoiceAiField_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated fields", len(seen), len(postpilotv1.VoiceAiField_name)-1)
+	}
+}

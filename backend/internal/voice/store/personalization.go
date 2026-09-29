@@ -2,198 +2,128 @@ package store
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
-	"time"
 
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
 
+const (
+	slotCurrent  = "current"
+	slotPrevious = "previous"
+)
+
+// analysisSnapshotVersion is the snapshot's own format; a row of another version is a record
+// this build cannot read.
+const analysisSnapshotVersion = 1
+
+type analysisSnapshot struct {
+	Version       int               `json:"version"`
+	Counted       voice.Fingerprint `json:"counted"`
+	AI            voice.AIPart      `json:"ai"`
+	MaterialCount int               `json:"material_count"`
+}
+
 func nullableString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}
 }
 
-func encodeProfile(value voice.StructuredProfile) (string, error) {
-	data, err := json.Marshal(value)
-	return string(data), err
-}
-func decodeProfile(value string) (voice.StructuredProfile, error) {
-	var out voice.StructuredProfile
-	err := json.Unmarshal([]byte(value), &out)
-	return out, err
-}
-
-func (s *Store) ListProfileVersions(ctx context.Context, userID, voiceID string) ([]voice.ProfileVersion, error) {
-	rows, err := s.read.ListProfileVersions(ctx, sqlc.ListProfileVersionsParams{VoiceID: voiceID, UserID: userID})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]voice.ProfileVersion, 0, len(rows))
-	for _, row := range rows {
-		item, err := profileVersion(sqlc.VoiceProfileVersion{
-			ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version,
-			Snapshot: row.Snapshot, Origin: row.Origin,
-			RestoredFromVersion: row.RestoredFromVersion, CreatedAt: row.CreatedAt,
-		})
-		if err != nil {
-			return nil, err
-		}
-		// The LEFT JOIN carries presence only: the list says whether a version CAN be
-		// previewed, and the snapshot itself is fetched per version on open (VOICE-29).
-		item.HasSample = row.SampleVersion.Valid
-		out = append(out, item)
-	}
-	return out, nil
-}
-func (s *Store) GetProfileVersion(ctx context.Context, userID, voiceID string, version int64) (voice.ProfileVersion, error) {
-	row, err := s.read.GetProfileVersion(ctx, sqlc.GetProfileVersionParams{VoiceID: voiceID, UserID: userID, Version: version})
+func (s *Store) CurrentAnalysis(ctx context.Context, userID, voiceID string) (*voice.Analysis, error) {
+	row, err := s.read.GetAnalysis(ctx, sqlc.GetAnalysisParams{VoiceID: voiceID, UserID: userID, Slot: slotCurrent})
 	if errors.Is(err, sql.ErrNoRows) {
-		return voice.ProfileVersion{}, voice.ErrLearningNotFound
+		return nil, nil
 	}
 	if err != nil {
-		return voice.ProfileVersion{}, err
+		return nil, fmt.Errorf("select current analysis: %w", err)
 	}
-	return profileVersion(row)
-}
-func profileVersion(row sqlc.VoiceProfileVersion) (voice.ProfileVersion, error) {
-	p, err := decodeProfile(row.Snapshot)
-	if err != nil {
-		return voice.ProfileVersion{}, err
+	var snapshot analysisSnapshot
+	if err := json.Unmarshal([]byte(row.Snapshot), &snapshot); err != nil {
+		return nil, fmt.Errorf("decode analysis snapshot: %w", err)
+	}
+	if snapshot.Version != analysisSnapshotVersion {
+		return nil, fmt.Errorf("analysis snapshot version %d", snapshot.Version)
+	}
+	var ids []string
+	if err := json.Unmarshal([]byte(row.MaterialIds), &ids); err != nil {
+		return nil, fmt.Errorf("decode analysis material ids: %w", err)
 	}
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
-		return voice.ProfileVersion{}, err
+		return nil, fmt.Errorf("analysis created_at: %w", err)
 	}
-	return voice.ProfileVersion{ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version, Profile: p, Origin: row.Origin, RestoredFromVersion: row.RestoredFromVersion.Int64, CreatedAt: created}, nil
+	return &voice.Analysis{Counted: snapshot.Counted, AI: snapshot.AI, MaterialIDs: ids, AnalyzeModel: row.AnalyzeModel, CreatedAt: created}, nil
 }
 
-func (s *Store) PublishProfileVersion(ctx context.Context, userID, voiceID string, profile voice.StructuredProfile, origin string, restoredFrom int64, now time.Time) (voice.ProfileVersion, error) {
+func (s *Store) HasPreviousAnalysis(ctx context.Context, userID, voiceID string) (bool, error) {
+	n, err := s.read.CountAnalysisSlot(ctx, sqlc.CountAnalysisSlotParams{VoiceID: voiceID, UserID: userID, Slot: slotPrevious})
+	if err != nil {
+		return false, fmt.Errorf("count previous analysis: %w", err)
+	}
+	return n > 0, nil
+}
+
+// PublishAnalysis discards the previous analysis, moves the current one there and stores the
+// new current, in one transaction (VOICE-25, VOICE-30).
+func (s *Store) PublishAnalysis(ctx context.Context, userID, voiceID string, analysis voice.Analysis) error {
+	snapshot, err := json.Marshal(analysisSnapshot{Version: analysisSnapshotVersion, Counted: analysis.Counted, AI: analysis.AI, MaterialCount: len(analysis.MaterialIDs)})
+	if err != nil {
+		return fmt.Errorf("encode analysis snapshot: %w", err)
+	}
+	ids := analysis.MaterialIDs
+	if ids == nil {
+		ids = []string{}
+	}
+	encodedIDs, err := json.Marshal(ids)
+	if err != nil {
+		return fmt.Errorf("encode analysis material ids: %w", err)
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return voice.ProfileVersion{}, err
+		return fmt.Errorf("begin publish analysis: %w", err)
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	version, err := publishProfileWithQueries(ctx, q, userID, voiceID, profile, origin, restoredFrom, now)
-	if err != nil {
-		return voice.ProfileVersion{}, err
+	if err := q.DeleteAnalysisSlot(ctx, sqlc.DeleteAnalysisSlotParams{VoiceID: voiceID, UserID: userID, Slot: slotPrevious}); err != nil {
+		return fmt.Errorf("drop previous analysis: %w", err)
 	}
-	if err = tx.Commit(); err != nil {
-		return voice.ProfileVersion{}, err
+	if _, err := q.MoveAnalysisSlot(ctx, sqlc.MoveAnalysisSlotParams{ToSlot: slotPrevious, VoiceID: voiceID, UserID: userID, FromSlot: slotCurrent}); err != nil {
+		return fmt.Errorf("keep the current analysis as previous: %w", err)
 	}
-	return version, nil
-}
-
-func (s *Store) PublishProfileVersionIfHead(ctx context.Context, userID, voiceID string, profile voice.StructuredProfile, origin string, expectedHead int64, now time.Time) (voice.ProfileVersion, bool, error) {
-	tx, err := s.writer.BeginTx(ctx, nil)
-	if err != nil {
-		return voice.ProfileVersion{}, false, err
-	}
-	defer tx.Rollback()
-	q := s.write.WithTx(tx)
-	current := int64(0)
-	row, err := q.GetProfile(ctx, sqlc.GetProfileParams{VoiceID: voiceID, UserID: userID})
-	if err == nil {
-		current = row.CurrentVersion
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return voice.ProfileVersion{}, false, err
-	}
-	if current != expectedHead {
-		if err = tx.Commit(); err != nil {
-			return voice.ProfileVersion{}, false, err
-		}
-		return voice.ProfileVersion{}, false, nil
-	}
-	version, err := publishProfileWithQueries(ctx, q, userID, voiceID, profile, origin, 0, now)
-	if err != nil {
-		return voice.ProfileVersion{}, false, err
-	}
-	if err = tx.Commit(); err != nil {
-		return voice.ProfileVersion{}, false, err
-	}
-	return version, true, nil
-}
-
-// publishProfileWithQueries appends the next immutable version for ONE voice and moves that
-// voice's head; version numbers count per voice, so two voices both at v1 is the normal case.
-func publishProfileWithQueries(ctx context.Context, q *sqlc.Queries, userID, voiceID string, profile voice.StructuredProfile, origin string, restoredFrom int64, now time.Time) (voice.ProfileVersion, error) {
-	current := int64(0)
-	row, err := q.GetProfile(ctx, sqlc.GetProfileParams{VoiceID: voiceID, UserID: userID})
-	if err == nil {
-		current = row.CurrentVersion
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return voice.ProfileVersion{}, err
-	}
-	profile.Version, profile.UpdatedAt = current+1, now
-	encoded, err := encodeProfile(profile)
-	if err != nil {
-		return voice.ProfileVersion{}, err
-	}
-	id := storeID()
-	if err = q.InsertProfileVersion(ctx, sqlc.InsertProfileVersionParams{ID: id, UserID: userID, VoiceID: voiceID, Version: profile.Version, Snapshot: encoded, Origin: origin, RestoredFromVersion: sql.NullInt64{Int64: restoredFrom, Valid: restoredFrom > 0}, CreatedAt: formatTime(now)}); err != nil {
-		return voice.ProfileVersion{}, err
-	}
-	if err = q.SetProfileHead(ctx, sqlc.SetProfileHeadParams{VoiceID: voiceID, UserID: userID, CurrentVersion: profile.Version, UpdatedAt: formatTime(now)}); err != nil {
-		return voice.ProfileVersion{}, err
-	}
-	return voice.ProfileVersion{ID: id, UserID: userID, VoiceID: voiceID, Version: profile.Version, Profile: profile, Origin: origin, RestoredFromVersion: restoredFrom, CreatedAt: now}, nil
-}
-
-func (s *Store) ListManualOverrides(ctx context.Context, userID, voiceID string) ([]voice.ManualOverride, error) {
-	rows, err := s.read.ListManualOverrides(ctx, sqlc.ListManualOverridesParams{VoiceID: voiceID, UserID: userID})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]voice.ManualOverride, 0, len(rows))
-	for _, r := range rows {
-		at, e := parseTime(r.UpdatedAt)
-		if e != nil {
-			return nil, e
-		}
-		out = append(out, voice.ManualOverride{UserID: r.UserID, VoiceID: r.VoiceID, Layer: voice.RuleLayer(r.Layer), Field: r.Field, Value: r.Value, UpdatedAt: at})
-	}
-	return out, nil
-}
-func (s *Store) SetManualOverride(ctx context.Context, v voice.ManualOverride) error {
-	return s.write.UpsertManualOverride(ctx, sqlc.UpsertManualOverrideParams{VoiceID: v.VoiceID, UserID: v.UserID, Layer: string(v.Layer), Field: v.Field, Value: v.Value, UpdatedAt: formatTime(v.UpdatedAt)})
-}
-func (s *Store) DeleteManualOverride(ctx context.Context, userID, voiceID string, layer voice.RuleLayer, field string) (bool, error) {
-	n, err := s.write.DeleteManualOverride(ctx, sqlc.DeleteManualOverrideParams{VoiceID: voiceID, UserID: userID, Layer: string(layer), Field: field})
-	return n > 0, err
-}
-func (s *Store) ApplyOverrideAndPublish(ctx context.Context, override voice.ManualOverride, value *string, profile voice.StructuredProfile, now time.Time) error {
-	tx, err := s.writer.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	q := s.write.WithTx(tx)
-	if value == nil {
-		if _, err = q.DeleteManualOverride(ctx, sqlc.DeleteManualOverrideParams{VoiceID: override.VoiceID, UserID: override.UserID, Layer: string(override.Layer), Field: override.Field}); err != nil {
-			return err
-		}
-	} else {
-		if err = q.UpsertManualOverride(ctx, sqlc.UpsertManualOverrideParams{VoiceID: override.VoiceID, UserID: override.UserID, Layer: string(override.Layer), Field: override.Field, Value: *value, UpdatedAt: formatTime(now)}); err != nil {
-			return err
-		}
-	}
-	if _, err = publishProfileWithQueries(ctx, q, override.UserID, override.VoiceID, profile, "manual", 0, now); err != nil {
-		return err
+	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{
+		VoiceID: voiceID, UserID: userID, Snapshot: string(snapshot), MaterialIds: string(encodedIDs),
+		AnalyzeModel: analysis.AnalyzeModel, CreatedAt: formatTime(analysis.CreatedAt),
+	}); err != nil {
+		return fmt.Errorf("insert current analysis: %w", err)
 	}
 	return tx.Commit()
 }
 
-func storeID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		panic(err)
+// RestorePreviousAnalysis makes the previous analysis current and discards the one it replaced.
+func (s *Store) RestorePreviousAnalysis(ctx context.Context, userID, voiceID string) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin restore analysis: %w", err)
 	}
-	return hex.EncodeToString(buf)
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	n, err := q.CountAnalysisSlot(ctx, sqlc.CountAnalysisSlotParams{VoiceID: voiceID, UserID: userID, Slot: slotPrevious})
+	if err != nil {
+		return fmt.Errorf("count previous analysis: %w", err)
+	}
+	if n == 0 {
+		return voice.ErrNoPreviousAnalysis
+	}
+	if err := q.DeleteAnalysisSlot(ctx, sqlc.DeleteAnalysisSlotParams{VoiceID: voiceID, UserID: userID, Slot: slotCurrent}); err != nil {
+		return fmt.Errorf("drop current analysis: %w", err)
+	}
+	if _, err := q.MoveAnalysisSlot(ctx, sqlc.MoveAnalysisSlotParams{ToSlot: slotCurrent, VoiceID: voiceID, UserID: userID, FromSlot: slotPrevious}); err != nil {
+		return fmt.Errorf("restore previous analysis: %w", err)
+	}
+	return tx.Commit()
 }
 
 func isUniqueViolation(err error) bool {

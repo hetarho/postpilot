@@ -28,7 +28,7 @@ func mustRevisionPayload(t *testing.T, instruction string) []byte {
 
 func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) {
 	system, user := BuildRevisePrompt(Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, EndingMaxConsecutive: 2,
+		Text: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"},
 	}, *revisionContent("CURRENT"), []string{"IMG_1.jpg"}, "INSTRUCTION", nil, nil, nil)
 	whole := system + "\n" + user
 	positions := []int{
@@ -48,7 +48,7 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 	for _, required := range []string{
 		"요청과 무관한 문장은 글자 그대로", "제목, 한 줄 요약, 태그", "완전한 PostContent",
 		"파일명을 바꾸거나 새 이미지를 만들지", "IMG_1.jpg", `"type":"TEXT"`,
-		"고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이",
+		"고유 사실, 주제, 문구를 복사하지",
 	} {
 		if !strings.Contains(whole, required) {
 			t.Errorf("revision prompt missing %q", required)
@@ -76,7 +76,6 @@ func (f *recordingProfiles) ProfileForPrompt(_ context.Context, _, voiceID strin
 	f.voices = append(f.voices, voiceID)
 	f.targets = append(f.targets, target)
 	profile := f.profile
-	profile.TargetLanguage = target
 	return profile, nil
 }
 
@@ -85,7 +84,7 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("pass-0"),
 	}}
 	profiles := &recordingProfiles{profile: Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT"},
+		Text: "STYLE", Excerpts: []string{"EXCERPT"},
 	}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, _ llm.Request) (llm.Response, error) {

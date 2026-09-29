@@ -45,6 +45,9 @@ enum FailureReason {
   // A 학습 글 change schedules nothing since T469, so it cannot fail to.
   reserved 212;
   reserved "VOICE_SAMPLE_MUTATION_FAILED";
+  // Profile versions and per-field overrides were retired in T471.
+  reserved 205, 221;
+  reserved "VOICE_LEARNING_NOT_FOUND", "VOICE_PROFILE_FIELD_REQUIRED";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -218,7 +221,6 @@ enum FailureReason {
   VOICE_BUSY = 195;
   VOICE_DELETED = 200;
   VOICE_INVALID_LIFECYCLE = 204;
-  VOICE_LEARNING_NOT_FOUND = 205;
   VOICE_NAME_REQUIRED = 206;
   VOICE_NAME_TAKEN = 207;
   VOICE_NAME_TOO_LONG = 208;
@@ -235,7 +237,6 @@ enum FailureReason {
   // a layout refusal recorded on the plan
   CLIP_LAYOUT_FREQUENCY = 220;
   // a profile field the owner left empty, reported with the run
-  VOICE_PROFILE_FIELD_REQUIRED = 221;
   // the browser's own: no status ever carries it, and it is named here so the catalogue it is rendered from stays one list
   NETWORK_UNAVAILABLE = 222;
   // 기억 (MEM r1): the field rules, the closed kind and the account cap
@@ -319,6 +320,8 @@ enum FailureReason {
   VOICE_ANSWER_REQUIRED = 264;
   // A photo prompt answered without an uploaded photo (VOICE-60).
   VOICE_PHOTO_REQUIRED = 265;
+  // 이전 분석으로 되돌리기 with no previous analysis (VOICE-30).
+  VOICE_NO_PREVIOUS_ANALYSIS = 266;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

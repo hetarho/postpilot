@@ -94,7 +94,7 @@ func TestParseContentFallbacksAndBadOutput(t *testing.T) {
 
 func TestBuildWritePromptOrderAndRules(t *testing.T) {
 	system, user := BuildWritePrompt(Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"},
+		Text: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"},
 	}, []Observation{{File: "IMG_1.jpg", Scene: "바다"}}, "MEMO", "TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, nil)
 	positions := []int{
 		strings.Index(system, "STYLE"), strings.Index(system, "EXCERPT-1"), strings.Index(system, "EXCERPT-2"),
@@ -111,7 +111,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 			t.Errorf("write prompt still carries %s", gone)
 		}
 	}
-	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "정확히 4개의 tags", "고유 사실, 주제, 문구를 복사하지", "같은 종결어미를 2문장보다 많이"} {
+	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "정확히 4개의 tags", "고유 사실, 주제, 문구를 복사하지"} {
 		if !strings.Contains(system, required) {
 			t.Errorf("system prompt missing %q", required)
 		}
@@ -451,7 +451,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 			Usage: llm.Usage{PromptTokens: 10, CompletionTokens: 2, CostMicrousd: 3, CostReported: true},
 		}, nil
 	}
-	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{profile: Profile{Text: "말투"}}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
@@ -610,9 +610,6 @@ type fakeProfiles struct {
 
 func (f fakeProfiles) ProfileForPrompt(_ context.Context, _, _ string, target Language) (Profile, error) {
 	profile := f.profile
-	if profile.TargetLanguage == "" {
-		profile.TargetLanguage = target
-	}
 	return profile, nil
 }
 

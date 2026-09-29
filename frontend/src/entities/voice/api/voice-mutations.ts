@@ -1,14 +1,15 @@
+import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidatePostsDependingOn } from '@/entities/post/@x/voice'
-import { appFailureFromConnect, VoiceService, type VoiceLayer } from '@/shared/api'
+import { appFailureFromConnect, GetVoiceProfileResponseSchema, VoiceService } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import {
   invalidateVoiceScope,
   replaceCachedVoices,
   upsertCachedVoice,
 } from './voice-directory-cache'
-import { voiceProfileQueryKey, voiceVersionsQueryKey } from './voice-queries'
+import { voiceAnalysisQueryKey, voicesQueryKey } from './voice-queries'
 
 /** The voice noun's own writes (ARCH-14's verb line): each is a bare mutation nobody renders, and
  *  the buttons, sheets and confirmations that render around them stay in the verb features. The
@@ -113,48 +114,25 @@ export function useSetDefaultVoice(ownerId: string) {
   }
 }
 
-/** One overridable profile field. Each caller owns its own mutation so the fields stay
- *  independent: a save in one must not put the others into a pending state. An override publishes
- *  a new whole-profile version, so the version list is stale alongside the profile. */
-export function useUpdateVoiceOverride(ownerId: string, voiceId: string) {
+/** 이전 분석으로 되돌리기 (VOICE-30): the previous analysis becomes current, the replaced one is
+ *  discarded, and the directory's analysis date moves with it. */
+export function useRestorePreviousVoiceAnalysis(ownerId: string, voiceId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
-  const mutation = useMutation(VoiceService.method.updateVoiceOverride)
-  const refresh = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-    })
-    await queryClient.invalidateQueries({
-      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
-    })
-  }
-  return {
-    ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
-    override: async (layer: VoiceLayer, field: string, value?: string) => {
-      await mutation.mutateAsync({ voiceId, layer, field, value })
-      await refresh()
-    },
-  }
-}
-
-/** Adopting an older version publishes a NEW head and destroys no history. */
-export function useRestoreVoiceProfile(ownerId: string, voiceId: string) {
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const mutation = useMutation(VoiceService.method.restoreVoiceProfile, {
-    onSuccess: () => {
-      for (const queryKey of [
-        voiceProfileQueryKey(transport, ownerId, voiceId),
-        voiceVersionsQueryKey(transport, ownerId, voiceId),
-      ]) {
-        void queryClient.invalidateQueries({ queryKey })
-      }
+  const mutation = useMutation(VoiceService.method.restorePreviousVoiceAnalysis, {
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        voiceAnalysisQueryKey(transport, ownerId, voiceId),
+        create(GetVoiceProfileResponseSchema, { profile: data.profile }),
+      )
+      void queryClient.invalidateQueries({ queryKey: voicesQueryKey(transport, ownerId) })
     },
   })
+  const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
   return {
     ...mutation,
-    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    adopt: (version: bigint) => mutation.mutateAsync({ voiceId, version }),
+    failure,
+    errorMessage: failure ? formatAppFailure(failure) : '',
+    restore: () => mutation.mutateAsync({ voiceId }),
   }
 }

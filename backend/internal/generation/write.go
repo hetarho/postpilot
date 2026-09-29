@@ -16,7 +16,6 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 		return WriteAnswer{}, fmt.Errorf("load voice profile: %w", err)
 	}
 	answer, _, err := s.writeCandidate(ctx, post, profile, observations, model)
-	answer.ProfileVersion = profile.Version
 	return answer, err
 }
 
@@ -78,7 +77,7 @@ func contentTags(content *PostContent) []string {
 func (s *Service) profileForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (Profile, error) {
 	// 말투 없음 reads no voice: there is nothing to project (GEN-74).
 	if voiceID == "" {
-		return Profile{NoVoice: true, TargetLanguage: target}, nil
+		return Profile{NoVoice: true}, nil
 	}
 	if contextual, ok := s.profiles.(TopicProfiles); ok {
 		return contextual.ProfileForPromptForTopic(ctx, userID, voiceID, target, topic, tags)

@@ -1,8 +1,14 @@
 export * from './config'
+export type { FingerprintItem, FingerprintRow } from './model/fingerprint'
+export { FINGERPRINT_ITEMS, fingerprintRows, fingerprintSentence } from './model/fingerprint'
 export type {
-  StructuredVoiceProfile,
   Voice,
-  VoiceAxes,
+  VoiceAiField,
+  VoiceAiPart,
+  VoiceAnalysis,
+  VoiceExample,
+  VoiceFingerprint,
+  VoiceNotice,
   VoiceProfile,
   VoicePrompt,
   VoicePromptPart,
@@ -11,16 +17,12 @@ export type {
   VoiceSample,
   VoiceSampleDetail,
   VoiceSampleKind,
-  VoiceValue,
-  VoiceVersion,
-  VoiceVersionSample,
 } from './model/types'
 export {
   activeVoices,
   defaultVoice,
   deletedVoiceAIReason,
   deletedVoices,
-  emptyStructuredVoiceProfile,
   emptyVoice,
   NO_VOICE_VALUE,
   noVoiceLabel,
@@ -32,18 +34,15 @@ export {
 } from './model/types'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'
 export { useVoiceProfile } from './api/useVoiceProfile'
-export { useVoiceVersions } from './api/useVoiceVersions'
-export { useVoiceVersionSample } from './api/useVoiceVersionSample'
 export { useAddVoiceSample } from './api/useAddVoiceSample'
 export type { CreateVoiceInput } from './api/voice-mutations'
 export {
   useCreateVoice,
   useDeleteVoice,
   useRenameVoice,
+  useRestorePreviousVoiceAnalysis,
   useRestoreVoice,
-  useRestoreVoiceProfile,
   useSetDefaultVoice,
-  useUpdateVoiceOverride,
 } from './api/voice-mutations'
 export { useDeleteVoiceSample } from './api/useDeleteVoiceSample'
 export type { VoiceAnswerInput } from './api/voice-materials'
@@ -60,13 +59,12 @@ export {
   upsertCachedVoice,
 } from './api/voice-directory-cache'
 export {
+  toFingerprint,
   toVoice,
   toVoiceRef,
-  voiceProfileQueryKey,
-  voiceVersionsQueryKey,
-  voiceVersionSampleQueryKey,
+  voiceAnalysisQueryKey,
   voicesQueryKey,
-  useVoiceProfileQueryKey,
+  useVoiceAnalysisQueryKey,
 } from './api/voice-queries'
 export { VoiceRefLabel } from './ui/VoiceRefLabel'
 export { VoiceReadinessMeter } from './ui/VoiceReadinessMeter'

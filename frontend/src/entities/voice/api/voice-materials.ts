@@ -11,7 +11,7 @@ import { invalidateVoiceMaterials } from './voice-directory-cache'
 import {
   toVoiceSample,
   voicePromptsQueryKey,
-  voiceProfileQueryKey,
+  voiceAnalysisQueryKey,
   voiceSampleQueryKey,
 } from './voice-queries'
 
@@ -121,7 +121,7 @@ export function useAnalyzeVoice(ownerId: string, voiceId: string) {
   const mutation = useMutation(VoiceService.method.analyzeVoice, {
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
+        queryKey: voiceAnalysisQueryKey(transport, ownerId, voiceId),
       }),
   })
   const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined

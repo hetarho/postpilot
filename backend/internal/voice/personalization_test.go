@@ -6,29 +6,22 @@ import (
 	"testing"
 )
 
-func TestMeasureKoreanEndingsAndUnicodeLength(t *testing.T) {
-	got := Measure("오늘은 좋아요. 정말 좋습니다! 다음에도 온다.\n짧아요.")
-	if len(got.Sentences) != 4 || got.AverageSentenceChars <= 0 {
-		t.Fatalf("measure = %+v", got)
+// VOICE-24, VOICE-27: the analysis call's schema names the four AI fields, all required, and the
+// prompt asks for nothing the product counts.
+func TestTheAnalysisAsksOnlyForTheAIPart(t *testing.T) {
+	var schema struct {
+		Required []string `json:"required"`
 	}
-	ratios := map[string]float64{}
-	for _, item := range got.EndingDistribution {
-		ratios[item.Ending] = item.Ratio
-	}
-	if ratios["해요"] != .5 || ratios["습니다"] != .25 || ratios["다"] != .25 {
-		t.Fatalf("ending ratios = %+v", ratios)
-	}
-}
-
-// A voice is Korean (VOICE-10): the analysis attaches the one embedded schema, which is valid
-// JSON, and asks about a Korean corpus.
-func TestTheAnalysisIsKoreanOnly(t *testing.T) {
-	var schema map[string]any
 	if err := json.Unmarshal(VoiceAnalysisSchema(), &schema); err != nil {
 		t.Fatalf("analysis schema is invalid JSON: %v", err)
 	}
-	if !strings.Contains(structuredAnalysisPrompt, "Korean authored corpus") {
-		t.Fatalf("analysis prompt = %q", structuredAnalysisPrompt)
+	if strings.Join(schema.Required, ",") != "impression,tics,signature_phrases,examples" {
+		t.Fatalf("required = %v", schema.Required)
+	}
+	for _, want := range []string{"수치는 다시 세지 말고", "impression", "tics", "signature_phrases", "examples", "없는 문장은 만들지 마세요"} {
+		if !strings.Contains(analysisPrompt, want) {
+			t.Fatalf("the analysis prompt lacks %q", want)
+		}
 	}
 }
 

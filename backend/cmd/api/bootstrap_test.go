@@ -237,7 +237,7 @@ func TestANewAccountHasNoVoiceUntilItMakesOne(t *testing.T) {
 // a post may name only a made voice.
 func makeVoice(t *testing.T, handle *db.DB, userID, voiceID string) {
 	t.Helper()
-	if _, err := voicestore.New(handle.Writer, handle.Reader).PublishProfileVersion(context.Background(), userID, voiceID, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+	if err := voicestore.New(handle.Writer, handle.Reader).PublishAnalysis(context.Background(), userID, voiceID, voice.Analysis{AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 }

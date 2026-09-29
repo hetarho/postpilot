@@ -3,7 +3,7 @@ import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
 import { ListVoicesResponseSchema, type ListVoicesResponse, type ProtoVoice } from '@/shared/api'
 import { sortVoices } from '../model/types'
-import { voiceProfileQueryKey, voiceVersionsQueryKey, voicesQueryKey } from './voice-queries'
+import { voiceAnalysisQueryKey, voicesQueryKey } from './voice-queries'
 
 /** Installs a whole directory the server just returned — SetDefaultVoice answers with every voice,
  *  because the previous default changed too. */
@@ -49,12 +49,9 @@ export function invalidateVoiceScope(
   ownerId: string,
   voiceId: string,
 ): void {
-  for (const queryKey of [
-    voiceProfileQueryKey(transport, ownerId, voiceId),
-    voiceVersionsQueryKey(transport, ownerId, voiceId),
-  ]) {
-    void queryClient.invalidateQueries({ queryKey })
-  }
+  void queryClient.invalidateQueries({
+    queryKey: voiceAnalysisQueryKey(transport, ownerId, voiceId),
+  })
 }
 
 /** A 학습 글 was added, answered or deleted: the profile's list and meter moved, and so did the
@@ -66,7 +63,7 @@ export function invalidateVoiceMaterials(
   voiceId: string,
 ): void {
   for (const queryKey of [
-    voiceProfileQueryKey(transport, ownerId, voiceId),
+    voiceAnalysisQueryKey(transport, ownerId, voiceId),
     voicesQueryKey(transport, ownerId),
   ]) {
     void queryClient.invalidateQueries({ queryKey })

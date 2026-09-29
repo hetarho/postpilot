@@ -9,16 +9,17 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// Analyze is the `analyze_voice` job: it reads one snapshot of the voice's 학습 글, measures it
-// and asks one call for the rest, and publishes what it read even when a 학습 글 changed
-// meanwhile — nothing repeats the call without the owner's press (VOICE-22, VOICE-23).
+// Analyze is the `analyze_voice` job (VOICE-22, VOICE-23): it reads one snapshot of the voice's
+// 학습 글, counts the fingerprint, makes one call for the AI part and publishes the result as the
+// current analysis, the one it replaces becoming the previous. A failed call publishes nothing,
+// and nothing repeats the call without the owner's press.
 func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progress) error {
 	ref, err := parseModelRef(found.WriteModel)
 	if err != nil {
 		return err
 	}
 	// The job froze its voice at enqueue; recheck before the provider call so a voice
-	// deleted while the job waited never receives a new styleguide.
+	// deleted while the job waited is never analysed.
 	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
 		return voiceUnavailableError(err)
 	}
@@ -29,42 +30,38 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	if len(newestFirst) == 0 {
 		return fmt.Errorf("분석할 학습 글이 없어요")
 	}
-	samples := make([]Sample, len(newestFirst))
+	counted := FingerprintOf(materialsOf(newestFirst))
+	oldestFirst := make([]Sample, len(newestFirst))
+	ids := make([]string, len(newestFirst))
 	for i, sample := range newestFirst {
-		samples[len(newestFirst)-1-i] = sample
+		oldestFirst[len(newestFirst)-1-i] = sample
+		ids[i] = sample.ID
 	}
 	progress("analyze", 0, 1)
-	// The typed analysis, with its schema: the voice gets its axes and structure habits
-	// from this call (VOICE-27).
-	qualitative, err := s.completeAnalysis(ctx, ref, AssembleCorpus(samples))
+	ai, err := s.completeAnalysis(ctx, ref, counted, oldestFirst)
 	if err != nil {
 		return err
 	}
-	measured := MeasuredProfile(proseCorpus(samples), s.now)
-	mergeQualitativeProfile(&measured, qualitative, analyzedValue)
-	if err := validateAxes(measured.Axes); err != nil {
-		return err
-	}
-	measured.SourceCount = len(samples)
-	measured.Empty = false
-	if s.personalization == nil {
-		progress("analyze", 1, 1)
-		return nil
-	}
-	overrides, err := s.overrides.ListManualOverrides(ctx, found.UserID, found.VoiceID)
-	if err != nil {
-		return fmt.Errorf("manual voice overrides: %w", err)
-	}
-	for _, override := range overrides {
-		if err := applyOverride(&measured, override.Layer, override.Field, override.Value); err != nil {
-			return err
-		}
-	}
-	if _, err := s.versions.PublishProfileVersion(ctx, found.UserID, found.VoiceID, measured, "analysis", 0, s.now()); err != nil {
-		return fmt.Errorf("publish typed voice profile: %w", err)
+	if err := s.analyses.PublishAnalysis(ctx, found.UserID, found.VoiceID, Analysis{
+		Counted: counted, AI: ai, MaterialIDs: ids, AnalyzeModel: ref.String(), CreatedAt: s.now(),
+	}); err != nil {
+		return fmt.Errorf("말투 분석 결과를 저장하지 못했어요: %w", err)
 	}
 	progress("analyze", 1, 1)
 	return nil
+}
+
+// materialsOf is the 학습 글 as the fingerprint reads them.
+func materialsOf(samples []Sample) []Material {
+	out := make([]Material, 0, len(samples))
+	for _, sample := range samples {
+		material := Material{ID: sample.ID, Kind: sample.Kind, CreatedAt: sample.CreatedAt, Text: sample.Body}
+		if prompt, ok := PromptByKey(sample.PromptKey); ok {
+			material.Part = prompt.Part
+		}
+		out = append(out, material)
+	}
+	return out
 }
 
 // voiceUnavailableError turns a directory refusal into the user-facing reason a job row
@@ -78,15 +75,6 @@ func voiceUnavailableError(err error) error {
 	default:
 		return err
 	}
-}
-
-func hasRequiredAnalysisShape(styleguide string) bool {
-	lines := strings.Split(strings.TrimSpace(styleguide), "\n")
-	if len(lines) == 0 || !strings.Contains(lines[0], "종결어미") {
-		return false
-	}
-	lower := strings.ToLower(styleguide)
-	return strings.Contains(lower, "never uses") || strings.Contains(styleguide, "사용하지 않는") || strings.Contains(styleguide, "쓰지 않는")
 }
 
 func parseModelRef(value string) (llm.ModelRef, error) {

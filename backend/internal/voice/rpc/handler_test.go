@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -266,7 +265,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	}
 	store := voicestore.New(handle.Writer, handle.Reader)
 	for _, id := range []string{review, defaultVoice.ID} {
-		if _, err := store.PublishProfileVersion(context.Background(), "alice", id, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+		if err := store.PublishAnalysis(context.Background(), "alice", id, voice.Analysis{AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -332,65 +331,42 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	}
 }
 
-// The version preview's RPC: it is where the stored snapshot stops being opaque text and
-// becomes the post content the client already decodes.
-func TestGetVoiceProfileVersionSampleIsOwnedAndOptional(t *testing.T) {
+// VOICE-30, VOICE-63: the profile carries the current analysis and whether a previous one
+// exists, and 이전 분석으로 되돌리기 answers with the voice as it now reads — or refuses without a
+// previous analysis.
+func TestTheAnalysisAndItsUndoAtTheEdge(t *testing.T) {
 	handle := openVoiceTestDB(t)
 	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
 	ctx := context.Background()
-	voices := map[string]string{}
-	for _, userID := range []string{"alice", "bob"} {
-		created, err := service.CreateVoice(ctx, userID, "기본 말투")
-		if err != nil {
-			t.Fatal(err)
-		}
-		voices[userID] = created.ID
-	}
-	store := voicestore.New(handle.Writer, handle.Reader)
-	head, err := store.PublishProfileVersion(ctx, "alice", voices["alice"], voice.StructuredProfile{Empty: false}, "analysis", 0, time.Now().UTC())
+	created, err := service.CreateVoice(ctx, "alice", "리뷰")
 	if err != nil {
-		t.Fatal(err)
-	}
-	encoded, err := protojson.Marshal(&postpilotv1.PostContent{
-		Title: "제주 여행기", Blocks: []*postpilotv1.Block{{Type: postpilotv1.BlockType_TEXT, Content: "비가 왔다"}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.RecordVersionSample(ctx, "alice", voices["alice"], head.Version, string(encoded)); err != nil {
 		t.Fatal(err)
 	}
 	handler := voicerpc.NewHandler(service)
-
-	got, err := handler.GetVoiceProfileVersionSample(
-		auth.WithUser(ctx, "alice"),
-		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
-	)
-	if err != nil || got.Msg.GetSample().GetTitle() != "제주 여행기" || len(got.Msg.GetSample().GetBlocks()) != 1 {
-		t.Fatalf("own snapshot = %+v err=%v", got.Msg, err)
+	alice := auth.WithUser(ctx, "alice")
+	if _, err := handler.RestorePreviousVoiceAnalysis(alice, connect.NewRequest(&postpilotv1.RestorePreviousVoiceAnalysisRequest{VoiceId: created.ID})); voiceReason(t, err) != "VOICE_NO_PREVIOUS_ANALYSIS" {
+		t.Fatalf("an undo with nothing to return to = %v", err)
 	}
-	if got.Msg.GetCreatedAt() == "" {
-		t.Fatalf("snapshot carried no timestamp: %+v", got.Msg)
+	store := voicestore.New(handle.Writer, handle.Reader)
+	for _, impression := range []string{"첫 분석", "다시 분석"} {
+		if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{
+			Counted:      voice.FingerprintOf([]voice.Material{{ID: "m", Kind: voice.SampleKindPost, Text: "안녕하세요!\n좋았어요."}}),
+			AI:           voice.AIPart{Impression: impression},
+			AnalyzeModel: "stub/analyze", CreatedAt: time.Now(),
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	// A version that never produced a post answers with no sample rather than an error.
-	absent, err := handler.GetVoiceProfileVersionSample(
-		auth.WithUser(ctx, "alice"),
-		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version + 5}),
-	)
-	if err != nil || absent.Msg.GetSample() != nil {
-		t.Fatalf("absent snapshot = %+v err=%v", absent.Msg, err)
+	profile, err := handler.GetVoiceProfile(alice, connect.NewRequest(&postpilotv1.GetVoiceProfileRequest{VoiceId: created.ID}))
+	got := profile.Msg.GetProfile()
+	if err != nil || !got.GetMade() || !got.GetHasPrevious() || got.GetAnalysis().GetAi().GetImpression() != "다시 분석" {
+		t.Fatalf("profile = %+v err=%v", got, err)
 	}
-	// A crafted voice id from another account is NotFound, never that account's snapshot.
-	if _, err := handler.GetVoiceProfileVersionSample(
-		auth.WithUser(ctx, "bob"),
-		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
-	); connect.CodeOf(err) != connect.CodeNotFound {
-		t.Fatalf("cross-account snapshot code = %v", err)
+	if !got.GetAnalysis().GetCounted().GetMarks().GetUnknown() || got.GetAnalysis().GetCounted().GetOpenings().GetOpenings()[0] != "안녕하세요!" {
+		t.Fatalf("counted items = %+v", got.GetAnalysis().GetCounted())
 	}
-	if _, err := handler.GetVoiceProfileVersionSample(
-		ctx,
-		connect.NewRequest(&postpilotv1.GetVoiceProfileVersionSampleRequest{VoiceId: voices["alice"], Version: head.Version}),
-	); connect.CodeOf(err) != connect.CodeUnauthenticated {
-		t.Fatalf("unauthenticated snapshot code = %v", err)
+	restored, err := handler.RestorePreviousVoiceAnalysis(alice, connect.NewRequest(&postpilotv1.RestorePreviousVoiceAnalysisRequest{VoiceId: created.ID}))
+	if err != nil || restored.Msg.GetProfile().GetAnalysis().GetAi().GetImpression() != "첫 분석" || restored.Msg.GetProfile().GetHasPrevious() {
+		t.Fatalf("restored = %+v err=%v", restored, err)
 	}
 }

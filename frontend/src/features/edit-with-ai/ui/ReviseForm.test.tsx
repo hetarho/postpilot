@@ -4,7 +4,7 @@ import { Code } from '@connectrpc/connect'
 import { expect, it, vi } from 'vitest'
 import type { GenerationJob } from '@/entities/generation-job'
 import { ContentRevisionConflictError } from '@/entities/post'
-import { voiceProfileQueryKey } from '@/entities/voice'
+import { voiceAnalysisQueryKey } from '@/entities/voice'
 import { ProtoGuidelineScope, Stage } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '../config'
 import type { FakeGuidelinesOptions } from '@/test/guidelines'
@@ -128,7 +128,7 @@ it('stays disabled while another job is active', async () => {
 it('starts a revision with its instruction and selected write model, and nothing else', async () => {
   const revisions: FakeRevisionStart[] = []
   const { onStarted, queryClient, transport } = renderForm({ revisions })
-  const profile = voiceProfileQueryKey(transport, 'alice', 'voice-a')
+  const profile = voiceAnalysisQueryKey(transport, 'alice', 'voice-a')
   queryClient.setQueryData(profile, { profile: 'own' })
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('수정 요청을 입력하세요'), '  존댓말로  ')

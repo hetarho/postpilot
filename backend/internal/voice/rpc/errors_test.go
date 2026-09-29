@@ -34,7 +34,7 @@ func TestVoiceSynchronousErrorsHaveStableDetails(t *testing.T) {
 		{name: "invalid photo", err: fmt.Errorf("wrapped: %w", voice.ErrInvalidPhoto), mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeInvalidArgument, reason: "UPLOAD_INVALID"},
 		{name: "busy", err: errors.Join(voice.ErrVoiceBusy, errors.New("private database state")), mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_BUSY"},
 		{name: "lifecycle", err: voice.ErrInvalidLifecycle, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INVALID_LIFECYCLE"},
-		{name: "unknown profile version", err: voice.ErrLearningNotFound, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeNotFound, reason: "VOICE_LEARNING_NOT_FOUND"},
+		{name: "no previous analysis", err: voice.ErrNoPreviousAnalysis, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_NO_PREVIOUS_ANALYSIS"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

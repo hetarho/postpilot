@@ -24,6 +24,23 @@ func (q *Queries) ClearDefaultVoice(ctx context.Context, arg ClearDefaultVoicePa
 	return err
 }
 
+const countAnalysisSlot = `-- name: CountAnalysisSlot :one
+SELECT count(*) FROM voice_analyses WHERE voice_id = ? AND user_id = ? AND slot = ?
+`
+
+type CountAnalysisSlotParams struct {
+	VoiceID string
+	UserID  string
+	Slot    string
+}
+
+func (q *Queries) CountAnalysisSlot(ctx context.Context, arg CountAnalysisSlotParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAnalysisSlot, arg.VoiceID, arg.UserID, arg.Slot)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSamples = `-- name: CountSamples :one
 SELECT count(*) FROM voice_samples WHERE voice_id = ? AND user_id = ?
 `
@@ -40,28 +57,19 @@ func (q *Queries) CountSamples(ctx context.Context, arg CountSamplesParams) (int
 	return count, err
 }
 
-const deleteManualOverride = `-- name: DeleteManualOverride :execrows
-DELETE FROM voice_manual_overrides WHERE voice_id=? AND user_id=? AND layer=? AND field=?
+const deleteAnalysisSlot = `-- name: DeleteAnalysisSlot :exec
+DELETE FROM voice_analyses WHERE voice_id = ? AND user_id = ? AND slot = ?
 `
 
-type DeleteManualOverrideParams struct {
+type DeleteAnalysisSlotParams struct {
 	VoiceID string
 	UserID  string
-	Layer   string
-	Field   string
+	Slot    string
 }
 
-func (q *Queries) DeleteManualOverride(ctx context.Context, arg DeleteManualOverrideParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteManualOverride,
-		arg.VoiceID,
-		arg.UserID,
-		arg.Layer,
-		arg.Field,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+func (q *Queries) DeleteAnalysisSlot(ctx context.Context, arg DeleteAnalysisSlotParams) error {
+	_, err := q.db.ExecContext(ctx, deleteAnalysisSlot, arg.VoiceID, arg.UserID, arg.Slot)
+	return err
 }
 
 const deletePhotoUpload = `-- name: DeletePhotoUpload :exec
@@ -92,6 +100,37 @@ func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (sql
 	return photo_key, err
 }
 
+const getAnalysis = `-- name: GetAnalysis :one
+SELECT snapshot, material_ids, analyze_model, created_at
+FROM voice_analyses
+WHERE voice_id = ? AND user_id = ? AND slot = ?
+`
+
+type GetAnalysisParams struct {
+	VoiceID string
+	UserID  string
+	Slot    string
+}
+
+type GetAnalysisRow struct {
+	Snapshot     string
+	MaterialIds  string
+	AnalyzeModel string
+	CreatedAt    string
+}
+
+func (q *Queries) GetAnalysis(ctx context.Context, arg GetAnalysisParams) (GetAnalysisRow, error) {
+	row := q.db.QueryRowContext(ctx, getAnalysis, arg.VoiceID, arg.UserID, arg.Slot)
+	var i GetAnalysisRow
+	err := row.Scan(
+		&i.Snapshot,
+		&i.MaterialIds,
+		&i.AnalyzeModel,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getPhotoUpload = `-- name: GetPhotoUpload :one
 SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
 FROM voice_photo_uploads
@@ -114,64 +153,6 @@ func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) 
 		&i.PromptKey,
 		&i.ObjectKey,
 		&i.ExpiresAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getProfile = `-- name: GetProfile :one
-SELECT voice_id, user_id, current_version, corpus_version, updated_at
-FROM voice_profiles
-WHERE voice_id = ? AND user_id = ?
-`
-
-type GetProfileParams struct {
-	VoiceID string
-	UserID  string
-}
-
-type GetProfileRow struct {
-	VoiceID        string
-	UserID         string
-	CurrentVersion int64
-	CorpusVersion  int64
-	UpdatedAt      string
-}
-
-func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProfileRow, error) {
-	row := q.db.QueryRowContext(ctx, getProfile, arg.VoiceID, arg.UserID)
-	var i GetProfileRow
-	err := row.Scan(
-		&i.VoiceID,
-		&i.UserID,
-		&i.CurrentVersion,
-		&i.CorpusVersion,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getProfileVersion = `-- name: GetProfileVersion :one
-SELECT id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at FROM voice_profile_versions WHERE voice_id=? AND user_id=? AND version=?
-`
-
-type GetProfileVersionParams struct {
-	VoiceID string
-	UserID  string
-	Version int64
-}
-
-func (q *Queries) GetProfileVersion(ctx context.Context, arg GetProfileVersionParams) (VoiceProfileVersion, error) {
-	row := q.db.QueryRowContext(ctx, getProfileVersion, arg.VoiceID, arg.UserID, arg.Version)
-	var i VoiceProfileVersion
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.VoiceID,
-		&i.Version,
-		&i.Snapshot,
-		&i.Origin,
-		&i.RestoredFromVersion,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -218,46 +199,19 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 	return i, err
 }
 
-const getVersionSample = `-- name: GetVersionSample :one
-SELECT voice_id, user_id, version, content, created_at
-FROM voice_version_samples
-WHERE voice_id = ? AND user_id = ? AND version = ?
-`
-
-type GetVersionSampleParams struct {
-	VoiceID string
-	UserID  string
-	Version int64
-}
-
-func (q *Queries) GetVersionSample(ctx context.Context, arg GetVersionSampleParams) (VoiceVersionSample, error) {
-	row := q.db.QueryRowContext(ctx, getVersionSample, arg.VoiceID, arg.UserID, arg.Version)
-	var i VoiceVersionSample
-	err := row.Scan(
-		&i.VoiceID,
-		&i.UserID,
-		&i.Version,
-		&i.Content,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getVoice = `-- name: GetVoice :one
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
-           SELECT 1 FROM voice_profiles p
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+           SELECT 1 FROM voice_analyses a
+           WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
        ) AS INTEGER) AS made,
        CAST((
            SELECT count(*) FROM voice_samples s
            WHERE s.voice_id = v.id AND s.user_id = v.user_id
        ) AS INTEGER) AS sample_count,
        CAST(coalesce((
-           SELECT pv.created_at FROM voice_profiles p
-           JOIN voice_profile_versions pv
-             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+           SELECT a.created_at FROM voice_analyses a
+           WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
        ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.id = ? AND v.user_id = ?
 `
@@ -298,22 +252,29 @@ func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow
 	return i, err
 }
 
-const insertEmptyProfile = `-- name: InsertEmptyProfile :exec
-INSERT INTO voice_profiles (voice_id, user_id, updated_at)
-VALUES (?, ?, ?)
-ON CONFLICT(voice_id) DO UPDATE SET updated_at = excluded.updated_at
+const insertCurrentAnalysis = `-- name: InsertCurrentAnalysis :exec
+INSERT INTO voice_analyses (voice_id, user_id, slot, snapshot, material_ids, analyze_model, created_at)
+VALUES (?, ?, 'current', ?, ?, ?, ?)
 `
 
-type InsertEmptyProfileParams struct {
-	VoiceID   string
-	UserID    string
-	UpdatedAt string
+type InsertCurrentAnalysisParams struct {
+	VoiceID      string
+	UserID       string
+	Snapshot     string
+	MaterialIds  string
+	AnalyzeModel string
+	CreatedAt    string
 }
 
-// Written with the directory row so a read never has to create a profile. It is the ONLY
-// insert path for this table now that both free-text editors are gone.
-func (q *Queries) InsertEmptyProfile(ctx context.Context, arg InsertEmptyProfileParams) error {
-	_, err := q.db.ExecContext(ctx, insertEmptyProfile, arg.VoiceID, arg.UserID, arg.UpdatedAt)
+func (q *Queries) InsertCurrentAnalysis(ctx context.Context, arg InsertCurrentAnalysisParams) error {
+	_, err := q.db.ExecContext(ctx, insertCurrentAnalysis,
+		arg.VoiceID,
+		arg.UserID,
+		arg.Snapshot,
+		arg.MaterialIds,
+		arg.AnalyzeModel,
+		arg.CreatedAt,
+	)
 	return err
 }
 
@@ -340,37 +301,6 @@ func (q *Queries) InsertPhotoUpload(ctx context.Context, arg InsertPhotoUploadPa
 		arg.PromptKey,
 		arg.ObjectKey,
 		arg.ExpiresAt,
-		arg.CreatedAt,
-	)
-	return err
-}
-
-const insertProfileVersion = `-- name: InsertProfileVersion :exec
-INSERT INTO voice_profile_versions
-    (id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-`
-
-type InsertProfileVersionParams struct {
-	ID                  string
-	UserID              string
-	VoiceID             string
-	Version             int64
-	Snapshot            string
-	Origin              string
-	RestoredFromVersion sql.NullInt64
-	CreatedAt           string
-}
-
-func (q *Queries) InsertProfileVersion(ctx context.Context, arg InsertProfileVersionParams) error {
-	_, err := q.db.ExecContext(ctx, insertProfileVersion,
-		arg.ID,
-		arg.UserID,
-		arg.VoiceID,
-		arg.Version,
-		arg.Snapshot,
-		arg.Origin,
-		arg.RestoredFromVersion,
 		arg.CreatedAt,
 	)
 	return err
@@ -444,45 +374,6 @@ func (q *Queries) InsertVoice(ctx context.Context, arg InsertVoiceParams) error 
 	return err
 }
 
-const listManualOverrides = `-- name: ListManualOverrides :many
-SELECT voice_id, user_id, layer, field, value, updated_at FROM voice_manual_overrides WHERE voice_id=? AND user_id=? ORDER BY layer, field
-`
-
-type ListManualOverridesParams struct {
-	VoiceID string
-	UserID  string
-}
-
-func (q *Queries) ListManualOverrides(ctx context.Context, arg ListManualOverridesParams) ([]VoiceManualOverride, error) {
-	rows, err := q.db.QueryContext(ctx, listManualOverrides, arg.VoiceID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []VoiceManualOverride
-	for rows.Next() {
-		var i VoiceManualOverride
-		if err := rows.Scan(
-			&i.VoiceID,
-			&i.UserID,
-			&i.Layer,
-			&i.Field,
-			&i.Value,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listPhotoUploadKeys = `-- name: ListPhotoUploadKeys :many
 SELECT object_key FROM voice_photo_uploads
 `
@@ -533,67 +424,6 @@ func (q *Queries) ListPhotoUploadsExpiredBefore(ctx context.Context, expiresAt s
 			&i.ObjectKey,
 			&i.ExpiresAt,
 			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProfileVersions = `-- name: ListProfileVersions :many
-SELECT v.id, v.user_id, v.voice_id, v.version, v.snapshot, v.origin, v.restored_from_version, v.created_at,
-       s.version AS sample_version
-FROM voice_profile_versions v
-LEFT JOIN voice_version_samples s
-       ON s.voice_id = v.voice_id AND s.user_id = v.user_id AND s.version = v.version
-WHERE v.voice_id=? AND v.user_id=? ORDER BY v.version DESC
-`
-
-type ListProfileVersionsParams struct {
-	VoiceID string
-	UserID  string
-}
-
-type ListProfileVersionsRow struct {
-	ID                  string
-	UserID              string
-	VoiceID             string
-	Version             int64
-	Snapshot            string
-	Origin              string
-	RestoredFromVersion sql.NullInt64
-	CreatedAt           string
-	SampleVersion       sql.NullInt64
-}
-
-// `has_sample` rather than the snapshot itself: the list must be able to say whether a version
-// can be previewed without carrying every post body it ever produced (VOICE-29).
-func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersionsParams) ([]ListProfileVersionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProfileVersions, arg.VoiceID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListProfileVersionsRow
-	for rows.Next() {
-		var i ListProfileVersionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.VoiceID,
-			&i.Version,
-			&i.Snapshot,
-			&i.Origin,
-			&i.RestoredFromVersion,
-			&i.CreatedAt,
-			&i.SampleVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -749,18 +579,16 @@ const listVoices = `-- name: ListVoices :many
 
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
-           SELECT 1 FROM voice_profiles p
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+           SELECT 1 FROM voice_analyses a
+           WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
        ) AS INTEGER) AS made,
        CAST((
            SELECT count(*) FROM voice_samples s
            WHERE s.voice_id = v.id AND s.user_id = v.user_id
        ) AS INTEGER) AS sample_count,
        CAST(coalesce((
-           SELECT pv.created_at FROM voice_profiles p
-           JOIN voice_profile_versions pv
-             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+           SELECT a.created_at FROM voice_analyses a
+           WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
        ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.user_id = ?
 ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id
@@ -779,7 +607,7 @@ type ListVoicesRow struct {
 	AnalyzedAt  string
 }
 
-// Every directory read carries made (a published analysis exists, POST-23), the sample count
+// Every directory read carries made (a current analysis exists, POST-23), the sample count
 // and the current analysis's publication time for the row's meta line (VOICE-52). The two
 // reads select the same columns, so their rows convert to one another.
 func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRow, error) {
@@ -814,6 +642,31 @@ func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRo
 		return nil, err
 	}
 	return items, nil
+}
+
+const moveAnalysisSlot = `-- name: MoveAnalysisSlot :execrows
+UPDATE voice_analyses SET slot = ?1
+WHERE voice_id = ?2 AND user_id = ?3 AND slot = ?4
+`
+
+type MoveAnalysisSlotParams struct {
+	ToSlot   string
+	VoiceID  string
+	UserID   string
+	FromSlot string
+}
+
+func (q *Queries) MoveAnalysisSlot(ctx context.Context, arg MoveAnalysisSlotParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, moveAnalysisSlot,
+		arg.ToSlot,
+		arg.VoiceID,
+		arg.UserID,
+		arg.FromSlot,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const photoKeyInUse = `-- name: PhotoKeyInUse :one
@@ -889,29 +742,6 @@ func (q *Queries) SetDefaultVoice(ctx context.Context, arg SetDefaultVoiceParams
 	return result.RowsAffected()
 }
 
-const setProfileHead = `-- name: SetProfileHead :exec
-INSERT INTO voice_profiles(voice_id, user_id, corpus_version, current_version, updated_at)
-VALUES (?, ?, 0, ?, ?)
-ON CONFLICT(voice_id) DO UPDATE SET current_version=excluded.current_version, updated_at=excluded.updated_at
-`
-
-type SetProfileHeadParams struct {
-	VoiceID        string
-	UserID         string
-	CurrentVersion int64
-	UpdatedAt      string
-}
-
-func (q *Queries) SetProfileHead(ctx context.Context, arg SetProfileHeadParams) error {
-	_, err := q.db.ExecContext(ctx, setProfileHead,
-		arg.VoiceID,
-		arg.UserID,
-		arg.CurrentVersion,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
 const softDeleteVoice = `-- name: SoftDeleteVoice :execrows
 UPDATE voices SET deleted_at = ?, updated_at = ?, is_default = 0
 WHERE id = ? AND user_id = ? AND deleted_at IS NULL
@@ -936,59 +766,4 @@ func (q *Queries) SoftDeleteVoice(ctx context.Context, arg SoftDeleteVoiceParams
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const upsertManualOverride = `-- name: UpsertManualOverride :exec
-INSERT INTO voice_manual_overrides(voice_id, user_id, layer, field, value, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
-ON CONFLICT(voice_id,layer,field) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
-`
-
-type UpsertManualOverrideParams struct {
-	VoiceID   string
-	UserID    string
-	Layer     string
-	Field     string
-	Value     string
-	UpdatedAt string
-}
-
-func (q *Queries) UpsertManualOverride(ctx context.Context, arg UpsertManualOverrideParams) error {
-	_, err := q.db.ExecContext(ctx, upsertManualOverride,
-		arg.VoiceID,
-		arg.UserID,
-		arg.Layer,
-		arg.Field,
-		arg.Value,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const upsertVersionSample = `-- name: UpsertVersionSample :exec
-INSERT INTO voice_version_samples (voice_id, user_id, version, content, created_at)
-VALUES (?, ?, ?, ?, ?)
-ON CONFLICT(voice_id, version) DO UPDATE SET
-    content = excluded.content,
-    created_at = excluded.created_at
-`
-
-type UpsertVersionSampleParams struct {
-	VoiceID   string
-	UserID    string
-	Version   int64
-	Content   string
-	CreatedAt string
-}
-
-// One snapshot per version: a later generation under the same head REPLACES it.
-func (q *Queries) UpsertVersionSample(ctx context.Context, arg UpsertVersionSampleParams) error {
-	_, err := q.db.ExecContext(ctx, upsertVersionSample,
-		arg.VoiceID,
-		arg.UserID,
-		arg.Version,
-		arg.Content,
-		arg.CreatedAt,
-	)
-	return err
 }

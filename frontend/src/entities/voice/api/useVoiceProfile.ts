@@ -4,7 +4,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import { VoiceService } from '@/shared/api'
 import type { VoiceProfile } from '../model/types'
-import { toVoiceProfile, voiceProfileQueryKey } from './voice-queries'
+import { toVoiceProfile, voiceAnalysisQueryKey } from './voice-queries'
 
 export function useVoiceProfile(
   ownerId: string,
@@ -17,7 +17,7 @@ export function useVoiceProfile(
 } {
   const transport = useTransport()
   const query = useQuery({
-    queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
+    queryKey: voiceAnalysisQueryKey(transport, ownerId, voiceId),
     queryFn: () => createClient(VoiceService, transport).getVoiceProfile({ voiceId }),
     enabled: ownerId !== '' && voiceId !== '',
   })

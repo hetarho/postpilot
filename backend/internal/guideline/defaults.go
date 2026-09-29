@@ -143,12 +143,23 @@ var postDefaults = []DefaultGuideline{
 		"tags는 먼저 떠오르는 단어를 그대로 쓰지 말고, 이 글의 내용에 이미 들어맞는 이름 가운데서 고르세요.",
 		"Tag rule",
 		"Choose the tags among labels already true of this post, not the first words that come to mind."),
+	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is
+	// EndingMaxConsecutive, which the text states in words.
+	{
+		Key: "ending_run", Kind: KindPost, KoreanTargetOnly: true,
+		Ko: DefaultCopy{"같은 종결어미 세 번 잇지 않기", "같은 종결어미로 끝나는 문장을 세 번 연이어 쓰지 마세요. 두 번까지는 괜찮습니다."},
+		En: DefaultCopy{"No three identical endings in a row", "Do not end three consecutive Korean sentences with the same ending; two in a row is fine."},
+	},
 	{
 		Key: "natural_korean", Kind: KindPost, KoreanTargetOnly: true,
 		Ko: DefaultCopy{"자연스러운 한국어 문체", naturalKorean},
 		En: DefaultCopy{"Natural Korean style", "Caps stock contrasts, formulaic closers, uniform sentences, hype and piled metaphors in Korean prose; where a voice is given above, the voice outranks it."},
 	},
 }
+
+// EndingMaxConsecutive is ENDING_MAX_CONSECUTIVE: the ending_run 기본 지침 allows two sentences in
+// a row with the same ending and says so in its text.
+const EndingMaxConsecutive = 2
 
 // clipDefaults are the 영상 지침 기본 지침 (GUIDE-42); the clip writing calls render them (T440).
 var clipDefaults = []DefaultGuideline{

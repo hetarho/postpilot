@@ -311,7 +311,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// The per-version generation snapshot (VOICE-29). Generation is the only context
 			// that depends on both post and voice, so it is the only one that may join a
 			// machine baseline to the profile version that produced it.
-			Samples: generationVersionSamples{service: c.voice},
 			// A video reaches a model as a LINK, minted per call and living exactly as long
 			// as a browser view URL does — the bytes never enter this process (VIDEO-10).
 			Videos: p.bucket, VideoURLTTL: cfg.PresignGetTTL,

@@ -3,17 +3,13 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
-// A version's generation snapshot IS a post content -- the raw AI output of the post that
-// version produced -- so it is typed as the message the client already decodes rather than as
-// a second, voice-flavoured copy of the same shape.
-import "postpilot/v1/post.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 // Every procedure is scoped by the authenticated context. No request carries a user id.
 service VoiceService {
-  // The voice directory. A voice owns exactly one profile and every row that can change
-  // it; an account has zero or more voices and at most one active, made default.
+  // The voice directory: an account has zero or more voices and at most one active, made
+  // default.
   rpc ListVoices(ListVoicesRequest) returns (ListVoicesResponse) {}
   rpc CreateVoice(CreateVoiceRequest) returns (CreateVoiceResponse) {}
   rpc RenameVoice(RenameVoiceRequest) returns (RenameVoiceResponse) {}
@@ -32,93 +28,153 @@ service VoiceService {
   rpc AnswerVoicePrompt(AnswerVoicePromptRequest) returns (AnswerVoicePromptResponse) {}
   // 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
   rpc AnalyzeVoice(AnalyzeVoiceRequest) returns (AnalyzeVoiceResponse) {}
-  rpc ListVoiceProfileVersions(ListVoiceProfileVersionsRequest) returns (ListVoiceProfileVersionsResponse) {}
-  // One version's generation snapshot, fetched when that version is OPENED. It is not part of
-  // the list: a list carrying every post body a voice ever produced would grow without bound
-  // for a reading nobody asked for. `has_sample` on the row says whether this call is worth
-  // making.
-  rpc GetVoiceProfileVersionSample(GetVoiceProfileVersionSampleRequest) returns (GetVoiceProfileVersionSampleResponse) {}
-  rpc UpdateVoiceOverride(UpdateVoiceOverrideRequest) returns (UpdateVoiceOverrideResponse) {}
-  rpc RestoreVoiceProfile(RestoreVoiceProfileRequest) returns (RestoreVoiceProfileResponse) {}
+  // 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
+  // and there is no redo (VOICE-30).
+  rpc RestorePreviousVoiceAnalysis(RestorePreviousVoiceAnalysisRequest) returns (RestorePreviousVoiceAnalysisResponse) {}
 }
 
-enum VoiceValueSource {
-  VOICE_VALUE_SOURCE_UNSPECIFIED = 0;
-  VOICE_VALUE_SOURCE_UNKNOWN = 1;
-  VOICE_VALUE_SOURCE_MEASURED = 2;
-  VOICE_VALUE_SOURCE_ANALYZED = 3;
-  VOICE_VALUE_SOURCE_MANUAL = 4;
+// The sentence an item is shown with, and the 학습 글 it came from ("" for a measured text).
+message VoiceExample {
+  string sentence = 1;
+  string material_id = 2;
 }
 
-message VoiceValue {
-  string value = 1;
-  VoiceValueSource source = 2;
-  bool unknown = 3;
+// The fingerprint's eight counted items (VOICE-24), each in its own unit. Shares are 0…1, rates
+// are per 100 sentences, and an item below its threshold is unknown rather than 0 (VOICE-26).
+message VoiceSuffix {
+  string text = 1;
+  int32 count = 2;
+}
+message VoiceEndingsItem {
+  bool unknown = 1;
+  double da = 2;
+  double haeyo = 3;
+  double seumnida = 4;
+  double other = 5;
+  repeated VoiceSuffix suffixes = 6;
+  VoiceExample example = 7;
+}
+message VoiceMarksItem {
+  bool unknown = 1;
+  double exclaim = 2;
+  double question = 3;
+  double tilde = 4;
+  double ellipsis = 5;
+  double period = 6;
+  double none = 7;
+  double repeat = 8;
+  VoiceExample example = 9;
+}
+message VoiceEmojiItem {
+  bool unknown = 1;
+  double emoji = 2;
+  double hh = 3;
+  double kk = 4;
+  double tears = 5;
+  VoiceExample example = 6;
+}
+message VoiceShapeItem {
+  bool unknown = 1;
+  double average_chars = 2;
+  double paragraph_average = 3;
+  int32 paragraph_min = 4;
+  int32 paragraph_max = 5;
+  double line_break_share = 6;
+  bool own_line = 7;
+  VoiceExample example = 8;
+}
+message VoiceOpeningsItem {
+  bool unknown = 1;
+  repeated string openings = 2;
+  repeated string closings = 3;
+  VoiceExample example = 4;
+}
+message VoiceWordRate {
+  string word = 1;
+  double per_hundred = 2;
+}
+message VoiceAdverbsItem {
+  bool unknown = 1;
+  // A real answer: no lexicon word repeats (from 30 sentences up).
+  bool none = 2;
+  repeated VoiceWordRate words = 3;
+  VoiceExample example = 4;
+}
+message VoicePersonItem {
+  bool unknown = 1;
+  double jeo = 2;
+  double uri = 3;
+  double na = 4;
+  // 저, 우리 or 나; empty when no form reaches 1 per 100 sentences.
+  string dominant = 5;
+  VoiceExample example = 6;
+}
+message VoiceHeadingsItem {
+  bool unknown = 1;
+  int32 count = 2;
+  double emoji_share = 3;
+  double question_share = 4;
+  double numbered_share = 5;
+  double list_share = 6;
+  string marker = 7;
+  VoiceExample example = 8;
+}
+message VoiceFingerprint {
+  int32 sentences = 1;
+  VoiceEndingsItem endings = 2;
+  VoiceMarksItem marks = 3;
+  VoiceEmojiItem emoji = 4;
+  VoiceShapeItem shape = 5;
+  VoiceOpeningsItem openings = 6;
+  VoiceAdverbsItem adverbs = 7;
+  VoicePersonItem person = 8;
+  VoiceHeadingsItem headings = 9;
 }
 
-message WeightedWord { string word = 1; repeated string alternatives = 2; int32 weight = 3; }
-message BannedItem { string value = 1; string reason = 2; }
-message EndingRatio { string ending = 1; double ratio = 2; }
-message VoiceLexical {
-  repeated WeightedWord preferred_words = 1;
-  repeated BannedItem banned_words = 2;
-  repeated BannedItem banned_patterns = 3;
-  VoiceValue description = 4;
+// What the analysis call wrote: only what cannot be counted (VOICE-24).
+message VoiceTic {
+  string phrase = 1;
+  string when = 2;
 }
-message VoiceEndings {
-  VoiceValue base_register = 1;
-  repeated EndingRatio distribution = 2;
-  repeated string banned_endings = 3;
-  repeated string signature_endings = 4;
-  repeated string constraints = 5;
+enum VoiceAiField {
+  VOICE_AI_FIELD_UNSPECIFIED = 0;
+  VOICE_AI_FIELD_IMPRESSION = 1;
+  VOICE_AI_FIELD_TICS = 2;
+  VOICE_AI_FIELD_SIGNATURE_PHRASES = 3;
 }
-message VoiceSyntax {
-  double average_sentence_chars = 1;
-  VoiceValue sentence_length = 2;
-  VoiceValue connective_style = 3;
-  repeated string preferred_connectives = 4;
-  VoiceValue nominalization = 5;
-  VoiceValue passive_tendency = 6;
-  // 7 was the English average sentence length in words, retired with English voices.
-  reserved 7;
-  reserved "average_sentence_words";
+message VoiceAiExample {
+  VoiceAiField field = 1;
+  string sentence = 2;
+  string material_id = 3;
 }
-message VoiceStructure {
-  VoiceValue intro_pattern = 1;
-  VoiceValue closing_pattern = 2;
-  int32 paragraph_sentences_min = 3;
-  int32 paragraph_sentences_max = 4;
-  VoiceValue heading_habit = 5;
-  VoiceValue list_habit = 6;
-  VoiceValue emoji_use = 7;
-}
-// Each axis carries presence: an axis the analysis did not answer is absent, not 0.
-message VoiceAxes {
-  optional int32 involvement = 1;
-  optional int32 narrativity = 2;
-  optional int32 persuasion_overtness = 3;
-  optional int32 abstractness = 4;
-  optional int32 addressee_focus = 5;
-  optional int32 humor = 6;
+message VoiceAiPart {
+  string impression = 1;
+  repeated VoiceTic tics = 2;
+  repeated string signature_phrases = 3;
+  repeated VoiceAiExample examples = 4;
 }
 
-enum VoiceLayer {
-  VOICE_LAYER_UNSPECIFIED = 0;
-  VOICE_LAYER_LEXICAL = 1;
-  VOICE_LAYER_ENDINGS = 2;
-  VOICE_LAYER_SYNTAX = 3;
-  VOICE_LAYER_STRUCTURE = 4;
-  VOICE_LAYER_AXES = 5;
+// One analysis (VOICE-26): the counted fingerprint, the AI part, how many 학습 글 it read, the
+// model and when.
+message VoiceAnalysis {
+  VoiceFingerprint counted = 1;
+  VoiceAiPart ai = 2;
+  int32 material_count = 3;
+  string analyze_model = 4;
+  string created_at = 5;
 }
-message VoiceProfileMeta { int64 version = 1; string updated_at = 2; int32 source_count = 3; }
-message StructuredVoiceProfile {
-  VoiceProfileMeta meta = 1; VoiceLexical lexical = 2; VoiceEndings endings = 3;
-  VoiceSyntax syntax = 4; VoiceStructure structure = 5; VoiceAxes axes = 6;
-  // 7, 8 and 9 were the contrast rules, the finalized-post few-shot bank and the sentence
-  // feedback log, retired in T465 with learning from finalized posts.
-  reserved 7, 8, 9;
-  reserved "contrast_rules", "few_shot_bank", "feedback_log";
-  bool empty = 10;
+
+// How the 학습 글 moved since the current analysis read them (VOICE-21).
+enum VoiceNoticeKind {
+  VOICE_NOTICE_KIND_UNSPECIFIED = 0;
+  // `새 학습 글 N편 · 다시 분석`
+  VOICE_NOTICE_KIND_ADDED = 1;
+  // `학습 글이 바뀌었어요 · 다시 분석`
+  VOICE_NOTICE_KIND_CHANGED = 2;
+}
+message VoiceNotice {
+  VoiceNoticeKind kind = 1;
+  int32 count = 2;
 }
 
 // Where in a post a prompt's answer belongs; the readiness meter needs each (VOICE-32).
@@ -145,26 +201,21 @@ message VoiceProfile {
   // Whether an analysis is published (VOICE-25), and the meter over every 학습 글.
   bool made = 12;
   VoiceReadiness readiness = 13;
-  // 1, 2 and 7 were the free-text styleguide, the free-text rules, and the two of them joined
-  // for display. That whole path is gone (VOICE-6): the profile is the structured profile, its
-  // earned rules and its sample excerpts, injected once. Reserved, never reused.
-  reserved 1, 2, 7;
-  string updated_at = 3;
+  // The current analysis, unset until made; whether a previous one exists to return to; and
+  // the notice when the 학습 글 moved since it read them.
+  VoiceAnalysis analysis = 14;
+  bool has_previous = 15;
+  VoiceNotice notice = 16;
+  // 1, 2, 7 were the free-text styleguide and rules; 3 and 6 the versioned structured profile,
+  // retired in T471 (VOICE-6). Reserved, never reused.
+  reserved 1, 2, 3, 6, 7;
+  reserved "updated_at", "structured";
   repeated VoiceSample samples = 4;
   string active_job_id = 5;
-  StructuredVoiceProfile structured = 6;
   // 8 and 9 were the finalized-post source count and whether profile validation could run,
   // retired in T465; 11 was the failure of the description seed, retired in T468.
   reserved 8, 9, 11;
   reserved "finalized_source_count", "can_validate", "seed_failure";
-}
-
-message VoiceProfileVersion {
-  int64 version = 1; StructuredVoiceProfile profile = 2; string origin = 3;
-  int64 restored_from_version = 4; string created_at = 5;
-  // Whether this version carries a generation snapshot that can be previewed. Presence only --
-  // the snapshot is fetched per version through GetVoiceProfileVersionSample.
-  bool has_sample = 6;
 }
 
 enum VoiceSampleKind {
@@ -310,17 +361,5 @@ message AnswerVoicePromptResponse { VoiceSample sample = 1; }
 message AnalyzeVoiceRequest { string voice_id = 1; ModelRef model = 2; }
 message AnalyzeVoiceResponse { string job_id = 1; }
 
-message ListVoiceProfileVersionsRequest { string voice_id = 1; }
-message ListVoiceProfileVersionsResponse { repeated VoiceProfileVersion versions = 1; }
-
-message GetVoiceProfileVersionSampleRequest { string voice_id = 1; int64 version = 2; }
-// `sample` is unset for a version that never produced a post, which is an ordinary state for a
-// version rather than a failure: the client says so instead of showing an empty preview.
-message GetVoiceProfileVersionSampleResponse {
-  PostContent sample = 1;
-  string created_at = 2;
-}
-message UpdateVoiceOverrideRequest { string voice_id = 4; VoiceLayer layer = 1; string field = 2; optional string value = 3; }
-message UpdateVoiceOverrideResponse { VoiceProfile profile = 1; }
-message RestoreVoiceProfileRequest { string voice_id = 2; int64 version = 1; }
-message RestoreVoiceProfileResponse { VoiceProfile profile = 1; }
+message RestorePreviousVoiceAnalysisRequest { string voice_id = 1; }
+message RestorePreviousVoiceAnalysisResponse { VoiceProfile profile = 1; }

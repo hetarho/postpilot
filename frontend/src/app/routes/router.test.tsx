@@ -409,14 +409,14 @@ describe('lazily loaded routes', () => {
     expect(router.state.location.pathname).toBe(path)
   })
 
-  // The five voice tabs share one chunk, so reaching any tab proves the whole tab area
-  // resolved; the tab row proves VoiceLayout's separate boundary resolved with it.
+  // The voice tabs share one chunk, so reaching any tab proves the whole tab area resolved;
+  // the tab row proves VoiceLayout's separate boundary resolved with it.
   it('renders a voice tab and its layout on a direct load', async () => {
-    const { router } = renderAppAt('/voices/voice-default/versions', { user: { id: 'alice' } })
+    const { router } = renderAppAt('/voices/voice-default/materials', { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('link', { name: '프로필' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '버전 기록' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/voices/voice-default/versions')
+    expect(await screen.findByRole('link', { name: '말투 분석' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '학습 글' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/voices/voice-default/materials')
   })
 })
 
@@ -664,8 +664,7 @@ describe('localized registered-route smoke', () => {
       templates: '템플릿',
       guidelines: '지침',
       about: '사진과 메모를 내 말투의 블로그 초안으로',
-      profile: '프로필',
-      versions: '버전 기록',
+      analysis: '말투 분석',
       materials: '학습 글',
       models: '모델 변경',
       retry: '다시 시도',
@@ -678,8 +677,7 @@ describe('localized registered-route smoke', () => {
       templates: 'Templates',
       guidelines: 'Guidelines',
       about: 'Photos and rough notes into a blog draft in your own voice',
-      profile: 'Profile',
-      versions: 'Version history',
+      analysis: 'Voice analysis',
       materials: 'Writing',
       models: 'Change models',
       retry: 'Try again',
@@ -724,13 +722,7 @@ describe('localized registered-route smoke', () => {
         {
           path: '/voices/voice-default',
           role: 'heading',
-          name: text.profile,
-          signedIn: true,
-        },
-        {
-          path: '/voices/voice-default/versions',
-          role: 'heading',
-          name: text.versions,
+          name: text.analysis,
           signedIn: true,
         },
         {
@@ -742,16 +734,16 @@ describe('localized registered-route smoke', () => {
         {
           path: '/voice',
           role: 'heading',
-          name: text.profile,
+          name: text.analysis,
           signedIn: true,
           expectedPath: '/voices/voice-default',
         },
         {
-          path: '/voice/versions',
+          path: '/voice/materials',
           role: 'heading',
-          name: text.versions,
+          name: text.materials,
           signedIn: true,
-          expectedPath: '/voices/voice-default/versions',
+          expectedPath: '/voices/voice-default/materials',
         },
         { path: '/ai-models', role: 'heading', name: text.models, signedIn: true },
         {

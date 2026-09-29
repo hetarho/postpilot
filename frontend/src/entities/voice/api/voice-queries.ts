@@ -2,43 +2,34 @@ import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import {
-  VoiceValueSource,
   type ProtoVoice,
+  type ProtoVoiceAnalysis,
+  type ProtoVoiceExample,
+  type ProtoVoiceFingerprint,
+  type ProtoVoiceNotice,
   type ProtoVoiceProfile,
   type ProtoVoiceRef,
   type ProtoVoiceReadiness,
   type ProtoVoiceSample,
-  type StructuredVoiceProfile as ProtoStructured,
-  type VoiceProfileVersion as ProtoVersion,
 } from '@/shared/api'
 import {
   emptyVoice,
-  type StructuredVoiceProfile,
   type Voice,
+  type VoiceAnalysis,
+  type VoiceExample,
+  type VoiceFingerprint,
+  type VoiceNotice,
   type VoiceProfile,
   type VoiceReadiness,
   type VoiceRef,
   type VoiceSample,
-  type VoiceSourceKind,
-  type VoiceVersion,
 } from '../model/types'
-import { requirePromptPart, requireSampleKind } from './voice-enums'
-
-const source = (value: VoiceValueSource): VoiceSourceKind =>
-  value === VoiceValueSource.MEASURED
-    ? 'measured'
-    : value === VoiceValueSource.ANALYZED
-      ? 'analyzed'
-      : value === VoiceValueSource.MANUAL
-        ? 'manual'
-        : 'unknown'
-const voiceValue = (
-  value: { value: string; source: VoiceValueSource; unknown: boolean } | undefined,
-) => ({
-  value: value?.value ?? '',
-  source: source(value?.source ?? VoiceValueSource.UNKNOWN),
-  unknown: value?.unknown ?? true,
-})
+import {
+  requireAiField,
+  requireNoticeKind,
+  requirePromptPart,
+  requireSampleKind,
+} from './voice-enums'
 
 export function toVoice(voice: ProtoVoice | undefined): Voice {
   if (!voice) return emptyVoice()
@@ -86,90 +77,123 @@ export function toReadiness(readiness: ProtoVoiceReadiness | undefined): VoiceRe
     missingParts: readiness?.missingParts.map(requirePromptPart) ?? [],
   }
 }
-export function toStructured(p: ProtoStructured | undefined): StructuredVoiceProfile {
+const example = (value: ProtoVoiceExample | undefined): VoiceExample | undefined =>
+  value?.sentence ? { sentence: value.sentence, materialId: value.materialId } : undefined
+
+/** The counted items as every screen shows them — the analysis, ②'s comparison, 검증. A missing
+ *  item reads as unknown, never as zeros. */
+export function toFingerprint(p: ProtoVoiceFingerprint | undefined): VoiceFingerprint {
   return {
-    version: p?.meta?.version ?? 0n,
-    updatedAt: p?.meta?.updatedAt ?? '',
-    sourceCount: p?.meta?.sourceCount ?? 0,
-    empty: p?.empty ?? true,
-    lexical: {
-      description: voiceValue(p?.lexical?.description),
-      preferredWords:
-        p?.lexical?.preferredWords.map((v) => ({
-          word: v.word,
-          alternatives: [...v.alternatives],
-          weight: v.weight,
-        })) ?? [],
-      bannedWords: p?.lexical?.bannedWords.map((v) => ({ value: v.value, reason: v.reason })) ?? [],
-      bannedPatterns:
-        p?.lexical?.bannedPatterns.map((v) => ({ value: v.value, reason: v.reason })) ?? [],
-    },
+    sentences: p?.sentences ?? 0,
     endings: {
-      baseRegister: voiceValue(p?.endings?.baseRegister),
-      distribution:
-        p?.endings?.distribution.map((v) => ({ ending: v.ending, ratio: v.ratio })) ?? [],
-      bannedEndings: [...(p?.endings?.bannedEndings ?? [])],
-      signatureEndings: [...(p?.endings?.signatureEndings ?? [])],
-      constraints: [...(p?.endings?.constraints ?? [])],
+      unknown: p?.endings?.unknown ?? true,
+      da: p?.endings?.da ?? 0,
+      haeyo: p?.endings?.haeyo ?? 0,
+      seumnida: p?.endings?.seumnida ?? 0,
+      other: p?.endings?.other ?? 0,
+      suffixes:
+        p?.endings?.suffixes.map((suffix) => ({ text: suffix.text, count: suffix.count })) ?? [],
+      example: example(p?.endings?.example),
     },
-    syntax: {
-      averageSentenceChars: p?.syntax?.averageSentenceChars ?? 0,
-      sentenceLength: voiceValue(p?.syntax?.sentenceLength),
-      connectiveStyle: voiceValue(p?.syntax?.connectiveStyle),
-      preferredConnectives: [...(p?.syntax?.preferredConnectives ?? [])],
-      nominalization: voiceValue(p?.syntax?.nominalization),
-      passiveTendency: voiceValue(p?.syntax?.passiveTendency),
+    marks: {
+      unknown: p?.marks?.unknown ?? true,
+      exclaim: p?.marks?.exclaim ?? 0,
+      question: p?.marks?.question ?? 0,
+      tilde: p?.marks?.tilde ?? 0,
+      ellipsis: p?.marks?.ellipsis ?? 0,
+      period: p?.marks?.period ?? 0,
+      none: p?.marks?.none ?? 0,
+      repeat: p?.marks?.repeat ?? 0,
+      example: example(p?.marks?.example),
     },
-    structure: {
-      introPattern: voiceValue(p?.structure?.introPattern),
-      closingPattern: voiceValue(p?.structure?.closingPattern),
-      paragraphSentencesMin: p?.structure?.paragraphSentencesMin ?? 0,
-      paragraphSentencesMax: p?.structure?.paragraphSentencesMax ?? 0,
-      headingHabit: voiceValue(p?.structure?.headingHabit),
-      listHabit: voiceValue(p?.structure?.listHabit),
-      emojiUse: voiceValue(p?.structure?.emojiUse),
+    emoji: {
+      unknown: p?.emoji?.unknown ?? true,
+      emoji: p?.emoji?.emoji ?? 0,
+      hh: p?.emoji?.hh ?? 0,
+      kk: p?.emoji?.kk ?? 0,
+      tears: p?.emoji?.tears ?? 0,
+      example: example(p?.emoji?.example),
     },
-    // No `?? 0` here: the wire carries axis presence, and collapsing absence into 0 is exactly
-    // the bug this screen used to show — a neutral measurement the model never made.
-    axes: {
-      involvement: p?.axes?.involvement,
-      narrativity: p?.axes?.narrativity,
-      persuasionOvertness: p?.axes?.persuasionOvertness,
-      abstractness: p?.axes?.abstractness,
-      addresseeFocus: p?.axes?.addresseeFocus,
-      humor: p?.axes?.humor,
+    shape: {
+      unknown: p?.shape?.unknown ?? true,
+      averageChars: p?.shape?.averageChars ?? 0,
+      paragraphAverage: p?.shape?.paragraphAverage ?? 0,
+      paragraphMin: p?.shape?.paragraphMin ?? 0,
+      paragraphMax: p?.shape?.paragraphMax ?? 0,
+      lineBreakShare: p?.shape?.lineBreakShare ?? 0,
+      ownLine: p?.shape?.ownLine ?? false,
+      example: example(p?.shape?.example),
+    },
+    openings: {
+      unknown: p?.openings?.unknown ?? true,
+      openings: [...(p?.openings?.openings ?? [])],
+      closings: [...(p?.openings?.closings ?? [])],
+      example: example(p?.openings?.example),
+    },
+    adverbs: {
+      unknown: p?.adverbs?.unknown ?? true,
+      none: p?.adverbs?.none ?? false,
+      words:
+        p?.adverbs?.words.map((word) => ({ word: word.word, perHundred: word.perHundred })) ?? [],
+      example: example(p?.adverbs?.example),
+    },
+    person: {
+      unknown: p?.person?.unknown ?? true,
+      jeo: p?.person?.jeo ?? 0,
+      uri: p?.person?.uri ?? 0,
+      na: p?.person?.na ?? 0,
+      dominant: p?.person?.dominant ?? '',
+      example: example(p?.person?.example),
+    },
+    headings: {
+      unknown: p?.headings?.unknown ?? true,
+      count: p?.headings?.count ?? 0,
+      emojiShare: p?.headings?.emojiShare ?? 0,
+      questionShare: p?.headings?.questionShare ?? 0,
+      numberedShare: p?.headings?.numberedShare ?? 0,
+      listShare: p?.headings?.listShare ?? 0,
+      marker: p?.headings?.marker ?? '',
+      example: example(p?.headings?.example),
     },
   }
 }
+
+export function toVoiceAnalysis(analysis: ProtoVoiceAnalysis): VoiceAnalysis {
+  return {
+    counted: toFingerprint(analysis.counted),
+    ai: {
+      impression: analysis.ai?.impression ?? '',
+      tics: analysis.ai?.tics.map((tic) => ({ phrase: tic.phrase, when: tic.when })) ?? [],
+      signaturePhrases: [...(analysis.ai?.signaturePhrases ?? [])],
+      examples:
+        analysis.ai?.examples.map((cited) => ({
+          field: requireAiField(cited.field),
+          sentence: cited.sentence,
+          materialId: cited.materialId,
+        })) ?? [],
+    },
+    materialCount: analysis.materialCount,
+    analyzeModel: analysis.analyzeModel,
+    createdAt: analysis.createdAt,
+  }
+}
+
+const toNotice = (notice: ProtoVoiceNotice | undefined): VoiceNotice => ({
+  kind: requireNoticeKind(notice?.kind),
+  count: notice?.count ?? 0,
+})
+
 export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoiceProfile {
   return {
     voice: toVoice(profile?.voice),
     made: profile?.made ?? false,
     readiness: toReadiness(profile?.readiness),
-    updatedAt: profile?.updatedAt ?? '',
     samples: profile?.samples.map(toVoiceSample) ?? [],
     activeJobId: profile?.activeJobId ?? '',
-    structured: toStructured(profile?.structured),
+    ...(profile?.analysis ? { analysis: toVoiceAnalysis(profile.analysis) } : {}),
+    hasPrevious: profile?.hasPrevious ?? false,
+    notice: toNotice(profile?.notice),
   }
-}
-export function toVoiceVersion(version: ProtoVersion): VoiceVersion {
-  return {
-    version: version.version,
-    profile: toStructured(version.profile),
-    origin: version.origin,
-    restoredFromVersion: version.restoredFromVersion,
-    createdAt: version.createdAt,
-    hasSample: version.hasSample,
-  }
-}
-
-export function voiceVersionSampleQueryKey(
-  transport: Transport,
-  ownerId: string,
-  voiceId: string,
-  version: bigint,
-) {
-  return ['voice-version-sample', transport, ownerId, voiceId, version.toString()] as const
 }
 
 // Every key carries the account AND the voice (VOICE-56): two voices of one
@@ -178,11 +202,9 @@ export function voiceVersionSampleQueryKey(
 export function voicesQueryKey(transport: Transport, ownerId: string) {
   return ['voices', transport, ownerId] as const
 }
-export function voiceProfileQueryKey(transport: Transport, ownerId: string, voiceId: string) {
-  return ['voice-profile', transport, ownerId, voiceId] as const
-}
-export function voiceVersionsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
-  return ['voice-versions', transport, ownerId, voiceId] as const
+/** The voice as its tabs read it: the analysis, the 학습 글 list and the meter (VOICE-56). */
+export function voiceAnalysisQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-analysis', transport, ownerId, voiceId] as const
 }
 /** One opened 학습 글, partitioned like every voice read (VOICE-56). */
 export function voiceSampleQueryKey(
@@ -198,12 +220,12 @@ export function voicePromptsQueryKey(transport: Transport) {
   return ['voice-prompts', transport] as const
 }
 
-/** The profile entry as a cache target, for a caller that has to say "this job's completion makes
- *  that profile stale" without holding a transport of its own (ARCH-17). */
-export function useVoiceProfileQueryKey(ownerId: string, voiceId: string) {
+/** The analysis entry as a cache target, for a caller that has to say "this job's completion
+ *  makes that analysis stale" without holding a transport of its own (ARCH-17). */
+export function useVoiceAnalysisQueryKey(ownerId: string, voiceId: string) {
   const transport = useTransport()
   return useMemo(
-    () => voiceProfileQueryKey(transport, ownerId, voiceId),
+    () => voiceAnalysisQueryKey(transport, ownerId, voiceId),
     [ownerId, transport, voiceId],
   )
 }

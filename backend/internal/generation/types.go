@@ -46,8 +46,6 @@ type WriteAnswer struct {
 	// nil only for a comparison candidate recorded before the storyline existed, which then
 	// keeps the post's own (GEN-72).
 	Storyline *Storyline
-	// ProfileVersion is the voice profile version the prompt was built from (VOICE-29).
-	ProfileVersion int64
 }
 
 // Storyline is a write's storyline: its paragraphs in order, and the attachment names the
@@ -230,16 +228,14 @@ type PostInput struct {
 	Published bool
 }
 
+// Profile is the voice's projection as the writer receives it (VOICE-46): the section text as
+// given, the excerpts a Korean target gets, and whether it is the portable one.
 type Profile struct {
 	// NoVoice is 말투 없음: the prompt carries no voice bytes at all (GEN-74).
-	NoVoice              bool
-	Styleguide           string
-	Excerpts             []string
-	EndingMaxConsecutive int
-	TargetLanguage       Language
-	Portable             bool
-	// Version is the published voice profile version the projection was read from.
-	Version int64
+	NoVoice  bool
+	Text     string
+	Excerpts []string
+	Portable bool
 }
 
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the

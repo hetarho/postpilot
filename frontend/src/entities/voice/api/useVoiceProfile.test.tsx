@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { GetVoiceProfileResponseSchema, VoiceProfileSchema } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import { DEFAULT_FAKE_VOICE } from '@/test/voice'
-import { voiceProfileQueryKey } from './voice-queries'
+import { voiceAnalysisQueryKey } from './voice-queries'
 import { useVoiceProfile } from './useVoiceProfile'
 
 describe('useVoiceProfile', () => {
@@ -17,8 +17,8 @@ describe('useVoiceProfile', () => {
     })
     const queryClient = createTestQueryClient()
     const seeded = [
-      [voiceProfileQueryKey(transport, 'alice', DEFAULT_FAKE_VOICE.id), 'alice-job'],
-      [voiceProfileQueryKey(transport, 'bob', 'voice-review'), 'bob-review-job'],
+      [voiceAnalysisQueryKey(transport, 'alice', DEFAULT_FAKE_VOICE.id), 'alice-job'],
+      [voiceAnalysisQueryKey(transport, 'bob', 'voice-review'), 'bob-review-job'],
     ] as const
     for (const [key, activeJobId] of seeded) {
       queryClient.setQueryData(

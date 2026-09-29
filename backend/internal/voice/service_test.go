@@ -52,26 +52,26 @@ func (f *changingCorpusModels) Complete(_ context.Context, _ llm.ModelRef, reque
 	if call == 0 {
 		close(f.started)
 		<-f.release
-		return llm.Response{Text: analysisAnswer("## 1. 종결어미 분포\nold\n## 8. never uses\nold")}, nil
+		return llm.Response{Text: analysisAnswer("old")}, nil
 	}
-	return llm.Response{Text: analysisAnswer("## 1. 종결어미 분포\nnew\n## 8. never uses\nnew")}, nil
+	return llm.Response{Text: analysisAnswer("new")}, nil
 }
 
-// analysisAnswer is the analysis call's JSON answer around a nine-section style guide, which
-// is the profile's lexical description (VOICE-25, VOICE-27).
-func analysisAnswer(guide string) string {
+// analysisAnswer is the analysis call's JSON answer: the AI part alone (VOICE-24).
+func analysisAnswer(impression string, examples ...string) string {
+	cited := make([]map[string]string, 0, len(examples))
+	for _, sentence := range examples {
+		cited = append(cited, map[string]string{"field": "impression", "sentence": sentence})
+	}
 	encoded, err := json.Marshal(map[string]any{
-		"lexical_description": guide, "base_register": "", "connective_style": "", "intro_pattern": "",
-		"closing_pattern": "", "heading_habit": "", "list_habit": "", "emoji_use": "", "axes": map[string]int{},
+		"impression": impression, "tics": []map[string]string{{"phrase": "진짜", "when": "감탄할 때"}},
+		"signature_phrases": []string{"~더라구요"}, "examples": cited,
 	})
 	if err != nil {
 		panic(err)
 	}
 	return string(encoded)
 }
-
-// A nine-section guide in the shape the analysis refuses anything short of.
-const koreanGuide = "1. 종결어미 분포: 해요체\n8. 절대 사용하지 않는 표현 (never uses): 과장"
 
 // structured makes Resolve report a model that declares structured output, so a test can
 // assert the analysis call attaches its schema only then. analyzeRef serves the analyze stage,
@@ -174,7 +174,7 @@ func newVoiceHarness(t *testing.T) *voiceHarness {
 // makeVoice publishes an analysis, which is what makes a voice (VOICE-25).
 func (h *voiceHarness) makeVoice(t *testing.T, user, voiceID string) {
 	t.Helper()
-	if _, err := h.store.PublishProfileVersion(context.Background(), user, voiceID, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+	if err := h.store.PublishAnalysis(context.Background(), user, voiceID, voice.Analysis{AnalyzeModel: analyzeRef.String(), CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -238,7 +238,7 @@ func TestCreateRenameValidateAndUniqueNames(t *testing.T) {
 	// A new voice is genuinely empty even though the default has data.
 	h.addSample(t, "alice", h.voice("alice"), "default-sample", "기본", longSample("기"), time.Now())
 	profile, err := h.svc.Get(ctx, "alice", review.ID)
-	if err != nil || len(profile.Samples) != 0 || !profile.Structured.Empty || profile.Voice.ID != review.ID {
+	if err != nil || len(profile.Samples) != 0 || profile.Analysis != nil || profile.Voice.ID != review.ID {
 		t.Fatalf("new voice inherited data: %+v err=%v", profile, err)
 	}
 }
@@ -414,8 +414,9 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	if err != nil || len(formalProfile.Samples) != 1 || formalProfile.Samples[0].ID != "formal-sample" || formalProfile.ActiveJobID != "" {
 		t.Fatalf("formal profile leaked/missing: %+v err=%v", formalProfile, err)
 	}
-	formalPrompt, err := h.svc.PromptProfileForTopic(ctx, "alice", formal.ID, "", nil)
-	if err != nil || formalPrompt.Empty || len(formalPrompt.Excerpts) != 1 || !strings.HasPrefix(formalPrompt.Excerpts[0], "습") {
+	h.makeVoice(t, "alice", formal.ID)
+	formalPrompt, err := h.svc.PromptProfileForTopic(ctx, "alice", formal.ID, "", voice.LanguageKorean, "")
+	if err != nil || len(formalPrompt.Excerpts) != 1 || !strings.HasPrefix(formalPrompt.Excerpts[0], "습") {
 		t.Fatalf("formal prompt borrowed from casual: excerpts=%v err=%v", formalPrompt.Excerpts, err)
 	}
 	// A same-account sample id from the other voice is unreachable, as is a foreign voice.
@@ -452,7 +453,7 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	if _, err := h.svc.AddSample(ctx, "alice", gone.ID, "", longSample("가")); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("sample on deleted = %v", err)
 	}
-	if _, err := h.svc.PromptProfileForTopic(ctx, "alice", gone.ID, "", nil); !errors.Is(err, voice.ErrVoiceDeleted) {
+	if _, err := h.svc.PromptProfileForTopic(ctx, "alice", gone.ID, "", voice.LanguageKorean, ""); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("prompt for deleted = %v", err)
 	}
 	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: gone.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {}); !errors.Is(err, voice.ErrVoiceDeleted) {
@@ -714,65 +715,162 @@ func TestReadinessReachesTheDirectoryAndTheProfile(t *testing.T) {
 }
 
 // VOICE-46: the projection carries FewShotMax excerpts, newest first, each cut at the excerpt
-// maximum when no sentence ends near the target.
-func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
+// maximum when no sentence ends near the target; a voice not yet made projects nothing.
+func TestProfileForPromptMostRecentTruncatedAndUnmade(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	limits := voice.PersonalizationThresholds()
-	projection, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
-	if err != nil || projection.Styleguide != "" || len(projection.Excerpts) != 0 || !projection.Empty {
-		t.Fatalf("empty profile = %+v err=%v", projection, err)
+	if _, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", voice.LanguageKorean, ""); !errors.Is(err, voice.ErrVoiceNotMade) {
+		t.Fatalf("an unmade voice projected: %v", err)
 	}
 	base := time.Now().Add(-time.Hour)
 	markers := []rune{'가', '나', '다', '라'}
 	for i := range 4 {
-		body := strings.Repeat(string(markers[i]), limits.FewShotExcerptMaxChars+10)
+		body := strings.Repeat(string(markers[i]), voice.FewShotExcerptMaxChars+10)
 		h.addSample(t, "alice", alice, string(rune('a'+i)), "sample", body, base.Add(time.Duration(i)*time.Minute))
 	}
-	projection, err = h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
+	h.makeVoice(t, "alice", alice)
+	projection, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", voice.LanguageKorean, "")
 	excerpts := projection.Excerpts
-	if err != nil || projection.Empty || len(excerpts) != limits.FewShotMax {
-		t.Fatalf("profile prompt = lens=%d %v err=%v", len(excerpts), projection.Empty, err)
+	if err != nil || len(excerpts) != voice.FewShotMax || !strings.HasPrefix(projection.Text, "[말투]") {
+		t.Fatalf("profile prompt = %d excerpts, %q err=%v", len(excerpts), projection.Text, err)
 	}
 	if []rune(excerpts[0])[0] != '라' {
 		t.Fatalf("first excerpt is not most recent: %q", []rune(excerpts[0])[0])
 	}
 	for _, excerpt := range excerpts {
-		if len([]rune(excerpt)) != limits.FewShotExcerptMaxChars {
+		if len([]rune(excerpt)) != voice.FewShotExcerptMaxChars {
 			t.Fatalf("excerpt length = %d", len([]rune(excerpt)))
 		}
 	}
+	// The checked answer is never excerpted (VOICE-43), and a topic match comes first.
+	excluded, _ := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", voice.LanguageKorean, "d")
+	for _, excerpt := range excluded.Excerpts {
+		if []rune(excerpt)[0] == '라' {
+			t.Fatal("the excluded 학습 글 was excerpted")
+		}
+	}
+	topical, _ := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "가가 여행", voice.LanguageKorean, "")
+	if []rune(topical.Excerpts[0])[0] != '가' {
+		t.Fatalf("a topic match did not come first: %q", []rune(topical.Excerpts[0])[0])
+	}
+	english, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", voice.LanguageEnglish, "")
+	if err != nil || !english.Portable || len(english.Excerpts) != 0 || !strings.HasPrefix(english.Text, "[Portable voice habits]") {
+		t.Fatalf("English projection = %+v err=%v", english, err)
+	}
 }
 
-func TestAnalyzePublishesStructuredProfile(t *testing.T) {
+// VOICE-23 … VOICE-26: an analysis counts the fingerprint, makes one call, keeps only the AI's
+// examples quoted verbatim from a 학습 글 and publishes; a failed or incomplete call publishes
+// nothing.
+func TestAnalyzeCountsCallsOnceAndPublishes(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
-	h.models.response = analysisAnswer("## 평균 문장 길이\n짧음")
-	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err == nil || !strings.Contains(err.Error(), "종결어미") {
-		t.Fatalf("missing ending section error = %v", err)
+	body := strings.Repeat("진짜 맛있었어요!\n", 12) + "국물이 정말   진했어요."
+	h.addSample(t, "alice", alice, "sample", "국숫집", body, time.Now())
+	job := voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}
+	for _, broken := range []string{"## 평균 문장 길이\n짧음", `{"impression": "짧아요"}`} {
+		h.models.response = broken
+		if err := h.svc.Analyze(context.Background(), job, func(string, int, int) {}); err == nil {
+			t.Fatalf("a broken answer %q published", broken)
+		}
+		if current, _ := h.store.CurrentAnalysis(context.Background(), "alice", alice); current != nil {
+			t.Fatalf("a broken answer published %+v", current)
+		}
 	}
-	profile, _ := h.store.GetProfile(context.Background(), "alice", alice)
-	if profile.Structured.Version != 0 {
-		t.Fatalf("invalid analysis mutated profile: %+v", profile)
-	}
-
-	guide := "## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장"
-	h.models.response = analysisAnswer(guide)
+	h.models.completeCalls = 0
+	h.models.response = analysisAnswer("밝고 들뜬 말투예요. 느낌표가 많아요. 세 번째 문장은 버려요.", "국물이 정말 진했어요.", "지어낸 문장이에요.")
 	var progress [][3]any
-	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(stage string, done, total int) {
+	if err := h.svc.Analyze(context.Background(), job, func(stage string, done, total int) {
 		progress = append(progress, [3]any{stage, done, total})
 	}); err != nil {
 		t.Fatal(err)
 	}
-	profile, _ = h.store.GetProfile(context.Background(), "alice", alice)
-	// The analysis text lands in the published structured version's lexical description, once
-	// (VOICE-25).
-	if profile.Structured.Lexical.Description.Value != guide || len(progress) != 2 {
-		t.Fatalf("successful analysis = profile=%+v progress=%+v", profile, progress)
+	current, err := h.store.CurrentAnalysis(context.Background(), "alice", alice)
+	if err != nil || current == nil || h.models.completeCalls != 1 || len(progress) != 2 {
+		t.Fatalf("analysis = %+v calls=%d progress=%v err=%v", current, h.models.completeCalls, progress, err)
 	}
-	if !strings.Contains(h.models.request.Messages[0].Parts[0].Text, longSample("글")) {
-		t.Fatal("analysis request omitted the accumulated corpus")
+	if current.AI.Impression != "밝고 들뜬 말투예요. 느낌표가 많아요." || len(current.AI.Examples) != 1 || current.AI.Examples[0].MaterialID != "sample" {
+		t.Fatalf("AI part = %+v", current.AI)
+	}
+	if current.Counted.Sentences != 13 || current.Counted.Marks.Unknown || current.Counted.Marks.Exclaim < 0.9 || strings.Join(current.MaterialIDs, ",") != "sample" {
+		t.Fatalf("counted = %+v ids=%v", current.Counted.Marks, current.MaterialIDs)
+	}
+	request := h.models.request.Messages[0].Parts[0].Text
+	if !strings.Contains(request, "[제품이 센 습관]") || !strings.Contains(request, "===== 학습 글 1: 국숫집 =====") || !strings.Contains(request, "느낌표") {
+		t.Fatalf("analysis request = %s", request)
+	}
+	if !strings.Contains(h.models.request.System, "수치는 다시 세지 말고") {
+		t.Fatalf("analysis system prompt = %q", h.models.request.System)
+	}
+}
+
+// VOICE-30: 이전 분석으로 되돌리기 makes the previous analysis current and discards the replaced
+// one; there is no redo, nothing to return to without a previous one, and a tombstone refuses.
+func TestRestoreThePreviousAnalysisOnce(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	if _, err := h.svc.RestorePreviousAnalysis(ctx, "alice", alice); !errors.Is(err, voice.ErrNoPreviousAnalysis) {
+		t.Fatalf("an unmade voice's undo = %v", err)
+	}
+	first := voice.Analysis{AI: voice.AIPart{Impression: "첫 분석"}, AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}
+	second := voice.Analysis{AI: voice.AIPart{Impression: "다시 분석"}, AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}
+	for _, analysis := range []voice.Analysis{first, second} {
+		if err := h.store.PublishAnalysis(ctx, "alice", alice, analysis); err != nil {
+			t.Fatal(err)
+		}
+	}
+	profile, _ := h.svc.Get(ctx, "alice", alice)
+	if profile.Analysis.AI.Impression != "다시 분석" || !profile.HasPrevious {
+		t.Fatalf("before undo = %+v previous=%v", profile.Analysis, profile.HasPrevious)
+	}
+	restored, err := h.svc.RestorePreviousAnalysis(ctx, "alice", alice)
+	if err != nil || restored.Analysis.AI.Impression != "첫 분석" || restored.HasPrevious {
+		t.Fatalf("after undo = %+v err=%v", restored, err)
+	}
+	if _, err := h.svc.RestorePreviousAnalysis(ctx, "alice", alice); !errors.Is(err, voice.ErrNoPreviousAnalysis) {
+		t.Fatalf("a second undo = %v", err)
+	}
+	if _, err := h.svc.DeleteVoice(ctx, "alice", alice); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.svc.RestorePreviousAnalysis(ctx, "alice", alice); !errors.Is(err, voice.ErrVoiceDeleted) {
+		t.Fatalf("a tombstone's undo = %v", err)
+	}
+}
+
+// VOICE-21: the notice says 새 학습 글 N편 after additions and 학습 글이 바뀌었어요 once a 학습 글 the
+// analysis read is gone — whose examples leave at once.
+func TestTheNoticeAndADeletedExample(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "s1", "하나", "첫 글이에요.", time.Now().Add(-time.Hour))
+	h.addSample(t, "alice", alice, "s2", "둘", "둘째 글이에요.", time.Now().Add(-time.Minute))
+	analysis := voice.Analysis{
+		Counted:     voice.Fingerprint{Marks: voice.Marks{Example: voice.Example{Sentence: "첫 글이에요.", MaterialID: "s1"}}},
+		AI:          voice.AIPart{Impression: "담담해요.", Examples: []voice.AIExample{{Field: voice.AIImpression, Sentence: "첫 글이에요.", MaterialID: "s1"}}},
+		MaterialIDs: []string{"s1", "s2"}, AnalyzeModel: "stub/analyze", CreatedAt: time.Now(),
+	}
+	if err := h.store.PublishAnalysis(ctx, "alice", alice, analysis); err != nil {
+		t.Fatal(err)
+	}
+	if profile, _ := h.svc.Get(ctx, "alice", alice); profile.Notice != (voice.Notice{}) {
+		t.Fatalf("a fresh analysis has a notice: %+v", profile.Notice)
+	}
+	h.addSample(t, "alice", alice, "s3", "셋", "셋째 글이에요.", time.Now())
+	if profile, _ := h.svc.Get(ctx, "alice", alice); profile.Notice != (voice.Notice{Kind: voice.NoticeAdded, Count: 1}) {
+		t.Fatalf("after an addition = %+v", profile.Notice)
+	}
+	if err := h.svc.DeleteSample(ctx, "alice", alice, "s1"); err != nil {
+		t.Fatal(err)
+	}
+	profile, _ := h.svc.Get(ctx, "alice", alice)
+	if profile.Notice.Kind != voice.NoticeChanged {
+		t.Fatalf("after a deletion = %+v", profile.Notice)
+	}
+	if profile.Analysis.Counted.Marks.Example != (voice.Example{}) || len(profile.Analysis.AI.Examples) != 0 {
+		t.Fatalf("a deleted 학습 글's example survived: %+v %+v", profile.Analysis.Counted.Marks.Example, profile.Analysis.AI.Examples)
 	}
 }
 
@@ -783,7 +881,7 @@ func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
 	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
-	h.models.response = analysisAnswer("## 1. 종결어미 분포\n해요체\n## 8. 절대 사용하지 않는 표현 (never uses)\n과장")
+	h.models.response = analysisAnswer("담담해요.")
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -818,9 +916,9 @@ func TestAnAnalysisPublishesWhatItReadAndNeverRepeats(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || !strings.Contains(profile.Structured.Lexical.Description.Value, "old") || profile.Structured.SourceCount != 1 {
-		t.Fatalf("published analysis = %+v err=%v", profile.Structured, err)
+	current, err := h.store.CurrentAnalysis(context.Background(), "alice", alice)
+	if err != nil || current == nil || current.AI.Impression != "old" || len(current.MaterialIDs) != 1 {
+		t.Fatalf("published analysis = %+v err=%v", current, err)
 	}
 	models.mu.Lock()
 	defer models.mu.Unlock()
@@ -856,10 +954,10 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 	if err := <-casualDone; err != nil {
 		t.Fatal(err)
 	}
-	casualProfile, _ := h.store.GetProfile(context.Background(), "alice", casual)
-	formalProfile, _ := h.store.GetProfile(context.Background(), "alice", formal.ID)
-	casualAnalysis := casualProfile.Structured.Lexical.Description.Value
-	formalAnalysis := formalProfile.Structured.Lexical.Description.Value
+	casualCurrent, _ := h.store.CurrentAnalysis(context.Background(), "alice", casual)
+	formalCurrent, _ := h.store.CurrentAnalysis(context.Background(), "alice", formal.ID)
+	casualAnalysis := casualCurrent.AI.Impression
+	formalAnalysis := formalCurrent.AI.Impression
 	if !strings.Contains(casualAnalysis, "old") || !strings.Contains(formalAnalysis, "new") {
 		t.Fatalf("published analyses crossed: casual=%q formal=%q", casualAnalysis, formalAnalysis)
 	}

@@ -41,7 +41,6 @@ it('sends every legacy tab to the same tab of the default voice', async () => {
   ]
   // The account's actual default, not the first voice, and nothing is created on the way.
   expect(await target('')).toBe('/voices/voice-b')
-  expect(await target('versions')).toBe('/voices/voice-b/versions')
   expect(await target('materials')).toBe('/voices/voice-b/materials')
   // The 가져오기 tab is gone and lands on the profile, like one that never existed.
   expect(await target('import')).toBe('/voices/voice-b')
@@ -54,7 +53,7 @@ it('sends every legacy tab to the same tab of the default voice', async () => {
 
 it('sends an account with nothing to show to the directory', async () => {
   loadVoices = async () => []
-  expect(await target('versions')).toBe('/voices')
+  expect(await target('materials')).toBe('/voices')
   // An outage is not a reason to invent a voice: the directory is what answers for it.
   loadVoices = async () => {
     throw new Error('offline')

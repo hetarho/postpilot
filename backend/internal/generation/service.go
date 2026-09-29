@@ -22,7 +22,6 @@ type Service struct {
 	guidelines   GuidelinesForPrompt
 	memories     MemoriesForPrompt
 	candidates   GuidelineCandidates
-	samples      VersionSampleWriter
 	batchSize    int
 	videos       VideoLinker
 	videoURLTTL  time.Duration
@@ -82,8 +81,6 @@ type Deps struct {
 	// QualityRules renders the ticked rules still over band, read once at enqueue, for a
 	// write only (GEN-51).
 	QualityRules QualityRulesForPrompt
-	// Samples is the voice context's per-version snapshot recorder.
-	Samples VersionSampleWriter
 	// Videos mints the signed link a video reaches a model through (VIDEO-10); the
 	// bytes never enter this process. VideoURLTTL is that link's lifetime.
 	Videos      VideoLinker
@@ -100,7 +97,7 @@ func NewService(posts Posts, profiles Profiles, models LLM, images ImageReader, 
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos, "quality rules": deps.QualityRules} {
+	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "video linker": deps.Videos, "quality rules": deps.QualityRules} {
 		if dep == nil {
 			panic("generation: " + name + " collaborator is required")
 		}
@@ -109,27 +106,13 @@ func NewService(posts Posts, profiles Profiles, models LLM, images ImageReader, 
 		panic("generation: video link TTL must be positive")
 	}
 	return &Service{posts: posts, profiles: profiles, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
-		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
+		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
 		qualityRules: deps.QualityRules}
 }
 
-// recordVersionSample copies what a run produced into the voice's current head version. It is
-// called AFTER the machine baseline is written, and its failure is swallowed on template: a
-// snapshot is a record of a post, and losing the record must never lose the post ([I1] is about
-// history outliving its subject, not the other way round). The voice id is the one the run was
-// frozen against, so a reassignment mid-run cannot file the snapshot under the wrong profile.
-func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID string, version int64, content PostContent) {
-	if s.samples == nil || voiceID == "" {
-		return
-	}
-	if err := s.samples.RecordVersionSample(ctx, userID, voiceID, version, content); err != nil {
-		slog.WarnContext(ctx, "record voice version sample failed", "error", err, "voice_id", voiceID)
-	}
-}
-
 // recordGuidelineCandidate records what the user ASKED FOR, after the revised content is
-// already persisted. Its failure is swallowed for the same reason recordVersionSample's is:
-// the result the user is looking at is authoritative, and turning a bookkeeping error into a
+// already persisted. Its failure is swallowed: the result the user is looking at is
+// authoritative, and turning a bookkeeping error into a
 // failed job would throw that work away. Nothing is recorded for a failed, cancelled or
 // still-running revision, which follows from the call position alone.
 func (s *Service) recordGuidelineCandidate(ctx context.Context, userID, postSlug, instruction string) {

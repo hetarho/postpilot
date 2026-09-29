@@ -1,5 +1,10 @@
-import { VoicePromptPart as ProtoPart, VoiceSampleKind as ProtoKind } from '@/shared/api'
-import type { VoicePromptPart, VoiceSampleKind } from '../model/types'
+import {
+  VoiceAiField as ProtoAiField,
+  VoiceNoticeKind as ProtoNoticeKind,
+  VoicePromptPart as ProtoPart,
+  VoiceSampleKind as ProtoKind,
+} from '@/shared/api'
+import type { VoiceAiField, VoiceNotice, VoicePromptPart, VoiceSampleKind } from '../model/types'
 
 const PART_FROM_PROTO = new Map<ProtoPart, VoicePromptPart>([
   [ProtoPart.OPENING, 'opening'],
@@ -23,5 +28,31 @@ export function requirePromptPart(value: ProtoPart): VoicePromptPart {
 export function requireSampleKind(value: ProtoKind): VoiceSampleKind {
   const kind = KIND_FROM_PROTO.get(value)
   if (!kind) throw new Error(`unsupported voice sample kind enum: ${String(value)}`)
+  return kind
+}
+
+const AI_FIELD_FROM_PROTO = new Map<ProtoAiField, VoiceAiField>([
+  [ProtoAiField.IMPRESSION, 'impression'],
+  [ProtoAiField.TICS, 'tics'],
+  [ProtoAiField.SIGNATURE_PHRASES, 'signature_phrases'],
+])
+
+const NOTICE_FROM_PROTO = new Map<ProtoNoticeKind, VoiceNotice['kind']>([
+  [ProtoNoticeKind.UNSPECIFIED, 'none'],
+  [ProtoNoticeKind.ADDED, 'added'],
+  [ProtoNoticeKind.CHANGED, 'changed'],
+])
+
+/** The field an AI example shows; one this build does not know fails the read (ARCH-3). */
+export function requireAiField(value: ProtoAiField): VoiceAiField {
+  const field = AI_FIELD_FROM_PROTO.get(value)
+  if (!field) throw new Error(`unsupported voice AI field enum: ${String(value)}`)
+  return field
+}
+
+/** The notice kind; an unset notice is none. */
+export function requireNoticeKind(value: ProtoNoticeKind | undefined): VoiceNotice['kind'] {
+  const kind = NOTICE_FROM_PROTO.get(value ?? ProtoNoticeKind.UNSPECIFIED)
+  if (!kind) throw new Error(`unsupported voice notice enum: ${String(value)}`)
   return kind
 }

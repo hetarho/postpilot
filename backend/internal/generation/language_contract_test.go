@@ -17,7 +17,6 @@ type languageRecordingProfiles struct {
 func (p *languageRecordingProfiles) ProfileForPrompt(_ context.Context, _, _ string, target Language) (Profile, error) {
 	p.targets = append(p.targets, target)
 	profile := p.profile
-	profile.TargetLanguage = target
 	return profile, nil
 }
 
@@ -51,7 +50,7 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 		Title: "title", Memo: "memo", TargetLanguage: LanguageEnglish,
 	}}
 	jobs := &fakeJobs{id: "job"}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Text: "PORTABLE", Portable: true}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "The output language is English") {
@@ -139,16 +138,15 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 
 func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *testing.T) {
 	leaky := Profile{
-		Styleguide: "PORTABLE-STRUCTURE", Excerpts: []string{"DO-NOT-LEAK-EXCERPT"},
-		EndingMaxConsecutive: 7, TargetLanguage: LanguageEnglish, Portable: true,
+		Text: "[Portable voice habits]\nPORTABLE-STRUCTURE", Excerpts: []string{"DO-NOT-LEAK-EXCERPT"}, Portable: true,
 	}
 	english, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: leaky, Memo: "memo", Title: "title", TagCount: 4})
-	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE alt and caption", "PORTABLE-STRUCTURE", "Portable voice profile"} {
+	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE alt and caption", "PORTABLE-STRUCTURE", "[Portable voice habits]"} {
 		if !strings.Contains(english, required) {
 			t.Errorf("English prompt missing %q", required)
 		}
 	}
-	for _, forbidden := range []string{"A가 아니라 B", "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-EXCERPT", "종결어미 제약"} {
+	for _, forbidden := range []string{"A가 아니라 B", "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-EXCERPT", "종결어미 제약", "[글 예시 발췌]"} {
 		if strings.Contains(english, forbidden) {
 			t.Errorf("English portable prompt leaked %q", forbidden)
 		}
@@ -197,7 +195,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	models.complete = func(ref llm.ModelRef, _ llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"title":"` + ref.ModelID + `","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"body"}]}`}, nil
 	}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Text: "PORTABLE", Portable: true}}
 	svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
@@ -207,7 +205,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 		t.Fatalf("snapshot target = %q", got)
 	}
 	posts.input.TargetLanguage = LanguageKorean
-	profiles.profile.Styleguide = "MUTATED"
+	profiles.profile.Text = "MUTATED"
 	prepared, err := svc.PrepareWriteInput(context.Background(), raw, func(string, int, int) {})
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +237,7 @@ func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testin
 		TargetLanguage: LanguageEnglish, ContentLanguage: languagePointer(LanguageEnglish), Content: revisionContent("pass-0"),
 	}}
 	jobs := &fakeJobs{id: "revision-job"}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Text: "PORTABLE", Portable: true}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "Preserve English") || !strings.Contains(request.System, "Translation is outside revision semantics") {

@@ -137,15 +137,12 @@ type snapshotBlock struct {
 	Items   []string `json:"Items"`
 }
 
+// snapshotProfile freezes the projection text itself (MODEL-31): a comparison writes from the
+// voice as it was, whatever the voice becomes.
 type snapshotProfile struct {
-	Styleguide           string   `json:"Styleguide"`
-	Excerpts             []string `json:"Excerpts"`
-	EndingMaxConsecutive int      `json:"EndingMaxConsecutive"`
-	TargetLanguage       string   `json:"TargetLanguage"`
-	Portable             bool     `json:"Portable"`
-	// Version is the profile version the projection was read from; absent in a snapshot taken
-	// before it was carried (VOICE-29).
-	Version int64 `json:"Version,omitempty"`
+	Text     string   `json:"Text"`
+	Excerpts []string `json:"Excerpts"`
+	Portable bool     `json:"Portable"`
 }
 
 // observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
@@ -397,11 +394,7 @@ func toSnapshotProfile(profile Profile) *snapshotProfile {
 	if profile.NoVoice {
 		return nil
 	}
-	return &snapshotProfile{
-		Styleguide: profile.Styleguide, Excerpts: copyTexts(profile.Excerpts),
-		EndingMaxConsecutive: profile.EndingMaxConsecutive,
-		TargetLanguage:       string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
-	}
+	return &snapshotProfile{Text: profile.Text, Excerpts: copyTexts(profile.Excerpts), Portable: profile.Portable}
 }
 
 // fromSnapshotProfile reads a frozen projection back; an absent one is 말투 없음. Every
@@ -410,9 +403,5 @@ func fromSnapshotProfile(wire *snapshotProfile) Profile {
 	if wire == nil {
 		return Profile{NoVoice: true}
 	}
-	return Profile{
-		Styleguide: wire.Styleguide, Excerpts: copyTexts(wire.Excerpts),
-		EndingMaxConsecutive: wire.EndingMaxConsecutive,
-		TargetLanguage:       Language(wire.TargetLanguage), Portable: wire.Portable, Version: wire.Version,
-	}
+	return Profile{Text: wire.Text, Excerpts: copyTexts(wire.Excerpts), Portable: wire.Portable}
 }

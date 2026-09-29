@@ -10,19 +10,17 @@ import {
   RenameVoiceResponseSchema,
   RestoreVoiceResponseSchema,
   SetDefaultVoiceResponseSchema,
-  GetVoiceProfileVersionSampleResponseSchema,
-  RestoreVoiceProfileResponseSchema,
   VoiceProfileSchema,
   VoiceSampleSchema,
   VoiceSchema,
   VoiceService,
-  ListVoiceProfileVersionsResponseSchema,
-  PostContentSchema,
-  VoiceValueSource,
-  StructuredVoiceProfileSchema,
-  UpdateVoiceOverrideResponseSchema,
+  VoiceAnalysisSchema,
+  VoiceNoticeKind,
+  VoiceNoticeSchema,
+  RestorePreviousVoiceAnalysisResponseSchema,
   type ProtoVoiceProfile,
   type ProtoVoiceSample,
+  type ProtoVoiceAnalysis,
   VoicePromptPart,
   VoiceSampleKind,
   VoiceReadinessSchema,
@@ -99,25 +97,21 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 }
 
 export interface FakeVoiceOptions {
-  updatedAt?: string
   activeJobId?: string
-  /** Returned from the second profile read, simulating a completed analysis. */
-  /** The analysis the profile publishes on the read AFTER the first one — the shape a resumed
-   *  analysis has when its job is already done. It lands in the structured profile's lexical
-   *  description, which is where an analysis lives now (VOICE-25). */
+  /** The impression of an analysis the profile publishes on the read AFTER the first one — the
+   *  shape a resumed analysis has when its job is already done. */
   analysisAfterAnalysis?: string
+  /** The default voice's current analysis. Omitted, a made voice reads with an empty one. */
+  analysis?: MessageInitShape<typeof VoiceAnalysisSchema>
+  /** The default voice's previous analysis, which 이전 분석으로 되돌리기 returns to. */
+  previousAnalysis?: MessageInitShape<typeof VoiceAnalysisSchema>
+  /** The default voice's notice (VOICE-21). */
+  notice?: { kind: 'added' | 'changed'; count?: number }
   samples?: FakeVoiceSampleRow[]
   addError?: string
   deleteFails?: boolean
   addGate?: Promise<void>
   calls?: string[]
-  versions?: Array<{ version: bigint; origin: string; hasSample?: boolean }>
-  /** One version's generation snapshot, keyed by version number as a string. A version absent
-   *  from this map produced no post, which is what the RPC reports with an unset sample. */
-  versionSamples?: Record<string, MessageInitShape<typeof PostContentSchema>>
-  /** The typed profile the account has learned. Omitted, the profile reads as empty. */
-  structured?: MessageInitShape<typeof StructuredVoiceProfileSchema>
-  overrideFails?: boolean
   /** The account's voice directory. Omitted, it holds only `DEFAULT_FAKE_VOICE`. */
   voices?: FakeVoiceRow[]
   /** Voice ids whose deletion the server refuses because work could still publish to them. */
@@ -284,13 +278,44 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   profiles.set(
     defaultId,
     create(VoiceProfileSchema, {
-      updatedAt: options.updatedAt ?? '',
       activeJobId: options.activeJobId ?? '',
-      structured: options.structured
-        ? create(StructuredVoiceProfileSchema, options.structured)
-        : undefined,
     }),
   )
+  // Each voice's current and previous analysis (VOICE-30). A made voice with no analysis given
+  // reads with an empty one, so it is shown as made.
+  const current = new Map<string, ReturnType<typeof create<typeof VoiceAnalysisSchema>>>()
+  const previous = new Map<string, ReturnType<typeof create<typeof VoiceAnalysisSchema>>>()
+  if (options.analysis) current.set(defaultId, create(VoiceAnalysisSchema, options.analysis))
+  if (options.previousAnalysis)
+    previous.set(defaultId, create(VoiceAnalysisSchema, options.previousAnalysis))
+  // Like the server, an example whose 학습 글 was deleted is not returned (VOICE-21).
+  const withoutDeletedExamples = (voiceId: string, analysis: ProtoVoiceAnalysis) => {
+    const present = new Set(materialsOf(voiceId).map((row) => row.sample.id))
+    const copy = create(VoiceAnalysisSchema, analysis)
+    const counted = copy.counted
+    if (counted) {
+      for (const item of [
+        counted.endings,
+        counted.marks,
+        counted.emoji,
+        counted.shape,
+        counted.openings,
+        counted.adverbs,
+        counted.person,
+        counted.headings,
+      ]) {
+        if (item?.example && !present.has(item.example.materialId)) item.example = undefined
+      }
+    }
+    if (copy.ai)
+      copy.ai.examples = copy.ai.examples.filter((example) => present.has(example.materialId))
+    return copy
+  }
+  const analysisOf = (row: VoiceRow) => {
+    const found = current.get(row.id)
+    if (found) return withoutDeletedExamples(row.id, found)
+    return row.made ? create(VoiceAnalysisSchema, { counted: {}, ai: {} }) : undefined
+  }
   const profileOf = (voiceId: string): ProtoVoiceProfile => {
     owned(voiceId)
     let profile = profiles.get(voiceId)
@@ -303,12 +328,22 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   const setProfile = (voiceId: string, profile: ProtoVoiceProfile) => profiles.set(voiceId, profile)
   const withVoice = (voiceId: string, profile: ProtoVoiceProfile) => {
     const row = owned(voiceId)
+    const notice =
+      voiceId === defaultId && options.notice
+        ? create(VoiceNoticeSchema, {
+            kind: options.notice.kind === 'added' ? VoiceNoticeKind.ADDED : VoiceNoticeKind.CHANGED,
+            count: options.notice.count ?? 0,
+          })
+        : undefined
     return create(VoiceProfileSchema, {
       ...profile,
       voice: toProtoVoice(row),
       made: row.made,
       samples: materialsOf(voiceId).map((material) => material.sample),
       readiness: fakeReadiness(materialsOf(voiceId)),
+      analysis: analysisOf(row),
+      hasPrevious: previous.has(voiceId),
+      notice,
     })
   }
 
@@ -392,57 +427,31 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     let profile = profileOf(request.voiceId)
     if (request.voiceId === defaultId) {
       if (profileReads > 0 && options.analysisAfterAnalysis) {
-        profile = create(VoiceProfileSchema, {
-          ...profile,
-          structured: create(StructuredVoiceProfileSchema, {
-            meta: { version: 1n },
-            empty: false,
-            lexical: {
-              description: {
-                value: options.analysisAfterAnalysis,
-                source: VoiceValueSource.ANALYZED,
-              },
-            },
-          }),
-          activeJobId: '',
-          updatedAt: NOW,
-        })
+        profile = create(VoiceProfileSchema, { ...profile, activeJobId: '' })
         setProfile(defaultId, profile)
+        current.set(
+          defaultId,
+          create(VoiceAnalysisSchema, {
+            counted: {},
+            ai: { impression: options.analysisAfterAnalysis },
+          }),
+        )
+        owned(defaultId).made = true
       }
       profileReads += 1
     }
     return create(GetVoiceProfileResponseSchema, { profile: withVoice(request.voiceId, profile) })
   })
 
-  rpc(VoiceService.method.restoreVoiceProfile, (request) => {
-    options.calls?.push('RestoreVoiceProfile')
-    owned(request.voiceId)
-    // Adopting a version publishes a NEW head and destroys nothing, so the fake answers with
-    // the profile it already holds rather than pretending to rewrite history.
-    return create(RestoreVoiceProfileResponseSchema, {
-      profile: withVoice(request.voiceId, profileOf(request.voiceId)),
-    })
-  })
-
-  rpc(VoiceService.method.getVoiceProfileVersionSample, (request) => {
-    options.calls?.push('GetVoiceProfileVersionSample')
-    const sample = options.versionSamples?.[request.version.toString()]
-    return create(GetVoiceProfileVersionSampleResponseSchema, {
-      sample: sample ? create(PostContentSchema, sample) : undefined,
-      createdAt: sample ? NOW : '',
-    })
-  })
-
-  rpc(VoiceService.method.updateVoiceOverride, (request) => {
-    options.calls?.push('UpdateVoiceOverride')
-    const profile = profileOf(request.voiceId)
+  rpc(VoiceService.method.restorePreviousVoiceAnalysis, (request) => {
+    options.calls?.push('RestorePreviousVoiceAnalysis')
     active(request.voiceId)
-    if (options.overrideFails)
-      throw connectAppError('VOICE_PROFILE_FIELD_REQUIRED', Code.InvalidArgument)
-    // The response is the unchanged profile: what an override publishes is backend behavior with
-    // its own coverage, and a fake that half-rebuilds a typed profile would only test itself.
-    return create(UpdateVoiceOverrideResponseSchema, {
-      profile: withVoice(request.voiceId, profile),
+    const back = previous.get(request.voiceId)
+    if (!back) throw connectAppError('VOICE_NO_PREVIOUS_ANALYSIS', Code.FailedPrecondition)
+    current.set(request.voiceId, back)
+    previous.delete(request.voiceId)
+    return create(RestorePreviousVoiceAnalysisResponseSchema, {
+      profile: withVoice(request.voiceId, profileOf(request.voiceId)),
     })
   })
 
@@ -581,13 +590,5 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       create(VoiceProfileSchema, { ...profileOf(request.voiceId), activeJobId: jobId }),
     )
     return create(AnalyzeVoiceResponseSchema, { jobId })
-  })
-
-  // The version list records its call so a test can prove the tab fetches only what it renders —
-  // the profile screen used to issue every per-tab list on every mount.
-  rpc(VoiceService.method.listVoiceProfileVersions, (request) => {
-    options.calls?.push('ListVoiceProfileVersions')
-    owned(request.voiceId)
-    return create(ListVoiceProfileVersionsResponseSchema, { versions: options.versions ?? [] })
   })
 }

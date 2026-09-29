@@ -8,7 +8,6 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -111,48 +110,6 @@ func (h *Handler) GetVoiceProfile(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.GetVoiceProfileResponse{Profile: toProtoProfile(profile)}), nil
 }
 
-// GetVoiceProfileVersionSample returns one version's generation snapshot -- the raw AI output
-// of the last post that version produced -- so the version can be READ before it is adopted.
-//
-// Both the voice and the acting account are named on the way down, so no cross-voice or
-// cross-account read is expressible ([I4]). A version that never produced a post answers with
-// an unset `sample` rather than an error: having produced nothing is an ordinary state for a
-// version.
-//
-// This handler is where the snapshot stops being opaque text. The voice context stores and
-// returns it verbatim without ever parsing it; the anti-corruption mapping into the post
-// content the client already decodes happens here, at the transport edge.
-func (h *Handler) GetVoiceProfileVersionSample(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceProfileVersionSampleRequest]) (*connect.Response[postpilotv1.GetVoiceProfileVersionSampleResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	sample, err := h.service.VersionSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetVersion())
-	if errors.Is(err, voice.ErrVersionSampleNotFound) {
-		return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{}), nil
-	}
-	if err != nil {
-		return nil, toConnectError("get voice profile version sample", err)
-	}
-	content := &postpilotv1.PostContent{}
-	if unmarshalErr := protojson.Unmarshal([]byte(sample.Content), content); unmarshalErr != nil {
-		// A snapshot that cannot be decoded is a record we can no longer read, not a reason to
-		// fail opening the version — so the client is told "no preview", the same as for a
-		// version that never produced a post. It is LOGGED, because the list said this version
-		// had a sample: an operator has to be able to tell an absent snapshot from a corrupt one.
-		slog.WarnContext(ctx, "voice version sample could not be decoded",
-			"error", unmarshalErr, "voice_id", req.Msg.GetVoiceId(), "version", req.Msg.GetVersion())
-		return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{}), nil
-	}
-	created := ""
-	if !sample.CreatedAt.IsZero() {
-		created = sample.CreatedAt.UTC().Format(timeLayout)
-	}
-	return connect.NewResponse(&postpilotv1.GetVoiceProfileVersionSampleResponse{
-		Sample: content, CreatedAt: created,
-	}), nil
-}
-
 func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.AddVoiceSampleRequest]) (*connect.Response[postpilotv1.AddVoiceSampleResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -245,44 +202,16 @@ func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpil
 	return connect.NewResponse(&postpilotv1.AnalyzeVoiceResponse{JobId: jobID}), nil
 }
 
-func (h *Handler) ListVoiceProfileVersions(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceProfileVersionsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileVersionsResponse], error) {
+func (h *Handler) RestorePreviousVoiceAnalysis(ctx context.Context, req *connect.Request[postpilotv1.RestorePreviousVoiceAnalysisRequest]) (*connect.Response[postpilotv1.RestorePreviousVoiceAnalysisResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	versions, err := h.service.ListVersions(ctx, userID, req.Msg.GetVoiceId())
+	profile, err := h.service.RestorePreviousAnalysis(ctx, userID, req.Msg.GetVoiceId())
 	if err != nil {
-		return nil, toConnectError("list voice versions", err)
+		return nil, toConnectError("restore previous voice analysis", err)
 	}
-	out := make([]*postpilotv1.VoiceProfileVersion, 0, len(versions))
-	for _, version := range versions {
-		out = append(out, toProtoVersion(version))
-	}
-	return connect.NewResponse(&postpilotv1.ListVoiceProfileVersionsResponse{Versions: out}), nil
-}
-
-func (h *Handler) UpdateVoiceOverride(ctx context.Context, req *connect.Request[postpilotv1.UpdateVoiceOverrideRequest]) (*connect.Response[postpilotv1.UpdateVoiceOverrideResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	profile, err := h.service.UpdateOverride(ctx, userID, req.Msg.GetVoiceId(), fromProtoLayer(req.Msg.GetLayer()), req.Msg.GetField(), req.Msg.Value)
-	if err != nil {
-		return nil, toConnectError("update voice override", err)
-	}
-	return connect.NewResponse(&postpilotv1.UpdateVoiceOverrideResponse{Profile: toProtoProfile(profile)}), nil
-}
-
-func (h *Handler) RestoreVoiceProfile(ctx context.Context, req *connect.Request[postpilotv1.RestoreVoiceProfileRequest]) (*connect.Response[postpilotv1.RestoreVoiceProfileResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	profile, err := h.service.RestoreVersion(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetVersion())
-	if err != nil {
-		return nil, toConnectError("restore voice profile", err)
-	}
-	return connect.NewResponse(&postpilotv1.RestoreVoiceProfileResponse{Profile: toProtoProfile(profile)}), nil
+	return connect.NewResponse(&postpilotv1.RestorePreviousVoiceAnalysisResponse{Profile: toProtoProfile(profile)}), nil
 }
 
 func actingUser(ctx context.Context) (string, error) {
@@ -320,8 +249,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", postpilotv1.FailureReason_VOICE_SAMPLE_NOT_FOUND, nil)
-	case errors.Is(err, voice.ErrLearningNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile version not found", postpilotv1.FailureReason_VOICE_LEARNING_NOT_FOUND, nil)
+	case errors.Is(err, voice.ErrNoPreviousAnalysis):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the voice has no previous analysis", postpilotv1.FailureReason_VOICE_NO_PREVIOUS_ANALYSIS, nil)
 	case errors.Is(err, voice.ErrVoiceNotReady):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the voice needs more 학습 글", postpilotv1.FailureReason_VOICE_NOT_READY, nil)
 	case errors.Is(err, voice.ErrPromptNotFound):
@@ -384,100 +313,100 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 	for _, sample := range profile.Samples {
 		samples = append(samples, toProtoSample(sample))
 	}
-	updated := ""
-	if !profile.UpdatedAt.IsZero() {
-		updated = profile.UpdatedAt.UTC().Format(timeLayout)
+	out := &postpilotv1.VoiceProfile{
+		Voice:       toProtoVoice(profile.Voice),
+		Samples:     samples,
+		ActiveJobId: profile.ActiveJobID,
+		Made:        profile.Analysis != nil,
+		Readiness:   toProtoReadiness(profile.Readiness),
+		HasPrevious: profile.HasPrevious,
+		Notice:      toProtoNotice(profile.Notice),
 	}
-	return &postpilotv1.VoiceProfile{
-		Voice:   toProtoVoice(profile.Voice),
-		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
-		Structured: toProtoStructured(profile.Structured),
-		Made:       profile.Structured.Version > 0,
-		Readiness:  toProtoReadiness(profile.Readiness),
+	if profile.Analysis != nil {
+		out.Analysis = toProtoAnalysis(*profile.Analysis)
+	}
+	return out
+}
+
+func toProtoNotice(notice voice.Notice) *postpilotv1.VoiceNotice {
+	switch notice.Kind {
+	case voice.NoticeAdded:
+		return &postpilotv1.VoiceNotice{Kind: postpilotv1.VoiceNoticeKind_VOICE_NOTICE_KIND_ADDED, Count: int32(notice.Count)}
+	case voice.NoticeChanged:
+		return &postpilotv1.VoiceNotice{Kind: postpilotv1.VoiceNoticeKind_VOICE_NOTICE_KIND_CHANGED}
+	}
+	return nil
+}
+
+func toProtoAnalysis(analysis voice.Analysis) *postpilotv1.VoiceAnalysis {
+	ai := &postpilotv1.VoiceAiPart{Impression: analysis.AI.Impression, SignaturePhrases: analysis.AI.SignaturePhrases}
+	for _, tic := range analysis.AI.Tics {
+		ai.Tics = append(ai.Tics, &postpilotv1.VoiceTic{Phrase: tic.Phrase, When: tic.When})
+	}
+	for _, example := range analysis.AI.Examples {
+		ai.Examples = append(ai.Examples, &postpilotv1.VoiceAiExample{Field: toProtoAIField(example.Field), Sentence: example.Sentence, MaterialId: example.MaterialID})
+	}
+	return &postpilotv1.VoiceAnalysis{
+		Counted:       ToProtoFingerprint(analysis.Counted),
+		Ai:            ai,
+		MaterialCount: int32(len(analysis.MaterialIDs)),
+		AnalyzeModel:  analysis.AnalyzeModel,
+		CreatedAt:     analysis.CreatedAt.UTC().Format(timeLayout),
 	}
 }
 
-func toProtoStructured(p voice.StructuredProfile) *postpilotv1.StructuredVoiceProfile {
-	words := make([]*postpilotv1.WeightedWord, 0, len(p.Lexical.PreferredWords))
-	for _, v := range p.Lexical.PreferredWords {
-		words = append(words, &postpilotv1.WeightedWord{Word: v.Word, Alternatives: v.Alternatives, Weight: int32(v.Weight)})
+// toProtoAIField maps the three fields the domain has, pinned by a test that walks the
+// generated enum (ARCH-3).
+func toProtoAIField(field voice.AIField) postpilotv1.VoiceAiField {
+	switch field {
+	case voice.AIImpression:
+		return postpilotv1.VoiceAiField_VOICE_AI_FIELD_IMPRESSION
+	case voice.AITics:
+		return postpilotv1.VoiceAiField_VOICE_AI_FIELD_TICS
+	case voice.AISignaturePhrases:
+		return postpilotv1.VoiceAiField_VOICE_AI_FIELD_SIGNATURE_PHRASES
 	}
-	bannedWords := make([]*postpilotv1.BannedItem, 0, len(p.Lexical.BannedWords))
-	for _, v := range p.Lexical.BannedWords {
-		bannedWords = append(bannedWords, &postpilotv1.BannedItem{Value: v.Value, Reason: v.Reason})
-	}
-	bannedPatterns := make([]*postpilotv1.BannedItem, 0, len(p.Lexical.BannedPatterns))
-	for _, v := range p.Lexical.BannedPatterns {
-		bannedPatterns = append(bannedPatterns, &postpilotv1.BannedItem{Value: v.Value, Reason: v.Reason})
-	}
-	ending := make([]*postpilotv1.EndingRatio, 0, len(p.Endings.Distribution))
-	for _, v := range p.Endings.Distribution {
-		ending = append(ending, &postpilotv1.EndingRatio{Ending: v.Ending, Ratio: v.Ratio})
-	}
-	updated := ""
-	if !p.UpdatedAt.IsZero() {
-		updated = p.UpdatedAt.UTC().Format(timeLayout)
-	}
-	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, Empty: p.Empty}
-}
-func toProtoValue(v voice.VoiceValue) *postpilotv1.VoiceValue {
-	return &postpilotv1.VoiceValue{Value: v.Value, Source: toProtoSource(v.Source), Unknown: v.Unknown}
-}
-func toProtoSource(v voice.ValueSource) postpilotv1.VoiceValueSource {
-	switch v {
-	case voice.SourceMeasured:
-		return postpilotv1.VoiceValueSource_VOICE_VALUE_SOURCE_MEASURED
-	case voice.SourceAnalyzed:
-		return postpilotv1.VoiceValueSource_VOICE_VALUE_SOURCE_ANALYZED
-	case voice.SourceManual:
-		return postpilotv1.VoiceValueSource_VOICE_VALUE_SOURCE_MANUAL
-	default:
-		return postpilotv1.VoiceValueSource_VOICE_VALUE_SOURCE_UNKNOWN
-	}
+	return postpilotv1.VoiceAiField_VOICE_AI_FIELD_UNSPECIFIED
 }
 
-// nil stays nil so the wire carries absence; the FE renders it as unknown.
-func toProtoAxis(v *int) *int32 {
-	if v == nil {
+func toProtoExample(example voice.Example) *postpilotv1.VoiceExample {
+	if example.Sentence == "" {
 		return nil
 	}
-	value := int32(*v)
-	return &value
+	return &postpilotv1.VoiceExample{Sentence: example.Sentence, MaterialId: example.MaterialID}
 }
-func toProtoLayer(v voice.RuleLayer) postpilotv1.VoiceLayer {
-	switch v {
-	case voice.LayerLexical:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_LEXICAL
-	case voice.LayerEndings:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_ENDINGS
-	case voice.LayerSyntax:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_SYNTAX
-	case voice.LayerStructure:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_STRUCTURE
-	case voice.LayerAxes:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_AXES
-	default:
-		return postpilotv1.VoiceLayer_VOICE_LAYER_UNSPECIFIED
+
+// ToProtoFingerprint is the counted items on the wire, shared by every screen that shows them
+// (the analysis, ②'s comparison, 검증).
+func ToProtoFingerprint(f voice.Fingerprint) *postpilotv1.VoiceFingerprint {
+	suffixes := make([]*postpilotv1.VoiceSuffix, 0, len(f.Endings.Suffixes))
+	for _, suffix := range f.Endings.Suffixes {
+		suffixes = append(suffixes, &postpilotv1.VoiceSuffix{Text: suffix.Text, Count: int32(suffix.Count)})
 	}
-}
-func fromProtoLayer(v postpilotv1.VoiceLayer) voice.RuleLayer {
-	switch v {
-	case postpilotv1.VoiceLayer_VOICE_LAYER_LEXICAL:
-		return voice.LayerLexical
-	case postpilotv1.VoiceLayer_VOICE_LAYER_ENDINGS:
-		return voice.LayerEndings
-	case postpilotv1.VoiceLayer_VOICE_LAYER_SYNTAX:
-		return voice.LayerSyntax
-	case postpilotv1.VoiceLayer_VOICE_LAYER_STRUCTURE:
-		return voice.LayerStructure
-	case postpilotv1.VoiceLayer_VOICE_LAYER_AXES:
-		return voice.LayerAxes
-	default:
-		return ""
+	words := make([]*postpilotv1.VoiceWordRate, 0, len(f.Adverbs.Words))
+	for _, word := range f.Adverbs.Words {
+		words = append(words, &postpilotv1.VoiceWordRate{Word: word.Word, PerHundred: word.PerHundred})
 	}
-}
-func toProtoVersion(v voice.ProfileVersion) *postpilotv1.VoiceProfileVersion {
-	return &postpilotv1.VoiceProfileVersion{Version: v.Version, Profile: toProtoStructured(v.Profile), Origin: v.Origin, RestoredFromVersion: v.RestoredFromVersion, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), HasSample: v.HasSample}
+	return &postpilotv1.VoiceFingerprint{
+		Sentences: int32(f.Sentences),
+		Endings: &postpilotv1.VoiceEndingsItem{Unknown: f.Endings.Unknown, Da: f.Endings.Da, Haeyo: f.Endings.Haeyo, Seumnida: f.Endings.Seumnida,
+			Other: f.Endings.Other, Suffixes: suffixes, Example: toProtoExample(f.Endings.Example)},
+		Marks: &postpilotv1.VoiceMarksItem{Unknown: f.Marks.Unknown, Exclaim: f.Marks.Exclaim, Question: f.Marks.Question, Tilde: f.Marks.Tilde,
+			Ellipsis: f.Marks.Ellipsis, Period: f.Marks.Period, None: f.Marks.None, Repeat: f.Marks.Repeat, Example: toProtoExample(f.Marks.Example)},
+		Emoji: &postpilotv1.VoiceEmojiItem{Unknown: f.Emoji.Unknown, Emoji: f.Emoji.Emoji, Hh: f.Emoji.Hh, Kk: f.Emoji.Kk, Tears: f.Emoji.Tears,
+			Example: toProtoExample(f.Emoji.Example)},
+		Shape: &postpilotv1.VoiceShapeItem{Unknown: f.Shape.Unknown, AverageChars: f.Shape.AverageChars, ParagraphAverage: f.Shape.ParagraphAverage,
+			ParagraphMin: int32(f.Shape.ParagraphMin), ParagraphMax: int32(f.Shape.ParagraphMax), LineBreakShare: f.Shape.LineBreakShare,
+			OwnLine: f.Shape.OwnLine, Example: toProtoExample(f.Shape.Example)},
+		Openings: &postpilotv1.VoiceOpeningsItem{Unknown: f.OpenClose.Unknown, Openings: f.OpenClose.Openings, Closings: f.OpenClose.Closings,
+			Example: toProtoExample(f.OpenClose.Example)},
+		Adverbs: &postpilotv1.VoiceAdverbsItem{Unknown: f.Adverbs.Unknown, None: f.Adverbs.None, Words: words, Example: toProtoExample(f.Adverbs.Example)},
+		Person: &postpilotv1.VoicePersonItem{Unknown: f.Person.Unknown, Jeo: f.Person.Jeo, Uri: f.Person.Uri, Na: f.Person.Na,
+			Dominant: f.Person.Dominant, Example: toProtoExample(f.Person.Example)},
+		Headings: &postpilotv1.VoiceHeadingsItem{Unknown: f.Headings.Unknown, Count: int32(f.Headings.Count), EmojiShare: f.Headings.EmojiShare,
+			QuestionShare: f.Headings.QuestionShare, NumberedShare: f.Headings.NumberedShare, ListShare: f.Headings.ListShare,
+			Marker: f.Headings.Marker, Example: toProtoExample(f.Headings.Example)},
+	}
 }
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"

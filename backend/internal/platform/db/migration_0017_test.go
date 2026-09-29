@@ -57,7 +57,8 @@ func TestMigration0017RescuesAPreStructuredStyleguide(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := provider.Up(ctx); err != nil {
+	// Up to 17 only: 0111 drops the versioned profile this rescue wrote into.
+	if _, err := provider.UpTo(ctx, 17); err != nil {
 		t.Fatal(err)
 	}
 

@@ -16,7 +16,6 @@ func testDeps() Deps {
 		Guidelines:  neutralGuidelines{},
 		Memories:    neutralMemories{},
 		Candidates:  neutralCandidates{},
-		Samples:     neutralSamples{},
 		Videos:      neutralLinker{},
 		VideoURLTTL: time.Minute,
 		// Nothing ticked: what every post answered before quality existed.
@@ -59,12 +58,6 @@ func (neutralMemories) ForPost(context.Context, string, []string) ([]string, err
 type neutralCandidates struct{}
 
 func (neutralCandidates) Record(context.Context, string, string, string) error { return nil }
-
-type neutralSamples struct{}
-
-func (neutralSamples) RecordVersionSample(context.Context, string, string, int64, PostContent) error {
-	return nil
-}
 
 // neutralLinker refuses every link, which is what a run with a video met before a
 // linker was wired: there is no other way to deliver a clip.

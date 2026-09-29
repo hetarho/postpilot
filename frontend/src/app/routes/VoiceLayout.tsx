@@ -1,5 +1,5 @@
 import { Link, Outlet, useParams } from '@tanstack/react-router'
-import { FileText, History, IdCard } from 'lucide-react'
+import { FileText, IdCard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
@@ -22,11 +22,10 @@ import {
  *  not destinations of their own. Every tab carries an icon and a short caption so the row can
  *  compact itself instead of horizontally scrolling on a phone (TabLinks' container mode). */
 const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label' | 'shortLabel'> & {
-  labelKey: 'profile' | 'versions' | 'materials'
+  labelKey: 'analysis' | 'materials'
 })[] = [
-  { to: '/voices/$voiceId', labelKey: 'profile', icon: IdCard },
+  { to: '/voices/$voiceId', labelKey: 'analysis', icon: IdCard },
   { to: '/voices/$voiceId/materials', labelKey: 'materials', icon: FileText },
-  { to: '/voices/$voiceId/versions', labelKey: 'versions', icon: History },
 ]
 
 /** The frame of `/voices/$voiceId`: which voice this is, its state, and the tab row. The voice

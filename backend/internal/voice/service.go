@@ -16,36 +16,21 @@ import (
 )
 
 type Service struct {
-	directory      VoiceDirectoryStore
-	profiles       ProfileStore
-	samples        SampleStore
-	versionSamples VersionSampleStore
-	models         Models
-	jobs           Jobs
-	now            func() time.Time
-	newID          func() string
-	profileMu      sync.Mutex
-	sampleMu       sync.Mutex
-	directoryMu    sync.Mutex
-	config         PersonalizationConfig
-	photoUploads   PhotoUploadStore
-	objects        ObjectStore
-	photos         PhotoLimits
-	// personalization is the versioned profile store as one handle, held only to answer "is
-	// it wired at all" — every call goes through one of the narrow ports below it.
-	personalization PersonalizationStorage
-	versions        ProfileVersionStore
-	overrides       ManualOverrideStore
+	directory    VoiceDirectoryStore
+	analyses     AnalysisStore
+	samples      SampleStore
+	photoUploads PhotoUploadStore
+	models       Models
+	jobs         Jobs
+	now          func() time.Time
+	newID        func() string
+	directoryMu  sync.Mutex
+	objects      ObjectStore
+	photos       PhotoLimits
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
-	svc := &Service{directory: store, profiles: store, samples: store, versionSamples: store, photoUploads: store, models: models, jobs: jobs, now: time.Now, newID: newID,
-		config: PersonalizationThresholds()}
-	if p, ok := store.(PersonalizationStorage); ok {
-		svc.personalization = p
-		svc.versions, svc.overrides = p, p
-	}
-	return svc
+	return &Service{directory: store, analyses: store, samples: store, photoUploads: store, models: models, jobs: jobs, now: time.Now, newID: newID}
 }
 
 // ConfigurePhotos wires the private bucket a photo prompt's photo is stored in (VOICE-60).
@@ -54,10 +39,6 @@ func (s *Service) ConfigurePhotos(objects ObjectStore, limits PhotoLimits) {
 		panic("voice: invalid photo storage configuration")
 	}
 	s.objects, s.photos = objects, limits
-}
-
-func (s *Service) EndingMaxConsecutive() int {
-	return s.config.EndingMaxConsecutive
 }
 
 // --- directory ---
@@ -254,14 +235,12 @@ func (s *Service) activeVoice(ctx context.Context, userID, voiceID string) (Voic
 
 // --- profile ---
 
+// Get is a voice as its tabs read it: the 학습 글, the readiness meter, the current analysis with
+// the examples whose 학습 글 still exist, whether a previous analysis exists, and the notice.
 func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, error) {
 	found, err := s.ownedVoice(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, err
-	}
-	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
-	if err != nil {
-		return Profile{}, fmt.Errorf("get profile: %w", err)
 	}
 	samples, err := s.samples.ListSamples(ctx, userID, voiceID)
 	if err != nil {
@@ -271,63 +250,97 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	if err != nil {
 		return Profile{}, fmt.Errorf("list sample bodies: %w", err)
 	}
-	profile.Readiness = ReadinessOf(bodies)
 	active, err := s.jobs.ActiveForVoiceKind(ctx, voiceID, AnalysisJobKind)
 	if err != nil {
 		return Profile{}, fmt.Errorf("get active analysis: %w", err)
 	}
-	profile.UserID, profile.VoiceID, profile.Voice = userID, voiceID, found
-	profile.Samples = samples
+	profile := Profile{UserID: userID, VoiceID: voiceID, Voice: found, Samples: samples, Readiness: ReadinessOf(bodies)}
 	if active != nil {
 		profile.ActiveJobID = active.ID
+	}
+	current, err := s.analyses.CurrentAnalysis(ctx, userID, voiceID)
+	if err != nil {
+		return Profile{}, fmt.Errorf("current analysis: %w", err)
+	}
+	if current != nil {
+		present := make(map[string]bool, len(samples))
+		for _, sample := range samples {
+			present[sample.ID] = true
+		}
+		visible := withoutDeletedExamples(*current, present)
+		profile.Analysis = &visible
+		profile.Notice = noticeOf(current.MaterialIDs, present)
+		if profile.HasPrevious, err = s.analyses.HasPreviousAnalysis(ctx, userID, voiceID); err != nil {
+			return Profile{}, fmt.Errorf("previous analysis: %w", err)
+		}
 	}
 	return profile, nil
 }
 
-// RecordVersionSample copies the raw AI output of a post into the voice's CURRENT head
-// version, so that version can be read before it is adopted (VOICE-29). It is called by the
-// generation context after a machine baseline is written — the only context that depends on
-// both post and voice, and therefore the only one allowed to join them.
-//
-// Idempotent per (voice, version): a later generation under the same head REPLACES the
-// snapshot rather than adding a second one. A voice with no published version yet records
-// nothing instead of inventing version 0, and a deleted voice records nothing at all.
-//
-// The version is the head AT COMPLETION, which is not the same thing as the version the
-// prompt was built from: a profile published while the provider was working moves the head,
-// and this output is then filed under that newer version. The window is the length of one
-// provider call. Closing it would mean freezing the profile version into the generation
-// payload and carrying it back out through the write path, which is a contract not opened
-// here.
-//
-// `content` is opaque text. Nothing here parses it.
-// RecordVersionSample files a generated post under the profile version its prompt was built
-// from, not the head at completion, which may have moved while the provider wrote (VOICE-29).
-// Version 0 is a prompt built from no published version, which files nothing.
-func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID string, version int64, content string) error {
-	if content == "" || version <= 0 {
-		return nil
+// noticeOf compares the 학습 글 an analysis read with the ones there now (VOICE-21): a read one
+// gone is `changed`, else the count of ones added since.
+func noticeOf(read []string, present map[string]bool) Notice {
+	readSet := make(map[string]bool, len(read))
+	for _, id := range read {
+		if !present[id] {
+			return Notice{Kind: NoticeChanged}
+		}
+		readSet[id] = true
 	}
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return err
+	added := 0
+	for id := range present {
+		if !readSet[id] {
+			added++
+		}
 	}
-	if err := s.versionSamples.UpsertVersionSample(ctx, VersionSample{
-		UserID: userID, VoiceID: voiceID, Version: version, Content: content, CreatedAt: s.now(),
-	}); err != nil {
-		return fmt.Errorf("record version sample: %w", err)
+	if added == 0 {
+		return Notice{}
 	}
-	return nil
+	return Notice{Kind: NoticeAdded, Count: added}
 }
 
-// VersionSample returns one version's snapshot. Both the voice and the account are named, so
-// no cross-voice or cross-account read is expressible ([I4]). A version that never produced a
-// post is ErrVersionSampleNotFound, which callers present as "no preview" rather than as a
-// failure. A deleted voice's samples stay READABLE, like the rest of its profile.
-func (s *Service) VersionSample(ctx context.Context, userID, voiceID string, version int64) (VersionSample, error) {
-	if _, err := s.directory.GetVoice(ctx, userID, voiceID); err != nil {
-		return VersionSample{}, err
+// withoutDeletedExamples drops every example whose 학습 글 was deleted: the owner took that prose
+// back (VOICE-21).
+func withoutDeletedExamples(analysis Analysis, present map[string]bool) Analysis {
+	keep := func(example Example) Example {
+		if example.MaterialID != "" && !present[example.MaterialID] {
+			return Example{}
+		}
+		return example
 	}
-	return s.versionSamples.GetVersionSample(ctx, userID, voiceID, version)
+	counted := analysis.Counted
+	counted.Endings.Example = keep(counted.Endings.Example)
+	counted.Marks.Example = keep(counted.Marks.Example)
+	counted.Emoji.Example = keep(counted.Emoji.Example)
+	counted.Shape.Example = keep(counted.Shape.Example)
+	counted.OpenClose.Example = keep(counted.OpenClose.Example)
+	counted.Adverbs.Example = keep(counted.Adverbs.Example)
+	counted.Person.Example = keep(counted.Person.Example)
+	counted.Headings.Example = keep(counted.Headings.Example)
+	analysis.Counted = counted
+	var examples []AIExample
+	for _, example := range analysis.AI.Examples {
+		if present[example.MaterialID] {
+			examples = append(examples, example)
+		}
+	}
+	analysis.AI.Examples = examples
+	return analysis
+}
+
+// RestorePreviousAnalysis is 이전 분석으로 되돌리기 (VOICE-30): the previous analysis becomes
+// current and the one it replaced is discarded. There is no redo, and a tombstone offers none.
+func (s *Service) RestorePreviousAnalysis(ctx context.Context, userID, voiceID string) (Profile, error) {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return Profile{}, err
+	}
+	if err := s.analyses.RestorePreviousAnalysis(ctx, userID, voiceID); err != nil {
+		if errors.Is(err, ErrNoPreviousAnalysis) {
+			return Profile{}, err
+		}
+		return Profile{}, fmt.Errorf("restore previous analysis: %w", err)
+	}
+	return s.Get(ctx, userID, voiceID)
 }
 
 // AddSample stores a pasted post as a 학습 글 (VOICE-20). It needs no model and enqueues

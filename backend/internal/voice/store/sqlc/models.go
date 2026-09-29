@@ -4,19 +4,6 @@
 
 package sqlc
 
-import (
-	"database/sql"
-)
-
-type VoiceManualOverride struct {
-	VoiceID   string
-	UserID    string
-	Layer     string
-	Field     string
-	Value     string
-	UpdatedAt string
-}
-
 type VoicePhotoUpload struct {
 	ID        string
 	UserID    string
@@ -24,24 +11,5 @@ type VoicePhotoUpload struct {
 	PromptKey string
 	ObjectKey string
 	ExpiresAt string
-	CreatedAt string
-}
-
-type VoiceProfileVersion struct {
-	ID                  string
-	UserID              string
-	VoiceID             string
-	Version             int64
-	Snapshot            string
-	Origin              string
-	RestoredFromVersion sql.NullInt64
-	CreatedAt           string
-}
-
-type VoiceVersionSample struct {
-	VoiceID   string
-	UserID    string
-	Version   int64
-	Content   string
 	CreatedAt string
 }

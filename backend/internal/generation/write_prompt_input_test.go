@@ -12,7 +12,7 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 	target := 1500
 	fixtures := map[string]func(*WritePromptInput){
 		"Language":     func(in *WritePromptInput) { in.Language = LanguageEnglish },
-		"Profile":      func(in *WritePromptInput) { in.Profile = Profile{Styleguide: "OTHER"} },
+		"Profile":      func(in *WritePromptInput) { in.Profile = Profile{Text: "OTHER"} },
 		"Observations": func(in *WritePromptInput) { in.Observations = goldenObservations() },
 		"Memo":         func(in *WritePromptInput) { in.Memo = "memo" },
 		"Title":        func(in *WritePromptInput) { in.Title = "title" },

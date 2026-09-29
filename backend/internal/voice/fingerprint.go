@@ -142,7 +142,8 @@ type Person struct {
 	Example      Example
 }
 
-// Headings is item ⑧: how headings and lists are written.
+// Headings is item ⑧: how headings and lists are written — the share of headings that start
+// with an emoji, that ask a question and that are numbered, and the list lines' share and marker.
 type Headings struct {
 	Unknown                                  bool
 	Count                                    int
@@ -905,7 +906,7 @@ func headingsOf(headings []line, ids []string, lines, listLines int, markers map
 	if len(headings) > 0 {
 		withEmoji, questions, numbered := 0, 0, 0
 		for _, heading := range headings {
-			if strings.ContainsFunc(heading.text, isEmojiBase) {
+			if first, _ := utf8.DecodeRuneInString(heading.text); isEmojiBase(first) {
 				withEmoji++
 			}
 			if strings.HasSuffix(strings.TrimRightFunc(heading.text, func(r rune) bool { return unicode.IsSpace(r) || isEmojiRune(r) }), "?") {

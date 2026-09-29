@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
-	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/job"
@@ -18,7 +18,6 @@ import (
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/voice"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type generationTemplates struct{ service *template.Service }
@@ -154,43 +153,17 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 }
 
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
-	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, Excerpts: profile.Excerpts, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
-}
-
-// generationVersionSamples adapts at the boundary the way generationProfiles does. The wire
-// format is the PostContent message's own protojson, so the voice context can keep the value as
-// opaque text and the voice RPC edge can hand the client back exactly the message it already
-// decodes -- one schema, defined in the proto, rather than a second JSON shape maintained here.
-type generationVersionSamples struct{ service *voice.Service }
-
-func (a generationVersionSamples) RecordVersionSample(ctx context.Context, userID, voiceID string, version int64, content generation.PostContent) error {
-	encoded, err := protojson.Marshal(generationContentProto(content))
-	if err != nil {
-		return fmt.Errorf("encode voice version sample: %w", err)
-	}
-	return generationVoiceError(a.service.RecordVersionSample(ctx, userID, voiceID, version, string(encoded)))
-}
-
-func generationContentProto(content generation.PostContent) *postpilotv1.PostContent {
-	out := &postpilotv1.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
-	for _, block := range content.Blocks {
-		out.Blocks = append(out.Blocks, &postpilotv1.Block{
-			// The domain's block type strings ARE the proto enum's value names, so the
-			// generated name table is the mapping. An unknown name yields UNSPECIFIED, which
-			// is the same thing every other mapper in the tree does with one.
-			Type:    postpilotv1.BlockType(postpilotv1.BlockType_value[string(block.Type)]),
-			Content: block.Content, Level: block.Level,
-			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
-		})
-	}
-	return out
+	retrieval := strings.TrimSpace(topic + " " + strings.Join(tags, " "))
+	profile, err := a.service.PromptProfileForTopic(ctx, userID, voiceID, retrieval, voice.Language(target), "")
+	return generation.Profile{Text: profile.Text, Excerpts: profile.Excerpts, Portable: profile.Portable}, generationVoiceError(err)
 }
 
 func generationVoiceError(err error) error {
 	switch {
 	case errors.Is(err, voice.ErrVoiceDeleted):
 		return generation.ErrVoiceDeleted
+	case errors.Is(err, voice.ErrVoiceNotMade):
+		return generation.ErrVoiceNotMade
 	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
 		// The voice the run froze no longer resolves: the result may not land (GEN-27).
 		return generation.ErrVoiceMismatch

@@ -55,7 +55,7 @@ import { i18n as deleteGuidelineI18n } from '@/features/delete-guideline/config/
 import { i18n as deleteTemplateI18n } from '@/features/delete-template/config/i18n'
 import { i18n as deleteVoiceI18n } from '@/features/delete-voice/config/i18n'
 import { i18n as editGuidelineI18n } from '@/features/edit-guideline/config/i18n'
-import { i18n as editVoiceProfileI18n } from '@/features/edit-voice-profile/config/i18n'
+import { i18n as restoreVoiceAnalysisI18n } from '@/features/restore-voice-analysis/config/i18n'
 import { i18n as exportPanelI18n } from '@/widgets/export-panel/config/i18n'
 import { i18n as finalizePostI18n } from '@/features/finalize-post/config/i18n'
 import { i18n as editStorylineI18n } from '@/features/edit-storyline/config/i18n'
@@ -225,7 +225,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   templatesI18n,
   createVoiceI18n,
   deleteVoiceI18n,
-  editVoiceProfileI18n,
+  restoreVoiceAnalysisI18n,
   manageVoiceSamplesI18n,
   pasteVoiceMaterialI18n,
   answerVoicePromptI18n,
@@ -266,7 +266,7 @@ export const resources = {
     voices: {
       ...createVoiceI18n.ko,
       ...deleteVoiceI18n.ko,
-      ...editVoiceProfileI18n.ko,
+      ...restoreVoiceAnalysisI18n.ko,
       ...manageVoiceSamplesI18n.ko,
       ...pasteVoiceMaterialI18n.ko,
       ...answerVoicePromptI18n.ko,
@@ -386,7 +386,7 @@ export const resources = {
     voices: {
       ...createVoiceI18n.en,
       ...deleteVoiceI18n.en,
-      ...editVoiceProfileI18n.en,
+      ...restoreVoiceAnalysisI18n.en,
       ...manageVoiceSamplesI18n.en,
       ...pasteVoiceMaterialI18n.en,
       ...answerVoicePromptI18n.en,

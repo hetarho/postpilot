@@ -18,15 +18,3 @@ func AssembleCorpus(samples []Sample) string {
 	}
 	return out.String()
 }
-
-// proseCorpus is what the product measures: the prose lines alone, with no separator a count
-// could mistake for the owner's sentence.
-func proseCorpus(samples []Sample) string {
-	parts := make([]string, 0, len(samples))
-	for _, sample := range samples {
-		if prose := ProseText(sample.Body); prose != "" {
-			parts = append(parts, prose)
-		}
-	}
-	return strings.Join(parts, "\n\n")
-}

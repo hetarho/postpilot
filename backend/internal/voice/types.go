@@ -29,12 +29,9 @@ var (
 	ErrPhotoRequired = errors.New("a photo prompt needs an uploaded photo")
 	// ErrInvalidPhoto is a photo whose size or dimensions a post photo could not have either.
 	ErrInvalidPhoto = errors.New("invalid voice photo")
-	// ErrVersionSampleNotFound means this version never produced a post, which is an ordinary
-	// state for a version rather than a failure.
-	ErrVersionSampleNotFound = errors.New("voice version sample not found")
-	// ErrLearningNotFound is a profile version the voice never published.
-	ErrLearningNotFound = errors.New("voice profile version not found")
-	ErrInvalidLifecycle = errors.New("invalid voice lifecycle transition")
+	// ErrNoPreviousAnalysis is 이전 분석으로 되돌리기 with nothing to return to (VOICE-30).
+	ErrNoPreviousAnalysis = errors.New("the voice has no previous analysis")
+	ErrInvalidLifecycle   = errors.New("invalid voice lifecycle transition")
 
 	ErrVoiceRequired = errors.New("a voice is required")
 	// ErrVoiceNotFound covers unknown AND foreign ids on purpose: a voice that belongs to
@@ -146,146 +143,74 @@ type PhotoUpload struct {
 	ExpiresAt, CreatedAt                time.Time
 }
 
+// Profile is a voice as its 말투 분석 tab and its 학습 글 tab read it.
 type Profile struct {
 	UserID      string
 	VoiceID     string
 	Voice       Voice
-	UpdatedAt   time.Time
 	Samples     []Sample
 	ActiveJobID string
-	Structured  StructuredProfile
-	Versions    []ProfileVersion
 	// Readiness is the meter over every 학습 글 (VOICE-32); 다시 분석 needs it at 100% too.
 	Readiness Readiness
+	// Analysis is the current analysis, nil until the voice is made (VOICE-25).
+	Analysis    *Analysis
+	HasPrevious bool
+	Notice      Notice
 }
 
-type ValueSource string
-
-const (
-	SourceUnknown  ValueSource = "unknown"
-	SourceMeasured ValueSource = "measured"
-	SourceAnalyzed ValueSource = "analyzed"
-	SourceManual   ValueSource = "manual"
-)
-
-type VoiceValue struct {
-	Value   string
-	Source  ValueSource
-	Unknown bool
-}
-type WeightedWord struct {
-	Word         string
-	Alternatives []string
-	Weight       int
-}
-type BannedItem struct {
-	Value  string
-	Reason string
-}
-type EndingRatio struct {
-	Ending string
-	Ratio  float64
-}
-type LexicalProfile struct {
-	PreferredWords              []WeightedWord
-	BannedWords, BannedPatterns []BannedItem
-	Description                 VoiceValue
-}
-type EndingsProfile struct {
-	BaseRegister                                 VoiceValue
-	Distribution                                 []EndingRatio
-	BannedEndings, SignatureEndings, Constraints []string
-}
-type SyntaxProfile struct {
-	AverageSentenceChars            float64
-	SentenceLength, ConnectiveStyle VoiceValue
-	PreferredConnectives            []string
-	Nominalization, PassiveTendency VoiceValue
-}
-type StructureProfile struct {
-	IntroPattern, ClosingPattern                 VoiceValue
-	ParagraphSentencesMin, ParagraphSentencesMax int
-	HeadingHabit, ListHabit, EmojiUse            VoiceValue
-}
-
-// Each axis is a pointer so presence survives the round trip: an axis the analysis never
-// answered is nil (published as unknown), not an indistinguishable neutral 0. A stored `0`
-// in an older snapshot still decodes as present-0, so historical versions keep showing what
-// they published.
-type AxesProfile struct{ Involvement, Narrativity, PersuasionOvertness, Abstractness, AddresseeFocus, Humor *int }
-
-// AxisValues lists the six axes in their canonical order with their JSON keys.
-func (a AxesProfile) AxisValues() []struct {
-	Key   string
-	Value *int
-} {
-	return []struct {
-		Key   string
-		Value *int
-	}{{"involvement", a.Involvement}, {"narrativity", a.Narrativity}, {"persuasion_overtness", a.PersuasionOvertness}, {"abstractness", a.Abstractness}, {"addressee_focus", a.AddresseeFocus}, {"humor", a.Humor}}
-}
-
-type RuleLayer string
+// NoticeKind is how the 학습 글 moved since the current analysis read them (VOICE-21).
+type NoticeKind string
 
 const (
-	LayerLexical   RuleLayer = "lexical"
-	LayerEndings   RuleLayer = "endings"
-	LayerSyntax    RuleLayer = "syntax"
-	LayerStructure RuleLayer = "structure"
-	LayerAxes      RuleLayer = "axes"
+	NoticeNone    NoticeKind = ""
+	NoticeAdded   NoticeKind = "added"
+	NoticeChanged NoticeKind = "changed"
 )
 
-type StructuredProfile struct {
-	Version     int64
-	UpdatedAt   time.Time
-	SourceCount int
-	Empty       bool
-	Lexical     LexicalProfile
-	Endings     EndingsProfile
-	Syntax      SyntaxProfile
-	Structure   StructureProfile
-	Axes        AxesProfile
-	// OverrideBase holds, per overridden field ("layer.field"), the value it held before the
-	// override replaced it, so clearing the override can return it (VOICE-28).
-	OverrideBase map[string]VoiceValue `json:",omitempty"`
-}
-type ProfileVersion struct {
-	ID, UserID, VoiceID string
-	Version             int64
-	Profile             StructuredProfile
-	Origin              string
-	RestoredFromVersion int64
-	CreatedAt           time.Time
-	// HasSample says whether this version can be PREVIEWED, without the list carrying every
-	// post body the voice ever produced (VOICE-29). The snapshot itself is fetched per
-	// version, on open.
-	HasSample bool
+// Notice is `새 학습 글 N편` (added) or `학습 글이 바뀌었어요` (changed).
+type Notice struct {
+	Kind  NoticeKind
+	Count int
 }
 
-// VersionSample is a copy of the raw AI output of the last post generated under one profile
-// version — the material that lets a version be read before it is adopted (VOICE-29).
-//
-// Content is OPAQUE TEXT here and everywhere inside this context. Voice records what a profile
-// version produced; it does not learn the shape of a post's content, so nothing in this package
-// parses this string (ARCHITECTURE section 2, the anti-corruption boundary). It is a COPY, not a
-// reference: deleting the source post, regenerating it, editing it by hand or reassigning it to
-// another voice leaves the snapshot alone.
-type VersionSample struct {
-	UserID, VoiceID string
-	Version         int64
-	Content         string
-	CreatedAt       time.Time
-}
-type ManualOverride struct {
-	UserID, VoiceID string
-	Layer           RuleLayer
-	Field, Value    string
-	UpdatedAt       time.Time
+// AIField is which part of the AI's reading an example shows.
+type AIField string
+
+const (
+	AIImpression       AIField = "impression"
+	AITics             AIField = "tics"
+	AISignaturePhrases AIField = "signature_phrases"
+)
+
+// Tic is a verbal tic and when it appears.
+type Tic struct {
+	Phrase string `json:"phrase"`
+	When   string `json:"when"`
 }
 
-type PersonalizationConfig struct {
-	FewShotMax, FewShotExcerptTargetChars, FewShotExcerptMaxChars int
-	EndingMaxConsecutive                                          int
+// AIExample is a sentence the AI cited, kept only when it occurs verbatim in a 학습 글.
+type AIExample struct {
+	Field      AIField `json:"field"`
+	Sentence   string  `json:"sentence"`
+	MaterialID string  `json:"material_id"`
+}
+
+// AIPart is what the analysis call writes: only what cannot be counted (VOICE-24).
+type AIPart struct {
+	Impression       string      `json:"impression"`
+	Tics             []Tic       `json:"tics"`
+	SignaturePhrases []string    `json:"signature_phrases"`
+	Examples         []AIExample `json:"examples"`
+}
+
+// Analysis is one immutable snapshot (VOICE-26): the counted fingerprint, the AI part, the 학습
+// 글 it read and when.
+type Analysis struct {
+	Counted      Fingerprint
+	AI           AIPart
+	MaterialIDs  []string
+	AnalyzeModel string
+	CreatedAt    time.Time
 }
 
 type AnalysisJob struct {
