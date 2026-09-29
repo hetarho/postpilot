@@ -92,3 +92,30 @@ it('keeps any other caption frame refusal final', async () => {
   await expect(request.frames('caption', 0, new AbortController().signal)).rejects.toThrow()
   expect(calls).toBe(1)
 })
+
+// CLIP-192: a browser render's assets and frames are asked for by the render's name, so the
+// server draws them on the grounds it sampled for it; the editing preview never names one.
+it('names the browser render on both of its requests, and nothing else ever does', async () => {
+  vi.stubGlobal('crypto', webcrypto)
+  const seen: string[] = []
+  const transport = createRouterTransport((router) =>
+    router.service(ClipRenderService, {
+      prepareClipPreview: (request) => {
+        seen.push(`assets:${request.renderId}`)
+        return { draftHash: request.draftHash, nextOffset: -1 }
+      },
+      prepareClipCaptionFrames: (request) => {
+        seen.push(`frames:${request.renderId}`)
+        return { cells: 1, cellWidth: 10, cellHeight: 10, columns: 1, nextOffset: -1 }
+      },
+    }),
+  )
+  const signal = new AbortController().signal
+  const render = await clipPreviewRequest(transport, 'owned', 1, smallPlan, 'render')
+  await render.load([], 0, signal)
+  await render.frames('caption', 0, signal)
+  const editing = await clipPreviewRequest(transport, 'owned', 1, smallPlan)
+  await editing.load([], 0, signal)
+  await editing.frames('caption', 0, signal)
+  expect(seen).toEqual(['assets:render', 'frames:render', 'assets:', 'frames:'])
+})

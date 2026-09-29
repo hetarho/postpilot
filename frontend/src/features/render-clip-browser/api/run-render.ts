@@ -6,6 +6,9 @@ import {
 } from '@/entities/clip-preview'
 import { type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
+import { isTerminal, type GenerationJobCalls } from '@/entities/generation-job'
+import type { AppFailure } from '@/shared/api'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 import { BrowserOriginals } from '../lib/originals'
 import { prepareBrowserRenderAssets, type PreviewRequestCall } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'
@@ -22,15 +25,27 @@ export interface BrowserRenderInput {
   resolvePlayback: (fingerprint: string) => Promise<string>
 }
 export interface BrowserRenderProgress {
-  stage: 'encoding' | 'storing'
+  stage: 'sampling' | 'encoding' | 'storing'
   percent: number
 }
+/** The render's sampling job ended without keeping the grounds its assets are drawn on
+ *  (CLIP-192): the render is refused with the job's own reason (CLIP-155). */
+export class BrowserRenderSamplingError extends Error {
+  constructor(readonly failure: AppFailure | undefined) {
+    super('CLIP_BROWSER_RENDER_SAMPLING_FAILED')
+    this.name = 'BrowserRenderSamplingError'
+  }
+}
 export interface BrowserRenderOperations {
-  admit(input: BrowserRenderInput): Promise<string>
+  /** The render's identity, and the job its grounds are sampled by (none without a worker). */
+  admit(input: BrowserRenderInput): Promise<{ renderId: string; jobId: string }>
+  /** Resolves once the sampling job kept the grounds; rejects when it ended otherwise. */
+  sampled(jobId: string, signal: AbortSignal): Promise<void>
   cancel(id: string): Promise<boolean>
   refresh(projectId: string): Promise<ClipProject>
   prepare: (
     input: BrowserRenderInput,
+    renderId: string,
     signal: AbortSignal,
   ) => ReturnType<typeof prepareBrowserRenderAssets>
   video: typeof renderBrowserVideo
@@ -51,26 +66,48 @@ export function browserRenderOperations(calls: {
   render: ClipRenderCalls
   fetchProject: (projectId: string) => Promise<ClipProject>
   requestPreview: PreviewRequestCall
+  job: GenerationJobCalls
 }): BrowserRenderOperations {
   return {
     async admit(input) {
-      const { renderId } = await calls.render.admit({
+      const { renderId, jobId } = await calls.render.admit({
         projectId: input.projectId,
         expectedRevision: input.revision,
         batchId: input.batchId,
         machine: 'browser',
       })
       if (!renderId) throw new Error('Missing browser render identity')
-      return renderId
+      return { renderId, jobId }
+    },
+    async sampled(jobId, signal) {
+      for (;;) {
+        const job = await calls.job.get(jobId, signal)
+        if (isTerminal(job)) {
+          if (job.status !== 'done') throw new BrowserRenderSamplingError(job.failure)
+          return
+        }
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, POLL_INTERVAL_MS)
+          signal.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timer)
+              reject(signal.reason)
+            },
+            { once: true },
+          )
+        })
+      }
     },
     cancel: (renderId) => calls.render.cancelBrowserRender(renderId),
     refresh: (id) => calls.fetchProject(id),
-    prepare: (input, signal) =>
+    prepare: (input, renderId, signal) =>
       prepareBrowserRenderAssets(
         calls.requestPreview,
         input.projectId,
         input.revision,
         input.plan,
+        renderId,
         signal,
       ),
     video: renderBrowserVideo,
@@ -141,10 +178,20 @@ export async function runBrowserRender(
   try {
     signal.throwIfAborted()
     encoded()
-    id = await operations.admit(input)
+    const admitted = await operations.admit(input)
+    id = admitted.renderId
     if (signal.aborted) abort()
     controller.signal.throwIfAborted()
-    assets = await operations.prepare(input, controller.signal)
+    // The server samples the footage this render is drawn over before its assets exist
+    // (CLIP-192). The wait is the render's own first phase in ② (CLIP-156); cancelling it
+    // cancels the render, which stops the job.
+    if (admitted.jobId) {
+      progress({ stage: 'sampling', percent: 0 })
+      await operations.sampled(admitted.jobId, controller.signal)
+      controller.signal.throwIfAborted()
+      encoded()
+    }
+    assets = await operations.prepare(input, id, controller.signal)
     controller.signal.throwIfAborted()
     handle = operations.video(
       { plan: input.plan, ratio: input.ratio, assets: assets.assets },

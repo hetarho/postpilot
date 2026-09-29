@@ -586,6 +586,52 @@ func (q *Queries) LatestForProject(ctx context.Context, arg LatestForProjectPara
 	return i, err
 }
 
+const latestForProjectExcept = `-- name: LatestForProjectExcept :one
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs WHERE user_id=?1 AND clip_project_id=?2 AND kind NOT IN (SELECT value FROM json_each(?3)) ORDER BY created_at DESC,id DESC LIMIT 1
+`
+
+type LatestForProjectExceptParams struct {
+	UserID        string
+	ClipProjectID sql.NullString
+	Kinds         interface{}
+}
+
+// The same read passing over the kinds the caller names, as a JSON array, so the queue's
+// SQL names no product.
+func (q *Queries) LatestForProjectExcept(ctx context.Context, arg LatestForProjectExceptParams) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, latestForProjectExcept, arg.UserID, arg.ClipProjectID, arg.Kinds)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.TargetLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
+		&i.ClipProjectID,
+		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
+		&i.ExperimentID,
+	)
+	return i, err
+}
+
 const latestForVoiceKind = `-- name: LatestForVoiceKind :one
 SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs
 WHERE voice_id = ? AND kind = ?

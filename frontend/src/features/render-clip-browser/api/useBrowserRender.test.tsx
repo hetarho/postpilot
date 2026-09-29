@@ -7,6 +7,7 @@ import {
   ClipGenerationService,
   ClipProjectSchema,
   ClipRenderService,
+  GenerationService,
   StartClipRenderResponseSchema,
 } from '@/shared/api'
 import { clipPlanToProto } from '@/entities/clip-plan'
@@ -69,4 +70,57 @@ it('renders no revision older than the one the server holds', async () => {
     failure: { reason: 'CLIP_PLAN_CONFLICT' },
   })
   expect(started).not.toHaveBeenCalled()
+})
+
+// CLIP-192, CLIP-155: the render waits on its sampling job; a job that failed refuses the
+// browser kind by that one reason, names the refusal, and withdraws the render.
+it('refuses the browser render when its sampling job failed', async () => {
+  const editing = clipTimelineFixture()
+  const cancelled = vi.fn(() => ({ cancelled: true }))
+  const transport = createRouterTransport((router) => {
+    router.service(ClipRenderService, {
+      startClipRender: () =>
+        create(StartClipRenderResponseSchema, { renderId: 'render', jobId: 'sampling' }),
+      cancelClipBrowserRender: cancelled,
+    })
+    router.rpc(GenerationService.method.getGeneration, () => ({
+      job: {
+        id: 'sampling',
+        kind: 'sample_browser_render',
+        status: 'failed',
+        failure: { reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} },
+      },
+    }))
+    router.rpc(ClipGenerationService.method.getClipProject, () => ({
+      project: create(ClipProjectSchema, {
+        id: 'clip',
+        title: 'Test',
+        ratio: 'vertical',
+        editPlanRevision: 3,
+        renderedPlanRevision: 1,
+        editing: create(ClipEditingStateSchema, {
+          ...editing,
+          plan: clipPlanToProto(editing.plan),
+        }),
+      }),
+    }))
+    router.rpc(ClipGenerationService.method.listClipProjects, () => ({ projects: [] }))
+  })
+  const view = renderHook(() => useBrowserRender('alice', 'clip'), {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await act(() =>
+    view.result.current.start({
+      batchId: 'batch',
+      localSources: [],
+      resolvePlayback: vi.fn(),
+      flush: () => Promise.resolve(3),
+    }),
+  )
+  expect(view.result.current.state).toMatchObject({
+    phase: 'failed',
+    refusal: 'sampling',
+    failure: { reason: 'CLIP_SOURCE_UNAVAILABLE' },
+  })
+  expect(cancelled).toHaveBeenCalledOnce()
 })

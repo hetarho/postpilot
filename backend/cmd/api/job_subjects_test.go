@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -61,7 +62,7 @@ func TestPostVoiceWorkStatesTheGuardsTheQueueUsedToInfer(t *testing.T) {
 				t.Fatalf("guards = %v, want %v", guards, tc.guards)
 			}
 			for i, want := range tc.guards {
-				if guards[i].Subject != want || guards[i].Filter != tc.guardFilters[i] {
+				if guards[i].Subject != want || !reflect.DeepEqual(guards[i].Filter, tc.guardFilters[i]) {
 					t.Fatalf("guard %d = %v, want %v %v", i, guards[i], want, tc.guardFilters[i])
 				}
 			}
@@ -114,7 +115,7 @@ func TestStorylineWorkIsPostTargetedAndOwnsNoVoice(t *testing.T) {
 		}
 		subjects, guards := postVoiceWork(kind, "alice", "post", "")
 		want := job.Subject{Dimension: post.JobSubject, ID: "post"}
-		if len(subjects) != 1 || subjects[0] != want || len(guards) != 1 || guards[0].Subject != want || guards[0].Filter != (job.Filter{UserID: "alice"}) {
+		if len(subjects) != 1 || subjects[0] != want || len(guards) != 1 || guards[0].Subject != want || !reflect.DeepEqual(guards[0].Filter, job.Filter{UserID: "alice"}) {
 			t.Errorf("%s: subjects %v guards %v", kind, subjects, guards)
 		}
 	}

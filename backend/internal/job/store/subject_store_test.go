@@ -128,6 +128,29 @@ func TestActiveForClipProjectIsOwnerScoped(t *testing.T) {
 	}
 }
 
+// A latest read may pass over kinds its context names, and only those: a newer job of such
+// a kind leaves the one before it as the subject's latest.
+func TestLatestForClipProjectPassesOverNamedKinds(t *testing.T) {
+	store, handle := subjectHarness(t)
+	ctx := context.Background()
+	subject := job.Subject{Dimension: clipProjectSubject, ID: "clip-alice"}
+	insert(t, store, job.Job{ID: "older", Kind: "render_clip", UserID: "alice", Subjects: []job.Subject{subject}})
+	// One project runs one job at a time: the render ends before the next one starts.
+	if _, err := handle.Writer.Exec(`UPDATE generation_jobs SET status='done', created_at='2026-09-29T00:00:00Z' WHERE id='older'`); err != nil {
+		t.Fatal(err)
+	}
+	insert(t, store, job.Job{ID: "newer", Kind: "sample_browser_render", UserID: "alice", Subjects: []job.Subject{subject}})
+	for _, tc := range []struct {
+		except []string
+		want   string
+	}{{nil, "newer"}, {[]string{"sample_browser_render"}, "older"}, {[]string{"revise_clip"}, "newer"}} {
+		latest, err := store.LatestFor(ctx, subject, job.Filter{UserID: "alice", ExceptKinds: tc.except})
+		if err != nil || latest == nil || latest.ID != tc.want {
+			t.Fatalf("latest passing over %v = %v, %v; want %s", tc.except, latest, err, tc.want)
+		}
+	}
+}
+
 // An experiment keeps its id in the payload; the generated column is what makes that a
 // lookup. It is read-only: a job cannot be attached to it.
 func TestExperimentSubjectIsDerivedAndUnattachable(t *testing.T) {

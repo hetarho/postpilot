@@ -7,11 +7,13 @@ import {
   type PreparedAsset,
 } from '@/entities/clip-preview'
 
-/** How the caller asks for one preview request; the entity owns the transport behind it. */
+/** How the caller asks for one preview request; the entity owns the transport behind it. A
+ *  browser render names itself, so its assets are drawn on the grounds sampled for it. */
 export type PreviewRequestCall = (
   projectId: string,
   revision: number,
   plan: ClipEditPlan,
+  renderId?: string,
 ) => Promise<ClipPreviewRequest>
 
 /** The same server PNGs, manifest checks and runtime-only cache the preview uses. */
@@ -20,6 +22,7 @@ export async function prepareBrowserRenderAssets(
   projectId: string,
   revision: number,
   plan: ClipEditPlan,
+  renderId: string,
   signal: AbortSignal,
 ): Promise<{
   assets: PreparedAsset[]
@@ -31,7 +34,7 @@ export async function prepareBrowserRenderAssets(
   dispose: () => void
 }> {
   signal.throwIfAborted()
-  const request = await requestPreview(projectId, revision, plan)
+  const request = await requestPreview(projectId, revision, plan, renderId)
   signal.throwIfAborted()
   const preparation = new PreviewPreparation(
     new PreviewAssetCache({

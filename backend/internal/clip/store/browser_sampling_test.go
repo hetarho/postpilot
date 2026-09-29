@@ -110,6 +110,10 @@ func TestABrowserRenderIsSampledOnAMediaWorker(t *testing.T) {
 	if _, err := g.h.service.StartRender(t.Context(), "alice", g.before.ID, g.batch.ID, g.before.EditPlanRevision, clip.RenderServer); !errors.Is(err, clip.ErrBusy) {
 		t.Fatal("another render started beside a sampling job", err)
 	}
+	// The sampling belongs to the render: the project's latest job stays its own (CLIP-156).
+	if latest, err := clipapp.NewJobs(g.h.queue, nil).Latest(t.Context(), "alice", g.before.ID); err != nil || latest == nil || latest.ID == sampling {
+		t.Fatalf("the project's latest job is the render's sampling: %+v %v", latest, err)
+	}
 	j := g.pick(t)
 	if j.ID != sampling || j.Kind != clip.JobKindSampleBrowserRender {
 		t.Fatalf("picked %s (%s), want the sampling job", j.ID, j.Kind)

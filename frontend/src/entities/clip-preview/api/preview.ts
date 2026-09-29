@@ -41,11 +41,15 @@ async function askAgainWhenBusy<T>(call: () => Promise<T>, signal: AbortSignal):
   }
 }
 
+/** A request for the draft's assets and caption frames. A browser render names itself
+ *  (`renderId`), so the server draws them on the grounds it sampled for that render
+ *  (CLIP-192); the editing preview names none and is drawn on no ground. */
 export async function clipPreviewRequest(
   transport: Transport,
   projectId: string,
   revision: number,
   draft: ClipEditPlan,
+  renderId = '',
 ) {
   const plan = create(ClipEditPlanSchema, clipPlanToProto(draft))
   const bytes = toBinary(ClipEditPlanSchema, plan)
@@ -69,6 +73,7 @@ export async function clipPreviewRequest(
         plan,
         instanceId,
         frameOffset,
+        renderId,
       })
       const value = await askAgainWhenBusy(
         () =>
@@ -100,6 +105,7 @@ export async function clipPreviewRequest(
         plan,
         elementIds,
         assetOffset,
+        renderId,
       })
       if (
         new TextEncoder().encode(toJsonString(PrepareClipPreviewRequestSchema, request))
@@ -142,8 +148,8 @@ export type ClipPreviewRequest = Awaited<ReturnType<typeof clipPreviewRequest>>
 export function useClipPreviewRequest() {
   const transport = useTransport()
   return useCallback(
-    (projectId: string, revision: number, draft: ClipEditPlan) =>
-      clipPreviewRequest(transport, projectId, revision, draft),
+    (projectId: string, revision: number, draft: ClipEditPlan, renderId?: string) =>
+      clipPreviewRequest(transport, projectId, revision, draft, renderId),
     [transport],
   )
 }

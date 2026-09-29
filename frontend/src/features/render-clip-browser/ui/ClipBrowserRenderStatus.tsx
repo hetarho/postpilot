@@ -31,7 +31,10 @@ export function ClipBrowserRenderStatus({
         )}
       </div>
       {state.failure && (
-        <div role="alert">
+        <div role="alert" className="space-y-1">
+          {state.refusal && (
+            <Typography variant="meta">{t(`render.refusal.${state.refusal}`)}</Typography>
+          )}
           <AppFailureMessage failure={state.failure} />
         </div>
       )}

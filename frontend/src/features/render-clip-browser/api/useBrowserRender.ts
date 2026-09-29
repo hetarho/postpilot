@@ -5,8 +5,10 @@ import {
   type ClipNotice,
 } from '@/entities/clip-project'
 import { useClipPreviewRequest, useClipRenderCalls } from '@/entities/clip-preview'
+import { useGenerationJobCalls } from '@/entities/generation-job'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
+  BrowserRenderSamplingError,
   browserRenderOperations,
   runBrowserRender,
   type BrowserRenderInput,
@@ -18,6 +20,8 @@ export interface BrowserRenderState {
   phase: 'idle' | 'running' | 'cancelling' | 'cancelled' | 'done' | 'failed'
   progress: BrowserRenderProgress
   failure?: AppFailure
+  /** Why the browser kind was refused, beside the reason itself (CLIP-155). */
+  refusal?: 'sampling'
   notices?: ClipNotice[]
 }
 type StartInput = Pick<BrowserRenderInput, 'batchId' | 'localSources' | 'resolvePlayback'> & {
@@ -28,6 +32,7 @@ export function useBrowserRender(ownerId: string, projectId: string) {
   const calls = useClipProjectCalls()
   const renders = useClipRenderCalls()
   const requestPreview = useClipPreviewRequest()
+  const job = useGenerationJobCalls()
   const refresh = useRefreshClipProjects(ownerId)
   const current = useRef<AbortController | undefined>(undefined)
   const mounted = useRef(true)
@@ -65,13 +70,26 @@ export function useBrowserRender(ownerId: string, projectId: string) {
       }
       await runBrowserRender(
         { ...input, projectId, revision, plan: project.editing.plan, ratio: project.ratio },
-        browserRenderOperations({ render: renders, fetchProject: calls.fetch, requestPreview }),
+        browserRenderOperations({
+          render: renders,
+          fetchProject: calls.fetch,
+          requestPreview,
+          job,
+        }),
         controller.signal,
         (progress) => update({ progress }),
       )
       update({ phase: 'done', progress: { stage: 'storing', percent: 100 } })
     } catch (error) {
       if (controller.signal.aborted) update({ phase: 'cancelled' })
+      else if (error instanceof BrowserRenderSamplingError)
+        // The footage this render is drawn over could not be sampled, so the browser kind is
+        // refused with the sampling job's own reason and the server render stays the choice.
+        update({
+          phase: 'failed',
+          refusal: 'sampling',
+          failure: error.failure ?? { reason: 'CLIP_PROCESSING_FAILED', params: {} },
+        })
       else if (error instanceof BrowserRenderVerdictError)
         update({
           phase: 'failed',

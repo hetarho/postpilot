@@ -95,8 +95,10 @@ func (a Jobs) Snapshot(ctx context.Context, user, project, id string) (*clip.Cli
 	return snapshot(j), err
 }
 
+// Latest is the project's newest job of its own; a browser render's sampling belongs to
+// the render and is passed over (CLIP-156, CLIP-192).
 func (a Jobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.LatestSnapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: id})
+	j, err := a.queue.LatestSnapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: id}, clip.ProjectLatestExcept...)
 	return snapshot(j), err
 }
 

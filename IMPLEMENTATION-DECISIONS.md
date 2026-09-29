@@ -477,6 +477,12 @@ choice would be expensive to undo are listed at the end.
 - **Without a media worker nothing is sampled.** The in-process mode only the tests run records
   an empty sampling, so a browser render there is drawn on no ground. Production and dev always
   have a worker.
+- **The page waits on the sampling as the render's own first phase (T464).** ② shows "영상의 밝기를
+  확인하는 중" and polls the job every 2 s (the app's job poll interval); a job that failed refuses
+  the browser kind with its reason and a line pointing to the server render. The sampling job
+  is left out of the project's `latestJob`, list badge and accounting, so the page never shows it
+  as a project job or switches to the focused job view (CLIP-156); it still holds the project,
+  so edits and confirmation wait for it.
 - **Contrast notices ride on each asset only.** A render-bound asset says whether a line still
   falls short on its ground (`contrast_notice`); nothing persists it, which is what a server
   render does with its own notices today.

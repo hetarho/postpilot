@@ -28,6 +28,11 @@ const (
 	JobKindSampleBrowserRender = "sample_browser_render"
 )
 
+// ProjectLatestExcept are the kinds a project's latest job never is: a browser render's
+// sampling runs inside that render's own progress in ② and is not shown as the project's
+// job (CLIP-156, CLIP-192), though it holds the project while it runs.
+var ProjectLatestExcept = []string{JobKindSampleBrowserRender}
+
 // SafeJobStage is the stage vocabulary a clip job may have its progress logged under.
 // Anything else is an unexpected handler's string and is logged as "unknown".
 func SafeJobStage(stage string) string {

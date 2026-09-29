@@ -14,6 +14,10 @@ func (s Subject) valid() bool { return s.Dimension != "" && s.ID != "" }
 type Filter struct {
 	UserID string
 	Kind   string
+	// ExceptKinds are kinds a latest-job read of a project passes over: work that belongs
+	// to something else of the subject's, which its context names (a clip's browser render
+	// sampling is the render's, not the project's own job).
+	ExceptKinds []string
 }
 
 // Guard is one "refuse if work is already active" check Enqueue runs before it inserts.

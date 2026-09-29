@@ -72,8 +72,8 @@ func (q *Queue) Snapshot(ctx context.Context, userID string, subject Subject, id
 
 // LatestSnapshot is the same owner-scoped read for the subject's most recent job, which is
 // how a recovering owner finds the approval it left behind.
-func (q *Queue) LatestSnapshot(ctx context.Context, userID string, subject Subject) (*Job, error) {
-	found, err := q.store.LatestFor(ctx, subject, Filter{UserID: userID})
+func (q *Queue) LatestSnapshot(ctx context.Context, userID string, subject Subject, except ...string) (*Job, error) {
+	found, err := q.store.LatestFor(ctx, subject, Filter{UserID: userID, ExceptKinds: except})
 	if err != nil || found == nil {
 		return nil, err
 	}

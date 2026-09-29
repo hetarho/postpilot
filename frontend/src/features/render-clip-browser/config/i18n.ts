@@ -7,6 +7,7 @@ export const i18n = {
     render: {
       progress: {
         label: '브라우저 렌더 진행',
+        sampling: '영상의 밝기를 확인하는 중',
         encoding: '브라우저에서 영상 만드는 중',
         storing: '완성된 영상 저장 중',
         cancelling: '브라우저 렌더 취소 중',
@@ -19,6 +20,8 @@ export const i18n = {
         capability:
           '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요. 서버 렌더를 선택해 주세요.',
         memory: '이 기기의 메모리가 브라우저 렌더에 부족해요. 서버 렌더를 선택해 주세요.',
+        sampling:
+          '브라우저 렌더에 필요한 영상 밝기 확인을 마치지 못했어요. 서버 렌더를 선택해 주세요.',
       },
       choose: '어디서 렌더할까요?',
       kind: { browser: '브라우저에서 렌더', server: '서버에서 렌더' },
@@ -32,6 +35,7 @@ export const i18n = {
     render: {
       progress: {
         label: 'Browser render progress',
+        sampling: 'Checking the brightness of your footage',
         encoding: 'Rendering in your browser',
         storing: 'Storing the finished video',
         cancelling: 'Cancelling browser render',
@@ -45,6 +49,8 @@ export const i18n = {
           'This browser does not support the required video or audio encoding. Choose server rendering.',
         memory:
           'This device reports too little memory for browser rendering. Choose server rendering.',
+        sampling:
+          'The footage check a browser render needs did not finish. Choose server rendering.',
       },
       choose: 'Where should this render run?',
       kind: { browser: 'Render in this browser', server: 'Render on the server' },

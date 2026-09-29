@@ -304,7 +304,17 @@ func (s *Store) LatestFor(ctx context.Context, subject job.Subject, filter job.F
 	if filter.Kind != "" {
 		return nil, fmt.Errorf("latest for clip project: kind filter unsupported")
 	}
-	row, err := s.read.LatestForProject(ctx, sqlc.LatestForProjectParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
+	var row sqlc.GenerationJob
+	var err error
+	if len(filter.ExceptKinds) > 0 {
+		kinds, encodeErr := json.Marshal(filter.ExceptKinds)
+		if encodeErr != nil {
+			return nil, encodeErr
+		}
+		row, err = s.read.LatestForProjectExcept(ctx, sqlc.LatestForProjectExceptParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID), Kinds: string(kinds)})
+	} else {
+		row, err = s.read.LatestForProject(ctx, sqlc.LatestForProjectParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

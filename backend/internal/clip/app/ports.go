@@ -109,7 +109,7 @@ type Queue interface {
 	ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.JobSummary, error)
 	Get(ctx context.Context, id, user string) (*job.JobSummary, error)
 	Snapshot(ctx context.Context, user string, subject job.Subject, id string) (*job.Job, error)
-	LatestSnapshot(ctx context.Context, user string, subject job.Subject) (*job.Job, error)
+	LatestSnapshot(ctx context.Context, user string, subject job.Subject, except ...string) (*job.Job, error)
 }
 
 // Freezer is the model registry as the quote and the admission see it: frozen

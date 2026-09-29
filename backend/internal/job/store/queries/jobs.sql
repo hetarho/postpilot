@@ -142,6 +142,10 @@ WHERE id = ? AND user_id = ? AND kind = ? AND status = 'done';
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
 -- name: LatestForProject :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
+-- name: LatestForProjectExcept :one
+-- The same read passing over the kinds the caller names, as a JSON array, so the queue's
+-- SQL names no product.
+SELECT * FROM generation_jobs WHERE user_id=sqlc.arg(user_id) AND clip_project_id=sqlc.arg(clip_project_id) AND kind NOT IN (SELECT value FROM json_each(sqlc.arg(kinds))) ORDER BY created_at DESC,id DESC LIMIT 1;
 -- name: Activate :execrows
 -- Which kinds defer their dispatch is the composition root's answer, passed in as a JSON
 -- array, so the queue's SQL names no product.
