@@ -170,6 +170,9 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
 		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}
 	})
+	voucherStore.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
+		return voucherPaidCoverage{billing: billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
+	})
 	c.voucher = voucher.NewService(voucherStore, voucherCredits{c.ledger})
 	c.metered = meteredRegistry{Registry: registry, ledger: c.ledger}
 	// The curation surface's evidence, joined HERE rather than by a query inside the catalog:

@@ -18,8 +18,12 @@ type fakeStore struct {
 	credits  *fakeCredits
 }
 
-func (f *fakeStore) InWriteTx(_ context.Context, fn func(Store, Credits) error) error {
-	return fn(f, f.credits)
+type alwaysPaid struct{}
+
+func (alwaysPaid) ActivePaidAt(context.Context, string, time.Time) (bool, error) { return true, nil }
+
+func (f *fakeStore) InWriteTx(_ context.Context, fn func(Store, Credits, PaidCoverage) error) error {
+	return fn(f, f.credits, alwaysPaid{})
 }
 
 func (f *fakeStore) InsertVoucher(_ context.Context, v Voucher) error {
@@ -373,11 +377,11 @@ func TestListAttachesStateAndRemainingCredits(t *testing.T) {
 
 func TestPresetsFollowThePaidRungs(t *testing.T) {
 	presets := Presets()
-	if len(presets) != 3 {
+	if len(presets) != 4 {
 		t.Fatalf("presets = %+v", presets)
 	}
-	for i, rung := range []plan.Plan{plan.Basic, plan.Pro, plan.Max} {
-		if presets[i].Plan != rung || presets[i].Credits != plan.MonthlyCredits(rung) || presets[i].Days != PresetDays {
+	for i, offer := range plan.Offers()[1:] {
+		if presets[i].Plan != offer.Plan || presets[i].Credits != offer.MonthlyBonus || presets[i].Days != PresetDays {
 			t.Errorf("preset %d = %+v", i, presets[i])
 		}
 	}

@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { create } from '@bufbuild/protobuf'
-import { myPlanQueryKey } from '@/entities/plan'
-import { GetMyPlanResponseSchema, ProtoVoucherState } from '@/shared/api'
+import { ProtoPlan, ProtoVoucherState } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 const PENDING = 'postpilot.pendingGift'
+const PAID_PLAN = {
+  plan: ProtoPlan.BASIC,
+  serverExportWindow: { coverageId: 'paid:alice', allowance: 6, remaining: 6 },
+}
 
 describe('GiftPage', () => {
   beforeEach(() => localStorage.clear())
@@ -49,24 +51,44 @@ describe('GiftPage', () => {
     expect(await screen.findByText('Postpilot 이용권이 도착했어요')).toBeInTheDocument()
   })
 
+  it.each([ProtoPlan.FREE, ProtoPlan.BASIC])(
+    'requires active paid coverage without redeeming (%s)',
+    async (plan) => {
+      const calls: string[] = []
+      renderAppAt('/gift/tok-1', {
+        user: { id: 'alice' },
+        plans: { plan },
+        vouchers: { vouchers: [{ token: 'tok-1', credits: 290 }] },
+        calls,
+      })
+      expect(await screen.findByText(/활성 유료 구독 중에 받을 수 있어요/)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: '요금제 보기' })).toHaveAttribute('href', '/plans')
+      expect(screen.queryByRole('button', { name: '받기' })).not.toBeInTheDocument()
+      expect(calls).not.toContain('RedeemVoucher')
+    },
+  )
+
   // GIFT-9: signed in, one explicit action redeems it, and the balance the header reads is
   // marked stale so it shows the new credits.
   it('redeems for a signed-in account and refreshes the balance', async () => {
     const user = userEvent.setup()
     const redeemRequests: string[] = []
+    const planCalls: string[] = []
     localStorage.setItem(PENDING, JSON.stringify({ token: 'tok-1', savedAt: Date.now() }))
-    const { queryClient, transport } = renderAppAt('/gift/tok-1', {
+    renderAppAt('/gift/tok-1', {
       user: { id: 'alice' },
+      plans: { ...PAID_PLAN, calls: planCalls },
       vouchers: { vouchers: [{ token: 'tok-1', credits: 330 }], redeemRequests },
     })
-    queryClient.setQueryData(myPlanQueryKey(transport), create(GetMyPlanResponseSchema, {}))
 
     await user.click(await screen.findByRole('button', { name: '받기' }))
 
     expect(await screen.findByText(/^330 크레딧을 받았어요\./)).toBeInTheDocument()
     expect(redeemRequests).toEqual(['tok-1'])
     expect(screen.getByRole('link', { name: '시작하기' })).toHaveAttribute('href', '/posts')
-    expect(queryClient.getQueryState(myPlanQueryKey(transport))?.isInvalidated).toBe(true)
+    await waitFor(() =>
+      expect(planCalls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1),
+    )
     // The link this visitor was headed to is reached; nothing is left to hand back.
     expect(localStorage.getItem(PENDING)).toBeNull()
   })
@@ -75,6 +97,7 @@ describe('GiftPage', () => {
     const user = userEvent.setup()
     renderAppAt('/gift/tok-1', {
       user: { id: 'alice' },
+      plans: PAID_PLAN,
       vouchers: { vouchers: [{ token: 'tok-1' }], redeemFailure: 'VOUCHER_REDEEMED' },
     })
 
@@ -126,6 +149,7 @@ describe('pending gift hand-back', () => {
     localStorage.setItem(PENDING, JSON.stringify({ token: 'tok-1', savedAt: Date.now() }))
     const { router } = renderAppAt('/posts', {
       user: { id: 'alice' },
+      plans: PAID_PLAN,
       vouchers: { vouchers: [{ token: 'tok-1' }] },
     })
 

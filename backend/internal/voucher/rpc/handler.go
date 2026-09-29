@@ -146,6 +146,8 @@ func voucherError(action, userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voucher link expired", postpilotv1.FailureReason_VOUCHER_EXPIRED, nil)
 	case errors.Is(err, voucher.ErrRevoked):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voucher revoked", postpilotv1.FailureReason_VOUCHER_REVOKED, nil)
+	case errors.Is(err, voucher.ErrPaidCoverageRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "active paid subscription required", postpilotv1.FailureReason_SUBSCRIPTION_REQUIRED, nil)
 	default:
 		slog.Error("voucher "+action+" failed", "user_id", userID, "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "could not "+action+" voucher", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)

@@ -66,13 +66,15 @@ export function toVoucher(voucher: ProtoVoucher): Voucher {
 
 export function toVoucherPreset(preset: ProtoVoucherPreset): VoucherPreset {
   const plan =
-    preset.plan === ProtoPlan.BASIC
-      ? 'basic'
-      : preset.plan === ProtoPlan.PRO
-        ? 'pro'
-        : preset.plan === ProtoPlan.MAX
-          ? 'max'
-          : 'other'
+    preset.plan === ProtoPlan.LIGHT
+      ? 'light'
+      : preset.plan === ProtoPlan.BASIC
+        ? 'basic'
+        : preset.plan === ProtoPlan.PRO
+          ? 'pro'
+          : preset.plan === ProtoPlan.MAX
+            ? 'max'
+            : 'other'
   return { plan, credits: preset.credits, validityDays: preset.validityDays }
 }
 

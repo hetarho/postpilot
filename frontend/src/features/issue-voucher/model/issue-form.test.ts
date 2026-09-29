@@ -3,9 +3,10 @@ import type { VoucherPreset } from '@/entities/voucher'
 import { digitsOnly, toIssue, type IssueDraft } from './issue-form'
 
 const PRESETS: VoucherPreset[] = [
-  { plan: 'basic', credits: 330, validityDays: 30 },
-  { plan: 'pro', credits: 1150, validityDays: 30 },
-  { plan: 'max', credits: 2400, validityDays: 30 },
+  { plan: 'light', credits: 290, validityDays: 30 },
+  { plan: 'basic', credits: 510, validityDays: 30 },
+  { plan: 'pro', credits: 1070, validityDays: 30 },
+  { plan: 'max', credits: 3170, validityDays: 30 },
 ]
 
 const draft = (patch: Partial<IssueDraft>): IssueDraft => ({
@@ -22,7 +23,7 @@ const draft = (patch: Partial<IssueDraft>): IssueDraft => ({
 describe('toIssue', () => {
   it('takes a preset as it is and trims the message', () => {
     expect(toIssue(draft({ mode: 'basic', message: '  감사합니다 ' }), PRESETS)).toEqual({
-      issue: { credits: 330, validityDays: 30, message: '감사합니다', sale: undefined },
+      issue: { credits: 510, validityDays: 30, message: '감사합니다', sale: undefined },
     })
   })
 

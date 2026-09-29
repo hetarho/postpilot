@@ -84,7 +84,7 @@ describe('AdminVouchersPage', () => {
     const issueRequests: FakeVoucherIssue[] = []
     renderTab({ issueRequests })
 
-    await user.click(await screen.findByRole('tab', { name: 'pro · 1150 크레딧 · 30일' }))
+    await user.click(await screen.findByRole('tab', { name: 'pro · 1070 크레딧 · 30일' }))
     await user.type(screen.getByLabelText('받은 금액(원)'), '14900')
     expect(screen.getByLabelText('받은 금액(원)')).toHaveValue('14,900')
     await user.type(screen.getByLabelText('입금자'), '김민수')
@@ -96,7 +96,7 @@ describe('AdminVouchersPage', () => {
     ).toBeInTheDocument()
     expect(issueRequests).toEqual([
       {
-        credits: 1150,
+        credits: 1070,
         validityDays: 30,
         message: '감사합니다',
         sale: { amountKrw: 14900, payerName: '김민수' },

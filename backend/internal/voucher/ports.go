@@ -10,7 +10,7 @@ type Store interface {
 	// InWriteTx runs fn in ONE write transaction with a store and a credit port bound to it.
 	// A redemption needs it: the lot it opens and the row that marks the voucher redeemed
 	// commit together or not at all.
-	InWriteTx(ctx context.Context, fn func(Store, Credits) error) error
+	InWriteTx(ctx context.Context, fn func(Store, Credits, PaidCoverage) error) error
 	InsertVoucher(ctx context.Context, voucher Voucher) error
 	VoucherByToken(ctx context.Context, token string) (Voucher, bool, error)
 	VoucherByID(ctx context.Context, id string) (Voucher, bool, error)
@@ -21,6 +21,12 @@ type Store interface {
 	MarkRedeemed(ctx context.Context, id, userID, lotID string, at time.Time) (bool, error)
 	// MarkRevoked records the revocation only once, and reports whether it did.
 	MarkRevoked(ctx context.Context, id string, at time.Time) (bool, error)
+}
+
+// PaidCoverage resolves the billing owner's effective coverage on the same
+// transaction that marks a voucher redeemed and opens its lot.
+type PaidCoverage interface {
+	ActivePaidAt(ctx context.Context, userID string, at time.Time) (bool, error)
 }
 
 // Credits is the credit ledger as a voucher asks for it (QUOTA-58).

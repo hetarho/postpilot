@@ -16,10 +16,11 @@ import (
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
-	writer       *sql.DB
-	write        *sqlc.Queries
-	read         *sqlc.Queries
-	creditsForTx func(*sql.Tx) voucher.Credits
+	writer        *sql.DB
+	write         *sqlc.Queries
+	read          *sqlc.Queries
+	creditsForTx  func(*sql.Tx) voucher.Credits
+	coverageForTx func(*sql.Tx) voucher.PaidCoverage
 }
 
 func New(writer, reader *sql.DB) *Store {
@@ -33,8 +34,12 @@ func (s *Store) SetCreditsForTx(factory func(*sql.Tx) voucher.Credits) {
 	s.creditsForTx = factory
 }
 
-func (s *Store) InWriteTx(ctx context.Context, fn func(voucher.Store, voucher.Credits) error) error {
-	if s.writer == nil || s.creditsForTx == nil {
+func (s *Store) SetPaidCoverageForTx(factory func(*sql.Tx) voucher.PaidCoverage) {
+	s.coverageForTx = factory
+}
+
+func (s *Store) InWriteTx(ctx context.Context, fn func(voucher.Store, voucher.Credits, voucher.PaidCoverage) error) error {
+	if s.writer == nil || s.creditsForTx == nil || s.coverageForTx == nil {
 		return errors.New("voucher transaction is not configured")
 	}
 	tx, err := s.writer.BeginTx(ctx, nil)
@@ -44,12 +49,19 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(voucher.Store, voucher.Cr
 	// database/sql rolls the transaction back when the caller's context dies, which a
 	// hand-written ROLLBACK on that same dead context could not.
 	defer func() { _ = tx.Rollback() }()
+	// Reserve the SQLite writer before reading coverage and voucher state. A
+	// concurrent coverage transition must finish before these decisions, or wait
+	// until the lot and one-use mark commit.
+	if _, err := tx.ExecContext(ctx, `UPDATE vouchers SET message=message WHERE 0`); err != nil {
+		return err
+	}
 	credits := s.creditsForTx(tx)
-	if credits == nil {
-		return errors.New("voucher transaction credit factory returned nil")
+	coverage := s.coverageForTx(tx)
+	if credits == nil || coverage == nil {
+		return errors.New("voucher transaction adapter factory returned nil")
 	}
 	scoped := &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
-	if err := fn(scoped, credits); err != nil {
+	if err := fn(scoped, credits, coverage); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {

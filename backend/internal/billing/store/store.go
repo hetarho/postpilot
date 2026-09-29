@@ -30,6 +30,11 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, db: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
+// NewTx exposes billing's coverage reads on a caller-owned writer transaction.
+func NewTx(tx *sql.Tx) *Store {
+	return &Store{db: tx, write: sqlc.New(tx), read: sqlc.New(tx)}
+}
+
 // SetCreditsForTx attaches the usage adapter at the composition root. The factory binds
 // that adapter to this store's transaction connection, so billing can atomically record a
 // method registration and its once-only credit lot without either store importing the other.

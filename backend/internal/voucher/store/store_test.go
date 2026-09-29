@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/postpilot/backend/internal/billing"
+	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
@@ -28,6 +31,13 @@ func (fixedAnchors) CoverageFor(context.Context, string, time.Time) (usage.Cover
 // ledgerCredits is the composition root's adapter, restated here so the test wires the store
 // the way production does: the redemption's lot rides the voucher store's transaction.
 type ledgerCredits struct{ ledger *usage.Service }
+
+type paidCoverage struct{ service *billing.Service }
+
+func (p paidCoverage) ActivePaidAt(ctx context.Context, userID string, at time.Time) (bool, error) {
+	coverage, ok, err := p.service.CoverageAt(ctx, userID, at)
+	return ok && coverage.Tier != plan.Free && coverage.Tier != plan.Master, err
+}
 
 func (c ledgerCredits) OpenVoucherLot(ctx context.Context, userID string, credits int, expiresAt time.Time) (string, error) {
 	return c.ledger.OpenVoucherLot(ctx, userID, credits, expiresAt)
@@ -67,9 +77,23 @@ func newService(t *testing.T) (*voucher.Service, *voucherstore.Store, *db.DB) {
 			t.Fatal(err)
 		}
 	}
+	anchor := time.Now().UTC().Add(-time.Hour).Format("2006-01-02T15:04:05.000000000Z07:00")
+	for _, id := range []string{"alice", "bob"} {
+		if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO support_coverages(user_id,coverage_id,tier,anchor_at,updated_at)
+			VALUES (?,?,'basic',?,?)`, id, "support:"+id, anchor, anchor); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO entitlement_tier_transitions(user_id,coverage_id,effective_at,tier,correlation_id)
+			VALUES (?,? ,?,'basic',?)`, id, "support:"+id, anchor, "support:"+id); err != nil {
+			t.Fatal(err)
+		}
+	}
 	store := voucherstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
 		return ledgerCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchors{})}
+	})
+	store.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
+		return paidCoverage{billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
 	})
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchors{})
 	return voucher.NewService(store, ledgerCredits{ledger}), store, handle
@@ -82,6 +106,63 @@ func voucherLots(t *testing.T, handle *db.DB) int {
 		t.Fatal(err)
 	}
 	return n
+}
+
+func TestPaidCoverageIsCheckedInsideTheRedemptionTransaction(t *testing.T) {
+	svc, _, handle := newService(t)
+	ctx := t.Context()
+	issued, err := svc.Issue(ctx, "root", voucher.Issue{Credits: 290, ValidityDays: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `DELETE FROM support_coverages WHERE user_id='bob'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Redeem(ctx, "bob", issued.Token); !errors.Is(err, voucher.ErrPaidCoverageRequired) {
+		t.Fatalf("free redemption = %v", err)
+	}
+	now := time.Now().UTC()
+	stamp := func(at time.Time) string { return at.Format("2006-01-02T15:04:05.000000000Z07:00") }
+	anchor, end := stamp(now.Add(-48*time.Hour)), stamp(now.Add(-24*time.Hour))
+	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO subscriptions
+		(user_id,tier,term,anchor_at,term_start,term_end,next_grant_at,auto_renew,status,created_at,updated_at,coverage_id)
+		VALUES ('bob','basic','monthly',?,?,?,?,0,'lapsed',?,?,'paid:bob')`,
+		anchor, anchor, end, end, anchor, end); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO entitlement_tier_transitions
+		(user_id,coverage_id,effective_at,tier,correlation_id) VALUES ('bob','paid:bob',?,'basic','paid:bob:first')`, anchor); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Redeem(ctx, "bob", issued.Token); !errors.Is(err, voucher.ErrPaidCoverageRequired) {
+		t.Fatalf("lapsed redemption = %v", err)
+	}
+	if n := voucherLots(t, handle); n != 0 {
+		t.Fatalf("refused redemption left %d lots", n)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE subscriptions SET status='active',term_end=? WHERE user_id='bob'`, stamp(now.Add(24*time.Hour))); err != nil {
+		t.Fatal(err)
+	}
+	redemption, err := svc.Redeem(ctx, "bob", issued.Token)
+	if err != nil || redemption.Credits != 290 || voucherLots(t, handle) != 1 {
+		t.Fatalf("paid redemption = %+v, %v", redemption, err)
+	}
+}
+
+func TestExpiredLinkNeverOpensALot(t *testing.T) {
+	svc, _, handle := newService(t)
+	ctx := t.Context()
+	issued, err := svc.Issue(ctx, "root", voucher.Issue{Credits: 510, ValidityDays: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE vouchers SET link_expires_at=? WHERE id=?`,
+		time.Now().UTC().Add(-time.Second).Format(time.RFC3339Nano), issued.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Redeem(ctx, "alice", issued.Token); !errors.Is(err, voucher.ErrExpired) || voucherLots(t, handle) != 0 {
+		t.Fatalf("expired redemption = %v", err)
+	}
 }
 
 // GIFT-9 under real concurrency: every racer reads the voucher as redeemable, and exactly

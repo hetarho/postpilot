@@ -27,11 +27,12 @@ const (
 )
 
 var (
-	ErrInvalid  = errors.New("voucher: issue is outside the allowed bounds")
-	ErrNotFound = errors.New("voucher: not found")
-	ErrRedeemed = errors.New("voucher: already redeemed")
-	ErrExpired  = errors.New("voucher: link has expired")
-	ErrRevoked  = errors.New("voucher: revoked")
+	ErrInvalid              = errors.New("voucher: issue is outside the allowed bounds")
+	ErrNotFound             = errors.New("voucher: not found")
+	ErrRedeemed             = errors.New("voucher: already redeemed")
+	ErrExpired              = errors.New("voucher: link has expired")
+	ErrRevoked              = errors.New("voucher: revoked")
+	ErrPaidCoverageRequired = errors.New("voucher: active paid coverage required")
 )
 
 // State is where a voucher stands at an instant. It is derived, never stored.
@@ -160,10 +161,13 @@ type Preset struct {
 
 // Presets reads the paid rungs from the code-owned ladder, so the shortcuts move with it.
 func Presets() []Preset {
-	rungs := []plan.Plan{plan.Basic, plan.Pro, plan.Max}
-	presets := make([]Preset, 0, len(rungs))
-	for _, rung := range rungs {
-		presets = append(presets, Preset{Plan: rung, Credits: plan.MonthlyCredits(rung), Days: PresetDays})
+	offers := plan.Offers()
+	presets := make([]Preset, 0, len(offers)-1)
+	for _, offer := range offers {
+		if offer.Plan == plan.Free {
+			continue
+		}
+		presets = append(presets, Preset{Plan: offer.Plan, Credits: offer.MonthlyBonus, Days: PresetDays})
 	}
 	return presets
 }

@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useInvalidateModelAccess } from '@/entities/model-catalog'
-import { useMyPlanQueryKey } from '@/entities/plan'
+import { useMyPlan, useMyPlanQueryKey } from '@/entities/plan'
 import { useGiftQueryKey, useRedeemVoucher } from '@/entities/voucher'
 import { SIGNED_IN_HOME } from '@/shared/lib'
 import { AppFailureMessage, Button, Notice, buttonStyles } from '@/shared/ui'
@@ -19,6 +19,7 @@ export function RedeemVoucher({ token, signedIn }: { token: string; signedIn: bo
   const queryClient = useQueryClient()
   const invalidateModelAccess = useInvalidateModelAccess()
   const planKey = useMyPlanQueryKey()
+  const { myPlan, isPending: planPending } = useMyPlan(signedIn)
   const giftKey = useGiftQueryKey(token)
   const redeem = useRedeemVoucher({
     onRedeemed: () => {
@@ -30,6 +31,9 @@ export function RedeemVoucher({ token, signedIn }: { token: string; signedIn: bo
     onRefused: (failure) => {
       if (failure.reason.startsWith('VOUCHER_')) {
         void queryClient.invalidateQueries({ queryKey: giftKey })
+      }
+      if (failure.reason === 'SUBSCRIPTION_REQUIRED') {
+        void queryClient.invalidateQueries({ queryKey: planKey })
       }
     },
   })
@@ -63,6 +67,21 @@ export function RedeemVoucher({ token, signedIn }: { token: string; signedIn: bo
         </Link>
         <Link to="/signup" search={{ redirect }} className={buttonStyles({ variant: 'secondary' })}>
           {t('redeemVoucher.signUp')}
+        </Link>
+      </div>
+    )
+  }
+
+  if (planPending) return <div className="mt-6">{t('redeemVoucher.checking')}</div>
+
+  if (myPlan && !myPlan.serverExportWindow?.coverageId) {
+    return (
+      <div className="mt-6 grid gap-3">
+        <Notice tone="info" role="status">
+          {t('redeemVoucher.paidRequired')}
+        </Notice>
+        <Link to="/plans" className={buttonStyles({ variant: 'cta' })}>
+          {t('redeemVoucher.plans')}
         </Link>
       </div>
     )

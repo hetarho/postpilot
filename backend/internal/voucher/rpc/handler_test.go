@@ -32,6 +32,10 @@ func (fixedAnchors) CoverageFor(context.Context, string, time.Time) (usage.Cover
 
 type ledgerCredits struct{ ledger *usage.Service }
 
+type allowPaid struct{}
+
+func (allowPaid) ActivePaidAt(context.Context, string, time.Time) (bool, error) { return true, nil }
+
 func (c ledgerCredits) OpenVoucherLot(ctx context.Context, userID string, credits int, expiresAt time.Time) (string, error) {
 	return c.ledger.OpenVoucherLot(ctx, userID, credits, expiresAt)
 }
@@ -74,6 +78,7 @@ func newHandler(t *testing.T) *voucherrpc.Handler {
 	store.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
 		return ledgerCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchors{})}
 	})
+	store.SetPaidCoverageForTx(func(*sql.Tx) voucher.PaidCoverage { return allowPaid{} })
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchors{})
 	return voucherrpc.NewHandler(voucher.NewService(store, ledgerCredits{ledger}))
 }
@@ -208,7 +213,7 @@ func TestListVouchersShowsTheTokenOnlyWhileRedeemable(t *testing.T) {
 	if got := byID[revoked.GetId()]; got.GetToken() != "" || got.GetState() != postpilotv1.VoucherState_VOUCHER_STATE_REVOKED {
 		t.Errorf("revoked = %+v", got)
 	}
-	if presets := response.Msg.GetPresets(); len(presets) != 3 || presets[1].GetPlan() != postpilotv1.Plan_PLAN_PRO || presets[1].GetValidityDays() != 30 {
+	if presets := response.Msg.GetPresets(); len(presets) != 4 || presets[0].GetPlan() != postpilotv1.Plan_PLAN_LIGHT || presets[2].GetPlan() != postpilotv1.Plan_PLAN_PRO || presets[2].GetValidityDays() != 30 {
 		t.Errorf("presets = %+v", presets)
 	}
 

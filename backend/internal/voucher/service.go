@@ -82,7 +82,7 @@ func (s *Service) Redeem(ctx context.Context, userID, token string) (Redemption,
 		return Redemption{}, ErrNotFound
 	}
 	var redemption Redemption
-	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits) error {
+	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits, coverage PaidCoverage) error {
 		voucher, found, err := tx.VoucherByToken(ctx, token)
 		if err != nil {
 			return err
@@ -93,6 +93,13 @@ func (s *Service) Redeem(ctx context.Context, userID, token string) (Redemption,
 		now := s.now().UTC()
 		if refusal := voucher.State(now).refusal(); refusal != nil {
 			return refusal
+		}
+		eligible, err := coverage.ActivePaidAt(ctx, userID, now)
+		if err != nil {
+			return err
+		}
+		if !eligible {
+			return ErrPaidCoverageRequired
 		}
 		expires := now.Add(time.Duration(voucher.ValidityDays) * 24 * time.Hour)
 		lotID, err := credits.OpenVoucherLot(ctx, userID, voucher.Credits, expires)
@@ -128,7 +135,7 @@ func (s *Service) List(ctx context.Context) ([]Listed, error) {
 // spent ones stay spent (GIFT-10). Revoking twice changes nothing the second time.
 func (s *Service) Revoke(ctx context.Context, id string) (Listed, error) {
 	var revoked Voucher
-	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits) error {
+	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits, _ PaidCoverage) error {
 		voucher, found, err := tx.VoucherByID(ctx, id)
 		if err != nil {
 			return err

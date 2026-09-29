@@ -55,9 +55,10 @@ export interface FakeVoucherOptions {
 }
 
 const PRESETS = [
-  { plan: ProtoPlan.BASIC, credits: 330, validityDays: 30 },
-  { plan: ProtoPlan.PRO, credits: 1150, validityDays: 30 },
-  { plan: ProtoPlan.MAX, credits: 2400, validityDays: 30 },
+  { plan: ProtoPlan.LIGHT, credits: 290, validityDays: 30 },
+  { plan: ProtoPlan.BASIC, credits: 510, validityDays: 30 },
+  { plan: ProtoPlan.PRO, credits: 1070, validityDays: 30 },
+  { plan: ProtoPlan.MAX, credits: 3170, validityDays: 30 },
 ]
 
 function toVoucher(seed: FakeVoucherSeed, index: number): ProtoVoucher {

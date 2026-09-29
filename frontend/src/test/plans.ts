@@ -62,6 +62,15 @@ export interface FakePlansOptions {
     } | null
   }>
   clipSourceSeconds?: number
+  serverExportWindow?: {
+    coverageId: string
+    startsAt?: string
+    endsAt?: string
+    allowance?: number
+    used?: number
+    reserved?: number
+    remaining?: number
+  }
   /** Make GetMyPlan fail. */
   planFails?: boolean
   /** The accounts the admin screen lists. */
@@ -83,6 +92,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
     return create(GetMyPlanResponseSchema, {
       plan: options.plan ?? ProtoPlan.MASTER,
       clipSourceSeconds: options.clipSourceSeconds ?? 60,
+      serverExportWindow: options.serverExportWindow,
       balance: {
         credits: options.balance?.credits ?? 0,
         // The session fake signs in as master, whose balance is not a number at all.
