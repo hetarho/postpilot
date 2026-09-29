@@ -114,6 +114,8 @@ type GenerationStart struct {
 	UserID, ProjectID, Observe, Write string
 	Payload                           []byte
 	RenderOnly                        bool
+	// A server export's pre-queue hold, linked before activation.
+	ExportReservationID string
 	// One owner-written revision of the saved plan (CLIP-131): charged work
 	// with no media in it.
 	Revise bool

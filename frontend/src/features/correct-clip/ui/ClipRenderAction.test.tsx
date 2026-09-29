@@ -75,3 +75,31 @@ it('is one refused trigger while the plan cannot be rendered, and waits on the r
   )
   expect(screen.getByRole('button', { name: '렌더하기' })).toHaveClass('bg-button-cta-bg')
 })
+
+it('shows the monthly server balance and keeps browser export available when slots are exhausted', async () => {
+  const onRender = vi.fn()
+  render(
+    <ClipRenderAction
+      browserAvailable
+      serverPlan="basic"
+      serverWindow={{
+        coverageId: 'paid',
+        startsAt: '2026-09-01T00:00:00Z',
+        endsAt: '2026-10-01T00:00:00Z',
+        allowance: 6,
+        used: 5,
+        reserved: 1,
+        remaining: 0,
+      }}
+      pending={false}
+      disabled={false}
+      onRender={onRender}
+    />,
+  )
+  const choice = await open('렌더하기')
+  expect(choice.getByRole('button', { name: '서버에서 렌더' })).toBeDisabled()
+  expect(choice.getByText(/사용 5, 예약 1, 남음 0\/6/)).toBeInTheDocument()
+  expect(choice.getByRole('link', { name: '요금제 보기' })).toHaveAttribute('href', '/plans')
+  await userEvent.click(choice.getByRole('button', { name: '브라우저에서 렌더' }))
+  expect(onRender).toHaveBeenCalledExactlyOnceWith('browser')
+})

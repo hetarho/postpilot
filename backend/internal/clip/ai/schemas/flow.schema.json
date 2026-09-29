@@ -71,7 +71,7 @@
     "duration_ms": {
       "type": "integer",
       "minimum": 15000,
-      "maximum": 90000
+      "maximum": 60000
     },
     "cuts": {
       "type": "array",

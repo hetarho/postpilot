@@ -305,8 +305,8 @@ func (e *experiment) validateInput(ctx context.Context, path string) error {
 		return err
 	}
 	d, err := time.ParseDuration(info.Format.Duration + "s")
-	if err != nil || d <= 0 || d > 90*time.Second {
-		return errors.New("fixture duration must be <=90 seconds")
+	if err != nil || d <= 0 || d > time.Duration(clip.MaxDurationMS)*time.Millisecond {
+		return errors.New("fixture duration must be <=60 seconds")
 	}
 	video := 0
 	for _, s := range info.Streams {
@@ -326,7 +326,7 @@ func (e *experiment) encode(ctx context.Context, binary, input, name string, enc
 	output := filepath.Join(e.out, name+".mp4")
 	args := []string{"-hide_banner", "-v", "error", "-nostdin", "-protocol_whitelist", "file,pipe", "-threads", "1", "-i", input, "-map", "0:v:0", "-map", "0:a:0?", "-map_metadata", "-1", "-filter_threads", "1", "-threads", "1"}
 	args = append(args, encoder...)
-	args = append(args, "-pix_fmt", "yuv420p", "-r", "30", "-fps_mode", "cfr", "-c:a", "copy", "-t", "90", "-fs", fmt.Sprint(fileLimit), "-movflags", "+faststart", output)
+	args = append(args, "-pix_fmt", "yuv420p", "-r", "30", "-fps_mode", "cfr", "-c:a", "copy", "-t", "60", "-fs", fmt.Sprint(fileLimit), "-movflags", "+faststart", output)
 	started := time.Now()
 	_, err := e.call(ctx, binary, args...)
 	elapsed := time.Since(started).Milliseconds()
@@ -378,7 +378,7 @@ func (e *experiment) encode(ctx context.Context, binary, input, name string, enc
 	for _, s := range measured.Streams {
 		if s.CodecType == "audio" {
 			audio := filepath.Join(e.out, name+".wav")
-			_, err = e.call(ctx, e.env.FFmpegPath, "-hide_banner", "-v", "error", "-nostdin", "-threads", "1", "-i", output, "-vn", "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", "-t", "90", "-fs", fmt.Sprint(fileLimit), audio)
+			_, err = e.call(ctx, e.env.FFmpegPath, "-hide_banner", "-v", "error", "-nostdin", "-threads", "1", "-i", output, "-vn", "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", "-t", "60", "-fs", fmt.Sprint(fileLimit), audio)
 			if err != nil {
 				return nil, err
 			}

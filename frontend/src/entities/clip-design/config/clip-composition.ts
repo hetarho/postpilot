@@ -13,12 +13,12 @@ export const CLIP_COMPOSITION_LIMITS = {
   answerChars: 500,
   copyChars: 500,
   generatedChars: 4000,
-  maxDurationMs: 90000,
+  maxDurationMs: 60000,
   autoInsetMs: 120,
 } as const
 
 /** The template preview's illustrative clip (CLIP-169, CLIP-170): a sample duration across
- *  CLIP-7's 15–90 s, the intro alone in its first 2.5 s and the outro alone in its last 3 s,
+ *  CLIP-7's 15–60 s, the intro alone in its first 2.5 s and the outro alone in its last 3 s,
  *  and captions back to back between them, each at most 4 s — which, over the shortest span
  *  the bounds leave (9.5 s), keeps every one at least 3 s. */
 export const CLIP_COMPOSITION_PREVIEW = {

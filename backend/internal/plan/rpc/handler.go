@@ -83,6 +83,18 @@ type Ledger interface {
 	BalanceFor(ctx context.Context, userID string, acting plan.Plan) (Balance, error)
 }
 
+// ExportReader is the clip-owned counter viewed by the plan response. The
+// plan context depends on this narrow consumer port, not clip storage.
+type ExportReader interface {
+	Current(ctx context.Context, userID string, at time.Time) (ExportBalance, bool, error)
+}
+
+type ExportBalance struct {
+	CoverageID                string
+	StartsAt, EndsAt          time.Time
+	Allowance, Used, Reserved int
+}
+
 // EstimatorCombo is one priced combo as this edge publishes it. It is declared here so the
 // context that owns the assignment never learns the wire shape, and the composition root
 // maps between the two.
@@ -107,11 +119,14 @@ type Estimator interface {
 type Handler struct {
 	ledger    Ledger
 	estimator Estimator
+	exports   ExportReader
 }
 
 func NewHandler(ledger Ledger, estimator Estimator) *Handler {
 	return &Handler{ledger: ledger, estimator: estimator}
 }
+
+func (h *Handler) WithExports(exports ExportReader) *Handler { h.exports = exports; return h }
 
 // GetMyPlan reports the caller's own tier and what it has left to spend.
 //
@@ -135,6 +150,22 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	if err != nil {
 		slog.Error("plan balance read failed", "user_id", userID, "err", err)
 		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read plan balance", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+	}
+	var serverWindow *postpilotv1.ServerExportWindow
+	if acting != plan.Master && h.exports != nil {
+		current, ok, readErr := h.exports.Current(ctx, userID, time.Now())
+		if readErr != nil {
+			slog.Error("server export balance read failed", "user_id", userID, "err", readErr)
+			return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read server export balance", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		}
+		if ok {
+			serverWindow = &postpilotv1.ServerExportWindow{CoverageId: current.CoverageID,
+				StartsAt: wireTime(current.StartsAt), EndsAt: wireTime(current.EndsAt),
+				Allowance: int32(current.Allowance), Used: int32(current.Used), Reserved: int32(current.Reserved),
+				Remaining: int32(max(0, current.Allowance-current.Used-current.Reserved))}
+		} else {
+			serverWindow = &postpilotv1.ServerExportWindow{EndsAt: wireTime(balance.RenewsAt)}
+		}
 	}
 
 	lots := make([]*postpilotv1.CreditLot, 0, len(balance.Lots))
@@ -217,13 +248,14 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	}
 
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
-		Plan:              ToProto(acting),
-		Offers:            offers,
-		EstimatorCombos:   combos,
-		ClipSourceSeconds: plan.EstimatorClipSourceSeconds,
-		CreditPacks:       packs,
-		FxRate:            fxRate,
-		FxUnavailable:     fxUnavailable,
+		Plan:               ToProto(acting),
+		Offers:             offers,
+		EstimatorCombos:    combos,
+		ClipSourceSeconds:  plan.EstimatorClipSourceSeconds,
+		CreditPacks:        packs,
+		FxRate:             fxRate,
+		FxUnavailable:      fxUnavailable,
+		ServerExportWindow: serverWindow,
 		Balance: &postpilotv1.CreditBalance{
 			Credits:            int32(balance.Credits),
 			Unlimited:          balance.Unlimited,

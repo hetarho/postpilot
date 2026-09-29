@@ -11,7 +11,7 @@
     "answerChars": 500,
     "copyChars": 500,
     "generatedChars": 4000,
-    "maxDurationMs": 90000,
+    "maxDurationMs": 60000,
     "autoInsetMs": 120,
     "stages": 8
   },
@@ -5643,12 +5643,12 @@
             "groupId": "",
             "itemId": "",
             "startMs": 0,
-            "endMs": 90000,
+            "endMs": 60000,
             "transitionMs": 0
           }
         ]
       },
-      "durationMs": 90000,
+      "durationMs": 60000,
       "resolvedCount": 0
     },
     {

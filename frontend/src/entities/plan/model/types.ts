@@ -101,6 +101,15 @@ export interface MyPlan {
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]
   clipSourceSeconds: number
+  serverExportWindow?: {
+    coverageId: string
+    startsAt: string
+    endsAt: string
+    allowance: number
+    used: number
+    reserved: number
+    remaining: number
+  }
 }
 
 /** How many posts a balance covers at a given per-post estimate. It is deliberately a

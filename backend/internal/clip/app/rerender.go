@@ -110,17 +110,20 @@ type renderPayload struct {
 // StartRender starts a render of either kind and returns the server render's
 // job, or the browser render's identity; StartBrowserRender also returns the
 // job a browser render waits on.
-func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind) (string, error) {
-	started, err := s.startRender(ctx, user, id, batch, revision, kind)
+func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind, reuse ...bool) (string, error) {
+	started, err := s.startRender(ctx, user, id, batch, revision, kind, reuse...)
 	if kind == clip.RenderBrowser {
 		return started.renderID, err
 	}
 	return started.jobID, err
 }
 
-type renderStarted struct{ renderID, jobID string }
+type renderStarted struct {
+	renderID, jobID string
+	reused          bool
+}
 
-func (s *GenerationService) startRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind) (renderStarted, error) {
+func (s *GenerationService) startRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind, reuse ...bool) (renderStarted, error) {
 	none := renderStarted{}
 	switch kind {
 	case clip.RenderServer, clip.RenderBrowser:
@@ -139,6 +142,12 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	if revision <= 0 || p.EditPlanRevision != revision {
 		return none, clip.ErrPlanConflict
+	}
+	// The stored file already represents this exact saved plan and kind. A
+	// repeated request returns it through the project read; no new job or slot
+	// is created. An owner edit increments the revision and admits a new export.
+	if len(reuse) > 0 && reuse[0] && kind == clip.RenderServer && p.Result != nil && p.Result.Key != "" && p.Result.RenderKind() == kind && p.RenderedPlanRevision == revision {
+		return renderStarted{reused: true}, nil
 	}
 	active, err := s.jobs.Active(ctx, user, id)
 	if err != nil {
@@ -241,8 +250,37 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	if err != nil {
 		return none, err
 	}
-	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Payload: raw, RenderOnly: true}, batch, revision)
+	reservation := ""
+	if s.exports != nil {
+		operator := false
+		if s.prepareExport != nil {
+			operator, err = s.prepareExport(ctx, user)
+			if err != nil {
+				return none, err
+			}
+		}
+		if !operator {
+			reservation = newID()
+			if err = s.exports.ReserveExport(ctx, user, id, revision, reservation, s.now()); err != nil {
+				return none, err
+			}
+		}
+	}
+	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Payload: raw, RenderOnly: true, ExportReservationID: reservation}, batch, revision)
+	if err != nil && reservation != "" {
+		cleanup := context.WithoutCancel(ctx)
+		err = errors.Join(err, s.exports.ReleaseExport(cleanup, reservation))
+	}
 	return renderStarted{jobID: job}, err
+}
+
+// ReleaseExport is invoked after the durable terminal job write. A successful
+// render was committed with its result; all other outcomes return the slot.
+func (s *GenerationService) ReleaseExport(ctx context.Context, jobID string) error {
+	if s.exports == nil {
+		return nil
+	}
+	return s.exports.ReleaseExport(ctx, jobID)
 }
 
 func (s *GenerationService) RunRender(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {

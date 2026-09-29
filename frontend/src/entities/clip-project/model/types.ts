@@ -25,7 +25,7 @@ export const CLIP_PROJECT_LIMITS = {
    *  as the server counts them (CLIP-121). */
   instruction: 1000,
   minSeconds: 15,
-  maxSeconds: 90,
+  maxSeconds: 60,
 } as const
 export interface ClipProjectDraft {
   compositionInputs?: ClipCompositionInputs

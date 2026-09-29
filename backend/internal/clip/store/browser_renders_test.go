@@ -30,6 +30,22 @@ func TestEitherRenderKindRefusesLayoutBeforeWork(t *testing.T) {
 	}
 }
 
+func TestExplicitReuseKeepsTheCurrentServerFileWithoutAJob(t *testing.T) {
+	h, p, _ := completedClip(t)
+	id, err := h.service.StartRender(t.Context(), "alice", p.ID, h.batch.ID, p.EditPlanRevision, clip.RenderServer, true)
+	if err != nil || id != "" {
+		t.Fatalf("reuse job=%q err=%v", id, err)
+	}
+	var jobs int
+	if err := h.db.Reader.QueryRow(`SELECT count(*) FROM generation_jobs`).Scan(&jobs); err != nil || jobs != 0 {
+		t.Fatalf("jobs=%d err=%v", jobs, err)
+	}
+	current, err := h.projects.GetProject(t.Context(), "alice", p.ID)
+	if err != nil || current.Result == nil || current.Result.Key != p.Result.Key {
+		t.Fatalf("result=%+v err=%v", current.Result, err)
+	}
+}
+
 func TestBrowserVerdictIsOwnedRevisionBoundAndDoesNotDecodeOrPromoteAFile(t *testing.T) {
 	h, p, draft := completedClip(t)
 	id, err := h.service.StartRender(t.Context(), "alice", p.ID, h.batch.ID, p.EditPlanRevision, clip.RenderBrowser)

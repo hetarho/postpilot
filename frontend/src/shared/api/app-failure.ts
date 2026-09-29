@@ -121,6 +121,10 @@ export const appFailureSpecs = {
   CLIP_INPUT_TOO_LARGE: {},
   CLIP_ANALYSIS_TOO_LARGE: {},
   CLIP_WORKSPACE_LIMIT: {},
+  CLIP_SERVER_EXPORT_EXHAUSTED: {
+    required: ['allowance', 'used', 'reserved', 'remaining'],
+    optional: ['renews_at'],
+  },
   CLIP_MODEL_INPUT_UNSUPPORTED: {},
   CLIP_PROCESSING_FAILED: {},
   CLIP_MEDIA_UNAVAILABLE: {},

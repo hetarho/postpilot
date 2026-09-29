@@ -17,9 +17,8 @@ export const i18n = {
         cancel: '브라우저 렌더 취소',
       },
       refusal: {
-        capability:
-          '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요. 서버 렌더를 선택해 주세요.',
-        memory: '이 기기의 메모리가 브라우저 렌더에 부족해요. 서버 렌더를 선택해 주세요.',
+        capability: '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요.',
+        memory: '이 기기의 메모리가 브라우저 렌더에 부족해요.',
         sampling:
           '브라우저 렌더에 필요한 영상 밝기 확인을 마치지 못했어요. 서버 렌더를 선택해 주세요.',
       },
@@ -29,6 +28,13 @@ export const i18n = {
         browser: '이 기기에서 바로 만들어요. 이 화면을 떠나면 멈춰요.',
         server: '서버에서 만들어요. 화면을 떠나도 계속돼요.',
       },
+      serverBalance:
+        '이번 달 서버 내보내기: 사용 {{used}}, 예약 {{reserved}}, 남음 {{remaining}}/{{allowance}}',
+      serverExisting: '현재 저장된 서버 결과를 그대로 사용해요. 횟수가 차감되지 않아요.',
+      serverRenewal: '{{at}}에 서버 내보내기 횟수가 갱신돼요.',
+      serverNoAllowance: '현재 사용할 수 있는 서버 내보내기 횟수가 없어요.',
+      serverUpgrade: '요금제 보기',
+      serverBrowserOption: '이 기기에서는 브라우저 내보내기를 선택할 수 있어요.',
     },
   },
   en: {
@@ -45,10 +51,8 @@ export const i18n = {
         cancel: 'Cancel browser render',
       },
       refusal: {
-        capability:
-          'This browser does not support the required video or audio encoding. Choose server rendering.',
-        memory:
-          'This device reports too little memory for browser rendering. Choose server rendering.',
+        capability: 'This browser does not support the required video or audio encoding.',
+        memory: 'This device reports too little memory for browser rendering.',
         sampling:
           'The footage check a browser render needs did not finish. Choose server rendering.',
       },
@@ -58,6 +62,13 @@ export const i18n = {
         browser: 'Made right here on this device. Leaving this screen stops it.',
         server: 'Made on the server. It keeps going after you leave this screen.',
       },
+      serverBalance:
+        'Server exports this month: used {{used}}, reserved {{reserved}}, remaining {{remaining}}/{{allowance}}',
+      serverExisting: 'Use the current stored server result. No export is spent.',
+      serverRenewal: 'Server exports renew at {{at}}.',
+      serverNoAllowance: 'No server exports are currently available.',
+      serverUpgrade: 'See plans',
+      serverBrowserOption: 'You can choose a browser export on this device.',
     },
   },
 } as const satisfies I18nFragment

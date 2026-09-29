@@ -124,7 +124,13 @@ func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources 
 		return service.RunStorylineRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
 	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
+		terminalKind := kind
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
+			if terminalKind == clip.JobKindRender {
+				if err := service.ReleaseExport(ctx, j.ID); err != nil {
+					return err
+				}
+			}
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})
 	}

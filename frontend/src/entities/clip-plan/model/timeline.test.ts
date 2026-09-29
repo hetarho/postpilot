@@ -80,7 +80,7 @@ const editing = (plan: ClipEditPlan): ClipEditingState => ({
   maxCuts: 100,
   maxCopyRunes: 500,
   minDurationMs: 15000,
-  maxDurationMs: 90000,
+  maxDurationMs: 60000,
 })
 
 describe('timeline transactions', () => {

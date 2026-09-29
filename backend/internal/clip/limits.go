@@ -38,7 +38,7 @@ const (
 	AnswerChars         = 500
 	InstructionChars    = 1000
 	MinDurationMS       = 15000
-	MaxDurationMS       = 90000
+	MaxDurationMS       = 60000
 	// MediaThreadMax bounds deployment tuning for both ffmpeg roles. Production
 	// keeps the single encoder thread default for reproducibility; local dev may
 	// spend more cores without turning a typo into an unbounded process.

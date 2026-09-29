@@ -1,4 +1,5 @@
 import { type ClipBrowserRenderCapability } from '@/entities/clip-preview'
+import type { MyPlan } from '@/entities/plan'
 import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -89,6 +90,8 @@ export function ClipCorrectionWorkspace({
     lastKind?: ClipRenderKind
     current?: boolean
     capability?: ClipBrowserRenderCapability
+    serverWindow?: MyPlan['serverExportWindow']
+    serverPlan?: MyPlan['plan']
     start: (kind: ClipRenderKind) => void
   }
   /** The originals ② draws frames from: the local copies, and the way to reach an unexpired
@@ -474,6 +477,8 @@ export function ClipCorrectionWorkspace({
                     lastKind={lastRenderKind}
                     currentRender={currentRender}
                     browserAvailable={browserCapability?.available ?? false}
+                    serverWindow={render.serverWindow}
+                    serverPlan={render.serverPlan}
                     browserRefusal={
                       browserCapability && !browserCapability.available
                         ? browserCapability.reason

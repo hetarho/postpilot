@@ -23,14 +23,15 @@ const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 type Store struct {
 	writer      *sql.DB
 	read, write *sqlc.Queries
+	raw         sqlc.DBTX
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, read: sqlc.New(reader), write: sqlc.New(writer)}
+	return &Store{writer: writer, read: sqlc.New(reader), write: sqlc.New(writer), raw: writer}
 }
 
 func NewTx(tx *sql.Tx) *Store {
-	return &Store{read: sqlc.New(tx), write: sqlc.New(tx)}
+	return &Store{read: sqlc.New(tx), write: sqlc.New(tx), raw: tx}
 }
 
 var _ clip.Store = (*Store)(nil)

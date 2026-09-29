@@ -88,6 +88,7 @@ type Ports struct {
 	Control     MediaControlTx
 	Clips       ClipTx
 	Admission   Admission
+	Exports     clip.ExportReservations
 }
 
 // Binder turns the open transaction into the tx-scoped ports. It is the one

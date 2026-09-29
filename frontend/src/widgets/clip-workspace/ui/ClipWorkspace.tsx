@@ -356,6 +356,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           progress: render.browser.state.phase !== 'idle' ? browserStatus : undefined,
           lastKind: render.lastKind,
           current: render.current,
+          serverWindow: render.serverWindow,
+          serverPlan: render.serverPlan,
           capability: render.capability,
           start: render.start,
         }}

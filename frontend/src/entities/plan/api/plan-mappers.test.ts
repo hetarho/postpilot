@@ -63,6 +63,32 @@ describe('toMyPlan offers', () => {
   })
 })
 
+it('keeps server export use, reservations, remaining and renewal separate from credits', () => {
+  const mapped = toMyPlan(
+    create(GetMyPlanResponseSchema, {
+      plan: ProtoPlan.BASIC,
+      balance: { credits: 28, renewsAt: '2026-10-01T00:00:00Z' },
+      serverExportWindow: {
+        coverageId: 'paid:alice',
+        startsAt: '2026-09-01T00:00:00Z',
+        endsAt: '2026-10-01T00:00:00Z',
+        allowance: 6,
+        used: 2,
+        reserved: 1,
+        remaining: 3,
+      },
+    }),
+  )
+  expect(mapped?.balance.credits).toBe(28)
+  expect(mapped?.serverExportWindow).toMatchObject({
+    used: 2,
+    reserved: 1,
+    remaining: 3,
+    allowance: 6,
+    endsAt: '2026-10-01T00:00:00Z',
+  })
+})
+
 describe('toMyPlan lots', () => {
   // QUOTA-58: a voucher lot keeps its own kind; only a kind the client has never heard of
   // falls back to a bonus.

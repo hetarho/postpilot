@@ -79,9 +79,9 @@ message PrepareClipCaptionFramesResponse {
   int32 next_offset = 11;
 }
 
-message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }
+message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; bool reuse_existing = 5; }
 
-message StartClipRenderResponse { string job_id = 1; string render_id = 2; }
+message StartClipRenderResponse { string job_id = 1; string render_id = 2; bool reused_result = 3; }
 
 message ReportClipRenderVerdictRequest {
   string render_id = 1;

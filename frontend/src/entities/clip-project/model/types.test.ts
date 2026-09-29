@@ -28,7 +28,7 @@ describe('clip setup validation', () => {
     { title: '😀'.repeat(101) },
     { targetDurationMs: 0 },
     { targetDurationMs: 14999 },
-    { targetDurationMs: 90001 },
+    { targetDurationMs: 60001 },
     { targetDurationMs: NaN },
     { targetDurationMs: 15000.1 },
     { compositionInputs: answered('') },
@@ -57,7 +57,7 @@ describe('clip setup validation', () => {
     expect(validClipProject(draft(), composition)).toBe(true)
     expect(
       validClipProject(
-        { ...draft(), title: '😀'.repeat(100), targetDurationMs: 90000 },
+        { ...draft(), title: '😀'.repeat(100), targetDurationMs: 60000 },
         composition,
       ),
     ).toBe(true)

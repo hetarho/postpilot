@@ -44,7 +44,7 @@ type StartInput =
       observe: ModelRef
       write: ModelRef
     }
-  | { kind: 'render'; batchId: string; revision: number }
+  | { kind: 'render'; batchId: string; revision: number; reuseExisting: boolean }
 const DEFINITE_REFUSALS = new Set([
   'CLIP_QUOTE_REQUIRED',
   'CLIP_FINALIZED',
@@ -62,6 +62,7 @@ const DEFINITE_REFUSALS = new Set([
   'CLIP_INVALID_INPUT',
   'CLIP_INPUT_TOO_LARGE',
   'CLIP_BUSY',
+  'CLIP_SERVER_EXPORT_EXHAUSTED',
   'CLIP_PLAN_CONFLICT',
   'MODEL_VIDEO_UNSUPPORTED',
   'MODEL_UNAVAILABLE',
@@ -135,6 +136,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
               projectId: project.id,
               batchId: input.batchId,
               expectedRevision: input.revision,
+              reuseExisting: input.reuseExisting,
             })
           : input.mode === 'storyline'
             ? await calls.startStoryline({
@@ -156,7 +158,11 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
                 cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
                 ...(input.mode === 'fromStoryline' ? { fromStoryline: true } : {}),
               })
-      if (!response.jobId) throw new Error('Missing durable clip job')
+      if (
+        !response.jobId &&
+        !(input.kind === 'render' && 'reusedResult' in response && response.reusedResult)
+      )
+        throw new Error('Missing durable clip job')
       return response
     },
     // Never pause a paid request offline and resume it on reconnect, nor replay it.
@@ -227,6 +233,10 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   useEffect(() => {
     if (balanceTransition) void cache.invalidateQueries({ queryKey: planKey })
   }, [balanceTransition, cache, planKey])
+  const exportTransition = job?.kind === 'render_clip' ? `${job.id}:${job.status}` : ''
+  useEffect(() => {
+    if (exportTransition) void cache.invalidateQueries({ queryKey: planKey })
+  }, [exportTransition, cache, planKey])
 
   async function submit(input: StartInput, ownership: Ownership) {
     if (!ownership.begin(input.batchId)) return
@@ -236,6 +246,12 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     try {
       const response = await mutation.mutateAsync(input)
       if (!active.current) return
+      if (input.kind === 'render' && 'reusedResult' in response && response.reusedResult) {
+        consumed.current.delete(input.batchId)
+        ownership.rejected(input.batchId)
+        void cache.invalidateQueries({ queryKey: projectsKey })
+        return
+      }
       ownership.owned(input.batchId, response.jobId)
       setStarted({ id: response.jobId, previous: project.latestJob?.id, batchId: input.batchId })
       void cache.invalidateQueries({ queryKey: projectsKey })
@@ -305,7 +321,12 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       ownership,
     )
   }
-  async function render(batch: ReadyClipBatch | undefined, revision: number, ownership: Ownership) {
+  async function render(
+    batch: ReadyClipBatch | undefined,
+    revision: number,
+    ownership: Ownership,
+    reuseExisting = false,
+  ) {
     if (
       starting.current ||
       busy ||
@@ -329,7 +350,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       setLocalFailure({ reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} })
       return
     }
-    await submit({ kind: 'render', batchId: batch.id, revision }, ownership)
+    await submit({ kind: 'render', batchId: batch.id, revision, reuseExisting }, ownership)
   }
   return {
     job,

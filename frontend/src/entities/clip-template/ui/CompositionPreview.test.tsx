@@ -47,14 +47,14 @@ it('shows the outro and the badge at the scrubber’s end', () => {
   expect(view.container.querySelector('[data-region="intro"]')).not.toBeInTheDocument()
 })
 
-// CLIP-169, CLIP-170: the sample duration spans CLIP-7's 15–90 s, and moving the scrubber shows
+// CLIP-169, CLIP-170: the sample duration spans CLIP-7's 15–60 s, and moving the scrubber shows
 // the captions advancing, each in the template's next allowed style.
 it('advances the sample captions in the template’s styles as the scrubber moves', () => {
   const document = parseClipComposition('<clip version="1"/>')
   const view = render(<CompositionPreview document={document} captionStyles={['neon', 'glitch']} />)
   const duration = screen.getByRole('slider', { name: /예시 영상 길이/ })
   expect(duration).toHaveAttribute('min', '15000')
-  expect(duration).toHaveAttribute('max', '90000')
+  expect(duration).toHaveAttribute('max', '60000')
   const time = screen.getByRole('slider', { name: /확인할 시점/ })
   const shown = () => {
     const caption = view.container.querySelector('[data-role="caption"]')

@@ -233,11 +233,11 @@ func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.S
 		}
 		return connect.NewResponse(&v1.StartClipRenderResponse{RenderId: render, JobId: sampling}), nil
 	}
-	id, err := h.generation.StartRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision), kind)
+	id, err := h.generation.StartRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision), kind, req.Msg.ReuseExisting)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.StartClipRenderResponse{JobId: id}), nil
+	return connect.NewResponse(&v1.StartClipRenderResponse{JobId: id, ReusedResult: id == ""}), nil
 }
 
 func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {

@@ -27,7 +27,7 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 	return func(tx *sql.Tx) clipapp.Ports {
 		jobs := jobstore.NewTx(tx, jobKinds())
 		clips := clipstore.NewTx(tx)
-		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips, Recovery: clips, Control: clips}
+		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips, Recovery: clips, Control: clips, Exports: clips}
 		if ledger != nil {
 			ports.Admission = clipAdmission{jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}}
 		}
@@ -65,7 +65,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	if err != nil {
 		return nil, err
 	}
-	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, jobKinds()), store, nil)
+	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, jobKinds()), store, nil, store)
 	// Server preparation and final delivery always cross the durable worker
 	// boundary. Renderer stays here for authored-plan checks and preview assets.
 	remote, err := clipapp.NewMediaDispatch(writer, bind, clip.DefaultMediaStageLimits(clipEnvironment(cfg)), clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
@@ -87,6 +87,18 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		Admission:  clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
 		Candidates: candidates,
 		Guidelines: candidates,
+		Exports:    store,
+		PrepareExport: func(ctx context.Context, user string) (bool, error) {
+			tier, err := plans.PlanOf(ctx, user)
+			if err != nil {
+				return false, err
+			}
+			if tier == "master" {
+				return true, nil
+			}
+			_, err = models.ledger.BalanceFor(ctx, user, tier)
+			return false, err
+		},
 	})
 	if _, err = queue.SweepUnactivated(ctx); err != nil {
 		return nil, err

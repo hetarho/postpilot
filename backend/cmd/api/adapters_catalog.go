@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/plan"
@@ -120,6 +122,14 @@ func (emptyModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.Model
 // planBalance is the ledger as the plan edge asks for it: the translation ARCH-7 wants at the
 // boundary, so `plan/rpc` publishes its own shape and the ledger's lot row stops here.
 type planBalance struct{ ledger *usage.Service }
+
+type planExports struct{ windows clip.ExportWindows }
+
+func (p planExports) Current(ctx context.Context, user string, at time.Time) (planrpc.ExportBalance, bool, error) {
+	w, ok, err := p.windows.CurrentExportWindow(ctx, user, at)
+	return planrpc.ExportBalance{CoverageID: w.CoverageID, StartsAt: w.Start, EndsAt: w.End,
+		Allowance: w.Allowance, Used: w.Used, Reserved: w.Reserved}, ok, err
+}
 
 func (b planBalance) BalanceFor(ctx context.Context, userID string, acting plan.Plan) (planrpc.Balance, error) {
 	found, err := b.ledger.BalanceFor(ctx, userID, acting)

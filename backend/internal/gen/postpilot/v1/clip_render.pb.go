@@ -439,6 +439,7 @@ type StartClipRenderRequest struct {
 	ExpectedRevision int32                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	BatchId          string                 `protobuf:"bytes,3,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
 	RenderKind       ClipRenderKind         `protobuf:"varint,4,opt,name=render_kind,json=renderKind,proto3,enum=postpilot.v1.ClipRenderKind" json:"render_kind,omitempty"`
+	ReuseExisting    bool                   `protobuf:"varint,5,opt,name=reuse_existing,json=reuseExisting,proto3" json:"reuse_existing,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -501,10 +502,18 @@ func (x *StartClipRenderRequest) GetRenderKind() ClipRenderKind {
 	return ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED
 }
 
+func (x *StartClipRenderRequest) GetReuseExisting() bool {
+	if x != nil {
+		return x.ReuseExisting
+	}
+	return false
+}
+
 type StartClipRenderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
 	RenderId      string                 `protobuf:"bytes,2,opt,name=render_id,json=renderId,proto3" json:"render_id,omitempty"`
+	ReusedResult  bool                   `protobuf:"varint,3,opt,name=reused_result,json=reusedResult,proto3" json:"reused_result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -551,6 +560,13 @@ func (x *StartClipRenderResponse) GetRenderId() string {
 		return x.RenderId
 	}
 	return ""
+}
+
+func (x *StartClipRenderResponse) GetReusedResult() bool {
+	if x != nil {
+		return x.ReusedResult
+	}
+	return false
 }
 
 type ReportClipRenderVerdictRequest struct {
@@ -1001,17 +1017,19 @@ const file_postpilot_v1_clip_render_proto_rawDesc = "" +
 	"\fframe_offset\x18\n" +
 	" \x01(\x05R\vframeOffset\x12\x1f\n" +
 	"\vnext_offset\x18\v \x01(\x05R\n" +
-	"nextOffset\"\xbe\x01\n" +
+	"nextOffset\"\xe5\x01\n" +
 	"\x16StartClipRenderRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\x12\x19\n" +
 	"\bbatch_id\x18\x03 \x01(\tR\abatchId\x12=\n" +
 	"\vrender_kind\x18\x04 \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindR\n" +
-	"renderKind\"M\n" +
+	"renderKind\x12%\n" +
+	"\x0ereuse_existing\x18\x05 \x01(\bR\rreuseExisting\"r\n" +
 	"\x17StartClipRenderResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1b\n" +
-	"\trender_id\x18\x02 \x01(\tR\brenderId\"\x9f\x01\n" +
+	"\trender_id\x18\x02 \x01(\tR\brenderId\x12#\n" +
+	"\rreused_result\x18\x03 \x01(\bR\freusedResult\"\x9f\x01\n" +
 	"\x1eReportClipRenderVerdictRequest\x12\x1b\n" +
 	"\trender_id\x18\x01 \x01(\tR\brenderId\x12H\n" +
 	"\fmeasurements\x18\x02 \x01(\v2$.postpilot.v1.ClipRenderMeasurementsR\fmeasurements\x12\x16\n" +

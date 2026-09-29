@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -16,6 +17,28 @@ import (
 // stubLedger answers with a fixed balance: this file is about what the handler PUBLISHES
 // from the ladder, not about how a balance is computed.
 type stubLedger struct{}
+
+type stubExports struct{ window planrpc.ExportBalance }
+
+func (s stubExports) Current(context.Context, string, time.Time) (planrpc.ExportBalance, bool, error) {
+	return s.window, true, nil
+}
+
+func TestGetMyPlanKeepsExportCountsOutsideCreditBalance(t *testing.T) {
+	start := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "alice", Plan: plan.Basic})
+	h := planrpc.NewHandler(stubLedger{}, stubEstimator{}).WithExports(stubExports{window: planrpc.ExportBalance{
+		CoverageID: "paid:alice", StartsAt: start, EndsAt: start.AddDate(0, 1, 0), Allowance: 6, Used: 2, Reserved: 1,
+	}})
+	response, err := h.GetMyPlan(ctx, connect.NewRequest(&postpilotv1.GetMyPlanRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := response.Msg.ServerExportWindow
+	if w == nil || w.Allowance != 6 || w.Used != 2 || w.Reserved != 1 || w.Remaining != 3 || w.EndsAt != "2026-10-01T00:00:00Z" || response.Msg.Balance.Credits != 220 {
+		t.Fatalf("export=%+v balance=%+v", w, response.Msg.Balance)
+	}
+}
 
 func (stubLedger) BalanceFor(context.Context, string, plan.Plan) (planrpc.Balance, error) {
 	return planrpc.Balance{Credits: 220}, nil

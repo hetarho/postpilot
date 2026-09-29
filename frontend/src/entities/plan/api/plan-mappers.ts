@@ -131,6 +131,17 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     plan: planFromProto(response.plan),
     balance: toBalance(response.balance),
     clipSourceSeconds: response.clipSourceSeconds,
+    ...(response.serverExportWindow && {
+      serverExportWindow: {
+        coverageId: response.serverExportWindow.coverageId,
+        startsAt: response.serverExportWindow.startsAt,
+        endsAt: response.serverExportWindow.endsAt,
+        allowance: response.serverExportWindow.allowance,
+        used: response.serverExportWindow.used,
+        reserved: response.serverExportWindow.reserved,
+        remaining: response.serverExportWindow.remaining,
+      },
+    }),
     // A tier this build cannot name is dropped rather than rendered as unknown: an offer
     // nobody can identify is not something to put a price next to.
     offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),

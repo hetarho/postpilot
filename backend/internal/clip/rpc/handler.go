@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -183,6 +184,18 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", postpilotv1.FailureReason_CLIP_TARGET_DURATION_REQUIRED, nil)
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", postpilotv1.FailureReason_CLIP_BUSY, nil)
+	case errors.Is(err, clip.ErrExportAllowance):
+		var quota *clip.ExportAllowanceError
+		params := map[string]string{}
+		if errors.As(err, &quota) {
+			params = map[string]string{"allowance": strconv.Itoa(quota.Window.Allowance), "used": strconv.Itoa(quota.Window.Used),
+				"reserved": strconv.Itoa(quota.Window.Reserved), "remaining": strconv.Itoa(max(0, quota.Window.Allowance-quota.Window.Used-quota.Window.Reserved)),
+				"renews_at": quota.Window.End.UTC().Format(time.RFC3339Nano)}
+			if quota.Window.End.IsZero() {
+				delete(params, "renews_at")
+			}
+		}
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "server export allowance exhausted", postpilotv1.FailureReason_CLIP_SERVER_EXPORT_EXHAUSTED, params)
 	case errors.Is(err, llm.ErrModelUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is unavailable", postpilotv1.FailureReason_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, llm.ErrProviderDisabled):

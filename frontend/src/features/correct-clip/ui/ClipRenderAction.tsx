@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { preferredClipRenderKind, type ClipRenderKind } from '@/entities/clip-project'
+import type { MyPlan } from '@/entities/plan'
 import { Button, Popover, Typography } from '@/shared/ui'
 
 /** ②'s render control (CLIP-40, CLIP-153): ONE trigger that opens the choice of kind — a browser
@@ -10,6 +11,8 @@ export function ClipRenderAction({
   lastKind,
   browserAvailable = false,
   browserRefusal,
+  serverWindow,
+  serverPlan,
   currentRender = false,
   pending,
   disabled,
@@ -19,6 +22,8 @@ export function ClipRenderAction({
   lastKind?: ClipRenderKind
   browserAvailable?: boolean
   browserRefusal?: 'capability' | 'memory'
+  serverWindow?: MyPlan['serverExportWindow']
+  serverPlan?: MyPlan['plan']
   currentRender?: boolean
   pending: boolean
   disabled: boolean
@@ -32,6 +37,9 @@ export function ClipRenderAction({
   const kinds: ClipRenderKind[] =
     preferred === 'browser' ? ['browser', 'server'] : ['server', 'browser']
   const label = t(currentRender ? 'timeline.rerender' : 'timeline.render')
+  const existingServerResult = currentRender && lastKind === 'server'
+  const serverExhausted = !!serverWindow && serverWindow.remaining <= 0 && !existingServerResult
+  const renewal = serverWindow?.endsAt ? new Date(serverWindow.endsAt).toLocaleString() : ''
   return (
     <Popover
       label={label}
@@ -47,7 +55,7 @@ export function ClipRenderAction({
         <div className="grid gap-4">
           <Typography variant="body">{t('render.choose')}</Typography>
           {kinds.map((kind) => {
-            const refused = kind === 'browser' && !browserAvailable
+            const refused = kind === 'browser' ? !browserAvailable : serverExhausted
             return (
               <div key={kind} className="grid gap-1">
                 <Button
@@ -62,10 +70,33 @@ export function ClipRenderAction({
                   {t(`render.kind.${kind}`)}
                 </Button>
                 <Typography variant="meta" as="p" role={refused ? 'status' : undefined}>
-                  {refused && browserRefusal
-                    ? t(`render.refusal.${browserRefusal}`)
-                    : t(`render.kindHelp.${kind}`)}
+                  {kind === 'server' && existingServerResult
+                    ? t('render.serverExisting')
+                    : kind === 'server' && serverWindow
+                      ? t('render.serverBalance', {
+                          used: serverWindow.used,
+                          reserved: serverWindow.reserved,
+                          remaining: serverWindow.remaining,
+                          allowance: serverWindow.allowance,
+                        })
+                      : refused && kind === 'browser' && browserRefusal
+                        ? t(`render.refusal.${browserRefusal}`)
+                        : t(`render.kindHelp.${kind}`)}
                 </Typography>
+                {kind === 'server' && serverExhausted && (
+                  <Typography variant="meta" as="p" role="status">
+                    {renewal
+                      ? t('render.serverRenewal', { at: renewal })
+                      : t('render.serverNoAllowance')}
+                    {serverPlan && ['free', 'light', 'basic', 'pro'].includes(serverPlan) && (
+                      <>
+                        {' '}
+                        <a href="/plans">{t('render.serverUpgrade')}</a>
+                      </>
+                    )}
+                    {browserAvailable && <> {t('render.serverBrowserOption')}</>}
+                  </Typography>
+                )}
               </div>
             )
           })}

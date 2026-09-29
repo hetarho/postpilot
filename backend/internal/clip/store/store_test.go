@@ -205,7 +205,7 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 		}
 	}
 	v, _ := create(t, s)
-	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.Ratio = "9:16" }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 90001 }} {
+	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.Ratio = "9:16" }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 60001 }} {
 		p := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}
 		mutate(&p)
 		if _, err := s.CreateProject(ctx, "alice", p); !errors.Is(err, clip.ErrInvalid) {
@@ -217,7 +217,7 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 		t.Fatalf("accepted a value over its limit: %v", err)
 	}
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
-		p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "incomplete", VideoTemplateID: v.ID, Ratio: ratio, TargetDurationMS: 90000})
+		p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "incomplete", VideoTemplateID: v.ID, Ratio: ratio, TargetDurationMS: 60000})
 		if err != nil {
 			t.Fatal(err)
 		}

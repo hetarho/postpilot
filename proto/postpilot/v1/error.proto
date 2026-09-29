@@ -337,6 +337,7 @@ enum FailureReason {
   MODEL_UNCLASSIFIED = 275;
   MODEL_FREE_PATH_UNAVAILABLE = 276;
   MODEL_FREE_INELIGIBLE = 277;
+  CLIP_SERVER_EXPORT_EXHAUSTED = 278;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

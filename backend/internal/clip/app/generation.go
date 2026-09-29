@@ -36,6 +36,8 @@ type GenerationService struct {
 	admission     clip.AnalysisAdmission
 	candidates    clip.GuidelineCandidates
 	guidelines    VideoGuidelineSource
+	exports       clip.ExportReservations
+	prepareExport func(context.Context, string) (bool, error)
 	now           func() time.Time
 }
 
@@ -64,6 +66,10 @@ type GenerationDeps struct {
 	Candidates clip.GuidelineCandidates
 	// Guidelines resolves the 영상 지침 a quote binds and a start freezes. Nil freezes none.
 	Guidelines VideoGuidelineSource
+	Exports    clip.ExportReservations
+	// PrepareExport opens the current entitlement month. True denotes the
+	// operator path, which carries no commercial numeric allowance.
+	PrepareExport func(context.Context, string) (bool, error)
 }
 
 func NewGenerationService(store clip.GenerationStore, projects *Service, sources *SourceService, objects clip.ProcessingObjects, media clip.Media, planner clip.Planner, renderer clip.Renderer, jobs clip.GenerationJobs, cfg clip.GenerationConfig, deps GenerationDeps) *GenerationService {
@@ -75,7 +81,7 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 	}
 	s := &GenerationService{remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
 		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission,
-		candidates: deps.Candidates, guidelines: deps.Guidelines}
+		candidates: deps.Candidates, guidelines: deps.Guidelines, exports: deps.Exports, prepareExport: deps.PrepareExport}
 	// The project service and its generation side need each other; the pair is closed
 	// here, where both exist, instead of through a setter the composition root could forget.
 	if projects != nil {
@@ -106,6 +112,9 @@ func (s *GenerationService) enqueue(ctx context.Context, input clip.GenerationSt
 	// A queued row is invisible to the dispatcher until its source lease is linked.
 	if input.RenderOnly {
 		err = s.store.LinkRenderSourceJob(ctx, user, batch, job, revision, s.now())
+		if err == nil && input.ExportReservationID != "" {
+			err = s.exports.BindExport(ctx, input.ExportReservationID, job)
+		}
 	} else if input.Revise && input.Quote != nil {
 		// A revision's quote binds the saved plan and the owner's words, which
 		// StartRevision has just checked; the link consumes it and renews the

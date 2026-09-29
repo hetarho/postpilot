@@ -35,7 +35,8 @@ export interface ClipRenderCalls {
     expectedRevision: number
     batchId: string
     machine: ClipRenderMachine
-  }): Promise<{ renderId: string; jobId: string }>
+    reuseExisting?: boolean
+  }): Promise<{ renderId: string; jobId: string; reusedResult: boolean }>
   cancelBrowserRender(renderId: string): Promise<boolean>
   prepareUpload(
     renderId: string,
@@ -58,8 +59,13 @@ export function clipRenderCalls(transport: Transport): ClipRenderCalls {
       const response = await client.startClipRender({
         ...input,
         renderKind: machine === 'browser' ? ClipRenderKind.BROWSER : ClipRenderKind.SERVER,
+        reuseExisting: input.reuseExisting ?? false,
       })
-      return { renderId: response.renderId, jobId: response.jobId }
+      return {
+        renderId: response.renderId,
+        jobId: response.jobId,
+        reusedResult: response.reusedResult,
+      }
     },
     cancelBrowserRender: async (renderId) =>
       (await client.cancelClipBrowserRender({ renderId })).cancelled,

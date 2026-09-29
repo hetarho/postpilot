@@ -31,7 +31,7 @@ describe('the template preview’s sample clip', () => {
   })
 
   it('fills the span between with captions of 3–4 s back to back, the outline’s own first', () => {
-    for (const duration of [15000, 30000, 47300, 90000]) {
+    for (const duration of [15000, 30000, 47300, 60000]) {
       const captions = sample(
         intro + caption('own', '가게 소개') + outro,
         duration,

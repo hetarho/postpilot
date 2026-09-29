@@ -144,6 +144,8 @@ export const errors = {
     '분석용 영상을 안전한 용량 안으로 준비하지 못해 AI 생성을 시작하지 않았어요. 원본을 확인한 뒤 다시 시도해 주세요.',
   CLIP_WORKSPACE_LIMIT:
     '영상 처리에 필요한 임시 공간이 부족해 중단했어요. 이전 결과는 보존돼요. 잠시 후 다시 시도해 주세요.',
+  CLIP_SERVER_EXPORT_EXHAUSTED:
+    '이번 달 서버 내보내기 횟수를 모두 사용했어요. 다음 갱신 때 다시 이용하거나 요금제를 올려 주세요. 이 기기에서 지원하면 브라우저 내보내기도 할 수 있어요.',
   CLIP_MODEL_INPUT_UNSUPPORTED:
     '선택한 모델은 클립의 영상 입력 방식을 지원하지 않아요. 클립 분석을 지원하는 모델을 선택해 주세요.',
   CLIP_MEDIA_UNAVAILABLE:

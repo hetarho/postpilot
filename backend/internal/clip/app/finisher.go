@@ -14,21 +14,26 @@ import (
 // clip result land in one writer transaction, or neither does. A candidate
 // stays staged until then so a crash between upload and commit loses nothing.
 type Finisher struct {
-	writer *sql.DB
-	bind   Binder
-	jobs   JobReader
-	clips  ClipStore
-	now    func() time.Time
+	writer  *sql.DB
+	bind    Binder
+	jobs    JobReader
+	clips   ClipStore
+	exports clip.ExportReservations
+	now     func() time.Time
 }
 
-func NewFinisher(writer *sql.DB, bind Binder, jobs JobReader, clips ClipStore, now func() time.Time) Finisher {
+func NewFinisher(writer *sql.DB, bind Binder, jobs JobReader, clips ClipStore, now func() time.Time, exports ...clip.ExportReservations) Finisher {
 	if writer == nil || bind == nil || jobs == nil || clips == nil {
 		panic("clip app: finisher needs writer, binder, jobs and clips")
 	}
 	if now == nil {
 		now = time.Now
 	}
-	return Finisher{writer: writer, bind: bind, jobs: jobs, clips: clips, now: now}
+	f := Finisher{writer: writer, bind: bind, jobs: jobs, clips: clips, now: now}
+	if len(exports) > 0 {
+		f.exports = exports[0]
+	}
+	return f
 }
 
 func (f Finisher) resultCommitted(ctx context.Context, c clip.AttemptResult) bool {
@@ -104,6 +109,11 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 		if err := p.Clips.ApplyAttemptResult(ctx, candidate); err != nil {
 			return err
 		}
+		if p.Exports != nil {
+			if err := p.Exports.CommitExport(ctx, candidate); err != nil {
+				return err
+			}
+		}
 		if err := p.Jobs.Finish(ctx, j.ID, job.StatusDone, nil, f.now()); err != nil {
 			return err
 		}
@@ -130,6 +140,11 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 // Recover sweeps staged candidates whose job has already ended: a crash after
 // the stage but before the commit leaves a row nobody will commit.
 func (f Finisher) Recover(ctx context.Context) error {
+	if f.exports != nil {
+		if err := f.exports.RecoverExports(ctx); err != nil {
+			return err
+		}
+	}
 	rows, err := f.clips.PendingAttemptResults(ctx)
 	if err != nil {
 		return err
