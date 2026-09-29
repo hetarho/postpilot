@@ -139,7 +139,7 @@ function VoiceRowContent({ voice }: { voice: Voice }) {
                 count: voice.materialCount,
                 date: voiceAnalysisDate(voice.analyzedAt),
               })
-            : t('page.making', { ns: 'voices' })}
+            : t('page.making', { ns: 'voices', percent: voice.readinessPercent })}
         </span>
       </span>
     </>

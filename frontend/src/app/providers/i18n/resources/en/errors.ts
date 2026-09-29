@@ -53,6 +53,11 @@ export const errors = {
   VOICE_NOT_FOUND: 'Could not find the voice.',
   VOICE_DELETED: 'This voice has been deleted. Restore it first.',
   VOICE_NOT_MADE: "This voice isn't made yet. Make it or pick another voice.",
+  VOICE_NOT_READY: 'Not enough writing yet. Fill what the voice needs to 100%.',
+  VOICE_PROMPT_NOT_FOUND: 'That prompt does not exist.',
+  VOICE_PROMPT_ANSWERED: 'You already answered this prompt. Delete the answer to write it again.',
+  VOICE_ANSWER_REQUIRED: 'Write an answer.',
+  VOICE_PHOTO_REQUIRED: 'Choose a photo first.',
   VOICE_NAME_REQUIRED: 'Enter a voice name.',
   VOICE_NAME_TOO_LONG:
     'The voice name must be no more than {{max}} characters. It is currently {{actual}} characters.',
@@ -61,7 +66,6 @@ export const errors = {
   VOICE_SAMPLE_TOO_SHORT:
     'A sample must contain at least {{min}} characters. It currently contains {{actual}}.',
   VOICE_SAMPLE_NOT_FOUND: 'Could not find the voice sample.',
-  VOICE_SAMPLE_MUTATION_FAILED: 'Could not update the voice sample.',
   VOICE_PROFILE_FIELD_REQUIRED: 'Enter the voice profile content.',
   VOICE_ANALYZE_MODEL_REQUIRED: 'Select a voice-analysis model.',
   VOICE_LEARNING_NOT_FOUND: 'Could not find the voice-learning record.',

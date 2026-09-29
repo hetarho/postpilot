@@ -59,6 +59,21 @@ const (
 	// VoiceServiceDeleteVoiceSampleProcedure is the fully-qualified name of the VoiceService's
 	// DeleteVoiceSample RPC.
 	VoiceServiceDeleteVoiceSampleProcedure = "/postpilot.v1.VoiceService/DeleteVoiceSample"
+	// VoiceServiceGetVoiceSampleProcedure is the fully-qualified name of the VoiceService's
+	// GetVoiceSample RPC.
+	VoiceServiceGetVoiceSampleProcedure = "/postpilot.v1.VoiceService/GetVoiceSample"
+	// VoiceServiceListVoicePromptsProcedure is the fully-qualified name of the VoiceService's
+	// ListVoicePrompts RPC.
+	VoiceServiceListVoicePromptsProcedure = "/postpilot.v1.VoiceService/ListVoicePrompts"
+	// VoiceServiceCreateVoicePhotoUploadProcedure is the fully-qualified name of the VoiceService's
+	// CreateVoicePhotoUpload RPC.
+	VoiceServiceCreateVoicePhotoUploadProcedure = "/postpilot.v1.VoiceService/CreateVoicePhotoUpload"
+	// VoiceServiceAnswerVoicePromptProcedure is the fully-qualified name of the VoiceService's
+	// AnswerVoicePrompt RPC.
+	VoiceServiceAnswerVoicePromptProcedure = "/postpilot.v1.VoiceService/AnswerVoicePrompt"
+	// VoiceServiceAnalyzeVoiceProcedure is the fully-qualified name of the VoiceService's AnalyzeVoice
+	// RPC.
+	VoiceServiceAnalyzeVoiceProcedure = "/postpilot.v1.VoiceService/AnalyzeVoice"
 	// VoiceServiceListVoiceProfileVersionsProcedure is the fully-qualified name of the VoiceService's
 	// ListVoiceProfileVersions RPC.
 	VoiceServiceListVoiceProfileVersionsProcedure = "/postpilot.v1.VoiceService/ListVoiceProfileVersions"
@@ -84,8 +99,16 @@ type VoiceServiceClient interface {
 	DeleteVoice(context.Context, *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error)
 	RestoreVoice(context.Context, *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error)
 	GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error)
+	// 학습 글 (VOICE-59): a pasted post, or an answer to one of the shared prompts. Gathering
+	// calls no model and enqueues nothing (VOICE-16).
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
+	GetVoiceSample(context.Context, *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error)
+	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
+	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
+	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
+	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
 	ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error)
 	// One version's generation snapshot, fetched when that version is OPENED. It is not part of
 	// the list: a list carrying every post body a voice ever produced would grow without bound
@@ -161,6 +184,36 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("DeleteVoiceSample")),
 			connect.WithClientOptions(opts...),
 		),
+		getVoiceSample: connect.NewClient[v1.GetVoiceSampleRequest, v1.GetVoiceSampleResponse](
+			httpClient,
+			baseURL+VoiceServiceGetVoiceSampleProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("GetVoiceSample")),
+			connect.WithClientOptions(opts...),
+		),
+		listVoicePrompts: connect.NewClient[v1.ListVoicePromptsRequest, v1.ListVoicePromptsResponse](
+			httpClient,
+			baseURL+VoiceServiceListVoicePromptsProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("ListVoicePrompts")),
+			connect.WithClientOptions(opts...),
+		),
+		createVoicePhotoUpload: connect.NewClient[v1.CreateVoicePhotoUploadRequest, v1.CreateVoicePhotoUploadResponse](
+			httpClient,
+			baseURL+VoiceServiceCreateVoicePhotoUploadProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("CreateVoicePhotoUpload")),
+			connect.WithClientOptions(opts...),
+		),
+		answerVoicePrompt: connect.NewClient[v1.AnswerVoicePromptRequest, v1.AnswerVoicePromptResponse](
+			httpClient,
+			baseURL+VoiceServiceAnswerVoicePromptProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
+			connect.WithClientOptions(opts...),
+		),
+		analyzeVoice: connect.NewClient[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse](
+			httpClient,
+			baseURL+VoiceServiceAnalyzeVoiceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("AnalyzeVoice")),
+			connect.WithClientOptions(opts...),
+		),
 		listVoiceProfileVersions: connect.NewClient[v1.ListVoiceProfileVersionsRequest, v1.ListVoiceProfileVersionsResponse](
 			httpClient,
 			baseURL+VoiceServiceListVoiceProfileVersionsProcedure,
@@ -199,6 +252,11 @@ type voiceServiceClient struct {
 	getVoiceProfile              *connect.Client[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse]
 	addVoiceSample               *connect.Client[v1.AddVoiceSampleRequest, v1.AddVoiceSampleResponse]
 	deleteVoiceSample            *connect.Client[v1.DeleteVoiceSampleRequest, v1.DeleteVoiceSampleResponse]
+	getVoiceSample               *connect.Client[v1.GetVoiceSampleRequest, v1.GetVoiceSampleResponse]
+	listVoicePrompts             *connect.Client[v1.ListVoicePromptsRequest, v1.ListVoicePromptsResponse]
+	createVoicePhotoUpload       *connect.Client[v1.CreateVoicePhotoUploadRequest, v1.CreateVoicePhotoUploadResponse]
+	answerVoicePrompt            *connect.Client[v1.AnswerVoicePromptRequest, v1.AnswerVoicePromptResponse]
+	analyzeVoice                 *connect.Client[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse]
 	listVoiceProfileVersions     *connect.Client[v1.ListVoiceProfileVersionsRequest, v1.ListVoiceProfileVersionsResponse]
 	getVoiceProfileVersionSample *connect.Client[v1.GetVoiceProfileVersionSampleRequest, v1.GetVoiceProfileVersionSampleResponse]
 	updateVoiceOverride          *connect.Client[v1.UpdateVoiceOverrideRequest, v1.UpdateVoiceOverrideResponse]
@@ -250,6 +308,31 @@ func (c *voiceServiceClient) DeleteVoiceSample(ctx context.Context, req *connect
 	return c.deleteVoiceSample.CallUnary(ctx, req)
 }
 
+// GetVoiceSample calls postpilot.v1.VoiceService.GetVoiceSample.
+func (c *voiceServiceClient) GetVoiceSample(ctx context.Context, req *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error) {
+	return c.getVoiceSample.CallUnary(ctx, req)
+}
+
+// ListVoicePrompts calls postpilot.v1.VoiceService.ListVoicePrompts.
+func (c *voiceServiceClient) ListVoicePrompts(ctx context.Context, req *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error) {
+	return c.listVoicePrompts.CallUnary(ctx, req)
+}
+
+// CreateVoicePhotoUpload calls postpilot.v1.VoiceService.CreateVoicePhotoUpload.
+func (c *voiceServiceClient) CreateVoicePhotoUpload(ctx context.Context, req *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error) {
+	return c.createVoicePhotoUpload.CallUnary(ctx, req)
+}
+
+// AnswerVoicePrompt calls postpilot.v1.VoiceService.AnswerVoicePrompt.
+func (c *voiceServiceClient) AnswerVoicePrompt(ctx context.Context, req *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error) {
+	return c.answerVoicePrompt.CallUnary(ctx, req)
+}
+
+// AnalyzeVoice calls postpilot.v1.VoiceService.AnalyzeVoice.
+func (c *voiceServiceClient) AnalyzeVoice(ctx context.Context, req *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error) {
+	return c.analyzeVoice.CallUnary(ctx, req)
+}
+
 // ListVoiceProfileVersions calls postpilot.v1.VoiceService.ListVoiceProfileVersions.
 func (c *voiceServiceClient) ListVoiceProfileVersions(ctx context.Context, req *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error) {
 	return c.listVoiceProfileVersions.CallUnary(ctx, req)
@@ -281,8 +364,16 @@ type VoiceServiceHandler interface {
 	DeleteVoice(context.Context, *connect.Request[v1.DeleteVoiceRequest]) (*connect.Response[v1.DeleteVoiceResponse], error)
 	RestoreVoice(context.Context, *connect.Request[v1.RestoreVoiceRequest]) (*connect.Response[v1.RestoreVoiceResponse], error)
 	GetVoiceProfile(context.Context, *connect.Request[v1.GetVoiceProfileRequest]) (*connect.Response[v1.GetVoiceProfileResponse], error)
+	// 학습 글 (VOICE-59): a pasted post, or an answer to one of the shared prompts. Gathering
+	// calls no model and enqueues nothing (VOICE-16).
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
+	GetVoiceSample(context.Context, *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error)
+	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
+	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
+	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
+	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
 	ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error)
 	// One version's generation snapshot, fetched when that version is OPENED. It is not part of
 	// the list: a list carrying every post body a voice ever produced would grow without bound
@@ -354,6 +445,36 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("DeleteVoiceSample")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceGetVoiceSampleHandler := connect.NewUnaryHandler(
+		VoiceServiceGetVoiceSampleProcedure,
+		svc.GetVoiceSample,
+		connect.WithSchema(voiceServiceMethods.ByName("GetVoiceSample")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceListVoicePromptsHandler := connect.NewUnaryHandler(
+		VoiceServiceListVoicePromptsProcedure,
+		svc.ListVoicePrompts,
+		connect.WithSchema(voiceServiceMethods.ByName("ListVoicePrompts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceCreateVoicePhotoUploadHandler := connect.NewUnaryHandler(
+		VoiceServiceCreateVoicePhotoUploadProcedure,
+		svc.CreateVoicePhotoUpload,
+		connect.WithSchema(voiceServiceMethods.ByName("CreateVoicePhotoUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceAnswerVoicePromptHandler := connect.NewUnaryHandler(
+		VoiceServiceAnswerVoicePromptProcedure,
+		svc.AnswerVoicePrompt,
+		connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceAnalyzeVoiceHandler := connect.NewUnaryHandler(
+		VoiceServiceAnalyzeVoiceProcedure,
+		svc.AnalyzeVoice,
+		connect.WithSchema(voiceServiceMethods.ByName("AnalyzeVoice")),
+		connect.WithHandlerOptions(opts...),
+	)
 	voiceServiceListVoiceProfileVersionsHandler := connect.NewUnaryHandler(
 		VoiceServiceListVoiceProfileVersionsProcedure,
 		svc.ListVoiceProfileVersions,
@@ -398,6 +519,16 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceAddVoiceSampleHandler.ServeHTTP(w, r)
 		case VoiceServiceDeleteVoiceSampleProcedure:
 			voiceServiceDeleteVoiceSampleHandler.ServeHTTP(w, r)
+		case VoiceServiceGetVoiceSampleProcedure:
+			voiceServiceGetVoiceSampleHandler.ServeHTTP(w, r)
+		case VoiceServiceListVoicePromptsProcedure:
+			voiceServiceListVoicePromptsHandler.ServeHTTP(w, r)
+		case VoiceServiceCreateVoicePhotoUploadProcedure:
+			voiceServiceCreateVoicePhotoUploadHandler.ServeHTTP(w, r)
+		case VoiceServiceAnswerVoicePromptProcedure:
+			voiceServiceAnswerVoicePromptHandler.ServeHTTP(w, r)
+		case VoiceServiceAnalyzeVoiceProcedure:
+			voiceServiceAnalyzeVoiceHandler.ServeHTTP(w, r)
 		case VoiceServiceListVoiceProfileVersionsProcedure:
 			voiceServiceListVoiceProfileVersionsHandler.ServeHTTP(w, r)
 		case VoiceServiceGetVoiceProfileVersionSampleProcedure:
@@ -449,6 +580,26 @@ func (UnimplementedVoiceServiceHandler) AddVoiceSample(context.Context, *connect
 
 func (UnimplementedVoiceServiceHandler) DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.DeleteVoiceSample is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) GetVoiceSample(context.Context, *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.GetVoiceSample is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.ListVoicePrompts is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.CreateVoicePhotoUpload is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.AnswerVoicePrompt is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.AnalyzeVoice is not implemented"))
 }
 
 func (UnimplementedVoiceServiceHandler) ListVoiceProfileVersions(context.Context, *connect.Request[v1.ListVoiceProfileVersionsRequest]) (*connect.Response[v1.ListVoiceProfileVersionsResponse], error) {

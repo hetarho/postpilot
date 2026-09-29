@@ -2,6 +2,7 @@ package voice
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -29,26 +30,67 @@ type VoiceDirectoryStore interface {
 	RestoreVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
 }
 
-// ProfileStore is the voice's current profile text and the guard an analysis has to win
-// before it may publish one.
+// ProfileStore is the voice's current profile.
 type ProfileStore interface {
 	GetProfile(ctx context.Context, userID, voiceID string) (Profile, error)
-	// ClaimCorpusVersion is the concurrency guard a finished analysis has to win before it may
-	// publish. False means a sample changed while the provider was working, so the analysis
-	// describes a corpus the voice has already moved past. It writes no text (VOICE-22): the
-	// styleguide column the guard used to piggyback on is gone.
-	ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error)
 }
 
-// SampleStore is the corpus a voice is learned from.
+// SampleStore is the 학습 글 a voice is made from (VOICE-59).
 type SampleStore interface {
 	InsertSample(ctx context.Context, sample Sample) error
 	ListSamples(ctx context.Context, userID, voiceID string) ([]Sample, error)
 	ListSampleBodies(ctx context.Context, userID, voiceID string) ([]Sample, error)
 	GetSampleBody(ctx context.Context, userID, voiceID, sampleID string) (*Sample, error)
-	CorpusSnapshot(ctx context.Context, userID, voiceID string) ([]Sample, int64, error)
-	DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (bool, error)
+	// DeleteSample removes the row and reports the photo key it held, so the object can go
+	// after it (row first, then object →POST-39).
+	DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (photoKey string, deleted bool, err error)
 	CountSamples(ctx context.Context, userID, voiceID string) (int, error)
+	// AnswerPrompt writes an answer and, for a photo prompt, drops its pending upload in one
+	// transaction; a prompt that already holds an answer is ErrPromptAnswered.
+	AnswerPrompt(ctx context.Context, sample Sample, uploadID string) error
+}
+
+// PhotoUploadStore is a photo prompt's photo between its presign and its answer.
+type PhotoUploadStore interface {
+	InsertPhotoUpload(ctx context.Context, upload PhotoUpload) error
+	// GetPhotoUpload is the pending upload of this voice and prompt, or ErrPhotoRequired.
+	GetPhotoUpload(ctx context.Context, userID, voiceID, uploadID string) (PhotoUpload, error)
+	DeletePhotoUpload(ctx context.Context, id string) error
+}
+
+// PhotoSweepLedger is what the photo sweep asks the database (→POST-40).
+type PhotoSweepLedger interface {
+	ListPhotoUploadsExpiredBefore(ctx context.Context, cutoff time.Time) ([]PhotoUpload, error)
+	PhotoKeyInUse(ctx context.Context, key string) (bool, error)
+	// AllReferencedPhotoKeys is every key a 학습 글 or a pending upload names, read in one
+	// transaction.
+	AllReferencedPhotoKeys(ctx context.Context) (map[string]struct{}, error)
+	DeletePhotoUpload(ctx context.Context, id string) error
+}
+
+// ErrObjectNotFound is a HEAD of a key storage does not hold.
+var ErrObjectNotFound = errors.New("object not found")
+
+// ObjectHead is what a HEAD reports about a stored photo.
+type ObjectHead struct {
+	Size        int64
+	ContentType string
+}
+
+// StoredObject is one listed object.
+type StoredObject struct {
+	Key          string
+	LastModified time.Time
+}
+
+// ObjectStore is the private bucket as the voice context needs it: the post port's shape,
+// adapted over internal/storage in cmd/api (ARCH-6).
+type ObjectStore interface {
+	PresignPut(ctx context.Context, key, contentType string, ttl time.Duration) (string, error)
+	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
+	Head(ctx context.Context, key string) (ObjectHead, error)
+	Delete(ctx context.Context, key string) error
+	List(ctx context.Context, prefix string) ([]StoredObject, error)
 }
 
 // VersionSampleStore is the per-version generation snapshot (VOICE-29): what a profile
@@ -69,6 +111,7 @@ type Storage interface {
 	ProfileStore
 	SampleStore
 	VersionSampleStore
+	PhotoUploadStore
 }
 
 // ProfileVersionStore is the published history of a voice's structured profile.
@@ -95,11 +138,9 @@ type PersonalizationStorage interface {
 	ManualOverrideStore
 }
 
-// Models resolves the acting user's current analyze selection and performs calls
-// through the provider-neutral llm boundary. Model selection stays account-scoped: two
-// voices share the account's analyze model, never its profile.
+// Models resolves a model the request names and performs calls through the provider-neutral
+// llm boundary. The client names the model explicitly, like every start RPC (MODEL-23).
 type Models interface {
-	AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error)
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)
 }

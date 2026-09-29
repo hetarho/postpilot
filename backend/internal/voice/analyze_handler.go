@@ -9,6 +9,9 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
+// Analyze is the `analyze_voice` job: it reads one snapshot of the voice's 학습 글, measures it
+// and asks one call for the rest, and publishes what it read even when a 학습 글 changed
+// meanwhile — nothing repeats the call without the owner's press (VOICE-22, VOICE-23).
 func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progress) error {
 	ref, err := parseModelRef(found.WriteModel)
 	if err != nil {
@@ -19,77 +22,49 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
 		return voiceUnavailableError(err)
 	}
-	attempted := false
-	for {
-		head, err := s.profiles.GetProfile(ctx, found.UserID, found.VoiceID)
-		if err != nil {
-			return fmt.Errorf("현재 문체 프로필을 불러오지 못했어요: %w", err)
-		}
-		samples, corpusVersion, err := s.samples.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
-		if err != nil {
-			return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
-		}
-		if len(samples) == 0 {
-			if attempted {
-				progress("analyze", 1, 1)
-				return nil
-			}
-			return fmt.Errorf("분석할 문체 자료가 없어요")
-		}
-		corpus := AssembleCorpus(samples)
-		attempted = true
-		progress("analyze", 0, 1)
-		// The typed analysis, with its schema: the voice gets its axes and structure habits
-		// from this call (VOICE-27).
-		qualitative, err := s.completeAnalysis(ctx, ref, corpus)
-		if err != nil {
-			return err
-		}
-		// The guard, and only the guard: it used to be a write of `styleguide` that happened
-		// to be conditional. False means a sample changed while the provider was working, so
-		// this analysis describes a corpus the voice has already moved past (VOICE-22).
-		stored, err := s.profiles.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
-		if err != nil {
-			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
-		}
-		if stored {
-			measured := MeasuredProfile(corpus, s.now)
-			mergeQualitativeProfile(&measured, qualitative, analyzedValue)
-			if err := validateAxes(measured.Axes); err != nil {
-				return err
-			}
-			measured.SourceCount = len(samples)
-			measured.Empty = false
-			if s.personalization == nil {
-				progress("analyze", 1, 1)
-				return nil
-			}
-			overrides, overrideErr := s.overrides.ListManualOverrides(ctx, found.UserID, found.VoiceID)
-			if overrideErr != nil {
-				return fmt.Errorf("manual voice overrides: %w", overrideErr)
-			}
-			for _, override := range overrides {
-				if overrideErr = applyOverride(&measured, override.Layer, override.Field, override.Value); overrideErr != nil {
-					return overrideErr
-				}
-			}
-			if _, published, versionErr := s.versions.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
-				return fmt.Errorf("publish typed voice profile: %w", versionErr)
-			} else if !published {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-				continue
-			}
-			progress("analyze", 1, 1)
-			return nil
-		}
-		// A sample changed while the provider was running. Keep the same durable job and
-		// analyze the newest full snapshot instead of publishing a stale analysis.
-		if err := ctx.Err(); err != nil {
+	newestFirst, err := s.samples.ListSampleBodies(ctx, found.UserID, found.VoiceID)
+	if err != nil {
+		return fmt.Errorf("학습 글을 불러오지 못했어요: %w", err)
+	}
+	if len(newestFirst) == 0 {
+		return fmt.Errorf("분석할 학습 글이 없어요")
+	}
+	samples := make([]Sample, len(newestFirst))
+	for i, sample := range newestFirst {
+		samples[len(newestFirst)-1-i] = sample
+	}
+	progress("analyze", 0, 1)
+	// The typed analysis, with its schema: the voice gets its axes and structure habits
+	// from this call (VOICE-27).
+	qualitative, err := s.completeAnalysis(ctx, ref, AssembleCorpus(samples))
+	if err != nil {
+		return err
+	}
+	measured := MeasuredProfile(proseCorpus(samples), s.now)
+	mergeQualitativeProfile(&measured, qualitative, analyzedValue)
+	if err := validateAxes(measured.Axes); err != nil {
+		return err
+	}
+	measured.SourceCount = len(samples)
+	measured.Empty = false
+	if s.personalization == nil {
+		progress("analyze", 1, 1)
+		return nil
+	}
+	overrides, err := s.overrides.ListManualOverrides(ctx, found.UserID, found.VoiceID)
+	if err != nil {
+		return fmt.Errorf("manual voice overrides: %w", err)
+	}
+	for _, override := range overrides {
+		if err := applyOverride(&measured, override.Layer, override.Field, override.Value); err != nil {
 			return err
 		}
 	}
+	if _, err := s.versions.PublishProfileVersion(ctx, found.UserID, found.VoiceID, measured, "analysis", 0, s.now()); err != nil {
+		return fmt.Errorf("publish typed voice profile: %w", err)
+	}
+	progress("analyze", 1, 1)
+	return nil
 }
 
 // voiceUnavailableError turns a directory refusal into the user-facing reason a job row

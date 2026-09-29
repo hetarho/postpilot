@@ -30,13 +30,13 @@ export const nav = {
   voice: {
     profile: 'Profile',
     versions: 'Version history',
-    import: 'Import existing posts',
+    materials: 'Writing',
     settings: 'Voice settings',
     backToList: '← Voices',
     short: {
       profile: 'Profile',
       versions: 'Versions',
-      import: 'Import',
+      materials: 'Writing',
     },
   },
 } as const

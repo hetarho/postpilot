@@ -5,7 +5,7 @@ export const i18n = {
   namespace: 'voices',
   ko: {
     picker: {
-      making: '{{name}} · 만드는 중',
+      making: '{{name}} · 만드는 중 {{percent}}%',
       create: '새 말투 만들기',
     },
     assignment: {
@@ -25,7 +25,7 @@ export const i18n = {
   },
   en: {
     picker: {
-      making: '{{name}} · Being made',
+      making: '{{name}} · Being made {{percent}}%',
       create: 'New voice',
     },
     assignment: {

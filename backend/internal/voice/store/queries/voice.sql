@@ -80,51 +80,60 @@ SELECT voice_id, user_id, current_version, corpus_version, updated_at
 FROM voice_profiles
 WHERE voice_id = ? AND user_id = ?;
 
--- name: ClaimCorpusVersion :execrows
--- The concurrency guard, and nothing else. It used to write the analysis text into a
--- `styleguide` column; that column is gone (VOICE-6) and the analysis text now reaches the
--- profile only through the structured version this claim gates. Zero rows means the corpus
--- moved while the provider was working, so the finished analysis is stale and must not publish.
-UPDATE voice_profiles
-SET updated_at = ?
-WHERE voice_id = ? AND user_id = ? AND corpus_version = ?;
-
 -- name: InsertSample :exec
-INSERT INTO voice_samples (id, voice_id, user_id, label, body, created_at)
-VALUES (?, ?, ?, ?, ?, ?);
-
--- name: BumpCorpusVersion :exec
-INSERT INTO voice_profiles (voice_id, user_id, corpus_version, updated_at)
-VALUES (?, ?, 1, ?)
-ON CONFLICT(voice_id) DO UPDATE SET
-    corpus_version = voice_profiles.corpus_version + 1,
-    updated_at = excluded.updated_at;
-
--- name: GetCorpusVersion :one
-SELECT corpus_version FROM voice_profiles WHERE voice_id = ? AND user_id = ?;
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListSamples :many
-SELECT id, label, length(body) AS chars, created_at
+SELECT id, kind, prompt_key, label, length(body) AS chars, photo_key, created_at
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC;
 
 -- name: ListSampleBodies :many
-SELECT id, label, body, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC;
 
 -- name: GetSampleBody :one
-SELECT id, label, body, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?;
 
--- name: DeleteSample :execrows
-DELETE FROM voice_samples WHERE id = ? AND voice_id = ? AND user_id = ?;
+-- name: DeleteSample :one
+-- The row goes first and names the photo key, so the object can follow it (POST-39).
+DELETE FROM voice_samples WHERE id = ? AND voice_id = ? AND user_id = ?
+RETURNING photo_key;
 
 -- name: CountSamples :one
 SELECT count(*) FROM voice_samples WHERE voice_id = ? AND user_id = ?;
+
+-- name: InsertPhotoUpload :exec
+INSERT INTO voice_photo_uploads (id, user_id, voice_id, prompt_key, object_key, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- name: GetPhotoUpload :one
+SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
+FROM voice_photo_uploads
+WHERE id = ? AND voice_id = ? AND user_id = ?;
+
+-- name: DeletePhotoUpload :exec
+DELETE FROM voice_photo_uploads WHERE id = ?;
+
+-- name: ListPhotoUploadsExpiredBefore :many
+SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
+FROM voice_photo_uploads
+WHERE expires_at < ?;
+
+-- name: PhotoKeyInUse :one
+SELECT CAST(EXISTS (SELECT 1 FROM voice_samples WHERE photo_key = ?) AS INTEGER) AS in_use;
+
+-- name: ListSamplePhotoKeys :many
+SELECT photo_key FROM voice_samples WHERE photo_key IS NOT NULL;
+
+-- name: ListPhotoUploadKeys :many
+SELECT object_key FROM voice_photo_uploads;
 
 -- name: InsertProfileVersion :exec
 INSERT INTO voice_profile_versions

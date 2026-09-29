@@ -1,97 +1,162 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type VoiceSample, useDeleteVoiceSample } from '@/entities/voice'
-import { formatNumber, formatRelativeTime } from '@/shared/lib'
-import { Button, Dialog, FieldMessage, Typography } from '@/shared/ui'
+import {
+  type VoiceSample,
+  useDeleteVoiceSample,
+  useVoicePrompts,
+  useVoiceSample,
+} from '@/entities/voice'
+import { formatRelativeTime } from '@/shared/lib'
+import { Badge, Button, Dialog, FieldMessage, Sheet, Typography } from '@/shared/ui'
 
+/** The voice's 학습 글, newest first (VOICE-64): a pasted post by its label, an answer by its
+ *  prompt, each opening to its full text and photo with `삭제`. */
 export function SampleList({
   ownerId,
   voiceId,
   samples,
-  onAnalysisStarted,
   blocked = false,
 }: {
   ownerId: string
   voiceId: string
   samples: readonly VoiceSample[]
-  onAnalysisStarted: (jobId: string) => void
   blocked?: boolean
 }) {
-  const { t } = useTranslation(['voices', 'common'])
-  const removeSample = useDeleteVoiceSample(ownerId, voiceId)
-  // The sample the confirmation sheet is open for. `window.confirm` is not an option for a
-  // delete the user repeats while pruning a profile: mobile Chrome and Safari offer to suppress
-  // further dialogs on the page, after which every confirm returns false and 삭제 becomes a
-  // silent no-op (THEME-29).
-  const [confirming, setConfirming] = useState<VoiceSample | null>(null)
-
-  const remove = async (sample: VoiceSample) => {
-    try {
-      const response = await removeSample.remove(sample.id)
-      if (response.jobId) onAnalysisStarted(response.jobId)
-    } catch {
-      // The mutation error is rendered below.
-    } finally {
-      // Closed on failure too, so the message under the list is not left behind the scrim.
-      setConfirming(null)
-    }
-  }
+  const { t } = useTranslation('voices')
+  const { prompts } = useVoicePrompts()
+  const [opened, setOpened] = useState<VoiceSample | null>(null)
+  const titleOf = (sample: VoiceSample) =>
+    sample.kind === 'answer'
+      ? (prompts.find((prompt) => prompt.key === sample.promptKey)?.text ?? '')
+      : sample.label
 
   return (
-    <section>
-      <Typography variant="title" as="h3">
-        {t('samples.title', { ns: 'voices' })}
-      </Typography>
+    // The tab's own heading names the list (학습 글), so it carries none of its own.
+    <section aria-label={t('samples.title')}>
       {samples.length === 0 ? (
-        <Typography variant="body" className="text-content-tertiary mt-4">
-          {t('samples.empty', { ns: 'voices' })}
+        <Typography variant="body" className="text-content-tertiary">
+          {t('samples.empty')}
         </Typography>
       ) : (
-        <ul className="divide-divider mt-3 divide-y">
+        <ul className="divide-divider divide-y">
           {samples.map((sample) => (
-            <li key={sample.id} className="flex min-h-14 items-center gap-3 py-2">
-              <span className="min-w-0 flex-1">
-                <Typography variant="body" as="span" className="block truncate">
-                  {sample.label}
-                </Typography>
-                <Typography variant="meta" className="mt-1 block">
-                  {t('samples.meta', {
-                    ns: 'voices',
-                    count: sample.chars,
-                    characters: formatNumber(sample.chars),
-                    time: formatRelativeTime(sample.createdAt),
-                  })}
-                </Typography>
-              </span>
-              <Button
-                variant="danger"
-                onClick={() => setConfirming(sample)}
-                disabled={blocked || removeSample.isPending}
-                aria-label={t('samples.deleteAria', { ns: 'voices', label: sample.label })}
+            <li key={sample.id}>
+              <button
+                type="button"
+                onClick={() => setOpened(sample)}
+                className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-14 w-full items-center gap-3 py-2 text-left"
               >
-                {t('action.delete', { ns: 'common' })}
-              </Button>
+                <span className="min-w-0 flex-1">
+                  <Typography variant="body" as="span" className="block truncate">
+                    {titleOf(sample)}
+                  </Typography>
+                  <Typography variant="meta" className="mt-1 block">
+                    {t(sample.kind === 'answer' ? 'samples.answer' : 'samples.post')} ·{' '}
+                    {formatRelativeTime(sample.createdAt)}
+                  </Typography>
+                </span>
+                {sample.hasPhoto && <Badge>{t('samples.photo')}</Badge>}
+              </button>
             </li>
           ))}
         </ul>
       )}
-      {removeSample.isError && (
-        <FieldMessage className="mt-2">{removeSample.errorMessage}</FieldMessage>
+      {opened && (
+        <SampleSheet
+          ownerId={ownerId}
+          voiceId={voiceId}
+          sample={opened}
+          title={titleOf(opened)}
+          blocked={blocked}
+          onClose={() => setOpened(null)}
+        />
       )}
+    </section>
+  )
+}
+
+function SampleSheet({
+  ownerId,
+  voiceId,
+  sample,
+  title,
+  blocked,
+  onClose,
+}: {
+  ownerId: string
+  voiceId: string
+  sample: VoiceSample
+  title: string
+  blocked: boolean
+  onClose: () => void
+}) {
+  const { t } = useTranslation(['voices', 'common'])
+  const titleId = useId()
+  const { detail, isError } = useVoiceSample(ownerId, voiceId, sample.id)
+  const remove = useDeleteVoiceSample(ownerId, voiceId)
+  const [confirming, setConfirming] = useState(false)
+
+  const confirm = async () => {
+    try {
+      await remove.remove(sample.id)
+      onClose()
+    } catch {
+      // The mutation's message renders in the sheet.
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <Sheet open labelledBy={titleId} onClose={onClose}>
+      <Typography variant="title" as="h2" id={titleId} className="break-words">
+        {title}
+      </Typography>
+      {isError ? (
+        <FieldMessage className="mt-4">{t('samples.loadFailed', { ns: 'voices' })}</FieldMessage>
+      ) : detail ? (
+        <>
+          {detail.photoUrl && (
+            <img
+              src={detail.photoUrl}
+              width={detail.photoWidth}
+              height={detail.photoHeight}
+              alt={t('samples.photoAlt', { ns: 'voices' })}
+              className="max-h-field mt-4 h-auto w-full rounded-md object-contain"
+            />
+          )}
+          <Typography variant="body" as="p" className="mt-4 break-words whitespace-pre-line">
+            {detail.body}
+          </Typography>
+        </>
+      ) : (
+        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
+          {t('state.loading', { ns: 'common' })}
+        </Typography>
+      )}
+      {remove.isError && <FieldMessage className="mt-3">{remove.errorMessage}</FieldMessage>}
+      <div className="mt-6 flex flex-wrap justify-end gap-2">
+        <Button variant="ghost" onClick={onClose}>
+          {t('action.close', { ns: 'common' })}
+        </Button>
+        <Button
+          variant="danger"
+          disabled={blocked || remove.isPending}
+          onClick={() => setConfirming(true)}
+        >
+          {t('action.delete', { ns: 'common' })}
+        </Button>
+      </div>
       <Dialog
-        open={confirming !== null}
+        open={confirming}
         title={t('samples.deleteTitle', { ns: 'voices' })}
         confirmLabel={t('action.delete', { ns: 'common' })}
-        pending={removeSample.isPending}
-        onClose={() => setConfirming(null)}
-        onConfirm={() => {
-          if (confirming) void remove(confirming)
-        }}
+        pending={remove.isPending}
+        onClose={() => setConfirming(false)}
+        onConfirm={() => void confirm()}
       >
-        {/* The label is stored text the user pasted, so it breaks inside the sheet rather than
-            widening it (THEME-21). */}
-        {t('samples.deleteDescription', { ns: 'voices', label: confirming?.label ?? '' })}
+        {t('samples.deleteDescription', { ns: 'voices' })}
       </Dialog>
-    </section>
+    </Sheet>
   )
 }

@@ -10,55 +10,6 @@ import (
 	"database/sql"
 )
 
-const bumpCorpusVersion = `-- name: BumpCorpusVersion :exec
-INSERT INTO voice_profiles (voice_id, user_id, corpus_version, updated_at)
-VALUES (?, ?, 1, ?)
-ON CONFLICT(voice_id) DO UPDATE SET
-    corpus_version = voice_profiles.corpus_version + 1,
-    updated_at = excluded.updated_at
-`
-
-type BumpCorpusVersionParams struct {
-	VoiceID   string
-	UserID    string
-	UpdatedAt string
-}
-
-func (q *Queries) BumpCorpusVersion(ctx context.Context, arg BumpCorpusVersionParams) error {
-	_, err := q.db.ExecContext(ctx, bumpCorpusVersion, arg.VoiceID, arg.UserID, arg.UpdatedAt)
-	return err
-}
-
-const claimCorpusVersion = `-- name: ClaimCorpusVersion :execrows
-UPDATE voice_profiles
-SET updated_at = ?
-WHERE voice_id = ? AND user_id = ? AND corpus_version = ?
-`
-
-type ClaimCorpusVersionParams struct {
-	UpdatedAt     string
-	VoiceID       string
-	UserID        string
-	CorpusVersion int64
-}
-
-// The concurrency guard, and nothing else. It used to write the analysis text into a
-// `styleguide` column; that column is gone (VOICE-6) and the analysis text now reaches the
-// profile only through the structured version this claim gates. Zero rows means the corpus
-// moved while the provider was working, so the finished analysis is stale and must not publish.
-func (q *Queries) ClaimCorpusVersion(ctx context.Context, arg ClaimCorpusVersionParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, claimCorpusVersion,
-		arg.UpdatedAt,
-		arg.VoiceID,
-		arg.UserID,
-		arg.CorpusVersion,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
 const clearDefaultVoice = `-- name: ClearDefaultVoice :exec
 UPDATE voices SET is_default = 0, updated_at = ? WHERE user_id = ? AND is_default = 1
 `
@@ -113,8 +64,18 @@ func (q *Queries) DeleteManualOverride(ctx context.Context, arg DeleteManualOver
 	return result.RowsAffected()
 }
 
-const deleteSample = `-- name: DeleteSample :execrows
+const deletePhotoUpload = `-- name: DeletePhotoUpload :exec
+DELETE FROM voice_photo_uploads WHERE id = ?
+`
+
+func (q *Queries) DeletePhotoUpload(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deletePhotoUpload, id)
+	return err
+}
+
+const deleteSample = `-- name: DeleteSample :one
 DELETE FROM voice_samples WHERE id = ? AND voice_id = ? AND user_id = ?
+RETURNING photo_key
 `
 
 type DeleteSampleParams struct {
@@ -123,28 +84,39 @@ type DeleteSampleParams struct {
 	UserID  string
 }
 
-func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteSample, arg.ID, arg.VoiceID, arg.UserID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+// The row goes first and names the photo key, so the object can follow it (POST-39).
+func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, deleteSample, arg.ID, arg.VoiceID, arg.UserID)
+	var photo_key sql.NullString
+	err := row.Scan(&photo_key)
+	return photo_key, err
 }
 
-const getCorpusVersion = `-- name: GetCorpusVersion :one
-SELECT corpus_version FROM voice_profiles WHERE voice_id = ? AND user_id = ?
+const getPhotoUpload = `-- name: GetPhotoUpload :one
+SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
+FROM voice_photo_uploads
+WHERE id = ? AND voice_id = ? AND user_id = ?
 `
 
-type GetCorpusVersionParams struct {
+type GetPhotoUploadParams struct {
+	ID      string
 	VoiceID string
 	UserID  string
 }
 
-func (q *Queries) GetCorpusVersion(ctx context.Context, arg GetCorpusVersionParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getCorpusVersion, arg.VoiceID, arg.UserID)
-	var corpus_version int64
-	err := row.Scan(&corpus_version)
-	return corpus_version, err
+func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) (VoicePhotoUpload, error) {
+	row := q.db.QueryRowContext(ctx, getPhotoUpload, arg.ID, arg.VoiceID, arg.UserID)
+	var i VoicePhotoUpload
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.VoiceID,
+		&i.PromptKey,
+		&i.ObjectKey,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getProfile = `-- name: GetProfile :one
@@ -206,7 +178,7 @@ func (q *Queries) GetProfileVersion(ctx context.Context, arg GetProfileVersionPa
 }
 
 const getSampleBody = `-- name: GetSampleBody :one
-SELECT id, label, body, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?
 `
@@ -218,10 +190,15 @@ type GetSampleBodyParams struct {
 }
 
 type GetSampleBodyRow struct {
-	ID        string
-	Label     string
-	Body      string
-	CreatedAt string
+	ID          string
+	Kind        string
+	PromptKey   sql.NullString
+	Label       string
+	Body        string
+	PhotoKey    sql.NullString
+	PhotoWidth  sql.NullInt64
+	PhotoHeight sql.NullInt64
+	CreatedAt   string
 }
 
 func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (GetSampleBodyRow, error) {
@@ -229,8 +206,13 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 	var i GetSampleBodyRow
 	err := row.Scan(
 		&i.ID,
+		&i.Kind,
+		&i.PromptKey,
 		&i.Label,
 		&i.Body,
+		&i.PhotoKey,
+		&i.PhotoWidth,
+		&i.PhotoHeight,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -335,6 +317,34 @@ func (q *Queries) InsertEmptyProfile(ctx context.Context, arg InsertEmptyProfile
 	return err
 }
 
+const insertPhotoUpload = `-- name: InsertPhotoUpload :exec
+INSERT INTO voice_photo_uploads (id, user_id, voice_id, prompt_key, object_key, expires_at, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertPhotoUploadParams struct {
+	ID        string
+	UserID    string
+	VoiceID   string
+	PromptKey string
+	ObjectKey string
+	ExpiresAt string
+	CreatedAt string
+}
+
+func (q *Queries) InsertPhotoUpload(ctx context.Context, arg InsertPhotoUploadParams) error {
+	_, err := q.db.ExecContext(ctx, insertPhotoUpload,
+		arg.ID,
+		arg.UserID,
+		arg.VoiceID,
+		arg.PromptKey,
+		arg.ObjectKey,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertProfileVersion = `-- name: InsertProfileVersion :exec
 INSERT INTO voice_profile_versions
     (id, user_id, voice_id, version, snapshot, origin, restored_from_version, created_at)
@@ -367,17 +377,22 @@ func (q *Queries) InsertProfileVersion(ctx context.Context, arg InsertProfileVer
 }
 
 const insertSample = `-- name: InsertSample :exec
-INSERT INTO voice_samples (id, voice_id, user_id, label, body, created_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertSampleParams struct {
-	ID        string
-	VoiceID   string
-	UserID    string
-	Label     string
-	Body      string
-	CreatedAt string
+	ID          string
+	VoiceID     string
+	UserID      string
+	Kind        string
+	PromptKey   sql.NullString
+	Label       string
+	Body        string
+	PhotoKey    sql.NullString
+	PhotoWidth  sql.NullInt64
+	PhotoHeight sql.NullInt64
+	CreatedAt   string
 }
 
 func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) error {
@@ -385,8 +400,13 @@ func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) erro
 		arg.ID,
 		arg.VoiceID,
 		arg.UserID,
+		arg.Kind,
+		arg.PromptKey,
 		arg.Label,
 		arg.Body,
+		arg.PhotoKey,
+		arg.PhotoWidth,
+		arg.PhotoHeight,
 		arg.CreatedAt,
 	)
 	return err
@@ -463,6 +483,70 @@ func (q *Queries) ListManualOverrides(ctx context.Context, arg ListManualOverrid
 	return items, nil
 }
 
+const listPhotoUploadKeys = `-- name: ListPhotoUploadKeys :many
+SELECT object_key FROM voice_photo_uploads
+`
+
+func (q *Queries) ListPhotoUploadKeys(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listPhotoUploadKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var object_key string
+		if err := rows.Scan(&object_key); err != nil {
+			return nil, err
+		}
+		items = append(items, object_key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPhotoUploadsExpiredBefore = `-- name: ListPhotoUploadsExpiredBefore :many
+SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
+FROM voice_photo_uploads
+WHERE expires_at < ?
+`
+
+func (q *Queries) ListPhotoUploadsExpiredBefore(ctx context.Context, expiresAt string) ([]VoicePhotoUpload, error) {
+	rows, err := q.db.QueryContext(ctx, listPhotoUploadsExpiredBefore, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoicePhotoUpload
+	for rows.Next() {
+		var i VoicePhotoUpload
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.VoiceID,
+			&i.PromptKey,
+			&i.ObjectKey,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProfileVersions = `-- name: ListProfileVersions :many
 SELECT v.id, v.user_id, v.voice_id, v.version, v.snapshot, v.origin, v.restored_from_version, v.created_at,
        s.version AS sample_version
@@ -525,7 +609,7 @@ func (q *Queries) ListProfileVersions(ctx context.Context, arg ListProfileVersio
 }
 
 const listSampleBodies = `-- name: ListSampleBodies :many
-SELECT id, label, body, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
@@ -537,10 +621,15 @@ type ListSampleBodiesParams struct {
 }
 
 type ListSampleBodiesRow struct {
-	ID        string
-	Label     string
-	Body      string
-	CreatedAt string
+	ID          string
+	Kind        string
+	PromptKey   sql.NullString
+	Label       string
+	Body        string
+	PhotoKey    sql.NullString
+	PhotoWidth  sql.NullInt64
+	PhotoHeight sql.NullInt64
+	CreatedAt   string
 }
 
 func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesParams) ([]ListSampleBodiesRow, error) {
@@ -554,8 +643,13 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 		var i ListSampleBodiesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Kind,
+			&i.PromptKey,
 			&i.Label,
 			&i.Body,
+			&i.PhotoKey,
+			&i.PhotoWidth,
+			&i.PhotoHeight,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -571,8 +665,35 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 	return items, nil
 }
 
+const listSamplePhotoKeys = `-- name: ListSamplePhotoKeys :many
+SELECT photo_key FROM voice_samples WHERE photo_key IS NOT NULL
+`
+
+func (q *Queries) ListSamplePhotoKeys(ctx context.Context) ([]sql.NullString, error) {
+	rows, err := q.db.QueryContext(ctx, listSamplePhotoKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []sql.NullString
+	for rows.Next() {
+		var photo_key sql.NullString
+		if err := rows.Scan(&photo_key); err != nil {
+			return nil, err
+		}
+		items = append(items, photo_key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSamples = `-- name: ListSamples :many
-SELECT id, label, length(body) AS chars, created_at
+SELECT id, kind, prompt_key, label, length(body) AS chars, photo_key, created_at
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
@@ -585,8 +706,11 @@ type ListSamplesParams struct {
 
 type ListSamplesRow struct {
 	ID        string
+	Kind      string
+	PromptKey sql.NullString
 	Label     string
 	Chars     sql.NullInt64
+	PhotoKey  sql.NullString
 	CreatedAt string
 }
 
@@ -601,8 +725,11 @@ func (q *Queries) ListSamples(ctx context.Context, arg ListSamplesParams) ([]Lis
 		var i ListSamplesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Kind,
+			&i.PromptKey,
 			&i.Label,
 			&i.Chars,
+			&i.PhotoKey,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -687,6 +814,17 @@ func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRo
 		return nil, err
 	}
 	return items, nil
+}
+
+const photoKeyInUse = `-- name: PhotoKeyInUse :one
+SELECT CAST(EXISTS (SELECT 1 FROM voice_samples WHERE photo_key = ?) AS INTEGER) AS in_use
+`
+
+func (q *Queries) PhotoKeyInUse(ctx context.Context, photoKey sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, photoKeyInUse, photoKey)
+	var in_use int64
+	err := row.Scan(&in_use)
+	return in_use, err
 }
 
 const renameVoice = `-- name: RenameVoice :execrows

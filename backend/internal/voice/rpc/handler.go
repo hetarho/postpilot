@@ -158,16 +158,11 @@ func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, err
 	}
-	ref := llm.ModelRef{
-		ProviderID: req.Msg.GetModel().GetProviderId(), ModelID: req.Msg.GetModel().GetModelId(),
-	}
-	sample, jobID, err := h.service.AddSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetLabel(), req.Msg.GetBody(), ref)
+	sample, err := h.service.AddSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetLabel(), req.Msg.GetBody())
 	if err != nil {
 		return nil, toConnectError("add voice sample", err)
 	}
-	return connect.NewResponse(&postpilotv1.AddVoiceSampleResponse{
-		Sample: toProtoSample(sample), JobId: jobID,
-	}), nil
+	return connect.NewResponse(&postpilotv1.AddVoiceSampleResponse{Sample: toProtoSample(sample)}), nil
 }
 
 func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.DeleteVoiceSampleRequest]) (*connect.Response[postpilotv1.DeleteVoiceSampleResponse], error) {
@@ -175,11 +170,79 @@ func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, err
 	}
-	jobID, err := h.service.DeleteSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetSampleId())
-	if err != nil {
+	if err := h.service.DeleteSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetSampleId()); err != nil {
 		return nil, toConnectError("delete voice sample", err)
 	}
-	return connect.NewResponse(&postpilotv1.DeleteVoiceSampleResponse{JobId: jobID}), nil
+	return connect.NewResponse(&postpilotv1.DeleteVoiceSampleResponse{}), nil
+}
+
+func (h *Handler) GetVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceSampleRequest]) (*connect.Response[postpilotv1.GetVoiceSampleResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sample, photoURL, err := h.service.GetSample(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetSampleId())
+	if err != nil {
+		return nil, toConnectError("get voice sample", err)
+	}
+	return connect.NewResponse(&postpilotv1.GetVoiceSampleResponse{
+		Sample: toProtoSample(sample), Body: sample.Body, PhotoUrl: photoURL,
+		PhotoWidth: int32(sample.PhotoWidth), PhotoHeight: int32(sample.PhotoHeight),
+	}), nil
+}
+
+func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postpilotv1.ListVoicePromptsRequest]) (*connect.Response[postpilotv1.ListVoicePromptsResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	prompts := h.service.Prompts()
+	out := make([]*postpilotv1.VoicePrompt, 0, len(prompts))
+	for _, prompt := range prompts {
+		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text})
+	}
+	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out}), nil
+}
+
+func (h *Handler) CreateVoicePhotoUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateVoicePhotoUploadRequest]) (*connect.Response[postpilotv1.CreateVoicePhotoUploadResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	upload, url, err := h.service.CreatePhotoUpload(ctx, userID, req.Msg.GetVoiceId(), req.Msg.GetPromptKey())
+	if err != nil {
+		return nil, toConnectError("create voice photo upload", err)
+	}
+	return connect.NewResponse(&postpilotv1.CreateVoicePhotoUploadResponse{
+		UploadId: upload.ID, PutUrl: url, ContentType: voice.PhotoContentType, ExpiresAt: upload.ExpiresAt.UTC().Format(timeLayout),
+	}), nil
+}
+
+func (h *Handler) AnswerVoicePrompt(ctx context.Context, req *connect.Request[postpilotv1.AnswerVoicePromptRequest]) (*connect.Response[postpilotv1.AnswerVoicePromptResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sample, err := h.service.AnswerPrompt(ctx, userID, req.Msg.GetVoiceId(), voice.Answer{
+		PromptKey: req.Msg.GetPromptKey(), Body: req.Msg.GetBody(), UploadID: req.Msg.GetUploadId(),
+		PhotoWidth: int(req.Msg.GetPhotoWidth()), PhotoHeight: int(req.Msg.GetPhotoHeight()),
+	})
+	if err != nil {
+		return nil, toConnectError("answer voice prompt", err)
+	}
+	return connect.NewResponse(&postpilotv1.AnswerVoicePromptResponse{Sample: toProtoSample(sample)}), nil
+}
+
+func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpilotv1.AnalyzeVoiceRequest]) (*connect.Response[postpilotv1.AnalyzeVoiceResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ref := llm.ModelRef{ProviderID: req.Msg.GetModel().GetProviderId(), ModelID: req.Msg.GetModel().GetModelId()}
+	jobID, err := h.service.AnalyzeVoice(ctx, userID, req.Msg.GetVoiceId(), ref)
+	if err != nil {
+		return nil, toConnectError("analyze voice", err)
+	}
+	return connect.NewResponse(&postpilotv1.AnalyzeVoiceResponse{JobId: jobID}), nil
 }
 
 func (h *Handler) ListVoiceProfileVersions(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceProfileVersionsRequest]) (*connect.Response[postpilotv1.ListVoiceProfileVersionsResponse], error) {
@@ -259,8 +322,18 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", postpilotv1.FailureReason_VOICE_SAMPLE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrLearningNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile version not found", postpilotv1.FailureReason_VOICE_LEARNING_NOT_FOUND, nil)
-	case errors.Is(err, voice.ErrSampleMutation):
-		return rpcserver.NewAppError(connect.CodeInternal, "voice sample could not be updated", postpilotv1.FailureReason_VOICE_SAMPLE_MUTATION_FAILED, nil)
+	case errors.Is(err, voice.ErrVoiceNotReady):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the voice needs more 학습 글", postpilotv1.FailureReason_VOICE_NOT_READY, nil)
+	case errors.Is(err, voice.ErrPromptNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice prompt not found", postpilotv1.FailureReason_VOICE_PROMPT_NOT_FOUND, nil)
+	case errors.Is(err, voice.ErrPromptAnswered):
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "the prompt already holds an answer", postpilotv1.FailureReason_VOICE_PROMPT_ANSWERED, nil)
+	case errors.Is(err, voice.ErrAnswerRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an answer is required", postpilotv1.FailureReason_VOICE_ANSWER_REQUIRED, nil)
+	case errors.Is(err, voice.ErrPhotoRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a photo prompt needs an uploaded photo", postpilotv1.FailureReason_VOICE_PHOTO_REQUIRED, nil)
+	case errors.Is(err, voice.ErrInvalidPhoto):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", postpilotv1.FailureReason_UPLOAD_INVALID, nil)
 	case errors.Is(err, voice.ErrVoiceNameTaken):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "voice name already exists", postpilotv1.FailureReason_VOICE_NAME_TAKEN, nil)
 	case errors.Is(err, voice.ErrVoiceDeleted):
@@ -302,7 +375,7 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 	return &postpilotv1.Voice{
 		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
 		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
-		Made: v.Made, MaterialCount: int32(v.SampleCount), AnalyzedAt: analyzed,
+		Made: v.Made, MaterialCount: int32(v.SampleCount), AnalyzedAt: analyzed, ReadinessPercent: int32(v.ReadinessPercent),
 	}
 }
 
@@ -319,6 +392,8 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 		Voice:   toProtoVoice(profile.Voice),
 		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
 		Structured: toProtoStructured(profile.Structured),
+		Made:       profile.Structured.Version > 0,
+		Readiness:  toProtoReadiness(profile.Readiness),
 	}
 }
 
@@ -408,10 +483,39 @@ func toProtoVersion(v voice.ProfileVersion) *postpilotv1.VoiceProfileVersion {
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 func toProtoSample(sample voice.Sample) *postpilotv1.VoiceSample {
+	kind := postpilotv1.VoiceSampleKind_VOICE_SAMPLE_KIND_POST
+	if sample.Kind == voice.SampleKindAnswer {
+		kind = postpilotv1.VoiceSampleKind_VOICE_SAMPLE_KIND_ANSWER
+	}
 	return &postpilotv1.VoiceSample{
 		Id: sample.ID, Label: sample.Label, Chars: int32(sample.Chars),
 		CreatedAt: sample.CreatedAt.UTC().Format(timeLayout),
+		Kind:      kind, PromptKey: sample.PromptKey, HasPhoto: sample.HasPhoto(),
 	}
+}
+
+func toProtoReadiness(readiness voice.Readiness) *postpilotv1.VoiceReadiness {
+	missing := make([]postpilotv1.VoicePromptPart, 0, len(readiness.MissingParts))
+	for _, part := range readiness.MissingParts {
+		missing = append(missing, toProtoPart(part))
+	}
+	return &postpilotv1.VoiceReadiness{
+		Percent: int32(readiness.Percent), Sentences: int32(readiness.Sentences), Needed: int32(readiness.Needed), MissingParts: missing,
+	}
+}
+
+// toProtoPart maps the three parts the domain has; a fourth is a compile-time impossibility,
+// pinned by a test that walks the generated enum (ARCH-3).
+func toProtoPart(part voice.PromptPart) postpilotv1.VoicePromptPart {
+	switch part {
+	case voice.PartOpening:
+		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_OPENING
+	case voice.PartDescription:
+		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_DESCRIPTION
+	case voice.PartClosing:
+		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING
+	}
+	return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_UNSPECIFIED
 }
 
 var _ postpilotv1connect.VoiceServiceHandler = (*Handler)(nil)

@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -21,10 +22,13 @@ import (
 
 type models struct{}
 
-func (models) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
-	return llm.ModelRef{}, false, nil
+// Resolve knows one model, registered to the analyze stage.
+func (models) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	if ref == (llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}) {
+		return llm.ModelInfo{Stages: []string{llm.StageNameAnalyze}}, true
+	}
+	return llm.ModelInfo{}, false
 }
-func (models) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
 func (models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
 	return llm.Response{}, nil
 }
@@ -123,20 +127,97 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("short sample RPC error = %v", err)
 	}
-	_, err = handler.AddVoiceSample(
+	// A pasted post needs no model and starts nothing (VOICE-21).
+	added, err := handler.AddVoiceSample(
 		auth.WithUser(context.Background(), "alice"),
-		connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{
-			VoiceId: voices["alice"],
-			Body:    strings.Repeat("가", 200),
-			Model:   &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"},
-		}),
+		connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: voices["alice"], Body: strings.Repeat("가", 200)}),
 	)
-	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatalf("missing model RPC error = %v", err)
+	if err != nil || added.Msg.GetSample().GetKind() != postpilotv1.VoiceSampleKind_VOICE_SAMPLE_KIND_POST {
+		t.Fatalf("add sample = %+v err=%v", added, err)
 	}
-	if count, err := voicestore.New(handle.Writer, handle.Reader).CountSamples(context.Background(), "alice", voices["alice"]); err != nil || count != 0 {
-		t.Fatalf("model failure stored %d samples: %v", count, err)
+}
+
+// VOICE-60, VOICE-23: the prompt set, answering, opening a 학습 글 and 말투 만들기 at the edge.
+func TestVoiceMaterialRPCs(t *testing.T) {
+	handle := openVoiceTestDB(t)
+	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
+	ctx := context.Background()
+	created, err := service.CreateVoice(ctx, "alice", "리뷰")
+	if err != nil {
+		t.Fatal(err)
 	}
+	handler := voicerpc.NewHandler(service)
+	alice := auth.WithUser(ctx, "alice")
+
+	prompts, err := handler.ListVoicePrompts(alice, connect.NewRequest(&postpilotv1.ListVoicePromptsRequest{}))
+	if err != nil || len(prompts.Msg.GetPrompts()) != 20 {
+		t.Fatalf("prompts = %d err=%v", len(prompts.Msg.GetPrompts()), err)
+	}
+	photos := 0
+	parts := map[postpilotv1.VoicePromptPart]int{}
+	for _, prompt := range prompts.Msg.GetPrompts() {
+		parts[prompt.GetPart()]++
+		if prompt.GetPhoto() {
+			photos++
+		}
+	}
+	if photos != 6 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_OPENING] != 4 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_DESCRIPTION] != 12 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING] != 4 {
+		t.Fatalf("prompt parts = %v photos=%d", parts, photos)
+	}
+
+	for request, want := range map[*postpilotv1.AnswerVoicePromptRequest]connect.Code{
+		{VoiceId: created.ID, PromptKey: "nope", Body: "안녕"}:            connect.CodeNotFound,
+		{VoiceId: created.ID, PromptKey: "opening_greeting", Body: " "}: connect.CodeInvalidArgument,
+		{VoiceId: created.ID, PromptKey: "photo_food", Body: "맛있어요"}:    connect.CodeFailedPrecondition,
+	} {
+		if _, err := handler.AnswerVoicePrompt(alice, connect.NewRequest(request)); connect.CodeOf(err) != want {
+			t.Fatalf("answer %+v code = %v, want %v", request, err, want)
+		}
+	}
+	answered, err := handler.AnswerVoicePrompt(alice, connect.NewRequest(&postpilotv1.AnswerVoicePromptRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Body: "안녕하세요!"}))
+	if err != nil || answered.Msg.GetSample().GetKind() != postpilotv1.VoiceSampleKind_VOICE_SAMPLE_KIND_ANSWER || answered.Msg.GetSample().GetPromptKey() != "opening_greeting" {
+		t.Fatalf("answer = %+v err=%v", answered, err)
+	}
+	if _, err := handler.AnswerVoicePrompt(alice, connect.NewRequest(&postpilotv1.AnswerVoicePromptRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Body: "또"})); connect.CodeOf(err) != connect.CodeAlreadyExists {
+		t.Fatalf("second answer code = %v", err)
+	}
+	opened, err := handler.GetVoiceSample(alice, connect.NewRequest(&postpilotv1.GetVoiceSampleRequest{VoiceId: created.ID, SampleId: answered.Msg.GetSample().GetId()}))
+	if err != nil || opened.Msg.GetBody() != "안녕하세요!" || opened.Msg.GetPhotoUrl() != "" {
+		t.Fatalf("opened = %+v err=%v", opened, err)
+	}
+	if _, err := handler.GetVoiceSample(auth.WithUser(ctx, "bob"), connect.NewRequest(&postpilotv1.GetVoiceSampleRequest{VoiceId: created.ID, SampleId: answered.Msg.GetSample().GetId()})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("foreign open code = %v", err)
+	}
+
+	analyze := &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}
+	if _, err := handler.AnalyzeVoice(alice, connect.NewRequest(&postpilotv1.AnalyzeVoiceRequest{VoiceId: created.ID, Model: analyze})); voiceReason(t, err) != "VOICE_NOT_READY" {
+		t.Fatalf("an unready analysis = %v", err)
+	}
+	if _, err := handler.AnalyzeVoice(alice, connect.NewRequest(&postpilotv1.AnalyzeVoiceRequest{VoiceId: created.ID, Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "other"}})); voiceReason(t, err) != "VOICE_ANALYZE_MODEL_REQUIRED" {
+		t.Fatalf("an unregistered model = %v", err)
+	}
+	profile, err := handler.GetVoiceProfile(alice, connect.NewRequest(&postpilotv1.GetVoiceProfileRequest{VoiceId: created.ID}))
+	if err != nil || profile.Msg.GetProfile().GetMade() || profile.Msg.GetProfile().GetReadiness().GetNeeded() != 60 {
+		t.Fatalf("profile readiness = %+v err=%v", profile.Msg.GetProfile().GetReadiness(), err)
+	}
+}
+
+func voiceReason(t *testing.T, err error) string {
+	t.Helper()
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		return ""
+	}
+	for _, detail := range connectErr.Details() {
+		value, valueErr := detail.Value()
+		if valueErr != nil {
+			continue
+		}
+		if app, ok := value.(*postpilotv1.AppErrorDetail); ok {
+			return app.GetReason()
+		}
+	}
+	return ""
 }
 
 // The directory RPCs map every lifecycle refusal to a code the client can act on, and never
@@ -226,7 +307,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	if err != nil || !deleted.Msg.GetVoice().GetDeleted() || deleted.Msg.GetVoice().GetDeletedAt() == "" || deleted.Msg.GetVoice().GetIsDefault() {
 		t.Fatalf("delete = %+v err=%v", deleted, err)
 	}
-	if _, err := handler.AddVoiceSample(alice, connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: defaultVoice.ID, Body: strings.Repeat("가", 200), Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+	if _, err := handler.AddVoiceSample(alice, connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: defaultVoice.ID, Body: strings.Repeat("가", 200)})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("mutate deleted code = %v", err)
 	}
 	listed, err := handler.ListVoices(alice, connect.NewRequest(&postpilotv1.ListVoicesRequest{}))

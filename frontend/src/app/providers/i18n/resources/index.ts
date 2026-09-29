@@ -77,6 +77,9 @@ import { i18n as memoriesPageI18n } from '@/pages/memories/config/i18n'
 import { i18n as manageModelCatalogI18n } from '@/features/manage-model-catalog/config/i18n'
 import { i18n as manageSubscriptionI18n } from '@/features/manage-subscription/config/i18n'
 import { i18n as manageVoiceSamplesI18n } from '@/features/manage-voice-samples/config/i18n'
+import { i18n as pasteVoiceMaterialI18n } from '@/features/paste-voice-material/config/i18n'
+import { i18n as answerVoicePromptI18n } from '@/features/answer-voice-prompt/config/i18n'
+import { i18n as makeVoiceI18n } from '@/features/make-voice/config/i18n'
 import { i18n as modelCatalogI18n } from '@/entities/model-catalog/config/i18n'
 import { i18n as modelExperimentEntityI18n } from '@/entities/model-experiment/config/i18n'
 import { i18n as modelExperimentI18n } from '@/pages/model-experiment/config/i18n'
@@ -224,6 +227,9 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   deleteVoiceI18n,
   editVoiceProfileI18n,
   manageVoiceSamplesI18n,
+  pasteVoiceMaterialI18n,
+  answerVoicePromptI18n,
+  makeVoiceI18n,
   renameVoiceI18n,
   selectPostVoiceI18n,
   setDefaultVoiceI18n,
@@ -262,6 +268,9 @@ export const resources = {
       ...deleteVoiceI18n.ko,
       ...editVoiceProfileI18n.ko,
       ...manageVoiceSamplesI18n.ko,
+      ...pasteVoiceMaterialI18n.ko,
+      ...answerVoicePromptI18n.ko,
+      ...makeVoiceI18n.ko,
       ...renameVoiceI18n.ko,
       ...selectPostVoiceI18n.ko,
       ...setDefaultVoiceI18n.ko,
@@ -379,6 +388,9 @@ export const resources = {
       ...deleteVoiceI18n.en,
       ...editVoiceProfileI18n.en,
       ...manageVoiceSamplesI18n.en,
+      ...pasteVoiceMaterialI18n.en,
+      ...answerVoicePromptI18n.en,
+      ...makeVoiceI18n.en,
       ...renameVoiceI18n.en,
       ...selectPostVoiceI18n.en,
       ...setDefaultVoiceI18n.en,

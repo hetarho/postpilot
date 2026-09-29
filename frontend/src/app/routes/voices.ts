@@ -6,12 +6,12 @@ import { authenticatedRoute, writingGroupRoute, type RouterContext } from './tre
 // whole tab area rather than three: the tabs are one screen and are always reached
 // together. VoiceLayout is lazy too but stays its own 2 kB chunk — it belongs to app/routes,
 // not to the pages/voice slice, and sharing their chunk would mean moving it across layers.
-const lazyVoice = <K extends 'VoicePage' | 'VoiceVersionsPage' | 'VoiceImportPage'>(name: K) =>
+const lazyVoice = <K extends 'VoicePage' | 'VoiceVersionsPage' | 'VoiceMaterialsPage'>(name: K) =>
   lazyRouteComponent(() => import('@/pages/voice'), name)
 
 /** The tabs an old `/voice/<tab>` link may name, so the redirect keeps the user on the same
  *  screen of the default voice. Anything else lands on the profile tab. */
-const LEGACY_VOICE_TABS = new Set(['versions', 'import'])
+const LEGACY_VOICE_TABS = new Set(['versions', 'materials'])
 
 /** Sends an old `/voice` address to the same tab of the account's default voice — read from the
  *  directory, never created here — or to the directory itself when there is none to show. Always
@@ -29,8 +29,8 @@ export async function redirectLegacyVoice(
   switch (LEGACY_VOICE_TABS.has(tab) ? tab : '') {
     case 'versions':
       throw redirect({ to: '/voices/$voiceId/versions', params, replace: true })
-    case 'import':
-      throw redirect({ to: '/voices/$voiceId/import', params, replace: true })
+    case 'materials':
+      throw redirect({ to: '/voices/$voiceId/materials', params, replace: true })
     default:
       throw redirect({ to: '/voices/$voiceId', params, replace: true })
   }
@@ -62,10 +62,10 @@ export const voiceVersionsRoute = createRoute({
   component: lazyVoice('VoiceVersionsPage'),
 })
 
-export const voiceImportRoute = createRoute({
+export const voiceMaterialsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
-  path: '/import',
-  component: lazyVoice('VoiceImportPage'),
+  path: '/materials',
+  component: lazyVoice('VoiceMaterialsPage'),
 })
 
 // The address the app had before voices were plural. Bookmarks and the empty-profile warning
@@ -89,6 +89,6 @@ export const legacyVoiceTabRoute = createRoute({
 /** The directory, which is NOT a tab of one voice. */
 export const voiceRoutes = [voicesRoute]
 /** The three tabs under `/voices/$voiceId`, which share the tab row. */
-export const voiceTabRoutes = [voiceRoute, voiceVersionsRoute, voiceImportRoute]
+export const voiceTabRoutes = [voiceRoute, voiceVersionsRoute, voiceMaterialsRoute]
 /** The address the app had before voices were plural. */
 export const legacyVoiceRoutes = [legacyVoiceRoute, legacyVoiceTabRoute]

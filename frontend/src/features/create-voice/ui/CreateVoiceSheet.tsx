@@ -67,7 +67,8 @@ function CreateVoicePanel({ ownerId, onClose }: { ownerId: string; onClose: () =
       const response = await create.create({ name: name.trim() })
       onClose()
       if (response.voice) {
-        await navigate({ to: '/voices/$voiceId', params: { voiceId: response.voice.id } })
+        // A new voice has nothing to read yet: it lands where its 학습 글 are gathered.
+        await navigate({ to: '/voices/$voiceId/materials', params: { voiceId: response.voice.id } })
       }
     } catch {
       // The mutation's message renders under the field, inside the still-open sheet.

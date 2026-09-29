@@ -220,16 +220,6 @@ func (s *Store) GetProfile(ctx context.Context, userID, voiceID string) (voice.P
 		UpdatedAt: updated, Structured: structured}, nil
 }
 
-func (s *Store) ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error) {
-	n, err := s.write.ClaimCorpusVersion(ctx, sqlc.ClaimCorpusVersionParams{
-		UpdatedAt: formatTime(now), VoiceID: voiceID, UserID: userID, CorpusVersion: version,
-	})
-	if err != nil {
-		return false, fmt.Errorf("claim corpus version: %w", err)
-	}
-	return n > 0, nil
-}
-
 func (s *Store) UpsertVersionSample(ctx context.Context, sample voice.VersionSample) error {
 	if err := s.write.UpsertVersionSample(ctx, sqlc.UpsertVersionSampleParams{
 		VoiceID: sample.VoiceID, UserID: sample.UserID, Version: sample.Version,
@@ -261,27 +251,50 @@ func (s *Store) GetVersionSample(ctx context.Context, userID, voiceID string, ve
 }
 
 func (s *Store) InsertSample(ctx context.Context, sample voice.Sample) error {
+	if err := s.write.InsertSample(ctx, sampleParams(sample)); err != nil {
+		return fmt.Errorf("insert sample: %w", err)
+	}
+	return nil
+}
+
+// AnswerPrompt writes the answer and drops its pending photo upload in one transaction, so a
+// photo is never both answered and reclaimable. The partial unique index on
+// (voice_id, prompt_key) is the arbiter of a second answer.
+func (s *Store) AnswerPrompt(ctx context.Context, sample voice.Sample, uploadID string) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin insert sample: %w", err)
+		return fmt.Errorf("begin answer prompt: %w", err)
 	}
 	defer tx.Rollback()
 	queries := s.write.WithTx(tx)
-	if err := queries.InsertSample(ctx, sqlc.InsertSampleParams{
-		ID: sample.ID, VoiceID: sample.VoiceID, UserID: sample.UserID, Label: sample.Label, Body: sample.Body,
-		CreatedAt: formatTime(sample.CreatedAt),
-	}); err != nil {
-		return fmt.Errorf("insert sample: %w", err)
+	if err := queries.InsertSample(ctx, sampleParams(sample)); err != nil {
+		if isUniqueViolation(err) {
+			return voice.ErrPromptAnswered
+		}
+		return fmt.Errorf("insert answer: %w", err)
 	}
-	if err := queries.BumpCorpusVersion(ctx, sqlc.BumpCorpusVersionParams{
-		VoiceID: sample.VoiceID, UserID: sample.UserID, UpdatedAt: formatTime(time.Now()),
-	}); err != nil {
-		return fmt.Errorf("bump corpus version: %w", err)
+	if uploadID != "" {
+		if err := queries.DeletePhotoUpload(ctx, uploadID); err != nil {
+			return fmt.Errorf("drop photo upload: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit insert sample: %w", err)
+		return fmt.Errorf("commit answer prompt: %w", err)
 	}
 	return nil
+}
+
+func sampleParams(sample voice.Sample) sqlc.InsertSampleParams {
+	params := sqlc.InsertSampleParams{
+		ID: sample.ID, VoiceID: sample.VoiceID, UserID: sample.UserID, Kind: string(sample.Kind),
+		PromptKey: nullableString(sample.PromptKey), Label: sample.Label, Body: sample.Body,
+		PhotoKey: nullableString(sample.PhotoKey), CreatedAt: formatTime(sample.CreatedAt),
+	}
+	if sample.HasPhoto() {
+		params.PhotoWidth = sql.NullInt64{Int64: int64(sample.PhotoWidth), Valid: true}
+		params.PhotoHeight = sql.NullInt64{Int64: int64(sample.PhotoHeight), Valid: true}
+	}
+	return params
 }
 
 func (s *Store) ListSamples(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
@@ -295,15 +308,29 @@ func (s *Store) ListSamples(ctx context.Context, userID, voiceID string) ([]voic
 		if err != nil {
 			return nil, fmt.Errorf("sample %s created_at: %w", row.ID, err)
 		}
-		out = append(out, voice.Sample{
-			ID: row.ID, UserID: userID, VoiceID: voiceID, Label: row.Label, Chars: int(row.Chars.Int64), CreatedAt: created,
-		})
+		sample := voice.Sample{
+			ID: row.ID, UserID: userID, VoiceID: voiceID, Kind: voice.SampleKind(row.Kind), PromptKey: row.PromptKey.String,
+			Label: row.Label, Chars: int(row.Chars.Int64), PhotoKey: row.PhotoKey.String, CreatedAt: created,
+		}
+		out = append(out, sample)
 	}
 	return out, nil
 }
 
 func (s *Store) ListSampleBodies(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
-	return listSampleBodies(ctx, s.read, userID, voiceID)
+	rows, err := s.read.ListSampleBodies(ctx, sqlc.ListSampleBodiesParams{VoiceID: voiceID, UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("select sample bodies: %w", err)
+	}
+	out := make([]voice.Sample, 0, len(rows))
+	for _, row := range rows {
+		sample, err := toSample(userID, voiceID, sqlc.GetSampleBodyRow(row))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, sample)
+	}
+	return out, nil
 }
 
 func (s *Store) GetSampleBody(ctx context.Context, userID, voiceID, sampleID string) (*voice.Sample, error) {
@@ -314,84 +341,35 @@ func (s *Store) GetSampleBody(ctx context.Context, userID, voiceID, sampleID str
 	if err != nil {
 		return nil, fmt.Errorf("select sample body: %w", err)
 	}
+	sample, err := toSample(userID, voiceID, row)
+	if err != nil {
+		return nil, err
+	}
+	return &sample, nil
+}
+
+func toSample(userID, voiceID string, row sqlc.GetSampleBodyRow) (voice.Sample, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("sample %s created_at: %w", row.ID, err)
+		return voice.Sample{}, fmt.Errorf("sample %s created_at: %w", row.ID, err)
 	}
-	return &voice.Sample{
-		ID: row.ID, UserID: userID, VoiceID: voiceID, Label: row.Label, Body: row.Body,
-		Chars: utf8.RuneCountInString(row.Body), CreatedAt: created,
+	return voice.Sample{
+		ID: row.ID, UserID: userID, VoiceID: voiceID, Kind: voice.SampleKind(row.Kind), PromptKey: row.PromptKey.String,
+		Label: row.Label, Body: row.Body, Chars: utf8.RuneCountInString(row.Body),
+		PhotoKey: row.PhotoKey.String, PhotoWidth: int(row.PhotoWidth.Int64), PhotoHeight: int(row.PhotoHeight.Int64),
+		CreatedAt: created,
 	}, nil
 }
 
-func (s *Store) CorpusSnapshot(ctx context.Context, userID, voiceID string) ([]voice.Sample, int64, error) {
-	tx, err := s.reader.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return nil, 0, fmt.Errorf("begin corpus snapshot: %w", err)
-	}
-	defer tx.Rollback()
-	queries := s.read.WithTx(tx)
-	samples, err := listSampleBodies(ctx, queries, userID, voiceID)
-	if err != nil {
-		return nil, 0, err
-	}
-	version, err := queries.GetCorpusVersion(ctx, sqlc.GetCorpusVersionParams{VoiceID: voiceID, UserID: userID})
+func (s *Store) DeleteSample(ctx context.Context, userID, voiceID, sampleID string, _ time.Time) (string, bool, error) {
+	key, err := s.write.DeleteSample(ctx, sqlc.DeleteSampleParams{ID: sampleID, VoiceID: voiceID, UserID: userID})
 	if errors.Is(err, sql.ErrNoRows) {
-		version = 0
-	} else if err != nil {
-		return nil, 0, fmt.Errorf("select corpus version: %w", err)
+		return "", false, nil
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, 0, fmt.Errorf("commit corpus snapshot: %w", err)
-	}
-	return samples, version, nil
-}
-
-type sampleBodyQueries interface {
-	ListSampleBodies(ctx context.Context, arg sqlc.ListSampleBodiesParams) ([]sqlc.ListSampleBodiesRow, error)
-}
-
-func listSampleBodies(ctx context.Context, queries sampleBodyQueries, userID, voiceID string) ([]voice.Sample, error) {
-	rows, err := queries.ListSampleBodies(ctx, sqlc.ListSampleBodiesParams{VoiceID: voiceID, UserID: userID})
 	if err != nil {
-		return nil, fmt.Errorf("select sample bodies: %w", err)
+		return "", false, fmt.Errorf("delete sample: %w", err)
 	}
-	out := make([]voice.Sample, 0, len(rows))
-	for _, row := range rows {
-		created, err := parseTime(row.CreatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("sample %s created_at: %w", row.ID, err)
-		}
-		out = append(out, voice.Sample{
-			ID: row.ID, UserID: userID, VoiceID: voiceID, Label: row.Label, Body: row.Body,
-			Chars: utf8.RuneCountInString(row.Body), CreatedAt: created,
-		})
-	}
-	return out, nil
-}
-
-func (s *Store) DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (bool, error) {
-	tx, err := s.writer.BeginTx(ctx, nil)
-	if err != nil {
-		return false, fmt.Errorf("begin delete sample: %w", err)
-	}
-	defer tx.Rollback()
-	queries := s.write.WithTx(tx)
-	n, err := queries.DeleteSample(ctx, sqlc.DeleteSampleParams{ID: sampleID, VoiceID: voiceID, UserID: userID})
-	if err != nil {
-		return false, fmt.Errorf("delete sample: %w", err)
-	}
-	if n > 0 {
-		if err := queries.BumpCorpusVersion(ctx, sqlc.BumpCorpusVersionParams{
-			VoiceID: voiceID, UserID: userID, UpdatedAt: formatTime(now),
-		}); err != nil {
-			return false, fmt.Errorf("bump corpus version: %w", err)
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("commit delete sample: %w", err)
-	}
-	return n > 0, nil
+	return key.String, true, nil
 }
 
 func (s *Store) CountSamples(ctx context.Context, userID, voiceID string) (int, error) {
@@ -400,6 +378,105 @@ func (s *Store) CountSamples(ctx context.Context, userID, voiceID string) (int, 
 		return 0, fmt.Errorf("count samples: %w", err)
 	}
 	return int(count), nil
+}
+
+// --- photo uploads ---
+
+func (s *Store) InsertPhotoUpload(ctx context.Context, upload voice.PhotoUpload) error {
+	if err := s.write.InsertPhotoUpload(ctx, sqlc.InsertPhotoUploadParams{
+		ID: upload.ID, UserID: upload.UserID, VoiceID: upload.VoiceID, PromptKey: upload.PromptKey, ObjectKey: upload.Key,
+		ExpiresAt: formatTime(upload.ExpiresAt), CreatedAt: formatTime(upload.CreatedAt),
+	}); err != nil {
+		return fmt.Errorf("insert photo upload: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) GetPhotoUpload(ctx context.Context, userID, voiceID, uploadID string) (voice.PhotoUpload, error) {
+	row, err := s.read.GetPhotoUpload(ctx, sqlc.GetPhotoUploadParams{ID: uploadID, VoiceID: voiceID, UserID: userID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return voice.PhotoUpload{}, voice.ErrPhotoRequired
+	}
+	if err != nil {
+		return voice.PhotoUpload{}, fmt.Errorf("select photo upload: %w", err)
+	}
+	return toPhotoUpload(row)
+}
+
+func (s *Store) DeletePhotoUpload(ctx context.Context, id string) error {
+	if err := s.write.DeletePhotoUpload(ctx, id); err != nil {
+		return fmt.Errorf("delete photo upload: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ListPhotoUploadsExpiredBefore(ctx context.Context, cutoff time.Time) ([]voice.PhotoUpload, error) {
+	rows, err := s.read.ListPhotoUploadsExpiredBefore(ctx, formatTime(cutoff))
+	if err != nil {
+		return nil, fmt.Errorf("select expired photo uploads: %w", err)
+	}
+	out := make([]voice.PhotoUpload, 0, len(rows))
+	for _, row := range rows {
+		upload, err := toPhotoUpload(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, upload)
+	}
+	return out, nil
+}
+
+func (s *Store) PhotoKeyInUse(ctx context.Context, key string) (bool, error) {
+	n, err := s.read.PhotoKeyInUse(ctx, nullableString(key))
+	if err != nil {
+		return false, fmt.Errorf("check photo key: %w", err)
+	}
+	return n == 1, nil
+}
+
+// AllReferencedPhotoKeys reads both tables in one read transaction, so a key moving from a
+// pending upload to its answer is seen in one of them.
+func (s *Store) AllReferencedPhotoKeys(ctx context.Context) (map[string]struct{}, error) {
+	tx, err := s.reader.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("begin referenced photo keys: %w", err)
+	}
+	defer tx.Rollback()
+	queries := s.read.WithTx(tx)
+	answered, err := queries.ListSamplePhotoKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select sample photo keys: %w", err)
+	}
+	pending, err := queries.ListPhotoUploadKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select pending photo keys: %w", err)
+	}
+	keys := make(map[string]struct{}, len(answered)+len(pending))
+	for _, key := range answered {
+		keys[key.String] = struct{}{}
+	}
+	for _, key := range pending {
+		keys[key] = struct{}{}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit referenced photo keys: %w", err)
+	}
+	return keys, nil
+}
+
+func toPhotoUpload(row sqlc.VoicePhotoUpload) (voice.PhotoUpload, error) {
+	expires, err := parseTime(row.ExpiresAt)
+	if err != nil {
+		return voice.PhotoUpload{}, fmt.Errorf("photo upload %s expires_at: %w", row.ID, err)
+	}
+	created, err := parseTime(row.CreatedAt)
+	if err != nil {
+		return voice.PhotoUpload{}, fmt.Errorf("photo upload %s created_at: %w", row.ID, err)
+	}
+	return voice.PhotoUpload{
+		ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, PromptKey: row.PromptKey, Key: row.ObjectKey,
+		ExpiresAt: expires, CreatedAt: created,
+	}, nil
 }
 
 func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }

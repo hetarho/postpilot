@@ -52,7 +52,7 @@ describe('the voice directory', () => {
     expect(rows[1]).toHaveTextContent('학습 글 3편 · 2026.08.29 분석')
     expect(rows[1]).not.toHaveTextContent('기본')
     expect(rows[2]).toHaveTextContent('새 말투')
-    expect(rows[2]).toHaveTextContent('만드는 중')
+    expect(rows[2]).toHaveTextContent('만드는 중 0%')
     // Nothing interactive on a row: no 기본으로 설정, no 삭제, no language chip.
     for (const row of rows) expect(within(row).queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '기본으로 설정' })).not.toBeInTheDocument()
@@ -113,7 +113,7 @@ describe('the voice directory', () => {
 
     await waitFor(() => expect(calls).toContain('CreateVoice'))
     expect(creates).toEqual([{ name: '제품 리뷰' }])
-    await waitFor(() => expect(router.state.location.pathname).toBe('/voices/voice-5'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/voices/voice-5/materials'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(calls.filter((call) => call.startsWith('Start') || call === 'AddVoiceSample')).toEqual(
       [],

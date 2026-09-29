@@ -272,9 +272,12 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 
 	c.voice = voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
-		voiceModels{selections: c.provider, registry: c.metered, plans: c.auth},
+		voiceModels{registry: c.metered},
 		voiceJobs{queue: c.jobs},
 	)
+	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
+		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,
+	})
 
 	c.generation = generation.NewService(
 		generationPosts{service: c.post},

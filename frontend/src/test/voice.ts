@@ -22,6 +22,16 @@ import {
   StructuredVoiceProfileSchema,
   UpdateVoiceOverrideResponseSchema,
   type ProtoVoiceProfile,
+  type ProtoVoiceSample,
+  VoicePromptPart,
+  VoiceSampleKind,
+  VoiceReadinessSchema,
+  VoicePromptSchema,
+  ListVoicePromptsResponseSchema,
+  GetVoiceSampleResponseSchema,
+  CreateVoicePhotoUploadResponseSchema,
+  AnswerVoicePromptResponseSchema,
+  AnalyzeVoiceResponseSchema,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -32,7 +42,41 @@ export interface FakeVoiceSampleRow {
   label: string
   chars?: number
   createdAt?: string
+  kind?: 'post' | 'answer'
+  promptKey?: string
+  /** The full text; omitted, a 200-character body. */
+  body?: string
+  hasPhoto?: boolean
 }
+
+/** The shared prompt set as the fake serves it: a subset with every part and a photo prompt,
+ *  which is all a screen test needs to tell groups and photos apart. */
+export const FAKE_VOICE_PROMPTS = [
+  {
+    key: 'opening_greeting',
+    part: 'opening',
+    photo: false,
+    text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'photo_food',
+    part: 'description',
+    photo: true,
+    text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'situation_value',
+    part: 'description',
+    photo: false,
+    text: '가격이나 양, 가성비에 대한 생각을 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'closing_greeting',
+    part: 'closing',
+    photo: false,
+    text: '글을 마무리할 때 쓰는 끝인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+] as const
 
 export interface FakeVoiceRow {
   id: string
@@ -63,8 +107,6 @@ export interface FakeVoiceOptions {
    *  description, which is where an analysis lives now (VOICE-25). */
   analysisAfterAnalysis?: string
   samples?: FakeVoiceSampleRow[]
-  addJobId?: string
-  deleteJobId?: string
   addError?: string
   deleteFails?: boolean
   addGate?: Promise<void>
@@ -84,6 +126,50 @@ export interface FakeVoiceOptions {
   listFails?: boolean
   /** Voice creates: a voice is created by name alone (VOICE-10). */
   creates?: Array<{ name: string }>
+  /** 말투 만들기 / 다시 분석 starts, with the model each named. */
+  analyses?: Array<{ voiceId: string; model: string }>
+  /** Answers the fake received, with the upload each named. */
+  answers?: Array<{ promptKey: string; body: string; uploadId: string }>
+  /** The job an AnalyzeVoice answers with. */
+  analyzeJobId?: string
+}
+
+const PART_TO_PROTO = {
+  opening: VoicePromptPart.OPENING,
+  description: VoicePromptPart.DESCRIPTION,
+  closing: VoicePromptPart.CLOSING,
+} as const
+
+/** The server's readiness, counted the simple way the fixtures need: sentences end at `.`, `!`,
+ *  `?` or a line break, a post covers every part and an answer its prompt's (VOICE-32). */
+function fakeReadiness(rows: readonly MaterialRow[]) {
+  let sentences = 0
+  const covered = new Set<string>()
+  for (const row of rows) {
+    sentences += row.body.split(/[.!?\n]+/).filter((part) => part.trim() !== '').length
+    if (row.sample.kind === VoiceSampleKind.ANSWER) {
+      const prompt = FAKE_VOICE_PROMPTS.find((candidate) => candidate.key === row.sample.promptKey)
+      if (prompt) covered.add(prompt.part)
+    } else {
+      for (const part of ['opening', 'description', 'closing']) covered.add(part)
+    }
+  }
+  const missing = (['opening', 'description', 'closing'] as const).filter(
+    (part) => !covered.has(part),
+  )
+  let percent = Math.floor((Math.min(sentences, 60) * 100) / 60)
+  if (missing.length > 0 && percent > 99) percent = 99
+  return create(VoiceReadinessSchema, {
+    percent,
+    sentences,
+    needed: 60,
+    missingParts: missing.map((part) => PART_TO_PROTO[part]),
+  })
+}
+
+interface MaterialRow {
+  sample: ProtoVoiceSample
+  body: string
 }
 
 const NOW = '2026-08-29T12:00:00Z'
@@ -97,6 +183,9 @@ interface VoiceRow {
   made: boolean
   materialCount: number
 }
+
+const toSampleKind = (kind: FakeVoiceSampleRow['kind']) =>
+  kind === 'answer' ? VoiceSampleKind.ANSWER : VoiceSampleKind.POST
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
   const { rpc } = router
@@ -120,6 +209,9 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   const defaultId =
     [...voices.values()].find((row) => row.isDefault && !row.deletedAt)?.id ?? DEFAULT_FAKE_VOICE.id
 
+  // Every voice's 학습 글, newest first. The options' samples are the default voice's.
+  const materials = new Map<string, MaterialRow[]>()
+  const materialsOf = (voiceId: string) => materials.get(voiceId) ?? []
   const toProtoVoice = (row: VoiceRow) =>
     create(VoiceSchema, {
       id: row.id,
@@ -130,8 +222,9 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       updatedAt: NOW,
       deletedAt: row.deletedAt,
       made: row.made,
-      materialCount: row.materialCount,
+      materialCount: materials.has(row.id) ? materialsOf(row.id).length : row.materialCount,
       analyzedAt: row.made ? NOW : '',
+      readinessPercent: row.made ? 0 : fakeReadiness(materialsOf(row.id)).percent,
     })
   const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
   // The server's order: active before deleted, the default first, then by name.
@@ -171,18 +264,28 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   // Profiles are partitioned per voice: the options describe the default voice's, and any other
   // voice — created here or listed in `voices` — starts empty, as on the server.
   const profiles = new Map<string, ProtoVoiceProfile>()
+  if (options.samples) {
+    materials.set(
+      defaultId,
+      options.samples.map((row) => ({
+        sample: create(VoiceSampleSchema, {
+          id: row.id,
+          label: row.label,
+          chars: row.chars ?? 200,
+          createdAt: row.createdAt ?? NOW,
+          kind: toSampleKind(row.kind),
+          promptKey: row.promptKey ?? '',
+          hasPhoto: row.hasPhoto ?? false,
+        }),
+        body: row.body ?? '가'.repeat(row.chars ?? 200),
+      })),
+    )
+  }
   profiles.set(
     defaultId,
     create(VoiceProfileSchema, {
       updatedAt: options.updatedAt ?? '',
       activeJobId: options.activeJobId ?? '',
-      samples: (options.samples ?? []).map((sample) =>
-        create(VoiceSampleSchema, {
-          ...sample,
-          chars: sample.chars ?? 200,
-          createdAt: sample.createdAt ?? NOW,
-        }),
-      ),
       structured: options.structured
         ? create(StructuredVoiceProfileSchema, options.structured)
         : undefined,
@@ -198,8 +301,16 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     return profile
   }
   const setProfile = (voiceId: string, profile: ProtoVoiceProfile) => profiles.set(voiceId, profile)
-  const withVoice = (voiceId: string, profile: ProtoVoiceProfile) =>
-    create(VoiceProfileSchema, { ...profile, voice: toProtoVoice(owned(voiceId)) })
+  const withVoice = (voiceId: string, profile: ProtoVoiceProfile) => {
+    const row = owned(voiceId)
+    return create(VoiceProfileSchema, {
+      ...profile,
+      voice: toProtoVoice(row),
+      made: row.made,
+      samples: materialsOf(voiceId).map((material) => material.sample),
+      readiness: fakeReadiness(materialsOf(voiceId)),
+    })
+  }
 
   rpc(VoiceService.method.listVoices, () => {
     options.calls?.push('ListVoices')
@@ -335,9 +446,11 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     })
   })
 
+  const addMaterial = (voiceId: string, material: MaterialRow) =>
+    materials.set(voiceId, [material, ...materialsOf(voiceId)])
+
   rpc(VoiceService.method.addVoiceSample, async (request) => {
     options.calls?.push('AddVoiceSample')
-    const profile = profileOf(request.voiceId)
     active(request.voiceId)
     if (options.addGate) await options.addGate
     if (options.addError)
@@ -353,43 +466,121 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         min: '200',
       })
     }
-    if (!request.model?.providerId || !request.model.modelId) {
-      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
-    }
     sequence += 1
     const sample = create(VoiceSampleSchema, {
       id: `sample-${sequence}`,
+      kind: VoiceSampleKind.POST,
       label: request.label.trim() || body.slice(0, 20),
       chars,
       createdAt: NOW,
     })
-    const jobId = options.addJobId ?? 'voice-job'
-    setProfile(
-      request.voiceId,
-      create(VoiceProfileSchema, {
-        ...profile,
-        samples: [sample, ...profile.samples],
-        activeJobId: jobId,
-      }),
-    )
-    return create(AddVoiceSampleResponseSchema, { sample, jobId })
+    addMaterial(request.voiceId, { sample, body })
+    return create(AddVoiceSampleResponseSchema, { sample })
   })
 
   rpc(VoiceService.method.deleteVoiceSample, (request) => {
     options.calls?.push('DeleteVoiceSample')
-    const profile = profileOf(request.voiceId)
     active(request.voiceId)
-    if (options.deleteFails) throw connectAppError('VOICE_SAMPLE_MUTATION_FAILED', Code.Internal)
-    const samples = profile.samples.filter((sample) => sample.id !== request.sampleId)
-    if (samples.length === profile.samples.length) {
+    if (options.deleteFails) throw connectAppError('UNKNOWN_FAILURE', Code.Internal)
+    const rows = materialsOf(request.voiceId)
+    const kept = rows.filter((row) => row.sample.id !== request.sampleId)
+    if (kept.length === rows.length) {
       throw connectAppError('VOICE_SAMPLE_NOT_FOUND', Code.NotFound)
     }
-    const jobId = samples.length > 0 ? (options.deleteJobId ?? 'voice-job') : ''
+    materials.set(request.voiceId, kept)
+    return create(DeleteVoiceSampleResponseSchema, {})
+  })
+
+  rpc(VoiceService.method.getVoiceSample, (request) => {
+    options.calls?.push('GetVoiceSample')
+    owned(request.voiceId)
+    const row = materialsOf(request.voiceId).find(
+      (material) => material.sample.id === request.sampleId,
+    )
+    if (!row) throw connectAppError('VOICE_SAMPLE_NOT_FOUND', Code.NotFound)
+    return create(GetVoiceSampleResponseSchema, {
+      sample: row.sample,
+      body: row.body,
+      photoUrl: row.sample.hasPhoto ? `https://storage.test/voices/${request.sampleId}.jpg` : '',
+      photoWidth: row.sample.hasPhoto ? 1024 : 0,
+      photoHeight: row.sample.hasPhoto ? 768 : 0,
+    })
+  })
+
+  rpc(VoiceService.method.listVoicePrompts, () => {
+    options.calls?.push('ListVoicePrompts')
+    return create(ListVoicePromptsResponseSchema, {
+      prompts: FAKE_VOICE_PROMPTS.map((prompt) =>
+        create(VoicePromptSchema, { ...prompt, part: PART_TO_PROTO[prompt.part] }),
+      ),
+    })
+  })
+
+  let uploadSequence = 0
+  const pendingUploads = new Map<string, string>()
+  rpc(VoiceService.method.createVoicePhotoUpload, (request) => {
+    options.calls?.push('CreateVoicePhotoUpload')
+    active(request.voiceId)
+    const prompt = FAKE_VOICE_PROMPTS.find((candidate) => candidate.key === request.promptKey)
+    if (!prompt?.photo) throw connectAppError('VOICE_PROMPT_NOT_FOUND', Code.NotFound)
+    uploadSequence += 1
+    const uploadId = `voice-upload-${uploadSequence}`
+    pendingUploads.set(uploadId, request.promptKey)
+    return create(CreateVoicePhotoUploadResponseSchema, {
+      uploadId,
+      putUrl: `https://storage.test/put/${uploadId}`,
+      contentType: 'image/jpeg',
+      expiresAt: NOW,
+    })
+  })
+
+  rpc(VoiceService.method.answerVoicePrompt, (request) => {
+    options.calls?.push('AnswerVoicePrompt')
+    active(request.voiceId)
+    const prompt = FAKE_VOICE_PROMPTS.find((candidate) => candidate.key === request.promptKey)
+    if (!prompt) throw connectAppError('VOICE_PROMPT_NOT_FOUND', Code.NotFound)
+    const body = request.body.trim()
+    if (!body) throw connectAppError('VOICE_ANSWER_REQUIRED', Code.InvalidArgument)
+    if (materialsOf(request.voiceId).some((row) => row.sample.promptKey === prompt.key)) {
+      throw connectAppError('VOICE_PROMPT_ANSWERED', Code.AlreadyExists)
+    }
+    if (prompt.photo && pendingUploads.get(request.uploadId) !== prompt.key) {
+      throw connectAppError('VOICE_PHOTO_REQUIRED', Code.FailedPrecondition)
+    }
+    options.answers?.push({ promptKey: prompt.key, body, uploadId: request.uploadId })
+    pendingUploads.delete(request.uploadId)
+    sequence += 1
+    const sample = create(VoiceSampleSchema, {
+      id: `sample-${sequence}`,
+      kind: VoiceSampleKind.ANSWER,
+      promptKey: prompt.key,
+      hasPhoto: prompt.photo,
+      chars: Array.from(body).length,
+      createdAt: NOW,
+    })
+    addMaterial(request.voiceId, { sample, body })
+    return create(AnswerVoicePromptResponseSchema, { sample })
+  })
+
+  rpc(VoiceService.method.analyzeVoice, (request) => {
+    options.calls?.push('AnalyzeVoice')
+    active(request.voiceId)
+    if (!request.model?.providerId || !request.model.modelId) {
+      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
+    }
+    if (fakeReadiness(materialsOf(request.voiceId)).percent < 100) {
+      throw connectAppError('VOICE_NOT_READY', Code.FailedPrecondition)
+    }
+    options.analyses?.push({
+      voiceId: request.voiceId,
+      model: `${request.model.providerId}/${request.model.modelId}`,
+    })
+    const jobId = options.analyzeJobId ?? 'voice-job'
     setProfile(
       request.voiceId,
-      create(VoiceProfileSchema, { ...profile, samples, activeJobId: jobId }),
+      create(VoiceProfileSchema, { ...profileOf(request.voiceId), activeJobId: jobId }),
     )
-    return create(DeleteVoiceSampleResponseSchema, { jobId })
+    return create(AnalyzeVoiceResponseSchema, { jobId })
   })
 
   // The version list records its call so a test can prove the tab fetches only what it renders —

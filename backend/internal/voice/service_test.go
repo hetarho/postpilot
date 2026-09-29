@@ -18,10 +18,13 @@ import (
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
-var analyzeRef = llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}
+var (
+	analyzeRef   = llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}
+	writeOnlyRef = llm.ModelRef{ProviderID: "stub", ModelID: "write"}
+	disabledRef  = llm.ModelRef{ProviderID: "stub", ModelID: "disabled"}
+)
 
 type fakeModels struct {
-	selected      map[string]llm.ModelRef
 	response      string
 	err           error
 	request       llm.Request
@@ -34,10 +37,6 @@ type changingCorpusModels struct {
 	release  chan struct{}
 	mu       sync.Mutex
 	requests []string
-}
-
-func (f *changingCorpusModels) AnalyzeModel(context.Context, string) (llm.ModelRef, bool, error) {
-	return analyzeRef, true, nil
 }
 
 func (f *changingCorpusModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
@@ -74,15 +73,19 @@ func analysisAnswer(guide string) string {
 // A nine-section guide in the shape the analysis refuses anything short of.
 const koreanGuide = "1. 종결어미 분포: 해요체\n8. 절대 사용하지 않는 표현 (never uses): 과장"
 
-func (f *fakeModels) AnalyzeModel(_ context.Context, userID string) (llm.ModelRef, bool, error) {
-	ref, ok := f.selected[userID]
-	return ref, ok, nil
-}
-
 // structured makes Resolve report a model that declares structured output, so a test can
-// assert the analysis call attaches its schema only then.
-func (f *fakeModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
-	return llm.ModelInfo{StructuredOutput: f.structured}, true
+// assert the analysis call attaches its schema only then. analyzeRef serves the analyze stage,
+// writeOnlyRef only the write stage and disabledRef is switched off; anything else is unknown.
+func (f *fakeModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	switch ref {
+	case analyzeRef:
+		return llm.ModelInfo{StructuredOutput: f.structured, Stages: []string{llm.StageNameAnalyze}}, true
+	case writeOnlyRef:
+		return llm.ModelInfo{Stages: []string{llm.StageNameWrite}}, true
+	case disabledRef:
+		return llm.ModelInfo{Stages: []string{llm.StageNameAnalyze}, Disabled: true}, true
+	}
+	return llm.ModelInfo{}, false
 }
 
 func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
@@ -155,7 +158,7 @@ func newVoiceHarness(t *testing.T) *voiceHarness {
 		}
 	}
 	store := voicestore.New(handle.Writer, handle.Reader)
-	models := &fakeModels{selected: map[string]llm.ModelRef{"alice": analyzeRef, "bob": analyzeRef}}
+	models := &fakeModels{}
 	jobs := &fakeJobs{active: map[string]*voice.ActiveJob{}, busy: map[string]bool{}, enqueueID: "job-new"}
 	h := &voiceHarness{store: store, db: handle, models: models, jobs: jobs, svc: voice.NewService(store, models, jobs), voices: map[string]string{}}
 	for _, userID := range []string{"alice", "bob"} {
@@ -181,7 +184,7 @@ func (h *voiceHarness) voice(user string) string { return h.voices[user] }
 
 func (h *voiceHarness) addSample(t *testing.T, user, voiceID, id, label, body string, at time.Time) {
 	t.Helper()
-	if err := h.store.InsertSample(context.Background(), voice.Sample{ID: id, UserID: user, VoiceID: voiceID, Label: label, Body: body, CreatedAt: at}); err != nil {
+	if err := h.store.InsertSample(context.Background(), voice.Sample{ID: id, UserID: user, VoiceID: voiceID, Kind: voice.SampleKindPost, Label: label, Body: body, CreatedAt: at}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -416,7 +419,7 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 		t.Fatalf("formal prompt borrowed from casual: excerpts=%v err=%v", formalPrompt.Excerpts, err)
 	}
 	// A same-account sample id from the other voice is unreachable, as is a foreign voice.
-	if _, err := h.svc.DeleteSample(ctx, "alice", formal.ID, "casual-sample"); !errors.Is(err, voice.ErrSampleNotFound) {
+	if err := h.svc.DeleteSample(ctx, "alice", formal.ID, "casual-sample"); !errors.Is(err, voice.ErrSampleNotFound) {
 		t.Fatalf("cross-voice sample delete = %v", err)
 	}
 	if count, _ := h.store.CountSamples(ctx, "alice", casual); count != 1 {
@@ -425,7 +428,7 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	if _, err := h.svc.Get(ctx, "bob", casual); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("foreign voice read = %v", err)
 	}
-	if _, _, err := h.svc.AddSample(ctx, "bob", formal.ID, "", longSample("가"), analyzeRef); !errors.Is(err, voice.ErrVoiceNotFound) {
+	if _, err := h.svc.AddSample(ctx, "bob", formal.ID, "", longSample("가")); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("foreign voice sample = %v", err)
 	}
 	// Bob's own default is untouched by any of it.
@@ -446,7 +449,7 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	if profile, err := h.svc.Get(ctx, "alice", gone.ID); err != nil || len(profile.Samples) != 1 {
 		t.Fatalf("tombstone read = %+v err=%v", profile, err)
 	}
-	if _, _, err := h.svc.AddSample(ctx, "alice", gone.ID, "", longSample("가"), analyzeRef); !errors.Is(err, voice.ErrVoiceDeleted) {
+	if _, err := h.svc.AddSample(ctx, "alice", gone.ID, "", longSample("가")); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("sample on deleted = %v", err)
 	}
 	if _, err := h.svc.PromptProfileForTopic(ctx, "alice", gone.ID, "", nil); !errors.Is(err, voice.ErrVoiceDeleted) {
@@ -462,54 +465,251 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 
 // --- samples and analysis (VOICE-20..VOICE-25), per voice ---
 
-func TestAddSampleValidatesBeforeWritingAndReturnsActiveJob(t *testing.T) {
+// readyPost is one pasted post holding exactly the sentences 말투 만들기 needs (VOICE-32).
+func readyPost() string {
+	return strings.Repeat("오늘도 정말 맛있게 먹었어요.\n", voice.ReadySentences)
+}
+
+// VOICE-20, VOICE-21: a pasted post is validated, stored, and enqueues nothing.
+func TestAddSampleValidatesAndEnqueuesNothing(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	_, _, err := h.svc.AddSample(context.Background(), "alice", alice, "", strings.Repeat("가", 199), analyzeRef)
+	_, err := h.svc.AddSample(context.Background(), "alice", alice, "", strings.Repeat("가", 199))
 	var short *voice.SampleTooShortError
 	if !errors.As(err, &short) || short.Chars != 199 {
 		t.Fatalf("short sample error = %v", err)
 	}
-	delete(h.models.selected, "alice")
-	_, _, err = h.svc.AddSample(context.Background(), "alice", alice, "", longSample("나"), analyzeRef)
-	if !errors.Is(err, voice.ErrAnalyzeModelRequired) {
-		t.Fatalf("missing model error = %v", err)
+	sample, err := h.svc.AddSample(context.Background(), "alice", alice, "", longSample("다"))
+	if err != nil || sample.Kind != voice.SampleKindPost || sample.Label != strings.Repeat("다", voice.LabelFallbackChars) || sample.Chars != voice.SampleMinChars || sample.VoiceID != alice {
+		t.Fatalf("sample = %+v err=%v", sample, err)
 	}
-	if count, _ := h.store.CountSamples(context.Background(), "alice", alice); count != 0 {
-		t.Fatalf("samples stored before model validation = %d", count)
+	if err := h.svc.DeleteSample(context.Background(), "alice", alice, sample.ID); err != nil {
+		t.Fatal(err)
 	}
-
-	h.models.selected["alice"] = analyzeRef
-	h.jobs.enqueueErr = errors.New("queue unavailable")
-	_, _, err = h.svc.AddSample(context.Background(), "alice", alice, "", longSample("마"), analyzeRef)
-	if !errors.Is(err, voice.ErrSampleMutation) {
-		t.Fatalf("enqueue failure = %v", err)
+	if err := h.svc.DeleteSample(context.Background(), "alice", alice, sample.ID); !errors.Is(err, voice.ErrSampleNotFound) {
+		t.Fatalf("second delete = %v", err)
 	}
-	if count, _ := h.store.CountSamples(context.Background(), "alice", alice); count != 0 {
-		t.Fatalf("failed enqueue left %d samples", count)
-	}
-
-	h.jobs.enqueueErr = &voice.JobAlreadyInProgressError{ActiveID: "job-active"}
-	sample, jobID, err := h.svc.AddSample(context.Background(), "alice", alice, "", longSample("다"), analyzeRef)
-	if err != nil || jobID != "job-active" {
-		t.Fatalf("AddSample = sample=%+v job=%q err=%v", sample, jobID, err)
-	}
-	if sample.Label != strings.Repeat("다", voice.LabelFallbackChars) || sample.Chars != voice.SampleMinChars || sample.VoiceID != alice {
-		t.Fatalf("sample fallback/count = %+v", sample)
-	}
-	if calls := h.jobs.calls(); len(calls) != 2 || calls[1].WriteModel != analyzeRef.String() || calls[1].VoiceID != alice {
-		t.Fatalf("enqueue calls = %+v", calls)
+	if len(h.jobs.calls()) != 0 || h.models.completeCalls != 0 {
+		t.Fatal("gathering enqueued work or called a provider")
 	}
 }
 
-func TestAssembleCorpusIncludesEveryBody(t *testing.T) {
+func TestAssembleCorpusHeadsEachPieceAndKeepsProseOnly(t *testing.T) {
 	corpus := voice.AssembleCorpus([]voice.Sample{
-		{Label: "첫 글", Body: "첫 번째 본문"}, {Label: "둘째 글", Body: "두 번째 본문"},
+		{Kind: voice.SampleKindPost, Label: "첫 글", Body: "첫 번째 본문이에요.\n#맛집 #연남동\n📍 서울 마포구 연남동 123"},
+		{Kind: voice.SampleKindAnswer, PromptKey: "closing_greeting", Body: "다음에 또 만나요!"},
 	})
-	for _, expected := range []string{"첫 글", "첫 번째 본문", "둘째 글", "두 번째 본문"} {
+	for _, expected := range []string{"===== 학습 글 1: 첫 글 =====", "첫 번째 본문이에요.", "===== 학습 글 2: 글을 마무리할 때", "다음에 또 만나요!"} {
 		if !strings.Contains(corpus, expected) {
 			t.Errorf("corpus missing %q: %s", expected, corpus)
 		}
+	}
+	for _, excluded := range []string{"#맛집", "📍"} {
+		if strings.Contains(corpus, excluded) {
+			t.Errorf("corpus kept the non-prose %q: %s", excluded, corpus)
+		}
+	}
+}
+
+// fakeObjects is the private bucket as the voice context sees it.
+type fakeObjects struct {
+	mu      sync.Mutex
+	objects map[string]int64
+	deleted []string
+}
+
+func (f *fakeObjects) PresignPut(_ context.Context, key, _ string, _ time.Duration) (string, error) {
+	return "https://storage.test/put/" + key, nil
+}
+func (f *fakeObjects) PresignGet(_ context.Context, key string, _ time.Duration) (string, error) {
+	return "https://storage.test/get/" + key, nil
+}
+func (f *fakeObjects) Head(_ context.Context, key string) (voice.ObjectHead, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	size, ok := f.objects[key]
+	if !ok {
+		return voice.ObjectHead{}, voice.ErrObjectNotFound
+	}
+	return voice.ObjectHead{Size: size, ContentType: voice.PhotoContentType}, nil
+}
+func (f *fakeObjects) Delete(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.objects, key)
+	f.deleted = append(f.deleted, key)
+	return nil
+}
+func (f *fakeObjects) List(context.Context, string) ([]voice.StoredObject, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]voice.StoredObject, 0, len(f.objects))
+	for key := range f.objects {
+		out = append(out, voice.StoredObject{Key: key, LastModified: time.Now().Add(-48 * time.Hour)})
+	}
+	return out, nil
+}
+
+const photoMaxBytes = 1 << 20
+
+func (h *voiceHarness) withPhotos() *fakeObjects {
+	objects := &fakeObjects{objects: map[string]int64{}}
+	h.svc.ConfigurePhotos(objects, voice.PhotoLimits{PutTTL: time.Minute, GetTTL: time.Minute, MaxBytes: photoMaxBytes})
+	return objects
+}
+
+// VOICE-60: an answer is trimmed and non-empty, one per prompt, and names a known prompt.
+func TestAnswerPromptValidatesAndHoldsOneAnswerPerPrompt(t *testing.T) {
+	h := newVoiceHarness(t)
+	h.withPhotos()
+	ctx := context.Background()
+	alice := h.voice("alice")
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "no_such_prompt", Body: "안녕하세요"}); !errors.Is(err, voice.ErrPromptNotFound) {
+		t.Fatalf("unknown prompt = %v", err)
+	}
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "   "}); !errors.Is(err, voice.ErrAnswerRequired) {
+		t.Fatalf("empty answer = %v", err)
+	}
+	answer, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "  안녕하세요! 오늘도 반가워요.  "})
+	if err != nil || answer.Kind != voice.SampleKindAnswer || answer.PromptKey != "opening_greeting" || answer.Body != "안녕하세요! 오늘도 반가워요." || answer.Label != "" || answer.HasPhoto() {
+		t.Fatalf("answer = %+v err=%v", answer, err)
+	}
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "또 안녕하세요"}); !errors.Is(err, voice.ErrPromptAnswered) {
+		t.Fatalf("second answer = %v", err)
+	}
+	// Another voice's prompt is its own: bob answers the same prompt freely.
+	if _, err := h.svc.AnswerPrompt(ctx, "bob", h.voice("bob"), voice.Answer{PromptKey: "opening_greeting", Body: "반가워요"}); err != nil {
+		t.Fatalf("another voice's answer = %v", err)
+	}
+	// Deleting the answer frees the prompt.
+	if err := h.svc.DeleteSample(ctx, "alice", alice, answer.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "다시 안녕하세요"}); err != nil {
+		t.Fatalf("answer after delete = %v", err)
+	}
+	if len(h.jobs.calls()) != 0 || h.models.completeCalls != 0 {
+		t.Fatal("answering enqueued work or called a provider")
+	}
+}
+
+// VOICE-60, POST-34 … POST-39: a photo prompt's photo is presigned under the voice, confirmed
+// by a HEAD within the post photo's limits, opened through a fresh view URL, and removed after
+// its answer's row.
+func TestAPhotoPromptIsAnsweredOnTheOwnersUploadedPhoto(t *testing.T) {
+	h := newVoiceHarness(t)
+	objects := h.withPhotos()
+	ctx := context.Background()
+	alice := h.voice("alice")
+	if _, _, err := h.svc.CreatePhotoUpload(ctx, "alice", alice, "opening_greeting"); !errors.Is(err, voice.ErrPromptNotFound) {
+		t.Fatalf("a photo upload for a prompt with no photo = %v", err)
+	}
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요."}); !errors.Is(err, voice.ErrPhotoRequired) {
+		t.Fatalf("a photo prompt with no photo = %v", err)
+	}
+	upload, url, err := h.svc.CreatePhotoUpload(ctx, "alice", alice, "photo_food")
+	if err != nil || !strings.HasPrefix(upload.Key, "voices/"+alice+"/") || !strings.HasSuffix(upload.Key, ".jpg") || !strings.Contains(url, upload.Key) {
+		t.Fatalf("upload = %+v url=%q err=%v", upload, url, err)
+	}
+	answer := voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요.", UploadID: upload.ID, PhotoWidth: 1024, PhotoHeight: 768}
+	// The PUT has not landed yet: the answer waits for it.
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, answer); !errors.Is(err, voice.ErrPhotoRequired) {
+		t.Fatalf("an answer before the PUT = %v", err)
+	}
+	// bob cannot use alice's upload even for his own voice.
+	objects.objects[upload.Key] = 5000
+	if _, err := h.svc.AnswerPrompt(ctx, "bob", h.voice("bob"), answer); !errors.Is(err, voice.ErrPhotoRequired) {
+		t.Fatalf("a foreign upload = %v", err)
+	}
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요.", UploadID: upload.ID}); !errors.Is(err, voice.ErrInvalidPhoto) {
+		t.Fatalf("an answer without dimensions = %v", err)
+	}
+	saved, err := h.svc.AnswerPrompt(ctx, "alice", alice, answer)
+	if err != nil || saved.PhotoKey != upload.Key || saved.PhotoWidth != 1024 {
+		t.Fatalf("photo answer = %+v err=%v", saved, err)
+	}
+	opened, view, err := h.svc.GetSample(ctx, "alice", alice, saved.ID)
+	if err != nil || opened.Body != "짜장면이에요." || !strings.Contains(view, upload.Key) {
+		t.Fatalf("opened = %+v view=%q err=%v", opened, view, err)
+	}
+	if _, _, err := h.svc.GetSample(ctx, "bob", alice, saved.ID); !errors.Is(err, voice.ErrVoiceNotFound) {
+		t.Fatalf("a foreign read = %v", err)
+	}
+	if err := h.svc.DeleteSample(ctx, "alice", alice, saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	if len(objects.deleted) != 1 || objects.deleted[0] != upload.Key {
+		t.Fatalf("deleted objects = %v", objects.deleted)
+	}
+}
+
+// POST-36: an object past the size limit is dropped at once and never becomes a 학습 글.
+func TestAnOversizedPhotoIsDroppedAtOnce(t *testing.T) {
+	h := newVoiceHarness(t)
+	objects := h.withPhotos()
+	ctx := context.Background()
+	alice := h.voice("alice")
+	upload, _, err := h.svc.CreatePhotoUpload(ctx, "alice", alice, "photo_space")
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects.objects[upload.Key] = photoMaxBytes + 1
+	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_space", Body: "넓어요.", UploadID: upload.ID, PhotoWidth: 10, PhotoHeight: 10}); !errors.Is(err, voice.ErrInvalidPhoto) {
+		t.Fatalf("oversized photo = %v", err)
+	}
+	if _, ok := objects.objects[upload.Key]; ok {
+		t.Fatal("the oversized object was left behind")
+	}
+	if count, _ := h.store.CountSamples(ctx, "alice", alice); count != 0 {
+		t.Fatalf("an oversized photo became %d 학습 글", count)
+	}
+}
+
+// VOICE-23, VOICE-32: 말투 만들기 is one analyze_voice job at 100% on a model registered to the
+// analyze stage; a voice already analysing is refused.
+func TestAnalyzeVoiceNeedsReadinessAndAnAnalyzeModel(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef); !errors.Is(err, voice.ErrVoiceNotReady) {
+		t.Fatalf("an empty voice = %v", err)
+	}
+	h.addSample(t, "alice", alice, "almost", "거의", strings.Repeat("거의 다 됐어요.\n", voice.ReadySentences-1), time.Now())
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef); !errors.Is(err, voice.ErrVoiceNotReady) {
+		t.Fatalf("a voice at 59 sentences = %v", err)
+	}
+	h.addSample(t, "alice", alice, "ready", "충분", readyPost(), time.Now())
+	for _, ref := range []llm.ModelRef{{}, writeOnlyRef, disabledRef, {ProviderID: "stub", ModelID: "unknown"}} {
+		if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, ref); !errors.Is(err, voice.ErrAnalyzeModelRequired) {
+			t.Fatalf("model %v = %v", ref, err)
+		}
+	}
+	id, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef)
+	if calls := h.jobs.calls(); err != nil || id != "job-new" || len(calls) != 1 || calls[0].VoiceID != alice || calls[0].WriteModel != analyzeRef.String() {
+		t.Fatalf("analyze = %q err=%v calls=%+v", id, err, calls)
+	}
+	h.jobs.enqueueErr = &voice.JobAlreadyInProgressError{ActiveID: "job-new"}
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef); !errors.Is(err, voice.ErrVoiceBusy) {
+		t.Fatalf("a second analysis = %v", err)
+	}
+	if h.models.completeCalls != 0 {
+		t.Fatal("starting an analysis called a provider")
+	}
+}
+
+// VOICE-9, VOICE-32: the directory and the profile carry the readiness of a voice not yet made.
+func TestReadinessReachesTheDirectoryAndTheProfile(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "half", "절반", strings.Repeat("반쯤 왔어요.\n", voice.ReadySentences/2), time.Now())
+	voices, _ := h.svc.ListVoices(ctx, "alice")
+	if voices[0].ReadinessPercent != 50 {
+		t.Fatalf("directory readiness = %d", voices[0].ReadinessPercent)
+	}
+	profile, err := h.svc.Get(ctx, "alice", alice)
+	if err != nil || profile.Readiness.Percent != 50 || profile.Readiness.Sentences != voice.ReadySentences/2 || len(profile.Readiness.MissingParts) != 0 {
+		t.Fatalf("profile readiness = %+v err=%v", profile.Readiness, err)
 	}
 }
 
@@ -541,40 +741,6 @@ func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 		if len([]rune(excerpt)) != limits.FewShotExcerptMaxChars {
 			t.Fatalf("excerpt length = %d", len([]rune(excerpt)))
 		}
-	}
-}
-
-func TestDeleteReenqueuesOnlyWhileSamplesRemain(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	for _, id := range []string{"one", "two"} {
-		h.addSample(t, "alice", alice, id, id, longSample(id), time.Now())
-	}
-	jobID, err := h.svc.DeleteSample(context.Background(), "alice", alice, "one")
-	if err != nil || jobID != "job-new" || len(h.jobs.calls()) != 1 {
-		t.Fatalf("first delete = job=%q calls=%d err=%v", jobID, len(h.jobs.calls()), err)
-	}
-	jobID, err = h.svc.DeleteSample(context.Background(), "alice", alice, "two")
-	if err != nil || jobID != "" || len(h.jobs.calls()) != 1 {
-		t.Fatalf("last delete = job=%q calls=%d err=%v", jobID, len(h.jobs.calls()), err)
-	}
-}
-
-func TestDeleteRestoresSampleWhenEnqueueFails(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	for _, id := range []string{"keep", "delete"} {
-		h.addSample(t, "alice", alice, id, id, longSample(id), time.Now())
-	}
-	h.jobs.enqueueErr = errors.New("queue unavailable")
-	if _, err := h.svc.DeleteSample(context.Background(), "alice", alice, "delete"); !errors.Is(err, voice.ErrSampleMutation) {
-		t.Fatalf("delete enqueue error = %v", err)
-	}
-	if count, err := h.store.CountSamples(context.Background(), "alice", alice); err != nil || count != 2 {
-		t.Fatalf("restored sample count = %d err=%v", count, err)
-	}
-	if restored, err := h.store.GetSampleBody(context.Background(), "alice", alice, "delete"); err != nil || restored == nil || restored.Label != "delete" {
-		t.Fatalf("restored sample = %+v err=%v", restored, err)
 	}
 }
 
@@ -628,7 +794,9 @@ func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {
 	}
 }
 
-func TestAnalyzeRetriesWhenCorpusChangesDuringProviderCall(t *testing.T) {
+// VOICE-22: an analysis publishes the snapshot it read, even when a 학습 글 arrived meanwhile,
+// and never repeats the call on its own.
+func TestAnAnalysisPublishesWhatItReadAndNeverRepeats(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
 	h.addSample(t, "alice", alice, "first", "first", longSample("첫"), time.Now())
@@ -651,18 +819,18 @@ func TestAnalyzeRetriesWhenCorpusChangesDuringProviderCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || !strings.Contains(profile.Structured.Lexical.Description.Value, "new") {
-		t.Fatalf("latest published analysis = %+v err=%v", profile, err)
+	if err != nil || !strings.Contains(profile.Structured.Lexical.Description.Value, "old") || profile.Structured.SourceCount != 1 {
+		t.Fatalf("published analysis = %+v err=%v", profile.Structured, err)
 	}
 	models.mu.Lock()
 	defer models.mu.Unlock()
-	if len(models.requests) != 2 || strings.Contains(models.requests[0], longSample("둘")) || !strings.Contains(models.requests[1], longSample("둘")) {
-		t.Fatalf("analysis snapshots = %d: %+v", len(models.requests), models.requests)
+	if len(models.requests) != 1 || strings.Contains(models.requests[0], longSample("둘")) {
+		t.Fatalf("analysis calls = %d: %+v", len(models.requests), models.requests)
 	}
 }
 
 // Two voices analyzing at the same time do not see each other's corpus or overwrite each
-// other's published profile: the corpus-version claim and the profile head are both per voice.
+// other's published profile: the profile head is per voice.
 func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
@@ -699,36 +867,6 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 	defer models.mu.Unlock()
 	if len(models.requests) != 2 || strings.Contains(models.requests[0], longSample("습")) || strings.Contains(models.requests[1], longSample("해")) {
 		t.Fatalf("a voice saw the other voice's corpus: %+v", models.requests)
-	}
-}
-
-func TestDeletingLastSampleDuringAnalysisLeavesProfileUntouched(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	h.addSample(t, "alice", alice, "only", "only", longSample("문"), time.Now())
-	models := &changingCorpusModels{started: make(chan struct{}), release: make(chan struct{})}
-	svc := voice.NewService(h.store, models, h.jobs)
-	done := make(chan error, 1)
-	go func() {
-		done <- svc.Analyze(context.Background(), voice.AnalysisJob{
-			UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(),
-		}, func(string, int, int) {})
-	}()
-	select {
-	case <-models.started:
-	case <-time.After(time.Second):
-		t.Fatal("provider call did not start")
-	}
-	if jobID, err := svc.DeleteSample(context.Background(), "alice", alice, "only"); err != nil || jobID != "" {
-		t.Fatalf("delete last sample = job=%q err=%v", jobID, err)
-	}
-	close(models.release)
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
-	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version != 0 {
-		t.Fatalf("last-delete profile = %+v err=%v", profile, err)
 	}
 }
 
@@ -789,26 +927,25 @@ func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
 }
 
 // The queue guards analyses per voice: two voices of one account may analyze at once, while
-// a second analysis for the same voice attaches to the active one.
+// a second analysis for the same voice is refused.
 func TestAnalysesAreGuardedPerVoiceThroughTheQueue(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
 	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식")
 	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, jobKindsForTest()), time.Second, jobReportingForTest())
 	svc := voice.NewService(h.store, h.models, queueJobs{queue: queue})
-	h.addSample(t, "alice", casual, "c", "casual", longSample("해"), time.Now())
-	h.addSample(t, "alice", formal.ID, "f", "formal", longSample("습"), time.Now())
-	_, casualJob, err := svc.AddSample(context.Background(), "alice", casual, "", longSample("가"), analyzeRef)
+	h.addSample(t, "alice", casual, "c", "casual", readyPost(), time.Now())
+	h.addSample(t, "alice", formal.ID, "f", "formal", readyPost(), time.Now())
+	casualJob, err := svc.AnalyzeVoice(context.Background(), "alice", casual, analyzeRef)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, formalJob, err := svc.AddSample(context.Background(), "alice", formal.ID, "", longSample("나"), analyzeRef)
+	formalJob, err := svc.AnalyzeVoice(context.Background(), "alice", formal.ID, analyzeRef)
 	if err != nil || formalJob == casualJob {
 		t.Fatalf("second voice could not analyze concurrently: job=%q err=%v", formalJob, err)
 	}
-	_, againJob, err := svc.AddSample(context.Background(), "alice", casual, "", longSample("다"), analyzeRef)
-	if err != nil || againJob != casualJob {
-		t.Fatalf("same voice did not attach to its active analysis: job=%q want %q err=%v", againJob, casualJob, err)
+	if _, err := svc.AnalyzeVoice(context.Background(), "alice", casual, analyzeRef); !errors.Is(err, voice.ErrVoiceBusy) {
+		t.Fatalf("same voice analysing twice = %v", err)
 	}
 	profile, err := svc.Get(context.Background(), "alice", formal.ID)
 	if err != nil || profile.ActiveJobID != formalJob {

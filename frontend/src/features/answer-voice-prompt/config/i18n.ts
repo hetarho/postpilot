@@ -1,0 +1,44 @@
+import type { I18nFragment } from '@/shared/lib'
+
+/** This slice's share of the `voices` namespace (ARCH-16). */
+export const i18n = {
+  namespace: 'voices',
+  ko: {
+    prompts: {
+      open: '문항 풀기',
+      title: '문항 풀기',
+      group: { opening: '글머리', description: '본문', closing: '마무리' },
+      answered: '답함',
+      photo: '사진',
+      back: '문항 목록',
+      pickPhoto: '사진 고르기',
+      changePhoto: '다른 사진',
+      photoAlt: '고른 사진',
+      converting: '사진을 준비하는 중',
+      convertFailed: '이 사진을 열 수 없어요. 다른 사진을 골라 주세요.',
+      uploadFailed: '사진을 올리지 못했어요. 다시 시도해 주세요.',
+      answer: '답',
+      submit: '답하기',
+      loadFailed: '문항을 불러오지 못했어요.',
+    },
+  },
+  en: {
+    prompts: {
+      open: 'Answer prompts',
+      title: 'Answer prompts',
+      group: { opening: 'Opening', description: 'Body', closing: 'Closing' },
+      answered: 'Answered',
+      photo: 'Photo',
+      back: 'All prompts',
+      pickPhoto: 'Choose a photo',
+      changePhoto: 'Another photo',
+      photoAlt: 'The chosen photo',
+      converting: 'Preparing the photo',
+      convertFailed: 'This photo cannot be opened. Choose another one.',
+      uploadFailed: 'Could not upload the photo. Try again.',
+      answer: 'Answer',
+      submit: 'Answer',
+      loadFailed: 'Could not load the prompts.',
+    },
+  },
+} as const satisfies I18nFragment

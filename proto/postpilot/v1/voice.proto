@@ -22,8 +22,16 @@ service VoiceService {
   rpc RestoreVoice(RestoreVoiceRequest) returns (RestoreVoiceResponse) {}
 
   rpc GetVoiceProfile(GetVoiceProfileRequest) returns (GetVoiceProfileResponse) {}
+  // 학습 글 (VOICE-59): a pasted post, or an answer to one of the shared prompts. Gathering
+  // calls no model and enqueues nothing (VOICE-16).
   rpc AddVoiceSample(AddVoiceSampleRequest) returns (AddVoiceSampleResponse) {}
   rpc DeleteVoiceSample(DeleteVoiceSampleRequest) returns (DeleteVoiceSampleResponse) {}
+  rpc GetVoiceSample(GetVoiceSampleRequest) returns (GetVoiceSampleResponse) {}
+  rpc ListVoicePrompts(ListVoicePromptsRequest) returns (ListVoicePromptsResponse) {}
+  rpc CreateVoicePhotoUpload(CreateVoicePhotoUploadRequest) returns (CreateVoicePhotoUploadResponse) {}
+  rpc AnswerVoicePrompt(AnswerVoicePromptRequest) returns (AnswerVoicePromptResponse) {}
+  // 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+  rpc AnalyzeVoice(AnalyzeVoiceRequest) returns (AnalyzeVoiceResponse) {}
   rpc ListVoiceProfileVersions(ListVoiceProfileVersionsRequest) returns (ListVoiceProfileVersionsResponse) {}
   // One version's generation snapshot, fetched when that version is OPENED. It is not part of
   // the list: a list carrying every post body a voice ever produced would grow without bound
@@ -113,10 +121,30 @@ message StructuredVoiceProfile {
   bool empty = 10;
 }
 
+// Where in a post a prompt's answer belongs; the readiness meter needs each (VOICE-32).
+enum VoicePromptPart {
+  VOICE_PROMPT_PART_UNSPECIFIED = 0;
+  VOICE_PROMPT_PART_OPENING = 1;
+  VOICE_PROMPT_PART_DESCRIPTION = 2;
+  VOICE_PROMPT_PART_CLOSING = 3;
+}
+
+// How far the 학습 글 are from 말투 만들기 (VOICE-32): the sentence share, held below 100 while a
+// part is missing, which the meter names.
+message VoiceReadiness {
+  int32 percent = 1;
+  int32 sentences = 2;
+  int32 needed = 3;
+  repeated VoicePromptPart missing_parts = 4;
+}
+
 message VoiceProfile {
   // The owning voice travels with the profile so a cache entry and a deleted-state screen
   // can never become detached from the voice they describe.
   Voice voice = 10;
+  // Whether an analysis is published (VOICE-25), and the meter over every 학습 글.
+  bool made = 12;
+  VoiceReadiness readiness = 13;
   // 1, 2 and 7 were the free-text styleguide, the free-text rules, and the two of them joined
   // for display. That whole path is gone (VOICE-6): the profile is the structured profile, its
   // earned rules and its sample excerpts, injected once. Reserved, never reused.
@@ -139,11 +167,33 @@ message VoiceProfileVersion {
   bool has_sample = 6;
 }
 
+enum VoiceSampleKind {
+  VOICE_SAMPLE_KIND_UNSPECIFIED = 0;
+  // A post the owner wrote by hand and pasted.
+  VOICE_SAMPLE_KIND_POST = 1;
+  // An answer to one of the shared prompts.
+  VOICE_SAMPLE_KIND_ANSWER = 2;
+}
+
+// One 학습 글 as the list shows it: a post by its label, an answer by its prompt.
 message VoiceSample {
   string id = 1;
+  // Empty for an answer, whose prompt text is product copy.
   string label = 2;
   int32 chars = 3;
   string created_at = 4;
+  VoiceSampleKind kind = 5;
+  string prompt_key = 6;
+  bool has_photo = 7;
+}
+
+// One of the shared prompts every voice answers (VOICE-60). Its text is product copy, Korean in
+// both locales (LANG-14).
+message VoicePrompt {
+  string key = 1;
+  VoicePromptPart part = 2;
+  bool photo = 3;
+  string text = 4;
 }
 
 // A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
@@ -166,6 +216,8 @@ message Voice {
   // current analysis was published, empty until it is made.
   int32 material_count = 10;
   string analyzed_at = 11;
+  // The readiness meter's share until the voice is made (VOICE-9); 0 once it is.
+  int32 readiness_percent = 12;
 }
 
 message ListVoicesRequest {}
@@ -196,21 +248,67 @@ message RestoreVoiceResponse { Voice voice = 1; }
 message GetVoiceProfileRequest { string voice_id = 1; }
 message GetVoiceProfileResponse { VoiceProfile profile = 1; }
 
+// A pasted post: at least 200 trimmed characters, an empty label falling back to its first 20
+// (VOICE-20). 3 was the analyze model and 2 of the response the analysis it enqueued; adding a
+// 학습 글 enqueues nothing (VOICE-21).
 message AddVoiceSampleRequest {
   string voice_id = 4;
   string label = 1;
   string body = 2;
-  // Verified against the acting user's current enabled analyze selection before the
-  // sample is stored. The job records the exact ref it runs with.
-  ModelRef model = 3;
+  reserved 3;
+  reserved "model";
 }
 message AddVoiceSampleResponse {
   VoiceSample sample = 1;
-  string job_id = 2;
+  reserved 2;
+  reserved "job_id";
 }
 
 message DeleteVoiceSampleRequest { string voice_id = 2; string sample_id = 1; }
-message DeleteVoiceSampleResponse { string job_id = 1; }
+message DeleteVoiceSampleResponse {
+  reserved 1;
+  reserved "job_id";
+}
+
+// One 학습 글 opened for its owner: the full text and, for a photo answer, a view URL minted on
+// this read (VOICE-8).
+message GetVoiceSampleRequest { string voice_id = 1; string sample_id = 2; }
+message GetVoiceSampleResponse {
+  VoiceSample sample = 1;
+  string body = 2;
+  string photo_url = 3;
+  int32 photo_width = 4;
+  int32 photo_height = 5;
+}
+
+message ListVoicePromptsRequest {}
+message ListVoicePromptsResponse { repeated VoicePrompt prompts = 1; }
+
+// A photo prompt's photo is the owner's own, converted in the browser and PUT directly to
+// private storage as a post photo is (VOICE-60, POST-34).
+message CreateVoicePhotoUploadRequest { string voice_id = 1; string prompt_key = 2; }
+message CreateVoicePhotoUploadResponse {
+  string upload_id = 1;
+  string put_url = 2;
+  string content_type = 3;
+  string expires_at = 4;
+}
+
+// A trimmed, non-empty answer; a photo prompt names the upload it was written on, with the
+// dimensions the browser measured.
+message AnswerVoicePromptRequest {
+  string voice_id = 1;
+  string prompt_key = 2;
+  string body = 3;
+  string upload_id = 4;
+  int32 photo_width = 5;
+  int32 photo_height = 6;
+}
+message AnswerVoicePromptResponse { VoiceSample sample = 1; }
+
+// The model is named explicitly, like every start RPC (MODEL-23).
+message AnalyzeVoiceRequest { string voice_id = 1; ModelRef model = 2; }
+message AnalyzeVoiceResponse { string job_id = 1; }
 
 message ListVoiceProfileVersionsRequest { string voice_id = 1; }
 message ListVoiceProfileVersionsResponse { repeated VoiceProfileVersion versions = 1; }

@@ -30,14 +30,14 @@ export const nav = {
   voice: {
     profile: '프로필',
     versions: '버전 기록',
-    import: '기존 글 가져오기',
+    materials: '학습 글',
     settings: '말투 설정',
     backToList: '← 말투 목록',
     // Compact tab captions: the full labels above outgrow evenly divided tabs at 320px.
     short: {
       profile: '프로필',
       versions: '버전',
-      import: '가져오기',
+      materials: '학습 글',
     },
   },
 } as const

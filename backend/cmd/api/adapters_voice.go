@@ -3,36 +3,17 @@ package main
 import (
 	"context"
 	"errors"
+	"time"
 
-	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/provider"
+	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/voice"
 )
 
 type voiceModels struct {
-	selections *provider.Service
-	registry   meteredRegistry
-	plans      *auth.Service
-}
-
-func (a voiceModels) AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error) {
-	selections, err := a.selections.GetSelections(ctx, userID)
-	if err != nil {
-		return llm.ModelRef{}, false, err
-	}
-	for _, selection := range selections {
-		if selection.Stage != provider.StageAnalyze || selection.Missing {
-			continue
-		}
-		info, ok := a.registry.Lookup(selection.Ref)
-		if !ok || info.Disabled {
-			return llm.ModelRef{}, false, nil
-		}
-		return selection.Ref, true, nil
-	}
-	return llm.ModelRef{}, false, nil
+	registry meteredRegistry
 }
 
 func (a voiceModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) { return a.registry.Lookup(ref) }
@@ -68,4 +49,41 @@ func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 
 func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
 	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
+}
+
+// voiceObjects is the bucket as the voice context's own ObjectStore port (ARCH-6): the same
+// private bucket and prefix rules as a post photo, with the storage types translated here.
+type voiceObjects struct{ bucket *storage.Bucket }
+
+func (a voiceObjects) PresignPut(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
+	return a.bucket.PresignPut(ctx, key, contentType, ttl)
+}
+
+func (a voiceObjects) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	return a.bucket.PresignGet(ctx, key, ttl)
+}
+
+func (a voiceObjects) Head(ctx context.Context, key string) (voice.ObjectHead, error) {
+	head, err := a.bucket.Head(ctx, key)
+	if errors.Is(err, post.ErrObjectNotFound) {
+		return voice.ObjectHead{}, voice.ErrObjectNotFound
+	}
+	if err != nil {
+		return voice.ObjectHead{}, err
+	}
+	return voice.ObjectHead{Size: head.Size, ContentType: head.ContentType}, nil
+}
+
+func (a voiceObjects) Delete(ctx context.Context, key string) error { return a.bucket.Delete(ctx, key) }
+
+func (a voiceObjects) List(ctx context.Context, prefix string) ([]voice.StoredObject, error) {
+	objects, err := a.bucket.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]voice.StoredObject, 0, len(objects))
+	for _, object := range objects {
+		out = append(out, voice.StoredObject{Key: object.Key, LastModified: object.LastModified})
+	}
+	return out, nil
 }

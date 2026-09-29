@@ -1,11 +1,50 @@
 import i18next from 'i18next'
 import type { PostContent } from '@/shared/api'
 
+/** What a 학습 글 is: a post the owner wrote by hand and pasted, or an answer to one of the shared
+ *  prompts (VOICE-59). */
+export type VoiceSampleKind = 'post' | 'answer'
+
+/** One 학습 글 as the list shows it: a post by its label, an answer by its prompt. */
 export interface VoiceSample {
   id: string
+  kind: VoiceSampleKind
+  /** Empty for an answer, whose prompt text is product copy. */
   label: string
+  promptKey: string
+  hasPhoto: boolean
   chars: number
   createdAt: string
+}
+
+/** One 학습 글 opened: its full text and, for a photo answer, a view URL minted on that read. */
+export interface VoiceSampleDetail {
+  sample: VoiceSample
+  body: string
+  photoUrl: string
+  photoWidth: number
+  photoHeight: number
+}
+
+/** Where in a post a prompt's answer belongs (VOICE-60). */
+export type VoicePromptPart = 'opening' | 'description' | 'closing'
+
+/** One of the shared prompts every voice answers. The text is product copy, Korean in both
+ *  locales (LANG-14). */
+export interface VoicePrompt {
+  key: string
+  part: VoicePromptPart
+  photo: boolean
+  text: string
+}
+
+/** How far the 학습 글 are from 말투 만들기 (VOICE-32): the sentence share, held below 100 while a
+ *  part is missing, which `missingParts` names. */
+export interface VoiceReadiness {
+  percent: number
+  sentences: number
+  needed: number
+  missingParts: VoicePromptPart[]
 }
 export type VoiceSourceKind = 'unknown' | 'measured' | 'analyzed' | 'manual'
 export interface VoiceValue {
@@ -79,6 +118,8 @@ export interface Voice {
    *  current analysis was published ('' until it is made). */
   materialCount: number
   analyzedAt: string
+  /** The readiness meter's share until the voice is made (VOICE-9); 0 once it is. */
+  readinessPercent: number
 }
 
 /** The voice a post is written in, as a post screen needs it — just enough to name it, including
@@ -94,6 +135,9 @@ export interface VoiceRef {
 
 export interface VoiceProfile {
   voice: Voice
+  /** Whether an analysis is published (VOICE-25). */
+  made: boolean
+  readiness: VoiceReadiness
   updatedAt: string
   samples: VoiceSample[]
   activeJobId: string
@@ -129,6 +173,7 @@ export function emptyVoice(): Voice {
     made: false,
     materialCount: 0,
     analyzedAt: '',
+    readinessPercent: 0,
   }
 }
 

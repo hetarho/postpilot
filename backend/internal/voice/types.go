@@ -17,10 +17,21 @@ const VoiceNameMaxChars = 50
 var (
 	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
 	ErrSampleNotFound       = errors.New("voice sample not found")
+	// ErrVoiceNotReady is 말투 만들기 or 다시 분석 below 100% (VOICE-32).
+	ErrVoiceNotReady = errors.New("the voice's 학습 글 are not enough yet")
+	// ErrPromptNotFound is a prompt key the shared set does not hold.
+	ErrPromptNotFound = errors.New("voice prompt not found")
+	// ErrPromptAnswered is a second answer to a prompt that holds one (VOICE-60).
+	ErrPromptAnswered = errors.New("the prompt already holds an answer")
+	// ErrAnswerRequired is an empty answer.
+	ErrAnswerRequired = errors.New("an answer is required")
+	// ErrPhotoRequired is a photo prompt answered without an uploaded photo.
+	ErrPhotoRequired = errors.New("a photo prompt needs an uploaded photo")
+	// ErrInvalidPhoto is a photo whose size or dimensions a post photo could not have either.
+	ErrInvalidPhoto = errors.New("invalid voice photo")
 	// ErrVersionSampleNotFound means this version never produced a post, which is an ordinary
 	// state for a version rather than a failure.
 	ErrVersionSampleNotFound = errors.New("voice version sample not found")
-	ErrSampleMutation        = errors.New("voice sample change could not schedule analysis")
 	// ErrLearningNotFound is a profile version the voice never published.
 	ErrLearningNotFound = errors.New("voice profile version not found")
 	ErrInvalidLifecycle = errors.New("invalid voice lifecycle transition")
@@ -83,18 +94,56 @@ type Voice struct {
 	// 글 the voice holds and when its current analysis was published (nil until made).
 	SampleCount int
 	AnalyzedAt  *time.Time
+	// ReadinessPercent is the meter's share until the voice is made (VOICE-9); 0 once made.
+	ReadinessPercent int
 }
 
 func (v Voice) Deleted() bool { return v.DeletedAt != nil }
 
+// SampleKind is what a 학습 글 is: a post the owner wrote by hand and pasted, or an answer to
+// one of the shared prompts (VOICE-59).
+type SampleKind string
+
+const (
+	SampleKindPost   SampleKind = "post"
+	SampleKindAnswer SampleKind = "answer"
+)
+
+// Sample is one 학습 글. An answer names its prompt, and a photo prompt's answer the private
+// photo it was written on (VOICE-60); a post has neither. Label is empty for an answer: its
+// prompt text is product copy, never a row.
 type Sample struct {
-	ID        string
-	UserID    string
-	VoiceID   string
-	Label     string
-	Body      string
-	Chars     int
-	CreatedAt time.Time
+	ID          string
+	UserID      string
+	VoiceID     string
+	Kind        SampleKind
+	PromptKey   string
+	Label       string
+	Body        string
+	Chars       int
+	PhotoKey    string
+	PhotoWidth  int
+	PhotoHeight int
+	CreatedAt   time.Time
+}
+
+// HasPhoto reports an answer written on a photo.
+func (s Sample) HasPhoto() bool { return s.PhotoKey != "" }
+
+// Title is how the analysis corpus heads a 학습 글: a post by its label, an answer by its prompt.
+func (s Sample) Title() string {
+	if s.Kind == SampleKindAnswer {
+		if prompt, ok := PromptByKey(s.PromptKey); ok {
+			return prompt.Text
+		}
+	}
+	return s.Label
+}
+
+// PhotoUpload is a photo prompt's photo between its presign and its answer (VOICE-60).
+type PhotoUpload struct {
+	ID, UserID, VoiceID, PromptKey, Key string
+	ExpiresAt, CreatedAt                time.Time
 }
 
 type Profile struct {
@@ -106,6 +155,8 @@ type Profile struct {
 	ActiveJobID string
 	Structured  StructuredProfile
 	Versions    []ProfileVersion
+	// Readiness is the meter over every 학습 글 (VOICE-32); 다시 분석 needs it at 100% too.
+	Readiness Readiness
 }
 
 type ValueSource string

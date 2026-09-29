@@ -6,6 +6,7 @@ import {
   type ProtoVoice,
   type ProtoVoiceProfile,
   type ProtoVoiceRef,
+  type ProtoVoiceReadiness,
   type ProtoVoiceSample,
   type StructuredVoiceProfile as ProtoStructured,
   type VoiceProfileVersion as ProtoVersion,
@@ -15,11 +16,13 @@ import {
   type StructuredVoiceProfile,
   type Voice,
   type VoiceProfile,
+  type VoiceReadiness,
   type VoiceRef,
   type VoiceSample,
   type VoiceSourceKind,
   type VoiceVersion,
 } from '../model/types'
+import { requirePromptPart, requireSampleKind } from './voice-enums'
 
 const source = (value: VoiceValueSource): VoiceSourceKind =>
   value === VoiceValueSource.MEASURED
@@ -50,6 +53,7 @@ export function toVoice(voice: ProtoVoice | undefined): Voice {
     made: voice.made,
     materialCount: voice.materialCount,
     analyzedAt: voice.analyzedAt,
+    readinessPercent: voice.readinessPercent,
   }
 }
 /** A post's voice, or undefined for 말투 없음: the wire leaves the message unset rather than
@@ -64,7 +68,23 @@ export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef | undefined
   }
 }
 export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
-  return { id: sample.id, label: sample.label, chars: sample.chars, createdAt: sample.createdAt }
+  return {
+    id: sample.id,
+    kind: requireSampleKind(sample.kind),
+    label: sample.label,
+    promptKey: sample.promptKey,
+    hasPhoto: sample.hasPhoto,
+    chars: sample.chars,
+    createdAt: sample.createdAt,
+  }
+}
+export function toReadiness(readiness: ProtoVoiceReadiness | undefined): VoiceReadiness {
+  return {
+    percent: readiness?.percent ?? 0,
+    sentences: readiness?.sentences ?? 0,
+    needed: readiness?.needed ?? 0,
+    missingParts: readiness?.missingParts.map(requirePromptPart) ?? [],
+  }
 }
 export function toStructured(p: ProtoStructured | undefined): StructuredVoiceProfile {
   return {
@@ -124,6 +144,8 @@ export function toStructured(p: ProtoStructured | undefined): StructuredVoicePro
 export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoiceProfile {
   return {
     voice: toVoice(profile?.voice),
+    made: profile?.made ?? false,
+    readiness: toReadiness(profile?.readiness),
     updatedAt: profile?.updatedAt ?? '',
     samples: profile?.samples.map(toVoiceSample) ?? [],
     activeJobId: profile?.activeJobId ?? '',
@@ -161,6 +183,19 @@ export function voiceProfileQueryKey(transport: Transport, ownerId: string, voic
 }
 export function voiceVersionsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
   return ['voice-versions', transport, ownerId, voiceId] as const
+}
+/** One opened 학습 글, partitioned like every voice read (VOICE-56). */
+export function voiceSampleQueryKey(
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+  sampleId: string,
+) {
+  return ['voice-materials', transport, ownerId, voiceId, sampleId] as const
+}
+/** The shared prompt set is product copy, the same for every account. */
+export function voicePromptsQueryKey(transport: Transport) {
+  return ['voice-prompts', transport] as const
 }
 
 /** The profile entry as a cache target, for a caller that has to say "this job's completion makes

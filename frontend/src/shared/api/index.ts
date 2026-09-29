@@ -308,6 +308,15 @@ export {
   SetDefaultVoiceResponseSchema,
   DeleteVoiceResponseSchema,
   RestoreVoiceResponseSchema,
+  VoiceSampleKind,
+  VoicePromptPart,
+  VoicePromptSchema,
+  VoiceReadinessSchema,
+  ListVoicePromptsResponseSchema,
+  GetVoiceSampleResponseSchema,
+  CreateVoicePhotoUploadResponseSchema,
+  AnswerVoicePromptResponseSchema,
+  AnalyzeVoiceResponseSchema,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetVoiceProfileResponse,
@@ -315,6 +324,8 @@ export type {
   Voice as ProtoVoice,
   VoiceProfile as ProtoVoiceProfile,
   VoiceSample as ProtoVoiceSample,
+  VoicePrompt as ProtoVoicePrompt,
+  VoiceReadiness as ProtoVoiceReadiness,
   StructuredVoiceProfile,
   VoiceProfileVersion,
 } from './gen/postpilot/v1/voice_pb'

@@ -2,16 +2,14 @@ import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { appFailureFromConnect, VoiceService } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
-import { voiceProfileQueryKey } from './voice-queries'
+import { invalidateVoiceMaterials } from './voice-directory-cache'
 
+/** Deletes a 학습 글; it enqueues nothing (VOICE-21). */
 export function useDeleteVoiceSample(ownerId: string, voiceId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(VoiceService.method.deleteVoiceSample, {
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-      }),
+    onSuccess: () => invalidateVoiceMaterials(queryClient, transport, ownerId, voiceId),
   })
   return {
     ...mutation,

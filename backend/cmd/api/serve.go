@@ -33,7 +33,9 @@ import (
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
 	qualityrpc "github.com/postpilot/backend/internal/quality/rpc"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
+	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
+	voicestore "github.com/postpilot/backend/internal/voice/store"
 	voucherrpc "github.com/postpilot/backend/internal/voucher/rpc"
 )
 
@@ -68,6 +70,8 @@ func serve(ctx context.Context, c *contexts) error {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
+	// A photo prompt's photos, on the post sweep's interval and rules (VOICE-60).
+	go voice.NewPhotoSweeper(voicestore.New(handle.Writer, handle.Reader), voiceObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.Run(ctx)
 	go c.clipMediaRecovery.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)

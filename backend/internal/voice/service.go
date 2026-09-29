@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,9 @@ type Service struct {
 	sampleMu       sync.Mutex
 	directoryMu    sync.Mutex
 	config         PersonalizationConfig
+	photoUploads   PhotoUploadStore
+	objects        ObjectStore
+	photos         PhotoLimits
 	// personalization is the versioned profile store as one handle, held only to answer "is
 	// it wired at all" — every call goes through one of the narrow ports below it.
 	personalization PersonalizationStorage
@@ -35,7 +39,7 @@ type Service struct {
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
-	svc := &Service{directory: store, profiles: store, samples: store, versionSamples: store, models: models, jobs: jobs, now: time.Now, newID: newID,
+	svc := &Service{directory: store, profiles: store, samples: store, versionSamples: store, photoUploads: store, models: models, jobs: jobs, now: time.Now, newID: newID,
 		config: PersonalizationThresholds()}
 	if p, ok := store.(PersonalizationStorage); ok {
 		svc.personalization = p
@@ -44,16 +48,35 @@ func NewService(store Storage, models Models, jobs Jobs) *Service {
 	return svc
 }
 
+// ConfigurePhotos wires the private bucket a photo prompt's photo is stored in (VOICE-60).
+func (s *Service) ConfigurePhotos(objects ObjectStore, limits PhotoLimits) {
+	if objects == nil || limits.PutTTL <= 0 || limits.GetTTL <= 0 || limits.MaxBytes <= 0 {
+		panic("voice: invalid photo storage configuration")
+	}
+	s.objects, s.photos = objects, limits
+}
+
 func (s *Service) EndingMaxConsecutive() int {
 	return s.config.EndingMaxConsecutive
 }
 
 // --- directory ---
 
+// ListVoices is the directory, each voice not yet made carrying its readiness (VOICE-9).
 func (s *Service) ListVoices(ctx context.Context, userID string) ([]Voice, error) {
 	voices, err := s.directory.ListVoices(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list voices: %w", err)
+	}
+	for i := range voices {
+		if voices[i].Made {
+			continue
+		}
+		bodies, err := s.samples.ListSampleBodies(ctx, userID, voices[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("list sample bodies: %w", err)
+		}
+		voices[i].ReadinessPercent = ReadinessOf(bodies).Percent
 	}
 	return voices, nil
 }
@@ -244,6 +267,11 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	if err != nil {
 		return Profile{}, fmt.Errorf("list samples: %w", err)
 	}
+	bodies, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
+	if err != nil {
+		return Profile{}, fmt.Errorf("list sample bodies: %w", err)
+	}
+	profile.Readiness = ReadinessOf(bodies)
 	active, err := s.jobs.ActiveForVoiceKind(ctx, voiceID, AnalysisJobKind)
 	if err != nil {
 		return Profile{}, fmt.Errorf("get active analysis: %w", err)
@@ -302,128 +330,203 @@ func (s *Service) VersionSample(ctx context.Context, userID, voiceID string, ver
 	return s.versionSamples.GetVersionSample(ctx, userID, voiceID, version)
 }
 
-func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body string, requested llm.ModelRef) (Sample, string, error) {
+// AddSample stores a pasted post as a 학습 글 (VOICE-20). It needs no model and enqueues
+// nothing (VOICE-21): before the voice is made it moves the readiness meter, after it the
+// analysis stays as it is until the owner presses 다시 분석.
+func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body string) (Sample, error) {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return Sample{}, "", err
+		return Sample{}, err
 	}
-	s.sampleMu.Lock()
-	defer s.sampleMu.Unlock()
 	body = strings.TrimSpace(body)
 	chars := utf8.RuneCountInString(body)
 	if chars < SampleMinChars {
-		return Sample{}, "", &SampleTooShortError{Chars: chars}
-	}
-	model, err := s.resolveAnalyzeModel(ctx, userID, requested)
-	if err != nil {
-		return Sample{}, "", err
+		return Sample{}, &SampleTooShortError{Chars: chars}
 	}
 	label = strings.TrimSpace(label)
 	if label == "" {
 		label = firstRunes(body, LabelFallbackChars)
 	}
 	sample := Sample{
-		ID: s.newID(), UserID: userID, VoiceID: voiceID, Label: label, Body: body, Chars: chars, CreatedAt: s.now(),
+		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindPost, Label: label, Body: body, Chars: chars, CreatedAt: s.now(),
 	}
 	if err := s.samples.InsertSample(ctx, sample); err != nil {
-		return Sample{}, "", fmt.Errorf("insert sample: %w", err)
+		return Sample{}, fmt.Errorf("insert sample: %w", err)
 	}
-	jobID, err := s.enqueueAnalysis(ctx, userID, voiceID, model)
-	if err != nil {
-		_, cleanupErr := s.samples.DeleteSample(ctx, userID, voiceID, sample.ID, s.now())
-		return Sample{}, "", errors.Join(ErrSampleMutation, err, cleanupErr)
-	}
-	return sample, jobID, nil
+	return sample, nil
 }
 
-func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID string) (string, error) {
+// DeleteSample removes a 학습 글 and enqueues nothing (VOICE-21). The row goes first, then a
+// photo answer's object; an object delete that fails is left for the photo sweep (→POST-39).
+func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID string) error {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return err
+	}
+	photoKey, deleted, err := s.samples.DeleteSample(ctx, userID, voiceID, sampleID, s.now())
+	if err != nil {
+		return fmt.Errorf("delete sample: %w", err)
+	}
+	if !deleted {
+		return ErrSampleNotFound
+	}
+	if photoKey != "" && s.objects != nil {
+		if err := s.objects.Delete(ctx, photoKey); err != nil {
+			slog.WarnContext(ctx, "voice photo delete failed; the sweep reclaims it", "voice_id", voiceID, "err", err)
+		}
+	}
+	return nil
+}
+
+// Prompts is the shared prompt set every voice answers (VOICE-60).
+func (s *Service) Prompts() []Prompt { return Prompts() }
+
+// CreatePhotoUpload presigns a photo prompt's photo: a private `voices/{voice_id}/{id}.jpg`
+// key PUT as `image/jpeg`, with a pending row the sweep can reclaim (VOICE-60, →POST-34).
+func (s *Service) CreatePhotoUpload(ctx context.Context, userID, voiceID, promptKey string) (PhotoUpload, string, error) {
+	if s.objects == nil {
+		return PhotoUpload{}, "", errors.New("voice: photo storage is not configured")
+	}
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return PhotoUpload{}, "", err
+	}
+	prompt, ok := PromptByKey(promptKey)
+	if !ok || !prompt.Photo {
+		return PhotoUpload{}, "", ErrPromptNotFound
+	}
+	id := s.newID()
+	now := s.now()
+	upload := PhotoUpload{
+		ID: id, UserID: userID, VoiceID: voiceID, PromptKey: promptKey,
+		Key:       photoObjectPrefix + voiceID + "/" + id + ".jpg",
+		ExpiresAt: now.Add(s.photos.PutTTL), CreatedAt: now,
+	}
+	url, err := s.objects.PresignPut(ctx, upload.Key, PhotoContentType, s.photos.PutTTL)
+	if err != nil {
+		return PhotoUpload{}, "", fmt.Errorf("presign voice photo: %w", err)
+	}
+	// After the presign: a row with no usable URL would be a reservation nothing can fill.
+	if err := s.photoUploads.InsertPhotoUpload(ctx, upload); err != nil {
+		return PhotoUpload{}, "", fmt.Errorf("insert voice photo upload: %w", err)
+	}
+	return upload, url, nil
+}
+
+// Answer is one prompt answered in the owner's words, on the photo it uploaded for a photo
+// prompt.
+type Answer struct {
+	PromptKey, Body, UploadID string
+	PhotoWidth, PhotoHeight   int
+}
+
+// AnswerPrompt stores an answer as a 학습 글 (VOICE-60): trimmed and non-empty, one per prompt,
+// and a photo prompt's photo confirmed by a HEAD against the post photo's size and dimension
+// limits (→POST-36). It enqueues nothing.
+func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answer Answer) (Sample, error) {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return Sample{}, err
+	}
+	prompt, ok := PromptByKey(answer.PromptKey)
+	if !ok {
+		return Sample{}, ErrPromptNotFound
+	}
+	body := strings.TrimSpace(answer.Body)
+	if body == "" {
+		return Sample{}, ErrAnswerRequired
+	}
+	sample := Sample{
+		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindAnswer, PromptKey: prompt.Key,
+		Body: body, Chars: utf8.RuneCountInString(body), CreatedAt: s.now(),
+	}
+	uploadID := ""
+	if prompt.Photo {
+		if answer.UploadID == "" || s.objects == nil {
+			return Sample{}, ErrPhotoRequired
+		}
+		upload, err := s.photoUploads.GetPhotoUpload(ctx, userID, voiceID, answer.UploadID)
+		if err != nil {
+			return Sample{}, err
+		}
+		if upload.PromptKey != prompt.Key {
+			return Sample{}, ErrPhotoRequired
+		}
+		if answer.PhotoWidth <= 0 || answer.PhotoHeight <= 0 || answer.PhotoWidth > MaxPhotoDimension || answer.PhotoHeight > MaxPhotoDimension {
+			return Sample{}, ErrInvalidPhoto
+		}
+		head, err := s.objects.Head(ctx, upload.Key)
+		if err != nil {
+			if errors.Is(err, ErrObjectNotFound) {
+				return Sample{}, ErrPhotoRequired
+			}
+			return Sample{}, fmt.Errorf("head voice photo: %w", err)
+		}
+		if head.Size <= 0 || head.Size > s.photos.MaxBytes {
+			// Dropped at once rather than left for the sweep (→POST-36).
+			if err := s.objects.Delete(ctx, upload.Key); err == nil {
+				_ = s.photoUploads.DeletePhotoUpload(ctx, upload.ID)
+			}
+			return Sample{}, ErrInvalidPhoto
+		}
+		sample.PhotoKey, sample.PhotoWidth, sample.PhotoHeight = upload.Key, answer.PhotoWidth, answer.PhotoHeight
+		uploadID = upload.ID
+	}
+	if err := s.samples.AnswerPrompt(ctx, sample, uploadID); err != nil {
+		if errors.Is(err, ErrPromptAnswered) {
+			return Sample{}, err
+		}
+		return Sample{}, fmt.Errorf("answer prompt: %w", err)
+	}
+	return sample, nil
+}
+
+// GetSample opens one 학습 글 for its owner: the full text and, for a photo answer, a view URL
+// minted fresh on each read (VOICE-8, VOICE-64). A deleted voice's 학습 글 stay readable.
+func (s *Service) GetSample(ctx context.Context, userID, voiceID, sampleID string) (Sample, string, error) {
+	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
+		return Sample{}, "", err
+	}
+	sample, err := s.samples.GetSampleBody(ctx, userID, voiceID, sampleID)
+	if err != nil {
+		return Sample{}, "", fmt.Errorf("get sample: %w", err)
+	}
+	if sample == nil {
+		return Sample{}, "", ErrSampleNotFound
+	}
+	url := ""
+	if sample.HasPhoto() && s.objects != nil {
+		if url, err = s.objects.PresignGet(ctx, sample.PhotoKey, s.photos.GetTTL); err != nil {
+			return Sample{}, "", fmt.Errorf("presign voice photo view: %w", err)
+		}
+	}
+	return *sample, url, nil
+}
+
+// AnalyzeVoice is 말투 만들기 and 다시 분석 (VOICE-23): one durable `analyze_voice` job on the
+// model the request names, which must be enabled and registered to the analyze stage. It needs
+// the 학습 글 at 100% (VOICE_NOT_READY otherwise); a voice already analysing is refused by the
+// per-(voice, kind) guard.
+func (s *Service) AnalyzeVoice(ctx context.Context, userID, voiceID string, model llm.ModelRef) (string, error) {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return "", err
 	}
-	s.sampleMu.Lock()
-	defer s.sampleMu.Unlock()
-	sample, err := s.samples.GetSampleBody(ctx, userID, voiceID, sampleID)
+	info, found := s.models.Resolve(model)
+	if model.ProviderID == "" || model.ModelID == "" || !found || info.Disabled || !info.ServesStage(llm.StageNameAnalyze) {
+		return "", ErrAnalyzeModelRequired
+	}
+	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
 	if err != nil {
-		return "", fmt.Errorf("get sample before delete: %w", err)
+		return "", fmt.Errorf("list samples: %w", err)
 	}
-	if sample == nil {
-		return "", ErrSampleNotFound
+	if !ReadinessOf(samples).Ready() {
+		return "", ErrVoiceNotReady
 	}
-	before, err := s.samples.CountSamples(ctx, userID, voiceID)
-	if err != nil {
-		return "", fmt.Errorf("count samples before delete: %w", err)
-	}
-	var model llm.ModelRef
-	if before > 1 {
-		var ok bool
-		model, ok, err = s.models.AnalyzeModel(ctx, userID)
-		if err != nil {
-			return "", fmt.Errorf("resolve analyze model: %w", err)
-		}
-		if !ok {
-			return "", ErrAnalyzeModelRequired
-		}
-	}
-	deleted, err := s.samples.DeleteSample(ctx, userID, voiceID, sampleID, s.now())
-	if err != nil {
-		return "", fmt.Errorf("delete sample: %w", err)
-	}
-	if !deleted {
-		return "", ErrSampleNotFound
-	}
-	count, err := s.samples.CountSamples(ctx, userID, voiceID)
-	if err != nil {
-		return "", fmt.Errorf("count samples: %w", err)
-	}
-	if count == 0 {
-		return "", nil
-	}
-	if model == (llm.ModelRef{}) {
-		var ok bool
-		model, ok, err = s.models.AnalyzeModel(ctx, userID)
-		if err != nil {
-			if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
-				return "", errors.Join(ErrSampleMutation, err, restoreErr)
-			}
-			return "", fmt.Errorf("resolve analyze model: %w", err)
-		}
-		if !ok {
-			if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
-				return "", errors.Join(ErrSampleMutation, ErrAnalyzeModelRequired, restoreErr)
-			}
-			return "", ErrAnalyzeModelRequired
-		}
-	}
-	jobID, err := s.enqueueAnalysis(ctx, userID, voiceID, model)
-	if err == nil {
-		return jobID, nil
-	}
-	if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
-		return "", errors.Join(ErrSampleMutation, err, restoreErr)
-	}
-	return "", errors.Join(ErrSampleMutation, err)
-}
-
-func (s *Service) resolveAnalyzeModel(ctx context.Context, userID string, requested llm.ModelRef) (llm.ModelRef, error) {
-	selected, ok, err := s.models.AnalyzeModel(ctx, userID)
-	if err != nil {
-		return llm.ModelRef{}, fmt.Errorf("resolve analyze model: %w", err)
-	}
-	if !ok || requested.ProviderID == "" || requested.ModelID == "" || requested != selected {
-		return llm.ModelRef{}, ErrAnalyzeModelRequired
-	}
-	return selected, nil
-}
-
-func (s *Service) enqueueAnalysis(ctx context.Context, userID, voiceID string, model llm.ModelRef) (string, error) {
 	id, err := s.jobs.Enqueue(ctx, AnalysisJobRequest{UserID: userID, VoiceID: voiceID, WriteModel: model.String()})
-	if err == nil {
-		return id, nil
+	if err != nil {
+		var active *JobAlreadyInProgressError
+		if errors.As(err, &active) {
+			return "", ErrVoiceBusy
+		}
+		return "", fmt.Errorf("enqueue analysis: %w", err)
 	}
-	var active *JobAlreadyInProgressError
-	if errors.As(err, &active) {
-		return active.ActiveID, nil
-	}
-	return "", fmt.Errorf("enqueue analysis: %w", err)
+	return id, nil
 }
 
 func firstRunes(value string, limit int) string {

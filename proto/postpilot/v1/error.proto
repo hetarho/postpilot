@@ -42,6 +42,9 @@ enum FailureReason {
   reserved 199, 201, 215, 216;
   reserved "VOICE_DEFAULT_DELETE_FORBIDDEN", "VOICE_DESCRIPTION_TOO_LONG";
   reserved "VOICE_SOURCE_LANGUAGE_REQUIRED", "VOICE_SOURCE_LANGUAGE_UNSUPPORTED";
+  // A 학습 글 change schedules nothing since T469, so it cannot fail to.
+  reserved 212;
+  reserved "VOICE_SAMPLE_MUTATION_FAILED";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -221,7 +224,6 @@ enum FailureReason {
   VOICE_NAME_TOO_LONG = 208;
   VOICE_NOT_FOUND = 209;
   VOICE_REQUIRED = 210;
-  VOICE_SAMPLE_MUTATION_FAILED = 212;
   VOICE_SAMPLE_NOT_FOUND = 213;
   VOICE_SAMPLE_TOO_SHORT = 214;
 
@@ -307,6 +309,16 @@ enum FailureReason {
   // A voice with no published analysis yet: it cannot be assigned to a post or write one
   // (POST-23, POST-25).
   VOICE_NOT_MADE = 260;
+  // 말투 만들기 or 다시 분석 below 100% (VOICE-32).
+  VOICE_NOT_READY = 261;
+  // A prompt key the shared set does not hold (VOICE-60).
+  VOICE_PROMPT_NOT_FOUND = 262;
+  // A second answer to a prompt that holds one (VOICE-60).
+  VOICE_PROMPT_ANSWERED = 263;
+  // An empty answer (VOICE-60).
+  VOICE_ANSWER_REQUIRED = 264;
+  // A photo prompt answered without an uploaded photo (VOICE-60).
+  VOICE_PHOTO_REQUIRED = 265;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

@@ -19,7 +19,7 @@ const writing = [
   ['/voices', '/voices'],
   ['/voices/one', '/voices'],
   ['/voices/one/versions', '/voices'],
-  ['/voices/one/import', '/voices'],
+  ['/voices/one/materials', '/voices'],
   ['/templates', '/templates'],
   ['/templates/new', '/templates'],
   ['/templates/one', '/templates'],

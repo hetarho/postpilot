@@ -4,8 +4,13 @@ export type {
   Voice,
   VoiceAxes,
   VoiceProfile,
+  VoicePrompt,
+  VoicePromptPart,
+  VoiceReadiness,
   VoiceRef,
   VoiceSample,
+  VoiceSampleDetail,
+  VoiceSampleKind,
   VoiceValue,
   VoiceVersion,
   VoiceVersionSample,
@@ -41,6 +46,14 @@ export {
   useUpdateVoiceOverride,
 } from './api/voice-mutations'
 export { useDeleteVoiceSample } from './api/useDeleteVoiceSample'
+export type { VoiceAnswerInput } from './api/voice-materials'
+export {
+  useAnalyzeVoice,
+  useAnswerVoicePrompt,
+  useVoicePhotoUpload,
+  useVoicePrompts,
+  useVoiceSample,
+} from './api/voice-materials'
 export {
   invalidateVoiceScope,
   replaceCachedVoices,
@@ -56,3 +69,4 @@ export {
   useVoiceProfileQueryKey,
 } from './api/voice-queries'
 export { VoiceRefLabel } from './ui/VoiceRefLabel'
+export { VoiceReadinessMeter } from './ui/VoiceReadinessMeter'

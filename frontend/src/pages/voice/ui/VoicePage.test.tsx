@@ -121,8 +121,8 @@ describe('the voice tab row', () => {
     // Three tabs: the 규칙 and 검증 tabs left with contrast rules and profile validation.
     expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
       DEFAULT,
+      `${DEFAULT}/materials`,
       `${DEFAULT}/versions`,
-      `${DEFAULT}/import`,
     ])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
     // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its Korean
@@ -133,11 +133,9 @@ describe('the voice tab row', () => {
       expect(tab).toHaveClass('whitespace-nowrap')
     })
 
-    await userEvent.setup().click(tabs[2])
-    await waitFor(() => expect(router.state.location.pathname).toBe(`${DEFAULT}/import`))
-    expect(
-      await screen.findByRole('heading', { level: 2, name: '기존 글 가져오기' }),
-    ).toBeInTheDocument()
+    await userEvent.setup().click(tabs[1])
+    await waitFor(() => expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`))
+    expect(await screen.findByRole('heading', { level: 2, name: '학습 글' })).toBeInTheDocument()
 
     router.history.back()
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
@@ -145,7 +143,7 @@ describe('the voice tab row', () => {
 
   it.each([
     [`${DEFAULT}/versions`, '버전 기록'],
-    [`${DEFAULT}/import`, '기존 글 가져오기'],
+    [`${DEFAULT}/materials`, '학습 글'],
   ])('renders %s as its own screen on reload', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
@@ -229,7 +227,9 @@ describe('the legacy /voice address', () => {
   // VOICE-54: old links resolve the server default; nothing is created on the way.
   it.each([
     ['/voice', DEFAULT],
-    ['/voice/import', `${DEFAULT}/import`],
+    ['/voice/materials', `${DEFAULT}/materials`],
+    // The old 가져오기 tab is gone and lands on the profile, like any tab that never existed.
+    ['/voice/import', DEFAULT],
     // A tab that no longer exists lands on the profile, like one that never did.
     ['/voice/rules', DEFAULT],
     ['/voice/whatever', DEFAULT],
@@ -257,10 +257,10 @@ describe('the legacy /voice address', () => {
   })
 })
 
-describe('the 기존 글 가져오기 tab', () => {
+describe('the 학습 글 tab', () => {
   it('resumes polling the active analysis exposed by the profile', async () => {
     const calls: string[] = []
-    renderAppAt(`${DEFAULT}/import`, {
+    renderAppAt(`${DEFAULT}/materials`, {
       user: { id: 'alice' },
       calls,
       voice: { activeJobId: 'voice-job' },
@@ -310,18 +310,21 @@ describe('the 기존 글 가져오기 tab', () => {
 
   // VOICE-6: the 이전 수동 안내 section and both of its editors are gone from every tab.
   it('offers no free-text guidance editors anywhere on the voice screens', async () => {
-    renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
-    await screen.findByLabelText('내가 쓴 글')
+    renderAppAt(`${DEFAULT}/materials`, { user: { id: 'alice' } })
+    await screen.findByRole('heading', { level: 2, name: '학습 글' })
     expect(screen.queryByText('이전 수동 안내')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('문체 규칙')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('추가 규칙')).not.toBeInTheDocument()
   })
 
-  // VOICE-54: the paste form's first field says what it is.
-  it('labels the imported piece 제목 and keeps it optional', async () => {
-    renderAppAt(`${DEFAULT}/import`, { user: { id: 'alice' } })
-    expect(await screen.findByLabelText('제목 (선택)')).toBeInTheDocument()
-    expect(screen.queryByLabelText('라벨 (선택)')).not.toBeInTheDocument()
+  // VOICE-64: the paste form's first field says what it is.
+  it('labels the pasted piece 제목 and keeps it optional', async () => {
+    const user = userEvent.setup()
+    renderAppAt(`${DEFAULT}/materials`, { user: { id: 'alice' } })
+    await user.click(await screen.findByRole('button', { name: '글 붙여넣기' }))
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(sheet.getAllByRole('textbox')[0]).toBe(sheet.getByLabelText('제목 (선택)'))
+    expect(sheet.queryByLabelText('라벨 (선택)')).not.toBeInTheDocument()
   })
 
   // VOICE-30: a version is READ before it is taken, and the preview is the confirmation.
@@ -452,8 +455,8 @@ describe('the 기존 글 가져오기 tab', () => {
   })
 
   // VOICE-15, VOICE-54: a tombstone is readable, and the import is refused before the paste.
-  it('shows a deleted voice as a tombstone and blocks importing into it', async () => {
-    renderAppAt('/voices/voice-old/import', {
+  it('shows a deleted voice as a tombstone and blocks adding 학습 글 to it', async () => {
+    renderAppAt('/voices/voice-old/materials', {
       user: { id: 'alice' },
       voice: {
         voices: [
@@ -466,7 +469,8 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '옛 말투' })).toBeInTheDocument()
     expect(screen.getByText(/삭제된 말투예요\. 기록은 볼 수 있지만/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '복원' })).toBeInTheDocument()
-    expect(await screen.findByText(/삭제된 말투에는 글을 가져올 수 없어요/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '학습' })).toBeDisabled()
+    expect(await screen.findByText(/삭제된 말투에는 학습 글을 더할 수 없어요/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '글 붙여넣기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '문항 풀기' })).toBeDisabled()
   })
 })

@@ -324,7 +324,7 @@ describe('the post voice', () => {
       },
     })
 
-    expect(await voiceField(user)).toHaveTextContent('가게 소개 · 만드는 중')
+    expect(await voiceField(user)).toHaveTextContent('가게 소개 · 만드는 중 0%')
     const reason = '아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.'
     expect(await screen.findByText(reason)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '말투 학습하기' })).toHaveAttribute(

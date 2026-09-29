@@ -17,6 +17,16 @@ type VoiceManualOverride struct {
 	UpdatedAt string
 }
 
+type VoicePhotoUpload struct {
+	ID        string
+	UserID    string
+	VoiceID   string
+	PromptKey string
+	ObjectKey string
+	ExpiresAt string
+	CreatedAt string
+}
+
 type VoiceProfileVersion struct {
 	ID                  string
 	UserID              string

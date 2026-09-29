@@ -79,7 +79,7 @@ export function PostVoiceSelect({
   // deleted one stays listed, disabled, so the field can still say what the post is written in.
   const unlisted = current && !active.some((voice) => voice.id === current.id) ? current : undefined
   // A voice not yet made, as the list shows it: disabled, and saying why (POST-101).
-  const makingLabel = (name: string) => t('picker.making', { name })
+  const makingLabel = (name: string, percent: number) => t('picker.making', { name, percent })
 
   const apply = async (voiceId: string) => {
     setApplying(true)
@@ -117,7 +117,10 @@ export function PostVoiceSelect({
             label:
               unlisted.deleted || unlisted.made
                 ? voiceRefLabel(unlisted)
-                : makingLabel(unlisted.name),
+                : makingLabel(
+                    unlisted.name,
+                    active.find((voice) => voice.id === unlisted.id)?.readinessPercent ?? 0,
+                  ),
             disabled: unlisted.deleted || !unlisted.made,
           },
         ]
@@ -125,11 +128,15 @@ export function PostVoiceSelect({
     ...active
       .filter((voice) => voice.made)
       .map((voice) => ({ value: voice.id, label: voice.name })),
-    // Listed so the owner can see the voice exists and is on its way; choosable once it is made
-    // (VOICE-32). No readiness share yet: the directory does not carry one.
+    // Listed so the owner can see the voice exists and how far it is; choosable once it is made
+    // (VOICE-32).
     ...active
       .filter((voice) => !voice.made)
-      .map((voice) => ({ value: voice.id, label: makingLabel(voice.name), disabled: true })),
+      .map((voice) => ({
+        value: voice.id,
+        label: makingLabel(voice.name, voice.readinessPercent),
+        disabled: true,
+      })),
     { value: CREATE_VOICE_VALUE, label: t('picker.create') },
   ]
 

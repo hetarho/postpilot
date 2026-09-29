@@ -74,7 +74,7 @@ it('lists 말투 없음, the made voices, the unmade ones disabled, then 새 말
     '말투 없음',
     '기본 말투',
     '리뷰',
-    '가게 소개 · 만드는 중',
+    '가게 소개 · 만드는 중 0%',
     '새 말투 만들기',
   ])
   expect(options.map((option) => option.getAttribute('aria-disabled') === 'true')).toEqual([
@@ -96,7 +96,7 @@ it('keeps the selection when a voice not yet made is pressed', async () => {
   ])
 
   await user.click(
-    within(await openList(user)).getByRole('option', { name: '가게 소개 · 만드는 중' }),
+    within(await openList(user)).getByRole('option', { name: '가게 소개 · 만드는 중 0%' }),
   )
 
   expect(onSelect).not.toHaveBeenCalled()

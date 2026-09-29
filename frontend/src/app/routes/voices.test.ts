@@ -42,7 +42,9 @@ it('sends every legacy tab to the same tab of the default voice', async () => {
   // The account's actual default, not the first voice, and nothing is created on the way.
   expect(await target('')).toBe('/voices/voice-b')
   expect(await target('versions')).toBe('/voices/voice-b/versions')
-  expect(await target('import')).toBe('/voices/voice-b/import')
+  expect(await target('materials')).toBe('/voices/voice-b/materials')
+  // The 가져오기 tab is gone and lands on the profile, like one that never existed.
+  expect(await target('import')).toBe('/voices/voice-b')
   // A tab that never existed — or no longer does — lands on the profile rather than on an
   // empty screen.
   expect(await target('whatever')).toBe('/voices/voice-b')

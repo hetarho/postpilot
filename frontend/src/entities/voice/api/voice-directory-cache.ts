@@ -56,3 +56,19 @@ export function invalidateVoiceScope(
     void queryClient.invalidateQueries({ queryKey })
   }
 }
+
+/** A 학습 글 was added, answered or deleted: the profile's list and meter moved, and so did the
+ *  directory row's count and share (VOICE-52). */
+export function invalidateVoiceMaterials(
+  queryClient: QueryClient,
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+): void {
+  for (const queryKey of [
+    voiceProfileQueryKey(transport, ownerId, voiceId),
+    voicesQueryKey(transport, ownerId),
+  ]) {
+    void queryClient.invalidateQueries({ queryKey })
+  }
+}
