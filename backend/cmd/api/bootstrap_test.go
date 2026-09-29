@@ -239,9 +239,27 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	if err != nil || len(voices) != 1 || !voices[0].IsDefault || voices[0].Name != voice.DefaultVoiceName {
 		t.Fatalf("voices after two bootstraps = %+v err=%v", voices, err)
 	}
+	// POST r25: the bootstrapped 기본 is not made yet, so a post may not name it; 말투 없음
+	// needs no voice at all.
+	if _, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &voices[0].ID, TargetLanguage: &language}); !errors.Is(err, post.ErrVoiceNotMade) {
+		t.Fatalf("post in the unmade 기본 = %v", err)
+	}
+	if none, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", TargetLanguage: &language}); err != nil || none.VoiceID != "" {
+		t.Fatalf("post with no voice = %+v err=%v", none, err)
+	}
+	makeVoice(t, handle, "alice", voices[0].ID)
 	created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &voices[0].ID, TargetLanguage: &language})
-	if err != nil || created.VoiceID != voices[0].ID || created.Voice.Name != voice.DefaultVoiceName {
+	if err != nil || created.VoiceID != voices[0].ID || created.Voice.Name != voice.DefaultVoiceName || !created.Voice.Made {
 		t.Fatalf("post after bootstrap = %+v err=%v", created, err)
+	}
+}
+
+// makeVoice publishes a first analysis for the voice, which is what made means (POST r25):
+// a post may name only a made voice.
+func makeVoice(t *testing.T, handle *db.DB, userID, voiceID string) {
+	t.Helper()
+	if _, err := voicestore.New(handle.Writer, handle.Reader).PublishProfileVersion(context.Background(), userID, voiceID, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -281,6 +299,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "제주", VoiceID: &defaultVoice.ID, TemplateID: &shaped.ID, TargetLanguage: &language})
 	if err != nil {
@@ -354,6 +373,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "제주", VoiceID: &defaultVoice.ID, TemplateID: &created.ID, TargetLanguage: &language, Answers: []post.TemplateAnswer{
 		{Label: "총평 별점", Text: "4.5점", Enabled: true},
@@ -477,6 +497,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "을지로", VoiceID: &defaultVoice.ID, TemplateID: &created.ID, TargetLanguage: &language, Answers: []post.TemplateAnswer{
 		{Label: "가게 이름", Text: "을지로 노포", Enabled: true},
@@ -537,6 +558,7 @@ func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language, field := post.LanguageKorean, "restaurant"
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "을지로", VoiceID: &defaultVoice.ID, TargetLanguage: &language, Field: &field})
 	if err != nil {
@@ -622,6 +644,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "무인 떡집", VoiceID: &defaultVoice.ID, TemplateID: &review.ID, TargetLanguage: &language})
 	if err != nil {
@@ -747,6 +770,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "무인 떡집", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {
@@ -948,6 +972,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language, field := post.LanguageKorean, "cafe"
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "성수 카페", VoiceID: &defaultVoice.ID, TemplateID: &review.ID, Field: &field, TargetLanguage: &language})
 	if err != nil {

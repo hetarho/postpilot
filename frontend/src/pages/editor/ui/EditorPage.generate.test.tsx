@@ -183,10 +183,11 @@ describe('opening a post', () => {
     )
   })
 
-  it('keeps the empty-profile warning non-blocking for zero-photo generation', async () => {
+  // GEN-25: a post with 말투 없음 needs no voice to run, and nothing warns about the absence.
+  it('lets a zero-photo post with 말투 없음 generate', async () => {
     renderAppAt('/posts/20260820-memo', {
       user: USER,
-      posts: { posts: [{ slug: '20260820-memo', memo: '사진 없는 메모' }] },
+      posts: { posts: [{ slug: '20260820-memo', memo: '사진 없는 메모', voice: null }] },
       providers: {
         models: [
           { providerId: 'openrouter', modelId: 'writer' },
@@ -204,8 +205,9 @@ describe('opening a post', () => {
     })
 
     const user = userEvent.setup()
-    expect(await screen.findByText(/문체 프로필이 비어 있어요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
+    // Neither voice refusal — deleted or not yet made — has anything to say.
+    expect(screen.queryByText(/말투예요/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('mt-auto', 'h-6')
 
     const brief = await openBrief(user)

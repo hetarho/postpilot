@@ -383,8 +383,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tag count out of range", postpilotv1.FailureReason_POST_TAG_COUNT_INVALID, nil)
 	case errors.Is(err, post.ErrInvalidContent):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", postpilotv1.FailureReason_POST_CONTENT_INVALID, nil)
-	case errors.Is(err, post.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, post.ErrLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, post.ErrVoiceNotFound):
@@ -393,6 +391,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_PURPOSE_NOT_FOUND, nil)
 	case errors.Is(err, post.ErrVoiceDeleted):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
+	case errors.Is(err, post.ErrVoiceNotMade):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is not made yet", postpilotv1.FailureReason_VOICE_NOT_MADE, nil)
 	case errors.Is(err, post.ErrPostPublished):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is published", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
 	case errors.Is(err, post.ErrPublishedURLInvalid):
@@ -537,7 +537,7 @@ func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {
 	if ref.ID == "" {
 		return nil
 	}
-	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted, SourceLanguage: languageToProto(ref.SourceLanguage)}
+	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted, SourceLanguage: languageToProto(ref.SourceLanguage), Made: ref.Made}
 }
 
 func optionalLanguageFromProto(value *postpilotv1.ContentLanguage) (*post.Language, error) {

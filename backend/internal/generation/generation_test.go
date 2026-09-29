@@ -23,7 +23,7 @@ var (
 	testBudget = fakeBudget{observe: 2048, floor: 8192, perChar: 4, ceiling: 32768}
 	// liveVoice is the post's active voice in every fixture; voice_test.go covers the
 	// deleted and reassigned cases.
-	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투", SourceLanguage: LanguageKorean}
+	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true}
 )
 
 func TestValidateBlocks(t *testing.T) {
@@ -282,7 +282,7 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	var progress []string
-	err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(stage string, done, total int) {
+	err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
 	})
 	if err != nil {
@@ -315,7 +315,7 @@ func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{TargetLength: &frozen, TagCount: 9})}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{TargetLength: &frozen, TagCount: 9})}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -359,7 +359,7 @@ func TestQueuedZeroPhotoGenerationIgnoresPhotosAttachedAfterStart(t *testing.T) 
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
 	err := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).Generate(
-		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
+		context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
 	if err != nil {
@@ -377,7 +377,7 @@ func TestProviderTimeoutHasClearStageReason(t *testing.T) {
 	}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
 	err := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).Generate(
-		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
+		context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
 	if err == nil || !strings.Contains(err.Error(), "글 작성 모델 호출 시간이 초과됐어요") {
@@ -923,7 +923,7 @@ func TestStartAndStartRevisionRefuseAPublishedPostBeforeAnything(t *testing.T) {
 	}, func(string, int, int) {}); !errors.Is(err, ErrPostPublished) {
 		t.Fatalf("generate handler = %v, want ErrPostPublished", err)
 	}
-	if err := svc.Revise(ctx, RevisionJob{
+	if err := svc.Revise(ctx, RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); !errors.Is(err, ErrPostPublished) {
 		t.Fatalf("revise handler = %v, want ErrPostPublished", err)

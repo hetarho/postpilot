@@ -135,9 +135,11 @@ LIMIT sqlc.arg(row_limit);
 -- name: ReassignPostVoice :execrows
 -- The reassignment keeps every byte of the post, its machine baseline included: nothing is
 -- learned from a post any more, and the hand-edit confirmation (POST-98) still reads the
--- baseline after a reassignment.
-UPDATE posts SET voice_id = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND voice_id <> ? AND status <> 'published';
+-- baseline after a reassignment. NULL is no voice (POST-23), and IS NOT is SQLite's
+-- NULL-safe inequality, so clearing to none and setting from none both count as a change.
+UPDATE posts SET voice_id = sqlc.narg(voice_id), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
+  AND voice_id IS NOT sqlc.narg(voice_id);
 
 -- name: AssignPostTemplate :execrows
 -- Assignment is not a reassignment: unlike the voice, a template is never learned from, so

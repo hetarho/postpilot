@@ -88,7 +88,7 @@ func (aliceVoice) Voices(_ context.Context, userID string) ([]post.VoiceRef, err
 	if userID != "alice" {
 		return nil, nil
 	}
-	return []post.VoiceRef{{ID: "voice-alice", Name: "기본", SourceLanguage: post.LanguageKorean}}, nil
+	return []post.VoiceRef{{ID: "voice-alice", Name: "기본", SourceLanguage: post.LanguageKorean, Made: true}}, nil
 }
 
 // rpcService is a real post service over SQLite: the handler holds the concrete service, so a

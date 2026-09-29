@@ -123,6 +123,8 @@ type VoiceRef struct {
 	Name           string
 	Deleted        bool
 	SourceLanguage Language
+	// Made is whether the voice has a published analysis; a run needs a made voice (GEN-23).
+	Made bool
 }
 
 // TemplateBrief is the post's 템플릿 as the writer needs it: the name and the body ALREADY
@@ -230,6 +232,8 @@ type PostInput struct {
 }
 
 type Profile struct {
+	// NoVoice is 말투 없음: the prompt carries no voice bytes at all (GEN-74).
+	NoVoice              bool
 	Styleguide           string
 	Excerpts             []string
 	EndingMaxConsecutive int

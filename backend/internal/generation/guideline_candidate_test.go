@@ -44,7 +44,7 @@ func TestCompletedRevisionRecordsTheInstructionVerbatim(t *testing.T) {
 	candidates := &fakeCandidates{}
 	svc := candidateAwareService(t, posts, revisingModels(), candidates)
 
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, instruction),
 	}, func(string, int, int) {}); err != nil {
@@ -73,7 +73,7 @@ func TestFailedRevisionRecordsNoCandidate(t *testing.T) {
 	candidates := &fakeCandidates{}
 	svc := candidateAwareService(t, posts, models, candidates)
 
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "광고 같아"),
 	}, func(string, int, int) {}); err == nil {
@@ -91,7 +91,7 @@ func TestRecordingFailureLeavesTheRevisionSuccessful(t *testing.T) {
 	candidates := &fakeCandidates{err: errors.New("candidate store down")}
 	svc := candidateAwareService(t, posts, revisingModels(), candidates)
 
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "광고 같아"),
 	}, func(string, int, int) {}); err != nil {
@@ -109,7 +109,7 @@ func TestRecordingFailureLeavesTheRevisionSuccessful(t *testing.T) {
 func TestRevisionWithoutACandidateRecorderStillCompletes(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before")}}
 	svc := NewService(posts, fakeProfiles{}, revisingModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "광고 같아"),
 	}, func(string, int, int) {}); err != nil {
@@ -128,7 +128,7 @@ func TestRecordingAddsNoProviderCallAndNoEnqueue(t *testing.T) {
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	svc.candidates = candidates
 
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "광고 같아"),
 	}, func(string, int, int) {}); err != nil {
@@ -159,7 +159,7 @@ func TestRecordingChangesNoPromptByte(t *testing.T) {
 		if recorder != nil {
 			svc.candidates = recorder
 		}
-		if err := svc.Revise(context.Background(), RevisionJob{
+		if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 			Payload: mustRevisionPayload(t, instruction),
 		}, func(string, int, int) {}); err != nil {

@@ -113,6 +113,7 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "성수", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {

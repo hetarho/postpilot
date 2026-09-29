@@ -490,15 +490,18 @@ func (x *Observation) GetSpeech() string {
 
 // The voice a post is written in, as the post screens need it. Transport-only: a deleted
 // voice still names itself here so a post assigned to it stays readable and exportable
-// while every AI action refuses.
+// while every AI action refuses. A post with 말투 없음 carries none (POST-25).
 type VoiceRef struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Deleted        bool                   `protobuf:"varint,3,opt,name=deleted,proto3" json:"deleted,omitempty"`
 	SourceLanguage ContentLanguage        `protobuf:"varint,4,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Whether the voice has a published analysis; one not yet made refuses AI work the way a
+	// deleted one does (POST-23).
+	Made          bool `protobuf:"varint,5,opt,name=made,proto3" json:"made,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VoiceRef) Reset() {
@@ -557,6 +560,13 @@ func (x *VoiceRef) GetSourceLanguage() ContentLanguage {
 		return x.SourceLanguage
 	}
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *VoiceRef) GetMade() bool {
+	if x != nil {
+		return x.Made
+	}
+	return false
 }
 
 type Post struct {
@@ -2204,9 +2214,10 @@ type SavePostDraftRequest struct {
 	Slug  string `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Memo  string `protobuf:"bytes,3,opt,name=memo,proto3" json:"memo,omitempty"`
-	// Presence decides the meaning, which is what lets autosave keep patching: required on
-	// create, absent preserves the current assignment, and a different present value asks for
-	// a reassignment. An empty string is never valid — the server substitutes no default.
+	// Presence decides the meaning, which is what lets autosave keep patching: on create an
+	// absent value is 말투 없음; on an update absent preserves the current assignment, an empty
+	// string clears it to 말투 없음 and a different present value asks for a reassignment. The
+	// server never substitutes the 기본 (POST-23, POST-24).
 	VoiceId *string `protobuf:"bytes,4,opt,name=voice_id,json=voiceId,proto3,oneof" json:"voice_id,omitempty"`
 	// Presence decides the meaning here too, but with one more case than voice_id, because a
 	// post may legitimately have none: absent preserves the current assignment (what ordinary
@@ -3589,12 +3600,13 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0epeople_present\x18\x06 \x01(\bR\rpeoplePresent\x12\x14\n" +
 	"\x05model\x18\a \x01(\tR\x05model\x12\x16\n" +
 	"\x06events\x18\b \x03(\tR\x06events\x12\x16\n" +
-	"\x06speech\x18\t \x01(\tR\x06speech\"\x90\x01\n" +
+	"\x06speech\x18\t \x01(\tR\x06speech\"\xa4\x01\n" +
 	"\bVoiceRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\adeleted\x18\x03 \x01(\bR\adeleted\x12F\n" +
-	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xae\v\n" +
+	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\x12\x12\n" +
+	"\x04made\x18\x05 \x01(\bR\x04made\"\xae\v\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +

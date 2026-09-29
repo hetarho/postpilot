@@ -131,12 +131,15 @@ message Observation {
 
 // The voice a post is written in, as the post screens need it. Transport-only: a deleted
 // voice still names itself here so a post assigned to it stays readable and exportable
-// while every AI action refuses.
+// while every AI action refuses. A post with 말투 없음 carries none (POST-25).
 message VoiceRef {
   string id = 1;
   string name = 2;
   bool deleted = 3;
   ContentLanguage source_language = 4;
+  // Whether the voice has a published analysis; one not yet made refuses AI work the way a
+  // deleted one does (POST-23).
+  bool made = 5;
 }
 
 message Post {
@@ -386,9 +389,10 @@ message SavePostDraftRequest {
   string slug = 1;
   string title = 2;
   string memo = 3;
-  // Presence decides the meaning, which is what lets autosave keep patching: required on
-  // create, absent preserves the current assignment, and a different present value asks for
-  // a reassignment. An empty string is never valid — the server substitutes no default.
+  // Presence decides the meaning, which is what lets autosave keep patching: on create an
+  // absent value is 말투 없음; on an update absent preserves the current assignment, an empty
+  // string clears it to 말투 없음 and a different present value asks for a reassignment. The
+  // server never substitutes the 기본 (POST-23, POST-24).
   optional string voice_id = 4;
   // Presence decides the meaning here too, but with one more case than voice_id, because a
   // post may legitimately have none: absent preserves the current assignment (what ordinary

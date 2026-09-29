@@ -20,7 +20,9 @@ const (
 	aliceVoice   = "voice-alice"
 	aliceReview  = "voice-alice-review"
 	aliceDeleted = "voice-alice-deleted"
-	bobVoice     = "voice-bob"
+	// aliceUnmade has no published analysis yet, so no post may name it (POST-23).
+	aliceUnmade = "voice-alice-unmade"
+	bobVoice    = "voice-bob"
 )
 
 var testNow = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
@@ -45,8 +47,13 @@ func (f fakeVoices) Voices(_ context.Context, userID string) ([]VoiceRef, error)
 
 func testVoices() fakeVoices {
 	return fakeVoices{
-		alice: {{ID: aliceVoice, Name: "기본 말투", SourceLanguage: LanguageKorean}, {ID: aliceReview, Name: "리뷰", SourceLanguage: LanguageKorean}, {ID: aliceDeleted, Name: "옛 말투", Deleted: true, SourceLanguage: LanguageKorean}},
-		bob:   {{ID: bobVoice, Name: "기본 말투", SourceLanguage: LanguageKorean}},
+		alice: {
+			{ID: aliceVoice, Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true},
+			{ID: aliceReview, Name: "리뷰", SourceLanguage: LanguageKorean, Made: true},
+			{ID: aliceDeleted, Name: "옛 말투", Deleted: true, SourceLanguage: LanguageKorean, Made: true},
+			{ID: aliceUnmade, Name: "새 말투", SourceLanguage: LanguageKorean},
+		},
+		bob: {{ID: bobVoice, Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true}},
 	}
 }
 

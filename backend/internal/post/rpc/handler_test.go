@@ -39,7 +39,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"not finalized", "publish", post.ErrPostNotFinalized, connect.CodeFailedPrecondition, "POST_NOT_FINALIZED"},
 		{"invalid content", "save post content", &post.InvalidContentError{Reason: "private authored content"}, connect.CodeInvalidArgument, "POST_CONTENT_INVALID"},
 		{"tag count", "save post generation options", post.ErrInvalidTagCount, connect.CodeInvalidArgument, "POST_TAG_COUNT_INVALID"},
-		{"voice required", "save draft", post.ErrVoiceRequired, connect.CodeInvalidArgument, "VOICE_REQUIRED"},
+		{"voice not made", "save draft", post.ErrVoiceNotMade, connect.CodeFailedPrecondition, "VOICE_NOT_MADE"},
 		{"voice missing", "save draft", post.ErrVoiceNotFound, connect.CodeNotFound, "VOICE_NOT_FOUND"},
 		{"template missing", "save draft", post.ErrTemplateNotFound, connect.CodeNotFound, "PURPOSE_NOT_FOUND"},
 		{"voice deleted", "save draft", post.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED"},

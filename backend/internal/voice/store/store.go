@@ -90,7 +90,7 @@ func (s *Store) GetVoice(ctx context.Context, userID, voiceID string) (voice.Voi
 	if err != nil {
 		return voice.Voice{}, fmt.Errorf("select voice: %w", err)
 	}
-	return toVoice(row)
+	return toVoice(sqlc.ListVoicesRow(row))
 }
 
 func (s *Store) DefaultVoice(ctx context.Context, userID string) (voice.Voice, bool, error) {
@@ -101,7 +101,7 @@ func (s *Store) DefaultVoice(ctx context.Context, userID string) (voice.Voice, b
 	if err != nil {
 		return voice.Voice{}, false, fmt.Errorf("select default voice: %w", err)
 	}
-	v, err := toVoice(row)
+	v, err := toVoice(sqlc.ListVoicesRow(row))
 	return v, err == nil, err
 }
 
@@ -176,7 +176,9 @@ func (s *Store) RestoreVoice(ctx context.Context, userID, voiceID string, now ti
 	return n > 0, nil
 }
 
-func toVoice(row sqlc.Voice) (voice.Voice, error) {
+// toVoice maps a directory row. The three directory reads select the same columns, so a
+// GetVoice or GetDefaultVoice row converts to this one.
+func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return voice.Voice{}, fmt.Errorf("voice %s created_at: %w", row.ID, err)
@@ -197,7 +199,7 @@ func toVoice(row sqlc.Voice) (voice.Voice, error) {
 	if err != nil {
 		return voice.Voice{}, fmt.Errorf("voice %s source language: %w", row.ID, err)
 	}
-	return voice.Voice{ID: row.ID, UserID: row.UserID, Name: row.Name, SourceLanguage: sourceLanguage, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated, DeletedAt: deleted}, nil
+	return voice.Voice{ID: row.ID, UserID: row.UserID, Name: row.Name, SourceLanguage: sourceLanguage, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated, DeletedAt: deleted, Made: row.Made == 1}, nil
 }
 
 // --- profile and samples ---

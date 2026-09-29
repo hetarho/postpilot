@@ -44,7 +44,7 @@ type experimentSnapshot struct {
 	ObserveModel   string                `json:"observe_model,omitempty"`
 	ObserveFiles   *[]string             `json:"observe_files,omitempty"`
 	Post           snapshotPost          `json:"post"`
-	Profile        snapshotProfile       `json:"profile,omitempty"`
+	Profile        *snapshotProfile      `json:"profile,omitempty"` // absent for 말투 없음 (LANG-18, GEN-74)
 	Observations   []snapshotObservation `json:"observations,omitempty"`
 	SnapshotOnly   bool                  `json:"snapshot_only,omitempty"`
 }
@@ -52,9 +52,10 @@ type experimentSnapshot struct {
 // snapshotPost is PostInput as a snapshot has always carried it. Field, QualityRuleIDs and
 // Published are inputs to resolve and never frozen, so they have no member at all.
 type snapshotPost struct {
-	Slug              string                `json:"Slug"`
-	UserID            string                `json:"UserID"`
-	Voice             snapshotVoice         `json:"Voice"`
+	Slug   string `json:"Slug"`
+	UserID string `json:"UserID"`
+	// Absent for a post with 말투 없음: the snapshot freezes the absence (MODEL-31).
+	Voice             *snapshotVoice        `json:"Voice,omitempty"`
 	TemplateID        string                `json:"TemplateID"`
 	Template          *snapshotTemplate     `json:"Template"`
 	Guidelines        []string              `json:"Guidelines"`
@@ -265,7 +266,7 @@ func toSnapshotPost(post PostInput) snapshotPost {
 	}
 	return snapshotPost{
 		Slug: post.Slug, UserID: post.UserID,
-		Voice:      snapshotVoice{ID: post.Voice.ID, Name: post.Voice.Name, Deleted: post.Voice.Deleted, SourceLanguage: string(post.Voice.SourceLanguage)},
+		Voice:      toSnapshotVoice(post.Voice),
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
 		Guidelines: copyTexts(post.Guidelines), DefaultGuidelines: copyTexts(post.DefaultGuidelines),
 		UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
@@ -294,7 +295,7 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 	}
 	return PostInput{
 		Slug: wire.Slug, UserID: wire.UserID,
-		Voice:      VoiceRef{ID: wire.Voice.ID, Name: wire.Voice.Name, Deleted: wire.Voice.Deleted, SourceLanguage: Language(wire.Voice.SourceLanguage)},
+		Voice:      fromSnapshotVoice(wire.Voice),
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
 		Guidelines: copyTexts(wire.Guidelines), DefaultGuidelines: copyTexts(wire.DefaultGuidelines),
 		UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
@@ -380,15 +381,37 @@ func fromSnapshotContent(wire snapshotContent) PostContent {
 	}
 }
 
-func toSnapshotProfile(profile Profile) snapshotProfile {
-	return snapshotProfile{
+func toSnapshotVoice(voice VoiceRef) *snapshotVoice {
+	if voice.ID == "" {
+		return nil
+	}
+	return &snapshotVoice{ID: voice.ID, Name: voice.Name, Deleted: voice.Deleted, SourceLanguage: string(voice.SourceLanguage)}
+}
+
+func fromSnapshotVoice(wire *snapshotVoice) VoiceRef {
+	if wire == nil {
+		return VoiceRef{}
+	}
+	return VoiceRef{ID: wire.ID, Name: wire.Name, Deleted: wire.Deleted, SourceLanguage: Language(wire.SourceLanguage)}
+}
+
+func toSnapshotProfile(profile Profile) *snapshotProfile {
+	if profile.NoVoice {
+		return nil
+	}
+	return &snapshotProfile{
 		Styleguide: profile.Styleguide, Excerpts: copyTexts(profile.Excerpts),
 		EndingMaxConsecutive: profile.EndingMaxConsecutive, SourceLanguage: string(profile.SourceLanguage),
 		TargetLanguage: string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
 	}
 }
 
-func fromSnapshotProfile(wire snapshotProfile) Profile {
+// fromSnapshotProfile reads a frozen projection back; an absent one is 말투 없음. Every
+// snapshot taken before a post could have no voice carries its profile.
+func fromSnapshotProfile(wire *snapshotProfile) Profile {
+	if wire == nil {
+		return Profile{NoVoice: true}
+	}
 	return Profile{
 		Styleguide: wire.Styleguide, Excerpts: copyTexts(wire.Excerpts),
 		EndingMaxConsecutive: wire.EndingMaxConsecutive, SourceLanguage: Language(wire.SourceLanguage),

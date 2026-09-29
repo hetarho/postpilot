@@ -527,6 +527,25 @@ choice would be expensive to undo are listed at the end.
 - **The recommendation's "applied" message** now names the observe and write pairs; the English
   text used to claim a pair for all three stages.
 
+## T467 — a post may have no voice (POST r25)
+
+- **An unmade 기본 is not the starting voice.** `/posts/new` starts on the 기본 only when it is
+  made, and on 말투 없음 otherwise: a post may not name an unmade voice, so starting on one would
+  make the first save fail. Until T468 removes the sign-up bootstrap, a new account therefore
+  starts on 말투 없음.
+- **`/posts/new` still waits for the voice list** before it accepts typing. Without the wait, a
+  fast first keystroke could create the post on 말투 없음 before the 기본 arrived.
+- **새 말투 만들기 opens the sheet from the editor, not from the picker.** A feature may not render
+  another feature (ARCH-13), so the picker calls back and the editor's dock header holds the
+  sheet. After a create the sheet still lands on the new voice, which leaves the editor
+  (VOICE-53).
+- **One AI refusal for a post's voice.** Generation, A/B, storyline, the lab and 수정 read the
+  same check: the deleted message first, then the not-made one, and nothing for 말투 없음.
+- **English copy** for the picker is `No voice`, `{{name}} · Being made` and `New voice`; no SSOT
+  names it. The not-made warning's link reuses the existing 말투 학습하기 label.
+- **The `cmd/api` fixtures publish an analysis** for the bootstrapped voice wherever a post names
+  it, and the bootstrap test now proves the unmade 기본 is refused and 말투 없음 is not.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

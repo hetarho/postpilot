@@ -153,6 +153,11 @@ const templateFactLegend = "\n- <facts label=\"…\">…</facts>: 사용자가 �
 // because nothing could check it against the source.
 const templatePrecedence = "템플릿은 글의 구성·순서·포함할 내용을 정하고, 문체·종결어미는 위의 말투 프로필을 따릅니다. 템플릿이 \"A 대신 B라고 쓰세요\"처럼 바꿔 쓸 표현을 구체적으로 정하면 그 치환은 말투 프로필보다 우선하지만, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다."
 
+// templatePrecedenceNoVoice is the same sentence for a post with 말투 없음, naming no voice
+// (GEN-74, TMPL-12): a sentence pointing at a profile that is not there invites the model to
+// invent one.
+const templatePrecedenceNoVoice = "템플릿은 글의 구성·순서·포함할 내용을 정합니다. 템플릿이 \"A 대신 B라고 쓰세요\"처럼 바꿔 쓸 표현을 구체적으로 정하면 그 치환을 따르고, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다."
+
 // templateTitleInstruction introduces a frozen template's title area (GEN-52, TMPL-50), which
 // renders in its own fences above the body form. Like the rest of the section it never says
 // 지침 (TMPL-13).
@@ -180,12 +185,16 @@ const reviseTemplateTitleInstruction = "수정 요청이 제목을 바꾸라고 
 // A nil template writes nothing at all, so a post without one adds no template bytes.
 // titleInstruction is the pass's own title line: templateTitleInstruction for the write,
 // reviseTemplateTitleInstruction for a revision; nothing else in the section differs.
-func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstruction string) {
+func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstruction string, noVoice bool) {
 	if brief == nil {
 		return
 	}
 	writeTemplateForm(out, brief, titleInstruction)
-	fmt.Fprintf(out, "\n%s", templatePrecedence)
+	precedence := templatePrecedence
+	if noVoice {
+		precedence = templatePrecedenceNoVoice
+	}
+	fmt.Fprintf(out, "\n%s", precedence)
 }
 
 // writeTemplateForm is the section without its closing precedence line: the heading, the
@@ -214,6 +223,10 @@ func writeTemplateForm(out *strings.Builder, brief *TemplateBrief, titleInstruct
 // guideline over the template over the profile, and an abstract one carries no authority at all.
 // Korean for every target, like the heading. Fixed prompt text, so it lives in code (ARCH-21).
 const guidelinePrecedence = "지침은 이 글을 어떻게 쓸지 정합니다. 지침이 템플릿과 충돌하면 지침을 우선하고, 문체·종결어미는 위의 말투 프로필을 따르세요. 사용자 지침이 기본 지침과 충돌하면 사용자 지침을 따르고, 같은 묶음 안에서 충돌하면 먼저 적힌 지침을 따르세요. \"A 대신 B라고 쓰세요\"처럼 구체적으로 정한 치환은 지침, 템플릿, 말투 프로필 순으로 우선하고, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다."
+
+// guidelinePrecedenceNoVoice closes the section for a post with 말투 없음: no register clause
+// and no profile in the substitution order (GUIDE-15, GEN-74).
+const guidelinePrecedenceNoVoice = "지침은 이 글을 어떻게 쓸지 정합니다. 지침이 템플릿과 충돌하면 지침을 우선하세요. 사용자 지침이 기본 지침과 충돌하면 사용자 지침을 따르고, 같은 묶음 안에서 충돌하면 먼저 적힌 지침을 따르세요. \"A 대신 B라고 쓰세요\"처럼 구체적으로 정한 치환은 지침, 템플릿 순으로 우선하고, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다."
 
 // reviseGuidelineScope follows [작문 지침] in the revise prompt: the section binds only what the
 // request writes or touches, so a revision never re-checks or rewrites the sentences outside it.
@@ -264,8 +277,12 @@ func qualityRulesSection(rules []string) string {
 // still reads as one bullet. The heading, labels and precedence sentence stay Korean for every
 // target language, exactly as writeTemplateSection does: the section frames the guideline texts,
 // and its framing is not part of the output-language contract.
-func writeGuidelinesSection(out *strings.Builder, defaults, owner []string) bool {
-	return writeGuidelinesSectionClosedBy(out, defaults, owner, guidelinePrecedence)
+func writeGuidelinesSection(out *strings.Builder, defaults, owner []string, noVoice bool) bool {
+	precedence := guidelinePrecedence
+	if noVoice {
+		precedence = guidelinePrecedenceNoVoice
+	}
+	return writeGuidelinesSectionClosedBy(out, defaults, owner, precedence)
 }
 
 // writeGuidelinesSectionClosedBy is the section with the pass's own closing sentence: the write
@@ -379,7 +396,11 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		if following {
 			members = "title"
 		}
-		stable.WriteString("\n출력 언어는 한국어입니다. " + members + ", summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		sources := "말투 프로필, 템플릿, 메모, 가제"
+		if input.Profile.NoVoice {
+			sources = "템플릿, 메모, 가제"
+		}
+		stable.WriteString("\n출력 언어는 한국어입니다. " + members + ", summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. " + sources + "의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(input.Videos) > 0 {
 			video := videoWriteInstructions
 			if following {
@@ -394,7 +415,11 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		if following {
 			members = "the title"
 		}
-		stable.WriteString("\nThe output language is English. Write " + members + ", summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
+		sources := "the voice profile, template, memo, or title hint"
+		if input.Profile.NoVoice {
+			sources = "the template, memo, or title hint"
+		}
+		stable.WriteString("\nThe output language is English. Write " + members + ", summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in " + sources + ".")
 		if len(input.Videos) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)
 		}
@@ -404,8 +429,8 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		stable.WriteString("Unsupported output language; do not generate content.")
 	}
 	writeProfileSection(&stable, input.Language, input.Profile, input.TargetLength)
-	writeTemplateSection(&stable, input.Template, templateTitleInstruction)
-	writeGuidelinesSection(&stable, input.DefaultGuidelines, input.Guidelines)
+	writeTemplateSection(&stable, input.Template, templateTitleInstruction, input.Profile.NoVoice)
+	writeGuidelinesSection(&stable, input.DefaultGuidelines, input.Guidelines, input.Profile.NoVoice)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
 	// The memory section sits between the memo and the attachments and renders to the empty
@@ -433,6 +458,12 @@ func writeStaticRules(language Language, followingStoryline bool) string {
 }
 
 func writeProfileSection(stable *strings.Builder, language Language, profile Profile, targetLength *int) {
+	// 말투 없음 carries no voice bytes (GEN-74); a Korean target's length stands on its own
+	// [길이] line like every other language's.
+	if profile.NoVoice {
+		writeGenericLength(stable, language, targetLength)
+		return
+	}
 	if profile.Portable {
 		stable.WriteString("\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n")
 		stable.WriteString(profile.Styleguide)

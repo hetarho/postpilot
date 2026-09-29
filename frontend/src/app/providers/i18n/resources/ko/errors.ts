@@ -53,6 +53,7 @@ export const errors = {
   VOICE_REQUIRED: '말투를 선택해 주세요.',
   VOICE_NOT_FOUND: '말투를 찾을 수 없어요.',
   VOICE_DELETED: '삭제된 말투예요. 먼저 복원해 주세요.',
+  VOICE_NOT_MADE: '아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.',
   VOICE_NAME_REQUIRED: '말투 이름을 입력해 주세요.',
   VOICE_NAME_TOO_LONG: '말투 이름은 {{max}}자 이하로 입력해 주세요. 현재 {{actual}}자예요.',
   VOICE_DESCRIPTION_TOO_LONG: '말투 설명은 {{max}}자 이하로 입력해 주세요. 현재 {{actual}}자예요.',

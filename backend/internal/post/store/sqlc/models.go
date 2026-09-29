@@ -4,6 +4,10 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
 type Image struct {
 	ID        string
 	PostSlug  string
@@ -13,6 +17,36 @@ type Image struct {
 	Height    int64
 	Bytes     int64
 	CreatedAt string
+}
+
+type Post struct {
+	Slug                    string
+	UserID                  string
+	VoiceID                 sql.NullString
+	Title                   string
+	Memo                    string
+	Observations            sql.NullString
+	Content                 sql.NullString
+	Status                  string
+	CreatedAt               string
+	UpdatedAt               string
+	ContentRevision         int64
+	MachineBaseline         sql.NullString
+	MachineBaselineRevision int64
+	TargetLength            sql.NullInt64
+	FinalizedRevision       sql.NullInt64
+	FinalizedAt             sql.NullString
+	TemplateID              sql.NullString
+	TargetLanguage          string
+	ContentLanguage         sql.NullString
+	TagCount                sql.NullInt64
+	UseMemory               int64
+	PublishedUrl            sql.NullString
+	PublishedAt             sql.NullString
+	Field                   sql.NullString
+	ContentNouns            sql.NullString
+	QualityRules            sql.NullString
+	Storyline               sql.NullString
 }
 
 type Upload struct {

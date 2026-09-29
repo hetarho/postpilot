@@ -113,6 +113,9 @@ type Voice struct {
 	UpdatedAt      time.Time
 	DeletedAt      *time.Time
 	SourceLanguage Language
+	// Made is whether the voice has a published analysis: only a made voice can be assigned
+	// to a post or write one (POST-23).
+	Made bool
 }
 
 func (v Voice) Deleted() bool { return v.DeletedAt != nil }

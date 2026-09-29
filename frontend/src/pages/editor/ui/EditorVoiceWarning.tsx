@@ -1,15 +1,21 @@
-import { useVoiceProfile, type VoiceRef } from '@/entities/voice'
-import { DeletedVoiceWarning, VoiceWarning } from '@/widgets/voice-warning'
+import type { VoiceRef } from '@/entities/voice'
+import { DeletedVoiceWarning, UnmadeVoiceWarning } from '@/widgets/voice-warning'
 
 /** Below the memo, not above it: three wrapped lines of undismissable warning at the top of the
- *  editor pushed the writing field a fifth of a 640px screen down, for every user who has not
- *  trained a profile yet — and chrome is small, quiet and at the edges (THEME-8). It still sits above
- *  글 생성, which is what it is a caveat about.
+ *  editor pushed the writing field a fifth of a 640px screen down — and chrome is small, quiet
+ *  and at the edges (THEME-8). It still sits above 글 생성, which is what it is a caveat about.
  *
- *  A deleted voice is the other caveat, and the louder one: nothing AI will run until it is
- *  restored or the post is moved. Its profile is not read — a tombstone's emptiness is not the
- *  point. */
-export function EditorVoiceWarning({ ownerId, voice }: { ownerId: string; voice: VoiceRef }) {
+ *  Nothing AI runs on a post whose voice is deleted or not made yet, until it is restored or made
+ *  or the post is moved (POST-25). A deleted voice is told first: restoring it is the way out
+ *  whether or not it was ever made. A post with 말투 없음 has nothing to warn about. */
+export function EditorVoiceWarning({
+  ownerId,
+  voice,
+}: {
+  ownerId: string
+  voice: VoiceRef | undefined
+}) {
+  if (!voice) return null
   if (voice.deleted) {
     return (
       <div className="mt-6">
@@ -17,13 +23,12 @@ export function EditorVoiceWarning({ ownerId, voice }: { ownerId: string; voice:
       </div>
     )
   }
-  if (!voice.id) return null
-  return <EmptyProfileWarning ownerId={ownerId} voiceId={voice.id} />
-}
-
-function EmptyProfileWarning({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
-  const { profile } = useVoiceProfile(ownerId, voiceId)
-  const warning = <VoiceWarning profile={profile} voiceId={voiceId} />
-  if (!profile) return null
-  return <div className="mt-6 empty:hidden">{warning}</div>
+  if (!voice.made) {
+    return (
+      <div className="mt-6">
+        <UnmadeVoiceWarning voice={voice} />
+      </div>
+    )
+  }
+  return null
 }

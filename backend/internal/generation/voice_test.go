@@ -36,9 +36,15 @@ func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	if jobs.enqueues != 0 || len(models.calls) != 0 {
 		t.Fatalf("a deleted voice reached the queue or a provider: jobs=%d calls=%d", jobs.enqueues, len(models.calls))
 	}
-	posts.input.Voice = VoiceRef{}
-	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceRequired) {
-		t.Fatalf("voiceless post start = %v", err)
+	posts.input.Voice = VoiceRef{ID: "voice-unmade", Name: "새 말투"}
+	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceNotMade) {
+		t.Fatalf("start in an unmade voice = %v", err)
+	}
+	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceNotMade) {
+		t.Fatalf("revision in an unmade voice = %v", err)
+	}
+	if jobs.enqueues != 0 || len(models.calls) != 0 {
+		t.Fatalf("an unmade voice reached the queue or a provider: jobs=%d calls=%d", jobs.enqueues, len(models.calls))
 	}
 }
 
@@ -72,7 +78,10 @@ func TestHandlersRecheckTheFrozenVoiceBeforeProviderCalls(t *testing.T) {
 	}{
 		"reassigned": {liveVoice, "voice-other", ErrVoiceMismatch},
 		"deleted":    {deletedVoice, deletedVoice.ID, ErrVoiceDeleted},
-		"legacy job": {liveVoice, "", nil},
+		// GEN-27: a frozen absence is a frozen value like any voice.
+		"frozen 말투 없음, post now in a voice": {liveVoice, "", ErrVoiceMismatch},
+		"frozen voice, post now 말투 없음":      {VoiceRef{}, liveVoice.ID, ErrVoiceMismatch},
+		"말투 없음 both times":                  {VoiceRef{}, "", nil},
 	} {
 		t.Run(name, func(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: tc.voice, Content: revisionContent("body")}}
@@ -104,7 +113,7 @@ func TestRevisionDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before")}}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
-		posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰"}
+		posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰", Made: true}
 		return okContent(), nil
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
@@ -121,13 +130,13 @@ func TestGenerateDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 		moved VoiceRef
 		want  error
 	}{
-		"reassigned": {VoiceRef{ID: "voice-other", Name: "리뷰"}, ErrVoiceMismatch},
+		"reassigned": {VoiceRef{ID: "voice-other", Name: "리뷰", Made: true}, ErrVoiceMismatch},
 		"deleted":    {deletedVoice, ErrVoiceDeleted},
 	} {
 		t.Run(name, func(t *testing.T) {
 			voice := liveVoice
 			if tc.moved.ID == deletedVoice.ID {
-				voice = VoiceRef{ID: deletedVoice.ID, Name: deletedVoice.Name}
+				voice = VoiceRef{ID: deletedVoice.ID, Name: deletedVoice.Name, Made: true}
 			}
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: voice}}
 			models := newFakeModels()
@@ -147,8 +156,8 @@ func TestGenerateDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 // ARCH-34 [I4]: two voices with contradictory profiles each receive only their own
 // projection, through generation and through five repeated revisions.
 func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
-	casual := VoiceRef{ID: "voice-casual", Name: "일상"}
-	formal := VoiceRef{ID: "voice-formal", Name: "격식"}
+	casual := VoiceRef{ID: "voice-casual", Name: "일상", Made: true}
+	formal := VoiceRef{ID: "voice-formal", Name: "격식", Made: true}
 	profiles := voiceProfiles{
 		casual.ID: {Styleguide: "CASUAL-STYLE ~해요", Excerpts: []string{"CASUAL-EXCERPT"}},
 		formal.ID: {Styleguide: "FORMAL-STYLE ~습니다", Excerpts: []string{"FORMAL-EXCERPT"}},
@@ -200,7 +209,7 @@ func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 		t.Fatalf("SnapshotVoice = %q", got)
 	}
 	winner := WriteAnswer{Content: PostContent{Title: "w", Blocks: []Block{{Type: BlockText, Content: "ok"}}}}
-	posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰"}
+	posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰", Made: true}
 	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", winner, raw); !errors.Is(err, ErrVoiceMismatch) || len(posts.contents) != 0 {
 		t.Fatalf("apply after reassignment: err=%v contents=%d", err, len(posts.contents))
 	}

@@ -433,7 +433,7 @@ describe('the first save of a new draft', () => {
 })
 
 describe('the voice assignment', () => {
-  // POST-8: a create always names its voice; an ordinary edit leaves it alone.
+  // POST-8: a create names the voice picked; an ordinary edit leaves it alone.
   it('sends the voice with the create and not with an unchanged edit', async () => {
     const api = backend({ mint: '20260828-제주' })
     const { handle } = attach(api.send, { voiceId: 'voice-a' })
@@ -444,6 +444,63 @@ describe('the voice assignment', () => {
     await advance(AUTOSAVE_DEBOUNCE_MS)
 
     expect(api.voices()).toEqual(['voice-a', undefined])
+  })
+
+  // POST-8: 말투 없음 is no field on a create — '' would be a clear, and a create has nothing to
+  // clear — and later edits leave the absence alone too.
+  it('sends no voice with the create of a 말투 없음 draft', async () => {
+    const api = backend({ mint: '20260828-제주' })
+    const { handle } = attach(api.send, { voiceId: '' })
+
+    handle.queue(draft('제주'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.sent).toHaveLength(2)
+    expect(api.voices()).toEqual([undefined, undefined])
+    expect(handle.state()).toBe('saved')
+  })
+
+  it('creates on 말투 없음 when the draft switches to it before the first save', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { voiceId: 'voice-a' })
+
+    await expect(handle.assign('voiceId', '')).resolves.toBeUndefined()
+    handle.queue(draft('제주'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.voices()).toEqual([undefined])
+  })
+
+  // POST-24: on an existing post '' is the clear, sent at once like any reassignment, and then
+  // settled so the next edit carries text only.
+  it('clears an existing post to 말투 없음 with an empty voice', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: 'voice-a' })
+
+    const done = handle.assign('voiceId', '')
+    await advance(0)
+
+    expect(api.sent).toEqual([{ slug: 'p', draft: draft('제주'), voiceId: '' }])
+    await expect(done).resolves.toBeUndefined()
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.voices()).toEqual(['', undefined])
+  })
+
+  it('moves a 말투 없음 post to a voice and treats the absence as its baseline', async () => {
+    const api = backend()
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), voiceId: '' })
+
+    // Unchanged: 말투 없음 is what the server holds, so nothing goes out.
+    await expect(handle.assign('voiceId', '')).resolves.toBeUndefined()
+    expect(api.sent).toHaveLength(0)
+
+    const done = handle.assign('voiceId', 'voice-b')
+    await advance(0)
+    await expect(done).resolves.toBeUndefined()
+    expect(api.voices()).toEqual(['voice-b'])
   })
 
   it('lets a draft with no post yet change its mind without sending anything', async () => {

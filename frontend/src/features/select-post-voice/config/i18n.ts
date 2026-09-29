@@ -4,6 +4,10 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'voices',
   ko: {
+    picker: {
+      making: '{{name}} · 만드는 중',
+      create: '새 말투 만들기',
+    },
     assignment: {
       jobBlocked: 'AI 작업이 끝나면 말투를 바꿀 수 있어요.',
       experimentBlocked: '대기 중인 A/B 결과를 먼저 확인하면 말투를 바꿀 수 있어요.',
@@ -20,6 +24,10 @@ export const i18n = {
     },
   },
   en: {
+    picker: {
+      making: '{{name}} · Being made',
+      create: 'New voice',
+    },
     assignment: {
       jobBlocked: 'You can change the voice after the AI job finishes.',
       experimentBlocked: 'Review the pending A/B result before changing the voice.',

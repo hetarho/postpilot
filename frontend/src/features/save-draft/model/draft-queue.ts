@@ -71,13 +71,13 @@ export interface DraftRequest extends Partial<Assignments> {
   /** Empty for a draft whose first save mints the post. */
   slug: string
   draft: Draft
-  /** Present on every create — a post cannot exist without a voice (POST-23)
-   *  — and on an existing post only while the assignment differs from what the server holds, so
-   *  an ordinary title save can never carry a stale voice over a newer one. */
+  /** On a create, the voice picked, or absent for 말투 없음 — the server never picks one
+   *  (POST-8, POST-23). On an existing post only while the assignment differs from what the
+   *  server holds, so an ordinary title save can never carry a stale voice over a newer one;
+   *  there '' clears it to 말투 없음 and an id reassigns it (POST-24). */
   voiceId?: string
-  /** The voice's mechanism with one more state, because a post may have none: '' clears it and
-   *  an id assigns it. On a create it is sent only when one was chosen — 없음 is the default and
-   *  the server never picks. */
+  /** The voice's mechanism: '' clears it and an id assigns it, and a create sends it only when
+   *  one was chosen — 없음 is the default and the server never picks. */
   templateId?: string
   targetLanguage?: ContentLanguage
   /** Present only while the storyline the editor holds differs from the server's. */
@@ -111,12 +111,12 @@ export interface DraftQueueHandle {
   /** Takes the server's storyline as the baseline when it moved, so an edit compares against
    *  what the server now holds. Ignored — and false — while an edit of it is queued or out. */
   rebaseStoryline: (storyline: StorylineParagraphDraft[] | undefined) => boolean
-  /** Records one assignment: the voice, the 템플릿 ('' for 없음) or the target language. For a
-   *  draft with no post yet that is all it does — the create carries it. For an existing post
-   *  it is sent at once, on its own request, so a delayed title save cannot revert a newer
-   *  choice, and the promise reports that one save's outcome. A refused assignment is taken
-   *  back, so the retries that follow carry text only instead of failing forever on the same
-   *  answer. */
+  /** Records one assignment: the voice ('' for 말투 없음), the 템플릿 ('' for 없음) or the target
+   *  language. For a draft with no post yet that is all it does — the create carries it. For an
+   *  existing post it is sent at once, on its own request, so a delayed title save cannot revert
+   *  a newer choice, and the promise reports that one save's outcome. A refused assignment is
+   *  taken back, so the retries that follow carry text only instead of failing forever on the
+   *  same answer. */
   assign: <K extends AssignmentChannel>(channel: K, value: Assignments[K]) => Promise<void>
 }
 
@@ -153,12 +153,11 @@ const RULES: {
     unsaved: Assignments[K] | undefined
   }
 } = {
-  // Every create carries its voice; the server holds none until the post exists.
-  voiceId: { noun: 'voice', onCreate: (wanted) => wanted, unsaved: '' },
-  // On a create, 없음 sends nothing rather than an empty string: the create has no assignment to
-  // clear, and omitting it keeps the request identical to what it was before templates existed.
+  // On a create, 말투 없음 and 없음 send nothing rather than an empty string: the create has no
+  // assignment to clear, and an absent voice is exactly how the server hears 말투 없음 (POST-8).
   // On an existing post a dirty '' IS sent, because there it means "clear". '' is also what a
   // draft with no post holds, so the rule needs no extra state.
+  voiceId: { noun: 'voice', onCreate: (wanted) => wanted || undefined, unsaved: '' },
   templateId: { noun: 'template', onCreate: (wanted) => wanted || undefined, unsaved: '' },
   targetLanguage: { noun: 'target language', onCreate: (wanted) => wanted, unsaved: undefined },
 }

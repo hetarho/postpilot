@@ -349,8 +349,10 @@ func mapSnapshotError(err error) error {
 			return &experiment.VideoUnsupportedError{Model: unsupported.Model}
 		}
 		return experiment.ErrVideoUnsupported
-	case errors.Is(err, generation.ErrVoiceDeleted), errors.Is(err, generation.ErrVoiceMismatch), errors.Is(err, generation.ErrVoiceRequired):
+	case errors.Is(err, generation.ErrVoiceDeleted), errors.Is(err, generation.ErrVoiceMismatch):
 		return experiment.ErrVoiceUnavailable
+	case errors.Is(err, generation.ErrVoiceNotMade):
+		return experiment.ErrVoiceNotMade
 	case errors.Is(err, generation.ErrPostPublished):
 		// The editor's comparison of a published post is refused while it is still a snapshot,
 		// so the start creates no row and queues no job (MODEL-31).

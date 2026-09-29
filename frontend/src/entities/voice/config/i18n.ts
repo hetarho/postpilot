@@ -5,11 +5,13 @@ export const i18n = {
   namespace: 'voices',
   ko: {
     title: '말투',
+    noVoice: '말투 없음',
     voiceLoadFailed: '말투를 불러오지 못했어요.',
     missing: '없는 말투예요.',
     deletedPrefix: '삭제된 말투',
     deletedRef: '삭제된 말투 · {{name}}',
     deletedAiReason: '삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.',
+    unmadeAiReason: '아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.',
     learn: {
       label: '제목 (선택)',
       labelPlaceholder: '예: 제주 여행기',
@@ -35,17 +37,18 @@ export const i18n = {
     warning: {
       deletedPost:
         '<voice>{{voice}}</voice>. 이 글은 읽고 직접 고치고 내보낼 수 있어요. AI 생성·수정·학습은 말투를 복원하거나 위에서 다른 말투로 바꾼 뒤에 할 수 있어요.',
-      empty: '문체 프로필이 비어 있어요. 말투 탭에서 글 한 편을 학습시키면 내 문체로 나와요.',
       learn: '말투 학습하기',
     },
   },
   en: {
     title: 'Voices',
+    noVoice: 'No voice',
     voiceLoadFailed: 'Could not load the voice.',
     missing: 'This voice does not exist.',
     deletedPrefix: 'Deleted voice',
     deletedRef: 'Deleted voice · {{name}}',
     deletedAiReason: 'This voice has been deleted. Restore it or choose another voice.',
+    unmadeAiReason: "This voice isn't made yet. Make it or pick another voice.",
     learn: {
       label: 'Title (optional)',
       labelPlaceholder: 'For example: Jeju travel story',
@@ -71,8 +74,6 @@ export const i18n = {
     warning: {
       deletedPost:
         '<voice>{{voice}}</voice>. You can still read, edit, and export this post. To generate, revise, or learn with AI, restore the voice or choose another one above.',
-      empty:
-        'The voice profile is empty. Teach it with one post in the Voice tab to generate in your style.',
       learn: 'Teach this voice',
     },
   },

@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { ModelRef } from '@/entities/model-catalog'
-import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
+import { voiceAIRefusal, type VoiceRef } from '@/entities/voice'
 
 export interface GenerationModelSelection {
   ref: ModelRef
@@ -19,7 +19,7 @@ export interface GenerationModelSelection {
  *  answers by waiting. */
 export type GenerationBlocker =
   | 'published'
-  | 'voiceDeleted'
+  | 'voiceUnavailable'
   | 'activeJob'
   | 'observe'
   | 'vision'
@@ -65,14 +65,15 @@ export interface GenerationGateInput {
   videos: readonly unknown[]
   published: boolean
   activeJob: Pick<GenerationJob, 'status'> | undefined
-  voice: Pick<VoiceRef, 'deleted'> | undefined
+  /** The post's voice, undefined for 말투 없음 — which writes with no voice and refuses nothing. */
+  voice: Pick<VoiceRef, 'deleted' | 'made'> | undefined
   observe: GenerationModelSelection | undefined
 }
 
 /** Mirrors the server gate so an impossible generation never looks clickable. A published post
  *  comes first: it takes no write at all (POST-86), so nothing else about the run matters. Then
- *  the voice: a deleted voice refuses every machine result before any model is even asked about
- *  (GEN-25). */
+ *  the voice: a deleted or not-yet-made voice refuses every machine result before any model is
+ *  even asked about, with the one shared message (GEN-25). */
 function sharedPreconditions({
   images,
   videos,
@@ -87,7 +88,8 @@ function sharedPreconditions({
       reason: i18next.t('published.locked', { ns: 'posts' }),
       blocker: 'published',
     }
-  if (voice?.deleted) return { ok: false, reason: deletedVoiceAIReason(), blocker: 'voiceDeleted' }
+  const voiceRefusal = voiceAIRefusal(voice)
+  if (voiceRefusal) return { ok: false, reason: voiceRefusal, blocker: 'voiceUnavailable' }
   if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
     return {
       ok: false,
@@ -198,8 +200,8 @@ export type BriefIssues = Partial<Record<BriefField, string>>
 
 /** EVERY brief field the mode is waiting on, not only the first: a press on 생성 opens the brief
  *  with each of them marked, so the user fixes them in one visit rather than one per press. The
- *  blockers no brief field resolves (a job running, a deleted voice, a published post) are not
- *  here — those keep the action itself disabled. */
+ *  blockers no brief field resolves (a job running, a deleted or not-yet-made voice, a published
+ *  post) are not here — those keep the action itself disabled. */
 export function briefIssues(
   mode: GenerationMode,
   photoCount: number,

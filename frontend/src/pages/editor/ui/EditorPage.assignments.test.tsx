@@ -75,16 +75,17 @@ describe('the post language', () => {
 
 describe('the post voice', () => {
   const AUTOSAVED = { timeout: 4_000 }
+  const OPTION_NAMES: Record<string, string> = {
+    'voice-review': '리뷰',
+    'voice-default': '기본 말투',
+    '': '말투 없음',
+  }
   /** The picker lists the directory, which answers after the first paint; choose only once it has. */
   async function pickVoice(user: ReturnType<typeof userEvent.setup>, voiceId: string) {
     const picker = await voiceField(user)
     await waitFor(() => expect(picker).toBeEnabled())
     await user.click(picker)
-    await user.click(
-      await screen.findByRole('option', {
-        name: voiceId === 'voice-review' ? '리뷰' : '기본 말투',
-      }),
-    )
+    await user.click(await screen.findByRole('option', { name: OPTION_NAMES[voiceId] }))
     return picker
   }
   const confirmDialog = () => screen.findByRole('dialog', { name: '말투를 바꿀까요?' })
@@ -136,6 +137,83 @@ describe('the post voice', () => {
       templateAnswers: [],
       targetLanguage: undefined,
     })
+  })
+
+  // POST-101: no 기본 is no reason to block — the draft starts on 말투 없음, and the create names
+  // no voice, which is how the server hears 말투 없음 (POST-8).
+  it('starts a new draft on 말투 없음 when the account has no 기본', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt('/posts/new', {
+      user: USER,
+      posts: { draftSaves, voices: POST_VOICES },
+      voice: { voices: [{ id: 'voice-review', name: '리뷰' }] },
+    })
+
+    expect(await voiceField(user)).toHaveTextContent('말투 없음')
+    await user.type(screen.getByLabelText('제목'), '제주')
+
+    await waitFor(
+      () => expect(router.state.location.pathname).toBe('/posts/20260828-제주'),
+      AUTOSAVED,
+    )
+    expect(draftSaves[0]).toEqual({
+      slug: '',
+      voiceId: undefined,
+      templateId: undefined,
+      templateAnswers: [],
+      targetLanguage: 'ko',
+    })
+    expect(await voiceField(user)).toHaveTextContent('말투 없음')
+  })
+
+  // A 기본 not yet made cannot be assigned (VOICE-32), so it is no seed either.
+  it('starts a new draft on 말투 없음 when the 기본 is not made yet', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', {
+      user: USER,
+      voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true, made: false }] },
+    })
+
+    expect(await voiceField(user)).toHaveTextContent('말투 없음')
+  })
+
+  it('lets a new draft switch to 말투 없음 before anything is typed', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
+
+    const picker = await pickVoice(user, '')
+    expect(picker).toHaveTextContent('말투 없음')
+    await user.type(screen.getByLabelText('제목'), '제주')
+
+    await waitFor(() => expect(draftSaves).toHaveLength(1), AUTOSAVED)
+    expect(draftSaves[0].voiceId).toBeUndefined()
+  })
+
+  // VOICE-53: the picker's last option opens the directory's own create sheet, over the draft,
+  // and choosing it assigns nothing.
+  it('opens the create sheet from 새 말투 만들기 and keeps the voice', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [reviewPost], draftSaves, voices: POST_VOICES },
+      voice: { voices: TWO_VOICES },
+    })
+
+    const picker = await voiceField(user)
+    await waitFor(() => expect(picker).toBeEnabled())
+    await user.click(picker)
+    await user.click(await screen.findByRole('option', { name: '새 말투 만들기' }))
+
+    const sheet = await screen.findByRole('dialog', { name: '새 말투' })
+    expect(within(sheet).getByLabelText('말투 이름')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(picker).toHaveTextContent('기본 말투')
+    expect(draftSaves).toEqual([])
   })
 
   it('lets a new draft pick another voice before anything is typed', async () => {
@@ -200,6 +278,64 @@ describe('the post voice', () => {
     expect(await screen.findByRole('button', { name: '확정하기' })).toBeEnabled()
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
+  })
+
+  // POST-24: '' clears to 말투 없음, and a post with no voice still generates (GEN-25).
+  it('clears an existing post to 말투 없음 after confirmation', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status: 'draft' }], draftSaves, voices: POST_VOICES },
+      voice: { voices: TWO_VOICES },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    const picker = await voiceField(user)
+    await waitFor(() => expect(picker).toHaveTextContent('기본 말투'))
+    await pickVoice(user, '')
+    await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
+
+    await waitFor(() =>
+      expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: '', templateAnswers: [] }]),
+    )
+    await waitFor(() => expect(picker).toHaveTextContent('말투 없음'))
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
+  })
+
+  // POST-25: a voice not yet made refuses the AI actions like a deleted one, with its own
+  // sentence, and the warning links to that voice, where it is made.
+  it('refuses AI actions on a voice not yet made and links to it', async () => {
+    const user = userEvent.setup()
+    const unmade = { id: 'voice-cafe', name: '가게 소개', made: false }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ ...reviewPost, status: 'draft', voice: unmade }],
+        voices: [...POST_VOICES, unmade],
+      },
+      voice: { voices: [...TWO_VOICES, unmade] },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    expect(await voiceField(user)).toHaveTextContent('가게 소개 · 만드는 중')
+    const reason = '아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.'
+    expect(await screen.findByText(reason)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '말투 학습하기' })).toHaveAttribute(
+      'href',
+      '/voices/voice-cafe',
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
+
+    await openStep(user, '글 다듬기')
+    expect(await screen.findByRole('button', { name: '수정' })).toBeDisabled()
+    expect(screen.getByText(reason)).toBeInTheDocument()
   })
 
   // POST-24: a reassignment leaves the status alone, so a finalized post stays finalized and its

@@ -76,6 +76,10 @@ func contentTags(content *PostContent) []string {
 }
 
 func (s *Service) profileForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (Profile, error) {
+	// 말투 없음 reads no voice: there is nothing to project (GEN-74).
+	if voiceID == "" {
+		return Profile{NoVoice: true, TargetLanguage: target}, nil
+	}
 	if contextual, ok := s.profiles.(TopicProfiles); ok {
 		return contextual.ProfileForPromptForTopic(ctx, userID, voiceID, target, topic, tags)
 	}

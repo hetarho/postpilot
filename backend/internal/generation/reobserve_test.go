@@ -90,7 +90,7 @@ func TestReuseEverythingMakesNoObservationCallAndLeavesTheSnapshotUntouched(t *t
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
 	var progress []string
-	err := svc.Generate(context.Background(), GenerateJob{
+	err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID:       "alice",
 		PostSlug:     "post",
 		ObserveModel: observeRef.String(),
@@ -130,7 +130,7 @@ func TestReuseEverythingWritesFromTheStoredObservations(t *testing.T) {
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID:       "alice",
 		PostSlug:     "post",
 		ObserveModel: observeRef.String(),
@@ -156,7 +156,7 @@ func TestPartialReobservationReplacesOnlyTheSelectedEntries(t *testing.T) {
 
 	selected := filenames(2, 5, 7, 11, 14)
 	var progress []string
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID:       "alice",
 		PostSlug:     "post",
 		ObserveModel: observeRef.String(),
@@ -325,7 +325,7 @@ func TestAbsentFrozenSetObservesEveryPhoto(t *testing.T) {
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
 	var progress []string
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 	}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
@@ -362,7 +362,7 @@ func TestZeroPhotoPathStillClearsTheSnapshot(t *testing.T) {
 	if jobs.frozen(t, 0).ObserveFiles != nil || jobs.generations[0].ObserveCalls != 0 {
 		t.Fatalf("zero-photo start froze a selection: %+v", jobs.generations[0])
 	}
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
@@ -521,7 +521,7 @@ func TestEachPhotoIsNamedRightBeforeItself(t *testing.T) {
 	models := observingModels(t)
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)

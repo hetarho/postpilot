@@ -71,6 +71,8 @@ export interface FakePostVoice {
   id: string
   name: string
   deleted?: boolean
+  /** Omitted is made: a voice not yet made is the case a test opts into (POST-23). */
+  made?: boolean
   sourceLanguage?: ContentLanguage
 }
 
@@ -142,7 +144,8 @@ export interface FakePostRow {
   status?: string
   createdAt?: string
   updatedAt?: string
-  voice?: FakePostVoice
+  /** Omitted is `DEFAULT_POST_VOICE`; `null` is 말투 없음 (POST-23). */
+  voice?: FakePostVoice | null
   template?: FakePostTemplate
   /** The post's 분야 as an `entities/blog-field` id; omitted is 없음. */
   field?: string
@@ -295,7 +298,8 @@ type Row = {
   status: string
   createdAt: string
   updatedAt: string
-  voice: ProtoVoiceRef
+  /** Unset for 말투 없음, as on the wire (POST-25). */
+  voice?: ProtoVoiceRef
   template?: ProtoTemplateRef
   field: ProtoBlogField
   templateAnswers: ProtoTemplateAnswer[]
@@ -403,14 +407,18 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       id: voice.id,
       name: voice.name,
       deleted: voice.deleted ?? false,
+      made: voice.made ?? true,
       sourceLanguage: contentLanguageToProto(voice.sourceLanguage ?? 'ko'),
     })
 
-  /** Like the server: an unknown voice is 404, a deleted one is refused, never substituted. */
-  function assignable(voiceId: string): ProtoVoiceRef {
+  /** Like the server: '' is 말투 없음, an unknown voice is 404, and a deleted one or one not yet
+   *  made is refused — never substituted (POST-23). */
+  function assignable(voiceId: string): ProtoVoiceRef | undefined {
+    if (voiceId === '') return undefined
     const voice = voices.find((candidate) => candidate.id === voiceId)
     if (!voice) throw connectAppError('VOICE_NOT_FOUND', Code.NotFound)
     if (voice.deleted) throw connectAppError('VOICE_DELETED', Code.FailedPrecondition)
+    if (voice.made === false) throw connectAppError('VOICE_NOT_MADE', Code.FailedPrecondition)
     return toVoiceRef(voice)
   }
 
@@ -430,7 +438,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   }
 
   function toRow(row: FakePostRow): Row {
-    const voice = row.voice ?? DEFAULT_POST_VOICE
+    const voice = row.voice === undefined ? DEFAULT_POST_VOICE : row.voice
     return {
       slug: row.slug,
       title: row.title ?? '',
@@ -438,7 +446,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       status: row.status ?? 'draft',
       createdAt: row.createdAt ?? DEFAULT_UPDATED_AT,
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
-      voice: toVoiceRef(voice),
+      voice: voice ? toVoiceRef(voice) : undefined,
       template: row.template ? toTemplateRef(row.template) : undefined,
       field: fixtureField(row.field),
       templateAnswers: (row.templateAnswers ?? []).map((answer) =>
@@ -654,9 +662,10 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_TARGET_LANGUAGE_REQUIRED', Code.InvalidArgument)
     if (req.targetLanguage !== undefined && !requestedTarget)
       throw connectAppError('POST_TARGET_LANGUAGE_UNSUPPORTED', Code.InvalidArgument)
-    // The server's assignment rules (POST-23, POST-24): a create names its voice, an edit
-    // that omits it preserves it, and a different present value reassigns — refused while a job
-    // or an undecided A/B result could still write a baseline for the old voice.
+    // The server's assignment rules (POST-23, POST-24): a create takes the voice it names, or
+    // 말투 없음 when it names none; an edit that omits it preserves it, '' clears it and a
+    // different present value reassigns — refused while a job or an undecided A/B result could
+    // still write a baseline for the old voice.
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
     // title and memo exactly as they were.
     let template = existing?.template
@@ -680,11 +689,10 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         if (source?.tagCount !== undefined) seededTags = source.tagCount
       }
     }
-    let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
+    let voice = existing ? existing.voice : toVoiceRef(DEFAULT_POST_VOICE)
     if (!req.slug) {
-      if (!req.voiceId) throw connectAppError('VOICE_REQUIRED', Code.InvalidArgument)
-      voice = assignable(req.voiceId)
-    } else if (req.voiceId !== undefined && req.voiceId !== voice.id) {
+      voice = assignable(req.voiceId ?? '')
+    } else if (req.voiceId !== undefined && req.voiceId !== (voice?.id ?? '')) {
       const next = assignable(req.voiceId)
       const busy =
         (existing?.activeJob &&

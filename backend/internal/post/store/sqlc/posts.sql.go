@@ -85,7 +85,7 @@ SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?
 `
 
 type CountPostsByVoiceParams struct {
-	VoiceID string
+	VoiceID sql.NullString
 	UserID  string
 }
 
@@ -106,7 +106,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
 type CreatePostParams struct {
 	Slug           string
 	UserID         string
-	VoiceID        string
+	VoiceID        sql.NullString
 	TemplateID     sql.NullString
 	Field          sql.NullString
 	Title          string
@@ -208,39 +208,9 @@ SELECT slug, user_id, voice_id, title, memo, observations, content, status, crea
 FROM posts WHERE slug = ?
 `
 
-type GetPostRow struct {
-	Slug                    string
-	UserID                  string
-	VoiceID                 string
-	Title                   string
-	Memo                    string
-	Observations            sql.NullString
-	Content                 sql.NullString
-	Status                  string
-	CreatedAt               string
-	UpdatedAt               string
-	ContentRevision         int64
-	MachineBaseline         sql.NullString
-	MachineBaselineRevision int64
-	TargetLength            sql.NullInt64
-	FinalizedRevision       sql.NullInt64
-	FinalizedAt             sql.NullString
-	TemplateID              sql.NullString
-	TargetLanguage          string
-	ContentLanguage         sql.NullString
-	TagCount                sql.NullInt64
-	UseMemory               int64
-	PublishedUrl            sql.NullString
-	PublishedAt             sql.NullString
-	Field                   sql.NullString
-	ContentNouns            sql.NullString
-	QualityRules            sql.NullString
-	Storyline               sql.NullString
-}
-
-func (q *Queries) GetPost(ctx context.Context, slug string) (GetPostRow, error) {
+func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 	row := q.db.QueryRowContext(ctx, getPost, slug)
-	var i GetPostRow
+	var i Post
 	err := row.Scan(
 		&i.Slug,
 		&i.UserID,
@@ -300,7 +270,7 @@ type ListPostSummariesByUserRow struct {
 	Title           string
 	Status          string
 	UpdatedAt       string
-	VoiceID         string
+	VoiceID         sql.NullString
 	TemplateID      sql.NullString
 	TargetLanguage  string
 	ContentLanguage sql.NullString
@@ -461,28 +431,28 @@ func (q *Queries) PublishPost(ctx context.Context, arg PublishPostParams) (int64
 }
 
 const reassignPostVoice = `-- name: ReassignPostVoice :execrows
-UPDATE posts SET voice_id = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND voice_id <> ? AND status <> 'published'
+UPDATE posts SET voice_id = ?1, updated_at = ?2
+WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+  AND voice_id IS NOT ?1
 `
 
 type ReassignPostVoiceParams struct {
-	VoiceID   string
+	VoiceID   sql.NullString
 	UpdatedAt string
 	Slug      string
 	UserID    string
-	VoiceID_2 string
 }
 
 // The reassignment keeps every byte of the post, its machine baseline included: nothing is
 // learned from a post any more, and the hand-edit confirmation (POST-98) still reads the
-// baseline after a reassignment.
+// baseline after a reassignment. NULL is no voice (POST-23), and IS NOT is SQLite's
+// NULL-safe inequality, so clearing to none and setting from none both count as a change.
 func (q *Queries) ReassignPostVoice(ctx context.Context, arg ReassignPostVoiceParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, reassignPostVoice,
 		arg.VoiceID,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
-		arg.VoiceID_2,
 	)
 	if err != nil {
 		return 0, err

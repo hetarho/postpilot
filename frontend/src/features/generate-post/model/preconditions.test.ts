@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deletedVoiceAIReason } from '@/entities/voice'
+import { deletedVoiceAIReason, unmadeVoiceAIReason } from '@/entities/voice'
 import {
   briefIssues,
   comparisonGenerationPreconditions,
@@ -101,25 +101,30 @@ describe('generationPreconditions', () => {
     ).toBe(true)
   })
 
-  // GEN-25: a deleted voice refuses every machine result, whatever the models.
-  it('refuses a deleted voice before anything else', () => {
-    const deleted = { deleted: true }
+  // GEN-25: a deleted or not-yet-made voice refuses every machine result, whatever the models,
+  // with the one shared message; a post with 말투 없음 writes with no voice and refuses nothing.
+  it.each([
+    ['a deleted voice', { deleted: true, made: true }, deletedVoiceAIReason()],
+    // Restoring is the way out whether or not the voice was ever made, so deleted is told first.
+    ['a deleted voice never made', { deleted: true, made: false }, deletedVoiceAIReason()],
+    ['a voice not yet made', { deleted: false, made: false }, unmadeVoiceAIReason()],
+  ])('refuses %s before anything else', (_name, voice, reason) => {
     expect(
       ordinaryGenerationPreconditions({
-        images: [],
+        images: [image],
         videos: [],
         published: false,
-        activeJob: undefined,
-        voice: deleted,
+        activeJob: { status: 'running' },
+        voice,
         observe: undefined,
-        write: text,
+        write: undefined,
       }),
     ).toEqual({
       ok: false,
-      reason: deletedVoiceAIReason(),
-      // Not a setup blocker: no route to the models fixes a tombstoned voice, so the bar keeps
-      // its disabled buttons and the reason under them.
-      blocker: 'voiceDeleted',
+      reason,
+      // Not a setup blocker: no route to the models fixes the voice, so the bar keeps its
+      // disabled buttons and the reason under them.
+      blocker: 'voiceUnavailable',
     })
     expect(
       comparisonGenerationPreconditions({
@@ -127,21 +132,39 @@ describe('generationPreconditions', () => {
         videos: [],
         published: false,
         activeJob: undefined,
-        voice: deleted,
+        voice,
         observe: undefined,
         writeA: text,
         writeB: textB,
-      }).ok,
-    ).toBe(false)
+      }),
+    ).toMatchObject({ ok: false, reason, blocker: 'voiceUnavailable' })
+  })
+
+  it.each([
+    ['a made voice', { deleted: false, made: true }],
+    ['말투 없음', undefined],
+  ])('lets %s run', (_name, voice) => {
     expect(
       ordinaryGenerationPreconditions({
         images: [],
         videos: [],
         published: false,
         activeJob: undefined,
-        voice: { deleted: false },
+        voice,
         observe: undefined,
         write: text,
+      }).ok,
+    ).toBe(true)
+    expect(
+      comparisonGenerationPreconditions({
+        images: [],
+        videos: [],
+        published: false,
+        activeJob: undefined,
+        voice,
+        observe: undefined,
+        writeA: text,
+        writeB: textB,
       }).ok,
     ).toBe(true)
   })
@@ -259,7 +282,7 @@ describe('setup blockers', () => {
           videos: [],
           published: false,
           activeJob: undefined,
-          voice: { deleted: true },
+          voice: { deleted: true, made: true },
           observe: undefined,
           write: text,
         }).blocker,
@@ -432,7 +455,7 @@ describe('a post with a video', () => {
 // fix it, only clearing the post's URL on 글 완성 can.
 describe('a published post', () => {
   const running = { status: 'running' }
-  const deleted = { deleted: true }
+  const deleted = { deleted: true, made: true }
   const locked = {
     ok: false,
     reason: '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',

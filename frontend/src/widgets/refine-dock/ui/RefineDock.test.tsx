@@ -14,7 +14,7 @@ const POST = {
   title: '가제',
   memo: '',
   status: 'review',
-  voice: { id: 'voice-a', name: '일상 말투', deleted: false, sourceLanguage: 'ko' },
+  voice: { id: 'voice-a', name: '일상 말투', deleted: false, made: true, sourceLanguage: 'ko' },
   template: { id: '', name: '' },
   images: [],
   observations: [],

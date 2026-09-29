@@ -158,7 +158,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 		t.Fatal("the write prompt does not ask for the storyline and nouns")
 	}
 
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)

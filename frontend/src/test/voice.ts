@@ -42,6 +42,8 @@ export interface FakeVoiceRow {
   name: string
   isDefault?: boolean
   deleted?: boolean
+  /** Omitted is made; a voice this fake creates starts not made, as on the server (VOICE-10). */
+  made?: boolean
   sourceLanguage?: ContentLanguage
 }
 
@@ -105,6 +107,7 @@ interface VoiceRow {
   isDefault: boolean
   deletedAt: string
   sourceLanguage: ContentLanguage
+  made: boolean
 }
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
@@ -121,6 +124,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         isDefault: row.isDefault ?? false,
         deletedAt: row.deleted ? NOW : '',
         sourceLanguage: row.sourceLanguage ?? 'ko',
+        made: row.made ?? true,
       },
     ]),
   )
@@ -138,6 +142,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       updatedAt: NOW,
       deletedAt: row.deletedAt,
       sourceLanguage: contentLanguageToProto(row.sourceLanguage),
+      made: row.made,
     })
   const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
   // The server's order: active before deleted, the default first, then by name.
@@ -254,6 +259,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       isDefault: false,
       deletedAt: '',
       sourceLanguage,
+      made: false,
     }
     voices.set(row.id, row)
     // Only a described create enqueues, and the new voice's profile carries that run so the

@@ -91,6 +91,26 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /옛 글/ })).toHaveTextContent('삭제된 말투 · 옛 말투')
   })
 
+  // POST-25: 말투 없음 is an absence, not a value, so the row says nothing about a voice — neither
+  // a name nor the voice's language badge, and no '말투 없음' either.
+  it('shows no voice on the row of a post with 말투 없음', async () => {
+    renderList({
+      posts: [
+        { slug: '20260828-jeju', title: '제주 3일' },
+        { slug: '20260820-plain', title: '말투 없는 글', voice: null },
+      ],
+    })
+
+    const voiced = await screen.findByRole('link', { name: /제주 3일/ })
+    expect(voiced).toHaveTextContent('기본 말투')
+    expect(voiced).toHaveTextContent('한국어')
+    const plain = screen.getByRole('link', { name: /말투 없는 글/ })
+    expect(plain).toHaveTextContent('초안')
+    expect(plain).not.toHaveTextContent('기본 말투')
+    expect(plain).not.toHaveTextContent('말투 없음')
+    expect(plain).not.toHaveTextContent('한국어')
+  })
+
   // TMPL-32: an assigned row names its 템플릿 beside the voice; an unassigned one says
   // nothing at all, since 없음 is the majority of the list.
   it("names an assigned row's template and leaves an unassigned row alone", async () => {

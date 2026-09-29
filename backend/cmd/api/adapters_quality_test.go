@@ -75,6 +75,7 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	language := post.LanguageKorean
 	var slugs []string
 	for i := 0; i < 4; i++ {

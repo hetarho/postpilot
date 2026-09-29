@@ -6,7 +6,7 @@ function post(overrides: Partial<PostListItem> & { slug: string }): PostListItem
     title: '',
     status: 'draft',
     updatedAt: '2026-08-28T11:58:00Z',
-    voice: { id: 'voice-1', name: '기본', deleted: false, sourceLanguage: 'ko' },
+    voice: { id: 'voice-1', name: '기본', deleted: false, made: true, sourceLanguage: 'ko' },
     template: { id: '', name: '' },
     activeJob: undefined,
     pendingExperimentId: '',

@@ -102,7 +102,7 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 
 	for pass := 1; pass <= 5; pass++ {
 		instruction := fmt.Sprintf("INSTRUCTION-%d", pass)
-		if err := svc.Revise(context.Background(), RevisionJob{
+		if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 			Payload: mustRevisionPayload(t, instruction),
 		}, func(string, int, int) {}); err != nil {
@@ -148,7 +148,7 @@ func TestRevisionUsesSharedValidationAndAttachmentFilterAndKeepsImageOrder(t *te
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	var progress []string
-	err := svc.Revise(context.Background(), RevisionJob{
+	err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘"),
 	}, func(stage string, done, total int) {
@@ -179,7 +179,7 @@ func TestRevisionRefiltersAgainstAttachmentsAfterProviderCall(t *testing.T) {
 	}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
-	err := svc.Revise(context.Background(), RevisionJob{
+	err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘"),
 	}, func(string, int, int) {})

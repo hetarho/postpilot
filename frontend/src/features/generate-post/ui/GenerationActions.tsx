@@ -250,8 +250,8 @@ export const GenerationActions = forwardRef<
       <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         {/* A refusal for the SETUP leaves an action live: pressing it is how the user is taken to
             the brief with the missing field marked, and nothing is written under the row. Every
-            other refusal — a job running, a deleted voice, a pending A/B result, a published
-            post — keeps it disabled, because no field fixes those. */}
+            other refusal — a job running, a deleted or not-yet-made voice, a pending A/B result,
+            a published post — keeps it disabled, because no field fixes those. */}
         <Button
           variant="secondary"
           disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}

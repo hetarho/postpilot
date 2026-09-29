@@ -332,6 +332,8 @@ var (
 	ErrSnapshotUnavailable   = errors.New("experiment snapshot is unavailable")
 	ErrRetryModelUnavailable = errors.New("experiment retry model is unavailable")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted")
+	// ErrVoiceNotMade: the compared post's voice has no published analysis yet (GEN-25).
+	ErrVoiceNotMade = errors.New("the compared post's voice is not made yet")
 	// ErrVoiceNotFound is an unknown or foreign voice, which the owner cannot tell apart
 	// (MODEL-31); a deleted one of theirs is ErrVoiceUnavailable.
 	ErrVoiceNotFound = errors.New("the voice this comparison names is not found")

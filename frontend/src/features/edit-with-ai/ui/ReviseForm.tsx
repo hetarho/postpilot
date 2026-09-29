@@ -4,7 +4,7 @@ import { SendHorizontal } from 'lucide-react'
 import { isTerminal, useStartRevision, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
 import { ContentRevisionConflictError } from '@/entities/post'
-import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
+import { voiceAIRefusal, type VoiceRef } from '@/entities/voice'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '../config'
 import { AppFailureMessage, Button, FieldMessage, Notice, Textarea, Typography } from '@/shared/ui'
@@ -14,8 +14,9 @@ import { SaveAsGuidelineButton } from './SaveAsGuidelineButton'
 interface ReviseFormProps {
   ownerId: string
   postSlug: string
-  /** The post's voice: a deleted one refuses revision before any provider call. */
-  voice: Pick<VoiceRef, 'deleted'>
+  /** The post's voice, undefined for 말투 없음: a deleted or not-yet-made one refuses revision
+   *  before any provider call (POST-25). */
+  voice: Pick<VoiceRef, 'deleted' | 'made'> | undefined
   /** The post's current template, read from the already-loaded post so the guideline capture can
    *  offer it as a scope without issuing a query. Empty id means the post has none. */
   template?: { id: string; name: string }
@@ -74,7 +75,8 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   const revisionCompleted = activeJob?.kind === 'revise' && activeJob.status === 'done'
   const revisionBusy =
     activeJob?.kind === 'revise' && (!isTerminal(activeJob) || activeJob.status === 'failed')
-  const voiceBlocked = Boolean(voice?.deleted)
+  const voiceRefusal = voiceAIRefusal(voice)
+  const voiceBlocked = Boolean(voiceRefusal)
   const trimmed = instruction.trim()
   const disabled =
     voiceBlocked ||
@@ -111,7 +113,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
   const blocker = voiceBlocked
-    ? deletedVoiceAIReason()
+    ? voiceRefusal
     : jobPending
       ? t('revision.blocked.jobChecking')
       : hasActiveJob

@@ -38,7 +38,10 @@ export function applyingSavedDraft(
   post.title = saved.title
   post.memo = saved.memo
   post.targetLanguage = saved.targetLanguage
-  if (saved.voice) post.voice = clone(VoiceRefSchema, saved.voice)
+  // Unconditional, like the 템플릿 below: the response always reports the current voice, and an
+  // unset one is a real answer (말투 없음, POST-25). A `if (saved.voice)` guard would make a clear
+  // invisible until the next GetPost.
+  post.voice = saved.voice ? clone(VoiceRefSchema, saved.voice) : undefined
   // An ASSIGNMENT seeds the post's two generation options from the template it assigns
   // (TMPL-48), so the values that come back with it are the ones this mutation settled.
   // Only then: an ordinary autosave of title and memo carries whatever the row held when the
@@ -49,9 +52,7 @@ export function applyingSavedDraft(
     post.targetLength = saved.targetLength
     post.tagCount = saved.tagCount
   }
-  // Unconditional, unlike the voice: the response always reports the current 템플릿, and an
-  // unset one is a real answer (없음). A `if (saved.template)` guard would make a clear
-  // invisible until the next GetPost.
+  // Unconditional for the same reason as the voice: an unset 템플릿 is 없음.
   post.template = saved.template ? clone(TemplateRefSchema, saved.template) : undefined
   // The 분야 is the brief's options save's now (POST-89), like the two numbers above: an ordinary
   // autosave answers with the 분야 the row held when it was read, and installing that would roll
@@ -71,7 +72,7 @@ export function applyingSavedDraft(
  *  one (POST-4). This is the autosave endpoint, so it is called about once
  *  a second while someone types. */
 /** One draft save, in the editor's terms. An assignment member left undefined leaves the post's
- *  value alone; '' clears a 템플릿. There is no 분야 member: this build saves the 분야 with the
+ *  value alone; '' clears a voice to 말투 없음 and a 템플릿 to 없음. There is no 분야 member: this build saves the 분야 with the
  *  brief's run options (POST-89), so no autosave can carry one. */
 export interface PostDraftSave {
   /** Empty for the save that creates the post. */

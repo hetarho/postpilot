@@ -304,6 +304,9 @@ enum FailureReason {
   // A browser render's assets were asked for before its sampling job kept the
   // grounds they are drawn with (CLIP-192).
   CLIP_RENDER_NOT_SAMPLED = 259;
+  // A voice with no published analysis yet: it cannot be assigned to a post or write one
+  // (POST-23, POST-25).
+  VOICE_NOT_MADE = 260;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

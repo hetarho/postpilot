@@ -14,7 +14,7 @@ func TestSignedVideoGateRefusesInlineOnlyModelEvenWhenAllObservationsAreReused(t
 		info := models.infos[videoObserveRef]
 		info.VideoDelivery = llm.VideoDelivery{InlineStaticVideo: true}
 		models.infos[videoObserveRef] = info
-		posts := &fakePosts{input: PostInput{Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice"}, TargetLanguage: LanguageKorean, Images: []Image{clip("a.mp4")}, Observations: []Observation{{File: "a.mp4", Speech: "known"}}}}
+		posts := &fakePosts{input: PostInput{Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true}, TargetLanguage: LanguageKorean, Images: []Image{clip("a.mp4")}, Observations: []Observation{{File: "a.mp4", Speech: "known"}}}}
 		jobs := &fakeJobs{id: "job"}
 		linker := &fakeLinker{}
 		svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())

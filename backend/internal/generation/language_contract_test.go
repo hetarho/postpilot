@@ -50,7 +50,7 @@ func TestGenerationPayloadRequiresAndFreezesCanonicalTargetLanguage(t *testing.T
 
 func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
 		Title: "title", Memo: "memo", TargetLanguage: LanguageEnglish,
 	}}
 	jobs := &fakeJobs{id: "job"}
@@ -192,7 +192,7 @@ func TestAnEnglishTargetGetsTheEnglishDefaultTextsInAKoreanFrame(t *testing.T) {
 
 func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
 		TargetLanguage: LanguageEnglish,
 	}}
 	models := newFakeModels()
@@ -238,7 +238,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 
 func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
 		TargetLanguage: LanguageEnglish, ContentLanguage: languagePointer(LanguageEnglish), Content: revisionContent("pass-0"),
 	}}
 	jobs := &fakeJobs{id: "revision-job"}

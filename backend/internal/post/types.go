@@ -109,13 +109,13 @@ var (
 	// ErrInvalidListRequest is a list request the browser never builds: a page token it was
 	// not handed, a status that is not one, or a negative page size.
 	ErrInvalidListRequest = errors.New("invalid post list request")
-	// ErrVoiceRequired: a create (or a present voice_id) arrived without a concrete voice.
-	// The server never substitutes the default — that choice belongs to the client's dropdown.
-	ErrVoiceRequired = errors.New("a voice is required")
 	// ErrVoiceNotFound covers unknown and foreign voices alike; a foreign id must not be
 	// distinguishable from a nonexistent one.
 	ErrVoiceNotFound = errors.New("voice not found")
 	ErrVoiceDeleted  = errors.New("voice is deleted")
+	// ErrVoiceNotMade: the named voice has no published analysis yet, so no post may be
+	// written in it (POST-23).
+	ErrVoiceNotMade = errors.New("voice is not made yet")
 	// ErrTemplateNotFound covers unknown and foreign templates alike, like ErrVoiceNotFound.
 	// There is deliberately no ErrTemplateRequired: a post may have none, and clearing the
 	// assignment is a valid save rather than a missing value.
@@ -199,6 +199,8 @@ type VoiceRef struct {
 	Name           string
 	Deleted        bool
 	SourceLanguage Language
+	// Made is whether the voice has a published analysis; only a made voice can be assigned.
+	Made bool
 }
 
 // TemplateRef is the template a post is written for, as the post context needs it: the id it
@@ -229,7 +231,8 @@ func (r TemplateRef) Seeds() TemplateNumbers {
 
 // Post is the aggregate exposed by the drafting context. Generation may replace its
 // canonical content and observations only through Service's published behaviors. The post
-// stores only VoiceID; Voice is enriched on read through the VoiceDirectory port.
+// stores only VoiceID, empty for 말투 없음 (POST-23); Voice is enriched on read through the
+// VoiceDirectory port and is the zero value for a post with no voice.
 type Post struct {
 	Slug    string
 	UserID  string

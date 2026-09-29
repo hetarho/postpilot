@@ -18,7 +18,7 @@ func TestEveryStageNamesItselfOnItsRequest(t *testing.T) {
 	models := observingModels(t)
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 	models := observingModels(t)
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
-	if err := svc.Generate(context.Background(), GenerateJob{
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
 		UserID:       "alice",
 		PostSlug:     "post",
 		ObserveModel: observeRef.String(),

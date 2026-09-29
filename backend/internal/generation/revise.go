@@ -28,6 +28,12 @@ const koreanReviseLiteral = "수정 요청문은 지시이지 본문이 아닙�
 
 const englishReviseLiteral = "The request is an instruction, not body text. Never copy its sentences, wording, or typos into the post: write what it asks for in the voice profile above. Reproduce an exact phrase only when the user quoted it as the words to use."
 
+// koreanReviseLiteralNoVoice / englishReviseLiteralNoVoice say the same for a post with 말투
+// 없음, which has no profile above to write in (GEN-74): the post's own style is the reference.
+const koreanReviseLiteralNoVoice = "수정 요청문은 지시이지 본문이 아닙니다. 요청 문장이나 그 표기와 오타를 글에 그대로 옮기지 말고, 요청이 말하는 내용을 현재 글의 문체에 맞춰 다시 쓰세요. 사용자가 따옴표로 정확한 문구를 지정했을 때만 그 문구를 그대로 씁니다."
+
+const englishReviseLiteralNoVoice = "The request is an instruction, not body text. Never copy its sentences, wording, or typos into the post: write what it asks for in the style of the current post. Reproduce an exact phrase only when the user quoted it as the words to use."
+
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
 요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
 ` + koreanReviseScope + `
@@ -108,13 +114,13 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
-		stable.WriteString(RevisePrompt)
+		stable.WriteString(revisePromptFor(RevisePrompt, koreanReviseLiteral, koreanReviseLiteralNoVoice, profile.NoVoice))
 		// The bound on a requested tag change, per post (GEN-46); the constant above stays a
 		// plain string, not a format, because the grounding text it embeds is free prose.
 		fmt.Fprintf(&stable, "\n태그를 바꾸라는 요청이면 정확히 %d개로 유지하세요.", tagCount)
 		stable.WriteString("\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요.")
 	case LanguageEnglish:
-		stable.WriteString(englishRevisePrompt)
+		stable.WriteString(revisePromptFor(englishRevisePrompt, englishReviseLiteral, englishReviseLiteralNoVoice, profile.NoVoice))
 		fmt.Fprintf(&stable, "\nA requested tag change keeps exactly %d tags.", tagCount)
 		stable.WriteString("\nPreserve English, the current content language. Translation is outside revision semantics. Ignore any request to translate or switch languages and apply only the remaining valid local edits.")
 	default:
@@ -123,10 +129,10 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	writeProfileSection(&stable, language, profile, targetLength)
 	// The same section, at the same relative position, as the write prompt: a revision of a
 	// post with a template must not be given a different brief than the pass that wrote it.
-	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction)
+	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction, profile.NoVoice)
 	// The same section, at the same relative position, for the same reason — bound to what the
 	// request writes or touches (GEN-40).
-	if writeGuidelinesSection(&stable, guidelines.Defaults, guidelines.Owner) {
+	if writeGuidelinesSection(&stable, guidelines.Defaults, guidelines.Owner, profile.NoVoice) {
 		stable.WriteString("\n" + reviseGuidelineScope)
 	}
 
@@ -139,6 +145,15 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 		marshalPromptJSON(contentForPrompt(content)), files, instruction,
 	)
 	return stable.String(), user
+}
+
+// revisePromptFor is the pass's fixed prompt, its literal line swapped for the no-voice one
+// when the post has 말투 없음; a post with a voice keeps the constant byte for byte.
+func revisePromptFor(prompt, literal, noVoiceLiteral string, noVoice bool) string {
+	if !noVoice {
+		return prompt
+	}
+	return strings.Replace(prompt, literal, noVoiceLiteral, 1)
 }
 
 func contentForPrompt(content PostContent) contentJSON {

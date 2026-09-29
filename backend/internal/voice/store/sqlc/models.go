@@ -8,17 +8,6 @@ import (
 	"database/sql"
 )
 
-type Voice struct {
-	ID             string
-	UserID         string
-	Name           string
-	IsDefault      int64
-	DeletedAt      sql.NullString
-	CreatedAt      string
-	UpdatedAt      string
-	SourceLanguage string
-}
-
 type VoiceManualOverride struct {
 	VoiceID   string
 	UserID    string

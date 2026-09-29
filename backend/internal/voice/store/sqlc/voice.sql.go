@@ -159,12 +159,29 @@ func (q *Queries) GetCorpusVersion(ctx context.Context, arg GetCorpusVersionPara
 }
 
 const getDefaultVoice = `-- name: GetDefaultVoice :one
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at, source_language FROM voices WHERE user_id = ? AND is_default = 1 AND deleted_at IS NULL
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.user_id = ? AND v.is_default = 1 AND v.deleted_at IS NULL
 `
 
-func (q *Queries) GetDefaultVoice(ctx context.Context, userID string) (Voice, error) {
+type GetDefaultVoiceRow struct {
+	ID             string
+	UserID         string
+	Name           string
+	IsDefault      int64
+	DeletedAt      sql.NullString
+	CreatedAt      string
+	UpdatedAt      string
+	SourceLanguage string
+	Made           int64
+}
+
+func (q *Queries) GetDefaultVoice(ctx context.Context, userID string) (GetDefaultVoiceRow, error) {
 	row := q.db.QueryRowContext(ctx, getDefaultVoice, userID)
-	var i Voice
+	var i GetDefaultVoiceRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -174,6 +191,7 @@ func (q *Queries) GetDefaultVoice(ctx context.Context, userID string) (Voice, er
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SourceLanguage,
+		&i.Made,
 	)
 	return i, err
 }
@@ -293,7 +311,12 @@ func (q *Queries) GetVersionSample(ctx context.Context, arg GetVersionSamplePara
 }
 
 const getVoice = `-- name: GetVoice :one
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at, source_language FROM voices WHERE id = ? AND user_id = ?
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.id = ? AND v.user_id = ?
 `
 
 type GetVoiceParams struct {
@@ -301,9 +324,21 @@ type GetVoiceParams struct {
 	UserID string
 }
 
-func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (Voice, error) {
+type GetVoiceRow struct {
+	ID             string
+	UserID         string
+	Name           string
+	IsDefault      int64
+	DeletedAt      sql.NullString
+	CreatedAt      string
+	UpdatedAt      string
+	SourceLanguage string
+	Made           int64
+}
+
+func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow, error) {
 	row := q.db.QueryRowContext(ctx, getVoice, arg.ID, arg.UserID)
-	var i Voice
+	var i GetVoiceRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -313,6 +348,7 @@ func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (Voice, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SourceLanguage,
+		&i.Made,
 	)
 	return i, err
 }
@@ -622,19 +658,39 @@ func (q *Queries) ListSamples(ctx context.Context, arg ListSamplesParams) ([]Lis
 }
 
 const listVoices = `-- name: ListVoices :many
-SELECT id, user_id, name, is_default, deleted_at, created_at, updated_at, source_language FROM voices WHERE user_id = ?
-ORDER BY deleted_at IS NOT NULL, is_default DESC, name, id
+
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.user_id = ?
+ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id
 `
 
-func (q *Queries) ListVoices(ctx context.Context, userID string) ([]Voice, error) {
+type ListVoicesRow struct {
+	ID             string
+	UserID         string
+	Name           string
+	IsDefault      int64
+	DeletedAt      sql.NullString
+	CreatedAt      string
+	UpdatedAt      string
+	SourceLanguage string
+	Made           int64
+}
+
+// Every directory read carries made: a published analysis exists (POST-23). The three reads
+// select the same columns, so their rows convert to one another.
+func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listVoices, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Voice
+	var items []ListVoicesRow
 	for rows.Next() {
-		var i Voice
+		var i ListVoicesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -644,6 +700,7 @@ func (q *Queries) ListVoices(ctx context.Context, userID string) ([]Voice, error
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.SourceLanguage,
+			&i.Made,
 		); err != nil {
 			return nil, err
 		}

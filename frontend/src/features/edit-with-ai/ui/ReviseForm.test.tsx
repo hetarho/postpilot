@@ -64,7 +64,7 @@ function renderForm({
     <ReviseForm
       ownerId="alice"
       postSlug="post"
-      voice={{ deleted: false }}
+      voice={{ deleted: false, made: true }}
       activeJob={active}
       template={template}
       onStarted={onStarted}

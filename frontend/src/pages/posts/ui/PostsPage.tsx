@@ -192,7 +192,8 @@ export function PostsPage() {
           // AI 결과 확인 the cut point moved row to row, so the list read as a ragged column of
           // half-titles. The voice sits between the status and the time as metadata: which voice a post is in
           // is the one thing this list newly has to say, and a tombstone must say so on the row
-          // itself (POST-25) — the name gives way before the badge or the time do.
+          // itself (POST-25) — the name gives way before the badge or the time do. A post with
+          // 말투 없음 shows none: an absence is not metadata.
           const content = (
             <>
               <Typography
@@ -203,12 +204,14 @@ export function PostsPage() {
               </Typography>
               <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
                 <Badge tone={status.tone}>{status.label}</Badge>
-                <VoiceRefLabel
-                  voice={post.voice}
-                  className={typographyStyles({ variant: 'meta' })}
-                />
-                {/* Only for an assigned post, and after the voice: the voice is on every row and
-                    the 템플릿 is not, so it reads as an addition rather than a second column. */}
+                {post.voice && (
+                  <VoiceRefLabel
+                    voice={post.voice}
+                    className={typographyStyles({ variant: 'meta' })}
+                  />
+                )}
+                {/* Only for an assigned post, and after the voice: most rows carry a voice and
+                    fewer a 템플릿, so it reads as an addition rather than a second column. */}
                 <TemplateRefLabel
                   template={post.template}
                   className={typographyStyles({ variant: 'meta' })}

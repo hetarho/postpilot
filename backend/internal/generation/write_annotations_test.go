@@ -41,7 +41,7 @@ func annotatedService(posts *fakePosts, models *fakeModels) *Service {
 func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 	posts := annotatedPost()
 	svc := annotatedService(posts, annotatingModels(annotatedAnswer))
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{})}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{})}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.annotations) != 1 {
@@ -82,7 +82,7 @@ func TestTheWriteStorylineIsMadeWithTheAttachmentsItWasShown(t *testing.T) {
 func TestANounlessWriteClearsTheNouns(t *testing.T) {
 	posts := annotatedPost()
 	svc := annotatedService(posts, annotatingModels(okContent().Text))
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID, UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.annotations) != 1 || posts.annotations[0] == nil {
@@ -100,7 +100,7 @@ func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 	}}
 	models := annotatingModels(`{"title":"제목","summary":"요약","tags":["a"],"blocks":[{"type":"TEXT","content":"고친 본문"}]}`)
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Revise(context.Background(), RevisionJob{
+	if err := svc.Revise(context.Background(), RevisionJob{VoiceID: liveVoice.ID,
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)

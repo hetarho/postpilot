@@ -10,9 +10,9 @@ import { DraftEditor } from './DraftEditor'
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
  *  moves the URL to the minted slug (see DraftEditor's `onMinted`).
  *
- *  The directory is read first: a create must name its voice, and the picker is initialized to
- *  the account's default (POST-23), so the editor waits for that one answer rather
- *  than letting a first keystroke send a save with no voice for the server to refuse. */
+ *  The directory is read first: the picker is seeded with the account's 기본, or 말투 없음 when
+ *  there is none (POST-101), so the editor waits for that one answer rather than letting a first
+ *  keystroke create the post on 말투 없음 because the 기본 had not arrived yet. */
 export function NewDraftPage() {
   const { t } = useTranslation(['posts', 'common'])
   const { user } = useSession()
@@ -22,22 +22,7 @@ export function NewDraftPage() {
     return <LoadFailure message={t('editor.voiceListFailed', { ns: 'posts' })} onRetry={refetch} />
   if (isPending)
     return <EditorPlaceholder>{t('state.loading', { ns: 'common' })}</EditorPlaceholder>
-  if (!defaultVoice) {
-    return (
-      <LoadFailure
-        message={t('editor.noDefaultVoice', { ns: 'posts' })}
-        action={
-          <Link
-            to="/voices"
-            className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline"
-          >
-            {t('editor.goVoices', { ns: 'posts' })}
-          </Link>
-        }
-      />
-    )
-  }
-  return <DraftEditor defaultVoiceId={defaultVoice.id} />
+  return <DraftEditor defaultVoice={defaultVoice} />
 }
 
 /** `/posts/$slug` — an existing post. */
@@ -74,20 +59,12 @@ export function PostEditorPage() {
 
   // Keyed by slug: this route stays mounted when the param changes, so opening another
   // post from the list has to start a new editor rather than keep the previous text.
-  // The empty-profile warning is the editor's own now — it belongs below the memo, inside the
-  // page's one `<main>`, rather than above it as a sibling (see DraftEditor).
+  // The voice warning is the editor's own — it belongs below the memo, inside the page's one
+  // `<main>`, rather than above it as a sibling (see EditorGeneratePanel).
   return <DraftEditor key={slug} post={post} />
 }
 
-function LoadFailure({
-  message,
-  onRetry,
-  action,
-}: {
-  message: ReactNode
-  onRetry?: () => void
-  action?: ReactNode
-}) {
+function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
   const { t } = useTranslation(['posts', 'common'])
   return (
     <EditorPlaceholder>
@@ -101,7 +78,6 @@ function LoadFailure({
         >
           {t('editor.backToListPlain', { ns: 'posts' })}
         </Link>
-        {action}
         {onRetry && (
           <Button variant="ghost" onClick={onRetry} className="underline">
             {t('action.retry', { ns: 'common' })}

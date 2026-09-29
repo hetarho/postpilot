@@ -324,7 +324,7 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 	return &postpilotv1.Voice{
 		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
 		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
-		SourceLanguage: languageToProto(v.SourceLanguage),
+		SourceLanguage: languageToProto(v.SourceLanguage), Made: v.Made,
 	}
 }
 

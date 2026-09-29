@@ -102,6 +102,11 @@ func publishedPostService(t *testing.T) (*post.Service, *voice.Service) {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	return post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc)), voiceSvc
 }
 

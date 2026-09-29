@@ -49,7 +49,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 	err := s.write.CreatePost(ctx, sqlc.CreatePostParams{
 		Slug:           p.Slug,
 		UserID:         p.UserID,
-		VoiceID:        p.VoiceID,
+		VoiceID:        optionalText(p.VoiceID),
 		TemplateID:     optionalText(p.TemplateID),
 		Field:          optionalText(p.Field),
 		Title:          p.Title,
@@ -97,7 +97,7 @@ func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo strin
 
 func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
 	n, err := s.write.ReassignPostVoice(ctx, sqlc.ReassignPostVoiceParams{
-		VoiceID: voiceID, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, VoiceID_2: voiceID,
+		VoiceID: optionalText(voiceID), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		if isVoiceOwnershipViolation(err) {
@@ -459,8 +459,8 @@ func (s *Store) ListPosts(ctx context.Context, userID string, filter post.ListFi
 		}
 		summaries = append(summaries, post.Summary{
 			Slug:            row.Slug,
-			VoiceID:         row.VoiceID,
-			Voice:           post.VoiceRef{ID: row.VoiceID},
+			VoiceID:         row.VoiceID.String,
+			Voice:           post.VoiceRef{ID: row.VoiceID.String},
 			TemplateID:      row.TemplateID.String,
 			Template:        post.TemplateRef{ID: row.TemplateID.String},
 			Title:           title,
@@ -896,7 +896,7 @@ func (s *Store) AllReferencedKeys(ctx context.Context) (map[string]struct{}, err
 
 // --- mapping ---
 
-func toPost(row sqlc.GetPostRow) (post.Post, error) {
+func toPost(row sqlc.Post) (post.Post, error) {
 	createdAt, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s created_at: %w", row.Slug, err)
@@ -952,8 +952,8 @@ func toPost(row sqlc.GetPostRow) (post.Post, error) {
 	return post.Post{
 		Slug:                    row.Slug,
 		UserID:                  row.UserID,
-		VoiceID:                 row.VoiceID,
-		Voice:                   post.VoiceRef{ID: row.VoiceID},
+		VoiceID:                 row.VoiceID.String,
+		Voice:                   post.VoiceRef{ID: row.VoiceID.String},
 		TemplateID:              row.TemplateID.String,
 		Template:                post.TemplateRef{ID: row.TemplateID.String},
 		TargetLanguage:          targetLanguage,

@@ -50,14 +50,19 @@ export function toVoice(voice: ProtoVoice | undefined): Voice {
     updatedAt: voice.updatedAt,
     deletedAt: voice.deletedAt,
     sourceLanguage: requireContentLanguage(voice.sourceLanguage),
+    made: voice.made,
   }
 }
-export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef {
+/** A post's voice, or undefined for 말투 없음: the wire leaves the message unset rather than
+ *  sending an empty one (POST-25). */
+export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef | undefined {
+  if (!ref) return undefined
   return {
-    id: ref?.id ?? '',
-    name: ref?.name ?? '',
-    deleted: ref?.deleted ?? false,
-    sourceLanguage: ref ? requireContentLanguage(ref.sourceLanguage) : undefined,
+    id: ref.id,
+    name: ref.name,
+    deleted: ref.deleted,
+    made: ref.made,
+    sourceLanguage: requireContentLanguage(ref.sourceLanguage),
   }
 }
 export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {

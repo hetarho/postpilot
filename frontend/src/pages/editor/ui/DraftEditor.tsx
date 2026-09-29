@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { isPublished, type PostDraft, type PostTemplateAnswer } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useTemplates } from '@/entities/template'
+import type { Voice } from '@/entities/voice'
 import { discardContentQueue, useCaretHandoff } from '@/features/edit-post-content'
 import { DeletePostButton } from '@/features/delete-post'
 import { discardDraftQueue, useAutosave } from '@/features/save-draft'
@@ -26,7 +27,6 @@ import { EditorPhotos } from './EditorPhotos'
 import { EditorProgressBar, EditorStatusLine } from './EditorStatus'
 import { EditorDock } from './EditorDock'
 import { EditorDockHeader } from './EditorDockHeader'
-import { EditorVoiceWarning } from './EditorVoiceWarning'
 import { LifecycleSteps } from './LifecycleSteps'
 import { MemoField } from './MemoField'
 import { TitleField } from './TitleField'
@@ -37,10 +37,11 @@ interface DraftEditorProps {
   /** The saved post being edited, or undefined for a draft the server has not created
    *  yet (`/posts/new`). */
   post?: PostDraft
-  /** The voice a draft with no post yet starts in — the account's default, resolved by the
-   *  route before this mounts, so the first save always carries a concrete id
-   *  (POST-23). Ignored for an existing post, whose voice is its own. */
-  defaultVoiceId?: string
+  /** The account's 기본, which a draft with no post yet starts in — resolved by the route before
+   *  this mounts, so the picker is seeded once with the right answer; undefined when there is
+   *  none, which starts the draft on 말투 없음 (POST-101). Ignored for an existing post, whose
+   *  voice is its own. */
+  defaultVoice?: Pick<Voice, 'id' | 'made'>
 }
 
 /** Title + memo, autosaved, plus the post's lifecycle presented as three steps. The screen the
@@ -49,7 +50,7 @@ interface DraftEditorProps {
  *  The steps are PANELS, not routes: one mounted editor per slug, so a step change cannot remount
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
-export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
+export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   const { t } = useTranslation('posts')
   const navigate = useNavigate()
   const { user } = useSession()
@@ -64,7 +65,7 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
   const caretFields = useMemo(() => ({ title: titleRef, memo: memoRef }), [])
   const caret = useCaretHandoff(post?.slug, caretFields)
 
-  const assignments = useDraftAssignments(post, defaultVoiceId)
+  const assignments = useDraftAssignments(post, defaultVoice)
   const { voiceId, templateId, targetLanguage } = assignments
 
   // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
@@ -282,7 +283,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {answerFieldsPanel}
           {memoField}
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-          <EditorVoiceWarning ownerId={ownerId} voice={assignments.voice} />
+          {/* No voice warning here: a draft can hold only 말투 없음 or a made, active voice, so
+              there is nothing to warn about before the post exists. */}
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the
               brief still have to be reachable before the first word is typed. */}
           <EditorDock header={dockHeader} />

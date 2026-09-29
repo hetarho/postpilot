@@ -147,6 +147,14 @@ describe('applying a draft save response', () => {
     expect(moved.voice?.id).toBe('voice-b')
     expect(moved.machineBaselineRevision).toBe(3n)
     expect(moved.canFinalize).toBe(true)
+
+    // An unset voice is 말투 없음, a real answer: a clear must show before the next GetPost.
+    const cleared = applyingSavedDraft(
+      create(PostSchema, { slug: 'post', machineBaselineRevision: 0n }),
+      cached,
+    )
+    expect(cleared.voice).toBeUndefined()
+    expect(cleared.machineBaselineRevision).toBe(3n)
   })
 
   // POST-89: the 분야 is the brief's options save's, like the two numbers. A draft save answers

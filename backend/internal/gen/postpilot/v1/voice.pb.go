@@ -1177,8 +1177,11 @@ type Voice struct {
 	UpdatedAt      string                 `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DeletedAt      string                 `protobuf:"bytes,7,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	SourceLanguage ContentLanguage        `protobuf:"varint,8,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Whether the voice has a published analysis. Only a made voice can be assigned to a post
+	// or write one; the picker lists one not yet made disabled (POST-101).
+	Made          bool `protobuf:"varint,9,opt,name=made,proto3" json:"made,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Voice) Reset() {
@@ -1265,6 +1268,13 @@ func (x *Voice) GetSourceLanguage() ContentLanguage {
 		return x.SourceLanguage
 	}
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *Voice) GetMade() bool {
+	if x != nil {
+		return x.Made
+	}
+	return false
 }
 
 type ListVoicesRequest struct {
@@ -2644,7 +2654,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
 	"\x05chars\x18\x03 \x01(\x05R\x05chars\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x89\x02\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x9d\x02\n" +
 	"\x05Voice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
@@ -2657,7 +2667,8 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"updated_at\x18\x06 \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
 	"deleted_at\x18\a \x01(\tR\tdeletedAt\x12F\n" +
-	"\x0fsource_language\x18\b \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\x13\n" +
+	"\x0fsource_language\x18\b \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\x12\x12\n" +
+	"\x04made\x18\t \x01(\bR\x04made\"\x13\n" +
 	"\x11ListVoicesRequest\"A\n" +
 	"\x12ListVoicesResponse\x12+\n" +
 	"\x06voices\x18\x01 \x03(\v2\x13.postpilot.v1.VoiceR\x06voices\"\xe8\x01\n" +

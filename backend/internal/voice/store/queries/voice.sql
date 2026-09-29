@@ -8,15 +8,33 @@
 INSERT INTO voices (id, user_id, name, source_language, is_default, deleted_at, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, NULL, ?, ?);
 
+-- Every directory read carries made: a published analysis exists (POST-23). The three reads
+-- select the same columns, so their rows convert to one another.
+
 -- name: ListVoices :many
-SELECT * FROM voices WHERE user_id = ?
-ORDER BY deleted_at IS NOT NULL, is_default DESC, name, id;
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.user_id = ?
+ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id;
 
 -- name: GetVoice :one
-SELECT * FROM voices WHERE id = ? AND user_id = ?;
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.id = ? AND v.user_id = ?;
 
 -- name: GetDefaultVoice :one
-SELECT * FROM voices WHERE user_id = ? AND is_default = 1 AND deleted_at IS NULL;
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+       CAST(EXISTS (
+           SELECT 1 FROM voice_profiles p
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
+       ) AS INTEGER) AS made
+FROM voices v WHERE v.user_id = ? AND v.is_default = 1 AND v.deleted_at IS NULL;
 
 -- name: CountActiveVoices :one
 SELECT count(*) FROM voices WHERE user_id = ? AND deleted_at IS NULL;

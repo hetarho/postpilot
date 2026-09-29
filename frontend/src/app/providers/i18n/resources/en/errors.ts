@@ -52,6 +52,7 @@ export const errors = {
   VOICE_REQUIRED: 'Select a voice.',
   VOICE_NOT_FOUND: 'Could not find the voice.',
   VOICE_DELETED: 'This voice has been deleted. Restore it first.',
+  VOICE_NOT_MADE: "This voice isn't made yet. Make it or pick another voice.",
   VOICE_NAME_REQUIRED: 'Enter a voice name.',
   VOICE_NAME_TOO_LONG:
     'The voice name must be no more than {{max}} characters. It is currently {{actual}} characters.',

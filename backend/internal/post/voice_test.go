@@ -15,24 +15,24 @@ func (f fakePendingExperiments) PendingForPost(_ context.Context, _, slug string
 	return f[slug], nil
 }
 
-// POST-23: a create names exactly one owned active voice, and the server never picks one.
-func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
+// POST-23: a create names one owned, active, made voice or none — 말투 없음 is a real answer
+// and the server never picks the 기본.
+func TestCreateNamesAMadeVoiceOrNone(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
-	empty := ""
 	unknown := "voice-nobody"
 	foreign := bobVoice
 	deleted := aliceDeleted
+	unmade := aliceUnmade
 	language := LanguageKorean
 	for name, tc := range map[string]struct {
 		voice *string
 		want  error
 	}{
-		"absent":  {nil, ErrVoiceRequired},
-		"empty":   {&empty, ErrVoiceRequired},
-		"unknown": {&unknown, ErrVoiceNotFound},
-		"foreign": {&foreign, ErrVoiceNotFound},
-		"deleted": {&deleted, ErrVoiceDeleted},
+		"unknown":  {&unknown, ErrVoiceNotFound},
+		"foreign":  {&foreign, ErrVoiceNotFound},
+		"deleted":  {&deleted, ErrVoiceDeleted},
+		"not made": {&unmade, ErrVoiceNotMade},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "Jeju", VoiceID: tc.voice, TargetLanguage: &language}); !errors.Is(err, tc.want) {
@@ -42,6 +42,16 @@ func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 	}
 	if len(store.posts) != 0 {
 		t.Fatalf("a rejected create minted a post: %+v", store.posts)
+	}
+	empty := ""
+	for name, voice := range map[string]*string{"absent": nil, "empty": &empty} {
+		created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "Jeju " + name, VoiceID: voice, TargetLanguage: &language})
+		if err != nil || created.VoiceID != "" || created.Voice != (VoiceRef{}) {
+			t.Fatalf("%s voice create = %+v err=%v, want 말투 없음", name, created, err)
+		}
+		if stored := store.posts[created.Slug]; stored.VoiceID != "" {
+			t.Fatalf("%s voice create stored voice %q", name, stored.VoiceID)
+		}
 	}
 	// A directory is constructor state (ARCH-40): a service that could be built without
 	// one would fail every create closed at runtime instead of at boot.
@@ -127,10 +137,10 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 		voice string
 		want  error
 	}{
-		"empty":   {"", ErrVoiceRequired},
-		"unknown": {"voice-nobody", ErrVoiceNotFound},
-		"foreign": {bobVoice, ErrVoiceNotFound},
-		"deleted": {aliceDeleted, ErrVoiceDeleted},
+		"unknown":  {"voice-nobody", ErrVoiceNotFound},
+		"foreign":  {bobVoice, ErrVoiceNotFound},
+		"deleted":  {aliceDeleted, ErrVoiceDeleted},
+		"not made": {aliceUnmade, ErrVoiceNotMade},
 	} {
 		t.Run(name, func(t *testing.T) {
 			voiceID := tc.voice
@@ -162,5 +172,41 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 	// A title-only autosave arriving afterwards preserves the newer assignment.
 	if kept, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2"}); err != nil || kept.VoiceID != aliceReview {
 		t.Fatalf("absent voice_id changed the assignment: %+v err=%v", kept, err)
+	}
+}
+
+// POST-24: an empty voice_id clears the post to 말투 없음, a present one sets a voice on a post
+// that had none, and each is a reassignment under the same busy refusals, touching voice_id
+// alone.
+func TestAPostClearsToNoVoiceAndBack(t *testing.T) {
+	svc, store, _ := newTestService(t)
+	ctx := context.Background()
+	created := mustCreatePost(t, svc, alice, "Jeju")
+	before := store.posts[created.Slug]
+	none := ""
+	svc.jobs = fakeActiveJobs{created.Slug: {ID: "job-1", Status: "running"}}
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &none}); !errors.Is(err, ErrPostBusy) {
+		t.Fatalf("clearing during a job = %v", err)
+	}
+	svc.jobs = fakeActiveJobs{}
+	cleared, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &none})
+	if err != nil || cleared.VoiceID != "" || cleared.Voice != (VoiceRef{}) {
+		t.Fatalf("clear = %+v err=%v", cleared, err)
+	}
+	after := store.posts[created.Slug]
+	if after.ContentRevision != before.ContentRevision || after.MachineBaselineRevision != before.MachineBaselineRevision || after.Status != before.Status {
+		t.Fatalf("clearing moved more than the voice: before=%+v after=%+v", before, after)
+	}
+	// Clearing twice is no change at all.
+	if again, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &none}); err != nil || again.VoiceID != "" {
+		t.Fatalf("second clear = %+v err=%v", again, err)
+	}
+	unmade := aliceUnmade
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &unmade}); !errors.Is(err, ErrVoiceNotMade) {
+		t.Fatalf("setting an unmade voice = %v", err)
+	}
+	review := aliceReview
+	if set, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); err != nil || set.VoiceID != aliceReview || set.Voice.Name != "리뷰" {
+		t.Fatalf("setting a voice on 말투 없음 = %+v err=%v", set, err)
 	}
 }

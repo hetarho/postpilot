@@ -33,7 +33,7 @@ func TestGenerationErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"revision content":        {"start revision", generation.ErrRevisionContentRequired, connect.CodeFailedPrecondition, "REVISION_CONTENT_REQUIRED", nil},
 		"storyline missing":       {"start storyline revision", generation.ErrStorylineMissing, connect.CodeFailedPrecondition, "POST_STORYLINE_MISSING", nil},
 		"storyline reobserve":     {"start generation", generation.ErrStorylineReobserve, connect.CodeInvalidArgument, "GENERATION_STORYLINE_REOBSERVE", nil},
-		"voice required":          {"start generation", generation.ErrVoiceRequired, connect.CodeFailedPrecondition, "VOICE_REQUIRED", nil},
+		"voice not made":          {"start generation", generation.ErrVoiceNotMade, connect.CodeFailedPrecondition, "VOICE_NOT_MADE", nil},
 		"voice deleted":           {"start generation", generation.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED", nil},
 		"voice changed":           {"start generation", generation.ErrVoiceMismatch, connect.CodeFailedPrecondition, "GENERATION_VOICE_MISMATCH", nil},
 		"post published":          {"start revision", generation.ErrPostPublished, connect.CodeFailedPrecondition, "POST_PUBLISHED_LOCKED", nil},

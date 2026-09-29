@@ -16,18 +16,38 @@ import {
   Typography,
 } from '@/shared/ui'
 
+type CreateVoiceSheetProps = { ownerId: string; className?: string } & (
+  | { open?: undefined; onOpenChange?: undefined }
+  | {
+      /** Controlled: the caller owns the open state and renders its own way in — the post voice
+       *  picker's `새 말투 만들기` option (VOICE-53) — so no button is drawn here. */
+      open: boolean
+      onOpenChange: (open: boolean) => void
+    }
+)
+
 /** The directory's one committing action and the overlay it opens. The trigger is rendered here
  *  rather than by the page so the open state stays with the form it opens, the way `Popover`
- *  keeps its own. */
-export function CreateVoiceSheet({ ownerId, className }: { ownerId: string; className?: string }) {
+ *  keeps its own — unless a caller that already has a way in passes `open`. */
+export function CreateVoiceSheet({
+  ownerId,
+  className,
+  open,
+  onOpenChange,
+}: CreateVoiceSheetProps) {
   const { t } = useTranslation('voices')
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = open !== undefined
+  const shown = open ?? ownOpen
+  const setShown = onOpenChange ?? setOwnOpen
   return (
     <>
-      <Button variant="cta" className={className} onClick={() => setOpen(true)}>
-        {t('create.open')}
-      </Button>
-      {open && <CreateVoicePanel ownerId={ownerId} onClose={() => setOpen(false)} />}
+      {!controlled && (
+        <Button variant="cta" className={className} onClick={() => setOwnOpen(true)}>
+          {t('create.open')}
+        </Button>
+      )}
+      {shown && <CreateVoicePanel ownerId={ownerId} onClose={() => setShown(false)} />}
     </>
   )
 }

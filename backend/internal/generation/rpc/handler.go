@@ -185,8 +185,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", postpilotv1.FailureReason_GENERATION_VOICE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrPostPublished):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a published post is locked", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
-	case errors.Is(err, generation.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
+	case errors.Is(err, generation.ErrVoiceNotMade):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is not made yet", postpilotv1.FailureReason_VOICE_NOT_MADE, nil)
 	case errors.Is(err, generation.ErrRevisionInstructionRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is required", postpilotv1.FailureReason_REVISION_INSTRUCTION_REQUIRED, nil)
 	case errors.Is(err, generation.ErrRevisionInstructionTooLong):

@@ -17,8 +17,11 @@ export {
   deletedVoices,
   emptyStructuredVoiceProfile,
   emptyVoice,
-  isEmptyProfile,
+  NO_VOICE_VALUE,
+  noVoiceLabel,
   sortVoices,
+  unmadeVoiceAIReason,
+  voiceAIRefusal,
   voiceRefLabel,
 } from './model/types'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'

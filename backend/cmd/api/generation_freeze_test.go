@@ -222,6 +222,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
 	queue.Admit(&stubAdmitter{})
 	generationSvc := generation.NewService(
@@ -325,6 +326,7 @@ func TestGenerationQualityRendersTheTicksInTheRunsLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeVoice(t, handle, "alice", defaultVoice.ID)
 	// Three published posts of two block types each: composition is over its band (QUAL-11).
 	language := post.LanguageKorean
 	var slug string

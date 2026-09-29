@@ -74,14 +74,20 @@ export interface Voice {
   updatedAt: string
   deletedAt: string
   sourceLanguage: ContentLanguage
+  /** Whether the voice has a published analysis. Only a made voice can be assigned to a post or
+   *  write one; one not yet made is still in the directory, 만드는 중 (POST-101). */
+  made: boolean
 }
 
 /** The voice a post is written in, as a post screen needs it — just enough to name it, including
- *  after the voice is deleted, since the post stays readable and exportable. */
+ *  after the voice is deleted, since the post stays readable and exportable. A post with 말투 없음
+ *  has none (POST-25). */
 export interface VoiceRef {
   id: string
   name: string
   deleted: boolean
+  /** A voice not yet made refuses every AI action the way a deleted one does (POST-25). */
+  made: boolean
   sourceLanguage: ContentLanguage | undefined
 }
 
@@ -123,6 +129,7 @@ export function emptyVoice(): Voice {
     updatedAt: '',
     deletedAt: '',
     sourceLanguage: 'ko',
+    made: false,
   }
 }
 
@@ -168,10 +175,13 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
   }
 }
 
-// An empty profile is now exactly "no sample and nothing published": the free-text styleguide
-// that used to count as content is gone (VOICE-6), and finalized posts no longer teach a voice.
-export function isEmptyProfile(profile: Pick<VoiceProfile, 'structured' | 'samples'>): boolean {
-  return profile.structured.empty && profile.samples.length === 0
+/** The value standing for 말투 없음 wherever a post's voice is chosen. Empty, because that is
+ *  exactly what the wire carries to clear an assignment (a present empty `voice_id`, POST-24). */
+export const NO_VOICE_VALUE = ''
+
+/** How 말투 없음 is written wherever it can be chosen or confirmed. */
+export function noVoiceLabel(): string {
+  return i18next.t('noVoice', { ns: 'voices' })
 }
 
 export function voiceRefLabel(voice: Pick<VoiceRef, 'name' | 'deleted'>): string {
@@ -183,6 +193,22 @@ export function voiceRefLabel(voice: Pick<VoiceRef, 'name' | 'deleted'>): string
  *  this only says so before the round trip. */
 export function deletedVoiceAIReason(): string {
   return i18next.t('deletedAiReason', { ns: 'voices' })
+}
+
+/** The same for a voice not yet made: every AI action waits until it is, or until the post is
+ *  moved to another voice (POST-25). */
+export function unmadeVoiceAIReason(): string {
+  return i18next.t('unmadeAiReason', { ns: 'voices' })
+}
+
+/** Why a post's voice refuses AI work, or '' when it does not: a deleted voice first, since
+ *  restoring it is the way out even when it was never made, then one not yet made. A post with
+ *  말투 없음 writes with no voice, so nothing is refused (GEN-25). */
+export function voiceAIRefusal(voice: Pick<VoiceRef, 'deleted' | 'made'> | undefined): string {
+  if (!voice) return ''
+  if (voice.deleted) return deletedVoiceAIReason()
+  if (!voice.made) return unmadeVoiceAIReason()
+  return ''
 }
 
 export function activeVoices<T extends Pick<Voice, 'deleted'>>(voices: readonly T[]): T[] {

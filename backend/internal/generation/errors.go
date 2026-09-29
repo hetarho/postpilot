@@ -23,7 +23,9 @@ var (
 	// ErrStorylineReobserve: a run along the storyline observes exactly what the storyline holds,
 	// so a picker answer beside it is a contradiction (GEN-70).
 	ErrStorylineReobserve = errors.New("a storyline run takes no re-observation selection")
-	ErrVoiceRequired      = errors.New("the post has no voice")
+	// ErrVoiceNotMade refuses AI work for a post whose voice has no published analysis yet
+	// (POST-25); making the voice or reassigning the post lifts it.
+	ErrVoiceNotMade = errors.New("the post's voice is not made yet; make it or assign another voice first")
 	// ErrVoiceDeleted refuses AI work for a post whose voice is a tombstone; the post stays
 	// readable and exportable, and restoring the voice or reassigning the post lifts it.
 	ErrVoiceDeleted = errors.New("the post's voice is deleted; restore it or assign another voice first")

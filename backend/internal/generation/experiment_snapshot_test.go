@@ -78,10 +78,19 @@ func bareSnapshotFixture() snapshotFixture {
 	return snapshotFixture{
 		language: LanguageKorean,
 		post: PostInput{
-			Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice-1", Name: "기본"}, TargetLanguage: LanguageKorean,
+			Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice-1", Name: "기본", Made: true}, TargetLanguage: LanguageKorean,
 			Images: []Image{{Filename: "IMG_1.jpg", Key: "key-1"}}, Title: "가제", Memo: "메모",
 		},
 	}
+}
+
+// noVoiceSnapshotFixture is the bare snapshot of a post with 말투 없음: it freezes no voice
+// and no profile (MODEL-31, LANG-18).
+func noVoiceSnapshotFixture() snapshotFixture {
+	fixture := bareSnapshotFixture()
+	fixture.post.Voice = VoiceRef{}
+	fixture.profile = Profile{NoVoice: true}
+	return fixture
 }
 
 func (f snapshotFixture) snapshot() writeSnapshot {
@@ -95,8 +104,9 @@ func (f snapshotFixture) snapshot() writeSnapshot {
 // snapshot got its own wire struct: every stored experiment's input hash rests on them.
 func TestWriteSnapshotEncodingIsPinned(t *testing.T) {
 	for golden, fixture := range map[string]snapshotFixture{
-		"write_snapshot_full.golden": fullSnapshotFixture(),
-		"write_snapshot_bare.golden": bareSnapshotFixture(),
+		"write_snapshot_full.golden":     fullSnapshotFixture(),
+		"write_snapshot_bare.golden":     bareSnapshotFixture(),
+		"write_snapshot_no_voice.golden": noVoiceSnapshotFixture(),
 	} {
 		want := readSnapshotGolden(t, golden)
 		got, err := encodeWriteSnapshot(fixture.snapshot())
@@ -117,12 +127,17 @@ func TestWriteSnapshotEncodingIsPinned(t *testing.T) {
 		// The decoder's legacy normalization resolves a missing tag count to the default, exactly
 		// as it did before this wire struct, so a bare snapshot's prepared bytes gain it.
 		reencoded := want
-		if golden == "write_snapshot_bare.golden" {
+		if golden != "write_snapshot_full.golden" {
 			reencoded = strings.Replace(want, `"TargetLength":null,`, `"TargetLength":null,"tag_count":4,`, 1)
 		}
 		if string(again) != reencoded {
 			t.Errorf("%s does not survive a decode and re-encode:\n got %s\nwant %s", golden, again, reencoded)
 		}
+	}
+	// A 말투 없음 snapshot reads back as 말투 없음, with no voice to apply a winner to.
+	noVoice, err := decodeWriteSnapshot([]byte(readSnapshotGolden(t, "write_snapshot_no_voice.golden")))
+	if err != nil || !noVoice.Profile.NoVoice || noVoice.Post.Voice != (VoiceRef{}) {
+		t.Fatalf("the 말투 없음 snapshot decoded as %+v err=%v", noVoice, err)
 	}
 	// Memories are the one member that now carries a value (MEM-19, GEN-18): the bytes are the
 	// full golden with that member filled, and nothing else moved.
@@ -156,8 +171,13 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 		Type: BlockText, Content: "본문", Level: 2, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판",
 		Items: []string{"하나"},
 	}}
+	fixture.post.Voice.Made = true
 	snapshot := fixture.snapshot()
-	requireNoZero(t, "snapshot", reflect.ValueOf(snapshot))
+	// NoVoice is frozen as the absence of the whole profile, which the 말투 없음 golden pins;
+	// a snapshot with a profile cannot also set it.
+	probe := snapshot
+	probe.Profile.NoVoice = true
+	requireNoZero(t, "snapshot", reflect.ValueOf(probe))
 	raw, err := encodeWriteSnapshot(snapshot)
 	if err != nil {
 		t.Fatal(err)
@@ -171,6 +191,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	// storyline, stored or followed (GEN-72).
 	want.Post.Field, want.Post.QualityRuleIDs, want.Post.Published = "", nil, false
 	want.Post.Storyline, want.Post.FollowStoryline = nil, nil
+	// Whether the voice is made is read afresh at every run's start, never frozen (GEN-23).
+	want.Post.Voice.Made = false
 	if !reflect.DeepEqual(decoded, want) {
 		t.Fatalf("a snapshot member did not round-trip:\n got %+v\nwant %+v", decoded, want)
 	}

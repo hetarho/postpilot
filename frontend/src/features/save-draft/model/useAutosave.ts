@@ -31,7 +31,8 @@ export interface UseAutosaveArgs {
         memo: string
         /** Decides the published lock (POST-86): the autosave reads it here, and nowhere else. */
         status: PostStatus
-        voice: { id: string }
+        /** Absent for 말투 없음 (POST-25). */
+        voice?: { id: string }
         template: { id: string }
         targetLanguage: ContentLanguage
         templateAnswers: TemplateAnswerDraft[]
@@ -42,9 +43,9 @@ export interface UseAutosaveArgs {
   /** The selected template's fields over these answers, in ①'s order; the draft carries exactly
    *  this (POST-62). Keep it stable per template, since it is a memo dependency. */
   answerPatch: (answers: readonly TemplateAnswerDraft[]) => TemplateAnswerDraft[]
-  /** The voice a draft with no post yet will be created in. Once the post exists its
-   *  assignment changes only through `reassign` — never by this value moving — so a stale
-   *  server value re-rendering the editor cannot undo a choice still in flight. */
+  /** The voice a draft with no post yet will be created in, '' for 말투 없음. Once the post
+   *  exists its assignment changes only through `reassign` — never by this value moving — so a
+   *  stale server value re-rendering the editor cannot undo a choice still in flight. */
   voiceId: string
   /** The 템플릿 a draft with no post yet will be created with, '' for 없음. Same rule as
    *  `voiceId`: once the post exists its assignment changes only through `assignTemplate`. */
@@ -79,9 +80,9 @@ export interface Autosave {
   ensureSlug: () => Promise<string>
   /** Waits until the current title and memo are durably saved. */
   flush: () => Promise<void>
-  /** Moves an existing post to another voice through the same queue as the text, so a
-   *  title save still in flight cannot carry the old assignment over it. Resolves when the
-   *  server holds the new voice; rejects with the server's answer when it refuses. */
+  /** Moves an existing post to another voice, or to 말투 없음 (''), through the same queue as
+   *  the text, so a title save still in flight cannot carry the old assignment over it. Resolves
+   *  when the server holds the new voice; rejects with the server's answer when it refuses. */
   reassign: (voiceId: string) => Promise<void>
   /** Assigns or clears ('') an existing post's 템플릿 through the same queue as the text, so a
    *  title save still in flight cannot carry the old assignment over a newer selection. */
@@ -177,7 +178,9 @@ export function useAutosave({
         answers: opened?.templateAnswers ?? [],
         storyline: opened?.storyline?.paragraphs,
       },
-      voiceId: opened?.voice.id ?? voiceRef.current,
+      // An existing post's own voice, '' when it has none — never the picker's seed, which only
+      // a draft with no post yet is created in.
+      voiceId: opened ? (opened.voice?.id ?? '') : voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
       send: ({ slug, draft, voiceId, templateId, targetLanguage, storyline }) =>

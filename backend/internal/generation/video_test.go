@@ -189,7 +189,7 @@ func TestStartRefusesAVideoBlindObserveModel(t *testing.T) {
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	posts.input = PostInput{
-		Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice"},
+		Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true},
 		Images: []Image{photo("IMG_1.jpg"), clip("a.mp4")},
 	}
 
@@ -245,7 +245,7 @@ func TestStartPlansOneObserveCallPerFrozenVideo(t *testing.T) {
 		photo("IMG_1.jpg"), photo("IMG_2.jpg"), photo("IMG_3.jpg"), photo("IMG_4.jpg"), photo("IMG_5.jpg"),
 		clip("a.mp4"), clip("b.mp4"),
 	}
-	posts.input = PostInput{Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice"}, Images: images}
+	posts.input = PostInput{Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true}, Images: images}
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "p",

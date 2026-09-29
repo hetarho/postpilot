@@ -1,7 +1,8 @@
-import { forwardRef } from 'react'
+import { forwardRef, useState } from 'react'
 import { isTerminal } from '@/entities/generation-job'
 import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
+import { CreateVoiceSheet } from '@/features/create-voice'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import type { GenerationMode } from '@/features/generate-post'
@@ -60,6 +61,9 @@ export const EditorDockHeader = forwardRef<
   // these fields names a reason — ① says it once, above its actions.
   const published = post ? isPublished(post) : false
   const jobRunning = Boolean(post?.activeJob && !isTerminal(post.activeJob))
+  // The picker's `새 말투 만들기` opens the directory's own create sheet (VOICE-53). Its open state
+  // lives here because the picker, a feature, cannot render another feature (ARCH-13).
+  const [creatingVoice, setCreatingVoice] = useState(false)
   // Read as soon as the dock renders, so the rows are there when the brief opens; the language is
   // part of the read, since every rule text is rendered in it.
   usePrefetchAccountQuality(ownerId, post?.slug ?? '', targetLanguage)
@@ -120,6 +124,7 @@ export const EditorDockHeader = forwardRef<
       blocked={published || !post ? '' : reassignmentBlocker(post)}
       confirm={Boolean(post)}
       onSelect={onVoiceSelect}
+      onCreateVoice={() => setCreatingVoice(true)}
       disabled={published}
       className="min-w-0 flex-1"
     />
@@ -146,6 +151,7 @@ export const EditorDockHeader = forwardRef<
       {voiceSelect}
       {templateSelect}
       {briefPanel}
+      <CreateVoiceSheet ownerId={ownerId} open={creatingVoice} onOpenChange={setCreatingVoice} />
     </div>
   )
 

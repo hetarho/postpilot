@@ -115,8 +115,22 @@ func TestPostRoundTrip(t *testing.T) {
 	if err := s.CreatePost(ctx, post.Post{Slug: "foreign-voice", UserID: "alice", VoiceID: "voice-bob", Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}); err == nil {
 		t.Error("a post naming another account's voice was accepted")
 	}
-	if err := s.CreatePost(ctx, post.Post{Slug: "no-voice", UserID: "alice", Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}); err == nil {
-		t.Error("a post without a voice was accepted")
+	// 말투 없음 is a real answer (POST-23): the post stores no voice and reads back with none.
+	if err := s.CreatePost(ctx, post.Post{Slug: "no-voice", UserID: "alice", Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: created, UpdatedAt: created}); err != nil {
+		t.Fatalf("a post with no voice was refused: %v", err)
+	}
+	if none, err := s.GetPost(ctx, "no-voice"); err != nil || none.VoiceID != "" || none.Voice != (post.VoiceRef{}) {
+		t.Fatalf("a post with no voice = %+v err=%v", none, err)
+	}
+	// Setting a voice on it and clearing it again are both changes (IS NOT is NULL-safe).
+	if moved, err := s.ReassignVoice(ctx, "no-voice", "alice", "voice-alice", created); err != nil || !moved {
+		t.Fatalf("set a voice: moved=%v err=%v", moved, err)
+	}
+	if moved, err := s.ReassignVoice(ctx, "no-voice", "alice", "", created); err != nil || !moved {
+		t.Fatalf("clear the voice: moved=%v err=%v", moved, err)
+	}
+	if moved, err := s.ReassignVoice(ctx, "no-voice", "alice", "", created); err != nil || moved {
+		t.Fatalf("clearing an already clear voice: moved=%v err=%v", moved, err)
 	}
 	if !got.CreatedAt.Equal(created) {
 		t.Errorf("created_at = %v, want the same instant as %v", got.CreatedAt, created)

@@ -192,7 +192,8 @@ func generationVoiceError(err error) error {
 	case errors.Is(err, voice.ErrVoiceDeleted):
 		return generation.ErrVoiceDeleted
 	case errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
-		return generation.ErrVoiceRequired
+		// The voice the run froze no longer resolves: the result may not land (GEN-27).
+		return generation.ErrVoiceMismatch
 	default:
 		return err
 	}
@@ -207,7 +208,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, SourceLanguage: generation.Language(found.Voice.SourceLanguage)},
+		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, SourceLanguage: generation.Language(found.Voice.SourceLanguage), Made: found.Voice.Made},
 		TargetLanguage: generation.Language(found.TargetLanguage),
 		// The id, never the brief: only the enqueue resolves it, and only through the template
 		// context's own port. Dropping it here is what would make the whole feature a silent

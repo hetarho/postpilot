@@ -190,10 +190,12 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		if targetLanguage == nil {
 			return Post{}, ErrLanguageRequired
 		}
-		if voiceID == nil {
-			return Post{}, ErrVoiceRequired
+		// No voice is 말투 없음, a real answer: the server never substitutes the 기본 (POST-23).
+		requested := ""
+		if voiceID != nil {
+			requested = *voiceID
 		}
-		target, err := s.activeVoice(ctx, userID, *voiceID)
+		target, err := s.assignableVoice(ctx, userID, requested)
 		if err != nil {
 			return Post{}, err
 		}
@@ -286,8 +288,9 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 }
 
 // DraftSave is one autosave. Slug empty is the create. Every pointer is presence-aware — nil
-// keeps what the post holds — and VoiceID, TemplateID and Field are ids, TemplateID and Field
-// clearing with a present "" because a post may legitimately have neither.
+// keeps what the post holds — and VoiceID, TemplateID and Field are ids, each clearing with a
+// present "" because a post may legitimately have none of them. On the create a nil VoiceID
+// is 말투 없음.
 type DraftSave struct {
 	Slug, Title, Memo          string
 	VoiceID, TemplateID, Field *string
@@ -327,12 +330,12 @@ func (s *Service) validTemplateAnswers(answers []TemplateAnswer) ([]TemplateAnsw
 	return out, nil
 }
 
-// reassignVoice moves an idle post to another active owned voice. It is refused while a
-// job or an undecided write experiment could still apply output written for the old voice;
-// otherwise the store's single UPDATE changes the id and clears the machine baseline's voice
-// association, which is what withdraws learn eligibility until a fresh machine result.
+// reassignVoice moves an idle post to another active, made, owned voice, or clears it to
+// 말투 없음 when voiceID is empty. It is refused while a job or an undecided write experiment
+// could still apply output written for the old assignment; otherwise the store's single
+// UPDATE changes voice_id and updated_at alone (POST-24).
 func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string) error {
-	target, err := s.activeVoice(ctx, found.UserID, voiceID)
+	target, err := s.assignableVoice(ctx, found.UserID, voiceID)
 	if err != nil {
 		return err
 	}
@@ -371,12 +374,13 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 	return nil
 }
 
-// activeVoice resolves an owned, active voice through the directory port. Missing and
-// foreign ids read the same, and a tombstone is refused: a new post or a reassignment may
-// only target a voice that can still receive AI work.
-func (s *Service) activeVoice(ctx context.Context, userID, voiceID string) (VoiceRef, error) {
+// assignableVoice resolves the voice a post may be created in or moved to through the
+// directory port. An empty id is 말투 없음 and resolves to no voice. Missing and foreign ids
+// read the same, a tombstone is refused, and so is a voice not made yet: a post may only
+// name a voice that can write it (POST-23).
+func (s *Service) assignableVoice(ctx context.Context, userID, voiceID string) (VoiceRef, error) {
 	if strings.TrimSpace(voiceID) == "" {
-		return VoiceRef{}, ErrVoiceRequired
+		return VoiceRef{}, nil
 	}
 	if s.voices == nil {
 		return VoiceRef{}, errors.New("voice directory is not configured")
@@ -391,6 +395,9 @@ func (s *Service) activeVoice(ctx context.Context, userID, voiceID string) (Voic
 		}
 		if v.Deleted {
 			return VoiceRef{}, ErrVoiceDeleted
+		}
+		if !v.Made {
+			return VoiceRef{}, ErrVoiceNotMade
 		}
 		return v, nil
 	}
@@ -469,7 +476,11 @@ func projectTemplate(refs map[string]TemplateRef, templateID string) TemplateRef
 	return TemplateRef{ID: templateID}
 }
 
+// projectVoice names a post's voice, and names none for 말투 없음.
 func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
+	if voiceID == "" {
+		return VoiceRef{}
+	}
 	if ref, ok := refs[voiceID]; ok {
 		return ref
 	}
