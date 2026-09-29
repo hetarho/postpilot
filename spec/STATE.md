@@ -34,7 +34,7 @@
 | THEME | 19 | 19 | - | 0 |
 | MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 51 | 51 | - | 2 |
+| CLIP | 52 | 52 | - | 2 |
 | CDS | 31 | 31 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
@@ -57,13 +57,21 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T462 | Sample every unplated text's ground from the originals through one shared sampler | CLIP CDS ARCH | - | todo |
+| T463 | Sample a browser render's grounds on a media worker and serve its assets with them | CLIP ARCH | T462 | todo |
+| T464 | A browser render waits for its sampling job and draws from render-bound assets | CLIP ARCH | T463 | todo |
 
 ## next
-- next: owner decision, then update-ssot CLIP CDS: a browser render never draws the CDS-44/CDS-32 scrim (its assets come from the footage-free preview under CLIP-159), so a bright ground gets a scrim only in a server render; choose the server sampling for the browser render's assets, the browser sampling, or browser renders omitting it (T456 result)
+- next: implement-task T462 (then T463, T464: a browser render draws the server-sampled scrim under CLIP-192)
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
 - ideation voice-tidy continues (open: the axis set under the owner's Korean-research rule, readiness-meter numbers, the prompt photo source, the VOICE-49 analyze experiment, existing voices), then update-ssot VOICE GEN POST GUIDE AUTH QUOTA; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 create-task CLIP r52 → T462 T463 T464 (one originals-based ground sampler for both kinds; a media-worker sampling stage bound to the browser render; the page waits for it and sends render_id)
+- 260929 ideation voice-tidy resume (open: axis set, readiness meter, prompt photos, VOICE-49, existing voices)
+- 260929 create-task CLIP start (r52: CLIP-192+)
+- 260929 update-ssot CLIP r52: CLIP-192+ the server samples the retained originals so a browser render draws the CDS-44 scrim, accent colour and contrast notices; no active task/worker affected
+- 260929 update-ssot CLIP CDS start (a browser render draws the CDS-44 scrim)
 - 260929 T456 done: one real run (바로 만들기, gemini-3.8-flash, 5 calls, $0.0107) rendered on the CPU server and in Chrome WebCodecs agree on duration, codecs, frames, slots, the owner caption and the muted span; the run found and fixed caption frames serving only a rapid caption's first phrase (every browser render of a rapid sequence-style caption failed); the browser render's missing scrim is left to update-ssot
 - 260929 T456 resumed (rr): the owner approved one real provider generation run (≈ $0.012) for the browser and CPU server render checks
 - 260929 T456 blocked: preview/export parity on every ratio and pace, the no-template workflow to both render kinds, older-project fixtures, flush-before-render regressions and a real CPU render smoke of the edited clip all pass; the real browser render needs a plan, which needs a paid generation call or a dev provider double
