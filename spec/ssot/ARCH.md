@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r13 | Where code goes, which way dependencies point, and the gates every task must pass.
+> r14 | Where code goes, which way dependencies point, and the gates every task must pass.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -79,7 +79,7 @@
   | I1 | no destination-platform publishing automation or credentials |
   | I2 | the canonical post is a block array and every platform output is derived from it (POST) |
   | I3 | generation separates observe from write with every model choice explicit — ordinary generation observes once and calls one writer, only the explicit A/B action fans out (GEN, MODEL) |
-  | I4 | voices are mutually isolated per account and every post selects exactly one (VOICE) |
+  | I4 | voices are mutually isolated per account and a post selects at most one (VOICE) |
   | I5 | long work is a job record (ARCH-11) |
   | I6 | image work happens in the browser (ARCH-19) |
   | I7 | migrations are embedded and run at boot (ARCH-10) |
@@ -123,6 +123,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r14 260929 ARCH-34✎ I4 every post selects exactly one voice→a post selects at most one
 - r12 260927 ARCH-5✎ contexts auth billing experiment generation guideline health job llm modelcatalog plan platform post provider storage template usage voice→every `backend/internal` directory but gen and devseed: +clip fxrate googleauth mail memory quality tosspay voucher, -health (platform/health →ARCH-6) · ARCH-31✎ CI runs ARCH-25 + ARCH-27 + ARCH-28 and ARCH-26→also `pnpm test:dev`, ARCH-30's `haeram-spec-creator check` and the deploy Python unittests
 - r11 260925 ARCH-37✎ hardware required for any GPU task→hardware required for production GPU activation, with packaging/docs/isolated diagnostics allowed to finish as GPU-unverified; ARCH-57✎ CPU split then immediate NVIDIA measurements→CPU split plus three-environment guides, later hardware validation and operator-controlled migration; ARCH-59+ existing CPU VPS default, three deployment procedures and explicit repository/operator delivery boundary
 - r10 260924 ARCH-2✎ API→API + media worker; ARCH-6✎ API-only composition→separate API/worker roots; ARCH-11✎ all long work in-process with restart failure→leased CLIP media stages with durable recovery; ARCH-23✎ session on every RPC→user sessions plus internal worker identities; ARCH-32✎ one API image on one VPS→independent API and CPU/GPU worker deployments; ARCH-36✎ API distroless media smokes→execution-image and hardware smokes; ARCH-37✎ local image gate→local image plus GPU hardware gate; ARCH-39✎ bundled-tool names→per-profile names and executable capability; ARCH-40✎ one composition root→API and execution-only worker roots; ARCH-42✎ dev API→dev API + CPU worker; ARCH-45+ ARCH-46+ ARCH-47+ ARCH-48+ ARCH-49+ ARCH-50+ ARCH-51+ ARCH-52+ ARCH-53+ ARCH-54+ ARCH-55+ ARCH-56+ ARCH-57+ ARCH-58+ deployment, artifact, lease, acceleration and rollout contracts

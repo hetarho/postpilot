@@ -15,22 +15,22 @@
 | post-quality-and-related-links | converted@260923 |
 | searchable-details | open@260926 |
 | storyline-first | converted@260927 |
-| voice-tidy | ready@260929 |
+| voice-tidy | converted@260929 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 13 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
+| ARCH | 14 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 10 | 10 | - | 0 |
-| QUOTA | 23 | 23 | - | 0 |
-| POST | 24 | 24 | - | 0 |
-| VOICE | 4 | 4 | - | 1 |
-| GEN | 18 | 18 | - | 0 |
-| MODEL | 19 | 19 | - | 0 |
-| TMPL | 16 | 16 | - | 1 |
-| GUIDE | 11 | 11 | - | 0 |
+| QUOTA | 24 | 23 | QUOTA-13✎ QUOTA-14✎ | 0 |
+| POST | 25 | 24 | POST-4✎ POST-8✎ POST-13✎ POST-16✎ POST-23✎ POST-24✎ POST-25✎ POST-28✎ POST-46✎ POST-47✎ POST-49✎ POST-51✎ POST-54✎ POST-56✎ POST-57✎ POST-62✎ POST-71✎ POST-72✎ POST-74✎ POST-82✎ POST-96✎ POST-101+ POST-102+ POST-21- | 0 |
+| VOICE | 5 | 4 | VOICE-1✎ VOICE-2✎ VOICE-3✎ VOICE-4✎ VOICE-5✎ VOICE-6✎ VOICE-8✎ VOICE-9✎ VOICE-10✎ VOICE-12✎ VOICE-13✎ VOICE-15✎ VOICE-16✎ VOICE-20✎ VOICE-21✎ VOICE-22✎ VOICE-23✎ VOICE-24✎ VOICE-25✎ VOICE-26✎ VOICE-27✎ VOICE-30✎ VOICE-31✎ VOICE-32✎ VOICE-43✎ VOICE-44✎ VOICE-45✎ VOICE-46✎ VOICE-47✎ VOICE-50✎ VOICE-51✎ VOICE-52✎ VOICE-53✎ VOICE-54✎ VOICE-55✎ VOICE-56✎ VOICE-57✎ VOICE-58✎ VOICE-59+ VOICE-60+ VOICE-61+ VOICE-62+ VOICE-63+ VOICE-64+ VOICE-7- VOICE-11- VOICE-17- VOICE-18- VOICE-19- VOICE-28- VOICE-29- VOICE-33- VOICE-34- VOICE-35- VOICE-36- VOICE-37- VOICE-38- VOICE-39- VOICE-40- VOICE-41- VOICE-42- VOICE-48- VOICE-49- | 0 |
+| GEN | 19 | 18 | GEN-14✎ GEN-17✎ GEN-23✎ GEN-25✎ GEN-27✎ GEN-30✎ GEN-38✎ GEN-40✎ GEN-41✎ GEN-43✎ GEN-46✎ GEN-74+ GEN-75+ GEN-34- GEN-39- | 0 |
+| MODEL | 20 | 19 | MODEL-16✎ MODEL-23✎ MODEL-25✎ MODEL-26✎ MODEL-30✎ MODEL-31✎ MODEL-36✎ MODEL-37✎ MODEL-39✎ MODEL-41✎ MODEL-44✎ MODEL-62✎ MODEL-67+ MODEL-43- | 0 |
+| TMPL | 17 | 16 | TMPL-1✎ TMPL-12✎ | 1 |
+| GUIDE | 12 | 11 | GUIDE-15✎ GUIDE-21✎ GUIDE-41✎ | 0 |
 | EXPORT | 6 | 6 | - | 0 |
-| LANG | 6 | 6 | - | 0 |
+| LANG | 7 | 6 | LANG-1✎ LANG-2✎ LANG-13✎ LANG-14✎ LANG-15✎ LANG-18✎ LANG-20✎ LANG-21✎ LANG-26✎ LANG-28✎ LANG-19- | 0 |
 | THEME | 19 | 19 | - | 0 |
 | MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
@@ -64,9 +64,11 @@
 ## next
 - next: implement-task T462 (then T463, T464: a browser render draws the server-sampled scrim under CLIP-192)
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
-- update-ssot VOICE GEN POST GUIDE AUTH QUOTA MODEL LANG from ideation voice-tidy (ready@260929: the voice as the owner's fingerprint), then create-task; after the new voice ships, the one-time prod hand edit that keeps only `맛집 리뷰 블로거 학습` (its pasted post as the one 학습 글); ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
+- create-task VOICE GEN POST GUIDE QUOTA MODEL LANG TMPL ARCH (VOICE r5: the voice as the owner's fingerprint); after the new voice ships, the one-time prod hand edit that keeps only `맛집 리뷰 블로거 학습` (its pasted post as the one 학습 글); ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 update-ssot VOICE r5 GEN r19 POST r25 GUIDE r12 QUOTA r24 MODEL r20 LANG r7 TMPL r17 ARCH r14: the voice is the owner's fingerprint — 학습 글 only, eight counted items plus a short AI part, a readiness meter, 검증 and 말투 반영 비교, optional voice and 기본, Korean only, learning, rules, versions and the analyze comparison removed; AUTH needs no change (VOICE-4); THEME-23 lost a stale example (wording); no active task affected — T462–T464 cite ARCH-45…51, not the changed ARCH-34
+- 260929 update-ssot VOICE GEN POST GUIDE AUTH QUOTA MODEL LANG start (from ideation voice-tidy: the voice as the owner's fingerprint)
 - 260929 ideation voice-tidy ready: 말투 is the owner's fingerprint — eight counted habits (endings, sentence-final marks, emoji, sentence/paragraph shape, opening/closing lines, adverbs, first person, headings/lists) plus a short AI description, the six axes dropped; 60 sentences from pasted posts or one shared prompt set on the owner's own photos; 검증, ② and the model lab's 말투 반영 비교 (replacing the analyze comparison) compare fingerprints with no extra call; Korean voices only, tied to no 분야 or template, several per owner by mood; no paid A/B now
 - 260929 T456 follow-up: a rapid phrase in a sequence style is one raster of its style in the server render (CDS-4), so the draft preview now serves it as one (`sequenceDrawn`) and the frame endpoint refuses it; the first fix, which served it animated frames, is withdrawn; Chrome and server renders now match at 1.5 s (0.00 % of pixels off)
 - 260929 T462 claimed (rr)
@@ -85,15 +87,3 @@
 - 260929 T454 claimed (p15)
 - 260929 T453 done: ② edits the intro/outro slots around the storyline body before any template, body or plan, and ① offers 사용 안 함; a drawn slot's words are the plan's rows, and the settings, slot and correction saves share one write lane
 - 260929 T453 claimed (p15)
-- 260929 ideation voice-tidy open: 말투 learns only from prose the owner wrote (pasted posts, per-분야 photo/situation prompts, a readiness meter, one analysis at 100%); read-only 말투 분석 with research-defined axes; 검증 beside the owner's answer; optional voice and 기본; drops 대조 규칙, finished-post learning, 문장 의견, the 버전 기록 tab, the seed and 규칙으로 저장
-- 260929 ideation voice-tidy start (does the voice apply; what 말투/프로필/버전/측정·분석/여섯 성향/대조 규칙/검증 mean; list and detail pages)
-- 260929 T460 done: one closed-row guideline list (기본 지침 in use, then the owner's) with a 기본 지침 sheet and a one-form edit
-- 260929 T460 claimed (sm)
-- 260929 T459 done: guidelines carry an optional title (≤40, migration 0104) offered on every create surface and never in a prompt
-- 260929 T459 claimed (sm)
-- 260929 T452 done: the storyline call and 바로 만들기's flow call draft the generated intro/outro slots in their one approved call; builds and revisions copy the slot words; region inputs join quotes, payloads and recovery
-- 260929 T461 done: ① is 가제 → template fields → memo → photos; the 가제's Enter goes to the next field on screen
-- 260929 T461 claimed (sm)
-- 260929 create-task POST r24 → T461
-- 260929 update-ssot POST r24: ①'s memo moves below the template data fields; no active task/worker affected
-- 260929 T458 done: a memory row is its text over one badge line with 수정/삭제 icons; one form saves text, kind and tags

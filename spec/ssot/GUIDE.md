@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r11 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r12 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the direction layer: it says what kind of writing is wanted — what a post or a clip states and leaves out, the order it tells things in and how its sentences are written beyond their register — beside the voice (how sentences sound, VOICE), the template (the form, TMPL) and the system prompt, which holds the input and output format alone (→GEN-14); a guideline outranks the template on content while leaving register to the voice ← a rule about what may be written, fixed in the system prompt, would forbid every kind of writing that needs its opposite
@@ -40,7 +40,7 @@
   - a run missing a template or a 분야 receives only the groups it has
   - a `templates` guideline whose every template was deleted (적용 대상 없음) reaches no prompt until it is rescoped
   - injection order is the 기본 지침 in the product's order, then the global group, then the template group, then the 분야 group, each owner group by `created_at, id` ascending, and each management screen lists its guidelines in exactly that order ← what the user sees is what the writer is given
-- GUIDE-15 [o] the write, revise and storyline prompts render one `[작문 지침]` section at one position — after the `[글 템플릿]` section when the post has a template, otherwise directly after the voice profile's `[종결어미 제약]`, or after the static rules in the storyline prompt, which carries no voice (→GEN-68), always before `[이번 글]` — as hyphen-bulleted verbatim lines closed by a fixed precedence sentence: a guideline outranks the template where they conflict, register stays with the voice, and the owner's own line outranks a conflicting 기본 지침 (→GUIDE-37)
+- GUIDE-15 [o] the write, revise and storyline prompts render one `[작문 지침]` section at one position — after the `[글 템플릿]` section when the post has a template, otherwise directly after the voice projection, or after the static rules for a post with 말투 없음 and in the storyline prompt, which carries no voice (→GEN-68), always before `[이번 글]` — as hyphen-bulleted verbatim lines closed by a fixed precedence sentence: a guideline outranks the template where they conflict, register stays with the voice (a clause absent for 말투 없음, →GEN-74), and the owner's own line outranks a conflicting 기본 지침 (→GUIDE-37)
   - the heading and the sentence stay Korean for every target language and the target language outranks a conflicting language instruction inside a guideline's text (LANG)
   - with no enabled 기본 지침 and no applicable guideline there is no section
   - the voice prefix and the template section are byte-identical with and without guidelines
@@ -59,10 +59,9 @@
   - with nothing in the list the page says so with one worked example as copy
   - the page carries no standing form — the dock (→THEME-24, the shape its sibling directories use) holds `기본 지침` (→GUIDE-48) and `새 지침`, which opens the shared `Sheet` holding the title field, a textarea with a live remaining count from `shared/config` and the scope control (a 전역 / 특정 템플릿 / 분야 choice and a checkbox list of the account's templates or of the product's 분야), and the page itself is the list
   - the list query is keyed `(accountId, 'guidelines')` with `staleTime: 0` and `refetchOnMount: 'always'` and is marked stale by a template rename or delete ← chip names are a projection
-- GUIDE-21 [o] after a completed revision (`done`, not merely terminal ← a failed revision produced nothing worth saving), `지침으로 저장` sits beside `규칙으로 저장` and opens a dialog seeded with the revision instruction, editable, offering 전역 (default) and the post's current template when it has one (read from the loaded post, no new query)
+- GUIDE-21 [o] after a completed revision (`done`, not merely terminal ← a failed revision produced nothing worth saving), `지침으로 저장` — the one save a revision offers — opens a dialog seeded with the revision instruction, editable, offering 전역 (default) and the post's current template when it has one (read from the loaded post, no new query)
   - it calls the standard create
   - `AlreadyExists` renders as already-saved information
-  - `규칙으로 저장` stays a pre-flight checkbox ← the voice learns from the run itself, a guideline is a plain create that can wait for the result
 - GUIDE-22 [o] the 후보 queue sits below the saved list as a closed disclosure whose summary carries its pending count (`지침 후보 (3)`) ← the saved rules are what the screen is for and an unreviewed suggestion is not a form
   - rows follow the server's review order (occurrences descending, then last-seen descending), each showing its text, its occurrence count when above one, and its source post as a link (plain text when the post is gone)
   - the disclosure renders nothing when nothing waits and the queue has room, and nothing on a failed candidate read ← the saved list owns the page's error state
@@ -97,6 +96,7 @@
   | 관찰을 나열하지 않기 | →GEN-47 |
   | 제목 규칙 | →GEN-49 |
   | 태그 규칙 | →GEN-50 |
+  | 같은 종결어미 세 번 잇지 않기, for a Korean target alone | →GEN-75 |
   | 자연스러운 한국어 문체, for a Korean target alone | →GEN-17 |
 - GUIDE-42 [o] the 영상 지침 kind's 기본 지침, in this order:
   | 기본 지침 | rule |
@@ -143,4 +143,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r12 260929 GUIDE-15✎ after the voice profile's `[종결어미 제약]`→after the voice projection, or after the static rules for 말투 없음, whose precedence sentence names no voice · GUIDE-21✎ 지침으로 저장 beside 규칙으로 저장, a pre-flight 규칙으로 저장→the one save a revision offers · GUIDE-41✎ +같은 종결어미 세 번 잇지 않기 for a Korean target, before 자연스러운 한국어 문체

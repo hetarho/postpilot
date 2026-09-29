@@ -100,7 +100,7 @@
   - padding is a ratio, not a leftover — the height floor is a floor, not padding, and a control's horizontal padding is roughly twice its effective vertical: buttons, fields and selects `px-4` (`px-5` for a CTA), icon buttons square at the pointer floor, list rows `px-4 py-3`, a row holding a control `px-4 py-2 min-h-16`, chips `px-2 py-0.5`, inline notices `px-4 py-3`, cards `p-4` (`p-5` for a sheet)
   - a row is never inset less than the gutter it sits in
   - a control and its panel never share a padding step or a radius
-  - a list's row-height floor is set once by the tallest thing any row can hold (the 말투 directory, where only the default offers neither 기본으로 설정 nor 삭제)
+  - a list's row-height floor is set once by the tallest thing any row can hold
 - THEME-24 [o] reach and placement:
   - the committing action of a view lives in the lower band, not a top corner and not flush against the bottom edge (`새 글`, `생성`, `저장`, `복사`)
   - navigation is reachable from anywhere in the scroll

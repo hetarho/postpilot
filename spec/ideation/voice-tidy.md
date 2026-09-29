@@ -1,5 +1,5 @@
 # IDEATION voice-tidy
-> st:ready@260929 | 말투 is the last prompt layer left unreviewed: make it the owner's fingerprint — learned only from prose the owner wrote, shown back in plain words, and checked against the owner's own answer
+> st:converted@260929 | 말투 is the last prompt layer left unreviewed: make it the owner's fingerprint — learned only from prose the owner wrote, shown back in plain words, and checked against the owner's own answer
 
 ## vision
 - [o] Problem: 말투 was built early as a learning system (edit-diff 대조 규칙, 프로필 검증, 문장 의견, 블라인드 비교, versioned typed profile with six axes and provenance badges) that the owner cannot read and that never received the signal it learns from
@@ -116,15 +116,17 @@
 - not: 대조 규칙, 블라인드 비교, learning from finished posts (확정하고 말투 학습 / 말투 학습), 문장 의견, 버전 기록 tab, the 말투 설명 seed, per-field editing and overrides, the auto-created 기본 말투, a sign-up onboarding step, product-supplied prompt photos, a Korean register-dimension axis set, the six axes, a single match score, the paid with/without-voice A/B, the analyze-model comparison and analyze apply, fingerprints on write A/B candidates, an automatic per-model ranking, English voices, per-분야 prompt sets, a voice's 분야
 
 ## domains
-- VOICE: what a voice is made of (pasted posts + prompt answers on the owner's photos), the eight counted fingerprint items and the AI description, non-prose lines excluded, `만드는 중` and the readiness meter (60 sentences + coverage), one shared prompt set, several voices by mood, no 분야 on a voice, the list row, three tabs, read-only analysis in plain words (two groups, an example sentence per item), 다시 분석 and one-step undo, 검증 with the fingerprint comparison, Korean voices only, optional 기본, no bootstrap voice; removes the six axes, the English analysis, the analyze experiment (VOICE-49), contrast rules, comparisons, finished-post learning, sentence feedback, versions tab, seed, overrides, 규칙으로 저장 text
-- GEN: the voice projection in plain Korean with each fingerprint item's definition, no voice section for 말투 없음, the ending-run line leaving the voice section, 규칙으로 저장 leaving revision (GEN-39)
-- POST: a post's voice becomes optional; ② shows the post's fingerprint beside its voice's; the voice picker's 말투 없음 and 새 말투 만들기; ② loses 확정하고 말투 학습; ③ loses the 말투 학습 panel and 문장 의견
-- GUIDE: a new 기본 지침 for the ending run; 지침으로 저장 is the only save beside a revision
-- AUTH: adduser no longer creates a voice
-- QUOTA: credits for 말투 만들기, 다시 분석 and 검증 (one call each) and 말투 반영 비교 (two write calls)
-- MODEL: 말투 반영 비교 replaces the 문체 분석 comparison (blind, badges, write-stage ranking); analyze leaves the model lab and analyze apply goes; the voice-rule comparison (MODEL-43) goes with 대조 규칙
-- LANG: voices are Korean only (the source-language choice and the English analysis retire); a Korean voice on an English post projects only the language-independent items
+- VOICE: what a voice is made of (pasted posts + prompt answers on the owner's photos), the eight counted fingerprint items and the AI description, non-prose lines excluded, `만드는 중` and the readiness meter (60 sentences + coverage), one shared prompt set, several voices by mood, no 분야 on a voice, the list row, three tabs, read-only analysis in plain words (two groups, an example sentence per item), 다시 분석 and one-step undo, 검증 with the fingerprint comparison, Korean voices only, optional 기본, no bootstrap voice; removes the six axes, the English analysis, the analyze experiment (VOICE-49), contrast rules, comparisons, finished-post learning, sentence feedback, versions tab, seed, overrides, 규칙으로 저장 text →VOICE
+- GEN: the voice projection in plain Korean with each fingerprint item's definition, no voice section for 말투 없음, the ending-run line leaving the voice section, 규칙으로 저장 leaving revision (GEN-39) →GEN
+- POST: a post's voice becomes optional; ② shows the post's fingerprint beside its voice's; the voice picker's 말투 없음 and 새 말투 만들기; ② loses 확정하고 말투 학습; ③ loses the 말투 학습 panel and 문장 의견 →POST
+- GUIDE: a new 기본 지침 for the ending run; 지침으로 저장 is the only save beside a revision →GUIDE
+- AUTH: adduser no longer creates a voice →VOICE
+- QUOTA: credits for 말투 만들기, 다시 분석 and 검증 (one call each) and 말투 반영 비교 (two write calls) →QUOTA
+- MODEL: 말투 반영 비교 replaces the 문체 분석 comparison (blind, badges, write-stage ranking); analyze leaves the model lab and analyze apply goes; the voice-rule comparison (MODEL-43) goes with 대조 규칙 →MODEL
+- LANG: voices are Korean only (the source-language choice and the English analysis retire); a Korean voice on an English post projects only the language-independent items →LANG
+- TMPL: a post combines at most one voice; the template section follows the voice projection →TMPL
+- ARCH: invariant I4, a post selects at most one voice →ARCH
 - ops (no SSOT): the one-time hand edit of the prod DB keeping `맛집 리뷰 블로거 학습`
 
 ## open
-- SSOT calibration: the shared prompt set's size and text, the non-prose line rule, the checked text's minimum length, the photo prompt's 검증 reading the photo, whether ② says the post used a template
+- resolved in VOICE r5: the prompt set is 20 (openings 4 · descriptions 12 · closings 4); VOICE-61 names the non-prose lines; 검증 writes 10~15 sentences; a photo prompt is checked only with a write model that reads images; POST-102 carries no template note
