@@ -30,11 +30,13 @@ export const nav = {
   voice: {
     analysis: 'Voice analysis',
     materials: 'Writing',
+    checks: 'Checks',
     settings: 'Voice settings',
     backToList: '← Voices',
     short: {
       analysis: 'Analysis',
       materials: 'Writing',
+      checks: 'Checks',
     },
   },
 } as const

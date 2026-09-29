@@ -206,6 +206,10 @@ export function voicesQueryKey(transport: Transport, ownerId: string) {
 export function voiceAnalysisQueryKey(transport: Transport, ownerId: string, voiceId: string) {
   return ['voice-analysis', transport, ownerId, voiceId] as const
 }
+/** One voice's 검증 results (VOICE-56). */
+export function voiceChecksQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-checks', transport, ownerId, voiceId] as const
+}
 /** ②'s fingerprint comparison of one post at one content revision (POST-102). */
 export function postFingerprintQueryKey(
   transport: Transport,

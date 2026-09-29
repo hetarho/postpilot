@@ -23,6 +23,18 @@ export const i18n = {
       noticeAdded_other: '새 학습 글 {{count}}편',
       noticeChanged: '학습 글이 바뀌었어요',
     },
+    checks: {
+      status: '검증 상태',
+      statusFailed: '검증 상태를 확인하지 못했어요.',
+      loadFailed: '검증 결과를 불러오지 못했어요.',
+      empty: '아직 검증한 결과가 없어요.',
+      stale: '이전 분석으로 검증',
+      answer: '내 답',
+      piece: 'AI 글',
+      answerDeleted: '이 답은 학습 글에서 지웠어요.',
+      comparison: '말투 지문',
+      running: '검증하는 중이에요.',
+    },
   },
   en: {
     screens: {
@@ -43,6 +55,18 @@ export const i18n = {
       noticeAdded_one: '{{count}} new writing',
       noticeAdded_other: '{{count}} new writings',
       noticeChanged: 'The writing changed',
+    },
+    checks: {
+      status: 'Check status',
+      statusFailed: 'Could not check the status.',
+      loadFailed: 'Could not load the checks.',
+      empty: 'No checks yet.',
+      stale: 'Checked with an earlier analysis',
+      answer: 'Your answer',
+      piece: 'AI piece',
+      answerDeleted: 'This answer was removed from your writing.',
+      comparison: 'Voice fingerprint',
+      running: 'Checking…',
     },
   },
 } as const satisfies I18nFragment

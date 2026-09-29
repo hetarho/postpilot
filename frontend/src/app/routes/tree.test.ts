@@ -64,6 +64,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/voices',
     '/voices/$voiceId',
     '/voices/$voiceId/',
+    '/voices/$voiceId/checks',
     '/voices/$voiceId/materials',
   ])
 })

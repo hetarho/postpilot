@@ -59,6 +59,10 @@ export const errors = {
   VOICE_ANSWER_REQUIRED: 'Write an answer.',
   VOICE_PHOTO_REQUIRED: 'Choose a photo first.',
   VOICE_NO_PREVIOUS_ANALYSIS: 'There is no previous analysis to return to.',
+  VOICE_CHECK_PROMPT_UNANSWERED: 'Answer this prompt first.',
+  VOICE_CHECK_PHOTO_UNSUPPORTED:
+    "The current writing model can't read photos. Check a photo prompt with a model that reads images.",
+  VOICE_CHECK_NOT_FOUND: 'This check could not be found.',
   VOICE_NAME_REQUIRED: 'Enter a voice name.',
   VOICE_NAME_TOO_LONG:
     'The voice name must be no more than {{max}} characters. It is currently {{actual}} characters.',

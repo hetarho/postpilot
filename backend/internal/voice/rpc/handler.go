@@ -12,7 +12,6 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
-	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/voice"
@@ -194,8 +193,7 @@ func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpil
 	if err != nil {
 		return nil, err
 	}
-	ref := llm.ModelRef{ProviderID: req.Msg.GetModel().GetProviderId(), ModelID: req.Msg.GetModel().GetModelId()}
-	jobID, err := h.service.AnalyzeVoice(ctx, userID, req.Msg.GetVoiceId(), ref)
+	jobID, err := h.service.AnalyzeVoice(ctx, userID, req.Msg.GetVoiceId(), fromProtoRef(req.Msg.GetModel()))
 	if err != nil {
 		return nil, toConnectError("analyze voice", err)
 	}
@@ -245,6 +243,14 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
 	case errors.Is(err, voice.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
+	case errors.Is(err, voice.ErrCheckPromptUnanswered):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the prompt has no answer to check against", postpilotv1.FailureReason_VOICE_CHECK_PROMPT_UNANSWERED, nil)
+	case errors.Is(err, voice.ErrCheckPhotoUnsupported):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the write model cannot read the prompt's photo", postpilotv1.FailureReason_VOICE_CHECK_PHOTO_UNSUPPORTED, nil)
+	case errors.Is(err, voice.ErrCheckNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice check not found", postpilotv1.FailureReason_VOICE_CHECK_NOT_FOUND, nil)
+	case errors.Is(err, voice.ErrWriteModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", postpilotv1.FailureReason_GENERATION_WRITE_MODEL_REQUIRED, nil)
 	case errors.Is(err, voice.ErrPostNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrPostForbidden):

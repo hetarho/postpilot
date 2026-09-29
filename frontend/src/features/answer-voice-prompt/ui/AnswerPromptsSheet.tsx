@@ -123,7 +123,8 @@ type PhotoState =
   | { phase: 'ready'; photo: ResizedJpeg; preview: string }
   | { phase: 'failed' }
 
-function AnswerForm({
+/** One prompt's answer form, also opened from 검증 for a prompt not yet answered (VOICE-43). */
+export function AnswerForm({
   ownerId,
   voiceId,
   prompt,

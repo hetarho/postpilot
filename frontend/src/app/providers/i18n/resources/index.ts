@@ -48,6 +48,7 @@ import { i18n as billingI18n } from '@/pages/billing/config/i18n'
 import { i18n as blogFieldI18n } from '@/entities/blog-field/config/i18n'
 import { i18n as candidateComparisonI18n } from '@/widgets/candidate-comparison/config/i18n'
 import { i18n as voiceFingerprintI18n } from '@/widgets/voice-fingerprint/config/i18n'
+import { i18n as checkVoiceI18n } from '@/features/check-voice/config/i18n'
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
 import { i18n as createVoiceI18n } from '@/features/create-voice/config/i18n'
@@ -228,6 +229,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   deleteVoiceI18n,
   restoreVoiceAnalysisI18n,
   voiceFingerprintI18n,
+  checkVoiceI18n,
   manageVoiceSamplesI18n,
   pasteVoiceMaterialI18n,
   answerVoicePromptI18n,
@@ -270,6 +272,7 @@ export const resources = {
       ...deleteVoiceI18n.ko,
       ...restoreVoiceAnalysisI18n.ko,
       ...voiceFingerprintI18n.ko,
+      ...checkVoiceI18n.ko,
       ...manageVoiceSamplesI18n.ko,
       ...pasteVoiceMaterialI18n.ko,
       ...answerVoicePromptI18n.ko,
@@ -391,6 +394,7 @@ export const resources = {
       ...deleteVoiceI18n.en,
       ...restoreVoiceAnalysisI18n.en,
       ...voiceFingerprintI18n.en,
+      ...checkVoiceI18n.en,
       ...manageVoiceSamplesI18n.en,
       ...pasteVoiceMaterialI18n.en,
       ...answerVoicePromptI18n.en,

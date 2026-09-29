@@ -30,12 +30,14 @@ export const nav = {
   voice: {
     analysis: '말투 분석',
     materials: '학습 글',
+    checks: '검증',
     settings: '말투 설정',
     backToList: '← 말투 목록',
     // Compact tab captions: the full labels above outgrow evenly divided tabs at 320px.
     short: {
       analysis: '말투 분석',
       materials: '학습 글',
+      checks: '검증',
     },
   },
 } as const

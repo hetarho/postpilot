@@ -273,7 +273,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.voice = voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
 		voiceModels{registry: c.metered},
-		voiceJobs{queue: c.jobs},
+		voiceJobs{queue: c.jobs, budget: cfg.LLMCompletionBudget},
 	)
 	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
 		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,

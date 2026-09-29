@@ -21,10 +21,13 @@ import (
 
 type models struct{}
 
-// Resolve knows one model, registered to the analyze stage.
+// Resolve knows two models: one on the analyze stage, one on the write stage.
 func (models) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	if ref == (llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}) {
 		return llm.ModelInfo{Stages: []string{llm.StageNameAnalyze}}, true
+	}
+	if ref == (llm.ModelRef{ProviderID: "stub", ModelID: "write"}) {
+		return llm.ModelInfo{Stages: []string{llm.StageNameWrite}}, true
 	}
 	return llm.ModelInfo{}, false
 }
@@ -35,6 +38,9 @@ func (models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response
 type jobs struct{}
 
 func (jobs) Enqueue(context.Context, voice.AnalysisJobRequest) (string, error) { return "job", nil }
+func (jobs) EnqueueCheck(context.Context, voice.CheckJobRequest) (string, error) {
+	return "job-check", nil
+}
 func (jobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJob, error) {
 	return nil, nil
 }
@@ -442,5 +448,74 @@ func TestGetPostFingerprintOverTheWire(t *testing.T) {
 	}
 	if _, err := ask(ctx, "nope"); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("an unknown post = %v", err)
+	}
+}
+
+// VOICE-43: 검증 over the wire — the start answers the queued check with its prompt and answer
+// and the job, the list carries it with the active job, a retry is a new check, and the
+// refusals arrive as their reasons.
+func TestVoiceChecksOverTheWire(t *testing.T) {
+	handle := openVoiceTestDB(t)
+	store := voicestore.New(handle.Writer, handle.Reader)
+	service := voice.NewService(store, models{}, jobs{})
+	ctx := auth.WithUser(context.Background(), "alice")
+	created, err := service.CreateVoice(ctx, "alice", "리뷰")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.InsertSample(ctx, voice.Sample{ID: "answer", UserID: "alice", VoiceID: created.ID, Kind: voice.SampleKindAnswer, PromptKey: "opening_greeting", Body: "안녕하세요, 동네 빵집이에요.", CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	handler := voicerpc.NewHandler(service)
+	write := &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "write"}
+
+	started, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Model: write}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := started.Msg.GetCheck()
+	if started.Msg.GetJobId() != "job-check" || check.GetStatus() != postpilotv1.VoiceCheckStatus_VOICE_CHECK_STATUS_QUEUED ||
+		check.GetPrompt().GetKey() != "opening_greeting" || check.GetAnswer() != "안녕하세요, 동네 빵집이에요." || check.GetWriteModel().GetModelId() != "write" {
+		t.Fatalf("started = %+v", started.Msg)
+	}
+	listed, err := handler.ListVoiceChecks(ctx, connect.NewRequest(&postpilotv1.ListVoiceChecksRequest{VoiceId: created.ID}))
+	if err != nil || len(listed.Msg.GetChecks()) != 1 || listed.Msg.GetChecks()[0].GetId() != check.GetId() {
+		t.Fatalf("listed = %+v err=%v", listed, err)
+	}
+	// The fake queue holds no job, so the waiting check reads as interrupted.
+	if failure := listed.Msg.GetChecks()[0].GetFailure(); failure.GetReason() != "JOB_INTERRUPTED" {
+		t.Fatalf("a check with no job = %+v", listed.Msg.GetChecks()[0])
+	}
+	retried, err := handler.RetryVoiceCheck(ctx, connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: check.GetId(), Model: write}))
+	if err != nil || retried.Msg.GetCheck().GetId() == check.GetId() {
+		t.Fatalf("retried = %+v err=%v", retried, err)
+	}
+	for name, tc := range map[string]struct {
+		call func() error
+		code connect.Code
+	}{
+		"unanswered": {func() error {
+			_, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "closing_greeting", Model: write}))
+			return err
+		}, connect.CodeFailedPrecondition},
+		"not a writer": {func() error {
+			_, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}}))
+			return err
+		}, connect.CodeFailedPrecondition},
+		"foreign check": {func() error {
+			_, err := handler.RetryVoiceCheck(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: check.GetId(), Model: write}))
+			return err
+		}, connect.CodeNotFound},
+		"foreign voice": {func() error {
+			_, err := handler.ListVoiceChecks(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.ListVoiceChecksRequest{VoiceId: created.ID}))
+			return err
+		}, connect.CodeNotFound},
+	} {
+		if err := tc.call(); connect.CodeOf(err) != tc.code {
+			t.Fatalf("%s = %v, want %v", name, err, tc.code)
+		}
 	}
 }

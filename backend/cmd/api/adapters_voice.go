@@ -7,6 +7,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/voice"
@@ -22,12 +23,34 @@ func (a voiceModels) Complete(ctx context.Context, ref llm.ModelRef, request llm
 	return a.registry.Complete(ctx, ref, request)
 }
 
-type voiceJobs struct{ queue *job.Queue }
+type voiceJobs struct {
+	queue  *job.Queue
+	budget config.LLMCompletionBudget
+}
 
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
 	subjects, guards := postVoiceWork(job.KindAnalyzeVoice, request.UserID, "", request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindAnalyzeVoice, UserID: request.UserID, Subjects: subjects, Guards: guards, WriteModel: request.WriteModel,
+	})
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	if errors.Is(err, job.ErrVoiceUnavailable) {
+		return "", voice.ErrVoiceDeleted
+	}
+	return id, err
+}
+
+// EnqueueCheck starts one 검증 (VOICE-43) through the shared admission (QUOTA-13), priced as the
+// one write call it makes at the write stage's floor; the payload names the check.
+func (a voiceJobs) EnqueueCheck(ctx context.Context, request voice.CheckJobRequest) (string, error) {
+	subjects, guards := postVoiceWork(job.KindCheckVoice, request.UserID, "", request.VoiceID)
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindCheckVoice, UserID: request.UserID, Subjects: subjects, Guards: guards, WriteModel: request.WriteModel,
+		Payload:      []byte(request.CheckID),
+		PricingCalls: []job.PlannedCall{{Ref: request.WriteModel, Count: 1, CompletionTokens: a.budget.WriteFloor}},
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -72,6 +95,11 @@ func (a voiceObjects) Head(ctx context.Context, key string) (voice.ObjectHead, e
 		return voice.ObjectHead{}, err
 	}
 	return voice.ObjectHead{Size: head.Size, ContentType: head.ContentType}, nil
+}
+
+// Read is a photo's bytes for a 검증's call, capped by the bucket at the image limit.
+func (a voiceObjects) Read(ctx context.Context, key string) ([]byte, error) {
+	return a.bucket.ReadObject(ctx, key)
 }
 
 func (a voiceObjects) Delete(ctx context.Context, key string) error { return a.bucket.Delete(ctx, key) }

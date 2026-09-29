@@ -12,6 +12,9 @@ const (
 	FailureReasonVoiceNotFound    = "VOICE_NOT_FOUND"
 	FailureReasonInvalidLifecycle = "VOICE_INVALID_LIFECYCLE"
 	FailureReasonUnknown          = "UNKNOWN_FAILURE"
+	// FailureReasonJobInterrupted is a check whose job ended without writing it back — a
+	// restart failed the job while the check was still waiting (VOICE-45).
+	FailureReasonJobInterrupted = "JOB_INTERRUPTED"
 )
 
 // Failure is the voice context's durable, localizable failure projection. Params is

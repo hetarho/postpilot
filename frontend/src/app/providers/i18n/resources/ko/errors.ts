@@ -60,6 +60,10 @@ export const errors = {
   VOICE_ANSWER_REQUIRED: '답을 써 주세요.',
   VOICE_PHOTO_REQUIRED: '사진을 먼저 골라 주세요.',
   VOICE_NO_PREVIOUS_ANALYSIS: '되돌릴 이전 분석이 없어요.',
+  VOICE_CHECK_PROMPT_UNANSWERED: '먼저 이 문항에 답해 주세요.',
+  VOICE_CHECK_PHOTO_UNSUPPORTED:
+    '지금 작성 모델은 사진을 읽지 못해요. 사진 문항은 사진을 읽는 모델로 검증할 수 있어요.',
+  VOICE_CHECK_NOT_FOUND: '검증 결과를 찾을 수 없어요.',
   VOICE_NAME_REQUIRED: '말투 이름을 입력해 주세요.',
   VOICE_NAME_TOO_LONG: '말투 이름은 {{max}}자 이하로 입력해 주세요. 현재 {{actual}}자예요.',
   VOICE_NAME_TAKEN: '같은 이름의 말투가 이미 있어요.',

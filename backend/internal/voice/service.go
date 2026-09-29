@@ -20,6 +20,7 @@ type Service struct {
 	analyses     AnalysisStore
 	samples      SampleStore
 	photoUploads PhotoUploadStore
+	checks       CheckStore
 	models       Models
 	jobs         Jobs
 	now          func() time.Time
@@ -31,7 +32,7 @@ type Service struct {
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
-	return &Service{directory: store, analyses: store, samples: store, photoUploads: store, models: models, jobs: jobs, now: time.Now, newID: newID}
+	return &Service{directory: store, analyses: store, samples: store, photoUploads: store, checks: store, models: models, jobs: jobs, now: time.Now, newID: newID}
 }
 
 // ConfigurePhotos wires the private bucket a photo prompt's photo is stored in (VOICE-60).

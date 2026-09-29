@@ -14,6 +14,7 @@ SET status = 'running',
         WHEN 'storyline_clip' THEN 'prepare'
         WHEN 'revise_storyline_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
+        WHEN 'check_voice' THEN 'write'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
     END END,

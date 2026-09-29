@@ -19,6 +19,13 @@ import {
   VoiceNoticeSchema,
   RestorePreviousVoiceAnalysisResponseSchema,
   GetPostFingerprintResponseSchema,
+  VoiceCheckSchema,
+  ProtoVoiceCheckStatus,
+  ListVoiceChecksResponseSchema,
+  StartVoiceCheckResponseSchema,
+  RetryVoiceCheckResponseSchema,
+  type AppFailureReason,
+  type ProtoVoiceCheck,
   type ProtoVoiceProfile,
   type ProtoVoiceSample,
   type ProtoVoiceAnalysis,
@@ -131,6 +138,17 @@ export interface FakeVoiceOptions {
   postFingerprints?: Record<string, MessageInitShape<typeof GetPostFingerprintResponseSchema>>
   /** The slug of every GetPostFingerprint the fake received. */
   postFingerprintReads?: string[]
+  /** The default voice's 검증 results, newest first (VOICE-43). */
+  checks?: MessageInitShape<typeof VoiceCheckSchema>[]
+  /** The default voice's queued or running 검증 job, as ListVoiceChecks names it. */
+  activeCheckJobId?: string
+  /** 검증 starts and retries the fake received, with the model each named. */
+  checkStarts?: Array<{ voiceId: string; promptKey: string; model: string }>
+  checkRetries?: Array<{ checkId: string; model: string }>
+  /** Refuse a 검증 start with this reason — a shared entitlement refusal included. */
+  checkStartRefusal?: { reason: AppFailureReason; code: Code; params?: Record<string, string> }
+  /** The job a 검증 start or retry answers with. */
+  checkJobId?: string
 }
 
 const PART_TO_PROTO = {
@@ -446,6 +464,74 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       profileReads += 1
     }
     return create(GetVoiceProfileResponseSchema, { profile: withVoice(request.voiceId, profile) })
+  })
+
+  // 검증 (VOICE-43): the default voice's results, a start or retry adding a queued check.
+  const checks = new Map<string, ProtoVoiceCheck[]>()
+  checks.set(
+    defaultId,
+    (options.checks ?? []).map((check) => create(VoiceCheckSchema, check)),
+  )
+  let checkSequence = 0
+  const queuedCheck = (voiceId: string, promptKey: string) => {
+    const prompt = FAKE_VOICE_PROMPTS.find((candidate) => candidate.key === promptKey)
+    if (!prompt) throw connectAppError('VOICE_PROMPT_NOT_FOUND', Code.NotFound)
+    const answer = materialsOf(voiceId).find((row) => row.sample.promptKey === promptKey)
+    if (!answer) throw connectAppError('VOICE_CHECK_PROMPT_UNANSWERED', Code.FailedPrecondition)
+    checkSequence += 1
+    const check = create(VoiceCheckSchema, {
+      id: `check-new-${checkSequence}`,
+      prompt: {
+        key: prompt.key,
+        part: PART_TO_PROTO[prompt.part],
+        photo: prompt.photo,
+        text: prompt.text,
+      },
+      answer: answer.body,
+      status: ProtoVoiceCheckStatus.QUEUED,
+      createdAt: NOW,
+    })
+    checks.set(voiceId, [check, ...(checks.get(voiceId) ?? [])])
+    return check
+  }
+  rpc(VoiceService.method.listVoiceChecks, (request) => {
+    options.calls?.push('ListVoiceChecks')
+    owned(request.voiceId)
+    return create(ListVoiceChecksResponseSchema, {
+      checks: checks.get(request.voiceId) ?? [],
+      activeJobId: request.voiceId === defaultId ? (options.activeCheckJobId ?? '') : '',
+    })
+  })
+  rpc(VoiceService.method.startVoiceCheck, (request) => {
+    options.calls?.push('StartVoiceCheck')
+    const model = `${request.model?.providerId ?? ''}/${request.model?.modelId ?? ''}`
+    options.checkStarts?.push({ voiceId: request.voiceId, promptKey: request.promptKey, model })
+    active(request.voiceId)
+    if (options.checkStartRefusal) {
+      const { reason, code, params } = options.checkStartRefusal
+      throw connectAppError(reason, code, params)
+    }
+    const check = queuedCheck(request.voiceId, request.promptKey)
+    return create(StartVoiceCheckResponseSchema, {
+      check,
+      jobId: options.checkJobId ?? 'check-job',
+    })
+  })
+  rpc(VoiceService.method.retryVoiceCheck, (request) => {
+    options.calls?.push('RetryVoiceCheck')
+    const model = `${request.model?.providerId ?? ''}/${request.model?.modelId ?? ''}`
+    options.checkRetries?.push({ checkId: request.checkId, model })
+    for (const [voiceId, rows] of checks) {
+      const found = rows.find((row) => row.id === request.checkId)
+      if (found?.prompt) {
+        const check = queuedCheck(voiceId, found.prompt.key)
+        return create(RetryVoiceCheckResponseSchema, {
+          check,
+          jobId: options.checkJobId ?? 'check-job',
+        })
+      }
+    }
+    throw connectAppError('VOICE_CHECK_NOT_FOUND', Code.NotFound)
   })
 
   rpc(VoiceService.method.getPostFingerprint, (request) => {

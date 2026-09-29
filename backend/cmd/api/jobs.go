@@ -29,6 +29,16 @@ func registerJobs(c *contexts) {
 			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	}))
+	// 검증 (VOICE-43): the payload names the check the job writes back to.
+	q.Register(job.KindCheckVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		checkID := strings.TrimSpace(string(found.Payload))
+		if checkID == "" {
+			return errors.New("voice check payload is missing")
+		}
+		return voiceSvc.CheckVoice(ctx, voice.CheckJob{
+			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), CheckID: checkID, WriteModel: found.WriteModel,
+		}, voice.Progress(progress))
+	}))
 	// The one job the memory context owns. It reads the post frozen onto its own row and
 	// writes its candidates back onto it; it touches no memory table at all (MEM-14).
 	q.Register(job.KindExtractMemory, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {

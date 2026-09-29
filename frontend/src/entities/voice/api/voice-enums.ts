@@ -1,6 +1,7 @@
 import {
   ProtoFingerprintFacetUnit,
   ProtoFingerprintItem,
+  ProtoVoiceCheckStatus,
   VoiceAiField as ProtoAiField,
   VoiceNoticeKind as ProtoNoticeKind,
   VoicePromptPart as ProtoPart,
@@ -8,6 +9,7 @@ import {
 } from '@/shared/api'
 import type { VoiceAiField, VoiceNotice, VoicePromptPart, VoiceSampleKind } from '../model/types'
 import type { FingerprintFacetUnit, FingerprintItem } from '../model/fingerprint'
+import type { VoiceCheckStatus } from '../model/check'
 
 const PART_FROM_PROTO = new Map<ProtoPart, VoicePromptPart>([
   [ProtoPart.OPENING, 'opening'],
@@ -91,4 +93,18 @@ export function requireFacetUnit(value: ProtoFingerprintFacetUnit): FingerprintF
   const unit = UNIT_FROM_PROTO.get(value)
   if (!unit) throw new Error(`unsupported fingerprint facet unit enum: ${String(value)}`)
   return unit
+}
+
+const CHECK_STATUS_FROM_PROTO = new Map<ProtoVoiceCheckStatus, VoiceCheckStatus>([
+  [ProtoVoiceCheckStatus.QUEUED, 'queued'],
+  [ProtoVoiceCheckStatus.RUNNING, 'running'],
+  [ProtoVoiceCheckStatus.DONE, 'done'],
+  [ProtoVoiceCheckStatus.FAILED, 'failed'],
+])
+
+/** A 검증 status this build does not know fails the read. */
+export function requireCheckStatus(value: ProtoVoiceCheckStatus): VoiceCheckStatus {
+  const status = CHECK_STATUS_FROM_PROTO.get(value)
+  if (!status) throw new Error(`unsupported voice check status enum: ${String(value)}`)
+  return status
 }

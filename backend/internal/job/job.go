@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	KindGenerate        = "generate"
-	KindRevise          = "revise"
-	KindAnalyzeVoice    = "analyze_voice"
+	KindGenerate     = "generate"
+	KindRevise       = "revise"
+	KindAnalyzeVoice = "analyze_voice"
+	// KindCheckVoice is 검증: one write call in a voice on one of its answered prompts.
+	KindCheckVoice      = "check_voice"
 	KindModelExperiment = "model_experiment"
 	KindExtractMemory   = "extract_memory"
 	// KindStoryline writes a post's storyline from its material (스토리라인 먼저, 다시 만들기);

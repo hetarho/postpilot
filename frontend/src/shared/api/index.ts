@@ -319,6 +319,11 @@ export {
   FingerprintFacetUnit as ProtoFingerprintFacetUnit,
   FingerprintItemComparisonSchema,
   GetPostFingerprintResponseSchema,
+  VoiceCheckStatus as ProtoVoiceCheckStatus,
+  VoiceCheckSchema,
+  ListVoiceChecksResponseSchema,
+  StartVoiceCheckResponseSchema,
+  RetryVoiceCheckResponseSchema,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetVoiceProfileResponse,
@@ -335,6 +340,7 @@ export type {
   FingerprintItemComparison as ProtoFingerprintItemComparison,
   FingerprintFacetValue as ProtoFingerprintFacetValue,
   GetPostFingerprintResponse,
+  VoiceCheck as ProtoVoiceCheck,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetComparisonPairsResponse,

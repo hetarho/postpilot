@@ -34,6 +34,13 @@ func TestPostVoiceWorkStatesTheGuardsTheQueueUsedToInfer(t *testing.T) {
 			guardFilters: []job.Filter{{Kind: job.KindAnalyzeVoice}},
 		},
 		{
+			name: "a 검증 is guarded per voice and kind",
+			kind: job.KindCheckVoice, voice: "voice-a",
+			subjects:     []job.Subject{{Dimension: "voice", ID: "voice-a"}},
+			guards:       []job.Subject{{Dimension: "voice", ID: "voice-a"}},
+			guardFilters: []job.Filter{{Kind: job.KindCheckVoice}},
+		},
+		{
 			name: "an experiment on a post and a voice is guarded by the post alone",
 			kind: job.KindModelExperiment, slug: "post-a", voice: "voice-a",
 			subjects:     []job.Subject{{Dimension: "post", ID: "post-a"}, {Dimension: "voice", ID: "voice-a"}},
@@ -80,6 +87,7 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 		job.KindModelExperiment: true,
 		job.KindExtractMemory:   false,
 		job.KindAnalyzeVoice:    false,
+		job.KindCheckVoice:      false,
 		// A storyline job writes the storyline, never the content (GEN-68, GEN-69).
 		job.KindStoryline:       false,
 		job.KindReviseStoryline: false,

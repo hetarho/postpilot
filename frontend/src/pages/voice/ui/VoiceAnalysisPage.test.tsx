@@ -154,8 +154,12 @@ describe('the voice tab row', () => {
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
-    // Three tabs: the 규칙 and 검증 tabs left with contrast rules and profile validation.
-    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([DEFAULT, `${DEFAULT}/materials`])
+    // Three tabs: 말투 분석 · 학습 글 · 검증 (VOICE-54).
+    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
+      DEFAULT,
+      `${DEFAULT}/materials`,
+      `${DEFAULT}/checks`,
+    ])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
     // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its Korean
     // labels, and every tab keeps the 44px floor.
@@ -173,16 +177,16 @@ describe('the voice tab row', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
   })
 
-  it.each([[`${DEFAULT}/materials`, '학습 글']])(
-    'renders %s as its own screen on reload',
-    async (path, heading) => {
-      const { router } = renderAppAt(path, { user: { id: 'alice' } })
+  it.each([
+    [`${DEFAULT}/materials`, '학습 글'],
+    [`${DEFAULT}/checks`, '검증'],
+  ])('renders %s as its own screen on reload', async (path, heading) => {
+    const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
-      expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
-      expect(router.state.location.pathname).toBe(path)
-      expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
-    },
-  )
+    expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(path)
+    expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
+  })
 })
 
 // VOICE-12, VOICE-13, VOICE-54: the title row carries the rename, 기본으로 설정 or 기본 해제 on

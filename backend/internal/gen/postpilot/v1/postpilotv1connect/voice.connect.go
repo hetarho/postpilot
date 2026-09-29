@@ -80,6 +80,15 @@ const (
 	// VoiceServiceGetPostFingerprintProcedure is the fully-qualified name of the VoiceService's
 	// GetPostFingerprint RPC.
 	VoiceServiceGetPostFingerprintProcedure = "/postpilot.v1.VoiceService/GetPostFingerprint"
+	// VoiceServiceStartVoiceCheckProcedure is the fully-qualified name of the VoiceService's
+	// StartVoiceCheck RPC.
+	VoiceServiceStartVoiceCheckProcedure = "/postpilot.v1.VoiceService/StartVoiceCheck"
+	// VoiceServiceListVoiceChecksProcedure is the fully-qualified name of the VoiceService's
+	// ListVoiceChecks RPC.
+	VoiceServiceListVoiceChecksProcedure = "/postpilot.v1.VoiceService/ListVoiceChecks"
+	// VoiceServiceRetryVoiceCheckProcedure is the fully-qualified name of the VoiceService's
+	// RetryVoiceCheck RPC.
+	VoiceServiceRetryVoiceCheckProcedure = "/postpilot.v1.VoiceService/RetryVoiceCheck"
 )
 
 // VoiceServiceClient is a client for the postpilot.v1.VoiceService service.
@@ -109,6 +118,11 @@ type VoiceServiceClient interface {
 	// ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
 	// request, never stored, with no model call (VOICE-62).
 	GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error)
+	// 검증 (VOICE-43): one check_voice job on the write selection writes one answered prompt in
+	// the voice, the answer withheld; results stay listed newest first, and a retry is a new job.
+	StartVoiceCheck(context.Context, *connect.Request[v1.StartVoiceCheckRequest]) (*connect.Response[v1.StartVoiceCheckResponse], error)
+	ListVoiceChecks(context.Context, *connect.Request[v1.ListVoiceChecksRequest]) (*connect.Response[v1.ListVoiceChecksResponse], error)
+	RetryVoiceCheck(context.Context, *connect.Request[v1.RetryVoiceCheckRequest]) (*connect.Response[v1.RetryVoiceCheckResponse], error)
 }
 
 // NewVoiceServiceClient constructs a client for the postpilot.v1.VoiceService service. By default,
@@ -218,6 +232,24 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("GetPostFingerprint")),
 			connect.WithClientOptions(opts...),
 		),
+		startVoiceCheck: connect.NewClient[v1.StartVoiceCheckRequest, v1.StartVoiceCheckResponse](
+			httpClient,
+			baseURL+VoiceServiceStartVoiceCheckProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("StartVoiceCheck")),
+			connect.WithClientOptions(opts...),
+		),
+		listVoiceChecks: connect.NewClient[v1.ListVoiceChecksRequest, v1.ListVoiceChecksResponse](
+			httpClient,
+			baseURL+VoiceServiceListVoiceChecksProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("ListVoiceChecks")),
+			connect.WithClientOptions(opts...),
+		),
+		retryVoiceCheck: connect.NewClient[v1.RetryVoiceCheckRequest, v1.RetryVoiceCheckResponse](
+			httpClient,
+			baseURL+VoiceServiceRetryVoiceCheckProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("RetryVoiceCheck")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -239,6 +271,9 @@ type voiceServiceClient struct {
 	analyzeVoice                 *connect.Client[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse]
 	restorePreviousVoiceAnalysis *connect.Client[v1.RestorePreviousVoiceAnalysisRequest, v1.RestorePreviousVoiceAnalysisResponse]
 	getPostFingerprint           *connect.Client[v1.GetPostFingerprintRequest, v1.GetPostFingerprintResponse]
+	startVoiceCheck              *connect.Client[v1.StartVoiceCheckRequest, v1.StartVoiceCheckResponse]
+	listVoiceChecks              *connect.Client[v1.ListVoiceChecksRequest, v1.ListVoiceChecksResponse]
+	retryVoiceCheck              *connect.Client[v1.RetryVoiceCheckRequest, v1.RetryVoiceCheckResponse]
 }
 
 // ListVoices calls postpilot.v1.VoiceService.ListVoices.
@@ -321,6 +356,21 @@ func (c *voiceServiceClient) GetPostFingerprint(ctx context.Context, req *connec
 	return c.getPostFingerprint.CallUnary(ctx, req)
 }
 
+// StartVoiceCheck calls postpilot.v1.VoiceService.StartVoiceCheck.
+func (c *voiceServiceClient) StartVoiceCheck(ctx context.Context, req *connect.Request[v1.StartVoiceCheckRequest]) (*connect.Response[v1.StartVoiceCheckResponse], error) {
+	return c.startVoiceCheck.CallUnary(ctx, req)
+}
+
+// ListVoiceChecks calls postpilot.v1.VoiceService.ListVoiceChecks.
+func (c *voiceServiceClient) ListVoiceChecks(ctx context.Context, req *connect.Request[v1.ListVoiceChecksRequest]) (*connect.Response[v1.ListVoiceChecksResponse], error) {
+	return c.listVoiceChecks.CallUnary(ctx, req)
+}
+
+// RetryVoiceCheck calls postpilot.v1.VoiceService.RetryVoiceCheck.
+func (c *voiceServiceClient) RetryVoiceCheck(ctx context.Context, req *connect.Request[v1.RetryVoiceCheckRequest]) (*connect.Response[v1.RetryVoiceCheckResponse], error) {
+	return c.retryVoiceCheck.CallUnary(ctx, req)
+}
+
 // VoiceServiceHandler is an implementation of the postpilot.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	// The voice directory: an account has zero or more voices and at most one active, made
@@ -348,6 +398,11 @@ type VoiceServiceHandler interface {
 	// ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
 	// request, never stored, with no model call (VOICE-62).
 	GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error)
+	// 검증 (VOICE-43): one check_voice job on the write selection writes one answered prompt in
+	// the voice, the answer withheld; results stay listed newest first, and a retry is a new job.
+	StartVoiceCheck(context.Context, *connect.Request[v1.StartVoiceCheckRequest]) (*connect.Response[v1.StartVoiceCheckResponse], error)
+	ListVoiceChecks(context.Context, *connect.Request[v1.ListVoiceChecksRequest]) (*connect.Response[v1.ListVoiceChecksResponse], error)
+	RetryVoiceCheck(context.Context, *connect.Request[v1.RetryVoiceCheckRequest]) (*connect.Response[v1.RetryVoiceCheckResponse], error)
 }
 
 // NewVoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -453,6 +508,24 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("GetPostFingerprint")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceStartVoiceCheckHandler := connect.NewUnaryHandler(
+		VoiceServiceStartVoiceCheckProcedure,
+		svc.StartVoiceCheck,
+		connect.WithSchema(voiceServiceMethods.ByName("StartVoiceCheck")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceListVoiceChecksHandler := connect.NewUnaryHandler(
+		VoiceServiceListVoiceChecksProcedure,
+		svc.ListVoiceChecks,
+		connect.WithSchema(voiceServiceMethods.ByName("ListVoiceChecks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceRetryVoiceCheckHandler := connect.NewUnaryHandler(
+		VoiceServiceRetryVoiceCheckProcedure,
+		svc.RetryVoiceCheck,
+		connect.WithSchema(voiceServiceMethods.ByName("RetryVoiceCheck")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VoiceServiceListVoicesProcedure:
@@ -487,6 +560,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceRestorePreviousVoiceAnalysisHandler.ServeHTTP(w, r)
 		case VoiceServiceGetPostFingerprintProcedure:
 			voiceServiceGetPostFingerprintHandler.ServeHTTP(w, r)
+		case VoiceServiceStartVoiceCheckProcedure:
+			voiceServiceStartVoiceCheckHandler.ServeHTTP(w, r)
+		case VoiceServiceListVoiceChecksProcedure:
+			voiceServiceListVoiceChecksHandler.ServeHTTP(w, r)
+		case VoiceServiceRetryVoiceCheckProcedure:
+			voiceServiceRetryVoiceCheckHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -558,4 +637,16 @@ func (UnimplementedVoiceServiceHandler) RestorePreviousVoiceAnalysis(context.Con
 
 func (UnimplementedVoiceServiceHandler) GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.GetPostFingerprint is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) StartVoiceCheck(context.Context, *connect.Request[v1.StartVoiceCheckRequest]) (*connect.Response[v1.StartVoiceCheckResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.StartVoiceCheck is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) ListVoiceChecks(context.Context, *connect.Request[v1.ListVoiceChecksRequest]) (*connect.Response[v1.ListVoiceChecksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.ListVoiceChecks is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) RetryVoiceCheck(context.Context, *connect.Request[v1.RetryVoiceCheckRequest]) (*connect.Response[v1.RetryVoiceCheckResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.RetryVoiceCheck is not implemented"))
 }

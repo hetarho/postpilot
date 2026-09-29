@@ -82,6 +82,8 @@ func (f *fakeModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
 		return llm.ModelInfo{StructuredOutput: f.structured, Stages: []string{llm.StageNameAnalyze}}, true
 	case writeOnlyRef:
 		return llm.ModelInfo{Stages: []string{llm.StageNameWrite}}, true
+	case visionRef:
+		return llm.ModelInfo{Stages: []string{llm.StageNameWrite}, Vision: true}, true
 	case disabledRef:
 		return llm.ModelInfo{Stages: []string{llm.StageNameAnalyze}, Disabled: true}, true
 	}
@@ -102,6 +104,20 @@ type fakeJobs struct {
 	enqueueID    string
 	enqueueErr   error
 	enqueueCalls []voice.AnalysisJobRequest
+	// activeChecks is each voice's queued or running 검증 job; checkErr refuses a check enqueue.
+	activeChecks map[string]*voice.ActiveJob
+	checkErr     error
+	checkCalls   []voice.CheckJobRequest
+}
+
+func (f *fakeJobs) EnqueueCheck(_ context.Context, request voice.CheckJobRequest) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.checkCalls = append(f.checkCalls, request)
+	if f.checkErr != nil {
+		return "", f.checkErr
+	}
+	return "job-check-" + request.CheckID, nil
 }
 
 func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) (string, error) {
@@ -111,12 +127,15 @@ func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) 
 	return f.enqueueID, f.enqueueErr
 }
 
-func (f *fakeJobs) ActiveForVoiceKind(_ context.Context, voiceID, _ string) (*voice.ActiveJob, error) {
+func (f *fakeJobs) ActiveForVoiceKind(_ context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
+	if kind == voice.CheckJobKind {
+		return f.activeChecks[voiceID], nil
+	}
 	return f.active[voiceID], nil
 }
 
 func (f *fakeJobs) HasActiveForVoice(_ context.Context, voiceID string) (bool, error) {
-	return f.active[voiceID] != nil || f.busy[voiceID], nil
+	return f.active[voiceID] != nil || f.activeChecks[voiceID] != nil || f.busy[voiceID], nil
 }
 
 func (f *fakeJobs) calls() []voice.AnalysisJobRequest {
@@ -159,7 +178,7 @@ func newVoiceHarness(t *testing.T) *voiceHarness {
 	}
 	store := voicestore.New(handle.Writer, handle.Reader)
 	models := &fakeModels{}
-	jobs := &fakeJobs{active: map[string]*voice.ActiveJob{}, busy: map[string]bool{}, enqueueID: "job-new"}
+	jobs := &fakeJobs{active: map[string]*voice.ActiveJob{}, activeChecks: map[string]*voice.ActiveJob{}, busy: map[string]bool{}, enqueueID: "job-new"}
 	h := &voiceHarness{store: store, db: handle, models: models, jobs: jobs, svc: voice.NewService(store, models, jobs), voices: map[string]string{}}
 	for _, userID := range []string{"alice", "bob"} {
 		created, err := h.svc.CreateVoice(context.Background(), userID, firstVoiceName)
@@ -533,6 +552,14 @@ func (f *fakeObjects) Head(_ context.Context, key string) (voice.ObjectHead, err
 		return voice.ObjectHead{}, voice.ErrObjectNotFound
 	}
 	return voice.ObjectHead{Size: size, ContentType: voice.PhotoContentType}, nil
+}
+func (f *fakeObjects) Read(_ context.Context, key string) ([]byte, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.objects[key]; !ok {
+		return nil, voice.ErrObjectNotFound
+	}
+	return []byte("jpeg:" + key), nil
 }
 func (f *fakeObjects) Delete(_ context.Context, key string) error {
 	f.mu.Lock()
@@ -972,6 +999,17 @@ type queueJobs struct{ queue *job.Queue }
 
 func (a queueJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
 	id, err := a.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel}, "", request.VoiceID))
+	var active *job.ErrAlreadyInProgress
+	if errors.As(err, &active) {
+		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
+	}
+	return id, err
+}
+
+func (a queueJobs) EnqueueCheck(ctx context.Context, request voice.CheckJobRequest) (string, error) {
+	id, err := a.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindCheckVoice, UserID: request.UserID, WriteModel: request.WriteModel, Payload: []byte(request.CheckID),
+	}, "", request.VoiceID))
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}

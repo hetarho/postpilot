@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package postpilot.v1;
 
+import "postpilot/v1/error.proto";
 import "postpilot/v1/provider.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
@@ -34,6 +35,11 @@ service VoiceService {
   // ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
   // request, never stored, with no model call (VOICE-62).
   rpc GetPostFingerprint(GetPostFingerprintRequest) returns (GetPostFingerprintResponse) {}
+  // 검증 (VOICE-43): one check_voice job on the write selection writes one answered prompt in
+  // the voice, the answer withheld; results stay listed newest first, and a retry is a new job.
+  rpc StartVoiceCheck(StartVoiceCheckRequest) returns (StartVoiceCheckResponse) {}
+  rpc ListVoiceChecks(ListVoiceChecksRequest) returns (ListVoiceChecksResponse) {}
+  rpc RetryVoiceCheck(RetryVoiceCheckRequest) returns (RetryVoiceCheckResponse) {}
 }
 
 // The sentence an item is shown with, and the 학습 글 it came from ("" for a measured text).
@@ -428,4 +434,55 @@ message GetPostFingerprintResponse {
   // The content revision that was counted.
   int64 revision = 2;
   repeated FingerprintItemComparison items = 3;
+}
+
+enum VoiceCheckStatus {
+  VOICE_CHECK_STATUS_UNSPECIFIED = 0;
+  VOICE_CHECK_STATUS_QUEUED = 1;
+  VOICE_CHECK_STATUS_RUNNING = 2;
+  VOICE_CHECK_STATUS_DONE = 3;
+  VOICE_CHECK_STATUS_FAILED = 4;
+}
+
+// One 검증 as the tab reads it: the prompt, the owner's answer beside the piece, the piece
+// measured against the current analysis, and whether it was written from an older analysis.
+message VoiceCheck {
+  string id = 1;
+  VoicePrompt prompt = 2;
+  // The answer's current text; answer_deleted once that 학습 글 is gone.
+  string answer = 3;
+  bool answer_deleted = 4;
+  VoiceCheckStatus status = 5;
+  // The piece once done; the failure once failed (an interrupted job reads JOB_INTERRUPTED).
+  string piece = 6;
+  Failure failure = 7;
+  repeated FingerprintItemComparison comparison = 8;
+  // Written from an analysis the voice has since replaced (이전 분석으로 검증).
+  bool stale = 9;
+  ModelRef write_model = 10;
+  string created_at = 11;
+}
+
+message StartVoiceCheckRequest {
+  string voice_id = 1;
+  string prompt_key = 2;
+  ModelRef model = 3;
+}
+message StartVoiceCheckResponse {
+  VoiceCheck check = 1;
+  string job_id = 2;
+}
+message ListVoiceChecksRequest { string voice_id = 1; }
+message ListVoiceChecksResponse {
+  repeated VoiceCheck checks = 1;
+  // The voice's queued or running 검증 job, so a reload resumes polling (VOICE-31).
+  string active_job_id = 2;
+}
+message RetryVoiceCheckRequest {
+  string check_id = 1;
+  ModelRef model = 2;
+}
+message RetryVoiceCheckResponse {
+  VoiceCheck check = 1;
+  string job_id = 2;
 }

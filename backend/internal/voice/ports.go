@@ -96,6 +96,9 @@ type ObjectStore interface {
 	PresignPut(ctx context.Context, key, contentType string, ttl time.Duration) (string, error)
 	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
 	Head(ctx context.Context, key string) (ObjectHead, error)
+	// Read is a stored photo's bytes for a model call (a 검증 on a photo prompt), capped at the
+	// photo limit.
+	Read(ctx context.Context, key string) ([]byte, error)
 	Delete(ctx context.Context, key string) error
 	List(ctx context.Context, prefix string) ([]StoredObject, error)
 }
@@ -108,6 +111,7 @@ type Storage interface {
 	AnalysisStore
 	SampleStore
 	PhotoUploadStore
+	CheckStore
 }
 
 // PostContents is how the voice context reads one of the caller's posts to count it (VOICE-62,
@@ -130,6 +134,8 @@ type Models interface {
 // work is guarded per voice so two voices may analyze at once.
 type Jobs interface {
 	Enqueue(ctx context.Context, request AnalysisJobRequest) (string, error)
+	// EnqueueCheck starts one check_voice job holding one write call (VOICE-43).
+	EnqueueCheck(ctx context.Context, request CheckJobRequest) (string, error)
 	ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*ActiveJob, error)
 	// HasActiveForVoice reports any queued/running job frozen to the voice, whatever its kind
 	// or post — the whole set a soft delete must wait for.

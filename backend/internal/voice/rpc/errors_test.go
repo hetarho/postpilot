@@ -35,6 +35,11 @@ func TestVoiceSynchronousErrorsHaveStableDetails(t *testing.T) {
 		{name: "busy", err: errors.Join(voice.ErrVoiceBusy, errors.New("private database state")), mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_BUSY"},
 		{name: "lifecycle", err: voice.ErrInvalidLifecycle, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INVALID_LIFECYCLE"},
 		{name: "no previous analysis", err: voice.ErrNoPreviousAnalysis, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_NO_PREVIOUS_ANALYSIS"},
+		{name: "check prompt unanswered", err: voice.ErrCheckPromptUnanswered, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_CHECK_PROMPT_UNANSWERED"},
+		{name: "check photo unsupported", err: voice.ErrCheckPhotoUnsupported, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_CHECK_PHOTO_UNSUPPORTED"},
+		{name: "check not found", err: voice.ErrCheckNotFound, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeNotFound, reason: "VOICE_CHECK_NOT_FOUND"},
+		{name: "check write model", err: voice.ErrWriteModelRequired, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "GENERATION_WRITE_MODEL_REQUIRED"},
+		{name: "foreign post", err: voice.ErrPostForbidden, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodePermissionDenied, reason: "POST_FORBIDDEN"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

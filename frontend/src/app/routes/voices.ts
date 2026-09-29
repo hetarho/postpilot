@@ -6,8 +6,9 @@ import { authenticatedRoute, writingGroupRoute, type RouterContext } from './tre
 // whole tab area rather than three: the tabs are one screen and are always reached
 // together. VoiceLayout is lazy too but stays its own 2 kB chunk — it belongs to app/routes,
 // not to the pages/voice slice, and sharing their chunk would mean moving it across layers.
-const lazyVoice = <K extends 'VoiceAnalysisPage' | 'VoiceMaterialsPage'>(name: K) =>
-  lazyRouteComponent(() => import('@/pages/voice'), name)
+const lazyVoice = <K extends 'VoiceAnalysisPage' | 'VoiceMaterialsPage' | 'VoiceChecksPage'>(
+  name: K,
+) => lazyRouteComponent(() => import('@/pages/voice'), name)
 
 /** The tabs an old `/voice/<tab>` link may name, so the redirect keeps the user on the same
  *  screen of the default voice. Anything else lands on the profile tab. */
@@ -60,6 +61,12 @@ export const voiceMaterialsRoute = createRoute({
   component: lazyVoice('VoiceMaterialsPage'),
 })
 
+export const voiceChecksRoute = createRoute({
+  getParentRoute: () => voiceLayoutRoute,
+  path: '/checks',
+  component: lazyVoice('VoiceChecksPage'),
+})
+
 // The address the app had before voices were plural. Bookmarks and the empty-profile warning
 // of an older draft still point here.
 export const legacyVoiceRoute = createRoute({
@@ -81,6 +88,6 @@ export const legacyVoiceTabRoute = createRoute({
 /** The directory, which is NOT a tab of one voice. */
 export const voiceRoutes = [voicesRoute]
 /** The tabs under `/voices/$voiceId`, which share the tab row. */
-export const voiceTabRoutes = [voiceRoute, voiceMaterialsRoute]
+export const voiceTabRoutes = [voiceRoute, voiceMaterialsRoute, voiceChecksRoute]
 /** The address the app had before voices were plural. */
 export const legacyVoiceRoutes = [legacyVoiceRoute, legacyVoiceTabRoute]

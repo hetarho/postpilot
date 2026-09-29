@@ -322,6 +322,12 @@ enum FailureReason {
   VOICE_PHOTO_REQUIRED = 265;
   // 이전 분석으로 되돌리기 with no previous analysis (VOICE-30).
   VOICE_NO_PREVIOUS_ANALYSIS = 266;
+  // 검증 on a prompt the voice holds no answer to (VOICE-43).
+  VOICE_CHECK_PROMPT_UNANSWERED = 267;
+  // 검증 on a photo prompt with a write model that does not read images (VOICE-43).
+  VOICE_CHECK_PHOTO_UNSUPPORTED = 268;
+  // A 검증 id this account does not own.
+  VOICE_CHECK_NOT_FOUND = 269;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

@@ -10,7 +10,10 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/job"
+	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
@@ -111,5 +114,83 @@ func TestVoicePostsReadsAnOwnedPostsBlocks(t *testing.T) {
 	}
 	if _, _, _, err := adapter.PostForFingerprint(ctx, "alice", "nope"); !errors.Is(err, voice.ErrPostNotFound) {
 		t.Fatalf("an unknown post = %v", err)
+	}
+}
+
+type capturedAdmission struct {
+	starts []job.Start
+	refuse error
+}
+
+func (a *capturedAdmission) Hold(_ context.Context, start job.Start) error {
+	a.starts = append(a.starts, start)
+	return a.refuse
+}
+func (a *capturedAdmission) Release(context.Context, string)             {}
+func (a *capturedAdmission) Settle(context.Context, string, string)      {}
+func (a *capturedAdmission) OpenHolds(context.Context) ([]string, error) { return nil, nil }
+
+// QUOTA-13, VOICE-43: a 검증 passes the shared admission as one write call at the write stage's
+// floor, one runs per voice at a time, and a refused admission leaves no job.
+func TestAVoiceCheckIsAdmittedAsOneWriteCall(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-check-jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	found, err := firstTestVoice(ctx, voiceSvc, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
+	admission := &capturedAdmission{}
+	queue.Admit(admission)
+	budget := config.LLMCompletionBudget{WriteFloor: 8192, Ceiling: 32768}
+	adapter := voiceJobs{queue: queue, budget: budget}
+	request := voice.CheckJobRequest{UserID: "alice", VoiceID: found.ID, CheckID: "check-1", WriteModel: "stub/write"}
+
+	id, err := adapter.EnqueueCheck(ctx, request)
+	if err != nil || id == "" {
+		t.Fatalf("enqueue = %q %v", id, err)
+	}
+	if len(admission.starts) != 1 {
+		t.Fatalf("admissions = %+v", admission.starts)
+	}
+	start := admission.starts[0]
+	if start.Kind != job.KindCheckVoice || len(start.Calls) != 1 || start.Calls[0] != (job.PlannedCall{Ref: "stub/write", Count: 1, CompletionTokens: 8192}) {
+		t.Fatalf("admitted %+v", start)
+	}
+	var kind, payload string
+	if err := handle.Reader.QueryRow(`SELECT kind, payload FROM generation_jobs WHERE id = ? AND voice_id = ?`, id, found.ID).Scan(&kind, &payload); err != nil || kind != job.KindCheckVoice || payload != "check-1" {
+		t.Fatalf("the job = %s %q err=%v", kind, payload, err)
+	}
+	var active *voice.JobAlreadyInProgressError
+	if _, err := adapter.EnqueueCheck(ctx, voice.CheckJobRequest{UserID: "alice", VoiceID: found.ID, CheckID: "check-2", WriteModel: "stub/write"}); !errors.As(err, &active) || active.ActiveID != id {
+		t.Fatalf("a second 검증 of one voice = %v", err)
+	}
+
+	refused := errors.New("no credits")
+	admission.refuse = refused
+	other, err := voiceSvc.CreateVoice(ctx, "alice", "일상")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adapter.EnqueueCheck(ctx, voice.CheckJobRequest{UserID: "alice", VoiceID: other.ID, CheckID: "check-3", WriteModel: "stub/write"}); !errors.Is(err, refused) {
+		t.Fatalf("a refused admission = %v", err)
+	}
+	var jobs int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM generation_jobs WHERE voice_id = ?`, other.ID).Scan(&jobs); err != nil || jobs != 0 {
+		t.Fatalf("a refused admission left %d jobs: %v", jobs, err)
 	}
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ProtoFingerprintFacetUnit,
   ProtoFingerprintItem,
+  ProtoVoiceCheckStatus,
   VoiceAiField,
   VoiceNoticeKind,
   VoicePromptPart,
@@ -10,6 +11,7 @@ import {
 import { FINGERPRINT_ITEMS } from '../model/fingerprint'
 import {
   requireAiField,
+  requireCheckStatus,
   requireFacetUnit,
   requireFingerprintItem,
   requireNoticeKind,
@@ -61,5 +63,13 @@ describe('the voice enum mirrors', () => {
       .map(requireFacetUnit)
     expect(units).toEqual(['share', 'per_hundred', 'chars', 'sentences', 'text'])
     expect(() => requireFacetUnit(ProtoFingerprintFacetUnit.UNSPECIFIED)).toThrow()
+  })
+
+  it('maps every check status the wire names', () => {
+    const statuses = wireValues<ProtoVoiceCheckStatus>(ProtoVoiceCheckStatus)
+      .filter((value) => value !== ProtoVoiceCheckStatus.UNSPECIFIED)
+      .map(requireCheckStatus)
+    expect(statuses).toEqual(['queued', 'running', 'done', 'failed'])
+    expect(() => requireCheckStatus(ProtoVoiceCheckStatus.UNSPECIFIED)).toThrow()
   })
 })
