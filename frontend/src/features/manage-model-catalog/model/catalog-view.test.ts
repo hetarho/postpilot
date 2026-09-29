@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { REASONING_EFFORTS, type AdminCatalogEntry } from '@/entities/model-catalog'
-import { offersReasoningControl, reasoningOptionsFor, sortEntries } from './catalog-view'
+import {
+  filterEntries,
+  NO_FILTERS,
+  offersReasoningControl,
+  reasoningOptionsFor,
+  sortEntries,
+} from './catalog-view'
+
+it('filters free and unclassified registrations within the current purpose', () => {
+  const rows = [
+    entry({ modelId: 'free', level: 'free' }),
+    entry({ modelId: 'paid', level: 'value' }),
+    entry({ modelId: 'unset', level: '' }),
+  ]
+  expect(
+    filterEntries(rows, { ...NO_FILTERS, level: 'free' }, 'writing').map((row) => row.modelId),
+  ).toEqual(['free'])
+  expect(
+    filterEntries(rows, { ...NO_FILTERS, level: 'unset' }, 'writing').map((row) => row.modelId),
+  ).toEqual(['unset'])
+})
 
 function entry(over: Partial<AdminCatalogEntry> = {}): AdminCatalogEntry {
   return {

@@ -40,6 +40,17 @@ describe('orderModelsForStage', () => {
     ])
   })
 
+  it('puts classified free models before paid grades', () => {
+    const models = [
+      model('value', ['write'], { write: 'value' }),
+      model('free', ['write'], { write: 'free' }),
+    ]
+    expect(orderModelsForStage(models, 'write').map((m) => m.ref.modelId)).toEqual([
+      'free',
+      'value',
+    ])
+  })
+
   it('puts every ungraded model after every graded one (MODEL-58)', () => {
     const models = [
       model('ungraded-a', ['write']),

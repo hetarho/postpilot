@@ -23,6 +23,7 @@ type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 const DOCUMENT_VERSION_LINE = '# postpilot models v1'
 const LEVEL_VALUES = ['value', 'balanced', 'premium', 'top']
+const GRADE_VALUES = ['free', ...LEVEL_VALUES]
 
 const PURPOSES = [
   'photo-analysis',
@@ -54,6 +55,8 @@ export interface FakeCatalogEntry {
   /** The operator's grade PER PURPOSE, keyed by purpose slug — like the effort, it lives on
    *  the registration and each tab shows only its own (MODEL-57). */
   level?: Record<string, string>
+  /** Whether a verified zero-cost provider route qualifies this row for free. */
+  freeEligible?: boolean
   /** Recent reasoning spend per purpose slug, as the ledger's aggregate reports it for that
    *  purpose's stage. A purpose absent from the map has no recorded call. */
   reasoningSpend?: Record<
@@ -206,7 +209,7 @@ export function registerModelCatalogService(
         issues.push({ line: number, text: line, cause: 'malformed_line' })
         return
       }
-      if (levelToken !== undefined && !LEVEL_VALUES.includes(levelToken)) {
+      if (levelToken !== undefined && !GRADE_VALUES.includes(levelToken)) {
         issues.push({ line: number, text: line, cause: 'unknown_level' })
         return
       }
@@ -218,6 +221,10 @@ export function registerModelCatalogService(
       const entry = entries.find((candidate) => candidate.modelId === modelId)
       if (!entry) {
         issues.push({ line: number, text: line, cause: 'unknown_model' })
+        return
+      }
+      if (levelToken === 'free' && !entry.freeEligible) {
+        issues.push({ line: number, text: line, cause: 'free_path_ineligible' })
         return
       }
       if (section.purpose === 'photo-analysis' && !(entry.vision ?? false)) {
@@ -404,6 +411,9 @@ export function registerModelCatalogService(
     const target = entries.find((entry) => entry.modelId === req.modelId)
     if (!target || !(target.purposes ?? []).includes(req.purpose)) {
       throw connectAppError('UNKNOWN_FAILURE', Code.FailedPrecondition)
+    }
+    if (req.level === 'free' && !target.freeEligible) {
+      throw connectAppError('MODEL_FREE_INELIGIBLE', Code.FailedPrecondition)
     }
     entries = entries.map((entry) =>
       entry.modelId === req.modelId

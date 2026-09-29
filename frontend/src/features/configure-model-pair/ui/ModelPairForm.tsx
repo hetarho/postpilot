@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { ModelSelect } from './ModelSelect'
 import {
   filterForStage,
+  modelChoiceIssue,
+  savedChoiceIssue,
   refKey,
   type ModelRef,
   type StageName,
@@ -41,6 +43,8 @@ export function ModelPairForm({
       stage={stage}
       initialA={initialA}
       initialB={initialB}
+      savedIssueA={pair?.candidateA ? savedChoiceIssue(pair.candidateA) : ''}
+      savedIssueB={pair?.candidateB ? savedChoiceIssue(pair.candidateB) : ''}
       suitable={suitable}
       savePair={savePair}
       onShownChange={onShownChange}
@@ -52,6 +56,8 @@ function ModelPairFields({
   stage,
   initialA,
   initialB,
+  savedIssueA,
+  savedIssueB,
   suitable,
   savePair,
   onShownChange,
@@ -59,6 +65,8 @@ function ModelPairFields({
   stage: StageName
   initialA: string
   initialB: string
+  savedIssueA: string
+  savedIssueB: string
   suitable: ReturnType<typeof useModels>['models']
   savePair: ReturnType<typeof useSaveComparisonPair>
   onShownChange?: (shown: ShownPair) => void
@@ -70,15 +78,13 @@ function ModelPairFields({
   // of under both.
   const [changed, setChanged] = useState<'a' | 'b' | ''>('')
   // Why the last change wrote nothing, on the field that made it (MODEL-65).
-  const [refused, setRefused] = useState<{ side: 'a' | 'b'; reason: 'incomplete' | 'same' }>()
+  const [refused, setRefused] = useState<{ side: 'a' | 'b'; reason: string }>()
   useEffect(() => {
     onShownChange?.({ stage, a, b })
   }, [onShownChange, stage, a, b])
-  const notice = refused
-    ? t(refused.reason === 'same' ? 'differentModels' : 'pairIncomplete')
-    : undefined
+  const notice = refused?.reason
   const find = (key: string): ModelRef | undefined =>
-    suitable.find((model) => refKey(model.ref) === key)?.ref
+    suitable.find((model) => refKey(model.ref) === key && !modelChoiceIssue(model, stage))?.ref
 
   /** The pair is written as it is chosen (MODEL-65). A change that leaves it incomplete, or
    *  that names the model the other side already holds, writes nothing: the server would
@@ -94,7 +100,17 @@ function ModelPairFields({
       // mutation's own failure outlives its mutation; forgetting which field it belonged to
       // is what takes it off the screen. What this change did not do is said instead.
       setChanged('')
-      setRefused({ side, reason: left && right ? 'same' : 'incomplete' })
+      const locked = keys
+        .map((key) => suitable.find((model) => refKey(model.ref) === key))
+        .find((model) => model && modelChoiceIssue(model, stage))
+      setRefused({
+        side,
+        reason: locked
+          ? modelChoiceIssue(locked, stage)
+          : left && right
+            ? t('differentModels')
+            : t('pairIncomplete'),
+      })
       return
     }
     setRefused(undefined)
@@ -112,6 +128,7 @@ function ModelPairFields({
           stage={stage}
           value={a}
           models={suitable}
+          savedIssue={savedIssueA}
           onChange={(key) => commit('a', key)}
           // Both sides are one row, so neither may move while that row is being written
           // (MODEL-23).
@@ -124,6 +141,7 @@ function ModelPairFields({
           stage={stage}
           value={b}
           models={suitable}
+          savedIssue={savedIssueB}
           onChange={(key) => commit('b', key)}
           saving={savePair.isPending}
           error={changed === 'b' ? savePair.failure : undefined}

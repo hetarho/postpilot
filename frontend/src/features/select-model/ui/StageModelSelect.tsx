@@ -6,6 +6,8 @@ import {
   type ModelAvailability,
   type StageName,
   levelPrefix,
+  modelChoiceIssue,
+  freeProviderNote,
   refKey,
   useSaveSelection,
   useStageSelection,
@@ -58,6 +60,10 @@ export function StageModelSelect({
   const { models, selected, unavailable, isPending, isError } = useStageSelection(stage)
   const save = useSaveSelection()
   const selectedVerdict = selected ? verdictOf(availability, selected) : undefined
+  const freeModel = models.find(
+    (model) => model.access?.[stage]?.grade === 'free' && !modelChoiceIssue(model, stage),
+  )
+  const hasAccessProjection = models.some((model) => model.access?.[stage])
 
   // The saved choice's key when it can be shown as chosen; the greyed unusable entry
   // otherwise. An empty value is the placeholder.
@@ -102,7 +108,7 @@ export function StageModelSelect({
         label: optionLabel(model, stage, verdict.usable ? '' : verdict.reason),
         disabled:
           model.disabled ||
-          (!availability && !model.affordable) ||
+          Boolean(modelChoiceIssue(model, stage)) ||
           (requireVideoInput && !model.videoInput) ||
           !verdict.usable,
       }
@@ -130,8 +136,7 @@ export function StageModelSelect({
           if (
             !disabled &&
             chosen &&
-            !chosen.disabled &&
-            (availability || chosen.affordable) &&
+            !modelChoiceIssue(chosen, stage) &&
             (!requireVideoInput || chosen.videoInput) &&
             verdictOf(availability, chosen.ref).usable
           )
@@ -179,6 +184,16 @@ export function StageModelSelect({
           )}
         </FieldMessage>
       )}
+      {(hasAccessProjection || (!isPending && !isError && models.length === 0)) && (
+        <Typography
+          variant="body"
+          as="p"
+          role="status"
+          className="text-content-tertiary mt-1 break-words"
+        >
+          {freeModel ? freeProviderNote(freeModel, stage) : t('access.noFreeModel')}
+        </Typography>
+      )}
       {isError && (
         <FieldMessage id={loadErrorId} className="mt-1">
           {t('selectField.loadFailed')}
@@ -222,13 +237,8 @@ function optionLabel(model: CatalogModel, stage: StageName, refusal = ''): strin
   // a key is the more immediate obstacle, so that reason wins when both apply.
   // The workflow's own refusal (T112) comes after the provider's state: a model with no key is
   // unusable everywhere, which is the more immediate thing to say.
-  const reason = model.disabled
-    ? ` (${model.disabledReason})`
-    : refusal
-      ? ` (${refusal})`
-      : !model.affordable
-        ? ` (${i18next.t('selectField.unaffordable', { ns: 'models', credits: model.requiredCredits })})`
-        : ''
+  const issue = modelChoiceIssue(model, stage) || refusal
+  const reason = issue ? ` (${issue})` : ''
   // The grade LEADS: the closed trigger truncates, so a trailing one is never read.
   return `${levelPrefix(model, stage)}${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

@@ -1,6 +1,12 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { refKey, levelPrefix, type StageName, type useModels } from '@/entities/model-catalog'
+import {
+  refKey,
+  levelPrefix,
+  modelChoiceIssue,
+  type StageName,
+  type useModels,
+} from '@/entities/model-catalog'
 import { formatNumber } from '@/shared/lib'
 import type { AppFailure } from '@/shared/api'
 import { AppFailureMessage, FieldLabel, Listbox, Typography } from '@/shared/ui'
@@ -14,6 +20,7 @@ export function ModelSelect({
   saving = false,
   error,
   notice,
+  savedIssue,
 }: {
   label: string
   /** Which stage's grade to show: a model is graded per stage, not once (MODEL-57). */
@@ -28,6 +35,7 @@ export function ModelSelect({
   error?: AppFailure
   /** Why the last change of this field wrote nothing (MODEL-65). */
   notice?: string
+  savedIssue?: string
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -45,12 +53,15 @@ export function ModelSelect({
         value={value}
         options={[
           { value: '', label: t('select') },
+          ...(value && !models.some((model) => refKey(model.ref) === value)
+            ? [{ value, label: `${value} · ${savedIssue || t('unsuitable')}`, disabled: true }]
+            : []),
           ...models.map((model) => ({
             value: refKey(model.ref),
             // The grade leads here too, so the three fields that render this same list
             // read identically (MODEL-44).
-            label: `${levelPrefix(model, stage)}${model.label}${model.disabled ? ` · ${model.disabledReason}` : ''}`,
-            disabled: model.disabled,
+            label: `${levelPrefix(model, stage)}${model.label}${modelChoiceIssue(model, stage) ? ` · ${modelChoiceIssue(model, stage)}` : ''}`,
+            disabled: Boolean(modelChoiceIssue(model, stage)),
           })),
         ]}
         // Disabled only while a save is in flight: on 3G the round trip is seconds long and a

@@ -179,6 +179,48 @@ describe('the 일괄 편집 document panel', () => {
     expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
   })
 
+  it('previews and applies a free grade, then exports it; an ineligible free line blocks the whole document', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'openrouter/zero',
+            label: 'Zero',
+            curated: true,
+            purposes: ['writing'],
+            freeEligible: true,
+          },
+          { modelId: 'openrouter/paid', label: 'Paid', curated: true, purposes: ['writing'] },
+        ],
+      },
+    })
+    await openPanel(user)
+    await user.click(paste())
+    await user.paste(
+      '# postpilot models v1\n[writing]\nopenrouter/zero free\nopenrouter/paid free\n',
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(await screen.findByText(/검증된 무료 공급자 경로가 없어/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
+    expect(calls.some((call) => call.startsWith('ApplyCatalogDocument'))).toBe(false)
+
+    await user.clear(paste())
+    await user.paste(
+      '# postpilot models v1\n[writing]\nopenrouter/zero free\nopenrouter/paid value\n',
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(await screen.findByText('등급 변경 2개')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '확정' }))
+    await screen.findByText('반영했어요. 등록 0개, 해제 0개.')
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    await openPanel(user)
+    expect(await screen.findByText(/openrouter\/zero free/)).toBeInTheDocument()
+  })
+
   // Editing after a preview invalidates it: 확정 must never commit a diff computed for text
   // the operator has since changed.
   it('keeps the pasted text but drops the diff when the document is edited', async () => {

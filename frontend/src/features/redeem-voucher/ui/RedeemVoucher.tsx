@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { useInvalidateModelAccess } from '@/entities/model-catalog'
 import { useMyPlanQueryKey } from '@/entities/plan'
 import { useGiftQueryKey, useRedeemVoucher } from '@/entities/voucher'
 import { SIGNED_IN_HOME } from '@/shared/lib'
@@ -16,12 +17,14 @@ import { clearPendingGift, savePendingGift } from '../lib/pending-gift'
 export function RedeemVoucher({ token, signedIn }: { token: string; signedIn: boolean }) {
   const { t } = useTranslation('plans')
   const queryClient = useQueryClient()
+  const invalidateModelAccess = useInvalidateModelAccess()
   const planKey = useMyPlanQueryKey()
   const giftKey = useGiftQueryKey(token)
   const redeem = useRedeemVoucher({
     onRedeemed: () => {
       clearPendingGift()
       void queryClient.invalidateQueries({ queryKey: planKey })
+      void invalidateModelAccess()
     },
     // A link that was spent, lapsed or revoked meanwhile: the page re-reads it and shows that.
     onRefused: (failure) => {

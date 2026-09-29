@@ -1,17 +1,15 @@
 import i18next from 'i18next'
 import type { CatalogModel, StageName } from './types'
 
-/** The operator's user-facing grade for one model AT ONE STAGE (MODEL-57). Four words that
- *  say which of the offered models is the cheap one and which is the good one, so a user
- *  does not have to read prices to choose.
- *
- *  Display and ordering only — it gates nothing, and an ungraded model is exactly as
- *  selectable as a graded one (MODEL-58). */
-export type LevelName = 'value' | 'balanced' | 'premium' | 'top'
+/** The operator's stage grade. The server decides access; this vocabulary orders and labels it. */
+export type LevelName = 'free' | 'value' | 'balanced' | 'premium' | 'top'
 
-/** ASCENDING — 가성비 · 밸런스 · 고급 · 최고. Every list that orders by level orders by this
+/** ASCENDING — 무료 · 가성비 · 밸런스 · 고급 · 최고. Every list that orders by level orders by this
  *  array, so the picker and the operator's own tab cannot disagree about what "higher" is. */
-export const LEVELS: readonly LevelName[] = ['value', 'balanced', 'premium', 'top']
+export const LEVELS: readonly LevelName[] = ['free', 'value', 'balanced', 'premium', 'top']
+
+/** Server estimator assignments price paid model groups only. */
+export const PAID_LEVELS = ['value', 'balanced', 'premium', 'top'] as const
 
 export function isLevelName(value: string): value is LevelName {
   return (LEVELS as readonly string[]).includes(value)

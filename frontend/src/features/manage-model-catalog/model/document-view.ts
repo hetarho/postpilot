@@ -13,6 +13,7 @@ export const DOCUMENT_ISSUE_CAUSES = [
   'malformed_line',
   'duplicate_id',
   'unknown_level',
+  'free_path_ineligible',
   'unknown_model',
   'unlisted_model',
   'purpose_ineligible',

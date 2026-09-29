@@ -35,8 +35,7 @@ import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-vi
  *  The 등급 Listbox appears on its own condition — registered to THIS purpose, nothing more.
  *  A model whose reasoning the source publishes nothing about still has a grade to set, and
  *  the grade is the only thing on this screen a USER ever sees (MODEL-57). While it is unset
- *  the row says so: an ungraded registration is served and selectable (MODEL-58), so nothing
- *  else would tell the operator there is work left here. */
+ *  the row says so: an ungraded registration stays out of user pickers until classified. */
 export function CatalogModelRow({
   entry,
   purpose,

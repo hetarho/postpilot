@@ -1,9 +1,10 @@
-import i18next from 'i18next'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   filterForStage,
   levelPrefix,
+  modelChoiceIssue,
+  savedChoiceIssue,
   refKey,
   type CatalogModel,
   type ModelRef,
@@ -59,6 +60,8 @@ export function CandidatePairSelect({
       stage={stage}
       savedA={savedA}
       savedB={savedB}
+      savedIssueA={pair?.candidateA ? savedChoiceIssue(pair.candidateA) : ''}
+      savedIssueB={pair?.candidateB ? savedChoiceIssue(pair.candidateB) : ''}
       suitable={filterForStage(models, stage)}
       disabled={isPending || isError}
       savePair={savePair}
@@ -72,6 +75,8 @@ function CandidatePairFields({
   stage,
   savedA,
   savedB,
+  savedIssueA,
+  savedIssueB,
   suitable,
   disabled,
   savePair,
@@ -81,6 +86,8 @@ function CandidatePairFields({
   stage: StageName
   savedA: string
   savedB: string
+  savedIssueA: string
+  savedIssueB: string
   suitable: readonly CatalogModel[]
   disabled: boolean
   savePair: ReturnType<typeof useSaveComparisonPair>
@@ -89,10 +96,12 @@ function CandidatePairFields({
 }) {
   const { t } = useTranslation('models')
   const issueId = useId()
+  const refusalId = useId()
   const [a, setA] = useState(savedA)
   const [b, setB] = useState(savedB)
+  const [refusal, setRefusal] = useState('')
   const find = (key: string): ModelRef | undefined =>
-    suitable.find((model) => refKey(model.ref) === key)?.ref
+    suitable.find((model) => refKey(model.ref) === key && !modelChoiceIssue(model, stage))?.ref
 
   const commit = (nextA: string, nextB: string) => {
     setA(nextA)
@@ -100,10 +109,24 @@ function CandidatePairFields({
     // Half a pair is nothing to store. The duplicate arm cannot fire from these fields — neither
     // one lists what the other holds — and is kept as the cheap guard on a contract the server
     // enforces anyway.
-    if (!nextA || !nextB || nextA === nextB) return
+    if (!nextA || !nextB) {
+      setRefusal('')
+      return
+    }
+    if (nextA === nextB) {
+      setRefusal(t('differentModels'))
+      return
+    }
     const left = find(nextA)
     const right = find(nextB)
-    if (!left || !right) return
+    if (!left || !right) {
+      const locked = [nextA, nextB]
+        .map((key) => suitable.find((model) => refKey(model.ref) === key))
+        .find((model) => model && modelChoiceIssue(model, stage))
+      setRefusal(locked ? modelChoiceIssue(locked, stage) : t('unsuitable'))
+      return
+    }
+    setRefusal('')
     void savePair.save(stage, left, right).catch(() => {
       // The mutation's own failure is rendered under the fields.
     })
@@ -126,8 +149,15 @@ function CandidatePairFields({
   //
   // A field always keeps its OWN current value, so a pair that somehow arrived duplicated still
   // renders as what it is rather than as an empty field.
-  const optionsExcept = (own: string, other: string): ListboxOption<string>[] =>
-    suitable
+  const optionsExcept = (
+    own: string,
+    other: string,
+    savedIssue: string,
+  ): ListboxOption<string>[] => [
+    ...(own && !suitable.some((model) => refKey(model.ref) === own)
+      ? [{ value: own, label: `${own} (${savedIssue || t('unsuitable')})`, disabled: true }]
+      : []),
+    ...suitable
       .filter((model) => {
         const key = refKey(model.ref)
         return key === own || key !== other
@@ -135,8 +165,9 @@ function CandidatePairFields({
       .map((model) => ({
         value: refKey(model.ref),
         label: optionLabel(model, stage),
-        disabled: model.disabled || !model.affordable,
-      }))
+        disabled: Boolean(modelChoiceIssue(model, stage)),
+      })),
+  ]
 
   return (
     <div className={className}>
@@ -147,27 +178,36 @@ function CandidatePairFields({
         <CandidateField
           label={t('candidateA')}
           value={a}
-          options={optionsExcept(a, b)}
+          options={optionsExcept(a, b, savedIssueA)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
           invalid={Boolean(error) && (!a || a === b)}
-          describedBy={error ? issueId : undefined}
+          describedBy={
+            [error && issueId, refusal && refusalId].filter(Boolean).join(' ') || undefined
+          }
           onChange={(next) => commit(next, b)}
         />
         <CandidateField
           label={t('candidateB')}
           value={b}
-          options={optionsExcept(b, a)}
+          options={optionsExcept(b, a, savedIssueB)}
           placeholder={t('select')}
           disabled={disabled || savePair.isPending}
           invalid={Boolean(error) && (!b || a === b)}
-          describedBy={error ? issueId : undefined}
+          describedBy={
+            [error && issueId, refusal && refusalId].filter(Boolean).join(' ') || undefined
+          }
           onChange={(next) => commit(a, next)}
         />
       </div>
       {error && (
         <FieldMessage id={issueId} role="alert" className="mt-1 break-words">
           {error}
+        </FieldMessage>
+      )}
+      {refusal && (
+        <FieldMessage id={refusalId} role="status" className="mt-1 break-words">
+          {refusal}
         </FieldMessage>
       )}
       {/* Mounted while idle so it announces when it fills, and out of the layout until it does. */}
@@ -244,13 +284,6 @@ function optionLabel(model: CatalogModel, stage: StageName): string {
   // The grade LEADS for the same reason it does in the stage selector: these two triggers
   // sit side by side at half width, so the tail is the first thing to be cut.
   const level = levelPrefix(model, stage)
-  if (model.disabled) return `${level}${model.label} (${model.disabledReason})`
-  if (!model.affordable) {
-    const reason = i18next.t('selectField.unaffordable', {
-      ns: 'models',
-      credits: model.requiredCredits,
-    })
-    return `${level}${model.label} (${reason})`
-  }
-  return `${level}${model.label}`
+  const issue = modelChoiceIssue(model, stage)
+  return `${level}${model.label}${issue ? ` (${issue})` : ''}`
 }

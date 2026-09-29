@@ -74,6 +74,72 @@ describe('ModelPairForm structured failures', () => {
   )
 })
 
+it('keeps a saved locked candidate visible and refuses a partial pair rewrite', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  render(<ModelPairForm stage="write" />, {
+    wrapper: withProviders(
+      createFakeProviderTransport({
+        calls,
+        models: [
+          {
+            providerId: 'openrouter',
+            modelId: 'locked',
+            label: 'Locked',
+            access: {
+              [Stage.WRITE]: {
+                grade: 'premium',
+                requiredPlan: 'pro',
+                entitled: false,
+                unavailableReason: 'MODEL_PLAN_REQUIRED',
+              },
+            },
+          },
+          {
+            providerId: 'openrouter',
+            modelId: 'old',
+            label: 'Old',
+            access: {
+              [Stage.WRITE]: {
+                grade: 'free',
+                requiredPlan: 'light',
+                entitled: true,
+                freePathAvailable: true,
+              },
+            },
+          },
+          {
+            providerId: 'openrouter',
+            modelId: 'new',
+            label: 'New',
+            access: {
+              [Stage.WRITE]: {
+                grade: 'free',
+                requiredPlan: 'light',
+                entitled: true,
+                freePathAvailable: true,
+              },
+            },
+          },
+        ],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'locked' },
+            candidateB: { providerId: 'openrouter', modelId: 'old' },
+          },
+        ],
+      }),
+      createTestQueryClient(),
+    ),
+  })
+  await waitFor(() => expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Locked'))
+  const fields = screen.getAllByRole('combobox')
+  await chooseOption(user, fields[1], 'New')
+  expect(fields[1]).toHaveAccessibleDescription('Pro 요금제부터 쓸 수 있어요')
+  expect(calls).not.toContain('SaveComparisonPair')
+})
+
 describe('ModelPairForm levels (T095/MODEL-44)', () => {
   const GRADED = [
     {

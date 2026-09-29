@@ -35,6 +35,8 @@ export interface CatalogModel {
   /** The operator's grade PER STAGE (MODEL-57), for the stages that have one. A stage
    *  absent from this map is ungraded, which is what every registration starts as. */
   levels: Partial<Record<StageName, LevelName>>
+  /** Server-owned plan and free-route decision for each listed stage. */
+  access?: Partial<Record<StageName, ModelStageAccess>>
   disabled: boolean
   disabledReason: string
   contextTokens: bigint
@@ -49,6 +51,14 @@ export interface CatalogModel {
   affordable: boolean
 }
 
+export interface ModelStageAccess {
+  grade: LevelName
+  requiredPlan: string
+  entitled: boolean
+  freePathAvailable: boolean
+  unavailableReason: string
+}
+
 export type SelectionSlotName = 'active' | 'candidateA' | 'candidateB'
 
 /** The acting user's saved choice for a stage. `missing`: the model is no longer
@@ -58,6 +68,8 @@ export interface StageSelection {
   ref: ModelRef
   missing: boolean
   slot: SelectionSlotName
+  requiredPlan?: string
+  unavailableReason?: string
 }
 
 export interface ComparisonPair {
@@ -286,7 +298,9 @@ export function isModelPurpose(value: string): value is ModelPurpose {
  *  question, and one of them forgetting to sort would look like a catalog bug. */
 export function filterForStage(models: readonly CatalogModel[], stage: StageName): CatalogModel[] {
   return orderModelsForStage(
-    models.filter((model) => model.stages.includes(stage)),
+    models.filter(
+      (model) => model.stages.includes(stage) && (!model.access || Boolean(model.access[stage])),
+    ),
     stage,
   )
 }

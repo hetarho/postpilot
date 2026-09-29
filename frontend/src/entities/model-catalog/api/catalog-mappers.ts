@@ -75,6 +75,24 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
         return name && isLevelName(level) ? [[name, level] as const] : []
       }),
     ),
+    access:
+      info.access.length === 0
+        ? undefined
+        : Object.fromEntries(
+            info.access.flatMap(
+              ({ stage, grade, requiredPlan, entitled, freePathAvailable, unavailableReason }) => {
+                const name = stageFromProto(stage)
+                return name && isLevelName(grade)
+                  ? [
+                      [
+                        name,
+                        { grade, requiredPlan, entitled, freePathAvailable, unavailableReason },
+                      ] as const,
+                    ]
+                  : []
+              },
+            ),
+          ),
     disabled: info.disabled,
     disabledReason: info.disabledReason,
     contextTokens: info.contextTokens,
@@ -161,6 +179,8 @@ export function toStageSelection(selection: ProtoSelection): StageSelection | un
     ref: toModelRef(selection.ref),
     missing: selection.missing,
     slot: slotFromProto(selection.slot),
+    requiredPlan: selection.requiredPlan,
+    unavailableReason: selection.unavailableReason,
   }
 }
 

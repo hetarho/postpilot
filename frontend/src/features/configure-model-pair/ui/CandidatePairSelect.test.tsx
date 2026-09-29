@@ -5,6 +5,7 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { createFakeProviderTransport } from '@/test/providers'
 import { createTestQueryClient, withProviders } from '@/test/session'
+import { chooseOption } from '@/test/listbox'
 import { CandidatePairSelect } from './CandidatePairSelect'
 
 afterEach(() => initializeI18n('ko'))
@@ -81,4 +82,59 @@ describe('CandidatePairSelect levels (T095/MODEL-44)', () => {
     expect(option.textContent).toMatch(/^최고 · Dear \(/)
     expect(option).toHaveAttribute('aria-disabled', 'true')
   })
+})
+
+it('keeps a locked saved pair visible and asks for an eligible replacement before saving', async () => {
+  const user = userEvent.setup()
+  const saved: { a: string; b: string }[] = []
+  render(<CandidatePairSelect stage="write" />, {
+    wrapper: withProviders(
+      createFakeProviderTransport({
+        models: [
+          {
+            providerId: 'openrouter',
+            modelId: 'locked',
+            label: 'Locked',
+            access: {
+              [Stage.WRITE]: {
+                grade: 'top',
+                requiredPlan: 'max',
+                entitled: false,
+                unavailableReason: 'MODEL_PLAN_REQUIRED',
+              },
+            },
+          },
+          ...['old', 'new', 'replacement'].map((modelId) => ({
+            providerId: 'openrouter',
+            modelId,
+            label: modelId,
+            access: {
+              [Stage.WRITE]: {
+                grade: 'free' as const,
+                requiredPlan: 'light',
+                entitled: true,
+                freePathAvailable: true,
+              },
+            },
+          })),
+        ],
+        comparisonPairs: [
+          {
+            stage: Stage.WRITE,
+            candidateA: { providerId: 'openrouter', modelId: 'locked' },
+            candidateB: { providerId: 'openrouter', modelId: 'old' },
+          },
+        ],
+        onSavePair: (pair) => saved.push(pair),
+      }),
+      createTestQueryClient(),
+    ),
+  })
+
+  await waitFor(() => expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Locked'))
+  await chooseOption(user, screen.getAllByRole('combobox')[1], 'new')
+  expect(screen.getByText('Max 요금제부터 쓸 수 있어요')).toBeInTheDocument()
+  expect(saved).toEqual([])
+  await chooseOption(user, screen.getAllByRole('combobox')[0], 'replacement')
+  await waitFor(() => expect(saved).toEqual([{ a: 'replacement', b: 'new' }]))
 })

@@ -49,13 +49,27 @@ export interface FakeModel {
   affordable?: boolean
   /** The operator's grade PER STAGE (MODEL-57). A stage left out is ungraded, which is what
    *  every registration starts as — and what a test that says nothing about grades gets. */
-  levels?: Partial<Record<Stage, 'value' | 'balanced' | 'premium' | 'top'>>
+  levels?: Partial<Record<Stage, 'free' | 'value' | 'balanced' | 'premium' | 'top'>>
+  access?: Partial<
+    Record<
+      Stage,
+      {
+        grade: 'free' | 'value' | 'balanced' | 'premium' | 'top'
+        requiredPlan: string
+        entitled: boolean
+        freePathAvailable?: boolean
+        unavailableReason?: string
+      }
+    >
+  >
 }
 
 export interface FakeSelection {
   stage: Stage
   providerId: string
   modelId: string
+  requiredPlan?: string
+  unavailableReason?: string
 }
 
 export interface FakeProviderMutationFailure {
@@ -133,6 +147,10 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
             stage: Number(stage) as Stage,
             level,
           })),
+          access: Object.entries(model.access ?? {}).map(([stage, access]) => ({
+            stage: Number(stage) as Stage,
+            ...access,
+          })),
         }),
       ),
     })
@@ -151,6 +169,8 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
         stage: selection.stage,
         ref: { providerId: selection.providerId, modelId: selection.modelId },
         missing: !registered(selection.providerId, selection.modelId) || unaffordableFor(selection),
+        requiredPlan: selection.requiredPlan ?? '',
+        unavailableReason: selection.unavailableReason ?? '',
       }),
     )
     // Like the server: a vanished choice is told once, then it is gone — but a plan-locked one
@@ -176,7 +196,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       throw connectAppError('MODEL_DISABLED', Code.FailedPrecondition)
     }
     // Like the server: the client's rendering is never the gate.
-    if (model.affordable === false) {
+    if (model.affordable === false && model.access?.[req.stage]?.grade !== 'free') {
       throw connectAppError('INSUFFICIENT_CREDITS', Code.ResourceExhausted, {
         required: '79',
         balance: '12',

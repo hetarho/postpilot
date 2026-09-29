@@ -3,6 +3,7 @@ import {
   REASONING_EFFORTS,
   type AdminCatalogEntry,
   type ReasoningEffortName,
+  type LevelName,
 } from '@/entities/model-catalog'
 import { FEATURED_MODEL_PROVIDERS } from '../config'
 import { type ModelPurpose } from '@/entities/model-catalog'
@@ -15,6 +16,8 @@ export interface CatalogFilters {
   visionOnly: boolean
   structuredOnly: boolean
   registeredOnly: boolean
+  /** Every grade, one grade, or registrations waiting for classification. */
+  level: LevelName | 'unset' | ''
 }
 
 export const NO_FILTERS: CatalogFilters = {
@@ -23,6 +26,7 @@ export const NO_FILTERS: CatalogFilters = {
   visionOnly: false,
   structuredOnly: false,
   registeredOnly: false,
+  level: '',
 }
 
 /** The purposes whose tab forces a capability gate — the single list the gate, the
@@ -134,6 +138,11 @@ export function filterEntries(
     if (filters.visionOnly && !entry.vision) return false
     if (filters.structuredOnly && !entry.structuredOutput) return false
     if (filters.registeredOnly && !entry.purposes.includes(purpose)) return false
+    if (
+      filters.level &&
+      (filters.level === 'unset' ? entry.level !== '' : entry.level !== filters.level)
+    )
+      return false
     if (!needle) return true
     // Both the id and the label, because an operator arrives with either: a model id copied
     // from a provider's page, or the name they read in a comparison.

@@ -92,17 +92,65 @@ describe('ApplyRecommendation over a seven-model set', () => {
     render(<ApplyRecommendation recommendation={sevenRefSet} />, {
       wrapper: withProviders(createFakeProviderTransport({ models }), createTestQueryClient()),
     })
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      [
-        'openrouter/observe-active',
-        'openrouter/observe-a',
-        'openrouter/observe-b',
-        'openrouter/analyze-active',
-        'openrouter/write-active',
-        'openrouter/write-a',
-        'openrouter/write-b',
-      ].join(', ') + ' 모델을 쓰려면 크레딧이 부족해요.',
-    )
+    const notice = await screen.findByRole('status')
+    for (const id of [
+      'observe-active',
+      'observe-a',
+      'observe-b',
+      'analyze-active',
+      'write-active',
+      'write-a',
+      'write-b',
+    ]) {
+      expect(notice).toHaveTextContent(`openrouter/${id} (크레딧`)
+    }
     expect(screen.getByRole('button', { name: '추천 조합 적용' })).toBeDisabled()
+  })
+
+  it('explains every plan and provider refusal before any seven-slot apply', async () => {
+    const calls: string[] = []
+    render(<ApplyRecommendation recommendation={sevenRefSet} />, {
+      wrapper: withProviders(
+        createFakeProviderTransport({
+          calls,
+          models: [
+            {
+              ...ref('observe-active'),
+              stages: [Stage.OBSERVE],
+              access: {
+                [Stage.OBSERVE]: {
+                  grade: 'premium',
+                  requiredPlan: 'pro',
+                  entitled: false,
+                  unavailableReason: 'MODEL_PLAN_REQUIRED',
+                },
+              },
+            },
+            {
+              ...ref('observe-a'),
+              stages: [Stage.OBSERVE],
+              access: {
+                [Stage.OBSERVE]: {
+                  grade: 'free',
+                  requiredPlan: 'light',
+                  entitled: true,
+                  freePathAvailable: false,
+                  unavailableReason: 'MODEL_FREE_PATH_UNAVAILABLE',
+                },
+              },
+            },
+          ],
+        }),
+        createTestQueryClient(),
+      ),
+    })
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent('openrouter/observe-active (Pro 요금제부터 쓸 수 있어요)')
+    expect(notice).toHaveTextContent(
+      'openrouter/observe-a (지금은 검증된 무료 공급자 경로가 없어요)',
+    )
+    expect(notice).toHaveTextContent('openrouter/write-b (등록된 모델 목록에서 사라졌어요)')
+    expect(screen.getByRole('button', { name: '추천 조합 적용' })).toBeDisabled()
+    expect(calls).not.toContain('ApplyRecommendationSet')
   })
 })

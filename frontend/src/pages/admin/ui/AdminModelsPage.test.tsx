@@ -681,8 +681,7 @@ describe('the registration level (T094/MODEL-57)', () => {
       modelCatalog: { entries: GRADED() },
     })
 
-    // MODEL-58: an ungraded registration is served and selectable, so nothing else on this
-    // screen would tell the operator there is work left here.
+    // An ungraded registration stays out of user pickers, so the operator sees the work left.
     expect(await screen.findByText(/등급을 아직 정하지 않았어요/)).toBeInTheDocument()
 
     const level = await screen.findByRole('combobox', { name: /등급 등급 미지정/ })
@@ -696,6 +695,49 @@ describe('the registration level (T094/MODEL-57)', () => {
     // Clearing is a real request, not the absence of one.
     await chooseOption(user, screen.getByRole('combobox', { name: /등급 가성비/ }), '등급 미지정')
     expect(calls).toContain('UpdateModel:photo-analysis::level=')
+  })
+
+  it('shows free classification refusal and filters the current purpose by grade', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: [
+          {
+            modelId: 'openrouter/zero',
+            label: 'Zero',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+            freeEligible: true,
+            level: { 'photo-analysis': 'free' },
+          },
+          {
+            modelId: 'openrouter/paid',
+            label: 'Paid',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis'],
+          },
+        ],
+      },
+    })
+
+    const gradeFilter = await screen.findByRole('combobox', { name: /등급으로 필터/ })
+    await chooseOption(user, gradeFilter, '무료')
+    expect(screen.getByText('openrouter/zero')).toBeInTheDocument()
+    expect(screen.queryByText('openrouter/paid')).not.toBeInTheDocument()
+
+    await chooseOption(user, gradeFilter, '전체 등급')
+    const row = screen.getByText('openrouter/paid').closest('li')!
+    await chooseOption(user, within(row).getByRole('combobox', { name: /등급/ }), '무료')
+    expect(await within(row).findByRole('alert')).toHaveTextContent(
+      '검증된 무료 경로가 없는 모델이에요',
+    )
+    expect(calls).toContain('UpdateModel:photo-analysis::level=free')
+    expect(within(row).getByRole('combobox', { name: /등급 미지정/ })).toBeInTheDocument()
   })
 
   it("shows only the active tab's grade", async () => {

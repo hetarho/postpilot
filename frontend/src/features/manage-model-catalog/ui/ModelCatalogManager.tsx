@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAdminCatalog, useRefreshCatalog } from '@/entities/model-catalog'
+import { LEVELS, useAdminCatalog, useRefreshCatalog } from '@/entities/model-catalog'
 import { MODEL_PURPOSES } from '@/entities/model-catalog'
 import { type ModelPurpose } from '@/entities/model-catalog'
 import {
@@ -67,6 +67,8 @@ export function ModelCatalogManager() {
   const providerLabelId = `${providerId}-label`
   const sortId = `${controlsId}-sort`
   const sortLabelId = `${sortId}-label`
+  const levelId = `${controlsId}-level`
+  const levelLabelId = `${levelId}-label`
   const panelId = `${controlsId}-purpose-panel`
 
   const sorted = useMemo(() => sortEntries(catalog.entries), [catalog.entries])
@@ -144,6 +146,23 @@ export function ModelCatalogManager() {
             ]}
             aria-labelledby={providerLabelId}
             onChange={(providerSlug) => patch({ providerSlug })}
+            className="mt-1"
+          />
+        </div>
+        <div className="min-w-0">
+          <FieldLabel id={levelLabelId} htmlFor={levelId}>
+            {t('catalog.filterLevel')}
+          </FieldLabel>
+          <Listbox<CatalogFilters['level']>
+            id={levelId}
+            value={filters.level}
+            options={[
+              { value: '', label: t('catalog.allLevels') },
+              ...LEVELS.map((level) => ({ value: level, label: t(`level.${level}`) })),
+              { value: 'unset', label: t('catalog.levelUnset') },
+            ]}
+            aria-labelledby={levelLabelId}
+            onChange={(level) => patch({ level })}
             className="mt-1"
           />
         </div>

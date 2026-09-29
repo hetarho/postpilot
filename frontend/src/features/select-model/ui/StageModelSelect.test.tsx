@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { create } from '@bufbuild/protobuf'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
-import { Stage } from '@/shared/api'
+import { GetMyPlanResponseSchema, Stage } from '@/shared/api'
+import { myPlanQueryKey } from '@/entities/plan'
 import type { ModelAvailability, ModelRef, ModelVerdict } from '@/entities/model-catalog'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { type FakeProvidersOptions, createFakeProviderTransport } from '@/test/providers'
@@ -238,6 +240,128 @@ describe('StageModelSelect', () => {
       'true',
     )
   })
+})
+
+describe('graded access (T481)', () => {
+  it('rechecks the model projection when a refreshed plan changes its grade ceiling', async () => {
+    const user = userEvent.setup()
+    const models: FakeProvidersOptions['models'] = [
+      {
+        providerId: 'openrouter',
+        modelId: 'paid',
+        label: 'Paid',
+        access: {
+          [Stage.WRITE]: {
+            grade: 'value',
+            requiredPlan: 'basic',
+            entitled: false,
+            unavailableReason: 'MODEL_PLAN_REQUIRED',
+          },
+        },
+      },
+    ]
+    const transport = createFakeProviderTransport({ models })
+    const queryClient = createTestQueryClient()
+    render(<StageModelSelect stage="write" />, { wrapper: withProviders(transport, queryClient) })
+    await openPanel(user, /작성 모델/)
+    expect(screen.getByRole('option', { name: /Paid.*Basic/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+
+    models[0]!.access![Stage.WRITE] = {
+      grade: 'value',
+      requiredPlan: 'basic',
+      entitled: true,
+      unavailableReason: '',
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    act(() =>
+      queryClient.setQueryData(myPlanQueryKey(transport), create(GetMyPlanResponseSchema, {})),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: 'Paid' })).not.toHaveAttribute('aria-disabled'),
+    )
+  })
+
+  it.each([
+    {
+      locale: 'ko' as const,
+      lock: 'Plus 요금제부터 쓸 수 있어요',
+      free: '무료 · Free',
+      note: /무료 모델은 공급자의/,
+    },
+    {
+      locale: 'en' as const,
+      lock: 'Available from the Plus plan',
+      free: 'Free · Free',
+      note: /Free models may be limited/,
+    },
+  ])(
+    'retains a saved locked model and lets its owner explicitly select a zero-balance free model in $locale',
+    async ({ locale, lock, free, note }) => {
+      initializeI18n(locale)
+      const calls: string[] = []
+      const user = userEvent.setup()
+      renderSelect('write', {
+        calls,
+        models: [
+          {
+            providerId: 'openrouter',
+            modelId: 'paid',
+            label: 'Paid',
+            levels: { [Stage.WRITE]: 'premium' },
+            access: {
+              [Stage.WRITE]: {
+                grade: 'premium',
+                requiredPlan: 'plus',
+                entitled: false,
+                unavailableReason: 'MODEL_PLAN_REQUIRED',
+              },
+            },
+          },
+          {
+            providerId: 'openrouter',
+            modelId: 'free',
+            label: 'Free',
+            affordable: false,
+            levels: { [Stage.WRITE]: 'free' },
+            access: {
+              [Stage.WRITE]: {
+                grade: 'free',
+                requiredPlan: 'light',
+                entitled: true,
+                freePathAvailable: true,
+              },
+            },
+          },
+        ],
+        selections: [
+          {
+            stage: Stage.WRITE,
+            providerId: 'openrouter',
+            modelId: 'paid',
+            requiredPlan: 'plus',
+            unavailableReason: 'MODEL_PLAN_REQUIRED',
+          },
+        ],
+      })
+
+      const trigger = await screen.findByRole('combobox', { name: /paid/i })
+      await waitFor(() => expect(trigger).toHaveAccessibleDescription(lock))
+      expect(trigger).toHaveClass('pointer-coarse:min-h-11')
+      expect(screen.getByText(note)).toHaveClass('break-words')
+      expect(calls).not.toContain('SaveSelection')
+      await user.click(trigger)
+      expect(screen.getByRole('option', { name: /Paid.*Plus/ })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      )
+      await user.click(screen.getByRole('option', { name: free }))
+      await waitFor(() => expect(calls).toContain('SaveSelection'))
+      expect(trigger).toHaveTextContent('Free')
+    },
+  )
 })
 
 describe('a model above the account tier', () => {

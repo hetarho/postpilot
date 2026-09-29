@@ -8,6 +8,7 @@ export const i18n = {
     /** The operator's grade for a model at a stage (MODEL-57). Four words that answer "which
      *  of these is the good one" without making the user read prices. */
     level: {
+      free: '무료',
       value: '가성비',
       balanced: '밸런스',
       premium: '고급',
@@ -42,8 +43,11 @@ export const i18n = {
       provider: '제공사',
       allProviders: '전체 제공사',
       level: '등급',
+      filterLevel: '등급으로 필터',
+      allLevels: '전체 등급',
       levelUnset: '등급 미지정',
-      levelMissing: '등급을 아직 정하지 않았어요. 사용자 목록에서는 등급 있는 모델 뒤에 놓입니다.',
+      levelMissing:
+        '등급을 아직 정하지 않았어요. 분류하기 전에는 사용자 선택 목록에 나타나지 않습니다.',
       sort: '정렬',
       sortOption: {
         level: '등급순',
@@ -119,7 +123,9 @@ export const i18n = {
         malformed_line:
           '한 줄에 모델 아이디 하나, 뒤에 등급을 하나만 붙일 수 있어요. 표·따옴표·백틱은 넣지 마세요.',
         duplicate_id: '같은 섹션에 같은 모델이 두 번 있어요.',
-        unknown_level: '등급 값이 잘못됐어요. value · balanced · premium · top 중 하나여야 합니다.',
+        unknown_level:
+          '등급 값이 잘못됐어요. free · value · balanced · premium · top 중 하나여야 합니다.',
+        free_path_ineligible: '검증된 무료 공급자 경로가 없어 무료 등급으로 등록할 수 없어요.',
         unknown_model: '제공사 목록에 없는 모델이에요.',
         unlisted_model: '제공사가 더 이상 제공하지 않는 모델이에요.',
         purpose_ineligible: '이 용도에 필요한 기능이 없는 모델이에요.',
@@ -135,6 +141,7 @@ export const i18n = {
     /** The operator's grade for a model at a stage (MODEL-57). Four words that answer "which
      *  of these is the good one" without making the user read prices. */
     level: {
+      free: 'Free',
       value: 'Value',
       balanced: 'Balanced',
       premium: 'Premium',
@@ -169,8 +176,10 @@ export const i18n = {
       provider: 'Provider',
       allProviders: 'All providers',
       level: 'Level',
+      filterLevel: 'Filter by grade',
+      allLevels: 'All grades',
       levelUnset: 'No level',
-      levelMissing: 'No level set yet. It sorts after every graded model in the user picker.',
+      levelMissing: 'No grade yet. This model stays out of user pickers until it is classified.',
       sort: 'Sort',
       sortOption: {
         level: 'By level',
@@ -248,7 +257,8 @@ export const i18n = {
         malformed_line:
           'One model id per line, optionally followed by one level. No tables, quotes or backticks.',
         duplicate_id: 'The same model appears twice in this section.',
-        unknown_level: 'That is not a level. Use one of value · balanced · premium · top.',
+        unknown_level: 'That is not a grade. Use free · value · balanced · premium · top.',
+        free_path_ineligible: 'No verified free provider route is available for this model.',
         unknown_model: 'The provider does not offer this model.',
         unlisted_model: 'The provider has stopped offering this model.',
         purpose_ineligible: 'This model lacks the capability this purpose requires.',

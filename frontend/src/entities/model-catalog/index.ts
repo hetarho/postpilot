@@ -20,7 +20,16 @@ export type {
   StageSelection,
 } from './model/types'
 export type { LevelName } from './model/level'
-export { LEVELS, isLevelName, levelOf, levelPrefix, orderModelsForStage } from './model/level'
+export {
+  LEVELS,
+  PAID_LEVELS,
+  isLevelName,
+  levelOf,
+  levelPrefix,
+  orderModelsForStage,
+} from './model/level'
+export { modelChoiceIssue, savedChoiceIssue, freeProviderNote } from './model/access'
+export { useInvalidateModelAccess } from './api/model-access-cache'
 export {
   REASONING_EFFORTS,
   STAGES,

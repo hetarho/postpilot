@@ -1,15 +1,21 @@
 import { useTranslation } from 'react-i18next'
-import type { CatalogModel, ModelRef, RecommendationSet } from '@/entities/model-catalog'
-import { refKey, sameRef, useApplyRecommendation, useModels } from '@/entities/model-catalog'
+import type { CatalogModel, ModelRef, RecommendationSet, StageName } from '@/entities/model-catalog'
+import {
+  modelChoiceIssue,
+  refKey,
+  sameRef,
+  useApplyRecommendation,
+  useModels,
+} from '@/entities/model-catalog'
 import { AppFailureMessage, Button, Notice, Typography } from '@/shared/ui'
 
 export function ApplyRecommendation({ recommendation }: { recommendation: RecommendationSet }) {
   const { t } = useTranslation('models')
   const mutation = useApplyRecommendation()
-  const { models } = useModels()
+  const { models, isPending, isError } = useModels()
   // A set is applied whole: the server refuses all seven refs if any one is above the tier, so
   // offering the button would only produce a refusal the user cannot act on from here.
-  const blocked = unaffordableRefs(recommendation, models)
+  const blocked = isPending || isError ? [] : unavailableRefs(recommendation, models, t('vanished'))
   return (
     // No card: this is the whole content of a page section, and THEME-13 excludes a section from the
     // card contract. On a 360px phone its padding cost 32px of a 328px column in the one region
@@ -28,7 +34,7 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
       <Button
         variant="secondary"
         className="mt-4 w-full sm:w-auto"
-        disabled={blocked.length > 0}
+        disabled={isPending || isError || blocked.length > 0}
         pending={mutation.isPending}
         onClick={() => {
           void mutation.apply(recommendation.id).catch(() => {
@@ -40,9 +46,14 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
       </Button>
       {blocked.length > 0 && (
         <Notice tone="info" role="status" className="mt-2">
-          {t('recommendation.unaffordable', {
-            models: blocked.map(refKey).join(', '),
+          {t('recommendation.unavailable', {
+            models: blocked.map(({ ref, reason }) => `${refKey(ref)} (${reason})`).join(', '),
           })}
+        </Notice>
+      )}
+      {isError && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          {t('selectField.loadFailed')}
         </Notice>
       )}
       {/* Everything this action rewrites — the three active models and the observe and write A/B
@@ -65,18 +76,21 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
 
 /** Every ref in the set the calling account may not run, in set order and without repeats: the
  *  seven a set carries, analyze naming its active model alone (MODEL-23). */
-function unaffordableRefs(
+function unavailableRefs(
   recommendation: RecommendationSet,
   models: readonly CatalogModel[],
-): ModelRef[] {
-  const locked: ModelRef[] = []
+  missingReason: string,
+): { ref: ModelRef; reason: string }[] {
+  const locked: { ref: ModelRef; reason: string }[] = []
   for (const selection of recommendation.selections) {
+    const stage: StageName = selection.stage
     const refs = [selection.active, selection.candidateA, selection.candidateB]
     for (const ref of refs.filter((value) => value !== undefined)) {
       const model = models.find((candidate) => sameRef(candidate.ref, ref))
-      if (!model || model.affordable) continue
-      if (locked.some((existing) => sameRef(existing, ref))) continue
-      locked.push(ref)
+      const reason = model ? modelChoiceIssue(model, stage) : missingReason
+      if (!reason) continue
+      if (locked.some((existing) => sameRef(existing.ref, ref))) continue
+      locked.push({ ref, reason })
     }
   }
   return locked

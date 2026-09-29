@@ -11,6 +11,7 @@ import {
   sameRef,
 } from '../model/types'
 import { toStageSelection } from './catalog-mappers'
+import { modelChoiceIssue, savedChoiceIssue } from '../model/access'
 import { useModels } from './useModels'
 
 export type SelectionsByStage = Partial<Record<StageName, StageSelection>>
@@ -92,6 +93,13 @@ export function useStageSelection(stage: StageName): StageSelectionState {
       }
     }
     if (catalogPending || isError) return { ...base, selected: null, unavailable: undefined }
+    if (saved.unavailableReason) {
+      return {
+        ...base,
+        selected: null,
+        unavailable: { ref: saved.ref, reason: savedChoiceIssue(saved) || t('unsuitable') },
+      }
+    }
 
     const model = catalog.find((candidate) => sameRef(candidate.ref, saved.ref))
     if (!model) {
@@ -102,11 +110,21 @@ export function useStageSelection(stage: StageName): StageSelectionState {
       return {
         ...base,
         selected: null,
-        unavailable: { ref: saved.ref, reason: model.disabledReason },
+        unavailable: { ref: saved.ref, reason: modelChoiceIssue(model, stage) },
       }
     }
     if (!models.includes(model)) {
       return { ...base, selected: null, unavailable: { ref: saved.ref, reason: t('unsuitable') } }
+    }
+    if (model.access?.[stage] && modelChoiceIssue(model, stage)) {
+      return {
+        ...base,
+        selected: null,
+        unavailable: {
+          ref: saved.ref,
+          reason: modelChoiceIssue(model, stage),
+        },
+      }
     }
     return { ...base, selected: saved.ref, unavailable: undefined }
   }, [saved, catalog, stage, catalogPending, selectionsPending, isError, t])

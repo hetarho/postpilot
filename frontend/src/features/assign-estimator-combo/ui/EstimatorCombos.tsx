@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  LEVELS,
+  PAID_LEVELS,
   useAdminCatalog,
   useAssignEstimatorCombo,
   type AdminCatalogEntry,
@@ -67,7 +67,7 @@ export function EstimatorCombos() {
 
       {!isError && (
         <div className="grid gap-4">
-          {LEVELS.map((combo) => {
+          {PAID_LEVELS.map((combo) => {
             const assigned = observe.catalog.estimatorCombos.find((entry) => entry.combo === combo)
             return (
               // The key carries the assignment, so a row re-seeds from the server after

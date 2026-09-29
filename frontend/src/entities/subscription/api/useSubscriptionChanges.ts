@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { myPlanQueryKey, planToProto, type PlanName } from '@/entities/plan/@x/subscription'
+import { invalidateModelAccess } from '@/entities/model-catalog/@x/subscription'
 import { appFailureFromConnect, BillingService, ProtoPlan, ProtoTerm } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import type { BillingTerm } from '../model/types'
@@ -27,6 +28,7 @@ function useBillingInvalidation() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: myBillingQueryKey(transport) }),
       queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) }),
+      invalidateModelAccess(queryClient, transport),
     ])
   }
 }
