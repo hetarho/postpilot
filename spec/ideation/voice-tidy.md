@@ -1,5 +1,5 @@
 # IDEATION voice-tidy
-> st:open@260929 | 말투 is the last prompt layer left unreviewed: learn it only from prose the owner wrote, show what was learned in plain words, and let the owner check that it applies
+> st:ready@260929 | 말투 is the last prompt layer left unreviewed: make it the owner's fingerprint — learned only from prose the owner wrote, shown back in plain words, and checked against the owner's own answer
 
 ## vision
 - [o] Problem: 말투 was built early as a learning system (edit-diff 대조 규칙, 프로필 검증, 문장 의견, 블라인드 비교, versioned typed profile with six axes and provenance badges) that the owner cannot read and that never received the signal it learns from
@@ -9,7 +9,7 @@
   - the one learned source is an AI-written post with ~5% hand edits — learning from it feeds the model's own prose back as "the owner's voice"
   - 문장 의견 is stored and never read by anything
 - [o] Target: an owner writing Naver posts who wants them to sound like themselves — from posts they wrote by hand, or from short writing prompts when they have none
-- [o] Core value: a voice holds only the owner's own prose, reads back to the owner in plain words, and can be checked side by side against the owner's own answer
+- [o] Core value: a voice is a fingerprint that shows one person wrote the text — the surface habits the owner repeats (`안녕하세요!`'s exclamation marks, emoji, a 해요/습니다 split or 해요 alone) — built only from the owner's own prose, read back in plain words, and checked side by side against the owner's own answer
 
 ## explored
 - [o] check (260929, no paid call): the voice does reach the model — the write and revise system prompts carry it on every run; storyline, observe and the clip writers never see it
@@ -22,9 +22,16 @@
   - a true "does it apply" test needs the same post generated with and without the voice: paid calls, only with the owner's yes
 - [o] a voice is learned from prose the owner wrote by hand, gathered when the voice is created ← owner direction; only the owner's own writing carries the owner's voice, AI output does not
   - the owner has hand-written posts ⇒ paste them
-  - the owner has none ⇒ the product shows a photo or a situation and the owner describes it in writing; those answers are the samples
+  - the owner has none ⇒ the product gives a prompt — on a photo of the owner's own, or a situation — and the owner answers it in writing; those answers are the samples
 - [x] the owner edits the analysis field by field (pencil per field, 직접 설정, axis sliders) ← owner: too complex to hand to a user to edit
-- [o] the writing prompts come from the product, one set per 분야 (the post's 분야 list): photo prompts ("이 음식을 블로그에 쓰듯 2~5문장으로") and situation prompts without a photo ("처음 가 본 식당에 들어섰을 때") ← a new owner can start at once, and the answers are the owner's own prose
+- [o] the writing prompts come from the product as one shared set for every voice: photo prompts ("고른 사진을 블로그에 쓰듯 2~5문장으로") and situation prompts without a photo ("처음 가 본 곳에 들어섰을 때"), openings and closings among them ← a new owner can start at once, and the answers are the owner's own prose
+  - [o] the set is product content the operator prepares once (an AI may draft it, the operator edits it); its size is SSOT calibration, about 20 so that 12~15 answers reach 60 sentences with room to skip
+  - [o] a photo prompt's photo is the owner's own, picked from their phone; the product supplies only the prompt text ← owner choice; the owner writes about what they actually ate or saw, as when writing a post, and no licence question arises
+  - [x] product-supplied photos (free-licence stock, 공공누리, AI-generated) ← the owner never ate or saw what is pictured, so taste and mood would be imagined
+- [o] a voice belongs to no 분야 and no template: it is the person's own voice across every post ← owner 260929: "말투는 전체 분야 / 템플릿이랑 연관성을 끊어볼까 사람 고유의 말투이니까"
+  - [x] per-분야 prompt sets and a 분야 chosen when a voice is made ← the same; the owner's own photo already fits any 분야, so no prompt needs one
+  - the template stays unlinked (TMPL-1; per-voice templates are already out) and the existing precedence below is unchanged: the template decides form, the voice decides how sentences sound
+- [o] an owner may keep several voices, e.g. a calm one and a cheerful one, each learning only from its own material ← owner: "어떨 땐 차분해야 하고 어떨 땐 유쾌해야 해서 말투 여러 개를 만들 수는 있게 하자"; VOICE-1's isolation and the absent voice-count limit stay
 - [o] after creation a voice keeps learning only from more pasted posts and more answered prompts (re-analysis → `다시 분석`) ← owner kept exactly these two
 - [x] learning from a finished post (확정하고 말투 학습 / 말투 학습) and 문장 의견, which only appears after such a run ← owner choice once each was explained: material comes only from pasted posts and answered prompts; on prod 6 of the 7 learned posts were ≥ 95% the AI's own output, and 문장 의견 was read by nothing
 - [x] 대조 규칙 and 블라인드 비교, which exists only to test one rule ← owner choice once explained: 말투 분석 already describes how the owner sounds, and an explicit instruction is a 지침; the edit diff it learned from is gone
@@ -37,51 +44,87 @@
   - retires the bootstrap `기본 말투` (VOICE-4) and "at least one active voice and exactly one default" (VOICE-2); a post's voice becomes optional (POST, GEN)
   - no voice ⇒ no voice section in the prompt at all, `[종결어미 제약]` included
 - [o] gathering makes no model call: a deterministic readiness meter shows `말투 학습에 필요한 정보 N% 확보` by the product's own rule, and at 100% `이제 말투를 만들 수 있어요`; the analysis runs once, when the owner then makes the voice ← owner: no AI analysis per answer
-  - [?] meter rule (proposal, numbers calibrated in the SSOT): pasted posts and answers count alike; 100% needs enough sentences for a stable ending mix and material covering an opening, a description and a closing
+  - [o] meter rule: pasted posts and answers count alike, by sentences; 100% needs 60 sentences and at least one opening, one description and one closing, a pasted post covering all three ← owner choice; about one hand-written post or 12~15 answers of 4~5 sentences, and the ending mix is then within about ±13%p
+    - calibration (prod 260929): the two pasted Naver posts hold about 80 sentences each; the owner's post bodies hold a median of 24; the mix's 95% margin is about ±15%p at 40 sentences, ±13%p at 60, ±10%p at 100
+    - a pasted Naver post's non-prose lines (the place card, 영업시간, hashtags) count toward none of the 60 (derived, below)
 - [x] the 말투 설명 field at creation (a seeded profile from a wish) ← a wish is not writing; wishes belong in 지침; the one seeded voice doubled the write prompt (46 s → 81 s)
 - [o] the analysis is shown read-only as 말투 분석 in its own tab ← owner direction
-- [o] keep the typed profile data (ending distribution, sentence length, paragraph shape, intro/closing and heading/list/emoji habits, six axes) and keep using it in the write and revise prompts; 말투 분석 explains every value to the owner in plain words ← owner: the structure is research-derived and worth keeping, it just needs explaining
+- [o] keep the typed profile data (ending distribution, sentence length, paragraph shape, intro/closing and heading/list/emoji habits) and keep using it in the write and revise prompts; 말투 분석 explains every value to the owner in plain words ← owner: the structure is worth keeping, it just needs explaining; the six axes were dropped with the fingerprint set (below)
   - the six axes take their names from Biber's multidimensional analysis (1988): involvement, narrativity, overt persuasion, abstractness; addressee focus and humor are added
   - Biber's scores are computed from ~60 counted linguistic features; here the analysis model estimates -3..3 with no definition of either pole, and the writer receives bare `key=N`
-- [o] every axis is defined as its source research defines it, and both the analysis model and the writer receive that definition (poles and what a value means) instead of a bare name and number ← owner: 논문에서 쓰는대로 정의를 제대로 해서 전달
-  - [o] source rule: research on Korean only; a paper older than 10 years is used only when highly cited (a classic, judged by citation count); an old paper that is not well cited is dropped and the product defines its own axes instead ← owner rule
-  - [?] which set passes the rule — research 260929 (web; citation counts from Google Scholar via a summarising fetch, not re-checked):
-    - Kim & Biber 1994 (OUP chapter): ~126 citations, borderline; its Korean dimensions are reported in Biber 1995 *Dimensions of Register Variation* §6.3 (~2,815 citations, a classic ⇒ passes)
-    - Korean dimensions (Biber 1995, read through an unofficial excerpt; loadings for D2–D6 unseen): D1 on-line interaction vs planned exposition · D2 overt vs implicit logical cohesion · D3 overt expression of personal stance · D4 narrative vs non-narrative · D5 on-line reportage of events (sportscasts, tentative) · D6 honorification
-    - Biber 1995: a persuasion dimension exists only in English and Somali, an abstract-style dimension only in English ⇒ the product's persuasion, abstractness and humor axes have no Korean research behind them
-    - post-2016: Kang Beomil 2024 (언어과학 31(1), 59 features, 17 registers) — 대화적/비공식적 스타일 · 학술적/격식적 담화 대 정보성 담화 · 공적 견해 표출 · 감정적 상호작용 · 서술적 이야기; the features per dimension are behind a paywall (unverified)
-    - no study defines dimensions for Korean blog or review writing
-    - none of these papers uses a -3..3 scale; they report factor scores
+  - the Korean analysis prompt's nine sections never mention the axes; only the structured-output schema asks for six integers, with no definition
+- [o] whatever reaches the analysis model and the writer carries its definition — what was counted and what a value means — never a bare name and number ← owner: 정의를 제대로 해서 전달
+- [o] a voice works as a fingerprint that shows one person wrote the text; any free source may inform what it is made of — stylometry (authorship attribution), other methods, prompt engineering — and a paper need not be well known ← owner 260929: "말투는 '한 사람이 썼다는 걸 증명하는 지문' 같은 역할을 할 수만 있으면", e.g. `안녕하세요!`'s exclamation marks, heavy emoji, a 해요/습니다 split, 해요 alone
+- [x] source rule "research on Korean only; a paper older than 10 years only when highly cited" and replacing the axes with a Korean register-dimension set ← owner: no paid papers, and the goal is a fingerprint, not a register position; both sets that passed kept their per-dimension features behind a paywall
+  - record of that research (260929, web; citation counts from Google Scholar via a summarising fetch, not re-checked): Biber 1995 *Dimensions of Register Variation* (~2,815 citations) reports Kim & Biber 1994's Korean dimensions — on-line interaction vs planned exposition · overt vs implicit logical cohesion · overt expression of personal stance · narrative vs non-narrative · on-line reportage of events · honorification; 강범일 2024 (언어과학 31(1), 59 features, 17 registers): 대화적/비공식적 스타일 · 학술적/격식적 담화 대 정보성 담화 · 공적 견해 표출 · 감정적 상호작용 · 서술적 이야기; no Korean research behind persuasion, abstractness or humor; register dimensions separate conversation, news and academic prose, so posts of one register sit close together on them
+- [o] research for the fingerprint (260929, free sources): Stamatatos 2009, *A survey of modern authorship attribution methods* (JASIST 60(3), free preprint)
+  - lexical: sentence and word length, vocabulary richness, function-word frequencies, word n-grams, errors
+  - character: character types (letters, digits, punctuation), character n-grams — any language, no tools, tolerant of noisy online text
+  - syntactic and semantic features need a tagger or parser (outside VOICE-51's standard-library rule)
+  - application-specific structural features: greetings and farewells, signatures, indentation, paragraph length — "particularly important in very short texts"
+  - style is treated as orthogonal to topic: content words are avoided so a fingerprint holds across topics
+  - Korean: a frequency-based authorship study over four 조선일보 columnists reached > 93% with morpheme frequencies (from a search summary, not re-read; morphology needs a tagger; sentence-final character strings stand in for endings)
+- [o] the fingerprint is eight items the product counts, and the AI writes only what cannot be counted ← owner choice
+  - counted: ① endings — the 다 / 해요 / 습니다 / 기타 mix and the frequent sentence-final strings (`~더라구요`) · ② sentence-final marks — the share of `!` `?` `~` `…` and repeats such as `!!` · ③ emoji and ㅎㅎ·ㅋㅋ·ㅠㅠ · ④ sentence length, sentences per paragraph, a line break after every sentence · ⑤ the opening and closing lines (`안녕하세요!`) · ⑥ frequent adverbs and phrases (진짜, 완전, 근데) · ⑦ first person (저 / 제가 / 나) · ⑧ heading and list habits
+  - AI-written: an overall impression in one or two sentences, when each verbal tic appears, signature phrases with the topic words (보리밥, 양꼬치) filtered out
+  - 말투 만들기 and 다시 분석 stay one AI call each
+- [x] the six axes ← register-level scales that separate conversation, news and academic prose; they do not tell one blogger from another, and the model filled them with no definition
+- [x] counting only, with no AI call (making a voice free and instant) ← owner chose the AI description; with few 학습 글 the phrase list would fill with topic words
+- [o] derived: a line that is not the owner's prose — a hashtag-only line, the pasted place card, 영업시간 / 주소 / 전화 lines, a `[출처]` line — counts toward none of the 60 sentences and feeds no fingerprint item ← a voice is learned only from prose the owner wrote; the SSOT names the detection rule
+- [o] 검증 also shows a per-item fingerprint comparison: each item's value for this voice beside the AI text's, the largest gap first, counted by the product with no extra call ← owner choice; whether the voice applied reads as numbers, not a feeling
+  - the reference is the voice's whole fingerprint, not the one answer
+  - [x] one 0–100 match score ← it hides which habit went missing
+  - derived: the checked prompt's own answer is withheld from that call's excerpts ← otherwise the AI copies the owner's answer
+  - derived: a voice with no answered prompt (e.g. the kept voice, made from one pasted post) offers the shared prompts in 검증; the owner answers one there, and that answer is also a new 학습 글 ← 검증 compares against the owner's own answer to the same prompt
+  - [?] a 2~5 sentence AI text makes the ratios swing: a minimum length for the checked text (SSOT calibrates)
+  - [?] feasibility: checking a photo prompt means the call reads the owner's photo — a write model that reads images, or an observe call first (two calls)
+- [o] model lab: what the owner wants from a voice comparison is how well an AI reflects the voice ← owner 260929: "얼마나 우리의 말투를 ai가 잘 반영하는지를 보고싶은건데"
+- [o] 말투 반영 비교 takes the 문체 분석 comparison's place in the model lab: pick a voice and one answered prompt → two write models write that prompt in this voice from identical input → both texts beside the owner's answer, each with its per-item fingerprint comparison → the owner picks one; two write calls; the verdict counts toward the write stage's ranking ← owner choice
+  - derived: blind until the verdict, with the shared badge catalog, as every lab comparison (MODEL-32, MODEL-61~63)
+  - derived: the prompt's own answer is withheld from both calls, and a voice with no answered prompt has the owner answer one first ← as in 검증
+- [o] ② shows this post's fingerprint beside its voice's after each generation and AI 수정, counted with no call ← owner choice; whether the voice held reads on every post
+  - derived: a post with 말투 없음 shows none
+  - [?] a post written with a template: whether ② says so, since a gap on headings or the opening line may come from the template (below)
+- [o] derived: the existing precedence holds — the template decides composition, order, what each place covers and any literal line it writes; style and endings follow the voice (the generation `templatePrecedence` sentence, TMPL-1) ← the fingerprint is how sentences sound, the template is the post's form
+- [x] the analyze-model comparison (VOICE-49, the model lab's 문체 분석 tab, analyze apply) ← owner accepted: with most of the fingerprint counted, two analysis models differ only in the AI description; used once on prod against 26 write comparisons
+- [x] a fingerprint on each write A/B candidate ← owner chose 말투 반영 비교 and ② instead
+- [x] an automatic per-model ranking from generated posts ← templates and topics differ post to post, so it is not a fair comparison
+- [o] 말투 분석 shows two groups, `숫자로 본 습관` (the eight counted items, e.g. "문장의 32%를 느낌표로 끝내요") and `AI가 읽은 인상`, each item with one sentence from the owner's own 학습 글 that shows the habit; no provenance badge ← owner choice; the group title says where a value came from, and the example lets the owner judge it at once
+- [o] v1 voices are Korean only; an English post may still use a Korean voice and then receives only the language-independent items (sentence-final marks, emoji, line breaks, paragraph length, heading and list habits) ← owner choice; prod never held an English voice or post (10 voices, 44 posts, all Korean), and endings, ㅎㅎ·ㅋㅋ, first person and the phrase lists are Korean-only
+  - retires the English analysis and its schema and the source-language choice at creation; English voices return later with their own items and prompts
+- [x] the paid with/without-voice A/B now ← owner choice; the projection it would test is being replaced; the task that builds the new one runs one real 검증 with the owner's yes
 - [o] 규칙으로 저장 leaves the voice entirely; 지침으로 저장 (GUIDE-21) stays the only way to keep a revision instruction ← owner: it has nothing to do with the voice (resolves VOICE-7)
-- [o] 말투 list uses 내 글's row: the whole row is one link, name + 기본 / language badges + a meta line; 기본으로 설정 and 삭제 move to the voice page ← one list design across the app
+- [o] 말투 list uses 내 글's row: the whole row is one link, name + 기본 badge + a meta line (derived: no language badge, voices being Korean only, below); 기본으로 설정 and 삭제 move to the voice page ← one list design across the app
 - [o] a 학습 글 (pasted post or answered prompt) opens to its full text; today the body is never returned (VOICE-8) and the row is a truncated label with only 삭제 ← owner: "상세보기 할 수가 없고 삭제만돼"
 - [o] `[종결어미 제약]`'s fixed "no third identical ending in a row" becomes a 기본 지침, on for every post and switchable on the 지침 screen; "follow the measured ending mix" stays with the voice, being the analysis itself ← the system-prompt-format-only split: a fixed writing rule blocks writing that needs its opposite
 - [o] the voice page has three tabs: 말투 분석 (opens first) · 학습 글 · 검증; renaming, 기본 and 삭제 sit on the title row ← owner choice
-- [o] 새 말투 만들기 asks the name and the 분야 first and lists the voice at once as `만드는 중`; gathering can stop and resume; a voice below 100% cannot be picked for a post ← owner choice
+- [o] 새 말투 만들기 asks the name alone (a voice has no 분야, above) and lists the voice at once as `만드는 중`; gathering can stop and resume; a voice below 100% cannot be picked for a post ← owner choice
 - [o] an owner with no voice finds 새 말투 만들기 on the empty 말투 list and inside the post's voice picker (말투 없음 · the owner's voices · 새 말투 만들기) ← owner choice; no sign-up onboarding step
+- [o] prod data: only `맛집 리뷰 블로거 학습` stays, its pasted post (`서울 구로디지털단지역 맛집 이가네양꼬치…`, 5,186 characters, about 78 sentences) kept as its one 학습 글; the conversion is a hand edit of the prod DB with no data-migration code ← owner: "db가 전체에 이거 하나니까 마이그레이션까지는 필요 없을 것 같아"
+  - prod 260929: 4 accounts; 3 hold only the empty bootstrap 기본 말투 and no post; the owner holds 7 voices (4 active) and 44 posts, 35 of them on the kept voice
+  - derived: every other voice and every learning row (finished-post sources, versions, rules, events) is removed; the 9 posts on a removed voice become 말투 없음 and keep their text
+  - derived: the kept voice's old analysis goes with the old shape; it re-enters as `만드는 중`, its readiness counted from the kept post, and the owner makes it again (one analysis call) ← the analysis runs only when the owner makes the voice
+  - [?] feasibility: read as "no data-conversion code"; a fresh or test database still needs the new schema, which is create-task's call
 
 ## shape
-- flow create: 새 말투 만들기 → name + 분야 → voice listed as `만드는 중` → 글 붙여넣기 | 문항 풀기 (photo prompt | situation prompt) → `말투 학습에 필요한 정보 N% 확보` (no model call) → 100% → 말투 만들기 (one analysis call) → 말투 분석
+- flow create: 새 말투 만들기 → name → voice listed as `만드는 중` → 글 붙여넣기 | 문항 풀기 (photo prompt on the owner's own photo | situation prompt) → `말투 학습에 필요한 정보 N% 확보` (no model call; 60 sentences + opening, description, closing) → 100% → 말투 만들기 (one analysis call) → 말투 분석
 - flow grow: 학습 글 → paste a post | answer more prompts → `새 학습 글 N편 · 다시 분석` → re-analysis (one call) → `이전 분석으로 되돌리기` while the previous one is kept
-- flow check: 검증 → pick an answered prompt → one AI call writes it in this voice → shown beside the owner's answer
-- flow write: new post → the 기본 voice, or 말투 없음 when none is 기본 → voice picker (말투 없음 · voices at 100% · 새 말투 만들기); 말투 없음 ⇒ no voice section in the prompt
-- v1: 내 글-style voice list; three tabs; read-only 말투 분석 in plain words with research-defined axes, given to the writer with the same definitions; per-분야 photo and situation prompts; readiness meter; optional voice and optional 기본; 다시 분석 + one-step undo; 검증; 학습 글 readable in full; 규칙으로 저장 removed; the ending-run rule as a 기본 지침
-- not: 대조 규칙, 블라인드 비교, learning from finished posts (확정하고 말투 학습 / 말투 학습), 문장 의견, 버전 기록 tab, the 말투 설명 seed, per-field editing and overrides, the auto-created 기본 말투, a sign-up onboarding step
+- flow check: 검증 → pick an answered prompt (or answer one now) → one AI call writes it in this voice, that answer withheld → shown beside the owner's answer with the per-item fingerprint comparison (no extra call)
+- flow write: new post → the 기본 voice, or 말투 없음 when none is 기본 → voice picker (말투 없음 · voices at 100% · 새 말투 만들기); 말투 없음 ⇒ no voice section in the prompt → after each generation and AI 수정, ② shows the post's fingerprint beside the voice's (no call)
+- flow compare (model lab): 말투 반영 비교 → voice + answered prompt → two write models, identical input, that answer withheld → both beside the owner's answer with fingerprint comparisons → the owner's verdict → write-stage ranking
+- v1: 내 글-style voice list; three tabs; read-only 말투 분석 in plain words: eight counted fingerprint items and a short AI description, given to the writer with the same definitions; one shared prompt set: photo prompts (the owner's photo) and situation prompts; readiness meter; optional voice and optional 기본; 다시 분석 + one-step undo; 검증 with the per-item fingerprint comparison; 말투 분석 in two groups with an example from the owner's text; ②'s fingerprint beside the voice's; the model lab's 말투 반영 비교; Korean voices only; 학습 글 readable in full; 규칙으로 저장 removed; the ending-run rule as a 기본 지침
+- not: 대조 규칙, 블라인드 비교, learning from finished posts (확정하고 말투 학습 / 말투 학습), 문장 의견, 버전 기록 tab, the 말투 설명 seed, per-field editing and overrides, the auto-created 기본 말투, a sign-up onboarding step, product-supplied prompt photos, a Korean register-dimension axis set, the six axes, a single match score, the paid with/without-voice A/B, the analyze-model comparison and analyze apply, fingerprints on write A/B candidates, an automatic per-model ranking, English voices, per-분야 prompt sets, a voice's 분야
 
 ## domains
-- VOICE: what a voice is made of (pasted posts + prompt answers), `만드는 중` and the readiness meter, per-분야 prompt sets, the list row, three tabs, read-only analysis in plain words, 다시 분석 and one-step undo, 검증, optional 기본, no bootstrap voice; removes contrast rules, comparisons, finished-post learning, sentence feedback, versions tab, seed, overrides, 규칙으로 저장 text
-- GEN: the voice projection in plain Korean with the axis definitions, no voice section for 말투 없음, the ending-run line leaving the voice section, 규칙으로 저장 leaving revision (GEN-39)
-- POST: a post's voice becomes optional; the voice picker's 말투 없음 and 새 말투 만들기; ② loses 확정하고 말투 학습; ③ loses the 말투 학습 panel and 문장 의견
+- VOICE: what a voice is made of (pasted posts + prompt answers on the owner's photos), the eight counted fingerprint items and the AI description, non-prose lines excluded, `만드는 중` and the readiness meter (60 sentences + coverage), one shared prompt set, several voices by mood, no 분야 on a voice, the list row, three tabs, read-only analysis in plain words (two groups, an example sentence per item), 다시 분석 and one-step undo, 검증 with the fingerprint comparison, Korean voices only, optional 기본, no bootstrap voice; removes the six axes, the English analysis, the analyze experiment (VOICE-49), contrast rules, comparisons, finished-post learning, sentence feedback, versions tab, seed, overrides, 규칙으로 저장 text
+- GEN: the voice projection in plain Korean with each fingerprint item's definition, no voice section for 말투 없음, the ending-run line leaving the voice section, 규칙으로 저장 leaving revision (GEN-39)
+- POST: a post's voice becomes optional; ② shows the post's fingerprint beside its voice's; the voice picker's 말투 없음 and 새 말투 만들기; ② loses 확정하고 말투 학습; ③ loses the 말투 학습 panel and 문장 의견
 - GUIDE: a new 기본 지침 for the ending run; 지침으로 저장 is the only save beside a revision
 - AUTH: adduser no longer creates a voice
-- QUOTA: credits for 말투 만들기, 다시 분석 and 검증 (one call each)
-- MODEL: the analyze-model experiment that runs on a voice's corpus (VOICE-49) — pending
+- QUOTA: credits for 말투 만들기, 다시 분석 and 검증 (one call each) and 말투 반영 비교 (two write calls)
+- MODEL: 말투 반영 비교 replaces the 문체 분석 comparison (blind, badges, write-stage ranking); analyze leaves the model lab and analyze apply goes; the voice-rule comparison (MODEL-43) goes with 대조 규칙
+- LANG: voices are Korean only (the source-language choice and the English analysis retire); a Korean voice on an English post projects only the language-independent items
+- ops (no SSOT): the one-time hand edit of the prod DB keeping `맛집 리뷰 블로거 학습`
 
 ## open
-- which axis set passes the owner's source rule (research running 260929)
-- the readiness meter's rule and numbers (sentences, characters, coverage of opening / description / closing)
-- the prompt photos: a source the product may use [?] feasibility (licence)
-- how 말투 분석 words each value for the owner (one plain sentence per item; whether a value computed by counting reads differently from one the AI judged)
-- the analyze-model experiment (VOICE-49) that compares two analysis models on a voice's corpus: not yet explained to the owner
-- existing voices on prod (pre-alpha, data disposable): keep pasted samples, drop learned finished posts and empty bootstrap voices?
-- run the paid with/without-voice A/B?
+- SSOT calibration: the shared prompt set's size and text, the non-prose line rule, the checked text's minimum length, the photo prompt's 검증 reading the photo, whether ② says the post used a template
