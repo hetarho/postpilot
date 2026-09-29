@@ -430,11 +430,26 @@ choice would be expensive to undo are listed at the end.
   actual pixels in three frames: the intro over its opening, nothing over the uncaptioned cut,
   the outro over its close. The provider side is a fixture. The other four pairs, and every
   preview-versus-export comparison, are checked by measured-layout tests, not by a render.
-- **No real browser render was run.** WebCodecs needs Chrome, and a clip needs a plan, which only
-  a generation call makes. The dev backend has no provider double, and spending credits needs
-  your explicit yes. *If you want that evidence:* approve one small real run (a measured full
-  run is about $0.012) or add a fixture provider to the dev backend; the Playwright and
-  system-Chrome recipe is ready.
+- **One real generation run, then both renders of the edited clip (260929, your approval).**
+  Three synthetic 12 s originals (a storefront, a latte, a dessert case, drawn with Korean signs;
+  the latte's source sound off), vertical, rapid pace, no template, intro and outro on.
+  바로 만들기 on `google/gemini-3.8-flash` made 5 calls (3 observations, flow, narration) with no
+  format retry, for $0.0107 as OpenRouter reported it. Then the second intro slot was blanked,
+  the first outro slot reworded, and the first caption given `neon` at 72 px and a chosen place.
+  The server render took 55 s and the Windows Chrome render 80 s. Both files are 30.000 s,
+  H.264 High 1080×1920 at 30 fps (900 frames) and AAC 48 kHz stereo, and both are silent exactly
+  over the latte. Frames match within encoding noise, except the outro (below).
+- **The run found a browser-render defect, now fixed.** A rapid caption in a sequence style is
+  laid out as one visual per phrase, and the caption-frame endpoint served only the first
+  phrase. The browser then asked for the second phrase and was refused, so every browser render
+  of such a caption failed ("브라우저 렌더를 완료하지 못했어요"). The endpoint now serves each
+  phrase's own frames, counted from the caption's first frame; a media test pins it.
+- **Open, needs your call (spec gap):** a browser render never draws the CDS-44 scrim. The server
+  samples the footage and put `scrim.radial` behind the outro over the bright dessert case; the
+  browser draws from preview assets, which never read footage ("final-only"), so its outro has
+  no scrim. CDS-44/CDS-32 want the scrim in every delivered clip, and CLIP-159 lets the browser
+  draw only what the server drew. Options: the server samples for the browser render's assets,
+  the browser samples, or browser renders are allowed to omit it.
 - **Cross-feature checks sit in the existing suites.** They are in media (preview/export
   parity on all three ratios at both paces), store (the no-template workflow from slots to both
   render kinds, and the older-project compatibility fixtures), `pages/clip/ui` (flush-before-render

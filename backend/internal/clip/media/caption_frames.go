@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,23 +44,27 @@ func (r *Rendering) PrepareCaptionFrames(ctx context.Context, plan clip.EditPlan
 		if err != nil {
 			return err
 		}
-		visual, found := declaredVisual{}, false
+		// A rapid caption is laid out as one visual per phrase, all carrying the
+		// caption's id, and the render draws each phrase as its own sequence. The
+		// browser counts every frame from the caption's first, so the phrases
+		// are one caption here too, in the order they play.
+		var cues []declaredVisual
 		for _, v := range layout.visuals {
 			if v.manifest.InstanceID == instanceID {
-				visual, found = v, true
-				break
+				cues = append(cues, v)
 			}
 		}
-		if !found || visual.manifest.Role != "caption" {
+		if len(cues) == 0 || cues[0].manifest.Role != "caption" {
 			return clip.ErrInvalid
 		}
 		// A static style has ONE raster, which the draft preview already serves
 		// as this caption's asset; asking for its frames is a mistake rather
 		// than a cheaper path (CDS-81).
-		if visual.caption.Caption.Static() {
+		if cues[0].caption.Caption.Static() {
 			return clip.ErrInvalid
 		}
-		out, err = r.captionSheet(ctx, ws, canvas, visual, offset, cfg)
+		slices.SortStableFunc(cues, func(a, b declaredVisual) int { return a.manifest.StartMS - b.manifest.StartMS })
+		out, err = r.captionSheet(ctx, ws, canvas, cues, offset, cfg)
 		return err
 	})
 	if err != nil {
@@ -70,23 +75,39 @@ func (r *Rendering) PrepareCaptionFrames(ctx context.Context, plan clip.EditPlan
 
 // captionSheet draws one run of a caption's frames onto a single document and
 // rasterises it once. The frames are the render's own: same crop, same progress
-// per frame, same painter (CDS-85).
-func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual declaredVisual, offset int, cfg clip.PreviewConfig) (clip.CaptionFrames, error) {
+// per frame, same painter (CDS-85). A run stays inside one phrase, whose crop
+// and progress are its own, and `offset` counts from the caption's first frame.
+func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cues []declaredVisual, offset int, cfg clip.PreviewConfig) (clip.CaptionFrames, error) {
 	out := clip.CaptionFrames{NextOffset: -1}
 	fps := r.cfg.FPS
-	startMS, endMS := visual.manifest.StartMS, visual.manifest.EndMS
-	first := startMS * fps / 1000
-	count := (endMS*fps+999)/1000 - first
+	frames := func(v declaredVisual) (int, int) {
+		first := v.manifest.StartMS * fps / 1000
+		return first, (v.manifest.EndMS*fps+999)/1000 - first
+	}
+	captionFirst, _ := frames(cues[0])
+	phrase := -1
+	for i, cue := range cues {
+		if first, count := frames(cue); captionFirst+offset >= first && captionFirst+offset < first+count {
+			phrase = i
+			break
+		}
+	}
+	if phrase < 0 {
+		return out, clip.ErrInvalid
+	}
+	visual := cues[phrase]
+	first, count := frames(visual)
+	local := captionFirst + offset - first
 	crop := sequenceCrop(canvas, visual.caption)
 	cellW, cellH := int(crop.Width), int(crop.Height)
-	if count <= 0 || cellW <= 0 || cellH <= 0 || offset >= count {
+	if count <= 0 || cellW <= 0 || cellH <= 0 {
 		return out, clip.ErrInvalid
 	}
 	// The sheet is decoded whole by a browser, so both of its sides stay inside
 	// one bound and the run is cut to what fits.
 	columns := max(1, min(cfg.MaxSheetPixels/cellW, cfg.MaxFrameCells))
 	rows := max(1, cfg.MaxSheetPixels/cellH)
-	cells := min(count-offset, min(cfg.MaxFrameCells, columns*rows))
+	cells := min(count-local, min(cfg.MaxFrameCells, columns*rows))
 	if cells <= 0 {
 		return out, clip.ErrPreviewTooLarge
 	}
@@ -101,7 +122,7 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 	// browser asks for the rest from NextOffset as it does for any run.
 	budget := sheetByteBudget(cfg)
 	frameCost, frameBytes := time.Duration(0), 0
-	for _, at := range []int{offset, count / 2} {
+	for _, at := range []int{local, count / 2} {
 		start := time.Now()
 		sample, _, err := r.drawCaptionSheet(ctx, ws, canvas, visual, crop, at, count, 1, cfg)
 		if err != nil {
@@ -122,7 +143,7 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 	var data []byte
 	for {
 		var err error
-		data, columns, err = r.drawCaptionSheet(ctx, ws, canvas, visual, crop, offset, count, cells, cfg)
+		data, columns, err = r.drawCaptionSheet(ctx, ws, canvas, visual, crop, local, count, cells, cfg)
 		if err != nil {
 			return out, err
 		}
@@ -134,12 +155,18 @@ func (r *Rendering) captionSheet(ctx context.Context, ws clip.MediaWorkspace, ca
 		}
 		cells = max(1, min(cells-1, cells*budget/len(data)))
 	}
+	// The next run continues this phrase, then opens the next one; the last
+	// phrase's last frame ends the caption.
 	next := offset + cells
-	if next >= count {
+	if local+cells >= count {
 		next = -1
+		if phrase+1 < len(cues) {
+			start, _ := frames(cues[phrase+1])
+			next = max(offset+cells, start-captionFirst)
+		}
 	}
 	return clip.CaptionFrames{Sheet: data, CellWidth: cellW, CellHeight: cellH, Columns: columns, Cells: cells,
-		X: int(math.Round(crop.X)), Y: int(math.Round(crop.Y)), FirstFrame: first, FrameOffset: offset, NextOffset: next}, nil
+		X: int(math.Round(crop.X)), Y: int(math.Round(crop.Y)), FirstFrame: captionFirst, FrameOffset: offset, NextOffset: next}, nil
 }
 
 // sheetByteBudget is the most PNG one sheet may hold. The sheet travels in a

@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,6 +132,86 @@ func TestACaptionSheetPagesALongCaption(t *testing.T) {
 	}
 	if seen != want || runs < 2 {
 		t.Fatalf("a paged caption delivered %d of %d frames in %d runs", seen, want, runs)
+	}
+}
+
+// A rapid caption in a sequence style is one visual per phrase under the one
+// caption id. The browser counts from the caption's first frame and asks again
+// where its run ends, so a later phrase is served from that count, as the
+// render's own drawing of that phrase (CLIP-159, CDS-59).
+func TestACaptionSheetServesEveryPhraseOfARapidCaption(t *testing.T) {
+	a, r := measured(t)
+	plan := declaredPlan(t, `<clip version="1" pace="rapid" styles="neon"><scene id="scene"><text id="caption" kind="ai" role="caption" basis="cut">여기 진짜 좋아요</text></scene></clip>`, "vertical")
+	plan.CaptionStyles = []string{"neon"}
+	plan.Portable.Elements[0].Resolved.Text = "여기 진짜 좋아요"
+	plan.Portable.Elements[0].OwnerEdited = true
+	// Phrase edges on frame edges: 200 and 1000 ms are frames 6 and 30 at 30 fps.
+	plan.Portable.Elements[0].Phrases = []clip.EditablePhrase{{Text: "여기 진짜", StartMS: 200, EndMS: 1000}, {Text: "좋아요", StartMS: 1000, EndMS: 1600}}
+	sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 30000, Width: 1920, Height: 1080}}}
+	cfg := clip.DefaultGenerationConfig(clip.Environment{}).Preview
+	canvas, _ := clip.ClipCanvas("vertical")
+	var cues []declaredVisual
+	for _, visual := range measuredDeclared(t, plan).visuals {
+		if visual.manifest.InstanceID == "caption/cut" {
+			cues = append(cues, visual)
+		}
+	}
+	if len(cues) != 2 {
+		t.Fatalf("the fixture laid out %d phrases", len(cues))
+	}
+	first := cues[0].manifest.StartMS * 30 / 1000
+	second := cues[1].manifest.StartMS*30/1000 - first
+	want := second + (cues[1].manifest.EndMS*30+999)/1000 - cues[1].manifest.StartMS*30/1000
+	// Walk the caption the way a browser render does, from each run's next offset.
+	var closing clip.CaptionFrames
+	seen, offset, runs := 0, 0, 0
+	for offset != -1 {
+		frames, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", offset, cfg)
+		if err != nil {
+			t.Fatalf("the run from frame %d was refused: %v", offset, err)
+		}
+		if frames.FirstFrame != first || frames.FrameOffset != offset || frames.FrameOffset < second && frames.FrameOffset+frames.Cells > second {
+			t.Fatalf("run %d is %d cells from %d of a caption opening on frame %d; the second phrase opens at %d", runs, frames.Cells, frames.FrameOffset, frames.FirstFrame, second)
+		}
+		if frames.FrameOffset == second {
+			closing = frames
+		}
+		seen += frames.Cells
+		offset = frames.NextOffset
+		if runs++; runs > want {
+			t.Fatal("the paging did not end")
+		}
+	}
+	if seen != want || closing.Cells == 0 {
+		t.Fatalf("the caption delivered %d of %d frames; the second phrase's run is %d cells", seen, want, closing.Cells)
+	}
+	if closing.X != int(math.Round(sequenceCrop(canvas, cues[1].caption).X)) || closing.Y != int(math.Round(sequenceCrop(canvas, cues[1].caption).Y)) {
+		t.Fatalf("the second phrase is placed at %d,%d, the render places it at %v", closing.X, closing.Y, sequenceCrop(canvas, cues[1].caption))
+	}
+	// The cell is the frame the render writes for the second phrase.
+	var written string
+	if err := a.WithWorkspace(t.Context(), "phrase-compare", func(ws clip.MediaWorkspace) error {
+		sequence, err := r.captionSequence(t.Context(), ws, canvas, cues[1].copy, cues[1].caption, cues[1].manifest.StartMS, cues[1].manifest.EndMS, 0)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(filepath.Join(sequence.Dir, "00001.png"))
+		written = string(data)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	body := withoutIDs(written)
+	if at := strings.Index(body, "</defs>"); at >= 0 {
+		body = body[at+len("</defs>"):]
+	} else {
+		body = body[strings.Index(body, ">")+1:]
+	}
+	if !strings.Contains(withoutIDs(string(closing.Sheet)), strings.TrimSuffix(body, "</svg>")) {
+		t.Fatal("the second phrase's first cell is not the frame the render writes")
+	}
+	if _, err := r.PrepareCaptionFrames(t.Context(), plan, sources, "caption/cut", want, cfg); err == nil {
+		t.Fatal("a frame past the last phrase was served")
 	}
 }
 
