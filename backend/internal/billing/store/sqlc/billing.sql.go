@@ -29,7 +29,7 @@ func (q *Queries) DeleteSupportCoverage(ctx context.Context, userID string) erro
 }
 
 const getCreditPurchase = `-- name: GetCreditPurchase :one
-SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
        e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
        p.charged_at, p.refunded_at
 FROM credit_purchases p
@@ -46,6 +46,7 @@ type GetCreditPurchaseRow struct {
 	ID                 string
 	UserID             string
 	LotID              string
+	PackID             sql.NullString
 	Credits            int64
 	UsdCents           int64
 	Krw                int64
@@ -64,6 +65,7 @@ func (q *Queries) GetCreditPurchase(ctx context.Context, arg GetCreditPurchasePa
 		&i.ID,
 		&i.UserID,
 		&i.LotID,
+		&i.PackID,
 		&i.Credits,
 		&i.UsdCents,
 		&i.Krw,
@@ -206,15 +208,16 @@ func (q *Queries) InsertBillingEvent(ctx context.Context, arg InsertBillingEvent
 
 const insertCreditPurchase = `-- name: InsertCreditPurchase :exec
 INSERT INTO credit_purchases (
-    id, user_id, lot_id, credits, usd_cents, krw, provider_payment_key, order_id,
+    id, user_id, lot_id, pack_id, credits, usd_cents, krw, provider_payment_key, order_id,
     charged_at, refunded_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
 `
 
 type InsertCreditPurchaseParams struct {
 	ID                 string
 	UserID             string
 	LotID              string
+	PackID             sql.NullString
 	Credits            int64
 	UsdCents           int64
 	Krw                int64
@@ -228,6 +231,7 @@ func (q *Queries) InsertCreditPurchase(ctx context.Context, arg InsertCreditPurc
 		arg.ID,
 		arg.UserID,
 		arg.LotID,
+		arg.PackID,
 		arg.Credits,
 		arg.UsdCents,
 		arg.Krw,
@@ -273,7 +277,9 @@ func (q *Queries) InsertProviderNotification(ctx context.Context, arg InsertProv
 
 const insertTierTransition = `-- name: InsertTierTransition :execrows
 INSERT INTO entitlement_tier_transitions(user_id,coverage_id,effective_at,tier,correlation_id)
-VALUES (?, ?, ?, ?, ?) ON CONFLICT(correlation_id) DO NOTHING
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(user_id,coverage_id,effective_at)
+DO UPDATE SET tier=excluded.tier, correlation_id=excluded.correlation_id
 `
 
 type InsertTierTransitionParams struct {
@@ -365,7 +371,7 @@ func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsPa
 }
 
 const listCreditPurchases = `-- name: ListCreditPurchases :many
-SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
+SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
        e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
        p.charged_at, p.refunded_at
 FROM credit_purchases p
@@ -377,6 +383,7 @@ type ListCreditPurchasesRow struct {
 	ID                 string
 	UserID             string
 	LotID              string
+	PackID             sql.NullString
 	Credits            int64
 	UsdCents           int64
 	Krw                int64
@@ -401,6 +408,7 @@ func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]Lis
 			&i.ID,
 			&i.UserID,
 			&i.LotID,
+			&i.PackID,
 			&i.Credits,
 			&i.UsdCents,
 			&i.Krw,

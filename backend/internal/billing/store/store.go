@@ -17,6 +17,7 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer       *sql.DB
+	db           sqlc.DBTX
 	write        *sqlc.Queries
 	read         *sqlc.Queries
 	credits      billing.Credits
@@ -26,7 +27,7 @@ type Store struct {
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+	return &Store{writer: writer, db: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
 // SetCreditsForTx attaches the usage adapter at the composition root. The factory binds
@@ -62,7 +63,7 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Cr
 	if credits == nil || plans == nil {
 		return errors.New("billing transaction adapter factory returned nil")
 	}
-	scoped := &Store{write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
+	scoped := &Store{db: tx, write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
 	if err := fn(scoped, credits, plans); err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func (s *Store) Purchases(ctx context.Context, userID string) ([]billing.Purchas
 		if err != nil {
 			return nil, err
 		}
-		purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
+		purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, PackID: row.PackID.String, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
 		if row.RefundedAt.Valid {
 			refunded, err := parseTime(row.RefundedAt.String)
 			if err != nil {
@@ -280,7 +281,7 @@ func (s *Store) Purchase(ctx context.Context, userID, purchaseID string) (billin
 	if err != nil {
 		return billing.Purchase{}, false, err
 	}
-	purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
+	purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, PackID: row.PackID.String, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
 	if row.RefundedAt.Valid {
 		refunded, err := parseTime(row.RefundedAt.String)
 		if err != nil {
@@ -293,7 +294,7 @@ func (s *Store) Purchase(ctx context.Context, userID, purchaseID string) (billin
 
 func (s *Store) InsertPurchase(ctx context.Context, purchase billing.Purchase) error {
 	err := s.write.InsertCreditPurchase(ctx, sqlc.InsertCreditPurchaseParams{
-		ID: purchase.ID, UserID: purchase.UserID, LotID: purchase.LotID,
+		ID: purchase.ID, UserID: purchase.UserID, LotID: purchase.LotID, PackID: nullString(purchase.PackID),
 		Credits: int64(purchase.Credits), UsdCents: int64(purchase.USDCents), Krw: int64(purchase.KRW),
 		ProviderPaymentKey: purchase.ProviderPaymentKey, OrderID: purchase.OrderID,
 		ChargedAt: formatTime(purchase.ChargedAt),

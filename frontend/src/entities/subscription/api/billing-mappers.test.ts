@@ -5,8 +5,9 @@ import {
   ProtoPlan,
   ProtoTerm,
   QuotePriceResponseSchema,
+  QuotePurchaseResponseSchema,
 } from '@/shared/api'
-import { toMyBilling, toQuote } from './billing-mappers'
+import { toMyBilling, toPurchaseQuote, toQuote } from './billing-mappers'
 
 describe('billing mappers', () => {
   it('maps presence, enums, bigint money, and lists without deriving figures', () => {
@@ -31,7 +32,16 @@ describe('billing mappers', () => {
             krwPerUsdE4: 14000000n,
           },
         ],
-        purchases: [{ id: 'p1', credits: 100, usdCents: 100, krw: 1400n, refundable: true }],
+        purchases: [
+          {
+            id: 'p1',
+            packId: 'pack-1000',
+            credits: 100,
+            usdCents: 100,
+            krw: 1400n,
+            refundable: true,
+          },
+        ],
       }),
     )
     expect(mapped).toMatchObject({
@@ -45,7 +55,7 @@ describe('billing mappers', () => {
       },
       paymentMethod: { cardLabel: '11 1234' },
       history: [{ id: 7n, krw: 70000n, krwPerUsdE4: 14000000n }],
-      purchases: [{ id: 'p1', credits: 100, krw: 1400n, refundable: true }],
+      purchases: [{ id: 'p1', packId: 'pack-1000', credits: 100, krw: 1400n, refundable: true }],
     })
   })
 
@@ -60,11 +70,33 @@ describe('billing mappers', () => {
       toQuote(
         create(QuotePriceResponseSchema, {
           usdCents: 500,
+          quoteId: 'q-fixed',
           krw: 6963n,
           krwPerUsdE4: 13925000n,
           rateDate: '2026-09-07',
         }),
       ),
-    ).toEqual({ usdCents: 500, krw: 6963n, ratePerUsdE4: 13925000n, rateDate: '2026-09-07' })
+    ).toEqual({
+      id: 'q-fixed',
+      usdCents: 500,
+      krw: 6963n,
+      ratePerUsdE4: 13925000n,
+      rateDate: '2026-09-07',
+    })
+  })
+
+  it('maps fixed KRW offers and pack IDs without inventing a checkout FX rate', () => {
+    expect(toQuote(create(QuotePriceResponseSchema, { krw: 19000n }))).toMatchObject({
+      krw: 19000n,
+      usdCents: 0,
+      ratePerUsdE4: 0n,
+      rateDate: '',
+    })
+    expect(
+      toPurchaseQuote(
+        create(QuotePurchaseResponseSchema, { packId: 'pack-3000', credits: 3000, krw: 9000n }),
+        0,
+      ),
+    ).toMatchObject({ packId: 'pack-3000', credits: 3000, krw: 9000n })
   })
 })

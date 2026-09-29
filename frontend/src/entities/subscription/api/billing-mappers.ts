@@ -48,6 +48,7 @@ export function toSubscription(value: ProtoBillingSubscription): Subscription {
 export function toChangeQuote(response: QuoteChangeResponse | undefined): ChangeQuote | undefined {
   if (!response) return undefined
   return {
+    id: response.quoteId,
     usdCents: response.usdCents,
     krw: response.krw,
     ratePerUsdE4: response.krwPerUsdE4,
@@ -78,6 +79,7 @@ function toEvent(value: ProtoBillingEvent): BillingEvent {
 function toPurchase(value: ProtoBillingPurchase): Purchase {
   return {
     id: value.id,
+    packId: value.packId,
     credits: value.credits,
     usdCents: value.usdCents,
     krw: value.krw,
@@ -93,6 +95,8 @@ export function toPurchaseQuote(
 ): PurchaseQuote | undefined {
   if (!response) return undefined
   return {
+    id: '',
+    packId: response.packId,
     usdCents,
     credits: response.credits,
     krw: response.krw,
@@ -122,6 +126,7 @@ export function toMyBilling(response: GetMyBillingResponse | undefined): MyBilli
 export function toQuote(response: QuotePriceResponse | undefined): Quote | undefined {
   if (!response) return undefined
   return {
+    id: response.quoteId,
     usdCents: response.usdCents,
     krw: response.krw,
     ratePerUsdE4: response.krwPerUsdE4,
@@ -132,5 +137,5 @@ export function toQuote(response: QuotePriceResponse | undefined): Quote | undef
 export function billablePlan(
   plan: PlanName | undefined,
 ): plan is Exclude<PlanName, 'free' | 'master'> {
-  return plan === 'basic' || plan === 'pro' || plan === 'max'
+  return plan === 'light' || plan === 'basic' || plan === 'pro' || plan === 'max'
 }

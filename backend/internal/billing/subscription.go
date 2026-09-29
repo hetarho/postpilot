@@ -11,6 +11,9 @@ import (
 )
 
 func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
+	if s.fixedKRW {
+		return s.subscribeFixed(ctx, userID, tier, term)
+	}
 	if !s.Enabled() {
 		return Subscription{}, ErrUnavailable
 	}
@@ -128,6 +131,11 @@ func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 	if !s.Enabled() {
 		return ErrUnavailable
 	}
+	if s.fixedKRW {
+		if err := s.ReconcilePending(ctx); err != nil {
+			return err
+		}
+	}
 	due, err := s.store.DueSubscriptions(ctx, now)
 	if err != nil {
 		return err
@@ -137,6 +145,9 @@ func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 		for subscription.Status == "active" && !subscription.NextGrantAt.After(now) {
 			updated, stepErr := s.runDueStep(ctx, subscription, now)
 			if stepErr != nil {
+				if errors.Is(stepErr, ErrPaymentPending) {
+					break
+				}
 				failures = append(failures, fmt.Errorf("%s: %w", subscription.UserID, stepErr))
 				break
 			}
@@ -172,6 +183,9 @@ func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscripti
 }
 
 func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
+	if s.fixedKRW {
+		return s.renewFixed(ctx, subscription, now)
+	}
 	tier, term := subscription.Tier, subscription.Term
 	if subscription.ScheduledTier != nil {
 		tier = *subscription.ScheduledTier
@@ -312,6 +326,17 @@ func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription,
 }
 
 func (s *Service) quoteAt(ctx context.Context, tier plan.Plan, term Term, now time.Time) (Quote, error) {
+	if s.fixedKRW {
+		offer, ok := plan.CommercialOffer(tier)
+		if !ok || !billableTier(tier) || !term.Valid() {
+			return Quote{}, ErrTierNotSubscribable
+		}
+		krw := offer.MonthlyKRW
+		if term == TermAnnual {
+			krw = offer.AnnualKRW
+		}
+		return Quote{KRW: krw}, nil
+	}
 	rate, date, err := s.rateFor(ctx, now)
 	if err != nil {
 		return Quote{}, err

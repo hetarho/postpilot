@@ -21,6 +21,10 @@ export const errors = {
   CUSTOMER_KEY_MISMATCH: 'The payment registration does not match the current account.',
   SUBSCRIPTION_NEEDS_METHOD: 'A renewing subscription needs a payment method. Cancel it first.',
   BILLING_UNAVAILABLE: 'Billing is currently unavailable.',
+  BILLING_PAYMENT_PENDING:
+    'Your payment is still being confirmed. Check your billing history shortly.',
+  BILLING_STALE_QUOTE: 'Your subscription changed. Refresh the quote before continuing.',
+  BILLING_PACK_INVALID: 'Choose one of the listed credit packs.',
   BILLING_SELECTION_INVALID: 'Check the plan and billing cycle you selected.',
   POST_NOT_FOUND: 'Could not find the post.',
   POST_FORBIDDEN: 'You do not have access to this post.',

@@ -29,6 +29,18 @@ type Store interface {
 	DeleteSupportCoverage(ctx context.Context, userID string) error
 }
 
+// IntentStore is the fixed-KRW checkout journal. The legacy Store remains
+// compatible with historical tests while production installs this extension.
+type IntentStore interface {
+	PutQuote(context.Context, QuoteRecord) error
+	Quote(context.Context, string) (QuoteRecord, bool, error)
+	InsertIntent(context.Context, Intent) error
+	Intent(context.Context, string) (Intent, bool, error)
+	PendingIntent(context.Context, string) (Intent, bool, error)
+	DueIntents(context.Context) ([]Intent, error)
+	MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error)
+}
+
 type Provider interface {
 	IssueBillingKey(ctx context.Context, authKey, customerKey string) (BillingKey, error)
 	Charge(ctx context.Context, request ChargeRequest) (Payment, error)

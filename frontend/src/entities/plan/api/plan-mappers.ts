@@ -135,6 +135,7 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     // nobody can identify is not something to put a price next to.
     offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),
     creditPacks: (response.creditPacks ?? []).map((pack) => ({
+      id: pack.id,
       priceKrw: pack.priceKrw,
       credits: pack.credits,
     })),

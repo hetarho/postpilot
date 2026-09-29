@@ -23,6 +23,9 @@ func newID() string {
 }
 
 func (s *Service) QuotePurchase(ctx context.Context, usdCents int) (PurchaseQuote, error) {
+	if s.fixedKRW {
+		return PurchaseQuote{}, ErrInvalidPack
+	}
 	if !s.Enabled() {
 		return PurchaseQuote{}, ErrUnavailable
 	}
@@ -40,6 +43,9 @@ func (s *Service) QuotePurchase(ctx context.Context, usdCents int) (PurchaseQuot
 }
 
 func (s *Service) PurchaseCredits(ctx context.Context, userID string, usdCents int) (Purchase, error) {
+	if s.fixedKRW {
+		return Purchase{}, ErrInvalidPack
+	}
 	if !s.Enabled() {
 		return Purchase{}, ErrUnavailable
 	}
@@ -216,10 +222,14 @@ func purchaseChargeEvent(userID string, quote PurchaseQuote, payment Payment, or
 
 func purchaseRefundEvent(purchase Purchase, now time.Time) Event {
 	kind := "refund"
-	return Event{
+	event := Event{
 		UserID: purchase.UserID, Kind: kind, Credits: &purchase.Credits,
-		USDCents: &purchase.USDCents, KRWPerUSDE4: &purchase.RatePerUSDE4,
-		RateDate: &purchase.RateDate, KRW: &purchase.KRW,
+		KRW:                &purchase.KRW,
 		ProviderPaymentKey: &purchase.ProviderPaymentKey, Note: &purchase.ID, CreatedAt: now,
 	}
+	if purchase.RatePerUSDE4 > 0 {
+		event.USDCents, event.KRWPerUSDE4, event.RateDate =
+			&purchase.USDCents, &purchase.RatePerUSDE4, &purchase.RateDate
+	}
+	return event
 }

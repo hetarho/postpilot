@@ -32,7 +32,7 @@ export function ScheduledChangeButton({
 
   const confirm = async () => {
     try {
-      await change.changeSubscription(plan, term)
+      await change.changeSubscription(plan, term, quote?.id)
       setOpen(false)
     } catch {
       // The mutation's catalog-backed error remains in the dialog.

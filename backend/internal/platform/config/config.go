@@ -248,8 +248,8 @@ type Config struct {
 	// Google sign-in is optional, but a half-configured OAuth client is never useful.
 	GoogleClientID     string
 	GoogleClientSecret string
-	// Billing is disabled only when all three server credentials are empty. A partial
-	// configuration is boot-fatal because it can render prices that cannot be charged.
+	// Fixed-KRW billing requires the Toss key pair. The independent Eximbank key
+	// remains optional for AI credit pricing and does not gate checkout.
 	TossSecretKey  string
 	TossClientKey  string
 	EximAPIKey     string
@@ -433,17 +433,10 @@ func Load() (*Config, error) {
 	if (cfg.GoogleClientID == "") != (cfg.GoogleClientSecret == "") {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set or both be empty")
 	}
-	billingValues := []string{cfg.TossSecretKey, cfg.TossClientKey, cfg.EximAPIKey}
-	configured := 0
-	for _, value := range billingValues {
-		if value != "" {
-			configured++
-		}
+	if (cfg.TossSecretKey == "") != (cfg.TossClientKey == "") {
+		return nil, fmt.Errorf("TOSS_SECRET_KEY and TOSS_CLIENT_KEY must both be set or both be empty")
 	}
-	if configured != 0 && configured != len(billingValues) {
-		return nil, fmt.Errorf("TOSS_SECRET_KEY, TOSS_CLIENT_KEY, and EXIM_API_KEY must all be set or all be empty")
-	}
-	cfg.BillingEnabled = configured == len(billingValues)
+	cfg.BillingEnabled = cfg.TossSecretKey != ""
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)

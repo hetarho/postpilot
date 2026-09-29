@@ -38,6 +38,7 @@ export interface BillingEvent {
 
 export interface Purchase {
   id: string
+  packId: string
   credits: number
   usdCents: number
   krw: bigint
@@ -48,9 +49,11 @@ export interface Purchase {
 
 export interface PurchaseQuote extends Quote {
   credits: number
+  packId: string
 }
 
 export interface Quote {
+  id: string
   usdCents: number
   krw: bigint
   ratePerUsdE4: bigint

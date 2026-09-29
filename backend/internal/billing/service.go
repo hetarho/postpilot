@@ -24,6 +24,7 @@ type Service struct {
 	mailer   Mailer
 	now      func() time.Time
 	newID    func() string
+	fixedKRW bool
 
 	rateMu    sync.Mutex
 	rateCache map[string]int64
@@ -38,7 +39,22 @@ func NewService(store Store, provider Provider, rates Rates, credits Credits, pl
 	}
 }
 
-func (s *Service) Enabled() bool { return s.provider != nil && s.rates != nil }
+func (s *Service) Enabled() bool  { return s.provider != nil && (s.fixedKRW || s.rates != nil) }
+func (s *Service) FixedKRW() bool { return s.fixedKRW }
+
+func (s *Service) WithClock(now func() time.Time) *Service {
+	if now != nil {
+		s.now = now
+	}
+	return s
+}
+
+// WithFixedKRW selects the code-owned commercial offer. The legacy USD path is
+// retained only for pre-transition records and tests until T487 retires it.
+func (s *Service) WithFixedKRW() *Service {
+	s.fixedKRW = true
+	return s
+}
 
 // markRefundable fills in the refund button's state for a whole screen.
 //
@@ -153,6 +169,21 @@ func (s *Service) RemovePaymentMethod(ctx context.Context, userID string) error 
 	if !s.Enabled() {
 		return ErrUnavailable
 	}
+	if s.fixedKRW {
+		return s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+			if err := s.requireNoPending(ctx, tx, userID); err != nil {
+				return err
+			}
+			sub, found, err := tx.Subscription(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if found && sub.Status == "active" && sub.AutoRenew {
+				return ErrSubscriptionNeedsMethod
+			}
+			return tx.DeletePaymentMethod(ctx, userID)
+		})
+	}
 	subscription, found, err := s.store.Subscription(ctx, userID)
 	if err != nil {
 		return err
@@ -167,7 +198,7 @@ func (s *Service) QuotePrice(ctx context.Context, tier plan.Plan, term Term) (Qu
 	if !s.Enabled() {
 		return Quote{}, ErrUnavailable
 	}
-	if tier != plan.Basic && tier != plan.Pro && tier != plan.Max {
+	if !billableTier(tier) {
 		return Quote{}, fmt.Errorf("tier %q is not billable", tier)
 	}
 	if !term.Valid() {

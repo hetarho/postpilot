@@ -33,7 +33,10 @@ var (
 	// whole. It is billing's own sentinel, translated from whatever the ledger says by the
 	// adapter that wires the two (ARCH-7): billing knows a lot can be spent, not how the
 	// ledger names that.
-	ErrLotTouched = errors.New("purchased credit lot has already been touched")
+	ErrLotTouched     = errors.New("purchased credit lot has already been touched")
+	ErrPaymentPending = errors.New("payment outcome is pending")
+	ErrStaleQuote     = errors.New("billing quote no longer matches subscription")
+	ErrInvalidPack    = errors.New("unknown fixed credit pack")
 )
 
 type Term string
@@ -106,6 +109,7 @@ type Event struct {
 
 type Purchase struct {
 	ID                 string
+	PackID             string
 	UserID             string
 	LotID              string
 	Credits            int
@@ -121,6 +125,7 @@ type Purchase struct {
 }
 
 type Quote struct {
+	ID           string
 	USDCents     int
 	KRW          int
 	RatePerUSDE4 int64
@@ -136,6 +141,27 @@ type ChangeQuote struct {
 type PurchaseQuote struct {
 	Quote
 	Credits int
+	PackID  string
+}
+
+type QuoteRecord struct {
+	ID, UserID                                              string
+	Tier                                                    plan.Plan
+	Term                                                    Term
+	KRW                                                     int
+	AppliedNow                                              bool
+	EffectiveAt, SubscriptionUpdatedAt, QuotedAt, ExpiresAt time.Time
+}
+
+type Intent struct {
+	OrderID, UserID, Kind, PackID, QuoteID       string
+	BillingKey, CustomerKey                      string
+	Tier                                         plan.Plan
+	Term                                         Term
+	KRW                                          int
+	QuotedAt, SubscriptionUpdatedAt, EffectiveAt time.Time
+	Status, ProviderStatus, PaymentKey           string
+	CreatedAt, UpdatedAt                         time.Time
 }
 
 type AccountBilling struct {
@@ -169,6 +195,8 @@ type Payment struct {
 	PaymentKey string
 	OrderID    string
 	Status     string
+	AmountKRW  int
+	Currency   string
 }
 
 type Notification struct {
@@ -190,8 +218,9 @@ type ProviderNotification struct {
 }
 
 type ProviderError struct {
-	Code    string
-	Message string
+	Code       string
+	Message    string
+	HTTPStatus int
 }
 
 func (e *ProviderError) Error() string { return e.Code + ": " + e.Message }

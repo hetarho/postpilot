@@ -330,6 +330,9 @@ enum FailureReason {
   VOICE_CHECK_NOT_FOUND = 269;
   // New cost-incurring AI requires a verified, recent official KRW/USD reference.
   AI_FX_RATE_UNAVAILABLE = 270;
+  BILLING_PAYMENT_PENDING = 271;
+  BILLING_STALE_QUOTE = 272;
+  BILLING_PACK_INVALID = 273;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

@@ -629,6 +629,7 @@ type CreditPack struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PriceKrw      int32                  `protobuf:"varint,1,opt,name=price_krw,json=priceKrw,proto3" json:"price_krw,omitempty"`
 	Credits       int32                  `protobuf:"varint,2,opt,name=credits,proto3" json:"credits,omitempty"`
+	Id            string                 `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -675,6 +676,13 @@ func (x *CreditPack) GetCredits() int32 {
 		return x.Credits
 	}
 	return 0
+}
+
+func (x *CreditPack) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 // One estimator combo: a pair of models the operator assigned to a price tier, reduced to
@@ -1399,11 +1407,12 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\rmonthly_bonus\x18\t \x01(\x05R\fmonthlyBonus\x12#\n" +
 	"\rmodel_ceiling\x18\n" +
 	" \x01(\tR\fmodelCeiling\x124\n" +
-	"\x16monthly_server_exports\x18\v \x01(\x05R\x14monthlyServerExportsJ\x04\b\x04\x10\x05\"C\n" +
+	"\x16monthly_server_exports\x18\v \x01(\x05R\x14monthlyServerExportsJ\x04\b\x04\x10\x05\"S\n" +
 	"\n" +
 	"CreditPack\x12\x1b\n" +
 	"\tprice_krw\x18\x01 \x01(\x05R\bpriceKrw\x12\x18\n" +
-	"\acredits\x18\x02 \x01(\x05R\acredits\"\xe5\x02\n" +
+	"\acredits\x18\x02 \x01(\x05R\acredits\x12\x0e\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\"\xe5\x02\n" +
 	"\x0eEstimatorCombo\x12\x14\n" +
 	"\x05combo\x18\x01 \x01(\tR\x05combo\x12#\n" +
 	"\robserve_label\x18\x02 \x01(\tR\fobserveLabel\x12\x1f\n" +

@@ -42,8 +42,8 @@ export function useChangeSubscription() {
   })
   return {
     ...mutation,
-    changeSubscription: (plan: PlanName, term: BillingTerm) =>
-      mutation.mutateAsync({ plan: planToProto(plan), term: termToProto(term) }),
+    changeSubscription: (plan: PlanName, term: BillingTerm, quoteId = '') =>
+      mutation.mutateAsync({ plan: planToProto(plan), term: termToProto(term), quoteId }),
     errorMessage: exposeError(mutation),
   }
 }

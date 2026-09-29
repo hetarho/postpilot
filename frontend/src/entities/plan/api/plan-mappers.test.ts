@@ -29,7 +29,7 @@ describe('toMyPlan offers', () => {
             recommended: true,
           },
         ],
-        creditPacks: [{ priceKrw: 3000, credits: 1000 }],
+        creditPacks: [{ id: 'pack-1000', priceKrw: 3000, credits: 1000 }],
       }),
     )
 
@@ -59,7 +59,7 @@ describe('toMyPlan offers', () => {
         recommended: true,
       },
     ])
-    expect(myPlan?.creditPacks).toEqual([{ priceKrw: 3000, credits: 1000 }])
+    expect(myPlan?.creditPacks).toEqual([{ id: 'pack-1000', priceKrw: 3000, credits: 1000 }])
   })
 })
 

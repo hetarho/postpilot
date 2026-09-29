@@ -31,10 +31,24 @@ func CommercialOffer(p Plan) (Offer, bool) {
 
 // Pack is a fixed-price, non-expiring credit purchase for an active paid subscriber.
 type Pack struct {
+	ID       string
 	PriceKRW int
 	Credits  int
 }
 
 func Packs() []Pack {
-	return []Pack{{3000, 1000}, {9000, 3000}, {30000, 10000}}
+	return []Pack{
+		{ID: "pack-1000", PriceKRW: 3000, Credits: 1000},
+		{ID: "pack-3000", PriceKRW: 9000, Credits: 3000},
+		{ID: "pack-10000", PriceKRW: 30000, Credits: 10000},
+	}
+}
+
+func PackByID(id string) (Pack, bool) {
+	for _, pack := range Packs() {
+		if pack.ID == id {
+			return pack, true
+		}
+	}
+	return Pack{}, false
 }

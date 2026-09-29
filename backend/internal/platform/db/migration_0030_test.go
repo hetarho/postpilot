@@ -32,7 +32,7 @@ func TestMigration0030CreatesCheckedBillingLedger(t *testing.T) {
 		{"event tier", `INSERT INTO billing_events(user_id,kind,tier,created_at) VALUES('alice','charge','free',?)`},
 		{"event term", `INSERT INTO billing_events(user_id,kind,term,created_at) VALUES('alice','charge','weekly',?)`},
 		{"purchase credits", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-credits','alice','lot',0,100,1300,'pay','invalid-credits',?)`},
-		{"purchase USD", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-usd','alice','lot',100,0,1300,'pay','invalid-usd',?)`},
+		{"purchase negative USD", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-usd','alice','lot',100,-1,1300,'pay','invalid-usd',?)`},
 		{"purchase KRW", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-krw','alice','lot',100,100,0,'pay','invalid-krw',?)`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

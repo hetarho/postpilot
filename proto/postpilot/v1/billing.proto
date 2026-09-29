@@ -7,7 +7,7 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 import "postpilot/v1/plan.proto";
 
 // BillingService is authenticated but not master-only. Every money figure displayed by
-// the client comes from this contract; the KRW quote moves with the published daily rate.
+// the client comes from this contract. Subscription and pack KRW prices are fixed offers.
 service BillingService {
   rpc GetMyBilling(GetMyBillingRequest) returns (GetMyBillingResponse) {}
   rpc RegisterPaymentMethod(RegisterPaymentMethodRequest) returns (RegisterPaymentMethodResponse) {}
@@ -79,6 +79,7 @@ message BillingPurchase {
   string charged_at = 8;
   string refunded_at = 9;
   bool refundable = 10;
+  string pack_id = 11;
 }
 
 message GetMyBillingRequest {}
@@ -120,6 +121,7 @@ message SubscribeResponse {
 message ChangeSubscriptionRequest {
   Plan plan = 1;
   Term term = 2;
+  string quote_id = 3;
 }
 
 message ChangeSubscriptionResponse {
@@ -155,6 +157,7 @@ message QuotePriceResponse {
   int64 krw = 2;
   int64 krw_per_usd_e4 = 3;
   string rate_date = 4;
+  string quote_id = 5;
 }
 
 message QuoteChangeRequest {
@@ -169,10 +172,12 @@ message QuoteChangeResponse {
   string rate_date = 4;
   bool applied_now = 5;
   string effective_at = 6;
+  string quote_id = 7;
 }
 
 message QuotePurchaseRequest {
   int32 usd_cents = 1;
+  string pack_id = 2;
 }
 
 message QuotePurchaseResponse {
@@ -180,10 +185,12 @@ message QuotePurchaseResponse {
   int64 krw = 2;
   int64 krw_per_usd_e4 = 3;
   string rate_date = 4;
+  string pack_id = 5;
 }
 
 message PurchaseCreditsRequest {
   int32 usd_cents = 1;
+  string pack_id = 2;
 }
 
 message PurchaseCreditsResponse {

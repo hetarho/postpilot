@@ -70,6 +70,9 @@ func RefundMail(purchase Purchase) MailMessage {
 }
 
 func purchaseDetail(purchase Purchase) string {
+	if purchase.RatePerUSDE4 == 0 {
+		return fmt.Sprintf("%d credits · %s원", purchase.Credits, comma(int64(purchase.KRW)))
+	}
 	return fmt.Sprintf(
 		"%d credits · $%d.%02d · %s원 · %s원/$ (%s)",
 		purchase.Credits, purchase.USDCents/100, purchase.USDCents%100,
@@ -78,6 +81,9 @@ func purchaseDetail(purchase Purchase) string {
 }
 
 func chargeDetail(tier plan.Plan, term Term, quote Quote) string {
+	if quote.RatePerUSDE4 == 0 {
+		return fmt.Sprintf("%s %s · %s원", tier, term, comma(int64(quote.KRW)))
+	}
 	return fmt.Sprintf(
 		"%s %s · $%d.%02d · %s원 · %s원/$",
 		tier, term, quote.USDCents/100, quote.USDCents%100,

@@ -101,7 +101,7 @@ func (h *Handler) ChangeSubscription(ctx context.Context, req *connect.Request[p
 	if !tierOK || !termOK {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	}
-	subscription, appliedNow, err := h.service.ChangeSubscription(ctx, userID, tier, term)
+	subscription, appliedNow, err := h.service.ChangeSubscriptionQuoted(ctx, userID, tier, term, req.Msg.GetQuoteId())
 	if err != nil {
 		return nil, changeError(userID, err)
 	}
@@ -150,7 +150,7 @@ func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilot
 	}
 	tier, ok := planrpc.FromProto(req.Msg.GetPlan())
 	term, termOK := termFromProto(req.Msg.GetTerm())
-	if !ok || !termOK || (tier != plan.Basic && tier != plan.Pro && tier != plan.Max) {
+	if !ok || !termOK || (tier != plan.Light && tier != plan.Basic && tier != plan.Pro && tier != plan.Max) {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid billing selection", postpilotv1.FailureReason_BILLING_SELECTION_INVALID, nil)
 	}
 	quote, err := h.service.QuotePrice(ctx, tier, term)
@@ -161,7 +161,7 @@ func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilot
 		slog.Error("billing quote failed", "user_id", func() string { id, _ := auth.UserFromContext(ctx); return id }(), "err", err)
 		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not quote price", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
-	return connect.NewResponse(&postpilotv1.QuotePriceResponse{UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate}), nil
+	return connect.NewResponse(&postpilotv1.QuotePriceResponse{UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate, QuoteId: quote.ID}), nil
 }
 
 func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilotv1.QuoteChangeRequest]) (*connect.Response[postpilotv1.QuoteChangeResponse], error) {
@@ -180,7 +180,7 @@ func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilo
 	}
 	return connect.NewResponse(&postpilotv1.QuoteChangeResponse{
 		UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4,
-		RateDate: quote.RateDate, AppliedNow: quote.AppliedNow, EffectiveAt: instant(quote.EffectiveAt),
+		RateDate: quote.RateDate, AppliedNow: quote.AppliedNow, EffectiveAt: instant(quote.EffectiveAt), QuoteId: quote.ID,
 	}), nil
 }
 
@@ -189,13 +189,19 @@ func (h *Handler) QuotePurchase(ctx context.Context, req *connect.Request[postpi
 	if !ok {
 		return nil, authRequired()
 	}
-	quote, err := h.service.QuotePurchase(ctx, int(req.Msg.GetUsdCents()))
+	var quote billing.PurchaseQuote
+	var err error
+	if h.service.FixedKRW() {
+		quote, err = h.service.QuotePack(ctx, req.Msg.GetPackId())
+	} else {
+		quote, err = h.service.QuotePurchase(ctx, int(req.Msg.GetUsdCents()))
+	}
 	if err != nil {
 		return nil, purchaseError(userID, err)
 	}
 	return connect.NewResponse(&postpilotv1.QuotePurchaseResponse{
 		Credits: int32(quote.Credits), Krw: int64(quote.KRW),
-		KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate,
+		KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate, PackId: quote.PackID,
 	}), nil
 }
 
@@ -204,7 +210,13 @@ func (h *Handler) PurchaseCredits(ctx context.Context, req *connect.Request[post
 	if !ok {
 		return nil, authRequired()
 	}
-	purchase, err := h.service.PurchaseCredits(ctx, userID, int(req.Msg.GetUsdCents()))
+	var purchase billing.Purchase
+	var err error
+	if h.service.FixedKRW() {
+		purchase, err = h.service.PurchasePack(ctx, userID, req.Msg.GetPackId())
+	} else {
+		purchase, err = h.service.PurchaseCredits(ctx, userID, int(req.Msg.GetUsdCents()))
+	}
 	if err != nil {
 		return nil, purchaseError(userID, err)
 	}
@@ -274,7 +286,7 @@ func toProtoEvent(value billing.Event) *postpilotv1.BillingEvent {
 }
 
 func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
-	result := &postpilotv1.BillingPurchase{Id: value.ID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable}
+	result := &postpilotv1.BillingPurchase{Id: value.ID, PackId: value.PackID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable}
 	if value.RefundedAt != nil {
 		result.RefundedAt = instant(*value.RefundedAt)
 	}
@@ -287,6 +299,12 @@ func purchaseError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrPurchaseTooSmall):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "purchase must be at least one dollar", postpilotv1.FailureReason_PURCHASE_TOO_SMALL, nil)
+	case errors.Is(err, billing.ErrInvalidPack):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "choose a listed credit pack", postpilotv1.FailureReason_BILLING_PACK_INVALID, nil)
+	case errors.Is(err, billing.ErrSubscriptionRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "active paid subscription required", postpilotv1.FailureReason_SUBSCRIPTION_REQUIRED, nil)
+	case errors.Is(err, billing.ErrPaymentPending):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
 	case errors.Is(err, billing.ErrPurchaseNotFound):
@@ -364,6 +382,10 @@ func subscriptionError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", postpilotv1.FailureReason_CHARGE_FAILED, nil)
+	case errors.Is(err, billing.ErrPaymentPending):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
+	case errors.Is(err, billing.ErrStaleQuote):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refresh the billing quote", postpilotv1.FailureReason_BILLING_STALE_QUOTE, nil)
 	default:
 		slog.Error("subscription start failed", "user_id", userID, "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "could not start subscription", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
@@ -372,6 +394,10 @@ func subscriptionError(userID string, err error) error {
 
 func changeError(userID string, err error) error {
 	switch {
+	case errors.Is(err, billing.ErrPaymentPending):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
+	case errors.Is(err, billing.ErrStaleQuote):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refresh the billing quote", postpilotv1.FailureReason_BILLING_STALE_QUOTE, nil)
 	case errors.Is(err, billing.ErrUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrTierNotSubscribable):

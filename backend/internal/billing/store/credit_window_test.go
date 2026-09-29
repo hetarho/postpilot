@@ -29,6 +29,7 @@ import (
 type ledgerHarness struct {
 	handle  *db.DB
 	ledger  *usage.Service
+	store   *billingstore.Store
 	service *billing.Service
 }
 
@@ -65,7 +66,7 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 		t.Fatal(err)
 	}
 	return &ledgerHarness{
-		handle: handle, ledger: ledger,
+		handle: handle, ledger: ledger, store: store,
 		service: billing.NewService(store, &registrationProvider{}, registrationRates{}, testCredits{Service: ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, nil, nil, nil),
 	}
 }

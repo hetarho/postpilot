@@ -96,7 +96,7 @@ export interface MyPlan {
   plan: PlanName | undefined
   balance: CreditBalance
   offers: PlanOffer[]
-  creditPacks: { priceKrw: number; credits: number }[]
+  creditPacks: { id: string; priceKrw: number; credits: number }[]
   /** The combos the operator has assigned and the server could price. Empty means a
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]

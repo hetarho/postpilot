@@ -58,7 +58,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T479 | Charge fixed KRW monthly/annual plans and prorate paid upgrades | BILL QUOTA ARCH | T477 | todo |
 | T480 | Enforce curated free models and cumulative paid grades on every AI path | MODEL QUOTA CLIP ARCH | T474 T478 | todo |
 | T481 | Show free groups, locked model grades and explicit eligible selections | MODEL QUOTA CLIP LANG ARCH | T480 | todo |
 | T482 | Limit outputs to sixty seconds and reserve successful server exports | CLIP QUOTA ARCH | T477 | todo |
@@ -69,10 +68,12 @@
 | T487 | Reset test entitlements and verify the complete pricing transition | QUOTA BILL MODEL CLIP AUTH MKT ARCH | T483 T486 | todo |
 
 ## next
-- next: implement-task T479–T487 in order; T480 consumes completed voice T474. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate
+- next: implement-task T480–T487 in order; T480 consumes completed voice T474. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); T486 includes the /about header check at 320px/200% text; T479/T485 replace the current USD billing flow before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260930 T479 done: fixed-KRW subscription, upgrade and paid-pack charges use persisted provider-reconciled intents, anchored renewal and one-time grants; ARCH-25/26/28 and deploy regression passed
+- 260930 T479 claimed (p6): replace FX-dependent checkout with fixed KRW plans and packs, exact upgrade proration and reconciled subscription outcomes
 - 260930 T478 done: official FX is frozen at paid admission, confirmed usage settles once, and service/unknown faults issue independent seven-day credit compensation; ARCH-26/28 and frontend/deploy regression passed
 - 260930 T478 claimed (p6): freeze one official FX snapshot for AI admission and settle confirmed cost with fault compensation
 - 260930 T477 done: paid daily/monthly credit and export windows are idempotent, upgrade and support transitions are atomic, origin-period holds survive resets; migration 0115 and full verification passed
@@ -91,5 +92,3 @@
 - 260929 T470 done: `internal/voice` counts the eight-item fingerprint over 학습 글, a text or a post's blocks (thresholds, examples, facets) and compares a text against a voice; `SegmentSentences` keeps `!!` and a trailing emoji with their sentence
 - 260929 T470 claimed (e5)
 - 260929 T469 done: 학습 글 are pasted posts and answers to 20 shared prompts (a photo prompt on the owner's own photo, private storage and a photo sweep), non-prose lines count nothing, a readiness meter needs 60 sentences and every part, and 말투 만들기 / 다시 분석 is an explicit AnalyzeVoice at 100% (migration 0110); the FE's second tab is 학습 글
-- 260929 T468 done: no account gets a voice it did not make — no bootstrap or seed creates one, CreateVoice takes a name alone as a Korean voice not yet made, the description seed and voice languages are gone (migration 0109), the 기본 is optional and any voice deletes, and `/voices` is 내 글's row list with 기본 and 삭제 on the voice's own title row
-- 260929 T468 claimed (e5): chain T468→T474, one commit per task; T475 (prod hand edit) waits for the owner

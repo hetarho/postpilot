@@ -171,7 +171,7 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	}
 	packs := make([]*postpilotv1.CreditPack, 0, len(plan.Packs()))
 	for _, pack := range plan.Packs() {
-		packs = append(packs, &postpilotv1.CreditPack{PriceKrw: int32(pack.PriceKRW), Credits: int32(pack.Credits)})
+		packs = append(packs, &postpilotv1.CreditPack{Id: pack.ID, PriceKrw: int32(pack.PriceKRW), Credits: int32(pack.Credits)})
 	}
 
 	// A comparison with no priced combo shows grants and prices and no post estimate. That

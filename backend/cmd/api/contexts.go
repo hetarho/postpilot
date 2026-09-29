@@ -159,15 +159,13 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})
 	})
-	var exchangeRates billing.Rates
 	if cfg.BillingEnabled {
 		c.payments = tosspay.New(cfg.TossSecretKey, http.DefaultClient)
-		exchangeRates = fxrate.NewEximbank(cfg.EximAPIKey, http.DefaultClient)
 	}
 	c.billing = billing.NewService(
-		c.billingStore, c.payments, exchangeRates, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
+		c.billingStore, c.payments, nil, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
-	)
+	).WithFixedKRW()
 	voucherStore := voucherstore.New(handle.Writer, handle.Reader)
 	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
 		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}

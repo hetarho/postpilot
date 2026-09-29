@@ -105,8 +105,8 @@ func TestLoadGoogleCredentialsArePaired(t *testing.T) {
 	})
 }
 
-func TestLoadBillingCredentialsAreAllOrNothing(t *testing.T) {
-	for _, name := range []string{"TOSS_SECRET_KEY", "TOSS_CLIENT_KEY", "EXIM_API_KEY"} {
+func TestLoadBillingUsesTossPairIndependentlyOfOfficialFX(t *testing.T) {
+	for _, name := range []string{"TOSS_SECRET_KEY", "TOSS_CLIENT_KEY"} {
 		t.Run(name+" only", func(t *testing.T) {
 			t.Setenv(name, "configured")
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TOSS_SECRET_KEY") {
@@ -120,12 +120,18 @@ func TestLoadBillingCredentialsAreAllOrNothing(t *testing.T) {
 			t.Fatalf("cfg=%+v err=%v", cfg, err)
 		}
 	})
+	t.Run("FX only still permits fixed-KRW billing to stay disabled", func(t *testing.T) {
+		t.Setenv("EXIM_API_KEY", "rate")
+		cfg, err := Load()
+		if err != nil || cfg.BillingEnabled || cfg.EximAPIKey != "rate" {
+			t.Fatalf("cfg=%+v err=%v", cfg, err)
+		}
+	})
 	t.Run("enabled", func(t *testing.T) {
 		t.Setenv("TOSS_SECRET_KEY", "secret")
 		t.Setenv("TOSS_CLIENT_KEY", "client")
-		t.Setenv("EXIM_API_KEY", "rate")
 		cfg, err := Load()
-		if err != nil || !cfg.BillingEnabled {
+		if err != nil || !cfg.BillingEnabled || cfg.EximAPIKey != "" {
 			t.Fatalf("cfg=%+v err=%v", cfg, err)
 		}
 	})

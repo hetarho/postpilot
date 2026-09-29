@@ -25,9 +25,9 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 		case "/v1/billing/authorizations/issue":
 			_, _ = io.WriteString(w, `{"billingKey":"billing-1","customerKey":"customer-1","card":{"issuerCode":"11","number":"433012******1234"}}`)
 		case "/v1/billing/billing-1":
-			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE"}`)
+			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE","totalAmount":2785,"currency":"KRW"}`)
 		case "/v1/payments/orders/order-1":
-			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE"}`)
+			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE","totalAmount":2785,"currency":"KRW"}`)
 		case "/v1/payments/pay-1/cancel":
 			_, _ = io.WriteString(w, `{}`)
 		case "/v1/payments/orders/missing":
@@ -48,7 +48,7 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 		t.Fatalf("key=%+v err=%v", key, err)
 	}
 	payment, err := client.Charge(context.Background(), billing.ChargeRequest{BillingKey: "billing-1", CustomerKey: "customer-1", OrderID: "order-1", KRW: 2785, Name: "Basic monthly"})
-	if err != nil || payment.Status != "DONE" {
+	if err != nil || payment.Status != "DONE" || payment.AmountKRW != 2785 || payment.Currency != "KRW" {
 		t.Fatalf("payment=%+v err=%v", payment, err)
 	}
 	if _, found, err := client.PaymentByOrder(context.Background(), "order-1"); err != nil || !found {
@@ -62,7 +62,7 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 	}
 	_, _, err = client.PaymentByOrder(context.Background(), "broken")
 	var providerErr *billing.ProviderError
-	if !errors.As(err, &providerErr) || providerErr.Code != "INVALID_REQUEST" {
+	if !errors.As(err, &providerErr) || providerErr.Code != "INVALID_REQUEST" || providerErr.HTTPStatus != http.StatusBadRequest {
 		t.Fatalf("err=%#v", err)
 	}
 

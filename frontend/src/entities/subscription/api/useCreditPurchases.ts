@@ -15,6 +15,15 @@ export function useQuotePurchase(usdCents: number) {
   return { ...query, quote: toPurchaseQuote(query.data, usdCents) }
 }
 
+export function useQuotePack(packId: string) {
+  const query = useQuery(
+    BillingService.method.quotePurchase,
+    { packId },
+    { enabled: packId.length > 0 },
+  )
+  return { ...query, quote: toPurchaseQuote(query.data, 0) }
+}
+
 function usePurchaseInvalidation() {
   const transport = useTransport()
   const queryClient = useQueryClient()
@@ -38,6 +47,10 @@ export function usePurchaseCredits() {
     ...mutation,
     purchaseCredits: async (usdCents: number) => {
       const response = await mutation.mutateAsync({ usdCents })
+      return response.purchase ? toPurchase(response.purchase) : undefined
+    },
+    purchasePack: async (packId: string) => {
+      const response = await mutation.mutateAsync({ packId })
       return response.purchase ? toPurchase(response.purchase) : undefined
     },
     errorMessage: errorMessage(mutation.error),

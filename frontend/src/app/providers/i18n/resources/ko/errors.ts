@@ -22,6 +22,9 @@ export const errors = {
   SUBSCRIPTION_NEEDS_METHOD:
     '자동 갱신 중인 구독에는 결제 수단이 필요해요. 먼저 구독을 취소해 주세요.',
   BILLING_UNAVAILABLE: '현재 결제 기능을 사용할 수 없어요.',
+  BILLING_PAYMENT_PENDING: '결제 결과를 확인하고 있어요. 잠시 후 결제 내역을 다시 확인해 주세요.',
+  BILLING_STALE_QUOTE: '요금제 상태가 바뀌었어요. 금액을 다시 확인해 주세요.',
+  BILLING_PACK_INVALID: '목록에 있는 크레딧 상품을 선택해 주세요.',
   BILLING_SELECTION_INVALID: '선택한 요금제와 결제 주기를 다시 확인해 주세요.',
   POST_NOT_FOUND: '글을 찾을 수 없어요.',
   POST_FORBIDDEN: '이 글에 접근할 수 없어요.',

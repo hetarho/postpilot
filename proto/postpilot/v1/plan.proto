@@ -127,6 +127,7 @@ message PlanOffer {
 message CreditPack {
   int32 price_krw = 1;
   int32 credits = 2;
+  string id = 3;
 }
 
 // One estimator combo: a pair of models the operator assigned to a price tier, reduced to

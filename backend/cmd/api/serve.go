@@ -56,7 +56,7 @@ func serve(ctx context.Context, c *contexts) error {
 			// direction (ARCH-7).
 			"/webhooks/toss": throttledRoute(
 				c.throttle, auth.ThrottleWebhook, cfg.ClientIPHeader,
-				billingrpc.NewWebhookHandler(c.payments, c.billingStore),
+				billingrpc.NewWebhookHandler(c.payments, c.billingStore).WithService(c.billing),
 			),
 		},
 	})

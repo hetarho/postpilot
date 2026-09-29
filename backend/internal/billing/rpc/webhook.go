@@ -15,11 +15,17 @@ const maxNotificationBytes = 1 << 20
 type WebhookHandler struct {
 	provider billing.Provider
 	store    billing.Store
+	service  *billing.Service
 	now      func() time.Time
 }
 
 func NewWebhookHandler(provider billing.Provider, store billing.Store) *WebhookHandler {
 	return &WebhookHandler{provider: provider, store: store, now: time.Now}
+}
+
+func (h *WebhookHandler) WithService(service *billing.Service) *WebhookHandler {
+	h.service = service
+	return h
 }
 
 func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +69,12 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		http.Error(w, "notification store failed", http.StatusInternalServerError)
 		return
+	}
+	if h.service != nil {
+		if err := h.service.ReconcileOrder(r.Context(), payment.OrderID); err != nil {
+			http.Error(w, "payment reconciliation pending", http.StatusBadGateway)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 }

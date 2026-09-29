@@ -26,10 +26,17 @@ func (s *Service) QuoteChange(ctx context.Context, userID string, tier plan.Plan
 	if err != nil {
 		return ChangeQuote{}, err
 	}
-	return s.quoteChangeAt(ctx, subscription, tier, term, kind, now)
+	quote, err := s.quoteChangeAt(ctx, subscription, tier, term, kind, now)
+	if err != nil || !s.fixedKRW {
+		return quote, err
+	}
+	return s.persistFixedChangeQuote(ctx, userID, subscription, tier, term, quote, now)
 }
 
 func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, bool, error) {
+	if s.fixedKRW {
+		return Subscription{}, false, ErrStaleQuote
+	}
 	if !s.Enabled() {
 		return Subscription{}, false, ErrUnavailable
 	}
@@ -59,7 +66,7 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 	}
 	orderID := upgradeOrderID(userID, now)
 	var payment Payment
-	if quote.USDCents > 0 {
+	if quote.KRW > 0 {
 		method, found, err := s.store.PaymentMethod(ctx, userID)
 		if err != nil {
 			return Subscription{}, false, err
@@ -98,7 +105,7 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
-		if quote.USDCents > 0 {
+		if quote.KRW > 0 {
 			if err := tx.InsertEvent(ctx, chargeEvent(userID, tier, term, quote.Quote, payment, orderID, now)); err != nil {
 				return err
 			}
@@ -118,6 +125,13 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 	return updated, true, err
 }
 
+func (s *Service) ChangeSubscriptionQuoted(ctx context.Context, userID string, tier plan.Plan, term Term, quoteID string) (Subscription, bool, error) {
+	if !s.fixedKRW {
+		return s.ChangeSubscription(ctx, userID, tier, term)
+	}
+	return s.changeFixed(ctx, userID, tier, term, quoteID)
+}
+
 func (s *Service) CancelScheduledChange(ctx context.Context, userID string) (Subscription, error) {
 	now := s.now()
 	subscription, err := s.requireActiveSubscription(ctx, userID, now)
@@ -126,6 +140,24 @@ func (s *Service) CancelScheduledChange(ctx context.Context, userID string) (Sub
 	}
 	if subscription.ScheduledTier == nil && subscription.ScheduledTerm == nil {
 		return Subscription{}, ErrNoScheduledChange
+	}
+	if s.fixedKRW {
+		err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+			if err := s.requireNoPending(ctx, tx, userID); err != nil {
+				return err
+			}
+			current, found, err := tx.Subscription(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+				return ErrStaleQuote
+			}
+			current.ScheduledTier, current.ScheduledTerm, current.UpdatedAt = nil, nil, now
+			subscription = current
+			return tx.UpsertSubscription(ctx, current)
+		})
+		return subscription, err
 	}
 	subscription.ScheduledTier = nil
 	subscription.ScheduledTerm = nil
@@ -147,6 +179,18 @@ func (s *Service) CancelSubscription(ctx context.Context, userID string) (Subscr
 	subscription.ScheduledTerm = nil
 	subscription.UpdatedAt = now
 	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+		if err := s.requireNoPending(ctx, tx, userID); err != nil {
+			return err
+		}
+		if s.fixedKRW {
+			current, found, err := tx.Subscription(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+				return ErrStaleQuote
+			}
+		}
 		if err := tx.UpsertSubscription(ctx, subscription); err != nil {
 			return err
 		}
@@ -163,6 +207,24 @@ func (s *Service) ResumeSubscription(ctx context.Context, userID string) (Subscr
 	}
 	if subscription.AutoRenew {
 		return Subscription{}, ErrNoChange
+	}
+	if s.fixedKRW {
+		err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+			if err := s.requireNoPending(ctx, tx, userID); err != nil {
+				return err
+			}
+			current, found, err := tx.Subscription(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+				return ErrStaleQuote
+			}
+			current.AutoRenew, current.UpdatedAt = true, now
+			subscription = current
+			return tx.UpsertSubscription(ctx, current)
+		})
+		return subscription, err
 	}
 	subscription.AutoRenew = true
 	subscription.UpdatedAt = now
@@ -186,6 +248,9 @@ func (s *Service) classifyChange(ctx context.Context, userID string, tier plan.P
 	case !tierChanged && !termChanged:
 		return Subscription{}, changeNone, ErrNoChange
 	case tierChanged && termChanged:
+		if s.fixedKRW {
+			return subscription, changeScheduled, nil
+		}
 		return Subscription{}, changeNone, ErrChangeUnsupported
 	case tierChanged && tier.Rank() > subscription.Tier.Rank():
 		return subscription, changeUpgrade, nil
@@ -212,6 +277,17 @@ func (s *Service) quoteChangeAt(ctx context.Context, subscription Subscription, 
 	}
 	result := ChangeQuote{Quote: quote, AppliedNow: kind == changeUpgrade, EffectiveAt: subscription.TermEnd}
 	if kind != changeUpgrade {
+		return result, nil
+	}
+	if s.fixedKRW {
+		benefitStart, benefitEnd := plan.BenefitWindow(subscription.AnchorAt, now)
+		amounts, err := plan.QuoteUpgrade(subscription.Tier, tier, term == TermAnnual,
+			subscription.TermStart, subscription.TermEnd, benefitStart, benefitEnd, now)
+		if err != nil {
+			return ChangeQuote{}, err
+		}
+		result.KRW = int(amounts.ChargeKRW)
+		result.EffectiveAt = now
 		return result, nil
 	}
 	difference := plan.MonthlyPriceCents(tier) - plan.MonthlyPriceCents(subscription.Tier)

@@ -64,7 +64,7 @@ export function BillingCheckoutPage() {
     if (!tier || !myBilling?.paymentMethod) return
     try {
       if (isUpgrade) {
-        await change.changeSubscription(tier, selectedTerm)
+        await change.changeSubscription(tier, selectedTerm, quote?.id)
       } else {
         await subscribe.subscribe(tier, selectedTerm)
       }

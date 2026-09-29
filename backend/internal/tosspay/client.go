@@ -113,13 +113,16 @@ func (c *Client) ParseNotification(raw []byte) (billing.Notification, error) {
 }
 
 type paymentResponse struct {
-	PaymentKey string `json:"paymentKey"`
-	OrderID    string `json:"orderId"`
-	Status     string `json:"status"`
+	PaymentKey  string `json:"paymentKey"`
+	OrderID     string `json:"orderId"`
+	Status      string `json:"status"`
+	TotalAmount int    `json:"totalAmount"`
+	Currency    string `json:"currency"`
 }
 
 func (p paymentResponse) domain() billing.Payment {
-	return billing.Payment{PaymentKey: p.PaymentKey, OrderID: p.OrderID, Status: p.Status}
+	return billing.Payment{PaymentKey: p.PaymentKey, OrderID: p.OrderID, Status: p.Status,
+		AmountKRW: p.TotalAmount, Currency: p.Currency}
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body any, target any) error {
@@ -154,6 +157,7 @@ func (c *Client) doStatus(ctx context.Context, method, path string, body any, ta
 		if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&providerErr); err != nil {
 			return response.StatusCode, fmt.Errorf("Toss Payments status %d", response.StatusCode)
 		}
+		providerErr.HTTPStatus = response.StatusCode
 		return response.StatusCode, &providerErr
 	}
 	if target == nil {
