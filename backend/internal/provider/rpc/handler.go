@@ -185,6 +185,10 @@ func actingUser(ctx context.Context) (string, error) {
 }
 
 func toConnectError(op string, err error) error {
+	var access *provider.ModelAccessError
+	if errors.As(err, &access) {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
 	var credits *plan.InsufficientCreditsError
 	if errors.As(err, &credits) {
 		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, credits)
@@ -232,6 +236,12 @@ func fromProtoStage(s postpilotv1.Stage) (provider.Stage, bool) {
 }
 
 func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
+	access := make([]*postpilotv1.ModelStageAccess, 0, len(m.Access))
+	for _, a := range m.Access {
+		access = append(access, &postpilotv1.ModelStageAccess{Stage: stageToProto[a.Stage], Grade: a.Grade,
+			RequiredPlan: string(a.RequiredPlan), Entitled: a.Entitled, FreePathAvailable: a.FreePathAvailable,
+			UnavailableReason: a.UnavailableReason})
+	}
 	stages := make([]postpilotv1.Stage, 0, len(m.Info.Stages))
 	levels := make([]*postpilotv1.StageLevel, 0, len(m.Info.Levels))
 	for _, value := range m.Info.Stages {
@@ -268,6 +278,7 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		AiPriceUnavailable:  m.PriceUnavailable,
 		Stages:              stages,
 		Levels:              levels,
+		Access:              access,
 	}
 }
 
@@ -276,6 +287,7 @@ func toProtoSelection(s provider.Selection) *postpilotv1.Selection {
 		Stage:   stageToProto[s.Stage],
 		Ref:     &postpilotv1.ModelRef{ProviderId: s.Ref.ProviderID, ModelId: s.Ref.ModelID},
 		Missing: s.Missing, Slot: slotToProto(s.Slot),
+		RequiredPlan: string(s.RequiredPlan), UnavailableReason: s.UnavailableReason,
 	}
 }
 

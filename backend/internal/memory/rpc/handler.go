@@ -13,6 +13,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
@@ -219,6 +220,9 @@ func toProtoKind(kind memory.Kind) postpilotv1.MemoryKind {
 // toConnectError maps the context's sentinels to wire codes. A foreign memory is NotFound
 // like an unknown one — the two must not be distinguishable.
 func toConnectError(op string, err error) error {
+	if access, ok := usage.ModelAccessFailure(err); ok {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
 	var tooLong *memory.TextTooLongError
 	var tooManyTags *memory.TooManyTagsError
 	var atCap *memory.AccountCapError

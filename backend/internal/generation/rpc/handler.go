@@ -17,6 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 type Handler struct{ service *generation.Service }
@@ -135,6 +136,9 @@ func actingUser(ctx context.Context) (string, error) {
 }
 
 func toConnectError(op string, err error) error {
+	if access, ok := usage.ModelAccessFailure(err); ok {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
 	// The credit refusal is matched by type here rather than mapped by each service: the
 	// gate lives at one seam (job enqueue), so its failure must translate identically
 	// wherever it surfaces.

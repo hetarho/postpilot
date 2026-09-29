@@ -451,12 +451,12 @@ func storylinePricingCalls(request generation.StartStorylineRequest, budget conf
 	calls := make([]job.PlannedCall, 0, 2)
 	if request.ObserveModel != "" && request.ObserveCalls > 0 {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.ObserveModel, Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
+			Ref: request.ObserveModel, Stage: "observe", Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
 		})
 	}
 	if request.WriteModel != "" {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Count: 1, CompletionTokens: generation.StorylineCompletionBudget,
+			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: generation.StorylineCompletionBudget,
 		})
 	}
 	return calls
@@ -467,19 +467,19 @@ func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequ
 	if request.WriteModel == "" {
 		return nil
 	}
-	return []job.PlannedCall{{Ref: request.WriteModel, Count: 1, CompletionTokens: generation.StorylineCompletionBudget}}
+	return []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: generation.StorylineCompletionBudget}}
 }
 
 func generationPricingCalls(request generation.StartRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
 	calls := make([]job.PlannedCall, 0, 2)
 	if request.ObserveModel != "" && request.ObserveCalls > 0 {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.ObserveModel, Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
+			Ref: request.ObserveModel, Stage: "observe", Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
 		})
 	}
 	if request.WriteModel != "" {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Count: 1, CompletionTokens: budget.Write(request.TargetLength, request.WriteNativeEffort),
+			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Write(request.TargetLength, request.WriteNativeEffort),
 		})
 	}
 	return calls
@@ -490,7 +490,7 @@ func revisionPricingCalls(request generation.StartRevisionRequest, budget config
 		return nil
 	}
 	return []job.PlannedCall{{
-		Ref: request.WriteModel, Count: 1,
+		Ref: request.WriteModel, Stage: "write", Count: 1,
 		CompletionTokens: budget.Revise(request.ContentChars, request.TargetLength, request.WriteNativeEffort),
 	}}
 }

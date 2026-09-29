@@ -112,7 +112,7 @@ func (n NewJob) plannedCalls() []PlannedCall {
 	}
 	calls := make([]PlannedCall, 0, 2+len(n.ExtraModels))
 	seen := make(map[string]int, 2+len(n.ExtraModels))
-	for _, ref := range append([]string{n.ObserveModel, n.WriteModel}, n.ExtraModels...) {
+	for index, ref := range append([]string{n.ObserveModel, n.WriteModel}, n.ExtraModels...) {
 		if ref == "" {
 			continue
 		}
@@ -138,7 +138,20 @@ func (n NewJob) plannedCalls() []PlannedCall {
 			continue
 		}
 		seen[ref] = len(calls)
-		calls = append(calls, PlannedCall{Ref: ref, Count: count})
+		stage := ""
+		if index == 0 {
+			stage = "observe"
+		} else if index == 1 {
+			stage = "write"
+			if n.Kind == KindAnalyzeVoice || n.Kind == KindExtractMemory {
+				stage = "analyze"
+			}
+		} else if n.Kind == KindModelExperiment {
+			// Experiments supply their stage explicitly in PricingCalls. This
+			// fallback is retained for older non-production queue fixtures.
+			stage = ""
+		}
+		calls = append(calls, PlannedCall{Ref: ref, Stage: stage, Count: count})
 	}
 	return calls
 }
@@ -147,6 +160,7 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 	calls := make([]PlannedCall, 0, len(input))
 	seen := make(map[struct {
 		ref    string
+		stage  string
 		budget int
 	}]int, len(input))
 	for _, call := range input {
@@ -155,8 +169,9 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 		}
 		key := struct {
 			ref    string
+			stage  string
 			budget int
-		}{ref: call.Ref, budget: call.CompletionTokens}
+		}{ref: call.Ref, stage: call.Stage, budget: call.CompletionTokens}
 		if index, ok := seen[key]; ok {
 			calls[index].Count += call.Count
 			continue

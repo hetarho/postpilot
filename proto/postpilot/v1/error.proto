@@ -333,6 +333,10 @@ enum FailureReason {
   BILLING_PAYMENT_PENDING = 271;
   BILLING_STALE_QUOTE = 272;
   BILLING_PACK_INVALID = 273;
+  MODEL_PLAN_REQUIRED = 274;
+  MODEL_UNCLASSIFIED = 275;
+  MODEL_FREE_PATH_UNAVAILABLE = 276;
+  MODEL_FREE_INELIGIBLE = 277;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

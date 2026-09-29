@@ -84,6 +84,16 @@ message ModelInfo {
   // Display and ordering only — an unlevelled model is as selectable as a levelled one.
   repeated StageLevel levels = 19;
   bool ai_price_unavailable = 20;
+  repeated ModelStageAccess access = 21;
+}
+
+message ModelStageAccess {
+  Stage stage = 1;
+  string grade = 2;
+  string required_plan = 3;
+  bool entitled = 4;
+  bool free_path_available = 5;
+  string unavailable_reason = 6;
 }
 
 // StageLevel is one stage's level for a model. A repeated message rather than a map
@@ -91,7 +101,7 @@ message ModelInfo {
 // would hand the client a name it otherwise never has to know.
 message StageLevel {
   Stage stage = 1;
-  // "value" | "balanced" | "premium" | "top". Never "" — a stage with no level is absent.
+  // "free" | "value" | "balanced" | "premium" | "top".
   string level = 2;
 }
 
@@ -102,6 +112,8 @@ message Selection {
   // client what to grey out and why.
   bool missing = 3;
   SelectionSlot slot = 4;
+  string required_plan = 5;
+  string unavailable_reason = 6;
 }
 
 message ComparisonPair {

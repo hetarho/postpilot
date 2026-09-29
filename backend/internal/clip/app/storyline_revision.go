@@ -133,6 +133,9 @@ func (s *GenerationService) QuoteStorylineRevision(ctx context.Context, user, id
 	if err := s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
 		return clip.GenerationQuote{}, admissionRefusal(modelRef(observe), err)
 	}
+	if err := s.checkQuoteAccess(ctx, user, observe, write, 0, 1); err != nil {
+		return clip.GenerationQuote{}, err
+	}
 	guidelines, err := s.videoGuidelines(ctx, p)
 	if err != nil {
 		return clip.GenerationQuote{}, err

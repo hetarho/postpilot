@@ -99,8 +99,9 @@ UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? 
 -- name: InsertAdmission :exec
 INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
                               coverage_id,daily_window_start,benefit_window_start,
-                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary,
+                              admitted_plan,admitted_models_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: DeleteAdmissionForJob :exec
 DELETE FROM usage_admissions WHERE job_id = ?;
@@ -174,7 +175,8 @@ SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid;
 -- terminal transition that runs twice finds nothing the second time.
 SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
        coverage_id,daily_window_start,benefit_window_start,
-       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary
+       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary,
+       admitted_plan,admitted_models_json
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL;
 

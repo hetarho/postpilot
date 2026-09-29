@@ -127,10 +127,10 @@ func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.Planne
 	}
 	calls := []job.PlannedCall{}
 	if chunks > 0 {
-		calls = append(calls, job.PlannedCall{Ref: p.Observe.Ref.String(), Count: p.ObserveCalls(chunks), CompletionTokens: p.Observe.CompletionTokens})
+		calls = append(calls, job.PlannedCall{Ref: p.Observe.Ref.String(), Stage: "observe", Count: p.ObserveCalls(chunks), CompletionTokens: p.Observe.CompletionTokens})
 	}
 	if p.PlanCalls() > 0 {
-		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
+		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Stage: "write", Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
 	}
 	reservation := Reservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Rate: p.Rate, Calls: []Call{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}}
 	return calls, reservation, nil

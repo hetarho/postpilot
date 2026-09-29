@@ -25,6 +25,7 @@ import (
 // start on credits the account turns out not to have, which the account never pays back.
 type PlannedCall struct {
 	Ref              llm.ModelRef
+	Stage            string
 	Count            int
 	CompletionTokens int64
 }
@@ -43,6 +44,8 @@ type Start struct {
 
 // Admission is the durable record of an admitted start and the credits held for it.
 type Admission struct {
+	AdmittedPlan              plan.Plan
+	AdmittedModels            []AdmittedModel
 	CancellationPolicyVersion int
 	UserID                    string
 	Kind                      string
@@ -54,6 +57,13 @@ type Admission struct {
 	DailyWindowStart          *time.Time
 	BenefitWindowStart        *time.Time
 	Rate                      plan.RateSnapshot
+}
+
+// AdmittedModel freezes the right to run one model at one stage for this job.
+type AdmittedModel struct {
+	Ref   llm.ModelRef `json:"ref"`
+	Stage string       `json:"stage"`
+	Grade string       `json:"grade"`
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.

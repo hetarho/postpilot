@@ -86,7 +86,20 @@ func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, e
 	if req.Execution != nil {
 		return c.completeStrict(ctx, req)
 	}
-	body, err := json.Marshal(c.buildRequest(req))
+	wire := c.buildRequest(req)
+	client := c.http
+	if req.FreeCall {
+		endpoint, err := c.freeEndpoint(ctx, req)
+		if err != nil {
+			return llm.Response{}, err
+		}
+		wire.Provider = &strictRouting{AllowFallbacks: false, RequireParameters: true,
+			Only: []string{endpoint}, Order: []string{endpoint}, MaxPrice: strictPrices{
+				Prompt: "0", Completion: "0", Request: "0", Image: "0", Audio: "0",
+			}}
+		client = c.strictHTTP()
+	}
+	body, err := json.Marshal(wire)
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("%s: encode request: %w", c.name, err)
 	}
@@ -102,7 +115,7 @@ func (c *Client) Complete(ctx context.Context, req llm.Request) (llm.Response, e
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream, application/json")
 
-	resp, err := c.http.Do(httpReq)
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("%s: %w", c.name, err)
 	}

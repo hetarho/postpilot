@@ -14,6 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -224,6 +225,9 @@ func actingUser(ctx context.Context) (string, error) {
 // like an unknown one; a tombstone and every lifecycle refusal are FailedPrecondition so the
 // client can offer the restore/reassign path instead of retrying.
 func toConnectError(op string, err error) error {
+	if access, ok := usage.ModelAccessFailure(err); ok {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
 	// The credit refusal is matched by type here rather than mapped by each service: the
 	// gate lives at one seam (job enqueue), so its failure must translate identically
 	// wherever it surfaces.

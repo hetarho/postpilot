@@ -28,9 +28,10 @@ const (
 	IssueDuplicateID      = "duplicate_id"
 	IssueUnknownLevel     = "unknown_level"
 	// Validation causes: the text parsed, but the catalog refuses it.
-	IssueUnknownModel = "unknown_model"
-	IssueUnlisted     = "unlisted_model"
-	IssueIneligible   = "purpose_ineligible"
+	IssueUnknownModel   = "unknown_model"
+	IssueUnlisted       = "unlisted_model"
+	IssueIneligible     = "purpose_ineligible"
+	IssueFreeIneligible = "free_path_ineligible"
 )
 
 // DocumentIssue is one rejected line. The line number is 1-based over the document as

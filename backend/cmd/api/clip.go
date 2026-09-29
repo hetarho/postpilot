@@ -55,7 +55,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates) (*clipapp.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
@@ -75,11 +75,18 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
 		RemoteMedia: remote,
 		Finisher:    finisher,
-		Pricing:     clipapp.NewPricingWithRate(models.Registry, clipBudgets(aiConfig), models.ledger),
-		Accounting:  clipapp.NewAccounting(models.ledger),
-		Admission:   clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
-		Candidates:  candidates,
-		Guidelines:  candidates,
+		Pricing: clipapp.NewPricingWithRate(models.Registry, clipBudgets(aiConfig), models.ledger).WithQuoteAccess(
+			func(ctx context.Context, user string, calls []usage.PlannedCall) error {
+				tier, err := plans.PlanOf(ctx, user)
+				if err != nil {
+					return err
+				}
+				return models.ledger.CheckModelAccess(ctx, tier, clip.JobKindGenerate, calls)
+			}),
+		Accounting: clipapp.NewAccounting(models.ledger),
+		Admission:  clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
+		Candidates: candidates,
+		Guidelines: candidates,
 	})
 	if _, err = queue.SweepUnactivated(ctx); err != nil {
 		return nil, err

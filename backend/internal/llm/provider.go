@@ -111,6 +111,9 @@ type Request struct {
 	// Execution is mandatory for paid clip calls. It preserves the admitted policy;
 	// neither the registry nor an adapter may relax it or apply a newer override.
 	Execution *ExecutionPolicy
+	// FreeCall is set by the trusted registry after an admitted free model is
+	// checked. The adapter pins one verified zero-price provider leaf.
+	FreeCall bool
 }
 
 // HasImages reports whether any message carries an image part. It stays image-only: it is

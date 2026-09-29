@@ -202,12 +202,17 @@ export const errors = {
   MODEL_NOT_REGISTERED: 'That model is not registered.',
   MODEL_PURPOSE_INVALID: 'Unknown model purpose. Choose one of the registered purposes.',
   MODEL_PURPOSE_INELIGIBLE: 'That model cannot do this purpose. Choose another model.',
+  MODEL_FREE_INELIGIBLE: 'This model has no verified free route for that purpose.',
   MODEL_PURPOSE_NOT_REGISTERED:
     'That model is not registered for this purpose. Register it for the purpose first.',
   COMBO_UNKNOWN: 'Unknown estimator combo. Choose one of the four.',
   COMBO_INCOMPLETE: 'Choose the combo and both its analysis and writing models.',
   MODEL_DISABLED: 'That model is disabled.',
   MODEL_UNSUITABLE: 'That model cannot be used for this stage.',
+  MODEL_PLAN_REQUIRED: 'This model requires a higher plan.',
+  MODEL_UNCLASSIFIED: 'This model is awaiting classification by an operator.',
+  MODEL_FREE_PATH_UNAVAILABLE:
+    'No verified free provider route is available for this model right now.',
   MODEL_CANDIDATES_DUPLICATE: 'Select two different models.',
   MODEL_RECOMMENDATION_NOT_FOUND: 'Could not find the model recommendation.',
   MODEL_SET_UNAVAILABLE:

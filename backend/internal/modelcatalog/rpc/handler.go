@@ -224,6 +224,8 @@ func toProtoReasoningSpend(spend *modelcatalog.ReasoningSpend) *postpilotv1.Reas
 
 func toConnectError(op string, err error) error {
 	switch {
+	case errors.Is(err, modelcatalog.ErrFreeIneligible):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model has no verified free path", postpilotv1.FailureReason_MODEL_FREE_INELIGIBLE, nil)
 	case errors.Is(err, modelcatalog.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "model not found", postpilotv1.FailureReason_MODEL_NOT_FOUND, nil)
 	case errors.Is(err, modelcatalog.ErrInvalidReasoning):

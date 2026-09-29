@@ -56,18 +56,20 @@ var (
 	// ErrPriceCeilingUnavailable: a leaf takes the request but publishes no complete,
 	// enforceable price ceiling for every unit the request can incur.
 	ErrPriceCeilingUnavailable = &AdmissionError{"price_ceiling_unavailable"}
+	ErrFreePathUnavailable     = &AdmissionError{"free_path_unavailable"}
 )
 
 // Stable failure reasons owned by the LLM context. They are intentionally prose-free:
 // callers persist or project them while choosing the user-facing copy at the edge.
 const (
-	FailureReasonProviderDisabled = "PROVIDER_DISABLED"
-	FailureReasonModelUnavailable = "MODEL_UNAVAILABLE"
-	FailureReasonModelRateLimited = "MODEL_RATE_LIMITED"
-	FailureReasonModelUnsupported = "MODEL_UNSUPPORTED"
-	FailureReasonOutputInvalid    = "MODEL_OUTPUT_INVALID"
-	FailureReasonOutputTruncated  = "MODEL_OUTPUT_TRUNCATED"
-	FailureReasonUnknown          = "UNKNOWN_FAILURE"
+	FailureReasonProviderDisabled    = "PROVIDER_DISABLED"
+	FailureReasonModelUnavailable    = "MODEL_UNAVAILABLE"
+	FailureReasonModelRateLimited    = "MODEL_RATE_LIMITED"
+	FailureReasonModelUnsupported    = "MODEL_UNSUPPORTED"
+	FailureReasonFreePathUnavailable = "MODEL_FREE_PATH_UNAVAILABLE"
+	FailureReasonOutputInvalid       = "MODEL_OUTPUT_INVALID"
+	FailureReasonOutputTruncated     = "MODEL_OUTPUT_TRUNCATED"
+	FailureReasonUnknown             = "UNKNOWN_FAILURE"
 )
 
 // Failure is the provider-neutral, durable projection of an LLM error.
@@ -142,6 +144,8 @@ func failureReason(err error) string {
 		return FailureReasonModelUnavailable
 	case errors.Is(err, ErrRateLimited):
 		return FailureReasonModelRateLimited
+	case errors.Is(err, ErrFreePathUnavailable):
+		return FailureReasonFreePathUnavailable
 	case errors.Is(err, ErrUnsupported):
 		return FailureReasonModelUnsupported
 	case errors.Is(err, ErrOutputTruncated):

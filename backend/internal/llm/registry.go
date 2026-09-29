@@ -59,8 +59,7 @@ type ModelInfo struct {
 	// Stages this model may serve, passed through from the source verbatim (see
 	// SourceModel.Stages). Empty means no user-facing stage lists it.
 	Stages []string
-	// Levels is the source's display grade per stage, passed through verbatim (see
-	// SourceModel.Levels). Nothing in the registry reads it.
+	// Levels is the source's curated grade per stage, passed through verbatim.
 	Levels         map[string]string
 	Disabled       bool
 	DisabledReason string
@@ -197,8 +196,9 @@ type modelRefEntry struct {
 // configuration read once at boot, and the usable-model list, which is curated data read
 // live from the source.
 type Registry struct {
-	providerID string
-	provider   Provider
+	modelGrades bool
+	providerID  string
+	provider    Provider
 	// disabled/disabledReason describe the provider, not one model: an unset key takes the
 	// whole endpoint out at once.
 	disabled        bool
@@ -207,6 +207,53 @@ type Registry struct {
 	source          ModelSource
 	recommendations []RecommendationSet
 	opts            Options
+}
+
+// WithModelGrades requires a trusted, durable admission on every provider call.
+func (r *Registry) WithModelGrades() *Registry { r.modelGrades = true; return r }
+
+type admittedCall struct {
+	ref          ModelRef
+	stage, grade string
+}
+type admittedCallsKey struct{}
+
+// WithAdmittedCalls is called only by the composition root after reading the
+// ledger. Request payloads cannot grant a model grade or free routing.
+func WithAdmittedCalls(ctx context.Context, calls []AdmittedCall) context.Context {
+	trusted := make([]admittedCall, 0, len(calls))
+	for _, call := range calls {
+		trusted = append(trusted, admittedCall{ref: call.Ref, stage: call.Stage, grade: call.Grade})
+	}
+	return context.WithValue(ctx, admittedCallsKey{}, trusted)
+}
+
+type AdmittedCall struct {
+	Ref          ModelRef
+	Stage, Grade string
+}
+
+func admittedGrade(ctx context.Context, ref ModelRef, stage string) (string, bool) {
+	calls, _ := ctx.Value(admittedCallsKey{}).([]admittedCall)
+	for _, call := range calls {
+		if call.ref == ref && call.stage == stage {
+			return call.grade, true
+		}
+	}
+	return "", false
+}
+
+// QualifyFree checks a provider leaf's current complete price envelope for
+// operator curation. The catalog service owns the policy and supplies the
+// applicable path; the adapter owns provider document interpretation.
+func (r *Registry) QualifyFree(ctx context.Context, modelID string, path FreePath) (bool, error) {
+	checker, ok := r.provider.(interface {
+		HasFreePath(context.Context, string, FreePath) (bool, error)
+	})
+	if !ok || r.disabled {
+		return false, nil
+	}
+	return checker.HasFreePath(ctx, modelID, path)
 }
 
 // Load reads and validates the registry file. Any problem is returned as an error the
@@ -470,13 +517,25 @@ func (r *Registry) resolve(ref ModelRef, req Request) (SourceModel, error) {
 // Complete resolves the ref, fills in the model and the default cap, and runs the call
 // under the stage timeout. This is the one way the contexts above call a model.
 func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Response, error) {
+	if r.modelGrades {
+		grade, found := admittedGrade(ctx, ref, req.Stage)
+		if !found {
+			return Response{}, ErrModelUnavailable
+		}
+		switch grade {
+		case "free", "value", "balanced", "premium", "top":
+		default:
+			return Response{}, ErrModelUnavailable
+		}
+		req.FreeCall = grade == "free"
+	}
 	resolved, err := r.resolve(ref, req)
 	if err != nil {
 		return Response{}, err
 	}
 	req.Model = ref.ModelID
 	if req.Execution != nil {
-		if !req.Execution.Matches(ref, req) || !slices.Contains(resolved.Stages, req.Stage) {
+		if !req.Execution.Matches(ref, req) || !r.modelGrades && !slices.Contains(resolved.Stages, req.Stage) {
 			return Response{}, ErrUnsupported
 		}
 		// The route itself was qualified when the policy was frozen and is rechecked

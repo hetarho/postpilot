@@ -1,0 +1,92 @@
+package provider_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/provider"
+)
+
+type tierCredits struct {
+	fakeCredits
+	tier plan.Plan
+}
+
+func (c tierCredits) Tier(context.Context, string) (plan.Plan, error) { return c.tier, nil }
+
+func TestModelAccessTierMatrixAndSavedLockedRef(t *testing.T) {
+	grades := []struct {
+		grade    string
+		required plan.Plan
+	}{{"free", plan.Free}, {"value", plan.Light}, {"balanced", plan.Basic}, {"premium", plan.Pro}, {"top", plan.Max}}
+	for _, tier := range []plan.Plan{plan.Free, plan.Light, plan.Basic, plan.Pro, plan.Max, plan.Master} {
+		for _, row := range grades {
+			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: row.grade}
+			price := "1"
+			if row.grade == "free" {
+				price = "0"
+			}
+			store := &fakeStore{rows: map[string]provider.Selection{}}
+			svc := provider.NewService(store, fakeCatalog{ref: {Ref: ref, Stages: []string{"write"}, Levels: map[string]string{"write": row.grade}, InputUSDPerMillion: price, OutputUSDPerMillion: price}}, tierCredits{tier: tier}).WithModelGrades()
+			models, err := svc.ListModels(context.Background(), "alice")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := tier == plan.Master || tier.Rank() >= row.required.Rank()
+			if len(models) != 1 || len(models[0].Access) != 1 || models[0].Access[0].Entitled != want || models[0].Access[0].RequiredPlan != row.required {
+				t.Fatalf("tier=%s grade=%s access=%+v", tier, row.grade, models)
+			}
+			_, err = svc.SaveSelection(context.Background(), "alice", provider.StageWrite, ref)
+			var locked *provider.ModelAccessError
+			if want && err != nil || !want && (!errors.As(err, &locked) || locked.Required != row.required) {
+				t.Fatalf("tier=%s grade=%s save=%v", tier, row.grade, err)
+			}
+			if !want {
+				store.rows["write"] = provider.Selection{Stage: provider.StageWrite, Ref: ref}
+				saved, err := svc.GetSelections(context.Background(), "alice")
+				if err != nil || len(saved) != 1 || saved[0].Missing || saved[0].UnavailableReason != "MODEL_PLAN_REQUIRED" {
+					t.Fatalf("retained tier=%s grade=%s selection=%+v err=%v", tier, row.grade, saved, err)
+				}
+			}
+		}
+	}
+}
+
+func TestRecommendationReportsPlanAndUnclassifiedRefsBeforeAnyWrite(t *testing.T) {
+	free := llm.ModelRef{ProviderID: "openrouter", ModelID: "free"}
+	paid := llm.ModelRef{ProviderID: "openrouter", ModelID: "paid"}
+	unset := llm.ModelRef{ProviderID: "openrouter", ModelID: "unset"}
+	store := &fakeStore{rows: map[string]provider.Selection{}}
+	catalog := recommendationCatalog{fakeCatalog: fakeCatalog{
+		free:  {Ref: free, Stages: allStages, Levels: map[string]string{"observe": "free", "write": "free", "analyze": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
+		paid:  {Ref: paid, Stages: allStages, Levels: map[string]string{"observe": "top", "write": "top"}, InputUSDPerMillion: "1", OutputUSDPerMillion: "1"},
+		unset: {Ref: unset, Stages: allStages},
+	}, sets: []llm.RecommendationSet{{ID: "mixed", Selections: []llm.RecommendationSelection{
+		{Stage: "observe", Active: free, CandidateA: paid, CandidateB: unset},
+		{Stage: "write", Active: free, CandidateA: paid, CandidateB: unset},
+		{Stage: "analyze", Active: free},
+	}}}}
+	svc := provider.NewService(store, catalog, tierCredits{tier: plan.Free}).WithModelGrades()
+	_, _, _, err := svc.ApplyRecommendationSet(context.Background(), "alice", "mixed")
+	var refusal *provider.SetRefusal
+	if !errors.As(err, &refusal) || len(refusal.PlanLocked) != 2 || len(refusal.Unclassified) != 2 || len(store.lastBatch) != 0 {
+		t.Fatalf("refusal=%+v batch=%+v err=%v", refusal, store.lastBatch, err)
+	}
+}
+
+func TestDisabledComparisonRefRemainsSavedWithProviderReason(t *testing.T) {
+	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "temporarily-disabled"}
+	store := &fakeStore{rows: map[string]provider.Selection{}}
+	store.rows["write"] = provider.Selection{Stage: provider.StageWrite, Slot: provider.SlotCandidateA, Ref: ref}
+	svc := provider.NewService(store, fakeCatalog{ref: {
+		Ref: ref, Stages: []string{"write"}, Levels: map[string]string{"write": "free"},
+		InputUSDPerMillion: "0", OutputUSDPerMillion: "0", Disabled: true,
+	}}, tierCredits{tier: plan.Free}).WithModelGrades()
+	pairs, err := svc.GetComparisonPairs(context.Background(), "alice")
+	if err != nil || len(pairs) != 1 || pairs[0].CandidateA.Missing || pairs[0].CandidateA.UnavailableReason != "MODEL_PROVIDER_UNAVAILABLE" || len(store.deleted) != 0 {
+		t.Fatalf("pair=%+v deleted=%v err=%v", pairs, store.deleted, err)
+	}
+}

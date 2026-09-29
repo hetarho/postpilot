@@ -19,6 +19,31 @@ var offerRules = map[Plan]offerRule{
 	Max:   {29900, 299000, 235, 3170, "top", 60},
 }
 
+// ModelGradeRequired is the first paid offer that may use a curated grade.
+// Free is a separate classification available to every offer. An empty or
+// unknown classification is not selectable, including by an operator account.
+func ModelGradeRequired(grade string) (Plan, bool) {
+	switch grade {
+	case "free":
+		return Free, true
+	case "value":
+		return Light, true
+	case "balanced":
+		return Basic, true
+	case "premium":
+		return Pro, true
+	case "top":
+		return Max, true
+	default:
+		return "", false
+	}
+}
+
+func AllowsModelGrade(tier Plan, grade string) (required Plan, allowed bool) {
+	required, known := ModelGradeRequired(grade)
+	return required, known && tier.Valid() && (grade == "free" || tier == Master || tier.Rank() >= required.Rank())
+}
+
 // CommercialOffer excludes the operator tier. The bool is false for an unknown plan.
 func CommercialOffer(p Plan) (Offer, bool) {
 	for _, offer := range Offers() {

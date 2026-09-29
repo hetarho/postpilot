@@ -183,6 +183,7 @@ export const appFailureSpecs = {
   MODEL_NOT_REGISTERED: {},
   MODEL_PURPOSE_INVALID: {},
   MODEL_PURPOSE_INELIGIBLE: {},
+  MODEL_FREE_INELIGIBLE: {},
   MODEL_PURPOSE_NOT_REGISTERED: {},
   // The operator's estimator-combo assignment (QUOTA-39): a combo that is not one of the
   // four, or a request missing the combo or one of its two models.
@@ -190,13 +191,23 @@ export const appFailureSpecs = {
   COMBO_INCOMPLETE: {},
   MODEL_DISABLED: {},
   MODEL_UNSUITABLE: {},
+  MODEL_PLAN_REQUIRED: { optional: ['model', 'stage', 'grade', 'required_plan'] },
+  MODEL_UNCLASSIFIED: { optional: ['model', 'stage'] },
+  MODEL_FREE_PATH_UNAVAILABLE: { optional: ['model', 'stage', 'grade'] },
   MODEL_CANDIDATES_DUPLICATE: {},
   MODEL_RECOMMENDATION_NOT_FOUND: {},
   // A recommendation set names nine refs, so its refusal names every one that blocks it —
   // grouped by cause, because "retired" and "unusable here" are different problems.
   MODEL_SET_UNAVAILABLE: {
     required: ['models'],
-    optional: ['unregistered', 'disabled', 'unsuitable'],
+    optional: [
+      'unregistered',
+      'disabled',
+      'unsuitable',
+      'plan_locked',
+      'unclassified',
+      'free_path',
+    ],
   },
   MODEL_NOT_FOUND: {},
   MODEL_ID_REQUIRED: {},

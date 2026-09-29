@@ -168,7 +168,7 @@ func TestAVoiceCheckIsAdmittedAsOneWriteCall(t *testing.T) {
 		t.Fatalf("admissions = %+v", admission.starts)
 	}
 	start := admission.starts[0]
-	if start.Kind != job.KindCheckVoice || len(start.Calls) != 1 || start.Calls[0] != (job.PlannedCall{Ref: "stub/write", Count: 1, CompletionTokens: 8192}) {
+	if start.Kind != job.KindCheckVoice || len(start.Calls) != 1 || start.Calls[0] != (job.PlannedCall{Ref: "stub/write", Stage: "write", Count: 1, CompletionTokens: 8192}) {
 		t.Fatalf("admitted %+v", start)
 	}
 	var kind, payload string

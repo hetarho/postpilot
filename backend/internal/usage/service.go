@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -31,15 +32,16 @@ var ErrSettlementOutcome = errors.New("settlement requires a persisted terminal 
 type Service struct {
 	// tx is also the handle every narrow port below is served from: the ledger has one
 	// store, and a use-case names the behaviour it uses (ARCH-6).
-	tx        WriteScope
-	lots      LotLedger
-	purchases PurchasedLotLedger
-	vouchers  VoucherLotLedger
-	charges   SpendLedger
-	holds     HoldLedger
-	models    Models
-	anchors   Anchors
-	rates     *RateSelector
+	tx          WriteScope
+	lots        LotLedger
+	purchases   PurchasedLotLedger
+	vouchers    VoucherLotLedger
+	charges     SpendLedger
+	holds       HoldLedger
+	models      Models
+	anchors     Anchors
+	rates       *RateSelector
+	modelGrades bool
 
 	// approvedKinds is the work that may not start without an approved credit ceiling.
 	// The composition root names it: the ledger enforces the rule and never learns which
@@ -54,6 +56,13 @@ type Service struct {
 	// is a calendar boundary, so the only way to exercise one is to move the clock.
 	now   func() time.Time
 	newID func() string
+}
+
+// WithModelGrades enforces the code-owned free/paid classification for every
+// production admission. Existing ledger fixtures can opt in explicitly.
+func (s *Service) WithModelGrades() *Service {
+	s.modelGrades = true
+	return s
 }
 
 // NewService wires the ledger. anchors is the account-specific monthly-window resolver
@@ -386,6 +395,51 @@ func (s *Service) matchExistingHold(start Start, prior Admission) error {
 	return nil
 }
 
+// CheckModelAccess applies the same classification and live free-path gate to
+// quotes and new holds. It has no balance or FX side effects.
+func (s *Service) CheckModelAccess(ctx context.Context, acting plan.Plan, kind string, calls []PlannedCall) error {
+	if !s.modelGrades {
+		return nil
+	}
+	if len(calls) == 0 {
+		return &ModelGradeError{}
+	}
+	for _, call := range calls {
+		if call.Count <= 0 {
+			continue
+		}
+		info, found := s.models.Lookup(call.Ref)
+		if !found || call.Stage == "" || !info.ServesStage(call.Stage) {
+			return &ModelGradeError{Ref: call.Ref.String(), Stage: call.Stage, Unavailable: true}
+		}
+		grade := info.Levels[call.Stage]
+		required, allowed := plan.AllowsModelGrade(acting, grade)
+		if !allowed {
+			return &ModelGradeError{Ref: call.Ref.String(), Stage: call.Stage, Required: required, Grade: grade}
+		}
+		if grade == "free" {
+			if !llm.ZeroUnitPrice(info.InputUSDPerMillion) || !llm.ZeroUnitPrice(info.OutputUSDPerMillion) {
+				return &FreePathError{Ref: call.Ref.String(), Stage: call.Stage}
+			}
+			if qualifier, ok := s.models.(interface {
+				QualifyFree(context.Context, string, llm.FreePath) (bool, error)
+			}); ok {
+				path := llm.FreeText
+				if strings.Contains(kind, "clip") && info.VideoInput {
+					path = llm.FreeVideoInput
+				} else if call.Stage == llm.StageNameObserve {
+					path = llm.FreeImageInput
+				}
+				qualified, err := qualifier.QualifyFree(ctx, call.Ref.ModelID, path)
+				if err != nil || !qualified {
+					return &FreePathError{Ref: call.Ref.String(), Stage: call.Stage}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // Hold reserves the credits one piece of LLM work could cost, and records the start.
 // It prices planned calls before the provider runs and spends from current lots in
 // one transaction with the admission row. A retry keeps the first snapshot.
@@ -402,6 +456,9 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		return err
 	} else if found {
 		return s.matchExistingHold(start, prior)
+	}
+	if err := s.CheckModelAccess(ctx, start.Plan, start.Kind, start.Calls); err != nil {
+		return err
 	}
 
 	now := s.now()
@@ -506,6 +563,15 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 			CancellationPolicyVersion: policyVersion,
 			Rate:                      frozenRate,
 		}
+		if s.modelGrades {
+			admission.AdmittedPlan = start.Plan
+			for _, call := range start.Calls {
+				if call.Count > 0 {
+					info, _ := s.models.Lookup(call.Ref)
+					admission.AdmittedModels = append(admission.AdmittedModels, AdmittedModel{Ref: call.Ref, Stage: call.Stage, Grade: info.Levels[call.Stage]})
+				}
+			}
+		}
 		if start.Plan != plan.Free && !plan.Unlimited(start.Plan) {
 			coverage, found, err := s.anchors.CoverageFor(ctx, start.UserID, now)
 			if err != nil {
@@ -526,6 +592,13 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		}
 		return tx.InsertEligibleLots(ctx, start.JobID, eligible)
 	})
+}
+
+// AdmissionForJob reads the durable rights of an open job. A worker never takes
+// a plan or free classification from its request payload.
+func (s *Service) AdmissionForJob(ctx context.Context, jobID string) (Admission, bool, error) {
+	admission, _, found, err := s.holds.HoldForJob(ctx, jobID)
+	return admission, found, err
 }
 
 // spend takes credits out of the account's lots in consumption order, refusing before it

@@ -37,7 +37,8 @@ var (
 	// The control only appears once registered, and the server holds the same rule.
 	ErrPurposeNotRegistered = errors.New("model is not registered to purpose")
 	// ErrInvalidLevel: the requested per-registration level is not one of the four.
-	ErrInvalidLevel = errors.New("invalid model level")
+	ErrInvalidLevel   = errors.New("invalid model level")
+	ErrFreeIneligible = errors.New("model has no verified zero-cost path")
 )
 
 // Purpose is one use the product puts a model to. Registration is per purpose (MODEL-14):
@@ -112,20 +113,18 @@ func (p Purpose) EligibleFor(m Model) bool {
 	}
 }
 
-// Level is the operator's user-facing grade for ONE registration (MODEL-57): four words
+// Level is the operator's user-facing grade for ONE registration (MODEL-57).
 // that tell a user which of the offered models is the cheap one and which is the good one,
 // without making them read prices.
 //
 // It is set per registration and never derived. The same model is a different bargain for
 // an input-heavy stage than for an output-heavy one, and a price band moves every time the
 // source reprices — a level computed from either would be wrong the week after it was
-// written. Free models get no level of their own: a $0 price already says free.
-//
-// It gates estimator-combo assignment only (MODEL-58). Everywhere else it is display and
-// ordering metadata.
+// written. Free is a distinct, validated classification. Paid grades gate plan access.
 type Level string
 
 const (
+	LevelFree     Level = "free"
 	LevelValue    Level = "value"
 	LevelBalanced Level = "balanced"
 	LevelPremium  Level = "premium"
@@ -134,7 +133,7 @@ const (
 
 // Levels in ASCENDING order — 가성비 · 밸런스 · 고급 · 최고. Every surface that orders by
 // level orders by this slice, so the admin tab and the user's picker cannot disagree.
-var Levels = []Level{LevelValue, LevelBalanced, LevelPremium, LevelTop}
+var Levels = []Level{LevelFree, LevelValue, LevelBalanced, LevelPremium, LevelTop}
 
 // ParseLevel accepts the stored/wire form. The empty string is UNSET and parses fine: it
 // is the state every registration starts in, and clearing a level is a normal edit.
@@ -443,11 +442,13 @@ const (
 	ComboTop      Combo = Combo(LevelTop)
 )
 
-// Combos are the four model levels in the same ascending order every other surface uses.
-// Build the result from Levels so a future vocabulary change has one authority.
+// Combos are the four paid model levels; free has no paid estimator assignment.
 func Combos() []Combo {
-	out := make([]Combo, 0, len(Levels))
+	out := make([]Combo, 0, len(Levels)-1)
 	for _, level := range Levels {
+		if level == LevelFree {
+			continue
+		}
 		out = append(out, Combo(level))
 	}
 	return out
@@ -456,7 +457,7 @@ func Combos() []Combo {
 // Valid reports whether a wire value is one of the four.
 func (c Combo) Valid() bool {
 	level, err := ParseLevel(string(c))
-	return err == nil && level != ""
+	return err == nil && level != "" && level != LevelFree
 }
 
 // Level is the registration level an assignment must match.

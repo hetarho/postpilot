@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // Stage is one of the three places a model is chosen ([I3]).
@@ -61,6 +62,16 @@ type CatalogModel struct {
 	RequiredCredits  int
 	Affordable       bool
 	PriceUnavailable bool
+	Access           []StageAccess
+}
+
+type StageAccess struct {
+	Stage             Stage
+	Grade             string
+	RequiredPlan      plan.Plan
+	Entitled          bool
+	FreePathAvailable bool
+	UnavailableReason string
 }
 
 // Selection is the acting user's choice for one stage.
@@ -70,8 +81,10 @@ type Selection struct {
 	Ref   llm.ModelRef
 	// Missing: the ref is no longer registered. GetSelections sets this and clears the
 	// row in the same call, so the client sees it exactly once.
-	Missing   bool
-	UpdatedAt time.Time
+	Missing           bool
+	RequiredPlan      plan.Plan
+	UnavailableReason string
+	UpdatedAt         time.Time
 }
 
 type ComparisonPair struct {
@@ -101,11 +114,45 @@ var (
 	ErrModelDisabled = errors.New("model disabled")
 	// ErrModelUnsuitable: the model is not registered to this stage's purpose (MODEL-25).
 	ErrModelUnsuitable     = errors.New("model unsuitable for stage")
+	ErrModelPlanRequired   = errors.New("model requires a higher plan")
+	ErrModelUnclassified   = errors.New("model has no classification")
+	ErrFreePathUnavailable = errors.New("free model has no verified zero-cost path")
 	ErrDuplicateCandidates = errors.New("comparison candidates must differ")
 	// ErrStageWithoutPair refuses a comparison pair for a stage that keeps none (HasPair).
 	ErrStageWithoutPair       = errors.New("stage keeps no comparison pair")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
 )
+
+const (
+	ReasonModelPlanRequired = "MODEL_PLAN_REQUIRED"
+	ReasonModelUnclassified = "MODEL_UNCLASSIFIED"
+)
+
+type ModelAccessError struct {
+	Ref      llm.ModelRef
+	Stage    Stage
+	Grade    string
+	Required plan.Plan
+	Cause    error
+}
+
+func (e *ModelAccessError) Error() string {
+	return fmt.Sprintf("%s: %s at %s", e.Cause, e.Ref, e.Stage)
+}
+func (e *ModelAccessError) Unwrap() error { return e.Cause }
+func (e *ModelAccessError) Reason() string {
+	switch e.Cause {
+	case ErrModelPlanRequired:
+		return ReasonModelPlanRequired
+	case ErrFreePathUnavailable:
+		return "MODEL_FREE_PATH_UNAVAILABLE"
+	default:
+		return ReasonModelUnclassified
+	}
+}
+func (e *ModelAccessError) Params() map[string]string {
+	return map[string]string{"model": e.Ref.String(), "stage": string(e.Stage), "grade": e.Grade, "required_plan": string(e.Required)}
+}
 
 // ReasonSetUnavailable is the wire reason for a recommendation set naming refs the catalog
 // cannot currently serve.
@@ -121,10 +168,13 @@ type SetRefusal struct {
 	Unregistered []string
 	Disabled     []string
 	Unsuitable   []string
+	PlanLocked   []string
+	Unclassified []string
+	FreePath     []string
 }
 
 func (e *SetRefusal) Error() string {
-	parts := make([]string, 0, 3)
+	parts := make([]string, 0, 6)
 	for _, group := range []struct {
 		what string
 		refs []string
@@ -132,6 +182,9 @@ func (e *SetRefusal) Error() string {
 		{"not in the catalog", e.Unregistered},
 		{"disabled", e.Disabled},
 		{"unusable for their stage", e.Unsuitable},
+		{"requires a higher plan", e.PlanLocked},
+		{"unclassified", e.Unclassified},
+		{"free path unavailable", e.FreePath},
 	} {
 		if len(group.refs) > 0 {
 			parts = append(parts, fmt.Sprintf("%s: %s", group.what, strings.Join(group.refs, ", ")))
@@ -150,6 +203,9 @@ func (e *SetRefusal) Params() map[string]string {
 		"unregistered": strings.Join(e.Unregistered, ", "),
 		"disabled":     strings.Join(e.Disabled, ", "),
 		"unsuitable":   strings.Join(e.Unsuitable, ", "),
+		"plan_locked":  strings.Join(e.PlanLocked, ", "),
+		"unclassified": strings.Join(e.Unclassified, ", "),
+		"free_path":    strings.Join(e.FreePath, ", "),
 	}
 }
 
@@ -166,15 +222,27 @@ func (e *SetRefusal) Unwrap() []error {
 	if len(e.Unsuitable) > 0 {
 		out = append(out, ErrModelUnsuitable)
 	}
+	if len(e.PlanLocked) > 0 {
+		out = append(out, ErrModelPlanRequired)
+	}
+	if len(e.Unclassified) > 0 {
+		out = append(out, ErrModelUnclassified)
+	}
+	if len(e.FreePath) > 0 {
+		out = append(out, ErrFreePathUnavailable)
+	}
 	return out
 }
 
 // All is every offending ref in report order.
 func (e *SetRefusal) All() []string {
-	out := make([]string, 0, len(e.Unregistered)+len(e.Disabled)+len(e.Unsuitable))
+	out := make([]string, 0, len(e.Unregistered)+len(e.Disabled)+len(e.Unsuitable)+len(e.PlanLocked)+len(e.Unclassified)+len(e.FreePath))
 	out = append(out, e.Unregistered...)
 	out = append(out, e.Disabled...)
 	out = append(out, e.Unsuitable...)
+	out = append(out, e.PlanLocked...)
+	out = append(out, e.Unclassified...)
+	out = append(out, e.FreePath...)
 	return out
 }
 

@@ -196,12 +196,16 @@ export const errors = {
   MODEL_NOT_REGISTERED: '등록되지 않은 모델이에요.',
   MODEL_PURPOSE_INVALID: '알 수 없는 모델 용도예요. 등록된 용도 중에서 선택해 주세요.',
   MODEL_PURPOSE_INELIGIBLE: '이 모델은 그 용도를 지원하지 않아요. 다른 모델을 선택해 주세요.',
+  MODEL_FREE_INELIGIBLE: '이 용도에 사용할 검증된 무료 경로가 없는 모델이에요.',
   MODEL_PURPOSE_NOT_REGISTERED:
     '이 모델은 그 용도로 등록되어 있지 않아요. 먼저 해당 용도로 등록해 주세요.',
   COMBO_UNKNOWN: '알 수 없는 견적 조합이에요. 네 조합 중에서 선택해 주세요.',
   COMBO_INCOMPLETE: '조합과 분석·작성 모델을 모두 선택해 주세요.',
   MODEL_DISABLED: '비활성화된 모델이에요.',
   MODEL_UNSUITABLE: '이 단계에서 쓸 수 없는 모델이에요.',
+  MODEL_PLAN_REQUIRED: '이 모델을 쓰려면 더 높은 요금제가 필요해요.',
+  MODEL_UNCLASSIFIED: '운영자가 아직 등급을 분류하지 않은 모델이에요.',
+  MODEL_FREE_PATH_UNAVAILABLE: '지금은 이 모델에 검증된 무료 공급자 경로가 없어요.',
   MODEL_CANDIDATES_DUPLICATE: '서로 다른 모델을 선택해 주세요.',
   MODEL_RECOMMENDATION_NOT_FOUND: '모델 추천 조합을 찾을 수 없어요.',
   MODEL_SET_UNAVAILABLE:

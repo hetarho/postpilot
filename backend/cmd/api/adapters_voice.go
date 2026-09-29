@@ -50,7 +50,7 @@ func (a voiceJobs) EnqueueCheck(ctx context.Context, request voice.CheckJobReque
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindCheckVoice, UserID: request.UserID, Subjects: subjects, Guards: guards, WriteModel: request.WriteModel,
 		Payload:      []byte(request.CheckID),
-		PricingCalls: []job.PlannedCall{{Ref: request.WriteModel, Count: 1, CompletionTokens: a.budget.WriteFloor}},
+		PricingCalls: []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: a.budget.WriteFloor}},
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {

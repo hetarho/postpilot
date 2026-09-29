@@ -87,6 +87,20 @@ func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm
 	if err != nil {
 		return llm.Response{}, err
 	}
+	if work, ok := usage.WorkFromContext(ctx); ok && m.ledger != nil {
+		admission, found, err := m.ledger.AdmissionForJob(ctx, work.JobID)
+		if err != nil {
+			return llm.Response{}, err
+		}
+		if !found || admission.UserID != work.UserID {
+			return llm.Response{}, llm.ErrModelUnavailable
+		}
+		calls := make([]llm.AdmittedCall, 0, len(admission.AdmittedModels))
+		for _, model := range admission.AdmittedModels {
+			calls = append(calls, llm.AdmittedCall{Ref: model.Ref, Stage: model.Stage, Grade: model.Grade})
+		}
+		ctx = llm.WithAdmittedCalls(ctx, calls)
+	}
 	response, err := m.Registry.Complete(ctx, ref, req)
 	// A ledger failure never fails the user's work: the tokens are already spent, and the
 	// budget it protects is a soft cap enforced at the NEXT admission.
@@ -133,21 +147,16 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 }
 
 func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.Reservation) error {
-	// The request's own tier is preferred so one request is judged against one tier
-	// throughout; a start made from a worker context has no session to read, and falls back
-	// to the stored row, which is the same authority the interceptor resolved from.
-	acting, ok := auth.PlanFromContext(ctx)
-	if !ok {
-		stored, err := a.plans.PlanOf(ctx, start.UserID)
-		if err != nil {
-			return fmt.Errorf("hold %s: resolve acting plan: %w", start.Kind, err)
-		}
-		acting = stored
+	// Admission uses the current stored tier even when a long-lived session still
+	// carries the tier from before a downgrade.
+	acting, err := a.plans.PlanOf(ctx, start.UserID)
+	if err != nil {
+		return fmt.Errorf("hold %s: resolve acting plan: %w", start.Kind, err)
 	}
 	calls := make([]usage.PlannedCall, 0, len(start.Calls))
 	for _, call := range start.Calls {
 		calls = append(calls, usage.PlannedCall{
-			Ref: parseRegistryRef(call.Ref), Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
+			Ref: parseRegistryRef(call.Ref), Stage: call.Stage, Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
 		})
 	}
 	return a.ledger.Hold(ctx, usage.Start{
@@ -240,6 +249,10 @@ func (a providerCredits) Balance(ctx context.Context, userID string) (int, bool,
 		acting = stored
 	}
 	return a.ledger.SpendableCredits(ctx, userID, acting)
+}
+
+func (a providerCredits) Tier(ctx context.Context, userID string) (plan.Plan, error) {
+	return a.plans.PlanOf(ctx, userID)
 }
 
 var _ provider.Credits = providerCredits{}

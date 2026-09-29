@@ -11,7 +11,7 @@ import (
 // call the generation makes today.
 func clipPricingCalls(observe, write string, chunks int, budget ai.Budgets) []job.PlannedCall {
 	return []job.PlannedCall{
-		{Ref: observe, Count: chunks, CompletionTokens: budget.Observe},
-		{Ref: write, Count: 1, CompletionTokens: budget.Flow},
+		{Ref: observe, Stage: "observe", Count: chunks, CompletionTokens: budget.Observe},
+		{Ref: write, Stage: "write", Count: 1, CompletionTokens: budget.Flow},
 	}
 }

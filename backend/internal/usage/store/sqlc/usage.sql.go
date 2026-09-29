@@ -300,8 +300,9 @@ func (q *Queries) HoldDebitsForJob(ctx context.Context, jobID string) ([]HoldDeb
 const insertAdmission = `-- name: InsertAdmission :exec
 INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
                               coverage_id,daily_window_start,benefit_window_start,
-                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary,
+                              admitted_plan,admitted_models_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertAdmissionParams struct {
@@ -320,6 +321,8 @@ type InsertAdmissionParams struct {
 	FxReferenceE4             sql.NullInt64
 	FxAppliedE4               sql.NullInt64
 	FxTemporary               int64
+	AdmittedPlan              sql.NullString
+	AdmittedModelsJson        string
 }
 
 func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams) error {
@@ -339,6 +342,8 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 		arg.FxReferenceE4,
 		arg.FxAppliedE4,
 		arg.FxTemporary,
+		arg.AdmittedPlan,
+		arg.AdmittedModelsJson,
 	)
 	return err
 }
@@ -625,7 +630,8 @@ func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSet
 const openAdmissionForJob = `-- name: OpenAdmissionForJob :one
 SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
        coverage_id,daily_window_start,benefit_window_start,
-       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary
+       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary,
+       admitted_plan,admitted_models_json
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL
 `
@@ -646,6 +652,8 @@ type OpenAdmissionForJobRow struct {
 	FxReferenceE4             sql.NullInt64
 	FxAppliedE4               sql.NullInt64
 	FxTemporary               int64
+	AdmittedPlan              sql.NullString
+	AdmittedModelsJson        string
 }
 
 // Only an unsettled admission is returned, which is what makes settlement idempotent: a
@@ -669,6 +677,8 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.FxReferenceE4,
 		&i.FxAppliedE4,
 		&i.FxTemporary,
+		&i.AdmittedPlan,
+		&i.AdmittedModelsJson,
 	)
 	return i, err
 }

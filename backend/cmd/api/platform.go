@@ -80,11 +80,12 @@ func (p *platform) load(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("providers config invalid: %w", err)
 	}
-	p.registry = registry
+	p.registry = registry.WithModelGrades()
 	// The upstream catalog lives at the registered endpoint, so its address is configured in
 	// exactly one place. Attached after Load because that is where the address comes from;
 	// boot itself never calls it.
 	p.catalog.SetUpstream(openrouter.New(registry.BaseURL(), cfg.CatalogFetchTimeout, cfg.CatalogTTL))
+	p.catalog.SetFreeQualifier(registry)
 	for _, m := range registry.Models() {
 		if m.Disabled {
 			slog.Warn("model disabled", "model", m.Ref.String(), "reason", m.DisabledReason)

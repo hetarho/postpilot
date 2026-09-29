@@ -136,9 +136,13 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 		targetLanguage = request.TargetLanguage.String()
 	}
 	subjects, guards := postVoiceWork(job.KindModelExperiment, request.UserID, request.PostSlug, request.VoiceID)
+	pricingCalls := make([]job.PlannedCall, 0, len(request.Models))
+	for _, ref := range request.Models {
+		pricingCalls = append(pricingCalls, job.PlannedCall{Ref: ref, Stage: string(request.Stage), Count: 1})
+	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindModelExperiment, UserID: request.UserID, Subjects: subjects, Guards: guards,
-		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID), ExtraModels: request.Models,
+		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID), ExtraModels: request.Models, PricingCalls: pricingCalls,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {

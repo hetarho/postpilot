@@ -8,6 +8,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 type remainingQuotePricing interface {
@@ -22,6 +23,26 @@ func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
 	return s.pricing.Freeze(ctx, o, w, n)
+}
+
+func (s *GenerationService) checkQuoteAccess(ctx context.Context, user, observe, write string, observeCalls, writeCalls int) error {
+	checker, ok := s.pricing.(interface {
+		CheckQuoteAccess(context.Context, string, []usage.PlannedCall) error
+	})
+	if !ok {
+		return nil
+	}
+	calls := []usage.PlannedCall{}
+	if writeCalls > 0 {
+		calls = append(calls, usage.PlannedCall{Ref: modelRef(write), Stage: llm.StageNameWrite, Count: writeCalls})
+	}
+	if observeCalls > 0 {
+		calls = append(calls, usage.PlannedCall{Ref: modelRef(observe), Stage: llm.StageNameObserve, Count: observeCalls})
+	}
+	if len(calls) == 0 {
+		return nil
+	}
+	return checker.CheckQuoteAccess(ctx, user, calls)
 }
 
 // quoteMode is the work a clip quote prices: 바로 만들기's flow and narration, 이 스토리로
@@ -171,6 +192,13 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	count = min(count, max(0, upperCount-len(recovered.Chunks)))
 	if skipFlow && count != 0 {
 		skipFlow, skipNarration = false, false
+	}
+	writeCalls := 1
+	if skipNarration {
+		writeCalls = 0
+	}
+	if err := s.checkQuoteAccess(ctx, user, observe, write, count, writeCalls); err != nil {
+		return p, t, b, pricing, guidelines, err
 	}
 	if skipNarration && recovered.Pricing.Valid() {
 		pricing = recovered.Pricing

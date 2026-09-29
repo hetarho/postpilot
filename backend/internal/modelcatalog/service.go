@@ -25,6 +25,7 @@ type Service struct {
 	store    Store
 	upstream Upstream
 	spend    ReasoningSpendReader
+	free     FreeQualifier
 	now      func() time.Time
 
 	mu     sync.RWMutex
@@ -41,6 +42,32 @@ func NewService(store Store) *Service {
 // SetUpstream attaches the provider's own catalog. Called once at boot; without it the
 // operator screen can still read and edit curated rows, it just cannot discover new ones.
 func (s *Service) SetUpstream(u Upstream) { s.upstream = u }
+
+func (s *Service) SetFreeQualifier(q FreeQualifier) { s.free = q }
+
+func freePathFor(p Purpose) llm.FreePath {
+	switch p {
+	case PurposePhotoAnalysis:
+		return llm.FreeImageInput
+	case PurposeImageGeneration:
+		return llm.FreeImageOutput
+	case PurposeVideoGeneration:
+		return llm.FreeVideoOutput
+	default:
+		return llm.FreeText
+	}
+}
+
+func (s *Service) qualifyFree(ctx context.Context, modelID string, p Purpose, input, output string) bool {
+	if p != PurposeImageGeneration && p != PurposeVideoGeneration && (!llm.ZeroUnitPrice(input) || !llm.ZeroUnitPrice(output)) || s.free == nil {
+		return false
+	}
+	ok, err := s.free.QualifyFree(ctx, modelID, freePathFor(p))
+	if err != nil {
+		slog.Warn("free model qualification failed", "model", modelID, "purpose", p, "err", err)
+	}
+	return err == nil && ok
+}
 
 // SetReasoningSpend wires the ledger's aggregate. Without it the curation surface simply
 // carries no spend signal, which is the same outcome an account with no recorded calls has.
@@ -320,10 +347,10 @@ func stageReasoningOf(row Model) map[string]llm.ReasoningEffort {
 	return out
 }
 
-// stageLevelsOf projects the per-purpose levels onto the stage keys the llm boundary
+// stageLevelsOf projects the per-purpose classifications onto the stage keys the llm boundary
 // carries, on exactly the terms stageReasoningOf uses: only a REGISTERED purpose
 // contributes, and a purpose that feeds no stage contributes nothing. The gate is NOT
-// re-checked here — a level is display metadata, and a model that lost its capability is
+// re-checked here — a model that lost its capability is
 // removed from the stage by stagesOf, which is the one place that decision belongs.
 func stageLevelsOf(row Model) map[string]string {
 	if len(row.Levels) == 0 {
@@ -379,11 +406,19 @@ func (s *Service) Update(ctx context.Context, modelID string, patch Patch) (Mode
 	if patch.Reasoning != nil && !patch.Reasoning.Valid() {
 		return Model{}, fmt.Errorf("%w: %q", ErrInvalidReasoning, *patch.Reasoning)
 	}
-	// The level has only the enum gate: it gates nothing downstream (MODEL-58), so there is
-	// no model-side rule to check it against the way an effort has one.
+	// A free classification additionally needs a currently verified zero-price path.
 	if patch.Level != nil {
 		if _, err := ParseLevel(string(*patch.Level)); err != nil {
 			return Model{}, err
+		}
+		if *patch.Level == LevelFree {
+			row, err := s.store.Get(ctx, modelID)
+			if err != nil {
+				return Model{}, err
+			}
+			if !s.qualifyFree(ctx, modelID, patch.Purpose, row.InputUSDPerMillion, row.OutputUSDPerMillion) {
+				return Model{}, ErrFreeIneligible
+			}
 		}
 	}
 	// Then the model rule (MODEL-21): an effort outside a model's published list, or `none`
@@ -838,6 +873,10 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 			row := rowFromCandidate(existing, hasRow, candidate, now)
 			if !section.Purpose.EligibleFor(row) {
 				plan.Issues = append(plan.Issues, DocumentIssue{Line: line, Text: modelID, Cause: IssueIneligible})
+				continue
+			}
+			if entry.Level == LevelFree && !s.qualifyFree(ctx, modelID, section.Purpose, row.InputUSDPerMillion, row.OutputUSDPerMillion) {
+				plan.Issues = append(plan.Issues, DocumentIssue{Line: line, Text: modelID, Cause: IssueFreeIneligible})
 				continue
 			}
 			wanted[modelID] = true

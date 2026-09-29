@@ -39,6 +39,7 @@ type Start struct {
 // caller whose stage still uses the registry default.
 type PlannedCall struct {
 	Ref              string
+	Stage            string
 	Count            int
 	CompletionTokens int
 }

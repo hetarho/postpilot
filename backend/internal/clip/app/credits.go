@@ -47,6 +47,19 @@ type Pricing struct {
 	freezer Freezer
 	budgets Budgets
 	rates   FXSelector
+	access  func(context.Context, string, []usage.PlannedCall) error
+}
+
+func (p Pricing) WithQuoteAccess(check func(context.Context, string, []usage.PlannedCall) error) Pricing {
+	p.access = check
+	return p
+}
+
+func (p Pricing) CheckQuoteAccess(ctx context.Context, user string, calls []usage.PlannedCall) error {
+	if p.access == nil {
+		return nil
+	}
+	return p.access(ctx, user, calls)
 }
 
 func NewPricingWithRate(freezer Freezer, budgets Budgets, rates FXSelector) Pricing {

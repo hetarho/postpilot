@@ -2,8 +2,13 @@ package modelcatalog
 
 import (
 	"context"
+	"github.com/postpilot/backend/internal/llm"
 	"time"
 )
+
+type FreeQualifier interface {
+	QualifyFree(ctx context.Context, modelID string, path llm.FreePath) (bool, error)
+}
 
 // Store is the persistence this context needs. catalog_models is global rather than
 // per-account: what an installation offers is an operator decision; affordability against

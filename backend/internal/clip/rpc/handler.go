@@ -20,6 +20,7 @@ import (
 	jobrpc "github.com/postpilot/backend/internal/job/rpc"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 type Handler struct {
@@ -115,6 +116,9 @@ func actingUser(ctx context.Context) (string, error) {
 	return user, nil
 }
 func toConnectError(err error) error {
+	if access, ok := usage.ModelAccessFailure(err); ok {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
 	var cut *clip.CutError

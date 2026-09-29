@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -326,7 +327,14 @@ func (s *Store) RefundToLot(ctx context.Context, lotID string, credits int) erro
 }
 
 func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) error {
-	err := s.write.InsertAdmission(ctx, sqlc.InsertAdmissionParams{
+	models, err := json.Marshal(admission.AdmittedModels)
+	if err != nil {
+		return fmt.Errorf("encode admitted models: %w", err)
+	}
+	if len(admission.AdmittedModels) == 0 {
+		models = []byte("[]")
+	}
+	err = s.write.InsertAdmission(ctx, sqlc.InsertAdmissionParams{
 		UserID:                    admission.UserID,
 		Kind:                      admission.Kind,
 		JobID:                     admission.JobID,
@@ -342,6 +350,8 @@ func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) 
 		FxReferenceE4:             nullableRate(admission.Rate.ReferenceE4),
 		FxAppliedE4:               nullableRate(admission.Rate.AppliedE4),
 		FxTemporary:               boolInt(admission.Rate.Temporary),
+		AdmittedPlan:              nullable(string(admission.AdmittedPlan)),
+		AdmittedModelsJson:        string(models),
 	})
 	if err != nil {
 		return fmt.Errorf("insert admission: %w", err)
@@ -422,12 +432,16 @@ func (s *Store) HoldForJob(
 	admission := usage.Admission{
 		UserID: row.UserID, Kind: row.Kind, JobID: row.JobID,
 		HoldCredits: int(row.HoldCredits), CreatedAt: created,
+		AdmittedPlan:              plan.Plan(row.AdmittedPlan.String),
 		ApprovedMaxCredits:        optionalCredits(row.ApprovedMaxCredits),
 		CancellationPolicyVersion: int(row.CancellationPolicyVersion),
 		CoverageID:                row.CoverageID.String,
 		Rate: plan.RateSnapshot{Source: row.FxSource.String, PublicationDate: row.FxPublicationDate.String,
 			ReferenceE4: row.FxReferenceE4.Int64, AppliedE4: row.FxAppliedE4.Int64,
 			Temporary: row.FxTemporary != 0},
+	}
+	if err := json.Unmarshal([]byte(row.AdmittedModelsJson), &admission.AdmittedModels); err != nil {
+		return usage.Admission{}, nil, false, fmt.Errorf("decode admitted models: %w", err)
 	}
 	if row.DailyWindowStart.Valid {
 		value, err := parseTime(row.DailyWindowStart.String)

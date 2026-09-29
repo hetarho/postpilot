@@ -7,14 +7,74 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // Service is the catalog's use-cases.
 type Service struct {
-	store   Store
-	catalog Catalog
-	credits Credits
-	now     func() time.Time
+	store       Store
+	catalog     Catalog
+	credits     Credits
+	modelGrades bool
+	now         func() time.Time
+}
+
+func (s *Service) WithModelGrades() *Service { s.modelGrades = true; return s }
+
+func (s *Service) tier(ctx context.Context, userID string) (plan.Plan, error) {
+	if !s.modelGrades {
+		return plan.Master, nil
+	}
+	reader, ok := s.credits.(interface {
+		Tier(context.Context, string) (plan.Plan, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("model tier reader unavailable")
+	}
+	return reader.Tier(ctx, userID)
+}
+
+func modelAccess(tier plan.Plan, stage Stage, info llm.ModelInfo) StageAccess {
+	grade := info.Levels[string(stage)]
+	required, entitled := plan.AllowsModelGrade(tier, grade)
+	access := StageAccess{Stage: stage, Grade: grade, RequiredPlan: required, Entitled: entitled,
+		FreePathAvailable: grade != "free" || llm.ZeroUnitPrice(info.InputUSDPerMillion) && llm.ZeroUnitPrice(info.OutputUSDPerMillion)}
+	switch {
+	case grade == "":
+		access.UnavailableReason = "MODEL_UNCLASSIFIED"
+	case !entitled:
+		access.UnavailableReason = "MODEL_PLAN_REQUIRED"
+	case !access.FreePathAvailable:
+		access.UnavailableReason = "MODEL_FREE_PATH_UNAVAILABLE"
+	case info.Disabled:
+		access.UnavailableReason = "MODEL_PROVIDER_UNAVAILABLE"
+	}
+	return access
+}
+
+func (s *Service) access(ctx context.Context, tier plan.Plan, stage Stage, info llm.ModelInfo, live bool) StageAccess {
+	access := modelAccess(tier, stage, info)
+	if access.Grade != "free" || access.UnavailableReason != "" {
+		return access
+	}
+	qualifier, ok := s.catalog.(interface {
+		QualifyFree(context.Context, string, llm.FreePath) (bool, error)
+	})
+	if !ok {
+		return access
+	}
+	path := llm.FreeText
+	if stage == StageObserve {
+		path = llm.FreeImageInput
+	}
+	if !live {
+		ctx = llm.AllowCachedEndpoints(ctx)
+	}
+	qualified, err := qualifier.QualifyFree(ctx, info.Ref.ModelID, path)
+	if err != nil || !qualified {
+		access.FreePathAvailable, access.UnavailableReason = false, "MODEL_FREE_PATH_UNAVAILABLE"
+	}
+	return access
 }
 
 // NewService wires the context.
@@ -30,6 +90,10 @@ func NewService(store Store, catalog Catalog, credits Credits) *Service {
 // hold, so a model the caller cannot afford at one call they certainly cannot afford at
 // the several a real job makes.
 func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel, error) {
+	tier, err := s.tier(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	balance, unlimited, err := s.credits.Balance(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("read balance: %w", err)
@@ -37,6 +101,15 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 	models := s.catalog.Models()
 	out := make([]CatalogModel, 0, len(models))
 	for _, info := range models {
+		if s.modelGrades {
+			classified := make([]string, 0, len(info.Stages))
+			for _, stage := range info.Stages {
+				if info.Levels[stage] != "" {
+					classified = append(classified, stage)
+				}
+			}
+			info.Stages = classified
+		}
 		// A model registered only to a purpose no stage consumes yet (image/video
 		// generation) is an operator setting, not a user-facing catalog entry — it never
 		// crosses this wire.
@@ -55,11 +128,20 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 		if unavailable {
 			required = 0
 		}
-		out = append(out, CatalogModel{
+		entry := CatalogModel{
 			Info: info, RequiredCredits: required,
 			Affordable:       !unavailable && (unlimited || balance >= required),
 			PriceUnavailable: unavailable,
-		})
+		}
+		if s.modelGrades {
+			for _, name := range info.Stages {
+				stage, err := ParseStage(name)
+				if err == nil {
+					entry.Access = append(entry.Access, s.access(ctx, tier, stage, info, false))
+				}
+			}
+		}
+		out = append(out, entry)
 	}
 	return out, nil
 }
@@ -93,6 +175,10 @@ func (s *Service) EstimatePostCredits(observe, write llm.ModelRef) int {
 // temporary state that the next renewal clears, so it invalidates nothing. Only a model
 // that has actually vanished or become unsuitable is cleared.
 func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection, error) {
+	tier, err := s.tier(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	selections, err := s.store.ListSelections(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list selections: %w", err)
@@ -107,6 +193,10 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 		// the machinery (MODEL-24) that absorbed the empty per-purpose cutover — every
 		// pre-cutover selection lands here on its next read, with no bespoke migration clearing.
 		if ok && Suitable(selections[i].Stage, info) {
+			if s.modelGrades {
+				access := s.access(ctx, tier, selections[i].Stage, info, false)
+				selections[i].RequiredPlan, selections[i].UnavailableReason = access.RequiredPlan, access.UnavailableReason
+			}
 			continue
 		}
 		selections[i].Missing = true
@@ -119,6 +209,10 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 }
 
 func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]ComparisonPair, error) {
+	tier, err := s.tier(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	selections, err := s.store.ListSelectionSlots(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list comparison pairs: %w", err)
@@ -130,11 +224,15 @@ func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]Comp
 		}
 		info, ok := s.catalog.Lookup(selection.Ref)
 		switch {
-		case !ok || info.Disabled || !Suitable(selection.Stage, info):
+		case !ok || !Suitable(selection.Stage, info):
 			selection.Missing = true
 			if err := s.store.DeleteSelection(ctx, userID, selection); err != nil {
 				slog.Warn("clear vanished comparison selection failed", "user", userID, "stage", selection.Stage, "slot", selection.Slot, "err", err)
 			}
+		}
+		if s.modelGrades && !selection.Missing {
+			access := s.access(ctx, tier, selection.Stage, info, false)
+			selection.RequiredPlan, selection.UnavailableReason = access.RequiredPlan, access.UnavailableReason
 		}
 		pair := byStage[selection.Stage]
 		if pair == nil {
@@ -159,7 +257,7 @@ func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]Comp
 // SaveSelection records a choice. Only a registered, enabled model can be chosen — the
 // same rule the dropdown shows, enforced where it can be trusted.
 func (s *Service) SaveSelection(ctx context.Context, userID string, stage Stage, ref llm.ModelRef) (Selection, error) {
-	if err := s.validateRef(stage, ref); err != nil {
+	if err := s.validateRef(ctx, userID, stage, ref); err != nil {
 		return Selection{}, err
 	}
 	selection := Selection{Stage: stage, Slot: SlotActive, Ref: ref, UpdatedAt: s.now()}
@@ -179,10 +277,10 @@ func (s *Service) SaveComparisonPair(ctx context.Context, userID string, stage S
 	if a == b {
 		return ComparisonPair{}, ErrDuplicateCandidates
 	}
-	if err := s.validateRef(stage, a); err != nil {
+	if err := s.validateRef(ctx, userID, stage, a); err != nil {
 		return ComparisonPair{}, err
 	}
-	if err := s.validateRef(stage, b); err != nil {
+	if err := s.validateRef(ctx, userID, stage, b); err != nil {
 		return ComparisonPair{}, err
 	}
 	now := s.now()
@@ -231,7 +329,7 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 	// config they used to be — a set that was valid when it shipped can name a model an
 	// operator has since retired. So the gate runs over all seven refs before anything is
 	// written, and reports every selection that blocks the set rather than the first.
-	if err := s.availabilityOf(*selected); err != nil {
+	if err := s.availabilityOf(ctx, userID, *selected); err != nil {
 		return RecommendationSet{}, nil, nil, err
 	}
 	now := s.now()
@@ -259,7 +357,7 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 	return *selected, active, pairs, nil
 }
 
-func (s *Service) validateRef(stage Stage, ref llm.ModelRef) error {
+func (s *Service) validateRef(ctx context.Context, userID string, stage Stage, ref llm.ModelRef) error {
 	if _, err := ParseStage(string(stage)); err != nil {
 		return err
 	}
@@ -273,13 +371,32 @@ func (s *Service) validateRef(stage Stage, ref llm.ModelRef) error {
 	if !Suitable(stage, info) {
 		return fmt.Errorf("%w: %s is not registered for %s", ErrModelUnsuitable, ref, stage)
 	}
+	if s.modelGrades {
+		tier, err := s.tier(ctx, userID)
+		if err != nil {
+			return err
+		}
+		access := s.access(ctx, tier, stage, info, true)
+		switch access.UnavailableReason {
+		case "MODEL_UNCLASSIFIED":
+			return &ModelAccessError{Ref: ref, Stage: stage, Cause: ErrModelUnclassified}
+		case "MODEL_PLAN_REQUIRED":
+			return &ModelAccessError{Ref: ref, Stage: stage, Grade: access.Grade, Required: access.RequiredPlan, Cause: ErrModelPlanRequired}
+		case "MODEL_FREE_PATH_UNAVAILABLE":
+			return &ModelAccessError{Ref: ref, Stage: stage, Grade: access.Grade, Cause: ErrFreePathUnavailable}
+		}
+	}
 	return nil
 }
 
 // availabilityOf checks every ref a set would save against the catalog as it is right now,
 // and reports all of them at once. The stage matters: the same model can be fine for write
 // and unusable for observe.
-func (s *Service) availabilityOf(set RecommendationSet) error {
+func (s *Service) availabilityOf(ctx context.Context, userID string, set RecommendationSet) error {
+	tier, err := s.tier(ctx, userID)
+	if err != nil {
+		return err
+	}
 	refusal := &SetRefusal{}
 	for _, stageSelection := range set.Selections {
 		refs := []llm.ModelRef{stageSelection.Active}
@@ -295,6 +412,16 @@ func (s *Service) availabilityOf(set RecommendationSet) error {
 				refusal.Disabled = append(refusal.Disabled, ref.String())
 			case !Suitable(stageSelection.Stage, info):
 				refusal.Unsuitable = append(refusal.Unsuitable, ref.String())
+			case s.modelGrades:
+				access := s.access(ctx, tier, stageSelection.Stage, info, true)
+				switch access.UnavailableReason {
+				case "MODEL_UNCLASSIFIED":
+					refusal.Unclassified = append(refusal.Unclassified, ref.String())
+				case "MODEL_PLAN_REQUIRED":
+					refusal.PlanLocked = append(refusal.PlanLocked, ref.String()+" ("+string(access.RequiredPlan)+")")
+				case "MODEL_FREE_PATH_UNAVAILABLE":
+					refusal.FreePath = append(refusal.FreePath, ref.String())
+				}
 			}
 		}
 	}

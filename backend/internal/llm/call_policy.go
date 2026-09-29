@@ -52,6 +52,14 @@ func ValidUnitPrice(value string) bool {
 	return ok && rate.Sign() >= 0
 }
 
+func ZeroUnitPrice(value string) bool {
+	if !ValidUnitPrice(value) {
+		return false
+	}
+	rate, _ := new(big.Rat).SetString(value)
+	return rate.Sign() == 0
+}
+
 func (p CallPolicy) Valid() bool {
 	inputValid := p.InputTokens == 0 || p.InputTokens == ClipInputUnits || p.InputTokens == ClipPlanInputUnits && p.Stage == StageNameWrite
 	return (p.ResponseRetries == 0 || p.ResponseRetries == 3) && inputValid && p.Ref.ProviderID != "" && p.Ref.ModelID != "" && p.Stage != "" && p.CompletionTokens > 0 && p.Reasoning.Valid() && ValidUnitPrice(p.InputUSDPerMillion) && ValidUnitPrice(p.OutputUSDPerMillion) && (p.Pricing == (CallPricing{}) || p.Pricing.Valid())

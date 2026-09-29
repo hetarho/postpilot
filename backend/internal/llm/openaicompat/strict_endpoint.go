@@ -328,6 +328,15 @@ func (c *Client) strictEndpoint(ctx context.Context, client *http.Client, req ll
 		if e.Tag != frozen.Pricing.Endpoint {
 			continue
 		}
+		if req.FreeCall {
+			path := llm.FreeText
+			if req.HasVideos() {
+				path = llm.FreeVideoInput
+			}
+			if !freeLeaf(e, endpoints, req.Model, path) {
+				return "", llm.ErrFreePathUnavailable
+			}
+		}
 		if !uniqueLeaf(e, endpoints) {
 			return "", llm.ErrInlineEndpointUnavailable
 		}
