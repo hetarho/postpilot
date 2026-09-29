@@ -1,3 +1,6 @@
+-- ASCII only: sqlc expands SELECT * by byte offset and a multi-byte character in this
+-- file corrupts the queries after it.
+
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
   id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
@@ -60,19 +63,6 @@ WHERE user_id = ? AND post_slug = ? AND stage = 'write' AND origin = 'editor'
        ))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1;
-
--- name: CountPublishableForVoice :one
--- An analyze experiment frozen to the voice that could still publish a styleguide into it
--- (VOICE-13, MODEL-37): unfinished, awaiting a verdict, or decided with its winner not yet
--- applied while its output is still held. A write-stage experiment publishes nothing into a
--- voice, and a pick past its retention or already purged can no longer be applied, so
--- neither counts. ASCII only: sqlc expands SELECT * by byte offset and a multi-byte
--- character in this file corrupts the queries after it.
-SELECT count(*) FROM model_experiments
-WHERE voice_id = sqlc.arg(voice_id) AND user_id = sqlc.arg(user_id) AND stage = 'analyze'
-  AND (status IN ('queued', 'running', 'review', 'partial')
-       OR (status = 'decided' AND applied_at IS NULL AND input_snapshot IS NOT NULL
-           AND (content_expires_at IS NULL OR content_expires_at > sqlc.arg(now))));
 
 -- name: SetExperimentStatus :exec
 UPDATE model_experiments

@@ -256,6 +256,10 @@ func TestComparisonPairValidation(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{}}
 	svc := newService(store)
 	ctx := context.Background()
+	// MODEL-23: analyze keeps its active selection alone.
+	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageAnalyze, live, seeing); !errors.Is(err, provider.ErrStageWithoutPair) || len(store.lastBatch) != 0 {
+		t.Fatalf("analyze pair = %v batch=%+v", err, store.lastBatch)
+	}
 	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, live, live); !errors.Is(err, provider.ErrDuplicateCandidates) {
 		t.Fatalf("duplicate pair = %v", err)
 	}
@@ -268,7 +272,9 @@ func TestComparisonPairValidation(t *testing.T) {
 	}
 }
 
-func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
+// MODEL-26: a set is seven refs — observe's and write's active model and pair, analyze's
+// active model alone — validated whole before one batch writes them.
+func TestRecommendationValidatesAllSevenBeforeOneBatch(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{}}
 	catalog := recommendationCatalog{
 		fakeCatalog: fakeCatalog{
@@ -279,7 +285,7 @@ func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
 			ID: "balanced", Label: "Balanced",
 			Selections: []llm.RecommendationSelection{
 				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
-				{Stage: "analyze", Active: live, CandidateA: live, CandidateB: seeing},
+				{Stage: "analyze", Active: live},
 				{Stage: "write", Active: live, CandidateA: live, CandidateB: seeing},
 			},
 		}},
@@ -297,14 +303,19 @@ func TestRecommendationValidatesAllNineBeforeOneBatch(t *testing.T) {
 	catalog.fakeCatalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true, Stages: allStages}
 	svc = provider.NewService(store, catalog, fakeCredits{})
 	_, active, pairs, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced")
-	if err != nil || len(active) != 3 || len(pairs) != 3 || len(store.lastBatch) != 9 {
+	if err != nil || len(active) != 3 || len(pairs) != 2 || len(store.lastBatch) != 7 {
 		t.Fatalf("apply = active:%d pairs:%d batch:%d err=%v", len(active), len(pairs), len(store.lastBatch), err)
+	}
+	for _, row := range store.lastBatch {
+		if row.Stage == provider.StageAnalyze && row.Slot != provider.SlotActive {
+			t.Fatalf("an analyze pair row was written: %+v", row)
+		}
 	}
 }
 
 // MODEL-25: the set's models are curated data now, so a shipped set can name one an
 // operator has since retired or disabled. The refusal names every offending ref at once,
-// grouped by cause — discovering them one apply at a time would be nine round trips.
+// grouped by cause — discovering them one apply at a time would be seven round trips.
 func TestRecommendationRefusalNamesEveryOffendingRef(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{}}
 	retired := llm.ModelRef{ProviderID: "openrouter", ModelID: "retired"}
@@ -321,7 +332,7 @@ func TestRecommendationRefusalNamesEveryOffendingRef(t *testing.T) {
 				// `retired` is gone from the catalog entirely; `disabled` is curated but
 				// delisted.
 				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
-				{Stage: "analyze", Active: retired, CandidateA: live, CandidateB: seeing},
+				{Stage: "analyze", Active: retired},
 				{Stage: "write", Active: disabled, CandidateA: live, CandidateB: seeing},
 			},
 		}},
@@ -451,4 +462,17 @@ func newTieredService(store *fakeStore) *provider.Service {
 		seeing:  {Ref: seeing, Vision: true, Stages: allStages},
 		premium: {Ref: premium, Stages: textStages},
 	}, fakeCredits{})
+}
+
+// MODEL-23: a stray analyze pair row — a database from before the pair's retirement — never
+// reads back as a pair.
+func TestComparisonPairsNameObserveAndWriteOnly(t *testing.T) {
+	store := &fakeStore{rows: map[string]provider.Selection{
+		"analyze": {Stage: provider.StageAnalyze, Slot: provider.SlotCandidateA, Ref: live},
+		"write":   {Stage: provider.StageWrite, Slot: provider.SlotCandidateA, Ref: live},
+	}}
+	pairs, err := newService(store).GetComparisonPairs(context.Background(), "alice")
+	if err != nil || len(pairs) != 1 || pairs[0].Stage != provider.StageWrite || pairs[0].CandidateA.Ref != live {
+		t.Fatalf("pairs = %+v err=%v", pairs, err)
+	}
 }

@@ -142,6 +142,21 @@ describe('StageModelSelect', () => {
     expect(calls).toContain('SaveSelection')
   })
 
+  // MODEL-23: analyze is never compared, yet it keeps its one active selection — 말투 만들기 and
+  // memory extraction read it — so its picker saves exactly as the other two do.
+  it('saves the analyze stage’s active model', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderSelect('analyze', { calls })
+
+    const trigger = await openPanel(user, /문체 분석 모델/)
+    await user.click(screen.getByRole('option', { name: /Writer/ }))
+
+    await waitFor(() => expect(trigger).toHaveTextContent('Writer'))
+    expect(calls).toContain('SaveSelection')
+    expect(calls).not.toContain('SaveComparisonPair')
+  })
+
   it('restores a saved choice', async () => {
     renderSelect('write', {
       selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],

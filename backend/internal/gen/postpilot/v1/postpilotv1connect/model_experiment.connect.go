@@ -36,9 +36,6 @@ const (
 	// ModelExperimentServiceStartObserveExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's StartObserveExperiment RPC.
 	ModelExperimentServiceStartObserveExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartObserveExperiment"
-	// ModelExperimentServiceStartAnalyzeExperimentProcedure is the fully-qualified name of the
-	// ModelExperimentService's StartAnalyzeExperiment RPC.
-	ModelExperimentServiceStartAnalyzeExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartAnalyzeExperiment"
 	// ModelExperimentServiceStartWriteExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's StartWriteExperiment RPC.
 	ModelExperimentServiceStartWriteExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartWriteExperiment"
@@ -77,7 +74,6 @@ const (
 // ModelExperimentServiceClient is a client for the postpilot.v1.ModelExperimentService service.
 type ModelExperimentServiceClient interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
-	StartAnalyzeExperiment(context.Context, *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
@@ -106,12 +102,6 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 			httpClient,
 			baseURL+ModelExperimentServiceStartObserveExperimentProcedure,
 			connect.WithSchema(modelExperimentServiceMethods.ByName("StartObserveExperiment")),
-			connect.WithClientOptions(opts...),
-		),
-		startAnalyzeExperiment: connect.NewClient[v1.StartAnalyzeExperimentRequest, v1.StartExperimentResponse](
-			httpClient,
-			baseURL+ModelExperimentServiceStartAnalyzeExperimentProcedure,
-			connect.WithSchema(modelExperimentServiceMethods.ByName("StartAnalyzeExperiment")),
 			connect.WithClientOptions(opts...),
 		),
 		startWriteExperiment: connect.NewClient[v1.StartWriteExperimentRequest, v1.StartExperimentResponse](
@@ -186,7 +176,6 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 // modelExperimentServiceClient implements ModelExperimentServiceClient.
 type modelExperimentServiceClient struct {
 	startObserveExperiment *connect.Client[v1.StartObserveExperimentRequest, v1.StartExperimentResponse]
-	startAnalyzeExperiment *connect.Client[v1.StartAnalyzeExperimentRequest, v1.StartExperimentResponse]
 	startWriteExperiment   *connect.Client[v1.StartWriteExperimentRequest, v1.StartExperimentResponse]
 	getExperiment          *connect.Client[v1.GetExperimentRequest, v1.GetExperimentResponse]
 	listExperiments        *connect.Client[v1.ListExperimentsRequest, v1.ListExperimentsResponse]
@@ -203,11 +192,6 @@ type modelExperimentServiceClient struct {
 // StartObserveExperiment calls postpilot.v1.ModelExperimentService.StartObserveExperiment.
 func (c *modelExperimentServiceClient) StartObserveExperiment(ctx context.Context, req *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
 	return c.startObserveExperiment.CallUnary(ctx, req)
-}
-
-// StartAnalyzeExperiment calls postpilot.v1.ModelExperimentService.StartAnalyzeExperiment.
-func (c *modelExperimentServiceClient) StartAnalyzeExperiment(ctx context.Context, req *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
-	return c.startAnalyzeExperiment.CallUnary(ctx, req)
 }
 
 // StartWriteExperiment calls postpilot.v1.ModelExperimentService.StartWriteExperiment.
@@ -269,7 +253,6 @@ func (c *modelExperimentServiceClient) GetLeaderboard(ctx context.Context, req *
 // service.
 type ModelExperimentServiceHandler interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
-	StartAnalyzeExperiment(context.Context, *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
@@ -294,12 +277,6 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 		ModelExperimentServiceStartObserveExperimentProcedure,
 		svc.StartObserveExperiment,
 		connect.WithSchema(modelExperimentServiceMethods.ByName("StartObserveExperiment")),
-		connect.WithHandlerOptions(opts...),
-	)
-	modelExperimentServiceStartAnalyzeExperimentHandler := connect.NewUnaryHandler(
-		ModelExperimentServiceStartAnalyzeExperimentProcedure,
-		svc.StartAnalyzeExperiment,
-		connect.WithSchema(modelExperimentServiceMethods.ByName("StartAnalyzeExperiment")),
 		connect.WithHandlerOptions(opts...),
 	)
 	modelExperimentServiceStartWriteExperimentHandler := connect.NewUnaryHandler(
@@ -372,8 +349,6 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 		switch r.URL.Path {
 		case ModelExperimentServiceStartObserveExperimentProcedure:
 			modelExperimentServiceStartObserveExperimentHandler.ServeHTTP(w, r)
-		case ModelExperimentServiceStartAnalyzeExperimentProcedure:
-			modelExperimentServiceStartAnalyzeExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceStartWriteExperimentProcedure:
 			modelExperimentServiceStartWriteExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceGetExperimentProcedure:
@@ -407,10 +382,6 @@ type UnimplementedModelExperimentServiceHandler struct{}
 
 func (UnimplementedModelExperimentServiceHandler) StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartObserveExperiment is not implemented"))
-}
-
-func (UnimplementedModelExperimentServiceHandler) StartAnalyzeExperiment(context.Context, *connect.Request[v1.StartAnalyzeExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartAnalyzeExperiment is not implemented"))
 }
 
 func (UnimplementedModelExperimentServiceHandler) StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {

@@ -109,6 +109,7 @@ message ComparisonPair {
   Selection candidate_b = 3;
 }
 
+// Analyze keeps its active selection alone, so its candidates are unset (MODEL-23).
 message RecommendationStageSelection {
   Stage stage = 1;
   ModelRef active = 2;

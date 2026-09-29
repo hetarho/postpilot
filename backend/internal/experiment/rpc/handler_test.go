@@ -27,12 +27,10 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"stage":                    {experiment.ErrInvalidStage, connect.CodeInvalidArgument, "EXPERIMENT_STAGE_INVALID", nil},
 		"duplicate candidates":     {experiment.ErrDuplicateCandidates, connect.CodeInvalidArgument, "EXPERIMENT_CANDIDATES_DUPLICATE", nil},
 		"target length":            {experiment.ErrInvalidTargetLength, connect.CodeInvalidArgument, "EXPERIMENT_TARGET_LENGTH_INVALID", nil},
-		"voice required":           {experiment.ErrVoiceRequired, connect.CodeInvalidArgument, "EXPERIMENT_VOICE_REQUIRED", nil},
 		"models required":          {experiment.ErrModelRequired, connect.CodeFailedPrecondition, "EXPERIMENT_MODELS_REQUIRED", nil},
 		"signed video unsupported": {&experiment.VideoUnsupportedError{Model: "provider/video"}, connect.CodeFailedPrecondition, "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": "provider/video"}},
 		"target language":          {experiment.ErrLanguageRequired, connect.CodeFailedPrecondition, "POST_TARGET_LANGUAGE_REQUIRED", nil},
 		"state":                    {experiment.ErrInvalidState, connect.CodeFailedPrecondition, "EXPERIMENT_STATE_INVALID", nil},
-		"confirmation":             {experiment.ErrConfirmationRequired, connect.CodeFailedPrecondition, "EXPERIMENT_CONFIRMATION_REQUIRED", nil},
 		"snapshot":                 {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
 		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
 		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
@@ -120,18 +118,18 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 	candidate := experiment.Candidate{
 		ID: "opaque", Model: experiment.ModelRef{ProviderID: "secret-provider", ModelID: "secret-model"},
 		ModelLabel: "Secret label", DisplaySide: experiment.SideLeft, Status: experiment.CandidateFailed,
-		Output: []byte(`"style guide"`), Failure: &experiment.Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "upstream secret error"},
+		Output: []byte(`[{"file":"IMG_1.jpg","scene":"바다"}]`), Failure: &experiment.Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "upstream secret error"},
 		Usage: experiment.Usage{PromptTokens: 12, CompletionTokens: 3, CostMicrousd: 8, CostSource: experiment.CostReported, LatencyMS: 99},
 	}
-	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageAnalyze, Status: experiment.StatusPartial}, candidate)
+	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusPartial}, candidate)
 	if blind.GetModel() != nil || blind.GetModelLabel() != "" || blind.GetUsage() != nil || blind.GetFailure() != nil || blind.GetError() != "" {
 		t.Fatalf("pre-verdict response leaked identity/accounting: %+v", blind)
 	}
-	if blind.GetStyleguide() != "style guide" || blind.GetId() != "opaque" {
+	if observations := blind.GetObservationSet().GetObservations(); len(observations) != 1 || observations[0].GetScene() != "바다" || blind.GetId() != "opaque" {
 		t.Fatalf("blind output/id missing: %+v", blind)
 	}
 
-	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageAnalyze, Status: experiment.StatusDismissed}, candidate)
+	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate)
 	if revealed.GetModel().GetModelId() != "secret-model" || revealed.GetModelLabel() != "Secret label" ||
 		revealed.GetUsage().GetCostMicrousd() != 8 || revealed.GetFailure().GetReason() != "MODEL_RATE_LIMITED" ||
 		revealed.GetFailure().GetTechnicalDetail() != "upstream secret error" || revealed.GetError() != "" {
@@ -338,5 +336,25 @@ func TestBadgeTalliesCrossTheWireAsCountsAlone(t *testing.T) {
 	}
 	if len(toProtoTallies(nil)) != 0 {
 		t.Fatal("an empty tally list produced a row")
+	}
+}
+
+// MODEL-30: analyze has no comparison. A history or leaderboard request naming it reaches the
+// service as that stage, not as the unset "every stage", and is refused as invalid.
+func TestAHistoryOrLeaderboardNamingAnalyzeIsRefused(t *testing.T) {
+	stage := fromProtoStage(postpilotv1.Stage_STAGE_ANALYZE)
+	if stage == "" {
+		t.Fatal("STAGE_ANALYZE reads as the unset stage, which a history takes for every stage")
+	}
+	_, err := experiment.ParseStage(string(stage))
+	if !errors.Is(err, experiment.ErrInvalidStage) {
+		t.Fatalf("parse analyze = %v, want ErrInvalidStage", err)
+	}
+	mapped := toConnectError("list experiments", err)
+	if connect.CodeOf(mapped) != connect.CodeInvalidArgument || experimentAppErrorDetail(t, mapped).GetReason() != "EXPERIMENT_STAGE_INVALID" {
+		t.Fatalf("mapped = %v", mapped)
+	}
+	if got := toProtoStage(experiment.Stage("analyze")); got != postpilotv1.Stage_STAGE_UNSPECIFIED {
+		t.Fatalf("an analyze experiment still maps to %v", got)
 	}
 }

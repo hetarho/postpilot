@@ -1,11 +1,20 @@
-import { render, screen } from '@testing-library/react'
+import { create } from '@bufbuild/protobuf'
+import { render, screen, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import type { ModelExperiment } from '@/entities/model-experiment'
+import type { ExperimentCandidate, ModelExperiment } from '@/entities/model-experiment'
+import { ObservationSchema } from '@/shared/api'
 import { CandidateComparison } from './CandidateComparison'
+
+function written(title: string): ExperimentCandidate['output'] {
+  return {
+    kind: 'write',
+    content: { $typeName: 'postpilot.v1.PostContent', title, summary: '', tags: [], blocks: [] },
+  }
+}
 
 const base: ModelExperiment = {
   id: 'exp',
-  stage: 'analyze',
+  stage: 'write',
   origin: 'editor',
   status: 'review',
   postSlug: '',
@@ -29,7 +38,7 @@ const base: ModelExperiment = {
       id: 'right',
       displaySide: 'right',
       status: 'succeeded',
-      output: { kind: 'analyze', styleguide: '오른쪽 결과' },
+      output: written('오른쪽 결과'),
       badges: [],
       otherNote: '',
       failure: undefined,
@@ -39,7 +48,7 @@ const base: ModelExperiment = {
       id: 'left',
       displaySide: 'left',
       status: 'succeeded',
-      output: { kind: 'analyze', styleguide: '왼쪽 결과' },
+      output: written('왼쪽 결과'),
       badges: [],
       otherNote: '',
       failure: undefined,
@@ -123,4 +132,35 @@ it('states each revealed candidate its own badges and note', () => {
   expect(complaint.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(other.className).not.toMatch(/warning/)
   expect(complaint.className).toMatch(/warning/)
+})
+
+// The lab compares observe and write alone (MODEL-30): an observe candidate is read as the
+// observations it made, one entry per photo.
+it('renders an observe candidate as its observations', () => {
+  render(
+    <CandidateComparison
+      experiment={{
+        ...base,
+        stage: 'observe',
+        candidates: base.candidates.map((candidate) => ({
+          ...candidate,
+          output: {
+            kind: 'observe',
+            observations: [
+              create(ObservationSchema, {
+                file: 'photo.jpg',
+                scene: `${candidate.displaySide} 장면`,
+                objects: ['컵'],
+              }),
+            ],
+          },
+        })),
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  const [left] = screen.getAllByRole('article')
+  expect(within(left).getByText('photo.jpg')).toBeInTheDocument()
+  expect(within(left).getByText('left 장면')).toBeInTheDocument()
+  expect(within(left).getByText('컵')).toBeInTheDocument()
 })

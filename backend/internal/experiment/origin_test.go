@@ -32,8 +32,8 @@ func writeRequest(origin Origin) StartRequest {
 }
 
 // A comparison's origin is frozen at start and is the caller's only for a write comparison:
-// observe and analyze can be started nowhere but the lab, and an unstated origin is the
-// editor, which is what every client predating the field was.
+// observe can be started nowhere but the lab, and an unstated origin is the editor, which is
+// what every client predating the field was.
 func TestStartFreezesTheComparisonOrigin(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -44,7 +44,6 @@ func TestStartFreezesTheComparisonOrigin(t *testing.T) {
 		{"write honours the editor", writeRequest(OriginEditor), OriginEditor},
 		{"write honours the lab", writeRequest(OriginLab), OriginLab},
 		{"observe is always the lab", StartRequest{UserID: "alice", PostSlug: "post", Stage: StageObserve, Origin: OriginEditor, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}, OriginLab},
-		{"analyze is always the lab", StartRequest{UserID: "alice", VoiceID: "voice", Stage: StageAnalyze, Origin: OriginEditor, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}, OriginLab},
 	}
 	for _, sample := range cases {
 		t.Run(sample.name, func(t *testing.T) {
@@ -178,7 +177,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 			if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
 				t.Fatal(err)
 			}
-			applied, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, false)
+			applied, err := svc.ApplyWinner(context.Background(), "alice", pair.ID)
 			if !errors.Is(err, sample.want) {
 				t.Fatalf("apply = %v, want %v", err, sample.want)
 			}
@@ -205,7 +204,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 			t.Fatal(err)
 		}
 		svc.posts.(*fakePosts).err = ErrInvalidState
-		if _, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, false); !errors.Is(err, ErrInvalidState) {
+		if _, err := svc.ApplyWinner(context.Background(), "alice", pair.ID); !errors.Is(err, ErrInvalidState) {
 			t.Fatalf("apply = %v, want ErrInvalidState", err)
 		}
 		if runner.applyCalls != 0 {
@@ -236,20 +235,6 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 			t.Fatalf("the refused verdict recorded something: %+v applies=%d", after, runner.applyCalls)
 		}
 	})
-
-	t.Run("analyze publishes into its voice without a post", func(t *testing.T) {
-		svc, store, _, _, runner := newTestService()
-		svc.SetVoiceDirectory(okVoices{})
-		posts := svc.posts.(*fakePosts)
-		pair := ready(t, svc, store, StartRequest{UserID: "alice", VoiceID: "voice", Stage: StageAnalyze, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
-		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
-			t.Fatal(err)
-		}
-		applied, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, true)
-		if err != nil || applied.AppliedAt == nil || runner.applyCalls != 1 || posts.calls != 0 {
-			t.Fatalf("analyze apply = %+v err=%v applies=%d post reads=%d", applied, err, runner.applyCalls, posts.calls)
-		}
-	})
 }
 
 // Once a lab pick's owner asks for the content application, that application is owed: a
@@ -262,7 +247,7 @@ func TestFailedLabApplicationKeepsThePostHeldUntilItSucceeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	runner.applyErr = errors.New("post unavailable")
-	failed, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, false)
+	failed, err := svc.ApplyWinner(context.Background(), "alice", pair.ID)
 	if err != nil {
 		t.Fatalf("apply = %v, want the failure recorded on the experiment", err)
 	}
@@ -274,7 +259,7 @@ func TestFailedLabApplicationKeepsThePostHeldUntilItSucceeds(t *testing.T) {
 		t.Fatalf("failed application released the post: %+v, %v", pending, err)
 	}
 	runner.applyErr = nil
-	recovered, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, false)
+	recovered, err := svc.ApplyWinner(context.Background(), "alice", pair.ID)
 	if err != nil || recovered.AppliedAt == nil || recovered.ApplyFailure != nil || runner.applyCalls != 2 {
 		t.Fatalf("retry = %+v err=%v applies=%d", recovered, err, runner.applyCalls)
 	}

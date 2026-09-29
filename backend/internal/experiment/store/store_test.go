@@ -40,15 +40,11 @@ func testStore(t *testing.T) (*experimentstore.Store, *db.DB) {
 	return experimentstore.New(handle.Writer, handle.Reader), handle
 }
 
-// The frozen voice round-trips, and the publishable count follows the lifecycle: queued,
-// review and decided-but-unapplied hold the voice; applied and dismissed release it.
-func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
+// The frozen voice round-trips.
+func TestStorePersistsTheFrozenVoice(t *testing.T) {
 	store, _ := testStore(t)
 	ctx := context.Background()
-	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
-	found := sample("exp-voice", "alice", "", now)
-	found.Stage, found.Origin = experiment.StageAnalyze, experiment.OriginLab
-	found.TargetLanguage = nil
+	found := sample("exp-voice", "alice", "post-a", time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC))
 	found.VoiceID = "voice-alice"
 	if err := store.Create(ctx, found); err != nil {
 		t.Fatal(err)
@@ -56,95 +52,6 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 	reloaded, err := store.Get(ctx, found.ID)
 	if err != nil || reloaded.VoiceID != "voice-alice" {
 		t.Fatalf("reloaded voice = %q err=%v", reloaded.VoiceID, err)
-	}
-	count := func(user, voiceID string) int {
-		n, err := store.CountPublishableForVoice(ctx, user, voiceID, now)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return n
-	}
-	if count("alice", "voice-alice") != 1 || count("bob", "voice-alice") != 0 || count("alice", "voice-bob") != 0 {
-		t.Fatalf("queued counts = %d/%d/%d", count("alice", "voice-alice"), count("bob", "voice-alice"), count("alice", "voice-bob"))
-	}
-	finished := now.Add(time.Second)
-	for _, candidate := range found.Candidates {
-		candidate.Status = experiment.CandidateSucceeded
-		candidate.Output = []byte(`"style"`)
-		candidate.FinishedAt = &finished
-		if err := store.CompleteCandidate(ctx, candidate); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &finished); err != nil {
-		t.Fatal(err)
-	}
-	if count("alice", "voice-alice") != 1 {
-		t.Fatal("review does not hold the voice")
-	}
-	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, false, nil, decided, decided.Add(time.Hour)); err != nil || !changed {
-		t.Fatalf("decide = %v, %v", changed, err)
-	}
-	if count("alice", "voice-alice") != 1 {
-		t.Fatal("decided-but-unapplied does not hold the voice")
-	}
-	if err := store.SetApplied(ctx, found.ID, "alice", decided.Add(time.Second)); err != nil {
-		t.Fatal(err)
-	}
-	if count("alice", "voice-alice") != 0 {
-		t.Fatal("applied experiment still holds the voice")
-	}
-}
-
-// VOICE-13, MODEL-37: of the experiments, only an analyze pick that can still be published
-// holds a voice. A write pick never does — a lab write pick on a finalized post can never be
-// applied — and neither does an analyze pick past its retention or already purged.
-func TestOnlyALiveAnalyzePickHoldsTheVoice(t *testing.T) {
-	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
-	for name, tc := range map[string]struct {
-		stage, origin string
-		expires       time.Duration
-		purged        bool
-		holds         bool
-	}{
-		"analyze pick":            {stage: "analyze", origin: "lab", expires: time.Hour, holds: true},
-		"analyze pick expired":    {stage: "analyze", origin: "lab", expires: -time.Hour},
-		"analyze pick purged":     {stage: "analyze", origin: "lab", expires: time.Hour, purged: true},
-		"lab write pick":          {stage: "write", origin: "lab", expires: time.Hour},
-		"editor write, unapplied": {stage: "write", origin: "editor", expires: time.Hour},
-	} {
-		t.Run(name, func(t *testing.T) {
-			store, handle := testStore(t)
-			ctx := context.Background()
-			found := sample("exp-pick", "alice", "post-a", now)
-			found.VoiceID = "voice-alice"
-			if tc.stage == "analyze" {
-				found.Stage, found.Origin, found.PostSlug, found.TargetLanguage = experiment.StageAnalyze, experiment.OriginLab, "", nil
-			} else if tc.origin == "lab" {
-				found.Origin = experiment.OriginLab
-			}
-			if err := store.Create(ctx, found); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := handle.Writer.ExecContext(ctx,
-				`UPDATE model_experiments SET status='decided', winner_candidate_id=?, outcome='winner', decided_at=?, content_expires_at=? WHERE id=?`,
-				found.Candidates[0].ID, formatAt(now), formatAt(now.Add(tc.expires)), found.ID); err != nil {
-				t.Fatal(err)
-			}
-			if tc.purged {
-				if _, err := handle.Writer.ExecContext(ctx, `UPDATE model_experiments SET input_snapshot=NULL WHERE id=?`, found.ID); err != nil {
-					t.Fatal(err)
-				}
-			}
-			n, err := store.CountPublishableForVoice(ctx, "alice", "voice-alice", now)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if (n == 1) != tc.holds || n > 1 {
-				t.Fatalf("publishable = %d, want holds=%v", n, tc.holds)
-			}
-		})
 	}
 }
 
@@ -319,9 +226,7 @@ func TestStoreMapsInactiveVoiceTrigger(t *testing.T) {
 		"2026-08-30T00:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
-	found := sample("exp-deleted-voice", "alice", "", time.Now().UTC())
-	found.Stage = experiment.StageAnalyze
-	found.TargetLanguage = nil
+	found := sample("exp-deleted-voice", "alice", "post-a", time.Now().UTC())
 	found.VoiceID = "voice-alice-2"
 	if err := store.Create(ctx, found); !errors.Is(err, experiment.ErrVoiceUnavailable) {
 		t.Fatalf("inactive voice create = %v, want ErrVoiceUnavailable", err)

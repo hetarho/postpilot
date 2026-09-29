@@ -29,7 +29,7 @@ func TestKoreanAnalysisContractsRemainTheDefaultByteForByte(t *testing.T) {
 	if got, want := MeasuredProfileForLanguage(text, LanguageKorean, now), MeasuredProfile(text, now); !reflect.DeepEqual(got, want) {
 		t.Fatalf("Korean measured profile changed\ngot=%#v\nwant=%#v", got, want)
 	}
-	if analysisPromptForLanguage(LanguageKorean) != analysisPrompt {
+	if structuredAnalysisPromptForLanguage(LanguageKorean) != structuredAnalysisPrompt {
 		t.Fatal("Korean analysis prompt changed through language selection")
 	}
 	if !bytes.Equal(VoiceAnalysisSchemaForLanguage(LanguageKorean), VoiceAnalysisSchema()) {
@@ -90,9 +90,6 @@ func TestEnglishContractionsExcludePossessivesAndUncontractedCannot(t *testing.T
 }
 
 func TestEnglishAnalysisPromptAndSchemaSelection(t *testing.T) {
-	if !strings.Contains(analysisPromptForLanguage(LanguageEnglish), "English writing-style analyst") || strings.Contains(analysisPromptForLanguage(LanguageEnglish), "한국어 문체") {
-		t.Fatalf("English analysis prompt = %q", analysisPromptForLanguage(LanguageEnglish))
-	}
 	var schema map[string]any
 	if err := json.Unmarshal(VoiceAnalysisSchemaForLanguage(LanguageEnglish), &schema); err != nil {
 		t.Fatalf("English schema is invalid JSON: %v", err)

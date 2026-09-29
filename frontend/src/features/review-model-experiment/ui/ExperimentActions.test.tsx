@@ -169,29 +169,6 @@ it('preserves apply-and-adopt intent when content application itself needs a ret
   expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
 })
 
-it('blocks provider and apply work when the experiment voice is deleted', async () => {
-  const actions = actionSet()
-  mocks.useExperimentActions.mockReturnValue(actions)
-  renderActions(
-    {
-      ...base,
-      stage: 'analyze',
-      status: 'decided',
-      voiceId: 'voice-old',
-      winnerCandidateId: 'left',
-      revealed: true,
-    },
-    [
-      { id: 'voice-default', name: '기본 말투', isDefault: true },
-      { id: 'voice-old', name: '옛 말투', deleted: true },
-    ],
-  )
-
-  expect(await screen.findByText(/삭제되었거나 찾을 수 없는 말투/)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '결과 적용' })).toBeDisabled()
-  expect(actions.apply).not.toHaveBeenCalled()
-})
-
 const labPair: ModelExperiment = { ...base, origin: 'lab' }
 const decidedLabPair: ModelExperiment = {
   ...labPair,
@@ -199,6 +176,22 @@ const decidedLabPair: ModelExperiment = {
   winnerCandidateId: 'left',
   revealed: true,
 }
+
+// A write comparison writes in its frozen voice, so its application waits on that voice while
+// the account-scoped adoption stays open.
+it('blocks a write comparison’s apply work when its frozen voice is deleted', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions({ ...decidedLabPair, voiceId: 'voice-old' }, [
+    { id: 'voice-default', name: '기본 말투', isDefault: true },
+    { id: 'voice-old', name: '옛 말투', deleted: true },
+  ])
+
+  expect(await screen.findByText(/삭제되었거나 찾을 수 없는 말투/)).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '결과 적용' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '활성 모델로 사용' })).toBeEnabled()
+  expect(actions.apply).not.toHaveBeenCalled()
+})
 
 it('offers the lab only a pick, and offers the editor no pick at all', async () => {
   const actions = actionSet()
@@ -228,6 +221,43 @@ it('offers a decided lab pick the model adoption and, on a draft, the content ap
   await userEvent.click(screen.getByRole('button', { name: '활성 모델로 사용' }))
   expect(actions.adopt).toHaveBeenCalled()
   expect(actions.decideWrite).not.toHaveBeenCalled()
+})
+
+// Every content application the lab still offers writes a post, so none of them asks first:
+// the press applies, and its retry applies the same way.
+it.each(['write', 'observe'] as const)(
+  'applies a decided %s lab result straight away, with no confirmation',
+  async (stage) => {
+    const actions = actionSet()
+    mocks.useExperimentActions.mockReturnValue(actions)
+    const { unmount } = renderActions({ ...decidedLabPair, stage })
+    await userEvent.click(await screen.findByRole('button', { name: '결과 적용' }))
+    expect(actions.apply).toHaveBeenCalledWith()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    unmount()
+    renderActions({ ...decidedLabPair, stage, applyFailure: { reason: 'POST_BUSY', params: {} } })
+    await userEvent.click(screen.getByRole('button', { name: '적용 다시 시도' }))
+    expect(actions.apply).toHaveBeenLastCalledWith()
+    expect(actions.apply).toHaveBeenCalledTimes(2)
+  },
+)
+
+// MODEL-62: the voice pair is offered for write comparisons alone.
+it.each([
+  ['write', true],
+  ['observe', false],
+] as const)('offers the voice pair on a %s pick: %s', async (stage, offered) => {
+  mocks.useExperimentActions.mockReturnValue(actionSet())
+  renderActions({ ...labPair, stage })
+  await userEvent.click(screen.getByRole('button', { name: '이 결과로 선택' }))
+  const sheet = await screen.findByRole('dialog')
+  expect(within(sheet).getAllByRole('button', { name: '속도가 빨라요' })).toHaveLength(2)
+  expect(within(sheet).queryAllByRole('button', { name: '문체가 잘 맞아요' })).toHaveLength(
+    offered ? 2 : 0,
+  )
+  expect(within(sheet).queryAllByRole('button', { name: '문체가 안 맞아요' })).toHaveLength(
+    offered ? 2 : 0,
+  )
 })
 
 // MODEL-36: an adoption leaves adopted_at, so a reload offers it no more; a failed one is

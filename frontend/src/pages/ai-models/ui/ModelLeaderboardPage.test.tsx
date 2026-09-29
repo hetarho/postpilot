@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { LeaderboardScope, LeaderboardWindow, Stage } from '@/shared/api'
@@ -68,14 +68,14 @@ it('keeps the other two filters when one changes, through reload and back', asyn
   expect(router.state.location.search.stage).toBe('write')
   expect(screen.getByRole('heading', { name: '전체 글 작성 리더보드' })).toBeInTheDocument()
 
-  await user.click(screen.getByRole('tab', { name: '문체 분석' }))
-  await waitFor(() => expect(router.state.location.search.stage).toBe('analyze'))
+  await user.click(screen.getByRole('tab', { name: '관찰' }))
+  await waitFor(() => expect(router.state.location.search.stage).toBe('observe'))
   expect(router.state.location.search.window).toBe('day')
   expect(router.state.location.search.scope).toBe('all')
   await waitFor(() =>
     expect(reads).toContainEqual({
       kind: 'leaderboard',
-      stage: Stage.ANALYZE,
+      stage: Stage.OBSERVE,
       window: LeaderboardWindow.DAY,
       scope: LeaderboardScope.ALL,
     }),
@@ -93,4 +93,27 @@ it('offers three bounded periods and no all-time board', async () => {
   const periods = await screen.findAllByRole('tab', { name: /^(일간|주간|월간)$/ })
   expect(periods).toHaveLength(3)
   expect(screen.queryByRole('tab', { name: '전체 기간' })).not.toBeInTheDocument()
+})
+
+// MODEL-44: the boards are observe and write. Analyze is never compared, so it has no board,
+// and an address that still names it opens the observe board instead of asking for one.
+it('ranks observe and write only, reading an address naming analyze as observe', async () => {
+  const reads = readsCollector()
+  renderAppAt('/ai-models/leaderboard?stage=analyze&window=day', {
+    user: { id: 'alice' },
+    experiments: { reads },
+  })
+  const stages = within(await screen.findByRole('tablist', { name: 'AI 단계' }))
+  expect(stages.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['관찰', '글 작성'])
+  expect(stages.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '일간' })).toHaveAttribute('aria-selected', 'true')
+  await waitFor(() =>
+    expect(reads).toContainEqual({
+      kind: 'leaderboard',
+      stage: Stage.OBSERVE,
+      window: LeaderboardWindow.DAY,
+      scope: LeaderboardScope.ME,
+    }),
+  )
+  expect(reads.map((read) => read.stage)).not.toContain(Stage.ANALYZE)
 })

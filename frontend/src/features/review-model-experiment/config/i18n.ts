@@ -30,10 +30,6 @@ export const i18n = {
       adopted: ' 활성 작성 모델도 변경했어요.',
       notAdopted: ' 활성 작성 모델은 변경하지 않았어요.',
       adoptionFailed: '결과는 적용했지만 활성 작성 모델은 변경하지 못했어요.',
-      confirmStyleTitle: '문체 분석 결과를 적용할까요?',
-      confirmStyle: '문체 덮어쓰기',
-      confirmStyleDescription:
-        '현재 styleguide를 선택한 결과로 교체합니다. 직접 작성한 rules는 그대로 유지됩니다.',
     },
   },
   en: {
@@ -64,10 +60,6 @@ export const i18n = {
       adopted: ' The active writing model was also changed.',
       notAdopted: ' The active writing model was not changed.',
       adoptionFailed: 'The result was applied, but the active writing model could not be changed.',
-      confirmStyleTitle: 'Apply this voice-analysis result?',
-      confirmStyle: 'Replace styleguide',
-      confirmStyleDescription:
-        'The current styleguide will be replaced by the selected result. Rules you wrote manually stay unchanged.',
     },
   },
 } as const satisfies I18nFragment

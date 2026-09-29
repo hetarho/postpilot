@@ -122,45 +122,38 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
       </div>
     )
   }
-  if (candidate.output.kind === 'observe') {
-    return (
-      <dl className="divide-divider mt-4 divide-y">
-        {candidate.output.observations.map((item) => (
-          <div key={item.file} className="py-4">
-            <Typography variant="label" as="dt" className="text-content-primary break-words">
-              {item.file}
-            </Typography>
-            <Typography variant="label" as="dd" className="mt-2 space-y-1">
-              <p>
-                <span className="text-content-tertiary">{t('comparison.scene')}</span>{' '}
-                {item.scene || '-'}
-              </p>
-              <p>
-                <span className="text-content-tertiary">{t('comparison.mood')}</span>{' '}
-                {item.mood || '-'}
-              </p>
-              <p>
-                <span className="text-content-tertiary">{t('comparison.visibleText')}</span>{' '}
-                {item.visibleText || '-'}
-              </p>
-              <p>
-                <span className="text-content-tertiary">{t('comparison.objects')}</span>{' '}
-                {item.objects.join(', ') || '-'}
-              </p>
-              <p>
-                <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
-                {item.peoplePresent ? t('comparison.present') : t('comparison.absent')}
-              </p>
-            </Typography>
-          </div>
-        ))}
-      </dl>
-    )
-  }
   return (
-    <Typography variant="body" as="div" className="mt-4 whitespace-pre-wrap">
-      {candidate.output.styleguide}
-    </Typography>
+    <dl className="divide-divider mt-4 divide-y">
+      {candidate.output.observations.map((item) => (
+        <div key={item.file} className="py-4">
+          <Typography variant="label" as="dt" className="text-content-primary break-words">
+            {item.file}
+          </Typography>
+          <Typography variant="label" as="dd" className="mt-2 space-y-1">
+            <p>
+              <span className="text-content-tertiary">{t('comparison.scene')}</span>{' '}
+              {item.scene || '-'}
+            </p>
+            <p>
+              <span className="text-content-tertiary">{t('comparison.mood')}</span>{' '}
+              {item.mood || '-'}
+            </p>
+            <p>
+              <span className="text-content-tertiary">{t('comparison.visibleText')}</span>{' '}
+              {item.visibleText || '-'}
+            </p>
+            <p>
+              <span className="text-content-tertiary">{t('comparison.objects')}</span>{' '}
+              {item.objects.join(', ') || '-'}
+            </p>
+            <p>
+              <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
+              {item.peoplePresent ? t('comparison.present') : t('comparison.absent')}
+            </p>
+          </Typography>
+        </div>
+      ))}
+    </dl>
   )
 }
 

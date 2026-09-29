@@ -1,4 +1,4 @@
-import type { StageName } from '@/entities/model-catalog/@x/model-experiment'
+import type { ExperimentStageName } from './types'
 
 /** The fixed badge catalog a verdict may attach to each candidate. It is code-owned and its
  *  ids are stable, because a leaderboard tallies them across releases; the copy for each one
@@ -48,10 +48,11 @@ export const NEGATIVE_BADGES = [
  *  so Korean prose is not cut to a third of what the field promises. */
 export const BADGE_NOTE_MAX_LENGTH = 200
 
-/** Whether a stage offers this badge. Only the voice pair is conditional: an observe
- *  comparison produces no prose, so neither judgement about voice can be made of it. */
-export function badgeAppliesTo(badge: VerdictBadgeName, stage: StageName): boolean {
-  if (badge === 'in_voice' || badge === 'off_voice') return stage === 'write' || stage === 'analyze'
+/** Whether a stage offers this badge. Only the voice pair is conditional: it belongs to write
+ *  comparisons alone (MODEL-62), because an observe comparison produces no prose, so neither
+ *  judgement about voice can be made of it. */
+export function badgeAppliesTo(badge: VerdictBadgeName, stage: ExperimentStageName): boolean {
+  if (badge === 'in_voice' || badge === 'off_voice') return stage === 'write'
   return true
 }
 

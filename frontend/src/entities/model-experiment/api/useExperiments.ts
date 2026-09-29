@@ -1,10 +1,14 @@
 import { useMemo } from 'react'
 import { useQuery } from '@connectrpc/connect-query'
-import { stageToProto, type StageName } from '@/entities/model-catalog/@x/model-experiment'
+import { stageToProto } from '@/entities/model-catalog/@x/model-experiment'
 import { ModelExperimentService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { isExperimentActive } from '../model/types'
-import type { LeaderboardScopeName, LeaderboardWindowName } from '../model/types'
+import type {
+  ExperimentStageName,
+  LeaderboardScopeName,
+  LeaderboardWindowName,
+} from '../model/types'
 import {
   leaderboardScopeToProto,
   leaderboardWindowToProto,
@@ -30,7 +34,7 @@ export function useExperiment(id: string) {
   }
 }
 
-export function useExperiments(stage?: StageName) {
+export function useExperiments(stage?: ExperimentStageName) {
   const query = useQuery(
     ModelExperimentService.method.listExperiments,
     { stage: stage ? stageToProto(stage) : undefined },
@@ -48,7 +52,7 @@ export function useExperiments(stage?: StageName) {
 }
 
 export function useLeaderboard(
-  stage: StageName,
+  stage: ExperimentStageName,
   window: LeaderboardWindowName,
   scope: LeaderboardScopeName,
 ) {

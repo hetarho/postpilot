@@ -121,11 +121,4 @@ type PersonalizationJobs interface {
 	EnqueuePersonalization(ctx context.Context, request PersonalizationJobRequest) (string, error)
 }
 
-// Experiments is the model-experiment context's published guard, consumed only by
-// DeleteVoice: an experiment frozen to the voice that could still publish into it (a
-// styleguide, a machine baseline) keeps the voice alive until it is decided and applied.
-type Experiments interface {
-	HasPublishableExperimentForVoice(ctx context.Context, userID, voiceID string) (bool, error)
-}
-
 type Progress func(stage string, done, total int)

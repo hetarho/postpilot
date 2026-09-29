@@ -92,8 +92,8 @@ export function ExperimentReview({
   )
 }
 
-/** Which voice an analyze comparison froze — and, once it is decided, the only voice the winner
- *  can be applied to. Named even after that voice is deleted, so the record stays legible. */
+/** Which voice a write comparison froze — the voice both candidates wrote in. Named even after
+ *  that voice is deleted, so the record stays legible. */
 function ExperimentVoice({ voiceId }: { voiceId: string }) {
   const { t } = useTranslation('models')
   const { user } = useSession()

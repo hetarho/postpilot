@@ -1,8 +1,7 @@
 package voice
 
 // analysisGuideSections is the nine-section style guide the analysis writes (VOICE-23). The
-// analysis call returns it as the profile's lexical description (VOICE-25); the model lab's
-// analyze comparison asks for it as plain text.
+// analysis call returns it as the profile's lexical description (VOICE-25).
 const analysisGuideSections = `아래 아홉 섹션을 반드시 이 순서와 제목으로 작성하세요. 첫 줄부터 1번 섹션으로 시작하고 서문은 쓰지 마세요.
 1. 종결어미 분포: ~다 / ~해요 / ~습니다 및 혼용 비율과 조건
 2. 평균 문장 길이
@@ -16,10 +15,6 @@ const analysisGuideSections = `아래 아홉 섹션을 반드시 이 순서와 �
 
 근거가 약한 항목은 지어내지 말고 "관찰되지 않음"이라고 쓰세요.`
 
-const analysisPrompt = `당신은 한국어 문체 분석가입니다. 제공된 모든 글 샘플을 함께 분석해 한국어 문체 가이드를 작성하세요.
-
-` + analysisGuideSections + ` 출력은 한국어 일반 텍스트로 작성하세요.`
-
 const englishAnalysisGuideSections = `Write exactly these nine sections in this order, starting with section 1 and no preface.
 1. Register and formality: formal/conversational balance and contraction use
 2. Average sentence length in words and characters
@@ -32,17 +27,6 @@ const englishAnalysisGuideSections = `Write exactly these nine sections in this 
 9. Six axes: involvement, narrativity, persuasion overtness, abstractness, addressee focus, humor
 
 Do not invent unsupported traits; write "not observed" when evidence is weak. Never translate English behavior into Korean ending categories.`
-
-const englishAnalysisPrompt = `You are an English writing-style analyst. Analyze all supplied samples together and produce an English style guide.
-
-` + englishAnalysisGuideSections + ` Return English plain text.`
-
-func analysisPromptForLanguage(language Language) string {
-	if language == LanguageEnglish {
-		return englishAnalysisPrompt
-	}
-	return analysisPrompt
-}
 
 // The seeding prompt takes a DESCRIPTION of a wanted register, not a writing sample. It must
 // produce the same nine-section shape the analysis produces, because everything downstream —

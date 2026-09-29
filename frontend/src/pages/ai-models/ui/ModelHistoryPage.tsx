@@ -2,8 +2,6 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { stageLabel } from '@/entities/model-catalog'
 import { useExperiments, type ExperimentStatusName } from '@/entities/model-experiment'
-import { useSession } from '@/entities/session'
-import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { Badge, type BadgeTone, Typography, typographyStyles, pageStyles } from '@/shared/ui'
 import { useModelStage } from '../model/useModelStage'
 import { ModelPageHeader } from './ModelPageHeader'
@@ -14,12 +12,6 @@ export function ModelHistoryPage() {
   const { t } = useTranslation('models')
   const { stage } = useModelStage()
   const { experiments, isPending, isError, refetch } = useExperiments(stage)
-  const { user } = useSession()
-  const { voices } = useVoices(user?.id ?? '')
-  const voiceName = (id: string) => {
-    const voice = voices.find((candidate) => candidate.id === id)
-    return voice ? voiceRefLabel(voice) : id
-  }
   return (
     <main className={pageStyles({ width: 'wide', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
       <ModelPageHeader title="history" description="historyDescription" />
@@ -52,7 +44,7 @@ export function ModelHistoryPage() {
                       312px row and would otherwise crush the status chip to a column of single
                       syllables (THEME-32). */}
                     <span className="min-w-0 truncate">
-                      {item.postSlug || voiceName(item.voiceId) || stageLabel(item.stage)}
+                      {item.postSlug || stageLabel(item.stage)}
                     </span>
                     <Badge tone={STATUS_TONES[item.status]}>
                       {t(`experimentStatus.${item.status}`, { ns: 'models' })}

@@ -44,8 +44,6 @@ func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID strin
 	switch {
 	case errors.Is(err, voice.ErrVoiceNotFound):
 		return experiment.ErrVoiceNotFound
-	case errors.Is(err, voice.ErrVoiceRequired):
-		return experiment.ErrVoiceRequired
 	case err != nil:
 		return err
 	case found.Deleted():
@@ -156,7 +154,6 @@ func (a experimentCatalog) Recommended(stage experiment.Stage, ref experiment.Mo
 
 type experimentRunner struct {
 	generation *generation.Service
-	voice      *voice.Service
 }
 
 func (a experimentRunner) Snapshot(ctx context.Context, request experiment.StartRequest) (experiment.Snapshot, error) {
@@ -178,9 +175,6 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 	case experiment.StageObserve:
 		content, err := a.generation.SnapshotObserveInput(ctx, request.UserID, request.PostSlug)
 		return experiment.Snapshot{Content: content, PromptVersion: generation.ObserveExperimentPromptVersion}, mapSnapshotError(err)
-	case experiment.StageAnalyze:
-		content, err := a.voice.SnapshotAnalysisInput(ctx, request.UserID, request.VoiceID)
-		return experiment.Snapshot{Content: content, PromptVersion: voice.AnalyzeExperimentPromptVersion, VoiceID: request.VoiceID}, experimentVoiceError(err)
 	default:
 		return experiment.Snapshot{}, experiment.ErrInvalidStage
 	}
@@ -218,19 +212,12 @@ func (a experimentRunner) RunCandidate(ctx context.Context, found experiment.Exp
 			err = encodeErr
 		}
 		return experiment.CandidateResult{Output: encoded, Usage: experimentUsage(usage.PromptTokens, usage.CompletionTokens, usage.CostMicrousd, usage.CostReported)}, mapSnapshotError(err)
-	case experiment.StageAnalyze:
-		styleguide, usage, err := a.voice.RunAnalyzeCandidate(ctx, found.InputSnapshot, ref)
-		encoded, encodeErr := json.Marshal(styleguide)
-		if err == nil {
-			err = encodeErr
-		}
-		return experiment.CandidateResult{Output: encoded, Usage: experimentUsage(usage.PromptTokens, usage.CompletionTokens, usage.CostMicrousd, usage.CostReported)}, err
 	default:
 		return experiment.CandidateResult{}, experiment.ErrInvalidStage
 	}
 }
 
-func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Experiment, candidate experiment.Candidate, confirmStyleguide bool) error {
+func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Experiment, candidate experiment.Candidate) error {
 	switch found.Stage {
 	case experiment.StageWrite:
 		var value outputPost
@@ -244,15 +231,6 @@ func (a experimentRunner) ApplyWinner(ctx context.Context, found experiment.Expe
 			return fmt.Errorf("decode observation winner: %w", err)
 		}
 		return a.generation.ApplyObservationWinner(ctx, found.UserID, found.PostSlug, fromOutputObservations(values))
-	case experiment.StageAnalyze:
-		if !confirmStyleguide {
-			return experiment.ErrConfirmationRequired
-		}
-		var styleguide string
-		if err := json.Unmarshal(candidate.Output, &styleguide); err != nil {
-			return fmt.Errorf("decode styleguide winner: %w", err)
-		}
-		return experimentVoiceError(a.voice.ApplyStyleguideWinner(ctx, found.UserID, found.VoiceID, styleguide))
 	default:
 		return experiment.ErrInvalidStage
 	}
@@ -381,15 +359,6 @@ func mapSnapshotError(err error) error {
 		return experiment.ErrSnapshotUnavailable
 	}
 	return err
-}
-
-func experimentVoiceError(err error) error {
-	switch {
-	case errors.Is(err, voice.ErrVoiceDeleted), errors.Is(err, voice.ErrVoiceNotFound), errors.Is(err, voice.ErrVoiceRequired):
-		return experiment.ErrVoiceUnavailable
-	default:
-		return err
-	}
 }
 
 // creditBootstrap gives a freshly provisioned account the credits its tier is granted,

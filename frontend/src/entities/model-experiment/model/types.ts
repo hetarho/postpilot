@@ -16,6 +16,9 @@ export type LeaderboardWindowName = 'day' | 'week' | 'month'
 /** Whose verdicts a leaderboard replays: the account's own, or everyone's as model-level
  *  figures that name no account. */
 export type LeaderboardScopeName = 'me' | 'all'
+/** The stages the model lab compares (MODEL-30). Analyze keeps its one active selection and is
+ *  never compared, so no comparison, history or board is ever an analyze one. */
+export type ExperimentStageName = Exclude<StageName, 'analyze'>
 
 export interface CandidateUsage {
   promptTokens: bigint
@@ -26,9 +29,7 @@ export interface CandidateUsage {
 }
 
 export type CandidateOutput =
-  | { kind: 'write'; content: PostContent }
-  | { kind: 'observe'; observations: Observation[] }
-  | { kind: 'analyze'; styleguide: string }
+  { kind: 'write'; content: PostContent } | { kind: 'observe'; observations: Observation[] }
 
 export interface ExperimentCandidate {
   id: string
@@ -46,14 +47,14 @@ export interface ExperimentCandidate {
 
 export interface ModelExperiment {
   id: string
-  stage: StageName
+  stage: ExperimentStageName
   /** `editor`: this comparison wrote a post that has no content until one side is applied,
    *  so its verdict applies the winner. `lab`: the verdict is a ranking pick that applies
    *  nothing, and every application is a separate follow-up. */
   origin: ExperimentOriginName
   status: ExperimentStatusName
   postSlug: string
-  /** The frozen voice for analyze/write work; observe compares the image snapshot only. */
+  /** The frozen voice for write work; observe compares the image snapshot only. */
   voiceId: string
   /** The 템플릿 the frozen write input carried, by name. Empty when the post had none; it keeps
    *  the name the snapshot froze even after that template is renamed or deleted. */

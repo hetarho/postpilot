@@ -51,8 +51,17 @@ func TestShippedRecommendationRefsAreSeeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, set := range reg.RecommendationSets() {
+		refs := 0
 		for _, selection := range set.Selections {
-			for _, ref := range []llm.ModelRef{selection.Active, selection.CandidateA, selection.CandidateB} {
+			named := []llm.ModelRef{selection.Active}
+			// Analyze keeps its active selection alone (MODEL-23); every other stage names a pair.
+			if selection.Stage != llm.StageNameAnalyze {
+				named = append(named, selection.CandidateA, selection.CandidateB)
+			} else if selection.CandidateA != (llm.ModelRef{}) || selection.CandidateB != (llm.ModelRef{}) {
+				t.Errorf("set %s names an analyze pair", set.ID)
+			}
+			refs += len(named)
+			for _, ref := range named {
 				if ref.ProviderID != reg.ProviderID() {
 					t.Errorf("set %s stage %s: ref %s names an unregistered provider", set.ID, selection.Stage, ref)
 				}
@@ -60,6 +69,9 @@ func TestShippedRecommendationRefsAreSeeded(t *testing.T) {
 					t.Errorf("set %s stage %s: %s is not seeded by the catalog migration", set.ID, selection.Stage, ref.ModelID)
 				}
 			}
+		}
+		if refs != 7 {
+			t.Errorf("set %s names %d refs, want seven (MODEL-26)", set.ID, refs)
 		}
 	}
 }

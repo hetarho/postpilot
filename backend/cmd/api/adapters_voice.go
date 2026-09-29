@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/postpilot/backend/internal/auth"
-	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/provider"
@@ -97,11 +96,4 @@ func (a voiceJobs) LatestForVoiceKind(ctx context.Context, voiceID, kind string)
 
 func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
 	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
-}
-
-// voiceExperiments adapts the experiment context's publishable-work guard for DeleteVoice.
-type voiceExperiments struct{ service *experiment.Service }
-
-func (a voiceExperiments) HasPublishableExperimentForVoice(ctx context.Context, userID, voiceID string) (bool, error) {
-	return a.service.HasPublishableForVoice(ctx, userID, voiceID)
 }

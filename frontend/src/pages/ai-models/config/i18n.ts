@@ -12,7 +12,7 @@ export const i18n = {
       settingsDescription: '관찰·문체 분석·글 작성에 실제로 사용할 모델을 고릅니다.',
       comparisonDescription: '같은 입력으로 두 모델을 비교하고 더 나은 결과를 선택합니다.',
       historyDescription:
-        '최근 비교 결과를 다시 확인합니다. 단계별로 관찰·문체 분석·글 작성 기록을 볼 수 있어요.',
+        '최근 비교 결과를 다시 확인합니다. 단계별로 관찰·글 작성 기록을 볼 수 있어요.',
       leaderboardDescription:
         '기간과 범위를 골라 그 안의 비교 결과로 매겨진 모델 순위를 확인합니다.',
       pairSettings: '비교할 A/B 모델',
@@ -20,9 +20,6 @@ export const i18n = {
       recommendation: '추천 조합',
       recommendationLoading: '추천 조합을 불러오는 중…',
       stageAria: 'AI 단계',
-      voice: '말투',
-      selectVoice: '말투를 선택하세요',
-      voiceHelp: '이 말투의 글 전체만 비교하고, 선택한 결과도 이 말투에만 적용돼요.',
       photoPost: '사진이 있는 글',
       comparePost: '비교할 글',
       selectPhotoPost: '사진이 있는 글을 선택하세요',
@@ -37,7 +34,6 @@ export const i18n = {
       requirement: {
         pair: 'A/B 조합을 저장',
         photoPost: '사진이 있는 글을 선택',
-        voice: '말투를 선택',
       },
       canStart: '{{requirements}}하면 비교를 시작할 수 있어요.',
       requirementSeparator: '하고, ',
@@ -68,7 +64,7 @@ export const i18n = {
       settingsDescription: 'Choose the models used for observation, voice analysis, and writing.',
       comparisonDescription: 'Compare two models on the same input and choose the better result.',
       historyDescription:
-        'Review recent results. Switch stages to see observation, voice analysis, or writing comparisons.',
+        'Review recent results. Switch stages to see observation or writing comparisons.',
       leaderboardDescription:
         'Pick a period and a scope to see the model ranking the comparisons inside it produce.',
       pairSettings: 'A/B comparison models',
@@ -76,10 +72,6 @@ export const i18n = {
       recommendation: 'Recommended set',
       recommendationLoading: 'Loading recommendations…',
       stageAria: 'AI stage',
-      voice: 'Voice',
-      selectVoice: 'Select a voice',
-      voiceHelp:
-        'Only posts from this voice are compared, and the selected result applies only to this voice.',
       photoPost: 'Post with photos',
       comparePost: 'Post to compare',
       selectPhotoPost: 'Select a post with photos',
@@ -94,7 +86,6 @@ export const i18n = {
       requirement: {
         pair: 'save an A/B pair',
         photoPost: 'select a post with photos',
-        voice: 'select a voice',
       },
       canStart: 'You can start after you {{requirements}}.',
       requirementSeparator: ', ',

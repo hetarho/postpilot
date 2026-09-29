@@ -26,12 +26,6 @@ export interface FakeWriteExperimentStart {
   reobserveFiles?: string[]
 }
 
-export interface FakeAnalyzeExperimentStart {
-  voiceId: string
-  modelA?: ModelRef
-  modelB?: ModelRef
-}
-
 export interface FakeExperimentsOptions {
   observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
   history?: Array<{ id: string; stage: Stage; postSlug?: string; voiceId?: string }>
@@ -46,7 +40,6 @@ export interface FakeExperimentsOptions {
   detailFails?: boolean
   readGate?: Promise<void>
   starts?: FakeWriteExperimentStart[]
-  analyzeStarts?: FakeAnalyzeExperimentStart[]
   calls?: string[]
   jobId?: string
   experimentId?: string
@@ -57,8 +50,15 @@ export function registerExperimentService(
   router: ConnectRouter,
   options: FakeExperimentsOptions = {},
 ) {
+  // Like the server: the lab compares observe and write alone (MODEL-30), so a history or a
+  // board naming analyze is refused rather than answered empty.
+  const refuseAnalyze = (stage: Stage) => {
+    if (stage === Stage.ANALYZE)
+      throw connectAppError('EXPERIMENT_STAGE_INVALID', Code.InvalidArgument)
+  }
   router.rpc(ModelExperimentService.method.listExperiments, async (request) => {
     options.reads?.push({ kind: 'history', stage: request.stage })
+    refuseAnalyze(request.stage)
     if (options.readGate) await options.readGate
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return {
@@ -74,6 +74,7 @@ export function registerExperimentService(
       window: request.window,
       scope: request.scope,
     })
+    refuseAnalyze(request.stage)
     if (options.readGate) await options.readGate
     if (options.leaderboardFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return { entries: [] }
@@ -118,25 +119,6 @@ export function registerExperimentService(
         : undefined,
       targetLength: request.targetLength,
       reobserveFiles: request.reobserve ? request.reobserve.files : undefined,
-    })
-    return create(StartExperimentResponseSchema, {
-      jobId: options.jobId ?? 'experiment-job',
-      experimentId: options.experimentId ?? 'experiment-1',
-    })
-  })
-  router.rpc(ModelExperimentService.method.startAnalyzeExperiment, (request) => {
-    options.calls?.push('StartAnalyzeExperiment')
-    if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    // The server never guesses a voice (MODEL-31).
-    if (!request.voiceId) throw connectAppError('EXPERIMENT_VOICE_REQUIRED', Code.InvalidArgument)
-    options.analyzeStarts?.push({
-      voiceId: request.voiceId,
-      modelA: request.modelA
-        ? { providerId: request.modelA.providerId, modelId: request.modelA.modelId }
-        : undefined,
-      modelB: request.modelB
-        ? { providerId: request.modelB.providerId, modelId: request.modelB.modelId }
-        : undefined,
     })
     return create(StartExperimentResponseSchema, {
       jobId: options.jobId ?? 'experiment-job',

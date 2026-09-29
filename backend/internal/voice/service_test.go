@@ -136,12 +136,6 @@ func (f *fakeJobs) calls() []voice.AnalysisJobRequest {
 	return append([]voice.AnalysisJobRequest(nil), f.enqueueCalls...)
 }
 
-type fakeExperimentGuard struct{ busy map[string]bool }
-
-func (f fakeExperimentGuard) HasPublishableExperimentForVoice(_ context.Context, _, voiceID string) (bool, error) {
-	return f.busy[voiceID], nil
-}
-
 type voiceHarness struct {
 	store  *voicestore.Store
 	db     *db.DB
@@ -358,6 +352,8 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 	}
 }
 
+// VOICE-13: only a queued or running job frozen to the voice keeps it; no model experiment
+// is asked.
 func TestDeleteRefusesVoiceWithPublishableWork(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
@@ -367,11 +363,6 @@ func TestDeleteRefusesVoiceWithPublishableWork(t *testing.T) {
 		t.Fatalf("delete with active job = %v", err)
 	}
 	h.jobs.busy[busy.ID] = false
-	h.svc.SetExperimentGuard(fakeExperimentGuard{busy: map[string]bool{busy.ID: true}})
-	if _, err := h.svc.DeleteVoice(ctx, "alice", busy.ID); !errors.Is(err, voice.ErrVoiceBusy) {
-		t.Fatalf("delete with publishable experiment = %v", err)
-	}
-	h.svc.SetExperimentGuard(fakeExperimentGuard{busy: map[string]bool{}})
 	if deleted, err := h.svc.DeleteVoice(ctx, "alice", busy.ID); err != nil || !deleted.Deleted() {
 		t.Fatalf("delete once idle = %+v err=%v", deleted, err)
 	}
@@ -437,9 +428,6 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	if _, err := h.svc.PromptProfileForTopic(ctx, "alice", gone.ID, "", nil); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("prompt for deleted = %v", err)
 	}
-	if _, err := h.svc.SnapshotAnalysisInput(ctx, "alice", gone.ID); !errors.Is(err, voice.ErrVoiceDeleted) {
-		t.Fatalf("experiment snapshot for deleted = %v", err)
-	}
 	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: gone.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {}); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("analyze deleted = %v", err)
 	}
@@ -498,46 +486,6 @@ func TestAssembleCorpusIncludesEveryBody(t *testing.T) {
 		if !strings.Contains(corpus, expected) {
 			t.Errorf("corpus missing %q: %s", expected, corpus)
 		}
-	}
-}
-
-func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPublishesAVersion(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	h.addSample(t, "alice", alice, "sample", "글", longSample("가"), time.Now())
-	raw, err := h.svc.SnapshotAnalysisInput(context.Background(), "alice", alice)
-	if err != nil {
-		t.Fatal(err)
-	}
-	h.models.response = "## 1. 종결어미 분포\n새 분석\n## 8. never uses\n없음"
-	first, _, err := h.svc.RunAnalyzeCandidate(context.Background(), raw, analyzeRef)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, _, err := h.svc.RunAnalyzeCandidate(context.Background(), raw, llm.ModelRef{ProviderID: "stub", ModelID: "other"})
-	if err != nil || first != second {
-		t.Fatalf("same corpus produced invalid candidates: first=%q second=%q err=%v", first, second, err)
-	}
-	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version != 0 {
-		t.Fatalf("experiment mutated profile before apply: %+v err=%v", profile, err)
-	}
-	// The winner lands only in the voice it was frozen for; a sibling voice is untouched.
-	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
-	if err := h.svc.ApplyStyleguideWinner(context.Background(), "alice", alice, first); err != nil {
-		t.Fatal(err)
-	}
-	// It is applied as a PUBLISHED STRUCTURED VERSION now, whose lexical description is the
-	// winning analysis (VOICE-25).
-	profile, err = h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version == 0 || profile.Structured.Lexical.Description.Value != first {
-		t.Fatalf("winner apply did not publish a structured version: %+v err=%v", profile, err)
-	}
-	if profile.Structured.Lexical.Description.Source != voice.SourceAnalyzed {
-		t.Fatalf("winner description source = %v", profile.Structured.Lexical.Description.Source)
-	}
-	if otherProfile, err := h.store.GetProfile(context.Background(), "alice", other.ID); err != nil || otherProfile.Structured.Version != 0 {
-		t.Fatalf("winner leaked into another voice: %+v err=%v", otherProfile, err)
 	}
 }
 

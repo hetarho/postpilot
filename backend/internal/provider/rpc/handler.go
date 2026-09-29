@@ -192,6 +192,8 @@ func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, provider.ErrUnknownStage):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown stage", postpilotv1.FailureReason_MODEL_STAGE_INVALID, nil)
+	case errors.Is(err, provider.ErrStageWithoutPair):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "stage keeps no comparison pair", postpilotv1.FailureReason_MODEL_STAGE_INVALID, nil)
 	case errors.Is(err, provider.ErrModelNotRegistered):
 		return rpcserver.NewAppError(connect.CodeNotFound, "model not registered", postpilotv1.FailureReason_MODEL_NOT_REGISTERED, nil)
 	case errors.Is(err, provider.ErrRecommendationNotFound):
@@ -299,10 +301,12 @@ func toProtoPair(pair provider.ComparisonPair) *postpilotv1.ComparisonPair {
 func toProtoRecommendation(set provider.RecommendationSet) *postpilotv1.RecommendationSet {
 	out := &postpilotv1.RecommendationSet{Id: set.ID, Label: set.Label}
 	for _, selection := range set.Selections {
-		out.Selections = append(out.Selections, &postpilotv1.RecommendationStageSelection{
-			Stage: stageToProto[selection.Stage], Active: toProtoRef(selection.Active),
-			CandidateA: toProtoRef(selection.CandidateA), CandidateB: toProtoRef(selection.CandidateB),
-		})
+		converted := &postpilotv1.RecommendationStageSelection{Stage: stageToProto[selection.Stage], Active: toProtoRef(selection.Active)}
+		// Analyze names its active model alone, and its candidates stay unset on the wire.
+		if provider.HasPair(selection.Stage) {
+			converted.CandidateA, converted.CandidateB = toProtoRef(selection.CandidateA), toProtoRef(selection.CandidateB)
+		}
+		out.Selections = append(out.Selections, converted)
 	}
 	return out
 }

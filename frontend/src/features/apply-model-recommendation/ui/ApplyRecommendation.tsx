@@ -7,7 +7,7 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
   const { t } = useTranslation('models')
   const mutation = useApplyRecommendation()
   const { models } = useModels()
-  // A set is applied whole: the server refuses all nine refs if any one is above the tier, so
+  // A set is applied whole: the server refuses all seven refs if any one is above the tier, so
   // offering the button would only produce a refusal the user cannot act on from here.
   const blocked = unaffordableRefs(recommendation, models)
   return (
@@ -45,8 +45,8 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
           })}
         </Notice>
       )}
-      {/* Everything this action rewrites — the active model and the A/B selects for all three
-          stages — is 400–900px further down the page, off-screen on any phone. Without a
+      {/* Everything this action rewrites — the three active models and the observe and write A/B
+          selects — is 400–900px further down the page, off-screen on any phone. Without a
           confirmation beside the button the only visible result of a successful apply is the
           spinner going away, which reads exactly like a failure (THEME-24). */}
       {mutation.isSuccess && (
@@ -63,14 +63,16 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
   )
 }
 
-/** Every ref in the set the calling account may not run, in set order and without repeats. */
+/** Every ref in the set the calling account may not run, in set order and without repeats: the
+ *  seven a set carries, analyze naming its active model alone (MODEL-23). */
 function unaffordableRefs(
   recommendation: RecommendationSet,
   models: readonly CatalogModel[],
 ): ModelRef[] {
   const locked: ModelRef[] = []
   for (const selection of recommendation.selections) {
-    for (const ref of [selection.active, selection.candidateA, selection.candidateB]) {
+    const refs = [selection.active, selection.candidateA, selection.candidateB]
+    for (const ref of refs.filter((value) => value !== undefined)) {
       const model = models.find((candidate) => sameRef(candidate.ref, ref))
       if (!model || model.affordable) continue
       if (locked.some((existing) => sameRef(existing, ref))) continue

@@ -1,6 +1,6 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
-import { toModelRef, type StageName } from '@/entities/model-catalog/@x/model-experiment'
+import { toModelRef } from '@/entities/model-catalog/@x/model-experiment'
 import {
   CandidateStatus,
   contentLanguageFromProto,
@@ -12,6 +12,7 @@ import {
   LeaderboardScope,
   LeaderboardWindow,
   ModelExperimentService,
+  Stage,
   VerdictBadge,
   appFailureFromProto,
   type ProtoExperimentCandidate,
@@ -24,6 +25,7 @@ import type {
   CostSourceName,
   ExperimentCandidate,
   ExperimentOriginName,
+  ExperimentStageName,
   ExperimentStatusName,
   LeaderboardEntry,
   LeaderboardScopeName,
@@ -70,9 +72,7 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
         ? { kind: 'write', content: output.value }
         : output.case === 'observationSet'
           ? { kind: 'observe', observations: output.value.observations }
-          : output.case === 'styleguide'
-            ? { kind: 'analyze', styleguide: output.value }
-            : undefined,
+          : undefined,
     failure:
       value.failure || value.status === CandidateStatus.FAILED
         ? appFailureFromProto(value.failure)
@@ -123,15 +123,6 @@ export function experimentQueryKey(transport: Transport, id: string) {
   return createConnectQueryKey({
     schema: ModelExperimentService.method.getExperiment,
     input: { id },
-    transport,
-    cardinality: 'finite',
-  })
-}
-
-export function experimentsQueryKey(transport: Transport, stage?: number) {
-  return createConnectQueryKey({
-    schema: ModelExperimentService.method.listExperiments,
-    input: { stage },
     transport,
     cardinality: 'finite',
   })
@@ -261,8 +252,8 @@ function outcomeName(value: ExperimentOutcome): ModelExperiment['outcome'] {
 function originName(value: ExperimentOrigin): ExperimentOriginName {
   return value === ExperimentOrigin.LAB ? 'lab' : 'editor'
 }
-function stageName(value: number): StageName {
-  if (value === 1) return 'observe'
-  if (value === 2) return 'write'
-  return 'analyze'
+/** The lab compares observe and write alone (MODEL-30). A value this build does not know
+ *  reads as observe, the lab's default stage, rather than as a stage it does not compare. */
+function stageName(value: Stage): ExperimentStageName {
+  return value === Stage.WRITE ? 'write' : 'observe'
 }

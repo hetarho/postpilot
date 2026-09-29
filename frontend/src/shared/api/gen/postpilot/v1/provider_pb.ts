@@ -249,6 +249,8 @@ export const ComparisonPairSchema: GenMessage<ComparisonPair> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_provider, 4);
 
 /**
+ * Analyze keeps its active selection alone, so its candidates are unset (MODEL-23).
+ *
  * @generated from message postpilot.v1.RecommendationStageSelection
  */
 export type RecommendationStageSelection = Message<"postpilot.v1.RecommendationStageSelection"> & {

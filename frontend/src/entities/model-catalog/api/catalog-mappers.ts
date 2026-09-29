@@ -191,8 +191,8 @@ export function toRecommendationSet(value: ProtoRecommendationSet): Recommendati
             {
               stage,
               active: toModelRef(selection.active),
-              candidateA: toModelRef(selection.candidateA),
-              candidateB: toModelRef(selection.candidateB),
+              candidateA: selection.candidateA ? toModelRef(selection.candidateA) : undefined,
+              candidateB: selection.candidateB ? toModelRef(selection.candidateB) : undefined,
             },
           ]
         : []

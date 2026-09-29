@@ -177,3 +177,18 @@ func TestDismissalCarriesNoBadges(t *testing.T) {
 		}
 	}
 }
+
+// MODEL-62: the voice pair belongs to write comparisons alone; every other badge is offered
+// to both stages.
+func TestTheVoicePairIsOfferedToWriteComparisonsOnly(t *testing.T) {
+	for _, stage := range []Stage{StageObserve, StageWrite, Stage("analyze")} {
+		for _, badge := range []Badge{BadgeInVoice, BadgeOffVoice} {
+			if got, want := badge.AppliesTo(stage), stage == StageWrite; got != want {
+				t.Errorf("%s applies to %s = %v, want %v", badge, stage, got, want)
+			}
+		}
+		if !BadgeFast.AppliesTo(stage) {
+			t.Errorf("fast is not offered to %s", stage)
+		}
+	}
+}

@@ -16,7 +16,7 @@ import (
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
-// MODEL-31: an analyze comparison's voice that is unknown or another account's answers
+// MODEL-31: a comparison's voice that is unknown or another account's answers
 // NotFound, one of the owner's that is deleted FailedPrecondition, and an active one passes.
 func TestExperimentVoicesTellAnUnknownVoiceFromADeletedOne(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "experiment-voice.db"))

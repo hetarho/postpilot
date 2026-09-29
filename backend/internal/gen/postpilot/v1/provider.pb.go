@@ -556,6 +556,7 @@ func (x *ComparisonPair) GetCandidateB() *Selection {
 	return nil
 }
 
+// Analyze keeps its active selection alone, so its candidates are unset (MODEL-23).
 type RecommendationStageSelection struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Stage         Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`

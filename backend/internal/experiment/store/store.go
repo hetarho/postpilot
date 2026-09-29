@@ -472,14 +472,6 @@ func (s *Store) PurgeExpired(ctx context.Context, before time.Time) (int64, erro
 	return count, nil
 }
 
-func (s *Store) CountPublishableForVoice(ctx context.Context, userID, voiceID string, now time.Time) (int, error) {
-	n, err := s.read.CountPublishableForVoice(ctx, sqlc.CountPublishableForVoiceParams{VoiceID: nullString(voiceID), UserID: userID, Now: nullTime(&now)})
-	if err != nil {
-		return 0, fmt.Errorf("count publishable experiments for voice: %w", err)
-	}
-	return int(n), nil
-}
-
 func (s *Store) PurgePost(ctx context.Context, userID, postSlug string) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {

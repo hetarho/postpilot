@@ -4,8 +4,8 @@ import { appFailureFromConnect, ModelExperimentService } from '@/shared/api'
 import type { CandidateBadges } from '../model/badges'
 import {
   badgesToProto,
+  experimentListQueriesKey,
   experimentQueryKey,
-  experimentsQueryKey,
   leaderboardQueriesKey,
 } from './experiment-mappers'
 
@@ -22,9 +22,9 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: experimentQueryKey(transport, id) }),
-      ...[undefined, 1, 2, 3].map((stage) =>
-        queryClient.invalidateQueries({ queryKey: experimentsQueryKey(transport, stage) }),
-      ),
+      // Every history at once, whatever its stage filter: the one this experiment is listed in
+      // and the unfiltered one both show its new status.
+      queryClient.invalidateQueries({ queryKey: experimentListQueriesKey(transport) }),
       // Every board at once: a verdict lands in its own window and in every wider one, on
       // the account's board and on the shared one.
       queryClient.invalidateQueries({ queryKey: leaderboardQueriesKey(transport) }),
@@ -70,8 +70,8 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       await refresh()
       return value
     },
-    apply: async (confirmStyleguideOverwrite = false) => {
-      const value = await apply.mutateAsync({ experimentId: id, confirmStyleguideOverwrite })
+    apply: async () => {
+      const value = await apply.mutateAsync({ experimentId: id })
       await refresh()
       return value
     },

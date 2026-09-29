@@ -7,6 +7,7 @@ export type {
   DisplaySideName,
   ExperimentCandidate,
   ExperimentOriginName,
+  ExperimentStageName,
   ExperimentStatusName,
   LeaderboardEntry,
   LeaderboardScopeName,

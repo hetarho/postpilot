@@ -60,16 +60,6 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return StartResult{}, ErrInvalidTargetLength
 	}
-	if request.Stage == StageAnalyze {
-		if request.VoiceID == "" {
-			return StartResult{}, ErrVoiceRequired
-		}
-		if err := s.requireActiveVoice(ctx, request.UserID, request.VoiceID); err != nil {
-			return StartResult{}, err
-		}
-	} else {
-		request.VoiceID = ""
-	}
 	if request.ModelA == request.ModelB {
 		return StartResult{}, ErrDuplicateCandidates
 	}
@@ -167,14 +157,6 @@ func (s *Service) PurgePost(ctx context.Context, userID, postSlug string) error 
 	return s.purge.PurgePost(ctx, userID, postSlug)
 }
 
-// HasPublishableForVoice is the guard the voice context asks before a soft delete: only an
-// analyze experiment frozen to the voice that is unfinished, awaiting a verdict, or decided
-// but not yet applied while its output is still held could still publish into it (VOICE-13).
-func (s *Service) HasPublishableForVoice(ctx context.Context, userID, voiceID string) (bool, error) {
-	n, err := s.runs.CountPublishableForVoice(ctx, userID, voiceID, s.now())
-	return n > 0, err
-}
-
 // RecoverInterrupted turns experiments left running by a process exit into retryable
 // terminal states. It runs before workers start, so it cannot race a live candidate.
 func (s *Service) RecoverInterrupted(ctx context.Context) (int64, error) {
@@ -265,8 +247,8 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 	return StartResult{ExperimentID: found.ID, JobID: jobID}, nil
 }
 
-// startOrigin freezes where a comparison was started. Observe and analyze can only be
-// started in the lab; a write comparison honours its caller, and an absent value means the
+// startOrigin freezes where a comparison was started. Observe can only be started in the
+// lab; a write comparison honours its caller, and an absent value means the
 // editor so that a client predating the field keeps the behaviour it was written against.
 func startOrigin(request StartRequest) Origin {
 	if request.Stage != StageWrite {
@@ -307,7 +289,7 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 			if err := s.allowPostWrite(ctx, found); err != nil {
 				return Experiment{}, err
 			}
-			return s.apply(ctx, found, false)
+			return s.apply(ctx, found)
 		}
 		return found, nil
 	}
@@ -341,7 +323,7 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 		current, loadErr := s.owned(ctx, userID, id)
 		if loadErr == nil && current.Status == StatusDecided && current.WinnerCandidateID == candidateID {
 			if current.AppliesOnVerdict() && current.AppliedAt == nil {
-				return s.apply(ctx, current, false)
+				return s.apply(ctx, current)
 			}
 			return current, nil
 		}
@@ -352,7 +334,7 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 		return Experiment{}, err
 	}
 	if found.AppliesOnVerdict() {
-		return s.apply(ctx, found, false)
+		return s.apply(ctx, found)
 	}
 	return found, nil
 }
@@ -381,7 +363,7 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 	return s.owned(ctx, userID, id)
 }
 
-func (s *Service) ApplyWinner(ctx context.Context, userID, id string, confirmStyleguide bool) (Experiment, error) {
+func (s *Service) ApplyWinner(ctx context.Context, userID, id string) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
@@ -391,9 +373,6 @@ func (s *Service) ApplyWinner(ctx context.Context, userID, id string, confirmSty
 	}
 	if found.AppliedAt != nil {
 		return found, nil
-	}
-	if found.Stage == StageAnalyze && !confirmStyleguide {
-		return Experiment{}, ErrConfirmationRequired
 	}
 	if err := s.allowPostWrite(ctx, found); err != nil {
 		return Experiment{}, err
@@ -410,18 +389,14 @@ func (s *Service) ApplyWinner(ctx context.Context, userID, id string, confirmSty
 			return Experiment{}, err
 		}
 	}
-	return s.apply(ctx, found, confirmStyleguide)
+	return s.apply(ctx, found)
 }
 
 // allowPostWrite decides whether a comparison's result may land in its post as the post is
-// now (MODEL-37). An analyze winner publishes into a voice and never asks. A draft or a post in
-// revision takes either origin's result, and a published post takes neither, since it is locked
+// now (MODEL-37). A draft or a post in revision takes either origin's result, and a published post takes neither, since it is locked
 // (POST-74). Any other status takes the editor's, whose result reopens a finalized post as
 // saving content does (POST-13), and refuses the lab's: its gate is an allowlist.
 func (s *Service) allowPostWrite(ctx context.Context, found Experiment) error {
-	if found.Stage == StageAnalyze {
-		return nil
-	}
 	if found.PostSlug == "" {
 		return ErrInvalidState
 	}
@@ -623,7 +598,7 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 	return entries, nil
 }
 
-func (s *Service) apply(ctx context.Context, found Experiment, confirmStyleguide bool) (Experiment, error) {
+func (s *Service) apply(ctx context.Context, found Experiment) (Experiment, error) {
 	// The post write and this aggregate's applied marker cannot share a transaction.
 	// Serialize their read-call-mark sequence inside the single API process, then rely
 	// on the post boundary's value-idempotent SQL for a crash between the two writes.
@@ -641,7 +616,7 @@ func (s *Service) apply(ctx context.Context, found Experiment, confirmStyleguide
 	if winner == nil || len(winner.Output) == 0 {
 		return Experiment{}, ErrInvalidState
 	}
-	if err := s.runner.ApplyWinner(ctx, found, *winner, confirmStyleguide); err != nil {
+	if err := s.runner.ApplyWinner(ctx, found, *winner); err != nil {
 		slog.Error("experiment winner apply failed", "experiment_id", found.ID, "stage", found.Stage, "err", err)
 		_ = s.outcome.SetApplyFailure(ctx, found.ID, found.UserID, normalizeFailure(err))
 		return s.owned(ctx, found.UserID, found.ID)

@@ -12,8 +12,6 @@ import {
 } from '@/entities/model-catalog'
 import { useStartModelExperiment, useStartWriteExperiment } from '@/entities/model-experiment'
 import { displayTitle, usePost, usePosts } from '@/entities/post'
-import { useSession } from '@/entities/session'
-import { useVoices } from '@/entities/voice'
 import { ModelPairForm, type ShownPair } from '@/features/configure-model-pair'
 import {
   comparisonGenerationPreconditions,
@@ -38,13 +36,10 @@ export function ModelComparisonPage() {
   const { t } = useTranslation(['models', 'common'])
   const { stage } = useModelStage()
   const [postSlug, setPostSlug] = useState('')
-  const [chosenVoiceId, setChosenVoiceId] = useState('')
   const startHintId = useId()
   const setup = useModelSetup()
   const pairSaving = useComparisonPairSavePending()
   const { posts } = usePosts()
-  const { user } = useSession()
-  const { active: activeVoices, defaultVoice } = useVoices(user?.id ?? '')
   const start = useStartModelExperiment()
   const navigate = useNavigate()
   const stored = setup.pairs.find((item) => item.stage === stage)
@@ -53,21 +48,12 @@ export function ModelComparisonPage() {
   // sees, so nothing may start against it.
   const [shown, setShown] = useState<ShownPair>()
   const pair = shownIsStored(shown, stage, stored) ? stored : undefined
-  // An analyze comparison freezes ONE voice's corpus, so the voice is chosen here and sent
-  // explicitly — initialized to the default, never guessed by the server
-  // (MODEL-31). A choice that has since been deleted falls back to the
-  // default rather than to a request the server would refuse.
-  const voiceId =
-    (activeVoices.some((voice) => voice.id === chosenVoiceId) ? chosenVoiceId : '') ||
-    defaultVoice?.id ||
-    ''
   // What the CTA is still waiting for, in the user's words. `pair` comes from the server, so
   // choosing A and B in the form above is not enough — the combination has to have been SAVED,
   // and a greyed button two screens down cannot say that on its own (THEME-24).
   const unmet = [
     !pair?.candidateA || !pair.candidateB ? t('page.requirement.pair', { ns: 'models' }) : '',
     stage === 'observe' && !postSlug ? t('page.requirement.photoPost', { ns: 'models' }) : '',
-    stage === 'analyze' && !voiceId ? t('page.requirement.voice', { ns: 'models' }) : '',
   ].filter(Boolean)
   const canStart = !pairSaving && unmet.length === 0
   const startHint = pairSaving
@@ -83,10 +69,7 @@ export function ModelComparisonPage() {
     // still be activated from a keyboard — the preconditions are enforced here, not by the browser.
     if (stage === 'write' || !canStart || start.isPending) return
     if (!pair?.candidateA || !pair.candidateB) return
-    const response =
-      stage === 'observe'
-        ? await start.startObserve(postSlug, pair.candidateA.ref, pair.candidateB.ref)
-        : await start.startAnalyze(voiceId, pair.candidateA.ref, pair.candidateB.ref)
+    const response = await start.startObserve(postSlug, pair.candidateA.ref, pair.candidateB.ref)
     void navigate({
       to: '/ai-models/experiments/$id',
       params: { id: response.experimentId },
@@ -103,53 +86,30 @@ export function ModelComparisonPage() {
               or a save error belongs to the tab it was fired from, not to the next one. */}
           <ModelPairForm key={stage} stage={stage} onShownChange={setShown} />
         </div>
-        {stage === 'analyze' && (
-          <div className="mt-6">
-            <FieldLabel id="experiment-voice-label" htmlFor="experiment-voice">
-              {t('page.voice', { ns: 'models' })}
-            </FieldLabel>
-            <Listbox
-              id="experiment-voice"
-              aria-labelledby="experiment-voice-label"
-              className="mt-1"
-              value={voiceId}
-              options={[
-                ...(voiceId ? [] : [{ value: '', label: t('page.selectVoice', { ns: 'models' }) }]),
-                ...activeVoices.map((voice) => ({ value: voice.id, label: voice.name })),
-              ]}
-              onChange={setChosenVoiceId}
-            />
-            <Typography variant="label" as="p" className="mt-2">
-              {t('page.voiceHelp', { ns: 'models' })}
-            </Typography>
-          </div>
-        )}
-        {stage !== 'analyze' && (
-          <div className="mt-6">
-            <FieldLabel id="experiment-post-label" htmlFor="experiment-post">
-              {stage === 'observe'
-                ? t('page.photoPost', { ns: 'models' })
-                : t('page.comparePost', { ns: 'models' })}
-            </FieldLabel>
-            <Listbox
-              id="experiment-post"
-              aria-labelledby="experiment-post-label"
-              className="mt-1"
-              value={postSlug}
-              options={[
-                {
-                  value: '',
-                  label:
-                    stage === 'observe'
-                      ? t('page.selectPhotoPost', { ns: 'models' })
-                      : t('page.selectPost', { ns: 'models' }),
-                },
-                ...posts.map((post) => ({ value: post.slug, label: displayTitle(post) })),
-              ]}
-              onChange={setPostSlug}
-            />
-          </div>
-        )}
+        <div className="mt-6">
+          <FieldLabel id="experiment-post-label" htmlFor="experiment-post">
+            {stage === 'observe'
+              ? t('page.photoPost', { ns: 'models' })
+              : t('page.comparePost', { ns: 'models' })}
+          </FieldLabel>
+          <Listbox
+            id="experiment-post"
+            aria-labelledby="experiment-post-label"
+            className="mt-1"
+            value={postSlug}
+            options={[
+              {
+                value: '',
+                label:
+                  stage === 'observe'
+                    ? t('page.selectPhotoPost', { ns: 'models' })
+                    : t('page.selectPost', { ns: 'models' }),
+              },
+              ...posts.map((post) => ({ value: post.slug, label: displayTitle(post) })),
+            ]}
+            onChange={setPostSlug}
+          />
+        </div>
         {stage === 'write' ? (
           <WriteComparisonStart
             postSlug={postSlug}

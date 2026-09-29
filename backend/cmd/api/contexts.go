@@ -329,7 +329,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		c.experimentStore,
 		experimentCatalog{selections: c.provider, registry: c.metered, plans: c.auth},
 		experimentJobs{queue: c.jobs},
-		experimentRunner{generation: c.generation, voice: c.voice},
+		experimentRunner{generation: c.generation},
 		experimentPosts{service: c.post},
 		cfg.ExperimentContentRetention,
 	)
@@ -338,10 +338,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	} else if n > 0 {
 		slog.Info("recovered interrupted experiments", "count", n)
 	}
-	// Voice and experiment guard each other through ports adapted only here: a voice with a
-	// publishable experiment cannot be deleted, and an experiment cannot start or retry in a
-	// deleted voice.
-	c.voice.SetExperimentGuard(voiceExperiments{service: c.experiment})
+	// The experiment reads the voice directory through a port adapted only here: a comparison
+	// cannot retry in a deleted voice. No experiment holds a voice's deletion (VOICE-13).
 	c.experiment.SetVoiceDirectory(experimentVoices{service: c.voice})
 	return c, nil
 }

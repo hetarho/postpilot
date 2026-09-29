@@ -11,7 +11,6 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 
 service ModelExperimentService {
   rpc StartObserveExperiment(StartObserveExperimentRequest) returns (StartExperimentResponse) {}
-  rpc StartAnalyzeExperiment(StartAnalyzeExperimentRequest) returns (StartExperimentResponse) {}
   rpc StartWriteExperiment(StartWriteExperimentRequest) returns (StartExperimentResponse) {}
   rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse) {}
   rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse) {}
@@ -129,8 +128,10 @@ message ExperimentCandidate {
   oneof output {
     PostContent post_content = 4;
     ObservationSet observation_set = 5;
-    string styleguide = 6;
   }
+  // 6 was an analyze comparison's styleguide, retired with that comparison in T466.
+  reserved 6;
+  reserved "styleguide";
   string error = 7 [deprecated = true];
   // Populated only after a verdict/dismissal. Blindness is enforced on the wire.
   ModelRef model = 8;
@@ -160,7 +161,7 @@ message ModelExperiment {
   string adoption_error = 15 [deprecated = true];
   string adopted_at = 16;
 	bool adoption_requested = 17;
-  // The frozen voice for analyze/write work and the only voice its result may affect.
+  // The frozen voice for write work and the only voice its result may affect.
   // Observe compares the post's image snapshot only and leaves this empty.
   string voice_id = 18;
   // The template frozen into a write comparison's snapshot, named so the detail can say
@@ -170,7 +171,7 @@ message ModelExperiment {
   ContentLanguage target_language = 20;
   Failure apply_failure = 21;
   Failure adoption_failure = 22;
-  // Which verdict form this comparison's review offers. Observe and analyze are always LAB.
+  // Which verdict form this comparison's review offers. Observe is always LAB.
   ExperimentOrigin origin = 23;
 }
 
@@ -178,13 +179,6 @@ message StartObserveExperimentRequest {
   string post_slug = 1;
   ModelRef model_a = 2;
   ModelRef model_b = 3;
-}
-message StartAnalyzeExperimentRequest {
-  ModelRef model_a = 1;
-  ModelRef model_b = 2;
-  // Required and explicit: an analyze experiment freezes one voice's corpus and may apply
-  // its winner only back to that same voice.
-  string voice_id = 3;
 }
 message StartWriteExperimentRequest {
   string post_slug = 1;
@@ -230,7 +224,9 @@ message DismissExperimentResponse { ModelExperiment experiment = 1; }
 
 message ApplyWinnerOutputRequest {
   string experiment_id = 1;
-  bool confirm_styleguide_overwrite = 2;
+  // 2 confirmed an analyze winner's overwrite of the voice, retired in T466.
+  reserved 2;
+  reserved "confirm_styleguide_overwrite";
 }
 message ApplyWinnerOutputResponse { ModelExperiment experiment = 1; }
 

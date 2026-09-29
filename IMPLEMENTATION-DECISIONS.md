@@ -513,6 +513,20 @@ choice would be expensive to undo are listed at the end.
 - **Copy left for later tasks:** the reassign dialog, the delete sheet and the profile's empty and
   version texts still speak of learning from posts; T467–T471 rewrite those screens.
 
+## T466 — the model lab compares observe and write only (MODEL r20)
+
+- **`EXPERIMENT_CONFIRMATION_REQUIRED` is retired too.** Only the analyze apply's overwrite
+  confirmation raised it, so it went with `EXPERIMENT_VOICE_REQUIRED`.
+- **A running analyze comparison's job is failed `JOB_INTERRUPTED`** by migration 0107 before its
+  experiment is deleted, so the open-hold sweep settles its credits.
+- **`stage=analyze` in a lab address falls back to observe,** and a history or leaderboard
+  request naming analyze is refused `EXPERIMENT_STAGE_INVALID` (it used to read as "every stage").
+- **The stage tabs keep their existing copy,** 관찰 · 글 작성; no SSOT names them otherwise.
+- **A history row names its post, or its stage once the post is gone.** The voice-name fallback
+  served analyze rows, which had no post; T474 names the voice again for 말투 반영 rows.
+- **The recommendation's "applied" message** now names the observe and write pairs; the English
+  text used to claim a pair for all three stages.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

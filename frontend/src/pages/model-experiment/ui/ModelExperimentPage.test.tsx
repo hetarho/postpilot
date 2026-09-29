@@ -145,9 +145,9 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 
 it.each([
   [
-    '/ai-models/experiments/review-1?from=compare&stage=analyze',
+    '/ai-models/experiments/review-1?from=compare&stage=write',
     '← 모델 비교로 돌아가기',
-    '/ai-models/compare?stage=analyze',
+    '/ai-models/compare?stage=write',
   ],
   ['/posts/experiments/review-1?from=posts&q=Draft', '← 내 글 목록으로 돌아가기', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {

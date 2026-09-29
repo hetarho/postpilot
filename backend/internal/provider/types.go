@@ -27,6 +27,10 @@ const (
 // Stages in display order.
 var Stages = []Stage{StageObserve, StageWrite, StageAnalyze}
 
+// HasPair reports whether a stage keeps an A/B comparison pair. Analyze keeps its active
+// selection alone: the model lab compares observe and write only (MODEL-23, MODEL-30).
+func HasPair(stage Stage) bool { return stage == StageObserve || stage == StageWrite }
+
 type SelectionSlot string
 
 const (
@@ -95,8 +99,10 @@ var (
 	// selected, the same rule the dropdown enforces.
 	ErrModelDisabled = errors.New("model disabled")
 	// ErrModelUnsuitable: the model is not registered to this stage's purpose (MODEL-25).
-	ErrModelUnsuitable        = errors.New("model unsuitable for stage")
-	ErrDuplicateCandidates    = errors.New("comparison candidates must differ")
+	ErrModelUnsuitable     = errors.New("model unsuitable for stage")
+	ErrDuplicateCandidates = errors.New("comparison candidates must differ")
+	// ErrStageWithoutPair refuses a comparison pair for a stage that keeps none (HasPair).
+	ErrStageWithoutPair       = errors.New("stage keeps no comparison pair")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
 )
 

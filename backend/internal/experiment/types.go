@@ -12,13 +12,12 @@ type Stage string
 
 const (
 	StageObserve Stage = "observe"
-	StageAnalyze Stage = "analyze"
 	StageWrite   Stage = "write"
 )
 
 func ParseStage(value string) (Stage, error) {
 	switch Stage(value) {
-	case StageObserve, StageAnalyze, StageWrite:
+	case StageObserve, StageWrite:
 		return Stage(value), nil
 	default:
 		return "", fmt.Errorf("%w: %q", ErrInvalidStage, value)
@@ -180,9 +179,8 @@ type Candidate struct {
 	FinishedAt   *time.Time
 }
 
-// Experiment.VoiceID is frozen at start: the voice whose corpus an analyze comparison read,
-// or the voice the compared post was in for a write one. A winner may only ever be applied
-// back to that same voice.
+// Experiment.VoiceID is frozen at start: the voice the compared post was in for a write
+// comparison. A winner may only ever be applied back to that same voice.
 type Experiment struct {
 	ID                string
 	UserID            string
@@ -266,19 +264,16 @@ type Snapshot struct {
 	// none. It is a name rather than an id so the detail keeps reading correctly after the
 	// template is renamed or deleted.
 	TemplateName string
-	// TargetLanguage is required for write snapshots and absent for observe/analyze.
+	// TargetLanguage is required for write snapshots and absent for observe.
 	TargetLanguage *Language
 }
 
 type StartRequest struct {
 	UserID   string
 	PostSlug string
-	// VoiceID is required for an analyze comparison and ignored otherwise: a write or
-	// observe comparison takes its voice from the post.
-	VoiceID string
-	Stage   Stage
-	// Origin is honoured for a write comparison only; observe and analyze can only be
-	// started in the lab. An empty value means the editor, which is what every caller
+	Stage    Stage
+	// Origin is honoured for a write comparison only; observe can only be started in the
+	// lab. An empty value means the editor, which is what every caller
 	// predating the field was.
 	Origin       Origin
 	ObserveModel ModelRef
@@ -288,7 +283,7 @@ type StartRequest struct {
 	// ObserveFiles is the re-observation picker's answer for a write comparison, passed
 	// straight through to the generation context's snapshot, which owns the reuse rule.
 	// Presence is the contract: nil observes every attached photo, non-nil-but-empty
-	// observes none. Ignored for observe and analyze comparisons.
+	// observes none. Ignored for observe comparisons.
 	ObserveFiles *[]string
 }
 
@@ -303,7 +298,7 @@ type JobRequest struct {
 	VoiceID      string
 	ExperimentID string
 	Stage        Stage
-	// TargetLanguage is frozen for write jobs and absent for observe/analyze jobs.
+	// TargetLanguage is frozen for write jobs and absent for observe jobs.
 	TargetLanguage *Language
 	// Models are the two candidate refs this comparison will run. The enqueue seam gates
 	// them against the caller's plan; one comparison still consumes exactly one admission.
@@ -334,10 +329,8 @@ var (
 	ErrLanguageRequired      = errors.New("a supported write target language is required")
 	ErrInvalidState          = errors.New("experiment state does not allow this operation")
 	ErrCandidateNotFound     = errors.New("candidate not found")
-	ErrConfirmationRequired  = errors.New("styleguide overwrite confirmation is required")
 	ErrSnapshotUnavailable   = errors.New("experiment snapshot is unavailable")
 	ErrRetryModelUnavailable = errors.New("experiment retry model is unavailable")
-	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted")
 	// ErrVoiceNotFound is an unknown or foreign voice, which the owner cannot tell apart
 	// (MODEL-31); a deleted one of theirs is ErrVoiceUnavailable.

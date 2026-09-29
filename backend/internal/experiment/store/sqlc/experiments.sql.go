@@ -95,33 +95,6 @@ func (q *Queries) CompleteCandidate(ctx context.Context, arg CompleteCandidatePa
 	return result.RowsAffected()
 }
 
-const countPublishableForVoice = `-- name: CountPublishableForVoice :one
-SELECT count(*) FROM model_experiments
-WHERE voice_id = ?1 AND user_id = ?2 AND stage = 'analyze'
-  AND (status IN ('queued', 'running', 'review', 'partial')
-       OR (status = 'decided' AND applied_at IS NULL AND input_snapshot IS NOT NULL
-           AND (content_expires_at IS NULL OR content_expires_at > ?3)))
-`
-
-type CountPublishableForVoiceParams struct {
-	VoiceID sql.NullString
-	UserID  string
-	Now     sql.NullString
-}
-
-// An analyze experiment frozen to the voice that could still publish a styleguide into it
-// (VOICE-13, MODEL-37): unfinished, awaiting a verdict, or decided with its winner not yet
-// applied while its output is still held. A write-stage experiment publishes nothing into a
-// voice, and a pick past its retention or already purged can no longer be applied, so
-// neither counts. ASCII only: sqlc expands SELECT * by byte offset and a multi-byte
-// character in this file corrupts the queries after it.
-func (q *Queries) CountPublishableForVoice(ctx context.Context, arg CountPublishableForVoiceParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countPublishableForVoice, arg.VoiceID, arg.UserID, arg.Now)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const decideExperiment = `-- name: DecideExperiment :execrows
 UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
@@ -348,6 +321,7 @@ func (q *Queries) InsertCandidate(ctx context.Context, arg InsertCandidateParams
 }
 
 const insertExperiment = `-- name: InsertExperiment :exec
+
 INSERT INTO model_experiments (
   id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
@@ -371,6 +345,8 @@ type InsertExperimentParams struct {
 	CreatedAt      string
 }
 
+// ASCII only: sqlc expands SELECT * by byte offset and a multi-byte character in this
+// file corrupts the queries after it.
 func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentParams) error {
 	_, err := q.db.ExecContext(ctx, insertExperiment,
 		arg.ID,

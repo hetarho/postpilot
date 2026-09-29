@@ -10,7 +10,7 @@ import { isUnfinalized, usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import type { CandidateBadges } from '@/entities/model-experiment'
-import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
+import { AppFailureMessage, Button, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
 import { VerdictSheet } from './VerdictSheet'
 
@@ -28,15 +28,14 @@ export function ExperimentActions({
   const frozenVoice = experiment.voiceId
     ? voices.find((voice) => voice.id === experiment.voiceId)
     : undefined
-  // Applying/retrying can publish into the experiment's frozen voice. Keep account-scoped
-  // decisions and model adoption available, but never let provider/profile/post work target a
-  // tombstone (or an unverified route cache entry).
+  // A write comparison's retry writes again in its frozen voice and its application writes the
+  // post in it. Keep account-scoped decisions and model adoption available, but never let
+  // provider or post work target a tombstone (or an unverified route cache entry).
   const voiceWorkBlocked = Boolean(
     experiment.voiceId && (voicesPending || !frozenVoice || frozenVoice.deleted),
   )
-  const refreshOwner = useExperimentOwnerRefresh(ownerId, experiment)
+  const refreshOwner = useExperimentOwnerRefresh(experiment)
   const actions = useExperimentActions(experiment.id, refreshOwner)
-  const [confirmStyle, setConfirmStyle] = useState(false)
   // Which winner action is waiting on its sheet. Non-empty IS the sheet's open state: there
   // is one sheet, and what it confirms is whichever action opened it (MODEL-61).
   const [verdict, setVerdict] = useState<'choose' | 'decide' | 'decideAdopt' | ''>('')
@@ -107,7 +106,7 @@ export function ExperimentActions({
               run('apply', () =>
                 commits
                   ? actions.decideWrite(experiment.winnerCandidateId, experiment.adoptionRequested)
-                  : actions.apply(experiment.stage === 'analyze'),
+                  : actions.apply(),
               )
             }
           >
@@ -195,11 +194,7 @@ export function ExperimentActions({
               variant="cta"
               disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'apply'}
-              onClick={() =>
-                experiment.stage === 'analyze'
-                  ? setConfirmStyle(true)
-                  : run('apply', () => actions.apply())
-              }
+              onClick={() => run('apply', () => actions.apply())}
             >
               {t('actions.apply')}
             </Button>
@@ -264,18 +259,6 @@ export function ExperimentActions({
           )
         }}
       />
-      <Dialog
-        open={confirmStyle}
-        title={t('actions.confirmStyleTitle')}
-        confirmLabel={t('actions.confirmStyle')}
-        pending={actions.isPending}
-        onClose={() => setConfirmStyle(false)}
-        onConfirm={() => {
-          if (!voiceWorkBlocked) void actions.apply(true).then(() => setConfirmStyle(false))
-        }}
-      >
-        {t('actions.confirmStyleDescription')}
-      </Dialog>
     </div>
   )
 }

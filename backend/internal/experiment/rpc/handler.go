@@ -38,21 +38,6 @@ func (h *Handler) StartObserveExperiment(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
 }
 
-func (h *Handler) StartAnalyzeExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartAnalyzeExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	started, err := h.service.Start(ctx, experiment.StartRequest{
-		UserID: userID, Stage: experiment.StageAnalyze, VoiceID: req.Msg.GetVoiceId(),
-		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
-	})
-	if err != nil {
-		return nil, toConnectError("start analyze experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
-}
-
 func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartWriteExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -163,7 +148,7 @@ func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, err
 	}
-	found, err := h.service.ApplyWinner(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetConfirmStyleguideOverwrite())
+	found, err := h.service.ApplyWinner(ctx, userID, req.Msg.GetExperimentId())
 	if err != nil {
 		return nil, toConnectError("apply experiment winner", err)
 	}
@@ -252,8 +237,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", postpilotv1.FailureReason_EXPERIMENT_CANDIDATES_DUPLICATE, nil)
 	case errors.Is(err, experiment.ErrInvalidTargetLength):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment target length must be positive", postpilotv1.FailureReason_EXPERIMENT_TARGET_LENGTH_INVALID, nil)
-	case errors.Is(err, experiment.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an active voice is required", postpilotv1.FailureReason_EXPERIMENT_VOICE_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrModelRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "two enabled suitable models are required", postpilotv1.FailureReason_EXPERIMENT_MODELS_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrVideoUnsupported):
@@ -267,8 +250,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrInvalidState):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment state does not allow this operation", postpilotv1.FailureReason_EXPERIMENT_STATE_INVALID, nil)
-	case errors.Is(err, experiment.ErrConfirmationRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment confirmation is required", postpilotv1.FailureReason_EXPERIMENT_CONFIRMATION_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrSnapshotUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment snapshot is unavailable", postpilotv1.FailureReason_EXPERIMENT_SNAPSHOT_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrRetryModelUnavailable):
@@ -432,11 +413,6 @@ func setOutput(out *postpilotv1.ExperimentCandidate, stage experiment.Stage, raw
 			set.Observations = append(set.Observations, &postpilotv1.Observation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent})
 		}
 		out.Output = &postpilotv1.ExperimentCandidate_ObservationSet{ObservationSet: set}
-	case experiment.StageAnalyze:
-		var value string
-		if json.Unmarshal(raw, &value) == nil {
-			out.Output = &postpilotv1.ExperimentCandidate_Styleguide{Styleguide: value}
-		}
 	}
 }
 
@@ -551,10 +527,12 @@ func fromProtoStage(stage postpilotv1.Stage) experiment.Stage {
 	switch stage {
 	case postpilotv1.Stage_STAGE_OBSERVE:
 		return experiment.StageObserve
-	case postpilotv1.Stage_STAGE_ANALYZE:
-		return experiment.StageAnalyze
 	case postpilotv1.Stage_STAGE_WRITE:
 		return experiment.StageWrite
+	case postpilotv1.Stage_STAGE_ANALYZE:
+		// Analyze has no comparison (MODEL-30). It is passed on by name so ParseStage refuses
+		// it, rather than read as the unset stage a history takes for every stage.
+		return experiment.Stage("analyze")
 	}
 	return ""
 }
@@ -562,8 +540,6 @@ func toProtoStage(stage experiment.Stage) postpilotv1.Stage {
 	switch stage {
 	case experiment.StageObserve:
 		return postpilotv1.Stage_STAGE_OBSERVE
-	case experiment.StageAnalyze:
-		return postpilotv1.Stage_STAGE_ANALYZE
 	case experiment.StageWrite:
 		return postpilotv1.Stage_STAGE_WRITE
 	}

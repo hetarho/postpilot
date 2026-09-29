@@ -120,7 +120,7 @@ func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]Comp
 	}
 	byStage := map[Stage]*ComparisonPair{}
 	for _, selection := range selections {
-		if selection.Slot == SlotActive {
+		if selection.Slot == SlotActive || !HasPair(selection.Stage) {
 			continue
 		}
 		info, ok := s.catalog.Lookup(selection.Ref)
@@ -165,6 +165,12 @@ func (s *Service) SaveSelection(ctx context.Context, userID string, stage Stage,
 }
 
 func (s *Service) SaveComparisonPair(ctx context.Context, userID string, stage Stage, a, b llm.ModelRef) (ComparisonPair, error) {
+	if _, err := ParseStage(string(stage)); err != nil {
+		return ComparisonPair{}, err
+	}
+	if !HasPair(stage) {
+		return ComparisonPair{}, fmt.Errorf("%w: %s", ErrStageWithoutPair, stage)
+	}
 	if a == b {
 		return ComparisonPair{}, ErrDuplicateCandidates
 	}
@@ -218,24 +224,28 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 	}
 	// A set is applied whole, and the models it names are curated data rather than the
 	// config they used to be — a set that was valid when it shipped can name a model an
-	// operator has since retired. So the gate runs over all nine refs before anything is
+	// operator has since retired. So the gate runs over all seven refs before anything is
 	// written, and reports every selection that blocks the set rather than the first.
 	if err := s.availabilityOf(*selected); err != nil {
 		return RecommendationSet{}, nil, nil, err
 	}
 	now := s.now()
-	all := make([]Selection, 0, 9)
+	all := make([]Selection, 0, 7)
 	active := make([]Selection, 0, 3)
-	pairs := make([]ComparisonPair, 0, 3)
+	pairs := make([]ComparisonPair, 0, 2)
 	for _, stageSelection := range selected.Selections {
+		activeSelection := Selection{Stage: stageSelection.Stage, Slot: SlotActive, Ref: stageSelection.Active, UpdatedAt: now}
+		all = append(all, activeSelection)
+		active = append(active, activeSelection)
+		if !HasPair(stageSelection.Stage) {
+			continue
+		}
 		if stageSelection.CandidateA == stageSelection.CandidateB {
 			return RecommendationSet{}, nil, nil, ErrDuplicateCandidates
 		}
-		activeSelection := Selection{Stage: stageSelection.Stage, Slot: SlotActive, Ref: stageSelection.Active, UpdatedAt: now}
 		a := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateA, Ref: stageSelection.CandidateA, UpdatedAt: now}
 		b := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateB, Ref: stageSelection.CandidateB, UpdatedAt: now}
-		all = append(all, activeSelection, a, b)
-		active = append(active, activeSelection)
+		all = append(all, a, b)
 		pairs = append(pairs, ComparisonPair{Stage: stageSelection.Stage, CandidateA: a, CandidateB: b})
 	}
 	if err := s.store.SaveSelections(ctx, userID, all); err != nil {
@@ -267,7 +277,11 @@ func (s *Service) validateRef(stage Stage, ref llm.ModelRef) error {
 func (s *Service) availabilityOf(set RecommendationSet) error {
 	refusal := &SetRefusal{}
 	for _, stageSelection := range set.Selections {
-		for _, ref := range []llm.ModelRef{stageSelection.Active, stageSelection.CandidateA, stageSelection.CandidateB} {
+		refs := []llm.ModelRef{stageSelection.Active}
+		if HasPair(stageSelection.Stage) {
+			refs = append(refs, stageSelection.CandidateA, stageSelection.CandidateB)
+		}
+		for _, ref := range refs {
 			info, ok := s.catalog.Lookup(ref)
 			switch {
 			case !ok:

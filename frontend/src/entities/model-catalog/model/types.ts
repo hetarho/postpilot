@@ -66,11 +66,13 @@ export interface ComparisonPair {
   candidateB?: StageSelection
 }
 
+/** One stage of a recommendation set. Analyze keeps its active selection alone, so its
+ *  candidates are absent; observe and write carry their A/B pair (MODEL-23). */
 export interface RecommendationStageSelection {
   stage: StageName
   active: ModelRef
-  candidateA: ModelRef
-  candidateB: ModelRef
+  candidateA?: ModelRef
+  candidateB?: ModelRef
 }
 
 export interface RecommendationSet {

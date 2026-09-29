@@ -1,8 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
-import type { ModelExperiment } from '@/entities/model-experiment'
+import type { ExperimentCandidate, ModelExperiment } from '@/entities/model-experiment'
 import { ExperimentReview } from './ExperimentReview'
+
+function written(title: string): ExperimentCandidate['output'] {
+  return {
+    kind: 'write',
+    content: { $typeName: 'postpilot.v1.PostContent', title, summary: '', tags: [], blocks: [] },
+  }
+}
 
 const mocks = vi.hoisted(() => ({ useExperiment: vi.fn() }))
 
@@ -31,10 +38,10 @@ vi.mock('@/features/review-model-experiment', () => ({
 
 const experiment: ModelExperiment = {
   id: 'experiment-1',
-  stage: 'analyze',
-  origin: 'editor',
+  stage: 'write',
+  origin: 'lab',
   status: 'review',
-  postSlug: '',
+  postSlug: 'post-1',
   voiceId: 'voice-default',
   templateName: '',
   jobId: 'job-1',
@@ -43,7 +50,7 @@ const experiment: ModelExperiment = {
       id: 'candidate-b',
       displaySide: 'right',
       status: 'succeeded',
-      output: { kind: 'analyze', styleguide: 'B 결과' },
+      output: written('B 결과'),
       badges: [],
       otherNote: '',
       failure: undefined,
@@ -53,7 +60,7 @@ const experiment: ModelExperiment = {
       id: 'candidate-a',
       displaySide: 'left',
       status: 'succeeded',
-      output: { kind: 'analyze', styleguide: 'A 결과' },
+      output: written('A 결과'),
       badges: [],
       otherNote: '',
       failure: undefined,
@@ -90,7 +97,7 @@ it('keeps the choice control visible on desktop and can target candidate B', asy
   const selector = screen.getByRole('tablist', { name: '선택할 후보' })
   expect(selector).not.toHaveClass('md:hidden')
   expect(screen.getByLabelText('결정 대상')).toHaveTextContent('candidate-a')
-  // An analyze experiment names the voice whose corpus it froze.
+  // A write experiment names the voice it froze.
   expect(screen.getByText('말투 · 기본 말투')).toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: 'B' }))

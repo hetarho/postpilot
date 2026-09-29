@@ -273,8 +273,6 @@ recommendation_sets:
         candidate_b: {provider_id: openrouter, model_id: nor-this}
       - stage: analyze
         active: {provider_id: openrouter, model_id: text-only}
-        candidate_a: {provider_id: openrouter, model_id: text-only}
-        candidate_b: {provider_id: openrouter, model_id: vision-json}
       - stage: write
         active: {provider_id: openrouter, model_id: text-only}
         candidate_a: {provider_id: openrouter, model_id: text-only}
@@ -288,6 +286,8 @@ recommendation_sets:
 		"duplicate pair": strings.Replace(withSet, "model_id: nor-this}", "model_id: nobody-has-this}", 1),
 		"missing stage":  strings.Replace(withSet, "      - stage: write\n", "", 1),
 		"empty ref":      strings.Replace(withSet, "active: {provider_id: openrouter, model_id: nobody-has-this}", "active: {provider_id: openrouter, model_id: \"\"}", 1),
+		// MODEL-23: analyze keeps its active selection alone.
+		"analyze pair": strings.Replace(withSet, "        active: {provider_id: openrouter, model_id: text-only}\n      - stage: write", "        active: {provider_id: openrouter, model_id: text-only}\n        candidate_a: {provider_id: openrouter, model_id: text-only}\n        candidate_b: {provider_id: openrouter, model_id: vision-json}\n      - stage: write", 1),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := llm.Parse([]byte(broken), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), twoModels(), opts); err == nil {

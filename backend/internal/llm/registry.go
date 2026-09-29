@@ -339,13 +339,23 @@ func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
 				CandidateA: toModelRef(selection.CandidateA),
 				CandidateB: toModelRef(selection.CandidateB),
 			}
-			for _, ref := range []ModelRef{converted.Active, converted.CandidateA, converted.CandidateB} {
+			refs := []ModelRef{converted.Active}
+			if selection.Stage == StageNameAnalyze {
+				// Analyze keeps its active selection alone: the lab compares observe and write
+				// only (MODEL-23), so a pair here would be a set no apply could honour.
+				if converted.CandidateA != (ModelRef{}) || converted.CandidateB != (ModelRef{}) {
+					return fmt.Errorf("recommendation set %q stage %q: analyze takes no candidates", item.ID, selection.Stage)
+				}
+			} else {
+				refs = append(refs, converted.CandidateA, converted.CandidateB)
+				if converted.CandidateA == converted.CandidateB {
+					return fmt.Errorf("recommendation set %q stage %q: candidates must differ", item.ID, selection.Stage)
+				}
+			}
+			for _, ref := range refs {
 				if ref.ProviderID == "" || ref.ModelID == "" {
 					return fmt.Errorf("recommendation set %q stage %q: every ref needs a provider_id and a model_id", item.ID, selection.Stage)
 				}
-			}
-			if converted.CandidateA == converted.CandidateB {
-				return fmt.Errorf("recommendation set %q stage %q: candidates must differ", item.ID, selection.Stage)
 			}
 			set.Selections = append(set.Selections, converted)
 		}

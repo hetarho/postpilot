@@ -1,15 +1,20 @@
-import type { StageName } from '@/entities/model-catalog'
-import type { LeaderboardScopeName, LeaderboardWindowName } from '@/entities/model-experiment'
+import type {
+  ExperimentStageName,
+  LeaderboardScopeName,
+  LeaderboardWindowName,
+} from '@/entities/model-experiment'
 
 /** The model group's URL filters. An unreadable value is dropped rather than corrected, so
- *  the page falls back to its own default and a shared link with a typo still opens. */
+ *  the page falls back to its own default and a shared link with a typo still opens — as does
+ *  one naming analyze, a stage the lab no longer compares (MODEL-30). */
 export const searchSchema = (
   search: Record<string, unknown>,
-): { stage?: StageName; window?: LeaderboardWindowName; scope?: LeaderboardScopeName } => ({
-  stage:
-    search.stage === 'observe' || search.stage === 'analyze' || search.stage === 'write'
-      ? search.stage
-      : undefined,
+): {
+  stage?: ExperimentStageName
+  window?: LeaderboardWindowName
+  scope?: LeaderboardScopeName
+} => ({
+  stage: search.stage === 'observe' || search.stage === 'write' ? search.stage : undefined,
   window:
     search.window === 'day' || search.window === 'week' || search.window === 'month'
       ? search.window

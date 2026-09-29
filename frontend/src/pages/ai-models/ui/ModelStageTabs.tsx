@@ -15,7 +15,9 @@ export function ModelStageTabs({
     <div className="bg-surface-base top-chrome sticky z-10 -mx-4 mt-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <SegmentedControl
         value={stage}
-        options={(['observe', 'analyze', 'write'] as const).map((value) => ({
+        // The stages the lab compares (MODEL-30): analyze keeps its active selection on 모델
+        // 변경 and has no comparison, history or board of its own.
+        options={(['observe', 'write'] as const).map((value) => ({
           value,
           label: t(`stage.${value}`),
         }))}

@@ -21,7 +21,6 @@ type Service struct {
 	versionSamples VersionSampleStore
 	models         Models
 	jobs           Jobs
-	experiments    Experiments
 	now            func() time.Time
 	newID          func() string
 	profileMu      sync.Mutex
@@ -62,11 +61,6 @@ func (s *Service) ConfigurePersonalization(config PersonalizationConfig) {
 		panic("voice: personalization jobs are not configured")
 	}
 }
-
-// SetExperimentGuard wires the model-experiment context's published guard once both
-// services exist in the composition root. Without it, DeleteVoice checks only what this
-// context and the queue know about.
-func (s *Service) SetExperimentGuard(experiments Experiments) { s.experiments = experiments }
 
 func (s *Service) EndingMaxConsecutive() int {
 	return s.config.EndingMaxConsecutive
@@ -240,9 +234,8 @@ func (s *Service) SetDefaultVoice(ctx context.Context, userID, voiceID string) (
 }
 
 // DeleteVoice is a soft delete. It refuses the default (so the last active voice can never
-// go) and anything that could still publish into the voice: a queued/running job frozen to
-// it or a publishable analyze experiment. Posts and profile history stay exactly as they
-// are.
+// go) and a queued/running job frozen to it, which could still publish into the voice. No
+// experiment holds a voice (VOICE-13). Posts and profile history stay exactly as they are.
 func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voice, error) {
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
@@ -267,13 +260,6 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 		return Voice{}, fmt.Errorf("check voice jobs: %w", err)
 	} else if busy {
 		return Voice{}, ErrVoiceBusy
-	}
-	if s.experiments != nil {
-		if busy, err := s.experiments.HasPublishableExperimentForVoice(ctx, userID, voiceID); err != nil {
-			return Voice{}, fmt.Errorf("check voice experiments: %w", err)
-		} else if busy {
-			return Voice{}, ErrVoiceBusy
-		}
 	}
 	deleted, err := s.directory.SoftDeleteVoice(ctx, userID, voiceID, s.now())
 	if err != nil {

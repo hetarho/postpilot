@@ -23,7 +23,6 @@ type RunLedger interface {
 	SetSnapshot(ctx context.Context, id string, snapshot Snapshot, hash string) error
 	SetStatus(ctx context.Context, id string, status Status, finishedAt *time.Time) error
 	ListQueued(ctx context.Context) ([]string, error)
-	CountPublishableForVoice(ctx context.Context, userID, voiceID string, now time.Time) (int, error)
 }
 
 // CandidateLedger is the two sides of a run while they are being produced, including what a
@@ -83,7 +82,7 @@ type PostDirectory interface {
 }
 
 // VoiceDirectory is the voice context's published check that a voice is owned and alive,
-// consumed before an analyze start or any retry that would run in a voice's name. The
+// consumed before any retry that would run in a voice's name. The
 // composition root adapts it; this context never reads voice tables.
 type VoiceDirectory interface {
 	ActiveVoice(ctx context.Context, userID, voiceID string) error
@@ -105,7 +104,7 @@ type Runner interface {
 	Snapshot(ctx context.Context, request StartRequest) (Snapshot, error)
 	PrepareWrite(ctx context.Context, found Experiment, progress Progress) (Snapshot, error)
 	RunCandidate(ctx context.Context, found Experiment, candidate Candidate, progress Progress) (CandidateResult, error)
-	ApplyWinner(ctx context.Context, found Experiment, candidate Candidate, confirmStyleguide bool) error
+	ApplyWinner(ctx context.Context, found Experiment, candidate Candidate) error
 }
 
 type Progress func(stage string, done, total int)

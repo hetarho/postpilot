@@ -40,7 +40,14 @@ it.each(['ko', 'en'] as const)(
         .filter((link) => link.dataset.navLevel === 'group')
         .map((link) => link.textContent),
     ).toEqual(destinations.map((d) => d[locale === 'ko' ? 1 : 2]))
+    // 모델 변경 keeps all three active selections: analyze is never compared, but 말투 만들기
+    // and memory extraction still read its one active model (MODEL-23).
     expect(within(screen.getByRole('main')).getAllByRole('combobox')).toHaveLength(3)
+    expect(
+      within(screen.getByRole('main')).getByRole('combobox', {
+        name: locale === 'ko' ? /문체 분석 모델/ : /Analyze voice model/,
+      }),
+    ).toBeInTheDocument()
     expect(reads).toEqual([])
     for (const [path, ko, en] of destinations) {
       await user.click(nav.getByRole('link', { name: locale === 'ko' ? ko : en }))
@@ -91,43 +98,48 @@ it('saves an active model only after a model change, separately from comparison 
 
 it('preserves the stage through the group menu, browser history, and saved experiment links', async () => {
   const user = userEvent.setup()
-  const { router } = renderAppAt('/ai-models/experiments?stage=analyze', {
+  const { router } = renderAppAt('/ai-models/experiments?stage=write', {
     user: { id: 'alice' },
-    voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true }] },
     experiments: {
-      history: [{ id: 'analysis-1', stage: Stage.ANALYZE, voiceId: 'voice-default' }],
+      history: [{ id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' }],
     },
   })
-  const record = await screen.findByRole('link', { name: /기본 말투/ })
-  expect(record).toHaveAttribute('href', '/ai-models/experiments/analysis-1?stage=analyze')
+  const record = await screen.findByRole('link', { name: /first-post/ })
+  expect(record).toHaveAttribute('href', '/ai-models/experiments/writing-1?stage=write')
   const [band] = screen.getAllByRole('navigation', { name: 'AI 모델 메뉴' })
   await user.click(within(band!).getByRole('button'))
   await user.click(screen.getByRole('menuitemradio', { name: '리더보드' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/leaderboard'))
-  expect(screen.getByRole('tab', { name: '문체 분석' })).toHaveAttribute('aria-selected', 'true')
-  await user.click(screen.getByRole('tab', { name: '글 작성' }))
+  expect(screen.getByRole('tab', { name: '글 작성' })).toHaveAttribute('aria-selected', 'true')
+  await user.click(screen.getByRole('tab', { name: '관찰' }))
+  await waitFor(() => expect(router.state.location.search.stage).toBe('observe'))
+  await act(async () => router.history.back())
   await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
   await act(async () => router.history.back())
-  await waitFor(() => expect(router.state.location.search.stage).toBe('analyze'))
-  await act(async () => router.history.back())
   await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
-  await user.click(await screen.findByRole('link', { name: /기본 말투/ }))
+  await user.click(await screen.findByRole('link', { name: /first-post/ }))
   const back = await screen.findByRole('link', { name: '← 비교 기록' })
-  expect(back).toHaveAttribute('href', '/ai-models/experiments?stage=analyze')
+  expect(back).toHaveAttribute('href', '/ai-models/experiments?stage=write')
   await user.click(back)
-  expect(await screen.findByRole('link', { name: /기본 말투/ })).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: /first-post/ })).toBeInTheDocument()
 })
 
+// An address naming analyze — a stage the lab no longer compares (MODEL-30) — is read as a
+// typo would be: the history and the board open on observe and never ask for analyze.
 it.each([
   ['/ai-models/experiments?stage=invalid', 'history'],
   ['/ai-models/leaderboard?stage=invalid', 'leaderboard'],
+  ['/ai-models/experiments?stage=analyze', 'history'],
+  ['/ai-models/leaderboard?stage=analyze', 'leaderboard'],
 ] as const)('defaults invalid stages to observe on direct load at %s', async (path, kind) => {
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
   renderAppAt(path, { user: { id: 'alice' }, experiments: { reads } })
   expect(await screen.findByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getAllByRole('tab', { name: /^(관찰|글 작성|문체 분석)$/ })).toHaveLength(2)
   await waitFor(() =>
     expect(reads).toContainEqual(expect.objectContaining({ kind, stage: Stage.OBSERVE })),
   )
+  expect(reads.map((read) => read.stage)).not.toContain(Stage.ANALYZE)
 })
 
 it.each([

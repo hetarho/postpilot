@@ -35,14 +35,18 @@ describe('the verdict badge catalog', () => {
     ])
   })
 
-  // Only the voice pair is conditional: an observe comparison produces no prose.
-  it('offers the voice pair only where prose was written', () => {
-    for (const stage of ['write', 'analyze'] as const) {
-      expect(badgeAppliesTo('in_voice', stage)).toBe(true)
-      expect(badgeAppliesTo('off_voice', stage)).toBe(true)
-    }
+  // Only the voice pair is conditional: it belongs to write comparisons alone (MODEL-62), and
+  // an observe comparison produces no prose to judge the voice of.
+  it('offers the voice pair for write comparisons only', () => {
+    expect(badgeAppliesTo('in_voice', 'write')).toBe(true)
+    expect(badgeAppliesTo('off_voice', 'write')).toBe(true)
     expect(badgeAppliesTo('in_voice', 'observe')).toBe(false)
     expect(badgeAppliesTo('off_voice', 'observe')).toBe(false)
-    expect(badgeAppliesTo('fast', 'observe')).toBe(true)
+    // Every other badge is offered on both stages the lab compares.
+    for (const badge of [...POSITIVE_BADGES, ...NEGATIVE_BADGES, 'other'] as const) {
+      if (badge === 'in_voice' || badge === 'off_voice') continue
+      expect(badgeAppliesTo(badge, 'observe'), badge).toBe(true)
+      expect(badgeAppliesTo(badge, 'write'), badge).toBe(true)
+    }
   })
 })

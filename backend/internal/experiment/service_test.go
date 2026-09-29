@@ -369,25 +369,6 @@ func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage St
 }
 func (s *memoryStore) PurgeExpired(context.Context, time.Time) (int64, error) { return 0, nil }
 func (s *memoryStore) PurgePost(context.Context, string, string) error        { return nil }
-func (s *memoryStore) CountPublishableForVoice(_ context.Context, userID, voiceID string, now time.Time) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	n := 0
-	for _, row := range s.rows {
-		if row.UserID != userID || row.VoiceID != voiceID || row.Stage != StageAnalyze {
-			continue
-		}
-		switch row.Status {
-		case StatusQueued, StatusRunning, StatusReview, StatusPartial:
-			n++
-		case StatusDecided:
-			if row.AppliedAt == nil && row.InputSnapshot != nil && (row.ContentExpiresAt == nil || row.ContentExpiresAt.After(now)) {
-				n++
-			}
-		}
-	}
-	return n, nil
-}
 
 func cloneExperiment(found Experiment) Experiment {
 	found.InputSnapshot = append([]byte(nil), found.InputSnapshot...)
@@ -557,16 +538,15 @@ type fakeRunner struct {
 	omitSnapshotTarget bool
 }
 
-// Snapshot freezes the request's voice, as the real runner does from the post or the
-// explicit analyze voice.
+// Snapshot freezes the post's voice for a write comparison, as the real runner does.
 func (r *fakeRunner) Snapshot(_ context.Context, request StartRequest) (Snapshot, error) {
 	r.snapshotCalls++
 	r.snapshotRequests = append(r.snapshotRequests, request)
 	if r.snapshotErr != nil {
 		return Snapshot{}, r.snapshotErr
 	}
-	voiceID := request.VoiceID
-	if request.Stage == StageWrite && r.snapshotVoice != "" {
+	voiceID := ""
+	if request.Stage == StageWrite {
 		voiceID = r.snapshotVoice
 	}
 	var target *Language
@@ -592,62 +572,45 @@ func (v fakeVoices) ActiveVoice(_ context.Context, _, voiceID string) error {
 	return nil
 }
 
-// VOICE-49: an analyze comparison names one active voice, freezes it on the experiment
-// and its job, keeps the voice undeletable while publishable, and refuses to start or retry
-// once the voice is gone.
-func TestAnalyzeExperimentIsFrozenToOneActiveVoice(t *testing.T) {
-	unwired, _, _, _, unwiredRunner := newTestService()
-	if _, err := unwired.Start(context.Background(), StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "voice-a", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceUnavailable) || unwiredRunner.snapshotCalls != 0 {
-		t.Fatalf("analyze without voice directory: err=%v snapshots=%d", err, unwiredRunner.snapshotCalls)
-	}
-
+// MODEL-30: the lab compares observe and write only, so an analyze start is refused before
+// any snapshot or job. A write comparison freezes the post's voice, and a retry in that voice
+// once it is deleted is refused.
+func TestAnalyzeStartsNothingAndAWriteRetryStaysInItsVoice(t *testing.T) {
 	svc, store, _, jobs, runner := newTestService()
 	voices := fakeVoices{deleted: map[string]bool{}}
 	svc.SetVoiceDirectory(voices)
 	ctx := context.Background()
-	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceRequired) || runner.snapshotCalls != 0 || len(jobs.ids) != 0 {
-		t.Fatalf("analyze without voice: err=%v snapshots=%d jobs=%v", err, runner.snapshotCalls, jobs.ids)
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: Stage("analyze"), ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrInvalidStage) || runner.snapshotCalls != 0 || len(jobs.ids) != 0 {
+		t.Fatalf("analyze start: err=%v snapshots=%d jobs=%v", err, runner.snapshotCalls, jobs.ids)
 	}
-	voices.deleted["gone"] = true
-	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "gone", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}}); !errors.Is(err, ErrVoiceUnavailable) || runner.snapshotCalls != 0 {
-		t.Fatalf("analyze in deleted voice: err=%v snapshots=%d", err, runner.snapshotCalls)
-	}
-	started, err := svc.Start(ctx, StartRequest{UserID: "alice", Stage: StageAnalyze, VoiceID: "voice-a", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	runner.snapshotVoice = "voice-write"
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	found, _ := store.Get(ctx, started.ExperimentID)
-	if found.VoiceID != "voice-a" || len(jobs.requests) != 1 || jobs.requests[0].VoiceID != "voice-a" || jobs.requests[0].TargetLanguage != nil {
+	if found.VoiceID != "voice-write" || len(jobs.requests) != 1 || jobs.requests[0].VoiceID != "voice-write" {
 		t.Fatalf("voice not frozen: experiment=%+v jobs=%+v", found, jobs.requests)
-	}
-	if busy, err := svc.HasPublishableForVoice(ctx, "alice", "voice-a"); err != nil || !busy {
-		t.Fatalf("queued analyze not publishable: busy=%v err=%v", busy, err)
-	}
-	if busy, _ := svc.HasPublishableForVoice(ctx, "alice", "voice-b"); busy {
-		t.Fatal("another voice reads as busy")
 	}
 	runner.fail["b"] = errors.New("provider failed")
 	if err := svc.Handle(ctx, found.ID, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
-	voices.deleted["voice-a"] = true
+	voices.deleted["voice-write"] = true
 	if _, err := svc.Retry(ctx, "alice", found.ID); !errors.Is(err, ErrVoiceUnavailable) || len(jobs.ids) != 1 {
 		t.Fatalf("retry in deleted voice: err=%v jobs=%v", err, jobs.ids)
 	}
-	if _, err := svc.Dismiss(ctx, "alice", found.ID); err != nil {
-		t.Fatal(err)
+}
+
+// The history and the leaderboard name observe and write only.
+func TestHistoryAndLeaderboardRefuseAnalyze(t *testing.T) {
+	svc, _, _, _, _ := newTestService()
+	ctx := context.Background()
+	if _, err := svc.List(ctx, "alice", Stage("analyze")); !errors.Is(err, ErrInvalidStage) {
+		t.Fatalf("analyze history = %v, want ErrInvalidStage", err)
 	}
-	if busy, _ := svc.HasPublishableForVoice(ctx, "alice", "voice-a"); busy {
-		t.Fatal("dismissed experiment still holds the voice")
-	}
-	// A write comparison never takes a voice from the request; it is the post's.
-	runner.snapshotVoice = "voice-write"
-	write, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, VoiceID: "gone", ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if found, _ := store.Get(ctx, write.ExperimentID); found.VoiceID != "voice-write" {
-		t.Fatalf("write experiment took the request voice: %+v", found)
+	if _, err := svc.Leaderboard(ctx, "alice", Stage("analyze"), WindowWeek, ScopeMe); !errors.Is(err, ErrInvalidStage) {
+		t.Fatalf("analyze leaderboard = %v, want ErrInvalidStage", err)
 	}
 }
 func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Candidate, _ Progress) (CandidateResult, error) {
@@ -659,7 +622,7 @@ func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Can
 	}
 	return CandidateResult{Output: []byte(`{"title":"ok"}`), Usage: UsageReport{PromptTokens: 10, CompletionTokens: 2}}, r.fail[candidate.Model.ModelID]
 }
-func (r *fakeRunner) ApplyWinner(context.Context, Experiment, Candidate, bool) error {
+func (r *fakeRunner) ApplyWinner(context.Context, Experiment, Candidate) error {
 	r.applyCalls++
 	return r.applyErr
 }
@@ -736,7 +699,7 @@ func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	if _, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false, nil); err != nil || runner.applyCalls != 1 {
 		t.Fatalf("idempotent decide err=%v applies=%d", err, runner.applyCalls)
 	}
-	if _, err := svc.ApplyWinner(context.Background(), "alice", found.ID, false); err != nil || runner.applyCalls != 1 {
+	if _, err := svc.ApplyWinner(context.Background(), "alice", found.ID); err != nil || runner.applyCalls != 1 {
 		t.Fatalf("idempotent apply err=%v applies=%d", err, runner.applyCalls)
 	}
 	if _, err := svc.Get(context.Background(), "mallory", found.ID); !errors.Is(err, ErrForbidden) {

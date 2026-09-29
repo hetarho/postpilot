@@ -39,11 +39,11 @@ var (
 )
 
 // AppliesTo reports whether a stage offers this badge. Only the voice pair is conditional:
-// an observe comparison produces no prose, so neither judgement about voice can be made of
-// it (MODEL-62).
+// it belongs to write comparisons, since an observe comparison produces no prose to judge a
+// voice by (MODEL-62).
 func (b Badge) AppliesTo(stage Stage) bool {
 	if b == BadgeInVoice || b == BadgeOffVoice {
-		return stage == StageWrite || stage == StageAnalyze
+		return stage == StageWrite
 	}
 	return true
 }

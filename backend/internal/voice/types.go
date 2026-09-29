@@ -46,8 +46,7 @@ var (
 	ErrVoiceDeleted   = errors.New("voice is deleted")
 	ErrVoiceNameTaken = errors.New("an active voice already has that name")
 	ErrVoiceIsDefault = errors.New("the default voice cannot be deleted")
-	// ErrVoiceBusy refuses a soft delete while a job or an analyze experiment could still
-	// publish into the voice.
+	// ErrVoiceBusy refuses a soft delete while a job could still publish into the voice.
 	ErrVoiceBusy           = errors.New("voice has unfinished work that could still publish to it")
 	ErrLanguageRequired    = errors.New("a content language is required")
 	ErrLanguageUnsupported = errors.New("the content language is unsupported")
