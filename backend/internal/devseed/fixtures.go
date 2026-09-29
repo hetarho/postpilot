@@ -48,7 +48,7 @@ type Account struct {
 // Posts is the account's total.
 func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized + a.Published }
 
-// Fixtures is the installation a seed produces: five accounts that differ in the two ways
+// Fixtures is the installation a seed produces: six accounts that differ in the two ways
 // worth differing in, the plan and how much work sits behind them.
 //
 // The spread is chosen so that every state a screen has to handle is reachable without
@@ -64,6 +64,7 @@ func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized + a.Pub
 // below it, so the minimum line shows. Both carry 일상·생각, so a seeded post shows a 분야.
 var Fixtures = []Account{
 	{LoginID: "free", Plan: plan.Free, Drafts: 0, Reviews: 0, Finalized: 0, Published: 0},
+	{LoginID: "light", Plan: plan.Light, Drafts: 1, Reviews: 0, Finalized: 0, Published: 0},
 	{LoginID: "base", Plan: plan.Basic, Drafts: 2, Reviews: 1, Finalized: 0, Published: 0},
 	{LoginID: "pro", Plan: plan.Pro, Drafts: 3, Reviews: 2, Finalized: 1, Published: 2, Field: FieldDailyLife},
 	{LoginID: "max", Plan: plan.Max, Drafts: 4, Reviews: 3, Finalized: 7, Published: 0},

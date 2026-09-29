@@ -41,6 +41,7 @@ enum Plan {
   PLAN_MAX = 3;
   PLAN_MASTER = 4;
   PLAN_PRO = 5;
+  PLAN_LIGHT = 6;
 }
 
 // One grant of credits. Lots arrive in the order they are spent (QUOTA-12): every expiring
@@ -84,6 +85,19 @@ message PlanOffer {
   // True for the one rung the comparison screen marks. Which rung that is belongs beside the
   // grants it compares, not in the client.
   bool recommended = 5;
+  // Fixed, VAT-inclusive product amounts. These do not depend on the AI FX rate.
+  int32 monthly_krw = 6;
+  int32 annual_krw = 7;
+  int32 daily_credits = 8;
+  int32 monthly_bonus = 9;
+  // "none", "value", "balanced", "premium" or "top".
+  string model_ceiling = 10;
+  int32 monthly_server_exports = 11;
+}
+
+message CreditPack {
+  int32 price_krw = 1;
+  int32 credits = 2;
 }
 
 // One estimator combo: a pair of models the operator assigned to a price tier, reduced to
@@ -130,6 +144,7 @@ message GetMyPlanResponse {
   repeated EstimatorCombo estimator_combos = 4;
   // Assumed duration of EACH original video, independent of finished clip length.
   int32 clip_source_seconds = 5;
+  repeated CreditPack credit_packs = 6;
 }
 
 message SetEstimatorComboRequest {

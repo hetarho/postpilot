@@ -23,6 +23,7 @@ import (
 // travelling as UNSPECIFIED.
 var planWire = map[plan.Plan]postpilotv1.Plan{
 	plan.Free:   postpilotv1.Plan_PLAN_FREE,
+	plan.Light:  postpilotv1.Plan_PLAN_LIGHT,
 	plan.Basic:  postpilotv1.Plan_PLAN_BASIC,
 	plan.Pro:    postpilotv1.Plan_PLAN_PRO,
 	plan.Max:    postpilotv1.Plan_PLAN_MAX,
@@ -146,11 +147,21 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	offers := make([]*postpilotv1.PlanOffer, 0, len(plan.Offers()))
 	for _, offer := range plan.Offers() {
 		offers = append(offers, &postpilotv1.PlanOffer{
-			Plan:           ToProto(offer.Plan),
-			MonthlyCredits: int32(offer.MonthlyCredits),
-			PriceUsdCents:  int32(offer.PriceUSDCents),
-			Recommended:    offer.Recommended,
+			Plan:                 ToProto(offer.Plan),
+			MonthlyCredits:       int32(offer.MonthlyCredits),
+			PriceUsdCents:        int32(offer.PriceUSDCents),
+			Recommended:          offer.Recommended,
+			MonthlyKrw:           int32(offer.MonthlyKRW),
+			AnnualKrw:            int32(offer.AnnualKRW),
+			DailyCredits:         int32(offer.DailyCredits),
+			MonthlyBonus:         int32(offer.MonthlyBonus),
+			ModelCeiling:         offer.ModelCeiling,
+			MonthlyServerExports: int32(offer.ServerExports),
 		})
+	}
+	packs := make([]*postpilotv1.CreditPack, 0, len(plan.Packs()))
+	for _, pack := range plan.Packs() {
+		packs = append(packs, &postpilotv1.CreditPack{PriceKrw: int32(pack.PriceKRW), Credits: int32(pack.Credits)})
 	}
 
 	// A comparison with no priced combo shows grants and prices and no post estimate. That
@@ -182,17 +193,22 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		})
 	}
 
+	legacyGrant := plan.MonthlyCredits(acting)
+	if acting == plan.Free {
+		legacyGrant = 0
+	}
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
 		Plan:              ToProto(acting),
 		Offers:            offers,
 		EstimatorCombos:   combos,
 		ClipSourceSeconds: plan.EstimatorClipSourceSeconds,
+		CreditPacks:       packs,
 		Balance: &postpilotv1.CreditBalance{
 			Credits:      int32(balance.Credits),
 			Unlimited:    balance.Unlimited,
 			Lots:         lots,
 			RenewsAt:     balance.RenewsAt.UTC().Format(time.RFC3339),
-			MonthlyGrant: int32(plan.MonthlyCredits(acting)),
+			MonthlyGrant: int32(legacyGrant),
 		},
 	}), nil
 }

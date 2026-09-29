@@ -11,6 +11,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/mail"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
@@ -22,6 +23,9 @@ func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	acting, err := authSvc.PlanOf(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("resolve provisioned plan: %w", err)
+	}
+	if acting == plan.Free {
+		return nil
 	}
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
 	if err := ledger.EnsureMonthlyLot(ctx, userID, acting); err != nil {

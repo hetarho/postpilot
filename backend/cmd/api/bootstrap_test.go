@@ -93,7 +93,7 @@ func (j *trackingVoiceJobs) HasActiveForVoice(context.Context, string) (bool, er
 	j.calls++
 	return false, nil
 }
-func TestCreditBootstrapOpensOnlyOneMonthlyLotForAFreeAccount(t *testing.T) {
+func TestCreditBootstrapDoesNotGrantCreditsToAFreeAccount(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "credits.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -116,14 +116,13 @@ func TestCreditBootstrapOpensOnlyOneMonthlyLotForAFreeAccount(t *testing.T) {
 	}
 
 	var count int
-	var kind string
 	if err := handle.Reader.QueryRowContext(ctx,
-		"SELECT COUNT(*), MIN(kind) FROM credit_lots WHERE user_id = ?", "alice",
-	).Scan(&count, &kind); err != nil {
+		"SELECT COUNT(*) FROM credit_lots WHERE user_id = ?", "alice",
+	).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 1 || kind != "monthly" {
-		t.Fatalf("lots = %d of kind %q, want exactly one monthly lot", count, kind)
+	if count != 0 {
+		t.Fatalf("free signup opened %d credit lots", count)
 	}
 }
 
@@ -170,7 +169,7 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 	}
 
 	// VOICE-4: no bootstrap creates a voice.
-	for table, want := range map[string]int{"voices": 0, "credit_lots": 1} {
+	for table, want := range map[string]int{"voices": 0, "credit_lots": 0} {
 		var count int
 		if err := handle.Reader.QueryRowContext(ctx,
 			"SELECT COUNT(*) FROM "+table+" WHERE user_id = ?", "alice@example.com",

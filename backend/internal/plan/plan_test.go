@@ -26,6 +26,7 @@ func TestMonthlyGrantsAreTheShippedLadder(t *testing.T) {
 		want   int
 	}{
 		{plan.Free, 50},
+		{plan.Light, 0},
 		{plan.Basic, 330},
 		{plan.Pro, 1150},
 		{plan.Max, 2400},

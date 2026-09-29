@@ -64,7 +64,9 @@ func TestRunWritesEveryFixtureAccount(t *testing.T) {
 		if created.password != devseed.Password {
 			t.Errorf("account %q password %q, want the shared fixture password", fixture.LoginID, created.password)
 		}
-		if h.credits.opened[fixture.LoginID] != fixture.Plan {
+		if fixture.Plan == plan.Free && h.credits.opened[fixture.LoginID] != "" {
+			t.Errorf("free fixture received a credit grant")
+		} else if fixture.Plan != plan.Free && h.credits.opened[fixture.LoginID] != fixture.Plan {
 			t.Errorf("account %q got no monthly grant for its plan", fixture.LoginID)
 		}
 		if report.Accounts[i].LoginID != fixture.LoginID {
@@ -103,7 +105,7 @@ func TestRunWritesThePostSpreadEachAccountDeclares(t *testing.T) {
 // move under anyone.
 func TestTheFixtureSpreadIsTheDeclaredOne(t *testing.T) {
 	want := map[string][4]int{
-		"free": {0, 0, 0, 0}, "base": {2, 1, 0, 0}, "pro": {3, 2, 1, 2},
+		"free": {0, 0, 0, 0}, "light": {1, 0, 0, 0}, "base": {2, 1, 0, 0}, "pro": {3, 2, 1, 2},
 		"max": {4, 3, 7, 0}, "master": {5, 4, 3, 11},
 	}
 	for _, fixture := range devseed.Fixtures {

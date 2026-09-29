@@ -85,8 +85,7 @@ type fixedAnchor struct{ at time.Time }
 
 func (a fixedAnchor) AnchorFor(context.Context, string) (time.Time, error) { return a.at, nil }
 
-// The collision F1 exists for: a window's id is its start date, so signing up and
-// subscribing on one Seoul date derives one id for the free window and the paid one.
+// Free signup creates no lot. A subscription on that same date opens only the paid window.
 func TestSubscribingTheSameDayAsSignupHandsOverTheWholeTierGrant(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -95,7 +94,7 @@ func TestSubscribingTheSameDayAsSignupHandsOverTheWholeTierGrant(t *testing.T) {
 	if err := h.ledger.EnsureMonthlyLot(ctx, "alice", plan.Free); err != nil {
 		t.Fatal(err)
 	}
-	if count, granted, _ := h.monthlyLots(t, now); count != 1 || granted != plan.MonthlyCredits(plan.Free) {
+	if count, granted, _ := h.monthlyLots(t, now); count != 0 || granted != 0 {
 		t.Fatalf("free window: lots=%d granted=%d", count, granted)
 	}
 
@@ -110,8 +109,7 @@ func TestSubscribingTheSameDayAsSignupHandsOverTheWholeTierGrant(t *testing.T) {
 	}
 }
 
-// The other half of QUOTA-42: when the two windows do NOT share an id, the free one is
-// closed rather than left beside the paid one, and its remainder does not carry over.
+// A later subscription also starts with no free-credit lot carried forward.
 func TestSubscribingOffTheFreeAnchorClosesTheFreeWindow(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -121,8 +119,8 @@ func TestSubscribingOffTheFreeAnchorClosesTheFreeWindow(t *testing.T) {
 	if err := h.ledger.EnsureMonthlyLot(ctx, "alice", plan.Free); err != nil {
 		t.Fatal(err)
 	}
-	if count, _, _ := h.monthlyLots(t, now); count != 1 {
-		t.Fatalf("free window: lots=%d, want 1", count)
+	if count, _, _ := h.monthlyLots(t, now); count != 0 {
+		t.Fatalf("free window: lots=%d, want 0", count)
 	}
 
 	if _, err := h.service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly); err != nil {
@@ -141,8 +139,8 @@ func TestSubscribingOffTheFreeAnchorClosesTheFreeWindow(t *testing.T) {
 		"SELECT count(*) FROM credit_lots WHERE user_id = ? AND kind = 'monthly'", "alice").Scan(&closed); err != nil {
 		t.Fatal(err)
 	}
-	if closed != 2 {
-		t.Fatalf("monthly rows = %d, want the closed free window kept beside the new one", closed)
+	if closed != 1 {
+		t.Fatalf("monthly rows = %d, want only the new paid window", closed)
 	}
 }
 

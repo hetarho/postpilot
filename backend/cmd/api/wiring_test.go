@@ -125,7 +125,7 @@ func wiringPlatform(t *testing.T, cfg *config.Config) *platform {
 }
 
 // VOICE-4: the account bootstraps the server boots with create no voice — a verified signup
-// lists none, while its credit grant still opens.
+// lists none and receives no signup credit grant.
 func TestAVerifiedSignupListsNoVoice(t *testing.T) {
 	t.Setenv("MAIL_DRIVER", "log")
 	cfg, err := config.Load()
@@ -154,7 +154,7 @@ func TestAVerifiedSignupListsNoVoice(t *testing.T) {
 		t.Fatalf("a verified signup lists %+v, %v", voices, err)
 	}
 	var lots int
-	if err := p.db.Reader.QueryRowContext(ctx, "SELECT COUNT(*) FROM credit_lots WHERE user_id = ?", "alice@example.com").Scan(&lots); err != nil || lots == 0 {
-		t.Fatalf("the credit bootstrap did not run: %d lots, %v", lots, err)
+	if err := p.db.Reader.QueryRowContext(ctx, "SELECT COUNT(*) FROM credit_lots WHERE user_id = ?", "alice@example.com").Scan(&lots); err != nil || lots != 0 {
+		t.Fatalf("signup opened %d credit lots, error %v", lots, err)
 	}
 }

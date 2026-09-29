@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
@@ -63,6 +64,8 @@ func TestClipAccountingDistinguishesPendingZeroLegacyAndMaster(t *testing.T) {
 
 func TestSQLiteCeilingRefusalAndOverageStayWithinApproval(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
+	removeLegacyFunding(t, handle, "alice")
+	removeLegacyFunding(t, handle, "bob")
 	ctx := context.Background()
 	start := holdFor("clip")
 	start.Kind = "generate_clip"
@@ -78,6 +81,8 @@ func TestSQLiteCeilingRefusalAndOverageStayWithinApproval(t *testing.T) {
 			t.Fatal("refused transaction wrote", table, n, err)
 		}
 	}
+	expires := time.Now().UTC().Add(31 * 24 * time.Hour)
+	insertLot(t, handle, "paid-test-funding", "alice", "monthly", 50, &expires, time.Now().UTC())
 	start.Approval.ApprovedMaxCredits = 5
 	if err := svc.Hold(ctx, start); err != nil {
 		t.Fatal(err)

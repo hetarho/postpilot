@@ -66,9 +66,13 @@ func TestGetMyPlanPublishesTheRungsAndTheEstimatorRates(t *testing.T) {
 	}
 
 	marked := make([]postpilotv1.Plan, 0, 1)
-	for _, offer := range msg.Offers {
+	for i, offer := range msg.Offers {
 		if _, ok := planrpc.FromProto(offer.Plan); !ok {
 			t.Fatalf("offer %v is not a known rung", offer.Plan)
+		}
+		rule := plan.Offers()[i]
+		if offer.MonthlyKrw != int32(rule.MonthlyKRW) || offer.AnnualKrw != int32(rule.AnnualKRW) || offer.DailyCredits != int32(rule.DailyCredits) || offer.MonthlyBonus != int32(rule.MonthlyBonus) || offer.ModelCeiling != rule.ModelCeiling || offer.MonthlyServerExports != int32(rule.ServerExports) {
+			t.Errorf("published %s offer = %+v, want %+v", rule.Plan, offer, rule)
 		}
 		if offer.Recommended {
 			marked = append(marked, offer.Plan)
@@ -76,6 +80,9 @@ func TestGetMyPlanPublishesTheRungsAndTheEstimatorRates(t *testing.T) {
 	}
 	if len(marked) != 1 || marked[0] != postpilotv1.Plan_PLAN_PRO {
 		t.Errorf("recommended offers = %v, want exactly [PLAN_PRO]", marked)
+	}
+	if packs := msg.CreditPacks; len(packs) != 3 || packs[0].PriceKrw != 3000 || packs[0].Credits != 1000 || packs[2].PriceKrw != 30000 || packs[2].Credits != 10000 {
+		t.Errorf("published packs = %+v", packs)
 	}
 
 	if len(msg.EstimatorCombos) != 1 {

@@ -56,6 +56,10 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 	}
 	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
+	// Clip concurrency tests require funded work; a free account now starts at zero.
+	if err := ledger.Grant(t.Context(), "alice", 50, nil); err != nil {
+		t.Fatal(err)
+	}
 	js, cs := jobstore.New(d.Writer, d.Reader, jobKindsForTest()), clipstore.New(d.Writer, d.Reader)
 	var queueStore job.Store = js
 	if wrap != nil {

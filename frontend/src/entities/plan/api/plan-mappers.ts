@@ -20,6 +20,7 @@ import {
 
 const PLAN_TO_PROTO: Record<PlanName, ProtoPlan> = {
   free: ProtoPlan.FREE,
+  light: ProtoPlan.LIGHT,
   basic: ProtoPlan.BASIC,
   pro: ProtoPlan.PRO,
   max: ProtoPlan.MAX,
@@ -65,16 +66,32 @@ function toOffer(offer: {
   plan: ProtoPlan
   monthlyCredits: number
   priceUsdCents: number
+  monthlyKrw: number
+  annualKrw: number
+  dailyCredits: number
+  monthlyBonus: number
+  modelCeiling: string
+  monthlyServerExports: number
   recommended?: boolean
 }): PlanOffer {
   return {
     plan: planFromProto(offer.plan),
     monthlyCredits: offer.monthlyCredits,
     priceUsdCents: offer.priceUsdCents,
+    monthlyKrw: offer.monthlyKrw,
+    annualKrw: offer.annualKrw,
+    dailyCredits: offer.dailyCredits,
+    monthlyBonus: offer.monthlyBonus,
+    modelCeiling: isModelCeiling(offer.modelCeiling) ? offer.modelCeiling : 'none',
+    monthlyServerExports: offer.monthlyServerExports,
     // A server that says nothing is read as "not marked" rather than as a rung to
     // highlight: emphasis the ladder did not ask for is a claim.
     recommended: offer.recommended ?? false,
   }
+}
+
+function isModelCeiling(value: string): value is NonNullable<PlanOffer['modelCeiling']> {
+  return ['none', 'value', 'balanced', 'premium', 'top'].includes(value)
 }
 
 /** A combo the client cannot name is dropped: the four are a closed set, and a tier whose
@@ -117,6 +134,10 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     // A tier this build cannot name is dropped rather than rendered as unknown: an offer
     // nobody can identify is not something to put a price next to.
     offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),
+    creditPacks: (response.creditPacks ?? []).map((pack) => ({
+      priceKrw: pack.priceKrw,
+      credits: pack.credits,
+    })),
     estimatorCombos: (response.estimatorCombos ?? [])
       .map(toCombo)
       .filter((combo): combo is EstimatorCombo => combo !== undefined),

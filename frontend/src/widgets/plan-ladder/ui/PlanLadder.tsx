@@ -18,6 +18,7 @@ import { useCountUp } from '../model/useCountUp'
  *  is never on offer, but the type includes it so a future rung cannot arrive without one. */
 const TIER_ICON: Record<PlanName, ComponentType<{ className?: string }>> = {
   free: Leaf,
+  light: Gift,
   basic: Zap,
   pro: Sparkles,
   max: Rocket,

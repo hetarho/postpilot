@@ -68,6 +68,12 @@ func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
 	}
+	// These ledger tests exercise historical funded lots explicitly. New free accounts
+	// receive no automatic grant, so the fixture supplies a previously granted lot.
+	expires := time.Now().UTC().Add(31 * 24 * time.Hour)
+	for _, id := range []string{"alice", "bob"} {
+		insertLot(t, handle, "legacy-monthly-"+id, id, "monthly", 50, &expires, time.Now().UTC())
+	}
 	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, clip.JobKindGenerate, clip.JobKindRevise)
 	return svc, handle
 }
@@ -86,6 +92,13 @@ func insertLot(t *testing.T, handle *db.DB, id, userID, kind string, credits int
 		id, userID, kind, credits, credits, expiresAt, created.UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		t.Fatalf("insert %s lot: %v", kind, err)
+	}
+}
+
+func removeLegacyFunding(t *testing.T, handle *db.DB, userID string) {
+	t.Helper()
+	if _, err := handle.Writer.Exec("DELETE FROM credit_lots WHERE id = ?", "legacy-monthly-"+userID); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -355,6 +368,7 @@ func TestCreditLotKindIsOneOfFour(t *testing.T) {
 // spends before the monthly grant that expires later.
 func TestOpenVoucherLotCountsTowardTheBalance(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
+	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	now := time.Now().UTC()
 	week := now.Add(7 * 24 * time.Hour)
@@ -393,6 +407,7 @@ func TestOpenVoucherLotCountsTowardTheBalance(t *testing.T) {
 // open on them settles afterwards and returns its unused part to the same lot.
 func TestExpiredVoucherLotIgnoresALateRefund(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
+	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	now := time.Now().UTC()
 	week := now.Add(7 * 24 * time.Hour)
@@ -477,6 +492,7 @@ func TestExpireVoucherLotAndStandings(t *testing.T) {
 // `remaining <= granted`.
 func TestTopUpMonthlyLotRaisesTheRunningCycle(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
+	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	now := time.Now().UTC()
 	expires := now.Add(14 * 24 * time.Hour)

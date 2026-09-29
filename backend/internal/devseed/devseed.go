@@ -149,8 +149,10 @@ func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time)
 	if err := deps.Accounts.Create(ctx, fixture.LoginID, Password, fixture.Plan); err != nil {
 		return AccountReport{}, fmt.Errorf("create: %w", err)
 	}
-	if err := deps.Credits.OpenMonthlyLot(ctx, fixture.LoginID, fixture.Plan); err != nil {
-		return AccountReport{}, fmt.Errorf("open monthly grant: %w", err)
+	if fixture.Plan != plan.Free {
+		if err := deps.Credits.OpenMonthlyLot(ctx, fixture.LoginID, fixture.Plan); err != nil {
+			return AccountReport{}, fmt.Errorf("open monthly grant: %w", err)
+		}
 	}
 	templateID := ""
 	if fixture.Template {

@@ -40,7 +40,7 @@ func TestSeedCreatesShortEmailFreeAccountsThatCanLogIn(t *testing.T) {
 		tier  plan.Plan
 		posts int
 	}{
-		{"free", plan.Free, 0}, {"base", plan.Basic, 3}, {"pro", plan.Pro, 8},
+		{"free", plan.Free, 0}, {"light", plan.Light, 1}, {"base", plan.Basic, 3}, {"pro", plan.Pro, 8},
 		{"max", plan.Max, 14}, {"master", plan.Master, 23},
 	}
 	var accounts int
@@ -130,7 +130,8 @@ func checkSeed(t *testing.T, reader *sql.DB) seedShape {
 		return nil
 	})
 	want := map[string]int{
-		"base/draft": 2, "base/review": 1,
+		"light/draft": 1,
+		"base/draft":  2, "base/review": 1,
 		"pro/draft": 3, "pro/review": 2, "pro/finalized": 1, "pro/published": 2,
 		"max/draft": 4, "max/review": 3, "max/finalized": 7,
 		"master/draft": 5, "master/review": 4, "master/finalized": 3, "master/published": 11,

@@ -93,7 +93,7 @@ func Run(ctx context.Context, cfg Settings, args []string, bootstraps ...Bootstr
 // spend by omission is the failure mode this ladder exists to prevent. The operator's own
 // account is promoted explicitly, with --plan=master or `setplan`.
 func parseAddUserArgs(args []string) (string, plan.Plan, error) {
-	const usage = "usage: adduser <login_id> [--plan=<free|basic|max|master>]"
+	const usage = "usage: adduser <login_id> [--plan=<free|light|basic|pro|max|master>]"
 	loginID := ""
 	tier := plan.Free
 	for _, arg := range args {

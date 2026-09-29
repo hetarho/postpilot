@@ -18,6 +18,7 @@ type Plan string
 
 const (
 	Free   Plan = "free"
+	Light  Plan = "light"
 	Basic  Plan = "basic"
 	Pro    Plan = "pro"
 	Max    Plan = "max"
@@ -27,7 +28,7 @@ const (
 // rank orders the ladder. It is unexported: nothing outside compares tiers any more —
 // model access is decided by the balance, not by the rung — so the numbers exist only to
 // keep Parse total and to give the admin surface a stable display order.
-var rank = map[Plan]int{Free: 0, Basic: 1, Pro: 2, Max: 3, Master: 4}
+var rank = map[Plan]int{Free: 0, Light: 1, Basic: 2, Pro: 3, Max: 4, Master: 5}
 
 // Parse converts a stored value into a Plan. An unknown value is an error rather than a
 // silent Free: a corrupted row must fail loudly, not quietly change what an account may
@@ -35,7 +36,7 @@ var rank = map[Plan]int{Free: 0, Basic: 1, Pro: 2, Max: 3, Master: 4}
 func Parse(value string) (Plan, error) {
 	candidate := Plan(strings.TrimSpace(value))
 	if _, ok := rank[candidate]; !ok {
-		return "", fmt.Errorf("unknown plan %q (want free, basic, pro, max, or master)", value)
+		return "", fmt.Errorf("unknown plan %q (want free, light, basic, pro, max, or master)", value)
 	}
 	return candidate, nil
 }
@@ -51,7 +52,7 @@ func (p Plan) String() string { return string(p) }
 func (p Plan) Rank() int { return rank[p] }
 
 // Ladder is every rung in order, for a surface that lists the tiers.
-func Ladder() []Plan { return []Plan{Free, Basic, Pro, Max, Master} }
+func Ladder() []Plan { return []Plan{Free, Light, Basic, Pro, Max, Master} }
 
 // A credit is the product's billing unit: a fixed $0.01 of list value, stored as an
 // integer. It is not a cost measurement — the ledger keeps recording true provider cost
@@ -80,6 +81,7 @@ const (
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
 var monthlyCredits = map[Plan]int{
 	Free:   50,
+	Light:  0,
 	Basic:  330,
 	Pro:    1150,
 	Max:    2400,
@@ -97,6 +99,7 @@ var monthlyCredits = map[Plan]int{
 // Charging these figures is BILLING's, not this package's.
 var monthlyPriceUSDCents = map[Plan]int{
 	Free:  0,
+	Light: 0,
 	Basic: 300,
 	Pro:   1000,
 	Max:   2000,
@@ -139,6 +142,12 @@ type Offer struct {
 	Plan           Plan
 	MonthlyCredits int
 	PriceUSDCents  int
+	MonthlyKRW     int
+	AnnualKRW      int
+	DailyCredits   int
+	MonthlyBonus   int
+	ModelCeiling   string
+	ServerExports  int
 	// Recommended marks the one rung the screen highlights.
 	Recommended bool
 }
@@ -146,13 +155,19 @@ type Offer struct {
 // Offers are the rungs on offer, in ladder order. Master is absent: it is the operator
 // tier, not something anyone is offered.
 func Offers() []Offer {
-	rungs := []Plan{Free, Basic, Pro, Max}
+	rungs := []Plan{Free, Light, Basic, Pro, Max}
 	offers := make([]Offer, 0, len(rungs))
 	for _, rung := range rungs {
 		offers = append(offers, Offer{
 			Plan:           rung,
 			MonthlyCredits: monthlyCredits[rung],
 			PriceUSDCents:  monthlyPriceUSDCents[rung],
+			MonthlyKRW:     offerRules[rung].monthlyKRW,
+			AnnualKRW:      offerRules[rung].annualKRW,
+			DailyCredits:   offerRules[rung].dailyCredits,
+			MonthlyBonus:   offerRules[rung].monthlyBonus,
+			ModelCeiling:   offerRules[rung].modelCeiling,
+			ServerExports:  offerRules[rung].serverExports,
 			Recommended:    Recommended(rung),
 		})
 	}

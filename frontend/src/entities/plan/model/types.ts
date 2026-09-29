@@ -5,7 +5,7 @@ import { LEVELS, type LevelName } from '@/entities/model-catalog/@x/plan'
  *  granted each month, and — for `master` alone — access to the operator-only surfaces.
  *  Which models an account may run is not one of them; that is decided by what it can
  *  afford. */
-export const PLANS = ['free', 'basic', 'pro', 'max', 'master'] as const
+export const PLANS = ['free', 'light', 'basic', 'pro', 'max', 'master'] as const
 
 export type PlanName = (typeof PLANS)[number]
 
@@ -21,7 +21,7 @@ export function planLabel(plan: PlanName | undefined): string {
 
 /** The tiers a plan comparison screen lists. `master` is absent on purpose: it is the
  *  operator tier, not something anyone is offered. */
-export const OFFERED_PLANS = ['free', 'basic', 'pro', 'max'] as const
+export const OFFERED_PLANS = ['free', 'light', 'basic', 'pro', 'max'] as const
 
 /** One grant of credits. Consumption spends every expiring lot first by expiry — monthly,
  *  voucher and an expiring bonus alike — then never-expiring bonus, then purchased (QUOTA-12),
@@ -55,6 +55,12 @@ export interface PlanOffer {
   monthlyCredits: number
   /** Whole US cents; zero for the free tier. What a card is charged is BILLING's. */
   priceUsdCents: number
+  monthlyKrw?: number
+  annualKrw?: number
+  dailyCredits?: number
+  monthlyBonus?: number
+  modelCeiling?: 'none' | 'value' | 'balanced' | 'premium' | 'top'
+  monthlyServerExports?: number
   /** The one rung the comparison screen marks. The server decides which. */
   recommended: boolean
 }
@@ -90,6 +96,7 @@ export interface MyPlan {
   plan: PlanName | undefined
   balance: CreditBalance
   offers: PlanOffer[]
+  creditPacks: { priceKrw: number; credits: number }[]
   /** The combos the operator has assigned and the server could price. Empty means a
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]

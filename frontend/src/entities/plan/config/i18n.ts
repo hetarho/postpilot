@@ -59,6 +59,7 @@ export const i18n = {
     },
     tier: {
       free: 'Free',
+      light: 'Light',
       basic: 'Basic',
       pro: 'Pro',
       max: 'Max',
@@ -159,6 +160,7 @@ export const i18n = {
     },
     tier: {
       free: 'Free',
+      light: 'Light',
       basic: 'Basic',
       pro: 'Pro',
       max: 'Max',

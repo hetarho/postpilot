@@ -9,16 +9,57 @@ describe('toMyPlan offers', () => {
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.BASIC,
         offers: [
-          { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200 },
-          { plan: ProtoPlan.PRO, monthlyCredits: 575, priceUsdCents: 500, recommended: true },
+          {
+            plan: ProtoPlan.LIGHT,
+            monthlyKrw: 1900,
+            annualKrw: 19000,
+            dailyCredits: 15,
+            monthlyBonus: 290,
+            modelCeiling: 'value',
+            monthlyServerExports: 2,
+          },
+          {
+            plan: ProtoPlan.PRO,
+            monthlyKrw: 9900,
+            annualKrw: 99000,
+            dailyCredits: 85,
+            monthlyBonus: 1070,
+            modelCeiling: 'premium',
+            monthlyServerExports: 15,
+            recommended: true,
+          },
         ],
+        creditPacks: [{ priceKrw: 3000, credits: 1000 }],
       }),
     )
 
     expect(myPlan?.offers).toEqual([
-      { plan: 'basic', monthlyCredits: 220, priceUsdCents: 200, recommended: false },
-      { plan: 'pro', monthlyCredits: 575, priceUsdCents: 500, recommended: true },
+      {
+        plan: 'light',
+        monthlyCredits: 0,
+        priceUsdCents: 0,
+        monthlyKrw: 1900,
+        annualKrw: 19000,
+        dailyCredits: 15,
+        monthlyBonus: 290,
+        modelCeiling: 'value',
+        monthlyServerExports: 2,
+        recommended: false,
+      },
+      {
+        plan: 'pro',
+        monthlyCredits: 0,
+        priceUsdCents: 0,
+        monthlyKrw: 9900,
+        annualKrw: 99000,
+        dailyCredits: 85,
+        monthlyBonus: 1070,
+        modelCeiling: 'premium',
+        monthlyServerExports: 15,
+        recommended: true,
+      },
     ])
+    expect(myPlan?.creditPacks).toEqual([{ priceKrw: 3000, credits: 1000 }])
   })
 })
 

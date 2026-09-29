@@ -554,8 +554,8 @@ func TestHoldRefusesWhatTheBalanceCannotCoverAndWritesNothing(t *testing.T) {
 	if refusal.Required != oneCallHold || refusal.Balance != 3 {
 		t.Errorf("refusal = %+v, want required %d and balance 3", refusal, oneCallHold)
 	}
-	if refusal.RenewsAt.IsZero() {
-		t.Error("the refusal did not name when it lifts")
+	if !refusal.RenewsAt.IsZero() {
+		t.Error("a free account must have no credit renewal clock")
 	}
 	if len(store.admissions) != 0 {
 		t.Errorf("admissions = %+v, want none after a refusal", store.admissions)
@@ -675,7 +675,7 @@ func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
 	}
 }
 
-func TestLegacyCalendarLotTransitionsThroughOneShortAnchorCycle(t *testing.T) {
+func TestLegacyFreeLotExpiresWithoutOpeningAnotherFreeGrant(t *testing.T) {
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
 	anchor := time.Date(2025, 1, 20, 0, 0, 0, 0, seoul)
 	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
@@ -692,8 +692,8 @@ func TestLegacyCalendarLotTransitionsThroughOneShortAnchorCycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !legacy.RenewsAt.Equal(calendarExpiry) || len(store.lots) != 1 {
-		t.Fatalf("legacy balance = %+v lots=%+v, want it active until October 1", legacy, store.lots)
+	if !legacy.RenewsAt.IsZero() || legacy.Credits != 50 || len(store.lots) != 1 {
+		t.Fatalf("legacy balance = %+v lots=%+v, want only the existing value", legacy, store.lots)
 	}
 
 	now = calendarExpiry
@@ -701,18 +701,16 @@ func TestLegacyCalendarLotTransitionsThroughOneShortAnchorCycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTransitionEnd := time.Date(2026, 10, 20, 0, 0, 0, 0, seoul)
-	if !transition.RenewsAt.Equal(wantTransitionEnd) || store.lots[1].ID != "monthly:alice:2026-09-20" {
-		t.Fatalf("transition = %+v lot=%+v, want the short October 1-20 cycle", transition, store.lots[1])
+	if !transition.RenewsAt.IsZero() || transition.Credits != 0 || len(store.lots) != 1 {
+		t.Fatalf("transition = %+v lots=%+v, want no free renewal", transition, store.lots)
 	}
 
-	now = wantTransitionEnd
+	now = time.Date(2026, 10, 20, 0, 0, 0, 0, seoul)
 	full, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(store.lots) != 3 || store.lots[2].ID != "monthly:alice:2026-10-20" ||
-		!full.RenewsAt.Equal(time.Date(2026, 11, 20, 0, 0, 0, 0, seoul)) {
+	if len(store.lots) != 1 || full.Credits != 0 || !full.RenewsAt.IsZero() {
 		t.Fatalf("full cycle = %+v lots=%+v", full, store.lots)
 	}
 }
@@ -1078,12 +1076,12 @@ func TestBalanceReportsItsLotsAndUnlimitedForMaster(t *testing.T) {
 	if balance.Unlimited {
 		t.Error("a free account reported unlimited")
 	}
-	// The bonus plus the monthly grant renewal opened on this very read.
-	if balance.Credits != 40+plan.MonthlyCredits(plan.Free) {
+	// The separately granted bonus remains; free access opens no monthly grant.
+	if balance.Credits != 40 {
 		t.Errorf("credits = %d", balance.Credits)
 	}
-	if len(balance.Lots) != 2 {
-		t.Errorf("lots = %+v, want the bonus and the fresh monthly grant", balance.Lots)
+	if len(balance.Lots) != 1 {
+		t.Errorf("lots = %+v, want only the bonus", balance.Lots)
 	}
 
 	master, err := svc.BalanceFor(context.Background(), "root", plan.Master)

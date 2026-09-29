@@ -457,6 +457,9 @@ func (s *Service) renew(
 	if plan.Unlimited(acting) {
 		return end, nil
 	}
+	if acting == plan.Free {
+		return time.Time{}, nil
+	}
 
 	current, found, err := tx.ActiveMonthlyLot(ctx, userID, now)
 	if err != nil {
