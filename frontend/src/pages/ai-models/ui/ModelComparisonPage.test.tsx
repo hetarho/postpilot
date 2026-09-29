@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { create } from '@bufbuild/protobuf'
 import { ExperimentOrigin, ObservationSchema, Stage } from '@/shared/api'
 import type { FakeWriteExperimentStart, FakeExperimentsOptions } from '@/test/experiments'
@@ -303,9 +303,10 @@ const photoPost = {
 
 const observePair = { ...writePair, stage: Stage.OBSERVE }
 
-// MODEL-30: the lab compares observe and write alone. Analyze keeps its active selection on
-// 모델 변경, so it has no tab here and nothing on this page asks for a voice.
-it('offers the observe and write comparisons only, and no voice picker on either', async () => {
+// MODEL-30, MODEL-67: the lab compares observe and write, and 말투 반영 as a write comparison drawn
+// from a voice. Analyze keeps its active selection on 모델 변경, so it has no tab here, and only
+// the 말투 반영 tab asks for a voice.
+it('offers observe, write and 말투 반영, and the voice picker on 말투 반영 alone', async () => {
   const user = userEvent.setup()
   renderAppAt('/ai-models/compare', {
     user: { id: 'owner-1' },
@@ -314,7 +315,11 @@ it('offers the observe and write comparisons only, and no voice picker on either
     voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true }] },
   })
   const tabs = within(await screen.findByRole('tablist', { name: 'AI 단계' }))
-  expect(tabs.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['관찰', '글 작성'])
+  expect(tabs.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+    '관찰',
+    '글 작성',
+    '말투 반영',
+  ])
   expect(screen.queryByRole('combobox', { name: /말투/ })).not.toBeInTheDocument()
   await user.click(tabs.getByRole('tab', { name: '글 작성' }))
   expect(await screen.findByRole('combobox', { name: /비교할 글/ })).toBeInTheDocument()
@@ -413,4 +418,122 @@ it('opens observation comparison without work and starts only with the chosen sa
     '/ai-models/compare?stage=observe',
   )
   expect(router.state.location.search.stage).toBe('observe')
+})
+
+// MODEL-41, MODEL-67: 말투 반영 picks a made voice — the 기본 first and chosen — one of its answered
+// prompts, and the saved write pair; a photo prompt is listed but not choosable unless both write
+// models read images, and 비교 시작 starts the comparison and opens its review.
+describe('the 말투 반영 tab', () => {
+  const voices = [
+    { id: 'voice-review', name: '리뷰' },
+    { id: 'voice-default', name: '기본 말투', isDefault: true },
+    { id: 'voice-new', name: '새 말투', made: false },
+  ]
+  const answers = [
+    {
+      id: 'a1',
+      label: '',
+      kind: 'answer' as const,
+      promptKey: 'opening_greeting',
+      body: '안녕하세요!',
+    },
+    {
+      id: 'a2',
+      label: '',
+      kind: 'answer' as const,
+      promptKey: 'photo_food',
+      body: '크루아상이에요.',
+    },
+  ]
+
+  it('starts a comparison on the 기본 and an answered prompt', async () => {
+    const user = userEvent.setup()
+    const reflectionStarts: NonNullable<FakeExperimentsOptions['reflectionStarts']> = []
+    const { router } = renderAppAt('/ai-models/compare?stage=voice', {
+      user: { id: 'owner-1' },
+      providers: { models: writeModels, comparisonPairs: [writePair] },
+      voice: { voices, samples: answers },
+      experiments: { reflectionStarts, experimentId: 'reflection-1' },
+    })
+
+    const voice = await screen.findByRole('combobox', { name: /^말투/ })
+    await waitFor(() => expect(voice).toHaveTextContent('기본 말투'))
+    await user.click(voice)
+    const listbox = await screen.findByRole('listbox')
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['기본 말투', '리뷰'])
+    await user.keyboard('{Escape}')
+
+    const prompt = screen.getByRole('combobox', { name: /^비교할 문항/ })
+    await waitFor(() => expect(prompt).toHaveTextContent('블로그 글을 시작할 때'))
+    await user.click(prompt)
+    const photo = within(await screen.findByRole('listbox')).getByRole('option', {
+      name: /음식이나 음료 사진/,
+    })
+    expect(photo).toHaveAttribute('aria-disabled', 'true')
+    await user.keyboard('{Escape}')
+    expect(
+      screen.getByText('사진 문항은 두 모델이 모두 사진을 읽을 때만 비교할 수 있어요.'),
+    ).toBeInTheDocument()
+
+    const start = screen.getByRole('button', { name: '비교 시작' })
+    await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+    await user.click(start)
+    await waitFor(() =>
+      expect(reflectionStarts).toEqual([
+        {
+          voiceId: 'voice-default',
+          promptKey: 'opening_greeting',
+          modelA: { providerId: 'openrouter', modelId: 'writer-a' },
+          modelB: { providerId: 'openrouter', modelId: 'writer-b' },
+        },
+      ]),
+    )
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/ai-models/experiments/reflection-1'),
+    )
+  })
+
+  it('offers a photo prompt once both write models read images', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/ai-models/compare?stage=voice', {
+      user: { id: 'owner-1' },
+      providers: {
+        models: writeModels.map((model) => ({ ...model, vision: true })),
+        comparisonPairs: [writePair],
+      },
+      voice: { voices, samples: answers },
+    })
+
+    const prompt = await screen.findByRole('combobox', { name: /^비교할 문항/ })
+    await waitFor(() => expect(prompt).toHaveTextContent('블로그 글을 시작할 때'))
+    await user.click(prompt)
+    const photo = within(await screen.findByRole('listbox')).getByRole('option', {
+      name: /음식이나 음료 사진/,
+    })
+    expect(photo).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('sends a voice with no answered prompt to its 학습 글', async () => {
+    renderAppAt('/ai-models/compare?stage=voice', {
+      user: { id: 'owner-1' },
+      providers: { models: writeModels, comparisonPairs: [writePair] },
+      voice: { voices },
+    })
+
+    expect(
+      await screen.findAllByText('이 말투에는 답한 문항이 없어요. 학습 글에서 문항에 답해 주세요.'),
+    ).not.toHaveLength(0)
+    expect(await screen.findByRole('link', { name: '문항에 답하러 가기' })).toHaveAttribute(
+      'href',
+      '/voices/voice-default/materials',
+    )
+    expect(screen.getByRole('button', { name: '비교 시작' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+  })
 })

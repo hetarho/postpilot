@@ -353,6 +353,7 @@ export type {
 } from './gen/postpilot/v1/provider_pb'
 export {
   ModelExperimentService,
+  ExperimentSource,
   ExperimentStatus,
   DisplaySide,
   CandidateStatus,

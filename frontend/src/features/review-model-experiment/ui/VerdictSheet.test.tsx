@@ -36,6 +36,10 @@ const pair: ModelExperiment = {
   decidedAt: '',
   revealed: false,
   targetLanguage: 'ko',
+  source: 'post',
+  voicePromptKey: '',
+  voicePromptText: '',
+  voiceAnswer: '',
   candidates: [candidate('left', 'left'), candidate('right', 'right')],
 }
 

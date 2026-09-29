@@ -5,11 +5,13 @@ import { ModelExperimentService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { isExperimentActive } from '../model/types'
 import type {
+  ExperimentSourceName,
   ExperimentStageName,
   LeaderboardScopeName,
   LeaderboardWindowName,
 } from '../model/types'
 import {
+  experimentSourceToProto,
   leaderboardScopeToProto,
   leaderboardWindowToProto,
   toExperiment,
@@ -34,10 +36,12 @@ export function useExperiment(id: string) {
   }
 }
 
-export function useExperiments(stage?: ExperimentStageName) {
+/** The account's comparisons newest first, narrowed to one stage and, for a write history, one
+ *  source: 글쓰기 lists post-sourced comparisons, 말투 반영 voice-sourced ones (MODEL-67). */
+export function useExperiments(stage?: ExperimentStageName, source?: ExperimentSourceName) {
   const query = useQuery(
     ModelExperimentService.method.listExperiments,
-    { stage: stage ? stageToProto(stage) : undefined },
+    { stage: stage ? stageToProto(stage) : undefined, source: experimentSourceToProto(source) },
     {
       refetchInterval: (state) =>
         state.state.data?.experiments.some((value) =>

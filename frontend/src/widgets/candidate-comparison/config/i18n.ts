@@ -6,6 +6,8 @@ export const i18n = {
   ko: {
     comparison: {
       candidate: '후보 {{label}}',
+      voiceAnswer: '내 답',
+      voiceAnswerPurged: '보관 기간이 지나 내 답은 지워졌어요.',
       status: { pending: '생성 중', running: '생성 중', succeeded: '완료', failed: '오류' },
       failed: '결과를 만들지 못했어요.',
       waiting: '결과를 기다리는 중…',
@@ -26,6 +28,8 @@ export const i18n = {
   en: {
     comparison: {
       candidate: 'Candidate {{label}}',
+      voiceAnswer: 'Your answer',
+      voiceAnswerPurged: 'Your answer was removed after the retention period.',
       status: {
         pending: 'Generating',
         running: 'Generating',

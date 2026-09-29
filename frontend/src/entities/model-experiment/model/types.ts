@@ -1,4 +1,5 @@
 import type { ModelRef, StageName } from '@/entities/model-catalog/@x/model-experiment'
+import type { FingerprintComparisonItem } from '@/entities/voice/@x/model-experiment'
 import type { VerdictBadgeName } from './badges'
 import type { AppFailure, ContentLanguage, Observation, PostContent } from '@/shared/api'
 
@@ -29,7 +30,17 @@ export interface CandidateUsage {
 }
 
 export type CandidateOutput =
-  { kind: 'write'; content: PostContent } | { kind: 'observe'; observations: Observation[] }
+  | { kind: 'write'; content: PostContent }
+  | { kind: 'observe'; observations: Observation[] }
+  /** A 말투 반영 비교 piece, measured against the voice's current analysis (MODEL-67). */
+  | { kind: 'voice'; text: string; comparison: FingerprintComparisonItem[] }
+
+/** What a write comparison was drawn from: a post, or one voice's answered prompt. */
+export type ExperimentSourceName = 'post' | 'voice'
+
+/** The model lab's tabs on the compare and history pages: the two stages it compares and
+ *  말투 반영, a write comparison drawn from a voice (MODEL-44, MODEL-67). */
+export type ModelLabTabName = ExperimentStageName | 'voice'
 
 export interface ExperimentCandidate {
   id: string
@@ -73,6 +84,11 @@ export interface ModelExperiment {
   decidedAt: string
   revealed: boolean
   targetLanguage: ContentLanguage | undefined
+  source: ExperimentSourceName
+  /** A voice-sourced comparison's prompt, and the owner's answer while the snapshot keeps it. */
+  voicePromptKey: string
+  voicePromptText: string
+  voiceAnswer: string
 }
 
 /** How often one model earned one badge inside this board's own scope, stage and window. */

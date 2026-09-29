@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
@@ -10,11 +10,15 @@ import type {
 import { candidateSides } from '@/entities/model-experiment'
 import { badgeGroup, badgeTone } from '@/entities/model-experiment'
 import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
+import type { FingerprintComparisonItem } from '@/entities/voice'
 import { formatNumber } from '@/shared/lib'
 
 interface CandidateComparisonProps {
   experiment: ModelExperiment
   activeCandidateId: string
+  /** Draws a 말투 반영 비교 piece's fingerprint comparison under the piece (MODEL-67); the page
+   *  supplies it, since this widget does not own the comparison's wording. */
+  renderComparison?: (items: FingerprintComparisonItem[]) => ReactNode
 }
 
 const STATUS_TONES: Record<CandidateStatusName, BadgeTone> = {
@@ -27,11 +31,37 @@ const STATUS_TONES: Record<CandidateStatusName, BadgeTone> = {
 /** The panels only. The A/B switch is docked by the page instead: it is pressed on every pass of
  *  the comparison, so it belongs in the same thumb band as the buttons that commit it, not pinned
  *  to the top edge ~700px away from the resting thumb (THEME-24). */
-export function CandidateComparison({ experiment, activeCandidateId }: CandidateComparisonProps) {
+export function CandidateComparison({
+  experiment,
+  activeCandidateId,
+  renderComparison,
+}: CandidateComparisonProps) {
   const { t } = useTranslation('posts')
   const sides = useMemo(() => candidateSides(experiment.candidates), [experiment.candidates])
   return (
     <div>
+      {/* The owner's own answer on top: both pieces are read against it (MODEL-67). It leaves with
+          the snapshot once the comparison's content is purged. */}
+      {experiment.source === 'voice' && (
+        <section
+          aria-label={t('comparison.voiceAnswer')}
+          className="bg-surface-recessed mb-4 rounded-lg px-4 py-3"
+        >
+          <Typography variant="label" as="h3">
+            {experiment.voicePromptText || t('comparison.voiceAnswer')}
+          </Typography>
+          <Typography variant="body" as="p" className="mt-2 break-words whitespace-pre-line">
+            {experiment.voiceAnswer ? (
+              <>
+                <span className="text-content-secondary">{t('comparison.voiceAnswer')}</span>{' '}
+                {experiment.voiceAnswer}
+              </>
+            ) : (
+              <span className="text-content-secondary">{t('comparison.voiceAnswerPurged')}</span>
+            )}
+          </Typography>
+        </section>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         {sides.map(({ candidate, label }) => (
           <article
@@ -51,7 +81,7 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
                 {t(`comparison.status.${candidate.status}`)}
               </Badge>
             </div>
-            <CandidateOutput candidate={candidate} />
+            <CandidateOutput candidate={candidate} renderComparison={renderComparison} />
           </article>
         ))}
       </div>
@@ -60,7 +90,13 @@ export function CandidateComparison({ experiment, activeCandidateId }: Candidate
   )
 }
 
-function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
+function CandidateOutput({
+  candidate,
+  renderComparison,
+}: {
+  candidate: ExperimentCandidate
+  renderComparison?: (items: FingerprintComparisonItem[]) => ReactNode
+}) {
   const { t } = useTranslation('posts')
   if (candidate.status === 'failed')
     return (
@@ -78,6 +114,18 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
         {t('comparison.waiting')}
       </Typography>
     )
+  if (candidate.output.kind === 'voice') {
+    return (
+      <div className="mt-4">
+        <Typography variant="body" as="p" className="break-words whitespace-pre-line">
+          {candidate.output.text}
+        </Typography>
+        {renderComparison && (
+          <div className="mt-4">{renderComparison(candidate.output.comparison)}</div>
+        )}
+      </div>
+    )
+  }
   if (candidate.output.kind === 'write') {
     const content = candidate.output.content
     return (

@@ -39,6 +39,9 @@ const (
 	// ModelExperimentServiceStartWriteExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's StartWriteExperiment RPC.
 	ModelExperimentServiceStartWriteExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartWriteExperiment"
+	// ModelExperimentServiceStartVoiceReflectionExperimentProcedure is the fully-qualified name of the
+	// ModelExperimentService's StartVoiceReflectionExperiment RPC.
+	ModelExperimentServiceStartVoiceReflectionExperimentProcedure = "/postpilot.v1.ModelExperimentService/StartVoiceReflectionExperiment"
 	// ModelExperimentServiceGetExperimentProcedure is the fully-qualified name of the
 	// ModelExperimentService's GetExperiment RPC.
 	ModelExperimentServiceGetExperimentProcedure = "/postpilot.v1.ModelExperimentService/GetExperiment"
@@ -75,6 +78,8 @@ const (
 type ModelExperimentServiceClient interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
+	// 말투 반영 비교 (MODEL-67): the write pair writes one answered prompt of one voice, 검증's piece.
+	StartVoiceReflectionExperiment(context.Context, *connect.Request[v1.StartVoiceReflectionExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
 	RetryCandidate(context.Context, *connect.Request[v1.RetryCandidateRequest]) (*connect.Response[v1.RetryCandidateResponse], error)
@@ -108,6 +113,12 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 			httpClient,
 			baseURL+ModelExperimentServiceStartWriteExperimentProcedure,
 			connect.WithSchema(modelExperimentServiceMethods.ByName("StartWriteExperiment")),
+			connect.WithClientOptions(opts...),
+		),
+		startVoiceReflectionExperiment: connect.NewClient[v1.StartVoiceReflectionExperimentRequest, v1.StartExperimentResponse](
+			httpClient,
+			baseURL+ModelExperimentServiceStartVoiceReflectionExperimentProcedure,
+			connect.WithSchema(modelExperimentServiceMethods.ByName("StartVoiceReflectionExperiment")),
 			connect.WithClientOptions(opts...),
 		),
 		getExperiment: connect.NewClient[v1.GetExperimentRequest, v1.GetExperimentResponse](
@@ -175,18 +186,19 @@ func NewModelExperimentServiceClient(httpClient connect.HTTPClient, baseURL stri
 
 // modelExperimentServiceClient implements ModelExperimentServiceClient.
 type modelExperimentServiceClient struct {
-	startObserveExperiment *connect.Client[v1.StartObserveExperimentRequest, v1.StartExperimentResponse]
-	startWriteExperiment   *connect.Client[v1.StartWriteExperimentRequest, v1.StartExperimentResponse]
-	getExperiment          *connect.Client[v1.GetExperimentRequest, v1.GetExperimentResponse]
-	listExperiments        *connect.Client[v1.ListExperimentsRequest, v1.ListExperimentsResponse]
-	retryCandidate         *connect.Client[v1.RetryCandidateRequest, v1.RetryCandidateResponse]
-	chooseWinner           *connect.Client[v1.ChooseWinnerRequest, v1.ChooseWinnerResponse]
-	decideWriteExperiment  *connect.Client[v1.DecideWriteExperimentRequest, v1.ChooseWinnerResponse]
-	useSingleCandidate     *connect.Client[v1.UseSingleCandidateRequest, v1.ChooseWinnerResponse]
-	dismissExperiment      *connect.Client[v1.DismissExperimentRequest, v1.DismissExperimentResponse]
-	applyWinnerOutput      *connect.Client[v1.ApplyWinnerOutputRequest, v1.ApplyWinnerOutputResponse]
-	adoptWinnerModel       *connect.Client[v1.AdoptWinnerModelRequest, v1.AdoptWinnerModelResponse]
-	getLeaderboard         *connect.Client[v1.GetLeaderboardRequest, v1.GetLeaderboardResponse]
+	startObserveExperiment         *connect.Client[v1.StartObserveExperimentRequest, v1.StartExperimentResponse]
+	startWriteExperiment           *connect.Client[v1.StartWriteExperimentRequest, v1.StartExperimentResponse]
+	startVoiceReflectionExperiment *connect.Client[v1.StartVoiceReflectionExperimentRequest, v1.StartExperimentResponse]
+	getExperiment                  *connect.Client[v1.GetExperimentRequest, v1.GetExperimentResponse]
+	listExperiments                *connect.Client[v1.ListExperimentsRequest, v1.ListExperimentsResponse]
+	retryCandidate                 *connect.Client[v1.RetryCandidateRequest, v1.RetryCandidateResponse]
+	chooseWinner                   *connect.Client[v1.ChooseWinnerRequest, v1.ChooseWinnerResponse]
+	decideWriteExperiment          *connect.Client[v1.DecideWriteExperimentRequest, v1.ChooseWinnerResponse]
+	useSingleCandidate             *connect.Client[v1.UseSingleCandidateRequest, v1.ChooseWinnerResponse]
+	dismissExperiment              *connect.Client[v1.DismissExperimentRequest, v1.DismissExperimentResponse]
+	applyWinnerOutput              *connect.Client[v1.ApplyWinnerOutputRequest, v1.ApplyWinnerOutputResponse]
+	adoptWinnerModel               *connect.Client[v1.AdoptWinnerModelRequest, v1.AdoptWinnerModelResponse]
+	getLeaderboard                 *connect.Client[v1.GetLeaderboardRequest, v1.GetLeaderboardResponse]
 }
 
 // StartObserveExperiment calls postpilot.v1.ModelExperimentService.StartObserveExperiment.
@@ -197,6 +209,12 @@ func (c *modelExperimentServiceClient) StartObserveExperiment(ctx context.Contex
 // StartWriteExperiment calls postpilot.v1.ModelExperimentService.StartWriteExperiment.
 func (c *modelExperimentServiceClient) StartWriteExperiment(ctx context.Context, req *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
 	return c.startWriteExperiment.CallUnary(ctx, req)
+}
+
+// StartVoiceReflectionExperiment calls
+// postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment.
+func (c *modelExperimentServiceClient) StartVoiceReflectionExperiment(ctx context.Context, req *connect.Request[v1.StartVoiceReflectionExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
+	return c.startVoiceReflectionExperiment.CallUnary(ctx, req)
 }
 
 // GetExperiment calls postpilot.v1.ModelExperimentService.GetExperiment.
@@ -254,6 +272,8 @@ func (c *modelExperimentServiceClient) GetLeaderboard(ctx context.Context, req *
 type ModelExperimentServiceHandler interface {
 	StartObserveExperiment(context.Context, *connect.Request[v1.StartObserveExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
+	// 말투 반영 비교 (MODEL-67): the write pair writes one answered prompt of one voice, 검증's piece.
+	StartVoiceReflectionExperiment(context.Context, *connect.Request[v1.StartVoiceReflectionExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error)
 	GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error)
 	ListExperiments(context.Context, *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error)
 	RetryCandidate(context.Context, *connect.Request[v1.RetryCandidateRequest]) (*connect.Response[v1.RetryCandidateResponse], error)
@@ -283,6 +303,12 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 		ModelExperimentServiceStartWriteExperimentProcedure,
 		svc.StartWriteExperiment,
 		connect.WithSchema(modelExperimentServiceMethods.ByName("StartWriteExperiment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modelExperimentServiceStartVoiceReflectionExperimentHandler := connect.NewUnaryHandler(
+		ModelExperimentServiceStartVoiceReflectionExperimentProcedure,
+		svc.StartVoiceReflectionExperiment,
+		connect.WithSchema(modelExperimentServiceMethods.ByName("StartVoiceReflectionExperiment")),
 		connect.WithHandlerOptions(opts...),
 	)
 	modelExperimentServiceGetExperimentHandler := connect.NewUnaryHandler(
@@ -351,6 +377,8 @@ func NewModelExperimentServiceHandler(svc ModelExperimentServiceHandler, opts ..
 			modelExperimentServiceStartObserveExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceStartWriteExperimentProcedure:
 			modelExperimentServiceStartWriteExperimentHandler.ServeHTTP(w, r)
+		case ModelExperimentServiceStartVoiceReflectionExperimentProcedure:
+			modelExperimentServiceStartVoiceReflectionExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceGetExperimentProcedure:
 			modelExperimentServiceGetExperimentHandler.ServeHTTP(w, r)
 		case ModelExperimentServiceListExperimentsProcedure:
@@ -386,6 +414,10 @@ func (UnimplementedModelExperimentServiceHandler) StartObserveExperiment(context
 
 func (UnimplementedModelExperimentServiceHandler) StartWriteExperiment(context.Context, *connect.Request[v1.StartWriteExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartWriteExperiment is not implemented"))
+}
+
+func (UnimplementedModelExperimentServiceHandler) StartVoiceReflectionExperiment(context.Context, *connect.Request[v1.StartVoiceReflectionExperimentRequest]) (*connect.Response[v1.StartExperimentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment is not implemented"))
 }
 
 func (UnimplementedModelExperimentServiceHandler) GetExperiment(context.Context, *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error) {

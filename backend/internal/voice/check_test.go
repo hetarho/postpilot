@@ -254,3 +254,48 @@ func TestAnOlderCheckIsMarkedAndKeepsItsPiece(t *testing.T) {
 		t.Fatalf("an older check = %+v", checks[0])
 	}
 }
+
+// MODEL-67: 말투 반영 비교 freezes 검증's input — the projection with the answer withheld, the
+// prompt, the answer's text and a photo prompt's photo — refuses what 검증 refuses, and each
+// candidate makes 검증's one call over that snapshot, reporting its usage.
+func TestAReflectionFreezesAndRunsTheCheckPrompt(t *testing.T) {
+	h, alice := checkHarness(t)
+	ctx := context.Background()
+	if _, err := h.svc.SnapshotReflectionInput(ctx, "alice", alice, "closing_greeting"); !errors.Is(err, voice.ErrCheckPromptUnanswered) {
+		t.Fatalf("an unanswered prompt = %v", err)
+	}
+	input, err := h.svc.SnapshotReflectionInput(ctx, "alice", alice, "photo_food")
+	if err != nil || !input.Photo || input.PromptKey != "photo_food" || input.MaterialID != "photo" {
+		t.Fatalf("input = %+v err=%v", input, err)
+	}
+	prompt, answer, err := voice.ReflectionView(input.Content)
+	if err != nil || prompt.Key != "photo_food" || answer != "노릇한 크루아상이 먹음직스러웠어요." {
+		t.Fatalf("view = %+v %q err=%v", prompt, answer, err)
+	}
+	h.models.completeCalls = 0
+	h.models.response = " 크루아상이 정말 바삭했어요. "
+	result, err := h.svc.RunReflectionCandidate(ctx, input.Content, visionRef)
+	if err != nil || result.Piece != "크루아상이 정말 바삭했어요." || h.models.completeCalls != 1 {
+		t.Fatalf("run = %+v err=%v calls=%d", result, err, h.models.completeCalls)
+	}
+	request := h.models.request
+	if strings.Contains(request.System, "먹음직스러웠어요") || len(request.Messages[0].Parts) != 2 || !strings.Contains(request.Messages[0].Parts[0].Text, "[문항]") {
+		t.Fatalf("the call = %+v", request)
+	}
+	if _, err := h.svc.DeleteVoice(ctx, "alice", alice); err != nil {
+		t.Fatal(err)
+	}
+	// The snapshot is the retry boundary: a deleted voice's comparison still runs, and still reads.
+	if _, err := h.svc.RunReflectionCandidate(ctx, input.Content, visionRef); err != nil {
+		t.Fatalf("a frozen snapshot on a deleted voice = %v", err)
+	}
+	if comparison, err := h.svc.CompareText(ctx, "alice", alice, result.Piece); err != nil || len(comparison) != len(voice.Items()) {
+		t.Fatalf("compare = %d err=%v", len(comparison), err)
+	}
+	if _, err := h.svc.SnapshotReflectionInput(ctx, "alice", alice, "opening_greeting"); !errors.Is(err, voice.ErrVoiceDeleted) {
+		t.Fatalf("a tombstone's snapshot = %v", err)
+	}
+	if _, err := h.svc.CompareText(ctx, "bob", alice, "글"); !errors.Is(err, voice.ErrVoiceNotFound) {
+		t.Fatalf("another account's compare = %v", err)
+	}
+}

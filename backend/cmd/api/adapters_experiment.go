@@ -52,6 +52,82 @@ func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID strin
 	return nil
 }
 
+// experimentReflection is the voice context's 말투 반영 비교 behaviour as the experiment context's
+// port (MODEL-67): 검증's snapshot, call and comparison, with the voice's refusals translated
+// into the experiment's own.
+type experimentReflection struct{ service *voice.Service }
+
+func (a experimentReflection) Snapshot(ctx context.Context, userID, voiceID, promptKey string) (experiment.ReflectionSnapshot, error) {
+	input, err := a.service.SnapshotReflectionInput(ctx, userID, voiceID, promptKey)
+	if err != nil {
+		return experiment.ReflectionSnapshot{}, reflectionError(err)
+	}
+	return experiment.ReflectionSnapshot{
+		Content: input.Content, PromptVersion: voice.ReflectionPromptVersion,
+		PromptKey: input.PromptKey, MaterialID: input.MaterialID, Photo: input.Photo,
+	}, nil
+}
+
+// Run is one candidate's piece; its output is the piece as plain text.
+func (a experimentReflection) Run(ctx context.Context, content []byte, model experiment.ModelRef) (experiment.CandidateResult, error) {
+	result, err := a.service.RunReflectionCandidate(ctx, content, llmRef(model))
+	usage := experimentUsage(int64(result.Usage.PromptTokens), int64(result.Usage.CompletionTokens), result.Usage.CostMicrousd, result.Usage.CostReported)
+	if err != nil {
+		return experiment.CandidateResult{Usage: usage}, err
+	}
+	return experiment.CandidateResult{Output: []byte(result.Piece), Usage: usage}, nil
+}
+
+func (a experimentReflection) PromptText(promptKey string) string {
+	prompt, _ := voice.PromptByKey(promptKey)
+	return prompt.Text
+}
+
+func (a experimentReflection) Answer(content []byte) (string, error) {
+	_, answer, err := voice.ReflectionView(content)
+	return answer, err
+}
+
+func (a experimentReflection) Compare(ctx context.Context, userID, voiceID, text string) ([]experiment.ItemComparison, error) {
+	items, err := a.service.CompareText(ctx, userID, voiceID, text)
+	if err != nil {
+		return nil, reflectionError(err)
+	}
+	out := make([]experiment.ItemComparison, 0, len(items))
+	for _, item := range items {
+		facets := make([]experiment.ComparisonFacet, 0, len(item.Facets))
+		for _, facet := range item.Facets {
+			facets = append(facets, experiment.ComparisonFacet{
+				Key: facet.Key, Unit: string(facet.Unit), Voice: facet.Voice, Text: facet.Text,
+				VoiceTerms: facet.VoiceTerms, TextTerms: facet.TextTerms,
+			})
+		}
+		out = append(out, experiment.ItemComparison{
+			Item: string(item.Item), Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Facets: facets,
+		})
+	}
+	return out, nil
+}
+
+// reflectionError is MODEL-31's refusal set in the experiment context's words.
+func reflectionError(err error) error {
+	switch {
+	case errors.Is(err, voice.ErrVoiceRequired):
+		return experiment.ErrVoiceRequired
+	case errors.Is(err, voice.ErrVoiceNotFound):
+		return experiment.ErrVoiceNotFound
+	case errors.Is(err, voice.ErrVoiceDeleted):
+		return experiment.ErrVoiceUnavailable
+	case errors.Is(err, voice.ErrVoiceNotMade):
+		return experiment.ErrVoiceNotMade
+	case errors.Is(err, voice.ErrPromptNotFound):
+		return experiment.ErrPromptNotFound
+	case errors.Is(err, voice.ErrCheckPromptUnanswered):
+		return experiment.ErrPromptUnanswered
+	}
+	return err
+}
+
 type experimentJobs struct{ queue *job.Queue }
 
 func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experiment.JobRequest) (string, error) {

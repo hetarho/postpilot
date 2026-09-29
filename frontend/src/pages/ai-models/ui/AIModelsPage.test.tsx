@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { ProtoPlan, Stage } from '@/shared/api'
+import { ExperimentSource, ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
@@ -166,4 +166,67 @@ it.each(destinations)('guards direct access to %s', async (path) => {
   const { router } = renderAppAt(path)
   await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
   expect(router.state.location.search.redirect).toBe(path)
+})
+
+// MODEL-44, MODEL-67: the history's 말투 반영 tab lists voice-sourced write comparisons naming the
+// voice and the prompt; 글쓰기 lists post-sourced ones only.
+it('lists voice-sourced comparisons on 말투 반영 and post-sourced ones on 글쓰기', async () => {
+  const user = userEvent.setup()
+  const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+  renderAppAt('/ai-models/experiments?stage=voice', {
+    user: { id: 'alice' },
+    voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true }] },
+    experiments: {
+      reads,
+      history: [
+        { id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' },
+        {
+          id: 'reflection-1',
+          stage: Stage.WRITE,
+          voiceId: 'voice-default',
+          source: ExperimentSource.VOICE,
+          voicePromptText: '첫인사를 써 보세요.',
+        },
+      ],
+    },
+  })
+
+  const record = await screen.findByRole('link', { name: /기본 말투 · 첫인사를 써 보세요\./ })
+  expect(record).toHaveAttribute('href', '/ai-models/experiments/reflection-1?stage=voice')
+  expect(screen.queryByRole('link', { name: /first-post/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '말투 반영' })).toHaveAttribute('aria-selected', 'true')
+  expect(reads).toContainEqual(
+    expect.objectContaining({
+      kind: 'history',
+      stage: Stage.WRITE,
+      source: ExperimentSource.VOICE,
+    }),
+  )
+
+  await user.click(screen.getByRole('tab', { name: '글 작성' }))
+  expect(await screen.findByRole('link', { name: /first-post/ })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /첫인사를 써 보세요/ })).not.toBeInTheDocument()
+  expect(reads).toContainEqual(
+    expect.objectContaining({ kind: 'history', stage: Stage.WRITE, source: ExperimentSource.POST }),
+  )
+})
+
+// MODEL-67: a 말투 반영 verdict counts on the write board, and the board keeps its two stages.
+it('reads 말투 반영 as the write board on the leaderboard', async () => {
+  const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+  renderAppAt('/ai-models/leaderboard?stage=voice', {
+    user: { id: 'alice' },
+    experiments: { reads },
+  })
+
+  expect(await screen.findByRole('tab', { name: '글 작성' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  expect(screen.queryByRole('tab', { name: '말투 반영' })).not.toBeInTheDocument()
+  await waitFor(() =>
+    expect(reads).toContainEqual(
+      expect.objectContaining({ kind: 'leaderboard', stage: Stage.WRITE }),
+    ),
+  )
 })

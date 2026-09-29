@@ -56,6 +56,34 @@ func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
 }
 
+// StartVoiceReflectionExperiment is 말투 반영 비교's start (MODEL-67).
+func (h *Handler) StartVoiceReflectionExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartVoiceReflectionExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	started, err := h.service.StartVoiceReflection(ctx, experiment.ReflectionStartRequest{
+		UserID: userID, VoiceID: req.Msg.GetVoiceId(), PromptKey: req.Msg.GetPromptKey(),
+		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
+	})
+	if err != nil {
+		return nil, toConnectError("start voice reflection experiment", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
+}
+
+// full is one comparison as its review reads it: a voice-sourced one with its prompt, the
+// owner's answer and each piece's comparison, computed now. A comparison that cannot be
+// measured is logged and left out rather than failing the review.
+func (h *Handler) full(ctx context.Context, found experiment.Experiment) *postpilotv1.ModelExperiment {
+	detail, err := h.service.ReflectionDetail(ctx, found)
+	if err != nil {
+		slog.Warn("voice reflection detail unavailable", "experiment_id", found.ID, "err", err)
+		detail = experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(found)}
+	}
+	return toProtoExperiment(found, detail)
+}
+
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -65,7 +93,7 @@ func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpi
 	if err != nil {
 		return nil, toConnectError("get experiment", err)
 	}
-	return connect.NewResponse(&postpilotv1.GetExperimentResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.GetExperimentResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[postpilotv1.ListExperimentsRequest]) (*connect.Response[postpilotv1.ListExperimentsResponse], error) {
@@ -74,13 +102,13 @@ func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[post
 		return nil, err
 	}
 	stage := fromProtoStage(req.Msg.GetStage())
-	found, err := h.service.List(ctx, userID, stage)
+	found, err := h.service.List(ctx, userID, stage, fromProtoSource(req.Msg.GetSource()))
 	if err != nil {
 		return nil, toConnectError("list experiments", err)
 	}
 	out := make([]*postpilotv1.ModelExperiment, 0, len(found))
 	for _, item := range found {
-		out = append(out, toProtoExperiment(item))
+		out = append(out, toProtoExperiment(item, experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(item)}))
 	}
 	return connect.NewResponse(&postpilotv1.ListExperimentsResponse{Experiments: out}), nil
 }
@@ -98,7 +126,7 @@ func (h *Handler) RetryCandidate(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, toConnectError("get retried experiment", err)
 	}
-	return connect.NewResponse(&postpilotv1.RetryCandidateResponse{JobId: started.JobID, Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.RetryCandidateResponse{JobId: started.JobID, Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpilotv1.ChooseWinnerRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
@@ -106,7 +134,7 @@ func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpil
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[postpilotv1.UseSingleCandidateRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
@@ -116,7 +144,7 @@ func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[p
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool, badges []experiment.CandidateBadges) (experiment.Experiment, error) {
@@ -140,7 +168,7 @@ func (h *Handler) DismissExperiment(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, toConnectError("dismiss experiment", err)
 	}
-	return connect.NewResponse(&postpilotv1.DismissExperimentResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.DismissExperimentResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyWinnerOutputRequest]) (*connect.Response[postpilotv1.ApplyWinnerOutputResponse], error) {
@@ -152,7 +180,7 @@ func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, toConnectError("apply experiment winner", err)
 	}
-	return connect.NewResponse(&postpilotv1.ApplyWinnerOutputResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.ApplyWinnerOutputResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) AdoptWinnerModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptWinnerModelRequest]) (*connect.Response[postpilotv1.AdoptWinnerModelResponse], error) {
@@ -179,7 +207,7 @@ func (h *Handler) DecideWriteExperiment(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, toConnectError("decide write experiment", err)
 	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
+	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
 }
 
 func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postpilotv1.GetLeaderboardRequest]) (*connect.Response[postpilotv1.GetLeaderboardResponse], error) {
@@ -266,6 +294,14 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a finalized post cannot take a comparison result", postpilotv1.FailureReason_EXPERIMENT_POST_FINALIZED, nil)
 	case errors.Is(err, experiment.ErrPostPublished):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a published post is locked", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
+	case errors.Is(err, experiment.ErrVoiceRequired):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "a voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
+	case errors.Is(err, experiment.ErrPromptNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice prompt not found", postpilotv1.FailureReason_VOICE_PROMPT_NOT_FOUND, nil)
+	case errors.Is(err, experiment.ErrPromptUnanswered):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the prompt has no answer to compare against", postpilotv1.FailureReason_VOICE_CHECK_PROMPT_UNANSWERED, nil)
+	case errors.Is(err, experiment.ErrPhotoUnsupported):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a photo prompt needs both candidates to read images", postpilotv1.FailureReason_VOICE_CHECK_PHOTO_UNSUPPORTED, nil)
 	case errors.As(err, &active):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:
@@ -288,10 +324,10 @@ func activeJobParams(id string) map[string]string {
 	return map[string]string{"active_job_id": id}
 }
 
-func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment {
+func toProtoExperiment(found experiment.Experiment, detail experiment.ReflectionDetail) *postpilotv1.ModelExperiment {
 	candidates := make([]*postpilotv1.ExperimentCandidate, 0, len(found.Candidates))
 	for _, candidate := range found.Candidates {
-		candidates = append(candidates, toProtoCandidate(found, candidate))
+		candidates = append(candidates, toProtoCandidate(found, candidate, detail.Comparisons[candidate.ID]))
 	}
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
@@ -305,6 +341,10 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 		AdoptedAt:         formatOptional(found.AdoptedAt),
 		ApplyFailure:      failureToProto(found.ApplyFailure),
 		AdoptionFailure:   failureToProto(found.AdoptionFailure),
+		Source:            toProtoSource(found.Source),
+		VoicePromptKey:    found.VoicePromptKey,
+		VoicePromptText:   detail.PromptText,
+		VoiceAnswer:       detail.Answer,
 	}
 }
 
@@ -336,9 +376,18 @@ func optionalTargetLength(value *int32) *int {
 	return &result
 }
 
-func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate) *postpilotv1.ExperimentCandidate {
+func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate, comparison []experiment.ItemComparison) *postpilotv1.ExperimentCandidate {
 	out := &postpilotv1.ExperimentCandidate{Id: candidate.ID, DisplaySide: toProtoSide(candidate.DisplaySide), Status: toProtoCandidateStatus(candidate.Status)}
-	setOutput(out, found.Stage, candidate.Output)
+	if found.Source == experiment.SourceVoice {
+		// A voice-sourced candidate's output is its piece, read as plain text (MODEL-67).
+		if len(candidate.Output) > 0 {
+			out.Output = &postpilotv1.ExperimentCandidate_VoicePiece{VoicePiece: &postpilotv1.VoicePiece{
+				Text: string(candidate.Output), Comparison: toProtoComparisons(comparison),
+			}}
+		}
+	} else {
+		setOutput(out, found.Stage, candidate.Output)
+	}
 	if found.Revealed() {
 		out.Model = toProtoRef(candidate.Model)
 		out.ModelLabel = candidate.ModelLabel

@@ -40,6 +40,9 @@ type ModelExperiment struct {
 	AdoptionTechnicalDetail sql.NullString
 	Origin                  string
 	ApplyRequested          int64
+	Source                  string
+	VoicePromptKey          sql.NullString
+	VoiceMaterialID         sql.NullString
 }
 
 type ModelExperimentBadge struct {

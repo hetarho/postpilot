@@ -1,24 +1,45 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { stageLabel } from '@/entities/model-catalog'
-import { useExperiments, type ExperimentStatusName } from '@/entities/model-experiment'
+import {
+  useExperiments,
+  type ExperimentStatusName,
+  type ModelExperiment,
+} from '@/entities/model-experiment'
+import { useSession } from '@/entities/session'
+import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { Badge, type BadgeTone, Typography, typographyStyles, pageStyles } from '@/shared/ui'
-import { useModelStage } from '../model/useModelStage'
+import { stageOfTab, useModelStage } from '../model/useModelStage'
 import { ModelPageHeader } from './ModelPageHeader'
 import { ModelStageTabs } from './ModelStageTabs'
 import { ModelResultsState } from './ModelResultsState'
 
 export function ModelHistoryPage() {
   const { t } = useTranslation('models')
-  const { stage } = useModelStage()
-  const { experiments, isPending, isError, refetch } = useExperiments(stage)
+  const { stage: tab } = useModelStage()
+  const stage = stageOfTab(tab)
+  // 글쓰기 lists post-sourced write comparisons and 말투 반영 voice-sourced ones (MODEL-67).
+  const { experiments, isPending, isError, refetch } = useExperiments(
+    stage,
+    stage === 'write' ? (tab === 'voice' ? 'voice' : 'post') : undefined,
+  )
+  const { user } = useSession()
+  const { voices } = useVoices(user?.id ?? '')
+  const rowLabel = (item: ModelExperiment) => {
+    if (item.source !== 'voice') return item.postSlug || stageLabel(item.stage)
+    const voice = voices.find((candidate) => candidate.id === item.voiceId)
+    return t('page.voice.row', {
+      voice: voice ? voiceRefLabel(voice) : item.voiceId,
+      prompt: item.voicePromptText,
+    })
+  }
   return (
     <main className={pageStyles({ width: 'wide', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
       <ModelPageHeader title="history" description="historyDescription" />
-      <ModelStageTabs to="/ai-models/experiments" />
+      <ModelStageTabs to="/ai-models/experiments" withVoice />
       <section className="mt-6" aria-labelledby="recent-heading">
         <Typography variant="title" id="recent-heading">
-          {t('page.recent', { stage: stageLabel(stage) })}
+          {t('page.recent', { stage: tab === 'voice' ? t('stage.voice') : stageLabel(stage) })}
         </Typography>
         <ModelResultsState isPending={isPending} isError={isError} onRetry={() => void refetch()}>
           {experiments.length === 0 ? (
@@ -32,7 +53,7 @@ export function ModelHistoryPage() {
                   <Link
                     to="/ai-models/experiments/$id"
                     params={{ id: item.id }}
-                    search={{ stage }}
+                    search={{ stage: tab }}
                     className={typographyStyles({
                       variant: 'label',
                       className:
@@ -43,9 +64,7 @@ export function ModelHistoryPage() {
                       runes of the title, so a spaceless Korean one is ~420px of max-content in a
                       312px row and would otherwise crush the status chip to a column of single
                       syllables (THEME-32). */}
-                    <span className="min-w-0 truncate">
-                      {item.postSlug || stageLabel(item.stage)}
-                    </span>
+                    <span className="min-w-0 truncate">{rowLabel(item)}</span>
                     <Badge tone={STATUS_TONES[item.status]}>
                       {t(`experimentStatus.${item.status}`, { ns: 'models' })}
                     </Badge>

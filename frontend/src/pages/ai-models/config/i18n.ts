@@ -5,6 +5,17 @@ export const i18n = {
   namespace: 'models',
   ko: {
     page: {
+      voice: {
+        voice: '말투',
+        prompt: '비교할 문항',
+        checking: '말투를 확인하는 중이에요.',
+        noVoice: '만든 말투가 없어요. 말투를 만든 뒤 비교할 수 있어요.',
+        noAnswer: '이 말투에는 답한 문항이 없어요. 학습 글에서 문항에 답해 주세요.',
+        answerPrompt: '문항에 답하러 가기',
+        photoOnly: '두 모델이 사진을 읽을 때만 비교할 수 있는 문항뿐이에요.',
+        photoNeedsVision: '사진 문항은 두 모델이 모두 사진을 읽을 때만 비교할 수 있어요.',
+        row: '{{voice}} · {{prompt}}',
+      },
       modelSettings: '모델 변경',
       comparison: '모델 비교',
       history: '최근 관찰 비교',
@@ -53,10 +64,22 @@ export const i18n = {
       decided: '선택 완료',
       dismissed: '사용 안 함',
     },
-    stage: { observe: '관찰', write: '글 작성', analyze: '문체 분석' },
+    stage: { observe: '관찰', write: '글 작성', analyze: '문체 분석', voice: '말투 반영' },
   },
   en: {
     page: {
+      voice: {
+        voice: 'Voice',
+        prompt: 'Prompt to compare',
+        checking: 'Checking the voice…',
+        noVoice: 'You have no made voice yet. Make one to compare.',
+        noAnswer: 'This voice has no answered prompt. Answer one in its writing first.',
+        answerPrompt: 'Answer a prompt',
+        photoOnly:
+          'Only photo prompts are answered, and both models must read photos to compare them.',
+        photoNeedsVision: 'A photo prompt can be compared only when both models read photos.',
+        row: '{{voice}} · {{prompt}}',
+      },
       modelSettings: 'Change models',
       comparison: 'Compare models',
       history: 'Recent observation comparisons',
@@ -105,6 +128,6 @@ export const i18n = {
       decided: 'Selected',
       dismissed: 'Dismissed',
     },
-    stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice' },
+    stage: { observe: 'Observe', write: 'Write', analyze: 'Analyze voice', voice: 'Voice fit' },
   },
 } as const satisfies I18nFragment

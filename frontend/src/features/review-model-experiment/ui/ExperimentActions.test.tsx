@@ -34,6 +34,10 @@ const base: ModelExperiment = {
   decidedAt: '',
   revealed: false,
   targetLanguage: 'ko',
+  source: 'post',
+  voicePromptKey: '',
+  voicePromptText: '',
+  voiceAnswer: '',
   candidates: [
     {
       id: 'left',
@@ -318,4 +322,44 @@ it('keeps the survivor of a half-failed comparison usable from either surface', 
     expect(actions.useSingle).toHaveBeenCalledWith('left')
     unmount()
   }
+})
+
+// MODEL-36, MODEL-67: a 말투 반영 비교 offers 선택 and, once decided, adoption alone — it wrote
+// nothing, so there is no content application and no survivor to use.
+it('offers a 말투 반영 비교 its pick and then adoption alone', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  const reflection: ModelExperiment = {
+    ...labPair,
+    postSlug: '',
+    voiceId: 'voice-default',
+    source: 'voice',
+    voicePromptKey: 'opening_greeting',
+  }
+  const { unmount } = renderActions(reflection)
+  expect(await screen.findByRole('button', { name: '이 결과로 선택' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+  unmount()
+
+  renderActions({ ...reflection, status: 'decided', winnerCandidateId: 'left', revealed: true })
+  await userEvent.click(await screen.findByRole('button', { name: '활성 모델로 사용' }))
+  expect(actions.adopt).toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+})
+
+it('offers a half-failed 말투 반영 비교 its retry, never its survivor', async () => {
+  mocks.useExperimentActions.mockReturnValue(actionSet())
+  renderActions({
+    ...labPair,
+    postSlug: '',
+    voiceId: 'voice-default',
+    source: 'voice',
+    status: 'partial',
+    candidates: [
+      base.candidates[0]!,
+      { ...base.candidates[1]!, status: 'failed', output: undefined },
+    ],
+  })
+  expect(await screen.findByRole('button', { name: '실패 후보 재시도' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '이 결과만 사용' })).not.toBeInTheDocument()
 })

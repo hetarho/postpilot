@@ -38,6 +38,11 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"post finalized":           {experiment.ErrPostFinalized, connect.CodeFailedPrecondition, "EXPERIMENT_POST_FINALIZED", nil},
 		"post published":           {experiment.ErrPostPublished, connect.CodeFailedPrecondition, "POST_PUBLISHED_LOCKED", nil},
 		"badges invalid":           {experiment.ErrBadgesInvalid, connect.CodeInvalidArgument, "EXPERIMENT_BADGES_INVALID", nil},
+		"voice required":           {experiment.ErrVoiceRequired, connect.CodeInvalidArgument, "VOICE_REQUIRED", nil},
+		"voice not made":           {experiment.ErrVoiceNotMade, connect.CodeFailedPrecondition, "VOICE_NOT_MADE", nil},
+		"prompt not found":         {experiment.ErrPromptNotFound, connect.CodeNotFound, "VOICE_PROMPT_NOT_FOUND", nil},
+		"prompt unanswered":        {experiment.ErrPromptUnanswered, connect.CodeFailedPrecondition, "VOICE_CHECK_PROMPT_UNANSWERED", nil},
+		"photo unsupported":        {experiment.ErrPhotoUnsupported, connect.CodeFailedPrecondition, "VOICE_CHECK_PHOTO_UNSUPPORTED", nil},
 		"already running wrapped":  {errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
 	}
 
@@ -86,10 +91,10 @@ func TestExperimentActiveJobParamRejectsNonOpaqueValues(t *testing.T) {
 
 func TestExperimentMapsOnlyFrozenWriteTargetLanguage(t *testing.T) {
 	english := experiment.LanguageEnglish
-	if got := toProtoExperiment(experiment.Experiment{TargetLanguage: &english}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH {
+	if got := toProtoExperiment(experiment.Experiment{TargetLanguage: &english}, experiment.ReflectionDetail{}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH {
 		t.Fatalf("English target = %v", got)
 	}
-	if got := toProtoExperiment(experiment.Experiment{}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
+	if got := toProtoExperiment(experiment.Experiment{}, experiment.ReflectionDetail{}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
 		t.Fatalf("absent target = %v", got)
 	}
 }
@@ -121,7 +126,7 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 		Output: []byte(`[{"file":"IMG_1.jpg","scene":"바다"}]`), Failure: &experiment.Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "upstream secret error"},
 		Usage: experiment.Usage{PromptTokens: 12, CompletionTokens: 3, CostMicrousd: 8, CostSource: experiment.CostReported, LatencyMS: 99},
 	}
-	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusPartial}, candidate)
+	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusPartial}, candidate, nil)
 	if blind.GetModel() != nil || blind.GetModelLabel() != "" || blind.GetUsage() != nil || blind.GetFailure() != nil || blind.GetError() != "" {
 		t.Fatalf("pre-verdict response leaked identity/accounting: %+v", blind)
 	}
@@ -129,7 +134,7 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 		t.Fatalf("blind output/id missing: %+v", blind)
 	}
 
-	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate)
+	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate, nil)
 	if revealed.GetModel().GetModelId() != "secret-model" || revealed.GetModelLabel() != "Secret label" ||
 		revealed.GetUsage().GetCostMicrousd() != 8 || revealed.GetFailure().GetReason() != "MODEL_RATE_LIMITED" ||
 		revealed.GetFailure().GetTechnicalDetail() != "upstream secret error" || revealed.GetError() != "" {
@@ -142,7 +147,7 @@ func TestExperimentMappingProjectsStructuredAggregateFailuresOnly(t *testing.T) 
 		ApplyFailure:    &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"safe": "value"}},
 		AdoptionFailure: &experiment.Failure{Reason: "MODEL_UNAVAILABLE", TechnicalDetail: "provider detail"},
 	}
-	mapped := toProtoExperiment(found)
+	mapped := toProtoExperiment(found, experiment.ReflectionDetail{})
 	if mapped.GetApplyFailure().GetReason() != "UNKNOWN_FAILURE" || mapped.GetApplyFailure().GetParams()["safe"] != "value" {
 		t.Fatalf("apply failure = %#v", mapped.GetApplyFailure())
 	}
@@ -181,7 +186,7 @@ func TestExperimentOriginMapsBothWays(t *testing.T) {
 		}
 		for _, sample := range cases {
 			found := experiment.Experiment{ID: "exp", Stage: experiment.StageWrite, Origin: sample.origin, Status: experiment.StatusReview}
-			if got := toProtoExperiment(found).GetOrigin(); got != sample.want {
+			if got := toProtoExperiment(found, experiment.ReflectionDetail{}).GetOrigin(); got != sample.want {
 				t.Errorf("origin %q maps to %v, want %v", sample.origin, got, sample.want)
 			}
 		}
@@ -195,7 +200,7 @@ func TestExperimentOriginMapsBothWays(t *testing.T) {
 				Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A",
 			}},
 		}
-		mapped := toProtoExperiment(found)
+		mapped := toProtoExperiment(found, experiment.ReflectionDetail{})
 		if mapped.GetOrigin() != postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB {
 			t.Fatalf("origin = %v", mapped.GetOrigin())
 		}
@@ -273,7 +278,7 @@ func TestBadgesCrossTheWireOnlyWithTheIdentity(t *testing.T) {
 	blind := toProtoExperiment(experiment.Experiment{
 		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
 		Status: experiment.StatusReview, Candidates: candidates,
-	})
+	}, experiment.ReflectionDetail{})
 	if len(blind.GetCandidates()[0].GetBadges()) != 0 || blind.GetCandidates()[0].GetOtherNote() != "" {
 		t.Fatalf("badges leaked before the verdict: %+v", blind.GetCandidates()[0])
 	}
@@ -281,7 +286,7 @@ func TestBadgesCrossTheWireOnlyWithTheIdentity(t *testing.T) {
 	revealed := toProtoExperiment(experiment.Experiment{
 		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
 		Status: experiment.StatusDecided, WinnerCandidateID: "left", Candidates: candidates,
-	})
+	}, experiment.ReflectionDetail{})
 	got := revealed.GetCandidates()[0]
 	if len(got.GetBadges()) != 2 || got.GetOtherNote() != "설명" {
 		t.Fatalf("revealed candidate = %+v", got)

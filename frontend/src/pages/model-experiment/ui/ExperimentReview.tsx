@@ -10,6 +10,7 @@ import { useSession } from '@/entities/session'
 import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { ExperimentActions, hasExperimentActions } from '@/features/review-model-experiment'
 import { CandidateComparison } from '@/widgets/candidate-comparison'
+import { FingerprintComparison } from '@/widgets/voice-fingerprint'
 import { ActionBar, Badge, Button, SegmentedControl, Typography, pageStyles } from '@/shared/ui'
 
 export function ExperimentReview({
@@ -65,7 +66,17 @@ export function ExperimentReview({
         </Typography>
       )}
       <div className="mt-6 sm:mt-8">
-        <CandidateComparison experiment={experiment} activeCandidateId={activeId} />
+        <CandidateComparison
+          experiment={experiment}
+          activeCandidateId={activeId}
+          // Each 말투 반영 비교 piece carries its fingerprint beside the voice's (MODEL-67).
+          renderComparison={(items) => (
+            <FingerprintComparison
+              items={items}
+              textLabel={t('experiment.pieceLabel', { ns: 'models' })}
+            />
+          )}
+        />
       </div>
       {activeId && (
         <ActionBar

@@ -4,8 +4,8 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
   id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
-  prompt_version, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+  prompt_version, created_at, source, voice_prompt_key, voice_material_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertCandidate :exec
 INSERT INTO model_experiment_candidates (
@@ -33,8 +33,12 @@ SELECT * FROM model_experiments WHERE id = ? AND user_id = ?;
 SELECT * FROM model_experiment_candidates WHERE experiment_id = ? ORDER BY display_side;
 
 -- name: ListExperimentsForUser :many
+-- An empty stage or source matches every one: the write history reads post-sourced comparisons
+-- and the voice history voice-sourced ones (MODEL-67).
 SELECT * FROM model_experiments
-WHERE user_id = ? AND (? = '' OR stage = ?)
+WHERE user_id = sqlc.arg(user_id)
+  AND (CAST(sqlc.arg(stage) AS TEXT) = '' OR stage = CAST(sqlc.arg(stage) AS TEXT))
+  AND (CAST(sqlc.arg(source) AS TEXT) = '' OR source = CAST(sqlc.arg(source) AS TEXT))
 ORDER BY created_at DESC, id DESC;
 
 -- name: PendingWriteForPost :one

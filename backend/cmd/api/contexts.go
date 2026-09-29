@@ -335,6 +335,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// The experiment reads the voice directory through a port adapted only here: a comparison
 	// cannot retry in a deleted voice. No experiment holds a voice's deletion (VOICE-13).
 	c.experiment.SetVoiceDirectory(experimentVoices{service: c.voice})
+	c.experiment.SetVoiceReflection(experimentReflection{service: c.voice})
 	return c, nil
 }
 

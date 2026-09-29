@@ -3,6 +3,7 @@ import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import {
   ExperimentOrigin,
+  ExperimentSource,
   LeaderboardScope,
   LeaderboardWindow,
   ModelExperimentService,
@@ -28,10 +29,19 @@ export interface FakeWriteExperimentStart {
 
 export interface FakeExperimentsOptions {
   observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
-  history?: Array<{ id: string; stage: Stage; postSlug?: string; voiceId?: string }>
+  history?: Array<{
+    id: string
+    stage: Stage
+    postSlug?: string
+    voiceId?: string
+    source?: ExperimentSource
+    voicePromptText?: string
+  }>
   reads?: Array<{
     kind: 'history' | 'leaderboard'
     stage: Stage
+    /** The history's source filter; UNSPECIFIED for every source and for a board. */
+    source?: ExperimentSource
     window?: LeaderboardWindow
     scope?: LeaderboardScope
   }>
@@ -44,6 +54,13 @@ export interface FakeExperimentsOptions {
   jobId?: string
   experimentId?: string
   startError?: string
+  /** 말투 반영 비교 starts the fake received (MODEL-67). */
+  reflectionStarts?: Array<{
+    voiceId: string
+    promptKey: string
+    modelA?: ModelRef
+    modelB?: ModelRef
+  }>
 }
 
 export function registerExperimentService(
@@ -57,13 +74,19 @@ export function registerExperimentService(
       throw connectAppError('EXPERIMENT_STAGE_INVALID', Code.InvalidArgument)
   }
   router.rpc(ModelExperimentService.method.listExperiments, async (request) => {
-    options.reads?.push({ kind: 'history', stage: request.stage })
+    options.reads?.push({ kind: 'history', stage: request.stage, source: request.source })
     refuseAnalyze(request.stage)
     if (options.readGate) await options.readGate
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    // Like the server: an unstated source is every one, and a row without one is post-sourced.
+    const sourceOf = (item: { source?: ExperimentSource }) => item.source ?? ExperimentSource.POST
     return {
       experiments: (options.history ?? [])
         .filter((item) => request.stage === Stage.UNSPECIFIED || item.stage === request.stage)
+        .filter(
+          (item) =>
+            request.source === ExperimentSource.UNSPECIFIED || sourceOf(item) === request.source,
+        )
         .map((item) => ({ ...item, status: ExperimentStatus.DECIDED })),
     }
   })
@@ -101,6 +124,22 @@ export function registerExperimentService(
       jobId: options.jobId ?? 'experiment-job',
       experimentId: options.experimentId ?? 'experiment-1',
     }
+  })
+  router.rpc(ModelExperimentService.method.startVoiceReflectionExperiment, (request) => {
+    options.calls?.push('StartVoiceReflectionExperiment')
+    if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const ref = (value?: { providerId: string; modelId: string }) =>
+      value ? { providerId: value.providerId, modelId: value.modelId } : undefined
+    options.reflectionStarts?.push({
+      voiceId: request.voiceId,
+      promptKey: request.promptKey,
+      modelA: ref(request.modelA),
+      modelB: ref(request.modelB),
+    })
+    return create(StartExperimentResponseSchema, {
+      jobId: options.jobId ?? 'experiment-job',
+      experimentId: options.experimentId ?? 'experiment-1',
+    })
   })
   router.rpc(ModelExperimentService.method.startWriteExperiment, (request) => {
     options.calls?.push('StartWriteExperiment')

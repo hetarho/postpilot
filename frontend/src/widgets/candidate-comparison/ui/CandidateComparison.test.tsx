@@ -33,6 +33,10 @@ const base: ModelExperiment = {
   decidedAt: '',
   revealed: false,
   targetLanguage: undefined,
+  source: 'post',
+  voicePromptKey: '',
+  voicePromptText: '',
+  voiceAnswer: '',
   candidates: [
     {
       id: 'right',
@@ -163,4 +167,48 @@ it('renders an observe candidate as its observations', () => {
   expect(within(left).getByText('photo.jpg')).toBeInTheDocument()
   expect(within(left).getByText('left 장면')).toBeInTheDocument()
   expect(within(left).getByText('컵')).toBeInTheDocument()
+})
+
+// MODEL-67: a 말투 반영 비교 shows the owner's answer on top and each piece with its comparison,
+// drawn by the slot the page supplies; once purged, the answer says it is gone.
+it('shows the owner answer above each piece and its comparison', () => {
+  const voiced: ModelExperiment = {
+    ...base,
+    origin: 'lab',
+    source: 'voice',
+    voicePromptKey: 'opening_greeting',
+    voicePromptText: '첫인사를 써 보세요.',
+    voiceAnswer: '안녕하세요, 동네 빵집이에요.',
+    candidates: base.candidates.map((candidate) => ({
+      ...candidate,
+      output: {
+        kind: 'voice' as const,
+        text: `${candidate.id} 조각`,
+        comparison: [
+          { item: 'endings' as const, unknown: false, distance: 0.4, headline: '해요', facets: [] },
+        ],
+      },
+    })),
+  }
+  const { rerender } = render(
+    <CandidateComparison
+      experiment={voiced}
+      activeCandidateId="left"
+      renderComparison={(items) => <p>{`비교 ${items.length}개`}</p>}
+    />,
+  )
+  const answer = screen.getByRole('region', { name: '내 답' })
+  expect(answer).toHaveTextContent('첫인사를 써 보세요.')
+  expect(answer).toHaveTextContent('안녕하세요, 동네 빵집이에요.')
+  const panels = screen.getAllByRole('article')
+  expect(within(panels[0]!).getByText('left 조각')).toBeInTheDocument()
+  expect(within(panels[0]!).getByText('비교 1개')).toBeInTheDocument()
+  expect(within(panels[1]!).getByText('right 조각')).toBeInTheDocument()
+
+  rerender(
+    <CandidateComparison experiment={{ ...voiced, voiceAnswer: '' }} activeCandidateId="left" />,
+  )
+  expect(screen.getByRole('region', { name: '내 답' })).toHaveTextContent(
+    '보관 기간이 지나 내 답은 지워졌어요.',
+  )
 })

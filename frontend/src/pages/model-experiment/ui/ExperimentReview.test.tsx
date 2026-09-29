@@ -79,6 +79,10 @@ const experiment: ModelExperiment = {
   decidedAt: '',
   revealed: false,
   targetLanguage: undefined,
+  source: 'post',
+  voicePromptKey: '',
+  voicePromptText: '',
+  voiceAnswer: '',
 }
 
 beforeEach(() => {
@@ -103,4 +107,53 @@ it('keeps the choice control visible on desktop and can target candidate B', asy
   await user.click(screen.getByRole('tab', { name: 'B' }))
 
   expect(screen.getByLabelText('결정 대상')).toHaveTextContent('candidate-b')
+})
+
+// MODEL-67: a 말투 반영 비교's review shows the owner's answer and, under each piece, its
+// fingerprint comparison labelled 이 후보.
+it('reads a 말투 반영 비교 as the answer and each piece with its comparison', () => {
+  const share = (voice: number, text: number) => ({
+    key: '해요',
+    unit: 'share' as const,
+    voice,
+    text,
+  })
+  mocks.useExperiment.mockReturnValue({
+    experiment: {
+      ...experiment,
+      source: 'voice',
+      postSlug: '',
+      voicePromptKey: 'opening_greeting',
+      voicePromptText: '첫인사를 써 보세요.',
+      voiceAnswer: '안녕하세요, 동네 빵집이에요.',
+      candidates: experiment.candidates.map((candidate, index) => ({
+        ...candidate,
+        output: {
+          kind: 'voice' as const,
+          text: `조각 ${index}`,
+          comparison: [
+            {
+              item: 'endings' as const,
+              unknown: false,
+              distance: 0.5,
+              headline: '해요',
+              facets: [share(0.9, index === 0 ? 0.4 : 0.8)],
+            },
+          ],
+        },
+      })),
+    },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  })
+  render(<ExperimentReview id="experiment-1" backLink={() => null} />)
+
+  expect(screen.getByRole('region', { name: '내 답' })).toHaveTextContent(
+    '안녕하세요, 동네 빵집이에요.',
+  )
+  expect(screen.getByText('조각 0')).toBeInTheDocument()
+  expect(screen.getAllByText(/내 말투 90% · 이 후보/).map((line) => line.textContent)).toEqual(
+    expect.arrayContaining(['내 말투 90% · 이 후보 40%', '내 말투 90% · 이 후보 80%']),
+  )
 })

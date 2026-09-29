@@ -104,27 +104,11 @@ type CheckStore interface {
 // enqueues one check_voice job holding one write call. A photo prompt needs a write model that
 // reads images.
 func (s *Service) StartVoiceCheck(ctx context.Context, userID, voiceID, promptKey string, model llm.ModelRef) (CheckView, string, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
-		return CheckView{}, "", err
-	}
-	analysis, err := s.analyses.CurrentAnalysis(ctx, userID, voiceID)
-	if err != nil {
-		return CheckView{}, "", fmt.Errorf("current analysis: %w", err)
-	}
-	if analysis == nil {
-		return CheckView{}, "", ErrVoiceNotMade
-	}
-	prompt, ok := PromptByKey(promptKey)
-	if !ok {
-		return CheckView{}, "", ErrPromptNotFound
-	}
-	answer, err := s.answerTo(ctx, userID, voiceID, promptKey)
+	input, err := s.prepareCheck(ctx, userID, voiceID, promptKey)
 	if err != nil {
 		return CheckView{}, "", err
 	}
-	if answer == nil {
-		return CheckView{}, "", ErrCheckPromptUnanswered
-	}
+	analysis, prompt, answer := input.analysis, input.prompt, input.answer
 	info, found := s.models.Resolve(model)
 	if model.ProviderID == "" || model.ModelID == "" || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
 		return CheckView{}, "", ErrWriteModelRequired
@@ -134,14 +118,10 @@ func (s *Service) StartVoiceCheck(ctx context.Context, userID, voiceID, promptKe
 	if prompt.Photo && !info.Vision {
 		return CheckView{}, "", ErrCheckPhotoUnsupported
 	}
-	projection, err := s.PromptProfileForTopic(ctx, userID, voiceID, prompt.Text, LanguageKorean, answer.ID)
-	if err != nil {
-		return CheckView{}, "", err
-	}
 	now := s.now()
 	check := Check{
 		ID: s.newID(), UserID: userID, VoiceID: voiceID, PromptKey: promptKey, MaterialID: answer.ID,
-		AnalysisCreatedAt: analysis.CreatedAt, Projection: frozenProjection(projection), WriteModel: model.String(),
+		AnalysisCreatedAt: analysis.CreatedAt, Projection: input.projection, WriteModel: model.String(),
 		Status: CheckQueued, CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.checks.InsertCheck(ctx, check); err != nil {
@@ -228,6 +208,46 @@ func (s *Service) ListVoiceChecks(ctx context.Context, userID, voiceID string) (
 		out = append(out, view)
 	}
 	return out, activeJobID, nil
+}
+
+// checkInput is what 검증 and 말투 반영 비교 freeze from a voice before any call: its current
+// analysis, the prompt, the answer, and the projection with that answer withheld (VOICE-43).
+type checkInput struct {
+	analysis   *Analysis
+	prompt     Prompt
+	answer     *Sample
+	projection string
+}
+
+// prepareCheck refuses a tombstone, a voice not made, an unknown prompt and an unanswered one,
+// then freezes the projection with the answer withheld.
+func (s *Service) prepareCheck(ctx context.Context, userID, voiceID, promptKey string) (checkInput, error) {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+		return checkInput{}, err
+	}
+	analysis, err := s.analyses.CurrentAnalysis(ctx, userID, voiceID)
+	if err != nil {
+		return checkInput{}, fmt.Errorf("current analysis: %w", err)
+	}
+	if analysis == nil {
+		return checkInput{}, ErrVoiceNotMade
+	}
+	prompt, ok := PromptByKey(promptKey)
+	if !ok {
+		return checkInput{}, ErrPromptNotFound
+	}
+	answer, err := s.answerTo(ctx, userID, voiceID, promptKey)
+	if err != nil {
+		return checkInput{}, err
+	}
+	if answer == nil {
+		return checkInput{}, ErrCheckPromptUnanswered
+	}
+	projection, err := s.PromptProfileForTopic(ctx, userID, voiceID, prompt.Text, LanguageKorean, answer.ID)
+	if err != nil {
+		return checkInput{}, err
+	}
+	return checkInput{analysis: analysis, prompt: prompt, answer: answer, projection: frozenProjection(projection)}, nil
 }
 
 // answerTo is the voice's answer to one prompt, or nil.

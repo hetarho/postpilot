@@ -7,12 +7,14 @@ export type {
   DisplaySideName,
   ExperimentCandidate,
   ExperimentOriginName,
+  ExperimentSourceName,
   ExperimentStageName,
   ExperimentStatusName,
   LeaderboardEntry,
   LeaderboardScopeName,
   LeaderboardWindowName,
   ModelExperiment,
+  ModelLabTabName,
 } from './model/types'
 export type { CandidateBadges, VerdictBadgeName } from './model/badges'
 export { candidateSides, type CandidateSide } from './model/sides'
@@ -32,3 +34,4 @@ export { useExperimentActions } from './api/useExperimentActions'
 export { useExperimentOwnerRefresh } from './api/useExperimentOwners'
 export { useStartModelExperiment } from './api/useStartModelExperiment'
 export { useStartWriteExperiment } from './api/useStartWriteExperiment'
+export { useStartVoiceReflection } from './api/useStartVoiceReflection'

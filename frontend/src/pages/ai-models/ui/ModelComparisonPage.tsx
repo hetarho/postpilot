@@ -28,13 +28,16 @@ import {
   Typography,
   pageStyles,
 } from '@/shared/ui'
-import { useModelStage } from '../model/useModelStage'
+import { stageOfTab, useModelStage } from '../model/useModelStage'
 import { ModelPageHeader } from './ModelPageHeader'
 import { ModelStageTabs } from './ModelStageTabs'
+import { VoiceReflectionStart } from './VoiceReflectionStart'
 
 export function ModelComparisonPage() {
   const { t } = useTranslation(['models', 'common'])
-  const { stage } = useModelStage()
+  const { stage: tab } = useModelStage()
+  // 말투 반영 compares the write pair: its comparisons are write comparisons (MODEL-67).
+  const stage = stageOfTab(tab)
   const [postSlug, setPostSlug] = useState('')
   const startHintId = useId()
   const setup = useModelSetup()
@@ -79,73 +82,125 @@ export function ModelComparisonPage() {
   return (
     <main className={pageStyles({ width: 'board', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
       <ModelPageHeader title="comparison" description="comparisonDescription" />
-      <ModelStageTabs to="/ai-models/compare" />
+      <ModelStageTabs to="/ai-models/compare" withVoice />
       <section className="mt-6" aria-label={t('page.pairSettings', { ns: 'models' })}>
         <div className="mt-6">
           {/* Keyed by stage: the form's save mutations live inside the feature, and a '저장했어요'
               or a save error belongs to the tab it was fired from, not to the next one. */}
-          <ModelPairForm key={stage} stage={stage} onShownChange={setShown} />
+          <ModelPairForm key={tab} stage={stage} onShownChange={setShown} />
         </div>
-        <div className="mt-6">
-          <FieldLabel id="experiment-post-label" htmlFor="experiment-post">
-            {stage === 'observe'
-              ? t('page.photoPost', { ns: 'models' })
-              : t('page.comparePost', { ns: 'models' })}
-          </FieldLabel>
-          <Listbox
-            id="experiment-post"
-            aria-labelledby="experiment-post-label"
-            className="mt-1"
-            value={postSlug}
-            options={[
-              {
-                value: '',
-                label:
-                  stage === 'observe'
-                    ? t('page.selectPhotoPost', { ns: 'models' })
-                    : t('page.selectPost', { ns: 'models' }),
-              },
-              ...posts.map((post) => ({ value: post.slug, label: displayTitle(post) })),
-            ]}
-            onChange={setPostSlug}
-          />
-        </div>
-        {stage === 'write' ? (
-          <WriteComparisonStart
+        {tab === 'voice' ? (
+          <VoiceReflectionStart pair={pair} pairPending={setup.isPending} pairSaving={pairSaving} />
+        ) : (
+          <PostComparisonStart
+            stage={stage}
             postSlug={postSlug}
+            onPostChange={setPostSlug}
+            posts={posts}
             pair={pair}
             pairPending={setup.isPending}
             pairSaving={pairSaving}
+            canStart={canStart}
+            startHint={startHint}
+            startHintId={startHintId}
+            start={start}
+            onStart={() => void startComparison()}
           />
-        ) : (
-          <div className="mt-6">
-            <Button
-              variant="cta"
-              className="w-full sm:w-auto"
-              pending={start.isPending}
-              // `aria-disabled` rather than `disabled`: a disabled button is removed from the focus
-              // order, so the reason below it would never reach a screen reader. `buttonStyles`
-              // dims it and blocks the pointer either way.
-              aria-disabled={!canStart || undefined}
-              aria-describedby={startHint ? startHintId : undefined}
-              onClick={() => void startComparison()}
-            >
-              {t('page.start', { ns: 'models' })}
-            </Button>
-            {startHint && (
-              <Typography variant="label" as="p" id={startHintId} className="mt-2">
-                {startHint}
-              </Typography>
-            )}
-            {start.failure && (
-              <Typography variant="body" as="div" role="alert" className="text-field-error mt-2">
-                <AppFailureMessage failure={start.failure} />
-              </Typography>
-            )}
-          </div>
         )}
       </section>
     </main>
+  )
+}
+
+function PostComparisonStart({
+  stage,
+  postSlug,
+  onPostChange,
+  posts,
+  pair,
+  pairPending,
+  pairSaving,
+  canStart,
+  startHint,
+  startHintId,
+  start,
+  onStart,
+}: {
+  stage: 'observe' | 'write'
+  postSlug: string
+  onPostChange: (slug: string) => void
+  posts: ReturnType<typeof usePosts>['posts']
+  pair: ComparisonPair | undefined
+  pairPending: boolean
+  pairSaving: boolean
+  canStart: boolean
+  startHint: string
+  startHintId: string
+  start: ReturnType<typeof useStartModelExperiment>
+  onStart: () => void
+}) {
+  const { t } = useTranslation(['models', 'common'])
+  return (
+    <>
+      <div className="mt-6">
+        <FieldLabel id="experiment-post-label" htmlFor="experiment-post">
+          {stage === 'observe'
+            ? t('page.photoPost', { ns: 'models' })
+            : t('page.comparePost', { ns: 'models' })}
+        </FieldLabel>
+        <Listbox
+          id="experiment-post"
+          aria-labelledby="experiment-post-label"
+          className="mt-1"
+          value={postSlug}
+          options={[
+            {
+              value: '',
+              label:
+                stage === 'observe'
+                  ? t('page.selectPhotoPost', { ns: 'models' })
+                  : t('page.selectPost', { ns: 'models' }),
+            },
+            ...posts.map((post) => ({ value: post.slug, label: displayTitle(post) })),
+          ]}
+          onChange={onPostChange}
+        />
+      </div>
+      {stage === 'write' ? (
+        <WriteComparisonStart
+          postSlug={postSlug}
+          pair={pair}
+          pairPending={pairPending}
+          pairSaving={pairSaving}
+        />
+      ) : (
+        <div className="mt-6">
+          <Button
+            variant="cta"
+            className="w-full sm:w-auto"
+            pending={start.isPending}
+            // `aria-disabled` rather than `disabled`: a disabled button is removed from the focus
+            // order, so the reason below it would never reach a screen reader. `buttonStyles`
+            // dims it and blocks the pointer either way.
+            aria-disabled={!canStart || undefined}
+            aria-describedby={startHint ? startHintId : undefined}
+            onClick={onStart}
+          >
+            {t('page.start', { ns: 'models' })}
+          </Button>
+          {startHint && (
+            <Typography variant="label" as="p" id={startHintId} className="mt-2">
+              {startHint}
+            </Typography>
+          )}
+          {start.failure && (
+            <Typography variant="body" as="div" role="alert" className="text-field-error mt-2">
+              <AppFailureMessage failure={start.failure} />
+            </Typography>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 

@@ -1,14 +1,14 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
 import { clsx } from 'clsx'
-import type { ExperimentStageName } from '@/entities/model-experiment'
+import type { ModelLabTabName } from '@/entities/model-experiment'
 import { typographyStyles } from '@/shared/ui'
 
 export interface RailItem {
   to: string
   label: string
   icon: ComponentType<{ className?: string }>
-  search?: { stage?: ExperimentStageName }
+  search?: { stage?: ModelLabTabName }
   /** `group` is a destination of the open group, drawn one step in from the primary row that
    *  opened it. */
   level: 'primary' | 'group'

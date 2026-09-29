@@ -1,6 +1,7 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { toModelRef } from '@/entities/model-catalog/@x/model-experiment'
+import { toComparisons } from '@/entities/voice/@x/model-experiment'
 import {
   CandidateStatus,
   contentLanguageFromProto,
@@ -8,6 +9,7 @@ import {
   DisplaySide,
   ExperimentOrigin,
   ExperimentOutcome,
+  ExperimentSource,
   ExperimentStatus,
   LeaderboardScope,
   LeaderboardWindow,
@@ -25,6 +27,7 @@ import type {
   CostSourceName,
   ExperimentCandidate,
   ExperimentOriginName,
+  ExperimentSourceName,
   ExperimentStageName,
   ExperimentStatusName,
   LeaderboardEntry,
@@ -56,7 +59,20 @@ export function toExperiment(value: ProtoModelExperiment): ModelExperiment {
     decidedAt: value.decidedAt,
     revealed: value.revealed,
     targetLanguage: contentLanguageFromProto(value.targetLanguage),
+    source: value.source === ExperimentSource.VOICE ? 'voice' : 'post',
+    voicePromptKey: value.voicePromptKey,
+    voicePromptText: value.voicePromptText,
+    voiceAnswer: value.voiceAnswer,
   }
+}
+
+/** A history filter on the wire; none is every source. */
+export function experimentSourceToProto(
+  source: ExperimentSourceName | undefined,
+): ExperimentSource {
+  if (source === 'voice') return ExperimentSource.VOICE
+  if (source === 'post') return ExperimentSource.POST
+  return ExperimentSource.UNSPECIFIED
 }
 
 function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
@@ -72,7 +88,13 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
         ? { kind: 'write', content: output.value }
         : output.case === 'observationSet'
           ? { kind: 'observe', observations: output.value.observations }
-          : undefined,
+          : output.case === 'voicePiece'
+            ? {
+                kind: 'voice',
+                text: output.value.text,
+                comparison: toComparisons(output.value.comparison),
+              }
+            : undefined,
     failure:
       value.failure || value.status === CandidateStatus.FAILED
         ? appFailureFromProto(value.failure)

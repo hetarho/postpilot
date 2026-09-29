@@ -22,6 +22,7 @@ type Service struct {
 	runner     Runner
 	posts      PostDirectory
 	voices     VoiceDirectory
+	reflection VoiceReflection
 	retention  time.Duration
 	applyMu    sync.Mutex
 	adoptMu    sync.Mutex
@@ -41,6 +42,9 @@ func NewService(store Storage, catalog Catalog, jobs Jobs, runner Runner, posts 
 
 // SetVoiceDirectory wires the voice context's published check once both services exist.
 func (s *Service) SetVoiceDirectory(voices VoiceDirectory) { s.voices = voices }
+
+// SetVoiceReflection wires the voice context's 말투 반영 비교 behaviour once both services exist.
+func (s *Service) SetVoiceReflection(reflection VoiceReflection) { s.reflection = reflection }
 
 // requireActiveVoice refuses work in a voice that is not the account's or is a tombstone.
 func (s *Service) requireActiveVoice(ctx context.Context, userID, voiceID string) error {
@@ -131,13 +135,128 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Experiment, error
 	return s.owned(ctx, userID, id)
 }
 
-func (s *Service) List(ctx context.Context, userID string, stage Stage) ([]Experiment, error) {
+// List is the account's comparisons newest first, narrowed to one stage and one source when
+// given: the write history reads post-sourced comparisons, 말투 반영 voice-sourced ones (MODEL-67).
+func (s *Service) List(ctx context.Context, userID string, stage Stage, source Source) ([]Experiment, error) {
 	if stage != "" {
 		if _, err := ParseStage(string(stage)); err != nil {
 			return nil, err
 		}
 	}
-	return s.runs.List(ctx, userID, stage)
+	if _, err := ParseSource(string(source)); err != nil {
+		return nil, err
+	}
+	return s.runs.List(ctx, userID, stage, source)
+}
+
+// StartVoiceReflection is 말투 반영 비교's start (MODEL-31, MODEL-67): a named, owned, active and
+// made voice, one of its answered prompts and two different write models — both reading images
+// for a photo prompt. The voice context freezes the snapshot; the comparison and its one job,
+// which holds both candidates' calls under one admission, exist before any provider call. The
+// job names no voice, so deleting the voice is never blocked by it (VOICE-13).
+func (s *Service) StartVoiceReflection(ctx context.Context, request ReflectionStartRequest) (StartResult, error) {
+	if request.VoiceID == "" {
+		return StartResult{}, ErrVoiceRequired
+	}
+	if request.ModelA == request.ModelB {
+		return StartResult{}, ErrDuplicateCandidates
+	}
+	modelA, err := s.resolveForStage(StageWrite, request.ModelA)
+	if err != nil {
+		return StartResult{}, err
+	}
+	modelB, err := s.resolveForStage(StageWrite, request.ModelB)
+	if err != nil {
+		return StartResult{}, err
+	}
+	if s.reflection == nil {
+		return StartResult{}, errors.New("experiment: voice reflection is not configured")
+	}
+	if err := s.requireActiveVoice(ctx, request.UserID, request.VoiceID); err != nil {
+		return StartResult{}, err
+	}
+	input, err := s.reflection.Snapshot(ctx, request.UserID, request.VoiceID, request.PromptKey)
+	if err != nil {
+		return StartResult{}, err
+	}
+	if input.Photo && !(modelA.Vision && modelB.Vision) {
+		return StartResult{}, ErrPhotoUnsupported
+	}
+	korean := LanguageKorean
+	frozen, hash, err := FreezeSnapshot(Snapshot{Content: input.Content, PromptVersion: input.PromptVersion, VoiceID: request.VoiceID, TargetLanguage: &korean})
+	if err != nil {
+		return StartResult{}, err
+	}
+	leftA, err := randomBool()
+	if err != nil {
+		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
+	}
+	sides := []DisplaySide{SideLeft, SideRight}
+	if !leftA {
+		sides[0], sides[1] = sides[1], sides[0]
+	}
+	found := Experiment{
+		ID: s.newID(), UserID: request.UserID, VoiceID: request.VoiceID, Source: SourceVoice,
+		VoicePromptKey: input.PromptKey, VoiceMaterialID: input.MaterialID, TargetLanguage: cloneLanguage(frozen.TargetLanguage),
+		Stage: StageWrite, Origin: OriginLab, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
+		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
+	}
+	found.Candidates = []Candidate{
+		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelA, ModelLabel: modelA.Label, DisplaySide: sides[0], Status: CandidatePending},
+		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelB, ModelLabel: modelB.Label, DisplaySide: sides[1], Status: CandidatePending},
+	}
+	if err := s.runs.Create(ctx, found); err != nil {
+		return StartResult{}, err
+	}
+	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
+		UserID: request.UserID, ExperimentID: found.ID, Stage: StageWrite,
+		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: []string{request.ModelA.String(), request.ModelB.String()},
+	})
+	if err != nil {
+		_ = s.runs.Delete(ctx, found.ID)
+		return StartResult{}, err
+	}
+	if err := s.runs.SetJob(ctx, found.ID, request.UserID, jobID); err != nil {
+		return StartResult{}, fmt.Errorf("link experiment job: %w", err)
+	}
+	return StartResult{ExperimentID: found.ID, JobID: jobID}, nil
+}
+
+// ReflectionPromptText is a voice-sourced comparison's prompt, as its history row names it; it
+// is product copy and outlives the purged snapshot.
+func (s *Service) ReflectionPromptText(found Experiment) string {
+	if found.Source != SourceVoice || s.reflection == nil {
+		return ""
+	}
+	return s.reflection.PromptText(found.VoicePromptKey)
+}
+
+// ReflectionDetail is what a 말투 반영 비교's review reads beside its pieces (MODEL-67): the prompt,
+// the owner's answer while the snapshot keeps it, and each delivered piece measured against the
+// voice's current analysis. Nothing about it reveals a candidate's identity (MODEL-32).
+func (s *Service) ReflectionDetail(ctx context.Context, found Experiment) (ReflectionDetail, error) {
+	if found.Source != SourceVoice || s.reflection == nil {
+		return ReflectionDetail{}, nil
+	}
+	detail := ReflectionDetail{PromptText: s.reflection.PromptText(found.VoicePromptKey), Comparisons: map[string][]ItemComparison{}}
+	if len(found.InputSnapshot) > 0 {
+		answer, err := s.reflection.Answer(found.InputSnapshot)
+		if err != nil {
+			return ReflectionDetail{}, err
+		}
+		detail.Answer = answer
+	}
+	for _, candidate := range found.Candidates {
+		if candidate.Status != CandidateSucceeded || len(candidate.Output) == 0 {
+			continue
+		}
+		comparison, err := s.reflection.Compare(ctx, found.UserID, found.VoiceID, string(candidate.Output))
+		if err != nil {
+			return ReflectionDetail{}, err
+		}
+		detail.Comparisons[candidate.ID] = comparison
+	}
+	return detail, nil
 }
 
 func (s *Service) PendingForPost(ctx context.Context, userID, postSlug string) (*Experiment, error) {

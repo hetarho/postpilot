@@ -13,7 +13,10 @@ export function ModelExperimentPage() {
       backLink={(experiment) => (
         <Link
           to={from === 'compare' ? '/ai-models/compare' : '/ai-models/experiments'}
-          search={{ stage: stage ?? experiment?.stage ?? 'observe' }}
+          search={{
+            stage:
+              stage ?? (experiment?.source === 'voice' ? 'voice' : experiment?.stage) ?? 'observe',
+          }}
           className={typographyStyles({
             variant: 'label',
             className: 'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center',

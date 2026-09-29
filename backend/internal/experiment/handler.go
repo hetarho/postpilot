@@ -22,7 +22,8 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 	if err := s.runs.SetStatus(ctx, found.ID, StatusRunning, nil); err != nil {
 		return err
 	}
-	if found.Stage == StageWrite {
+	// A voice-sourced comparison froze its whole input at start: there is nothing to observe.
+	if found.Stage == StageWrite && found.Source != SourceVoice {
 		prepared, err := s.runner.PrepareWrite(ctx, found, progress)
 		if err != nil {
 			_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
@@ -73,7 +74,17 @@ func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate 
 		return err
 	}
 	candidate.Status = CandidateRunning
-	result, runErr := s.runner.RunCandidate(ctx, found, candidate, progress)
+	var result CandidateResult
+	var runErr error
+	if found.Source == SourceVoice {
+		if s.reflection == nil {
+			runErr = errors.New("experiment: voice reflection is not configured")
+		} else {
+			result, runErr = s.reflection.Run(ctx, found.InputSnapshot, candidate.Model)
+		}
+	} else {
+		result, runErr = s.runner.RunCandidate(ctx, found, candidate, progress)
+	}
 	finished := s.now()
 	candidate.FinishedAt = &finished
 	candidate.Usage.LatencyMS = max(0, finished.Sub(started).Milliseconds())

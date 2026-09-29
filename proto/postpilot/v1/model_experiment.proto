@@ -6,12 +6,15 @@ import "postpilot/v1/post.proto";
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/error.proto";
 import "postpilot/v1/language.proto";
+import "postpilot/v1/voice.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 service ModelExperimentService {
   rpc StartObserveExperiment(StartObserveExperimentRequest) returns (StartExperimentResponse) {}
   rpc StartWriteExperiment(StartWriteExperimentRequest) returns (StartExperimentResponse) {}
+  // 말투 반영 비교 (MODEL-67): the write pair writes one answered prompt of one voice, 검증's piece.
+  rpc StartVoiceReflectionExperiment(StartVoiceReflectionExperimentRequest) returns (StartExperimentResponse) {}
   rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse) {}
   rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse) {}
   rpc RetryCandidate(RetryCandidateRequest) returns (RetryCandidateResponse) {}
@@ -96,6 +99,14 @@ message CandidateBadges {
   string other_note = 3;
 }
 
+// A write comparison's source: a post, or one voice's answered prompt (말투 반영 비교). As a
+// history filter, UNSPECIFIED is every source.
+enum ExperimentSource {
+  EXPERIMENT_SOURCE_UNSPECIFIED = 0;
+  EXPERIMENT_SOURCE_POST = 1;
+  EXPERIMENT_SOURCE_VOICE = 2;
+}
+
 enum ExperimentOutcome {
   EXPERIMENT_OUTCOME_UNSPECIFIED = 0;
   EXPERIMENT_OUTCOME_WINNER = 1;
@@ -121,6 +132,12 @@ message CandidateUsage {
 
 message ObservationSet { repeated Observation observations = 1; }
 
+// One 말투 반영 비교 candidate's piece, measured against the voice's current analysis on read.
+message VoicePiece {
+  string text = 1;
+  repeated FingerprintItemComparison comparison = 2;
+}
+
 message ExperimentCandidate {
   string id = 1;
   DisplaySide display_side = 2;
@@ -128,6 +145,7 @@ message ExperimentCandidate {
   oneof output {
     PostContent post_content = 4;
     ObservationSet observation_set = 5;
+    VoicePiece voice_piece = 14;
   }
   // 6 was an analyze comparison's styleguide, retired with that comparison in T466.
   reserved 6;
@@ -173,6 +191,12 @@ message ModelExperiment {
   Failure adoption_failure = 22;
   // Which verdict form this comparison's review offers. Observe is always LAB.
   ExperimentOrigin origin = 23;
+  // What a write comparison was drawn from; a voice-sourced one names its prompt and, while the
+  // snapshot keeps it, the owner's answer it withheld (MODEL-67, MODEL-42).
+  ExperimentSource source = 24;
+  string voice_prompt_key = 25;
+  string voice_prompt_text = 26;
+  string voice_answer = 27;
 }
 
 message StartObserveExperimentRequest {
@@ -193,12 +217,21 @@ message StartWriteExperimentRequest {
   // starts a comparison from the editor never turns a forced application into a silent pick.
   ExperimentOrigin origin = 7;
 }
+message StartVoiceReflectionExperimentRequest {
+  string voice_id = 1;
+  string prompt_key = 2;
+  ModelRef model_a = 3;
+  ModelRef model_b = 4;
+}
 message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
 
 message GetExperimentRequest { string id = 1; }
 message GetExperimentResponse { ModelExperiment experiment = 1; }
 
-message ListExperimentsRequest { Stage stage = 1; }
+message ListExperimentsRequest {
+  Stage stage = 1;
+  ExperimentSource source = 2;
+}
 message ListExperimentsResponse { repeated ModelExperiment experiments = 1; }
 
 message RetryCandidateRequest { string experiment_id = 1; }

@@ -43,6 +43,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 		Stage: string(found.Stage), Origin: string(found.Origin), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
+		Source: sourceOf(found.Source), VoicePromptKey: nullString(found.VoicePromptKey), VoiceMaterialID: nullString(found.VoiceMaterialID),
 	})
 	if err != nil {
 		message := strings.ToLower(err.Error())
@@ -84,8 +85,8 @@ func (s *Store) Get(ctx context.Context, id string) (experiment.Experiment, erro
 	return s.withCandidates(ctx, row)
 }
 
-func (s *Store) List(ctx context.Context, userID string, stage experiment.Stage) ([]experiment.Experiment, error) {
-	rows, err := s.read.ListExperimentsForUser(ctx, sqlc.ListExperimentsForUserParams{UserID: userID, Column2: string(stage), Stage: string(stage)})
+func (s *Store) List(ctx context.Context, userID string, stage experiment.Stage, source experiment.Source) ([]experiment.Experiment, error) {
+	rows, err := s.read.ListExperimentsForUser(ctx, sqlc.ListExperimentsForUserParams{UserID: userID, Stage: string(stage), Source: string(source)})
 	if err != nil {
 		return nil, fmt.Errorf("list experiments: %w", err)
 	}
@@ -525,6 +526,14 @@ func (s *Store) withCandidates(ctx context.Context, row sqlc.ModelExperiment) (e
 	return found, nil
 }
 
+// sourceOf is the stored source; an experiment built without one is post-sourced.
+func sourceOf(source experiment.Source) string {
+	if source == "" {
+		return string(experiment.SourcePost)
+	}
+	return string(source)
+}
+
 func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	created, err := time.Parse(time.RFC3339Nano, row.CreatedAt)
 	if err != nil {
@@ -545,7 +554,8 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	return experiment.Experiment{
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
 		TemplateName: row.TemplateName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
-		Origin: experiment.Origin(row.Origin),
+		Origin: experiment.Origin(row.Origin), Source: experiment.Source(row.Source),
+		VoicePromptKey: row.VoicePromptKey.String, VoiceMaterialID: row.VoiceMaterialID.String,
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyFailure: applyFailure, CreatedAt: created,

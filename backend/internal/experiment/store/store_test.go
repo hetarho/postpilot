@@ -1110,3 +1110,65 @@ func TestBadgeTalliesFollowTheBoardsScopeAndWindow(t *testing.T) {
 		}
 	}
 }
+
+// MODEL-67, MODEL-42, VOICE-13: a voice-sourced comparison names no post, round-trips its source,
+// prompt and answer ids, is kept apart from the post history, loses its snapshot (the answer's
+// text) and both pieces to the purge, and never holds its voice's deletion.
+func TestStoreKeepsAVoiceSourcedComparison(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	voiced := sample("exp-voice", "alice", "", now)
+	voiced.Origin, voiced.Source, voiced.VoiceID = experiment.OriginLab, experiment.SourceVoice, "voice-alice"
+	voiced.VoicePromptKey, voiced.VoiceMaterialID = "opening_greeting", "answer-1"
+	voiced.InputSnapshot = []byte(`{"answer":"내 답"}`)
+	if err := store.Create(ctx, voiced); err != nil {
+		t.Fatal(err)
+	}
+	// A second one of the same voice is not an unresolved post comparison.
+	second := sample("exp-voice-2", "alice", "", now.Add(time.Second))
+	second.Origin, second.Source, second.VoiceID, second.VoicePromptKey = experiment.OriginLab, experiment.SourceVoice, "voice-alice", "closing_greeting"
+	if err := store.Create(ctx, second); err != nil {
+		t.Fatalf("a second voice comparison: %v", err)
+	}
+	if err := store.Create(ctx, sample("exp-post", "alice", "post-a", now)); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := store.Get(ctx, voiced.ID)
+	if err != nil || reloaded.Source != experiment.SourceVoice || reloaded.PostSlug != "" || reloaded.VoicePromptKey != "opening_greeting" || reloaded.VoiceMaterialID != "answer-1" {
+		t.Fatalf("reloaded = %+v err=%v", reloaded, err)
+	}
+	if post, _ := store.Get(ctx, "exp-post"); post.Source != experiment.SourcePost {
+		t.Fatalf("a post comparison reads source %q", post.Source)
+	}
+	for source, want := range map[experiment.Source]int{experiment.SourceVoice: 2, experiment.SourcePost: 1, "": 3} {
+		if found, err := store.List(ctx, "alice", experiment.StageWrite, source); err != nil || len(found) != want {
+			t.Fatalf("list %q = %d err=%v", source, len(found), err)
+		}
+	}
+
+	finished := now.Add(time.Second)
+	for _, candidate := range reloaded.Candidates {
+		candidate.Status, candidate.Output, candidate.FinishedAt = experiment.CandidateSucceeded, []byte("piece"), &finished
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, voiced.ID, experiment.StatusReview, &finished); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`UPDATE voices SET deleted_at=?, is_default=0 WHERE id='voice-alice'`, formatAt(finished)); err != nil {
+		t.Fatalf("a voice comparison held the voice's deletion: %v", err)
+	}
+	decided := now.Add(2 * time.Second)
+	if changed, err := store.Decide(ctx, voiced.ID, "alice", reloaded.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, nil, decided, decided); err != nil || !changed {
+		t.Fatalf("decide = %v %v", changed, err)
+	}
+	if _, err := store.PurgeExpired(ctx, decided.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	purged, _ := store.Get(ctx, voiced.ID)
+	if len(purged.InputSnapshot) != 0 || len(purged.Candidates[0].Output) != 0 || len(purged.Candidates[1].Output) != 0 || purged.VoicePromptKey != "opening_greeting" {
+		t.Fatalf("the purge kept private content or lost the prompt: %+v", purged)
+	}
+}

@@ -29,7 +29,8 @@ func (s *memoryStore) Create(_ context.Context, found Experiment) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, row := range s.rows {
-		if found.Stage == StageWrite && row.UserID == found.UserID && row.PostSlug == found.PostSlug &&
+		// Like the unique index, which holds only for a comparison that names a post.
+		if found.Stage == StageWrite && found.PostSlug != "" && row.UserID == found.UserID && row.PostSlug == found.PostSlug &&
 			(row.Status == StatusQueued || row.Status == StatusRunning || row.Status == StatusReview || row.Status == StatusPartial || row.Status == StatusFailed) {
 			return ErrInvalidState
 		}
@@ -52,12 +53,16 @@ func (s *memoryStore) Get(_ context.Context, id string) (Experiment, error) {
 	}
 	return cloneExperiment(row), nil
 }
-func (s *memoryStore) List(_ context.Context, userID string, stage Stage) ([]Experiment, error) {
+func (s *memoryStore) List(_ context.Context, userID string, stage Stage, source Source) ([]Experiment, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []Experiment
 	for _, row := range s.rows {
-		if row.UserID == userID && (stage == "" || row.Stage == stage) {
+		rowSource := row.Source
+		if rowSource == "" {
+			rowSource = SourcePost
+		}
+		if row.UserID == userID && (stage == "" || row.Stage == stage) && (source == "" || rowSource == source) {
 			out = append(out, cloneExperiment(row))
 		}
 	}
@@ -606,7 +611,7 @@ func TestAnalyzeStartsNothingAndAWriteRetryStaysInItsVoice(t *testing.T) {
 func TestHistoryAndLeaderboardRefuseAnalyze(t *testing.T) {
 	svc, _, _, _, _ := newTestService()
 	ctx := context.Background()
-	if _, err := svc.List(ctx, "alice", Stage("analyze")); !errors.Is(err, ErrInvalidStage) {
+	if _, err := svc.List(ctx, "alice", Stage("analyze"), ""); !errors.Is(err, ErrInvalidStage) {
 		t.Fatalf("analyze history = %v, want ErrInvalidStage", err)
 	}
 	if _, err := svc.Leaderboard(ctx, "alice", Stage("analyze"), WindowWeek, ScopeMe); !errors.Is(err, ErrInvalidStage) {

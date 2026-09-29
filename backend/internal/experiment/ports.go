@@ -16,7 +16,8 @@ type RunLedger interface {
 	Create(ctx context.Context, found Experiment) error
 	Delete(ctx context.Context, id string) error
 	Get(ctx context.Context, id string) (Experiment, error)
-	List(ctx context.Context, userID string, stage Stage) ([]Experiment, error)
+	// List is the account's comparisons newest first; an empty stage or source is every one.
+	List(ctx context.Context, userID string, stage Stage, source Source) ([]Experiment, error)
 	PendingForPost(ctx context.Context, userID, postSlug string) (*Experiment, error)
 	BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error)
 	SetJob(ctx context.Context, id, userID, jobID string) error
@@ -86,6 +87,18 @@ type PostDirectory interface {
 // composition root adapts it; this context never reads voice tables.
 type VoiceDirectory interface {
 	ActiveVoice(ctx context.Context, userID, voiceID string) error
+}
+
+// VoiceReflection is the voice context's published 말투 반영 비교 behaviour (MODEL-67): it freezes
+// one voice's input, runs one candidate over that snapshot, reads the prompt and the answer back
+// for the review, and measures a piece against the voice. The composition root adapts it; this
+// context never reads voice tables.
+type VoiceReflection interface {
+	Snapshot(ctx context.Context, userID, voiceID, promptKey string) (ReflectionSnapshot, error)
+	Run(ctx context.Context, content []byte, model ModelRef) (CandidateResult, error)
+	PromptText(promptKey string) string
+	Answer(content []byte) (string, error)
+	Compare(ctx context.Context, userID, voiceID, text string) ([]ItemComparison, error)
 }
 
 type Catalog interface {

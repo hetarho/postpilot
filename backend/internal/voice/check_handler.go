@@ -57,7 +57,7 @@ func (s *Service) writeCheck(ctx context.Context, found CheckJob, check Check, r
 	if !ok {
 		return "", ErrPromptNotFound
 	}
-	parts := []llm.Part{{Text: "[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest}}
+	photoKey := ""
 	if prompt.Photo {
 		answer, err := s.samples.GetSampleBody(ctx, found.UserID, found.VoiceID, check.MaterialID)
 		if err != nil {
@@ -66,27 +66,41 @@ func (s *Service) writeCheck(ctx context.Context, found CheckJob, check Check, r
 		if answer == nil || !answer.HasPhoto() {
 			return "", ErrPhotoRequired
 		}
-		if s.objects == nil {
-			return "", errors.New("voice: photo storage not configured")
+		photoKey = answer.PhotoKey
+	}
+	progress("write", 0, 1)
+	piece, _, err := s.writePiece(ctx, ref, check.Projection, prompt, photoKey)
+	return piece, err
+}
+
+// writePiece is 검증's one call, shared with 말투 반영 비교 (MODEL-67): the frozen projection as
+// the system prompt, the prompt and the request as the task, and a photo prompt's photo.
+func (s *Service) writePiece(ctx context.Context, ref llm.ModelRef, projection string, prompt Prompt, photoKey string) (string, llm.Usage, error) {
+	parts := []llm.Part{{Text: "[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest}}
+	if prompt.Photo {
+		if photoKey == "" {
+			return "", llm.Usage{}, ErrPhotoRequired
 		}
-		image, err := s.objects.Read(ctx, answer.PhotoKey)
+		if s.objects == nil {
+			return "", llm.Usage{}, errors.New("voice: photo storage not configured")
+		}
+		image, err := s.objects.Read(ctx, photoKey)
 		if err != nil {
-			return "", fmt.Errorf("사진을 불러오지 못했어요: %w", err)
+			return "", llm.Usage{}, fmt.Errorf("사진을 불러오지 못했어요: %w", err)
 		}
 		parts = append(parts, llm.Part{Image: image, MIME: PhotoContentType})
 	}
-	progress("write", 0, 1)
 	// No MaxTokens of its own: the registry's default is the write stage's floor.
 	response, err := s.models.Complete(ctx, ref, llm.Request{
-		System:   check.Projection,
+		System:   projection,
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: parts}},
 	})
 	if err != nil {
-		return "", err
+		return "", response.Usage, err
 	}
 	piece := strings.TrimSpace(response.Text)
 	if piece == "" {
-		return "", fmt.Errorf("the check came back empty: %w", llm.ErrBadOutput)
+		return "", response.Usage, fmt.Errorf("the piece came back empty: %w", llm.ErrBadOutput)
 	}
-	return piece, nil
+	return piece, response.Usage, nil
 }

@@ -38,6 +38,26 @@ const (
 	OriginLab Origin = "lab"
 )
 
+// Source is what a write comparison was drawn from: a post, or — as 말투 반영 비교 — one voice and
+// one of its answered prompts (MODEL-30, MODEL-67). Its verdicts count on the write board
+// either way.
+type Source string
+
+const (
+	SourcePost  Source = "post"
+	SourceVoice Source = "voice"
+)
+
+// ParseSource reads a history filter; empty is every source.
+func ParseSource(value string) (Source, error) {
+	switch Source(value) {
+	case "", SourcePost, SourceVoice:
+		return Source(value), nil
+	default:
+		return "", fmt.Errorf("%w: source %q", ErrInvalidStage, value)
+	}
+}
+
 // Window is how far back a leaderboard reads. There is no all-time value: an unbounded
 // board ranks today's models by last year's verdicts (MODEL-38).
 type Window string
@@ -182,10 +202,15 @@ type Candidate struct {
 // Experiment.VoiceID is frozen at start: the voice the compared post was in for a write
 // comparison. A winner may only ever be applied back to that same voice.
 type Experiment struct {
-	ID                string
-	UserID            string
-	PostSlug          string
-	VoiceID           string
+	ID       string
+	UserID   string
+	PostSlug string
+	VoiceID  string
+	// Source, and for a voice-sourced comparison the prompt and the answer it withheld; the
+	// answer's text lives only in the snapshot (MODEL-42).
+	Source            Source
+	VoicePromptKey    string
+	VoiceMaterialID   string
 	TemplateName      string
 	TargetLanguage    *Language
 	Stage             Stage
@@ -287,6 +312,54 @@ type StartRequest struct {
 	ObserveFiles *[]string
 }
 
+// ReflectionStartRequest is 말투 반영 비교's start (MODEL-67): one voice, one of its answered
+// prompts and the write pair.
+type ReflectionStartRequest struct {
+	UserID    string
+	VoiceID   string
+	PromptKey string
+	ModelA    ModelRef
+	ModelB    ModelRef
+}
+
+// ReflectionSnapshot is the voice context's frozen 말투 반영 비교 input and what the comparison
+// records beside it.
+type ReflectionSnapshot struct {
+	Content       []byte
+	PromptVersion string
+	PromptKey     string
+	MaterialID    string
+	// Photo is a photo prompt, which needs both candidates to read images.
+	Photo bool
+}
+
+// ItemComparison is one counted item of a piece against its voice (VOICE-62), in the voice
+// context's own words; the rpc edge puts it on the shared wire message.
+type ItemComparison struct {
+	Item     string
+	Unknown  bool
+	Distance float64
+	Headline string
+	Facets   []ComparisonFacet
+}
+
+// ComparisonFacet is one value of an item on both sides, in its unit: numbers, or terms.
+type ComparisonFacet struct {
+	Key                   string
+	Unit                  string
+	Voice, Text           float64
+	VoiceTerms, TextTerms []string
+}
+
+// ReflectionDetail is what a 말투 반영 비교's review reads beside the pieces, computed on read: the
+// prompt, the owner's answer while the snapshot keeps it, and each delivered piece measured
+// against the voice's current analysis, by candidate id.
+type ReflectionDetail struct {
+	PromptText  string
+	Answer      string
+	Comparisons map[string][]ItemComparison
+}
+
 type StartResult struct {
 	ExperimentID string
 	JobID        string
@@ -342,4 +415,10 @@ var (
 	ErrInvalidWindow = errors.New("invalid leaderboard window")
 	ErrInvalidScope  = errors.New("invalid leaderboard scope")
 	ErrBadgesInvalid = errors.New("the badges offered with this verdict are not ones it can carry")
+	// The 말투 반영 비교 refusals (MODEL-31, MODEL-67): no voice named, a prompt the shared set does
+	// not hold or the voice has not answered, and a photo prompt either candidate cannot read.
+	ErrVoiceRequired    = errors.New("a voice is required")
+	ErrPromptNotFound   = errors.New("the prompt is not found")
+	ErrPromptUnanswered = errors.New("the prompt has no answer to compare against")
+	ErrPhotoUnsupported = errors.New("a photo prompt needs both candidates to read images")
 )

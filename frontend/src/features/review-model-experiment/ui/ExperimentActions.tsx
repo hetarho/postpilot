@@ -48,15 +48,20 @@ export function ExperimentActions({
     setPressed(name)
     void action().finally(() => setPressed(''))
   }
+  // A 말투 반영 비교 wrote nothing anywhere: its only follow-up is adopting the winner (MODEL-36).
+  const writesNothing = experiment.source === 'voice'
   const selected = experiment.candidates.find((candidate) => candidate.id === activeCandidateId)
-  const survivor = experiment.status === 'partial' && selected?.status === 'succeeded'
+  const survivor =
+    !writesNothing && experiment.status === 'partial' && selected?.status === 'succeeded'
   const canChoose = experiment.status === 'review' && selected?.status === 'succeeded'
   // The editor's write comparison wrote a post that holds no content until one side is
   // applied, so its verdict commits. Every lab comparison picks a winner and applies
   // nothing; what it may still write is offered afterwards, one action at a time.
   const commits = experiment.stage === 'write' && experiment.origin === 'editor'
   const offersContent =
-    experiment.origin === 'lab' && (experiment.stage === 'write' || experiment.stage === 'observe')
+    !writesNothing &&
+    experiment.origin === 'lab' &&
+    (experiment.stage === 'write' || experiment.stage === 'observe')
   // Asked for only where the answer changes the screen: what a decided lab comparison may
   // still write to. A finalized post keeps its confirmed content, so it is offered nothing.
   const { post, isPending: postPending } = usePost(experiment.postSlug, {
@@ -185,6 +190,7 @@ export function ExperimentActions({
         )}
         {experiment.status === 'decided' &&
           !commits &&
+          !writesNothing &&
           !experiment.appliedAt &&
           !experiment.applyFailure &&
           // A comparison that writes to a post offers it only while that post still takes

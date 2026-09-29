@@ -1,9 +1,22 @@
 import { useSearch } from '@tanstack/react-router'
-import type { LeaderboardScopeName, LeaderboardWindowName } from '@/entities/model-experiment'
+import type {
+  ExperimentStageName,
+  LeaderboardScopeName,
+  LeaderboardWindowName,
+  ModelLabTabName,
+} from '@/entities/model-experiment'
 
+/** The lab tab in the URL. `voice` is 말투 반영, a write comparison drawn from a voice; a page
+ *  that has no such tab — the leaderboard — reads it as 글쓰기, whose board its verdicts join
+ *  (MODEL-67). */
 export function useModelStage() {
   const { stage } = useSearch({ from: '/authenticated/models' })
   return { stage: stage ?? 'observe' }
+}
+
+/** The stage a lab tab compares. */
+export function stageOfTab(tab: ModelLabTabName): ExperimentStageName {
+  return tab === 'voice' ? 'write' : tab
 }
 
 /** The leaderboard's own two filters, defaulting to 주간 · 나 (MODEL-44). They live in the

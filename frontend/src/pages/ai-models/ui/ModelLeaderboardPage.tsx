@@ -3,7 +3,7 @@ import { stageLabel } from '@/entities/model-catalog'
 import { useLeaderboard } from '@/entities/model-experiment'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
 import { Typography, pageStyles } from '@/shared/ui'
-import { useLeaderboardFilters, useModelStage } from '../model/useModelStage'
+import { stageOfTab, useLeaderboardFilters, useModelStage } from '../model/useModelStage'
 import { LeaderboardFilters } from './LeaderboardFilters'
 import { ModelPageHeader } from './ModelPageHeader'
 import { ModelStageTabs } from './ModelStageTabs'
@@ -11,7 +11,8 @@ import { ModelResultsState } from './ModelResultsState'
 
 export function ModelLeaderboardPage() {
   const { t } = useTranslation('models')
-  const { stage } = useModelStage()
+  // A 말투 반영 verdict counts on the write board, so that tab reads as 글쓰기 here (MODEL-67).
+  const stage = stageOfTab(useModelStage().stage)
   const { window, scope } = useLeaderboardFilters()
   const { entries, isPending, isError, refetch } = useLeaderboard(stage, window, scope)
   return (
