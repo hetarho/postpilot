@@ -57,7 +57,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T462 | Sample every unplated text's ground from the originals through one shared sampler | CLIP CDS ARCH | - | todo |
+| T462 | Sample every unplated text's ground from the originals through one shared sampler | CLIP CDS ARCH | - | doing@260929.rr |
 | T463 | Sample a browser render's grounds on a media worker and serve its assets with them | CLIP ARCH | T462 | todo |
 | T464 | A browser render waits for its sampling job and draws from render-bound assets | CLIP ARCH | T463 | todo |
 
@@ -67,6 +67,8 @@
 - ideation voice-tidy continues (open: the axis set under the owner's Korean-research rule, readiness-meter numbers, the prompt photo source, the VOICE-49 analyze experiment, existing voices), then update-ssot VOICE GEN POST GUIDE AUTH QUOTA; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 T456 follow-up: a rapid phrase in a sequence style is one raster of its style in the server render (CDS-4), so the draft preview now serves it as one (`sequenceDrawn`) and the frame endpoint refuses it; the first fix, which served it animated frames, is withdrawn; Chrome and server renders now match at 1.5 s (0.00 % of pixels off)
+- 260929 T462 claimed (rr)
 - 260929 create-task CLIP r52 → T462 T463 T464 (one originals-based ground sampler for both kinds; a media-worker sampling stage bound to the browser render; the page waits for it and sends render_id)
 - 260929 ideation voice-tidy resume (open: axis set, readiness meter, prompt photos, VOICE-49, existing voices)
 - 260929 create-task CLIP start (r52: CLIP-192+)

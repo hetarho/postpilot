@@ -439,17 +439,18 @@ choice would be expensive to undo are listed at the end.
   The server render took 55 s and the Windows Chrome render 80 s. Both files are 30.000 s,
   H.264 High 1080×1920 at 30 fps (900 frames) and AAC 48 kHz stereo, and both are silent exactly
   over the latte. Frames match within encoding noise, except the outro (below).
-- **The run found a browser-render defect, now fixed.** A rapid caption in a sequence style is
-  laid out as one visual per phrase, and the caption-frame endpoint served only the first
-  phrase. The browser then asked for the second phrase and was refused, so every browser render
-  of such a caption failed ("브라우저 렌더를 완료하지 못했어요"). The endpoint now serves each
-  phrase's own frames, counted from the caption's first frame; a media test pins it.
-- **Open, needs your call (spec gap):** a browser render never draws the CDS-44 scrim. The server
-  samples the footage and put `scrim.radial` behind the outro over the bright dessert case; the
-  browser draws from preview assets, which never read footage ("final-only"), so its outro has
-  no scrim. CDS-44/CDS-32 want the scrim in every delivered clip, and CLIP-159 lets the browser
-  draw only what the server drew. Options: the server samples for the browser render's assets,
-  the browser samples, or browser renders are allowed to omit it.
+- **The run found a browser-render defect, now fixed.** Every browser render of a rapid caption
+  in a sequence style failed ("브라우저 렌더를 완료하지 못했어요"): the draft preview marked each
+  phrase as a moving frame run, the browser asked the frame endpoint for it, and the endpoint
+  refused the second phrase. The server render draws a rapid phrase from ONE frame of its
+  style (CDS-4), so the preview now marks it as a single raster, the frame endpoint refuses it
+  as it refuses a static style, and one rule (`sequenceDrawn`) answers for all three. A first
+  fix that served each phrase animated frames was withdrawn: it made the browser move a phrase
+  the server holds still.
+- **Decided, being built:** a browser render never drew the CDS-44 scrim. The server samples the
+  footage and put `scrim.radial` behind the outro over the bright dessert case; the browser
+  draws from preview assets, which never read footage ("final-only"), so its outro had none.
+  You chose the server sampling for the browser render (CLIP-192, CLIP r52); T462–T464 build it.
 - **Cross-feature checks sit in the existing suites.** They are in media (preview/export
   parity on all three ratios at both paces), store (the no-template workflow from slots to both
   render kinds, and the older-project compatibility fixtures), `pages/clip/ui` (flush-before-render

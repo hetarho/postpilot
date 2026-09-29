@@ -75,15 +75,22 @@ func (l captionLayer) paths() []string {
 	return []string{l.Plate}
 }
 
+// sequenceDrawn reports whether a visual is drawn once per output frame. A rapid
+// phrase replaces its neighbour with no fade and no movement whatever style it
+// carries (CDS-4), so it has nothing to animate: it takes ONE frame of its
+// style's own drawing — the frame the preview showed — instead of one per output
+// frame. The render, the draft preview's assets and the browser render's frame
+// sheets all ask this, so the two render kinds cannot disagree on it (CLIP-157).
+func sequenceDrawn(visual declaredVisual) bool {
+	return visual.manifest.Role == "caption" && !visual.caption.Caption.Static() && visual.copy.Pace != "rapid"
+}
+
 func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (captionLayer, error) {
 	if visual.manifest.Role == "caption" && !visual.caption.Caption.Static() {
 		visual.manifest.RecordDrawing(design.SequenceCaption)
-		// A rapid phrase replaces its neighbour with no fade and no movement
-		// whatever style it carries (CDS-4), so it has nothing to animate: it
-		// takes ONE frame of its style's own drawing — the frame the preview
-		// showed — instead of one per output frame, and never the bundled
+		// A rapid phrase takes its style's one frame and never the bundled
 		// template, which knows no style's plate, outline or ink (CDS-85).
-		if visual.copy.Pace != "rapid" {
+		if sequenceDrawn(*visual) {
 			sequence, err := r.captionSequence(ctx, ws, canvas, visual.copy, visual.caption, visual.manifest.StartMS, visual.manifest.EndMS, index)
 			if err != nil {
 				return captionLayer{}, err

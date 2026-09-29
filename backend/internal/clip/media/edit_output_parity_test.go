@@ -140,7 +140,9 @@ func TestEditedRegionsAndCaptionsReachPreviewAndExportAlike(t *testing.T) {
 						t.Fatalf("%s: the preview shows %v, the export %v", id, assets[id], windows(byID[id]))
 					}
 				}
-				if !moving["narration-1"] || moving["narration-2"] {
+				// The owner's sequence style moves at the steady pace; a rapid
+				// phrase is one frame of it whatever its style (CDS-4).
+				if moving["narration-1"] != (pace == "steady") || moving["narration-2"] {
 					t.Fatal("the preview does not state which drawing moves")
 				}
 				// Start, middle and end: the second cut holds no caption.

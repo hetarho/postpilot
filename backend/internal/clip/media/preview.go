@@ -98,7 +98,7 @@ func (r *Rendering) PreparePreview(ctx context.Context, plan clip.EditPlan, sour
 			}
 			hash := sha256.Sum256(data)
 			m := v.manifest
-			out.Assets = append(out.Assets, clip.PreviewAsset{Key: hex.EncodeToString(hash[:]), InstanceID: m.InstanceID, PNG: data, X: rect.Min.X, Y: rect.Min.Y, Width: rect.Dx(), Height: rect.Dy(), StartMS: m.StartMS, EndMS: m.EndMS, InMS: m.InMS, OutMS: m.OutMS, DY: m.DY, Layer: m.Layer, RepresentativeFrame: m.Role == "caption" && !v.caption.Caption.Static()})
+			out.Assets = append(out.Assets, clip.PreviewAsset{Key: hex.EncodeToString(hash[:]), InstanceID: m.InstanceID, PNG: data, X: rect.Min.X, Y: rect.Min.Y, Width: rect.Dx(), Height: rect.Dy(), StartMS: m.StartMS, EndMS: m.EndMS, InMS: m.InMS, OutMS: m.OutMS, DY: m.DY, Layer: m.Layer, RepresentativeFrame: sequenceDrawn(v)})
 		}
 		return ctx.Err()
 	})
