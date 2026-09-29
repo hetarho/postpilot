@@ -38,12 +38,13 @@ type Store struct {
 	writer       *sql.DB
 	write        *sqlc.Queries
 	read         *sqlc.Queries
+	raw          sqlc.DBTX
 	exports      usage.ExportWindowLedger
 	exportsForTx func(*sql.Tx) usage.ExportWindowLedger
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader), raw: writer}
 }
 
 // NewWithExports makes lazy credit and export grants part of the same writer
@@ -61,7 +62,7 @@ func NewWithExports(writer, reader *sql.DB, factory func(*sql.Tx) usage.ExportWi
 // coordinator. It exists for money flows that must update billing rows and credit lots in
 // one SQLite transaction without either context reading the other's tables.
 func NewTx(tx *sql.Tx) *Store {
-	return &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx), raw: tx}
 }
 
 // InWriteTx runs fn against a store bound to one write transaction.
@@ -87,7 +88,7 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Storage) error) err
 	if s.exportsForTx != nil {
 		exports = s.exportsForTx(tx)
 	}
-	if err := fn(&Store{write: sqlc.New(tx), read: sqlc.New(tx), exports: exports}); err != nil {
+	if err := fn(&Store{write: sqlc.New(tx), read: sqlc.New(tx), raw: tx, exports: exports}); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -116,7 +117,7 @@ func (s *Store) LotsInConsumptionOrder(
 	}
 	lots := make([]usage.Lot, 0, len(rows))
 	for _, row := range rows {
-		lot, err := toLot(row)
+		lot, err := toLot(sqlc.ActiveMonthlyLotRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -287,7 +288,7 @@ func (s *Store) VoucherLots(ctx context.Context, lotIDs []string) ([]usage.Lot, 
 	}
 	lots := make([]usage.Lot, 0, len(rows))
 	for _, row := range rows {
-		lot, err := toLot(row)
+		lot, err := toLot(sqlc.ActiveMonthlyLotRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -389,7 +390,7 @@ func (s *Store) EligibleLotsForJob(ctx context.Context, jobID string) ([]usage.L
 	}
 	lots := make([]usage.Lot, 0, len(rows))
 	for _, row := range rows {
-		lot, err := toLot(row)
+		lot, err := toLot(sqlc.ActiveMonthlyLotRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -526,7 +527,7 @@ func (s *Store) InsertEvent(ctx context.Context, event usage.Event) error {
 // toLot maps one stored row. A NULL expiry is a lot that does not expire, which the
 // domain models as a nil pointer rather than a sentinel instant — a far-future date would
 // sort correctly but read as a real deadline everywhere it was displayed.
-func toLot(row sqlc.CreditLot) (usage.Lot, error) {
+func toLot(row sqlc.ActiveMonthlyLotRow) (usage.Lot, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return usage.Lot{}, err

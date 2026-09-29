@@ -65,9 +65,12 @@ var throttledProcedures = map[string]string{
 // from it is reachable by any authenticated plan, so a NEW master-only procedure must be
 // added here in the same change that adds it to the proto.
 var masterProcedures = map[string]bool{
-	postpilotv1connect.AdminServiceListUsersProcedure:         true,
-	postpilotv1connect.AdminServiceSetUserPlanProcedure:       true,
-	postpilotv1connect.AdminServiceSetEstimatorComboProcedure: true,
+	postpilotv1connect.BillingServiceListRefundReviewsProcedure: true,
+	postpilotv1connect.BillingServiceReviewRefundProcedure:      true,
+	postpilotv1connect.BillingServiceReconcileRefundProcedure:   true,
+	postpilotv1connect.AdminServiceListUsersProcedure:           true,
+	postpilotv1connect.AdminServiceSetUserPlanProcedure:         true,
+	postpilotv1connect.AdminServiceSetEstimatorComboProcedure:   true,
 
 	// Vouchers hand out credits, so issuing, listing and revoking them sit with the tier
 	// assignment (GIFT-2). Redeeming one is any account's.

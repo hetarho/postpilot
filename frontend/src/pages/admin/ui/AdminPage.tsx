@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useAccounts } from '@/entities/plan'
 import { UserPlanSelect } from '@/features/manage-users'
+import { RefundReviewSection } from '@/features/review-refunds'
 import { formatDate } from '@/shared/lib'
 import { Notice, Typography } from '@/shared/ui'
 
@@ -53,6 +54,7 @@ export function AdminPage() {
           ))}
         </ul>
       )}
+      <RefundReviewSection />
     </section>
   )
 }

@@ -16,14 +16,16 @@ import (
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
-	writer       *sql.DB
-	db           sqlc.DBTX
-	write        *sqlc.Queries
-	read         *sqlc.Queries
-	credits      billing.Credits
-	creditsForTx func(*sql.Tx) billing.Credits
-	plans        billing.Plans
-	plansForTx   func(*sql.Tx) billing.Plans
+	writer              *sql.DB
+	db                  sqlc.DBTX
+	write               *sqlc.Queries
+	read                *sqlc.Queries
+	credits             billing.Credits
+	creditsForTx        func(*sql.Tx) billing.Credits
+	plans               billing.Plans
+	plansForTx          func(*sql.Tx) billing.Plans
+	refundBenefitsForTx func(*sql.Tx) billing.RefundBenefits
+	refundBenefits      billing.RefundBenefits
 }
 
 func New(writer, reader *sql.DB) *Store {
@@ -44,6 +46,14 @@ func (s *Store) SetCreditsForTx(factory func(*sql.Tx) billing.Credits) {
 
 func (s *Store) SetPlansForTx(factory func(*sql.Tx) billing.Plans) {
 	s.plansForTx = factory
+}
+
+func (s *Store) SetRefundBenefitsForTx(factory func(*sql.Tx) billing.RefundBenefits) {
+	s.refundBenefitsForTx = factory
+}
+
+func (s *Store) SetRefundBenefits(benefits billing.RefundBenefits) {
+	s.refundBenefits = benefits
 }
 
 func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
@@ -69,6 +79,9 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Cr
 		return errors.New("billing transaction adapter factory returned nil")
 	}
 	scoped := &Store{db: tx, write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
+	if s.refundBenefitsForTx != nil {
+		scoped.refundBenefits = s.refundBenefitsForTx(tx)
+	}
 	if err := fn(scoped, credits, plans); err != nil {
 		return err
 	}

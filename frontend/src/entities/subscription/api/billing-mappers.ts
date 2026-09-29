@@ -79,6 +79,7 @@ function toEvent(value: ProtoBillingEvent): BillingEvent {
 function toPurchase(value: ProtoBillingPurchase): Purchase {
   return {
     id: value.id,
+    refundOrderId: value.refundOrderId,
     packId: value.packId,
     credits: value.credits,
     usdCents: value.usdCents,

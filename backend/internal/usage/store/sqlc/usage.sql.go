@@ -91,9 +91,23 @@ type ActiveMonthlyLotParams struct {
 	ExpiresAt sql.NullString
 }
 
-func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotParams) (CreditLot, error) {
+type ActiveMonthlyLotRow struct {
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
+}
+
+func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotParams) (ActiveMonthlyLotRow, error) {
 	row := q.db.QueryRowContext(ctx, activeMonthlyLot, arg.UserID, arg.ExpiresAt)
-	var i CreditLot
+	var i ActiveMonthlyLotRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -154,20 +168,34 @@ const eligibleLotsForJob = `-- name: EligibleLotsForJob :many
 SELECT l.id,l.user_id,l.kind,l.granted,l.remaining,l.expires_at,l.created_at,
        l.coverage_id,l.window_start,l.issuance_cause,l.correlation_id
 FROM usage_admission_eligible_lots e JOIN credit_lots l ON l.id=e.lot_id
-WHERE e.job_id=? AND l.remaining>0
+WHERE e.job_id=? AND l.remaining>0 AND l.refund_request_id IS NULL
 ORDER BY CASE WHEN l.kind='purchased' THEN 2 WHEN l.expires_at IS NULL THEN 1 ELSE 0 END,
          l.expires_at,l.created_at,l.id
 `
 
-func (q *Queries) EligibleLotsForJob(ctx context.Context, jobID string) ([]CreditLot, error) {
+type EligibleLotsForJobRow struct {
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
+}
+
+func (q *Queries) EligibleLotsForJob(ctx context.Context, jobID string) ([]EligibleLotsForJobRow, error) {
 	rows, err := q.db.QueryContext(ctx, eligibleLotsForJob, jobID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CreditLot
+	var items []EligibleLotsForJobRow
 	for rows.Next() {
-		var i CreditLot
+		var i EligibleLotsForJobRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -532,6 +560,7 @@ SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
 FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
+  AND refund_request_id IS NULL
   AND (expires_at IS NULL OR expires_at > ?)
 ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE 0 END,
          expires_at, created_at, id
@@ -540,6 +569,20 @@ ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE
 type LotsInConsumptionOrderParams struct {
 	UserID    string
 	ExpiresAt sql.NullString
+}
+
+type LotsInConsumptionOrderRow struct {
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
 }
 
 // Queries for the usage context. sqlc compiles these into internal/usage/store/sqlc;
@@ -557,15 +600,15 @@ type LotsInConsumptionOrderParams struct {
 //
 // Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
 // so one multi-byte character shifts it and generates SQL that will not parse.
-func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumptionOrderParams) ([]CreditLot, error) {
+func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumptionOrderParams) ([]LotsInConsumptionOrderRow, error) {
 	rows, err := q.db.QueryContext(ctx, lotsInConsumptionOrder, arg.UserID, arg.ExpiresAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CreditLot
+	var items []LotsInConsumptionOrderRow
 	for rows.Next() {
-		var i CreditLot
+		var i LotsInConsumptionOrderRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -798,7 +841,7 @@ func (q *Queries) RestoreLot(ctx context.Context, arg RestoreLotParams) (int64, 
 }
 
 const spendFromLot = `-- name: SpendFromLot :exec
-UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ?
+UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ? AND refund_request_id IS NULL
 `
 
 type SpendFromLotParams struct {
@@ -946,9 +989,23 @@ WHERE id IN (/*SLICE:ids*/?)
   AND kind = 'voucher'
 `
 
+type VoucherLotsRow struct {
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
+}
+
 // Where each of these voucher lots stands, in one statement on the read pool. The operator's
 // voucher list is its only reader, and the answer decides nothing but what a row shows.
-func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]CreditLot, error) {
+func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]VoucherLotsRow, error) {
 	query := voucherLots
 	var queryParams []interface{}
 	if len(ids) > 0 {
@@ -964,9 +1021,9 @@ func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]CreditLot, e
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CreditLot
+	var items []VoucherLotsRow
 	for rows.Next() {
-		var i CreditLot
+		var i VoucherLotsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,

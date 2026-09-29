@@ -31,9 +31,12 @@ export {
   useResumeSubscription,
 } from './api/useSubscriptionChanges'
 export { useRegisterPaymentMethod, useRemovePaymentMethod } from './api/usePaymentMethod'
+export { usePurchaseCredits, useQuotePurchase, useQuotePack } from './api/useCreditPurchases'
 export {
-  usePurchaseCredits,
-  useQuotePurchase,
-  useQuotePack,
-  useRefundPurchase,
-} from './api/useCreditPurchases'
+  useMyRefunds,
+  useRefundReviews,
+  useRequestRefund,
+  useReviewRefund,
+  useReconcileRefund,
+} from './api/useRefunds'
+export type { ProtoBillingRefundRequest as BillingRefundRequest } from '@/shared/api'

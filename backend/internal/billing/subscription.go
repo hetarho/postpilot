@@ -135,6 +135,9 @@ func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 		if err := s.ReconcilePending(ctx); err != nil {
 			return err
 		}
+		if err := s.ReconcilePendingRefunds(ctx); err != nil {
+			slog.Error("pending refund reconciliation failed", "err", err)
+		}
 	}
 	due, err := s.store.DueSubscriptions(ctx, now)
 	if err != nil {

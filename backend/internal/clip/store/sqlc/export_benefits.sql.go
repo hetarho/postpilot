@@ -23,9 +23,20 @@ type CurrentExportWindowParams struct {
 	WindowEnd   string
 }
 
-func (q *Queries) CurrentExportWindow(ctx context.Context, arg CurrentExportWindowParams) (ServerExportWindow, error) {
+type CurrentExportWindowRow struct {
+	UserID        string
+	CoverageID    string
+	WindowStart   string
+	WindowEnd     string
+	Allowance     int64
+	Used          int64
+	Reserved      int64
+	CorrelationID sql.NullString
+}
+
+func (q *Queries) CurrentExportWindow(ctx context.Context, arg CurrentExportWindowParams) (CurrentExportWindowRow, error) {
 	row := q.db.QueryRowContext(ctx, currentExportWindow, arg.UserID, arg.WindowStart, arg.WindowEnd)
-	var i ServerExportWindow
+	var i CurrentExportWindowRow
 	err := row.Scan(
 		&i.UserID,
 		&i.CoverageID,

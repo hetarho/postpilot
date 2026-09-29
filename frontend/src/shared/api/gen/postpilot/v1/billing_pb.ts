@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/billing.proto.
  */
 export const file_postpilot_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJItYBCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDwoHY3JlZGl0cxgDIAEoBRIRCgl1c2RfY2VudHMYBCABKAUSCwoDa3J3GAUgASgDEhIKCmNoYXJnZWRfYXQYCCABKAkSEwoLcmVmdW5kZWRfYXQYCSABKAkSEgoKcmVmdW5kYWJsZRgKIAEoCBIPCgdwYWNrX2lkGAsgASgJSgQIAhADSgQIBhAHSgQIBxAIUgZsb3RfaWRSFHByb3ZpZGVyX3BheW1lbnRfa2V5UghvcmRlcl9pZCIVChNHZXRNeUJpbGxpbmdSZXF1ZXN0IoACChRHZXRNeUJpbGxpbmdSZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbhI6Cg5wYXltZW50X21ldGhvZBgCIAEoCzIiLnBvc3RwaWxvdC52MS5CaWxsaW5nUGF5bWVudE1ldGhvZBIrCgdoaXN0b3J5GAMgAygLMhoucG9zdHBpbG90LnYxLkJpbGxpbmdFdmVudBIwCglwdXJjaGFzZXMYBCADKAsyHS5wb3N0cGlsb3QudjEuQmlsbGluZ1B1cmNoYXNlEhQKDGN1c3RvbWVyX2tleRgFIAEoCSJGChxSZWdpc3RlclBheW1lbnRNZXRob2RSZXF1ZXN0EhAKCGF1dGhfa2V5GAEgASgJEhQKDGN1c3RvbWVyX2tleRgCIAEoCSJyCh1SZWdpc3RlclBheW1lbnRNZXRob2RSZXNwb25zZRI6Cg5wYXltZW50X21ldGhvZBgBIAEoCzIiLnBvc3RwaWxvdC52MS5CaWxsaW5nUGF5bWVudE1ldGhvZBIVCg1ib251c19ncmFudGVkGAIgASgIIhwKGlJlbW92ZVBheW1lbnRNZXRob2RSZXF1ZXN0Ih0KG1JlbW92ZVBheW1lbnRNZXRob2RSZXNwb25zZSJWChBTdWJzY3JpYmVSZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0iTAoRU3Vic2NyaWJlUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24icQoZQ2hhbmdlU3Vic2NyaXB0aW9uUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEhAKCHF1b3RlX2lkGAMgASgJImoKGkNoYW5nZVN1YnNjcmlwdGlvblJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uEhMKC2FwcGxpZWRfbm93GAIgASgIIh4KHENhbmNlbFNjaGVkdWxlZENoYW5nZVJlcXVlc3QiWAodQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24iGwoZQ2FuY2VsU3Vic2NyaXB0aW9uUmVxdWVzdCJVChpDYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbiIbChlSZXN1bWVTdWJzY3JpcHRpb25SZXF1ZXN0IlUKGlJlc3VtZVN1YnNjcmlwdGlvblJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uIlcKEVF1b3RlUHJpY2VSZXF1ZXN0EiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0icQoSUXVvdGVQcmljZVJlc3BvbnNlEhEKCXVzZF9jZW50cxgBIAEoBRILCgNrcncYAiABKAMSFgoOa3J3X3Blcl91c2RfZTQYAyABKAMSEQoJcmF0ZV9kYXRlGAQgASgJEhAKCHF1b3RlX2lkGAUgASgJIlgKElF1b3RlQ2hhbmdlUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtIp0BChNRdW90ZUNoYW5nZVJlc3BvbnNlEhEKCXVzZF9jZW50cxgBIAEoBRILCgNrcncYAiABKAMSFgoOa3J3X3Blcl91c2RfZTQYAyABKAMSEQoJcmF0ZV9kYXRlGAQgASgJEhMKC2FwcGxpZWRfbm93GAUgASgIEhQKDGVmZmVjdGl2ZV9hdBgGIAEoCRIQCghxdW90ZV9pZBgHIAEoCSI6ChRRdW90ZVB1cmNoYXNlUmVxdWVzdBIRCgl1c2RfY2VudHMYASABKAUSDwoHcGFja19pZBgCIAEoCSJxChVRdW90ZVB1cmNoYXNlUmVzcG9uc2USDwoHY3JlZGl0cxgBIAEoBRILCgNrcncYAiABKAMSFgoOa3J3X3Blcl91c2RfZTQYAyABKAMSEQoJcmF0ZV9kYXRlGAQgASgJEg8KB3BhY2tfaWQYBSABKAkiPAoWUHVyY2hhc2VDcmVkaXRzUmVxdWVzdBIRCgl1c2RfY2VudHMYASABKAUSDwoHcGFja19pZBgCIAEoCSJKChdQdXJjaGFzZUNyZWRpdHNSZXNwb25zZRIvCghwdXJjaGFzZRgBIAEoCzIdLnBvc3RwaWxvdC52MS5CaWxsaW5nUHVyY2hhc2UiLAoVUmVmdW5kUHVyY2hhc2VSZXF1ZXN0EhMKC3B1cmNoYXNlX2lkGAEgASgJIkkKFlJlZnVuZFB1cmNoYXNlUmVzcG9uc2USLwoIcHVyY2hhc2UYASABKAsyHS5wb3N0cGlsb3QudjEuQmlsbGluZ1B1cmNoYXNlKj8KBFRlcm0SFAoQVEVSTV9VTlNQRUNJRklFRBAAEhAKDFRFUk1fTU9OVEhMWRABEg8KC1RFUk1fQU5OVUFMEAIylgoKDkJpbGxpbmdTZXJ2aWNlElcKDEdldE15QmlsbGluZxIhLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkdldE15QmlsbGluZ1Jlc3BvbnNlIgAScgoVUmVnaXN0ZXJQYXltZW50TWV0aG9kEioucG9zdHBpbG90LnYxLlJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2UiABJsChNSZW1vdmVQYXltZW50TWV0aG9kEigucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXF1ZXN0GikucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXNwb25zZSIAEk4KCVN1YnNjcmliZRIeLnBvc3RwaWxvdC52MS5TdWJzY3JpYmVSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLlN1YnNjcmliZVJlc3BvbnNlIgASaQoSQ2hhbmdlU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLkNoYW5nZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuQ2hhbmdlU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJyChVDYW5jZWxTY2hlZHVsZWRDaGFuZ2USKi5wb3N0cGlsb3QudjEuQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVxdWVzdBorLnBvc3RwaWxvdC52MS5DYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXNwb25zZSIAEmkKEkNhbmNlbFN1YnNjcmlwdGlvbhInLnBvc3RwaWxvdC52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GigucG9zdHBpbG90LnYxLkNhbmNlbFN1YnNjcmlwdGlvblJlc3BvbnNlIgASaQoSUmVzdW1lU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLlJlc3VtZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuUmVzdW1lU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJRCgpRdW90ZVByaWNlEh8ucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXF1ZXN0GiAucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXNwb25zZSIAElQKC1F1b3RlQ2hhbmdlEiAucG9zdHBpbG90LnYxLlF1b3RlQ2hhbmdlUmVxdWVzdBohLnBvc3RwaWxvdC52MS5RdW90ZUNoYW5nZVJlc3BvbnNlIgASWgoNUXVvdGVQdXJjaGFzZRIiLnBvc3RwaWxvdC52MS5RdW90ZVB1cmNoYXNlUmVxdWVzdBojLnBvc3RwaWxvdC52MS5RdW90ZVB1cmNoYXNlUmVzcG9uc2UiABJgCg9QdXJjaGFzZUNyZWRpdHMSJC5wb3N0cGlsb3QudjEuUHVyY2hhc2VDcmVkaXRzUmVxdWVzdBolLnBvc3RwaWxvdC52MS5QdXJjaGFzZUNyZWRpdHNSZXNwb25zZSIAEl0KDlJlZnVuZFB1cmNoYXNlEiMucG9zdHBpbG90LnYxLlJlZnVuZFB1cmNoYXNlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5SZWZ1bmRQdXJjaGFzZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_plan]);
+  fileDesc("Chpwb3N0cGlsb3QvdjEvYmlsbGluZy5wcm90bxIMcG9zdHBpbG90LnYxIqUCChNCaWxsaW5nU3Vic2NyaXB0aW9uEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIgCgR0ZXJtGAIgASgOMhIucG9zdHBpbG90LnYxLlRlcm0SEQoJYW5jaG9yX2F0GAMgASgJEhIKCnRlcm1fc3RhcnQYBCABKAkSEAoIdGVybV9lbmQYBSABKAkSFQoNbmV4dF9ncmFudF9hdBgGIAEoCRISCgphdXRvX3JlbmV3GAcgASgIEioKDnNjaGVkdWxlZF9wbGFuGAggASgOMhIucG9zdHBpbG90LnYxLlBsYW4SKgoOc2NoZWR1bGVkX3Rlcm0YCSABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIOCgZzdGF0dXMYCiABKAkiQQoUQmlsbGluZ1BheW1lbnRNZXRob2QSEgoKY2FyZF9sYWJlbBgBIAEoCRIVCg1yZWdpc3RlcmVkX2F0GAIgASgJIpoCCgxCaWxsaW5nRXZlbnQSCgoCaWQYASABKAMSDAoEa2luZBgCIAEoCRIgCgRwbGFuGAMgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgEIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtEg8KB2NyZWRpdHMYBSABKAUSEQoJdXNkX2NlbnRzGAYgASgFEhYKDmtyd19wZXJfdXNkX2U0GAcgASgDEhEKCXJhdGVfZGF0ZRgIIAEoCRILCgNrcncYCSABKAMSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYCiABKAkSEAoIb3JkZXJfaWQYCyABKAkSDAoEbm90ZRgMIAEoCRISCgpjcmVhdGVkX2F0GA0gASgJIu8BCg9CaWxsaW5nUHVyY2hhc2USCgoCaWQYASABKAkSDwoHY3JlZGl0cxgDIAEoBRIRCgl1c2RfY2VudHMYBCABKAUSCwoDa3J3GAUgASgDEhIKCmNoYXJnZWRfYXQYCCABKAkSEwoLcmVmdW5kZWRfYXQYCSABKAkSEgoKcmVmdW5kYWJsZRgKIAEoCBIPCgdwYWNrX2lkGAsgASgJEhcKD3JlZnVuZF9vcmRlcl9pZBgMIAEoCUoECAIQA0oECAYQB0oECAcQCFIGbG90X2lkUhRwcm92aWRlcl9wYXltZW50X2tleVIIb3JkZXJfaWQiFQoTR2V0TXlCaWxsaW5nUmVxdWVzdCKAAgoUR2V0TXlCaWxsaW5nUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24SOgoOcGF5bWVudF9tZXRob2QYAiABKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1BheW1lbnRNZXRob2QSKwoHaGlzdG9yeRgDIAMoCzIaLnBvc3RwaWxvdC52MS5CaWxsaW5nRXZlbnQSMAoJcHVyY2hhc2VzGAQgAygLMh0ucG9zdHBpbG90LnYxLkJpbGxpbmdQdXJjaGFzZRIUCgxjdXN0b21lcl9rZXkYBSABKAkiRgocUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVxdWVzdBIQCghhdXRoX2tleRgBIAEoCRIUCgxjdXN0b21lcl9rZXkYAiABKAkicgodUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2USOgoOcGF5bWVudF9tZXRob2QYASABKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1BheW1lbnRNZXRob2QSFQoNYm9udXNfZ3JhbnRlZBgCIAEoCCIcChpSZW1vdmVQYXltZW50TWV0aG9kUmVxdWVzdCIdChtSZW1vdmVQYXltZW50TWV0aG9kUmVzcG9uc2UiVgoQU3Vic2NyaWJlUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtIkwKEVN1YnNjcmliZVJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uInEKGUNoYW5nZVN1YnNjcmlwdGlvblJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybRIQCghxdW90ZV9pZBgDIAEoCSJqChpDaGFuZ2VTdWJzY3JpcHRpb25SZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbhITCgthcHBsaWVkX25vdxgCIAEoCCIeChxDYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXF1ZXN0IlgKHUNhbmNlbFNjaGVkdWxlZENoYW5nZVJlc3BvbnNlEjcKDHN1YnNjcmlwdGlvbhgBIAEoCzIhLnBvc3RwaWxvdC52MS5CaWxsaW5nU3Vic2NyaXB0aW9uIhsKGUNhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QiVQoaQ2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2USNwoMc3Vic2NyaXB0aW9uGAEgASgLMiEucG9zdHBpbG90LnYxLkJpbGxpbmdTdWJzY3JpcHRpb24iGwoZUmVzdW1lU3Vic2NyaXB0aW9uUmVxdWVzdCJVChpSZXN1bWVTdWJzY3JpcHRpb25SZXNwb25zZRI3CgxzdWJzY3JpcHRpb24YASABKAsyIS5wb3N0cGlsb3QudjEuQmlsbGluZ1N1YnNjcmlwdGlvbiJXChFRdW90ZVByaWNlUmVxdWVzdBIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SIAoEdGVybRgCIAEoDjISLnBvc3RwaWxvdC52MS5UZXJtInEKElF1b3RlUHJpY2VSZXNwb25zZRIRCgl1c2RfY2VudHMYASABKAUSCwoDa3J3GAIgASgDEhYKDmtyd19wZXJfdXNkX2U0GAMgASgDEhEKCXJhdGVfZGF0ZRgEIAEoCRIQCghxdW90ZV9pZBgFIAEoCSJYChJRdW90ZUNoYW5nZVJlcXVlc3QSIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEiAKBHRlcm0YAiABKA4yEi5wb3N0cGlsb3QudjEuVGVybSKdAQoTUXVvdGVDaGFuZ2VSZXNwb25zZRIRCgl1c2RfY2VudHMYASABKAUSCwoDa3J3GAIgASgDEhYKDmtyd19wZXJfdXNkX2U0GAMgASgDEhEKCXJhdGVfZGF0ZRgEIAEoCRITCgthcHBsaWVkX25vdxgFIAEoCBIUCgxlZmZlY3RpdmVfYXQYBiABKAkSEAoIcXVvdGVfaWQYByABKAkiOgoUUXVvdGVQdXJjaGFzZVJlcXVlc3QSEQoJdXNkX2NlbnRzGAEgASgFEg8KB3BhY2tfaWQYAiABKAkicQoVUXVvdGVQdXJjaGFzZVJlc3BvbnNlEg8KB2NyZWRpdHMYASABKAUSCwoDa3J3GAIgASgDEhYKDmtyd19wZXJfdXNkX2U0GAMgASgDEhEKCXJhdGVfZGF0ZRgEIAEoCRIPCgdwYWNrX2lkGAUgASgJIjwKFlB1cmNoYXNlQ3JlZGl0c1JlcXVlc3QSEQoJdXNkX2NlbnRzGAEgASgFEg8KB3BhY2tfaWQYAiABKAkiSgoXUHVyY2hhc2VDcmVkaXRzUmVzcG9uc2USLwoIcHVyY2hhc2UYASABKAsyHS5wb3N0cGlsb3QudjEuQmlsbGluZ1B1cmNoYXNlItsBCg5SZWZ1bmRFdmlkZW5jZRIXCg9wYWlkX21vZGVsX2pvYnMYASABKAUSFAoMY3JlZGl0c191c2VkGAIgASgFEhgKEGNyZWRpdHNfcmVzZXJ2ZWQYAyABKAUSGwoTc2VydmVyX2V4cG9ydHNfdXNlZBgEIAEoBRIfChdzZXJ2ZXJfZXhwb3J0c19yZXNlcnZlZBgFIAEoBRIgChhmdW5kZWRfY3JlZGl0c19yZW1haW5pbmcYBiABKAUSIAoYZnVuZGVkX2V4cG9ydHNfcmVtYWluaW5nGAcgASgFIqABCg1SZWZ1bmRQYXltZW50EhAKCG9yZGVyX2lkGAEgASgJEgwKBGtpbmQYAiABKAkSHAoUcHJvdmlkZXJfcGF5bWVudF9rZXkYAyABKAkSEwoLY2hhcmdlZF9rcncYBCABKAMSEgoKY2hhcmdlZF9hdBgFIAEoCRITCgtjb3ZlcmFnZV9pZBgGIAEoCRITCgtwYWNrX2xvdF9pZBgHIAEoCSL4AgoUQmlsbGluZ1JlZnVuZFJlcXVlc3QSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIOCgZyZWFzb24YAyABKAkSDgoGc3RhdHVzGAQgASgJEhQKDHJlcXVlc3RlZF9hdBgFIAEoCRITCgtyZXZpZXdlZF9ieRgGIAEoCRITCgtyZXZpZXdlZF9hdBgHIAEoCRIbChNyZXZpZXdlZF9hbW91bnRfa3J3GAggASgDEhwKFGNvbmZpcm1lZF9hbW91bnRfa3J3GAkgASgDEhQKDGNvbmZpcm1lZF9hdBgKIAEoCRIYChBkaXNwb3NpdGlvbl9qc29uGAsgASgJEiwKB3BheW1lbnQYDCABKAsyGy5wb3N0cGlsb3QudjEuUmVmdW5kUGF5bWVudBIuCghldmlkZW5jZRgNIAEoCzIcLnBvc3RwaWxvdC52MS5SZWZ1bmRFdmlkZW5jZRIaChJwcmlvcl9yZWZ1bmRlZF9rcncYDiABKAMiOAoUUmVxdWVzdFJlZnVuZFJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDgoGcmVhc29uGAIgASgJIksKFVJlcXVlc3RSZWZ1bmRSZXNwb25zZRIyCgZyZWZ1bmQYASABKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1JlZnVuZFJlcXVlc3QiFgoUTGlzdE15UmVmdW5kc1JlcXVlc3QiTAoVTGlzdE15UmVmdW5kc1Jlc3BvbnNlEjMKB3JlZnVuZHMYASADKAsyIi5wb3N0cGlsb3QudjEuQmlsbGluZ1JlZnVuZFJlcXVlc3QiGgoYTGlzdFJlZnVuZFJldmlld3NSZXF1ZXN0IlAKGUxpc3RSZWZ1bmRSZXZpZXdzUmVzcG9uc2USMwoHcmVmdW5kcxgBIAMoCzIiLnBvc3RwaWxvdC52MS5CaWxsaW5nUmVmdW5kUmVxdWVzdCJXChNSZXZpZXdSZWZ1bmRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSDwoHb3V0Y29tZRgCIAEoCRIbChNyZXZpZXdlZF9hbW91bnRfa3J3GAMgASgDIkoKFFJldmlld1JlZnVuZFJlc3BvbnNlEjIKBnJlZnVuZBgBIAEoCzIiLnBvc3RwaWxvdC52MS5CaWxsaW5nUmVmdW5kUmVxdWVzdCIsChZSZWNvbmNpbGVSZWZ1bmRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkiTQoXUmVjb25jaWxlUmVmdW5kUmVzcG9uc2USMgoGcmVmdW5kGAEgASgLMiIucG9zdHBpbG90LnYxLkJpbGxpbmdSZWZ1bmRSZXF1ZXN0Kj8KBFRlcm0SFAoQVEVSTV9VTlNQRUNJRklFRBAAEhAKDFRFUk1fTU9OVEhMWRABEg8KC1RFUk1fQU5OVUFMEAIykg0KDkJpbGxpbmdTZXJ2aWNlElcKDEdldE15QmlsbGluZxIhLnBvc3RwaWxvdC52MS5HZXRNeUJpbGxpbmdSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkdldE15QmlsbGluZ1Jlc3BvbnNlIgAScgoVUmVnaXN0ZXJQYXltZW50TWV0aG9kEioucG9zdHBpbG90LnYxLlJlZ2lzdGVyUGF5bWVudE1ldGhvZFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuUmVnaXN0ZXJQYXltZW50TWV0aG9kUmVzcG9uc2UiABJsChNSZW1vdmVQYXltZW50TWV0aG9kEigucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXF1ZXN0GikucG9zdHBpbG90LnYxLlJlbW92ZVBheW1lbnRNZXRob2RSZXNwb25zZSIAEk4KCVN1YnNjcmliZRIeLnBvc3RwaWxvdC52MS5TdWJzY3JpYmVSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLlN1YnNjcmliZVJlc3BvbnNlIgASaQoSQ2hhbmdlU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLkNoYW5nZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuQ2hhbmdlU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJyChVDYW5jZWxTY2hlZHVsZWRDaGFuZ2USKi5wb3N0cGlsb3QudjEuQ2FuY2VsU2NoZWR1bGVkQ2hhbmdlUmVxdWVzdBorLnBvc3RwaWxvdC52MS5DYW5jZWxTY2hlZHVsZWRDaGFuZ2VSZXNwb25zZSIAEmkKEkNhbmNlbFN1YnNjcmlwdGlvbhInLnBvc3RwaWxvdC52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GigucG9zdHBpbG90LnYxLkNhbmNlbFN1YnNjcmlwdGlvblJlc3BvbnNlIgASaQoSUmVzdW1lU3Vic2NyaXB0aW9uEicucG9zdHBpbG90LnYxLlJlc3VtZVN1YnNjcmlwdGlvblJlcXVlc3QaKC5wb3N0cGlsb3QudjEuUmVzdW1lU3Vic2NyaXB0aW9uUmVzcG9uc2UiABJRCgpRdW90ZVByaWNlEh8ucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXF1ZXN0GiAucG9zdHBpbG90LnYxLlF1b3RlUHJpY2VSZXNwb25zZSIAElQKC1F1b3RlQ2hhbmdlEiAucG9zdHBpbG90LnYxLlF1b3RlQ2hhbmdlUmVxdWVzdBohLnBvc3RwaWxvdC52MS5RdW90ZUNoYW5nZVJlc3BvbnNlIgASWgoNUXVvdGVQdXJjaGFzZRIiLnBvc3RwaWxvdC52MS5RdW90ZVB1cmNoYXNlUmVxdWVzdBojLnBvc3RwaWxvdC52MS5RdW90ZVB1cmNoYXNlUmVzcG9uc2UiABJgCg9QdXJjaGFzZUNyZWRpdHMSJC5wb3N0cGlsb3QudjEuUHVyY2hhc2VDcmVkaXRzUmVxdWVzdBolLnBvc3RwaWxvdC52MS5QdXJjaGFzZUNyZWRpdHNSZXNwb25zZSIAEloKDVJlcXVlc3RSZWZ1bmQSIi5wb3N0cGlsb3QudjEuUmVxdWVzdFJlZnVuZFJlcXVlc3QaIy5wb3N0cGlsb3QudjEuUmVxdWVzdFJlZnVuZFJlc3BvbnNlIgASWgoNTGlzdE15UmVmdW5kcxIiLnBvc3RwaWxvdC52MS5MaXN0TXlSZWZ1bmRzUmVxdWVzdBojLnBvc3RwaWxvdC52MS5MaXN0TXlSZWZ1bmRzUmVzcG9uc2UiABJmChFMaXN0UmVmdW5kUmV2aWV3cxImLnBvc3RwaWxvdC52MS5MaXN0UmVmdW5kUmV2aWV3c1JlcXVlc3QaJy5wb3N0cGlsb3QudjEuTGlzdFJlZnVuZFJldmlld3NSZXNwb25zZSIAElcKDFJldmlld1JlZnVuZBIhLnBvc3RwaWxvdC52MS5SZXZpZXdSZWZ1bmRSZXF1ZXN0GiIucG9zdHBpbG90LnYxLlJldmlld1JlZnVuZFJlc3BvbnNlIgASYAoPUmVjb25jaWxlUmVmdW5kEiQucG9zdHBpbG90LnYxLlJlY29uY2lsZVJlZnVuZFJlcXVlc3QaJS5wb3N0cGlsb3QudjEuUmVjb25jaWxlUmVmdW5kUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_plan]);
 
 /**
  * @generated from message postpilot.v1.BillingSubscription
@@ -222,6 +222,11 @@ export type BillingPurchase = Message<"postpilot.v1.BillingPurchase"> & {
    * @generated from field: string pack_id = 11;
    */
   packId: string;
+
+  /**
+   * @generated from field: string refund_order_id = 12;
+   */
+  refundOrderId: string;
 };
 
 /**
@@ -762,38 +767,357 @@ export const PurchaseCreditsResponseSchema: GenMessage<PurchaseCreditsResponse> 
   messageDesc(file_postpilot_v1_billing, 27);
 
 /**
- * @generated from message postpilot.v1.RefundPurchaseRequest
+ * @generated from message postpilot.v1.RefundEvidence
  */
-export type RefundPurchaseRequest = Message<"postpilot.v1.RefundPurchaseRequest"> & {
+export type RefundEvidence = Message<"postpilot.v1.RefundEvidence"> & {
   /**
-   * @generated from field: string purchase_id = 1;
+   * @generated from field: int32 paid_model_jobs = 1;
    */
-  purchaseId: string;
+  paidModelJobs: number;
+
+  /**
+   * @generated from field: int32 credits_used = 2;
+   */
+  creditsUsed: number;
+
+  /**
+   * @generated from field: int32 credits_reserved = 3;
+   */
+  creditsReserved: number;
+
+  /**
+   * @generated from field: int32 server_exports_used = 4;
+   */
+  serverExportsUsed: number;
+
+  /**
+   * @generated from field: int32 server_exports_reserved = 5;
+   */
+  serverExportsReserved: number;
+
+  /**
+   * @generated from field: int32 funded_credits_remaining = 6;
+   */
+  fundedCreditsRemaining: number;
+
+  /**
+   * @generated from field: int32 funded_exports_remaining = 7;
+   */
+  fundedExportsRemaining: number;
 };
 
 /**
- * Describes the message postpilot.v1.RefundPurchaseRequest.
- * Use `create(RefundPurchaseRequestSchema)` to create a new message.
+ * Describes the message postpilot.v1.RefundEvidence.
+ * Use `create(RefundEvidenceSchema)` to create a new message.
  */
-export const RefundPurchaseRequestSchema: GenMessage<RefundPurchaseRequest> = /*@__PURE__*/
+export const RefundEvidenceSchema: GenMessage<RefundEvidence> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_billing, 28);
 
 /**
- * @generated from message postpilot.v1.RefundPurchaseResponse
+ * @generated from message postpilot.v1.RefundPayment
  */
-export type RefundPurchaseResponse = Message<"postpilot.v1.RefundPurchaseResponse"> & {
+export type RefundPayment = Message<"postpilot.v1.RefundPayment"> & {
   /**
-   * @generated from field: postpilot.v1.BillingPurchase purchase = 1;
+   * @generated from field: string order_id = 1;
    */
-  purchase?: BillingPurchase | undefined;
+  orderId: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string provider_payment_key = 3;
+   */
+  providerPaymentKey: string;
+
+  /**
+   * @generated from field: int64 charged_krw = 4;
+   */
+  chargedKrw: bigint;
+
+  /**
+   * @generated from field: string charged_at = 5;
+   */
+  chargedAt: string;
+
+  /**
+   * @generated from field: string coverage_id = 6;
+   */
+  coverageId: string;
+
+  /**
+   * @generated from field: string pack_lot_id = 7;
+   */
+  packLotId: string;
 };
 
 /**
- * Describes the message postpilot.v1.RefundPurchaseResponse.
- * Use `create(RefundPurchaseResponseSchema)` to create a new message.
+ * Describes the message postpilot.v1.RefundPayment.
+ * Use `create(RefundPaymentSchema)` to create a new message.
  */
-export const RefundPurchaseResponseSchema: GenMessage<RefundPurchaseResponse> = /*@__PURE__*/
+export const RefundPaymentSchema: GenMessage<RefundPayment> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_billing, 29);
+
+/**
+ * @generated from message postpilot.v1.BillingRefundRequest
+ */
+export type BillingRefundRequest = Message<"postpilot.v1.BillingRefundRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: string status = 4;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string requested_at = 5;
+   */
+  requestedAt: string;
+
+  /**
+   * @generated from field: string reviewed_by = 6;
+   */
+  reviewedBy: string;
+
+  /**
+   * @generated from field: string reviewed_at = 7;
+   */
+  reviewedAt: string;
+
+  /**
+   * @generated from field: int64 reviewed_amount_krw = 8;
+   */
+  reviewedAmountKrw: bigint;
+
+  /**
+   * @generated from field: int64 confirmed_amount_krw = 9;
+   */
+  confirmedAmountKrw: bigint;
+
+  /**
+   * @generated from field: string confirmed_at = 10;
+   */
+  confirmedAt: string;
+
+  /**
+   * @generated from field: string disposition_json = 11;
+   */
+  dispositionJson: string;
+
+  /**
+   * @generated from field: postpilot.v1.RefundPayment payment = 12;
+   */
+  payment?: RefundPayment | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.RefundEvidence evidence = 13;
+   */
+  evidence?: RefundEvidence | undefined;
+
+  /**
+   * @generated from field: int64 prior_refunded_krw = 14;
+   */
+  priorRefundedKrw: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.BillingRefundRequest.
+ * Use `create(BillingRefundRequestSchema)` to create a new message.
+ */
+export const BillingRefundRequestSchema: GenMessage<BillingRefundRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 30);
+
+/**
+ * @generated from message postpilot.v1.RequestRefundRequest
+ */
+export type RequestRefundRequest = Message<"postpilot.v1.RequestRefundRequest"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RequestRefundRequest.
+ * Use `create(RequestRefundRequestSchema)` to create a new message.
+ */
+export const RequestRefundRequestSchema: GenMessage<RequestRefundRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 31);
+
+/**
+ * @generated from message postpilot.v1.RequestRefundResponse
+ */
+export type RequestRefundResponse = Message<"postpilot.v1.RequestRefundResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingRefundRequest refund = 1;
+   */
+  refund?: BillingRefundRequest | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.RequestRefundResponse.
+ * Use `create(RequestRefundResponseSchema)` to create a new message.
+ */
+export const RequestRefundResponseSchema: GenMessage<RequestRefundResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 32);
+
+/**
+ * @generated from message postpilot.v1.ListMyRefundsRequest
+ */
+export type ListMyRefundsRequest = Message<"postpilot.v1.ListMyRefundsRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ListMyRefundsRequest.
+ * Use `create(ListMyRefundsRequestSchema)` to create a new message.
+ */
+export const ListMyRefundsRequestSchema: GenMessage<ListMyRefundsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 33);
+
+/**
+ * @generated from message postpilot.v1.ListMyRefundsResponse
+ */
+export type ListMyRefundsResponse = Message<"postpilot.v1.ListMyRefundsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.BillingRefundRequest refunds = 1;
+   */
+  refunds: BillingRefundRequest[];
+};
+
+/**
+ * Describes the message postpilot.v1.ListMyRefundsResponse.
+ * Use `create(ListMyRefundsResponseSchema)` to create a new message.
+ */
+export const ListMyRefundsResponseSchema: GenMessage<ListMyRefundsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 34);
+
+/**
+ * @generated from message postpilot.v1.ListRefundReviewsRequest
+ */
+export type ListRefundReviewsRequest = Message<"postpilot.v1.ListRefundReviewsRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.ListRefundReviewsRequest.
+ * Use `create(ListRefundReviewsRequestSchema)` to create a new message.
+ */
+export const ListRefundReviewsRequestSchema: GenMessage<ListRefundReviewsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 35);
+
+/**
+ * @generated from message postpilot.v1.ListRefundReviewsResponse
+ */
+export type ListRefundReviewsResponse = Message<"postpilot.v1.ListRefundReviewsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.BillingRefundRequest refunds = 1;
+   */
+  refunds: BillingRefundRequest[];
+};
+
+/**
+ * Describes the message postpilot.v1.ListRefundReviewsResponse.
+ * Use `create(ListRefundReviewsResponseSchema)` to create a new message.
+ */
+export const ListRefundReviewsResponseSchema: GenMessage<ListRefundReviewsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 36);
+
+/**
+ * @generated from message postpilot.v1.ReviewRefundRequest
+ */
+export type ReviewRefundRequest = Message<"postpilot.v1.ReviewRefundRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string outcome = 2;
+   */
+  outcome: string;
+
+  /**
+   * @generated from field: int64 reviewed_amount_krw = 3;
+   */
+  reviewedAmountKrw: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.ReviewRefundRequest.
+ * Use `create(ReviewRefundRequestSchema)` to create a new message.
+ */
+export const ReviewRefundRequestSchema: GenMessage<ReviewRefundRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 37);
+
+/**
+ * @generated from message postpilot.v1.ReviewRefundResponse
+ */
+export type ReviewRefundResponse = Message<"postpilot.v1.ReviewRefundResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingRefundRequest refund = 1;
+   */
+  refund?: BillingRefundRequest | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.ReviewRefundResponse.
+ * Use `create(ReviewRefundResponseSchema)` to create a new message.
+ */
+export const ReviewRefundResponseSchema: GenMessage<ReviewRefundResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 38);
+
+/**
+ * @generated from message postpilot.v1.ReconcileRefundRequest
+ */
+export type ReconcileRefundRequest = Message<"postpilot.v1.ReconcileRefundRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ReconcileRefundRequest.
+ * Use `create(ReconcileRefundRequestSchema)` to create a new message.
+ */
+export const ReconcileRefundRequestSchema: GenMessage<ReconcileRefundRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 39);
+
+/**
+ * @generated from message postpilot.v1.ReconcileRefundResponse
+ */
+export type ReconcileRefundResponse = Message<"postpilot.v1.ReconcileRefundResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.BillingRefundRequest refund = 1;
+   */
+  refund?: BillingRefundRequest | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.ReconcileRefundResponse.
+ * Use `create(ReconcileRefundResponseSchema)` to create a new message.
+ */
+export const ReconcileRefundResponseSchema: GenMessage<ReconcileRefundResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_billing, 40);
 
 /**
  * @generated from enum postpilot.v1.Term
@@ -925,12 +1249,46 @@ export const BillingService: GenService<{
     output: typeof PurchaseCreditsResponseSchema;
   },
   /**
-   * @generated from rpc postpilot.v1.BillingService.RefundPurchase
+   * @generated from rpc postpilot.v1.BillingService.RequestRefund
    */
-  refundPurchase: {
+  requestRefund: {
     methodKind: "unary";
-    input: typeof RefundPurchaseRequestSchema;
-    output: typeof RefundPurchaseResponseSchema;
+    input: typeof RequestRefundRequestSchema;
+    output: typeof RequestRefundResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.ListMyRefunds
+   */
+  listMyRefunds: {
+    methodKind: "unary";
+    input: typeof ListMyRefundsRequestSchema;
+    output: typeof ListMyRefundsResponseSchema;
+  },
+  /**
+   * The interceptor and handler both require the master tier.
+   *
+   * @generated from rpc postpilot.v1.BillingService.ListRefundReviews
+   */
+  listRefundReviews: {
+    methodKind: "unary";
+    input: typeof ListRefundReviewsRequestSchema;
+    output: typeof ListRefundReviewsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.ReviewRefund
+   */
+  reviewRefund: {
+    methodKind: "unary";
+    input: typeof ReviewRefundRequestSchema;
+    output: typeof ReviewRefundResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.BillingService.ReconcileRefund
+   */
+  reconcileRefund: {
+    methodKind: "unary";
+    input: typeof ReconcileRefundRequestSchema;
+    output: typeof ReconcileRefundResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_billing, 0);

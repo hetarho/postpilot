@@ -47,7 +47,7 @@ func (p *fixedPayments) Charge(_ context.Context, request billing.ChargeRequest)
 		return billing.Payment{}, &billing.ProviderError{Code: "REJECT_CARD", HTTPStatus: 402}
 	}
 	payment := billing.Payment{PaymentKey: "pay-" + request.OrderID, OrderID: request.OrderID,
-		Status: "DONE", AmountKRW: request.KRW, Currency: "KRW"}
+		Status: "DONE", AmountKRW: request.KRW, BalanceKRW: request.KRW, Currency: "KRW"}
 	if p.wrongAmount {
 		payment.AmountKRW++
 	}

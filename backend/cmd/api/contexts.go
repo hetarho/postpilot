@@ -159,6 +159,13 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})
 	})
+	c.billingStore.SetRefundBenefitsForTx(func(tx *sql.Tx) billing.RefundBenefits {
+		return refundBenefits{credits: usagestore.NewTx(tx), exports: clipstore.NewTx(tx)}
+	})
+	c.billingStore.SetRefundBenefits(refundBenefits{
+		credits: usagestore.New(handle.Writer, handle.Reader),
+		exports: clipstore.New(handle.Writer, handle.Reader),
+	})
 	if cfg.BillingEnabled {
 		c.payments = tosspay.New(cfg.TossSecretKey, http.DefaultClient)
 	}

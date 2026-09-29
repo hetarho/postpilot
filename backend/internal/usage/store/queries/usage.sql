@@ -20,6 +20,7 @@ SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
 FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
+  AND refund_request_id IS NULL
   AND (expires_at IS NULL OR expires_at > ?)
 ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE 0 END,
          expires_at, created_at, id;
@@ -89,7 +90,7 @@ UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? 
 -- name: SpendFromLot :exec
 -- The `remaining >= ?` guard is in the statement rather than in a read before it: two
 -- writers that each read the same lot must not both pass their own arithmetic.
-UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ?;
+UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ? AND refund_request_id IS NULL;
 
 -- name: RefundToLot :exec
 -- Bounded by the grant for the same reason: a double settle cannot inflate a lot past
@@ -160,7 +161,7 @@ ON CONFLICT(job_id,lot_id) DO NOTHING;
 SELECT l.id,l.user_id,l.kind,l.granted,l.remaining,l.expires_at,l.created_at,
        l.coverage_id,l.window_start,l.issuance_cause,l.correlation_id
 FROM usage_admission_eligible_lots e JOIN credit_lots l ON l.id=e.lot_id
-WHERE e.job_id=? AND l.remaining>0
+WHERE e.job_id=? AND l.remaining>0 AND l.refund_request_id IS NULL
 ORDER BY CASE WHEN l.kind='purchased' THEN 2 WHEN l.expires_at IS NULL THEN 1 ELSE 0 END,
          l.expires_at,l.created_at,l.id;
 

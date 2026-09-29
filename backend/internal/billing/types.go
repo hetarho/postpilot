@@ -196,7 +196,15 @@ type Payment struct {
 	OrderID    string
 	Status     string
 	AmountKRW  int
+	BalanceKRW int
 	Currency   string
+	Cancels    []PaymentCancel
+}
+
+type PaymentCancel struct {
+	TransactionKey string
+	AmountKRW      int
+	Status         string
 }
 
 type Notification struct {

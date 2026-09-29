@@ -52,6 +52,12 @@ type Provider interface {
 	ParseNotification(body []byte) (Notification, error)
 }
 
+// RefundProvider is the provider's reviewed partial-cancel and reconciliation
+// capability. It is optional so older charge adapters remain isolated.
+type RefundProvider interface {
+	CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (Payment, error)
+}
+
 type Rates interface {
 	KRWPerUSD(ctx context.Context, date time.Time) (rateE4 int64, published bool, err error)
 }

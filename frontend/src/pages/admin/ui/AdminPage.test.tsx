@@ -77,6 +77,43 @@ describe('the admin screen', () => {
     expect(screen.queryByRole('heading', { name: '운영 관리' })).not.toBeInTheDocument()
   })
 
+  it('reviews a payment refund with funded-use evidence and an explicit amount', async () => {
+    const user = userEvent.setup()
+    const refundReviewCalls: Array<{ requestId: string; outcome: string; amount: bigint }> = []
+    renderAppAt('/admin', {
+      user: MASTER,
+      plans: { plan: ProtoPlan.MASTER, accounts: [{ id: 'root', plan: ProtoPlan.MASTER }] },
+      billing: {
+        refundReviewCalls,
+        initialRefunds: [
+          {
+            id: 'r1',
+            userId: 'alice',
+            reason: '검토 부탁합니다',
+            status: 'requested',
+            requestedAt: '2026-09-08T00:00:00Z',
+            payment: {
+              orderId: 'order-1',
+              kind: 'subscribe',
+              chargedKrw: 4900n,
+              chargedAt: '2026-09-08T00:00:00Z',
+            },
+          },
+        ],
+      },
+    })
+    expect(await screen.findByRole('heading', { name: '환불 심사' })).toBeInTheDocument()
+    expect(await screen.findByText(/order-1/)).toHaveTextContent('이미 환불')
+    expect(await screen.findByText(/유료 AI 작업 0건/)).toBeInTheDocument()
+    await user.clear(screen.getByRole('spinbutton', { name: '심사 환불액(원)' }))
+    await user.type(screen.getByRole('spinbutton', { name: '심사 환불액(원)' }), '2500')
+    await user.click(screen.getByRole('button', { name: '승인하고 결제사 확인' }))
+    await waitFor(() =>
+      expect(refundReviewCalls).toEqual([{ requestId: 'r1', outcome: 'approve', amount: 2500n }]),
+    )
+    expect(await screen.findByRole('button', { name: '결제사 결과 재확인' })).toBeInTheDocument()
+  })
+
   // MODEL-28: the model catalog is the second tab of the same frame, reached from the row
   // rather than from a second entry point in the header.
   it('moves to the model tab from the tab row', async () => {

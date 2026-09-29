@@ -82,6 +82,13 @@ func (c *Client) Refund(ctx context.Context, paymentKey, reason string) error {
 	return c.do(ctx, http.MethodPost, "/v1/payments/"+url.PathEscape(paymentKey)+"/cancel", map[string]string{"cancelReason": reason}, nil)
 }
 
+func (c *Client) CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (billing.Payment, error) {
+	var response paymentResponse
+	_, err := c.doStatusWithKey(ctx, http.MethodPost, "/v1/payments/"+url.PathEscape(paymentKey)+"/cancel",
+		map[string]any{"cancelReason": reason, "cancelAmount": amountKRW}, &response, idempotencyKey)
+	return response.domain(), err
+}
+
 func (c *Client) ParseNotification(raw []byte) (billing.Notification, error) {
 	var envelope struct {
 		EventType  string `json:"eventType"`
@@ -113,16 +120,27 @@ func (c *Client) ParseNotification(raw []byte) (billing.Notification, error) {
 }
 
 type paymentResponse struct {
-	PaymentKey  string `json:"paymentKey"`
-	OrderID     string `json:"orderId"`
-	Status      string `json:"status"`
-	TotalAmount int    `json:"totalAmount"`
-	Currency    string `json:"currency"`
+	PaymentKey    string `json:"paymentKey"`
+	OrderID       string `json:"orderId"`
+	Status        string `json:"status"`
+	TotalAmount   int    `json:"totalAmount"`
+	BalanceAmount int    `json:"balanceAmount"`
+	Currency      string `json:"currency"`
+	Cancels       []struct {
+		TransactionKey string `json:"transactionKey"`
+		CancelAmount   int    `json:"cancelAmount"`
+		CancelStatus   string `json:"cancelStatus"`
+	} `json:"cancels"`
 }
 
 func (p paymentResponse) domain() billing.Payment {
-	return billing.Payment{PaymentKey: p.PaymentKey, OrderID: p.OrderID, Status: p.Status,
-		AmountKRW: p.TotalAmount, Currency: p.Currency}
+	result := billing.Payment{PaymentKey: p.PaymentKey, OrderID: p.OrderID, Status: p.Status,
+		AmountKRW: p.TotalAmount, BalanceKRW: p.BalanceAmount, Currency: p.Currency}
+	for _, cancel := range p.Cancels {
+		result.Cancels = append(result.Cancels, billing.PaymentCancel{
+			TransactionKey: cancel.TransactionKey, AmountKRW: cancel.CancelAmount, Status: cancel.CancelStatus})
+	}
+	return result
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body any, target any) error {
@@ -131,6 +149,10 @@ func (c *Client) do(ctx context.Context, method, path string, body any, target a
 }
 
 func (c *Client) doStatus(ctx context.Context, method, path string, body any, target any) (int, error) {
+	return c.doStatusWithKey(ctx, method, path, body, target, "")
+}
+
+func (c *Client) doStatusWithKey(ctx context.Context, method, path string, body any, target any, idempotencyKey string) (int, error) {
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -144,6 +166,9 @@ func (c *Client) doStatus(ctx context.Context, method, path string, body any, ta
 		return 0, err
 	}
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(c.secretKey+":")))
+	if idempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", idempotencyKey)
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

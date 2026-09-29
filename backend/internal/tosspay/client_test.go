@@ -86,3 +86,33 @@ func TestParseNotificationSupportsCurrentDataEnvelope(t *testing.T) {
 		t.Fatalf("notification=%+v err=%v", n, err)
 	}
 }
+
+func TestReviewedPartialCancelCarriesAmountIdempotencyAndProviderEvidence(t *testing.T) {
+	var calls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/payments/pay-1/cancel" || r.Method != http.MethodPost {
+			t.Errorf("request=%s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Idempotency-Key"); got != "refund:request-1" {
+			t.Errorf("idempotency=%q", got)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(body), `"cancelAmount":4900`) || !strings.Contains(string(body), `"cancelReason":"reviewed"`) {
+			t.Errorf("body=%s", body)
+		}
+		calls++
+		_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"PARTIAL_CANCELED","totalAmount":9900,"balanceAmount":5000,"currency":"KRW","cancels":[{"transactionKey":"cancel-1","cancelAmount":4900,"cancelStatus":"DONE"}]}`)
+	}))
+	defer server.Close()
+	client := New("test_sk", server.Client())
+	client.endpoint = server.URL
+	for range 2 {
+		payment, err := client.CancelPayment(context.Background(), "pay-1", 4900, "reviewed", "refund:request-1")
+		if err != nil || payment.BalanceKRW != 5000 || len(payment.Cancels) != 1 || payment.Cancels[0].TransactionKey != "cancel-1" {
+			t.Fatalf("cancel=%+v err=%v", payment, err)
+		}
+	}
+	if calls != 2 {
+		t.Fatalf("calls=%d", calls)
+	}
+}

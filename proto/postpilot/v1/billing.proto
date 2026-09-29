@@ -21,7 +21,12 @@ service BillingService {
   rpc QuoteChange(QuoteChangeRequest) returns (QuoteChangeResponse) {}
   rpc QuotePurchase(QuotePurchaseRequest) returns (QuotePurchaseResponse) {}
   rpc PurchaseCredits(PurchaseCreditsRequest) returns (PurchaseCreditsResponse) {}
-  rpc RefundPurchase(RefundPurchaseRequest) returns (RefundPurchaseResponse) {}
+  rpc RequestRefund(RequestRefundRequest) returns (RequestRefundResponse) {}
+  rpc ListMyRefunds(ListMyRefundsRequest) returns (ListMyRefundsResponse) {}
+  // The interceptor and handler both require the master tier.
+  rpc ListRefundReviews(ListRefundReviewsRequest) returns (ListRefundReviewsResponse) {}
+  rpc ReviewRefund(ReviewRefundRequest) returns (ReviewRefundResponse) {}
+  rpc ReconcileRefund(ReconcileRefundRequest) returns (ReconcileRefundResponse) {}
 }
 
 enum Term {
@@ -80,6 +85,7 @@ message BillingPurchase {
   string refunded_at = 9;
   bool refundable = 10;
   string pack_id = 11;
+  string refund_order_id = 12;
 }
 
 message GetMyBillingRequest {}
@@ -197,10 +203,54 @@ message PurchaseCreditsResponse {
   BillingPurchase purchase = 1;
 }
 
-message RefundPurchaseRequest {
-  string purchase_id = 1;
+message RefundEvidence {
+  int32 paid_model_jobs = 1;
+  int32 credits_used = 2;
+  int32 credits_reserved = 3;
+  int32 server_exports_used = 4;
+  int32 server_exports_reserved = 5;
+  int32 funded_credits_remaining = 6;
+  int32 funded_exports_remaining = 7;
 }
 
-message RefundPurchaseResponse {
-  BillingPurchase purchase = 1;
+message RefundPayment {
+  string order_id = 1;
+  string kind = 2;
+  string provider_payment_key = 3;
+  int64 charged_krw = 4;
+  string charged_at = 5;
+  string coverage_id = 6;
+  string pack_lot_id = 7;
 }
+
+message BillingRefundRequest {
+  string id = 1;
+  string user_id = 2;
+  string reason = 3;
+  string status = 4;
+  string requested_at = 5;
+  string reviewed_by = 6;
+  string reviewed_at = 7;
+  int64 reviewed_amount_krw = 8;
+  int64 confirmed_amount_krw = 9;
+  string confirmed_at = 10;
+  string disposition_json = 11;
+  RefundPayment payment = 12;
+  RefundEvidence evidence = 13;
+  int64 prior_refunded_krw = 14;
+}
+
+message RequestRefundRequest { string order_id = 1; string reason = 2; }
+message RequestRefundResponse { BillingRefundRequest refund = 1; }
+message ListMyRefundsRequest {}
+message ListMyRefundsResponse { repeated BillingRefundRequest refunds = 1; }
+message ListRefundReviewsRequest {}
+message ListRefundReviewsResponse { repeated BillingRefundRequest refunds = 1; }
+message ReviewRefundRequest {
+  string request_id = 1;
+  string outcome = 2;
+  int64 reviewed_amount_krw = 3;
+}
+message ReviewRefundResponse { BillingRefundRequest refund = 1; }
+message ReconcileRefundRequest { string request_id = 1; }
+message ReconcileRefundResponse { BillingRefundRequest refund = 1; }

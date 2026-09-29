@@ -38,6 +38,7 @@ export interface BillingEvent {
 
 export interface Purchase {
   id: string
+  refundOrderId: string
   packId: string
   credits: number
   usdCents: number

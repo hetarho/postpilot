@@ -30,7 +30,7 @@ describe('BillingPage', () => {
     expect(calls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1)
   })
 
-  it('shows the seven-day rule and refunds only server-marked purchases', async () => {
+  it('submits a reviewed refund request for a charged payment and shows pending state', async () => {
     const user = userEvent.setup()
     const refundRequests: string[] = []
     renderAppAt('/billing', {
@@ -38,31 +38,32 @@ describe('BillingPage', () => {
       billing: { populated: true, refundRequests },
     })
 
-    await user.click(await screen.findByRole('button', { name: '환불' }))
-    const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveTextContent('구매 후 7일 안에')
-    expect(dialog).toHaveTextContent('하나도 사용하지 않은 경우')
-    await user.click(within(dialog).getByRole('button', { name: '환불' }))
-
-    await waitFor(() => expect(refundRequests).toEqual(['purchase-1']))
-    expect(await screen.findByText('100 크레딧 구매를 환불했습니다.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '환불' })).not.toBeInTheDocument()
+    expect(
+      await screen.findByText(/사용했거나 7일이 지난 결제도 요청할 수 있으며/),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('combobox', { name: '결제' }))
+    await user.click(screen.getByRole('option', { name: /sub-1/ }))
+    await user.type(screen.getByRole('textbox', { name: '요청 사유' }), '결제 검토를 부탁합니다')
+    await user.click(screen.getByRole('button', { name: '환불 요청하기' }))
+    await waitFor(() => expect(refundRequests).toEqual(['sub-1']))
+    expect(await screen.findByText('환불 요청이 접수되었습니다.')).toBeInTheDocument()
+    expect(await screen.findByText(/심사 대기 · 결제 검토를 부탁합니다/)).toBeInTheDocument()
   })
 
-  it.each([
-    ['PURCHASE_SPENT', '구매한 크레딧을 일부 사용해 환불할 수 없어요.'],
-    ['REFUND_WINDOW_CLOSED', '구매 후 7일이 지나 환불할 수 없어요.'],
-    ['REFUND_FAILED', '환불을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.'],
-  ] as const)('localizes %s in the refund dialog', async (failure, message) => {
+  it('keeps a failed refund request visible as a form error', async () => {
     const user = userEvent.setup()
     renderAppAt('/billing', {
       user: { id: 'alice', plan: ProtoPlan.PRO },
-      billing: { populated: true, refundFailure: failure },
+      billing: { populated: true, refundFailure: 'REFUND_FAILED' },
     })
 
-    await user.click(await screen.findByRole('button', { name: '환불' }))
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '환불' }))
-    expect(await screen.findByText(message)).toBeInTheDocument()
+    await user.click(await screen.findByRole('combobox', { name: '결제' }))
+    await user.click(screen.getByRole('option', { name: /sub-1/ }))
+    await user.type(screen.getByRole('textbox', { name: '요청 사유' }), '실패 확인')
+    await user.click(screen.getByRole('button', { name: '환불 요청하기' }))
+    expect(
+      await screen.findByText('요청을 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
   })
 
   it('localizes a failed purchase charge in its confirmation dialog', async () => {
@@ -132,13 +133,13 @@ describe('BillingPage', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
-    expect(headings).toEqual(['구독', '결제 수단', '결제 및 지급 기록', '크레딧 구매'])
+    expect(headings).toEqual(['구독', '결제 수단', '결제 및 지급 기록', '크레딧 구매', '환불 요청'])
     expect(screen.getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
     expect(screen.getByText('등록된 결제 수단이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 결제 기록이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 구매한 크레딧이 없습니다.')).toBeInTheDocument()
     expect(calls.filter((call) => call === 'GetMyBilling')).toHaveLength(1)
-    expect(document.querySelectorAll('form, input')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: '환불 요청하기' })).toBeDisabled()
   })
 
   it('renders the active-renewal refusal beside the remove action', async () => {

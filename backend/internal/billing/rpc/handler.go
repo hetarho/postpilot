@@ -223,18 +223,6 @@ func (h *Handler) PurchaseCredits(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.PurchaseCreditsResponse{Purchase: toProtoPurchase(purchase)}), nil
 }
 
-func (h *Handler) RefundPurchase(ctx context.Context, req *connect.Request[postpilotv1.RefundPurchaseRequest]) (*connect.Response[postpilotv1.RefundPurchaseResponse], error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return nil, authRequired()
-	}
-	purchase, err := h.service.RefundPurchase(ctx, userID, req.Msg.GetPurchaseId())
-	if err != nil {
-		return nil, purchaseError(userID, err)
-	}
-	return connect.NewResponse(&postpilotv1.RefundPurchaseResponse{Purchase: toProtoPurchase(purchase)}), nil
-}
-
 func toProtoSubscription(value billing.Subscription) *postpilotv1.BillingSubscription {
 	result := &postpilotv1.BillingSubscription{
 		Plan: planrpc.ToProto(value.Tier), Term: termToProto(value.Term), AnchorAt: instant(value.AnchorAt),
@@ -286,7 +274,7 @@ func toProtoEvent(value billing.Event) *postpilotv1.BillingEvent {
 }
 
 func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
-	result := &postpilotv1.BillingPurchase{Id: value.ID, PackId: value.PackID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable}
+	result := &postpilotv1.BillingPurchase{Id: value.ID, PackId: value.PackID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable, RefundOrderId: value.OrderID}
 	if value.RefundedAt != nil {
 		result.RefundedAt = instant(*value.RefundedAt)
 	}

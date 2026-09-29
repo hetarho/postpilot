@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  usePurchaseCredits,
-  useQuotePurchase,
-  useRefundPurchase,
-  type Purchase,
-} from '@/entities/subscription'
+import { usePurchaseCredits, useQuotePurchase, type Purchase } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
 import { Button, Dialog, FieldMessage, Notice, Stepper, Typography } from '@/shared/ui'
 
@@ -19,11 +14,9 @@ export function CreditPurchaseSection({
   const { t } = useTranslation('billing')
   const [dollars, setDollars] = useState(5)
   const [confirmingPurchase, setConfirmingPurchase] = useState(false)
-  const [refunding, setRefunding] = useState<Purchase | undefined>()
-  const [success, setSuccess] = useState<{ kind: 'purchase' | 'refund'; credits: number }>()
+  const [success, setSuccess] = useState<{ kind: 'purchase'; credits: number }>()
   const { quote, isPending: quotePending, isError: quoteError } = useQuotePurchase(dollars * 100)
   const purchaseMutation = usePurchaseCredits()
-  const refundMutation = useRefundPurchase()
 
   const confirmPurchase = async () => {
     try {
@@ -31,18 +24,6 @@ export function CreditPurchaseSection({
       if (!purchased) return
       setConfirmingPurchase(false)
       setSuccess({ kind: 'purchase', credits: purchased.credits })
-    } catch {
-      // The catalog-backed failure remains in the confirmation dialog.
-    }
-  }
-
-  const confirmRefund = async () => {
-    if (!refunding) return
-    try {
-      const refunded = await refundMutation.refundPurchase(refunding.id)
-      if (!refunded) return
-      setRefunding(undefined)
-      setSuccess({ kind: 'refund', credits: refunded.credits })
     } catch {
       // The catalog-backed failure remains in the confirmation dialog.
     }
@@ -128,20 +109,7 @@ export function CreditPurchaseSection({
                 <Typography variant="meta" className="text-content-secondary">
                   {t('purchases.refunded', { date: formatDateTime(purchase.refundedAt) })}
                 </Typography>
-              ) : (
-                purchase.refundable && (
-                  <Button
-                    variant="secondary"
-                    className="w-fit"
-                    onClick={() => {
-                      refundMutation.reset()
-                      setRefunding(purchase)
-                    }}
-                  >
-                    {t('purchases.refund')}
-                  </Button>
-                )
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
@@ -166,22 +134,6 @@ export function CreditPurchaseSection({
           <span>{t('purchases.consumption')}</span>
           {purchaseMutation.errorMessage && (
             <FieldMessage>{purchaseMutation.errorMessage}</FieldMessage>
-          )}
-        </span>
-      </Dialog>
-
-      <Dialog
-        open={refunding !== undefined}
-        title={t('purchases.refundTitle')}
-        confirmLabel={t('purchases.refund')}
-        pending={refundMutation.isPending}
-        onClose={() => setRefunding(undefined)}
-        onConfirm={() => void confirmRefund()}
-      >
-        <span className="grid gap-2">
-          <span>{t('purchases.refundDescription')}</span>
-          {refundMutation.errorMessage && (
-            <FieldMessage>{refundMutation.errorMessage}</FieldMessage>
           )}
         </span>
       </Dialog>

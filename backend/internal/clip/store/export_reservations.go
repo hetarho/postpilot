@@ -63,7 +63,7 @@ func (s *Store) ReserveExport(ctx context.Context, user, project string, revisio
 		}
 		updated, err := db.ExecContext(ctx, `UPDATE server_export_windows SET reserved=reserved+1
 			WHERE user_id=? AND coverage_id=? AND window_start=? AND window_end>?
-			AND used+reserved<allowance`, user, window.CoverageID, stamp(window.Start), stamp(at))
+			AND used+reserved<allowance AND refund_request_id IS NULL`, user, window.CoverageID, stamp(window.Start), stamp(at))
 		if err != nil {
 			return err
 		}

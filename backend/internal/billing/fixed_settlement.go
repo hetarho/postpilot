@@ -164,6 +164,22 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 			}
 			return err
 		}
+		if current.Kind != "pack" {
+			sub, found, err := tx.Subscription(ctx, current.UserID)
+			if err != nil {
+				return err
+			}
+			if !found || sub.CoverageID == "" {
+				return ErrPaymentPending
+			}
+			if recorder, ok := tx.(interface {
+				SetIntentFunding(context.Context, string, string, time.Time) error
+			}); ok {
+				if err := recorder.SetIntentFunding(ctx, current.OrderID, sub.CoverageID, sub.TermEnd); err != nil {
+					return err
+				}
+			}
+		}
 		marked, err := journals.MarkIntent(ctx, current.OrderID, "applied", payment.Status, payment.PaymentKey, now)
 		if err != nil {
 			return err

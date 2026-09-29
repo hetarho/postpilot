@@ -4,6 +4,42 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'billing',
   ko: {
+    refundReview: {
+      heading: '환불 심사',
+      loading: '심사 요청을 불러오는 중입니다.',
+      loadFailed: '심사 요청을 불러오지 못했습니다.',
+      empty: '환불 심사 요청이 없습니다.',
+      funded: '원 결제 {{amount}}원 · 이미 환불 {{refunded}}원 · 주문 {{order}}',
+      evidence:
+        '유료 AI 작업 {{jobs}}건 · 사용 {{credits}} 크레딧 · 예약 {{reserved}} 크레딧 · 서버 내보내기 {{exports}}건 · 예약 {{exportReserved}}건',
+      amount: '심사 환불액(원)',
+      approve: '승인하고 결제사 확인',
+      reject: '반려',
+      reconcile: '결제사 결과 재확인',
+      actionFailed: '처리를 완료하지 못했습니다. 상태를 확인하고 다시 시도해 주세요.',
+      disposition: '확인된 환불 후 이 결제가 제공한 남은 혜택만 회수합니다.',
+    },
+    refund: {
+      heading: '환불 요청',
+      policy:
+        '결제 후 7일 이내 해당 결제로 받은 유료 혜택을 사용하지 않았다면 전액 환불 대상으로 검토합니다. 사용했거나 7일이 지난 결제도 요청할 수 있으며 운영자가 사용 내역과 금액을 심사합니다. 구독 해지는 별도입니다.',
+      payment: '결제',
+      select: '결제를 선택하세요',
+      reason: '요청 사유',
+      request: '환불 요청하기',
+      requested: '환불 요청이 접수되었습니다.',
+      loading: '환불 요청을 불러오는 중입니다.',
+      loadFailed: '환불 요청을 불러오지 못했습니다.',
+      requestFailed: '요청을 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      confirmedAmount: '확인된 환불액: {{amount}}원',
+      status: {
+        requested: '심사 대기',
+        rejected: '반려',
+        processing: '결제사 확인 중',
+        completed: '환불 완료',
+        failed: '처리 실패',
+      },
+    },
     description: '구독, 결제 수단과 결제 기록을 한곳에서 확인합니다.',
     subscription: {
       heading: '구독',
@@ -42,6 +78,43 @@ export const i18n = {
     loadFailed: '결제 정보를 불러오지 못했습니다.',
   },
   en: {
+    refundReview: {
+      heading: 'Refund review',
+      loading: 'Loading review requests.',
+      loadFailed: 'Could not load review requests.',
+      empty: 'No refund requests.',
+      funded: 'Original payment ₩{{amount}} · already refunded ₩{{refunded}} · order {{order}}',
+      evidence:
+        'Paid AI jobs {{jobs}} · credits used {{credits}} · reserved {{reserved}} · server exports {{exports}} · reserved {{exportReserved}}',
+      amount: 'Reviewed refund amount (KRW)',
+      approve: 'Approve and confirm with provider',
+      reject: 'Reject',
+      reconcile: 'Recheck provider outcome',
+      actionFailed: 'Could not complete the action. Check the status and try again.',
+      disposition:
+        'Only the remaining benefits funded by this payment are removed after confirmation.',
+    },
+    refund: {
+      heading: 'Refund requests',
+      policy:
+        'Payments within seven days with no paid benefit used from that payment qualify for full refund review. You can also request review after use or seven days; an operator reviews the use and amount. Subscription cancellation is separate.',
+      payment: 'Payment',
+      select: 'Select a payment',
+      reason: 'Reason',
+      request: 'Request refund',
+      requested: 'Your refund request was submitted.',
+      loading: 'Loading refund requests.',
+      loadFailed: 'Could not load refund requests.',
+      requestFailed: 'Could not submit the request. Please try again.',
+      confirmedAmount: 'Confirmed refund: ₩{{amount}}',
+      status: {
+        requested: 'Awaiting review',
+        rejected: 'Rejected',
+        processing: 'Confirming with provider',
+        completed: 'Refund complete',
+        failed: 'Processing failed',
+      },
+    },
     description: 'See your subscription, payment method, and payment records in one place.',
     subscription: {
       heading: 'Subscription',

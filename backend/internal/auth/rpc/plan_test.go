@@ -124,6 +124,47 @@ func TestModelCatalogIsMasterOnly(t *testing.T) {
 	}
 }
 
+func TestRefundReviewProceduresAreMasterOnly(t *testing.T) {
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
+	for id, tier := range map[string]plan.Plan{"alice": plan.Free, "root": plan.Master} {
+		if err := svc.CreateUser(context.Background(), id, "s3cret", tier); err != nil {
+			t.Fatal(err)
+		}
+	}
+	interceptor := connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), ""))
+	mux := http.NewServeMux()
+	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
+	mux.Handle(postpilotv1connect.NewBillingServiceHandler(postpilotv1connect.UnimplementedBillingServiceHandler{}, interceptor))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	authClient := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+	billingClient := postpilotv1connect.NewBillingServiceClient(server.Client(), server.URL)
+	free, master := loginAs(t, authClient, "alice"), loginAs(t, authClient, "root")
+	for name, call := range map[string]func(string) error{
+		"list": func(cookie string) error {
+			_, err := billingClient.ListRefundReviews(context.Background(), withCookie(&postpilotv1.ListRefundReviewsRequest{}, cookie))
+			return err
+		},
+		"review": func(cookie string) error {
+			_, err := billingClient.ReviewRefund(context.Background(), withCookie(&postpilotv1.ReviewRefundRequest{}, cookie))
+			return err
+		},
+		"reconcile": func(cookie string) error {
+			_, err := billingClient.ReconcileRefund(context.Background(), withCookie(&postpilotv1.ReconcileRefundRequest{}, cookie))
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if code := connect.CodeOf(call(free)); code != connect.CodePermissionDenied {
+				t.Fatalf("free code=%s", code)
+			}
+			if code := connect.CodeOf(call(master)); code != connect.CodeUnimplemented {
+				t.Fatalf("master code=%s", code)
+			}
+		})
+	}
+}
+
 // A10: the admin surface answers the operator and refuses everyone else.
 func TestAdminIsMasterOnly(t *testing.T) {
 	authClient, admin, _ := newPlanServer(t)

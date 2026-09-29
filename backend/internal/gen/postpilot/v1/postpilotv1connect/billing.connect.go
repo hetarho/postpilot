@@ -69,9 +69,21 @@ const (
 	// BillingServicePurchaseCreditsProcedure is the fully-qualified name of the BillingService's
 	// PurchaseCredits RPC.
 	BillingServicePurchaseCreditsProcedure = "/postpilot.v1.BillingService/PurchaseCredits"
-	// BillingServiceRefundPurchaseProcedure is the fully-qualified name of the BillingService's
-	// RefundPurchase RPC.
-	BillingServiceRefundPurchaseProcedure = "/postpilot.v1.BillingService/RefundPurchase"
+	// BillingServiceRequestRefundProcedure is the fully-qualified name of the BillingService's
+	// RequestRefund RPC.
+	BillingServiceRequestRefundProcedure = "/postpilot.v1.BillingService/RequestRefund"
+	// BillingServiceListMyRefundsProcedure is the fully-qualified name of the BillingService's
+	// ListMyRefunds RPC.
+	BillingServiceListMyRefundsProcedure = "/postpilot.v1.BillingService/ListMyRefunds"
+	// BillingServiceListRefundReviewsProcedure is the fully-qualified name of the BillingService's
+	// ListRefundReviews RPC.
+	BillingServiceListRefundReviewsProcedure = "/postpilot.v1.BillingService/ListRefundReviews"
+	// BillingServiceReviewRefundProcedure is the fully-qualified name of the BillingService's
+	// ReviewRefund RPC.
+	BillingServiceReviewRefundProcedure = "/postpilot.v1.BillingService/ReviewRefund"
+	// BillingServiceReconcileRefundProcedure is the fully-qualified name of the BillingService's
+	// ReconcileRefund RPC.
+	BillingServiceReconcileRefundProcedure = "/postpilot.v1.BillingService/ReconcileRefund"
 )
 
 // BillingServiceClient is a client for the postpilot.v1.BillingService service.
@@ -88,7 +100,12 @@ type BillingServiceClient interface {
 	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
 	QuotePurchase(context.Context, *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error)
 	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
-	RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error)
+	RequestRefund(context.Context, *connect.Request[v1.RequestRefundRequest]) (*connect.Response[v1.RequestRefundResponse], error)
+	ListMyRefunds(context.Context, *connect.Request[v1.ListMyRefundsRequest]) (*connect.Response[v1.ListMyRefundsResponse], error)
+	// The interceptor and handler both require the master tier.
+	ListRefundReviews(context.Context, *connect.Request[v1.ListRefundReviewsRequest]) (*connect.Response[v1.ListRefundReviewsResponse], error)
+	ReviewRefund(context.Context, *connect.Request[v1.ReviewRefundRequest]) (*connect.Response[v1.ReviewRefundResponse], error)
+	ReconcileRefund(context.Context, *connect.Request[v1.ReconcileRefundRequest]) (*connect.Response[v1.ReconcileRefundResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the postpilot.v1.BillingService service. By
@@ -174,10 +191,34 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
 			connect.WithClientOptions(opts...),
 		),
-		refundPurchase: connect.NewClient[v1.RefundPurchaseRequest, v1.RefundPurchaseResponse](
+		requestRefund: connect.NewClient[v1.RequestRefundRequest, v1.RequestRefundResponse](
 			httpClient,
-			baseURL+BillingServiceRefundPurchaseProcedure,
-			connect.WithSchema(billingServiceMethods.ByName("RefundPurchase")),
+			baseURL+BillingServiceRequestRefundProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("RequestRefund")),
+			connect.WithClientOptions(opts...),
+		),
+		listMyRefunds: connect.NewClient[v1.ListMyRefundsRequest, v1.ListMyRefundsResponse](
+			httpClient,
+			baseURL+BillingServiceListMyRefundsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListMyRefunds")),
+			connect.WithClientOptions(opts...),
+		),
+		listRefundReviews: connect.NewClient[v1.ListRefundReviewsRequest, v1.ListRefundReviewsResponse](
+			httpClient,
+			baseURL+BillingServiceListRefundReviewsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListRefundReviews")),
+			connect.WithClientOptions(opts...),
+		),
+		reviewRefund: connect.NewClient[v1.ReviewRefundRequest, v1.ReviewRefundResponse](
+			httpClient,
+			baseURL+BillingServiceReviewRefundProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ReviewRefund")),
+			connect.WithClientOptions(opts...),
+		),
+		reconcileRefund: connect.NewClient[v1.ReconcileRefundRequest, v1.ReconcileRefundResponse](
+			httpClient,
+			baseURL+BillingServiceReconcileRefundProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ReconcileRefund")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -197,7 +238,11 @@ type billingServiceClient struct {
 	quoteChange           *connect.Client[v1.QuoteChangeRequest, v1.QuoteChangeResponse]
 	quotePurchase         *connect.Client[v1.QuotePurchaseRequest, v1.QuotePurchaseResponse]
 	purchaseCredits       *connect.Client[v1.PurchaseCreditsRequest, v1.PurchaseCreditsResponse]
-	refundPurchase        *connect.Client[v1.RefundPurchaseRequest, v1.RefundPurchaseResponse]
+	requestRefund         *connect.Client[v1.RequestRefundRequest, v1.RequestRefundResponse]
+	listMyRefunds         *connect.Client[v1.ListMyRefundsRequest, v1.ListMyRefundsResponse]
+	listRefundReviews     *connect.Client[v1.ListRefundReviewsRequest, v1.ListRefundReviewsResponse]
+	reviewRefund          *connect.Client[v1.ReviewRefundRequest, v1.ReviewRefundResponse]
+	reconcileRefund       *connect.Client[v1.ReconcileRefundRequest, v1.ReconcileRefundResponse]
 }
 
 // GetMyBilling calls postpilot.v1.BillingService.GetMyBilling.
@@ -260,9 +305,29 @@ func (c *billingServiceClient) PurchaseCredits(ctx context.Context, req *connect
 	return c.purchaseCredits.CallUnary(ctx, req)
 }
 
-// RefundPurchase calls postpilot.v1.BillingService.RefundPurchase.
-func (c *billingServiceClient) RefundPurchase(ctx context.Context, req *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error) {
-	return c.refundPurchase.CallUnary(ctx, req)
+// RequestRefund calls postpilot.v1.BillingService.RequestRefund.
+func (c *billingServiceClient) RequestRefund(ctx context.Context, req *connect.Request[v1.RequestRefundRequest]) (*connect.Response[v1.RequestRefundResponse], error) {
+	return c.requestRefund.CallUnary(ctx, req)
+}
+
+// ListMyRefunds calls postpilot.v1.BillingService.ListMyRefunds.
+func (c *billingServiceClient) ListMyRefunds(ctx context.Context, req *connect.Request[v1.ListMyRefundsRequest]) (*connect.Response[v1.ListMyRefundsResponse], error) {
+	return c.listMyRefunds.CallUnary(ctx, req)
+}
+
+// ListRefundReviews calls postpilot.v1.BillingService.ListRefundReviews.
+func (c *billingServiceClient) ListRefundReviews(ctx context.Context, req *connect.Request[v1.ListRefundReviewsRequest]) (*connect.Response[v1.ListRefundReviewsResponse], error) {
+	return c.listRefundReviews.CallUnary(ctx, req)
+}
+
+// ReviewRefund calls postpilot.v1.BillingService.ReviewRefund.
+func (c *billingServiceClient) ReviewRefund(ctx context.Context, req *connect.Request[v1.ReviewRefundRequest]) (*connect.Response[v1.ReviewRefundResponse], error) {
+	return c.reviewRefund.CallUnary(ctx, req)
+}
+
+// ReconcileRefund calls postpilot.v1.BillingService.ReconcileRefund.
+func (c *billingServiceClient) ReconcileRefund(ctx context.Context, req *connect.Request[v1.ReconcileRefundRequest]) (*connect.Response[v1.ReconcileRefundResponse], error) {
+	return c.reconcileRefund.CallUnary(ctx, req)
 }
 
 // BillingServiceHandler is an implementation of the postpilot.v1.BillingService service.
@@ -279,7 +344,12 @@ type BillingServiceHandler interface {
 	QuoteChange(context.Context, *connect.Request[v1.QuoteChangeRequest]) (*connect.Response[v1.QuoteChangeResponse], error)
 	QuotePurchase(context.Context, *connect.Request[v1.QuotePurchaseRequest]) (*connect.Response[v1.QuotePurchaseResponse], error)
 	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
-	RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error)
+	RequestRefund(context.Context, *connect.Request[v1.RequestRefundRequest]) (*connect.Response[v1.RequestRefundResponse], error)
+	ListMyRefunds(context.Context, *connect.Request[v1.ListMyRefundsRequest]) (*connect.Response[v1.ListMyRefundsResponse], error)
+	// The interceptor and handler both require the master tier.
+	ListRefundReviews(context.Context, *connect.Request[v1.ListRefundReviewsRequest]) (*connect.Response[v1.ListRefundReviewsResponse], error)
+	ReviewRefund(context.Context, *connect.Request[v1.ReviewRefundRequest]) (*connect.Response[v1.ReviewRefundResponse], error)
+	ReconcileRefund(context.Context, *connect.Request[v1.ReconcileRefundRequest]) (*connect.Response[v1.ReconcileRefundResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -361,10 +431,34 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
 		connect.WithHandlerOptions(opts...),
 	)
-	billingServiceRefundPurchaseHandler := connect.NewUnaryHandler(
-		BillingServiceRefundPurchaseProcedure,
-		svc.RefundPurchase,
-		connect.WithSchema(billingServiceMethods.ByName("RefundPurchase")),
+	billingServiceRequestRefundHandler := connect.NewUnaryHandler(
+		BillingServiceRequestRefundProcedure,
+		svc.RequestRefund,
+		connect.WithSchema(billingServiceMethods.ByName("RequestRefund")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListMyRefundsHandler := connect.NewUnaryHandler(
+		BillingServiceListMyRefundsProcedure,
+		svc.ListMyRefunds,
+		connect.WithSchema(billingServiceMethods.ByName("ListMyRefunds")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListRefundReviewsHandler := connect.NewUnaryHandler(
+		BillingServiceListRefundReviewsProcedure,
+		svc.ListRefundReviews,
+		connect.WithSchema(billingServiceMethods.ByName("ListRefundReviews")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceReviewRefundHandler := connect.NewUnaryHandler(
+		BillingServiceReviewRefundProcedure,
+		svc.ReviewRefund,
+		connect.WithSchema(billingServiceMethods.ByName("ReviewRefund")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceReconcileRefundHandler := connect.NewUnaryHandler(
+		BillingServiceReconcileRefundProcedure,
+		svc.ReconcileRefund,
+		connect.WithSchema(billingServiceMethods.ByName("ReconcileRefund")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/postpilot.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -393,8 +487,16 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceQuotePurchaseHandler.ServeHTTP(w, r)
 		case BillingServicePurchaseCreditsProcedure:
 			billingServicePurchaseCreditsHandler.ServeHTTP(w, r)
-		case BillingServiceRefundPurchaseProcedure:
-			billingServiceRefundPurchaseHandler.ServeHTTP(w, r)
+		case BillingServiceRequestRefundProcedure:
+			billingServiceRequestRefundHandler.ServeHTTP(w, r)
+		case BillingServiceListMyRefundsProcedure:
+			billingServiceListMyRefundsHandler.ServeHTTP(w, r)
+		case BillingServiceListRefundReviewsProcedure:
+			billingServiceListRefundReviewsHandler.ServeHTTP(w, r)
+		case BillingServiceReviewRefundProcedure:
+			billingServiceReviewRefundHandler.ServeHTTP(w, r)
+		case BillingServiceReconcileRefundProcedure:
+			billingServiceReconcileRefundHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -452,6 +554,22 @@ func (UnimplementedBillingServiceHandler) PurchaseCredits(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.PurchaseCredits is not implemented"))
 }
 
-func (UnimplementedBillingServiceHandler) RefundPurchase(context.Context, *connect.Request[v1.RefundPurchaseRequest]) (*connect.Response[v1.RefundPurchaseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.RefundPurchase is not implemented"))
+func (UnimplementedBillingServiceHandler) RequestRefund(context.Context, *connect.Request[v1.RequestRefundRequest]) (*connect.Response[v1.RequestRefundResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.RequestRefund is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListMyRefunds(context.Context, *connect.Request[v1.ListMyRefundsRequest]) (*connect.Response[v1.ListMyRefundsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ListMyRefunds is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListRefundReviews(context.Context, *connect.Request[v1.ListRefundReviewsRequest]) (*connect.Response[v1.ListRefundReviewsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ListRefundReviews is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ReviewRefund(context.Context, *connect.Request[v1.ReviewRefundRequest]) (*connect.Response[v1.ReviewRefundResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ReviewRefund is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ReconcileRefund(context.Context, *connect.Request[v1.ReconcileRefundRequest]) (*connect.Response[v1.ReconcileRefundResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.BillingService.ReconcileRefund is not implemented"))
 }

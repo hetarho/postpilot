@@ -58,17 +58,3 @@ export function usePurchaseCredits() {
     errorMessage: errorMessage(mutation.error),
   }
 }
-
-export function useRefundPurchase() {
-  const mutation = useMutation(BillingService.method.refundPurchase, {
-    onSuccess: usePurchaseInvalidation(),
-  })
-  return {
-    ...mutation,
-    refundPurchase: async (purchaseId: string) => {
-      const response = await mutation.mutateAsync({ purchaseId })
-      return response.purchase ? toPurchase(response.purchase) : undefined
-    },
-    errorMessage: errorMessage(mutation.error),
-  }
-}

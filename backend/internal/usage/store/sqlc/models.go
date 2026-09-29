@@ -3,21 +3,3 @@
 //   sqlc v1.31.1
 
 package sqlc
-
-import (
-	"database/sql"
-)
-
-type CreditLot struct {
-	ID            string
-	UserID        string
-	Kind          string
-	Granted       int64
-	Remaining     int64
-	ExpiresAt     sql.NullString
-	CreatedAt     string
-	CoverageID    sql.NullString
-	WindowStart   sql.NullString
-	IssuanceCause sql.NullString
-	CorrelationID sql.NullString
-}

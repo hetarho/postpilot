@@ -7,6 +7,7 @@ import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
 import { BillingSubscriptionActions } from '@/features/manage-subscription'
 import { CreditPurchaseSection } from '@/features/purchase-credits'
+import { RefundRequestSection } from '@/features/request-refund'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
 import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
@@ -147,6 +148,7 @@ export function BillingPage() {
             hasPaymentMethod={myBilling.paymentMethod !== undefined}
             purchases={myBilling.purchases}
           />
+          <RefundRequestSection charges={myBilling.history} />
         </div>
       )}
     </main>

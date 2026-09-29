@@ -12,7 +12,11 @@ import {
   QuotePriceResponseSchema,
   QuotePurchaseResponseSchema,
   PurchaseCreditsResponseSchema,
-  RefundPurchaseResponseSchema,
+  RequestRefundResponseSchema,
+  ListMyRefundsResponseSchema,
+  ListRefundReviewsResponseSchema,
+  ReviewRefundResponseSchema,
+  ReconcileRefundResponseSchema,
   RegisterPaymentMethodResponseSchema,
   RemovePaymentMethodResponseSchema,
   ResumeSubscriptionResponseSchema,
@@ -55,8 +59,17 @@ export interface FakeBillingOptions {
   removeFailure?: 'SUBSCRIPTION_NEEDS_METHOD' | 'BILLING_UNAVAILABLE'
   purchaseRequests?: number[]
   refundRequests?: string[]
+  refundReviewCalls?: Array<{ requestId: string; outcome: string; amount: bigint }>
+  initialRefunds?: Array<{
+    id: string
+    userId: string
+    reason: string
+    status: string
+    requestedAt: string
+    payment: { orderId: string; kind: string; chargedKrw: bigint; chargedAt: string }
+  }>
   purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'PURCHASE_TOO_SMALL'
-  refundFailure?: 'PURCHASE_SPENT' | 'REFUND_WINDOW_CLOSED' | 'REFUND_FAILED' | 'PURCHASE_NOT_FOUND'
+  refundFailure?: 'REFUND_FAILED'
   /** Rows listed above the populated history, newest first, e.g. a refund. */
   extraHistory?: NonNullable<MessageInitShape<typeof GetMyBillingResponseSchema>['history']>
 }
@@ -77,6 +90,8 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     removeFailure,
     purchaseRequests,
     refundRequests,
+    refundReviewCalls,
+    initialRefunds = [],
     purchaseFailure,
     refundFailure,
     extraHistory = [],
@@ -92,6 +107,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     ? [
         {
           id: 'purchase-1',
+          refundOrderId: 'purchase-1',
           credits: 100,
           usdCents: 100,
           krw: 1400n,
@@ -101,6 +117,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
         },
       ]
     : []
+  let refunds = [...initialRefunds]
   router.rpc(BillingService.method.getMyBilling, () => {
     calls?.push('GetMyBilling')
     return create(GetMyBillingResponseSchema, {
@@ -141,6 +158,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
               krwPerUsdE4: 14000000n,
               rateDate: '2026-09-07',
               krw: 7000n,
+              orderId: 'sub-1',
               createdAt: '2026-09-08T00:00:00Z',
             },
           ]
@@ -198,6 +216,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     }
     const purchase = {
       id: `purchase-${purchases.length + 1}`,
+      refundOrderId: `purchase-${purchases.length + 1}`,
       credits: request.usdCents,
       usdCents: request.usdCents,
       krw: BigInt(request.usdCents * 14),
@@ -208,18 +227,54 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     purchases = [purchase, ...purchases]
     return create(PurchaseCreditsResponseSchema, { purchase })
   })
-  router.rpc(BillingService.method.refundPurchase, (request) => {
-    calls?.push('RefundPurchase')
-    refundRequests?.push(request.purchaseId)
+  router.rpc(BillingService.method.requestRefund, (request) => {
+    calls?.push('RequestRefund')
+    refundRequests?.push(request.orderId)
     if (refundFailure) throw connectAppError(refundFailure, Code.FailedPrecondition)
-    const found = purchases.find((purchase) => purchase.id === request.purchaseId)
-    const purchase = found
-      ? { ...found, refundable: false, refundedAt: '2026-09-08T00:00:02Z' }
-      : undefined
-    if (purchase) {
-      purchases = purchases.map((current) => (current.id === purchase.id ? purchase : current))
+    const refund = {
+      id: `refund-${refunds.length + 1}`,
+      userId: 'alice',
+      reason: request.reason,
+      status: 'requested',
+      requestedAt: '2026-09-08T00:00:02Z',
+      payment: {
+        orderId: request.orderId,
+        kind: 'subscribe',
+        chargedKrw: 7000n,
+        chargedAt: '2026-09-08T00:00:00Z',
+      },
     }
-    return create(RefundPurchaseResponseSchema, { purchase })
+    refunds = [refund, ...refunds]
+    return create(RequestRefundResponseSchema, { refund })
+  })
+  router.rpc(BillingService.method.listMyRefunds, () =>
+    create(ListMyRefundsResponseSchema, { refunds }),
+  )
+  router.rpc(BillingService.method.listRefundReviews, () =>
+    create(ListRefundReviewsResponseSchema, { refunds }),
+  )
+  router.rpc(BillingService.method.reviewRefund, (request) => {
+    refundReviewCalls?.push({
+      requestId: request.requestId,
+      outcome: request.outcome,
+      amount: request.reviewedAmountKrw,
+    })
+    refunds = refunds.map((refund) =>
+      refund.id === request.requestId
+        ? { ...refund, status: request.outcome === 'reject' ? 'rejected' : 'processing' }
+        : refund,
+    )
+    return create(ReviewRefundResponseSchema, {
+      refund: refunds.find((refund) => refund.id === request.requestId),
+    })
+  })
+  router.rpc(BillingService.method.reconcileRefund, (request) => {
+    refunds = refunds.map((refund) =>
+      refund.id === request.requestId ? { ...refund, status: 'completed' } : refund,
+    )
+    return create(ReconcileRefundResponseSchema, {
+      refund: refunds.find((refund) => refund.id === request.requestId),
+    })
   })
   router.rpc(BillingService.method.registerPaymentMethod, (request) => {
     calls?.push('RegisterPaymentMethod')
