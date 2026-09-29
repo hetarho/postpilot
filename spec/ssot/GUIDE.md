@@ -143,4 +143,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r12 260929 GUIDE-15✎ after the voice profile's `[종결어미 제약]`→after the voice projection, or after the static rules for 말투 없음, whose precedence sentence names no voice · GUIDE-21✎ 지침으로 저장 beside 규칙으로 저장, a pre-flight 규칙으로 저장→the one save a revision offers · GUIDE-41✎ +같은 종결어미 세 번 잇지 않기 for a Korean target, before 자연스러운 한국어 문체
+-

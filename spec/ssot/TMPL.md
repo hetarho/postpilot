@@ -159,4 +159,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r17 260929 TMPL-1✎ exactly one voice→at most one voice · TMPL-12✎ after the complete voice profile→after the voice projection, or after the static rules for 말투 없음, the precedence sentence naming no voice then · flow✎ after the voice projection
+-

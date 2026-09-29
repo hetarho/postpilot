@@ -16,21 +16,22 @@
 | searchable-details | open@260926 |
 | storyline-first | converted@260927 |
 | voice-tidy | converted@260929 |
+| daily-credit-plans | open@260929 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 14 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
+| ARCH | 14 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 10 | 10 | - | 0 |
-| QUOTA | 24 | 23 | QUOTA-13✎ QUOTA-14✎ | 0 |
-| POST | 25 | 24 | POST-4✎ POST-8✎ POST-13✎ POST-16✎ POST-23✎ POST-24✎ POST-25✎ POST-28✎ POST-46✎ POST-47✎ POST-49✎ POST-51✎ POST-54✎ POST-56✎ POST-57✎ POST-62✎ POST-71✎ POST-72✎ POST-74✎ POST-82✎ POST-96✎ POST-101+ POST-102+ POST-21- | 0 |
-| VOICE | 5 | 4 | VOICE-1✎ VOICE-2✎ VOICE-3✎ VOICE-4✎ VOICE-5✎ VOICE-6✎ VOICE-8✎ VOICE-9✎ VOICE-10✎ VOICE-12✎ VOICE-13✎ VOICE-15✎ VOICE-16✎ VOICE-20✎ VOICE-21✎ VOICE-22✎ VOICE-23✎ VOICE-24✎ VOICE-25✎ VOICE-26✎ VOICE-27✎ VOICE-30✎ VOICE-31✎ VOICE-32✎ VOICE-43✎ VOICE-44✎ VOICE-45✎ VOICE-46✎ VOICE-47✎ VOICE-50✎ VOICE-51✎ VOICE-52✎ VOICE-53✎ VOICE-54✎ VOICE-55✎ VOICE-56✎ VOICE-57✎ VOICE-58✎ VOICE-59+ VOICE-60+ VOICE-61+ VOICE-62+ VOICE-63+ VOICE-64+ VOICE-7- VOICE-11- VOICE-17- VOICE-18- VOICE-19- VOICE-28- VOICE-29- VOICE-33- VOICE-34- VOICE-35- VOICE-36- VOICE-37- VOICE-38- VOICE-39- VOICE-40- VOICE-41- VOICE-42- VOICE-48- VOICE-49- | 0 |
-| GEN | 19 | 18 | GEN-14✎ GEN-17✎ GEN-23✎ GEN-25✎ GEN-27✎ GEN-30✎ GEN-38✎ GEN-40✎ GEN-41✎ GEN-43✎ GEN-46✎ GEN-74+ GEN-75+ GEN-34- GEN-39- | 0 |
-| MODEL | 20 | 19 | MODEL-16✎ MODEL-23✎ MODEL-25✎ MODEL-26✎ MODEL-30✎ MODEL-31✎ MODEL-36✎ MODEL-37✎ MODEL-39✎ MODEL-41✎ MODEL-44✎ MODEL-62✎ MODEL-67+ MODEL-43- | 0 |
-| TMPL | 17 | 16 | TMPL-1✎ TMPL-12✎ | 1 |
-| GUIDE | 12 | 11 | GUIDE-15✎ GUIDE-21✎ GUIDE-41✎ | 0 |
+| QUOTA | 24 | 24 | - | 0 |
+| POST | 25 | 25 | - | 0 |
+| VOICE | 5 | 5 | - | 0 |
+| GEN | 19 | 19 | - | 0 |
+| MODEL | 20 | 20 | - | 0 |
+| TMPL | 17 | 17 | - | 1 |
+| GUIDE | 12 | 12 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
-| LANG | 7 | 6 | LANG-1✎ LANG-2✎ LANG-13✎ LANG-14✎ LANG-15✎ LANG-18✎ LANG-20✎ LANG-21✎ LANG-26✎ LANG-28✎ LANG-19- | 0 |
+| LANG | 7 | 7 | - | 0 |
 | THEME | 19 | 19 | - | 0 |
 | MKT | 8 | 8 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
@@ -57,15 +58,35 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T464 | A browser render waits for its sampling job and draws from render-bound assets | CLIP ARCH | T463 | todo |
+| T464 | A browser render waits for its sampling job and draws from render-bound assets | CLIP ARCH | T463 | doing@260929.rr |
+| T465 | Retire everything learned from finalized posts: learning, contrast rules, sentence feedback, rule comparison, profile validation and 규칙으로 저장 | VOICE GEN POST GUIDE QUOTA | - | todo |
+| T466 | Retire the model lab's analyze comparison and the analyze A/B pair | MODEL VOICE GEN | T465 | todo |
+| T467 | A post may have no voice (말투 없음) | POST GEN TMPL GUIDE ARCH VOICE LANG MODEL | T466 | todo |
+| T468 | Voice directory: no automatic voice, no description seed, Korean voices, an optional 기본 | VOICE LANG POST GEN QUOTA | T467 | todo |
+| T469 | 학습 글: pasted posts and prompt answers on the owner's photos, the readiness meter, and an explicit 말투 만들기 | VOICE POST QUOTA | T468 | todo |
+| T470 | Count the fingerprint and compare a text against it | VOICE | T469 | todo |
+| T471 | Analyse a voice as its fingerprint, show it in 말투 분석, undo one step, and project it in plain Korean | VOICE GEN GUIDE LANG POST | T470 | todo |
+| T472 | ② shows the post's fingerprint beside its voice's | POST VOICE | T471 | todo |
+| T473 | 검증: the AI writes one answered prompt in the voice, shown beside the owner's answer with the fingerprint comparison | VOICE QUOTA MODEL | T472 | todo |
+| T474 | 말투 반영 비교: two write models write one answered prompt in a voice, judged beside the owner's answer | MODEL VOICE QUOTA | T473 | todo |
+| T475 | On prod, keep only `맛집 리뷰 블로거 학습` with its pasted post | VOICE POST | T474 | todo |
 
 ## next
 - next: implement-task T464 (the page waits for the browser render's sampling job and draws from render-bound assets, so its delivered clip carries the server-sampled scrim under CLIP-192)
-- owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
-- create-task VOICE GEN POST GUIDE QUOTA MODEL LANG TMPL ARCH (VOICE r5: the voice as the owner's fingerprint); after the new voice ships, the one-time prod hand edit that keeps only `맛집 리뷰 블로거 학습` (its pasted post as the one 학습 글); ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
+- ideation daily-credit-plans continue (daily/bonus 15/290, 45/510, 85/1070, 235/3170 adopted; infrastructure break-even and capacity sensitivity checked, obtain real host specs/bill and representative media measurements; settle export quotas, workload limits, bonus expiry and model access); owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
+- implement-task T465, then T466 … T475 in order (the voice as the owner's fingerprint; T475 is the one-time prod hand edit keeping `맛집 리뷰 블로거 학습`, run with the owner's yes); none of them runs beside another task that regenerates proto or adds a migration; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 create-task VOICE r5 GEN r19 POST r25 GUIDE r12 QUOTA r24 MODEL r20 LANG r7 TMPL r17 ARCH r14 → T465–T475: retire finalized-post learning and the analyze comparison, 말투 없음, the directory, 학습 글 and readiness, fingerprint counting, the fingerprint analysis and projection, ② and 검증 comparisons, 말투 반영 비교, the prod hand edit; ARCH keeps tasked 9 for its CLIP-side r10–r13
+- 260929 ideation daily-credit-plans open: full-use total infrastructure budgets KRW 913.475 / 2400.225 / 5001.225 / 15879.975 per payer; video reserve added back to avoid double counting actual worker bills; 36 budget and 6 scale cases reconciled in Decimal/Chromium; existing serial-worker and complex-fixture limits inspected, actual VPS specs/capacity remain unverified; interactive infrastructure calculator added; spec lint is blocked by concurrently drafted VOICE tasks T465–T472 missing from STATE, left to their planning session
+- 260929 ideation daily-credit-plans resume: adopt daily/bonus 15/290, 45/510, 85/1070, 235/3170; examine infrastructure break-even, measured media capacity and whether worker scaling preserves contribution margin
+- 260929 ideation daily-credit-plans open: KRW 1 credits, once-per-job rounding and 5-unit grants adopted; propose daily/bonus 15/290, 45/510, 85/1070, 235/3170 preserving 31-grant budgets; 72 scenario calculations include the 10% reserve, full illustrative server-render cost and 5.5% provider fee; interactive per-account/portfolio tables checked in Chromium, actual net profit remains dependent on measured costs and subscriber counts
+- 260929 ideation daily-credit-plans open: owner's 21 screenshot costs total USD 0.10179; at illustrative KRW 1,400/USD, separate-row KRW 1 rounding adds 7.36%, KRW 10 adds 75.43%; recommend KRW 1 credits with one rounding per owner-visible job, awaiting adoption; grant examples rescaled without changing the assumed AI budgets
+- 260929 ideation daily-credit-plans open: four KRW prices and the owner's (90% price - server allowance)/2 provider budget recorded; first proposal has progressive model access, server-export counts, 70/30 daily/bonus allocation and illustrative KRW 0.01 credits; provider minimum debit and real rendering cost remain unverified, video scope and bonus expiry await the owner
+- 260929 T464 claimed (rr)
 - 260929 T463 done: a `sample_browser_render` job runs one `sample` media stage on a worker and keeps the grounds on the browser render (migration 0105); `render_id` previews and caption frames draw on them; a dev-stack sampling of the T456 clip took 6 s
+- 260929 /admin restored (adm): the running Vite server referenced missing optimized dependency files, returning 504 for @tanstack/react-virtual and failing the admin lazy import; restarting Vite rebuilt its cache without source changes; real-browser account/model/estimator/voucher tabs and reload pass with no browser errors, account API returns 200, AdminPage tests 5/5 pass
+- 260929 create-task VOICE GEN POST GUIDE QUOTA MODEL LANG TMPL ARCH start (VOICE r5 GEN r19 POST r25 GUIDE r12 QUOTA r24 MODEL r20 LANG r7 TMPL r17 ARCH r14: the voice as the owner's fingerprint)
 - 260929 T463 claimed (rr)
 - 260929 T462 done: one originals-based ground sampler (the composition's frame arithmetic, each cut's own chain, xfade's dissolve and fade through black) serves the server render and `SampleGrounds`; a server render of the T456 clip is byte-identical to the one before; `clip.SampledGround` round-trips
 - 260929 update-ssot VOICE r5 GEN r19 POST r25 GUIDE r12 QUOTA r24 MODEL r20 LANG r7 TMPL r17 ARCH r14: the voice is the owner's fingerprint — 학습 글 only, eight counted items plus a short AI part, a readiness meter, 검증 and 말투 반영 비교, optional voice and 기본, Korean only, learning, rules, versions and the analyze comparison removed; AUTH needs no change (VOICE-4); THEME-23 lost a stale example (wording); no active task affected — T462–T464 cite ARCH-45…51, not the changed ARCH-34
@@ -76,15 +97,3 @@
 - 260929 create-task CLIP r52 → T462 T463 T464 (one originals-based ground sampler for both kinds; a media-worker sampling stage bound to the browser render; the page waits for it and sends render_id)
 - 260929 ideation voice-tidy resume (open: axis set, readiness meter, prompt photos, VOICE-49, existing voices)
 - 260929 create-task CLIP start (r52: CLIP-192+)
-- 260929 update-ssot CLIP r52: CLIP-192+ the server samples the retained originals so a browser render draws the CDS-44 scrim, accent colour and contrast notices; no active task/worker affected
-- 260929 update-ssot CLIP CDS start (a browser render draws the CDS-44 scrim)
-- 260929 T456 done: one real run (바로 만들기, gemini-3.8-flash, 5 calls, $0.0107) rendered on the CPU server and in Chrome WebCodecs agree on duration, codecs, frames, slots, the owner caption and the muted span; the run found and fixed caption frames serving only a rapid caption's first phrase (every browser render of a rapid sequence-style caption failed); the browser render's missing scrim is left to update-ssot
-- 260929 T456 resumed (rr): the owner approved one real provider generation run (≈ $0.012) for the browser and CPU server render checks
-- 260929 T456 blocked: preview/export parity on every ratio and pace, the no-template workflow to both render kinds, older-project fixtures, flush-before-render regressions and a real CPU render smoke of the edited clip all pass; the real browser render needs a plan, which needs a paid generation call or a dev provider double
-- 260929 T456 claimed (p15)
-- 260929 T455 done: ②'s caption sheet picks any approved style from renderer-drawn tiles, keeps the owner size (a size the drawn style cannot take holds the save on that field), and follows undo/redo
-- 260929 T455 claimed (p15)
-- 260929 T454 done: an owner may give a caption any approved style outside the AI set; one rule draws every caption, so a set change restyles only captions naming no style and moves the revision only then; a size the drawn style cannot take is refused as caption_size with its range
-- 260929 T454 claimed (p15)
-- 260929 T453 done: ② edits the intro/outro slots around the storyline body before any template, body or plan, and ① offers 사용 안 함; a drawn slot's words are the plan's rows, and the settings, slot and correction saves share one write lane
-- 260929 T453 claimed (p15)
