@@ -92,6 +92,14 @@ message ServerExportWindow {
   int32 remaining = 7;
 }
 
+message PlanFXRate {
+  string source = 1;
+  string publication_date = 2;
+  int64 reference_e4 = 3;
+  int64 applied_e4 = 4;
+  bool temporary = 5;
+}
+
 // One rung as a plan comparison screen lists it.
 message PlanOffer {
   Plan plan = 1;
@@ -167,6 +175,8 @@ message GetMyPlanResponse {
   int32 clip_source_seconds = 5;
   repeated CreditPack credit_packs = 6;
   ServerExportWindow server_export_window = 7;
+  PlanFXRate fx_rate = 8;
+  bool fx_unavailable = 9;
 }
 
 message SetEstimatorComboRequest {

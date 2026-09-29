@@ -51,9 +51,14 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 			continue
 		}
 		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage, NativeEffort: info.ReasoningNativeEffort}})
+		unavailable := required < 0
+		if unavailable {
+			required = 0
+		}
 		out = append(out, CatalogModel{
 			Info: info, RequiredCredits: required,
-			Affordable: unlimited || balance >= required,
+			Affordable:       !unavailable && (unlimited || balance >= required),
+			PriceUnavailable: unavailable,
 		})
 	}
 	return out, nil

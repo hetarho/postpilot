@@ -284,4 +284,6 @@ export const errors = {
   USER_ID_REQUIRED: 'Choose an account.',
   MASTER_ONLY: 'This is available to operator accounts only.',
   NETWORK_UNAVAILABLE: 'Could not connect to the network.',
+  AI_FX_RATE_UNAVAILABLE:
+    'The official exchange rate is temporarily unavailable. Paid AI can resume when a recent rate is confirmed.',
 } as const satisfies Record<AppFailureReason, string>

@@ -114,6 +114,36 @@ func (fakeCredits) ForCalls(calls []provider.PlannedCall) int { return 5 * len(c
 
 func (fakeCredits) Balance(context.Context, string) (int, bool, error) { return 1000, false, nil }
 
+type temporarilyUnpricedCredits struct{}
+
+func (temporarilyUnpricedCredits) ForCalls(calls []provider.PlannedCall) int {
+	if len(calls) > 0 && calls[0].Ref == seeing {
+		return 0 // A free model needs no official rate.
+	}
+	return -1
+}
+func (temporarilyUnpricedCredits) Balance(context.Context, string) (int, bool, error) {
+	return 1000, false, nil
+}
+
+func TestMissingFXKeepsFreeModelsVisibleAndMarksPaidPriceUnavailable(t *testing.T) {
+	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
+		live: {Ref: live, Stages: textStages}, seeing: {Ref: seeing, Vision: true, Stages: allStages},
+	}, temporarilyUnpricedCredits{})
+	models, err := svc.ListModels(context.Background(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, model := range models {
+		if model.Info.Ref == live && (!model.PriceUnavailable || model.Affordable || model.RequiredCredits != 0) {
+			t.Fatalf("paid model without FX: %+v", model)
+		}
+		if model.Info.Ref == seeing && (model.PriceUnavailable || !model.Affordable || model.RequiredCredits != 0) {
+			t.Fatalf("free model without FX: %+v", model)
+		}
+	}
+}
+
 type recordingCredits struct {
 	calls [][]provider.PlannedCall
 }

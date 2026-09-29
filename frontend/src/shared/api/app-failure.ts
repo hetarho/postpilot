@@ -132,6 +132,7 @@ export const appFailureSpecs = {
   CLIP_QUOTE_CHANGED: {},
   CLIP_CREDIT_CEILING_EXCEEDED: { required: ['required', 'approved'] },
   CLIP_MODEL_PRICING_UNAVAILABLE: {},
+  AI_FX_RATE_UNAVAILABLE: {},
   CLIP_MODEL_VIDEO_INPUT_ABSENT: { required: ['model'] },
   CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE: { required: ['model'] },
   CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED: { required: ['model'] },

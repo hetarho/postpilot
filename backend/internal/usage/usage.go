@@ -53,6 +53,7 @@ type Admission struct {
 	CoverageID                string
 	DailyWindowStart          *time.Time
 	BenefitWindowStart        *time.Time
+	Rate                      plan.RateSnapshot
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.
@@ -71,6 +72,10 @@ type Settlement struct {
 	Credits                          int
 	Reason                           TerminalOutcome
 	ConfirmedCharge, CancellationFee *int
+	Cause                            string
+	CompensationCredits              int
+	CompensationLotID                string
+	CompensationExpiresAt            *time.Time
 }
 
 // JobCost keeps historical total accounting separate from confirmed priced evidence.
@@ -99,9 +104,10 @@ type LotDebit struct {
 type LotKind string
 
 const (
-	LotDaily   LotKind = "daily"
-	LotMonthly LotKind = "monthly"
-	LotBonus   LotKind = "bonus"
+	LotDaily        LotKind = "daily"
+	LotMonthly      LotKind = "monthly"
+	LotBonus        LotKind = "bonus"
+	LotCompensation LotKind = "compensation"
 	// LotPurchased is credits the account paid for. They never expire and they are the
 	// last kind spent: a paid credit must be the last to burn.
 	LotPurchased LotKind = "purchased"

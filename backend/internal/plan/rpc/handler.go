@@ -202,6 +202,19 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			ClipRates:             clipRates,
 		})
 	}
+	var fxRate *postpilotv1.PlanFXRate
+	fxUnavailable := false
+	if source, ok := h.estimator.(interface {
+		CurrentRate(context.Context) (plan.RateSnapshot, error)
+	}); ok {
+		rate, err := source.CurrentRate(ctx)
+		if err != nil {
+			fxUnavailable = true
+		} else if rate.Valid() {
+			fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
+				ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
+		}
+	}
 
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
 		Plan:              ToProto(acting),
@@ -209,6 +222,8 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		EstimatorCombos:   combos,
 		ClipSourceSeconds: plan.EstimatorClipSourceSeconds,
 		CreditPacks:       packs,
+		FxRate:            fxRate,
+		FxUnavailable:     fxUnavailable,
 		Balance: &postpilotv1.CreditBalance{
 			Credits:            int32(balance.Credits),
 			Unlimited:          balance.Unlimited,

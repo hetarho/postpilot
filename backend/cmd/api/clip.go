@@ -75,7 +75,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
 		RemoteMedia: remote,
 		Finisher:    finisher,
-		Pricing:     clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
+		Pricing:     clipapp.NewPricingWithRate(models.Registry, clipBudgets(aiConfig), models.ledger),
 		Accounting:  clipapp.NewAccounting(models.ledger),
 		Admission:   clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
 		Candidates:  candidates,

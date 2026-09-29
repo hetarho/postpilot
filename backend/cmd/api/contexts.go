@@ -84,6 +84,12 @@ type contexts struct {
 	experiment      *experiment.Service
 }
 
+type unavailableRateSource struct{}
+
+func (unavailableRateSource) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
+	return 0, false, usage.ErrRateUnavailable
+}
+
 func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	cfg, handle, registry := p.cfg, p.db, p.registry
 	if err := clip.DefaultMediaStageLimits(clipEnvironment(cfg)).Validate(); err != nil {
@@ -133,12 +139,19 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// every context is given from here on, so a call made anywhere lands on the ledger
 	// without that context knowing the ledger exists.
 	anchors := usageAnchors{auth: c.auth, late: c}
+	var officialRate usage.RateSource = unavailableRateSource{}
+	if cfg.EximAPIKey != "" {
+		officialRate = fxrate.NewEximbank(cfg.EximAPIKey, &http.Client{Timeout: 5 * time.Second})
+	}
 	c.ledger = usage.NewService(
 		usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
 			return usageExports{clipstore.NewTx(tx)}
 		}), registry,
 		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
-	)
+	).WithRateSelector(usage.NewRateSelector(
+		officialRate,
+		usagestore.New(handle.Writer, handle.Reader),
+	))
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
 		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...), exports: clipstore.NewTx(tx)}
@@ -165,7 +178,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// usage_events belongs to the ledger, and a context reading another's tables is the one
 	// rule ARCHITECTURE §2.2 exists to hold.
 	p.catalog.SetReasoningSpend(catalogReasoningSpend{ledger: c.ledger, providerID: registry.ProviderID()})
-	c.jobs.Admit(jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth})
+	c.jobs.Admit(jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth,
+		jobs: jobstore.New(handle.Writer, handle.Reader, jobKinds())})
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
 	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()))
 

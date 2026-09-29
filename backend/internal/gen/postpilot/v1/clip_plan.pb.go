@@ -654,6 +654,7 @@ type QuoteClipRevisionResponse struct {
 	// The plan revision this quote was taken against.
 	PlanRevision     int32                    `protobuf:"varint,7,opt,name=plan_revision,json=planRevision,proto3" json:"plan_revision,omitempty"`
 	SequenceCaptions *ClipSequenceCaptionCost `protobuf:"bytes,8,opt,name=sequence_captions,json=sequenceCaptions,proto3" json:"sequence_captions,omitempty"`
+	Rate             *ClipFXRate              `protobuf:"bytes,9,opt,name=rate,proto3" json:"rate,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -740,6 +741,13 @@ func (x *QuoteClipRevisionResponse) GetPlanRevision() int32 {
 func (x *QuoteClipRevisionResponse) GetSequenceCaptions() *ClipSequenceCaptionCost {
 	if x != nil {
 		return x.SequenceCaptions
+	}
+	return nil
+}
+
+func (x *QuoteClipRevisionResponse) GetRate() *ClipFXRate {
+	if x != nil {
+		return x.Rate
 	}
 	return nil
 }
@@ -938,7 +946,7 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x06target\x18\x03 \x01(\tR\x06target\x12;\n" +
 	"\robserve_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\x05 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"\xb2\x03\n" +
+	"writeModel\"\xe0\x03\n" +
 	"\x19QuoteClipRevisionResponse\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12\x1f\n" +
 	"\vmax_credits\x18\x02 \x01(\x05R\n" +
@@ -949,7 +957,8 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x13cancellation_policy\x18\x05 \x01(\v2$.postpilot.v1.ClipCancellationPolicyR\x12cancellationPolicy\x12)\n" +
 	"\x10response_retries\x18\x06 \x01(\x05R\x0fresponseRetries\x12#\n" +
 	"\rplan_revision\x18\a \x01(\x05R\fplanRevision\x12R\n" +
-	"\x11sequence_captions\x18\b \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptions\"\x8c\x03\n" +
+	"\x11sequence_captions\x18\b \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptions\x12,\n" +
+	"\x04rate\x18\t \x01(\v2\x18.postpilot.v1.ClipFXRateR\x04rate\"\x8c\x03\n" +
 	"\x18StartClipRevisionRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
@@ -1007,6 +1016,7 @@ var file_postpilot_v1_clip_plan_proto_goTypes = []any{
 	(*ClipPricedCall)(nil),                     // 18: postpilot.v1.ClipPricedCall
 	(*ClipCancellationPolicy)(nil),             // 19: postpilot.v1.ClipCancellationPolicy
 	(*ClipSequenceCaptionCost)(nil),            // 20: postpilot.v1.ClipSequenceCaptionCost
+	(*ClipFXRate)(nil),                         // 21: postpilot.v1.ClipFXRate
 }
 var file_postpilot_v1_clip_plan_proto_depIdxs = []int32{
 	13, // 0: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
@@ -1026,25 +1036,26 @@ var file_postpilot_v1_clip_plan_proto_depIdxs = []int32{
 	18, // 14: postpilot.v1.QuoteClipRevisionResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
 	19, // 15: postpilot.v1.QuoteClipRevisionResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
 	20, // 16: postpilot.v1.QuoteClipRevisionResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
-	17, // 17: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	17, // 18: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	0,  // 19: postpilot.v1.ClipPlanService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
-	2,  // 20: postpilot.v1.ClipPlanService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
-	4,  // 21: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
-	6,  // 22: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:input_type -> postpilot.v1.GetClipRegionPresetSamplesRequest
-	9,  // 23: postpilot.v1.ClipPlanService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
-	11, // 24: postpilot.v1.ClipPlanService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
-	1,  // 25: postpilot.v1.ClipPlanService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
-	3,  // 26: postpilot.v1.ClipPlanService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
-	5,  // 27: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
-	7,  // 28: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:output_type -> postpilot.v1.GetClipRegionPresetSamplesResponse
-	10, // 29: postpilot.v1.ClipPlanService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
-	12, // 30: postpilot.v1.ClipPlanService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
-	25, // [25:31] is the sub-list for method output_type
-	19, // [19:25] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	21, // 17: postpilot.v1.QuoteClipRevisionResponse.rate:type_name -> postpilot.v1.ClipFXRate
+	17, // 18: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	17, // 19: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	0,  // 20: postpilot.v1.ClipPlanService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
+	2,  // 21: postpilot.v1.ClipPlanService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
+	4,  // 22: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
+	6,  // 23: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:input_type -> postpilot.v1.GetClipRegionPresetSamplesRequest
+	9,  // 24: postpilot.v1.ClipPlanService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
+	11, // 25: postpilot.v1.ClipPlanService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
+	1,  // 26: postpilot.v1.ClipPlanService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
+	3,  // 27: postpilot.v1.ClipPlanService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
+	5,  // 28: postpilot.v1.ClipPlanService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
+	7,  // 29: postpilot.v1.ClipPlanService.GetClipRegionPresetSamples:output_type -> postpilot.v1.GetClipRegionPresetSamplesResponse
+	10, // 30: postpilot.v1.ClipPlanService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
+	12, // 31: postpilot.v1.ClipPlanService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
+	26, // [26:32] is the sub-list for method output_type
+	20, // [20:26] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_plan_proto_init() }

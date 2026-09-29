@@ -98,8 +98,9 @@ UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? 
 
 -- name: InsertAdmission :exec
 INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
-                              coverage_id,daily_window_start,benefit_window_start)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                              coverage_id,daily_window_start,benefit_window_start,
+                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: DeleteAdmissionForJob :exec
 DELETE FROM usage_admissions WHERE job_id = ?;
@@ -172,7 +173,8 @@ SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid;
 -- Only an unsettled admission is returned, which is what makes settlement idempotent: a
 -- terminal transition that runs twice finds nothing the second time.
 SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
-       coverage_id,daily_window_start,benefit_window_start
+       coverage_id,daily_window_start,benefit_window_start,
+       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL;
 
@@ -181,13 +183,16 @@ WHERE job_id = ? AND settled_at IS NULL;
 -- admissions written before the ceiling column existed are still projected.
 -- name: AccountingForJob :one
 SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
+       a.settlement_cause,a.compensation_credits,a.compensation_lot_id,a.compensation_expires_at,
+       a.fx_source,a.fx_publication_date,a.fx_reference_e4,a.fx_applied_e4,a.fx_temporary,
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
 WHERE a.user_id = sqlc.arg(user_id) AND a.job_id = sqlc.arg(job_id)
   AND a.kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
 
 -- name: MarkAdmissionSettled :exec
-UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?
+UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?,
+       settlement_cause=?,compensation_credits=?,compensation_lot_id=?,compensation_expires_at=?
 WHERE job_id = ? AND settled_at IS NULL;
 
 -- name: UnsettledHoldJobs :many

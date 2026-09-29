@@ -839,6 +839,7 @@ type QuoteClipGenerationResponse struct {
 	RenderOnly         bool                     `protobuf:"varint,8,opt,name=render_only,json=renderOnly,proto3" json:"render_only,omitempty"`
 	ResponseRetries    int32                    `protobuf:"varint,9,opt,name=response_retries,json=responseRetries,proto3" json:"response_retries,omitempty"`
 	SequenceCaptions   *ClipSequenceCaptionCost `protobuf:"bytes,10,opt,name=sequence_captions,json=sequenceCaptions,proto3" json:"sequence_captions,omitempty"`
+	Rate               *ClipFXRate              `protobuf:"bytes,11,opt,name=rate,proto3" json:"rate,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -939,6 +940,13 @@ func (x *QuoteClipGenerationResponse) GetResponseRetries() int32 {
 func (x *QuoteClipGenerationResponse) GetSequenceCaptions() *ClipSequenceCaptionCost {
 	if x != nil {
 		return x.SequenceCaptions
+	}
+	return nil
+}
+
+func (x *QuoteClipGenerationResponse) GetRate() *ClipFXRate {
+	if x != nil {
+		return x.Rate
 	}
 	return nil
 }
@@ -1792,7 +1800,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\robserve_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12%\n" +
-	"\x0efrom_storyline\x18\x05 \x01(\bR\rfromStoryline\"\x80\x04\n" +
+	"\x0efrom_storyline\x18\x05 \x01(\bR\rfromStoryline\"\xae\x04\n" +
 	"\x1bQuoteClipGenerationResponse\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12\x1f\n" +
 	"\vmax_credits\x18\x02 \x01(\x05R\n" +
@@ -1807,7 +1815,8 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"renderOnly\x12)\n" +
 	"\x10response_retries\x18\t \x01(\x05R\x0fresponseRetries\x12R\n" +
 	"\x11sequence_captions\x18\n" +
-	" \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptions\"\x9e\x03\n" +
+	" \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptions\x12,\n" +
+	"\x04rate\x18\v \x01(\v2\x18.postpilot.v1.ClipFXRateR\x04rate\"\x9e\x03\n" +
 	"\x1aStartClipGenerationRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
@@ -1943,9 +1952,10 @@ var file_postpilot_v1_clip_generation_proto_goTypes = []any{
 	(*ClipPricedCall)(nil),                      // 32: postpilot.v1.ClipPricedCall
 	(*ClipCancellationPolicy)(nil),              // 33: postpilot.v1.ClipCancellationPolicy
 	(*ClipSequenceCaptionCost)(nil),             // 34: postpilot.v1.ClipSequenceCaptionCost
-	(*GenerationJob)(nil),                       // 35: postpilot.v1.GenerationJob
-	(*ClipAccounting)(nil),                      // 36: postpilot.v1.ClipAccounting
-	(*ClipAnalysisModelEligibility)(nil),        // 37: postpilot.v1.ClipAnalysisModelEligibility
+	(*ClipFXRate)(nil),                          // 35: postpilot.v1.ClipFXRate
+	(*GenerationJob)(nil),                       // 36: postpilot.v1.GenerationJob
+	(*ClipAccounting)(nil),                      // 37: postpilot.v1.ClipAccounting
+	(*ClipAnalysisModelEligibility)(nil),        // 38: postpilot.v1.ClipAnalysisModelEligibility
 }
 var file_postpilot_v1_clip_generation_proto_depIdxs = []int32{
 	25, // 0: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
@@ -1968,53 +1978,54 @@ var file_postpilot_v1_clip_generation_proto_depIdxs = []int32{
 	32, // 17: postpilot.v1.QuoteClipGenerationResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
 	33, // 18: postpilot.v1.QuoteClipGenerationResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
 	34, // 19: postpilot.v1.QuoteClipGenerationResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
-	31, // 20: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	31, // 21: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	31, // 22: postpilot.v1.QuoteClipStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	31, // 23: postpilot.v1.QuoteClipStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
-	31, // 24: postpilot.v1.StartClipStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	31, // 25: postpilot.v1.StartClipStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
-	31, // 26: postpilot.v1.QuoteClipStorylineRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	31, // 27: postpilot.v1.QuoteClipStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	31, // 28: postpilot.v1.StartClipStorylineRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	31, // 29: postpilot.v1.StartClipStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	25, // 30: postpilot.v1.FinalizeClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	35, // 31: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
-	36, // 32: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
-	37, // 33: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
-	0,  // 34: postpilot.v1.ClipGenerationService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
-	2,  // 35: postpilot.v1.ClipGenerationService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
-	4,  // 36: postpilot.v1.ClipGenerationService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
-	6,  // 37: postpilot.v1.ClipGenerationService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
-	9,  // 38: postpilot.v1.ClipGenerationService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
-	11, // 39: postpilot.v1.ClipGenerationService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
-	13, // 40: postpilot.v1.ClipGenerationService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
-	15, // 41: postpilot.v1.ClipGenerationService.QuoteClipStoryline:input_type -> postpilot.v1.QuoteClipStorylineRequest
-	16, // 42: postpilot.v1.ClipGenerationService.StartClipStoryline:input_type -> postpilot.v1.StartClipStorylineRequest
-	17, // 43: postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision:input_type -> postpilot.v1.QuoteClipStorylineRevisionRequest
-	18, // 44: postpilot.v1.ClipGenerationService.StartClipStorylineRevision:input_type -> postpilot.v1.StartClipStorylineRevisionRequest
-	19, // 45: postpilot.v1.ClipGenerationService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
-	21, // 46: postpilot.v1.ClipGenerationService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
-	23, // 47: postpilot.v1.ClipGenerationService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
-	1,  // 48: postpilot.v1.ClipGenerationService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
-	3,  // 49: postpilot.v1.ClipGenerationService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
-	5,  // 50: postpilot.v1.ClipGenerationService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
-	8,  // 51: postpilot.v1.ClipGenerationService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
-	10, // 52: postpilot.v1.ClipGenerationService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
-	12, // 53: postpilot.v1.ClipGenerationService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	14, // 54: postpilot.v1.ClipGenerationService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
-	12, // 55: postpilot.v1.ClipGenerationService.QuoteClipStoryline:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	14, // 56: postpilot.v1.ClipGenerationService.StartClipStoryline:output_type -> postpilot.v1.StartClipGenerationResponse
-	12, // 57: postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	14, // 58: postpilot.v1.ClipGenerationService.StartClipStorylineRevision:output_type -> postpilot.v1.StartClipGenerationResponse
-	20, // 59: postpilot.v1.ClipGenerationService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
-	22, // 60: postpilot.v1.ClipGenerationService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
-	24, // 61: postpilot.v1.ClipGenerationService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
-	48, // [48:62] is the sub-list for method output_type
-	34, // [34:48] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	35, // 20: postpilot.v1.QuoteClipGenerationResponse.rate:type_name -> postpilot.v1.ClipFXRate
+	31, // 21: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	31, // 22: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	31, // 23: postpilot.v1.QuoteClipStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	31, // 24: postpilot.v1.QuoteClipStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
+	31, // 25: postpilot.v1.StartClipStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	31, // 26: postpilot.v1.StartClipStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
+	31, // 27: postpilot.v1.QuoteClipStorylineRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	31, // 28: postpilot.v1.QuoteClipStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	31, // 29: postpilot.v1.StartClipStorylineRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	31, // 30: postpilot.v1.StartClipStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	25, // 31: postpilot.v1.FinalizeClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	36, // 32: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
+	37, // 33: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
+	38, // 34: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
+	0,  // 35: postpilot.v1.ClipGenerationService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
+	2,  // 36: postpilot.v1.ClipGenerationService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
+	4,  // 37: postpilot.v1.ClipGenerationService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
+	6,  // 38: postpilot.v1.ClipGenerationService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
+	9,  // 39: postpilot.v1.ClipGenerationService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
+	11, // 40: postpilot.v1.ClipGenerationService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
+	13, // 41: postpilot.v1.ClipGenerationService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
+	15, // 42: postpilot.v1.ClipGenerationService.QuoteClipStoryline:input_type -> postpilot.v1.QuoteClipStorylineRequest
+	16, // 43: postpilot.v1.ClipGenerationService.StartClipStoryline:input_type -> postpilot.v1.StartClipStorylineRequest
+	17, // 44: postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision:input_type -> postpilot.v1.QuoteClipStorylineRevisionRequest
+	18, // 45: postpilot.v1.ClipGenerationService.StartClipStorylineRevision:input_type -> postpilot.v1.StartClipStorylineRevisionRequest
+	19, // 46: postpilot.v1.ClipGenerationService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
+	21, // 47: postpilot.v1.ClipGenerationService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
+	23, // 48: postpilot.v1.ClipGenerationService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
+	1,  // 49: postpilot.v1.ClipGenerationService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
+	3,  // 50: postpilot.v1.ClipGenerationService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
+	5,  // 51: postpilot.v1.ClipGenerationService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
+	8,  // 52: postpilot.v1.ClipGenerationService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
+	10, // 53: postpilot.v1.ClipGenerationService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
+	12, // 54: postpilot.v1.ClipGenerationService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	14, // 55: postpilot.v1.ClipGenerationService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
+	12, // 56: postpilot.v1.ClipGenerationService.QuoteClipStoryline:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	14, // 57: postpilot.v1.ClipGenerationService.StartClipStoryline:output_type -> postpilot.v1.StartClipGenerationResponse
+	12, // 58: postpilot.v1.ClipGenerationService.QuoteClipStorylineRevision:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	14, // 59: postpilot.v1.ClipGenerationService.StartClipStorylineRevision:output_type -> postpilot.v1.StartClipGenerationResponse
+	20, // 60: postpilot.v1.ClipGenerationService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
+	22, // 61: postpilot.v1.ClipGenerationService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
+	24, // 62: postpilot.v1.ClipGenerationService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
+	49, // [49:63] is the sub-list for method output_type
+	35, // [35:49] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_generation_proto_init() }

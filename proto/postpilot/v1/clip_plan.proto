@@ -115,6 +115,7 @@ message QuoteClipRevisionResponse {
   // The plan revision this quote was taken against.
   int32 plan_revision = 7;
   ClipSequenceCaptionCost sequence_captions = 8;
+  ClipFXRate rate = 9;
 }
 
 message StartClipRevisionRequest {

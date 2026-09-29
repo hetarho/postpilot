@@ -155,6 +155,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", postpilotv1.FailureReason_CLIP_QUOTE_EXPIRED, nil)
 	case errors.Is(err, clip.ErrQuoteChanged):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", postpilotv1.FailureReason_CLIP_QUOTE_CHANGED, nil)
+	case errors.Is(err, clip.ErrRateUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "official AI exchange rate unavailable", postpilotv1.FailureReason_AI_FX_RATE_UNAVAILABLE, nil)
 	case errors.Is(err, clip.ErrPricingUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model pricing unavailable", postpilotv1.FailureReason_CLIP_MODEL_PRICING_UNAVAILABLE, nil)
 	case errors.Is(err, clip.ErrModelInputUnsupported):

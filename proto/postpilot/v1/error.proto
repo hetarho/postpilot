@@ -328,6 +328,8 @@ enum FailureReason {
   VOICE_CHECK_PHOTO_UNSUPPORTED = 268;
   // A 검증 id this account does not own.
   VOICE_CHECK_NOT_FOUND = 269;
+  // New cost-incurring AI requires a verified, recent official KRW/USD reference.
+  AI_FX_RATE_UNAVAILABLE = 270;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

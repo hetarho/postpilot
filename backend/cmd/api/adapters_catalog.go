@@ -51,10 +51,30 @@ func catalogModelID(recorded, providerID string) (string, bool) {
 	return strings.TrimPrefix(recorded, prefix), true
 }
 
-type estimatorCombos struct{ catalog *modelcatalog.Service }
+type estimatorCombos struct {
+	catalog *modelcatalog.Service
+	ledger  *usage.Service
+}
+
+func (e estimatorCombos) CurrentRate(ctx context.Context) (plan.RateSnapshot, error) {
+	if e.ledger == nil {
+		return plan.RateSnapshot{}, usage.ErrRateUnavailable
+	}
+	return e.ledger.SelectRate(ctx)
+}
 
 func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCombo, error) {
-	priced, err := e.catalog.ComboRates(ctx)
+	var priced []modelcatalog.ComboRates
+	var err error
+	if e.ledger != nil {
+		rate, rateErr := e.ledger.SelectRate(ctx)
+		if rateErr != nil {
+			return nil, nil // Plan viewing remains available while paid AI has no usable rate.
+		}
+		priced, err = e.catalog.ComboRatesAt(ctx, rate)
+	} else {
+		priced, err = e.catalog.ComboRates(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

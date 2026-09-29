@@ -13,6 +13,8 @@ import (
 
 const accountingForJob = `-- name: AccountingForJob :one
 SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
+       a.settlement_cause,a.compensation_credits,a.compensation_lot_id,a.compensation_expires_at,
+       a.fx_source,a.fx_publication_date,a.fx_reference_e4,a.fx_applied_e4,a.fx_temporary,
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
 WHERE a.user_id = ?1 AND a.job_id = ?2
@@ -34,6 +36,15 @@ type AccountingForJobRow struct {
 	SettlementReason          sql.NullString
 	ConfirmedChargeCredits    sql.NullInt64
 	CancellationFeeCredits    sql.NullInt64
+	SettlementCause           sql.NullString
+	CompensationCredits       sql.NullInt64
+	CompensationLotID         sql.NullString
+	CompensationExpiresAt     sql.NullString
+	FxSource                  sql.NullString
+	FxPublicationDate         sql.NullString
+	FxReferenceE4             sql.NullInt64
+	FxAppliedE4               sql.NullInt64
+	FxTemporary               int64
 	DebitedCredits            int64
 }
 
@@ -52,6 +63,15 @@ func (q *Queries) AccountingForJob(ctx context.Context, arg AccountingForJobPara
 		&i.SettlementReason,
 		&i.ConfirmedChargeCredits,
 		&i.CancellationFeeCredits,
+		&i.SettlementCause,
+		&i.CompensationCredits,
+		&i.CompensationLotID,
+		&i.CompensationExpiresAt,
+		&i.FxSource,
+		&i.FxPublicationDate,
+		&i.FxReferenceE4,
+		&i.FxAppliedE4,
+		&i.FxTemporary,
 		&i.DebitedCredits,
 	)
 	return i, err
@@ -279,8 +299,9 @@ func (q *Queries) HoldDebitsForJob(ctx context.Context, jobID string) ([]HoldDeb
 
 const insertAdmission = `-- name: InsertAdmission :exec
 INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
-                              coverage_id,daily_window_start,benefit_window_start)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              coverage_id,daily_window_start,benefit_window_start,
+                              fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertAdmissionParams struct {
@@ -294,6 +315,11 @@ type InsertAdmissionParams struct {
 	CoverageID                sql.NullString
 	DailyWindowStart          sql.NullString
 	BenefitWindowStart        sql.NullString
+	FxSource                  sql.NullString
+	FxPublicationDate         sql.NullString
+	FxReferenceE4             sql.NullInt64
+	FxAppliedE4               sql.NullInt64
+	FxTemporary               int64
 }
 
 func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams) error {
@@ -308,6 +334,11 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 		arg.CoverageID,
 		arg.DailyWindowStart,
 		arg.BenefitWindowStart,
+		arg.FxSource,
+		arg.FxPublicationDate,
+		arg.FxReferenceE4,
+		arg.FxAppliedE4,
+		arg.FxTemporary,
 	)
 	return err
 }
@@ -557,7 +588,8 @@ func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumpt
 }
 
 const markAdmissionSettled = `-- name: MarkAdmissionSettled :exec
-UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?
+UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?,
+       settlement_cause=?,compensation_credits=?,compensation_lot_id=?,compensation_expires_at=?
 WHERE job_id = ? AND settled_at IS NULL
 `
 
@@ -567,6 +599,10 @@ type MarkAdmissionSettledParams struct {
 	SettlementReason       sql.NullString
 	ConfirmedChargeCredits sql.NullInt64
 	CancellationFeeCredits sql.NullInt64
+	SettlementCause        sql.NullString
+	CompensationCredits    sql.NullInt64
+	CompensationLotID      sql.NullString
+	CompensationExpiresAt  sql.NullString
 	JobID                  string
 }
 
@@ -577,6 +613,10 @@ func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSet
 		arg.SettlementReason,
 		arg.ConfirmedChargeCredits,
 		arg.CancellationFeeCredits,
+		arg.SettlementCause,
+		arg.CompensationCredits,
+		arg.CompensationLotID,
+		arg.CompensationExpiresAt,
 		arg.JobID,
 	)
 	return err
@@ -584,7 +624,8 @@ func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSet
 
 const openAdmissionForJob = `-- name: OpenAdmissionForJob :one
 SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
-       coverage_id,daily_window_start,benefit_window_start
+       coverage_id,daily_window_start,benefit_window_start,
+       fx_source,fx_publication_date,fx_reference_e4,fx_applied_e4,fx_temporary
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL
 `
@@ -600,6 +641,11 @@ type OpenAdmissionForJobRow struct {
 	CoverageID                sql.NullString
 	DailyWindowStart          sql.NullString
 	BenefitWindowStart        sql.NullString
+	FxSource                  sql.NullString
+	FxPublicationDate         sql.NullString
+	FxReferenceE4             sql.NullInt64
+	FxAppliedE4               sql.NullInt64
+	FxTemporary               int64
 }
 
 // Only an unsettled admission is returned, which is what makes settlement idempotent: a
@@ -618,6 +664,11 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.CoverageID,
 		&i.DailyWindowStart,
 		&i.BenefitWindowStart,
+		&i.FxSource,
+		&i.FxPublicationDate,
+		&i.FxReferenceE4,
+		&i.FxAppliedE4,
+		&i.FxTemporary,
 	)
 	return i, err
 }

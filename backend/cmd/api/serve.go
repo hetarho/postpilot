@@ -147,7 +147,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(c.auth, cfg.SessionTTL), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(planBalance{ledger: c.ledger}, estimatorCombos{catalog: catalog}), opts...)
+			return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(planBalance{ledger: c.ledger}, estimatorCombos{catalog: catalog, ledger: c.ledger}), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewBillingServiceHandler(billingrpc.NewHandler(c.billing), opts...)

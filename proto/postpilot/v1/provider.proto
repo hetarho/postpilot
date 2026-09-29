@@ -83,6 +83,7 @@ message ModelInfo {
   //
   // Display and ordering only — an unlevelled model is as selectable as a levelled one.
   repeated StageLevel levels = 19;
+  bool ai_price_unavailable = 20;
 }
 
 // StageLevel is one stage's level for a model. A repeated message rather than a map
@@ -138,6 +139,7 @@ message GetSelectionsResponse {
   // because the charge formula — its per-request base especially — is a server-owned rule
   // the client must never re-implement. Zero when no pair is selected yet.
   int32 estimated_post_credits = 2;
+  bool ai_price_unavailable = 3;
 }
 
 message SaveSelectionRequest {

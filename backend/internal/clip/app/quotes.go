@@ -304,7 +304,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if !s.now().Before(q.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, t, b, pricing, guidelines, err := s.quoteInputs(ctx, user, id, batch, observe, write, mode)
+	p, t, b, pricing, guidelines, err := s.quoteInputs(withFrozenQuoteRate(ctx, q.Pricing), user, id, batch, observe, write, mode)
 	if err != nil {
 		return "", err
 	}

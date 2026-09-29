@@ -1,6 +1,11 @@
 package usage
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/postpilot/backend/internal/plan"
+)
 
 // ReservationAccounting is the ledger's owner-scoped projection, not a client estimate.
 // Nil amounts are unknown/pending, never a settled zero. Shadow is master-only.
@@ -12,6 +17,10 @@ type ReservationAccounting struct {
 	Approved, Reserved, FinalCharge, Refund, ShadowCharge *int
 	Exempt                                                bool
 	Settled                                               bool
+	FaultCause                                            string
+	CompensationCredits, NetCharge                        *int
+	CompensationExpiresAt                                 *time.Time
+	Rate                                                  plan.RateSnapshot
 }
 
 type accountingReader interface {

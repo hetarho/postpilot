@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/usage/store/sqlc"
 )
@@ -18,6 +19,14 @@ import (
 // variable-width fraction would sort a grant into the wrong position in the consumption
 // order — or hide one that has not actually lapsed.
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
+
+func nullableRate(rate int64) sql.NullInt64 { return sql.NullInt64{Int64: rate, Valid: rate > 0} }
+func boolInt(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
+}
 
 // Store implements usage.Storage over SQLite.
 //
@@ -328,6 +337,11 @@ func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) 
 		CoverageID:                nullable(admission.CoverageID),
 		DailyWindowStart:          nullableTime(admission.DailyWindowStart),
 		BenefitWindowStart:        nullableTime(admission.BenefitWindowStart),
+		FxSource:                  nullable(admission.Rate.Source),
+		FxPublicationDate:         nullable(admission.Rate.PublicationDate),
+		FxReferenceE4:             nullableRate(admission.Rate.ReferenceE4),
+		FxAppliedE4:               nullableRate(admission.Rate.AppliedE4),
+		FxTemporary:               boolInt(admission.Rate.Temporary),
 	})
 	if err != nil {
 		return fmt.Errorf("insert admission: %w", err)
@@ -411,6 +425,9 @@ func (s *Store) HoldForJob(
 		ApprovedMaxCredits:        optionalCredits(row.ApprovedMaxCredits),
 		CancellationPolicyVersion: int(row.CancellationPolicyVersion),
 		CoverageID:                row.CoverageID.String,
+		Rate: plan.RateSnapshot{Source: row.FxSource.String, PublicationDate: row.FxPublicationDate.String,
+			ReferenceE4: row.FxReferenceE4.Int64, AppliedE4: row.FxAppliedE4.Int64,
+			Temporary: row.FxTemporary != 0},
 	}
 	if row.DailyWindowStart.Valid {
 		value, err := parseTime(row.DailyWindowStart.String)
@@ -436,6 +453,10 @@ func (s *Store) MarkSettled(ctx context.Context, jobID string, settlement usage.
 		SettlementReason:       sql.NullString{String: string(settlement.Reason), Valid: settlement.Reason != ""},
 		ConfirmedChargeCredits: nullableCredits(settlement.ConfirmedCharge),
 		CancellationFeeCredits: nullableCredits(settlement.CancellationFee),
+		SettlementCause:        nullable(settlement.Cause),
+		CompensationCredits:    nullableRate(int64(settlement.CompensationCredits)),
+		CompensationLotID:      nullable(settlement.CompensationLotID),
+		CompensationExpiresAt:  nullableTime(settlement.CompensationExpiresAt),
 		JobID:                  jobID,
 	})
 	if err != nil {

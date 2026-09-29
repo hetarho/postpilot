@@ -68,9 +68,15 @@ func (h *Handler) GetSelections(ctx context.Context, _ *connect.Request[postpilo
 			write = s.Ref
 		}
 	}
+	estimated := h.svc.EstimatePostCredits(observe, write)
+	unavailable := estimated < 0
+	if unavailable {
+		estimated = 0
+	}
 	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{
 		Selections:           out,
-		EstimatedPostCredits: int32(h.svc.EstimatePostCredits(observe, write)),
+		EstimatedPostCredits: int32(estimated),
+		AiPriceUnavailable:   unavailable,
 	}), nil
 }
 
@@ -259,6 +265,7 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		PricingCheckedAt:    m.Info.PricingCheckedAt,
 		RequiredCredits:     int32(m.RequiredCredits),
 		Affordable:          m.Affordable,
+		AiPriceUnavailable:  m.PriceUnavailable,
 		Stages:              stages,
 		Levels:              levels,
 	}

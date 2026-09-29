@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 var (
@@ -17,6 +18,7 @@ var (
 	ErrQuoteExpired       = errors.New("clip credit quote expired")
 	ErrQuoteChanged       = errors.New("clip credit quote inputs changed")
 	ErrPricingUnavailable = errors.New("clip model pricing unavailable")
+	ErrRateUnavailable    = errors.New("official AI exchange rate unavailable")
 	ErrCancellationPolicy = errors.New("clip cancellation policy requires a supported client approval")
 	// ErrCreditAllowance is refused work: a model call with no reserved allowance behind
 	// it, or a reservation that does not match the job it claims to pay for.
@@ -32,6 +34,8 @@ const CancellationPolicyVersion = 1
 type GenerationPricing struct {
 	CancellationPolicyVersion int
 	Version                   int
+	Rate                      plan.RateSnapshot `json:",omitempty"`
+	FXPolicy                  bool              `json:",omitempty"`
 	// The observation, then the two writing calls a generation makes: `Plan`
 	// prices the flow call and `Narration` the narration over it (CLIP-135).
 	// The flow keeps the field name it has always had, so the quote, the

@@ -597,6 +597,17 @@ func (s *Service) Combos(ctx context.Context) ([]ComboAssignment, error) {
 // price is left out rather than priced anyway (QUOTA-39): a comparison that quoted a tier
 // nobody can run would be worse than one that shows fewer tiers.
 func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
+	return s.comboRates(ctx, nil)
+}
+
+func (s *Service) ComboRatesAt(ctx context.Context, rate plan.RateSnapshot) ([]ComboRates, error) {
+	if !rate.Valid() {
+		return nil, nil
+	}
+	return s.comboRates(ctx, &rate)
+}
+
+func (s *Service) comboRates(ctx context.Context, rate *plan.RateSnapshot) ([]ComboRates, error) {
 	assignments, err := s.store.ListCombos(ctx)
 	if err != nil {
 		return nil, err
@@ -626,13 +637,24 @@ func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
 		if !writeOK || !priceable(write) {
 			continue
 		}
-		rates, ok := plan.EstimatorRates(pricerFor(observe), pricerFor(write))
+		var rates plan.Rates
+		if rate != nil {
+			rates, ok = plan.EstimatorRatesAt(pricerFor(observe), pricerFor(write), *rate)
+		} else {
+			rates, ok = plan.EstimatorRates(pricerFor(observe), pricerFor(write))
+		}
 		if !ok {
 			continue
 		}
 		var clipRates *plan.ClipRates
 		if observe.VideoInput && observe.StructuredOutput && write.StructuredOutput {
-			if quoted, ok := plan.ClipEstimatorRates(pricerFor(observe), pricerFor(write)); ok {
+			var quoted plan.ClipRates
+			if rate != nil {
+				quoted, ok = plan.ClipEstimatorRatesAt(pricerFor(observe), pricerFor(write), *rate)
+			} else {
+				quoted, ok = plan.ClipEstimatorRates(pricerFor(observe), pricerFor(write))
+			}
+			if ok {
 				clipRates = &quoted
 			}
 		}

@@ -55,6 +55,45 @@ type Reservation struct {
 	CancellationPolicyVersion int
 	ApprovedMaxCredits        int
 	Calls                     []PricedCall
+	Rate                      plan.RateSnapshot
+}
+
+// ReservationCost sums the bounded per-call worst cases before any currency
+// conversion. This is shared by a quote and its later admission.
+func ReservationCost(calls []PricedCall) (int64, error) {
+	if len(calls) == 0 || len(calls) > 2 {
+		return 0, ErrPricingUnavailable
+	}
+	var total int64
+	for _, call := range calls {
+		if !call.Policy.Valid() || call.Count < 0 || call.Count > 49*(1+call.Policy.ResponseRetries) {
+			return 0, ErrPricingUnavailable
+		}
+		if call.Count == 0 {
+			continue
+		}
+		cost, ok := call.Policy.QuoteMicrousd()
+		if !ok || cost > (math.MaxInt64-total)/int64(call.Count) {
+			return 0, ErrPricingUnavailable
+		}
+		total += cost * int64(call.Count)
+	}
+	return total, nil
+}
+
+func ReservationCreditsAt(calls []PricedCall, rate plan.RateSnapshot) (int, error) {
+	total, err := ReservationCost(calls)
+	if err != nil {
+		return 0, err
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	credits, err := plan.ChargeAt(total, rate)
+	if err != nil {
+		return 0, ErrPricingUnavailable
+	}
+	return credits, nil
 }
 
 // The fee uses the unused job hold, with upward integer rounding and no overflow.

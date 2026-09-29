@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/usage/store/sqlc"
 )
@@ -45,6 +47,18 @@ func (s *Store) AccountingForJob(ctx context.Context, user, job string, kinds []
 	nominal := int(r.HoldCredits)
 	out.NominalReservation, out.CancellationPolicyVersion = &nominal, int(r.CancellationPolicyVersion)
 	out.SettlementReason = r.SettlementReason.String
+	out.FaultCause = r.SettlementCause.String
+	out.CompensationCredits = optionalCredits(r.CompensationCredits)
+	if r.CompensationExpiresAt.Valid {
+		expires, err := time.Parse(writeLayout, r.CompensationExpiresAt.String)
+		if err != nil {
+			return nil, err
+		}
+		out.CompensationExpiresAt = &expires
+	}
+	out.Rate = plan.RateSnapshot{Source: r.FxSource.String, PublicationDate: r.FxPublicationDate.String,
+		ReferenceE4: r.FxReferenceE4.Int64, AppliedE4: r.FxAppliedE4.Int64,
+		Temporary: r.FxTemporary != 0}
 	out.ConfirmedCharge, out.CancellationFee = optionalCredits(r.ConfirmedChargeCredits), optionalCredits(r.CancellationFeeCredits)
 	if !out.Settled {
 		return out, nil
@@ -71,5 +85,10 @@ func (s *Store) AccountingForJob(ctx context.Context, user, job string, kinds []
 		}
 		out.FinalCharge, out.Refund = &charge, &refund
 	}
+	net := *out.FinalCharge
+	if out.CompensationCredits != nil {
+		net -= *out.CompensationCredits
+	}
+	out.NetCharge = &net
 	return out, nil
 }

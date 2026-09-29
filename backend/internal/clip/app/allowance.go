@@ -9,6 +9,7 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 // Call is one priced model call the reservation approved, and how many times it may run.
@@ -23,6 +24,7 @@ type Reservation struct {
 	CancellationPolicyVersion int
 	ApprovedMaxCredits        int
 	Calls                     []Call
+	Rate                      plan.RateSnapshot
 }
 
 // Hold is the credit hold a charged clip job takes before its first model call. The

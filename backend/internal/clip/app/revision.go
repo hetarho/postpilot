@@ -186,7 +186,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if err != nil {
 		return "", err
 	}
-	pricing, err := s.revisionPricing(ctx, write, observe, target, guidelines)
+	pricing, err := s.revisionPricing(withFrozenQuoteRate(ctx, q.Pricing), write, observe, target, guidelines)
 	if err != nil {
 		return "", err
 	}

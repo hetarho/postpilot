@@ -57,9 +57,10 @@ func ParseStage(s string) (Stage, error) {
 // same model becomes affordable again at the next renewal — which is why nothing
 // downstream treats an unaffordable selection as invalidated.
 type CatalogModel struct {
-	Info            llm.ModelInfo
-	RequiredCredits int
-	Affordable      bool
+	Info             llm.ModelInfo
+	RequiredCredits  int
+	Affordable       bool
+	PriceUnavailable bool
 }
 
 // Selection is the acting user's choice for one stage.

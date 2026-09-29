@@ -4,11 +4,46 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
+
+type changingRates struct {
+	rate  plan.RateSnapshot
+	err   error
+	calls int
+}
+
+func (s *changingRates) Select(context.Context, time.Time) (plan.RateSnapshot, error) {
+	s.calls++
+	return s.rate, s.err
+}
+
+func TestApprovedQuoteRetainsItsFrozenFXDuringRateOutage(t *testing.T) {
+	rates := &changingRates{rate: plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+		ReferenceE4: 13_579_001, AppliedE4: 13_600_000}}
+	pricing := NewPricingWithRate(&fakeFreezer{}, Budgets{ObserveCompletionTokens: 8192,
+		FlowCompletionTokens: 4096, NarrationCompletionTokens: 2048}, rates)
+	observe := llm.ModelRef{ProviderID: "p", ModelID: "o"}
+	write := llm.ModelRef{ProviderID: "p", ModelID: "w"}
+	first, err := pricing.Freeze(context.Background(), observe, write, 2)
+	if err != nil || !first.FXPolicy || first.MaxCredits <= 0 || rates.calls != 1 {
+		t.Fatalf("initial quote=%+v calls=%d err=%v", first, rates.calls, err)
+	}
+	rates.err = errors.New("official source unavailable")
+	if _, err := pricing.Freeze(context.Background(), observe, write, 2); !errors.Is(err, clip.ErrRateUnavailable) {
+		t.Fatalf("new paid quote during outage err=%v", err)
+	}
+	callsAfterRefusal := rates.calls
+	second, err := pricing.Freeze(withFrozenQuoteRate(context.Background(), first), observe, write, 2)
+	if err != nil || second.Rate != first.Rate || second.MaxCredits != first.MaxCredits || rates.calls != callsAfterRefusal {
+		t.Fatalf("replayed quote=%+v calls=%d err=%v", second, rates.calls, err)
+	}
+}
 
 func TestQuoteCreditsPricesRetriesAndBothWritingCallsAsOneLine(t *testing.T) {
 	base := clip.GenerationPricing{Observe: observePolicy(), Plan: writePolicy(), Narration: writePolicy(), ObservationCalls: 2}

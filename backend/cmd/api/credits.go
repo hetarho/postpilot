@@ -107,6 +107,9 @@ type jobAdmission struct {
 	ledger   *usage.Service
 	registry *llm.Registry
 	plans    *auth.Service
+	jobs     interface {
+		GetByID(context.Context, string) (job.Job, error)
+	}
 }
 
 // clipAdmission is the charged clip path's hold: the clip context states its approved
@@ -117,6 +120,7 @@ func (a clipAdmission) Hold(ctx context.Context, hold clipapp.Hold) error {
 	reservation := &usage.Reservation{
 		ApprovedMaxCredits:        hold.Reservation.ApprovedMaxCredits,
 		CancellationPolicyVersion: hold.Reservation.CancellationPolicyVersion,
+		Rate:                      hold.Reservation.Rate,
 	}
 	for _, c := range hold.Reservation.Calls {
 		reservation.Calls = append(reservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
@@ -160,16 +164,39 @@ func (a jobAdmission) Release(ctx context.Context, jobID string) {
 
 func (a jobAdmission) Settle(ctx context.Context, jobID, terminalStatus string) {
 	var outcome usage.TerminalOutcome
+	cause := "unknown"
 	switch terminalStatus {
 	case job.StatusDone:
 		outcome = usage.OutcomeSucceeded
 	case job.StatusFailed:
 		outcome = usage.OutcomeFailed
+		if a.jobs != nil {
+			found, err := a.jobs.GetByID(ctx, jobID)
+			if err == nil && found.Failure != nil {
+				cause = failureSettlementCause(found.Failure.Reason)
+			}
+		}
 	case job.StatusCancelled:
 		outcome = usage.OutcomeCancelled
 	}
-	if err := a.ledger.Settle(ctx, jobID, outcome); err != nil {
+	if terminalStatus == job.StatusDone {
+		cause = "completed"
+	} else if terminalStatus == job.StatusCancelled {
+		cause = "owner_cancelled"
+	}
+	if err := a.ledger.SettleCause(ctx, jobID, outcome, cause); err != nil {
 		slog.Error("settle hold failed", "job", jobID, "err", err)
+	}
+}
+
+func failureSettlementCause(reason string) string {
+	switch reason {
+	case llm.FailureReasonModelUnavailable, llm.FailureReasonModelRateLimited, llm.FailureReasonModelUnsupported:
+		return "provider"
+	case job.FailureReasonInterrupted, job.FailureReasonPanicked, job.FailureReasonHandlerMissing:
+		return "service"
+	default:
+		return "unknown"
 	}
 }
 

@@ -3,9 +3,11 @@ package app
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/usage"
 )
 
@@ -23,13 +25,37 @@ const DefaultQuoteRetries = 3
 // retry it may need, and both writing calls priced as one line on the same
 // model at the same budget (usage.ReservationCredits takes at most two).
 func QuoteCredits(pricing clip.GenerationPricing, count, retries int) (int, error) {
-	return usage.ReservationCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
+	calls := []usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}}
+	if pricing.FXPolicy {
+		return usage.ReservationCreditsAt(calls, pricing.Rate)
+	}
+	return usage.ReservationCredits(calls)
+}
+
+type FXSelector interface {
+	Select(context.Context, time.Time) (plan.RateSnapshot, error)
+}
+
+type frozenQuoteRateKey struct{}
+
+func withFrozenQuoteRate(ctx context.Context, pricing clip.GenerationPricing) context.Context {
+	return context.WithValue(ctx, frozenQuoteRateKey{}, pricing)
 }
 
 // Pricing is the clip.QuotePricing port over the registry.
 type Pricing struct {
 	freezer Freezer
 	budgets Budgets
+	rates   FXSelector
+}
+
+func NewPricingWithRate(freezer Freezer, budgets Budgets, rates FXSelector) Pricing {
+	p := NewPricing(freezer, budgets)
+	if rates == nil {
+		panic("clip app: production pricing needs FX selector")
+	}
+	p.rates = rates
+	return p
 }
 
 func NewPricing(freezer Freezer, budgets Budgets) Pricing {
@@ -68,6 +94,23 @@ func (p Pricing) FreezeWork(ctx context.Context, observe, write llm.ModelRef, co
 	}
 	a.ResponseRetries, b.ResponseRetries, c.ResponseRetries = retries, retries, retries
 	pricing := clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipFlow: skipFlow, SkipNarration: skipNarration, Observe: a, Plan: b, Narration: c, ObservationCalls: count}
+	if p.rates != nil {
+		pricing.FXPolicy = true
+		cost, err := usage.ReservationCost([]usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
+		if err != nil {
+			return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+		}
+		if cost > 0 {
+			if prior, ok := ctx.Value(frozenQuoteRateKey{}).(clip.GenerationPricing); ok && prior.FXPolicy && prior.Rate.Valid() {
+				pricing.Rate = prior.Rate
+			} else {
+				pricing.Rate, err = p.rates.Select(ctx, time.Now())
+			}
+			if err != nil {
+				return clip.GenerationPricing{}, clip.ErrRateUnavailable
+			}
+		}
+	}
 	credits, err := QuoteCredits(pricing, count, retries)
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
@@ -91,7 +134,7 @@ func (a Accounting) ForJob(ctx context.Context, user, id string) (*clip.Accounti
 	if err != nil || r == nil {
 		return nil, err
 	}
-	return &clip.Accounting{CancellationPolicyVersion: r.CancellationPolicyVersion, SettlementReason: r.SettlementReason, NominalReservation: r.NominalReservation, ConfirmedCharge: r.ConfirmedCharge, CancellationFee: r.CancellationFee, ShadowConfirmedCharge: r.ShadowConfirmedCharge, ShadowCancellationFee: r.ShadowCancellationFee, JobID: id, ApprovedMax: r.Approved, Reserved: r.Reserved, FinalCharge: r.FinalCharge, Refund: r.Refund, ShadowCharge: r.ShadowCharge, Exempt: r.Exempt, Settled: r.Settled}, nil
+	return &clip.Accounting{CancellationPolicyVersion: r.CancellationPolicyVersion, SettlementReason: r.SettlementReason, NominalReservation: r.NominalReservation, ConfirmedCharge: r.ConfirmedCharge, CancellationFee: r.CancellationFee, ShadowConfirmedCharge: r.ShadowConfirmedCharge, ShadowCancellationFee: r.ShadowCancellationFee, JobID: id, ApprovedMax: r.Approved, Reserved: r.Reserved, FinalCharge: r.FinalCharge, Refund: r.Refund, ShadowCharge: r.ShadowCharge, Exempt: r.Exempt, Settled: r.Settled, FaultCause: r.FaultCause, CompensationCredits: r.CompensationCredits, NetCharge: r.NetCharge, CompensationExpiresAt: r.CompensationExpiresAt, Rate: r.Rate}, nil
 }
 
 // ModelAdmission is the clip.AnalysisAdmission port over the registry: the

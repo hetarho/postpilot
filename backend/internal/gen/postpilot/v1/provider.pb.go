@@ -216,9 +216,10 @@ type ModelInfo struct {
 	// absent from this list has no level and sorts last (MODEL-58).
 	//
 	// Display and ordering only — an unlevelled model is as selectable as a levelled one.
-	Levels        []*StageLevel `protobuf:"bytes,19,rep,name=levels,proto3" json:"levels,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Levels             []*StageLevel `protobuf:"bytes,19,rep,name=levels,proto3" json:"levels,omitempty"`
+	AiPriceUnavailable bool          `protobuf:"varint,20,opt,name=ai_price_unavailable,json=aiPriceUnavailable,proto3" json:"ai_price_unavailable,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -368,6 +369,13 @@ func (x *ModelInfo) GetLevels() []*StageLevel {
 		return x.Levels
 	}
 	return nil
+}
+
+func (x *ModelInfo) GetAiPriceUnavailable() bool {
+	if x != nil {
+		return x.AiPriceUnavailable
+	}
+	return false
 }
 
 // StageLevel is one stage's level for a model. A repeated message rather than a map
@@ -809,6 +817,7 @@ type GetSelectionsResponse struct {
 	// because the charge formula — its per-request base especially — is a server-owned rule
 	// the client must never re-implement. Zero when no pair is selected yet.
 	EstimatedPostCredits int32 `protobuf:"varint,2,opt,name=estimated_post_credits,json=estimatedPostCredits,proto3" json:"estimated_post_credits,omitempty"`
+	AiPriceUnavailable   bool  `protobuf:"varint,3,opt,name=ai_price_unavailable,json=aiPriceUnavailable,proto3" json:"ai_price_unavailable,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -855,6 +864,13 @@ func (x *GetSelectionsResponse) GetEstimatedPostCredits() int32 {
 		return x.EstimatedPostCredits
 	}
 	return 0
+}
+
+func (x *GetSelectionsResponse) GetAiPriceUnavailable() bool {
+	if x != nil {
+		return x.AiPriceUnavailable
+	}
+	return false
 }
 
 type SaveSelectionRequest struct {
@@ -1329,7 +1345,7 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\bModelRef\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xc3\x05\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xf5\x05\n" +
 	"\tModelInfo\x12(\n" +
 	"\x03ref\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
@@ -1351,7 +1367,8 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"affordable\x18\x0e \x01(\bR\n" +
 	"affordable\x12+\n" +
 	"\x06stages\x18\x0f \x03(\x0e2\x13.postpilot.v1.StageR\x06stages\x120\n" +
-	"\x06levels\x18\x13 \x03(\v2\x18.postpilot.v1.StageLevelR\x06levelsJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"M\n" +
+	"\x06levels\x18\x13 \x03(\v2\x18.postpilot.v1.StageLevelR\x06levels\x120\n" +
+	"\x14ai_price_unavailable\x18\x14 \x01(\bR\x12aiPriceUnavailableJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"M\n" +
 	"\n" +
 	"StageLevel\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12\x14\n" +
@@ -1383,12 +1400,13 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x11ListModelsRequest\"E\n" +
 	"\x12ListModelsResponse\x12/\n" +
 	"\x06models\x18\x01 \x03(\v2\x17.postpilot.v1.ModelInfoR\x06models\"\x16\n" +
-	"\x14GetSelectionsRequest\"\x86\x01\n" +
+	"\x14GetSelectionsRequest\"\xb8\x01\n" +
 	"\x15GetSelectionsResponse\x127\n" +
 	"\n" +
 	"selections\x18\x01 \x03(\v2\x17.postpilot.v1.SelectionR\n" +
 	"selections\x124\n" +
-	"\x16estimated_post_credits\x18\x02 \x01(\x05R\x14estimatedPostCredits\"k\n" +
+	"\x16estimated_post_credits\x18\x02 \x01(\x05R\x14estimatedPostCredits\x120\n" +
+	"\x14ai_price_unavailable\x18\x03 \x01(\bR\x12aiPriceUnavailable\"k\n" +
 	"\x14SaveSelectionRequest\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12(\n" +
 	"\x03ref\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\"N\n" +
