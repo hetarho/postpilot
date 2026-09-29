@@ -56,10 +56,11 @@ func TestCurrentContentReadsThePostRowAlone(t *testing.T) {
 	}
 	row := store.posts[found.Slug]
 	want := ContentSnapshot{
-		Slug: row.Slug, ContentRevision: row.ContentRevision, Content: row.Content,
+		Slug: row.Slug, VoiceID: row.VoiceID, ContentRevision: row.ContentRevision, Content: row.Content,
 		ContentLanguage: row.ContentLanguage, TargetLanguage: row.TargetLanguage, Nouns: row.ContentNouns,
 	}
-	if !reflect.DeepEqual(got, want) || got.Content == nil || len(got.Nouns) == 0 {
+	// The voice id is the row's own, read with the voice directory failing (POST-102).
+	if !reflect.DeepEqual(got, want) || got.Content == nil || len(got.Nouns) == 0 || got.VoiceID == "" {
 		t.Fatalf("CurrentContent = %+v, want the stored row %+v", got, want)
 	}
 

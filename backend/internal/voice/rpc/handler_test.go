@@ -370,3 +370,77 @@ func TestTheAnalysisAndItsUndoAtTheEdge(t *testing.T) {
 		t.Fatalf("restored = %+v err=%v", restored, err)
 	}
 }
+
+type posts map[string]string
+
+// PostForFingerprint knows alice's posts: slug → voice id, each with the same prose.
+func (p posts) PostForFingerprint(_ context.Context, userID, slug string) (string, int64, []voice.Block, error) {
+	voiceID, ok := p[slug]
+	switch {
+	case !ok:
+		return "", 0, nil, voice.ErrPostNotFound
+	case userID != "alice":
+		return "", 0, nil, voice.ErrPostForbidden
+	}
+	return voiceID, 5, []voice.Block{{Type: voice.BlockText, Content: strings.Repeat("국물이 진했다. ", 12)}}, nil
+}
+
+// VOICE-62, POST-102: GetPostFingerprint answers the comparison in the domain's order with each
+// facet's unit and value, applicable=false for 말투 없음, PermissionDenied for another account's
+// post and NotFound for an unknown one.
+func TestGetPostFingerprintOverTheWire(t *testing.T) {
+	handle := openVoiceTestDB(t)
+	store := voicestore.New(handle.Writer, handle.Reader)
+	service := voice.NewService(store, models{}, jobs{})
+	ctx := auth.WithUser(context.Background(), "alice")
+	created, err := service.CreateVoice(ctx, "alice", "리뷰")
+	if err != nil {
+		t.Fatal(err)
+	}
+	counted := voice.FingerprintOf([]voice.Material{{ID: "m1", Kind: voice.SampleKindPost, CreatedAt: time.Now(), Text: strings.Repeat("정말 맛있었어요! ", 12)}})
+	if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{Counted: counted, AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	service.ConfigurePosts(posts{"made": created.ID, "no-voice": ""})
+	handler := voicerpc.NewHandler(service)
+	ask := func(ctx context.Context, slug string) (*postpilotv1.GetPostFingerprintResponse, error) {
+		res, err := handler.GetPostFingerprint(ctx, connect.NewRequest(&postpilotv1.GetPostFingerprintRequest{PostSlug: slug}))
+		if err != nil {
+			return nil, err
+		}
+		return res.Msg, nil
+	}
+
+	made, err := ask(ctx, "made")
+	if err != nil || !made.GetApplicable() || made.GetRevision() != 5 || len(made.GetItems()) != len(voice.Items()) {
+		t.Fatalf("made = %+v err=%v", made, err)
+	}
+	want := voice.Compare(counted, voice.MeasureBlocks([]voice.Block{{Type: voice.BlockText, Content: strings.Repeat("국물이 진했다. ", 12)}}))
+	for i, item := range made.GetItems() {
+		if item.GetItem() == postpilotv1.FingerprintItem_FINGERPRINT_ITEM_UNSPECIFIED || item.GetUnknown() != want[i].Unknown || item.GetHeadline() != want[i].Headline || len(item.GetFacets()) != len(want[i].Facets) {
+			t.Fatalf("item %d = %+v, want %+v", i, item, want[i])
+		}
+		for j, facet := range item.GetFacets() {
+			domain := want[i].Facets[j]
+			if facet.GetKey() != domain.Key || facet.GetUnit() == postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_UNSPECIFIED {
+				t.Fatalf("facet %s = %+v", domain.Key, facet)
+			}
+			if domain.Unit == voice.UnitText {
+				if facet.GetVoice().GetTerms() == nil || strings.Join(facet.GetVoice().GetTerms().GetTerms(), ",") != strings.Join(domain.VoiceTerms, ",") {
+					t.Fatalf("terms facet %s = %+v", domain.Key, facet)
+				}
+			} else if facet.GetVoice().GetNumber() != domain.Voice || facet.GetText().GetNumber() != domain.Text {
+				t.Fatalf("number facet %s = %+v, want %+v", domain.Key, facet, domain)
+			}
+		}
+	}
+	if none, err := ask(ctx, "no-voice"); err != nil || none.GetApplicable() || len(none.GetItems()) != 0 {
+		t.Fatalf("말투 없음 = %+v err=%v", none, err)
+	}
+	if _, err := ask(auth.WithUser(context.Background(), "bob"), "made"); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("a foreign post = %v", err)
+	}
+	if _, err := ask(ctx, "nope"); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("an unknown post = %v", err)
+	}
+}

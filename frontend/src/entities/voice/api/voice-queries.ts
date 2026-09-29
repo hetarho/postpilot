@@ -206,6 +206,15 @@ export function voicesQueryKey(transport: Transport, ownerId: string) {
 export function voiceAnalysisQueryKey(transport: Transport, ownerId: string, voiceId: string) {
   return ['voice-analysis', transport, ownerId, voiceId] as const
 }
+/** ②'s fingerprint comparison of one post at one content revision (POST-102). */
+export function postFingerprintQueryKey(
+  transport: Transport,
+  ownerId: string,
+  slug: string,
+  revision: bigint,
+) {
+  return ['voice-post-fingerprint', transport, ownerId, slug, String(revision)] as const
+}
 /** One opened 학습 글, partitioned like every voice read (VOICE-56). */
 export function voiceSampleQueryKey(
   transport: Transport,

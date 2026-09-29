@@ -278,6 +278,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
 		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,
 	})
+	c.voice.ConfigurePosts(voicePosts{service: c.post})
 
 	c.generation = generation.NewService(
 		generationPosts{service: c.post},

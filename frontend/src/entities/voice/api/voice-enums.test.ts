@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { VoiceAiField, VoiceNoticeKind, VoicePromptPart, VoiceSampleKind } from '@/shared/api'
+import {
+  ProtoFingerprintFacetUnit,
+  ProtoFingerprintItem,
+  VoiceAiField,
+  VoiceNoticeKind,
+  VoicePromptPart,
+  VoiceSampleKind,
+} from '@/shared/api'
+import { FINGERPRINT_ITEMS } from '../model/fingerprint'
 import {
   requireAiField,
+  requireFacetUnit,
+  requireFingerprintItem,
   requireNoticeKind,
   requirePromptPart,
   requireSampleKind,
@@ -38,5 +48,18 @@ describe('the voice enum mirrors', () => {
       'added',
       'changed',
     ])
+  })
+
+  it('maps every fingerprint item and facet unit the wire names', () => {
+    const items = wireValues<ProtoFingerprintItem>(ProtoFingerprintItem)
+      .filter((value) => value !== ProtoFingerprintItem.UNSPECIFIED)
+      .map(requireFingerprintItem)
+    expect(items).toEqual([...FINGERPRINT_ITEMS])
+    expect(() => requireFingerprintItem(ProtoFingerprintItem.UNSPECIFIED)).toThrow()
+    const units = wireValues<ProtoFingerprintFacetUnit>(ProtoFingerprintFacetUnit)
+      .filter((value) => value !== ProtoFingerprintFacetUnit.UNSPECIFIED)
+      .map(requireFacetUnit)
+    expect(units).toEqual(['share', 'per_hundred', 'chars', 'sentences', 'text'])
+    expect(() => requireFacetUnit(ProtoFingerprintFacetUnit.UNSPECIFIED)).toThrow()
   })
 })

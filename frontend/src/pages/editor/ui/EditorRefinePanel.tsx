@@ -5,6 +5,7 @@ import { PostMeasurementRow } from '@/entities/quality'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
 import type { PostContent } from '@/shared/api'
 import { Notice, Typography } from '@/shared/ui'
+import { PostFingerprintRow } from '@/widgets/voice-fingerprint'
 import { EmptyStep } from './EmptyStep'
 
 /** ②'s panel: the block editor over the generated draft, or the way back to ① when there is
@@ -63,15 +64,26 @@ export function EditorRefinePanel({
           ref={editorRef}
           post={post}
           onContentChange={onContentChange}
-          // This post's own M2, M3 and M4 (QUAL-36), read at the revision on screen.
+          // This post's own M2, M3 and M4 (QUAL-36), then its fingerprint beside its voice's
+          // (POST-102), both read at the revision on screen; a post with 말투 없음 has none.
           beforeArticle={
-            <PostMeasurementRow
-              ownerId={ownerId}
-              slug={post.slug}
-              revision={post.contentRevision}
-              contentLanguage={post.contentLanguage}
-              className="mt-4"
-            />
+            <>
+              <PostMeasurementRow
+                ownerId={ownerId}
+                slug={post.slug}
+                revision={post.contentRevision}
+                contentLanguage={post.contentLanguage}
+                className="mt-4"
+              />
+              {post.voice?.made && !post.voice.deleted && (
+                <PostFingerprintRow
+                  ownerId={ownerId}
+                  slug={post.slug}
+                  revision={post.contentRevision}
+                  className="mt-4"
+                />
+              )}
+            </>
           }
         />
       )}

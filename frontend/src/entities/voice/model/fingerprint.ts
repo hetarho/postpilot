@@ -15,6 +15,34 @@ export const FINGERPRINT_ITEMS = [
 
 export type FingerprintItem = (typeof FINGERPRINT_ITEMS)[number]
 
+/** How a facet's two values read (VOICE-62). */
+export type FingerprintFacetUnit = 'share' | 'per_hundred' | 'chars' | 'sentences' | 'text'
+
+/** One value of a counted item on the voice and on a text: numbers in their unit, or a text
+ *  facet's terms (possibly none). The facet key is the server's; the widget words it. */
+export type FingerprintFacet =
+  | { key: string; unit: Exclude<FingerprintFacetUnit, 'text'>; voice: number; text: number }
+  | { key: string; unit: 'text'; voice: string[]; text: string[] }
+
+/** One counted item measured on the voice and on a text, as the server orders them: farthest
+ *  from the voice first, unknown last (VOICE-62). */
+export interface FingerprintComparisonItem {
+  item: FingerprintItem
+  unknown: boolean
+  distance: number
+  /** The key of the facet with the largest gap. */
+  headline: string
+  facets: FingerprintFacet[]
+}
+
+/** ②'s reading of a post against its voice (POST-102); not applicable for 말투 없음, no content,
+ *  or a deleted or unmade voice. */
+export interface PostFingerprint {
+  applicable: boolean
+  revision: bigint
+  items: FingerprintComparisonItem[]
+}
+
 /** One counted item as a reader sees it: its name, one plain sentence with its numbers — or
  *  알 수 없음 — and the example sentence it was counted from (VOICE-63). */
 export interface FingerprintRow {

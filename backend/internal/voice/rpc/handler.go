@@ -245,6 +245,10 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
 	case errors.Is(err, voice.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
+	case errors.Is(err, voice.ErrPostNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
+	case errors.Is(err, voice.ErrPostForbidden):
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", postpilotv1.FailureReason_POST_FORBIDDEN, nil)
 	case errors.Is(err, voice.ErrVoiceNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleNotFound):

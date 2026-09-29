@@ -27,6 +27,7 @@ type Service struct {
 	directoryMu  sync.Mutex
 	objects      ObjectStore
 	photos       PhotoLimits
+	posts        PostContents
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {

@@ -18,6 +18,7 @@ import {
   VoiceNoticeKind,
   VoiceNoticeSchema,
   RestorePreviousVoiceAnalysisResponseSchema,
+  GetPostFingerprintResponseSchema,
   type ProtoVoiceProfile,
   type ProtoVoiceSample,
   type ProtoVoiceAnalysis,
@@ -126,6 +127,10 @@ export interface FakeVoiceOptions {
   answers?: Array<{ promptKey: string; body: string; uploadId: string }>
   /** The job an AnalyzeVoice answers with. */
   analyzeJobId?: string
+  /** ②'s comparison per post slug (POST-102); a slug not listed answers not applicable. */
+  postFingerprints?: Record<string, MessageInitShape<typeof GetPostFingerprintResponseSchema>>
+  /** The slug of every GetPostFingerprint the fake received. */
+  postFingerprintReads?: string[]
 }
 
 const PART_TO_PROTO = {
@@ -441,6 +446,15 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       profileReads += 1
     }
     return create(GetVoiceProfileResponseSchema, { profile: withVoice(request.voiceId, profile) })
+  })
+
+  rpc(VoiceService.method.getPostFingerprint, (request) => {
+    options.calls?.push('GetPostFingerprint')
+    options.postFingerprintReads?.push(request.postSlug)
+    return create(
+      GetPostFingerprintResponseSchema,
+      options.postFingerprints?.[request.postSlug] ?? { applicable: false },
+    )
   })
 
   rpc(VoiceService.method.restorePreviousVoiceAnalysis, (request) => {

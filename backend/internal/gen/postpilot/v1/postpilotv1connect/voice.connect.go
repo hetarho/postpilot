@@ -77,6 +77,9 @@ const (
 	// VoiceServiceRestorePreviousVoiceAnalysisProcedure is the fully-qualified name of the
 	// VoiceService's RestorePreviousVoiceAnalysis RPC.
 	VoiceServiceRestorePreviousVoiceAnalysisProcedure = "/postpilot.v1.VoiceService/RestorePreviousVoiceAnalysis"
+	// VoiceServiceGetPostFingerprintProcedure is the fully-qualified name of the VoiceService's
+	// GetPostFingerprint RPC.
+	VoiceServiceGetPostFingerprintProcedure = "/postpilot.v1.VoiceService/GetPostFingerprint"
 )
 
 // VoiceServiceClient is a client for the postpilot.v1.VoiceService service.
@@ -103,6 +106,9 @@ type VoiceServiceClient interface {
 	// 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
 	// and there is no redo (VOICE-30).
 	RestorePreviousVoiceAnalysis(context.Context, *connect.Request[v1.RestorePreviousVoiceAnalysisRequest]) (*connect.Response[v1.RestorePreviousVoiceAnalysisResponse], error)
+	// ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
+	// request, never stored, with no model call (VOICE-62).
+	GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error)
 }
 
 // NewVoiceServiceClient constructs a client for the postpilot.v1.VoiceService service. By default,
@@ -206,6 +212,12 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("RestorePreviousVoiceAnalysis")),
 			connect.WithClientOptions(opts...),
 		),
+		getPostFingerprint: connect.NewClient[v1.GetPostFingerprintRequest, v1.GetPostFingerprintResponse](
+			httpClient,
+			baseURL+VoiceServiceGetPostFingerprintProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("GetPostFingerprint")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -226,6 +238,7 @@ type voiceServiceClient struct {
 	answerVoicePrompt            *connect.Client[v1.AnswerVoicePromptRequest, v1.AnswerVoicePromptResponse]
 	analyzeVoice                 *connect.Client[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse]
 	restorePreviousVoiceAnalysis *connect.Client[v1.RestorePreviousVoiceAnalysisRequest, v1.RestorePreviousVoiceAnalysisResponse]
+	getPostFingerprint           *connect.Client[v1.GetPostFingerprintRequest, v1.GetPostFingerprintResponse]
 }
 
 // ListVoices calls postpilot.v1.VoiceService.ListVoices.
@@ -303,6 +316,11 @@ func (c *voiceServiceClient) RestorePreviousVoiceAnalysis(ctx context.Context, r
 	return c.restorePreviousVoiceAnalysis.CallUnary(ctx, req)
 }
 
+// GetPostFingerprint calls postpilot.v1.VoiceService.GetPostFingerprint.
+func (c *voiceServiceClient) GetPostFingerprint(ctx context.Context, req *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error) {
+	return c.getPostFingerprint.CallUnary(ctx, req)
+}
+
 // VoiceServiceHandler is an implementation of the postpilot.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	// The voice directory: an account has zero or more voices and at most one active, made
@@ -327,6 +345,9 @@ type VoiceServiceHandler interface {
 	// 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
 	// and there is no redo (VOICE-30).
 	RestorePreviousVoiceAnalysis(context.Context, *connect.Request[v1.RestorePreviousVoiceAnalysisRequest]) (*connect.Response[v1.RestorePreviousVoiceAnalysisResponse], error)
+	// ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
+	// request, never stored, with no model call (VOICE-62).
+	GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error)
 }
 
 // NewVoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -426,6 +447,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("RestorePreviousVoiceAnalysis")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceGetPostFingerprintHandler := connect.NewUnaryHandler(
+		VoiceServiceGetPostFingerprintProcedure,
+		svc.GetPostFingerprint,
+		connect.WithSchema(voiceServiceMethods.ByName("GetPostFingerprint")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VoiceServiceListVoicesProcedure:
@@ -458,6 +485,8 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceAnalyzeVoiceHandler.ServeHTTP(w, r)
 		case VoiceServiceRestorePreviousVoiceAnalysisProcedure:
 			voiceServiceRestorePreviousVoiceAnalysisHandler.ServeHTTP(w, r)
+		case VoiceServiceGetPostFingerprintProcedure:
+			voiceServiceGetPostFingerprintHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -525,4 +554,8 @@ func (UnimplementedVoiceServiceHandler) AnalyzeVoice(context.Context, *connect.R
 
 func (UnimplementedVoiceServiceHandler) RestorePreviousVoiceAnalysis(context.Context, *connect.Request[v1.RestorePreviousVoiceAnalysisRequest]) (*connect.Response[v1.RestorePreviousVoiceAnalysisResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.RestorePreviousVoiceAnalysis is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) GetPostFingerprint(context.Context, *connect.Request[v1.GetPostFingerprintRequest]) (*connect.Response[v1.GetPostFingerprintResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.GetPostFingerprint is not implemented"))
 }

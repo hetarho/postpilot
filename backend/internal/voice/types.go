@@ -32,6 +32,10 @@ var (
 	// ErrNoPreviousAnalysis is 이전 분석으로 되돌리기 with nothing to return to (VOICE-30).
 	ErrNoPreviousAnalysis = errors.New("the voice has no previous analysis")
 	ErrInvalidLifecycle   = errors.New("invalid voice lifecycle transition")
+	// ErrPostNotFound and ErrPostForbidden are a post PostContents does not know and one that
+	// belongs to another account.
+	ErrPostNotFound  = errors.New("post not found")
+	ErrPostForbidden = errors.New("post belongs to another account")
 
 	ErrVoiceRequired = errors.New("a voice is required")
 	// ErrVoiceNotFound covers unknown AND foreign ids on purpose: a voice that belongs to

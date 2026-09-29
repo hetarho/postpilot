@@ -315,6 +315,10 @@ export {
   VoiceAnalysisSchema,
   VoiceFingerprintSchema,
   RestorePreviousVoiceAnalysisResponseSchema,
+  FingerprintItem as ProtoFingerprintItem,
+  FingerprintFacetUnit as ProtoFingerprintFacetUnit,
+  FingerprintItemComparisonSchema,
+  GetPostFingerprintResponseSchema,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetVoiceProfileResponse,
@@ -328,6 +332,9 @@ export type {
   VoiceExample as ProtoVoiceExample,
   VoiceFingerprint as ProtoVoiceFingerprint,
   VoiceNotice as ProtoVoiceNotice,
+  FingerprintItemComparison as ProtoFingerprintItemComparison,
+  FingerprintFacetValue as ProtoFingerprintFacetValue,
+  GetPostFingerprintResponse,
 } from './gen/postpilot/v1/voice_pb'
 export type {
   GetComparisonPairsResponse,

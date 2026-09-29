@@ -46,3 +46,30 @@ func TestEveryAIFieldMaps(t *testing.T) {
 		t.Fatalf("the domain maps %d of %d generated fields", len(seen), len(postpilotv1.VoiceAiField_name)-1)
 	}
 }
+
+// ARCH-3: every counted item and facet unit maps to its own generated value, and every generated
+// value but UNSPECIFIED is one the domain has.
+func TestEveryFingerprintItemAndUnitMaps(t *testing.T) {
+	items := map[postpilotv1.FingerprintItem]bool{}
+	for _, item := range voice.Items() {
+		mapped := toProtoItem(item)
+		if mapped == postpilotv1.FingerprintItem_FINGERPRINT_ITEM_UNSPECIFIED || items[mapped] {
+			t.Fatalf("%q maps to %v", item, mapped)
+		}
+		items[mapped] = true
+	}
+	if len(items) != len(postpilotv1.FingerprintItem_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated items", len(items), len(postpilotv1.FingerprintItem_name)-1)
+	}
+	units := map[postpilotv1.FingerprintFacetUnit]bool{}
+	for _, unit := range voice.FacetUnits() {
+		mapped := toProtoFacetUnit(unit)
+		if mapped == postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_UNSPECIFIED || units[mapped] {
+			t.Fatalf("%q maps to %v", unit, mapped)
+		}
+		units[mapped] = true
+	}
+	if len(units) != len(postpilotv1.FingerprintFacetUnit_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated units", len(units), len(postpilotv1.FingerprintFacetUnit_name)-1)
+	}
+}

@@ -17,8 +17,7 @@ const JobSubject = "voice"
 // VoiceDirectoryStore is the account's voices as a directory: minting, listing, naming,
 // defaulting, retiring and restoring one.
 type VoiceDirectoryStore interface {
-	// InsertVoice writes the directory row and the voice's empty profile row together, so a
-	// read never has to create a profile.
+	// InsertVoice writes the directory row; a voice has no analysis until it is made.
 	InsertVoice(ctx context.Context, v Voice) error
 	ListVoices(ctx context.Context, userID string) ([]Voice, error)
 	GetVoice(ctx context.Context, userID, voiceID string) (Voice, error)
@@ -109,6 +108,14 @@ type Storage interface {
 	AnalysisStore
 	SampleStore
 	PhotoUploadStore
+}
+
+// PostContents is how the voice context reads one of the caller's posts to count it (VOICE-62,
+// POST-102); the composition root adapts the post context, and this context never reads post
+// tables. A foreign post is ErrPostForbidden and an unknown one ErrPostNotFound; voiceID is ""
+// for a post with 말투 없음 and blocks is nil before its first write.
+type PostContents interface {
+	PostForFingerprint(ctx context.Context, userID, slug string) (voiceID string, revision int64, blocks []Block, err error)
 }
 
 // Models resolves a model the request names and performs calls through the provider-neutral

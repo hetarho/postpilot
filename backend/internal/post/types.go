@@ -397,7 +397,9 @@ func withoutName(names []string, name string) []string {
 // ContentSnapshot is one owned post's current content with what a reader that measures it needs
 // beside it, read from the post row alone.
 type ContentSnapshot struct {
-	Slug            string
+	Slug string
+	// VoiceID is "" for a post with 말투 없음.
+	VoiceID         string
 	ContentRevision int64
 	Content         *PostContent // nil before the first write
 	ContentLanguage *Language

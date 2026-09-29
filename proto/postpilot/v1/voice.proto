@@ -31,6 +31,9 @@ service VoiceService {
   // 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
   // and there is no redo (VOICE-30).
   rpc RestorePreviousVoiceAnalysis(RestorePreviousVoiceAnalysisRequest) returns (RestorePreviousVoiceAnalysisResponse) {}
+  // ②'s reading of a post against its voice (POST-102): counted from the post's blocks per
+  // request, never stored, with no model call (VOICE-62).
+  rpc GetPostFingerprint(GetPostFingerprintRequest) returns (GetPostFingerprintResponse) {}
 }
 
 // The sentence an item is shown with, and the 학습 글 it came from ("" for a measured text).
@@ -363,3 +366,66 @@ message AnalyzeVoiceResponse { string job_id = 1; }
 
 message RestorePreviousVoiceAnalysisRequest { string voice_id = 1; }
 message RestorePreviousVoiceAnalysisResponse { VoiceProfile profile = 1; }
+
+// The fingerprint comparison (VOICE-62), shared by ②, 검증 and 말투 반영 비교.
+enum FingerprintItem {
+  FINGERPRINT_ITEM_UNSPECIFIED = 0;
+  FINGERPRINT_ITEM_ENDINGS = 1;
+  FINGERPRINT_ITEM_MARKS = 2;
+  FINGERPRINT_ITEM_EMOJI = 3;
+  FINGERPRINT_ITEM_SHAPE = 4;
+  FINGERPRINT_ITEM_OPENINGS = 5;
+  FINGERPRINT_ITEM_ADVERBS = 6;
+  FINGERPRINT_ITEM_PERSON = 7;
+  FINGERPRINT_ITEM_HEADINGS = 8;
+}
+
+// How a facet's two values read: a 0…1 share, a rate per 100 sentences, characters, sentences,
+// or a list of terms.
+enum FingerprintFacetUnit {
+  FINGERPRINT_FACET_UNIT_UNSPECIFIED = 0;
+  FINGERPRINT_FACET_UNIT_SHARE = 1;
+  FINGERPRINT_FACET_UNIT_PER_HUNDRED = 2;
+  FINGERPRINT_FACET_UNIT_CHARS = 3;
+  FINGERPRINT_FACET_UNIT_SENTENCES = 4;
+  FINGERPRINT_FACET_UNIT_TEXT = 5;
+}
+
+message FingerprintTerms { repeated string terms = 1; }
+
+// One side's value: a number, or for a text facet its terms (possibly none).
+message FingerprintFacetValue {
+  oneof value {
+    double number = 1;
+    FingerprintTerms terms = 2;
+  }
+}
+
+message FingerprintFacet {
+  // The item's own facet key (`exclaim`, `해요`, an adverb itself); the widget words it.
+  string key = 1;
+  FingerprintFacetUnit unit = 2;
+  FingerprintFacetValue voice = 3;
+  FingerprintFacetValue text = 4;
+}
+
+// One counted item on the voice and on the text; an unknown item has a distance of 0.
+message FingerprintItemComparison {
+  FingerprintItem item = 1;
+  bool unknown = 2;
+  // 0…1, relative to the voice's own value.
+  double distance = 3;
+  // The key of the facet with the largest gap.
+  string headline = 4;
+  repeated FingerprintFacet facets = 5;
+}
+
+message GetPostFingerprintRequest { string post_slug = 1; }
+// Items come farthest from the voice first and unknown last. applicable is false, with no
+// items, for a post with 말투 없음, with no content, or whose voice is deleted or not made.
+message GetPostFingerprintResponse {
+  bool applicable = 1;
+  // The content revision that was counted.
+  int64 revision = 2;
+  repeated FingerprintItemComparison items = 3;
+}

@@ -87,3 +87,42 @@ func (a voiceObjects) List(ctx context.Context, prefix string) ([]voice.StoredOb
 	}
 	return out, nil
 }
+
+// voicePosts hands the voice context one owned post's blocks to count (POST-102). The post's
+// block types are translated here, so the voice context never reads post tables or types.
+type voicePosts struct{ service *post.Service }
+
+func (a voicePosts) PostForFingerprint(ctx context.Context, userID, slug string) (string, int64, []voice.Block, error) {
+	found, err := a.service.CurrentContent(ctx, userID, slug)
+	switch {
+	case errors.Is(err, post.ErrNotFound):
+		return "", 0, nil, voice.ErrPostNotFound
+	case errors.Is(err, post.ErrForbidden):
+		return "", 0, nil, voice.ErrPostForbidden
+	case err != nil:
+		return "", 0, nil, err
+	}
+	if found.Content == nil {
+		return found.VoiceID, found.ContentRevision, nil, nil
+	}
+	return found.VoiceID, found.ContentRevision, fingerprintBlocks(found.Content.Blocks), nil
+}
+
+// fingerprintBlocks keeps the prose blocks the fingerprint reads — TEXT, HEADING, LIST (its
+// items) and QUOTE — and skips IMAGE and VIDEO, captions included (VOICE-62).
+func fingerprintBlocks(blocks []post.Block) []voice.Block {
+	out := make([]voice.Block, 0, len(blocks))
+	for _, block := range blocks {
+		switch block.Type {
+		case post.BlockText:
+			out = append(out, voice.Block{Type: voice.BlockText, Content: block.Content})
+		case post.BlockHeading:
+			out = append(out, voice.Block{Type: voice.BlockHeading, Content: block.Content})
+		case post.BlockQuote:
+			out = append(out, voice.Block{Type: voice.BlockQuote, Content: block.Content})
+		case post.BlockList:
+			out = append(out, voice.Block{Type: voice.BlockList, Items: append([]string(nil), block.Items...)})
+		}
+	}
+	return out
+}

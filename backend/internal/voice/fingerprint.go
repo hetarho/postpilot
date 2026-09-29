@@ -935,10 +935,28 @@ func headingsOf(headings []line, ids []string, lines, listLines int, markers map
 
 // --- the comparison (VOICE-62) ---
 
-// Facet is one value of an item on both sides, numeric or a list of terms, in the item's own
-// unit. Wording belongs to the widget and the projection.
+// FacetUnit is how a facet's two values read: a 0…1 share, a rate per 100 sentences, characters,
+// sentences, or a list of terms.
+type FacetUnit string
+
+const (
+	UnitShare      FacetUnit = "share"
+	UnitPerHundred FacetUnit = "per_hundred"
+	UnitChars      FacetUnit = "chars"
+	UnitSentences  FacetUnit = "sentences"
+	UnitText       FacetUnit = "text"
+)
+
+// FacetUnits lists every unit.
+func FacetUnits() []FacetUnit {
+	return []FacetUnit{UnitShare, UnitPerHundred, UnitChars, UnitSentences, UnitText}
+}
+
+// Facet is one value of an item on both sides, numeric or (UnitText) a list of terms, in the
+// item's own unit. Wording belongs to the widget and the projection.
 type Facet struct {
 	Key                   string
+	Unit                  FacetUnit
 	Voice, Text           float64
 	VoiceTerms, TextTerms []string
 }
@@ -984,36 +1002,41 @@ func Compare(voice, text Fingerprint) []ItemComparison {
 }
 
 func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
-	num := func(key string, a, b float64) Facet { return Facet{Key: key, Voice: a, Text: b} }
+	share := func(key string, a, b float64) Facet { return Facet{Key: key, Unit: UnitShare, Voice: a, Text: b} }
+	rate := func(key string, a, b float64) Facet { return Facet{Key: key, Unit: UnitPerHundred, Voice: a, Text: b} }
+	terms := func(key string, a, b []string) Facet {
+		return Facet{Key: key, Unit: UnitText, VoiceTerms: a, TextTerms: b}
+	}
 	switch item {
 	case ItemEndings:
-		facets := []Facet{num("다", v.Endings.Da, t.Endings.Da), num("해요", v.Endings.Haeyo, t.Endings.Haeyo), num("습니다", v.Endings.Seumnida, t.Endings.Seumnida), num("기타", v.Endings.Other, t.Endings.Other)}
-		facets = append(facets, Facet{Key: "suffixes", VoiceTerms: suffixTexts(v.Endings.Suffixes), TextTerms: suffixTexts(t.Endings.Suffixes)})
+		facets := []Facet{share("다", v.Endings.Da, t.Endings.Da), share("해요", v.Endings.Haeyo, t.Endings.Haeyo), share("습니다", v.Endings.Seumnida, t.Endings.Seumnida), share("기타", v.Endings.Other, t.Endings.Other)}
+		facets = append(facets, terms("suffixes", suffixTexts(v.Endings.Suffixes), suffixTexts(t.Endings.Suffixes)))
 		return facets, halfL1(facets[:4])
 	case ItemMarks:
 		facets := []Facet{
-			num(markExclaim, v.Marks.Exclaim, t.Marks.Exclaim), num(markQuestion, v.Marks.Question, t.Marks.Question),
-			num(markTilde, v.Marks.Tilde, t.Marks.Tilde), num(markEllipsis, v.Marks.Ellipsis, t.Marks.Ellipsis),
-			num(markPeriod, v.Marks.Period, t.Marks.Period), num(markNone, v.Marks.None, t.Marks.None),
-			num("repeat", v.Marks.Repeat, t.Marks.Repeat),
+			share(markExclaim, v.Marks.Exclaim, t.Marks.Exclaim), share(markQuestion, v.Marks.Question, t.Marks.Question),
+			share(markTilde, v.Marks.Tilde, t.Marks.Tilde), share(markEllipsis, v.Marks.Ellipsis, t.Marks.Ellipsis),
+			share(markPeriod, v.Marks.Period, t.Marks.Period), share(markNone, v.Marks.None, t.Marks.None),
+			share("repeat", v.Marks.Repeat, t.Marks.Repeat),
 		}
 		return facets, halfL1(facets[:6])
 	case ItemEmoji:
-		facets := []Facet{num("emoji", v.Emoji.Emoji, t.Emoji.Emoji), num("ㅎㅎ", v.Emoji.Hh, t.Emoji.Hh), num("ㅋㅋ", v.Emoji.Kk, t.Emoji.Kk), num("ㅠㅠ", v.Emoji.Tears, t.Emoji.Tears)}
+		facets := []Facet{rate("emoji", v.Emoji.Emoji, t.Emoji.Emoji), rate("ㅎㅎ", v.Emoji.Hh, t.Emoji.Hh), rate("ㅋㅋ", v.Emoji.Kk, t.Emoji.Kk), rate("ㅠㅠ", v.Emoji.Tears, t.Emoji.Tears)}
 		distance := 0.0
 		for _, facet := range facets {
 			distance = math.Max(distance, math.Abs(facet.Voice-facet.Text)/math.Max(math.Max(facet.Voice, facet.Text), 1))
 		}
 		return facets, distance
 	case ItemShape:
-		facets := []Facet{num("average", v.Shape.AverageChars, t.Shape.AverageChars), num("paragraph", v.Shape.ParagraphAverage, t.Shape.ParagraphAverage), num("line_break", v.Shape.LineBreakShare, t.Shape.LineBreakShare)}
+		facets := []Facet{
+			{Key: "average", Unit: UnitChars, Voice: v.Shape.AverageChars, Text: t.Shape.AverageChars},
+			{Key: "paragraph", Unit: UnitSentences, Voice: v.Shape.ParagraphAverage, Text: t.Shape.ParagraphAverage},
+			share("line_break", v.Shape.LineBreakShare, t.Shape.LineBreakShare),
+		}
 		length := math.Min(1, math.Abs(v.Shape.AverageChars-t.Shape.AverageChars)/math.Max(v.Shape.AverageChars, 1))
 		return facets, (length + math.Abs(v.Shape.LineBreakShare-t.Shape.LineBreakShare)) / 2
 	case ItemOpenings:
-		facets := []Facet{
-			{Key: "openings", VoiceTerms: v.OpenClose.Openings, TextTerms: t.OpenClose.Openings},
-			{Key: "closings", VoiceTerms: v.OpenClose.Closings, TextTerms: t.OpenClose.Closings},
-		}
+		facets := []Facet{terms("openings", v.OpenClose.Openings, t.OpenClose.Openings), terms("closings", v.OpenClose.Closings, t.OpenClose.Closings)}
 		distance := 0.0
 		if !sharesLine(v.OpenClose.Openings, t.OpenClose.Openings) {
 			distance += 0.5
@@ -1026,9 +1049,9 @@ func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
 		facets := make([]Facet, 0, len(v.Adverbs.Words))
 		missing := 0
 		for _, word := range v.Adverbs.Words {
-			rate := t.Adverbs.Rates[word.Word]
-			facets = append(facets, num(word.Word, word.PerHundred, rate))
-			if rate == 0 {
+			used := t.Adverbs.Rates[word.Word]
+			facets = append(facets, rate(word.Word, word.PerHundred, used))
+			if used == 0 {
 				missing++
 			}
 		}
@@ -1037,8 +1060,8 @@ func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
 		}
 		return facets, float64(missing) / float64(len(v.Adverbs.Words))
 	case ItemPerson:
-		facets := []Facet{num(PersonJeo, v.Person.Jeo, t.Person.Jeo), num(PersonUri, v.Person.Uri, t.Person.Uri), num(PersonNa, v.Person.Na, t.Person.Na)}
-		facets = append(facets, Facet{Key: "dominant", VoiceTerms: nonEmpty(v.Person.Dominant), TextTerms: nonEmpty(t.Person.Dominant)})
+		facets := []Facet{rate(PersonJeo, v.Person.Jeo, t.Person.Jeo), rate(PersonUri, v.Person.Uri, t.Person.Uri), rate(PersonNa, v.Person.Na, t.Person.Na)}
+		facets = append(facets, terms("dominant", nonEmpty(v.Person.Dominant), nonEmpty(t.Person.Dominant)))
 		if v.Person.Dominant != t.Person.Dominant {
 			return facets, 1
 		}
@@ -1049,9 +1072,9 @@ func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
 		return facets, math.Abs(a-b) / math.Max(math.Max(a, b), 1e-9)
 	case ItemHeadings:
 		facets := []Facet{
-			num("emoji", v.Headings.EmojiShare, t.Headings.EmojiShare), num("question", v.Headings.QuestionShare, t.Headings.QuestionShare),
-			num("numbered", v.Headings.NumberedShare, t.Headings.NumberedShare), num("list", v.Headings.ListShare, t.Headings.ListShare),
-			{Key: "marker", VoiceTerms: nonEmpty(v.Headings.Marker), TextTerms: nonEmpty(t.Headings.Marker)},
+			share("emoji", v.Headings.EmojiShare, t.Headings.EmojiShare), share("question", v.Headings.QuestionShare, t.Headings.QuestionShare),
+			share("numbered", v.Headings.NumberedShare, t.Headings.NumberedShare), share("list", v.Headings.ListShare, t.Headings.ListShare),
+			terms("marker", nonEmpty(v.Headings.Marker), nonEmpty(t.Headings.Marker)),
 		}
 		return facets, (math.Abs(v.Headings.EmojiShare-t.Headings.EmojiShare) + math.Abs(v.Headings.QuestionShare-t.Headings.QuestionShare)) / 2
 	}
@@ -1072,7 +1095,7 @@ func headline(facets []Facet) string {
 	best, bestGap := "", -1.0
 	for _, facet := range facets {
 		gap := 0.0
-		if facet.VoiceTerms != nil || facet.TextTerms != nil {
+		if facet.Unit == UnitText {
 			if len(facet.VoiceTerms) > 0 {
 				missing := 0
 				for _, term := range facet.VoiceTerms {

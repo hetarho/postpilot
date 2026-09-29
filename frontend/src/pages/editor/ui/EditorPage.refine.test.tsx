@@ -1,8 +1,9 @@
-// ② 글 다듬기: resumed revisions, 확정 and the content save before it, and the measurement row.
+// ② 글 다듬기: resumed revisions, 확정 and the content save before it, the measurement row and the
+// fingerprint row.
 import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Stage } from '@/shared/api'
+import { ProtoFingerprintFacetUnit, ProtoFingerprintItem, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { USER, finalize, openStep, resetEditorTest } from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
@@ -429,6 +430,105 @@ describe('the post measurement row', () => {
     expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
     expect(measurementReads(calls)).toBe(0)
+  })
+})
+
+// POST-102: under the measurements, ② shows this post's fingerprint beside its voice's, read at the
+// revision on screen; a post with 말투 없음 shows none and asks for none.
+describe('the fingerprint row', () => {
+  const HEADING = '말투 지문'
+  const POST = {
+    slug: '20260929-fingerprint',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+  }
+  const share = (value: number) => ({ value: { case: 'number' as const, value } })
+  const FINGERPRINT = {
+    [POST.slug]: {
+      applicable: true,
+      revision: 1n,
+      items: [
+        {
+          item: ProtoFingerprintItem.ENDINGS,
+          distance: 0.9,
+          headline: '해요',
+          facets: [
+            {
+              key: '다',
+              unit: ProtoFingerprintFacetUnit.SHARE,
+              voice: share(0.05),
+              text: share(0.95),
+            },
+            {
+              key: '해요',
+              unit: ProtoFingerprintFacetUnit.SHARE,
+              voice: share(0.92),
+              text: share(0),
+            },
+          ],
+        },
+        { item: ProtoFingerprintItem.EMOJI, unknown: true },
+      ],
+    },
+  }
+
+  it('sits under the measurements for a post with a made voice', async () => {
+    renderAppAt(`/posts/${POST.slug}`, {
+      user: USER,
+      posts: { posts: [POST] },
+      voice: { postFingerprints: FINGERPRINT },
+    })
+
+    const region = await screen.findByRole('region', { name: HEADING })
+    expect(screen.getByRole('region', { name: '이 글의 측정값' }).nextElementSibling).toBe(region)
+    expect(region.nextElementSibling).toBe(screen.getByRole('article', { name: '생성된 글' }))
+    const rows = within(region).getAllByRole('listitem')
+    expect(rows[0]).toHaveTextContent("문장 끝'~해요' 내 말투 92% · 이 글 0%")
+    expect(rows[1]).toHaveTextContent('이모지와 자모알 수 없음')
+    // The post's own reading: nothing about its template.
+    expect(within(region).queryByText(/템플릿/)).toBeNull()
+  })
+
+  it('is absent for a post with 말투 없음', async () => {
+    const reads: string[] = []
+    renderAppAt(`/posts/${POST.slug}`, {
+      user: USER,
+      posts: { posts: [{ ...POST, voice: null }] },
+      voice: { postFingerprints: FINGERPRINT, postFingerprintReads: reads },
+    })
+
+    await screen.findByRole('region', { name: '이 글의 측정값' })
+    expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
+    expect(reads).toEqual([])
+  })
+
+  it('reads again at the revision a save produces', async () => {
+    const calls: string[] = []
+    const reads: string[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${POST.slug}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [POST] },
+      voice: { postFingerprints: FINGERPRINT, postFingerprintReads: reads },
+    })
+    const region = await screen.findByRole('region', { name: HEADING })
+    expect(reads).toHaveLength(1)
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '지문을 다시 세는 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+    await waitFor(() => expect(reads).toHaveLength(2))
+    // The previous reading stays while the next one is counted.
+    expect(region).toBeInTheDocument()
   })
 })
 

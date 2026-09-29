@@ -1,5 +1,12 @@
 export * from './config'
-export type { FingerprintItem, FingerprintRow } from './model/fingerprint'
+export type {
+  FingerprintComparisonItem,
+  FingerprintFacet,
+  FingerprintFacetUnit,
+  FingerprintItem,
+  FingerprintRow,
+  PostFingerprint,
+} from './model/fingerprint'
 export { FINGERPRINT_ITEMS, fingerprintRows, fingerprintSentence } from './model/fingerprint'
 export type {
   Voice,
@@ -34,6 +41,8 @@ export {
 } from './model/types'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'
 export { useVoiceProfile } from './api/useVoiceProfile'
+export { usePostFingerprint } from './api/usePostFingerprint'
+export { toComparisons } from './api/fingerprint-comparison'
 export { useAddVoiceSample } from './api/useAddVoiceSample'
 export type { CreateVoiceInput } from './api/voice-mutations'
 export {
@@ -62,6 +71,7 @@ export {
   toFingerprint,
   toVoice,
   toVoiceRef,
+  postFingerprintQueryKey,
   voiceAnalysisQueryKey,
   voicesQueryKey,
   useVoiceAnalysisQueryKey,
