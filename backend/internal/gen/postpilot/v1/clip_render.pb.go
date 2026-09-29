@@ -26,10 +26,14 @@ type PrepareClipPreviewRequest struct {
 	ProjectId        string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	ExpectedRevision int32                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	// SHA-256 of the deterministic protobuf encoding of plan.
-	DraftHash     string        `protobuf:"bytes,3,opt,name=draft_hash,json=draftHash,proto3" json:"draft_hash,omitempty"`
-	Plan          *ClipEditPlan `protobuf:"bytes,4,opt,name=plan,proto3" json:"plan,omitempty"`
-	ElementIds    []string      `protobuf:"bytes,5,rep,name=element_ids,json=elementIds,proto3" json:"element_ids,omitempty"`
-	AssetOffset   int32         `protobuf:"varint,6,opt,name=asset_offset,json=assetOffset,proto3" json:"asset_offset,omitempty"`
+	DraftHash   string        `protobuf:"bytes,3,opt,name=draft_hash,json=draftHash,proto3" json:"draft_hash,omitempty"`
+	Plan        *ClipEditPlan `protobuf:"bytes,4,opt,name=plan,proto3" json:"plan,omitempty"`
+	ElementIds  []string      `protobuf:"bytes,5,rep,name=element_ids,json=elementIds,proto3" json:"element_ids,omitempty"`
+	AssetOffset int32         `protobuf:"varint,6,opt,name=asset_offset,json=assetOffset,proto3" json:"asset_offset,omitempty"`
+	// A browser render's assets (CLIP-192): drawn with the grounds the server
+	// sampled for that render, which must be of this project at this revision.
+	// Empty is the editing preview, which reads no footage.
+	RenderId      string `protobuf:"bytes,7,opt,name=render_id,json=renderId,proto3" json:"render_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +108,13 @@ func (x *PrepareClipPreviewRequest) GetAssetOffset() int32 {
 		return x.AssetOffset
 	}
 	return 0
+}
+
+func (x *PrepareClipPreviewRequest) GetRenderId() string {
+	if x != nil {
+		return x.RenderId
+	}
+	return ""
 }
 
 type PrepareClipPreviewResponse struct {
@@ -206,7 +217,9 @@ type PrepareClipCaptionFramesRequest struct {
 	// raster is what the draft preview already serves.
 	InstanceId string `protobuf:"bytes,5,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
 	// The first frame of this run, counted from the caption's own first frame.
-	FrameOffset   int32 `protobuf:"varint,6,opt,name=frame_offset,json=frameOffset,proto3" json:"frame_offset,omitempty"`
+	FrameOffset int32 `protobuf:"varint,6,opt,name=frame_offset,json=frameOffset,proto3" json:"frame_offset,omitempty"`
+	// As on PrepareClipPreviewRequest: the browser render these frames are for.
+	RenderId      string `protobuf:"bytes,7,opt,name=render_id,json=renderId,proto3" json:"render_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -281,6 +294,13 @@ func (x *PrepareClipCaptionFramesRequest) GetFrameOffset() int32 {
 		return x.FrameOffset
 	}
 	return 0
+}
+
+func (x *PrepareClipCaptionFramesRequest) GetRenderId() string {
+	if x != nil {
+		return x.RenderId
+	}
+	return ""
 }
 
 type PrepareClipCaptionFramesResponse struct {
@@ -932,7 +952,7 @@ var File_postpilot_v1_clip_render_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_render_proto_rawDesc = "" +
 	"\n" +
-	"\x1epostpilot/v1/clip_render.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\"\xfa\x01\n" +
+	"\x1epostpilot/v1/clip_render.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\"\x97\x02\n" +
 	"\x19PrepareClipPreviewRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
@@ -942,7 +962,8 @@ const file_postpilot_v1_clip_render_proto_rawDesc = "" +
 	"\x04plan\x18\x04 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\x12\x1f\n" +
 	"\velement_ids\x18\x05 \x03(\tR\n" +
 	"elementIds\x12!\n" +
-	"\fasset_offset\x18\x06 \x01(\x05R\vassetOffset\"\x95\x02\n" +
+	"\fasset_offset\x18\x06 \x01(\x05R\vassetOffset\x12\x1b\n" +
+	"\trender_id\x18\a \x01(\tR\brenderId\"\x95\x02\n" +
 	"\x1aPrepareClipPreviewResponse\x12\x1d\n" +
 	"\n" +
 	"draft_hash\x18\x01 \x01(\tR\tdraftHash\x12!\n" +
@@ -951,7 +972,7 @@ const file_postpilot_v1_clip_render_proto_rawDesc = "" +
 	"\x06assets\x18\x04 \x03(\v2\x1e.postpilot.v1.ClipPreviewAssetR\x06assets\x12\x1f\n" +
 	"\vnext_offset\x18\x05 \x01(\x05R\n" +
 	"nextOffset\x127\n" +
-	"\x06parity\x18\x06 \x03(\x0e2\x1f.postpilot.v1.ClipPreviewParityR\x06parity\"\x80\x02\n" +
+	"\x06parity\x18\x06 \x03(\x0e2\x1f.postpilot.v1.ClipPreviewParityR\x06parity\"\x9d\x02\n" +
 	"\x1fPrepareClipCaptionFramesRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
@@ -961,7 +982,8 @@ const file_postpilot_v1_clip_render_proto_rawDesc = "" +
 	"\x04plan\x18\x04 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\x12\x1f\n" +
 	"\vinstance_id\x18\x05 \x01(\tR\n" +
 	"instanceId\x12!\n" +
-	"\fframe_offset\x18\x06 \x01(\x05R\vframeOffset\"\xc8\x02\n" +
+	"\fframe_offset\x18\x06 \x01(\x05R\vframeOffset\x12\x1b\n" +
+	"\trender_id\x18\a \x01(\tR\brenderId\"\xc8\x02\n" +
 	" PrepareClipCaptionFramesResponse\x12\x1d\n" +
 	"\n" +
 	"draft_hash\x18\x01 \x01(\tR\tdraftHash\x12\x14\n" +

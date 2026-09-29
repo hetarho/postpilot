@@ -49,7 +49,7 @@ func ValidateMediaTask(op MediaOperation, task MediaTask, cfg MediaConfig) error
 		if task.Plan != "" {
 			return ErrInvalid
 		}
-	case MediaRender:
+	case MediaRender, MediaSample:
 		plan, err := DecodeEditPlan(task.Plan)
 		if err != nil {
 			return err
@@ -168,6 +168,20 @@ func ValidateMediaResult(op MediaOperation, task MediaTask, result MediaResult, 
 	}
 	if _, err := ValidateProbedSources(cfg, verified); err != nil {
 		return err
+	}
+	if op == MediaSample {
+		if len(result.Outputs) != 0 || result.Plan != "" {
+			return ErrInvalid
+		}
+		for i, source := range task.Sources {
+			if !SameMediaOriginal(source.Info, result.Sources[i].Info) {
+				return ErrInvalidMedia
+			}
+		}
+		return ValidateSampledGrounds(result.Grounds, DefaultCompositionLimits().Cues)
+	}
+	if len(result.Grounds) != 0 {
+		return ErrInvalid
 	}
 	if op == MediaRender {
 		if len(result.Outputs) != 1 {

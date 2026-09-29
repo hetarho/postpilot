@@ -15,8 +15,8 @@ import (
 // is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 	}
 }
@@ -28,15 +28,16 @@ func approvedCeilingKinds() []string {
 	return []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline}
 }
 
-// clipCancellation is the rule the queue asks before it accepts a stop: a render may
-// always be stopped because it spends nothing, and charged clip work only under the
-// cancellation policy this build honours and the owner approved.
+// clipCancellation is the rule the queue asks before it accepts a stop: a render and a
+// browser render's sampling may always be stopped because they spend nothing, and
+// charged clip work only under the cancellation policy this build honours and the
+// owner approved.
 type clipCancellation struct{}
 
 func (clipCancellation) Kind(kind string) bool { return clip.IsJobKind(kind) }
 
 func (clipCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
-	if kind == clip.JobKindRender {
+	if kind == clip.JobKindRender || kind == clip.JobKindSampleBrowserRender {
 		return true
 	}
 	return clip.ChargedJobKind(kind) && cancellationPolicyVersion == clip.CancellationPolicyVersion

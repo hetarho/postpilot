@@ -57,15 +57,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T463 | Sample a browser render's grounds on a media worker and serve its assets with them | CLIP ARCH | T462 | todo |
 | T464 | A browser render waits for its sampling job and draws from render-bound assets | CLIP ARCH | T463 | todo |
 
 ## next
-- next: implement-task T463 (then T464: a browser render draws the server-sampled scrim under CLIP-192)
+- next: implement-task T464 (the page waits for the browser render's sampling job and draws from render-bound assets, so its delivered clip carries the server-sampled scrim under CLIP-192)
 - owner review of /IMPLEMENTATION-DECISIONS.md (the ambiguous calls of T414–T448 and T451–T456), then review-code the clip wave
 - create-task VOICE GEN POST GUIDE QUOTA MODEL LANG TMPL ARCH (VOICE r5: the voice as the owner's fingerprint); after the new voice ships, the one-time prod hand edit that keeps only `맛집 리뷰 블로거 학습` (its pasted post as the one 학습 글); ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); the /about header overflow at 320px/200% text still wants a task (MKT THEME); BILL carries the Toss placeholder and USD pricing before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260929 T463 done: a `sample_browser_render` job runs one `sample` media stage on a worker and keeps the grounds on the browser render (migration 0105); `render_id` previews and caption frames draw on them; a dev-stack sampling of the T456 clip took 6 s
+- 260929 T463 claimed (rr)
 - 260929 T462 done: one originals-based ground sampler (the composition's frame arithmetic, each cut's own chain, xfade's dissolve and fade through black) serves the server render and `SampleGrounds`; a server render of the T456 clip is byte-identical to the one before; `clip.SampledGround` round-trips
 - 260929 update-ssot VOICE r5 GEN r19 POST r25 GUIDE r12 QUOTA r24 MODEL r20 LANG r7 TMPL r17 ARCH r14: the voice is the owner's fingerprint — 학습 글 only, eight counted items plus a short AI part, a readiness meter, 검증 and 말투 반영 비교, optional voice and 기본, Korean only, learning, rules, versions and the analyze comparison removed; AUTH needs no change (VOICE-4); THEME-23 lost a stale example (wording); no active task affected — T462–T464 cite ARCH-45…51, not the changed ARCH-34
 - 260929 update-ssot VOICE GEN POST GUIDE AUTH QUOTA MODEL LANG start (from ideation voice-tidy: the voice as the owner's fingerprint)

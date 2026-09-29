@@ -107,53 +107,67 @@ type renderPayload struct {
 	Batch          clip.SourceBatch
 }
 
+// StartRender starts a render of either kind and returns the server render's
+// job, or the browser render's identity; StartBrowserRender also returns the
+// job a browser render waits on.
 func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind) (string, error) {
+	started, err := s.startRender(ctx, user, id, batch, revision, kind)
+	if kind == clip.RenderBrowser {
+		return started.renderID, err
+	}
+	return started.jobID, err
+}
+
+type renderStarted struct{ renderID, jobID string }
+
+func (s *GenerationService) startRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind) (renderStarted, error) {
+	none := renderStarted{}
 	switch kind {
 	case clip.RenderServer, clip.RenderBrowser:
 	default:
-		return "", clip.ErrInvalid
+		return none, clip.ErrInvalid
 	}
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	if p.Finalized != nil {
-		return "", clip.ErrFinalized
+		return none, clip.ErrFinalized
 	}
 	if err := s.checkComposition(p.Composition); err != nil {
-		return "", err
+		return none, err
 	}
 	if revision <= 0 || p.EditPlanRevision != revision {
-		return "", clip.ErrPlanConflict
+		return none, clip.ErrPlanConflict
 	}
 	active, err := s.jobs.Active(ctx, user, id)
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	if active != nil {
-		return "", clip.ErrBusy
+		return none, clip.ErrBusy
 	}
 	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	plan, err = clip.ApplyCorrection(s.cfg.Render, p, clip.CorrectionFromPlan(plan))
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	if err := clip.ValidateCompositionEvidence(plan); err != nil {
-		return "", err
+		return none, err
 	}
 	sources, err := clip.RetainedSources(p)
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	b, err := s.sources.AvailableBatch(ctx, user, batch, plan)
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	if b.ProjectID != id || b.State != "ready" || !s.now().Before(b.ExpiresAt) {
-		return "", clip.ErrSourceState
+		return none, clip.ErrSourceState
 	}
 	// The owner's per-source sound choice is frozen HERE, from the leases that
 	// own it, so the job payload carries what the owner has chosen right now
@@ -161,11 +175,11 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	plan.SourceAudio = freezeRenderSourceAudio(b, plan)
 	for _, v := range b.Sources {
 		if v.State != "ready" || v.ActualBytes != v.Bytes {
-			return "", clip.ErrSourceState
+			return none, clip.ErrSourceState
 		}
 	}
 	if err = clip.MatchRenderBatch(plan, b); err != nil {
-		return "", err
+		return none, err
 	}
 	// Resolve the same bundled-font layout and checks before either executor
 	// starts. Pixel-dependent contrast and output checks stay with the producer.
@@ -179,42 +193,56 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 		refs = append(refs, source.RenderSource)
 	}
 	if err := clip.RefuseUnrenderableRates(plan, refs); err != nil {
-		return "", err
+		return none, err
 	}
 	if validator, ok := s.renderer.(clip.RenderPlanValidator); ok {
 		plan, err = validator.ValidateRenderPlan(ctx, plan, refs)
 	} else if plan.Portable != nil {
 		layout, ok := s.renderer.(clip.CompositionLayouter)
 		if !ok {
-			return "", clip.ErrCompositionUnavailable
+			return none, clip.ErrCompositionUnavailable
 		}
 		plan, _, err = layout.LayoutComposition(ctx, plan, refs)
 	} else {
 		layout, ok := s.renderer.(clip.PlanLayouter)
 		if !ok {
-			return "", clip.ErrCompositionUnavailable
+			return none, clip.ErrCompositionUnavailable
 		}
 		plan, _, err = layout.Layout(ctx, plan, refs)
 	}
 	if err != nil {
-		return "", err
+		return none, err
 	}
 	if kind == clip.RenderBrowser {
-		return s.beginBrowserRender(ctx, p, plan, refs)
+		render, err := s.beginBrowserRender(ctx, p, plan, refs)
+		if err != nil {
+			return none, err
+		}
+		sampling, err := s.startBrowserSampling(ctx, p, plan, sources, b, render)
+		if err != nil {
+			// A render its grounds can never reach is withdrawn rather than left
+			// for a page to wait on.
+			if store, ok := s.store.(clip.BrowserUploadStore); ok {
+				_, _ = store.CancelBrowserRender(context.WithoutCancel(ctx), user, render, s.now())
+			}
+			return none, err
+		}
+		return renderStarted{renderID: render, jobID: sampling}, nil
 	}
 	frozen := renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b}
 	if s.remoteMedia != nil {
 		task, err := freezeRenderTask(plan, sources, b, s.cfg.Media)
 		if err != nil {
-			return "", err
+			return none, err
 		}
 		frozen.Version, frozen.Execution = 2, &task
 	}
 	raw, err := json.Marshal(frozen)
 	if err != nil {
-		return "", err
+		return none, err
 	}
-	return s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Payload: raw, RenderOnly: true}, batch, revision)
+	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Payload: raw, RenderOnly: true}, batch, revision)
+	return renderStarted{jobID: job}, err
 }
 
 func (s *GenerationService) RunRender(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {

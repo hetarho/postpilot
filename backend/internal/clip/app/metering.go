@@ -21,7 +21,7 @@ func AdmitExecution(ctx context.Context, ref llm.ModelRef, req llm.Request) (con
 	if !hasWork {
 		return ctx, nil
 	}
-	if work.Kind == clip.JobKindRender {
+	if work.Kind == clip.JobKindRender || work.Kind == clip.JobKindSampleBrowserRender {
 		return ctx, clip.ErrCreditAllowance
 	}
 	if !clip.ChargedJobKind(work.Kind) {

@@ -40,7 +40,7 @@ func NewMediaDispatch(writer *sql.DB, bind Binder, limits clip.MediaStageLimits,
 func MediaWaitKey(stage string) string { return "clip-media:" + stage }
 
 func mediaResumePolicy(op clip.MediaOperation) job.ResumePolicy {
-	if op == clip.MediaRender {
+	if op == clip.MediaRender || op == clip.MediaSample {
 		return job.ReplaySafe
 	}
 	return job.FailOnInterrupt
@@ -104,7 +104,7 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 		if parent.UserID != in.UserID || parent.Subject(clip.JobSubject) != in.ProjectID || parent.Status != job.StatusRunning || !parent.DispatchReady || !clip.IsJobKind(parent.Kind) {
 			return clip.ErrMediaLeaseLost
 		}
-		if in.Operation == clip.MediaRender && parent.Kind != clip.JobKindRender || in.Operation == clip.MediaPrepare && !clip.PreparesMedia(parent.Kind) {
+		if in.Operation == clip.MediaRender && parent.Kind != clip.JobKindRender || in.Operation == clip.MediaSample && parent.Kind != clip.JobKindSampleBrowserRender || in.Operation == clip.MediaPrepare && !clip.PreparesMedia(parent.Kind) {
 			return clip.ErrInvalid
 		}
 		project, err := p.Clips.GetProject(ctx, in.UserID, in.ProjectID)

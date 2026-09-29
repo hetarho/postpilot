@@ -224,12 +224,18 @@ func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.S
 	if h.generation == nil {
 		return nil, toConnectError(errors.New("clip rendering unavailable"))
 	}
+	if kind == clip.RenderBrowser {
+		// The job the render's grounds are sampled by, which the page waits on
+		// before it draws (CLIP-192); none when no media worker samples here.
+		render, sampling, err := h.generation.StartBrowserRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision))
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		return connect.NewResponse(&v1.StartClipRenderResponse{RenderId: render, JobId: sampling}), nil
+	}
 	id, err := h.generation.StartRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision), kind)
 	if err != nil {
 		return nil, toConnectError(err)
-	}
-	if kind == clip.RenderBrowser {
-		return connect.NewResponse(&v1.StartClipRenderResponse{RenderId: id}), nil
 	}
 	return connect.NewResponse(&v1.StartClipRenderResponse{JobId: id}), nil
 }

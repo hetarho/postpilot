@@ -458,6 +458,29 @@ choice would be expensive to undo are listed at the end.
   confirmed) and `features/render-clip-browser/api` (the flush and revision boundaries). No
   parallel harness was added.
 
+## T462–T463 — the browser render's scrim from a server-side sampling (CLIP-192)
+
+- **One sampler for both kinds, reading the originals.** The server render used to measure the
+  composed intermediate; it now rebuilds each measured output frame from the originals through
+  the cut's own chain, and a browser render's grounds come from the same function on a media
+  worker. On the T456 clip the server render with the new sampler is byte-identical to the one
+  before. *If you would rather keep the old reading for server renders:* the two kinds could then
+  disagree near the 0.6 luminance threshold.
+- **Fade through black is modelled, not re-encoded.** A dissolve is exact; a fade through black
+  is blended pixel by pixel the way FFmpeg's xfade does it (Y=0 black), within a few levels of
+  FFmpeg's own output. Generated plans only use the dissolve.
+- **The browser render waits on a `sample_browser_render` job.** It is a clip job (cancellable,
+  free, one per project at a time, sources held and released like a render's), with one `sample`
+  media stage that a worker claims between preparation and server renders. Cancelling the
+  browser render stops the job; as with a server render, the worker is told at its next renewal
+  and the media reconciler retires the stage.
+- **Without a media worker nothing is sampled.** The in-process mode only the tests run records
+  an empty sampling, so a browser render there is drawn on no ground. Production and dev always
+  have a worker.
+- **Contrast notices ride on each asset only.** A render-bound asset says whether a line still
+  falls short on its ground (`contrast_notice`); nothing persists it, which is what a server
+  render does with its own notices today.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

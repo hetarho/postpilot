@@ -7,13 +7,31 @@ import (
 )
 
 func (s *GenerationService) PreparePreview(ctx context.Context, user, id string, revision int, hash string, draft clip.CorrectionPlan, ids []string, offset int) (clip.PreparedPreview, error) {
+	return s.preparePreview(ctx, user, "", id, revision, hash, draft, ids, offset)
+}
+
+// PrepareRenderPreview draws a browser render's assets with the grounds its
+// sampling job kept (CLIP-192), admitted as a draft preview is plus the render.
+func (s *GenerationService) PrepareRenderPreview(ctx context.Context, user, render, id string, revision int, hash string, draft clip.CorrectionPlan, ids []string, offset int) (clip.PreparedPreview, error) {
+	if render == "" {
+		return clip.PreparedPreview{}, clip.ErrNotFound
+	}
+	return s.preparePreview(ctx, user, render, id, revision, hash, draft, ids, offset)
+}
+
+func (s *GenerationService) preparePreview(ctx context.Context, user, render, id string, revision int, hash string, draft clip.CorrectionPlan, ids []string, offset int) (clip.PreparedPreview, error) {
 	p, err := s.admitPreview(ctx, user, id, revision)
+	if err != nil {
+		return clip.PreparedPreview{}, err
+	}
+	grounds, err := s.renderGrounds(ctx, user, render, id, revision)
 	if err != nil {
 		return clip.PreparedPreview{}, err
 	}
 	cfg := s.cfg.Preview
 	renderer, ok := s.renderer.(clip.PreviewPreparer)
-	if !ok || cfg.Timeout <= 0 || cfg.MaxAssets <= 0 {
+	grounded, groundsDrawn := s.renderer.(clip.GroundedPreviewPreparer)
+	if !ok || render != "" && !groundsDrawn || cfg.Timeout <= 0 || cfg.MaxAssets <= 0 {
 		return clip.PreparedPreview{}, clip.ErrPreviewUnavailable
 	}
 	if offset < 0 || len(ids) > cfg.MaxAssets {
@@ -31,7 +49,12 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	if err != nil {
 		return clip.PreparedPreview{}, err
 	}
-	out, err := renderer.PreparePreview(ctx, next, refs, ids, offset, cfg)
+	var out clip.PreparedPreview
+	if render != "" {
+		out, err = grounded.PrepareGroundedPreview(ctx, next, refs, grounds, ids, offset, cfg)
+	} else {
+		out, err = renderer.PreparePreview(ctx, next, refs, ids, offset, cfg)
+	}
 	if err != nil {
 		return clip.PreparedPreview{}, err
 	}
@@ -40,6 +63,35 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	}
 	out.DraftHash = hash
 	return out, nil
+}
+
+// renderGrounds is what a browser render's assets are drawn on: the grounds its
+// own sampling job kept, for the owner's live render of this project at this
+// revision. No render asks for none, which is the editing preview's no ground.
+func (s *GenerationService) renderGrounds(ctx context.Context, user, render, id string, revision int) ([]clip.SampledGround, error) {
+	if render == "" {
+		return nil, nil
+	}
+	store, ok := s.store.(clip.BrowserRenderStore)
+	if !ok {
+		return nil, clip.ErrRenderUnavailable
+	}
+	r, err := store.GetBrowserRender(ctx, user, render)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case r.ProjectID != id || r.CancelledAt != nil:
+		return nil, clip.ErrNotFound
+	case r.Revision != revision:
+		return nil, clip.ErrPlanConflict
+	case r.SampledAt == nil:
+		return nil, clip.ErrRenderNotSampled
+	}
+	if r.Grounds == nil {
+		return []clip.SampledGround{}, nil
+	}
+	return r.Grounds, nil
 }
 
 // admitPreview is what a read of a draft is allowed against: the owner's own
@@ -91,13 +143,31 @@ func (s *GenerationService) correctedPlan(p clip.Project, draft clip.CorrectionP
 // frames to a browser render (CLIP-159). It is admitted exactly as a draft
 // preview is, spends no credit and changes nothing.
 func (s *GenerationService) PrepareCaptionFrames(ctx context.Context, user, id string, revision int, hash string, draft clip.CorrectionPlan, instanceID string, offset int) (clip.CaptionFrames, error) {
+	return s.prepareCaptionFrames(ctx, user, "", id, revision, hash, draft, instanceID, offset)
+}
+
+// PrepareRenderCaptionFrames is the same run for a browser render, laid out on
+// the grounds its sampling job kept (CLIP-192).
+func (s *GenerationService) PrepareRenderCaptionFrames(ctx context.Context, user, render, id string, revision int, hash string, draft clip.CorrectionPlan, instanceID string, offset int) (clip.CaptionFrames, error) {
+	if render == "" {
+		return clip.CaptionFrames{}, clip.ErrNotFound
+	}
+	return s.prepareCaptionFrames(ctx, user, render, id, revision, hash, draft, instanceID, offset)
+}
+
+func (s *GenerationService) prepareCaptionFrames(ctx context.Context, user, render, id string, revision int, hash string, draft clip.CorrectionPlan, instanceID string, offset int) (clip.CaptionFrames, error) {
 	p, err := s.admitPreview(ctx, user, id, revision)
+	if err != nil {
+		return clip.CaptionFrames{}, err
+	}
+	grounds, err := s.renderGrounds(ctx, user, render, id, revision)
 	if err != nil {
 		return clip.CaptionFrames{}, err
 	}
 	cfg := s.cfg.Preview
 	renderer, ok := s.renderer.(clip.CaptionFramePreparer)
-	if !ok || cfg.FrameTimeout <= 0 || cfg.MaxFrameCells <= 0 {
+	grounded, groundsDrawn := s.renderer.(clip.GroundedPreviewPreparer)
+	if !ok || render != "" && !groundsDrawn || cfg.FrameTimeout <= 0 || cfg.MaxFrameCells <= 0 {
 		return clip.CaptionFrames{}, clip.ErrPreviewUnavailable
 	}
 	if _, loaded := s.previewOwners.LoadOrStore(user, struct{}{}); loaded {
@@ -110,7 +180,12 @@ func (s *GenerationService) PrepareCaptionFrames(ctx context.Context, user, id s
 	if err != nil {
 		return clip.CaptionFrames{}, err
 	}
-	out, err := renderer.PrepareCaptionFrames(ctx, next, refs, instanceID, offset, cfg)
+	var out clip.CaptionFrames
+	if render != "" {
+		out, err = grounded.PrepareGroundedCaptionFrames(ctx, next, refs, grounds, instanceID, offset, cfg)
+	} else {
+		out, err = renderer.PrepareCaptionFrames(ctx, next, refs, instanceID, offset, cfg)
+	}
 	if err != nil {
 		return clip.CaptionFrames{}, err
 	}

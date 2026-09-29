@@ -472,6 +472,9 @@ message ClipPreviewAsset {
   int32 layer = 13;
   // One representative raster of a sequence style; its motion is applied per frame.
   bool representative_frame = 14;
+  // A line of this element still reads under 4.5:1 on its sampled ground, after
+  // any scrim (CDS-44). Only a render-bound asset has a sampled ground.
+  bool contrast_notice = 15;
 }
 message ClipRetainedSource {
   string id = 1;

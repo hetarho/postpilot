@@ -3545,8 +3545,11 @@ type ClipPreviewAsset struct {
 	Layer      int32                  `protobuf:"varint,13,opt,name=layer,proto3" json:"layer,omitempty"`
 	// One representative raster of a sequence style; its motion is applied per frame.
 	RepresentativeFrame bool `protobuf:"varint,14,opt,name=representative_frame,json=representativeFrame,proto3" json:"representative_frame,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// A line of this element still reads under 4.5:1 on its sampled ground, after
+	// any scrim (CDS-44). Only a render-bound asset has a sampled ground.
+	ContrastNotice bool `protobuf:"varint,15,opt,name=contrast_notice,json=contrastNotice,proto3" json:"contrast_notice,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ClipPreviewAsset) Reset() {
@@ -3673,6 +3676,13 @@ func (x *ClipPreviewAsset) GetLayer() int32 {
 func (x *ClipPreviewAsset) GetRepresentativeFrame() bool {
 	if x != nil {
 		return x.RepresentativeFrame
+	}
+	return false
+}
+
+func (x *ClipPreviewAsset) GetContrastNotice() bool {
+	if x != nil {
+		return x.ContrastNotice
 	}
 	return false
 }
@@ -5209,7 +5219,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x03box\x18\x03 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x03box\x12\x1b\n" +
 	"\tfont_size\x18\x04 \x01(\x01R\bfontSize\x12\x14\n" +
 	"\x05style\x18\x05 \x01(\tR\x05style\x121\n" +
-	"\x14representative_frame\x18\x06 \x01(\bR\x13representativeFrame\"\xd8\x02\n" +
+	"\x14representative_frame\x18\x06 \x01(\bR\x13representativeFrame\"\x81\x03\n" +
 	"\x10ClipPreviewAsset\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1f\n" +
 	"\vinstance_id\x18\x02 \x01(\tR\n" +
@@ -5226,7 +5236,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x06out_ms\x18\v \x01(\x05R\x05outMs\x12\x0e\n" +
 	"\x02dy\x18\f \x01(\x01R\x02dy\x12\x14\n" +
 	"\x05layer\x18\r \x01(\x05R\x05layer\x121\n" +
-	"\x14representative_frame\x18\x0e \x01(\bR\x13representativeFrame\"\xe5\x01\n" +
+	"\x14representative_frame\x18\x0e \x01(\bR\x13representativeFrame\x12'\n" +
+	"\x0fcontrast_notice\x18\x0f \x01(\bR\x0econtrastNotice\"\xe5\x01\n" +
 	"\x12ClipRetainedSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
 	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x1a\n" +

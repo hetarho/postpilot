@@ -211,3 +211,83 @@ func TestRegionPresetSamplesRPCIsOwnerScopedAndTakesTheCallersLabel(t *testing.T
 		t.Fatal(m.Intro, m.Outro)
 	}
 }
+
+// renderRPCStore holds one browser render for the render-bound preview.
+type renderRPCStore struct {
+	clip.GenerationStore
+	render clip.BrowserRender
+}
+
+func (s renderRPCStore) GetBrowserRender(_ context.Context, user, id string) (clip.BrowserRender, error) {
+	if user != s.render.UserID || id != s.render.ID {
+		return clip.BrowserRender{}, clip.ErrNotFound
+	}
+	return s.render, nil
+}
+func (renderRPCStore) BeginBrowserRender(context.Context, clip.BrowserRender) error {
+	return clip.ErrInvalid
+}
+func (renderRPCStore) SaveBrowserRenderVerdict(context.Context, string, string, clip.RenderVerdict, time.Time) error {
+	return clip.ErrInvalid
+}
+
+type groundedRPCRenderer struct{ previewRPCRenderer }
+
+func (groundedRPCRenderer) PrepareGroundedPreview(_ context.Context, _ clip.EditPlan, _ []clip.RenderSource, grounds []clip.SampledGround, _ []string, _ int, _ clip.PreviewConfig) (clip.PreparedPreview, error) {
+	return clip.PreparedPreview{Canvas: clip.Canvas{Width: 1080, Height: 1920}, NextOffset: -1, Parity: []clip.PreviewParity{clip.PreviewAudioNormalization, clip.PreviewFrameTiming},
+		Assets: []clip.PreviewAsset{{Key: "outro", InstanceID: grounds[0].InstanceID, PNG: []byte{1}, Width: 1, Height: 1, ContrastNotice: true}}}, nil
+}
+func (groundedRPCRenderer) PrepareGroundedCaptionFrames(context.Context, clip.EditPlan, []clip.RenderSource, []clip.SampledGround, string, int, clip.PreviewConfig) (clip.CaptionFrames, error) {
+	return clip.CaptionFrames{}, clip.ErrInvalid
+}
+
+// CLIP-192: a request naming a browser render is drawn on that render's
+// grounds, says which line still falls short, drops the final-only contrast
+// caveat, and is refused by name until the render's sampling has finished.
+func TestPreviewRPCDrawsANamedRenderOnItsGrounds(t *testing.T) {
+	plan := nativePreviewPlan()
+	raw, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	analysis, _ := json.Marshal([]clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}}})
+	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", EditPlan: raw, EditPlanRevision: 1, Analysis: string(analysis)}}
+	projects := testProjects(store)
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
+	at := time.Now()
+	for _, sampled := range []bool{false, true} {
+		render := clip.BrowserRender{ID: "render", UserID: "alice", ProjectID: "owned", Revision: 1, SampleJobID: "sampling"}
+		if sampled {
+			render.SampledAt, render.Grounds = &at, []clip.SampledGround{{InstanceID: "project-outro", Mean: .8, R: .9, G: .9, B: .9, Frames: []float64{.8, .8, .8}}}
+		}
+		generation := clipapp.NewGenerationService(renderRPCStore{render: render}, projects, nil, neutralProcessing{}, nil, nil, groundedRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
+		h := NewHandler(projects).WithGeneration(generation, nil)
+		wire := editingProto(&clip.CorrectionState{Plan: clip.CorrectionFromPlan(plan)}).Plan
+		encoded, _ := (proto.MarshalOptions{Deterministic: true}).Marshal(wire)
+		hash := sha256.Sum256(encoded)
+		body := &v1.PrepareClipPreviewRequest{ProjectId: "owned", ExpectedRevision: 1, Plan: wire, DraftHash: hex.EncodeToString(hash[:]), RenderId: "render"}
+		out, err := h.PrepareClipPreview(auth.WithUser(t.Context(), "alice"), connect.NewRequest(body))
+		if !sampled {
+			ce, ok := err.(*connect.Error)
+			if !ok || connect.CodeOf(err) != connect.CodeFailedPrecondition {
+				t.Fatalf("an unsampled render was drawn: %v", err)
+			}
+			detail, e := ce.Details()[0].Value()
+			if e != nil || detail.(*v1.AppErrorDetail).Reason != "CLIP_RENDER_NOT_SAMPLED" {
+				t.Fatal(detail, e)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(out.Msg.Assets) != 1 || !out.Msg.Assets[0].ContrastNotice || out.Msg.Assets[0].InstanceId != "project-outro" || len(out.Msg.Parity) != 2 {
+			t.Fatalf("the render's grounds did not reach the response: %+v", out.Msg)
+		}
+		for _, p := range out.Msg.Parity {
+			if p == v1.ClipPreviewParity_CLIP_PREVIEW_PARITY_SOURCE_CONTRAST_FINAL_ONLY {
+				t.Fatal("a sampled render still says its contrast is final-only")
+			}
+		}
+	}
+}

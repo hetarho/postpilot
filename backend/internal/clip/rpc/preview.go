@@ -35,13 +35,18 @@ func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v
 	if req.Msg.DraftHash != hex.EncodeToString(digest[:]) {
 		return nil, toConnectError(clip.ErrInvalid)
 	}
-	result, err := h.generation.PreparePreview(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.ElementIds, int(req.Msg.AssetOffset))
+	var result clip.PreparedPreview
+	if req.Msg.RenderId != "" {
+		result, err = h.generation.PrepareRenderPreview(ctx, user, req.Msg.RenderId, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.ElementIds, int(req.Msg.AssetOffset))
+	} else {
+		result, err = h.generation.PreparePreview(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.ElementIds, int(req.Msg.AssetOffset))
+	}
 	if err != nil {
 		return nil, previewConnectError(err)
 	}
 	out := &v1.PrepareClipPreviewResponse{DraftHash: result.DraftHash, CanvasWidth: int32(result.Canvas.Width), CanvasHeight: int32(result.Canvas.Height), NextOffset: int32(result.NextOffset)}
 	for _, a := range result.Assets {
-		out.Assets = append(out.Assets, &v1.ClipPreviewAsset{Key: a.Key, InstanceId: a.InstanceID, Png: a.PNG, X: int32(a.X), Y: int32(a.Y), Width: int32(a.Width), Height: int32(a.Height), StartMs: int32(a.StartMS), EndMs: int32(a.EndMS), InMs: int32(a.InMS), OutMs: int32(a.OutMS), Dy: a.DY, Layer: int32(a.Layer), RepresentativeFrame: a.RepresentativeFrame})
+		out.Assets = append(out.Assets, &v1.ClipPreviewAsset{Key: a.Key, InstanceId: a.InstanceID, Png: a.PNG, X: int32(a.X), Y: int32(a.Y), Width: int32(a.Width), Height: int32(a.Height), StartMs: int32(a.StartMS), EndMs: int32(a.EndMS), InMs: int32(a.InMS), OutMs: int32(a.OutMS), Dy: a.DY, Layer: int32(a.Layer), RepresentativeFrame: a.RepresentativeFrame, ContrastNotice: a.ContrastNotice})
 	}
 	for _, p := range result.Parity {
 		switch p {
@@ -83,7 +88,12 @@ func (h *Handler) PrepareClipCaptionFrames(ctx context.Context, req *connect.Req
 	if req.Msg.DraftHash != hex.EncodeToString(digest[:]) {
 		return nil, toConnectError(clip.ErrInvalid)
 	}
-	result, err := h.generation.PrepareCaptionFrames(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.InstanceId, int(req.Msg.FrameOffset))
+	var result clip.CaptionFrames
+	if req.Msg.RenderId != "" {
+		result, err = h.generation.PrepareRenderCaptionFrames(ctx, user, req.Msg.RenderId, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.InstanceId, int(req.Msg.FrameOffset))
+	} else {
+		result, err = h.generation.PrepareCaptionFrames(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.InstanceId, int(req.Msg.FrameOffset))
+	}
 	if err != nil {
 		return nil, previewConnectError(err)
 	}

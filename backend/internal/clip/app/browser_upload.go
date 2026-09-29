@@ -11,7 +11,14 @@ func (s *GenerationService) CancelBrowserRender(ctx context.Context, user, id st
 	if !ok {
 		return false, clip.ErrRenderUnavailable
 	}
-	return store.CancelBrowserRender(ctx, user, id, s.now())
+	cancelled, err := store.CancelBrowserRender(ctx, user, id, s.now())
+	if err != nil || !cancelled {
+		return cancelled, err
+	}
+	if r, err := store.GetBrowserRender(ctx, user, id); err == nil {
+		s.stopBrowserSampling(ctx, user, r)
+	}
+	return cancelled, nil
 }
 
 func (s *GenerationService) PrepareBrowserUpload(ctx context.Context, user, id string, bytes int64) (clip.SignedSourcePut, error) {

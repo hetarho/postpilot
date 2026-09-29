@@ -45,6 +45,9 @@ type MediaResult struct {
 	Sources []MediaVerifiedSource
 	Outputs []MediaOutput
 	Plan    string
+	// Grounds is a sample stage's measurement. It is absent from every other
+	// result, so a worker or API that predates the sample stage decodes them.
+	Grounds []SampledGround `json:",omitempty"`
 }
 
 type MediaArtifact struct {

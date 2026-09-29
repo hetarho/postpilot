@@ -7,6 +7,10 @@ import (
 )
 
 var ErrPreviewBusy = errors.New("clip preview preparation busy")
+
+// ErrRenderNotSampled refuses a browser render's assets before its sampling job
+// has kept the grounds they are drawn with (CLIP-192).
+var ErrRenderNotSampled = errors.New("clip browser render not sampled yet")
 var ErrPreviewTooLarge = errors.New("clip preview preparation limit")
 var ErrPreviewUnavailable = errors.New("clip preview preparation unavailable")
 
@@ -30,6 +34,9 @@ type PreviewAsset struct {
 	StartMS, EndMS, InMS, OutMS, Layer int
 	DY                                 float64
 	RepresentativeFrame                bool
+	// A line of this element reads under the contrast floor on its sampled
+	// ground (CDS-44); only an asset drawn with grounds can say so.
+	ContrastNotice bool
 }
 type PreviewParity string
 
@@ -68,6 +75,13 @@ type CaptionFrames struct {
 
 type CaptionFramePreparer interface {
 	PrepareCaptionFrames(context.Context, EditPlan, []RenderSource, string, int, PreviewConfig) (CaptionFrames, error)
+}
+
+// GroundedPreviewPreparer draws a browser render's assets and frames with the
+// grounds the server sampled for that render (CLIP-192).
+type GroundedPreviewPreparer interface {
+	PrepareGroundedPreview(context.Context, EditPlan, []RenderSource, []SampledGround, []string, int, PreviewConfig) (PreparedPreview, error)
+	PrepareGroundedCaptionFrames(context.Context, EditPlan, []RenderSource, []SampledGround, string, int, PreviewConfig) (CaptionFrames, error)
 }
 type CompositionLayouter interface {
 	LayoutComposition(context.Context, EditPlan, []RenderSource) (EditPlan, []CompositionElement, error)

@@ -127,6 +127,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip result changed", postpilotv1.FailureReason_CLIP_FINALIZATION_CONFLICT, nil)
 	case errors.Is(err, clip.ErrFinalizationInvalid):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cannot be finalized", postpilotv1.FailureReason_CLIP_FINALIZATION_INVALID, nil)
+	case errors.Is(err, clip.ErrRenderNotSampled):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip browser render not sampled yet", postpilotv1.FailureReason_CLIP_RENDER_NOT_SAMPLED, nil)
 	case errors.Is(err, clip.ErrPreviewBusy):
 		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is busy", postpilotv1.FailureReason_CLIP_PREVIEW_BUSY, nil)
 	case errors.Is(err, clip.ErrPreviewTooLarge):

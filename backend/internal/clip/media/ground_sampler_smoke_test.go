@@ -1,11 +1,13 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -206,6 +208,47 @@ func TestRenderSmokeScrimsAnOutroOverABrightGround(t *testing.T) {
 		for _, visual := range layout.visuals {
 			if visual.manifest.Role == "ending" && (!scrimmed(visual.manifest.Parts) || visual.region.Radial == nil && visual.region.Scrim == nil) {
 				return fmt.Errorf("the browser render's grounds left the outro unscrimmed: %+v", grounds)
+			}
+		}
+		// The assets a browser render draws carry that scrim in the outro's own
+		// raster and the server render's contrast verdict; the editing preview's
+		// do not, because it reads no footage.
+		cfg := clip.DefaultGenerationConfig(clip.Environment{}).Preview
+		editing, err := r.PreparePreview(t.Context(), plan, sources, nil, 0, cfg)
+		if err != nil {
+			return err
+		}
+		bound, err := r.PrepareGroundedPreview(t.Context(), plan, sources, grounds, nil, 0, cfg)
+		if err != nil {
+			return err
+		}
+		outro := func(p clip.PreparedPreview) (clip.PreviewAsset, bool) {
+			for _, a := range p.Assets {
+				if strings.HasPrefix(a.InstanceID, "outro") {
+					return a, true
+				}
+			}
+			return clip.PreviewAsset{}, false
+		}
+		plain, ok1 := outro(editing)
+		drawn, ok2 := outro(bound)
+		if !ok1 || !ok2 || drawn.Width*drawn.Height <= plain.Width*plain.Height || bytes.Equal(drawn.PNG, plain.PNG) {
+			return fmt.Errorf("the browser render's outro asset (%dx%d) is not drawn over its scrim (the editing preview's is %dx%d)", drawn.Width, drawn.Height, plain.Width, plain.Height)
+		}
+		noticed := false
+		for _, e := range result.Elements {
+			if e.Role == "ending" {
+				for _, part := range e.Parts {
+					noticed = noticed || part.Kind == "copy" && part.ContrastNotice
+				}
+			}
+		}
+		if drawn.ContrastNotice != noticed || plain.ContrastNotice {
+			return fmt.Errorf("the contrast verdicts disagree: server %v, browser %v, editing %v", noticed, drawn.ContrastNotice, plain.ContrastNotice)
+		}
+		for _, parity := range bound.Parity {
+			if parity == clip.PreviewSourceContrast {
+				return fmt.Errorf("a sampled render still calls its contrast final-only")
 			}
 		}
 		return nil

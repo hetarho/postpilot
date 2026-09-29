@@ -8,7 +8,7 @@ import "time"
 func ResolveMediaSource(op MediaOperation, frozen MediaTaskSource, batch SourceBatch, now time.Time) (SourceLease, error) {
 	for _, source := range batch.Sources {
 		matches := source.ID == frozen.ID
-		if op == MediaRender {
+		if op.DrawsPlan() {
 			matches = source.Fingerprint == frozen.Fingerprint
 		}
 		if !matches {

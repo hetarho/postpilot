@@ -307,6 +307,9 @@ const (
 	FailureReason_CLIP_STORYLINE_INVALID FailureReason = 257
 	// GUIDE-46: a guideline title past GUIDELINE_TITLE_MAX_CHARS.
 	FailureReason_GUIDELINE_TITLE_TOO_LONG FailureReason = 258
+	// A browser render's assets were asked for before its sampling job kept the
+	// grounds they are drawn with (CLIP-192).
+	FailureReason_CLIP_RENDER_NOT_SAMPLED FailureReason = 259
 )
 
 // Enum value maps for FailureReason.
@@ -549,6 +552,7 @@ var (
 		256: "CLIP_STORYLINE_MISSING",
 		257: "CLIP_STORYLINE_INVALID",
 		258: "GUIDELINE_TITLE_TOO_LONG",
+		259: "CLIP_RENDER_NOT_SAMPLED",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -788,6 +792,7 @@ var (
 		"CLIP_STORYLINE_MISSING":                     256,
 		"CLIP_STORYLINE_INVALID":                     257,
 		"GUIDELINE_TITLE_TOO_LONG":                   258,
+		"CLIP_RENDER_NOT_SAMPLED":                    259,
 	}
 )
 
@@ -958,7 +963,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xa18\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xbf8\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1198,7 +1203,8 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x1eGENERATION_STORYLINE_REOBSERVE\x10\xff\x01\x12\x1b\n" +
 	"\x16CLIP_STORYLINE_MISSING\x10\x80\x02\x12\x1b\n" +
 	"\x16CLIP_STORYLINE_INVALID\x10\x81\x02\x12\x1d\n" +
-	"\x18GUIDELINE_TITLE_TOO_LONG\x10\x82\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x18GUIDELINE_TITLE_TOO_LONG\x10\x82\x02\x12\x1c\n" +
+	"\x17CLIP_RENDER_NOT_SAMPLED\x10\x83\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

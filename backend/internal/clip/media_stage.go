@@ -18,7 +18,18 @@ type MediaOperation string
 const (
 	MediaPrepare MediaOperation = "prepare"
 	MediaRender  MediaOperation = "render"
+	// MediaSample measures a browser render's grounds from the retained
+	// originals under the render's own frozen task, and writes no file (CLIP-192).
+	MediaSample MediaOperation = "sample"
 )
+
+func (op MediaOperation) known() bool {
+	return op == MediaPrepare || op == MediaRender || op == MediaSample
+}
+
+// DrawsPlan reports whether an operation executes a frozen edit plan over the
+// retained originals, whose leases it matches by fingerprint.
+func (op MediaOperation) DrawsPlan() bool { return op == MediaRender || op == MediaSample }
 
 type MediaStageState string
 
@@ -85,7 +96,7 @@ func (in MediaStageInput) Validate() error {
 			return ErrInvalid
 		}
 	}
-	if in.ExpectedRevision < 0 || in.ContractVersion < 1 || (in.Operation != MediaPrepare && in.Operation != MediaRender) || len(in.Payload) == 0 || len(in.Payload) > MediaPayloadMaxBytes || in.InputDigest != MediaPayloadDigest(in.Payload) {
+	if in.ExpectedRevision < 0 || in.ContractVersion < 1 || !in.Operation.known() || len(in.Payload) == 0 || len(in.Payload) > MediaPayloadMaxBytes || in.InputDigest != MediaPayloadDigest(in.Payload) {
 		return ErrInvalid
 	}
 	return in.Limits.Validate()
@@ -115,7 +126,7 @@ func (p MediaWorkerProfile) Validate() error {
 			return ErrInvalid
 		}
 	}
-	if p.ContractVersion < 1 || (p.Operation != MediaPrepare && p.Operation != MediaRender) || len(p.RuntimeManifest) == 0 || len(p.RuntimeManifest) > MediaManifestMaxBytes {
+	if p.ContractVersion < 1 || !p.Operation.known() || len(p.RuntimeManifest) == 0 || len(p.RuntimeManifest) > MediaManifestMaxBytes {
 		return ErrInvalid
 	}
 	return nil

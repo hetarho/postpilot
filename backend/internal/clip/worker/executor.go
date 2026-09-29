@@ -60,6 +60,8 @@ func (e *Executor) Execute(ctx context.Context, w clip.MediaWork) (string, error
 			return e.prepare(ctx, ws, w, task, &result)
 		case clip.MediaRender:
 			return e.renderTask(ctx, ws, w, task, &result)
+		case clip.MediaSample:
+			return e.sampleTask(ctx, ws, w, task, &result)
 		default:
 			return clip.ErrMediaIncompatible
 		}
@@ -146,38 +148,11 @@ func (e *Executor) prepare(ctx context.Context, ws clip.MediaWorkspace, w clip.M
 	return nil
 }
 func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) error {
-	var sources []clip.RenderSource
-	for _, s := range task.Sources {
-		original, drop, err := e.fetch(ctx, ws, w, s)
-		if err != nil {
-			return err
-		}
-		actual, err := e.media.Probe(ctx, ws, original.Path)
-		if err = errors.Join(err, drop()); err != nil {
-			return err
-		}
-		if !clip.SameMediaOriginal(s.Info, actual) {
-			return clip.ErrInvalidMedia
-		}
-		sources = append(sources, clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
-		result.Sources = append(result.Sources, clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
-	}
-	loader, release := localmedia.Loader(func(ctx context.Context, id string) (clip.MediaSource, func() error, error) {
-		for i, s := range task.Sources {
-			if s.ID == id {
-				s.Info = sources[i].Info
-				return e.fetch(ctx, ws, w, s)
-			}
-		}
-		return clip.MediaSource{}, nil, clip.ErrInvalidMedia
-	})
-	defer release()
-	plan, err := clip.DecodeEditPlan(task.Plan)
+	sources, plan, loader, release, err := e.planInputs(ctx, ws, w, task, result)
 	if err != nil {
 		return err
 	}
-	plan = task.Render.Apply(plan)
-	plan.HideDisclosure = task.HideDisclosure
+	defer release()
 	video, err := e.render.Render(ctx, ws, plan, sources, loader)
 	if err = errors.Join(err, release()); err != nil {
 		return err
@@ -201,6 +176,64 @@ func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w cli
 	}
 	result.Outputs = []clip.MediaOutput{out}
 	return nil
+}
+
+// sampleTask measures a browser render's grounds over the render's own frozen
+// task: the same verified originals and plan, the server's own sampler, and no
+// file written (CLIP-192).
+func (e *Executor) sampleTask(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) error {
+	sampler, ok := e.render.(clip.GroundSampler)
+	if !ok {
+		return clip.ErrMediaIncompatible
+	}
+	sources, plan, loader, release, err := e.planInputs(ctx, ws, w, task, result)
+	if err != nil {
+		return err
+	}
+	defer release()
+	grounds, err := sampler.SampleGrounds(ctx, ws, plan, sources, loader)
+	if err = errors.Join(err, release()); err != nil {
+		return err
+	}
+	result.Grounds = grounds
+	return nil
+}
+
+// planInputs verifies every original a frozen plan draws from, then hands back
+// that plan and a loader holding one original at a time.
+func (e *Executor) planInputs(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) ([]clip.RenderSource, clip.EditPlan, clip.RenderSourceLoader, func() error, error) {
+	var sources []clip.RenderSource
+	for _, s := range task.Sources {
+		original, drop, err := e.fetch(ctx, ws, w, s)
+		if err != nil {
+			return nil, clip.EditPlan{}, nil, nil, err
+		}
+		actual, err := e.media.Probe(ctx, ws, original.Path)
+		if err = errors.Join(err, drop()); err != nil {
+			return nil, clip.EditPlan{}, nil, nil, err
+		}
+		if !clip.SameMediaOriginal(s.Info, actual) {
+			return nil, clip.EditPlan{}, nil, nil, clip.ErrInvalidMedia
+		}
+		sources = append(sources, clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
+		result.Sources = append(result.Sources, clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
+	}
+	loader, release := localmedia.Loader(func(ctx context.Context, id string) (clip.MediaSource, func() error, error) {
+		for i, s := range task.Sources {
+			if s.ID == id {
+				s.Info = sources[i].Info
+				return e.fetch(ctx, ws, w, s)
+			}
+		}
+		return clip.MediaSource{}, nil, clip.ErrInvalidMedia
+	})
+	plan, err := clip.DecodeEditPlan(task.Plan)
+	if err != nil {
+		return nil, clip.EditPlan{}, nil, nil, errors.Join(err, release())
+	}
+	plan = task.Render.Apply(plan)
+	plan.HideDisclosure = task.HideDisclosure
+	return sources, plan, loader, release, nil
 }
 
 // FileDigest never buffers the media file and refuses a non-regular/mis-sized file.

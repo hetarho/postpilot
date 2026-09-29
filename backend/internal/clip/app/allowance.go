@@ -72,7 +72,7 @@ func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedC
 	if err != nil {
 		return nil, err
 	}
-	if j == nil || j.UserID != user || j.Kind == clip.JobKindRender || !clip.IsJobKind(j.Kind) || j.Status != job.StatusRunning ||
+	if j == nil || j.UserID != user || !clip.ChargedJobKind(j.Kind) || j.Status != job.StatusRunning ||
 		j.Stage != "prepare" || j.CancelRequestedAt != nil || j.CancellationPolicyVersion != approval.CancellationPolicyVersion {
 		return nil, clip.ErrCreditAllowance
 	}

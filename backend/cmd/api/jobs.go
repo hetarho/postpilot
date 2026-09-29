@@ -113,6 +113,10 @@ func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources 
 	q.Register(clip.JobKindRender, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
+	// The sampling a browser render waits on (CLIP-192).
+	q.Register(clip.JobKindSampleBrowserRender, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunBrowserSampling(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
+	}))
 	q.Register(clip.JobKindRevise, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
@@ -123,7 +127,7 @@ func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources 
 	q.Register(clip.JobKindReviseStoryline, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunStorylineRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})

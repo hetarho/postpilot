@@ -23,6 +23,12 @@ type BrowserRender struct {
 	StoredAt              *time.Time
 	CancelledAt           *time.Time
 	Verdict               *RenderVerdict
+	// The job the render's grounds are sampled by, and once it has finished
+	// what it measured (CLIP-192). SampledAt is set with the grounds, which may
+	// be none: a plan with no unplated text reads nothing.
+	SampleJobID string
+	Grounds     []SampledGround
+	SampledAt   *time.Time
 }
 
 // Object identity is derived from the admitted render, never supplied by a client.
@@ -50,6 +56,14 @@ type BrowserRenderStore interface {
 	BeginBrowserRender(context.Context, BrowserRender) error
 	GetBrowserRender(context.Context, string, string) (BrowserRender, error)
 	SaveBrowserRenderVerdict(context.Context, string, string, RenderVerdict, time.Time) error
+}
+
+// BrowserSamplingStore keeps a browser render's sampling (CLIP-192): the job
+// that samples it, and the grounds that job measured, which only that job may
+// write, once, while the render is live at its own plan revision.
+type BrowserSamplingStore interface {
+	BindBrowserRenderSampling(ctx context.Context, user, render, job string) error
+	SaveBrowserRenderGrounds(ctx context.Context, user, render, job string, revision int, grounds []SampledGround, now time.Time) error
 }
 
 func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurements) (RenderVerdict, error) {

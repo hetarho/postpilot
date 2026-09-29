@@ -14,10 +14,33 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-var _ clip.PreviewPreparer = (*Rendering)(nil)
+var (
+	_ clip.PreviewPreparer         = (*Rendering)(nil)
+	_ clip.GroundedPreviewPreparer = (*Rendering)(nil)
+)
 
 func (r *Rendering) PreparePreview(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, ids []string, offset int, cfg clip.PreviewConfig) (clip.PreparedPreview, error) {
+	return r.preparePreview(ctx, plan, sources, nil, ids, offset, cfg)
+}
+
+// PrepareGroundedPreview draws a browser render's assets with the grounds the
+// server sampled for it: the scrims, accent colours and contrast notices a
+// server render of the same plan draws (CLIP-192). The source contrast is then
+// no longer final-only.
+func (r *Rendering) PrepareGroundedPreview(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, grounds []clip.SampledGround, ids []string, offset int, cfg clip.PreviewConfig) (clip.PreparedPreview, error) {
+	if grounds == nil {
+		grounds = []clip.SampledGround{}
+	}
+	return r.preparePreview(ctx, plan, sources, grounds, ids, offset, cfg)
+}
+
+// preparePreview draws on no ground when grounds is nil, which is the editing
+// preview's, and on those grounds otherwise.
+func (r *Rendering) preparePreview(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, grounds []clip.SampledGround, ids []string, offset int, cfg clip.PreviewConfig) (clip.PreparedPreview, error) {
 	out := clip.PreparedPreview{NextOffset: -1, Parity: []clip.PreviewParity{clip.PreviewSourceContrast, clip.PreviewAudioNormalization, clip.PreviewFrameTiming}}
+	if grounds != nil {
+		out.Parity = out.Parity[1:]
+	}
 	if cfg.MaxAssets <= 0 || cfg.MaxAssetBytes <= 0 || cfg.MaxResponseBytes <= 0 || offset < 0 || len(ids) > cfg.MaxAssets {
 		return out, clip.ErrPreviewTooLarge
 	}
@@ -53,6 +76,10 @@ func (r *Rendering) PreparePreview(ctx context.Context, plan clip.EditPlan, sour
 		if err != nil {
 			return err
 		}
+		if grounds != nil {
+			canvas, _ := clip.ClipCanvas(plan.Ratio)
+			layout.applyGrounds(canvas, grounds)
+		}
 		visuals := []declaredVisual{}
 		for _, v := range layout.visuals {
 			if len(requested) == 0 || requested[v.manifest.InstanceID] {
@@ -72,8 +99,9 @@ func (r *Rendering) PreparePreview(ctx context.Context, plan clip.EditPlan, sour
 				return err
 			}
 			v := visuals[i]
-			// Zero source ground is deliberate and labelled final-only. Never load or
-			// sample an original to prepare a glyph asset.
+			// No original is loaded or sampled here: an editing preview draws on no
+			// ground, labelled final-only, and a browser render's assets on the
+			// grounds its sampling job measured.
 			var body string
 			if v.manifest.Role == "caption" {
 				body, err = r.captionDocument(canvas, v)
@@ -98,7 +126,7 @@ func (r *Rendering) PreparePreview(ctx context.Context, plan clip.EditPlan, sour
 			}
 			hash := sha256.Sum256(data)
 			m := v.manifest
-			out.Assets = append(out.Assets, clip.PreviewAsset{Key: hex.EncodeToString(hash[:]), InstanceID: m.InstanceID, PNG: data, X: rect.Min.X, Y: rect.Min.Y, Width: rect.Dx(), Height: rect.Dy(), StartMS: m.StartMS, EndMS: m.EndMS, InMS: m.InMS, OutMS: m.OutMS, DY: m.DY, Layer: m.Layer, RepresentativeFrame: sequenceDrawn(v)})
+			out.Assets = append(out.Assets, clip.PreviewAsset{Key: hex.EncodeToString(hash[:]), InstanceID: m.InstanceID, PNG: data, X: rect.Min.X, Y: rect.Min.Y, Width: rect.Dx(), Height: rect.Dy(), StartMS: m.StartMS, EndMS: m.EndMS, InMS: m.InMS, OutMS: m.OutMS, DY: m.DY, Layer: m.Layer, RepresentativeFrame: sequenceDrawn(v), ContrastNotice: contrastNoticed(m)})
 		}
 		return ctx.Err()
 	})
@@ -158,4 +186,15 @@ func cropPreviewPNG(ctx context.Context, path string, canvas clip.Canvas, limit 
 		return nil, image.Rectangle{}, clip.ErrPreviewTooLarge
 	}
 	return b.Bytes(), bounds, nil
+}
+
+// contrastNoticed reports whether any line of an element still reads under the
+// contrast floor on its ground, after any scrim (CDS-44).
+func contrastNoticed(m clip.CompositionElement) bool {
+	for _, part := range m.Parts {
+		if part.Kind == "copy" && part.ContrastNotice {
+			return true
+		}
+	}
+	return false
 }

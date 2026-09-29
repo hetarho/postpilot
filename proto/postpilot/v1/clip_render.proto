@@ -24,6 +24,10 @@ message PrepareClipPreviewRequest {
   ClipEditPlan plan = 4;
   repeated string element_ids = 5;
   int32 asset_offset = 6;
+  // A browser render's assets (CLIP-192): drawn with the grounds the server
+  // sampled for that render, which must be of this project at this revision.
+  // Empty is the editing preview, which reads no footage.
+  string render_id = 7;
 }
 
 message PrepareClipPreviewResponse {
@@ -51,6 +55,8 @@ message PrepareClipCaptionFramesRequest {
   string instance_id = 5;
   // The first frame of this run, counted from the caption's own first frame.
   int32 frame_offset = 6;
+  // As on PrepareClipPreviewRequest: the browser render these frames are for.
+  string render_id = 7;
 }
 
 message PrepareClipCaptionFramesResponse {

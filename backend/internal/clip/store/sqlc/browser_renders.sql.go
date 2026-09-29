@@ -39,6 +39,24 @@ func (q *Queries) BeginBrowserRender(ctx context.Context, arg BeginBrowserRender
 	return err
 }
 
+const bindBrowserRenderSampling = `-- name: BindBrowserRenderSampling :execrows
+UPDATE clip_browser_renders SET sample_job_id=?1 WHERE id=?2 AND user_id=?3 AND cancelled_at IS NULL AND (sample_job_id IS NULL OR sample_job_id=?1)
+`
+
+type BindBrowserRenderSamplingParams struct {
+	JobID  sql.NullString
+	ID     string
+	UserID string
+}
+
+func (q *Queries) BindBrowserRenderSampling(ctx context.Context, arg BindBrowserRenderSamplingParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, bindBrowserRenderSampling, arg.JobID, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const cancelBrowserRender = `-- name: CancelBrowserRender :execrows
 UPDATE clip_browser_renders SET cancelled_at=? WHERE id=? AND user_id=? AND cancelled_at IS NULL AND stored_at IS NULL
 `
@@ -76,7 +94,7 @@ func (q *Queries) CompleteBrowserRender(ctx context.Context, arg CompleteBrowser
 }
 
 const getBrowserRender = `-- name: GetBrowserRender :one
-SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at, cancelled_at FROM clip_browser_renders WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at, cancelled_at, sample_job_id, grounds_json, sampled_at FROM clip_browser_renders WHERE id=? AND user_id=?
 `
 
 type GetBrowserRenderParams struct {
@@ -101,6 +119,9 @@ func (q *Queries) GetBrowserRender(ctx context.Context, arg GetBrowserRenderPara
 		&i.UploadBytes,
 		&i.StoredAt,
 		&i.CancelledAt,
+		&i.SampleJobID,
+		&i.GroundsJson,
+		&i.SampledAt,
 	)
 	return i, err
 }
@@ -117,6 +138,34 @@ type ReserveBrowserRenderUploadParams struct {
 
 func (q *Queries) ReserveBrowserRenderUpload(ctx context.Context, arg ReserveBrowserRenderUploadParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, reserveBrowserRenderUpload, arg.UploadBytes, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const saveBrowserRenderGrounds = `-- name: SaveBrowserRenderGrounds :execrows
+UPDATE clip_browser_renders SET grounds_json=?1, sampled_at=?2 WHERE id=?3 AND user_id=?4 AND sample_job_id=?5 AND plan_revision=?6 AND sampled_at IS NULL AND cancelled_at IS NULL
+`
+
+type SaveBrowserRenderGroundsParams struct {
+	GroundsJson  sql.NullString
+	SampledAt    sql.NullString
+	ID           string
+	UserID       string
+	JobID        sql.NullString
+	PlanRevision int64
+}
+
+func (q *Queries) SaveBrowserRenderGrounds(ctx context.Context, arg SaveBrowserRenderGroundsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveBrowserRenderGrounds,
+		arg.GroundsJson,
+		arg.SampledAt,
+		arg.ID,
+		arg.UserID,
+		arg.JobID,
+		arg.PlanRevision,
+	)
 	if err != nil {
 		return 0, err
 	}

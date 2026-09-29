@@ -67,12 +67,8 @@ func (l Loop) Run(ctx context.Context) error {
 			cancel()
 			<-drained
 		}
-		// Alternate operations even under a continuously full queue.
-		if op == clip.MediaPrepare {
-			op = clip.MediaRender
-		} else {
-			op = clip.MediaPrepare
-		}
+		// Take turns between the operations even under a continuously full queue.
+		op = nextOperation(op)
 		if work == nil {
 			if !pause(ctx, l.PollDelay()) {
 				return nil
@@ -81,6 +77,19 @@ func (l Loop) Run(ctx context.Context) error {
 	}
 	return nil
 }
+
+// nextOperation is the claim order: preparation, a browser render's sampling,
+// which a page is waiting on, then a server render.
+func nextOperation(op clip.MediaOperation) clip.MediaOperation {
+	switch op {
+	case clip.MediaPrepare:
+		return clip.MediaSample
+	case clip.MediaSample:
+		return clip.MediaRender
+	}
+	return clip.MediaPrepare
+}
+
 func pause(ctx context.Context, d time.Duration) bool {
 	t := time.NewTimer(d)
 	defer t.Stop()

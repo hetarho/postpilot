@@ -23,6 +23,9 @@ const (
 	JobKindRevise          = "revise_clip"
 	JobKindStoryline       = "storyline_clip"
 	JobKindReviseStoryline = "revise_storyline_clip"
+	// The sampling a browser render waits on before it draws (CLIP-192): like a
+	// render it makes no model call, spends nothing and may always be stopped.
+	JobKindSampleBrowserRender = "sample_browser_render"
 )
 
 // SafeJobStage is the stage vocabulary a clip job may have its progress logged under.
@@ -31,7 +34,7 @@ func SafeJobStage(stage string) string {
 	switch stage {
 	// `plan` and `plan_retry` are the single writing call this build no longer makes; a
 	// job queued before it split keeps a readable stage.
-	case "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
+	case "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "sample_wait", "sample_retry", "sample", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"
@@ -39,7 +42,7 @@ func SafeJobStage(stage string) string {
 
 // IsJobKind reports whether a job belongs to the clip surface at all.
 func IsJobKind(kind string) bool {
-	return kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
+	return kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindSampleBrowserRender
 }
 
 // ChargedJobKind reports whether a clip job reserves an approved credit ceiling before

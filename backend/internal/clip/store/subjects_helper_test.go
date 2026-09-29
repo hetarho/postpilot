@@ -55,8 +55,8 @@ func voiceOwnedTestKind(kind string) bool {
 // jobKindsForTest is the same shape the composition root wires.
 func jobKindsForTest() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 	}
 }
@@ -88,7 +88,7 @@ type clipCancellationForTest struct{}
 
 func (clipCancellationForTest) Kind(kind string) bool { return clip.IsJobKind(kind) }
 func (clipCancellationForTest) Allowed(kind string, version int) bool {
-	if kind == clip.JobKindRender {
+	if kind == clip.JobKindRender || kind == clip.JobKindSampleBrowserRender {
 		return true
 	}
 	return clip.ChargedJobKind(kind) && version == clip.CancellationPolicyVersion

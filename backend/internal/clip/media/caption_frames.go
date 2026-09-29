@@ -24,6 +24,19 @@ var _ clip.CaptionFramePreparer = (*Rendering)(nil)
 // Nothing here starts a job, spends a credit or writes a project: it is the
 // preview's own read path with a frame run in place of an element page.
 func (r *Rendering) PrepareCaptionFrames(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, instanceID string, offset int, cfg clip.PreviewConfig) (clip.CaptionFrames, error) {
+	return r.prepareCaptionFrames(ctx, plan, sources, nil, instanceID, offset, cfg)
+}
+
+// PrepareGroundedCaptionFrames is the same run for a browser render, laid out on
+// the grounds the server sampled for it (CLIP-192).
+func (r *Rendering) PrepareGroundedCaptionFrames(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, grounds []clip.SampledGround, instanceID string, offset int, cfg clip.PreviewConfig) (clip.CaptionFrames, error) {
+	if grounds == nil {
+		grounds = []clip.SampledGround{}
+	}
+	return r.prepareCaptionFrames(ctx, plan, sources, grounds, instanceID, offset, cfg)
+}
+
+func (r *Rendering) prepareCaptionFrames(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource, grounds []clip.SampledGround, instanceID string, offset int, cfg clip.PreviewConfig) (clip.CaptionFrames, error) {
 	out := clip.CaptionFrames{NextOffset: -1}
 	if cfg.MaxFrameCells <= 0 || cfg.MaxSheetPixels <= 0 || cfg.MaxResponseBytes <= 0 || offset < 0 || instanceID == "" {
 		return out, clip.ErrPreviewTooLarge
@@ -42,6 +55,9 @@ func (r *Rendering) PrepareCaptionFrames(ctx context.Context, plan clip.EditPlan
 		layout, err := r.layoutComposition(ctx, ws, plan)
 		if err != nil {
 			return err
+		}
+		if grounds != nil {
+			layout.applyGrounds(canvas, grounds)
 		}
 		visual, found := declaredVisual{}, false
 		for _, v := range layout.visuals {
