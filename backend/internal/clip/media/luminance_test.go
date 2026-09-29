@@ -288,8 +288,12 @@ func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
 			}})
 			r := testRenderer(t, a)
 			visuals := []declaredVisual{visual}
+			sampler := r.newGroundSampler(canvas, layout.plan, visuals)
 			if err := a.WithWorkspace(t.Context(), "role-sample", func(ws clip.MediaWorkspace) error {
-				return r.sampleDeclaredGrounds(t.Context(), ws, canvas, clip.MediaSource{Path: sourceFile(t, ws), Info: clip.MediaInfo{DurationMS: 15000}}, visuals)
+				if err := r.sampleCut(t.Context(), ws, &sampler, 0, layout.plan.Cuts[0], clip.MediaSource{Path: sourceFile(t, ws), Info: clip.MediaInfo{DurationMS: 15000}}); err != nil {
+					return err
+				}
+				return sampler.apply(canvas, visuals)
 			}); err != nil {
 				t.Fatal(err)
 			}

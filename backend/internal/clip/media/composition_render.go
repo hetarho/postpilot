@@ -126,6 +126,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		audio = audio || plan.RetainsOriginalAudio(cut) && byID[cut.SourceID].Info.HasAudio
 	}
 	cuts, wavs := []string{}, []string{}
+	sampler := r.newGroundSampler(canvas, plan, layout.visuals)
 	step("render_footage")
 	for i, cut := range plan.Cuts {
 		step("render_footage")
@@ -140,11 +141,16 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		calls := 0
 		err = load(ctx, cut.SourceID, func(source clip.MediaSource) error {
 			calls++
-			expected := byID[cut.SourceID]
-			if calls != 1 || source.SourceID != cut.SourceID || source.Fingerprint != cut.Fingerprint || source.Info.DurationMS != expected.Info.DurationMS || source.Info.Width != expected.Info.Width || source.Info.Height != expected.Info.Height || source.Info.HasAudio != expected.Info.HasAudio {
+			if calls != 1 || !loadedAsRendered(source, cut, byID[cut.SourceID]) {
 				return clip.ErrInvalidMedia
 			}
 			if err := r.renderBareFootage(ctx, ws, canvas, cut, source, frames[i], video); err != nil {
+				return err
+			}
+			// The grounds CDS-44 reads are this cut's own frames, taken while its
+			// original is at hand, through the sampler a browser render's grounds
+			// come from too (CLIP-192).
+			if err := r.sampleCut(ctx, ws, &sampler, i, cut, source); err != nil {
 				return err
 			}
 			if audio {
@@ -185,11 +191,9 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			return result, err
 		}
 	}
-	// Sample the final, transitioned footage under the authored output window.
-	// The loader's original can already be released at this point.
 	composedSource := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: totalFrames * 1000 / r.cfg.FPS}}
 	step("render_overlay")
-	if err = r.sampleDeclaredGrounds(ctx, ws, canvas, composedSource, layout.visuals); err != nil {
+	if err = sampler.apply(canvas, layout.visuals); err != nil {
 		return result, err
 	}
 	layers := make([]captionLayer, len(layout.visuals))

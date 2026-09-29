@@ -13,52 +13,6 @@ import (
 	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
-// sampleDeclaredGrounds measures every element's ground BEFORE any plate is
-// built, so the frames CDS-44 names for the whole plan come from as few reads of
-// the composed footage as the batch allows rather than one read per frame
-// (CLIP-124). Each element is still measured on exactly its own three frames
-// and its own region.
-func (r *Rendering) sampleDeclaredGrounds(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, visuals []declaredVisual) error {
-	cut := clip.Cut{EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
-	var wanted []int
-	var regions []clip.Region
-	var sampled []int
-	for i := range visuals {
-		switch visuals[i].manifest.Role {
-		case "caption", "info", "hook", "ending":
-		default:
-			continue
-		}
-		bounds := sampledBounds(visuals[i])
-		if bounds.Width <= 0 || bounds.Height <= 0 {
-			continue
-		}
-		window := declaredSampleWindow(visuals[i].manifest.StartMS, visuals[i].manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
-		offsets := sampleOffsets(cut, window)
-		sampled = append(sampled, i)
-		wanted = append(wanted, offsets...)
-		for range offsets {
-			regions = append(regions, bounds)
-		}
-	}
-	if len(wanted) == 0 {
-		return nil
-	}
-	frames, err := r.sampleFrames(ctx, ws, canvas, source, cut.Focal, wanted, 0)
-	if err != nil {
-		return err
-	}
-	if len(frames) != len(wanted) {
-		return clip.ErrInvalidMedia
-	}
-	for at, index := range sampled {
-		from := at * 3
-		visuals[index].ground = measureFrames(frames[from:from+3], regions[from:from+3])
-		applyDeclaredGround(canvas, &visuals[index])
-	}
-	return nil
-}
-
 // One overlay input: a static caption's single plate, which the chain loops for
 // the caption's whole interval, or a sequence style's own PNG per output frame
 // (CDS-80, CDS-81).

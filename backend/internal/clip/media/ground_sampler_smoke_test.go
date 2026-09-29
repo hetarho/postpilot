@@ -1,0 +1,215 @@
+package media
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
+)
+
+// movingBlock writes a source whose picture changes every frame: a block
+// crossing a ground, so a frame taken one early or one late measures differently.
+func movingBlock(t *testing.T, a *Adapter, ws clip.MediaWorkspace, name, ground, block, size, period string) string {
+	t.Helper()
+	path := filepath.Join(ws.Path, name)
+	args := []string{"-v", "error", "-f", "lavfi", "-i", "color=c=" + ground + ":s=" + size + ":r=30", "-f", "lavfi", "-i", "color=c=" + block + ":s=" + size + ":r=30",
+		"-filter_complex", "[1:v]crop=iw:ih/4[b];[0:v][b]overlay=x=0:y='(H-h)*mod(t," + period + ")/" + period + "'[v]", "-map", "[v]",
+		"-t", "5", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", path}
+	if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, args...); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// The frames the sampler rebuilds from the originals are the composed footage's
+// (CLIP-192): the same pixels wherever one cut stands alone, because every
+// intermediate is lossless — on a cut at a non-1x rate and on both sides of a
+// hard cut — the same dissolve, and a fade through black within the few levels
+// its pixel model allows.
+func TestRenderSmokeSamplesGroundsAsTheComposedFootage(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real renderer gate runs inside Docker")
+	}
+	t.Parallel()
+	cfg := mediaConfig(t)
+	cfg.OperationTimeout = 10 * time.Minute
+	a, err := New(cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewRenderer(a, renderConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canvas, _ := clip.ClipCanvas("vertical")
+	if err := a.WithWorkspace(t.Context(), "ground-parity", func(ws clip.MediaWorkspace) error {
+		sources := map[string]clip.MediaSource{
+			"one": {SourceID: "one", Path: movingBlock(t, a, ws, "one.mp4", "black", "white", "1280x720", "2")},
+			"two": {SourceID: "two", Path: movingBlock(t, a, ws, "two.mp4", "0xE0E0E0", "0x202020", "720x1280", "3")},
+		}
+		plan := clip.EditPlan{Ratio: "vertical", Cuts: []clip.Cut{
+			{ID: "a", SourceID: "one", StartMS: 0, EndMS: 2000, Focal: clip.Point{X: .3, Y: .5}},
+			{ID: "b", SourceID: "two", StartMS: 500, EndMS: 3500, PlaybackRatePermille: 1500, TransitionMS: design.Transition.FadeMS, Focal: clip.Point{X: .5, Y: .5}},
+			{ID: "c", SourceID: "one", StartMS: 1000, EndMS: 3000, TransitionMS: design.Transition.BlackMS, Focal: clip.Point{X: .7, Y: .4}},
+			{ID: "d", SourceID: "two", StartMS: 0, EndMS: 1000, Focal: clip.Point{X: .5, Y: .5}},
+		}}
+		// The composition's footage, built exactly as a server render builds it.
+		frames, transitions := cutFrames(plan, r.cfg.FPS), planTransitions(plan)
+		cuts, cleanup := []string{}, []string{}
+		for i, cut := range plan.Cuts {
+			video := filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
+			if err := r.renderBareFootage(t.Context(), ws, canvas, cut, sources[cut.SourceID], frames[i], video); err != nil {
+				return err
+			}
+			cuts = append(cuts, video)
+		}
+		raw := filepath.Join(ws.Path, "composition-footage.mp4")
+		args, err := r.compositionInputsFormat(t.Context(), ws, cuts, frames, transitions, "", nil, &cleanup, "yuv444p")
+		if err != nil {
+			return err
+		}
+		if err := r.runRender(t.Context(), ws, raw, append(args, r.encodeProfile(false, 0, "yuv444p")...)); err != nil {
+			return err
+		}
+		timeline := newFootageTimeline(r.cfg, plan)
+		b, c, d := timeline.starts[1], timeline.starts[2], timeline.starts[3]
+		picks := []int{15, b + 3, b + 20, c + 1, c + 4, c + 7, d - 1, d, d + 5}
+		region := clip.Region{X: 90, Y: 600, Width: 900, Height: 700}
+		// Before: an output-side seek into the composed footage, the frame a
+		// render used to read.
+		offsets := make([]int, len(picks))
+		for i, frame := range picks {
+			offsets[i] = frame * 1000 / r.cfg.FPS
+		}
+		composed := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: timeline.total * 1000 / r.cfg.FPS}}
+		before, err := r.sampleFrames(t.Context(), ws, canvas, composed, clip.Point{X: .5, Y: .5}, offsets, 0)
+		if err != nil {
+			return err
+		}
+		// After: each frame rebuilt from the originals.
+		s := groundSampler{canvas: canvas}
+		for i, frame := range picks {
+			footage, ok := timeline.at(frame)
+			if !ok {
+				return fmt.Errorf("frame %d is outside the clip", frame)
+			}
+			s.reads = append(s.reads, groundRead{visual: i, footage: footage, region: region})
+		}
+		for i, cut := range plan.Cuts {
+			if err := r.sampleCut(t.Context(), ws, &s, i, cut, sources[cut.SourceID]); err != nil {
+				return err
+			}
+		}
+		after, err := s.grounds()
+		if err != nil {
+			return err
+		}
+		spread := 0.0
+		for i, frame := range picks {
+			want, _, _, _ := regionLuminance(before[i], region)
+			got := after[i].Frames[0]
+			tolerance := 1e-4
+			switch s.reads[i].footage.kind {
+			case "fade":
+				tolerance = 2e-3
+			case "fadeblack":
+				tolerance = 2e-2
+			}
+			t.Logf("frame %d %-9s originals %.5f composed %.5f", frame, s.reads[i].footage.kind, got, want)
+			if math.Abs(got-want) > tolerance {
+				t.Errorf("frame %d (%+v) measured %.5f from the originals, %.5f in the composed footage", frame, s.reads[i].footage, got, want)
+			}
+			if composedGround := measureFrames(before[i:i+1], []clip.Region{region}); composedGround.Scrim() != after[i].Scrim() || composedGround.AccentWhite() != after[i].AccentWhite() {
+				t.Errorf("frame %d decides a scrim or accent differently from the originals", frame)
+			}
+			if i > 0 {
+				spread = max(spread, math.Abs(got-after[i-1].Frames[0]))
+			}
+		}
+		if spread < .05 {
+			t.Errorf("the fixture's frames barely differ (%.4f), so a frame taken early or late would pass", spread)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A centred outro over a bright ground takes scrim.radial in a server render,
+// and the server's measurement a browser render is handed draws the same scrim
+// (CDS-32, CDS-44, CLIP-192).
+func TestRenderSmokeScrimsAnOutroOverABrightGround(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real renderer gate runs inside Docker")
+	}
+	t.Parallel()
+	cfg := mediaConfig(t)
+	cfg.OperationTimeout = 10 * time.Minute
+	a, err := New(cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewRenderer(a, renderConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canvas, _ := clip.ClipCanvas("vertical")
+	if err := a.WithWorkspace(t.Context(), "bright-outro", func(ws clip.MediaWorkspace) error {
+		path := filepath.Join(ws.Path, "source.mp4")
+		if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "color=c=0xF4EFE6:s=1280x720:r=30", "-t", "16", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", path); err != nil {
+			return err
+		}
+		info, err := a.Probe(t.Context(), ws, path)
+		if err != nil {
+			return err
+		}
+		plan := declaredPlan(t, `<clip version="1" outro="b"><text id="outro" kind="fixed" role="ending" basis="output-end"><row>또 올 곳</row><row>성수</row></text></clip>`, "vertical")
+		sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: info}}
+		load := func(_ context.Context, _ string, consume func(clip.MediaSource) error) error {
+			return consume(clip.MediaSource{SourceID: "source", Fingerprint: "fp", Info: info, Path: path})
+		}
+		scrimmed := func(parts []design.Element) bool {
+			for _, part := range parts {
+				if part.Kind == "scrim" {
+					return true
+				}
+			}
+			return false
+		}
+		result, err := r.Render(t.Context(), ws, plan, sources, load)
+		if err != nil {
+			return err
+		}
+		rendered := false
+		for _, e := range result.Elements {
+			rendered = rendered || e.Role == "ending" && scrimmed(e.Parts)
+		}
+		if !rendered {
+			return fmt.Errorf("the server render left the bright outro unscrimmed: %+v", result.Elements)
+		}
+		_ = os.Remove(result.Path)
+		grounds, err := r.SampleGrounds(t.Context(), ws, plan, sources, load)
+		if err != nil {
+			return err
+		}
+		layout, err := r.layoutComposition(t.Context(), ws, plan)
+		if err != nil {
+			return err
+		}
+		layout.applyGrounds(canvas, grounds)
+		for _, visual := range layout.visuals {
+			if visual.manifest.Role == "ending" && (!scrimmed(visual.manifest.Parts) || visual.region.Radial == nil && visual.region.Scrim == nil) {
+				return fmt.Errorf("the browser render's grounds left the outro unscrimmed: %+v", grounds)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

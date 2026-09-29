@@ -107,28 +107,8 @@ func relativeLuminance(r, g, b float64) float64 {
 // regionLuminance averages one frame over the plate region and returns its
 // relative luminance and its mean colour.
 func regionLuminance(frame image.Image, region clip.Region) (float64, float64, float64, float64) {
-	bounds := frame.Bounds()
-	x0, y0 := max(bounds.Min.X, int(region.X)), max(bounds.Min.Y, int(region.Y))
-	x1, y1 := min(bounds.Max.X, int(region.X+region.Width)), min(bounds.Max.Y, int(region.Y+region.Height))
-	if x1 <= x0 || y1 <= y0 {
-		return 0, 0, 0, 0
-	}
-	var sr, sg, sb float64
-	n := 0.0
-	// Every second pixel in each direction: a quarter of the reads for a mean
-	// that moves in the fourth decimal.
-	for y := y0; y < y1; y += 2 {
-		for x := x0; x < x1; x += 2 {
-			r, g, b, _ := frame.At(x, y).RGBA()
-			sr, sg, sb = sr+float64(r)/0xffff, sg+float64(g)/0xffff, sb+float64(b)/0xffff
-			n++
-		}
-	}
-	if n == 0 {
-		return 0, 0, 0, 0
-	}
-	sr, sg, sb = sr/n, sg/n, sb/n
-	return relativeLuminance(sr, sg, sb), sr, sg, sb
+	r, g, b := regionMean(frame, region)
+	return relativeLuminance(r, g, b), r, g, b
 }
 
 // readFrame decodes one extracted PNG frame.
