@@ -1,26 +1,26 @@
 # GIFT vouchers and gift links
-> r2 | The operator issues vouchers (이용권) — credits that expire a set number of days after redemption — sold by bank transfer or given free, each delivered as a one-time gift link anyone can open and a signed-in account redeems.
+> r3 | Operator-issued expiring credit vouchers with public one-time gift links, redeemed only during paid subscription coverage and never granting model or export rights.
 
 ## decisions
-- GIFT-1 [o] a voucher grants a fixed number of credits that expire a fixed number of days after redemption; it never changes the account's tier, anchor or subscription ← a tier decides only the monthly grant (→QUOTA-2), so expiring credits deliver the same value without colliding with BILL's subscription lifecycle
+- GIFT-1 [o] a voucher grants a fixed number of credits expiring after its redemption validity; it changes no tier, subscription/reset anchor, model grade or server-export count (→QUOTA-19 →QUOTA-58).
 - GIFT-2 [o] only the operator issues, lists and revokes vouchers, on the admin surface; they are master-only procedures (→QUOTA-25, →AUTH-18)
-- GIFT-3 [o] issuance picks credits and validity from presets equal to the paid rungs — each rung's monthly grant (→QUOTA-7) for 30 days, read from the code-owned ladder (→QUOTA-8) — or enters both numbers directly
+- GIFT-3 [o] issuance presets equal QUOTA-7's paid monthly bonuses: 290/510/1070/3170 credits, each valid for 30 days after redemption, read from the code-owned ladder. The operator may still specify credits and validity directly.
 - GIFT-4 [o] every voucher records whether it was sold or given: a sold one carries the KRW amount received and the payer name the operator entered, a given one carries neither; neither figure changes what the voucher grants ← bank-transfer sales need a ledger, and the voucher list is that ledger
 - GIFT-5 [o] a voucher carries an optional one-line message shown on its gift page; an empty message shows a default line
-- GIFT-6 [o] issuing yields one gift link carrying an unguessable token; the link is a bearer credential redeemable once, by whichever signed-in account redeems it first ← a link a message app can carry beats binding to an email the operator may not have; a leaked unredeemed link is answered by revocation (GIFT-10)
+- GIFT-6 [o] the unguessable gift-link token is a bearer credential redeemable once by the first eligible signed-in paid subscriber; recipient binding is not required. Revocation answers a leaked unredeemed link (→GIFT-10).
 - GIFT-7 [o] an unredeemed link expires 90 days after issuance; an expired unredeemed voucher is replaced by issuing a new one, never extended
-- GIFT-8 [o] the gift page is public: without a session it shows the credits, the validity days, the message and the link's state (redeemable · redeemed · expired · revoked); a visitor without a session signs in or signs up (email verification included, →AUTH-34) and lands back on the same page (→AUTH-27)
-- GIFT-9 [o] redemption is an explicit action on the gift page, never a side effect of opening it; it is single-use under concurrency — one of two simultaneous redemptions wins and the other sees the voucher as redeemed — and opens one credit lot of the voucher's credits expiring the validity days after the redemption instant
+- GIFT-8 [o] the public gift page shows credits, validity, message and link state. A signed-out visitor signs in/up and returns to it; a free account sees that an active paid subscription is required to redeem. Merely viewing the link never starts validity or redeems it.
+- GIFT-9 [o] explicit redemption requires active paid coverage and is single-use under concurrency; one winner opens one voucher lot expiring the specified validity after that instant. Subscription lapse never pauses or extends this expiry; the retained balance needs paid access to be spent.
 - GIFT-10 [o] the operator may revoke a voucher at any time: an unredeemed one's link stops working; a redeemed one's unspent remainder is voided while spent credits stay spent; money is returned outside the product ← a paid voucher's 7-day refund needs its credits gone, and a bank transfer is returned by hand
 - GIFT-11 [o] a voucher lot burns with the other expiring lots in QUOTA-12's consumption order (→QUOTA-12) ← a voucher credit left for last would lapse unspent while never-expiring credits burned before it
-- GIFT-12 [o] an account may redeem any number of vouchers; each redemption is its own lot
+- GIFT-12 [o] an eligible paid subscriber may redeem any number of vouchers; each opens its own lot under GIFT-9.
 - GIFT-13 [o] a redeemed voucher appears among the account's lots with its kind and expiry (→QUOTA-26); the product sends no mail on issue, redemption or expiry — the operator delivers the link
 - GIFT-14 [o] the admin voucher list shows each voucher's issue date, credits, validity, sold amount and payer or given, state, redeeming account and redemption date, and a redeemed voucher's remaining credits; an unredeemed voucher's link can be copied again
 - GIFT-15 [x] users buying vouchers or gifting their own credits, card-paid vouchers, vouchers that grant a tier, recipient-bound vouchers, per-account redemption limits, mail on issue/redeem/expiry, bulk issuance, typed coupon codes, partial redemption — out of scope
 
 ## flow
 - issue: admin → preset | custom(credits, days) → sold(amount, payer) | given → message(optional) → link copied → operator delivers it
-- redeem: open link → gift page(redeemable → session(yes → redeem → lot opens | no → sign in / sign up → back → redeem → lot opens) | redeemed | expired | revoked)
+- redeem: open link → public state → signed-in paid coverage(yes → explicit once-only redemption → expiring lot | no → sign in/signup or subscribe, then return; no redemption until eligible) | redeemed/expired/revoked
 - revoke: admin → unredeemed(link stops working) | redeemed(unspent remainder voided)
 
 ## constraints
