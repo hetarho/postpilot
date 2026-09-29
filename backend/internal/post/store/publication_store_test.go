@@ -164,16 +164,16 @@ func TestContentNounsDecodeThroughGetPostAndTheWindow(t *testing.T) {
 	}
 }
 
-func TestAPublishedRowIsLearnableAndListed(t *testing.T) {
+func TestAPublishedRowIsReadAndListed(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
 	finalizedRow(t, s, "jeju", "alice")
 	if ok, err := s.PublishPost(ctx, "jeju", "alice", firstAddress, testNow.Add(time.Hour)); err != nil || !ok {
 		t.Fatalf("publish: ok=%v err=%v", ok, err)
 	}
-	snapshot, err := s.LearningSnapshot(ctx, "jeju", "alice")
-	if err != nil || snapshot.ContentRevision != 1 || snapshot.Current.Title != "제주 3일" {
-		t.Fatalf("snapshot of a published row = %+v, %v", snapshot, err)
+	got, err := s.GetPost(ctx, "jeju")
+	if err != nil || got.ContentRevision != 1 || got.Content == nil || got.Content.Title != "제주 3일" {
+		t.Fatalf("a published row = %+v, %v", got, err)
 	}
 	listed, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
 	if err != nil || len(listed) != 1 || listed[0].Status != post.StatusPublished {

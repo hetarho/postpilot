@@ -10,14 +10,13 @@ var (
 	// ErrVideoUnsupported: the post has a video and the chosen observe model cannot watch
 	// one. It is checked BEFORE enqueue rather than at the call, so the run is refused while
 	// the user is still looking at the picker they can fix it in (VIDEO-11).
-	ErrVideoUnsupported             = errors.New("the selected observe model cannot watch video")
-	ErrLanguageRequired             = errors.New("a supported content language is required")
-	ErrContentLanguageRequired      = errors.New("content language is required for revision")
-	ErrVoiceContentLanguageMismatch = errors.New("post content language does not match voice source language")
-	ErrInvalidTargetLength          = errors.New("target length must be positive")
-	ErrRevisionInstructionRequired  = errors.New("a revision instruction is required")
-	ErrRevisionInstructionTooLong   = errors.New("the revision instruction is too long")
-	ErrRevisionContentRequired      = errors.New("generated content is required before revision")
+	ErrVideoUnsupported            = errors.New("the selected observe model cannot watch video")
+	ErrLanguageRequired            = errors.New("a supported content language is required")
+	ErrContentLanguageRequired     = errors.New("content language is required for revision")
+	ErrInvalidTargetLength         = errors.New("target length must be positive")
+	ErrRevisionInstructionRequired = errors.New("a revision instruction is required")
+	ErrRevisionInstructionTooLong  = errors.New("the revision instruction is too long")
+	ErrRevisionContentRequired     = errors.New("generated content is required before revision")
 	// ErrStorylineMissing: the storyline request rewrites the stored storyline, so a post that
 	// holds none has nothing to ask about (GEN-69).
 	ErrStorylineMissing = errors.New("the post holds no storyline to revise")

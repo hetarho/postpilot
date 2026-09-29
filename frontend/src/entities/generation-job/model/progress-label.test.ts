@@ -15,3 +15,11 @@ it('names the clip storyline stage', () => {
     '스토리라인 작성 중',
   )
 })
+
+// POST-46: no post job analyzes any more, so the editor's labels have no 문체 분석 중, while the
+// voice page's own analysis keeps naming its stage.
+it('names the analyze stage for a voice analysis alone', () => {
+  expect(progressLabel({ kind: 'analyze_voice', stage: 'analyze' })).toBe('문체 분석 중')
+  expect(progressLabel({ kind: 'revise', stage: 'analyze' })).toBe('생성 중')
+  expect(progressLabel({ stage: 'analyze' })).toBe('생성 중')
+})

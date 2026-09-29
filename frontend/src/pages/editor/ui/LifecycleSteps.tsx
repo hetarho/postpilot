@@ -8,9 +8,7 @@ import {
   type PostDraft,
   type PostStorylineParagraph,
 } from '@/entities/post'
-import { voiceContentLanguageMismatch } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
-import { useVoiceLearning } from '@/features/finalize-post'
 import type {
   GenerationActionsHandle,
   GenerationMode,
@@ -88,14 +86,6 @@ export function LifecycleSteps({
   // a fresh set when one of its photos fails to load — the only moment a dead URL costs anything,
   // because a photo that HAS painted is copied from its own pixels.
   const refreshPhotoUrls = useRefreshPostImages(post.slug)
-  // Above both panels on template: 확정하고 말투 학습 lives at the end of 글 다듬기 and every
-  // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
-  // finalize itself causes.
-  const learning = useVoiceLearning(ownerId, post)
-  const languageMismatch = voiceContentLanguageMismatch(
-    post.contentLanguage,
-    post.voice.sourceLanguage,
-  )
   const { job } = jobView
   const result = hasContent(post) ? post.content : undefined
   // What export renders. The block editor's unsaved edits are newer than the server's copy, but only
@@ -155,7 +145,6 @@ export function LifecycleSteps({
       ownerId={ownerId}
       storylineSpace={storylineSpace}
       result={result}
-      languageMismatch={languageMismatch}
       editorRef={contentEditorRef}
       onContentChange={reportEdited}
       onGoGenerate={() => onStepChange('generate')}
@@ -167,11 +156,8 @@ export function LifecycleSteps({
       ownerId={ownerId}
       result={result}
       liveContent={liveContent}
-      learning={learning}
-      languageMismatch={languageMismatch}
       onPhotoUrlsStale={refreshPhotoUrls}
       onGoGenerate={() => onStepChange('generate')}
-      onGoRefine={() => onStepChange('refine')}
     />
   )
   const jobNotice = (
@@ -220,8 +206,6 @@ export function LifecycleSteps({
         hasJobNotice={hasJobNotice}
         dockHeader={dockHeader}
         targetLength={targetLength}
-        languageMismatch={languageMismatch}
-        learning={learning}
         editorRef={contentEditorRef}
         generateRef={generateRef}
         reviseRef={reviseRef}

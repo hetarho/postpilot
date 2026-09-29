@@ -110,7 +110,7 @@ func TestTicksAreAnOptionSave(t *testing.T) {
 		after.MachineBaselineRevision != before.MachineBaselineRevision || after.FinalizedRevision != before.FinalizedRevision {
 		t.Fatalf("a tick save moved the lifecycle: %+v", after)
 	}
-	if _, err := svc.LearningSnapshot(ctx, alice, finalized.Slug); err != nil {
-		t.Fatalf("the post stopped being learnable: %v", err)
+	if got, err := svc.Get(ctx, alice, finalized.Slug); err != nil || !got.FinalizedAtCurrentRevision() {
+		t.Fatalf("the post stopped being finalized: %+v, %v", got, err)
 	}
 }

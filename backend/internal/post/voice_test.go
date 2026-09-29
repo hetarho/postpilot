@@ -81,9 +81,9 @@ func TestGetAndListProjectTheVoiceIncludingTombstones(t *testing.T) {
 	}
 }
 
-// POST-24: reassignment keeps the canonical post/finalization and withdraws the old
-// voice's machine baseline, which is what removes learn eligibility.
-func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
+// POST-24: a reassignment changes voice_id alone. Content, its revision, finalization and the
+// machine baseline stay, so an untouched draft still reads as untouched (POST-16, POST-98).
+func TestReassignmentKeepsContentAndTheMachineBaseline(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "Jeju")
@@ -95,12 +95,8 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := store.posts[created.Slug]
-	if before.MachineBaselineVoiceID != aliceVoice {
-		t.Fatalf("machine result did not record its voice: %+v", before)
-	}
-	snapshot, err := svc.LearningSnapshot(ctx, alice, created.Slug)
-	if err != nil || snapshot.VoiceID != aliceVoice || snapshot.MachineBaselineVoiceID != aliceVoice {
-		t.Fatalf("snapshot before reassignment = %+v err=%v", snapshot, err)
+	if before.MachineBaselineRevision != before.ContentRevision {
+		t.Fatalf("a machine result did not set its baseline: %+v", before)
 	}
 
 	review := aliceReview
@@ -108,53 +104,18 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reassign: %v", err)
 	}
-	if moved.VoiceID != aliceReview || moved.Voice.Name != "리뷰" || moved.MachineBaselineVoiceID != "" {
+	if moved.VoiceID != aliceReview || moved.Voice.Name != "리뷰" {
 		t.Fatalf("reassigned post = %+v", moved)
 	}
 	if moved.Slug != created.Slug || moved.Content == nil || moved.Content.Title != "generated" || moved.ContentRevision != before.ContentRevision ||
-		moved.MachineBaselineRevision != 0 || moved.Status != StatusFinalized || moved.FinalizedRevision != before.FinalizedRevision {
+		moved.MachineBaselineRevision != before.MachineBaselineRevision || moved.Status != StatusFinalized || moved.FinalizedRevision != before.FinalizedRevision {
 		t.Fatalf("reassignment changed the post: before=%+v after=%+v", before, moved)
 	}
-	// The learning hand-off is unavailable until a new machine result establishes a baseline.
-	if _, err = svc.LearningSnapshot(ctx, alice, created.Slug); !errors.Is(err, ErrNoMachineBaseline) {
-		t.Fatalf("snapshot after reassignment = %v, want ErrNoMachineBaseline", err)
-	}
-	// A fresh machine result re-establishes a baseline in the new voice.
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, PostContent{Title: "again", Blocks: []Block{{Type: BlockText, Content: "new"}}}, LanguageKorean, nil); err != nil {
-		t.Fatal(err)
-	}
-	if after := store.posts[created.Slug]; after.MachineBaselineVoiceID != aliceReview {
-		t.Fatalf("new baseline voice = %q, want %q", after.MachineBaselineVoiceID, aliceReview)
-	}
-	// The same present value is not a reassignment: an ordinary autosave patch.
-	same := aliceReview
-	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", Memo: "memo 2", VoiceID: &same}); err != nil {
-		t.Fatalf("unchanged assignment: %v", err)
-	}
-	if store.posts[created.Slug].MachineBaselineVoiceID != aliceReview {
-		t.Fatal("an unchanged assignment cleared the baseline")
-	}
-}
-
-func TestReassignedReviewCanFinalizeWithoutPublishingLearningEvidence(t *testing.T) {
-	svc, _, _ := newTestService(t)
-	ctx := context.Background()
-	created := mustCreatePost(t, svc, alice, "Finalize after move")
-	content := PostContent{Title: "kept", Blocks: []Block{{Type: BlockText, Content: "body"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
-		t.Fatal(err)
-	}
-	target := aliceReview
-	moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, VoiceID: &target})
-	if err != nil || moved.Content == nil || moved.MachineBaselineRevision != 0 {
-		t.Fatalf("reassign = %+v err=%v", moved, err)
-	}
-	finalized, err := svc.Finalize(ctx, alice, created.Slug, moved.ContentRevision)
-	if err != nil || finalized.Status != StatusFinalized {
-		t.Fatalf("finalize preserved content = %+v err=%v", finalized, err)
-	}
-	if _, err := svc.LearningSnapshot(ctx, alice, created.Slug); !errors.Is(err, ErrNoMachineBaseline) {
-		t.Fatalf("learning snapshot without new baseline = %v", err)
+	// Moving back is a reassignment too, and it keeps the baseline just the same.
+	back := aliceVoice
+	returned, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", Memo: "memo", VoiceID: &back})
+	if err != nil || returned.VoiceID != aliceVoice || returned.MachineBaselineRevision != returned.ContentRevision {
+		t.Fatalf("second reassignment = %+v err=%v", returned, err)
 	}
 }
 

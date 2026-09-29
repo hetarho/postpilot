@@ -13,48 +13,6 @@ export interface VoiceValue {
   source: VoiceSourceKind
   unknown: boolean
 }
-export type VoiceRuleLayer = 'lexical' | 'endings' | 'syntax' | 'structure' | 'axes' | 'unknown'
-export interface VoiceRule {
-  id: string
-  statement: string
-  layer: VoiceRuleLayer
-  evidenceCount: number
-  status: 'candidate' | 'active' | 'retired' | 'rejected' | 'unknown'
-  origin: string
-  createdAt: string
-  lastEvidenceAt: string
-}
-export interface VoiceSource {
-  id: string
-  postSlug: string
-  title: string
-  tags: string[]
-  excerpt: string
-  hasEmbedding: boolean
-  createdAt: string
-}
-export interface VoiceFeedback {
-  id: string
-  postSlug: string
-  kind: string
-  layer: VoiceRuleLayer
-  processingState: string
-  createdAt: string
-}
-export type VoiceValidationState = 'queued' | 'running' | 'partial' | 'failed' | 'done' | 'unknown'
-
-export function voiceValidationState(value: string): VoiceValidationState {
-  switch (value) {
-    case 'queued':
-    case 'running':
-    case 'partial':
-    case 'failed':
-    case 'done':
-      return value
-    default:
-      return 'unknown'
-  }
-}
 /** Every axis is optional because absence is a real answer: an axis the analysis never measured is
  *  missing, not 0, and the screen shows it as 알 수 없음 next to the other unknown-capable fields. */
 export interface VoiceAxes {
@@ -102,9 +60,6 @@ export interface StructuredVoiceProfile {
     emojiUse: VoiceValue
   }
   axes: VoiceAxes
-  rules: VoiceRule[]
-  sources: VoiceSource[]
-  feedback: VoiceFeedback[]
 }
 
 /** One of an account's writing voices (VOICE-1). A voice owns exactly one profile and
@@ -136,8 +91,6 @@ export interface VoiceProfile {
   samples: VoiceSample[]
   activeJobId: string
   structured: StructuredVoiceProfile
-  finalizedSourceCount: number
-  canValidate: boolean
   /** Why the seeding a described creation started failed, while the voice has no published
    *  version yet (VOICE-19). Stays after the job ended and after a reload. */
   seedFailure?: AppFailure
@@ -212,20 +165,13 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
       emojiUse: unknownValue(),
     },
     axes: {},
-    rules: [],
-    sources: [],
-    feedback: [],
   }
 }
 
-// An empty profile is now exactly "nothing to learn from and nothing published": the free-text
-// styleguide that used to count as content is gone (VOICE-6).
-export function isEmptyProfile(
-  profile: Pick<VoiceProfile, 'structured' | 'samples' | 'finalizedSourceCount'>,
-): boolean {
-  return (
-    profile.structured.empty && profile.samples.length === 0 && profile.finalizedSourceCount === 0
-  )
+// An empty profile is now exactly "no sample and nothing published": the free-text styleguide
+// that used to count as content is gone (VOICE-6), and finalized posts no longer teach a voice.
+export function isEmptyProfile(profile: Pick<VoiceProfile, 'structured' | 'samples'>): boolean {
+  return profile.structured.empty && profile.samples.length === 0
 }
 
 export function voiceRefLabel(voice: Pick<VoiceRef, 'name' | 'deleted'>): string {
@@ -237,17 +183,6 @@ export function voiceRefLabel(voice: Pick<VoiceRef, 'name' | 'deleted'>): string
  *  this only says so before the round trip. */
 export function deletedVoiceAIReason(): string {
   return i18next.t('deletedAiReason', { ns: 'voices' })
-}
-
-export function voiceContentLanguageMismatch(
-  contentLanguage: ContentLanguage | undefined,
-  sourceLanguage: ContentLanguage | undefined,
-): boolean {
-  return Boolean(contentLanguage && sourceLanguage && contentLanguage !== sourceLanguage)
-}
-
-export function voiceContentLanguageMismatchReason(): string {
-  return i18next.t('VOICE_CONTENT_LANGUAGE_MISMATCH', { ns: 'errors' })
 }
 
 export function activeVoices<T extends Pick<Voice, 'deleted'>>(voices: readonly T[]): T[] {

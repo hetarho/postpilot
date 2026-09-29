@@ -65,7 +65,6 @@ import { i18n as recordPublishedUrlI18n } from '@/features/record-published-url/
 import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config/i18n'
 import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/config/i18n'
-import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/widgets/guideline-directory/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
@@ -77,7 +76,6 @@ import { i18n as deleteMemoryI18n } from '@/features/delete-memory/config/i18n'
 import { i18n as memoriesPageI18n } from '@/pages/memories/config/i18n'
 import { i18n as manageModelCatalogI18n } from '@/features/manage-model-catalog/config/i18n'
 import { i18n as manageSubscriptionI18n } from '@/features/manage-subscription/config/i18n'
-import { i18n as manageVoiceRulesI18n } from '@/features/manage-voice-rules/config/i18n'
 import { i18n as manageVoiceSamplesI18n } from '@/features/manage-voice-samples/config/i18n'
 import { i18n as modelCatalogI18n } from '@/entities/model-catalog/config/i18n'
 import { i18n as modelExperimentEntityI18n } from '@/entities/model-experiment/config/i18n'
@@ -105,11 +103,8 @@ import { i18n as templateEntityI18n } from '@/entities/template/config/i18n'
 import { i18n as templatePageI18n } from '@/pages/template/config/i18n'
 import { i18n as templatesI18n } from '@/pages/templates/config/i18n'
 import { i18n as uploadPhotosI18n } from '@/features/upload-photos/config/i18n'
-import { i18n as validateVoiceProfileI18n } from '@/features/validate-voice-profile/config/i18n'
 import { i18n as voiceEntityI18n } from '@/entities/voice/config/i18n'
 import { i18n as voicePageI18n } from '@/pages/voice/config/i18n'
-import { i18n as voiceRuleComparisonI18n } from '@/pages/voice-rule-comparison/config/i18n'
-import { i18n as voiceValidationI18n } from '@/pages/voice-validation/config/i18n'
 import { i18n as voicesI18n } from '@/pages/voices/config/i18n'
 import { modelsI18n as selectModelModelsI18n } from '@/features/select-model/config/i18n'
 import { plansI18n as selectModelPlansI18n } from '@/features/select-model/config/i18n'
@@ -228,17 +223,12 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   createVoiceI18n,
   deleteVoiceI18n,
   editVoiceProfileI18n,
-  giveVoiceFeedbackI18n,
-  manageVoiceRulesI18n,
   manageVoiceSamplesI18n,
   renameVoiceI18n,
   selectPostVoiceI18n,
   setDefaultVoiceI18n,
-  validateVoiceProfileI18n,
   voiceEntityI18n,
   voicePageI18n,
-  voiceRuleComparisonI18n,
-  voiceValidationI18n,
   voicesI18n,
 ]
 
@@ -271,17 +261,12 @@ export const resources = {
       ...createVoiceI18n.ko,
       ...deleteVoiceI18n.ko,
       ...editVoiceProfileI18n.ko,
-      ...giveVoiceFeedbackI18n.ko,
-      ...manageVoiceRulesI18n.ko,
       ...manageVoiceSamplesI18n.ko,
       ...renameVoiceI18n.ko,
       ...selectPostVoiceI18n.ko,
       ...setDefaultVoiceI18n.ko,
-      ...validateVoiceProfileI18n.ko,
       ...voiceEntityI18n.ko,
       ...voicePageI18n.ko,
-      ...voiceRuleComparisonI18n.ko,
-      ...voiceValidationI18n.ko,
       ...voicesI18n.ko,
     },
     templates: {
@@ -393,17 +378,12 @@ export const resources = {
       ...createVoiceI18n.en,
       ...deleteVoiceI18n.en,
       ...editVoiceProfileI18n.en,
-      ...giveVoiceFeedbackI18n.en,
-      ...manageVoiceRulesI18n.en,
       ...manageVoiceSamplesI18n.en,
       ...renameVoiceI18n.en,
       ...selectPostVoiceI18n.en,
       ...setDefaultVoiceI18n.en,
-      ...validateVoiceProfileI18n.en,
       ...voiceEntityI18n.en,
       ...voicePageI18n.en,
-      ...voiceRuleComparisonI18n.en,
-      ...voiceValidationI18n.en,
       ...voicesI18n.en,
     },
     templates: {

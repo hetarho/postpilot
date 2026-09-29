@@ -10,7 +10,6 @@ import {
   USER,
   briefField,
   openBrief,
-  openFinalize,
   openStep,
   resetEditorTest,
   templateField,
@@ -168,8 +167,9 @@ describe('the post voice', () => {
     expect(await voiceField(user)).toHaveTextContent('리뷰')
   })
 
-  // POST-24: reassignment is confirmed, preserves the content, and clears learn eligibility.
-  it('reassigns an existing post after confirmation and clears its learn eligibility', async () => {
+  // POST-24: reassignment is confirmed, and it changes the voice alone — the content, the baseline
+  // and finalizability all stay, so 확정하기 finalizes the moved post as it would have before.
+  it('reassigns an existing post after confirmation and leaves it finalizable', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/20260820-jeju', {
@@ -194,18 +194,17 @@ describe('the post voice', () => {
     )
     await waitFor(() => expect(picker).toHaveTextContent('리뷰'))
     await user.keyboard('{Escape}')
-    // The canonical content survived; learning needs a new machine result first. Both live in
-    // 글 다듬기's dock, so the step has to be the one that owns them.
+    // The canonical content survived, and 글 다듬기's one way out still finalizes it: nothing about
+    // a finalize depends on the voice the draft was written under (POST-13).
     await openStep(user, '글 다듬기')
-    const ways = await openFinalize(user)
-    expect(within(ways).getByRole('button', { name: '확정' })).toBeEnabled()
-    expect(within(ways).getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
-    await user.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: '확정하기' })).toBeEnabled()
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
   })
 
-  it('keeps learning disabled when a finalized post is reassigned without a new baseline', async () => {
+  // POST-24: a reassignment leaves the status alone, so a finalized post stays finalized and its
+  // dock keeps the road onward rather than asking for another 확정.
+  it('keeps a finalized post finalized when it is reassigned', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -220,20 +219,15 @@ describe('the post voice', () => {
         voices: POST_VOICES,
       },
       voice: { voices: TWO_VOICES },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
     })
 
     await pickVoice(user, 'voice-review')
     await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
-    await openStep(user, '글 완성')
+    await waitFor(async () => expect(await voiceField(user)).toHaveTextContent('리뷰'))
+    await openStep(user, '글 다듬기')
 
-    expect(
-      await screen.findByText('새 말투로 다시 생성하거나 AI로 수정한 뒤에 학습할 수 있어요.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 학습' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: '글 완성으로 가기' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
   })
 
   // POST-25: the tombstone, the disabled AI controls with their reason, and both ways out.
@@ -278,15 +272,17 @@ describe('the post voice', () => {
     // The manual side of the post is untouched: its content and export are still there.
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    expect(
-      screen.getByText('삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
-    ).toBeInTheDocument()
     await openStep(user, '글 다듬기')
     expect(
       await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '수정' })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+    // The revision is refused before any provider call, and the refusal says why, above it.
+    expect(
+      screen.getByText('삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
+    ).toBeInTheDocument()
+    // A content-only finalize checks no voice (POST-13).
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     // Restore is offered in place and asks the server, nothing else ([I5]).
     await openStep(user, '글 생성')

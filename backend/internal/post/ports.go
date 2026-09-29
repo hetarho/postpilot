@@ -270,5 +270,4 @@ type ContentStore interface {
 	// title, or the post's existing one when that is empty. The copy rides the same guarded
 	// statement as the finalization, so it can never land without it.
 	Finalize(ctx context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error)
-	LearningSnapshot(ctx context.Context, slug, userID string) (LearningSnapshot, error)
 }

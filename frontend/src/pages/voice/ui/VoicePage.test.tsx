@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { BlockType, VoiceLayer, VoiceRuleStatus, VoiceValueSource } from '@/shared/api'
+import { BlockType, VoiceValueSource } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 /** A learned profile whose axes are partly unanswered — the state the analysis produces once it
@@ -31,22 +31,19 @@ describe('the 프로필 tab', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { level: 2, name: '프로필' })).toBeInTheDocument()
     expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '검증 시작' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '복원' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('문체 규칙')).not.toBeInTheDocument()
     expect(screen.queryByText('학습 샘플')).not.toBeInTheDocument()
   })
 
-  // VOICE-54: the three detail lists belong to the tabs that display them.
-  it('issues no version, confirmation or validation request on mount', async () => {
+  // VOICE-54: the version list belongs to the tab that displays it.
+  it('issues no version request on mount', async () => {
     const calls: string[] = []
     renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { structured: LEARNED } })
 
     await screen.findByText('현재 말투 프로필')
     await waitFor(() => expect(calls).toContain('GetVoiceProfile'))
     expect(calls).not.toContain('ListVoiceProfileVersions')
-    expect(calls).not.toContain('ListRuleConfirmations')
-    expect(calls).not.toContain('ListVoiceProfileValidations')
   })
 
   // VOICE-27, frontend half: an axis the analysis never answered is not a measurement.
@@ -160,25 +157,26 @@ describe('the voice tab row', () => {
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
+    // Three tabs: the 규칙 and 검증 tabs left with contrast rules and profile validation.
     expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
       DEFAULT,
       `${DEFAULT}/versions`,
       `${DEFAULT}/import`,
-      `${DEFAULT}/rules`,
-      `${DEFAULT}/validations`,
     ])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
-    // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its five
-    // Korean labels, and every tab keeps the 44px floor.
+    // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its Korean
+    // labels, and every tab keeps the 44px floor.
     expect(screen.getByRole('navigation', { name: '말투 설정' })).toHaveClass('overflow-x-auto')
     tabs.forEach((tab) => {
       expect(tab).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
       expect(tab).toHaveClass('whitespace-nowrap')
     })
 
-    await userEvent.setup().click(tabs[3])
-    await waitFor(() => expect(router.state.location.pathname).toBe(`${DEFAULT}/rules`))
-    expect(await screen.findByRole('heading', { level: 2, name: '대조 규칙' })).toBeInTheDocument()
+    await userEvent.setup().click(tabs[2])
+    await waitFor(() => expect(router.state.location.pathname).toBe(`${DEFAULT}/import`))
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '기존 글 가져오기' }),
+    ).toBeInTheDocument()
 
     router.history.back()
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
@@ -187,8 +185,6 @@ describe('the voice tab row', () => {
   it.each([
     [`${DEFAULT}/versions`, '버전 기록'],
     [`${DEFAULT}/import`, '기존 글 가져오기'],
-    [`${DEFAULT}/rules`, '대조 규칙'],
-    [`${DEFAULT}/validations`, '프로필 검증'],
   ])('renders %s as its own screen on reload', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
@@ -198,68 +194,13 @@ describe('the voice tab row', () => {
   })
 })
 
-describe('localized durable voice records', () => {
-  it.each([
-    { locale: 'ko' as const, label: 'v7 · 완료 · 33%' },
-    { locale: 'en' as const, label: 'v7 · Done · 33%' },
-  ])('localizes validation status and Intl percentage in $locale', async ({ locale, label }) => {
-    initializeI18n(locale)
-    renderAppAt(`${DEFAULT}/validations`, {
-      user: { id: 'alice' },
-      voice: {
-        validations: [
-          {
-            id: 'validation-1',
-            voiceId: 'voice-default',
-            profileVersion: 7n,
-            status: 'done',
-            judgeEnabled: true,
-            totalCount: 3,
-            yCount: 1,
-          },
-        ],
-      },
-    })
-
-    expect(await screen.findByRole('link', { name: label })).toBeInTheDocument()
-    expect(screen.queryByText('done')).not.toBeInTheDocument()
-  })
-
-  it.each([
-    { locale: 'ko' as const, layer: '어휘', evidence: '활성 · 근거 1' },
-    { locale: 'en' as const, layer: 'Lexical', evidence: 'Active · 1 evidence' },
-  ])('localizes the normalized rule layer in $locale', async ({ locale, layer, evidence }) => {
-    initializeI18n(locale)
-    renderAppAt(`${DEFAULT}/rules`, {
-      user: { id: 'alice' },
-      voice: {
-        structured: {
-          ...LEARNED,
-          contrastRules: [
-            {
-              id: 'rule-1',
-              statement: 'Keep sentences concise.',
-              layer: VoiceLayer.LEXICAL,
-              evidenceCount: 1,
-              status: VoiceRuleStatus.ACTIVE,
-            },
-          ],
-        },
-      },
-    })
-
-    expect(await screen.findByText(layer)).toBeInTheDocument()
-    expect(screen.getByText(evidence)).toBeInTheDocument()
-    expect(screen.queryByText('lexical')).not.toBeInTheDocument()
-  })
-})
-
 describe('the legacy /voice address', () => {
   // VOICE-54: old links resolve the server default; nothing is created on the way.
   it.each([
     ['/voice', DEFAULT],
-    ['/voice/rules', `${DEFAULT}/rules`],
     ['/voice/import', `${DEFAULT}/import`],
+    // A tab that no longer exists lands on the profile, like one that never did.
+    ['/voice/rules', DEFAULT],
     ['/voice/whatever', DEFAULT],
   ])('redirects %s to %s', async (from, to) => {
     const calls: string[] = []

@@ -33,7 +33,7 @@ func annotatedPost() *fakePosts {
 }
 
 func annotatedService(posts *fakePosts, models *fakeModels) *Service {
-	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	return NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 }
 
 // GEN-55, GEN-67: a generation hands the post the write's nouns and storyline beside its
@@ -99,9 +99,9 @@ func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body"), Field: "cafe",
 	}}
 	models := annotatingModels(`{"title":"제목","summary":"요약","tags":["a"],"blocks":[{"type":"TEXT","content":"고친 본문"}]}`)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	if err := svc.Revise(context.Background(), RevisionJob{
-		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘", false),
+		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

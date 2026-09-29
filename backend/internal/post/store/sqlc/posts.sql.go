@@ -200,70 +200,47 @@ func (q *Queries) FinalizePost(ctx context.Context, arg FinalizePostParams) (int
 	return result.RowsAffected()
 }
 
-const getLearningSnapshot = `-- name: GetLearningSnapshot :one
-SELECT slug, user_id, voice_id, content, content_revision, machine_baseline, machine_baseline_revision,
-       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at,
-       target_language, content_language
-FROM posts WHERE slug = ? AND user_id = ?
-`
-
-type GetLearningSnapshotParams struct {
-	Slug   string
-	UserID string
-}
-
-type GetLearningSnapshotRow struct {
-	Slug                    string
-	UserID                  string
-	VoiceID                 string
-	Content                 sql.NullString
-	ContentRevision         int64
-	MachineBaseline         sql.NullString
-	MachineBaselineRevision int64
-	MachineBaselineVoiceID  sql.NullString
-	TargetLength            sql.NullInt64
-	Status                  string
-	FinalizedRevision       sql.NullInt64
-	FinalizedAt             sql.NullString
-	UpdatedAt               string
-	TargetLanguage          string
-	ContentLanguage         sql.NullString
-}
-
-func (q *Queries) GetLearningSnapshot(ctx context.Context, arg GetLearningSnapshotParams) (GetLearningSnapshotRow, error) {
-	row := q.db.QueryRowContext(ctx, getLearningSnapshot, arg.Slug, arg.UserID)
-	var i GetLearningSnapshotRow
-	err := row.Scan(
-		&i.Slug,
-		&i.UserID,
-		&i.VoiceID,
-		&i.Content,
-		&i.ContentRevision,
-		&i.MachineBaseline,
-		&i.MachineBaselineRevision,
-		&i.MachineBaselineVoiceID,
-		&i.TargetLength,
-		&i.Status,
-		&i.FinalizedRevision,
-		&i.FinalizedAt,
-		&i.UpdatedAt,
-		&i.TargetLanguage,
-		&i.ContentLanguage,
-	)
-	return i, err
-}
-
 const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
-       content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
+       content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
        tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline
 FROM posts WHERE slug = ?
 `
 
-func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
+type GetPostRow struct {
+	Slug                    string
+	UserID                  string
+	VoiceID                 string
+	Title                   string
+	Memo                    string
+	Observations            sql.NullString
+	Content                 sql.NullString
+	Status                  string
+	CreatedAt               string
+	UpdatedAt               string
+	ContentRevision         int64
+	MachineBaseline         sql.NullString
+	MachineBaselineRevision int64
+	TargetLength            sql.NullInt64
+	FinalizedRevision       sql.NullInt64
+	FinalizedAt             sql.NullString
+	TemplateID              sql.NullString
+	TargetLanguage          string
+	ContentLanguage         sql.NullString
+	TagCount                sql.NullInt64
+	UseMemory               int64
+	PublishedUrl            sql.NullString
+	PublishedAt             sql.NullString
+	Field                   sql.NullString
+	ContentNouns            sql.NullString
+	QualityRules            sql.NullString
+	Storyline               sql.NullString
+}
+
+func (q *Queries) GetPost(ctx context.Context, slug string) (GetPostRow, error) {
 	row := q.db.QueryRowContext(ctx, getPost, slug)
-	var i Post
+	var i GetPostRow
 	err := row.Scan(
 		&i.Slug,
 		&i.UserID,
@@ -278,7 +255,6 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.ContentRevision,
 		&i.MachineBaseline,
 		&i.MachineBaselineRevision,
-		&i.MachineBaselineVoiceID,
 		&i.TargetLength,
 		&i.FinalizedRevision,
 		&i.FinalizedAt,
@@ -485,9 +461,7 @@ func (q *Queries) PublishPost(ctx context.Context, arg PublishPostParams) (int64
 }
 
 const reassignPostVoice = `-- name: ReassignPostVoice :execrows
-UPDATE posts SET voice_id = ?, machine_baseline = NULL, machine_baseline_revision = 0,
-    machine_baseline_voice_id = NULL,
-    updated_at = ?
+UPDATE posts SET voice_id = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND voice_id <> ? AND status <> 'published'
 `
 
@@ -499,9 +473,9 @@ type ReassignPostVoiceParams struct {
 	VoiceID_2 string
 }
 
-// The reassignment keeps every byte of the post and drops only what belonged to the old
-// voice: the machine baseline, and with it the eligibility to learn from this post until a
-// fresh machine result is written under the new voice.
+// The reassignment keeps every byte of the post, its machine baseline included: nothing is
+// learned from a post any more, and the hand-edit confirmation (POST-98) still reads the
+// baseline after a reassignment.
 func (q *Queries) ReassignPostVoice(ctx context.Context, arg ReassignPostVoiceParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, reassignPostVoice,
 		arg.VoiceID,
@@ -602,7 +576,7 @@ func (q *Queries) UnpublishPost(ctx context.Context, arg UnpublishPostParams) (i
 }
 
 const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
-UPDATE posts SET content = ?1, machine_baseline = ?2, machine_baseline_voice_id = voice_id,
+UPDATE posts SET content = ?1, machine_baseline = ?2,
     content_language = ?3,
     content_nouns = ?4,
     storyline = ?5,

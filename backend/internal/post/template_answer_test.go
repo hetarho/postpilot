@@ -192,13 +192,11 @@ func TestSavingAnAnswerIsAnOptionSave(t *testing.T) {
 			answered.ContentRevision, answered.FinalizedRevision,
 			finalized.ContentRevision, finalized.FinalizedRevision)
 	}
-	if answered.MachineBaselineRevision != finalized.MachineBaselineRevision ||
-		answered.MachineBaselineVoiceID != finalized.MachineBaselineVoiceID {
+	if answered.MachineBaselineRevision != finalized.MachineBaselineRevision {
 		t.Errorf("the machine baseline moved: %+v", answered)
 	}
-	// Learn eligibility is what a voice reassignment withdraws; an answer must not.
-	if _, err := svc.LearningSnapshot(ctx, alice, created.Slug); err != nil {
-		t.Errorf("an answer cost the post its learn eligibility: %v", err)
+	if !answered.FinalizedAtCurrentRevision() {
+		t.Errorf("an answer cost the post its finalization: %+v", answered)
 	}
 	if len(answered.TemplateAnswers) != 1 || answered.TemplateAnswers[0].Text != "4.5점" {
 		t.Errorf("answers = %+v", answered.TemplateAnswers)

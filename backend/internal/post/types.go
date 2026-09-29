@@ -249,11 +249,7 @@ type Post struct {
 	Content                 *PostContent
 	ContentRevision         int64
 	MachineBaselineRevision int64
-	// MachineBaselineVoiceID is the voice the latest machine result was written under.
-	// Reassignment clears it, so finalization learning can prove the baseline and the
-	// current voice agree.
-	MachineBaselineVoiceID string
-	TargetLength           *int
+	TargetLength            *int
 	// TagCount is how many tags a run asks for (POST-63). Always concrete: the store reads a
 	// row never saved with one as TagCountRange.Default, so no caller sees "unset". The
 	// one exception is a Post being CREATED, where 0 means "nobody named one" and the column
@@ -416,33 +412,6 @@ type PublishedPost struct {
 	ContentLanguage *Language
 	Nouns           []string
 	PublishedAt     time.Time
-}
-
-// LearningSnapshot is the post context's ownership-checked hand-off to voice. The
-// voice context never reads post tables and cannot mutate either snapshot. Status and
-// FinalizedRevision are the row it was read from, so the service can apply the finalization
-// rule to that read rather than to an earlier one.
-type LearningSnapshot struct {
-	PostSlug               string
-	UserID                 string
-	VoiceID                string
-	MachineBaselineVoiceID string
-	Status                 string
-	Current                PostContent
-	ContentRevision        int64
-	FinalizedRevision      int64
-	MachineBaseline        PostContent
-	BaselineRevision       int64
-	TargetLength           *int
-	FinalizedAt            time.Time
-	UpdatedAt              time.Time
-	ContentLanguage        Language
-	VoiceSourceLanguage    Language
-}
-
-// FinalizedAtCurrentRevision is whether the snapshot's row holds a finalized current revision.
-func (s LearningSnapshot) FinalizedAtCurrentRevision() bool {
-	return finalizedAt(s.Status, s.FinalizedRevision, s.ContentRevision)
 }
 
 // finalizedAt is the one rule for "the current revision is the finalized one". A published

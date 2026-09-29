@@ -30,26 +30,18 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		if err != nil {
 			return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 		}
-		var sources []AuthoredSource
-		if s.personalization != nil {
-			sources, err = s.learning.ListAuthoredSources(ctx, found.UserID, found.VoiceID)
-			if err != nil {
-				return fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
-			}
-			sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
-		}
-		if len(samples) == 0 && len(sources) == 0 {
+		if len(samples) == 0 {
 			if attempted {
 				progress("analyze", 1, 1)
 				return nil
 			}
 			return fmt.Errorf("분석할 문체 자료가 없어요")
 		}
-		corpus := personalizationCorpus(samples, sources)
+		corpus := AssembleCorpus(samples)
 		attempted = true
 		progress("analyze", 0, 1)
-		// The typed analysis, with its schema: an import-only voice gets its axes and structure
-		// habits from this call, since no learning ever runs for it (VOICE-27).
+		// The typed analysis, with its schema: the voice gets its axes and structure habits
+		// from this call (VOICE-27).
 		qualitative, err := s.completeAnalysis(ctx, ref, corpus, active.SourceLanguage)
 		if err != nil {
 			return err
@@ -67,8 +59,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			if err := validateAxes(measured.Axes); err != nil {
 				return err
 			}
-			measured.SourceCount = len(samples) + len(sources)
-			measured.Sources = sources
+			measured.SourceCount = len(samples)
 			measured.Empty = false
 			if s.personalization == nil {
 				progress("analyze", 1, 1)
@@ -82,10 +73,6 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 				if overrideErr = applyOverride(&measured, override.Layer, override.Field, override.Value); overrideErr != nil {
 					return overrideErr
 				}
-			}
-			measured.Rules, overrideErr = s.rules.ListRules(ctx, found.UserID, found.VoiceID)
-			if overrideErr != nil {
-				return fmt.Errorf("voice rules: %w", overrideErr)
 			}
 			if _, published, versionErr := s.versions.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
 				return fmt.Errorf("publish typed voice profile: %w", versionErr)
@@ -117,23 +104,6 @@ func voiceUnavailableError(err error) error {
 	default:
 		return err
 	}
-}
-
-func personalizationCorpus(samples []Sample, sources []AuthoredSource) string {
-	var corpus strings.Builder
-	if len(samples) > 0 {
-		corpus.WriteString(AssembleCorpus(samples))
-	}
-	for _, source := range sources {
-		if corpus.Len() > 0 {
-			corpus.WriteString("\n\n")
-		}
-		corpus.WriteString("--- finalized: ")
-		corpus.WriteString(source.Title)
-		corpus.WriteString(" ---\n")
-		corpus.WriteString(source.Body)
-	}
-	return corpus.String()
 }
 
 func hasRequiredAnalysisShape(styleguide string) bool {

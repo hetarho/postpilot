@@ -152,7 +152,6 @@ export interface FakePostRow {
    *  (POST-65), so passing them without `content` synthesizes the minimal content that would
    *  hold them — which is also the only way a real post comes to have one. */
   tags?: string[]
-  machineBaselineVoiceId?: string
   images?: FakeImageRow[]
   videos?: FakeVideoRow[]
   activeJob?: FakeGenerationJobRow
@@ -308,7 +307,6 @@ type Row = {
   pendingExperimentId: string
   contentRevision: bigint
   machineBaselineRevision: bigint
-  machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
   tagCount: number
@@ -450,8 +448,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           enabled: answer.enabled ?? true,
         }),
       ),
-      machineBaselineVoiceId:
-        row.machineBaselineVoiceId ?? ((row.machineBaselineRevision ?? 0n) > 0n ? voice.id : ''),
       images: (row.images ?? []).map((image) =>
         create(ImageSchema, {
           id: image.id,
@@ -685,7 +681,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       }
     }
     let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
-    let reassigned = false
     if (!req.slug) {
       if (!req.voiceId) throw connectAppError('VOICE_REQUIRED', Code.InvalidArgument)
       voice = assignable(req.voiceId)
@@ -698,7 +693,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         Boolean(existing?.pendingExperimentId)
       if (busy) throw connectAppError('POST_BUSY', Code.FailedPrecondition)
       voice = next
-      reassigned = true
     }
     const slug = req.slug || mintSlug(req.title)
     const row: Row = {
@@ -721,9 +715,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       observations: existing?.observations ?? [],
       pendingExperimentId: existing?.pendingExperimentId ?? '',
       contentRevision: existing?.contentRevision ?? 0n,
-      machineBaselineRevision: reassigned ? 0n : (existing?.machineBaselineRevision ?? 0n),
-      machineBaselineVoiceId: reassigned ? '' : (existing?.machineBaselineVoiceId ?? ''),
-      canFinalize: reassigned ? Boolean(existing?.content) : (existing?.canFinalize ?? false),
+      // A reassignment changes the voice alone (POST-24): the baseline and finalizability stay.
+      machineBaselineRevision: existing?.machineBaselineRevision ?? 0n,
+      canFinalize: existing?.canFinalize ?? false,
       targetLength: seededLength,
       tagCount: seededTags,
       useMemory: existing?.useMemory ?? false,

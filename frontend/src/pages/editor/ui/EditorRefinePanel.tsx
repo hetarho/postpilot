@@ -2,7 +2,6 @@ import type { ReactNode, RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BlockList, isPublished, type PostDraft } from '@/entities/post'
 import { PostMeasurementRow } from '@/entities/quality'
-import { voiceContentLanguageMismatchReason } from '@/entities/voice'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
 import type { PostContent } from '@/shared/api'
 import { Notice, Typography } from '@/shared/ui'
@@ -16,7 +15,6 @@ export function EditorRefinePanel({
   ownerId,
   storylineSpace,
   result,
-  languageMismatch,
   editorRef,
   onContentChange,
   onGoGenerate,
@@ -28,7 +26,6 @@ export function EditorRefinePanel({
   storylineSpace?: ReactNode
   /** The generated content this step edits; absent until a run has produced one. */
   result?: PostContent
-  languageMismatch: boolean
   editorRef: RefObject<BlockEditorHandle | null>
   onContentChange: (content: PostContent) => void
   onGoGenerate: () => void
@@ -53,20 +50,11 @@ export function EditorRefinePanel({
   return (
     <>
       {storylineSpace}
-      {languageMismatch && (
-        <Notice tone="warning" role="status" className="mb-4">
-          {voiceContentLanguageMismatchReason()}
-        </Notice>
-      )}
       {isPublished(post) && (
         <Notice tone="info" role="status" className="mb-4">
           {t('published.locked')}
         </Notice>
       )}
-      {/* 문장 의견 is NOT here. The server requires a completed voice-learning event for the
-          post before it will accept feedback, and a post on this step is in `review` — never
-          finalized, never learned — so the control failed on the ordinary path every time. It
-          lives on 글 완성 now, behind the same condition the server enforces (VOICE-41). */}
       {isPublished(post) ? (
         <BlockList content={result} images={post.images} videos={post.videos} />
       ) : (

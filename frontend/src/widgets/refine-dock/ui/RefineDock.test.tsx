@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PostDraft } from '@/entities/post'
@@ -26,45 +26,58 @@ const POST = {
   targetLanguage: 'ko',
 } as unknown as PostDraft
 
-const LEARNING = {
-  canLearn: false,
-  blocked: '새 결과가 필요해요.',
-  active: false,
-  needsAnalyzeModel: false,
-  learn: vi.fn(),
-} as unknown as Parameters<typeof RefineDock>[0]['learning']
-
-function renderDock(beforeStart = vi.fn().mockResolvedValue(undefined), post: PostDraft = POST) {
+function renderDock({
+  post = POST,
+  beforeFinalize = vi.fn().mockResolvedValue(1n),
+}: { post?: PostDraft; beforeFinalize?: () => Promise<bigint> } = {}) {
+  const calls: string[] = []
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
+    calls,
     providers: {
       models: [{ providerId: 'openrouter', modelId: 'writer' }],
       selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
     },
+    // The server's copy of the post on screen, so FinalizePost answers the way it would.
+    posts: {
+      posts: [
+        {
+          slug: POST.slug,
+          title: POST.title,
+          status: 'review',
+          content: POST_CONTENT_FIXTURE,
+          // Every photo the content's IMAGE blocks name, or the finalize is refused (POST-13).
+          images: [
+            { id: 'image-1', filename: 'IMG_1.jpg' },
+            { id: 'image-2', filename: 'IMG_2.jpg' },
+          ],
+          contentRevision: 1n,
+          machineBaselineRevision: 1n,
+          canFinalize: true,
+        },
+      ],
+    },
   })
-  const beforeFinalize = vi.fn().mockResolvedValue(1n)
   const onFinalized = vi.fn()
   const view = render(
     <RefineDock
       ownerId="alice"
       post={post}
-      ruleLanguageMismatch={false}
-      learning={LEARNING}
       jobPending={false}
       onRevisionStarted={vi.fn()}
-      beforeStart={beforeStart}
+      beforeStart={vi.fn().mockResolvedValue(undefined)}
       beforeFinalize={beforeFinalize}
       onFinalized={onFinalized}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
-  return { beforeStart, beforeFinalize, onFinalized, container: view.container }
+  return { beforeFinalize, onFinalized, calls, container: view.container }
 }
 
 describe('RefineDock', () => {
-  // The dock is ONE surface now: the revision row, whose heading names the field and carries the
-  // step's way out at its right. The confirming pair used to stand as a second row of full-width
-  // buttons under the field, which read as a second, competing interface.
+  // The dock is ONE surface: the revision row, whose heading names the field and carries the
+  // step's one way out at its right. The confirming pair used to stand as a second row of
+  // full-width buttons under the field, which read as a second, competing interface.
   it('puts the way out in the revision row heading and nothing else beside the field', () => {
     renderDock()
 
@@ -77,7 +90,8 @@ describe('RefineDock', () => {
     // step title it used to borrow — and 확정하기 fills what is left of the row (A9).
     expect(heading.tagName).toBe('LABEL')
     expect(heading).toHaveClass('text-base', 'font-bold')
-    expect(open.parentElement).toHaveClass('flex-1')
+    expect(open).toHaveClass('flex-1')
+    expect(open).toBeEnabled()
 
     expect(heading.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(open.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -87,38 +101,51 @@ describe('RefineDock', () => {
     }
   })
 
-  // THEME-31: the keyboard covers the bottom ~40%, so it may hide a control but never the reason
-  // that control is disabled — inside the surface the choice is made on, as well as in the row.
-  it('offers both ways out inside 확정하기, each under the reason it is refused for', async () => {
+  // POST-56 and POST-57: no popover or modal stands between the press and the run. 확정하기
+  // flushes the pending block edit, finalizes the exact revision that flush named, and carries the
+  // title the server now holds onward — and nothing about a voice is asked or started.
+  it('flushes and finalizes at once on 확정하기, with no surface in between', async () => {
     const user = userEvent.setup()
-    renderDock()
+    const { beforeFinalize, onFinalized, calls } = renderDock()
 
     await user.click(screen.getByRole('button', { name: '확정하기' }))
-    const panel = await screen.findByRole('dialog', { name: '확정하기' })
-    const finalize = within(panel).getByRole('button', { name: '확정' })
-    const learn = within(panel).getByRole('button', { name: '확정하고 말투 학습' })
-    const learnBlocked = within(panel).getByText('새 결과가 필요해요.')
 
-    expect(finalize).toBeEnabled()
-    expect(learn).toBeDisabled()
-    expect(finalize.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(
-      learnBlocked.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    await waitFor(() => expect(onFinalized).toHaveBeenCalledWith('비 온 뒤의 제주'))
+    expect(beforeFinalize).toHaveBeenCalledOnce()
+    expect(calls.filter((call) => call === 'FinalizePost')).toHaveLength(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '확정하고 말투 학습' })).not.toBeInTheDocument()
   })
 
-  // A post that is already finalized keeps the road onward and NOTHING standing beside it: the
-  // editor's own status badge says 확정, and the first changed content save returns the post to
-  // `review`, which brings the way out back by itself.
+  // THEME-31: the control sits in a heading row too narrow for a sentence, so a refused finalize
+  // is said across the dock, ABOVE the row holding the control it explains, and the step holds.
+  it('says a refused finalize above the row and does not move the step', async () => {
+    const user = userEvent.setup()
+    // The flush names a revision the server has already moved past.
+    const { onFinalized } = renderDock({ beforeFinalize: vi.fn().mockResolvedValue(2n) })
+
+    await user.click(screen.getByRole('button', { name: '확정하기' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('다른 화면에서 글이 바뀌었어요.')
+    const heading = screen.getByText('수정 요청을 입력하세요')
+    expect(alert.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(onFinalized).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
+  })
+
+  it('holds 확정하기 while the draft cannot be finalized', () => {
+    renderDock({ post: { ...POST, canFinalize: false } as PostDraft })
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeDisabled()
+  })
+
   // A published post takes no revision and no finalize (POST-86): the dock is the road onward to
   // 글 완성, where its address lives, and nothing else — no field, no send, no 확정하기.
   it('gives a published post only the road onward', async () => {
     const user = userEvent.setup()
-    const { container, onFinalized, beforeFinalize } = renderDock(undefined, {
-      ...POST,
-      status: 'published',
-      finalizedRevision: 1n,
-    } as PostDraft)
+    const { container, onFinalized, beforeFinalize } = renderDock({
+      post: { ...POST, status: 'published', finalizedRevision: 1n } as PostDraft,
+    })
 
     const onward = screen.getByRole('button', { name: '글 완성으로 가기' })
     expect(screen.getAllByRole('button')).toEqual([onward])
@@ -130,28 +157,24 @@ describe('RefineDock', () => {
     expect(beforeFinalize).not.toHaveBeenCalled()
   })
 
-  it('replaces the way out with the road onward once the post is finalized', () => {
-    renderDock(undefined, { ...POST, status: 'finalized' } as PostDraft)
+  // A post that is already finalized keeps the road onward and NOTHING standing beside it: the
+  // editor's own status line says 확정, and the first changed content save returns the post to
+  // `review`, which brings the way out back by itself.
+  it('replaces the way out with the road onward once the post is finalized', async () => {
+    const user = userEvent.setup()
+    const { onFinalized, beforeFinalize, calls } = renderDock({
+      post: { ...POST, status: 'finalized', finalizedRevision: 1n } as PostDraft,
+    })
 
-    expect(screen.getByRole('button', { name: '글 완성으로 가기' })).toBeInTheDocument()
+    const onward = screen.getByRole('button', { name: '글 완성으로 가기' })
     expect(screen.queryByText('이 revision을 확정했어요.')).not.toBeInTheDocument()
     for (const gone of ['확정하기', '확정', '확정하고 말투 학습']) {
       expect(screen.queryByRole('button', { name: gone })).not.toBeInTheDocument()
     }
-  })
 
-  // A13: the dock is mounted OUTSIDE the step panel, so a finalize may never name a revision that
-  // omits a block edit the user has already made. The panel that offers the choice IS the
-  // confirmation — each action carries the sentence saying what it does — so there is no modal
-  // between the press and the run.
-  it('flushes a pending block edit before naming the revision it confirms', async () => {
-    const user = userEvent.setup()
-    const { beforeFinalize } = renderDock()
-
-    await user.click(screen.getByRole('button', { name: '확정하기' }))
-    const panel = await screen.findByRole('dialog', { name: '확정하기' })
-    await user.click(within(panel).getByRole('button', { name: '확정' }))
-
-    await waitFor(() => expect(beforeFinalize).toHaveBeenCalled())
+    await user.click(onward)
+    expect(onFinalized).toHaveBeenCalledWith('가제')
+    expect(beforeFinalize).not.toHaveBeenCalled()
+    expect(calls).not.toContain('FinalizePost')
   })
 })

@@ -14,9 +14,6 @@ SET status = 'running',
         WHEN 'storyline_clip' THEN 'prepare'
         WHEN 'revise_storyline_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
-        WHEN 'learn_voice' THEN 'learn'
-        WHEN 'compare_voice_rule' THEN 'compare_rule'
-        WHEN 'validate_voice_profile' THEN 'validate_profile'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
     END END,
@@ -68,7 +65,7 @@ UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
 WHERE status = 'queued'
-  AND kind IN ('learn_voice', 'compare_voice_rule', 'validate_voice_profile', 'seed_voice');
+  AND kind = 'seed_voice';
 
 -- name: ActiveForPost :one
 SELECT * FROM generation_jobs

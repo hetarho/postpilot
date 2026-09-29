@@ -42,7 +42,7 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 -- The write's nouns and storyline ride the same statement, beside the content and never inside
 -- it (GEN-55, GEN-67). The service resolves them first, so NULL here always means none, and an
 -- identical content with different ones is a new machine write.
-UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline), machine_baseline_voice_id = voice_id,
+UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
     content_language = sqlc.arg(content_language),
     content_nouns = sqlc.narg(content_nouns),
     storyline = sqlc.narg(storyline),
@@ -81,7 +81,7 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 
 -- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
-       content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
+       content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
        tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline
 FROM posts WHERE slug = ?;
@@ -104,12 +104,6 @@ WHERE slug = ? AND user_id = ? AND status = 'published';
 SELECT slug, content, content_language, content_revision, content_nouns, published_at
 FROM posts WHERE user_id = ? AND status = 'published'
 ORDER BY published_at DESC, slug DESC LIMIT ?;
-
--- name: GetLearningSnapshot :one
-SELECT slug, user_id, voice_id, content, content_revision, machine_baseline, machine_baseline_revision,
-       machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at,
-       target_language, content_language
-FROM posts WHERE slug = ? AND user_id = ?;
 
 -- name: PostSlugExists :one
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?);
@@ -139,12 +133,10 @@ ORDER BY updated_at DESC, slug DESC
 LIMIT sqlc.arg(row_limit);
 
 -- name: ReassignPostVoice :execrows
--- The reassignment keeps every byte of the post and drops only what belonged to the old
--- voice: the machine baseline, and with it the eligibility to learn from this post until a
--- fresh machine result is written under the new voice.
-UPDATE posts SET voice_id = ?, machine_baseline = NULL, machine_baseline_revision = 0,
-    machine_baseline_voice_id = NULL,
-    updated_at = ?
+-- The reassignment keeps every byte of the post, its machine baseline included: nothing is
+-- learned from a post any more, and the hand-edit confirmation (POST-98) still reads the
+-- baseline after a reassignment.
+UPDATE posts SET voice_id = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND voice_id <> ? AND status <> 'published';
 
 -- name: AssignPostTemplate :execrows

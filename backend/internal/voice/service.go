@@ -27,20 +27,13 @@ type Service struct {
 	profileMu      sync.Mutex
 	sampleMu       sync.Mutex
 	directoryMu    sync.Mutex
-	posts          Posts
 	config         PersonalizationConfig
-	// personalization is the learning store as one handle, held only to answer "is learning
-	// wired at all" — every call goes through one of the narrow ports below it.
-	personalization       PersonalizationStorage
-	versions              ProfileVersionStore
-	overrides             ManualOverrideStore
-	learning              LearningRunStore
-	rules                 ContrastRuleStore
-	feedback              FeedbackStore
-	comparisons           RuleComparisonStore
-	validations           ProfileValidationStore
-	personalizationJobs   PersonalizationJobs
-	personalizationModels PersonalizationModels
+	// personalization is the versioned profile store as one handle, held only to answer "is
+	// it wired at all" — every call goes through one of the narrow ports below it.
+	personalization     PersonalizationStorage
+	versions            ProfileVersionStore
+	overrides           ManualOverrideStore
+	personalizationJobs PersonalizationJobs
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
@@ -48,17 +41,18 @@ func NewService(store Storage, models Models, jobs Jobs) *Service {
 		config: PersonalizationThresholds()}
 	if p, ok := store.(PersonalizationStorage); ok {
 		svc.personalization = p
-		svc.versions, svc.overrides, svc.learning = p, p, p
-		svc.rules, svc.feedback, svc.comparisons, svc.validations = p, p, p, p
+		svc.versions, svc.overrides = p, p
 	}
 	return svc
 }
 
-func (s *Service) ConfigurePersonalization(posts Posts, config PersonalizationConfig) {
-	if posts == nil || config.FewShotMax <= 0 || config.RuleActivationEvidence <= 0 {
+// ConfigurePersonalization wires what a described creation's seeding needs: the thresholds
+// and the queue that runs the seed.
+func (s *Service) ConfigurePersonalization(config PersonalizationConfig) {
+	if config.FewShotMax <= 0 {
 		panic("voice: invalid personalization configuration")
 	}
-	s.posts, s.config = posts, config
+	s.config = config
 	if s.personalization == nil {
 		panic("voice: personalization store is not configured")
 	}
@@ -66,11 +60,6 @@ func (s *Service) ConfigurePersonalization(posts Posts, config PersonalizationCo
 		s.personalizationJobs = jobs
 	} else {
 		panic("voice: personalization jobs are not configured")
-	}
-	if models, ok := s.models.(PersonalizationModels); ok {
-		s.personalizationModels = models
-	} else {
-		panic("voice: personalization model catalog is not configured")
 	}
 }
 
@@ -252,8 +241,8 @@ func (s *Service) SetDefaultVoice(ctx context.Context, userID, voiceID string) (
 
 // DeleteVoice is a soft delete. It refuses the default (so the last active voice can never
 // go) and anything that could still publish into the voice: a queued/running job frozen to
-// it, an undecided comparison or validation, or a publishable analyze experiment. Posts
-// and profile history stay exactly as they are.
+// it or a publishable analyze experiment. Posts and profile history stay exactly as they
+// are.
 func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voice, error) {
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
@@ -277,11 +266,6 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 	if busy, err := s.jobs.HasActiveForVoice(ctx, voiceID); err != nil {
 		return Voice{}, fmt.Errorf("check voice jobs: %w", err)
 	} else if busy {
-		return Voice{}, ErrVoiceBusy
-	}
-	if n, err := s.directory.CountUndecidedVoiceWork(ctx, voiceID); err != nil {
-		return Voice{}, fmt.Errorf("check undecided voice work: %w", err)
-	} else if n > 0 {
 		return Voice{}, ErrVoiceBusy
 	}
 	if s.experiments != nil {
@@ -403,29 +387,6 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	}
 	profile.UserID, profile.VoiceID, profile.Voice = userID, voiceID, found
 	profile.Samples = samples
-	if s.personalization != nil {
-		profile.SourceCount, err = func() (int, error) {
-			sources, e := s.learning.ListAuthoredSources(ctx, userID, voiceID)
-			if e == nil {
-				sources = authoredSourcesForLanguage(sources, found.SourceLanguage)
-				profile.Structured.Sources = sources
-			}
-			return len(sources), e
-		}()
-		if err != nil {
-			return Profile{}, fmt.Errorf("list authored sources: %w", err)
-		}
-		profile.CanValidate = profile.SourceCount >= s.config.ValidationPostCount
-		profile.Structured.SourceCount = profile.SourceCount
-		profile.Structured.Rules, err = s.rules.ListRules(ctx, userID, voiceID)
-		if err != nil {
-			return Profile{}, fmt.Errorf("list voice rules: %w", err)
-		}
-		profile.Structured.Feedback, err = s.feedback.ListFeedback(ctx, userID, voiceID)
-		if err != nil {
-			return Profile{}, fmt.Errorf("list voice feedback: %w", err)
-		}
-	}
 	if active != nil {
 		profile.ActiveJobID = active.ID
 	}
@@ -541,15 +502,8 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 	if err != nil {
 		return "", fmt.Errorf("count samples before delete: %w", err)
 	}
-	var authoredSources []AuthoredSource
-	if s.personalization != nil {
-		authoredSources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID)
-		if err != nil {
-			return "", fmt.Errorf("list finalized sources before delete: %w", err)
-		}
-	}
 	var model llm.ModelRef
-	if before > 1 || len(authoredSources) > 0 {
+	if before > 1 {
 		var ok bool
 		model, ok, err = s.models.AnalyzeModel(ctx, userID)
 		if err != nil {
@@ -570,7 +524,7 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 	if err != nil {
 		return "", fmt.Errorf("count samples: %w", err)
 	}
-	if count == 0 && len(authoredSources) == 0 {
+	if count == 0 {
 		return "", nil
 	}
 	if model == (llm.ModelRef{}) {

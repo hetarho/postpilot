@@ -88,12 +88,6 @@ describe('bundled locale resources', () => {
       expect(i18next.t('upload.failedCount', { ns: 'posts', count: 2 })).toBe(
         '2 photos could not be uploaded',
       )
-      expect(i18next.t('profile.finalizedCount', { ns: 'voices', version: '3', count: 1 })).toBe(
-        'v3 · 1 finalized post',
-      )
-      expect(i18next.t('profile.finalizedCount', { ns: 'voices', version: '3', count: 2 })).toBe(
-        'v3 · 2 finalized posts',
-      )
     } finally {
       await i18next.changeLanguage('ko')
     }

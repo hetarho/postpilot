@@ -64,7 +64,7 @@ function renderForm({
     <ReviseForm
       ownerId="alice"
       postSlug="post"
-      voice={{ id: 'voice-a', deleted: false }}
+      voice={{ deleted: false }}
       activeJob={active}
       template={template}
       onStarted={onStarted}
@@ -123,29 +123,30 @@ it('stays disabled while another job is active', async () => {
   expect(screen.getByRole('button', { name: '수정' })).toBeDisabled()
 })
 
-it('starts a revision with its instruction, rule flag, and selected write model', async () => {
+// POST-56: a revision teaches no voice anything, so the form offers no 규칙으로 저장 and the start
+// leaves every voice profile it could have touched as it was.
+it('starts a revision with its instruction and selected write model, and nothing else', async () => {
   const revisions: FakeRevisionStart[] = []
   const { onStarted, queryClient, transport } = renderForm({ revisions })
-  const ownProfile = voiceProfileQueryKey(transport, 'alice', 'voice-a')
-  const siblingProfile = voiceProfileQueryKey(transport, 'alice', 'voice-b')
-  queryClient.setQueryData(ownProfile, { profile: 'own' })
-  queryClient.setQueryData(siblingProfile, { profile: 'sibling' })
+  const profile = voiceProfileQueryKey(transport, 'alice', 'voice-a')
+  queryClient.setQueryData(profile, { profile: 'own' })
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('수정 요청을 입력하세요'), '  존댓말로  ')
-  await user.click(screen.getByRole('checkbox', { name: '이 요청을 규칙으로 저장' }))
+  // The secondary row is open now, and it holds the counter and nothing to tick.
+  expect(screen.getByText(`8/${REVISION_INSTRUCTION_MAX_CHARS}`)).toBeInTheDocument()
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByText(/규칙으로 저장/)).not.toBeInTheDocument()
   const button = screen.getByRole('button', { name: '수정' })
   await waitFor(() => expect(button).toBeEnabled())
 
   await user.click(button)
 
   await waitFor(() => expect(onStarted).toHaveBeenCalledWith('revision-new'))
-  expect(queryClient.getQueryState(ownProfile)?.isInvalidated).toBe(true)
-  expect(queryClient.getQueryState(siblingProfile)?.isInvalidated).toBe(false)
+  expect(queryClient.getQueryState(profile)?.isInvalidated).toBe(false)
   expect(revisions).toEqual([
     {
       postSlug: 'post',
       instruction: '존댓말로',
-      saveAsRule: true,
       writeModel: { providerId: 'openrouter', modelId: 'writer' },
     },
   ])
@@ -186,30 +187,21 @@ it('collapses its secondary controls while the instruction is empty and unfocuse
 
   const field = await screen.findByLabelText('수정 요청을 입력하세요')
   const counter = () => screen.queryByText(`0/${REVISION_INSTRUCTION_MAX_CHARS}`)
-  const ruleCheckbox = () => screen.queryByRole('checkbox', { name: '이 요청을 규칙으로 저장' })
   expect(counter()).not.toBeInTheDocument()
-  expect(ruleCheckbox()).not.toBeInTheDocument()
 
   await user.click(field)
   expect(counter()).toBeInTheDocument()
-  expect(ruleCheckbox()).toBeInTheDocument()
-
-  // Focus moving onto the checkbox INSIDE the form must not unmount it mid-gesture.
-  await user.click(ruleCheckbox()!)
-  expect(ruleCheckbox()).toBeChecked()
 
   // One Tab past the last control in the form lands on the body, which is a focus move OUT.
   await user.tab()
-  await waitFor(() => expect(ruleCheckbox()).not.toBeInTheDocument())
+  await waitFor(() => expect(counter()).not.toBeInTheDocument())
 })
 
 // A11: a running revision keeps the row open with nothing typed, because that is exactly when its
 // state is worth reading.
 it('keeps the secondary controls open while a revision is running', async () => {
   renderForm({ active: activeJob })
-  expect(
-    await screen.findByRole('checkbox', { name: '이 요청을 규칙으로 저장' }),
-  ).toBeInTheDocument()
+  expect(await screen.findByText(`0/${REVISION_INSTRUCTION_MAX_CHARS}`)).toBeInTheDocument()
 })
 
 it('does not offer it after a failed revision', async () => {

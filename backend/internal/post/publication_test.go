@@ -233,30 +233,6 @@ func TestSavePublishedURLIsOwnerScoped(t *testing.T) {
 	}
 }
 
-func TestLearningSnapshotReadsAPublishedPost(t *testing.T) {
-	svc, _, _ := newTestService(t)
-	ctx := context.Background()
-	finalized := finalizedPost(t, svc, alice)
-	want, err := svc.LearningSnapshot(ctx, alice, finalized.Slug)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, firstAddress); err != nil {
-		t.Fatal(err)
-	}
-	got, err := svc.LearningSnapshot(ctx, alice, finalized.Slug)
-	if err != nil {
-		t.Fatalf("a published post refused learning: %v", err)
-	}
-	// Publishing restamps updated_at and moves the row's status, which the service's rule reads
-	// and the learner does not; nothing the learner reads changes.
-	want.UpdatedAt, got.UpdatedAt = time.Time{}, time.Time{}
-	want.Status = StatusPublished
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("snapshot of the published post =\n%+v\nwant\n%+v", got, want)
-	}
-}
-
 func TestDeletePostRemovesAPublishedPostAndStillWaitsForAnyJob(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()

@@ -176,14 +176,6 @@ func (s *Store) RestoreVoice(ctx context.Context, userID, voiceID string, now ti
 	return n > 0, nil
 }
 
-func (s *Store) CountUndecidedVoiceWork(ctx context.Context, voiceID string) (int, error) {
-	n, err := s.read.CountUndecidedVoiceWork(ctx, sqlc.CountUndecidedVoiceWorkParams{VoiceID: voiceID, VoiceID_2: voiceID})
-	if err != nil {
-		return 0, fmt.Errorf("count undecided voice work: %w", err)
-	}
-	return int(n), nil
-}
-
 func toVoice(row sqlc.Voice) (voice.Voice, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
@@ -230,7 +222,7 @@ func (s *Store) GetProfile(ctx context.Context, userID, voiceID string) (voice.P
 		}
 		structured = version.Profile
 	}
-	return voice.Profile{UserID: row.UserID, VoiceID: row.VoiceID, Rules: row.Rules,
+	return voice.Profile{UserID: row.UserID, VoiceID: row.VoiceID,
 		UpdatedAt: updated, Structured: structured}, nil
 }
 
@@ -272,15 +264,6 @@ func (s *Store) GetVersionSample(ctx context.Context, userID, voiceID string, ve
 		UserID: row.UserID, VoiceID: row.VoiceID, Version: row.Version,
 		Content: row.Content, CreatedAt: created,
 	}, nil
-}
-
-func (s *Store) SetRules(ctx context.Context, userID, voiceID, rules string, now time.Time) error {
-	if err := s.write.SetRules(ctx, sqlc.SetRulesParams{
-		VoiceID: voiceID, UserID: userID, Rules: rules, UpdatedAt: formatTime(now),
-	}); err != nil {
-		return fmt.Errorf("set rules: %w", err)
-	}
-	return nil
 }
 
 func (s *Store) InsertSample(ctx context.Context, sample voice.Sample) error {

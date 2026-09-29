@@ -3,13 +3,7 @@ import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
 import { ListVoicesResponseSchema, type ListVoicesResponse, type ProtoVoice } from '@/shared/api'
 import { sortVoices } from '../model/types'
-import {
-  voiceConfirmationsQueryKey,
-  voiceProfileQueryKey,
-  voiceValidationsQueryKey,
-  voiceVersionsQueryKey,
-  voicesQueryKey,
-} from './voice-queries'
+import { voiceProfileQueryKey, voiceVersionsQueryKey, voicesQueryKey } from './voice-queries'
 
 /** Installs a whole directory the server just returned — SetDefaultVoice answers with every voice,
  *  because the previous default changed too. */
@@ -58,8 +52,6 @@ export function invalidateVoiceScope(
   for (const queryKey of [
     voiceProfileQueryKey(transport, ownerId, voiceId),
     voiceVersionsQueryKey(transport, ownerId, voiceId),
-    voiceConfirmationsQueryKey(transport, ownerId, voiceId),
-    voiceValidationsQueryKey(transport, ownerId, voiceId),
   ]) {
     void queryClient.invalidateQueries({ queryKey })
   }

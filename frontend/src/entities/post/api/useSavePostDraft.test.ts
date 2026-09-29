@@ -114,13 +114,15 @@ describe('applying a draft save response', () => {
     expect(cleared.template).toBeUndefined()
   })
 
-  it('takes the voice and the cleared baseline only when the save reassigned the post', () => {
+  // POST-24: a reassignment changes `voice_id` alone, so the save settles the voice and nothing
+  // else — the baseline stays the cache's, since this response may predate a generation that just
+  // established it, and POST-98's hand-edit confirmation reads the same after the move.
+  it('takes the voice from a save and leaves the cached baseline, reassigned or not', () => {
     const cached = create(GetPostResponseSchema, {
       post: create(PostSchema, {
         slug: 'post',
         voice: create(VoiceRefSchema, { id: 'voice-a', name: '일기' }),
         machineBaselineRevision: 3n,
-        machineBaselineVoiceId: 'voice-a',
         canFinalize: true,
       }),
     })
@@ -130,8 +132,6 @@ describe('applying a draft save response', () => {
       machineBaselineRevision: 0n,
       canFinalize: false,
     })
-    // Same voice: the name is refreshed, but the baseline stays the cache's — this response may
-    // predate a generation that just established it.
     const same = applyingSavedDraft(renamedOnly, cached)
     expect(same.voice?.name).toBe('일기장')
     expect(same.machineBaselineRevision).toBe(3n)
@@ -141,14 +141,12 @@ describe('applying a draft save response', () => {
       slug: 'post',
       voice: create(VoiceRefSchema, { id: 'voice-b', name: '리뷰' }),
       machineBaselineRevision: 0n,
-      machineBaselineVoiceId: '',
       canFinalize: false,
     })
     const moved = applyingSavedDraft(reassigned, cached)
     expect(moved.voice?.id).toBe('voice-b')
-    expect(moved.machineBaselineRevision).toBe(0n)
-    expect(moved.machineBaselineVoiceId).toBe('')
-    expect(moved.canFinalize).toBe(false)
+    expect(moved.machineBaselineRevision).toBe(3n)
+    expect(moved.canFinalize).toBe(true)
   })
 
   // POST-89: the 분야 is the brief's options save's, like the two numbers. A draft save answers

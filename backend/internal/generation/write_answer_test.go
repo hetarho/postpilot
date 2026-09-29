@@ -143,7 +143,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a"],"blocks":[{"type":"TEXT","content":"ok"}],"nouns":["카페"]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	answer, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean}, nil, writeRef)
 	if err != nil || !reflect.DeepEqual(answer.Nouns, []string{"카페"}) || len(answer.Content.Blocks) != 1 {
@@ -159,7 +159,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 	}
 
 	if err := svc.Revise(context.Background(), RevisionJob{
-		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘", false),
+		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

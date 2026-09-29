@@ -141,7 +141,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: []string{"제목에 같은 말을 되풀이하지 않는다"}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 
 	target := 1500
 	if _, err := svc.Start(context.Background(), StartRequest{
@@ -161,7 +161,7 @@ func TestAPayloadDecodesItsLanguageOrRefusesIt(t *testing.T) {
 		t.Fatalf("an empty payload decoded as %+v, %v", legacy, err)
 	}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	err = svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: []byte(`{"target_language":"xx"}`)}, func(string, int, int) {})
 	if !errors.Is(err, ErrLanguageRequired) {
 		t.Fatalf("an unknown language ran: %v", err)

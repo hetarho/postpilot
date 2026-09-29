@@ -27,13 +27,6 @@ func TestPostVoiceWorkStatesTheGuardsTheQueueUsedToInfer(t *testing.T) {
 			guardFilters: []job.Filter{{UserID: "alice"}},
 		},
 		{
-			name: "voice-owned work on a post is guarded by both",
-			kind: job.KindLearnVoice, slug: "post-a", voice: "voice-a",
-			subjects:     []job.Subject{{Dimension: "post", ID: "post-a"}, {Dimension: "voice", ID: "voice-a"}},
-			guards:       []job.Subject{{Dimension: "post", ID: "post-a"}, {Dimension: "voice", ID: "voice-a"}},
-			guardFilters: []job.Filter{{UserID: "alice"}, {Kind: job.KindLearnVoice}},
-		},
-		{
 			name: "voice-only work is guarded per voice and kind",
 			kind: job.KindAnalyzeVoice, voice: "voice-a",
 			subjects:     []job.Subject{{Dimension: "voice", ID: "voice-a"}},
@@ -82,15 +75,12 @@ func TestPostVoiceWorkLeavesUnattachedWorkToTheQueueDefault(t *testing.T) {
 // learns from it or reads it must not hold a URL paste hostage.
 func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 	for kind, want := range map[string]bool{
-		job.KindGenerate:             true,
-		job.KindRevise:               true,
-		job.KindModelExperiment:      true,
-		job.KindLearnVoice:           false,
-		job.KindExtractMemory:        false,
-		job.KindCompareVoiceRule:     false,
-		job.KindAnalyzeVoice:         false,
-		job.KindValidateVoiceProfile: false,
-		job.KindSeedVoice:            false,
+		job.KindGenerate:        true,
+		job.KindRevise:          true,
+		job.KindModelExperiment: true,
+		job.KindExtractMemory:   false,
+		job.KindAnalyzeVoice:    false,
+		job.KindSeedVoice:       false,
 		// A storyline job writes the storyline, never the content (GEN-68, GEN-69).
 		job.KindStoryline:       false,
 		job.KindReviseStoryline: false,

@@ -31,16 +31,12 @@ export const nav = {
     profile: 'Profile',
     versions: 'Version history',
     import: 'Import existing posts',
-    rules: 'Contrast rules',
-    validations: 'Profile validation',
     settings: 'Voice settings',
     backToList: '← Voices',
     short: {
       profile: 'Profile',
       versions: 'Versions',
       import: 'Import',
-      rules: 'Rules',
-      validations: 'Checks',
     },
   },
 } as const

@@ -1,35 +1,21 @@
 import { create } from '@bufbuild/protobuf'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { voiceProfileQueryKey } from '@/entities/voice/@x/generation-job'
+import { useMutation } from '@connectrpc/connect-query'
 import { appFailureFromConnect, GenerationService, ModelRefSchema } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import type { ModelRef } from '../model/types'
 
-export function useStartRevision(ownerId: string, voiceId: string) {
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const mutation = useMutation(GenerationService.method.startRevision, {
-    onSuccess: (_response, request) => {
-      if (request.saveAsRule) {
-        // The rule belongs to the post's frozen/current voice. Invalidating the broad
-        // `voice-profile` prefix would make unrelated voices refetch and breaks the
-        // account+voice cache boundary that keeps contradictory profiles independent.
-        void queryClient.invalidateQueries({
-          queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-        })
-      }
-    },
-  })
+/** ②'s AI revision: one durable `revise` job over the post's canonical content. It changes the post
+ *  and nothing else — no voice learns from it — so no other cache goes stale when it starts. */
+export function useStartRevision() {
+  const mutation = useMutation(GenerationService.method.startRevision)
 
   return {
     ...mutation,
     errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
-    start: (postSlug: string, instruction: string, saveAsRule: boolean, writeModel: ModelRef) =>
+    start: (postSlug: string, instruction: string, writeModel: ModelRef) =>
       mutation.mutateAsync({
         postSlug,
         instruction,
-        saveAsRule,
         writeModel: create(ModelRefSchema, writeModel),
       }),
   }

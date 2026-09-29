@@ -122,7 +122,6 @@ func TestPostTickIdsAreTheQualityMetrics(t *testing.T) {
 // Generation's other collaborators, each answering "nothing here".
 type (
 	freezeProfiles    struct{}
-	freezeRules       struct{}
 	freezeImages      struct{}
 	freezeExperiments struct{}
 	freezeMemories    struct{}
@@ -134,7 +133,6 @@ type (
 func (freezeProfiles) ProfileForPrompt(context.Context, string, string, generation.Language) (generation.Profile, error) {
 	return generation.Profile{}, nil
 }
-func (freezeRules) AppendRule(context.Context, string, string, string) error { return nil }
 func (freezeImages) Read(context.Context, string) ([]byte, error) {
 	return nil, errors.New("no images in this test")
 }
@@ -227,7 +225,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
 	queue.Admit(&stubAdmitter{})
 	generationSvc := generation.NewService(
-		generationPosts{service: postSvc}, freezeProfiles{}, freezeRules{}, models, freezeImages{},
+		generationPosts{service: postSvc}, freezeProfiles{}, models, freezeImages{},
 		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), testCompletionBudget(),
 		generation.Deps{
 			Experiments: freezeExperiments{}, Templates: generationTemplates{service: templateSvc},

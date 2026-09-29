@@ -283,12 +283,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voiceModels{selections: c.provider, registry: c.metered, plans: c.auth},
 		voiceJobs{queue: c.jobs},
 	)
-	c.voice.ConfigurePersonalization(voicePosts{service: c.post}, voice.PersonalizationThresholds())
+	c.voice.ConfigurePersonalization(voice.PersonalizationThresholds())
 
 	c.generation = generation.NewService(
 		generationPosts{service: c.post},
 		generationProfiles{service: c.voice},
-		generationRules{service: c.voice},
 		generationModels{registry: c.metered},
 		generationImages{bucket: p.bucket},
 		generationJobs{queue: c.jobs, budget: cfg.LLMCompletionBudget},

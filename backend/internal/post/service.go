@@ -997,41 +997,6 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	return s.Get(ctx, userID, slug)
 }
 
-func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (LearningSnapshot, error) {
-	found, err := s.ownedPost(ctx, userID, slug)
-	if err != nil {
-		return LearningSnapshot{}, err
-	}
-	// First, so a draft with no content answers ErrPostNotFinalized rather than the store's
-	// ErrNoMachineBaseline. A published post stays learnable (POST-21).
-	if !found.FinalizedAtCurrentRevision() {
-		return LearningSnapshot{}, ErrPostNotFinalized
-	}
-	contentStore := s.content
-	if contentStore == nil {
-		return LearningSnapshot{}, errors.New("post content store is not configured")
-	}
-	snapshot, err := contentStore.LearningSnapshot(ctx, slug, userID)
-	if err != nil {
-		return LearningSnapshot{}, err
-	}
-	// Again on the row actually read: a save landing between the two reads demotes the post, and
-	// learning never takes a revision nobody finalized.
-	if !snapshot.FinalizedAtCurrentRevision() {
-		return LearningSnapshot{}, ErrPostNotFinalized
-	}
-	// The post store owns content provenance but does not own the voice directory. Enrich the
-	// hand-off through the published directory projection so the voice context can enforce
-	// equality without reading either sibling's tables. ownedPost intentionally returns only
-	// stored post state, so resolve the reference here just as Get does.
-	refs, err := s.voiceRefs(ctx, userID)
-	if err != nil {
-		return LearningSnapshot{}, err
-	}
-	snapshot.VoiceSourceLanguage = projectVoice(refs, found.VoiceID).SourceLanguage
-	return snapshot, nil
-}
-
 // SavePublishedURL records, replaces or clears the post's Naver Blog address (POST-73,
 // POST-75). A valid address publishes a post whose current revision is its finalized one, and
 // replaces the address of one already published, restamping the time; the same address again

@@ -82,22 +82,22 @@ func insert(t *testing.T, store *jobstore.Store, found job.Job) job.Job {
 	return found
 }
 
-// A voice-owned job may carry the post that caused it. One derived subject could only
-// name one of the two, which is why the store resolves the dimension the caller asks for.
+// A post's job is frozen to the post's voice too. One derived subject could only name one
+// of the two, which is why the store resolves the dimension the caller asks for.
 func TestActiveForFindsBothAttachmentsOfOneJob(t *testing.T) {
 	store, _ := subjectHarness(t)
 	ctx := context.Background()
-	insert(t, store, job.Job{ID: "learn", Kind: job.KindLearnVoice, UserID: "alice", Subjects: []job.Subject{
+	insert(t, store, job.Job{ID: "generate", Kind: job.KindGenerate, UserID: "alice", Subjects: []job.Subject{
 		{Dimension: postSubject, ID: "post-alice"}, {Dimension: voiceSubject, ID: "voice-alice"},
 	}})
 
 	byPost, err := store.ActiveFor(ctx, job.Subject{Dimension: postSubject, ID: "post-alice"}, job.Filter{})
-	if err != nil || byPost == nil || byPost.ID != "learn" {
-		t.Fatalf("by post = %v, %v; want the learning job", byPost, err)
+	if err != nil || byPost == nil || byPost.ID != "generate" {
+		t.Fatalf("by post = %v, %v; want the generation job", byPost, err)
 	}
-	byVoice, err := store.ActiveFor(ctx, job.Subject{Dimension: voiceSubject, ID: "voice-alice"}, job.Filter{Kind: job.KindLearnVoice})
-	if err != nil || byVoice == nil || byVoice.ID != "learn" {
-		t.Fatalf("by voice = %v, %v; want the learning job", byVoice, err)
+	byVoice, err := store.ActiveFor(ctx, job.Subject{Dimension: voiceSubject, ID: "voice-alice"}, job.Filter{Kind: job.KindGenerate})
+	if err != nil || byVoice == nil || byVoice.ID != "generate" {
+		t.Fatalf("by voice = %v, %v; want the generation job", byVoice, err)
 	}
 	if got := byPost.Subject(voiceSubject); got != "voice-alice" {
 		t.Fatalf("voice subject of the read job = %q", got)

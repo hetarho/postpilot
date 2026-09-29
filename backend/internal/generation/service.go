@@ -14,7 +14,6 @@ import (
 type Service struct {
 	posts        Posts
 	profiles     Profiles
-	rules        RuleWriter
 	models       LLM
 	images       ImageReader
 	jobs         Jobs
@@ -91,7 +90,7 @@ type Deps struct {
 	VideoURLTTL time.Duration
 }
 
-func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy, budget CompletionBudget, deps Deps) *Service {
+func NewService(posts Posts, profiles Profiles, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy, budget CompletionBudget, deps Deps) *Service {
 	if batchSize <= 0 {
 		panic("generation: batch size must be positive")
 	}
@@ -109,7 +108,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	if deps.VideoURLTTL <= 0 {
 		panic("generation: video link TTL must be positive")
 	}
-	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
+	return &Service{posts: posts, profiles: profiles, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
 		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
 		qualityRules: deps.QualityRules}
 }
@@ -168,8 +167,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if err != nil {
 		return "", err
 	}
-	// Ahead of everything else, the rule append included: that writes to the voice, and a
-	// revision that cannot land must not teach it anything (GEN-56).
+	// Ahead of everything else: a revision that cannot land starts nothing (GEN-56).
 	if post.Published {
 		return "", ErrPostPublished
 	}
@@ -188,9 +186,6 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.VoiceID = voiceID
-	if request.SaveAsRule && (!post.Voice.SourceLanguage.Valid() || *post.ContentLanguage != post.Voice.SourceLanguage) {
-		return "", ErrVoiceContentLanguageMismatch
-	}
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
@@ -200,11 +195,6 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", ErrWriteModelRequired
 	}
 	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
-	if request.SaveAsRule {
-		if err := s.rules.AppendRule(ctx, request.UserID, voiceID, request.Instruction); err != nil {
-			return "", fmt.Errorf("save revision rule: %w", err)
-		}
-	}
 	brief, err := s.freezeTemplate(ctx, post)
 	if err != nil {
 		return "", err
@@ -216,7 +206,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Guidelines, request.DefaultGuidelines = guidelines.Owner, guidelines.Defaults
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort)
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}

@@ -19,42 +19,6 @@ type Voice struct {
 	SourceLanguage string
 }
 
-type VoiceContrastRule struct {
-	ID             string
-	UserID         string
-	VoiceID        string
-	Statement      string
-	CanonicalKey   string
-	Layer          string
-	EvidenceCount  int64
-	Status         string
-	Origin         string
-	CreatedAt      string
-	LastEvidenceAt string
-}
-
-type VoiceLearningEvent struct {
-	ID               string
-	UserID           string
-	VoiceID          string
-	PostSlug         string
-	BaselineRevision int64
-	InputHash        string
-	BaselineContent  string
-	FinalContent     string
-	ModelRef         string
-	Status           string
-	JobID            sql.NullString
-	Error            sql.NullString
-	CreatedAt        string
-	ProcessedAt      sql.NullString
-	ContentLanguage  sql.NullString
-	SourceLanguage   sql.NullString
-	ErrorReason      sql.NullString
-	ErrorParams      sql.NullString
-	TechnicalDetail  sql.NullString
-}
-
 type VoiceManualOverride struct {
 	VoiceID   string
 	UserID    string
@@ -62,40 +26,6 @@ type VoiceManualOverride struct {
 	Field     string
 	Value     string
 	UpdatedAt string
-}
-
-type VoiceProfileValidation struct {
-	ID              string
-	UserID          string
-	VoiceID         string
-	ProfileVersion  int64
-	AnalyzeModelRef string
-	WriteModelRef   string
-	JudgeEnabled    int64
-	Status          string
-	JobID           sql.NullString
-	YCount          sql.NullInt64
-	TotalCount      sql.NullInt64
-	CreatedAt       string
-	FinishedAt      sql.NullString
-	SourceLanguage  sql.NullString
-}
-
-type VoiceProfileValidationItem struct {
-	ID                 string
-	ValidationID       string
-	SourceID           string
-	VoiceID            string
-	UserID             string
-	Position           int64
-	NeutralSummary     sql.NullString
-	RegeneratedContent sql.NullString
-	Scores             sql.NullString
-	Status             string
-	Error              sql.NullString
-	ErrorReason        sql.NullString
-	ErrorParams        sql.NullString
-	TechnicalDetail    sql.NullString
 }
 
 type VoiceProfileVersion struct {
@@ -107,62 +37,6 @@ type VoiceProfileVersion struct {
 	Origin              string
 	RestoredFromVersion sql.NullInt64
 	CreatedAt           string
-}
-
-type VoiceRuleComparison struct {
-	ID             string
-	UserID         string
-	VoiceID        string
-	RuleID         string
-	SourceID       string
-	ProfileVersion int64
-	ModelRef       string
-	TargetLength   int64
-	InputSnapshot  string
-	RuleOnSide     string
-	Status         string
-	JobID          sql.NullString
-	ChosenSide     sql.NullString
-	CreatedAt      string
-	DecidedAt      sql.NullString
-	SourceLanguage sql.NullString
-}
-
-type VoiceRuleComparisonCandidate struct {
-	ID              string
-	ComparisonID    string
-	DisplaySide     string
-	Output          sql.NullString
-	Status          string
-	Error           sql.NullString
-	ErrorReason     sql.NullString
-	ErrorParams     sql.NullString
-	TechnicalDetail sql.NullString
-}
-
-type VoiceRuleConfirmation struct {
-	ID                string
-	UserID            string
-	VoiceID           string
-	RuleID            string
-	ProposedStatement string
-	EventID           sql.NullString
-	Status            string
-	CreatedAt         string
-	ResolvedAt        sql.NullString
-}
-
-type VoiceSentenceFeedback struct {
-	ID              string
-	UserID          string
-	VoiceID         string
-	PostSlug        string
-	SentenceRef     string
-	Kind            string
-	Reason          sql.NullString
-	PayloadRef      string
-	ProcessingState string
-	CreatedAt       string
 }
 
 type VoiceVersionSample struct {

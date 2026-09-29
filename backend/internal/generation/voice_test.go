@@ -17,25 +17,24 @@ func okContent() llm.Response {
 }
 
 // POST-25: every AI start refuses a post whose voice is deleted before any queue or
-// provider work, and a save-as-rule never lands in a tombstone.
+// provider work.
 func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: deletedVoice, Content: revisionContent("body")}}
 	jobs := &fakeJobs{id: "never"}
-	rules := &fakeRules{}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("generation start = %v", err)
 	}
-	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", SaveAsRule: true, WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceDeleted) {
+	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("revision start = %v", err)
 	}
 	if _, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false); !errors.Is(err, ErrVoiceDeleted) {
 		t.Fatalf("write experiment snapshot = %v", err)
 	}
-	if jobs.enqueues != 0 || len(rules.lines) != 0 || len(models.calls) != 0 {
-		t.Fatalf("a deleted voice reached the queue, the rules, or a provider: jobs=%d rules=%v calls=%d", jobs.enqueues, rules.lines, len(models.calls))
+	if jobs.enqueues != 0 || len(models.calls) != 0 {
+		t.Fatalf("a deleted voice reached the queue or a provider: jobs=%d calls=%d", jobs.enqueues, len(models.calls))
 	}
 	posts.input.Voice = VoiceRef{}
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); !errors.Is(err, ErrVoiceRequired) {
@@ -43,23 +42,19 @@ func TestStartsRefuseADeletedVoiceBeforeEnqueue(t *testing.T) {
 	}
 }
 
-// The start freezes the post's voice into the job and the saved rule goes to that voice.
+// The start freezes the post's voice into the job.
 func TestStartsFreezeThePostVoiceIntoTheJob(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 	jobs := &fakeJobs{id: "job"}
-	rules := &fakeRules{}
-	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "존댓말로", SaveAsRule: true, WriteModel: writeRef.String()}); err != nil {
+	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "존댓말로", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
 	if len(jobs.generations) != 1 || jobs.generations[0].VoiceID != liveVoice.ID || len(jobs.revisions) != 1 || jobs.revisions[0].VoiceID != liveVoice.ID {
 		t.Fatalf("jobs did not freeze the voice: generations=%+v revisions=%+v", jobs.generations, jobs.revisions)
-	}
-	if len(rules.voices) != 1 || rules.voices[0] != liveVoice.ID {
-		t.Fatalf("rule saved to voice %v, want %q", rules.voices, liveVoice.ID)
 	}
 }
 
@@ -81,13 +76,13 @@ func TestHandlersRecheckTheFrozenVoiceBeforeProviderCalls(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: tc.voice, Content: revisionContent("body")}}
-			svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+			svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 			calls := len(models.calls)
 			err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: tc.job, WriteModel: writeRef.String()}, func(string, int, int) {})
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("generate = %v, want %v", err, tc.want)
 			}
-			err = svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: tc.job, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "더 짧게", false)}, func(string, int, int) {})
+			err = svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: tc.job, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "더 짧게")}, func(string, int, int) {})
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("revise = %v, want %v", err, tc.want)
 			}
@@ -112,8 +107,8 @@ func TestRevisionDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 		posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰"}
 		return okContent(), nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	err := svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "더 짧게", false)}, func(string, int, int) {})
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	err := svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "더 짧게")}, func(string, int, int) {})
 	if !errors.Is(err, ErrVoiceMismatch) || len(posts.contents) != 0 {
 		t.Fatalf("mid-call reassignment: err=%v contents=%d", err, len(posts.contents))
 	}
@@ -140,7 +135,7 @@ func TestGenerateDropsOutputWhenThePostMovesMidCall(t *testing.T) {
 				posts.input.Voice = tc.moved
 				return okContent(), nil
 			}
-			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+			svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 			err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: voice.ID, WriteModel: writeRef.String()}, func(string, int, int) {})
 			if !errors.Is(err, tc.want) || len(posts.contents) != 0 {
 				t.Fatalf("mid-call %s: err=%v contents=%d", name, err, len(posts.contents))
@@ -155,8 +150,8 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 	casual := VoiceRef{ID: "voice-casual", Name: "일상"}
 	formal := VoiceRef{ID: "voice-formal", Name: "격식"}
 	profiles := voiceProfiles{
-		casual.ID: {Styleguide: "CASUAL-STYLE ~해요", ActiveRules: "CASUAL-RULE", Excerpts: []string{"CASUAL-EXCERPT"}, Rules: "CASUAL-MANUAL"},
-		formal.ID: {Styleguide: "FORMAL-STYLE ~습니다", ActiveRules: "FORMAL-RULE", Excerpts: []string{"FORMAL-EXCERPT"}, Rules: "FORMAL-MANUAL"},
+		casual.ID: {Styleguide: "CASUAL-STYLE ~해요", Excerpts: []string{"CASUAL-EXCERPT"}},
+		formal.ID: {Styleguide: "FORMAL-STYLE ~습니다", Excerpts: []string{"FORMAL-EXCERPT"}},
 	}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
@@ -166,22 +161,22 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 			other = casual
 		}
 		posts := &fakePosts{input: PostInput{Slug: "post-" + voice.ID, UserID: "alice", Voice: voice, Content: revisionContent("body")}}
-		svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+		svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 		if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: posts.input.Slug, VoiceID: voice.ID, WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 			t.Fatal(err)
 		}
 		for pass := 1; pass <= 5; pass++ {
-			if err := svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: posts.input.Slug, VoiceID: voice.ID, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, fmt.Sprintf("pass %d", pass), false)}, func(string, int, int) {}); err != nil {
+			if err := svc.Revise(context.Background(), RevisionJob{UserID: "alice", PostSlug: posts.input.Slug, VoiceID: voice.ID, WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, fmt.Sprintf("pass %d", pass))}, func(string, int, int) {}); err != nil {
 				t.Fatalf("pass %d: %v", pass, err)
 			}
 		}
 		own, foreign := profiles[voice.ID], profiles[other.ID]
 		for _, call := range models.calls {
 			system := call.request.System
-			if !strings.Contains(system, own.Styleguide) || !strings.Contains(system, own.ActiveRules) || !strings.Contains(system, own.Excerpts[0]) || !strings.Contains(system, own.Rules) {
+			if !strings.Contains(system, own.Styleguide) || !strings.Contains(system, own.Excerpts[0]) {
 				t.Fatalf("%s prompt lost its own projection: %s", voice.Name, system)
 			}
-			for _, leak := range []string{foreign.Styleguide, foreign.ActiveRules, foreign.Excerpts[0], foreign.Rules} {
+			for _, leak := range []string{foreign.Styleguide, foreign.Excerpts[0]} {
 				if strings.Contains(system, leak) {
 					t.Fatalf("%s prompt contains %s's %q", voice.Name, other.Name, leak)
 				}
@@ -196,7 +191,7 @@ func TestContradictoryVoicesReceiveOnlyTheirOwnProjection(t *testing.T) {
 func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo"}}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
@@ -251,7 +246,7 @@ func TestGenerateFilesTheSampleUnderThePromptsProfileVersion(t *testing.T) {
 	samples := &recordingSamples{}
 	deps := testDeps()
 	deps.Samples = samples
-	svc := NewService(posts, fakeProfiles{profile: Profile{Version: 5}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
+	svc := NewService(posts, fakeProfiles{profile: Profile{Version: 5}}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
 	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

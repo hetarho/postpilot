@@ -21,7 +21,7 @@ func describedVoice(description string) *voice.VoiceSeed {
 
 func TestCreateVoiceWithoutADescriptionStartsNoWork(t *testing.T) {
 	h := newVoiceHarness(t)
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, jobID, err := h.svc.CreateVoice(context.Background(), "alice", "요리", voice.LanguageKorean, nil)
 	if err != nil || created.ID == "" || jobID != "" {
 		t.Fatalf("plain creation = %+v job=%q err=%v", created, jobID, err)
@@ -33,7 +33,7 @@ func TestCreateVoiceWithoutADescriptionStartsNoWork(t *testing.T) {
 
 func TestCreateVoiceWithADescriptionEnqueuesOneSeedJob(t *testing.T) {
 	h := newVoiceHarness(t)
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, jobID, err := h.svc.CreateVoice(
 		context.Background(), "alice", "요리", voice.LanguageKorean, describedVoice("  단순하고 농담조인 요리 말투  "),
 	)
@@ -60,7 +60,7 @@ func TestCreateVoiceWithADescriptionEnqueuesOneSeedJob(t *testing.T) {
 func TestCreateVoiceRefusesABadDescriptionBeforeInsertingAnything(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	before, _ := h.svc.ListVoices(ctx, "alice")
 
 	var tooLong *voice.VoiceDescriptionTooLongError
@@ -91,7 +91,7 @@ func TestCreateVoiceRefusesABadDescriptionBeforeInsertingAnything(t *testing.T) 
 func TestSeedPublishesAFirstProfileWithNoMeasurements(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, _, err := h.svc.CreateVoice(ctx, "alice", "요리", voice.LanguageKorean, describedVoice("농담조 요리 말투"))
 	if err != nil {
 		t.Fatal(err)
@@ -148,15 +148,15 @@ func TestSeedPublishesAFirstProfileWithNoMeasurements(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(live.Samples) != 0 || live.SourceCount != 0 || live.CanValidate {
-		t.Fatalf("seeding produced evidence: samples=%d sources=%d canValidate=%v", len(live.Samples), live.SourceCount, live.CanValidate)
+	if len(live.Samples) != 0 {
+		t.Fatalf("seeding produced evidence: samples=%d", len(live.Samples))
 	}
 }
 
 func TestSeededProfileNeverStatesAMeasurementItDoesNotHave(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, _, err := h.svc.CreateVoice(ctx, "alice", "요리", voice.LanguageKorean, describedVoice("농담조"))
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestSeededProfileNeverStatesAMeasurementItDoesNotHave(t *testing.T) {
 func TestSeedStandsDownWhenRealEvidenceAlreadyPublished(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, _, err := h.svc.CreateVoice(ctx, "alice", "요리", voice.LanguageKorean, describedVoice("농담조"))
 	if err != nil {
 		t.Fatal(err)
@@ -225,7 +225,7 @@ func TestSeedStandsDownWhenRealEvidenceAlreadyPublished(t *testing.T) {
 func TestSeedRefusesADeletedVoiceAndKeepsFailuresOffTheProfile(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, _, err := h.svc.CreateVoice(ctx, "alice", "요리", voice.LanguageKorean, describedVoice("농담조"))
 	if err != nil {
 		t.Fatal(err)
@@ -261,7 +261,7 @@ func TestSeedRefusesADeletedVoiceAndKeepsFailuresOffTheProfile(t *testing.T) {
 func TestSeedingWorkIsVoiceOwnedForTheDeleteGuard(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	h.svc.ConfigurePersonalization(learningPosts{}, personalizationConfig())
+	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	created, jobID, err := h.svc.CreateVoice(ctx, "alice", "요리", voice.LanguageKorean, describedVoice("농담조"))
 	if err != nil || jobID == "" {
 		t.Fatalf("described creation = %v job=%q", err, jobID)

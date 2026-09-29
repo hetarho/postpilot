@@ -1,11 +1,11 @@
-// ③ 글 완성: export, sentence feedback, and the 발행 URL field publishing and clearing the post.
+// ③ 글 완성: what the panel holds, export, and the 발행 URL field publishing and clearing the post.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { ProtoPlan, Stage } from '@/shared/api'
+import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { USER, openStep, resetEditorTest, stubLearningHandoff } from '@/test/editor'
+import { USER, openStep, resetEditorTest } from '@/test/editor'
 import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 import {
   finalizedPostRow,
@@ -42,12 +42,9 @@ describe('opening a post', () => {
 
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    // 글 완성 loads the post and the analyze selection the finalize control needs. The voice
-    // profile is NOT among them any more: the empty-profile warning belongs to 글 생성, so a post
-    // already past generating no longer pays for that read.
-    await waitFor(() => {
-      expect(calls).toEqual(expect.arrayContaining(['GetPost', 'ListModels', 'GetSelections']))
-    })
+    // The voice profile is NOT read: the empty-profile warning belongs to 글 생성, so a post already
+    // past generating no longer pays for that read.
+    await waitFor(() => expect(calls).toContain('GetPost'))
     expect(calls).not.toContain('GetVoiceProfile')
     calls.length = 0
 
@@ -167,53 +164,32 @@ describe('the post language', () => {
   })
 })
 
-// VOICE-41: the server requires a COMPLETED voice-learning event before it accepts sentence
-// feedback, and a post on 글 다듬기 is in `review` — never finalized, never learned. The control
-// therefore moved to 글 완성 and is gated on the same condition the server enforces.
-describe('sentence feedback', () => {
-  const learnedPost = finalizedPostRow({ slug: '20260820-final' })
-
-  it('is absent on 글 다듬기 and present on 글 완성 once the learning run has completed', async () => {
-    const user = userEvent.setup()
-    const key = 'postpilot:voice-learning:alice:20260820-final'
-    stubLearningHandoff({
-      [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
-    })
+// POST-54, POST-72: ③ is what the finished post is for — 기억으로 저장, the manual export and the
+// 발행 URL field at its foot — and nothing else. 말투 학습 and 문장 의견 left it with learning from
+// finalized posts (VOICE r5): a finalized post teaches its voice nothing.
+describe('the finish panel', () => {
+  it('holds 기억으로 저장, the export and the 발행 URL field in that order, and no learning', async () => {
+    const calls: string[] = []
     renderAppAt('/posts/20260820-final', {
       user: USER,
-      posts: { posts: [learnedPost] },
-      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
+      calls,
+      posts: { posts: [finalizedPostRow({ slug: '20260820-final' })] },
     })
 
-    expect(await screen.findByText('이 글에서 말투를 배웠어요.')).toBeInTheDocument()
-    const feedback = screen.getByRole('button', { name: '문장 의견' })
+    // A finalized post opens on 글 완성.
+    const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
+    const memories = await within(panel).findByRole('button', { name: '기억으로 저장' })
+    const exportHeading = within(panel).getByRole('heading', { name: '내보내기' })
+    const publish = within(panel).getByRole('region', { name: '발행' })
+    const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING
+    expect(memories.compareDocumentPosition(exportHeading) & FOLLOWING).toBeTruthy()
+    expect(exportHeading.compareDocumentPosition(publish) & FOLLOWING).toBeTruthy()
 
-    // What it SAYS: it teaches the voice, it does not change the post, and it names the thing
-    // that does change the post.
-    await user.click(feedback)
-    const dialog = await screen.findByRole('dialog', { name: '어떤 점을 바꾸고 싶나요?' })
-    expect(dialog).toHaveTextContent('이 의견은 말투를 가르칩니다. 이 글은 바뀌지 않아요.')
-    expect(dialog).toHaveTextContent('AI 수정')
-    expect(dialog).not.toHaveTextContent('이 반응만으로 새 규칙이 생기거나 활성화되지는 않습니다.')
-
-    await user.click(within(dialog).getByRole('button', { name: '취소' }))
-    await openStep(user, '글 다듬기')
-    await screen.findByRole('button', { name: '제목과 요약, 태그 수정' })
-    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
-    localStorage.removeItem(key)
-  })
-
-  it('is not offered on 글 완성 for a post whose learning run has not completed', async () => {
-    renderAppAt('/posts/20260820-final', {
-      user: USER,
-      posts: { posts: [learnedPost] },
-    })
-    await screen.findByRole('button', { name: '말투 학습' })
-    expect(screen.queryByRole('button', { name: '문장 의견' })).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('heading', { name: '말투 학습' })).not.toBeInTheDocument()
+    for (const gone of ['말투 학습', '문장 의견', '수정 없이도 마음에 들어요']) {
+      expect(screen.queryByRole('button', { name: gone })).not.toBeInTheDocument()
+    }
+    expect(calls.filter((call) => /Learn|Feedback|Validation|Comparison/.test(call))).toEqual([])
   })
 })
 

@@ -7,16 +7,7 @@ import { ContentRevisionConflictError } from '@/entities/post'
 import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { REVISION_INSTRUCTION_MAX_CHARS } from '../config'
-import {
-  AppFailureMessage,
-  Button,
-  Checkbox,
-  FieldMessage,
-  Notice,
-  Textarea,
-  Typography,
-  typographyStyles,
-} from '@/shared/ui'
+import { AppFailureMessage, Button, FieldMessage, Notice, Textarea, Typography } from '@/shared/ui'
 
 import { SaveAsGuidelineButton } from './SaveAsGuidelineButton'
 
@@ -24,9 +15,7 @@ interface ReviseFormProps {
   ownerId: string
   postSlug: string
   /** The post's voice: a deleted one refuses revision before any provider call. */
-  voice: Pick<VoiceRef, 'id' | 'deleted'>
-  /** The revision itself stays available; only publishing its sentence as a voice rule is unsafe. */
-  ruleLanguageMismatch?: boolean
+  voice: Pick<VoiceRef, 'deleted'>
   /** The post's current template, read from the already-loaded post so the guideline capture can
    *  offer it as a scope without issuing a query. Empty id means the post has none. */
   template?: { id: string; name: string }
@@ -52,17 +41,16 @@ export interface ReviseFormHandle {
  *  a committing action may not live. It DOES render the row's heading, with the step's way out
  *  (확정하기) in the `action` slot beside it.
  *
- *  Its SECONDARY controls — the counter, 규칙으로 저장 and 지침으로 저장 — collapse while the field
- *  is empty and unfocused. The dock is over the draft the whole time, so the row that is not being
- *  used is height taken from the thing the screen is for (THEME-8). They come back on focus, on the
- *  first character, and for as long as a revision is running or has failed, because that is when
- *  their state is worth reading. */
+ *  Its SECONDARY controls — the counter and 지침으로 저장 — collapse while the field is empty and
+ *  unfocused. The dock is over the draft the whole time, so the row that is not being used is
+ *  height taken from the thing the screen is for (THEME-8). They come back on focus, on the first
+ *  character, and for as long as a revision is running or has failed, because that is when their
+ *  state is worth reading. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
   {
     ownerId,
     postSlug,
     voice,
-    ruleLanguageMismatch = false,
     template,
     activeJob,
     jobPending = false,
@@ -74,16 +62,15 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
 ) {
   const { t } = useTranslation('posts')
   const [instruction, setInstruction] = useState('')
-  const [saveAsRule, setSaveAsRule] = useState(false)
   const [focused, setFocused] = useState(false)
   const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   const write = useStageSelection('write')
   const selectionSaving = useSelectionSavePending()
-  const startRevision = useStartRevision(ownerId, voice.id)
+  const startRevision = useStartRevision()
   const hasActiveJob = Boolean(activeJob && !isTerminal(activeJob))
   // A completed REVISION, not just any completed job: a finished `generate` job leaves the
   // instruction box holding text that never ran, and 'done' rather than merely terminal because a
-  // failed revision produced nothing worth turning into a rule.
+  // failed revision produced nothing worth turning into a guideline.
   const revisionCompleted = activeJob?.kind === 'revise' && activeJob.status === 'done'
   const revisionBusy =
     activeJob?.kind === 'revise' && (!isTerminal(activeJob) || activeJob.status === 'failed')
@@ -114,27 +101,12 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
       return
     }
     try {
-      const response = await startRevision.start(
-        postSlug,
-        trimmed,
-        saveAsRule && !ruleLanguageMismatch,
-        write.selected,
-      )
+      const response = await startRevision.start(postSlug, trimmed, write.selected)
       onStarted(response.jobId)
     } catch {
       // The mutation owns and renders the transport/provider error.
     }
-  }, [
-    beforeStart,
-    disabled,
-    onStarted,
-    postSlug,
-    ruleLanguageMismatch,
-    saveAsRule,
-    startRevision,
-    trimmed,
-    write.selected,
-  ])
+  }, [beforeStart, disabled, onStarted, postSlug, startRevision, trimmed, write.selected])
 
   useImperativeHandle(ref, () => ({ start: () => void start() }), [start])
 
@@ -203,8 +175,8 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         className="grid gap-2"
         onFocus={() => setFocused(true)}
         onBlur={(event) => {
-          // Only a focus move OUT of this group collapses the row: tabbing from the field onto the
-          // 규칙으로 저장 checkbox inside it must not unmount the checkbox mid-gesture.
+          // Only a focus move OUT of this group collapses the row: tabbing from the field onto
+          // 지침으로 저장 inside it must not unmount the button mid-gesture.
           if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
         }}
       >
@@ -248,34 +220,9 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
             <Typography variant="meta" as="p" id="revision-instruction-count">
               {instruction.length}/{REVISION_INSTRUCTION_MAX_CHARS}
             </Typography>
-            <label
-              className={typographyStyles({
-                variant: 'label',
-                className: 'flex min-h-11 items-center gap-3',
-              })}
-            >
-              <Checkbox
-                checked={saveAsRule}
-                disabled={
-                  voiceBlocked ||
-                  ruleLanguageMismatch ||
-                  hasActiveJob ||
-                  jobPending ||
-                  startRevision.isPending
-                }
-                onChange={(event) => setSaveAsRule(event.target.checked)}
-              />
-              {t('revision.saveAsRule')}
-            </label>
-            {ruleLanguageMismatch && (
-              <Typography variant="body" role="status" className="text-content-secondary">
-                {t('revision.ruleLanguageMismatch')}
-              </Typography>
-            )}
-            {/* Beside 규칙으로 저장, but only after a revision has actually finished: the instruction is
-              worth saving as a rule once the user has seen what it did. `규칙으로 저장` has to be a
-              pre-flight checkbox because the voice learns from the run itself; a guideline is a plain
-              create, so it can wait for the result. */}
+            {/* Only after a revision has actually finished: the instruction is worth keeping as a
+              guideline once the user has seen what it did, and a guideline is a plain create, so it
+              can wait for the result. */}
             {revisionCompleted && (
               <div className="flex flex-wrap items-center gap-2">
                 <SaveAsGuidelineButton

@@ -71,7 +71,7 @@ func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpi
 	}
 	id, err := h.service.StartRevision(ctx, generation.StartRevisionRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Instruction: req.Msg.GetInstruction(),
-		SaveAsRule: req.Msg.GetSaveAsRule(), WriteModel: modelRefValue(req.Msg.GetWriteModel()),
+		WriteModel: modelRefValue(req.Msg.GetWriteModel()),
 	})
 	if err != nil {
 		return nil, toConnectError("start revision", err)
@@ -185,8 +185,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", postpilotv1.FailureReason_GENERATION_VOICE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrPostPublished):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a published post is locked", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
-	case errors.Is(err, generation.ErrVoiceContentLanguageMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match the voice source language", postpilotv1.FailureReason_VOICE_CONTENT_LANGUAGE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrRevisionInstructionRequired):

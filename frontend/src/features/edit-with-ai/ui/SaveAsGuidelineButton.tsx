@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@/shared/ui'
 
-/** Turns a revision instruction into a saved guideline, beside the pre-flight `규칙으로 저장`.
+/** Turns a completed revision's instruction into a saved guideline (GUIDE-21).
  *
  *  It is an explicit user save of user-authored text, not learning: the dialog seeds the
  *  instruction and the user edits it before saving (a raw "무인 매장이니까 주인 얘기 빼줘" is

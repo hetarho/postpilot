@@ -263,7 +263,6 @@ func toConnectError(op string, err error) error {
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
 	var longDescription *voice.VoiceDescriptionTooLongError
-	var mismatch *voice.ContentLanguageMismatchError
 	switch {
 	case errors.As(err, &tooShort):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", postpilotv1.FailureReason_VOICE_SAMPLE_TOO_SHORT, map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
@@ -284,6 +283,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", postpilotv1.FailureReason_VOICE_SAMPLE_NOT_FOUND, nil)
+	case errors.Is(err, voice.ErrLearningNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile version not found", postpilotv1.FailureReason_VOICE_LEARNING_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleMutation):
 		return rpcserver.NewAppError(connect.CodeInternal, "voice sample could not be updated", postpilotv1.FailureReason_VOICE_SAMPLE_MUTATION_FAILED, nil)
 	case errors.Is(err, voice.ErrVoiceNameTaken):
@@ -294,10 +295,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "default voice cannot be deleted", postpilotv1.FailureReason_VOICE_DEFAULT_DELETE_FORBIDDEN, nil)
 	case errors.Is(err, voice.ErrVoiceBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice has unfinished work", postpilotv1.FailureReason_VOICE_BUSY, nil)
-	case errors.Is(err, voice.ErrBaselineVoiceMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post baseline voice does not match current voice", postpilotv1.FailureReason_VOICE_BASELINE_MISMATCH, nil)
-	case errors.As(err, &mismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match voice source language", postpilotv1.FailureReason_VOICE_CONTENT_LANGUAGE_MISMATCH, languageMismatchParams(mismatch))
 	case errors.Is(err, voice.ErrAnalyzeModelRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", postpilotv1.FailureReason_VOICE_ANALYZE_MODEL_REQUIRED, nil)
 	case errors.Is(err, voice.ErrInvalidLifecycle):
@@ -306,17 +303,6 @@ func toConnectError(op string, err error) error {
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
-}
-
-func languageMismatchParams(mismatch *voice.ContentLanguageMismatchError) map[string]string {
-	params := map[string]string{}
-	if mismatch.ContentLanguage.Valid() {
-		params["content_language"] = string(mismatch.ContentLanguage)
-	}
-	if mismatch.SourceLanguage.Valid() {
-		params["source_language"] = string(mismatch.SourceLanguage)
-	}
-	return params
 }
 
 func toProtoVoices(voices []voice.Voice) []*postpilotv1.Voice {
@@ -380,8 +366,7 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 	return &postpilotv1.VoiceProfile{
 		Voice:   toProtoVoice(profile.Voice),
 		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
-		Structured:           toProtoStructured(profile.Structured),
-		FinalizedSourceCount: int32(profile.SourceCount), CanValidate: profile.CanValidate,
+		Structured:  toProtoStructured(profile.Structured),
 		SeedFailure: toProtoFailure(profile.SeedFailure),
 	}
 }
@@ -403,23 +388,11 @@ func toProtoStructured(p voice.StructuredProfile) *postpilotv1.StructuredVoicePr
 	for _, v := range p.Endings.Distribution {
 		ending = append(ending, &postpilotv1.EndingRatio{Ending: v.Ending, Ratio: v.Ratio})
 	}
-	rules := make([]*postpilotv1.VoiceContrastRule, 0, len(p.Rules))
-	for _, v := range p.Rules {
-		rules = append(rules, toProtoRule(v))
-	}
-	sources := make([]*postpilotv1.VoiceSource, 0, len(p.Sources))
-	for _, v := range p.Sources {
-		sources = append(sources, &postpilotv1.VoiceSource{Id: v.ID, PostSlug: v.PostSlug, Title: v.Title, Tags: v.Tags, Excerpt: v.Excerpt, HasEmbedding: v.EmbeddingRef != "", CreatedAt: v.CreatedAt.UTC().Format(timeLayout)})
-	}
-	feedback := make([]*postpilotv1.VoiceFeedbackRef, 0, len(p.Feedback))
-	for _, v := range p.Feedback {
-		feedback = append(feedback, &postpilotv1.VoiceFeedbackRef{Id: v.ID, PostSlug: v.PostSlug, Kind: v.Kind, Layer: toProtoLayer(voice.RuleLayer(v.Reason)), ProcessingState: v.ProcessingState, CreatedAt: v.CreatedAt.UTC().Format(timeLayout)})
-	}
 	updated := ""
 	if !p.UpdatedAt.IsZero() {
 		updated = p.UpdatedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, AverageSentenceWords: p.Syntax.AverageSentenceWords, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, ContrastRules: rules, FewShotBank: sources, FeedbackLog: feedback, Empty: p.Empty}
+	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, AverageSentenceWords: p.Syntax.AverageSentenceWords, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, Empty: p.Empty}
 }
 func toProtoValue(v voice.VoiceValue) *postpilotv1.VoiceValue {
 	return &postpilotv1.VoiceValue{Value: v.Value, Source: toProtoSource(v.Source), Unknown: v.Unknown}
@@ -476,20 +449,6 @@ func fromProtoLayer(v postpilotv1.VoiceLayer) voice.RuleLayer {
 	default:
 		return ""
 	}
-}
-func toProtoRule(v voice.ContrastRule) *postpilotv1.VoiceContrastRule {
-	status := postpilotv1.VoiceRuleStatus_VOICE_RULE_STATUS_UNSPECIFIED
-	switch v.Status {
-	case voice.RuleCandidate:
-		status = postpilotv1.VoiceRuleStatus_VOICE_RULE_STATUS_CANDIDATE
-	case voice.RuleActive:
-		status = postpilotv1.VoiceRuleStatus_VOICE_RULE_STATUS_ACTIVE
-	case voice.RuleRetired:
-		status = postpilotv1.VoiceRuleStatus_VOICE_RULE_STATUS_RETIRED
-	case voice.RuleRejected:
-		status = postpilotv1.VoiceRuleStatus_VOICE_RULE_STATUS_REJECTED
-	}
-	return &postpilotv1.VoiceContrastRule{Id: v.ID, Statement: v.Statement, Layer: toProtoLayer(v.Layer), EvidenceCount: int32(v.EvidenceCount), Status: status, Origin: v.Origin, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), LastEvidenceAt: v.LastEvidenceAt.UTC().Format(timeLayout)}
 }
 func toProtoVersion(v voice.ProfileVersion) *postpilotv1.VoiceProfileVersion {
 	return &postpilotv1.VoiceProfileVersion{Version: v.Version, Profile: toProtoStructured(v.Profile), Origin: v.Origin, RestoredFromVersion: v.RestoredFromVersion, CreatedAt: v.CreatedAt.UTC().Format(timeLayout), HasSample: v.HasSample}

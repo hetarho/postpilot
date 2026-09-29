@@ -23,8 +23,8 @@ type CandidateUsage struct {
 	CostReported     bool
 }
 
-// SnapshotAnalysisInput freezes one voice's whole corpus — the same samples plus finalized
-// sources the analyze job would read — so both candidates see exactly what analysis sees.
+// SnapshotAnalysisInput freezes one voice's whole corpus — the same samples the analyze job
+// would read — so both candidates see exactly what analysis sees.
 func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID string) ([]byte, error) {
 	active, err := s.activeVoice(ctx, userID, voiceID)
 	if err != nil {
@@ -34,17 +34,10 @@ func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID str
 	if err != nil {
 		return nil, fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 	}
-	var sources []AuthoredSource
-	if s.personalization != nil {
-		if sources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID); err != nil {
-			return nil, fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
-		}
-		sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
-	}
-	if len(samples) == 0 && len(sources) == 0 {
+	if len(samples) == 0 {
 		return nil, fmt.Errorf("분석할 문체 자료가 없어요")
 	}
-	return json.Marshal(analyzeExperimentSnapshot{Corpus: personalizationCorpus(samples, sources), SourceLanguage: active.SourceLanguage})
+	return json.Marshal(analyzeExperimentSnapshot{Corpus: AssembleCorpus(samples), SourceLanguage: active.SourceLanguage})
 }
 
 func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.ModelRef) (string, CandidateUsage, error) {
@@ -83,10 +76,10 @@ func (s *Service) RunAnalyzeCandidate(ctx context.Context, raw []byte, ref llm.M
 // What changed is where the winning analysis lands. It used to be written into a free-text
 // `styleguide` column; that column is gone (VOICE-6), so the winner is applied the way an
 // analysis run applies its own result — as a published structured profile version whose
-// lexical description IS the winning analysis, with the account's manual overrides and its
-// earned rules carried onto it, mirroring analyze_handler.
+// lexical description IS the winning analysis, with the account's manual overrides carried
+// onto it, mirroring analyze_handler.
 //
-// Publishing IF HEAD rather than unconditionally: an analysis or a rule change that published
+// Publishing IF HEAD rather than unconditionally: an analysis or an override that published
 // while the operator was confirming this winner is newer evidence, and a stale winner must not
 // overwrite it. Losing that race is not an error — the confirmation simply stands down.
 func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, styleguide string) error {
@@ -111,19 +104,14 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 	if err != nil {
 		return fmt.Errorf("corpus for analyze winner: %w", err)
 	}
-	var sources []AuthoredSource
-	if sources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID); err != nil {
-		return fmt.Errorf("authored sources for analyze winner: %w", err)
-	}
 	// The measured half is MEASURED, not inherited: cloning the current head would carry its
 	// ending distribution and sentence metrics onto a version the winner never described, and a
 	// voice with no head at all would publish a v1 with every metric unset. This is exactly what
 	// analyze_handler does with its own result — only the description differs.
-	corpus := personalizationCorpus(samples, sources)
+	corpus := AssembleCorpus(samples)
 	profile := MeasuredProfileForLanguage(corpus, active.SourceLanguage, s.now)
 	profile.Lexical.Description = VoiceValue{Value: styleguide, Source: SourceAnalyzed}
-	profile.SourceCount = len(samples) + len(sources)
-	profile.Sources = sources
+	profile.SourceCount = len(samples)
 	profile.Empty = false
 	overrides, err := s.overrides.ListManualOverrides(ctx, userID, voiceID)
 	if err != nil {
@@ -134,9 +122,6 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 			return err
 		}
 	}
-	if profile.Rules, err = s.rules.ListRules(ctx, userID, voiceID); err != nil {
-		return fmt.Errorf("voice rules: %w", err)
-	}
 	// origin "analysis": an analyze-stage winner IS an analysis result, and the version
 	// history's origin vocabulary already names that. A separate origin would need a
 	// migration to widen the CHECK for a distinction the history does not make.
@@ -146,8 +131,8 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 	}
 	// Losing the head race is NOT success. The caller records the winner as applied on a nil
 	// error, so swallowing this would leave the experiment claiming an effect the voice never
-	// received. An analysis or a rule published while the operator was confirming is newer
-	// evidence; the honest answer is to say the apply did not land so it can be retried.
+	// received. An analysis published while the operator was confirming is newer evidence; the
+	// honest answer is to say the apply did not land so it can be retried.
 	if !ok {
 		return fmt.Errorf("문체 프로필이 그 사이에 갱신되었어요. 다시 적용해 주세요")
 	}

@@ -122,7 +122,6 @@ func TestAssigningATemplateTouchesNoContentOrFinalizationState(t *testing.T) {
 	if stored.Status != before.Status ||
 		stored.ContentRevision != before.ContentRevision ||
 		stored.MachineBaselineRevision != before.MachineBaselineRevision ||
-		stored.MachineBaselineVoiceID != before.MachineBaselineVoiceID ||
 		stored.FinalizedRevision != before.FinalizedRevision {
 		t.Fatalf("assignment disturbed lifecycle state:\nbefore=%+v\nafter=%+v", before, stored)
 	}

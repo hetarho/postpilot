@@ -17,9 +17,9 @@ func revisionContent(text string, blocks ...Block) *PostContent {
 	}
 }
 
-func mustRevisionPayload(t *testing.T, instruction string, save bool) []byte {
+func mustRevisionPayload(t *testing.T, instruction string) []byte {
 	t.Helper()
-	payload, err := encodeRevisionPayload(instruction, save, nil, nil)
+	payload, err := encodeRevisionPayload(instruction, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,17 +28,21 @@ func mustRevisionPayload(t *testing.T, instruction string, save bool) []byte {
 
 func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) {
 	system, user := BuildRevisePrompt(Profile{
-		Styleguide: "STYLE", ActiveRules: "ACTIVE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, Rules: "RULES", EndingMaxConsecutive: 2,
+		Styleguide: "STYLE", Excerpts: []string{"EXCERPT-1", "EXCERPT-2"}, EndingMaxConsecutive: 2,
 	}, *revisionContent("CURRENT"), []string{"IMG_1.jpg"}, "INSTRUCTION", nil, nil, nil)
 	whole := system + "\n" + user
 	positions := []int{
-		strings.Index(whole, "STYLE"), strings.Index(whole, "ACTIVE"), strings.Index(whole, "EXCERPT-1"),
-		strings.Index(whole, "EXCERPT-2"), strings.Index(whole, "RULES"),
+		strings.Index(whole, "STYLE"), strings.Index(whole, "EXCERPT-1"), strings.Index(whole, "EXCERPT-2"),
 		strings.Index(whole, "CURRENT"), strings.Index(whole, "INSTRUCTION"),
 	}
 	for i := 1; i < len(positions); i++ {
 		if positions[i-1] < 0 || positions[i] <= positions[i-1] {
 			t.Fatalf("revision prompt order wrong: %v\n%s", positions, whole)
+		}
+	}
+	for _, gone := range []string{"[활성 대조 규칙]", "[사용자 규칙]"} {
+		if strings.Contains(whole, gone) {
+			t.Errorf("revision prompt still carries %s", gone)
 		}
 	}
 	for _, required := range []string{
@@ -84,7 +88,7 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("pass-0"),
 	}}
 	profiles := &recordingProfiles{profile: Profile{
-		Styleguide: "STYLE", Excerpts: []string{"EXCERPT"}, Rules: "RULE",
+		Styleguide: "STYLE", Excerpts: []string{"EXCERPT"},
 	}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, _ llm.Request) (llm.Response, error) {
@@ -94,19 +98,19 @@ func TestFiveRevisionsReinjectProfileAndPersistEveryResult(t *testing.T) {
 			pass,
 		)}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	for pass := 1; pass <= 5; pass++ {
 		instruction := fmt.Sprintf("INSTRUCTION-%d", pass)
 		if err := svc.Revise(context.Background(), RevisionJob{
 			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
-			Payload: mustRevisionPayload(t, instruction, false),
+			Payload: mustRevisionPayload(t, instruction),
 		}, func(string, int, int) {}); err != nil {
 			t.Fatalf("pass %d: %v", pass, err)
 		}
 		request := models.calls[pass-1].request
 		whole := request.System + "\n" + request.Messages[0].Parts[0].Text
-		for _, expected := range []string{"STYLE", "EXCERPT", "RULE", instruction} {
+		for _, expected := range []string{"STYLE", "EXCERPT", instruction} {
 			if !strings.Contains(whole, expected) {
 				t.Errorf("pass %d missing %q", pass, expected)
 			}
@@ -142,11 +146,11 @@ func TestRevisionUsesSharedValidationAndAttachmentFilterAndKeepsImageOrder(t *te
           {"type":"IMAGE","file":"A.jpg"}
         ]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	var progress []string
 	err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
-		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘", false),
+		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘"),
 	}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
 	})
@@ -173,11 +177,11 @@ func TestRevisionRefiltersAgainstAttachmentsAfterProviderCall(t *testing.T) {
 		posts.input.Images = []Image{{Filename: "A.jpg"}}
 		return llm.Response{Text: `{"title":"제목","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"IMAGE","file":"B.jpg"},{"type":"IMAGE","file":"A.jpg"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
-		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘", false),
+		Payload: mustRevisionPayload(t, "사진 순서 바꿔줘"),
 	}, func(string, int, int) {})
 	if err != nil {
 		t.Fatal(err)
@@ -191,46 +195,39 @@ func TestRevisionRefiltersAgainstAttachmentsAfterProviderCall(t *testing.T) {
 	}
 }
 
-type linkedRules struct {
-	profile *Profile
-	lines   []string
-}
-
-func (f *linkedRules) AppendRule(_ context.Context, _, _ string, line string) error {
-	f.lines = append(f.lines, line)
-	f.profile.Rules = strings.TrimSpace(f.profile.Rules + "\n" + strings.TrimSpace(line))
-	return nil
-}
-
-func TestStartRevisionSavesRuleBeforeEnqueueAndNewWritePromptSeesIt(t *testing.T) {
-	profile := Profile{Styleguide: "STYLE", Excerpts: []string{"EXCERPT"}, Rules: "OLD"}
-	rules := &linkedRules{profile: &profile}
+// VOICE-59: a revision teaches the voice nothing. StartRevision enqueues the instruction with
+// its pricing shape and a payload that carries no 규칙으로 저장 flag.
+func TestStartRevisionEnqueuesWithoutWritingTheVoice(t *testing.T) {
 	jobs := &fakeJobs{id: "revision-job"}
 	target := 1200
 	content := revisionContent("body")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: content, TargetLength: &target}}
-	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 
 	id, err := svc.StartRevision(context.Background(), StartRevisionRequest{
-		UserID: "alice", PostSlug: "post", Instruction: "  존댓말로  ",
-		SaveAsRule: true, WriteModel: writeRef.String(),
+		UserID: "alice", PostSlug: "post", Instruction: "  존댓말로  ", WriteModel: writeRef.String(),
 	})
-	if err != nil || id != "revision-job" {
-		t.Fatalf("StartRevision id=%q err=%v", id, err)
+	if err != nil || id != "revision-job" || len(jobs.revisions) != 1 {
+		t.Fatalf("StartRevision id=%q err=%v revisions=%v", id, err, jobs.revisions)
 	}
-	if len(rules.lines) != 1 || rules.lines[0] != "존댓말로" || len(jobs.revisions) != 1 {
-		t.Fatalf("rules=%v revisions=%v", rules.lines, jobs.revisions)
-	}
-	if got := jobs.revisions[0]; got.TargetLength == nil || *got.TargetLength != target || got.ContentChars != contentChars(content) {
-		t.Fatalf("revision pricing shape = target %v chars %d", got.TargetLength, got.ContentChars)
+	if got := jobs.revisions[0]; got.TargetLength == nil || *got.TargetLength != target || got.ContentChars != contentChars(content) || got.VoiceID != liveVoice.ID {
+		t.Fatalf("revision request = %+v", got)
 	}
 	payload, err := parseRevisionPayload(jobs.payloads[0])
-	if err != nil || payload.Instruction != "존댓말로" || !payload.SaveAsRule {
+	if err != nil || payload.Instruction != "존댓말로" {
 		t.Fatalf("payload=%+v err=%v", payload, err)
 	}
-	system, _ := BuildWritePrompt(profile, nil, "memo", "title", nil, nil, nil, nil)
-	if strings.Index(system, "존댓말로") <= strings.Index(system, "EXCERPT") {
-		t.Fatalf("saved rule is not after excerpts: %s", system)
+	if strings.Contains(string(jobs.payloads[0]), "save_as_rule") {
+		t.Fatalf("the payload still writes save_as_rule: %s", jobs.payloads[0])
+	}
+}
+
+// A revision queued while 규칙으로 저장 existed carries `save_as_rule`; it still decodes, and the
+// flag reaches nothing.
+func TestARevisionPayloadThatStillCarriesSaveAsRuleDecodes(t *testing.T) {
+	payload, err := parseRevisionPayload([]byte(`{"instruction":" 존댓말로 ","save_as_rule":true,"content_language":"ko","tag_count":5}`))
+	if err != nil || payload.Instruction != "존댓말로" || payload.ContentLanguage != LanguageKorean || payload.TagCount != 5 {
+		t.Fatalf("payload=%+v err=%v", payload, err)
 	}
 }
 
@@ -258,7 +255,7 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 			posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
 			models, jobs := newFakeModels(), &fakeJobs{id: "job"}
 			tc.mutate(&request, posts, models, jobs)
-			_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps()).
+			_, err := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps()).
 				StartRevision(context.Background(), request)
 			if name == "active job" {
 				var active *JobAlreadyInProgressError
@@ -274,18 +271,5 @@ func TestStartRevisionPreconditionsDoNotEnqueue(t *testing.T) {
 				t.Fatalf("enqueues = %d", jobs.enqueues)
 			}
 		})
-	}
-}
-
-func TestStartRevisionWithoutSaveDoesNotAppendRule(t *testing.T) {
-	rules := &fakeRules{}
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body")}}
-	_, err := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, &fakeJobs{id: "job"}, 4, testReasoningPolicy, testBudget, testDeps()).
-		StartRevision(context.Background(), StartRevisionRequest{
-			UserID: "alice", PostSlug: "post", Instruction: "더 짧게",
-			WriteModel: writeRef.String(), SaveAsRule: false,
-		})
-	if err != nil || len(rules.lines) != 0 {
-		t.Fatalf("rules=%v err=%v", rules.lines, err)
 	}
 }

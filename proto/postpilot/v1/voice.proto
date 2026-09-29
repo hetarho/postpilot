@@ -94,13 +94,6 @@ message VoiceAxes {
   optional int32 humor = 6;
 }
 
-enum VoiceRuleStatus {
-  VOICE_RULE_STATUS_UNSPECIFIED = 0;
-  VOICE_RULE_STATUS_CANDIDATE = 1;
-  VOICE_RULE_STATUS_ACTIVE = 2;
-  VOICE_RULE_STATUS_RETIRED = 3;
-  VOICE_RULE_STATUS_REJECTED = 4;
-}
 enum VoiceLayer {
   VOICE_LAYER_UNSPECIFIED = 0;
   VOICE_LAYER_LEXICAL = 1;
@@ -109,24 +102,15 @@ enum VoiceLayer {
   VOICE_LAYER_STRUCTURE = 4;
   VOICE_LAYER_AXES = 5;
 }
-message VoiceContrastRule {
-  string id = 1; string statement = 2; VoiceLayer layer = 3; int32 evidence_count = 4;
-  VoiceRuleStatus status = 5; string origin = 6; string created_at = 7; string last_evidence_at = 8;
-}
-message VoiceSource {
-  string id = 1; string post_slug = 2; string title = 3; repeated string tags = 4;
-  string excerpt = 5; bool has_embedding = 6; string created_at = 7;
-}
-message VoiceFeedbackRef {
-  string id = 1; string post_slug = 2; string kind = 3; VoiceLayer layer = 4;
-  string processing_state = 5; string created_at = 6;
-}
 message VoiceProfileMeta { int64 version = 1; string updated_at = 2; int32 source_count = 3; }
 message StructuredVoiceProfile {
   VoiceProfileMeta meta = 1; VoiceLexical lexical = 2; VoiceEndings endings = 3;
   VoiceSyntax syntax = 4; VoiceStructure structure = 5; VoiceAxes axes = 6;
-  repeated VoiceContrastRule contrast_rules = 7; repeated VoiceSource few_shot_bank = 8;
-  repeated VoiceFeedbackRef feedback_log = 9; bool empty = 10;
+  // 7, 8 and 9 were the contrast rules, the finalized-post few-shot bank and the sentence
+  // feedback log, retired in T465 with learning from finalized posts.
+  reserved 7, 8, 9;
+  reserved "contrast_rules", "few_shot_bank", "feedback_log";
+  bool empty = 10;
 }
 
 message VoiceProfile {
@@ -141,8 +125,10 @@ message VoiceProfile {
   repeated VoiceSample samples = 4;
   string active_job_id = 5;
   StructuredVoiceProfile structured = 6;
-  int32 finalized_source_count = 8;
-  bool can_validate = 9;
+  // 8 and 9 were the finalized-post source count and whether profile validation could run,
+  // retired in T465.
+  reserved 8, 9;
+  reserved "finalized_source_count", "can_validate";
   // Why the seeding a described creation started failed, while the voice still has no published
   // version; absent otherwise (VOICE-19).
   Failure seed_failure = 11;

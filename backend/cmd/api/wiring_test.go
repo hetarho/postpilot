@@ -57,13 +57,16 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 23 {
+	if len(got) != 21 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
 		path, _ := register()
 		if strings.Contains(path, "Publishing") {
 			t.Fatalf("retired publishing route is still registered: %s", path)
+		}
+		if strings.Contains(path, "VoiceLearningService") || strings.Contains(path, "VoiceValidationService") {
+			t.Fatalf("retired voice learning route is still registered: %s", path)
 		}
 	}
 	public := rpcserver.New(cfg, "test", rpcserver.Options{Handlers: got, Interceptors: []connect.Interceptor{authrpc.NewInterceptor(app.auth, app.throttle, cfg.ClientIPHeader)}})

@@ -38,6 +38,21 @@ func SegmentSentences(text string) []string {
 	return out
 }
 
+// endingOf classes a sentence by its ending: 습니다, 해요, 다 or 기타.
+func endingOf(sentence string) string {
+	v := strings.TrimRightFunc(strings.TrimSpace(sentence), func(r rune) bool { return unicode.IsPunct(r) || unicode.IsSpace(r) })
+	if strings.HasSuffix(v, "습니다") || strings.HasSuffix(v, "니다") || strings.HasSuffix(v, "ㅂ니다") {
+		return "습니다"
+	}
+	if strings.HasSuffix(v, "해요") || strings.HasSuffix(v, "어요") || strings.HasSuffix(v, "아요") || strings.HasSuffix(v, "요") {
+		return "해요"
+	}
+	if strings.HasSuffix(v, "다") {
+		return "다"
+	}
+	return "기타"
+}
+
 func Measure(text string) Measurements {
 	sentences := SegmentSentences(text)
 	counts := map[string]int{"다": 0, "해요": 0, "습니다": 0, "기타": 0}
@@ -45,8 +60,8 @@ func Measure(text string) Measurements {
 	for _, sentence := range sentences {
 		plain := strings.TrimRightFunc(strings.TrimSpace(sentence), func(r rune) bool { return unicode.IsPunct(r) || unicode.IsSpace(r) })
 		totalChars += utf8.RuneCountInString(plain)
-		// One ending reader for the measurement and the diff (VOICE-37): composed Hangul ends
-		// 합니다 in 니다, never in the jamo ㅂ니다, so a jamo suffix test counted it as 다.
+		// Composed Hangul ends 합니다 in 니다, never in the jamo ㅂ니다, so a jamo suffix test
+		// would count it as 다.
 		counts[endingOf(plain)]++
 	}
 	distribution := make([]EndingRatio, 0, 4)

@@ -10,7 +10,6 @@ import {
   openBrief,
   openStep,
   resetEditorTest,
-  stubLearningHandoff,
   templateField,
   voiceField,
 } from '@/test/editor'
@@ -81,12 +80,10 @@ describe('a published post', () => {
       },
       { providerId: 'openrouter', modelId: 'writer' },
       { providerId: 'openrouter', modelId: 'writer-b' },
-      { providerId: 'openrouter', modelId: 'analyzer' },
     ],
     selections: [
       { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'seer' },
       { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
-      { stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' },
     ],
     comparisonPairs: [
       {
@@ -118,38 +115,22 @@ describe('a published post', () => {
     })
   }
 
-  it('lands on 글 완성 with learning and export available, and the line reads 발행됨', async () => {
+  it('lands on 글 완성 with 기억으로 저장 and export available, and the line reads 발행됨', async () => {
     renderPublished()
 
-    const learn = await screen.findByRole('button', { name: '말투 학습' })
+    const memories = await screen.findByRole('button', { name: '기억으로 저장' })
     selected('글 완성')
-    // The same gates as a finalized post: publishing keeps the finalized revision (POST-21).
-    await waitFor(() => expect(learn).toBeEnabled())
+    // The same as a finalized post: publishing keeps the canonical content it extracts from.
+    await waitFor(() => expect(memories).toBeEnabled())
     expect(screen.getByRole('heading', { name: '내보내기' })).toBeInTheDocument()
     await waitFor(() => expect(statusLine()).toHaveTextContent('발행됨'))
-  })
-
-  it('keeps 문장 의견 on 글 완성 after a completed learning run', async () => {
-    const key = `postpilot:voice-learning:alice:${published.slug}`
-    stubLearningHandoff({
-      [key]: JSON.stringify({ eventId: 'event-1', jobId: 'learn-1', contentRevision: '1' }),
-    })
-    renderAppAt(`/posts/${published.slug}`, {
-      user: USER,
-      posts: { posts: [published] },
-      jobs: { jobs: [{ id: 'learn-1', kind: 'voice_learn', status: 'done' }] },
-      providers: PROVIDERS,
-    })
-
-    expect(await screen.findByText('이 글에서 말투를 배웠어요.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '문장 의견' })).toBeInTheDocument()
   })
 
   it('reads ② as prose under the one sentence, with only the road onward in its dock', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
     renderPublished(calls)
-    await screen.findByRole('button', { name: '말투 학습' })
+    await screen.findByRole('button', { name: '기억으로 저장' })
 
     await openStep(user, '글 다듬기')
     const notice = await screen.findByText(LOCKED)
@@ -180,7 +161,7 @@ describe('a published post', () => {
     const calls: string[] = []
     const user = userEvent.setup()
     renderPublished(calls)
-    await screen.findByRole('button', { name: '말투 학습' })
+    await screen.findByRole('button', { name: '기억으로 저장' })
 
     await openStep(user, '글 생성')
     const title = await screen.findByLabelText('제목')

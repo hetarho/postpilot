@@ -1,6 +1,6 @@
 // The routed editor's shared test harness: the six EditorPage suites drive the same page, step by
 // step, so the ways to reach a step, the brief and the dock fields live here once (ARCH-16).
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import type userEvent from '@testing-library/user-event'
 import { expect, vi } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -27,18 +27,10 @@ export async function openStep(user: ReturnType<typeof userEvent.setup>, label: 
   await user.click(await screen.findByRole('tab', { name: label }))
 }
 
-/** 글 다듬기's two ways out — 확정 and 확정하고 말투 학습 — live behind ONE 확정하기 trigger at the
- *  top-right of the revision row, in a popover that is a bottom sheet on a phone. The panel IS the
- *  confirmation, so a test presses the trigger and then the action it wants. */
-export async function openFinalize(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = await screen.findByRole('button', { name: '확정하기' })
-  if (trigger.getAttribute('aria-expanded') !== 'true') await user.click(trigger)
-  return screen.findByRole('dialog', { name: '확정하기' })
-}
-
-export async function finalize(user: ReturnType<typeof userEvent.setup>, action = '확정') {
-  const panel = await openFinalize(user)
-  await user.click(within(panel).getByRole('button', { name: action }))
+/** 글 다듬기's one way out, 확정하기, stands at the top-right of the revision row and finalizes at
+ *  once (POST-56): no popover or modal stands between the press and the run. */
+export async function finalize(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '확정하기' }))
 }
 
 /** The writing brief — 관찰/작성 모델, 작성 A/B 후보, 목표 언어, 목표 분량 — lives behind ONE trigger
@@ -106,21 +98,6 @@ export function stubBrowserImagePipeline() {
   const put = vi.fn(async () => new Response(null, { status: 200 }))
   vi.stubGlobal('fetch', put)
   return { put }
-}
-
-/** The voice-learning handoff a finished or failed run left in `localStorage`, keyed as the hook
- *  keys it. */
-export function stubLearningHandoff(entries: Record<string, string>): void {
-  const stored = new Map<string, string>(Object.entries(entries))
-  vi.stubGlobal('localStorage', {
-    get length() {
-      return stored.size
-    },
-    key: (index: number) => [...stored.keys()][index] ?? null,
-    getItem: (name: string) => stored.get(name) ?? null,
-    setItem: (name: string, value: string) => stored.set(name, value),
-    removeItem: (name: string) => stored.delete(name),
-  })
 }
 
 /** The account's M1 over band, so the brief's quality rows offer a tick. */

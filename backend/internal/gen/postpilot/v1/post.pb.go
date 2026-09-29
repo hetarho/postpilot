@@ -583,9 +583,6 @@ type Post struct {
 	FinalizedRevision       int64          `protobuf:"varint,16,opt,name=finalized_revision,json=finalizedRevision,proto3" json:"finalized_revision,omitempty"`
 	FinalizedAt             string         `protobuf:"bytes,17,opt,name=finalized_at,json=finalizedAt,proto3" json:"finalized_at,omitempty"`
 	Voice                   *VoiceRef      `protobuf:"bytes,18,opt,name=voice,proto3" json:"voice,omitempty"`
-	// The voice the latest machine baseline was written under. Finalization learning refuses
-	// unless it still equals `voice`, so a reassigned post cannot publish to the wrong voice.
-	MachineBaselineVoiceId string `protobuf:"bytes,19,opt,name=machine_baseline_voice_id,json=machineBaselineVoiceId,proto3" json:"machine_baseline_voice_id,omitempty"`
 	// Unset when the post has no template. Unlike `voice` it is optional by design: the
 	// server never picks one and 없음 is the default.
 	Template       *TemplateRef    `protobuf:"bytes,20,opt,name=template,proto3" json:"template,omitempty"`
@@ -775,13 +772,6 @@ func (x *Post) GetVoice() *VoiceRef {
 		return x.Voice
 	}
 	return nil
-}
-
-func (x *Post) GetMachineBaselineVoiceId() string {
-	if x != nil {
-		return x.MachineBaselineVoiceId
-	}
-	return ""
 }
 
 func (x *Post) GetTemplate() *TemplateRef {
@@ -1822,7 +1812,6 @@ type StartRevisionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
 	Instruction   string                 `protobuf:"bytes,2,opt,name=instruction,proto3" json:"instruction,omitempty"`
-	SaveAsRule    bool                   `protobuf:"varint,3,opt,name=save_as_rule,json=saveAsRule,proto3" json:"save_as_rule,omitempty"`
 	WriteModel    *ModelRef              `protobuf:"bytes,4,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1870,13 +1859,6 @@ func (x *StartRevisionRequest) GetInstruction() string {
 		return x.Instruction
 	}
 	return ""
-}
-
-func (x *StartRevisionRequest) GetSaveAsRule() bool {
-	if x != nil {
-		return x.SaveAsRule
-	}
-	return false
 }
 
 func (x *StartRevisionRequest) GetWriteModel() *ModelRef {
@@ -3612,7 +3594,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\adeleted\x18\x03 \x01(\bR\adeleted\x12F\n" +
-	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xc8\v\n" +
+	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xae\v\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -3635,8 +3617,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\rtarget_length\x18\x0f \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12-\n" +
 	"\x12finalized_revision\x18\x10 \x01(\x03R\x11finalizedRevision\x12!\n" +
 	"\ffinalized_at\x18\x11 \x01(\tR\vfinalizedAt\x12,\n" +
-	"\x05voice\x18\x12 \x01(\v2\x16.postpilot.v1.VoiceRefR\x05voice\x129\n" +
-	"\x19machine_baseline_voice_id\x18\x13 \x01(\tR\x16machineBaselineVoiceId\x125\n" +
+	"\x05voice\x18\x12 \x01(\v2\x16.postpilot.v1.VoiceRefR\x05voice\x125\n" +
 	"\btemplate\x18\x14 \x01(\v2\x19.postpilot.v1.TemplateRefR\btemplate\x12F\n" +
 	"\x0ftarget_language\x18\x15 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\x16 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12+\n" +
@@ -3652,7 +3633,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\tstoryline\x18  \x01(\v2\x17.postpilot.v1.StorylineR\tstorylineB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
-	"_tag_countJ\x04\b\x1e\x10\x1fR\x16replacement_candidates\">\n" +
+	"_tag_countJ\x04\b\x13\x10\x14J\x04\b\x1e\x10\x1fR\x19machine_baseline_voice_idR\x16replacement_candidates\">\n" +
 	"\x12StorylineParagraph\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x14\n" +
 	"\x05files\x18\x02 \x03(\tR\x05files\"\xbc\x01\n" +
@@ -3738,14 +3719,12 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0efrom_storyline\x18\x06 \x01(\bR\rfromStorylineB\x10\n" +
 	"\x0e_target_length\"0\n" +
 	"\x17StartGenerationResponse\x12\x15\n" +
-	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xb0\x01\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xa2\x01\n" +
 	"\x14StartRevisionRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12 \n" +
-	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12 \n" +
-	"\fsave_as_rule\x18\x03 \x01(\bR\n" +
-	"saveAsRule\x127\n" +
+	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x127\n" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\".\n" +
+	"writeModelJ\x04\b\x03\x10\x04R\fsave_as_rule\".\n" +
 	"\x15StartRevisionResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xea\x01\n" +
 	"\x15StartStorylineRequest\x12\x1b\n" +

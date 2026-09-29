@@ -191,7 +191,6 @@ func TestSeedingAdvancesNoRevisionAndMovesNoBaseline(t *testing.T) {
 	if after.Status != before.Status ||
 		after.ContentRevision != before.ContentRevision ||
 		after.MachineBaselineRevision != before.MachineBaselineRevision ||
-		after.MachineBaselineVoiceID != before.MachineBaselineVoiceID ||
 		after.FinalizedRevision != before.FinalizedRevision {
 		t.Fatalf("seeding disturbed lifecycle state:\nbefore=%+v\nafter=%+v", before, after)
 	}

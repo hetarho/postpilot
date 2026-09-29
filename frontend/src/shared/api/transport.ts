@@ -17,8 +17,6 @@ import { GenerationService } from './gen/postpilot/v1/post_pb'
 import { ProviderService } from './gen/postpilot/v1/provider_pb'
 import { TemplateService } from './gen/postpilot/v1/template_pb'
 import { VoiceService } from './gen/postpilot/v1/voice_pb'
-import { VoiceLearningService } from './gen/postpilot/v1/voice_learning_pb'
-import { VoiceValidationService } from './gen/postpilot/v1/voice_validation_pb'
 
 const baseUrl = import.meta.env.DEV ? '/api' : API_URL
 
@@ -83,8 +81,6 @@ export const templateClient = createClient(TemplateService, transport)
 
 /** Typed client for the acting account's voice profile. */
 export const voiceClient = createClient(VoiceService, transport)
-export const voiceLearningClient = createClient(VoiceLearningService, transport)
-export const voiceValidationClient = createClient(VoiceValidationService, transport)
 
 /** Typed client for blind model experiments and private leaderboards. */
 export const modelExperimentClient = createClient(ModelExperimentService, transport)

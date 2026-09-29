@@ -91,20 +91,15 @@ func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Req
 	return llm.Response{Text: f.response}, f.err
 }
 
-func (f *fakeModels) ModelEnabled(ref llm.ModelRef, _ string) bool {
-	return ref.ProviderID != "" && ref.ModelID != ""
-}
-
 // fakeJobs keys its active analyses by VOICE, which is the guard the service must ask for.
 type fakeJobs struct {
-	mu                    sync.Mutex
-	active                map[string]*voice.ActiveJob
-	busy                  map[string]bool
-	enqueueID             string
-	enqueueErr            error
-	enqueueCalls          []voice.AnalysisJobRequest
-	personalizationCalls  []voice.PersonalizationJobRequest
-	personalizationActive map[string]bool
+	mu                   sync.Mutex
+	active               map[string]*voice.ActiveJob
+	busy                 map[string]bool
+	enqueueID            string
+	enqueueErr           error
+	enqueueCalls         []voice.AnalysisJobRequest
+	personalizationCalls []voice.PersonalizationJobRequest
 	// latest is each voice's most recent job of a kind, keyed voiceID+"/"+kind.
 	latest map[string]*voice.FinishedJob
 }
@@ -132,23 +127,7 @@ func (f *fakeJobs) EnqueuePersonalization(_ context.Context, request voice.Perso
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.personalizationCalls = append(f.personalizationCalls, request)
-	if f.personalizationActive == nil {
-		f.personalizationActive = make(map[string]bool)
-	}
-	if f.enqueueErr == nil {
-		f.personalizationActive[f.enqueueID] = true
-	}
 	return f.enqueueID, f.enqueueErr
-}
-
-func (f *fakeJobs) IsPersonalizationJobActive(_ context.Context, jobID, _ string) (bool, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.personalizationActive[jobID], nil
-}
-
-func (f *fakeJobs) FailQueuedPersonalization(context.Context, string, string, voice.Failure) (bool, error) {
-	return true, nil
 }
 
 func (f *fakeJobs) calls() []voice.AnalysisJobRequest {
@@ -290,11 +269,9 @@ func TestCreateRenameValidateAndUniqueNames(t *testing.T) {
 		t.Fatalf("rename = %+v err=%v", renamed, err)
 	}
 	// A new voice is genuinely empty even though the default has data.
-	if err := h.svc.AppendRule(ctx, "alice", h.voice("alice"), "default rule"); err != nil {
-		t.Fatal(err)
-	}
+	h.addSample(t, "alice", h.voice("alice"), "default-sample", "기본", longSample("기"), time.Now())
 	profile, err := h.svc.Get(ctx, "alice", review.ID)
-	if err != nil || profile.Rules != "" || len(profile.Samples) != 0 || !profile.Structured.Empty || profile.Voice.ID != review.ID {
+	if err != nil || len(profile.Samples) != 0 || !profile.Structured.Empty || profile.Voice.ID != review.ID {
 		t.Fatalf("new voice inherited data: %+v err=%v", profile, err)
 	}
 }
@@ -342,9 +319,6 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 	}
 	extra, _, _ := h.svc.CreateVoice(ctx, "alice", "일기", voice.LanguageEnglish, nil)
 	h.addSample(t, "alice", extra.ID, "s1", "일기", longSample("일"), time.Now())
-	if err := h.svc.AppendRule(ctx, "alice", extra.ID, "diary rule"); err != nil {
-		t.Fatal(err)
-	}
 	deleted, err := h.svc.DeleteVoice(ctx, "alice", extra.ID)
 	if err != nil || !deleted.Deleted() || deleted.Name != "일기" || deleted.SourceLanguage != voice.LanguageEnglish {
 		t.Fatalf("delete = %+v err=%v", deleted, err)
@@ -354,7 +328,7 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 		t.Fatalf("second delete = %+v err=%v", again, err)
 	}
 	profile, err := h.svc.Get(ctx, "alice", extra.ID)
-	if err != nil || profile.Rules != "diary rule" || len(profile.Samples) != 1 || !profile.Voice.Deleted() || profile.Voice.SourceLanguage != voice.LanguageEnglish {
+	if err != nil || len(profile.Samples) != 1 || !profile.Voice.Deleted() || profile.Voice.SourceLanguage != voice.LanguageEnglish {
 		t.Fatalf("tombstone profile = %+v err=%v", profile, err)
 	}
 	voices, _ := h.svc.ListVoices(ctx, "alice")
@@ -393,22 +367,6 @@ func TestDeleteRefusesVoiceWithPublishableWork(t *testing.T) {
 		t.Fatalf("delete with active job = %v", err)
 	}
 	h.jobs.busy[busy.ID] = false
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	if _, err := h.db.Writer.Exec("INSERT INTO voice_contrast_rules(id,user_id,voice_id,statement,canonical_key,layer,evidence_count,status,origin,created_at,last_evidence_at) VALUES('r','alice',?,'s','k','endings',1,'candidate','diff',?,?)", busy.ID, now, now); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.db.Writer.Exec("INSERT INTO voice_authored_sources(id,user_id,voice_id,title,tags,body,excerpt,created_at) VALUES('src','alice',?,'t','[]','b','e',?)", busy.ID, now); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.db.Writer.Exec("INSERT INTO voice_rule_comparisons(id,user_id,voice_id,rule_id,source_id,profile_version,model_ref,target_length,input_snapshot,rule_on_side,status,created_at) VALUES('c','alice',?,'r','src',1,'m',0,'{}','left','review',?)", busy.ID, now); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.svc.DeleteVoice(ctx, "alice", busy.ID); !errors.Is(err, voice.ErrVoiceBusy) {
-		t.Fatalf("delete with undecided comparison = %v", err)
-	}
-	if _, err := h.db.Writer.Exec("UPDATE voice_rule_comparisons SET status='decided', chosen_side='left', decided_at=? WHERE id='c'", now); err != nil {
-		t.Fatal(err)
-	}
 	h.svc.SetExperimentGuard(fakeExperimentGuard{busy: map[string]bool{busy.ID: true}})
 	if _, err := h.svc.DeleteVoice(ctx, "alice", busy.ID); !errors.Is(err, voice.ErrVoiceBusy) {
 		t.Fatalf("delete with publishable experiment = %v", err)
@@ -426,27 +384,21 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	ctx := context.Background()
 	casual := h.voice("alice")
 	formal, _, _ := h.svc.CreateVoice(ctx, "alice", "격식", voice.LanguageKorean, nil)
-	if err := h.svc.AppendRule(ctx, "alice", casual, "casual rule"); err != nil {
-		t.Fatal(err)
-	}
-	if err := h.svc.AppendRule(ctx, "alice", formal.ID, "formal rule"); err != nil {
-		t.Fatal(err)
-	}
 	h.addSample(t, "alice", casual, "casual-sample", "캐주얼", longSample("해"), time.Now())
 	h.addSample(t, "alice", formal.ID, "formal-sample", "격식", longSample("습"), time.Now())
 	h.jobs.active[casual] = &voice.ActiveJob{ID: "analysis-casual"}
 
 	casualProfile, err := h.svc.Get(ctx, "alice", casual)
-	if err != nil || casualProfile.Rules != "casual rule" || len(casualProfile.Samples) != 1 || casualProfile.Samples[0].ID != "casual-sample" || casualProfile.ActiveJobID != "analysis-casual" {
+	if err != nil || len(casualProfile.Samples) != 1 || casualProfile.Samples[0].ID != "casual-sample" || casualProfile.ActiveJobID != "analysis-casual" {
 		t.Fatalf("casual profile leaked/missing: %+v err=%v", casualProfile, err)
 	}
 	formalProfile, err := h.svc.Get(ctx, "alice", formal.ID)
-	if err != nil || formalProfile.Rules != "formal rule" || len(formalProfile.Samples) != 1 || formalProfile.Samples[0].ID != "formal-sample" || formalProfile.ActiveJobID != "" {
+	if err != nil || len(formalProfile.Samples) != 1 || formalProfile.Samples[0].ID != "formal-sample" || formalProfile.ActiveJobID != "" {
 		t.Fatalf("formal profile leaked/missing: %+v err=%v", formalProfile, err)
 	}
 	formalPrompt, err := h.svc.PromptProfileForTopic(ctx, "alice", formal.ID, "", nil)
-	if err != nil || formalPrompt.Empty || formalPrompt.ManualRules != "formal rule" || len(formalPrompt.Excerpts) != 1 || !strings.HasPrefix(formalPrompt.Excerpts[0], "습") {
-		t.Fatalf("formal prompt borrowed from casual: rules=%q excerpts=%v err=%v", formalPrompt.ManualRules, formalPrompt.Excerpts, err)
+	if err != nil || formalPrompt.Empty || len(formalPrompt.Excerpts) != 1 || !strings.HasPrefix(formalPrompt.Excerpts[0], "습") {
+		t.Fatalf("formal prompt borrowed from casual: excerpts=%v err=%v", formalPrompt.Excerpts, err)
 	}
 	// A same-account sample id from the other voice is unreachable, as is a foreign voice.
 	if _, err := h.svc.DeleteSample(ctx, "alice", formal.ID, "casual-sample"); !errors.Is(err, voice.ErrSampleNotFound) {
@@ -458,15 +410,12 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	if _, err := h.svc.Get(ctx, "bob", casual); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("foreign voice read = %v", err)
 	}
-	if err := h.svc.AppendRule(ctx, "bob", casual, "hijack"); !errors.Is(err, voice.ErrVoiceNotFound) {
-		t.Fatalf("foreign voice write = %v", err)
-	}
 	if _, _, err := h.svc.AddSample(ctx, "bob", formal.ID, "", longSample("가"), analyzeRef); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("foreign voice sample = %v", err)
 	}
 	// Bob's own default is untouched by any of it.
 	bobProfile, err := h.svc.Get(ctx, "bob", h.voice("bob"))
-	if err != nil || bobProfile.Rules != "" || len(bobProfile.Samples) != 0 {
+	if err != nil || len(bobProfile.Samples) != 0 {
 		t.Fatalf("bob profile changed: %+v err=%v", bobProfile, err)
 	}
 }
@@ -475,20 +424,15 @@ func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	gone, _, _ := h.svc.CreateVoice(ctx, "alice", "사라질 말투", voice.LanguageKorean, nil)
-	if err := h.svc.AppendRule(ctx, "alice", gone.ID, "rule"); err != nil {
-		t.Fatal(err)
-	}
+	h.addSample(t, "alice", gone.ID, "gone-sample", "사라질", longSample("사"), time.Now())
 	if _, err := h.svc.DeleteVoice(ctx, "alice", gone.ID); err != nil {
 		t.Fatal(err)
 	}
-	if profile, err := h.svc.Get(ctx, "alice", gone.ID); err != nil || profile.Rules != "rule" {
+	if profile, err := h.svc.Get(ctx, "alice", gone.ID); err != nil || len(profile.Samples) != 1 {
 		t.Fatalf("tombstone read = %+v err=%v", profile, err)
 	}
 	if _, _, err := h.svc.AddSample(ctx, "alice", gone.ID, "", longSample("가"), analyzeRef); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("sample on deleted = %v", err)
-	}
-	if err := h.svc.AppendRule(ctx, "alice", gone.ID, "rule"); !errors.Is(err, voice.ErrVoiceDeleted) {
-		t.Fatalf("rule on deleted = %v", err)
 	}
 	if _, err := h.svc.PromptProfileForTopic(ctx, "alice", gone.ID, "", nil); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("prompt for deleted = %v", err)
@@ -557,12 +501,9 @@ func TestAssembleCorpusIncludesEveryBody(t *testing.T) {
 	}
 }
 
-func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing.T) {
+func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPublishesAVersion(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	if err := h.svc.AppendRule(context.Background(), "alice", alice, "hand rule"); err != nil {
-		t.Fatal(err)
-	}
 	h.addSample(t, "alice", alice, "sample", "글", longSample("가"), time.Now())
 	raw, err := h.svc.SnapshotAnalysisInput(context.Background(), "alice", alice)
 	if err != nil {
@@ -578,7 +519,7 @@ func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing
 		t.Fatalf("same corpus produced invalid candidates: first=%q second=%q err=%v", first, second, err)
 	}
 	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version != 0 || profile.Rules != "hand rule" {
+	if err != nil || profile.Structured.Version != 0 {
 		t.Fatalf("experiment mutated profile before apply: %+v err=%v", profile, err)
 	}
 	// The winner lands only in the voice it was frozen for; a sibling voice is untouched.
@@ -587,9 +528,9 @@ func TestAnalyzeExperimentSnapshotDoesNotMutateAndApplyPreservesRules(t *testing
 		t.Fatal(err)
 	}
 	// It is applied as a PUBLISHED STRUCTURED VERSION now, whose lexical description is the
-	// winning analysis (VOICE-25). The "save as rule" text is untouched by it.
+	// winning analysis (VOICE-25).
 	profile, err = h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version == 0 || profile.Structured.Lexical.Description.Value != first || profile.Rules != "hand rule" {
+	if err != nil || profile.Structured.Version == 0 || profile.Structured.Lexical.Description.Value != first {
 		t.Fatalf("winner apply did not publish a structured version: %+v err=%v", profile, err)
 	}
 	if profile.Structured.Lexical.Description.Source != voice.SourceAnalyzed {
@@ -607,11 +548,8 @@ func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 	alice := h.voice("alice")
 	limits := voice.PersonalizationThresholds()
 	projection, err := h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
-	if err != nil || projection.Styleguide != "" || projection.ManualRules != "" || len(projection.Excerpts) != 0 || !projection.Empty {
+	if err != nil || projection.Styleguide != "" || len(projection.Excerpts) != 0 || !projection.Empty {
 		t.Fatalf("empty profile = %+v err=%v", projection, err)
-	}
-	if err := h.svc.AppendRule(context.Background(), "alice", alice, "RULES"); err != nil {
-		t.Fatal(err)
 	}
 	base := time.Now().Add(-time.Hour)
 	markers := []rune{'가', '나', '다', '라'}
@@ -621,8 +559,8 @@ func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 	}
 	projection, err = h.svc.PromptProfileForTopic(context.Background(), "alice", alice, "", nil)
 	excerpts := projection.Excerpts
-	if err != nil || projection.ManualRules != "RULES" || projection.Empty || len(excerpts) != limits.FewShotMax {
-		t.Fatalf("profile prompt = lens=%d %q %v err=%v", len(excerpts), projection.ManualRules, projection.Empty, err)
+	if err != nil || projection.Empty || len(excerpts) != limits.FewShotMax {
+		t.Fatalf("profile prompt = lens=%d %v err=%v", len(excerpts), projection.Empty, err)
 	}
 	if []rune(excerpts[0])[0] != '라' {
 		t.Fatalf("first excerpt is not most recent: %q", []rune(excerpts[0])[0])
@@ -631,46 +569,6 @@ func TestProfileForPromptMostRecentTruncatedAndEmpty(t *testing.T) {
 		if len([]rune(excerpt)) != limits.FewShotExcerptMaxChars {
 			t.Fatalf("excerpt length = %d", len([]rune(excerpt)))
 		}
-	}
-}
-
-func TestAppendRuleDeduplicates(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	if err := h.svc.AppendRule(context.Background(), "alice", alice, "existing"); err != nil {
-		t.Fatal(err)
-	}
-	for _, line := range []string{"  new rule  ", "new rule"} {
-		if err := h.svc.AppendRule(context.Background(), "alice", alice, line); err != nil {
-			t.Fatal(err)
-		}
-	}
-	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Rules != "existing\nnew rule" {
-		t.Fatalf("profile after rule = %+v err=%v", profile, err)
-	}
-}
-
-func TestConcurrentAppendRuleDoesNotLoseLines(t *testing.T) {
-	h := newVoiceHarness(t)
-	alice := h.voice("alice")
-	start := make(chan struct{})
-	errs := make(chan error, 2)
-	for _, line := range []string{"first", "second"} {
-		go func() {
-			<-start
-			errs <- h.svc.AppendRule(context.Background(), "alice", alice, line)
-		}()
-	}
-	close(start)
-	for range 2 {
-		if err := <-errs; err != nil {
-			t.Fatal(err)
-		}
-	}
-	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || !strings.Contains(profile.Rules, "first") || !strings.Contains(profile.Rules, "second") {
-		t.Fatalf("concurrent rules = %q err=%v", profile.Rules, err)
 	}
 }
 
@@ -708,19 +606,16 @@ func TestDeleteRestoresSampleWhenEnqueueFails(t *testing.T) {
 	}
 }
 
-func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
+func TestAnalyzePublishesStructuredProfile(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	if err := h.svc.AppendRule(context.Background(), "alice", alice, "keep this rule"); err != nil {
-		t.Fatal(err)
-	}
 	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
 	h.models.response = analysisAnswer("## 평균 문장 길이\n짧음")
 	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err == nil || !strings.Contains(err.Error(), "종결어미") {
 		t.Fatalf("missing ending section error = %v", err)
 	}
 	profile, _ := h.store.GetProfile(context.Background(), "alice", alice)
-	if profile.Structured.Version != 0 || profile.Rules != "keep this rule" {
+	if profile.Structured.Version != 0 {
 		t.Fatalf("invalid analysis mutated profile: %+v", profile)
 	}
 
@@ -734,8 +629,8 @@ func TestAnalyzePublishesStructuredProfileAndNeverTouchesRules(t *testing.T) {
 	}
 	profile, _ = h.store.GetProfile(context.Background(), "alice", alice)
 	// The analysis text lands in the published structured version's lexical description, once
-	// (VOICE-25); the "save as rule" text is never touched by an analysis.
-	if profile.Structured.Lexical.Description.Value != guide || profile.Rules != "keep this rule" || len(progress) != 2 {
+	// (VOICE-25).
+	if profile.Structured.Lexical.Description.Value != guide || len(progress) != 2 {
 		t.Fatalf("successful analysis = profile=%+v progress=%+v", profile, progress)
 	}
 	if !strings.Contains(h.models.request.Messages[0].Parts[0].Text, longSample("글")) {
@@ -838,9 +733,6 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 func TestDeletingLastSampleDuringAnalysisLeavesProfileUntouched(t *testing.T) {
 	h := newVoiceHarness(t)
 	alice := h.voice("alice")
-	if err := h.svc.AppendRule(context.Background(), "alice", alice, "keep rule"); err != nil {
-		t.Fatal(err)
-	}
 	h.addSample(t, "alice", alice, "only", "only", longSample("문"), time.Now())
 	models := &changingCorpusModels{started: make(chan struct{}), release: make(chan struct{})}
 	svc := voice.NewService(h.store, models, h.jobs)
@@ -863,7 +755,7 @@ func TestDeletingLastSampleDuringAnalysisLeavesProfileUntouched(t *testing.T) {
 		t.Fatal(err)
 	}
 	profile, err := h.store.GetProfile(context.Background(), "alice", alice)
-	if err != nil || profile.Structured.Version != 0 || profile.Rules != "keep rule" {
+	if err != nil || profile.Structured.Version != 0 {
 		t.Fatalf("last-delete profile = %+v err=%v", profile, err)
 	}
 }

@@ -8,8 +8,6 @@ export {
   generationClient,
   templateClient,
   voiceClient,
-  voiceLearningClient,
-  voiceValidationClient,
   modelExperimentClient,
   credentialedFetch,
   unauthenticatedInterceptor,
@@ -302,7 +300,6 @@ export {
   ListVoiceProfileVersionsResponseSchema,
   UpdateVoiceOverrideResponseSchema,
   VoiceLayer,
-  VoiceRuleStatus,
   VoiceValueSource,
   VoiceSchema,
   ListVoicesResponseSchema,
@@ -321,24 +318,6 @@ export type {
   StructuredVoiceProfile,
   VoiceProfileVersion,
 } from './gen/postpilot/v1/voice_pb'
-export {
-  VoiceLearningService,
-  VoiceFeedbackReason,
-  VoiceLearningEventSchema,
-  LearnFromFinalizedPostResponseSchema,
-  RetryVoiceLearningResponseSchema,
-  GiveSentenceFeedbackResponseSchema,
-  ListRuleConfirmationsResponseSchema,
-} from './gen/postpilot/v1/voice_learning_pb'
-export type { VoiceLearningEvent } from './gen/postpilot/v1/voice_learning_pb'
-export {
-  VoiceValidationService,
-  ListVoiceProfileValidationsResponseSchema,
-} from './gen/postpilot/v1/voice_validation_pb'
-export type {
-  VoiceRuleComparison,
-  VoiceProfileValidation,
-} from './gen/postpilot/v1/voice_validation_pb'
 export type {
   GetComparisonPairsResponse,
   GetSelectionsResponse,

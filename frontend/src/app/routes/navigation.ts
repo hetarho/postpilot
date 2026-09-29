@@ -96,7 +96,7 @@ export function currentGroup(routeIds: readonly string[]): ContentGroup | undefi
   )?.group
 }
 
-/** Which destination of a group the address is under. A PREFIX match, so `/voices/one/rules` is
+/** Which destination of a group the address is under. A PREFIX match, so `/voices/one/import` is
  *  still 말투, longest first so `/ai-models/compare` wins over `/ai-models`; the group's home
  *  otherwise. `/ai-models/experiments/$id?from=compare` is the one address that belongs to a
  *  sibling rather than to its own prefix: it was reached from 모델 비교 and returns there. */

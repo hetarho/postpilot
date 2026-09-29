@@ -349,48 +349,6 @@ func (s *Store) Finalize(ctx context.Context, slug, userID, title string, expect
 	return n == 1, nil
 }
 
-func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post.LearningSnapshot, error) {
-	row, err := s.read.GetLearningSnapshot(ctx, sqlc.GetLearningSnapshotParams{Slug: slug, UserID: userID})
-	if errors.Is(err, sql.ErrNoRows) {
-		return post.LearningSnapshot{}, post.ErrNotFound
-	}
-	if err != nil {
-		return post.LearningSnapshot{}, fmt.Errorf("select learning snapshot: %w", err)
-	}
-	current, err := unmarshalContent(row.Content.String)
-	if err != nil {
-		return post.LearningSnapshot{}, err
-	}
-	baseline, err := unmarshalContent(row.MachineBaseline.String)
-	if err != nil {
-		return post.LearningSnapshot{}, err
-	}
-	if current == nil || baseline == nil {
-		return post.LearningSnapshot{}, post.ErrNoMachineBaseline
-	}
-	updated, err := parseTime(row.UpdatedAt)
-	if err != nil {
-		return post.LearningSnapshot{}, err
-	}
-	// Mapped, not judged: the service applies the finalization rule to this row. FinalizePost
-	// writes finalized_at with finalized_revision, so a row that passes the rule has it.
-	var finalizedAt time.Time
-	if row.FinalizedAt.Valid {
-		if finalizedAt, err = parseTime(row.FinalizedAt.String); err != nil {
-			return post.LearningSnapshot{}, err
-		}
-	}
-	contentLanguage, err := requiredLanguage(row.ContentLanguage)
-	if err != nil {
-		return post.LearningSnapshot{}, fmt.Errorf("post %s content language: %w", row.Slug, err)
-	}
-	return post.LearningSnapshot{PostSlug: row.Slug, UserID: row.UserID, VoiceID: row.VoiceID,
-		MachineBaselineVoiceID: row.MachineBaselineVoiceID.String, Status: row.Status, Current: *current,
-		ContentRevision: row.ContentRevision, FinalizedRevision: row.FinalizedRevision.Int64, MachineBaseline: *baseline,
-		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
-		FinalizedAt: finalizedAt, UpdatedAt: updated, ContentLanguage: contentLanguage}, nil
-}
-
 // --- publication ---
 
 func (s *Store) PublishPost(ctx context.Context, slug, userID, url string, publishedAt time.Time) (bool, error) {
@@ -938,7 +896,7 @@ func (s *Store) AllReferencedKeys(ctx context.Context) (map[string]struct{}, err
 
 // --- mapping ---
 
-func toPost(row sqlc.Post) (post.Post, error) {
+func toPost(row sqlc.GetPostRow) (post.Post, error) {
 	createdAt, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s created_at: %w", row.Slug, err)
@@ -1008,7 +966,6 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		Content:                 content,
 		ContentRevision:         row.ContentRevision,
 		MachineBaselineRevision: row.MachineBaselineRevision,
-		MachineBaselineVoiceID:  row.MachineBaselineVoiceID.String,
 		TargetLength:            optionalInt(row.TargetLength),
 		TagCount:                tagCountOrDefault(row.TagCount),
 		UseMemory:               row.UseMemory != 0,

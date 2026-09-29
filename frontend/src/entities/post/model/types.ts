@@ -90,9 +90,6 @@ export interface PostDraft {
   pendingExperimentId: string
   contentRevision: bigint
   machineBaselineRevision: bigint
-  /** The voice the latest machine baseline was written under; empty when there is none. Learning
-   *  is possible only while it equals `voice.id`, so a reassigned post must be regenerated first. */
-  machineBaselineVoiceId: string
   canFinalize: boolean
   targetLength?: number
   /** Always concrete: the server fills it and an older message falls back to the default. */

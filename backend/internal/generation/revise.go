@@ -46,9 +46,10 @@ IMAGE blocks may use only exact attached filenames. They may be reordered or rem
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
 Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.`
 
+// A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
+// because encoding/json ignores a key the struct no longer names.
 type revisionPayloadJSON struct {
 	Instruction     string   `json:"instruction"`
-	SaveAsRule      bool     `json:"save_as_rule"`
 	ContentLanguage Language `json:"content_language,omitempty"`
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before templates existed decodes with this absent, which is "no template".
@@ -63,16 +64,16 @@ type revisionPayloadJSON struct {
 	WriteNativeEffort bool `json:"write_native_effort,omitempty"`
 }
 
-func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, FrozenGuidelines{Owner: guidelines}, post.TagCountRange.Default, false)
+func encodeRevisionPayload(instruction string, template *TemplateBrief, guidelines []string) ([]byte, error) {
+	return encodeRevisionPayloadForLanguage(instruction, LanguageKorean, template, FrozenGuidelines{Owner: guidelines}, post.TagCountRange.Default, false)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
 	return json.Marshal(revisionPayloadJSON{
-		Instruction: instruction, SaveAsRule: saveAsRule, ContentLanguage: language,
+		Instruction: instruction, ContentLanguage: language,
 		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines.Owner),
 		DefaultGuidelines: cloneTexts(guidelines.Defaults),
 		TagCount:          tagCount, WriteNativeEffort: nativeEffort,

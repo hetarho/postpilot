@@ -50,7 +50,7 @@ func storylinePost() PostInput {
 }
 
 func storylineService(posts *fakePosts, jobs *fakeJobs, models *fakeModels, deps Deps) *Service {
-	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	return NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 }
 
 // GEN-68: a storyline start checks Start's preconditions in Start's order and refuses before

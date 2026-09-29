@@ -63,7 +63,7 @@ func fullSnapshotFixture() snapshotFixture {
 			Field: "cafe", QualityRuleIDs: []string{"composition"}, Published: true,
 		},
 		profile: Profile{
-			Styleguide: "스타일", ActiveRules: "규칙", Excerpts: []string{"발췌"}, Rules: "사용자 규칙",
+			Styleguide: "스타일", Excerpts: []string{"발췌"},
 			EndingMaxConsecutive: 2, SourceLanguage: LanguageKorean, TargetLanguage: LanguageKorean, Portable: true,
 		},
 		observations: []Observation{{
@@ -182,7 +182,7 @@ func TestObserveSnapshotEncodingIsPinned(t *testing.T) {
 		{Filename: "IMG_1.jpg", Key: "key-1", Kind: AttachmentPhoto, ContentType: "image/jpeg"},
 		{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200},
 	}}}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotObserveInput(context.Background(), "alice", "post")
 	if err != nil {
 		t.Fatal(err)

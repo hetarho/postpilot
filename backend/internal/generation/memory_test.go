@@ -164,7 +164,7 @@ func TestMemoriesAreFrozenIntoThePayload(t *testing.T) {
 // query — and a post with it on hands over its own words and nothing else (MEM-7, MEM-18).
 func TestOnlyAPostThatOptedInReachesTheMemoryPort(t *testing.T) {
 	recorder := &recordingMemories{texts: testMemories()}
-	service := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	service := NewService(&fakePosts{}, fakeProfiles{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	service.memories = recorder
 
 	off := PostInput{UserID: "alice", Memo: "메모", Title: "가제"}
@@ -213,7 +213,7 @@ func memoryDrainService(recorder *recordingMemories) (*Service, *fakeJobs, *fake
 	jobs := &fakeJobs{id: "job"}
 	models := newFakeModels()
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	svc.memories = recorder
 	return svc, jobs, models
 }

@@ -43,15 +43,16 @@ it('sends every legacy tab to the same tab of the default voice', async () => {
   expect(await target('')).toBe('/voices/voice-b')
   expect(await target('versions')).toBe('/voices/voice-b/versions')
   expect(await target('import')).toBe('/voices/voice-b/import')
-  expect(await target('rules')).toBe('/voices/voice-b/rules')
-  expect(await target('validations')).toBe('/voices/voice-b/validations')
-  // A tab that never existed lands on the profile rather than on an empty screen.
+  // A tab that never existed — or no longer does — lands on the profile rather than on an
+  // empty screen.
   expect(await target('whatever')).toBe('/voices/voice-b')
+  expect(await target('rules')).toBe('/voices/voice-b')
+  expect(await target('validations')).toBe('/voices/voice-b')
 })
 
 it('sends an account with nothing to show to the directory', async () => {
   loadVoices = async () => []
-  expect(await target('rules')).toBe('/voices')
+  expect(await target('versions')).toBe('/voices')
   // An outage is not a reason to invent a voice: the directory is what answers for it.
   loadVoices = async () => {
     throw new Error('offline')

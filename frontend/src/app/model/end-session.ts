@@ -1,6 +1,5 @@
 import { discardDraftQueues } from '@/features/save-draft'
 import { discardContentQueues } from '@/features/edit-post-content'
-import { discardLearningHandoffs } from '@/features/finalize-post'
 import { discardUploadBatches } from '@/features/upload-photos'
 import { discardClipSourceSessions } from '@/features/upload-clip-sources'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
@@ -15,7 +14,6 @@ import { discardClipDraftQueues } from '@/features/edit-clip-project'
 export function endSession(): void {
   discardDraftQueues()
   discardContentQueues()
-  discardLearningHandoffs()
   discardUploadBatches()
   discardClipSourceSessions()
   discardClipDraftQueues()

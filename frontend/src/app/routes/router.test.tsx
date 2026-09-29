@@ -652,7 +652,7 @@ describe('theme preferences in the real route tree', () => {
 
 // This table mirrors every concrete path registered in routeTree. The pathless
 // authenticated layout is exercised by every signed-in row; `/voices/$voiceId` is represented by
-// its index and all five child paths; the two redirect-only registrations assert their landing
+// all three of its child paths; the two redirect-only registrations assert their landing
 // paths. Running the same real route tree in both locales catches a catalog key that exists but is
 // wired to the wrong page just as reliably as a missing translation.
 describe('localized registered-route smoke', () => {
@@ -667,8 +667,6 @@ describe('localized registered-route smoke', () => {
       profile: '프로필',
       versions: '버전 기록',
       import: '기존 글 가져오기',
-      rules: '대조 규칙',
-      validations: '프로필 검증',
       models: '모델 변경',
       retry: '다시 시도',
       title: '제목',
@@ -683,8 +681,6 @@ describe('localized registered-route smoke', () => {
       profile: 'Profile',
       versions: 'Version history',
       import: 'Import existing posts',
-      rules: 'Contrast rules',
-      validations: 'Profile validation',
       models: 'Change models',
       retry: 'Try again',
       title: 'Title',
@@ -744,18 +740,6 @@ describe('localized registered-route smoke', () => {
           signedIn: true,
         },
         {
-          path: '/voices/voice-default/rules',
-          role: 'heading',
-          name: text.rules,
-          signedIn: true,
-        },
-        {
-          path: '/voices/voice-default/validations',
-          role: 'heading',
-          name: text.validations,
-          signedIn: true,
-        },
-        {
           path: '/voice',
           role: 'heading',
           name: text.profile,
@@ -763,27 +747,15 @@ describe('localized registered-route smoke', () => {
           expectedPath: '/voices/voice-default',
         },
         {
-          path: '/voice/rules',
+          path: '/voice/versions',
           role: 'heading',
-          name: text.rules,
+          name: text.versions,
           signedIn: true,
-          expectedPath: '/voices/voice-default/rules',
+          expectedPath: '/voices/voice-default/versions',
         },
         { path: '/ai-models', role: 'heading', name: text.models, signedIn: true },
         {
           path: '/ai-models/experiments/smoke',
-          role: 'button',
-          name: text.retry,
-          signedIn: true,
-        },
-        {
-          path: '/voices/voice-default/rules/smoke/compare',
-          role: 'button',
-          name: text.retry,
-          signedIn: true,
-        },
-        {
-          path: '/voices/voice-default/validations/smoke',
           role: 'button',
           name: text.retry,
           signedIn: true,

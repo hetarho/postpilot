@@ -8,7 +8,7 @@ var voiceAnalysisSchema []byte
 //go:embed schemas/voice_analysis_en.schema.json
 var englishVoiceAnalysisSchema []byte
 
-// VoiceAnalysisSchema is the response contract for the learn_voice completion, attached only
+// VoiceAnalysisSchema is the response contract for the analyze_voice completion, attached only
 // when the resolved model declares structured output (mirrors generation/schemas.go).
 func VoiceAnalysisSchema() []byte { return append([]byte(nil), voiceAnalysisSchema...) }
 

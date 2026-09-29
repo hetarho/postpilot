@@ -47,7 +47,7 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, fiel
 
 func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	if briefs != nil {
 		svc.templates = briefs
 	}
@@ -332,7 +332,7 @@ func TestAnUnwiredResolverPromptsWithoutGuidelines(t *testing.T) {
 	ctx := context.Background()
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
@@ -449,7 +449,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: testQualityRules()}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}

@@ -5,14 +5,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import {
-  USER,
-  openBrief,
-  openFinalize,
-  openStep,
-  resetEditorTest,
-  stubBrowserImagePipeline,
-} from '@/test/editor'
+import { USER, openBrief, openStep, resetEditorTest, stubBrowserImagePipeline } from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN, finalizedPostRow } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
@@ -255,18 +248,18 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, canFinalize: true }] },
     })
 
-    // ② is where a review post opens: the draft, and the dock that carries the revision and both
-    // confirmations. No 가제, no writing brief, no generation control.
+    // ② is where a review post opens: the draft, and the dock that carries the revision and the
+    // one way out, 확정하기, which finalizes at once and opens nothing (POST-56). No 가제, no
+    // writing brief, no generation control.
     expect(await screen.findByRole('heading', { name: '글 다듬기' })).toBeInTheDocument()
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /옵션/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '바로 글 쓰기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
-    const ways = await openFinalize(user)
-    expect(within(ways).getByRole('button', { name: '확정' })).toBeInTheDocument()
-    expect(within(ways).getByRole('button', { name: '확정하고 말투 학습' })).toBeInTheDocument()
-    await user.keyboard('{Escape}')
+    const finalize = screen.getByRole('button', { name: '확정하기' })
+    expect(finalize).not.toHaveAttribute('aria-haspopup')
+    expect(screen.queryByRole('button', { name: '확정하고 말투 학습' })).not.toBeInTheDocument()
 
     await openStep(user, '글 생성')
     expect(await screen.findByLabelText('제목')).toBeInTheDocument()
@@ -277,9 +270,13 @@ describe('the editor lifecycle steps', () => {
     expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toBeInTheDocument()
     await user.keyboard('{Escape}')
 
+    // ③ carries 기억으로 저장, the manual export and the 발행 URL field, and nothing that would
+    // teach a voice (POST-54).
     await openStep(user, '글 완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '말투 학습' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '바로 글 쓰기' })).not.toBeInTheDocument()
@@ -373,7 +370,7 @@ describe('the editor lifecycle steps', () => {
     expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
-    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByLabelText('글 작업')).not.toBeInTheDocument()
   })
 

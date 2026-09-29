@@ -70,10 +70,7 @@ export function StructuredProfileEditor({
           {t('profile.current')}
         </Typography>
         <Typography variant="label" className="text-content-tertiary">
-          {t('profile.finalizedCount', {
-            version: structured.version.toString(),
-            count: profile.finalizedSourceCount,
-          })}
+          {t('profile.version', { version: structured.version.toString() })}
         </Typography>
       </div>
       {structured.empty ? (

@@ -139,9 +139,7 @@ type snapshotBlock struct {
 
 type snapshotProfile struct {
 	Styleguide           string   `json:"Styleguide"`
-	ActiveRules          string   `json:"ActiveRules"`
 	Excerpts             []string `json:"Excerpts"`
-	Rules                string   `json:"Rules"`
 	EndingMaxConsecutive int      `json:"EndingMaxConsecutive"`
 	SourceLanguage       string   `json:"SourceLanguage"`
 	TargetLanguage       string   `json:"TargetLanguage"`
@@ -384,7 +382,7 @@ func fromSnapshotContent(wire snapshotContent) PostContent {
 
 func toSnapshotProfile(profile Profile) snapshotProfile {
 	return snapshotProfile{
-		Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: copyTexts(profile.Excerpts), Rules: profile.Rules,
+		Styleguide: profile.Styleguide, Excerpts: copyTexts(profile.Excerpts),
 		EndingMaxConsecutive: profile.EndingMaxConsecutive, SourceLanguage: string(profile.SourceLanguage),
 		TargetLanguage: string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
 	}
@@ -392,7 +390,7 @@ func toSnapshotProfile(profile Profile) snapshotProfile {
 
 func fromSnapshotProfile(wire snapshotProfile) Profile {
 	return Profile{
-		Styleguide: wire.Styleguide, ActiveRules: wire.ActiveRules, Excerpts: copyTexts(wire.Excerpts), Rules: wire.Rules,
+		Styleguide: wire.Styleguide, Excerpts: copyTexts(wire.Excerpts),
 		EndingMaxConsecutive: wire.EndingMaxConsecutive, SourceLanguage: Language(wire.SourceLanguage),
 		TargetLanguage: Language(wire.TargetLanguage), Portable: wire.Portable, Version: wire.Version,
 	}

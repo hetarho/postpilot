@@ -25,11 +25,9 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  uploads and generation independently advance images, observations, active_job and
  *  content. Installing that snapshot wholesale could roll any of them back in the cache.
  *  Title, memo and the assignments are the fields this mutation settles; every other
- *  field remains owned by GetPost or its focused mutation patch.
- *
- *  A reassignment is the one save that also moves the machine baseline: the server clears
- *  it in the same write (POST-24), and it refuses to reassign while a job could
- *  advance that baseline, so mirroring the cleared fields cannot roll a job's result back. */
+ *  field remains owned by GetPost or its focused mutation patch — a reassignment included: it
+ *  changes the voice and nothing else, leaving the baseline, the revision and the status as
+ *  they were (POST-24). */
 export function applyingSavedDraft(
   saved: Post,
   cached: GetPostResponse | undefined,
@@ -40,14 +38,7 @@ export function applyingSavedDraft(
   post.title = saved.title
   post.memo = saved.memo
   post.targetLanguage = saved.targetLanguage
-  if (saved.voice) {
-    if (saved.voice.id !== cached.post.voice?.id) {
-      post.machineBaselineRevision = saved.machineBaselineRevision
-      post.machineBaselineVoiceId = saved.machineBaselineVoiceId
-      post.canFinalize = saved.canFinalize
-    }
-    post.voice = clone(VoiceRefSchema, saved.voice)
-  }
+  if (saved.voice) post.voice = clone(VoiceRefSchema, saved.voice)
   // An ASSIGNMENT seeds the post's two generation options from the template it assigns
   // (TMPL-48), so the values that come back with it are the ones this mutation settled.
   // Only then: an ordinary autosave of title and memo carries whatever the row held when the

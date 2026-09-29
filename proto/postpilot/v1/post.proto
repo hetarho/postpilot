@@ -162,9 +162,10 @@ message Post {
   int64 finalized_revision = 16;
   string finalized_at = 17;
   VoiceRef voice = 18;
-  // The voice the latest machine baseline was written under. Finalization learning refuses
-  // unless it still equals `voice`, so a reassigned post cannot publish to the wrong voice.
-  string machine_baseline_voice_id = 19;
+  // 19 was the voice the latest machine baseline was written under, read only by the
+  // finalization learning retired in T465. Reserved, never reused.
+  reserved 19;
+  reserved "machine_baseline_voice_id";
   // Unset when the post has no template. Unlike `voice` it is optional by design: the
   // server never picks one and 없음 is the default.
   TemplateRef template = 20;
@@ -333,7 +334,9 @@ message StartGenerationResponse { string job_id = 1; }
 message StartRevisionRequest {
   string post_slug = 1;
   string instruction = 2;
-  bool save_as_rule = 3;
+  // 3 was 규칙으로 저장, retired with contrast rules in T465.
+  reserved 3;
+  reserved "save_as_rule";
   ModelRef write_model = 4;
 }
 

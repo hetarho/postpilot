@@ -487,6 +487,32 @@ choice would be expensive to undo are listed at the end.
   falls short on its ground (`contrast_notice`); nothing persists it, which is what a server
   render does with its own notices today.
 
+## T465 — nothing is learned from finalized posts (VOICE r5)
+
+- **A reassignment keeps the machine baseline.** POST-24 now says a reassignment changes
+  `voice_id` alone, so `ReassignPostVoice` no longer resets `machine_baseline_revision`. A draft
+  untouched since its last machine result still reads as untouched after the move, and
+  이 스토리로 다시 쓰기 rewrites it without POST-98's confirmation. *If a move should count as a
+  hand edit:* reset `machine_baseline_revision` in that statement again.
+- **`VOICE_LEARNING_NOT_FOUND` now names an unknown profile version.** Only the retired learning
+  handler emitted it; RestoreVoiceProfile on a version the voice never published used to answer
+  `UNKNOWN_FAILURE`. It is now `NotFound` with this reason, until T471 retires both.
+- **Excerpts ignore the topic.** The topic and tag ranking only ever ranked finalized-post
+  excerpts; with those gone the pasted samples are taken newest first whatever the post is about.
+  T471 brings topic matching back over 학습 글.
+- **Migration 0106 is forward-only,** like 0076: its Down is a no-op, since recreating ten empty
+  tables would bring nothing back.
+- **The editor's 문체 분석 중 label** now shows only for an `analyze_voice` job; any other job at
+  the `analyze` stage says 생성 중 (POST-46).
+- **Old voice links** (`/voice/rules`, `/voice/validations`) land on the voice's profile tab.
+- **A finalize failure** renders across the dock, above the 수정 요청 row: the row that holds
+  `확정하기` is too narrow for a sentence.
+- **Browser storage:** browsers keep their `postpilot:voice-learning:*` entries (event and job
+  ids); nothing reads them and logout no longer clears them. *If you want them gone:* a one-line
+  sweep of that prefix in `app/model/end-session.ts`.
+- **Copy left for later tasks:** the reassign dialog, the delete sheet and the profile's empty and
+  version texts still speak of learning from posts; T467–T471 rewrite those screens.
+
 ## Not done, skipped, and found on the way
 - **No task was skipped for refactor cost.** Every task from T414 to T448 is implemented and committed, one commit per task.
 - **T416 was blocked on an SSOT decision, not on cost,** and CDS r30 (260928) settled it: a caption character its style's face does not draw, the default 크게 강조 included, is set in Wanted Sans Variable inside the caption's own style. T416 was revised to implement that.

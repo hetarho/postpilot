@@ -2,6 +2,8 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"reflect"
@@ -105,7 +107,7 @@ func TestPostRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPost: %v", err)
 	}
-	if got.UserID != "alice" || got.VoiceID != "voice-alice" || got.Title != "Jeju" || got.Memo != "went" || got.Status != post.StatusDraft || got.MachineBaselineVoiceID != "" {
+	if got.UserID != "alice" || got.VoiceID != "voice-alice" || got.Title != "Jeju" || got.Memo != "went" || got.Status != post.StatusDraft {
 		t.Errorf("post = %+v", got)
 	}
 	// The schema, not the service, is the last line: a post cannot name another account's
@@ -226,8 +228,22 @@ func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(
 
 func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	ctx := context.Background()
-	s := newStore(t)
+	s, handle := newStoreWithHandle(t)
 	seedPost(t, s, "editable", "alice", testNow)
+	baselineTitle := func() string {
+		t.Helper()
+		var raw sql.NullString
+		if err := handle.Reader.QueryRowContext(ctx, `SELECT machine_baseline FROM posts WHERE slug = 'editable'`).Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		var content struct {
+			Title string `json:"title"`
+		}
+		if err := json.Unmarshal([]byte(raw.String), &content); err != nil {
+			t.Fatalf("machine baseline %q: %v", raw.String, err)
+		}
+		return content.Title
+	}
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
 	target1400 := 1400
 	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", post.GenerationOptionsSet{TargetLength: &target1400, TagCount: 4}, testNow); err != nil || !updated {
@@ -243,44 +259,23 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if updated, err := s.SaveContent(ctx, "editable", "alice", baseline, 1, testNow); err != nil || updated {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
 	}
-	target1500 := 1500
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", post.GenerationOptionsSet{TargetLength: &target1500, TagCount: 7}, testNow.Add(time.Minute)); err != nil || !updated {
-		t.Fatalf("option update: updated=%v err=%v", updated, err)
-	}
 	if updated, err := s.Finalize(ctx, "editable", "alice", "machine", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("finalize: updated=%v err=%v", updated, err)
 	}
-	snapshot, err := s.LearningSnapshot(ctx, "editable", "alice")
-	if err != nil {
-		t.Fatal(err)
+	got, err := s.GetPost(ctx, "editable")
+	if err != nil || got.Content == nil || got.Content.Title != "mine" || got.MachineBaselineRevision != 1 || got.ContentRevision != 2 || !got.FinalizedAtCurrentRevision() {
+		t.Fatalf("post after a manual edit = %+v err=%v", got, err)
 	}
-	if snapshot.MachineBaseline.Title != "machine" || snapshot.Current.Title != "mine" || snapshot.BaselineRevision != 1 || snapshot.ContentRevision != 2 || snapshot.TargetLength == nil || *snapshot.TargetLength != 1500 {
-		t.Fatalf("snapshot = %+v", snapshot)
-	}
-	if snapshot.VoiceID != "voice-alice" || snapshot.MachineBaselineVoiceID != "voice-alice" {
-		t.Fatalf("snapshot voices = %q / %q", snapshot.VoiceID, snapshot.MachineBaselineVoiceID)
+	if title := baselineTitle(); title != "machine" {
+		t.Fatalf("a manual save rewrote the machine baseline: %q", title)
 	}
 	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
-	// The store maps the row and judges nothing: the service applies the finalization rule to it.
-	unfinalized, err := s.LearningSnapshot(ctx, "editable", "alice")
-	if err != nil {
-		t.Fatalf("unfinalized snapshot err=%v", err)
-	}
-	if unfinalized.Status != "review" || unfinalized.FinalizedAtCurrentRevision() {
-		t.Fatalf("unfinalized snapshot = status %q, finalized at current %v", unfinalized.Status, unfinalized.FinalizedAtCurrentRevision())
-	}
-	if updated, err := s.Finalize(ctx, "editable", "alice", "machine 2", 3, testNow.Add(4*time.Minute)); err != nil || !updated {
-		t.Fatalf("second finalize: updated=%v err=%v", updated, err)
-	}
-	snapshot, err = s.LearningSnapshot(ctx, "editable", "alice")
-	if err != nil || snapshot.BaselineRevision != 3 || snapshot.ContentRevision != 3 || snapshot.MachineBaseline.Title != "machine 2" {
-		t.Fatalf("second snapshot = %+v err=%v", snapshot, err)
-	}
-	if _, err := s.LearningSnapshot(ctx, "editable", "bob"); !errors.Is(err, post.ErrNotFound) {
-		t.Fatalf("foreign snapshot err=%v", err)
+	got, err = s.GetPost(ctx, "editable")
+	if err != nil || got.MachineBaselineRevision != 3 || got.ContentRevision != 3 || got.FinalizedAtCurrentRevision() || baselineTitle() != "machine 2" {
+		t.Fatalf("post after the second machine result = %+v err=%v", got, err)
 	}
 }
 
@@ -618,39 +613,13 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.VoiceID != "voice-alice-review" || got.MachineBaselineVoiceID != "" {
-		t.Fatalf("voices after reassign = %q / %q", got.VoiceID, got.MachineBaselineVoiceID)
+	if got.VoiceID != "voice-alice-review" {
+		t.Fatalf("voice after reassign = %q", got.VoiceID)
 	}
-	if got.Content == nil || got.Content.Title != "machine" || got.ContentRevision != 1 || got.MachineBaselineRevision != 0 || got.Status != post.StatusFinalized || got.FinalizedRevision != 1 {
+	// voice_id and updated_at alone: the machine baseline stays, so an untouched draft still
+	// reads as untouched (POST-16, POST-98).
+	if got.Content == nil || got.Content.Title != "machine" || got.ContentRevision != 1 || got.MachineBaselineRevision != 1 || got.Status != post.StatusFinalized || got.FinalizedRevision != 1 {
 		t.Fatalf("reassign changed content or lifecycle: %+v", got)
-	}
-	// A later machine result under the new voice establishes a fresh baseline and restores
-	// learn eligibility there.
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute)); err != nil || !updated {
-		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
-	}
-	if got, _ = s.GetPost(ctx, "moving"); got.MachineBaselineVoiceID != "voice-alice-review" {
-		t.Fatalf("new baseline voice = %q", got.MachineBaselineVoiceID)
-	}
-}
-
-func TestFinalizeAfterReassignmentDoesNotRequireALearningBaseline(t *testing.T) {
-	ctx := context.Background()
-	s := newStore(t)
-	seedPost(t, s, "moving-review", "alice", testNow)
-	content := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "본문"}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
-		t.Fatalf("machine save: updated=%v err=%v", updated, err)
-	}
-	if moved, err := s.ReassignVoice(ctx, "moving-review", "alice", "voice-alice-review", testNow.Add(time.Minute)); err != nil || !moved {
-		t.Fatalf("reassign: moved=%v err=%v", moved, err)
-	}
-	if updated, err := s.Finalize(ctx, "moving-review", "alice", "machine", 1, testNow.Add(2*time.Minute)); err != nil || !updated {
-		t.Fatalf("finalize without baseline: updated=%v err=%v", updated, err)
-	}
-	got, err := s.GetPost(ctx, "moving-review")
-	if err != nil || got.Status != post.StatusFinalized || got.MachineBaselineRevision != 0 {
-		t.Fatalf("finalized reassigned post = %+v err=%v", got, err)
 	}
 }
 

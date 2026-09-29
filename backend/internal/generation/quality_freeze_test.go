@@ -31,7 +31,7 @@ func (r *recordingRules) RulesFor(_ context.Context, userID, slug string, ticked
 func freezingService(posts *fakePosts, jobs *fakeJobs, models *fakeModels, rules *recordingRules) *Service {
 	deps := testDeps()
 	deps.QualityRules = rules
-	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	return NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 }
 
 func tickedPost() *fakePosts {
@@ -124,7 +124,7 @@ func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 		deps := testDeps()
 		deps.QualityRules = &recordingRules{answer: []string{"frozen rule"}}
 		deps.Guidelines = &fakeGuidelines{texts: testGuidelines()}
-		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+		svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 		startOnce(t, svc)
 		if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
 			t.Fatal(err)

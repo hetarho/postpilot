@@ -2,7 +2,6 @@ package generation
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -66,7 +65,7 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 		}
 		return llm.Response{Text: `{"title":"English title","summary":"Summary","tags":["one","two","three"],"blocks":[{"type":"TEXT","content":"Body"}]}`}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, profiles, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
@@ -104,13 +103,13 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 		Images: []Image{{Filename: "IMG.jpg", Key: "key"}},
 	}
 	base.TargetLanguage = LanguageKorean
-	koRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).
+	koRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).
 		SnapshotObserveInput(context.Background(), "alice", "post")
 	if err != nil {
 		t.Fatal(err)
 	}
 	base.TargetLanguage = LanguageEnglish
-	enRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).
+	enRaw, err := NewService(&fakePosts{input: base}, fakeProfiles{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).
 		SnapshotObserveInput(context.Background(), "alice", "post")
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +127,7 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 	models.complete = func(_ llm.ModelRef, _ llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"observations":[{"file":"IMG.jpg","scene":"same","mood":"","visible_text":"","objects":[],"people_present":false}]}`}, nil
 	}
-	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(&fakePosts{}, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	for _, target := range []Language{LanguageKorean, LanguageEnglish} {
 		post := base
 		post.TargetLanguage = target
@@ -143,8 +142,7 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 
 func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *testing.T) {
 	leaky := Profile{
-		Styleguide: "PORTABLE-STRUCTURE", ActiveRules: "DO-NOT-LEAK-ACTIVE",
-		Excerpts: []string{"DO-NOT-LEAK-EXCERPT"}, Rules: "DO-NOT-LEAK-RULE",
+		Styleguide: "PORTABLE-STRUCTURE", Excerpts: []string{"DO-NOT-LEAK-EXCERPT"},
 		EndingMaxConsecutive: 7, SourceLanguage: LanguageKorean, TargetLanguage: LanguageEnglish, Portable: true,
 	}
 	english, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: leaky, Memo: "memo", Title: "title", TagCount: 4})
@@ -153,7 +151,7 @@ func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *te
 			t.Errorf("English prompt missing %q", required)
 		}
 	}
-	for _, forbidden := range []string{"A가 아니라 B", "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-ACTIVE", "DO-NOT-LEAK-EXCERPT", "DO-NOT-LEAK-RULE", "종결어미 제약"} {
+	for _, forbidden := range []string{"A가 아니라 B", "[한국어 자연 문체 기준선]", "DO-NOT-LEAK-EXCERPT", "종결어미 제약"} {
 		if strings.Contains(english, forbidden) {
 			t.Errorf("English portable prompt leaked %q", forbidden)
 		}
@@ -203,7 +201,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 		return llm.Response{Text: `{"title":"` + ref.ModelID + `","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"body"}]}`}, nil
 	}
 	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
@@ -255,7 +253,7 @@ func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testin
 		}
 		return llm.Response{Text: `{"title":"title","summary":"summary","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"next"}]}`}, nil
 	}
-	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, profiles, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
 		UserID: "alice", PostSlug: "post", Instruction: "Translate to Korean and shorten it", WriteModel: writeRef.String(),
 	})
@@ -293,36 +291,15 @@ func TestRevisionRejectsMissingProvenanceBeforeMutationOrProvider(t *testing.T) 
 		Slug: "post", UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean, Content: revisionContent("body"),
 	}, preserveMissingLanguages: true}
 	jobs := &fakeJobs{id: "must-not-enqueue"}
-	rules := &fakeRules{}
 	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
-		UserID: "alice", PostSlug: "post", Instruction: "shorten", SaveAsRule: true, WriteModel: writeRef.String(),
+		UserID: "alice", PostSlug: "post", Instruction: "shorten", WriteModel: writeRef.String(),
 	})
 	if err != ErrContentLanguageRequired {
 		t.Fatalf("error = %v", err)
 	}
-	if jobs.enqueues != 0 || len(rules.lines) != 0 || len(models.calls) != 0 {
-		t.Fatalf("rejected revision mutated work: jobs=%d rules=%v calls=%d", jobs.enqueues, rules.lines, len(models.calls))
-	}
-}
-
-func TestRevisionSaveAsRuleRejectsCrossLanguageContentBeforeRuleQueueOrProvider(t *testing.T) {
-	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean},
-		TargetLanguage: LanguageEnglish, ContentLanguage: languagePointer(LanguageEnglish), Content: revisionContent("English content"),
-	}}
-	jobs := &fakeJobs{id: "must-not-enqueue"}
-	rules := &fakeRules{}
-	models := newFakeModels()
-	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
-	_, err := svc.StartRevision(context.Background(), StartRevisionRequest{
-		UserID: "alice", PostSlug: "post", Instruction: "make this my rule", SaveAsRule: true, WriteModel: writeRef.String(),
-	})
-	if !errors.Is(err, ErrVoiceContentLanguageMismatch) {
-		t.Fatalf("error = %v, want ErrVoiceContentLanguageMismatch", err)
-	}
-	if jobs.enqueues != 0 || len(rules.lines) != 0 || len(models.calls) != 0 {
-		t.Fatalf("mismatched rule revision mutated work: jobs=%d rules=%v calls=%d", jobs.enqueues, rules.lines, len(models.calls))
+	if jobs.enqueues != 0 || len(models.calls) != 0 {
+		t.Fatalf("rejected revision mutated work: jobs=%d calls=%d", jobs.enqueues, len(models.calls))
 	}
 }

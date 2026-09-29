@@ -272,7 +272,7 @@ func TestAPayloadWithoutATemplateFieldDecodesAsNoTemplate(t *testing.T) {
 
 // The revision payload freezes the template the same way the generate payload does.
 func TestTheRevisionPayloadFreezesTheTemplateToo(t *testing.T) {
-	raw, err := encodeRevisionPayload("INSTRUCTION", false, testBrief(), nil)
+	raw, err := encodeRevisionPayload("INSTRUCTION", testBrief(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +316,7 @@ func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string
 
 func templateAwareService(t *testing.T, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	svc.templates = briefs
 	return svc
 }
@@ -440,7 +440,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	revise, err := encodeRevisionPayload("INSTRUCTION", false, brief, nil)
+	revise, err := encodeRevisionPayload("INSTRUCTION", brief, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,7 +468,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plainRevise, err := encodeRevisionPayload("INSTRUCTION", false, testBrief(), nil)
+	plainRevise, err := encodeRevisionPayload("INSTRUCTION", testBrief(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,7 +37,6 @@ func TestGenerationErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"voice deleted":           {"start generation", generation.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED", nil},
 		"voice changed":           {"start generation", generation.ErrVoiceMismatch, connect.CodeFailedPrecondition, "GENERATION_VOICE_MISMATCH", nil},
 		"post published":          {"start revision", generation.ErrPostPublished, connect.CodeFailedPrecondition, "POST_PUBLISHED_LOCKED", nil},
-		"voice language mismatch": {"start revision", generation.ErrVoiceContentLanguageMismatch, connect.CodeFailedPrecondition, "VOICE_CONTENT_LANGUAGE_MISMATCH", nil},
 		"instruction required":    {"start revision", generation.ErrRevisionInstructionRequired, connect.CodeInvalidArgument, "REVISION_INSTRUCTION_REQUIRED", nil},
 		"instruction too long":    {"start revision", generation.ErrRevisionInstructionTooLong, connect.CodeInvalidArgument, "REVISION_INSTRUCTION_TOO_LONG", map[string]string{"max": "500"}},
 		"target length":           {"start generation", generation.ErrInvalidTargetLength, connect.CodeInvalidArgument, "GENERATION_TARGET_LENGTH_INVALID", nil},

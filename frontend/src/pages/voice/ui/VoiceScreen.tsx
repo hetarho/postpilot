@@ -15,7 +15,7 @@ export interface VoiceScreenContext {
 }
 
 /** The frame every voice tab shares: THIS voice's profile query, its two non-content states, and
- *  the tab's own heading. The profile is the one read all five tabs need, so it stays shared here;
+ *  the tab's own heading. The profile is the one read all three tabs need, so it stays shared here;
  *  every other list is fetched by the tab that renders it. The page's `h1` is the voice's name in
  *  the layout, so a tab's title is an `h2`. */
 export function VoiceScreen({

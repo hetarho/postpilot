@@ -53,7 +53,6 @@ export function toPostDraft(post: Post): PostDraft {
     pendingExperimentId: post.pendingExperimentId,
     contentRevision: post.contentRevision,
     machineBaselineRevision: post.machineBaselineRevision,
-    machineBaselineVoiceId: post.machineBaselineVoiceId,
     canFinalize: post.canFinalize,
     targetLength: post.targetLength,
     tagCount: post.tagCount ?? POST_TAG_COUNT_DEFAULT,

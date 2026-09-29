@@ -6,25 +6,17 @@ import {
   DeleteVoiceResponseSchema,
   DeleteVoiceSampleResponseSchema,
   GetVoiceProfileResponseSchema,
-  GiveSentenceFeedbackResponseSchema,
-  LearnFromFinalizedPostResponseSchema,
   ListVoicesResponseSchema,
   RenameVoiceResponseSchema,
   RestoreVoiceResponseSchema,
-  RetryVoiceLearningResponseSchema,
   SetDefaultVoiceResponseSchema,
   GetVoiceProfileVersionSampleResponseSchema,
   RestoreVoiceProfileResponseSchema,
   VoiceProfileSchema,
-  VoiceLearningEventSchema,
-  VoiceLearningService,
   VoiceSampleSchema,
   VoiceSchema,
   VoiceService,
-  VoiceValidationService,
   ListVoiceProfileVersionsResponseSchema,
-  ListRuleConfirmationsResponseSchema,
-  ListVoiceProfileValidationsResponseSchema,
   PostContentSchema,
   VoiceValueSource,
   StructuredVoiceProfileSchema,
@@ -78,21 +70,10 @@ export interface FakeVoiceOptions {
   deleteFails?: boolean
   addGate?: Promise<void>
   calls?: string[]
-  learningFails?: boolean
-  learningJobId?: string
   versions?: Array<{ version: bigint; origin: string; hasSample?: boolean }>
   /** One version's generation snapshot, keyed by version number as a string. A version absent
    *  from this map produced no post, which is what the RPC reports with an unset sample. */
   versionSamples?: Record<string, MessageInitShape<typeof PostContentSchema>>
-  validations?: Array<{
-    id: string
-    voiceId: string
-    profileVersion: bigint
-    status: string
-    judgeEnabled?: boolean
-    totalCount?: number
-    yCount?: number
-  }>
   /** The typed profile the account has learned. Omitted, the profile reads as empty. */
   structured?: MessageInitShape<typeof StructuredVoiceProfileSchema>
   overrideFails?: boolean
@@ -102,8 +83,6 @@ export interface FakeVoiceOptions {
   busyVoices?: string[]
   /** Make ListVoices fail. */
   listFails?: boolean
-  /** Sentence feedback the fake received, for tests that assert *which* sentence was sent. */
-  sentenceFeedback?: Array<{ sentenceRef: string; authoredText: string }>
   /** Voice creates, including the concrete language that must never be inferred server-side and
    *  the optional description with the analyze ref that must travel with it. */
   creates?: Array<{
@@ -447,61 +426,11 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     return create(DeleteVoiceSampleResponseSchema, { jobId })
   })
 
-  rpc(VoiceLearningService.method.learnFromFinalizedPost, (request) => {
-    options.calls?.push('LearnFromFinalizedPost')
-    if (options.learningFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    const jobId = options.learningJobId ?? 'learning-job'
-    return create(LearnFromFinalizedPostResponseSchema, {
-      event: create(VoiceLearningEventSchema, {
-        id: `event-${request.postSlug}`,
-        postSlug: request.postSlug,
-        voiceId: defaultId,
-        baselineRevision: 1n,
-        status: 'queued',
-        jobId,
-        createdAt: NOW,
-      }),
-      jobId,
-    })
-  })
-
-  rpc(VoiceLearningService.method.retryVoiceLearning, (request) => {
-    options.calls?.push('RetryVoiceLearning')
-    const jobId = options.learningJobId ?? 'learning-job-retry'
-    return create(RetryVoiceLearningResponseSchema, {
-      event: create(VoiceLearningEventSchema, { id: request.eventId, status: 'queued', jobId }),
-      jobId,
-    })
-  })
-
-  rpc(VoiceLearningService.method.giveSentenceFeedback, (request) => {
-    options.calls?.push('GiveSentenceFeedback')
-    options.sentenceFeedback?.push({
-      sentenceRef: request.sentenceRef,
-      authoredText: request.authoredText,
-    })
-    return create(GiveSentenceFeedbackResponseSchema, { feedbackId: 'feedback-1' })
-  })
-
-  // The three per-tab lists. They record their calls so a test can prove a tab fetches only what
-  // it renders — the profile screen used to issue all three on every mount.
+  // The version list records its call so a test can prove the tab fetches only what it renders —
+  // the profile screen used to issue every per-tab list on every mount.
   rpc(VoiceService.method.listVoiceProfileVersions, (request) => {
     options.calls?.push('ListVoiceProfileVersions')
     owned(request.voiceId)
     return create(ListVoiceProfileVersionsResponseSchema, { versions: options.versions ?? [] })
-  })
-
-  rpc(VoiceLearningService.method.listRuleConfirmations, (request) => {
-    options.calls?.push('ListRuleConfirmations')
-    owned(request.voiceId)
-    return create(ListRuleConfirmationsResponseSchema, {})
-  })
-
-  rpc(VoiceValidationService.method.listVoiceProfileValidations, (request) => {
-    options.calls?.push('ListVoiceProfileValidations')
-    owned(request.voiceId)
-    return create(ListVoiceProfileValidationsResponseSchema, {
-      validations: options.validations ?? [],
-    })
   })
 }

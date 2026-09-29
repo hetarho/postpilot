@@ -7,7 +7,6 @@ import {
   type GenerationMode,
 } from '@/features/generate-post'
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
-import type { useVoiceLearning } from '@/features/finalize-post'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { RefineDock } from '@/widgets/refine-dock'
 import type { EditorStep } from '../model/steps'
@@ -27,8 +26,6 @@ export function EditorStepDock({
   hasJobNotice,
   dockHeader,
   targetLength,
-  languageMismatch,
-  learning,
   editorRef,
   generateRef,
   reviseRef,
@@ -47,8 +44,6 @@ export function EditorStepDock({
   hasJobNotice: boolean
   dockHeader: ReactNode
   targetLength?: number
-  languageMismatch: boolean
-  learning: ReturnType<typeof useVoiceLearning>
   editorRef: RefObject<BlockEditorHandle | null>
   generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
@@ -80,8 +75,6 @@ export function EditorStepDock({
           ref={reviseRef}
           ownerId={ownerId}
           post={post}
-          ruleLanguageMismatch={languageMismatch}
-          learning={learning}
           activeJob={job}
           jobPending={jobView.isPending}
           onRevisionStarted={(id) => jobView.onStarted(id, 'refine')}

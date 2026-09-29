@@ -111,9 +111,9 @@ func TestTheRevisePromptCarriesNoQualityRules(t *testing.T) {
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"title":"제목","summary":"요약","tags":["a"],"blocks":[{"type":"TEXT","content":"고친 본문"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	if err := svc.Revise(context.Background(), RevisionJob{
-		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘", false),
+		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘"),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

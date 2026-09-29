@@ -4,8 +4,6 @@ import { useTransport } from '@connectrpc/connect-query'
 import {
   appFailureFromProto,
   requireContentLanguage,
-  VoiceLayer,
-  VoiceRuleStatus,
   VoiceValueSource,
   type ProtoVoice,
   type ProtoVoiceProfile,
@@ -20,36 +18,11 @@ import {
   type Voice,
   type VoiceProfile,
   type VoiceRef,
-  type VoiceRuleLayer,
   type VoiceSample,
   type VoiceSourceKind,
   type VoiceVersion,
 } from '../model/types'
 
-const layer = (value: VoiceLayer): VoiceRuleLayer =>
-  value === VoiceLayer.LEXICAL
-    ? 'lexical'
-    : value === VoiceLayer.ENDINGS
-      ? 'endings'
-      : value === VoiceLayer.SYNTAX
-        ? 'syntax'
-        : value === VoiceLayer.STRUCTURE
-          ? 'structure'
-          : value === VoiceLayer.AXES
-            ? 'axes'
-            : 'unknown'
-const status = (
-  value: VoiceRuleStatus,
-): 'candidate' | 'active' | 'retired' | 'rejected' | 'unknown' =>
-  value === VoiceRuleStatus.CANDIDATE
-    ? 'candidate'
-    : value === VoiceRuleStatus.ACTIVE
-      ? 'active'
-      : value === VoiceRuleStatus.RETIRED
-        ? 'retired'
-        : value === VoiceRuleStatus.REJECTED
-          ? 'rejected'
-          : 'unknown'
 const source = (value: VoiceValueSource): VoiceSourceKind =>
   value === VoiceValueSource.MEASURED
     ? 'measured'
@@ -144,36 +117,6 @@ export function toStructured(p: ProtoStructured | undefined): StructuredVoicePro
       addresseeFocus: p?.axes?.addresseeFocus,
       humor: p?.axes?.humor,
     },
-    rules:
-      p?.contrastRules.map((v) => ({
-        id: v.id,
-        statement: v.statement,
-        layer: layer(v.layer),
-        evidenceCount: v.evidenceCount,
-        status: status(v.status),
-        origin: v.origin,
-        createdAt: v.createdAt,
-        lastEvidenceAt: v.lastEvidenceAt,
-      })) ?? [],
-    sources:
-      p?.fewShotBank.map((v) => ({
-        id: v.id,
-        postSlug: v.postSlug,
-        title: v.title,
-        tags: [...v.tags],
-        excerpt: v.excerpt,
-        hasEmbedding: v.hasEmbedding,
-        createdAt: v.createdAt,
-      })) ?? [],
-    feedback:
-      p?.feedbackLog.map((v) => ({
-        id: v.id,
-        postSlug: v.postSlug,
-        kind: v.kind,
-        layer: layer(v.layer),
-        processingState: v.processingState,
-        createdAt: v.createdAt,
-      })) ?? [],
   }
 }
 export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoiceProfile {
@@ -183,8 +126,6 @@ export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoicePro
     samples: profile?.samples.map(toVoiceSample) ?? [],
     activeJobId: profile?.activeJobId ?? '',
     structured: toStructured(profile?.structured),
-    finalizedSourceCount: profile?.finalizedSourceCount ?? 0,
-    canValidate: profile?.canValidate ?? false,
     ...(profile?.seedFailure ? { seedFailure: appFailureFromProto(profile.seedFailure) } : {}),
   }
 }
@@ -219,28 +160,6 @@ export function voiceProfileQueryKey(transport: Transport, ownerId: string, voic
 }
 export function voiceVersionsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
   return ['voice-versions', transport, ownerId, voiceId] as const
-}
-export function voiceConfirmationsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
-  return ['voice-confirmations', transport, ownerId, voiceId] as const
-}
-export function voiceValidationsQueryKey(transport: Transport, ownerId: string, voiceId: string) {
-  return ['voice-validations', transport, ownerId, voiceId] as const
-}
-export function voiceComparisonQueryKey(
-  transport: Transport,
-  ownerId: string,
-  voiceId: string,
-  id: string,
-) {
-  return ['voice-rule-comparison', transport, ownerId, voiceId, id] as const
-}
-export function voiceValidationQueryKey(
-  transport: Transport,
-  ownerId: string,
-  voiceId: string,
-  id: string,
-) {
-  return ['voice-validation', transport, ownerId, voiceId, id] as const
 }
 
 /** The profile entry as a cache target, for a caller that has to say "this job's completion makes

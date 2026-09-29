@@ -92,7 +92,7 @@ func clipEntry(key, koName, koText, enName, enText string) DefaultGuideline {
 // naturalKorean is the Korean naturalness baseline (GEN-17) as a 기본 지침: one text whose
 // lines each carry one rule. Its markers and its 700-rune bound are pinned in the generation
 // tests, which read it through the prompt.
-const naturalKorean = "아래 기준은 새로 쓰거나 수정 요청으로 손대는 TEXT 본문에만 적용하세요. 제목·요약·HEADING·LIST에는 적용하지 말고, 수정에서는 요청 밖의 기존 문장을 그대로 두세요.\n대조 수사는 글 전체에서 “A가 아니라 B”, “~것이 아니라” 꼴을 합쳐 한 번만 쓰세요.\n문단을 “필요한·중요한·핵심은 …이다”, “결국 …로 이어진다”, “~하는 이유다”로 닫지 마세요. “중요한 것은 실행력이다”보다 “오늘 할 일을 바로 적고 실행하세요”처럼 사실과 동작을 직접 쓰세요.\n구체적 시점 없는 “향후·앞으로” 전망이나 내용 없는 “과제도 남아 있다”로 문단을 닫지 마세요. “~해야 한다”로 끝나는 문단은 글 전체에서 하나만 허용합니다.\n연결어미 -고/-며/-지만/-면서/-아서 바로 뒤에는 쉼표를 놓지 말고, 대부분 문장은 쉼표 없이 쓰세요.\n한 문단 안에서 짧은 문장과 긴 복문, 단문과 복문을 섞어 길이와 구조에 변화를 주세요.\n확대·강화·개선·확보·구축 같은 포괄적 동사를 되풀이하지 말고 구체적인 동작을 쓰세요. 잠식·청사진·신호탄 같은 지어낸 비유를 겹치거나 과장 형용사를 쌓지 말고, “~적 명사”가 이어지지 않게 하세요.\n메모가 요구하지 않은 수사·경구를 덧붙이지 마세요.\n말투 프로필, 활성 대조 규칙, 사용자 규칙과 충돌하면 그쪽을 따르세요."
+const naturalKorean = "아래 기준은 새로 쓰거나 수정 요청으로 손대는 TEXT 본문에만 적용하세요. 제목·요약·HEADING·LIST에는 적용하지 말고, 수정에서는 요청 밖의 기존 문장을 그대로 두세요.\n대조 수사는 글 전체에서 “A가 아니라 B”, “~것이 아니라” 꼴을 합쳐 한 번만 쓰세요.\n문단을 “필요한·중요한·핵심은 …이다”, “결국 …로 이어진다”, “~하는 이유다”로 닫지 마세요. “중요한 것은 실행력이다”보다 “오늘 할 일을 바로 적고 실행하세요”처럼 사실과 동작을 직접 쓰세요.\n구체적 시점 없는 “향후·앞으로” 전망이나 내용 없는 “과제도 남아 있다”로 문단을 닫지 마세요. “~해야 한다”로 끝나는 문단은 글 전체에서 하나만 허용합니다.\n연결어미 -고/-며/-지만/-면서/-아서 바로 뒤에는 쉼표를 놓지 말고, 대부분 문장은 쉼표 없이 쓰세요.\n한 문단 안에서 짧은 문장과 긴 복문, 단문과 복문을 섞어 길이와 구조에 변화를 주세요.\n확대·강화·개선·확보·구축 같은 포괄적 동사를 되풀이하지 말고 구체적인 동작을 쓰세요. 잠식·청사진·신호탄 같은 지어낸 비유를 겹치거나 과장 형용사를 쌓지 말고, “~적 명사”가 이어지지 않게 하세요.\n메모가 요구하지 않은 수사·경구를 덧붙이지 마세요.\n위에 말투가 있으면, 말투와 충돌할 때 말투를 따르세요."
 
 var postDefaults = []DefaultGuideline{
 	post("facts", "재료에 있는 사실만",
@@ -146,7 +146,7 @@ var postDefaults = []DefaultGuideline{
 	{
 		Key: "natural_korean", Kind: KindPost, KoreanTargetOnly: true,
 		Ko: DefaultCopy{"자연스러운 한국어 문체", naturalKorean},
-		En: DefaultCopy{"Natural Korean style", "Caps stock contrasts, formulaic closers, uniform sentences, hype and piled metaphors in Korean prose; the voice profile outranks it."},
+		En: DefaultCopy{"Natural Korean style", "Caps stock contrasts, formulaic closers, uniform sentences, hype and piled metaphors in Korean prose; where a voice is given above, the voice outranks it."},
 	},
 }
 

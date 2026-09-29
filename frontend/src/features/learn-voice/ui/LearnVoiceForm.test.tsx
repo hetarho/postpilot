@@ -13,8 +13,6 @@ const EMPTY_PROFILE: VoiceProfile = {
   samples: [],
   activeJobId: '',
   structured: emptyStructuredVoiceProfile(),
-  finalizedSourceCount: 0,
-  canValidate: false,
 }
 
 function renderForm({

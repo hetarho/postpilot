@@ -27,12 +27,8 @@ func TestVoiceSynchronousErrorsHaveStableDetails(t *testing.T) {
 		{name: "source language required", err: voice.ErrLanguageRequired, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeInvalidArgument, reason: "VOICE_SOURCE_LANGUAGE_REQUIRED"},
 		{name: "source language unsupported", err: voice.ErrLanguageUnsupported, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeInvalidArgument, reason: "VOICE_SOURCE_LANGUAGE_UNSUPPORTED"},
 		{name: "sample mutation", err: errors.Join(voice.ErrSampleMutation, errors.New("private database state")), mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeInternal, reason: "VOICE_SAMPLE_MUTATION_FAILED"},
-		{name: "content language mismatch", err: &voice.ContentLanguageMismatchError{ContentLanguage: voice.LanguageEnglish, SourceLanguage: voice.LanguageKorean}, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_CONTENT_LANGUAGE_MISMATCH", params: map[string]string{"content_language": "en", "source_language": "ko"}},
-		{name: "feedback content language mismatch", err: &voice.ContentLanguageMismatchError{ContentLanguage: voice.LanguageKorean, SourceLanguage: voice.LanguageEnglish}, mapErr: feedbackError, code: connect.CodeFailedPrecondition, reason: "VOICE_CONTENT_LANGUAGE_MISMATCH", params: map[string]string{"content_language": "ko", "source_language": "en"}},
-		{name: "feedback payload invalid", err: errors.New("private authored sentence"), mapErr: feedbackError, code: connect.CodeInvalidArgument, reason: "VOICE_FEEDBACK_INVALID"},
-		{name: "learning lifecycle", err: voice.ErrInvalidLifecycle, mapErr: func(err error) error { return learningError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INVALID_LIFECYCLE"},
-		{name: "insufficient sources", err: &voice.InsufficientSourcesError{Minimum: 5}, mapErr: func(err error) error { return validationError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INSUFFICIENT_SOURCES", params: map[string]string{"min": "5"}},
-		{name: "validation lifecycle", err: voice.ErrInvalidLifecycle, mapErr: func(err error) error { return validationError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INVALID_LIFECYCLE"},
+		{name: "lifecycle", err: voice.ErrInvalidLifecycle, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeFailedPrecondition, reason: "VOICE_INVALID_LIFECYCLE"},
+		{name: "unknown profile version", err: voice.ErrLearningNotFound, mapErr: func(err error) error { return toConnectError("test", err) }, code: connect.CodeNotFound, reason: "VOICE_LEARNING_NOT_FOUND"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

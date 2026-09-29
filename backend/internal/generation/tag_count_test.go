@@ -55,7 +55,7 @@ func TestGenerationPayloadFreezesTheTagCount(t *testing.T) {
 }
 
 func TestRevisionPayloadFreezesTheTagCount(t *testing.T) {
-	raw, err := encodeRevisionPayloadForLanguage("shorten", false, LanguageKorean, nil, FrozenGuidelines{}, 7, false)
+	raw, err := encodeRevisionPayloadForLanguage("shorten", LanguageKorean, nil, FrozenGuidelines{}, 7, false)
 	if err != nil {
 		t.Fatal(err)
 	}

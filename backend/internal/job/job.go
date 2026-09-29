@@ -10,15 +10,12 @@ import (
 )
 
 const (
-	KindGenerate             = "generate"
-	KindRevise               = "revise"
-	KindAnalyzeVoice         = "analyze_voice"
-	KindModelExperiment      = "model_experiment"
-	KindLearnVoice           = "learn_voice"
-	KindCompareVoiceRule     = "compare_voice_rule"
-	KindValidateVoiceProfile = "validate_voice_profile"
-	KindSeedVoice            = "seed_voice"
-	KindExtractMemory        = "extract_memory"
+	KindGenerate        = "generate"
+	KindRevise          = "revise"
+	KindAnalyzeVoice    = "analyze_voice"
+	KindModelExperiment = "model_experiment"
+	KindSeedVoice       = "seed_voice"
+	KindExtractMemory   = "extract_memory"
 	// KindStoryline writes a post's storyline from its material (스토리라인 먼저, 다시 만들기);
 	// KindReviseStoryline rewrites it from the owner's request. Neither writes content (GEN-68,
 	// GEN-69).

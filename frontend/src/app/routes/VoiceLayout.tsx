@@ -1,5 +1,5 @@
 import { Link, Outlet, useParams } from '@tanstack/react-router'
-import { ClipboardCheck, FolderInput, History, IdCard, Scale } from 'lucide-react'
+import { FolderInput, History, IdCard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
@@ -16,18 +16,16 @@ import {
   pageStyles,
 } from '@/shared/ui'
 
-/** The five tabs of one voice, in one list so the row and the routes cannot drift — the same
+/** The three tabs of one voice, in one list so the row and the routes cannot drift — the same
  *  reason `AuthenticatedLayout` keeps one `DESTINATIONS`. They are sub-navigation inside one voice,
  *  not destinations of their own. Every tab carries an icon and a short caption so the row can
  *  compact itself instead of horizontally scrolling on a phone (TabLinks' container mode). */
 const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label' | 'shortLabel'> & {
-  labelKey: 'profile' | 'versions' | 'import' | 'rules' | 'validations'
+  labelKey: 'profile' | 'versions' | 'import'
 })[] = [
   { to: '/voices/$voiceId', labelKey: 'profile', icon: IdCard },
   { to: '/voices/$voiceId/versions', labelKey: 'versions', icon: History },
   { to: '/voices/$voiceId/import', labelKey: 'import', icon: FolderInput },
-  { to: '/voices/$voiceId/rules', labelKey: 'rules', icon: Scale },
-  { to: '/voices/$voiceId/validations', labelKey: 'validations', icon: ClipboardCheck },
 ]
 
 /** The frame of `/voices/$voiceId`: which voice this is, its state, and the tab row. The voice

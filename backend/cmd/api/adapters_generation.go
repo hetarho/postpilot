@@ -155,7 +155,7 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
 	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, ActiveRules: profile.ActiveRules, Excerpts: profile.Excerpts, Rules: profile.ManualRules, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
+	return generation.Profile{Styleguide: profile.Styleguide, Excerpts: profile.Excerpts, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
 }
 
 // generationVersionSamples adapts at the boundary the way generationProfiles does. The wire
@@ -185,12 +185,6 @@ func generationContentProto(content generation.PostContent) *postpilotv1.PostCon
 		})
 	}
 	return out
-}
-
-type generationRules struct{ service *voice.Service }
-
-func (a generationRules) AppendRule(ctx context.Context, userID, voiceID, line string) error {
-	return generationVoiceError(a.service.AppendRule(ctx, userID, voiceID, line))
 }
 
 func generationVoiceError(err error) error {

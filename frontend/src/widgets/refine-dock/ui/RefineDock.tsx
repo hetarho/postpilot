@@ -2,18 +2,11 @@ import { forwardRef } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
 import { isPublished, type PostDraft } from '@/entities/post'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
-import { FinalizeActions, type VoiceLearning } from '@/features/finalize-post'
+import { FinalizeActions } from '@/features/finalize-post'
 
 interface RefineDockProps {
   ownerId: string
   post: PostDraft
-  /** True when the post's content language and its voice's source language disagree: the revision
-   *  still runs, but its instruction may not be published as a voice rule. */
-  ruleLanguageMismatch: boolean
-  /** The voice-learning run. It lives ABOVE the step panels in `pages/editor`, because
-   *  확정하고 말투 학습 starts it here and every outcome is reported on 글 완성 — so the run has to
-   *  outlive the step change the finalize itself causes. */
-  learning: VoiceLearning
   activeJob?: GenerationJob
   jobPending: boolean
   onRevisionStarted: (jobId: string) => void
@@ -28,25 +21,22 @@ interface RefineDockProps {
 /** The body of 글 다듬기's dock: ONE surface, the revision instruction with its send button, whose
  *  heading carries 확정하기 at its top-right.
  *
- *  The two confirming actions used to be a second row of full-width buttons under the field, and
- *  the bar read as two competing interfaces — a conversation with the AI, and the pair that ends
- *  the step (owner decision 2026-09-02). Now 확정하기 opens 확정 and 확정하고 말투 학습 in a popover,
- *  or in a bottom sheet on a phone, so the dock says one thing and the choice between the two ways
- *  out is made where there is room to explain the difference.
+ *  The confirming actions used to be a second row of full-width buttons under the field, and the
+ *  bar read as two competing interfaces — a conversation with the AI, and the pair that ends the
+ *  step (owner decision 2026-09-02). Now the one way out, 확정하기, stands in the field's heading
+ *  row and finalizes at once (POST-56), so the dock says one thing.
  *
  *  It is a WIDGET because it composes two sibling `features/*` slices — `edit-with-ai` and
  *  `finalize-post` — and a feature may not import a sibling (ARCH-13). The composition is
  *  a SLOT: the finalize control is handed to the revise form as its heading action.
  *
- *  Each surface renders its own blockers, validation and failures directly above its own controls
+ *  Each surface renders its own blockers, validation and failures above its own controls
  *  (THEME-31): the keyboard covers roughly the bottom 40% of the screen, so it may hide a control but
  *  never the reason that control is disabled. */
 export const RefineDock = forwardRef<ReviseFormHandle, RefineDockProps>(function RefineDock(
   {
     ownerId,
     post,
-    ruleLanguageMismatch,
-    learning,
     activeJob,
     jobPending,
     onRevisionStarted,
@@ -56,30 +46,28 @@ export const RefineDock = forwardRef<ReviseFormHandle, RefineDockProps>(function
   },
   reviseRef,
 ) {
-  const finalize = (
-    <FinalizeActions
-      post={post}
-      learning={learning}
-      beforeFinalize={beforeFinalize}
-      onFinalized={onFinalized}
-    />
-  )
-  // A published post takes no revision (POST-86): the dock keeps only the road onward to 글 완성,
-  // where its address lives.
-  if (isPublished(post)) return finalize
   return (
-    <ReviseForm
-      ref={reviseRef}
-      ownerId={ownerId}
-      postSlug={post.slug}
-      voice={post.voice}
-      ruleLanguageMismatch={ruleLanguageMismatch}
-      template={post.template}
-      activeJob={activeJob}
-      jobPending={jobPending}
-      onStarted={onRevisionStarted}
-      beforeStart={beforeStart}
-      action={finalize}
-    />
+    <FinalizeActions post={post} beforeFinalize={beforeFinalize} onFinalized={onFinalized}>
+      {(finalize) =>
+        // A published post takes no revision (POST-86): the dock keeps only the road onward to
+        // 글 완성, where its address lives.
+        isPublished(post) ? (
+          finalize
+        ) : (
+          <ReviseForm
+            ref={reviseRef}
+            ownerId={ownerId}
+            postSlug={post.slug}
+            voice={post.voice}
+            template={post.template}
+            activeJob={activeJob}
+            jobPending={jobPending}
+            onStarted={onRevisionStarted}
+            beforeStart={beforeStart}
+            action={finalize}
+          />
+        )
+      }
+    </FinalizeActions>
   )
 })

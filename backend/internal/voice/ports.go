@@ -14,7 +14,7 @@ const JobSubject = "voice"
 // profile query names the voice AND the account: the voice partitions the aggregate, the
 // account keeps a crafted same-shape id from another user out.
 // VoiceDirectoryStore is the account's voices as a directory: minting, listing, naming,
-// defaulting, retiring and restoring one, and the work that must finish before it may go.
+// defaulting, retiring and restoring one.
 type VoiceDirectoryStore interface {
 	// InsertVoice writes the directory row and the voice's empty profile row together, so a
 	// read never has to create a profile.
@@ -27,9 +27,6 @@ type VoiceDirectoryStore interface {
 	SetDefaultVoice(ctx context.Context, userID, voiceID string, now time.Time) error
 	SoftDeleteVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
 	RestoreVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
-	// CountUndecidedVoiceWork counts the comparisons and validations this context owns that
-	// have not reached a terminal state; jobs and experiments are asked through their ports.
-	CountUndecidedVoiceWork(ctx context.Context, voiceID string) (int, error)
 }
 
 // ProfileStore is the voice's current profile text and the guard an analysis has to win
@@ -41,9 +38,6 @@ type ProfileStore interface {
 	// describes a corpus the voice has already moved past. It writes no text (VOICE-22): the
 	// styleguide column the guard used to piggyback on is gone.
 	ClaimCorpusVersion(ctx context.Context, userID, voiceID string, version int64, now time.Time) (bool, error)
-	// SetRules is reachable only from AppendRule, which is the refine step's "save as rule"
-	// checkbox. There is no editor and no RPC for this value any more (VOICE-6).
-	SetRules(ctx context.Context, userID, voiceID, rules string, now time.Time) error
 }
 
 // SampleStore is the corpus a voice is learned from.
@@ -77,10 +71,6 @@ type Storage interface {
 	VersionSampleStore
 }
 
-// PersonalizationStore owns the versioned learning aggregates. Rows that hang off an owned
-// parent (a rule, a confirmation, a comparison, a validation) are looked up by id and
-// account and carry their voice out, so a caller derives the voice from the aggregate
-// instead of nominating one.
 // ProfileVersionStore is the published history of a voice's structured profile.
 type ProfileVersionStore interface {
 	ListProfileVersions(ctx context.Context, userID, voiceID string) ([]ProfileVersion, error)
@@ -97,71 +87,12 @@ type ManualOverrideStore interface {
 	ApplyOverrideAndPublish(ctx context.Context, override ManualOverride, value *string, profile StructuredProfile, now time.Time) error
 }
 
-// LearningRunStore is one learning run from the post that caused it to the profile it
-// publishes.
-type LearningRunStore interface {
-	InsertLearningEvent(ctx context.Context, event LearningEvent) error
-	FindLearningEvent(ctx context.Context, userID, voiceID, postSlug string, baselineRevision int64, inputHash string) (*LearningEvent, error)
-	GetLearningEvent(ctx context.Context, userID, eventID string) (*LearningEvent, error)
-	SetLearningEventJob(ctx context.Context, userID, eventID, jobID string) error
-	SetLearningEventStatus(ctx context.Context, userID, eventID, status string, failure *Failure, processedAt *time.Time) error
-	ListAuthoredSources(ctx context.Context, userID, voiceID string) ([]AuthoredSource, error)
-	GetAuthoredSource(ctx context.Context, userID, voiceID, sourceID string) (AuthoredSource, error)
-	ApplyLearningResult(ctx context.Context, event LearningEvent, result LearningResult, cfg PersonalizationConfig, now time.Time) error
-}
-
-// ContrastRuleStore is the rules a learning run proposes and the owner decides on.
-type ContrastRuleStore interface {
-	ListRules(ctx context.Context, userID, voiceID string) ([]ContrastRule, error)
-	GetRule(ctx context.Context, userID, ruleID string) (ContrastRule, error)
-	SetRuleStatus(ctx context.Context, userID, voiceID, ruleID string, status RuleStatus, now time.Time) error
-	RetireStaleRules(ctx context.Context, userID, voiceID string, before time.Time) (int, error)
-	ApplyRuleStatusAndPublish(ctx context.Context, userID, voiceID, ruleID string, status RuleStatus, profile StructuredProfile, now time.Time) error
-	RetireStaleRulesAndPublish(ctx context.Context, userID, voiceID string, before, now time.Time) (int, error)
-}
-
-// FeedbackStore is a sentence the owner marked and the confirmations it asks for.
-type FeedbackStore interface {
-	InsertFeedback(ctx context.Context, feedback Feedback) error
-	ListFeedback(ctx context.Context, userID, voiceID string) ([]Feedback, error)
-	ListConfirmations(ctx context.Context, userID, voiceID string) ([]RuleConfirmation, error)
-	GetConfirmation(ctx context.Context, userID, confirmationID string) (RuleConfirmation, error)
-	ResolveConfirmation(ctx context.Context, userID, confirmationID string, replace bool, now time.Time) error
-	ResolveConfirmationAndPublish(ctx context.Context, userID, confirmationID string, replace bool, now time.Time) error
-}
-
-// RuleComparisonStore is one rule tried against one post, both ways.
-type RuleComparisonStore interface {
-	InsertRuleComparison(ctx context.Context, comparison RuleComparison) error
-	SetRuleComparisonJob(ctx context.Context, userID, comparisonID, jobID string) error
-	GetRuleComparison(ctx context.Context, userID, comparisonID string) (RuleComparison, error)
-	UpdateRuleComparison(ctx context.Context, comparison RuleComparison) error
-}
-
-// ProfileValidationStore is a profile measured against the posts it is meant to sound like.
-type ProfileValidationStore interface {
-	InsertProfileValidation(ctx context.Context, validation ProfileValidation) error
-	SetProfileValidationJob(ctx context.Context, userID, validationID, jobID string) error
-	GetProfileValidation(ctx context.Context, userID, validationID string) (ProfileValidation, error)
-	ListProfileValidations(ctx context.Context, userID, voiceID string) ([]ProfileValidation, error)
-	UpdateProfileValidation(ctx context.Context, validation ProfileValidation) error
-}
-
-// PersonalizationStorage is the learning store as the composition root hands it over. Like
-// Storage it is a handle, not a port: the use-cases hold the narrow interfaces above.
+// PersonalizationStorage is the versioned profile store as the composition root hands it
+// over. Like Storage it is a handle, not a port: the use-cases hold the narrow interfaces
+// above.
 type PersonalizationStorage interface {
 	ProfileVersionStore
 	ManualOverrideStore
-	LearningRunStore
-	ContrastRuleStore
-	FeedbackStore
-	RuleComparisonStore
-	ProfileValidationStore
-}
-
-// Posts is the post context's published finalization hand-off; it never exposes post rows.
-type Posts interface {
-	LearningSnapshot(ctx context.Context, userID, slug string) (FinalizationInput, error)
 }
 
 // Models resolves the acting user's current analyze selection and performs calls
@@ -171,12 +102,6 @@ type Models interface {
 	AnalyzeModel(ctx context.Context, userID string) (llm.ModelRef, bool, error)
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)
-}
-
-// PersonalizationModels answers whether a client-supplied ref may run for a stage — the
-// same per-purpose membership the pickers enforce (MODEL-16).
-type PersonalizationModels interface {
-	ModelEnabled(ref llm.ModelRef, stage string) bool
 }
 
 // Jobs is the shared queue behavior this context consumes. Its types are defined here;
@@ -194,8 +119,6 @@ type Jobs interface {
 }
 type PersonalizationJobs interface {
 	EnqueuePersonalization(ctx context.Context, request PersonalizationJobRequest) (string, error)
-	IsPersonalizationJobActive(ctx context.Context, jobID, userID string) (bool, error)
-	FailQueuedPersonalization(ctx context.Context, jobID, userID string, failure Failure) (bool, error)
 }
 
 // Experiments is the model-experiment context's published guard, consumed only by

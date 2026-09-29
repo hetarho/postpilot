@@ -39,9 +39,6 @@ export const postsI18n = {
       title: 'AI로 수정',
       instruction: '수정 요청을 입력하세요',
       placeholder: '어떻게 고칠까요? 예: 더 짧게 · 존댓말로 · 카페 얘기 늘려줘',
-      saveAsRule: '이 요청을 규칙으로 저장',
-      ruleLanguageMismatch:
-        '현재 본문과 말투의 샘플 언어가 달라 규칙으로 저장할 수 없어요. AI 수정 자체는 계속할 수 있습니다.',
       submit: '수정',
       prepareFailed: '편집한 글을 먼저 저장하지 못했어요.',
       blocked: {
@@ -58,9 +55,6 @@ export const postsI18n = {
       instruction: 'Enter a revision request',
       placeholder:
         'What should change? For example: make it shorter, use a formal tone, or expand the cafe section',
-      saveAsRule: 'Save this request as a rule',
-      ruleLanguageMismatch:
-        'The content and voice sample languages differ, so this cannot be saved as a rule. AI revision is still available.',
       submit: 'Revise',
       prepareFailed: 'Could not save your edits before starting the revision.',
       blocked: {

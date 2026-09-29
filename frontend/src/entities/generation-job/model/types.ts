@@ -46,6 +46,9 @@ const CLIP_KINDS = new Set([
   'revise_storyline_clip',
 ])
 
+/** The voice page's analysis run (VOICE-23), the one non-clip job whose `analyze` stage is named. */
+const VOICE_ANALYSIS_KIND = 'analyze_voice'
+
 /** WHICH STAGE is running, and nothing else. The numbers are the progress bar's value
  *  (`progressRatio`), so spelling them out here would print the same fact twice in two
  *  grammars — and in a container sized for a warning (POST-46).
@@ -119,8 +122,13 @@ export function progressLabel(
       return i18next.t('generation.writing', { ns: 'posts' })
     case 'storyline':
       return i18next.t('generation.writingStoryline', { ns: 'posts' })
+    // A voice's own analysis, on the voice page. No post job analyzes any more — the editor's
+    // learning run is gone — so the editor's label list has no 문체 분석 중 (POST-46), and a post
+    // job reporting this stage says what any unrecognized stage says.
     case 'analyze':
-      return i18next.t('generation.analyzing', { ns: 'posts' })
+      return job.kind === VOICE_ANALYSIS_KIND
+        ? i18next.t('generation.analyzing', { ns: 'posts' })
+        : i18next.t('generation.running', { ns: 'posts' })
     case 'compare_write':
       return i18next.t('generation.compareWriting', { ns: 'posts' })
     case 'compare_observe':

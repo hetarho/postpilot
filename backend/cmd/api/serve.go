@@ -200,12 +200,6 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewVoiceServiceHandler(voicerpc.NewHandler(c.voice), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewVoiceLearningServiceHandler(voicerpc.NewLearningHandler(c.voice), opts...)
-		},
-		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewVoiceValidationServiceHandler(voicerpc.NewValidationHandler(c.voice), opts...)
-		},
-		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(c.experiment), opts...)
 		},
 	}

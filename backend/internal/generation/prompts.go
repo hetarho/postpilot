@@ -443,15 +443,11 @@ func writeProfileSection(stable *strings.Builder, language Language, profile Pro
 
 	stable.WriteString("\n\n[스타일가이드]\n")
 	stable.WriteString(profile.Styleguide)
-	stable.WriteString("\n\n[활성 대조 규칙]\n")
-	stable.WriteString(profile.ActiveRules)
 	stable.WriteString("\n\n[글 예시 발췌]")
 	for i, excerpt := range profile.Excerpts {
 		fmt.Fprintf(stable, "\n%d. %s", i+1, excerpt)
 	}
 	stable.WriteString("\n예시의 고유 사실, 주제, 문구를 복사하지 말고 문체 특징만 참고하세요.")
-	stable.WriteString("\n\n[사용자 규칙]\n")
-	stable.WriteString(profile.Rules)
 	if language != LanguageKorean {
 		writeGenericLength(stable, language, targetLength)
 		return

@@ -28,9 +28,6 @@ type fakeStore struct {
 	// lock, so a test can publish the post after the service's check and before the write:
 	// the race the statements' own predicates and guards exist for.
 	beforeGuardedWrite func(slug string)
-	// beforeSnapshotRead runs first in LearningSnapshot, outside the lock, so a test can change
-	// the post between the service's own read and the snapshot's.
-	beforeSnapshotRead func(slug string)
 	// fieldAssignments counts AssignField calls, so a test can say a save named no 분야 write.
 	fieldAssignments int
 	// optionWrites counts SaveGenerationOptions calls, so a test can say one save was one write.
@@ -159,7 +156,6 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	existing.Storyline = annotations.Storyline
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
-	existing.MachineBaselineVoiceID = existing.VoiceID
 	existing.Status = StatusReview
 	existing.FinalizedRevision = 0
 	existing.FinalizedAt = nil
@@ -168,8 +164,8 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	return true, nil
 }
 
-// ReassignVoice mirrors the real single UPDATE: the id moves and the machine baseline is
-// withdrawn; canonical content, its revision, and finalization state stay.
+// ReassignVoice mirrors the real single UPDATE: the id moves and everything else stays,
+// the machine baseline included.
 func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
@@ -179,8 +175,6 @@ func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID strin
 		return false, nil
 	}
 	existing.VoiceID = voiceID
-	existing.MachineBaselineRevision = 0
-	existing.MachineBaselineVoiceID = ""
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil
@@ -332,40 +326,6 @@ func (f *fakeStore) Finalize(_ context.Context, slug, userID, title string, expe
 	existing.UpdatedAt = finalizedAt
 	f.posts[slug] = existing
 	return true, nil
-}
-
-// LearningSnapshot mirrors the store: it maps the row and judges nothing, so the service's own
-// finalization rule is what refuses an unfinalized one.
-func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (LearningSnapshot, error) {
-	f.mu.Lock()
-	hook := f.beforeSnapshotRead
-	f.mu.Unlock()
-	if hook != nil {
-		hook(slug)
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	existing, ok := f.posts[slug]
-	if !ok {
-		return LearningSnapshot{}, ErrNotFound
-	}
-	if existing.UserID != userID {
-		return LearningSnapshot{}, ErrForbidden
-	}
-	if existing.Content == nil || existing.MachineBaselineRevision <= 0 {
-		return LearningSnapshot{}, ErrNoMachineBaseline
-	}
-	snapshot := LearningSnapshot{
-		PostSlug: slug, UserID: userID, VoiceID: existing.VoiceID, MachineBaselineVoiceID: existing.MachineBaselineVoiceID,
-		Status: existing.Status, Current: *existing.Content,
-		ContentRevision: existing.ContentRevision, FinalizedRevision: existing.FinalizedRevision, MachineBaseline: *existing.Content,
-		BaselineRevision: existing.MachineBaselineRevision, TargetLength: existing.TargetLength,
-		UpdatedAt: existing.UpdatedAt, ContentLanguage: valueLanguage(existing.ContentLanguage),
-	}
-	if existing.FinalizedAt != nil {
-		snapshot.FinalizedAt = *existing.FinalizedAt
-	}
-	return snapshot, nil
 }
 
 // PublishPost mirrors the store's guarded statement: a post whose current revision is its

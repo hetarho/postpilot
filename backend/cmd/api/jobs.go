@@ -29,15 +29,6 @@ func registerJobs(c *contexts) {
 			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	}))
-	q.Register(job.KindLearnVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return voiceSvc.Learn(ctx, voice.LearningJob{UserID: found.UserID, EventID: strings.TrimSpace(string(found.Payload)), WriteModel: found.WriteModel}, voice.Progress(progress))
-	}))
-	q.Register(job.KindCompareVoiceRule, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return voiceSvc.CompareRule(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), found.WriteModel, voice.Progress(progress))
-	}))
-	q.Register(job.KindValidateVoiceProfile, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return voiceSvc.ValidateProfile(ctx, found.UserID, strings.TrimSpace(string(found.Payload)), voice.Progress(progress))
-	}))
 	q.Register(job.KindSeedVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Seed(ctx, voice.SeedJob{
 			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), Description: string(found.Payload), WriteModel: found.WriteModel,

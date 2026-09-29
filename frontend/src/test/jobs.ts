@@ -67,7 +67,6 @@ export interface FakeGenerationStart {
 export interface FakeRevisionStart {
   postSlug: string
   instruction: string
-  saveAsRule: boolean
   writeModel?: { providerId: string; modelId: string }
 }
 
@@ -144,7 +143,6 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
     options.revisions?.push({
       postSlug: req.postSlug,
       instruction: req.instruction,
-      saveAsRule: req.saveAsRule,
       writeModel: req.writeModel
         ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
         : undefined,

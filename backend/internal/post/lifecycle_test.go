@@ -32,8 +32,8 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 	if err != nil || review.Status != StatusReview || review.ContentRevision != 2 || review.FinalizedRevision != 0 {
 		t.Fatalf("changed save = %+v err=%v", review, err)
 	}
-	if _, err := svc.LearningSnapshot(context.Background(), alice, created.Slug); !errors.Is(err, ErrPostNotFinalized) {
-		t.Fatalf("learning snapshot before re-finalize = %v", err)
+	if review.FinalizedAtCurrentRevision() {
+		t.Fatalf("a changed save stayed finalized: %+v", review)
 	}
 }
 
@@ -79,10 +79,6 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
 	if err != nil || finalized.Status != StatusFinalized || finalized.TargetLanguage != LanguageEnglish || finalized.ContentLanguage == nil || *finalized.ContentLanguage != LanguageEnglish || finalized.Voice.SourceLanguage != LanguageKorean {
 		t.Fatalf("cross-language finalize = %#v, err=%v", finalized, err)
-	}
-	learning, err := svc.LearningSnapshot(ctx, alice, created.Slug)
-	if err != nil || learning.ContentLanguage != LanguageEnglish || learning.VoiceSourceLanguage != LanguageKorean {
-		t.Fatalf("learning language projection = %#v, err=%v", learning, err)
 	}
 }
 
@@ -379,7 +375,6 @@ var publishedLockExempt = map[string]string{
 	"Get":                  "read",
 	"List":                 "read",
 	"AttachedImages":       "read",
-	"LearningSnapshot":     "read",
 	"PublishedPosts":       "read",
 	"PostStatus":           "read",
 	"CurrentContent":       "read",
@@ -480,25 +475,6 @@ func TestDeletePostStillRemovesAPublishedPost(t *testing.T) {
 	}
 	if blobs.has(image.Key) || blobs.has(video.Key) {
 		t.Fatal("the delete left the post's objects behind")
-	}
-}
-
-// F13: the finalization rule judges the row the snapshot was read from. A save that demotes the
-// post between the service's own read and the snapshot's must not hand voice a revision nobody
-// finalized.
-func TestLearningSnapshotRefusesARevisionDemotedBetweenItsReads(t *testing.T) {
-	svc, store, _ := newTestService(t)
-	finalized := finalizedPost(t, svc, alice)
-	store.beforeSnapshotRead = func(slug string) {
-		store.mu.Lock()
-		defer store.mu.Unlock()
-		demoted := store.posts[slug]
-		demoted.Status = StatusReview
-		demoted.ContentRevision++
-		store.posts[slug] = demoted
-	}
-	if _, err := svc.LearningSnapshot(context.Background(), alice, finalized.Slug); !errors.Is(err, ErrPostNotFinalized) {
-		t.Fatalf("err = %v, want ErrPostNotFinalized", err)
 	}
 }
 

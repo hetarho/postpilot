@@ -89,11 +89,6 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		}
 		voices[userID] = created.ID
 	}
-	for _, userID := range []string{"alice", "bob"} {
-		if err := service.AppendRule(context.Background(), userID, voices[userID], userID+" rules"); err != nil {
-			t.Fatal(err)
-		}
-	}
 	handler := voicerpc.NewHandler(service)
 	for _, userID := range []string{"alice", "bob"} {
 		response, err := handler.GetVoiceProfile(
@@ -235,17 +230,6 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 
 func contentLanguagePtr(value postpilotv1.ContentLanguage) *postpilotv1.ContentLanguage {
 	return &value
-}
-
-func TestLearningAndValidationRPCsRequireAuthenticatedContextBeforeServiceAccess(t *testing.T) {
-	_, err := voicerpc.NewLearningHandler(nil).GetVoiceLearningEvent(context.Background(), connect.NewRequest(&postpilotv1.GetVoiceLearningEventRequest{EventId: "event"}))
-	if connect.CodeOf(err) != connect.CodeUnauthenticated {
-		t.Fatalf("learning code=%v err=%v", connect.CodeOf(err), err)
-	}
-	_, err = voicerpc.NewValidationHandler(nil).GetVoiceRuleComparison(context.Background(), connect.NewRequest(&postpilotv1.GetVoiceRuleComparisonRequest{ComparisonId: "comparison"}))
-	if connect.CodeOf(err) != connect.CodeUnauthenticated {
-		t.Fatalf("validation code=%v err=%v", connect.CodeOf(err), err)
-	}
 }
 
 // The version preview's RPC: it is where the stored snapshot stops being opaque text and

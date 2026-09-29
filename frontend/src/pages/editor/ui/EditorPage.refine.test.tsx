@@ -4,7 +4,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { USER, finalize, openFinalize, openStep, resetEditorTest } from '@/test/editor'
+import { USER, finalize, openStep, resetEditorTest } from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import type { FakeGenerationStart } from '@/test/jobs'
 import { finalizedPostRow, type FakeDraftSave } from '@/test/posts'
@@ -182,7 +182,10 @@ describe('opening a post', () => {
     expect(calls).not.toContain('FinalizePost')
   })
 
-  it('finalizes without an analyze model or learning call', async () => {
+  // POST-56: 확정하기 finalizes at once — no popover or modal between the press and the run — and
+  // needs no analyze model, because a finalize teaches no voice anything. It carries the user to
+  // 글 완성, which holds 기억으로 저장, the export and the address field, and no learning control.
+  it('finalizes at once on 확정하기 and lands on 글 완성', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-final', {
@@ -202,28 +205,28 @@ describe('opening a post', () => {
         ],
       },
     })
-    // 확정하기 ends 글 다듬기, where the post opens, and offers both ways out.
-    const panel = await openFinalize(user)
-    const only = within(panel).getByRole('button', { name: '확정' })
-    expect(only).toBeEnabled()
-    expect(within(panel).getByRole('button', { name: '확정하고 말투 학습' })).toBeDisabled()
-    await user.click(only)
+    const trigger = await screen.findByRole('button', { name: '확정하기' })
+    // A plain button, not a trigger for a surface.
+    expect(trigger).not.toHaveAttribute('aria-expanded')
+    expect(trigger).not.toHaveAttribute('aria-haspopup')
+    await user.click(trigger)
+
     await waitFor(() => expect(calls).toContain('FinalizePost'))
-    expect(calls).not.toContain('LearnFromFinalizedPost')
-    // Confirming carries the user to 글 완성, whose own action is learning — and this account has
-    // no analyze model, so it is offered as disabled rather than hidden.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
     )
-    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
+    expect(calls.filter((call) => call.includes('Learn'))).toEqual([])
   })
 
-  it('keeps the post finalized when explicit learning fails', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
+  // ② used to warn when the draft's language differed from its voice's samples — a notice that
+  // only ever said why the post could not teach that voice, and a finalized post teaches no voice
+  // now. The notice the post's own target and content languages raise is a different one.
+  it('shows no voice/content language notice on ②', async () => {
     renderAppAt('/posts/20260820-final', {
       user: USER,
-      calls,
       posts: {
         posts: [
           {
@@ -234,29 +237,19 @@ describe('opening a post', () => {
             contentRevision: 1n,
             machineBaselineRevision: 1n,
             canFinalize: true,
+            contentLanguage: 'ko',
+            voice: { id: 'voice-english', name: '영어 말투', sourceLanguage: 'en' },
           },
         ],
       },
-      voice: { learningFails: true },
-      providers: {
-        models: [{ providerId: 'openrouter', modelId: 'analyzer' }],
-        selections: [{ stage: Stage.ANALYZE, providerId: 'openrouter', modelId: 'analyzer' }],
-      },
     })
-    const panel = await openFinalize(user)
-    const combined = within(panel).getByRole('button', { name: '확정하고 말투 학습' })
-    await waitFor(() => expect(combined).toBeEnabled())
-    await user.click(combined)
-    await waitFor(() =>
-      expect(calls).toEqual(expect.arrayContaining(['FinalizePost', 'LearnFromFinalizedPost'])),
-    )
-    // The failure is reported on 글 완성 — where the learning run lands — and the finalize it
-    // followed still stands, so only learning is retried.
-    await waitFor(() =>
-      expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
-    )
-    expect(screen.getByText(/글은 확정됐지만 말투 학습은 시작하지 못했어요/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 학습' })).toBeEnabled()
+
+    const panel = await screen.findByRole('tabpanel', { name: '글 다듬기' })
+    expect(
+      await within(panel).findByRole('button', { name: '제목과 요약, 태그 수정' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/말투의 언어|언어가 달라/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
   })
 
   it('returns a finalized post to review after the first changed content save', async () => {
@@ -271,15 +264,14 @@ describe('opening a post', () => {
     })
 
     // A finalized post opens on 글 완성.
-    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
 
     await openStep(user, '글 다듬기')
     await user.click(await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }))
     await user.type(screen.getByLabelText('본문 제목'), ' 수정')
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
 
-    // Back in review, so 확정 is offered again where it belongs, and 글 완성 can no longer learn
-    // from a revision the post has moved past.
+    // Back in review, so 확정하기 is offered again where it belongs, and nowhere else.
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
         'aria-selected',
@@ -289,7 +281,7 @@ describe('opening a post', () => {
     expect(await screen.findByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     await openStep(user, '글 완성')
-    expect(await screen.findByRole('button', { name: '말투 학습' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
   })
 })

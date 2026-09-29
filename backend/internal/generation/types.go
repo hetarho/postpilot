@@ -231,9 +231,7 @@ type PostInput struct {
 
 type Profile struct {
 	Styleguide           string
-	ActiveRules          string
 	Excerpts             []string
-	Rules                string
 	EndingMaxConsecutive int
 	SourceLanguage       Language
 	TargetLanguage       Language
@@ -286,7 +284,6 @@ type StartRevisionRequest struct {
 	PostSlug          string
 	VoiceID           string
 	Instruction       string
-	SaveAsRule        bool
 	WriteModel        string
 	ContentLanguage   Language
 	Template          *TemplateBrief

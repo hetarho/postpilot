@@ -5,8 +5,8 @@ import { useStartMemoryExtraction } from '@/entities/memory'
 import { Button, FieldMessage, Typography } from '@/shared/ui'
 import { MemoryCandidateSheet } from './MemoryCandidateSheet'
 
-/** ③'s `기억으로 저장`, beside 말투 학습 (POST-72). It starts the extraction job, polls it, and
- *  opens its candidates in a sheet.
+/** ③'s `기억으로 저장` (POST-72). It starts the extraction job, polls it, and opens its
+ *  candidates in a sheet.
  *
  *  Nothing is stored by pressing it: the job PROPOSES and the user approves (MEM-14, MEM-15). A
  *  start refusal, a failed job or a closed sheet all leave the post exactly as it was. */

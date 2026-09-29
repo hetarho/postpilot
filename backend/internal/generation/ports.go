@@ -39,10 +39,6 @@ type TopicProfiles interface {
 	ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (Profile, error)
 }
 
-type RuleWriter interface {
-	AppendRule(ctx context.Context, userID, voiceID, line string) error
-}
-
 // VersionSampleWriter records what a voice profile version PRODUCED, so a version can be read
 // before it is adopted (VOICE-29).
 //

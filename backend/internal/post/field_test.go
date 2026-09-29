@@ -117,8 +117,8 @@ func TestAFieldSaveIsAnOptionSave(t *testing.T) {
 		!after.FinalizedAt.Equal(*before.FinalizedAt) {
 		t.Fatalf("a 분야 save moved the lifecycle: before %+v\nafter %+v", before, after)
 	}
-	if _, err := svc.LearningSnapshot(ctx, alice, finalized.Slug); err != nil {
-		t.Fatalf("the post stopped being learnable: %v", err)
+	if got, err := svc.Get(ctx, alice, finalized.Slug); err != nil || !got.FinalizedAtCurrentRevision() {
+		t.Fatalf("the post stopped being finalized: %+v, %v", got, err)
 	}
 	calls := store.fieldAssignments
 	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: finalized.Slug, Title: before.Title, Memo: before.Memo, Field: fieldPtr("restaurant")}); err != nil {

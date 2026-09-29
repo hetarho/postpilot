@@ -5,9 +5,7 @@ package generation
 func goldenProfile() Profile {
 	return Profile{
 		Styleguide:           "STYLE 스타일가이드",
-		ActiveRules:          "ACTIVE 대조 규칙",
 		Excerpts:             []string{"EXCERPT-1", "EXCERPT-2"},
-		Rules:                "RULES 사용자 규칙",
 		EndingMaxConsecutive: 2,
 	}
 }

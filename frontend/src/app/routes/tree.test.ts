@@ -65,10 +65,6 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/voices/$voiceId',
     '/voices/$voiceId/',
     '/voices/$voiceId/import',
-    '/voices/$voiceId/rules',
-    '/voices/$voiceId/rules/$id/compare',
-    '/voices/$voiceId/validations',
-    '/voices/$voiceId/validations/$id',
     '/voices/$voiceId/versions',
   ])
 })

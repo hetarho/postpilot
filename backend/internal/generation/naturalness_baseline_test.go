@@ -42,7 +42,8 @@ func TestNaturalKoreanDefaultContract(t *testing.T) {
 			t.Errorf("rejected folk-rule marker %q is present", rejected)
 		}
 	}
-	if !strings.HasSuffix(baseline, "말투 프로필, 활성 대조 규칙, 사용자 규칙과 충돌하면 그쪽을 따르세요.") {
+	// Conditional, so it stays true for a post with no voice (GEN-17).
+	if !strings.HasSuffix(baseline, "위에 말투가 있으면, 말투와 충돌할 때 말투를 따르세요.") {
 		t.Fatal("the voice's precedence must close the baseline")
 	}
 	if got := utf8.RuneCountInString(baseline); got > 700 {

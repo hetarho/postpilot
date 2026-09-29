@@ -229,7 +229,7 @@ func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
 	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"}, "", "voice-alice")); !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("same voice analysis = %v, want active %s", err, first)
 	}
-	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindLearnVoice, UserID: "alice"}, "", "voice-alice")); err != nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindSeedVoice, UserID: "alice"}, "", "voice-alice")); err != nil {
 		t.Fatalf("another kind for the same voice: %v", err)
 	}
 	found, err := h.queue.Get(ctx, second, "alice")
@@ -254,44 +254,6 @@ func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
 	// The (voice, kind) index closes the race the precheck cannot: a direct insert races.
 	if _, err := h.handle.Writer.ExecContext(ctx, "INSERT INTO generation_jobs(id,user_id,voice_id,kind,status,progress_done,progress_total,payload,created_at,updated_at) VALUES('dup','alice','voice-alice','analyze_voice','queued',0,0,'',?,?)", "2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err == nil {
 		t.Fatal("the database accepted a second active analysis for one voice")
-	}
-}
-
-// Learning and comparison jobs carry the triggering post for post-level lifecycle guards,
-// but that must not weaken their per-voice serialization.
-func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
-	h := newHarness(t)
-	ctx := context.Background()
-	if _, err := h.handle.Writer.ExecContext(ctx,
-		"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES ('post-c', 'alice', 'voice-alice-2', ?, ?)",
-		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err != nil {
-		t.Fatalf("insert second-voice post: %v", err)
-	}
-	first, err := h.queue.Enqueue(ctx, attach(job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice"}, "post-a", "voice-alice"))
-	if err != nil {
-		t.Fatalf("first learning job: %v", err)
-	}
-	var active *job.ErrAlreadyInProgress
-	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice"}, "post-b", "voice-alice")); !errors.As(err, &active) || active.ActiveID != first {
-		t.Fatalf("same voice learning on another post = %v, want active %s", err, first)
-	}
-	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice"}, "post-c", "voice-alice-2")); err != nil {
-		t.Fatalf("another voice learning on another post: %v", err)
-	}
-	if _, err := h.handle.Writer.ExecContext(ctx,
-		"INSERT INTO generation_jobs(id,post_slug,user_id,voice_id,kind,status,progress_done,progress_total,payload,created_at,updated_at) VALUES('dup-post','post-b','alice','voice-alice','learn_voice','queued',0,0,'',?,?)",
-		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err == nil {
-		t.Fatal("the database accepted a second post-backed learning job for one voice")
-	}
-	if err := h.store.Insert(ctx, job.Job{
-		ID: "store-dup", Kind: job.KindLearnVoice, UserID: "alice",
-		Subjects:  []job.Subject{{Dimension: postSubject, ID: "post-b"}, {Dimension: voiceSubject, ID: "voice-alice"}},
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
-	}); !errors.Is(err, job.ErrActiveConflict) {
-		t.Fatalf("store duplicate error = %v, want ErrActiveConflict", err)
 	}
 }
 
@@ -442,8 +404,8 @@ func TestSweepAndOwnership(t *testing.T) {
 func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	ids := make([]string, 0, 4)
-	for _, kind := range []string{job.KindLearnVoice, job.KindCompareVoiceRule, job.KindValidateVoiceProfile, job.KindSeedVoice} {
+	ids := make([]string, 0, 1)
+	for _, kind := range []string{job.KindSeedVoice} {
 		id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: kind, UserID: "alice"})
 		if err != nil {
 			t.Fatal(err)
@@ -454,7 +416,7 @@ func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 4 {
+	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 1 {
 		t.Fatalf("sweep queued personalization = %d, %v", n, err)
 	}
 	for _, id := range ids {
@@ -472,7 +434,7 @@ func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 func TestFailQueuedIsOwnerScopedAndCannotStopRunningWork(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindValidateVoiceProfile, UserID: "alice"})
+	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindSeedVoice, UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
