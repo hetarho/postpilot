@@ -206,6 +206,17 @@ type ClipSourceLease struct {
 	Position            int64
 }
 
+type ServerExportWindow struct {
+	UserID        string
+	CoverageID    string
+	WindowStart   string
+	WindowEnd     string
+	Allowance     int64
+	Used          int64
+	Reserved      int64
+	CorrelationID sql.NullString
+}
+
 type VideoTemplate struct {
 	ID                   string
 	UserID               string

@@ -19,6 +19,15 @@ func (q *Queries) DeletePaymentMethod(ctx context.Context, userID string) error 
 	return err
 }
 
+const deleteSupportCoverage = `-- name: DeleteSupportCoverage :exec
+DELETE FROM support_coverages WHERE user_id = ?
+`
+
+func (q *Queries) DeleteSupportCoverage(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteSupportCoverage, userID)
+	return err
+}
+
 const getCreditPurchase = `-- name: GetCreditPurchase :one
 SELECT p.id, p.user_id, p.lot_id, p.credits, p.usd_cents, p.krw,
        e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
@@ -90,15 +99,32 @@ func (q *Queries) GetPaymentMethod(ctx context.Context, userID string) (PaymentM
 const getSubscription = `-- name: GetSubscription :one
 
 SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-       scheduled_tier, scheduled_term, status, created_at, updated_at
+       scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
 FROM subscriptions WHERE user_id = ?
 `
 
+type GetSubscriptionRow struct {
+	UserID        string
+	Tier          string
+	Term          string
+	AnchorAt      string
+	TermStart     string
+	TermEnd       string
+	NextGrantAt   string
+	AutoRenew     int64
+	ScheduledTier sql.NullString
+	ScheduledTerm sql.NullString
+	Status        string
+	CreatedAt     string
+	UpdatedAt     string
+	CoverageID    sql.NullString
+}
+
 // Billing owns these reads and notification writes. billing_events deliberately has no
 // UPDATE or DELETE query: its history is append-only at the application boundary.
-func (q *Queries) GetSubscription(ctx context.Context, userID string) (Subscription, error) {
+func (q *Queries) GetSubscription(ctx context.Context, userID string) (GetSubscriptionRow, error) {
 	row := q.db.QueryRowContext(ctx, getSubscription, userID)
-	var i Subscription
+	var i GetSubscriptionRow
 	err := row.Scan(
 		&i.UserID,
 		&i.Tier,
@@ -112,6 +138,25 @@ func (q *Queries) GetSubscription(ctx context.Context, userID string) (Subscript
 		&i.ScheduledTerm,
 		&i.Status,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CoverageID,
+	)
+	return i, err
+}
+
+const getSupportCoverage = `-- name: GetSupportCoverage :one
+SELECT user_id,coverage_id,tier,anchor_at,updated_at
+FROM support_coverages WHERE user_id = ?
+`
+
+func (q *Queries) GetSupportCoverage(ctx context.Context, userID string) (SupportCoverage, error) {
+	row := q.db.QueryRowContext(ctx, getSupportCoverage, userID)
+	var i SupportCoverage
+	err := row.Scan(
+		&i.UserID,
+		&i.CoverageID,
+		&i.Tier,
+		&i.AnchorAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -226,6 +271,33 @@ func (q *Queries) InsertProviderNotification(ctx context.Context, arg InsertProv
 	return err
 }
 
+const insertTierTransition = `-- name: InsertTierTransition :execrows
+INSERT INTO entitlement_tier_transitions(user_id,coverage_id,effective_at,tier,correlation_id)
+VALUES (?, ?, ?, ?, ?) ON CONFLICT(correlation_id) DO NOTHING
+`
+
+type InsertTierTransitionParams struct {
+	UserID        string
+	CoverageID    string
+	EffectiveAt   string
+	Tier          string
+	CorrelationID string
+}
+
+func (q *Queries) InsertTierTransition(ctx context.Context, arg InsertTierTransitionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, insertTierTransition,
+		arg.UserID,
+		arg.CoverageID,
+		arg.EffectiveAt,
+		arg.Tier,
+		arg.CorrelationID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const listBillingEvents = `-- name: ListBillingEvents :many
 SELECT id, user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
        krw, provider_payment_key, order_id, note, created_at
@@ -237,15 +309,32 @@ type ListBillingEventsParams struct {
 	Limit  int64
 }
 
-func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsParams) ([]BillingEvent, error) {
+type ListBillingEventsRow struct {
+	ID                 int64
+	UserID             string
+	Kind               string
+	Tier               sql.NullString
+	Term               sql.NullString
+	Credits            sql.NullInt64
+	UsdCents           sql.NullInt64
+	KrwPerUsdE4        sql.NullInt64
+	RateDate           sql.NullString
+	Krw                sql.NullInt64
+	ProviderPaymentKey sql.NullString
+	OrderID            sql.NullString
+	Note               sql.NullString
+	CreatedAt          string
+}
+
+func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsParams) ([]ListBillingEventsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listBillingEvents, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []BillingEvent
+	var items []ListBillingEventsRow
 	for rows.Next() {
-		var i BillingEvent
+		var i ListBillingEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -337,21 +426,38 @@ func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]Lis
 
 const listDueSubscriptions = `-- name: ListDueSubscriptions :many
 SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-       scheduled_tier, scheduled_term, status, created_at, updated_at
+       scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
 FROM subscriptions
 WHERE status = 'active' AND next_grant_at <= ?
 ORDER BY next_grant_at, user_id
 `
 
-func (q *Queries) ListDueSubscriptions(ctx context.Context, nextGrantAt string) ([]Subscription, error) {
+type ListDueSubscriptionsRow struct {
+	UserID        string
+	Tier          string
+	Term          string
+	AnchorAt      string
+	TermStart     string
+	TermEnd       string
+	NextGrantAt   string
+	AutoRenew     int64
+	ScheduledTier sql.NullString
+	ScheduledTerm sql.NullString
+	Status        string
+	CreatedAt     string
+	UpdatedAt     string
+	CoverageID    sql.NullString
+}
+
+func (q *Queries) ListDueSubscriptions(ctx context.Context, nextGrantAt string) ([]ListDueSubscriptionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listDueSubscriptions, nextGrantAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Subscription
+	var items []ListDueSubscriptionsRow
 	for rows.Next() {
-		var i Subscription
+		var i ListDueSubscriptionsRow
 		if err := rows.Scan(
 			&i.UserID,
 			&i.Tier,
@@ -366,6 +472,7 @@ func (q *Queries) ListDueSubscriptions(ctx context.Context, nextGrantAt string) 
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CoverageID,
 		); err != nil {
 			return nil, err
 		}
@@ -397,6 +504,25 @@ func (q *Queries) MarkCreditPurchaseRefunded(ctx context.Context, arg MarkCredit
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const tierAt = `-- name: TierAt :one
+SELECT tier FROM entitlement_tier_transitions
+WHERE user_id = ? AND coverage_id = ? AND effective_at <= ?
+ORDER BY effective_at DESC LIMIT 1
+`
+
+type TierAtParams struct {
+	UserID      string
+	CoverageID  string
+	EffectiveAt string
+}
+
+func (q *Queries) TierAt(ctx context.Context, arg TierAtParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, tierAt, arg.UserID, arg.CoverageID, arg.EffectiveAt)
+	var tier string
+	err := row.Scan(&tier)
+	return tier, err
 }
 
 const upsertPaymentMethod = `-- name: UpsertPaymentMethod :exec
@@ -435,8 +561,8 @@ func (q *Queries) UpsertPaymentMethod(ctx context.Context, arg UpsertPaymentMeth
 const upsertSubscription = `-- name: UpsertSubscription :exec
 INSERT INTO subscriptions (
     user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-    scheduled_tier, scheduled_term, status, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(user_id) DO UPDATE SET
     tier = excluded.tier,
     term = excluded.term,
@@ -448,7 +574,8 @@ ON CONFLICT(user_id) DO UPDATE SET
     scheduled_tier = excluded.scheduled_tier,
     scheduled_term = excluded.scheduled_term,
     status = excluded.status,
-    updated_at = excluded.updated_at
+    updated_at = excluded.updated_at,
+    coverage_id = excluded.coverage_id
 `
 
 type UpsertSubscriptionParams struct {
@@ -465,6 +592,7 @@ type UpsertSubscriptionParams struct {
 	Status        string
 	CreatedAt     string
 	UpdatedAt     string
+	CoverageID    sql.NullString
 }
 
 func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
@@ -481,6 +609,33 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 		arg.ScheduledTerm,
 		arg.Status,
 		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.CoverageID,
+	)
+	return err
+}
+
+const upsertSupportCoverage = `-- name: UpsertSupportCoverage :exec
+INSERT INTO support_coverages(user_id,coverage_id,tier,anchor_at,updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET coverage_id = excluded.coverage_id,
+    tier = excluded.tier, anchor_at = excluded.anchor_at, updated_at = excluded.updated_at
+`
+
+type UpsertSupportCoverageParams struct {
+	UserID     string
+	CoverageID string
+	Tier       string
+	AnchorAt   string
+	UpdatedAt  string
+}
+
+func (q *Queries) UpsertSupportCoverage(ctx context.Context, arg UpsertSupportCoverageParams) error {
+	_, err := q.db.ExecContext(ctx, upsertSupportCoverage,
+		arg.UserID,
+		arg.CoverageID,
+		arg.Tier,
+		arg.AnchorAt,
 		arg.UpdatedAt,
 	)
 	return err

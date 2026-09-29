@@ -47,6 +47,7 @@ func (t Term) Valid() bool { return t == TermMonthly || t == TermAnnual }
 
 type Subscription struct {
 	UserID        string
+	CoverageID    string
 	Tier          plan.Plan
 	Term          Term
 	AnchorAt      time.Time
@@ -59,6 +60,22 @@ type Subscription struct {
 	Status        string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+type Coverage struct {
+	ID        string
+	Anchor    time.Time
+	End       time.Time
+	Tier      plan.Plan
+	DailyTier plan.Plan
+}
+
+type SupportCoverage struct {
+	UserID    string
+	ID        string
+	Tier      plan.Plan
+	Anchor    time.Time
+	UpdatedAt time.Time
 }
 
 type PaymentMethod struct {
@@ -214,9 +231,7 @@ func TermEnd(anchor, start time.Time, term Term) time.Time {
 	if term == TermAnnual {
 		windows = 12
 	}
-	current := start
-	for range windows {
-		_, current = plan.AnchorWindow(anchor, current)
-	}
-	return current
+	a, s := anchor.In(time.FixedZone("Asia/Seoul", 9*60*60)), start.In(time.FixedZone("Asia/Seoul", 9*60*60))
+	index := (s.Year()-a.Year())*12 + int(s.Month()-a.Month())
+	return plan.MonthBoundary(anchor, index+windows)
 }

@@ -65,7 +65,7 @@ func TestRegisterPaymentMethodGatesBeforeProviderAndWritesNothingOnProviderFailu
 	}
 }
 
-func TestRegisterPaymentMethodReplacesCardAndGrantsBonusOnlyOnce(t *testing.T) {
+func TestRegisterPaymentMethodReplacesCardWithoutGrantingCredits(t *testing.T) {
 	ctx := context.Background()
 	store := newRegistrationStore()
 	provider := &registrationProvider{}
@@ -74,15 +74,15 @@ func TestRegisterPaymentMethodReplacesCardAndGrantsBonusOnlyOnce(t *testing.T) {
 	svc.now = func() time.Time { return now }
 
 	first, err := svc.RegisterPaymentMethod(ctx, "alice", "auth-1", CustomerKey("alice"))
-	if err != nil || !first.BonusGranted || store.method == nil || store.method.CardLabel != "11 1234" || len(store.events) != 2 {
+	if err != nil || first.BonusGranted || store.method == nil || store.method.CardLabel != "11 1234" || len(store.events) != 1 {
 		t.Fatalf("first=%+v method=%+v events=%+v err=%v", first, store.method, store.events, err)
 	}
-	if store.events[0].Kind != "method_registered" || store.events[1].Kind != "grant" || store.events[1].Credits == nil || *store.events[1].Credits != plan.PaymentMethodBonusCredits {
+	if store.events[0].Kind != "method_registered" {
 		t.Fatalf("first events=%+v", store.events)
 	}
 	provider.cardLabel = "22 9876"
 	second, err := svc.RegisterPaymentMethod(ctx, "alice", "auth-2", CustomerKey("alice"))
-	if err != nil || second.BonusGranted || store.method.CardLabel != "22 9876" || len(store.events) != 3 || len(store.credits.grants) != 1 {
+	if err != nil || second.BonusGranted || store.method.CardLabel != "22 9876" || len(store.events) != 2 || len(store.credits.grants) != 0 {
 		t.Fatalf("second=%+v method=%+v events=%+v grants=%+v err=%v", second, store.method, store.events, store.credits.grants, err)
 	}
 }
@@ -315,4 +315,33 @@ func (stubProvider) PaymentByOrder(context.Context, string) (Payment, bool, erro
 func (stubProvider) Refund(context.Context, string, string) error { return nil }
 func (stubProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
+}
+
+func (*registrationStore) TierAt(context.Context, string, string, time.Time) (plan.Plan, error) {
+	return plan.Basic, nil
+}
+func (*registrationStore) InsertTierTransition(context.Context, string, string, time.Time, plan.Plan, string) error {
+	return nil
+}
+func (*registrationStore) SupportCoverage(context.Context, string) (SupportCoverage, bool, error) {
+	return SupportCoverage{}, false, nil
+}
+func (*registrationStore) UpsertSupportCoverage(context.Context, SupportCoverage) error { return nil }
+func (*registrationStore) DeleteSupportCoverage(context.Context, string) error          { return nil }
+func (emptyStore) TierAt(context.Context, string, string, time.Time) (plan.Plan, error) {
+	return plan.Basic, nil
+}
+func (emptyStore) InsertTierTransition(context.Context, string, string, time.Time, plan.Plan, string) error {
+	return nil
+}
+func (emptyStore) SupportCoverage(context.Context, string) (SupportCoverage, bool, error) {
+	return SupportCoverage{}, false, nil
+}
+func (emptyStore) UpsertSupportCoverage(context.Context, SupportCoverage) error { return nil }
+func (emptyStore) DeleteSupportCoverage(context.Context, string) error          { return nil }
+func (*registrationCredits) OpenCoverage(context.Context, string, Coverage, time.Time, string) error {
+	return nil
+}
+func (*registrationCredits) AddUpgradeBonus(context.Context, string, Coverage, time.Time, int, int, string) error {
+	return nil
 }

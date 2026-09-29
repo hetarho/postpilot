@@ -59,7 +59,9 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 		if len(provider.requests) != 1 || provider.requests[0].OrderID != "upg:alice:2026-06-14T03:00:00Z" || provider.requests[0].KRW != 9_748 {
 			t.Fatalf("requests = %+v", provider.requests)
 		}
-		if kinds(store.events) != "charge,tier_change" || len(store.credits.raises) != 1 || store.credits.raises[0] != 820 || store.plans.tiers["alice"] != plan.Pro {
+		benefitStart, benefitEnd := plan.BenefitWindow(anchor, now)
+		wantBonus, _ := plan.ProrateCeil(1070-510, benefitStart, benefitEnd, now)
+		if kinds(store.events) != "charge,tier_change" || len(store.credits.raises) != 1 || store.credits.raises[0] != int(wantBonus) || store.plans.tiers["alice"] != plan.Pro {
 			t.Fatalf("events=%s raises=%v tier=%s", kinds(store.events), store.credits.raises, store.plans.tiers["alice"])
 		}
 

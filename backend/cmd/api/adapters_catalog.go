@@ -110,10 +110,15 @@ func (b planBalance) BalanceFor(ctx context.Context, userID string, acting plan.
 	for _, lot := range found.Lots {
 		lots = append(lots, planrpc.Lot{
 			Kind: string(lot.Kind), Granted: lot.Granted, Remaining: lot.Remaining,
-			ExpiresAt: lot.ExpiresAt,
+			ExpiresAt: lot.ExpiresAt, CoverageID: lot.CoverageID,
+			WindowStart: lot.WindowStart, IssuanceCause: lot.IssuanceCause,
 		})
 	}
 	return planrpc.Balance{
 		Credits: found.Credits, Unlimited: found.Unlimited, Lots: lots, RenewsAt: found.RenewsAt,
+		DailyGrant: found.DailyGrant, MonthlyBonus: found.MonthlyBonus,
+		DailyResetsAt: found.DailyResetsAt, BonusResetsAt: found.BonusResetsAt,
+		CoverageID: found.CoverageID, CoverageEnd: found.CoverageEnd,
+		BenefitStart: found.BenefitStart, BenefitEnd: found.BenefitEnd,
 	}, nil
 }

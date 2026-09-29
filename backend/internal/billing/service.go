@@ -133,7 +133,7 @@ func (s *Service) RegisterPaymentMethod(ctx context.Context, userID, authKey, cu
 		CustomerKey: expectedKey, CardLabel: issued.CardLabel, RegisteredAt: now,
 	}
 	result := PaymentMethodRegistration{PaymentMethod: method}
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, _ Plans) error {
+	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
 		if err := tx.UpsertPaymentMethod(ctx, method); err != nil {
 			return err
 		}
@@ -141,19 +141,6 @@ func (s *Service) RegisterPaymentMethod(ctx context.Context, userID, authKey, cu
 		if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "method_registered", Note: &note, CreatedAt: now}); err != nil {
 			return err
 		}
-		created, err := credits.GrantBonusOnce(
-			ctx, "payment-method-bonus:"+userID, userID, plan.PaymentMethodBonusCredits,
-		)
-		if err != nil {
-			return err
-		}
-		if created {
-			amount := plan.PaymentMethodBonusCredits
-			if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "grant", Credits: &amount, CreatedAt: now}); err != nil {
-				return err
-			}
-		}
-		result.BonusGranted = created
 		return nil
 	})
 	if err != nil {

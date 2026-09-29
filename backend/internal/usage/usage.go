@@ -50,6 +50,9 @@ type Admission struct {
 	HoldCredits               int
 	CreatedAt                 time.Time
 	ApprovedMaxCredits        *int
+	CoverageID                string
+	DailyWindowStart          *time.Time
+	BenefitWindowStart        *time.Time
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.
@@ -82,8 +85,10 @@ type JobCost struct {
 // expired or a new one opened, and refunding into the wrong lot would move credits
 // between expiry dates.
 type LotDebit struct {
-	LotID   string
-	Credits int
+	LotID             string
+	Credits           int
+	OriginCoverageID  string
+	OriginWindowStart *time.Time
 }
 
 // LotKind separates the monthly grant from a bonus, from credits that were bought and from
@@ -94,6 +99,7 @@ type LotDebit struct {
 type LotKind string
 
 const (
+	LotDaily   LotKind = "daily"
 	LotMonthly LotKind = "monthly"
 	LotBonus   LotKind = "bonus"
 	// LotPurchased is credits the account paid for. They never expire and they are the
@@ -106,11 +112,15 @@ const (
 
 // Lot is one grant of credits.
 type Lot struct {
-	ID        string
-	UserID    string
-	Kind      LotKind
-	Granted   int
-	Remaining int
+	ID            string
+	UserID        string
+	Kind          LotKind
+	CoverageID    string
+	WindowStart   *time.Time
+	IssuanceCause string
+	CorrelationID string
+	Granted       int
+	Remaining     int
 	// ExpiresAt is nil for a grant that does not expire. Consumption spends every expiring
 	// lot before any of those, so a lot that would otherwise lapse is spent first.
 	ExpiresAt *time.Time
@@ -183,5 +193,29 @@ type Balance struct {
 	Lots      []Lot
 	// RenewsAt is when the next monthly grant opens. It is the instant every refusal
 	// names, so a user is never told "later" without being told when.
-	RenewsAt time.Time
+	RenewsAt      time.Time
+	DailyGrant    int
+	MonthlyBonus  int
+	DailyResetsAt time.Time
+	BonusResetsAt time.Time
+	CoverageID    string
+	CoverageEnd   time.Time
+	BenefitStart  time.Time
+	BenefitEnd    time.Time
+}
+
+// Coverage is the entitlement identity and tier history supplied by its owner. A zero
+// End means an open-ended support assignment, never a card-funded subscription.
+type Coverage struct {
+	ID        string
+	Anchor    time.Time
+	End       time.Time
+	Tier      plan.Plan
+	DailyTier plan.Plan
+}
+
+type ExportWindow struct {
+	UserID, CoverageID string
+	Start, End         time.Time
+	Allowance          int
 }

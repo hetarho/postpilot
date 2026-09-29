@@ -3,8 +3,30 @@
 
 -- name: GetSubscription :one
 SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-       scheduled_tier, scheduled_term, status, created_at, updated_at
+       scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
 FROM subscriptions WHERE user_id = ?;
+
+-- name: TierAt :one
+SELECT tier FROM entitlement_tier_transitions
+WHERE user_id = ? AND coverage_id = ? AND effective_at <= ?
+ORDER BY effective_at DESC LIMIT 1;
+
+-- name: InsertTierTransition :execrows
+INSERT INTO entitlement_tier_transitions(user_id,coverage_id,effective_at,tier,correlation_id)
+VALUES (?, ?, ?, ?, ?) ON CONFLICT(correlation_id) DO NOTHING;
+
+-- name: GetSupportCoverage :one
+SELECT user_id,coverage_id,tier,anchor_at,updated_at
+FROM support_coverages WHERE user_id = ?;
+
+-- name: UpsertSupportCoverage :exec
+INSERT INTO support_coverages(user_id,coverage_id,tier,anchor_at,updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET coverage_id = excluded.coverage_id,
+    tier = excluded.tier, anchor_at = excluded.anchor_at, updated_at = excluded.updated_at;
+
+-- name: DeleteSupportCoverage :exec
+DELETE FROM support_coverages WHERE user_id = ?;
 
 -- name: GetPaymentMethod :one
 SELECT user_id, provider, billing_key, customer_key, card_label, registered_at
@@ -73,8 +95,8 @@ INSERT INTO billing_events (
 -- name: UpsertSubscription :exec
 INSERT INTO subscriptions (
     user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-    scheduled_tier, scheduled_term, status, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(user_id) DO UPDATE SET
     tier = excluded.tier,
     term = excluded.term,
@@ -86,11 +108,12 @@ ON CONFLICT(user_id) DO UPDATE SET
     scheduled_tier = excluded.scheduled_tier,
     scheduled_term = excluded.scheduled_term,
     status = excluded.status,
-    updated_at = excluded.updated_at;
+    updated_at = excluded.updated_at,
+    coverage_id = excluded.coverage_id;
 
 -- name: ListDueSubscriptions :many
 SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
-       scheduled_tier, scheduled_term, status, created_at, updated_at
+       scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id
 FROM subscriptions
 WHERE status = 'active' AND next_grant_at <= ?
 ORDER BY next_grant_at, user_id;

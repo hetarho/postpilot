@@ -58,7 +58,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T477 | Grant daily credits and monthly bonuses once, with origin-period reservations | QUOTA AUTH ARCH | T476 | todo |
 | T478 | Settle AI cost at a frozen FX rate and issue seven-day fault compensation | QUOTA CLIP ARCH | T477 | todo |
 | T479 | Charge fixed KRW monthly/annual plans and prorate paid upgrades | BILL QUOTA ARCH | T477 | todo |
 | T480 | Enforce curated free models and cumulative paid grades on every AI path | MODEL QUOTA CLIP ARCH | T474 T478 | todo |
@@ -71,10 +70,12 @@
 | T487 | Reset test entitlements and verify the complete pricing transition | QUOTA BILL MODEL CLIP AUTH MKT ARCH | T483 T486 | todo |
 
 ## next
-- next: implement-task T477, then T478–T487 by their dependency graph; T480 consumes completed voice T474. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate
+- next: implement-task T478, then T479–T487 by their dependency graph; T480 consumes completed voice T474. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); T486 includes the /about header check at 320px/200% text; T479/T485 replace the current USD billing flow before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
 
 ## log
+- 260930 T477 done: paid daily/monthly credit and export windows are idempotent, upgrade and support transitions are atomic, origin-period holds survive resets; migration 0115 and full verification passed
+- 260930 T477 claimed (p6): daily and monthly entitlements follow the completed T476 period and offer foundation
 - 260930 T476 done: five KRW offers and Light identity are published; migration 0114 preserves accounts while widening the plan constraint; anchored KST month and 24-hour day periods, integer proration, zero free signup grants and Light dev fixture are verified
 - 260930 T475 done: prod keeps one voice, `맛집 리뷰 블로거 학습` with its pasted post as its one 학습 글; the other 9 voices and their 학습 글 are gone, their 9 posts are 말투 없음 with text untouched (backup `postpilot-before-T475.db`)
 - 260930 T475 claimed (e5): owner said yes to the prod edit; T468–T474 pushed (c1fc3c11)
@@ -93,6 +94,3 @@
 - 260929 T468 claimed (e5): chain T468→T474, one commit per task; T475 (prod hand edit) waits for the owner
 - 260929 T467 done: a post may have no voice — posts.voice_id is nullable and machine_baseline_voice_id is gone (migration 0108), a named voice must be active and made (VOICE_NOT_MADE), runs freeze the voice or its absence, a 말투 없음 prompt carries no voice bytes and ①'s picker offers 말투 없음, the made voices, unmade ones as 만드는 중 and 새 말투 만들기
 - 260929 T467 claimed (vfp)
-- 260929 pricing docs verified: 86 changed decisions mapped to T476–T487; dependency graph, current task bases and STATE rows consistent; spec lint has no errors (44 warnings, mainly consumed-chg/legacy result checks plus immutable T467 freshness); no application tests or data mutation needed for this documentation pass
-- 260929 create-task pricing complete: T476–T487 consume QUOTA25 BILL5 MODEL21 CLIP53 GIFT3 AUTH11 MKT9; refreshed todo T468/T469 bases and T473/T474 shared-gate/selector integration; doing T467 unchanged (MODEL-31 unchanged); ARCH pending retained; implementation/reset not run
-- 260929 create-task QUOTA BILL MODEL CLIP GIFT AUTH MKT start: pricing delta only; THEME/LANG reused unchanged and ARCH pending remains separate; refresh overlapping todo voice contracts without changing doing T467

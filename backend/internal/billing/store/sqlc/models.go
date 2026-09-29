@@ -4,27 +4,6 @@
 
 package sqlc
 
-import (
-	"database/sql"
-)
-
-type BillingEvent struct {
-	ID                 int64
-	UserID             string
-	Kind               string
-	Tier               sql.NullString
-	Term               sql.NullString
-	Credits            sql.NullInt64
-	UsdCents           sql.NullInt64
-	KrwPerUsdE4        sql.NullInt64
-	RateDate           sql.NullString
-	Krw                sql.NullInt64
-	ProviderPaymentKey sql.NullString
-	OrderID            sql.NullString
-	Note               sql.NullString
-	CreatedAt          string
-}
-
 type PaymentMethod struct {
 	UserID       string
 	Provider     string
@@ -34,18 +13,10 @@ type PaymentMethod struct {
 	RegisteredAt string
 }
 
-type Subscription struct {
-	UserID        string
-	Tier          string
-	Term          string
-	AnchorAt      string
-	TermStart     string
-	TermEnd       string
-	NextGrantAt   string
-	AutoRenew     int64
-	ScheduledTier sql.NullString
-	ScheduledTerm sql.NullString
-	Status        string
-	CreatedAt     string
-	UpdatedAt     string
+type SupportCoverage struct {
+	UserID     string
+	CoverageID string
+	Tier       string
+	AnchorAt   string
+	UpdatedAt  string
 }

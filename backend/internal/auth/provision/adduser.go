@@ -158,6 +158,36 @@ func SetPlan(ctx context.Context, cfg Settings, args []string, topUp CreditTopUp
 	return nil
 }
 
+// PlanAssigner is the composition-owned atomic support entitlement transition.
+type PlanAssigner func(ctx context.Context, handle *db.DB, userID string, target plan.Plan) error
+
+func SetPlanAssigned(ctx context.Context, cfg Settings, args []string, assign PlanAssigner) error {
+	if len(args) != 2 || strings.TrimSpace(args[0]) == "" {
+		return errors.New("usage: setplan <login_id> <free|light|basic|pro|max|master>")
+	}
+	loginID := strings.TrimSpace(args[0])
+	target, err := plan.Parse(args[1])
+	if err != nil {
+		return err
+	}
+	handle, err := db.Open(cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		return err
+	}
+	if err := assign(ctx, handle, loginID, target); err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			return fmt.Errorf("account %q does not exist", loginID)
+		}
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "account %q is now on the %s plan\n", loginID, target)
+	return nil
+}
+
 // CreditTopUp raises an account's current monthly grant, for the upgrade half of a tier
 // change (QUOTA-35). Supplied by the composition root for the same reason CreditGrant is:
 // credits belong to the usage context.

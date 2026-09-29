@@ -25,13 +25,26 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 // handle the queries run against — and that handle is capped at one connection, so a
 // transaction-scoped store must never fall back to the pool or it would wait on itself.
 type Store struct {
-	writer *sql.DB
-	write  *sqlc.Queries
-	read   *sqlc.Queries
+	writer       *sql.DB
+	write        *sqlc.Queries
+	read         *sqlc.Queries
+	exports      usage.ExportWindowLedger
+	exportsForTx func(*sql.Tx) usage.ExportWindowLedger
 }
 
 func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+}
+
+// NewWithExports makes lazy credit and export grants part of the same writer
+// transaction. The factory is required for production's paid-entitlement ledger.
+func NewWithExports(writer, reader *sql.DB, factory func(*sql.Tx) usage.ExportWindowLedger) *Store {
+	if factory == nil {
+		panic("usage: export window transaction factory is required")
+	}
+	store := New(writer, reader)
+	store.exportsForTx = factory
+	return store
 }
 
 // NewTx binds usage operations to a transaction connection owned by a composition-level
@@ -60,13 +73,24 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Storage) error) err
 	// hand on the request's own context was what left the single writer connection inside
 	// an open transaction, failing every later write in the process until a restart.
 	defer func() { _ = tx.Rollback() }()
-	if err := fn(&Store{write: sqlc.New(tx), read: sqlc.New(tx)}); err != nil {
+	var exports usage.ExportWindowLedger
+	if s.exportsForTx != nil {
+		exports = s.exportsForTx(tx)
+	}
+	if err := fn(&Store{write: sqlc.New(tx), read: sqlc.New(tx), exports: exports}); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit write transaction: %w", err)
 	}
 	return nil
+}
+
+func (s *Store) OpenExportWindow(ctx context.Context, window usage.ExportWindow) error {
+	if s.exports == nil {
+		return nil
+	} // Credit-only adapters compose exports in their owner.
+	return s.exports.OpenExportWindow(ctx, window)
 }
 
 func (s *Store) LotsInConsumptionOrder(
@@ -124,13 +148,15 @@ func (s *Store) InsertLot(ctx context.Context, lot usage.Lot) error {
 		expires = sql.NullString{String: formatTime(*lot.ExpiresAt), Valid: true}
 	}
 	err := s.write.InsertLot(ctx, sqlc.InsertLotParams{
-		ID:        lot.ID,
-		UserID:    lot.UserID,
-		Kind:      string(lot.Kind),
-		Granted:   int64(lot.Granted),
-		Remaining: int64(lot.Remaining),
-		ExpiresAt: expires,
-		CreatedAt: formatTime(lot.CreatedAt),
+		ID:         lot.ID,
+		UserID:     lot.UserID,
+		Kind:       string(lot.Kind),
+		Granted:    int64(lot.Granted),
+		Remaining:  int64(lot.Remaining),
+		ExpiresAt:  expires,
+		CreatedAt:  formatTime(lot.CreatedAt),
+		CoverageID: nullable(lot.CoverageID), WindowStart: nullableTime(lot.WindowStart),
+		IssuanceCause: nullable(lot.IssuanceCause), CorrelationID: nullable(lot.CorrelationID),
 	})
 	if err != nil {
 		return fmt.Errorf("insert credit lot: %w", err)
@@ -144,13 +170,15 @@ func (s *Store) InsertLotIfAbsent(ctx context.Context, lot usage.Lot) (bool, err
 		expires = sql.NullString{String: formatTime(*lot.ExpiresAt), Valid: true}
 	}
 	rows, err := s.write.InsertLotIfAbsent(ctx, sqlc.InsertLotIfAbsentParams{
-		ID:        lot.ID,
-		UserID:    lot.UserID,
-		Kind:      string(lot.Kind),
-		Granted:   int64(lot.Granted),
-		Remaining: int64(lot.Remaining),
-		ExpiresAt: expires,
-		CreatedAt: formatTime(lot.CreatedAt),
+		ID:         lot.ID,
+		UserID:     lot.UserID,
+		Kind:       string(lot.Kind),
+		Granted:    int64(lot.Granted),
+		Remaining:  int64(lot.Remaining),
+		ExpiresAt:  expires,
+		CreatedAt:  formatTime(lot.CreatedAt),
+		CoverageID: nullable(lot.CoverageID), WindowStart: nullableTime(lot.WindowStart),
+		IssuanceCause: nullable(lot.IssuanceCause), CorrelationID: nullable(lot.CorrelationID),
 	})
 	if err != nil {
 		return false, fmt.Errorf("insert credit lot if absent: %w", err)
@@ -185,6 +213,16 @@ func (s *Store) ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID
 	})
 	if err != nil {
 		return fmt.Errorf("expire monthly credit lots: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ExpireLegacyMonthlyLots(ctx context.Context, userID string, at time.Time) error {
+	stamp := sql.NullString{String: formatTime(at), Valid: true}
+	if err := s.write.ExpireLegacyMonthlyLots(ctx, sqlc.ExpireLegacyMonthlyLotsParams{
+		ExpiresAt: stamp, UserID: userID, ExpiresAt_2: stamp,
+	}); err != nil {
+		return fmt.Errorf("expire legacy monthly lots: %w", err)
 	}
 	return nil
 }
@@ -287,6 +325,9 @@ func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) 
 		CreatedAt:                 formatTime(admission.CreatedAt),
 		ApprovedMaxCredits:        nullableCredits(admission.ApprovedMaxCredits),
 		CancellationPolicyVersion: int64(admission.CancellationPolicyVersion),
+		CoverageID:                nullable(admission.CoverageID),
+		DailyWindowStart:          nullableTime(admission.DailyWindowStart),
+		BenefitWindowStart:        nullableTime(admission.BenefitWindowStart),
 	})
 	if err != nil {
 		return fmt.Errorf("insert admission: %w", err)
@@ -298,10 +339,44 @@ func (s *Store) InsertHoldDebits(ctx context.Context, jobID string, debits []usa
 	for _, debit := range debits {
 		err := s.write.InsertHoldDebit(ctx, sqlc.InsertHoldDebitParams{
 			JobID: jobID, LotID: debit.LotID, Credits: int64(debit.Credits),
+			OriginCoverageID:  nullable(debit.OriginCoverageID),
+			OriginWindowStart: nullableTime(debit.OriginWindowStart),
 		})
 		if err != nil {
 			return fmt.Errorf("insert hold debit: %w", err)
 		}
+	}
+	return nil
+}
+
+func (s *Store) InsertEligibleLots(ctx context.Context, jobID string, lots []usage.Lot) error {
+	for _, lot := range lots {
+		if err := s.write.InsertEligibleLot(ctx, sqlc.InsertEligibleLotParams{JobID: jobID, LotID: lot.ID}); err != nil {
+			return fmt.Errorf("snapshot eligible lot: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Store) EligibleLotsForJob(ctx context.Context, jobID string) ([]usage.Lot, error) {
+	rows, err := s.write.EligibleLotsForJob(ctx, jobID)
+	if err != nil {
+		return nil, fmt.Errorf("read eligible lots: %w", err)
+	}
+	lots := make([]usage.Lot, 0, len(rows))
+	for _, row := range rows {
+		lot, err := toLot(row)
+		if err != nil {
+			return nil, err
+		}
+		lots = append(lots, lot)
+	}
+	return lots, nil
+}
+
+func (s *Store) DeleteEligibleLotsForJob(ctx context.Context, jobID string) error {
+	if err := s.write.DeleteEligibleLotsForJob(ctx, jobID); err != nil {
+		return fmt.Errorf("delete eligible lots: %w", err)
 	}
 	return nil
 }
@@ -330,12 +405,28 @@ func (s *Store) HoldForJob(
 		debits = append(debits, usage.LotDebit{LotID: debit.LotID, Credits: int(debit.Credits)})
 	}
 
-	return usage.Admission{
+	admission := usage.Admission{
 		UserID: row.UserID, Kind: row.Kind, JobID: row.JobID,
 		HoldCredits: int(row.HoldCredits), CreatedAt: created,
 		ApprovedMaxCredits:        optionalCredits(row.ApprovedMaxCredits),
 		CancellationPolicyVersion: int(row.CancellationPolicyVersion),
-	}, debits, true, nil
+		CoverageID:                row.CoverageID.String,
+	}
+	if row.DailyWindowStart.Valid {
+		value, err := parseTime(row.DailyWindowStart.String)
+		if err != nil {
+			return usage.Admission{}, nil, false, err
+		}
+		admission.DailyWindowStart = &value
+	}
+	if row.BenefitWindowStart.Valid {
+		value, err := parseTime(row.BenefitWindowStart.String)
+		if err != nil {
+			return usage.Admission{}, nil, false, err
+		}
+		admission.BenefitWindowStart = &value
+	}
+	return admission, debits, true, nil
 }
 
 func (s *Store) MarkSettled(ctx context.Context, jobID string, settlement usage.Settlement, at time.Time) error {
@@ -407,7 +498,9 @@ func toLot(row sqlc.CreditLot) (usage.Lot, error) {
 	}
 	lot := usage.Lot{
 		ID: row.ID, UserID: row.UserID, Kind: usage.LotKind(row.Kind),
-		Granted: int(row.Granted), Remaining: int(row.Remaining), CreatedAt: created,
+		CoverageID: row.CoverageID.String, IssuanceCause: row.IssuanceCause.String,
+		CorrelationID: row.CorrelationID.String,
+		Granted:       int(row.Granted), Remaining: int(row.Remaining), CreatedAt: created,
 	}
 	if row.ExpiresAt.Valid {
 		expires, err := parseTime(row.ExpiresAt.String)
@@ -416,7 +509,22 @@ func toLot(row sqlc.CreditLot) (usage.Lot, error) {
 		}
 		lot.ExpiresAt = &expires
 	}
+	if row.WindowStart.Valid {
+		start, err := parseTime(row.WindowStart.String)
+		if err != nil {
+			return usage.Lot{}, err
+		}
+		lot.WindowStart = &start
+	}
 	return lot, nil
+}
+
+func nullable(value string) sql.NullString { return sql.NullString{String: value, Valid: value != ""} }
+func nullableTime(value *time.Time) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: formatTime(*value), Valid: true}
 }
 
 // ReasoningSpend reads through the READ pool: it is a diagnostic aggregate over a window of

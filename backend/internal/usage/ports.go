@@ -40,6 +40,7 @@ type LotLedger interface {
 	// one whose window is opening, by moving its expiry to `at`. The exception is what keeps
 	// opening a window idempotent.
 	ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID string, at time.Time) error
+	ExpireLegacyMonthlyLots(ctx context.Context, userID string, at time.Time) error
 	// RaiseLot grows a lot the account already holds, granted and remaining together. It
 	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
 	// given; a renewal opens a new lot instead.
@@ -87,6 +88,9 @@ type SpendLedger interface {
 type HoldLedger interface {
 	InsertAdmission(ctx context.Context, admission Admission) error
 	InsertHoldDebits(ctx context.Context, jobID string, debits []LotDebit) error
+	InsertEligibleLots(ctx context.Context, jobID string, lots []Lot) error
+	EligibleLotsForJob(ctx context.Context, jobID string) ([]Lot, error)
+	DeleteEligibleLotsForJob(ctx context.Context, jobID string) error
 	// HoldForJob returns the admission and the lots its hold came from. Missing means the
 	// job was never admitted through this gate.
 	HoldForJob(ctx context.Context, jobID string) (Admission, []LotDebit, bool, error)
@@ -109,6 +113,13 @@ type Storage interface {
 	VoucherLotLedger
 	SpendLedger
 	HoldLedger
+	ExportWindowLedger
+}
+
+// ExportWindowLedger is the monthly clip allowance opened alongside current credit
+// benefits. The composition root supplies clip's transaction-scoped adapter.
+type ExportWindowLedger interface {
+	OpenExportWindow(ctx context.Context, window ExportWindow) error
 }
 
 // Models resolves a ref's registry metadata. The hold needs its prices to estimate a
@@ -123,4 +134,8 @@ type Models interface {
 // later without making the ledger read either context's tables.
 type Anchors interface {
 	AnchorFor(ctx context.Context, userID string) (time.Time, error)
+	// CoverageFor resolves the paid or operator-assigned entitlement effective at at.
+	// DailyTier is the tier at the start of the current 24-hour window, which can
+	// differ from Tier after an upgrade before the first balance read.
+	CoverageFor(ctx context.Context, userID string, at time.Time) (Coverage, bool, error)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"time"
@@ -9,6 +10,9 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/provision"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/billing"
+	billingstore "github.com/postpilot/backend/internal/billing/store"
+	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
@@ -27,11 +31,24 @@ func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
 	if acting == plan.Free {
 		return nil
 	}
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
-	if err := ledger.EnsureMonthlyLot(ctx, userID, acting); err != nil {
-		return fmt.Errorf("open monthly grant: %w", err)
+	if err := assignSupportPlan(ctx, handle, userID, acting); err != nil {
+		return fmt.Errorf("open support benefits: %w", err)
 	}
 	return nil
+}
+
+func assignSupportPlan(ctx context.Context, handle *db.DB, userID string, target plan.Plan) error {
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
+	anchors := usageAnchors{auth: authSvc}
+	store := billingstore.New(handle.Writer, handle.Reader)
+	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), emptyModels{}, 0, anchors), exports: clipstore.NewTx(tx)}
+	})
+	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
+		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
+	})
+	service := billing.NewService(store, nil, nil, nil, nil, nil, nil)
+	return service.AssignSupportTier(ctx, userID, target)
 }
 
 // topUpMonthlyLot raises an account's current monthly grant, for the upgrade half of
@@ -91,7 +108,7 @@ func runCommand(args []string) bool {
 			fatal("grantcredits", err)
 		}
 	case "setplan":
-		if err := provision.SetPlan(ctx, settings, args[1:], topUpMonthlyLot); err != nil {
+		if err := provision.SetPlanAssigned(ctx, settings, args[1:], assignSupportPlan); err != nil {
 			fatal("setplan", err)
 		}
 	default:

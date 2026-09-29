@@ -26,6 +26,9 @@ type fixedAnchors struct{}
 func (fixedAnchors) AnchorFor(context.Context, string) (time.Time, error) {
 	return time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil
 }
+func (fixedAnchors) CoverageFor(context.Context, string, time.Time) (usage.Coverage, bool, error) {
+	return usage.Coverage{}, false, nil
+}
 
 type ledgerCredits struct{ ledger *usage.Service }
 

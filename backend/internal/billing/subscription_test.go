@@ -62,7 +62,7 @@ func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	if !subscription.AnchorAt.Equal(now) || !subscription.TermStart.Equal(now) || subscription.TermEnd.Month() != time.January || subscription.TermEnd.Year() != 2027 {
 		t.Fatalf("subscription = %+v", subscription)
 	}
-	if !subscription.NextGrantAt.Equal(time.Date(2026, 2, 28, 0, 0, 0, 0, seoul)) {
+	if !subscription.NextGrantAt.Equal(time.Date(2026, 2, 28, 9, 30, 0, 0, seoul)) {
 		t.Fatalf("next grant = %s", subscription.NextGrantAt)
 	}
 	if store.plans.tiers["alice"] != plan.Pro || len(store.credits.windows) != 1 {
@@ -72,7 +72,7 @@ func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	if !window.start.Equal(now) || !window.end.Equal(subscription.NextGrantAt) || window.tier != plan.Pro {
 		t.Fatalf("window = %+v", window)
 	}
-	if len(provider.requests) != 1 || provider.requests[0].KRW != 139_250 || provider.requests[0].OrderID != "sub:alice:2026-01-31" {
+	if len(provider.requests) != 1 || provider.requests[0].KRW != 139_250 || provider.requests[0].OrderID != subscriptionOrderID("alice", now) {
 		t.Fatalf("charge requests = %+v", provider.requests)
 	}
 	if kinds(store.events) != "charge,tier_change" || store.events[0].USDCents == nil || *store.events[0].USDCents != 10_000 {
@@ -111,7 +111,7 @@ func TestRunDueCoversAnnualGrantRenewalFailureAndCancellation(t *testing.T) {
 		if err := service.RunDue(ctx, due); err != nil {
 			t.Fatal(err)
 		}
-		if len(store.credits.windows) != 1 || kinds(store.events) != "grant" || store.subscriptions["alice"].NextGrantAt.Month() != time.March {
+		if len(store.credits.windows) != 0 || len(store.events) != 0 || store.subscriptions["alice"].NextGrantAt.Month() != time.March {
 			t.Fatalf("windows=%+v events=%+v subscription=%+v", store.credits.windows, store.events, store.subscriptions["alice"])
 		}
 	})
@@ -161,7 +161,7 @@ func TestRunDueCoversAnnualGrantRenewalFailureAndCancellation(t *testing.T) {
 	})
 }
 
-func TestAnnualSubscriptionOpensTwelveMonthlyLotsForOneCharge(t *testing.T) {
+func TestAnnualSubscriptionDoesNotPreGrantTwelveMonthlyBenefits(t *testing.T) {
 	ctx := context.Background()
 	anchor := time.Date(2026, 1, 15, 8, 0, 0, 0, seoul)
 	store := newSubscriptionStore()
@@ -177,7 +177,7 @@ func TestAnnualSubscriptionOpensTwelveMonthlyLotsForOneCharge(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(store.credits.windows) != 12 || len(provider.requests) != 1 {
+	if len(store.credits.windows) != 1 || len(provider.requests) != 1 {
 		t.Fatalf("windows=%d charge requests=%d", len(store.credits.windows), len(provider.requests))
 	}
 }
@@ -198,7 +198,7 @@ func TestRunDueContinuesAfterOneSubscriptionFails(t *testing.T) {
 	if got := store.subscriptions["bob"].NextGrantAt; got.Month() != time.March {
 		t.Fatalf("bob next grant = %s", got)
 	}
-	if len(store.credits.windows) != 1 || store.credits.windows[0].userID != "bob" {
+	if len(store.credits.windows) != 0 {
 		t.Fatalf("windows = %+v", store.credits.windows)
 	}
 }
@@ -481,4 +481,28 @@ func kinds(events []Event) string {
 		values[index] = event.Kind
 	}
 	return strings.Join(values, ",")
+}
+
+func (s *subscriptionStore) TierAt(_ context.Context, userID, _ string, _ time.Time) (plan.Plan, error) {
+	if value, found := s.subscriptions[userID]; found {
+		return value.Tier, nil
+	}
+	return plan.Basic, nil
+}
+func (*subscriptionStore) InsertTierTransition(context.Context, string, string, time.Time, plan.Plan, string) error {
+	return nil
+}
+func (*subscriptionStore) SupportCoverage(context.Context, string) (SupportCoverage, bool, error) {
+	return SupportCoverage{}, false, nil
+}
+func (*subscriptionStore) UpsertSupportCoverage(context.Context, SupportCoverage) error { return nil }
+func (*subscriptionStore) DeleteSupportCoverage(context.Context, string) error          { return nil }
+func (c *subscriptionCredits) OpenCoverage(_ context.Context, userID string, coverage Coverage, at time.Time, _ string) error {
+	_, end := plan.BenefitWindow(coverage.Anchor, at)
+	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: coverage.Tier, start: at, end: end, started: true})
+	return nil
+}
+func (c *subscriptionCredits) AddUpgradeBonus(_ context.Context, _ string, _ Coverage, _ time.Time, credits, _ int, _ string) error {
+	c.raises = append(c.raises, credits)
+	return nil
 }

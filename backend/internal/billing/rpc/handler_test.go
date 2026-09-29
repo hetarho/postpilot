@@ -251,3 +251,15 @@ func billingErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 	}
 	return detail
 }
+
+func (handlerStore) TierAt(context.Context, string, string, time.Time) (plan.Plan, error) {
+	return plan.Basic, nil
+}
+func (handlerStore) InsertTierTransition(context.Context, string, string, time.Time, plan.Plan, string) error {
+	return nil
+}
+func (handlerStore) SupportCoverage(context.Context, string) (billing.SupportCoverage, bool, error) {
+	return billing.SupportCoverage{}, false, nil
+}
+func (handlerStore) UpsertSupportCoverage(context.Context, billing.SupportCoverage) error { return nil }
+func (handlerStore) DeleteSupportCoverage(context.Context, string) error                  { return nil }

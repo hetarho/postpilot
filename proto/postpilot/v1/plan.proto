@@ -55,6 +55,9 @@ message CreditLot {
   int32 remaining = 3;
   // RFC3339, or empty for a grant that does not expire.
   string expires_at = 4;
+  string coverage_id = 5;
+  string window_start = 6;
+  string issuance_cause = 7;
 }
 
 // The account's spendable position. Credits are integers — the server never sends a
@@ -69,6 +72,24 @@ message CreditBalance {
   string renews_at = 4;
   // What this tier is granted each month, so the client can show a meter against it.
   int32 monthly_grant = 5;
+  int32 daily_grant = 6;
+  int32 monthly_bonus = 7;
+  string daily_resets_at = 8;
+  string bonus_resets_at = 9;
+  string coverage_id = 10;
+  string coverage_ends_at = 11;
+  string benefit_window_start = 12;
+  string benefit_window_end = 13;
+}
+
+message ServerExportWindow {
+  string coverage_id = 1;
+  string starts_at = 2;
+  string ends_at = 3;
+  int32 allowance = 4;
+  int32 used = 5;
+  int32 reserved = 6;
+  int32 remaining = 7;
 }
 
 // One rung as a plan comparison screen lists it.
@@ -145,6 +166,7 @@ message GetMyPlanResponse {
   // Assumed duration of EACH original video, independent of finished clip length.
   int32 clip_source_seconds = 5;
   repeated CreditPack credit_packs = 6;
+  ServerExportWindow server_export_window = 7;
 }
 
 message SetEstimatorComboRequest {

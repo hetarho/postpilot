@@ -10,9 +10,11 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/billing"
+	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/usage"
@@ -26,11 +28,27 @@ type usageAnchors struct {
 	auth    *auth.Service
 	billing interface {
 		AnchorFor(context.Context, string) (time.Time, bool, error)
+		CoverageAt(context.Context, string, time.Time) (billing.Coverage, bool, error)
 	}
 	// late resolves the billing side at call time: the ledger is constructed before
 	// billing (billing spends through it), so the anchors it is built with can only
 	// name where billing will be.
 	late *contexts
+}
+
+func (a usageAnchors) CoverageFor(ctx context.Context, userID string, at time.Time) (usage.Coverage, bool, error) {
+	billingService := a.billing
+	if billingService == nil && a.late != nil {
+		billingService = a.late.billing
+	}
+	if billingService != nil {
+		coverage, found, err := billingService.CoverageAt(ctx, userID, at)
+		if err != nil || found {
+			return usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
+				Tier: coverage.Tier, DailyTier: coverage.DailyTier}, found, err
+		}
+	}
+	return usage.Coverage{}, false, nil
 }
 
 func (a usageAnchors) AnchorFor(ctx context.Context, userID string) (time.Time, error) {
@@ -238,10 +256,80 @@ func (c voucherCredits) VoucherLotStandings(ctx context.Context, lotIDs []string
 // the translation ARCH-7 wants at the boundary: the ledger's sentinel for "this lot is no
 // longer whole" becomes billing's own, so the refund path matches an error it owns and the
 // billing package imports no ledger at all.
-type billingCredits struct{ billing.Credits }
+type billingCredits struct {
+	*usage.Service
+	exports clip.ExportWindows
+}
+
+type supportAccounts struct {
+	auth    *auth.Service
+	billing *billing.Service
+}
+
+type usageExports struct{ clip.ExportWindows }
+
+func (a usageExports) OpenExportWindow(ctx context.Context, window usage.ExportWindow) error {
+	return a.ExportWindows.OpenExportWindow(ctx, clip.ExportWindow{UserID: window.UserID,
+		CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}, "lazy")
+}
+
+func (a supportAccounts) ListUsers(ctx context.Context) ([]auth.User, error) {
+	return a.auth.ListUsers(ctx)
+}
+func (a supportAccounts) SetUserPlan(ctx context.Context, userID string, target plan.Plan) error {
+	return a.billing.AssignSupportTier(ctx, userID, target)
+}
+
+func (c billingCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlationID string) error {
+	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{
+		ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
+		Tier: coverage.Tier, DailyTier: coverage.DailyTier,
+	}, at, correlationID); err != nil {
+		return err
+	}
+	return c.openExport(ctx, userID, coverage, at, correlationID)
+}
+
+func (c billingCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlationID string) error {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{
+		ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
+		Tier: coverage.Tier, DailyTier: coverage.DailyTier,
+	}, at, credits, correlationID); err != nil {
+		return err
+	}
+	if err := c.openExport(ctx, userID, coverage, at, ""); err != nil {
+		return err
+	}
+	if c.exports == nil {
+		return errors.New("billing export windows are not wired")
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	if !coverage.End.IsZero() && coverage.End.Before(end) {
+		end = coverage.End
+	}
+	offer, _ := plan.CommercialOffer(coverage.Tier)
+	return c.exports.RaiseExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID,
+		Start: start, End: end, Allowance: offer.ServerExports}, exportDelta, correlationID)
+}
+
+func (c billingCredits) openExport(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlationID string) error {
+	if c.exports == nil {
+		return errors.New("billing export windows are not wired")
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	if !coverage.End.IsZero() && coverage.End.Before(end) {
+		end = coverage.End
+	}
+	offer, ok := plan.CommercialOffer(coverage.Tier)
+	if !ok {
+		return errors.New("billing export window: invalid tier")
+	}
+	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID,
+		Start: start, End: end, Allowance: offer.ServerExports}, correlationID)
+}
 
 func (c billingCredits) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	err := c.Credits.VoidUntouchedLot(ctx, lotID)
+	err := c.Service.VoidUntouchedLot(ctx, lotID)
 	if errors.Is(err, usage.ErrLotTouched) {
 		return billing.ErrLotTouched
 	}

@@ -11,6 +11,8 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/clip"
+	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -51,7 +53,7 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}), exports: clipstore.NewTx(tx)}
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
@@ -64,7 +66,7 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 	}
 	return &ledgerHarness{
 		handle: handle, ledger: ledger,
-		service: billing.NewService(store, &registrationProvider{}, registrationRates{}, ledger, nil, nil, nil),
+		service: billing.NewService(store, &registrationProvider{}, registrationRates{}, testCredits{Service: ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, nil, nil, nil),
 	}
 }
 
@@ -84,6 +86,47 @@ func (h *ledgerHarness) monthlyLots(t *testing.T, now time.Time) (count, granted
 type fixedAnchor struct{ at time.Time }
 
 func (a fixedAnchor) AnchorFor(context.Context, string) (time.Time, error) { return a.at, nil }
+func (a fixedAnchor) CoverageFor(context.Context, string, time.Time) (usage.Coverage, bool, error) {
+	return usage.Coverage{ID: "test-coverage", Anchor: a.at, Tier: plan.Basic, DailyTier: plan.Basic}, true, nil
+}
+
+type testCredits struct {
+	*usage.Service
+	exports clip.ExportWindows
+}
+
+func (c testCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlation string) error {
+	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor,
+		End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, correlation); err != nil {
+		return err
+	}
+	if c.exports == nil {
+		return nil
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	if !coverage.End.IsZero() && coverage.End.Before(end) {
+		end = coverage.End
+	}
+	offer, _ := plan.CommercialOffer(coverage.Tier)
+	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID,
+		Start: start, End: end, Allowance: offer.ServerExports}, correlation)
+}
+func (c testCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlation string) error {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor,
+		End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, credits, correlation); err != nil {
+		return err
+	}
+	if c.exports == nil {
+		return nil
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	if !coverage.End.IsZero() && coverage.End.Before(end) {
+		end = coverage.End
+	}
+	offer, _ := plan.CommercialOffer(coverage.Tier)
+	window := clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}
+	return c.exports.RaiseExportWindow(ctx, window, exportDelta, correlation)
+}
 
 // Free signup creates no lot. A subscription on that same date opens only the paid window.
 func TestSubscribingTheSameDayAsSignupHandsOverTheWholeTierGrant(t *testing.T) {
@@ -103,7 +146,7 @@ func TestSubscribingTheSameDayAsSignupHandsOverTheWholeTierGrant(t *testing.T) {
 	}
 
 	count, granted, remaining := h.monthlyLots(t, time.Now().UTC())
-	want := plan.MonthlyCredits(plan.Pro)
+	want := 1070
 	if count != 1 || granted != want || remaining != want {
 		t.Fatalf("after subscribing: lots=%d granted=%d remaining=%d, want 1 lot of %d", count, granted, remaining, want)
 	}
@@ -130,7 +173,7 @@ func TestSubscribingOffTheFreeAnchorClosesTheFreeWindow(t *testing.T) {
 	// Read as of after the subscribe: the free window is closed AT that instant, so a
 	// timestamp taken before it would still see the lot as open.
 	count, granted, remaining := h.monthlyLots(t, time.Now().UTC())
-	want := plan.MonthlyCredits(plan.Basic)
+	want := 510
 	if count != 1 || granted != want || remaining != want {
 		t.Fatalf("after subscribing: lots=%d granted=%d remaining=%d, want 1 lot of %d", count, granted, remaining, want)
 	}
@@ -145,22 +188,25 @@ func TestSubscribingOffTheFreeAnchorClosesTheFreeWindow(t *testing.T) {
 }
 
 // A provider retry must not mint a second window or re-grant the one already open.
-func TestStartingTheSameWindowTwiceLeavesOneLot(t *testing.T) {
+func TestOpeningTheSameCoverageTwiceDoesNotReplenishSpentBenefits(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 	h := newLedgerHarness(t, "idempotent.db", now, now)
 
-	start, end := plan.AnchorWindow(now, now)
-	if err := h.ledger.StartMonthlyWindow(ctx, "alice", plan.Max, start, end); err != nil {
+	coverage := usage.Coverage{ID: "paid:alice:test", Anchor: now, End: plan.CoverageEnd(now, false), Tier: plan.Max, DailyTier: plan.Max}
+	if err := h.ledger.OpenCoverage(ctx, "alice", coverage, now, "charge-1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.ledger.StartMonthlyWindow(ctx, "alice", plan.Max, start, end); err != nil {
+	if _, err := h.handle.Writer.ExecContext(ctx, "UPDATE credit_lots SET remaining=remaining-7 WHERE user_id=? AND kind='monthly'", "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.ledger.OpenCoverage(ctx, "alice", coverage, now, "charge-1"); err != nil {
 		t.Fatalf("second start: %v", err)
 	}
 
 	count, granted, remaining := h.monthlyLots(t, now)
-	want := plan.MonthlyCredits(plan.Max)
-	if count != 1 || granted != want || remaining != want {
+	want := 3170
+	if count != 1 || granted != want || remaining != want-7 {
 		t.Fatalf("lots=%d granted=%d remaining=%d, want 1 lot of %d", count, granted, remaining, want)
 	}
 	var expiries int
@@ -217,5 +263,112 @@ func TestUpgradeCommitsWhenNoMonthlyLotIsOpen(t *testing.T) {
 	}
 	if tier != "pro" || storedTier != "pro" || charges != 2 || tierChanges != 2 {
 		t.Fatalf("tier=%s users.plan=%s charges=%d tier_changes=%d", tier, storedTier, charges, tierChanges)
+	}
+}
+
+func TestSupportAssignmentAtomicallyOpensAndUpgradesBenefits(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().UTC()
+	h := newLedgerHarness(t, "support-benefits.db", now, now)
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Light); err != nil {
+		t.Fatal(err)
+	}
+	var tier string
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT plan FROM users WHERE id='alice'").Scan(&tier); err != nil {
+		t.Fatal(err)
+	}
+	if tier != "light" {
+		t.Fatalf("tier = %q", tier)
+	}
+	var daily, monthly, exports, subscriptions, charges int
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT COALESCE(sum(granted),0) FROM credit_lots WHERE user_id='alice' AND kind='daily'").Scan(&daily); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT COALESCE(sum(granted),0) FROM credit_lots WHERE user_id='alice' AND kind='monthly'").Scan(&monthly); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT allowance FROM server_export_windows WHERE user_id='alice'").Scan(&exports); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM subscriptions WHERE user_id='alice'").Scan(&subscriptions); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id='alice' AND kind='charge'").Scan(&charges); err != nil {
+		t.Fatal(err)
+	}
+	if daily != 15 || monthly != 290 || exports != 2 || subscriptions != 0 || charges != 0 {
+		t.Fatalf("support benefits daily=%d monthly=%d exports=%d subscriptions=%d charges=%d", daily, monthly, exports, subscriptions, charges)
+	}
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Light); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.handle.Writer.ExecContext(ctx, "UPDATE credit_lots SET remaining=remaining-7 WHERE user_id='alice' AND kind='daily'"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Basic); err != nil {
+		t.Fatal(err)
+	}
+	var remaining, dailyRows int
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*),sum(remaining) FROM credit_lots WHERE user_id='alice' AND kind='daily'").Scan(&dailyRows, &remaining); err != nil {
+		t.Fatal(err)
+	}
+	if dailyRows != 1 || remaining != 8 {
+		t.Fatalf("today's daily grant changed: rows=%d remaining=%d", dailyRows, remaining)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT allowance FROM server_export_windows WHERE user_id='alice'").Scan(&exports); err != nil {
+		t.Fatal(err)
+	}
+	if exports < 2 || exports > 6 {
+		t.Fatalf("prorated exports=%d", exports)
+	}
+}
+
+func TestFailedSupportExportMutationRollsBackTierAndCredits(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().UTC()
+	h := newLedgerHarness(t, "support-rollback.db", now, now)
+	if _, err := h.handle.Writer.ExecContext(ctx, `CREATE TRIGGER reject_export BEFORE INSERT ON server_export_windows
+BEGIN SELECT RAISE(ABORT, 'blocked export'); END`); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Light); err == nil {
+		t.Fatal("expected export insert failure")
+	}
+	var tier string
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT plan FROM users WHERE id='alice'").Scan(&tier); err != nil {
+		t.Fatal(err)
+	}
+	var lots, support int
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM credit_lots WHERE user_id='alice'").Scan(&lots); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM support_coverages WHERE user_id='alice'").Scan(&support); err != nil {
+		t.Fatal(err)
+	}
+	if tier != "free" || lots != 0 || support != 0 {
+		t.Fatalf("partial assignment tier=%s lots=%d support=%d", tier, lots, support)
+	}
+}
+
+func TestCoverageExpiresBeforeRenewalWorkerAndUpgradeKeepsTodaysDailyTier(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().UTC()
+	h := newLedgerHarness(t, "coverage-tier.db", now, now)
+	sub, err := h.service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := h.service.CoverageAt(ctx, "alice", sub.TermEnd.Add(time.Nanosecond)); err != nil || found {
+		t.Fatalf("expired coverage found=%v err=%v", found, err)
+	}
+	if _, applied, err := h.service.ChangeSubscription(ctx, "alice", plan.Pro, billing.TermMonthly); err != nil || !applied {
+		t.Fatalf("upgrade applied=%v err=%v", applied, err)
+	}
+	current, found, err := h.service.CoverageAt(ctx, "alice", time.Now())
+	if err != nil || !found {
+		t.Fatalf("current coverage found=%v err=%v", found, err)
+	}
+	if current.Tier != plan.Pro || current.DailyTier != plan.Basic || current.ID != sub.CoverageID || !current.Anchor.Equal(sub.AnchorAt) {
+		t.Fatalf("upgrade moved today's daily rights or anchor: %+v", current)
 	}
 }

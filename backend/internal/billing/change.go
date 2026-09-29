@@ -81,7 +81,19 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 	updated.ScheduledTier = nil
 	updated.ScheduledTerm = nil
 	updated.UpdatedAt = now
-	delta := plan.MonthlyCredits(tier) - plan.MonthlyCredits(subscription.Tier)
+	benefitStart, benefitEnd := plan.BenefitWindow(subscription.AnchorAt, now)
+	amounts, err := plan.QuoteUpgrade(subscription.Tier, tier, term == TermAnnual,
+		subscription.TermStart, subscription.TermEnd, benefitStart, benefitEnd, now)
+	if err != nil {
+		return Subscription{}, false, err
+	}
+	dailyStart, _ := plan.DailyWindow(subscription.AnchorAt, now)
+	dailyTier, err := s.store.TierAt(ctx, userID, subscription.CoverageID, dailyStart)
+	if err != nil {
+		return Subscription{}, false, err
+	}
+	oldCoverage := Coverage{ID: subscription.CoverageID, Anchor: subscription.AnchorAt,
+		End: subscription.TermEnd, Tier: subscription.Tier, DailyTier: dailyTier}
 	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
@@ -97,7 +109,11 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 		if err := plans.AssignTier(ctx, userID, tier); err != nil {
 			return err
 		}
-		return credits.RaiseMonthlyLot(ctx, userID, delta)
+		if err := credits.AddUpgradeBonus(ctx, userID, oldCoverage, now,
+			int(amounts.BonusCredits), int(amounts.ServerExports), orderID); err != nil {
+			return err
+		}
+		return tx.InsertTierTransition(ctx, userID, subscription.CoverageID, now, tier, orderID)
 	})
 	return updated, true, err
 }

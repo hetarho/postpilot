@@ -38,8 +38,11 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 	anchor := time.Now().AddDate(0, -1, -7)
 	start, end := plan.AnchorWindow(anchor, time.Now())
 	billingStore := billingstore.New(handle.Writer, handle.Reader)
-	active := billing.Subscription{UserID: "alice", Tier: plan.Pro, Term: billing.TermMonthly, AnchorAt: anchor, TermStart: start, TermEnd: end, NextGrantAt: end, AutoRenew: true, Status: "active", CreatedAt: anchor, UpdatedAt: anchor}
+	active := billing.Subscription{UserID: "alice", Tier: plan.Pro, Term: billing.TermMonthly, AnchorAt: anchor, TermStart: start, TermEnd: end, NextGrantAt: end, AutoRenew: true, Status: "active", CoverageID: "alice-pro-coverage", CreatedAt: anchor, UpdatedAt: anchor}
 	if err := billingStore.UpsertSubscription(ctx, active); err != nil {
+		t.Fatal(err)
+	}
+	if err := billingStore.InsertTierTransition(ctx, "alice", active.CoverageID, anchor, plan.Pro, "initial-pro-coverage"); err != nil {
 		t.Fatal(err)
 	}
 	authService := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
@@ -58,7 +61,8 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := plan.NextRenewal(anchor, time.Now()); !renewsAt.Equal(want) {
+	_, want := plan.DailyWindow(anchor, time.Now())
+	if !renewsAt.Equal(want) {
 		t.Fatalf("GetMyPlan renews_at = %s, want %s", renewsAt, want)
 	}
 

@@ -156,7 +156,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewVoucherServiceHandler(voucherrpc.NewHandler(c.voucher), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(c.auth, comboAssigner{catalog: catalog}), opts...)
+			return postpilotv1connect.NewAdminServiceHandler(authrpc.NewAdminHandler(supportAccounts{auth: c.auth, billing: c.billing}, comboAssigner{catalog: catalog}), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(c.post), opts...)

@@ -114,6 +114,7 @@ func (s *Store) UpsertSubscription(ctx context.Context, subscription billing.Sub
 		AutoRenew: boolInt(subscription.AutoRenew), ScheduledTier: planNull(subscription.ScheduledTier),
 		ScheduledTerm: termNull(subscription.ScheduledTerm), Status: subscription.Status,
 		CreatedAt: formatTime(subscription.CreatedAt), UpdatedAt: formatTime(subscription.UpdatedAt),
+		CoverageID: nullString(subscription.CoverageID),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert subscription: %w", err)
@@ -128,7 +129,7 @@ func (s *Store) DueSubscriptions(ctx context.Context, at time.Time) ([]billing.S
 	}
 	result := make([]billing.Subscription, 0, len(rows))
 	for _, row := range rows {
-		mapped, err := toSubscription(row)
+		mapped, err := toSubscription(sqlc.GetSubscriptionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -147,6 +148,69 @@ func (s *Store) Subscription(ctx context.Context, userID string) (billing.Subscr
 	}
 	result, err := toSubscription(row)
 	return result, err == nil, err
+}
+
+func (s *Store) TierAt(ctx context.Context, userID, coverageID string, at time.Time) (plan.Plan, error) {
+	stored, err := s.read.TierAt(ctx, sqlc.TierAtParams{
+		UserID: userID, CoverageID: coverageID, EffectiveAt: formatTime(at),
+	})
+	if err != nil {
+		return "", fmt.Errorf("read tier transition: %w", err)
+	}
+	return plan.Parse(stored)
+}
+
+func (s *Store) InsertTierTransition(ctx context.Context, userID, coverageID string, at time.Time, tier plan.Plan, correlationID string) error {
+	_, err := s.write.InsertTierTransition(ctx, sqlc.InsertTierTransitionParams{
+		UserID: userID, CoverageID: coverageID, EffectiveAt: formatTime(at),
+		Tier: tier.String(), CorrelationID: correlationID,
+	})
+	if err != nil {
+		return fmt.Errorf("insert tier transition: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) SupportCoverage(ctx context.Context, userID string) (billing.SupportCoverage, bool, error) {
+	row, err := s.read.GetSupportCoverage(ctx, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return billing.SupportCoverage{}, false, nil
+	}
+	if err != nil {
+		return billing.SupportCoverage{}, false, fmt.Errorf("read support coverage: %w", err)
+	}
+	tier, err := plan.Parse(row.Tier)
+	if err != nil {
+		return billing.SupportCoverage{}, false, err
+	}
+	anchor, err := parseTime(row.AnchorAt)
+	if err != nil {
+		return billing.SupportCoverage{}, false, err
+	}
+	updated, err := parseTime(row.UpdatedAt)
+	if err != nil {
+		return billing.SupportCoverage{}, false, err
+	}
+	return billing.SupportCoverage{UserID: row.UserID, ID: row.CoverageID,
+		Tier: tier, Anchor: anchor, UpdatedAt: updated}, true, nil
+}
+
+func (s *Store) UpsertSupportCoverage(ctx context.Context, coverage billing.SupportCoverage) error {
+	err := s.write.UpsertSupportCoverage(ctx, sqlc.UpsertSupportCoverageParams{
+		UserID: coverage.UserID, CoverageID: coverage.ID, Tier: coverage.Tier.String(),
+		AnchorAt: formatTime(coverage.Anchor), UpdatedAt: formatTime(coverage.UpdatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("upsert support coverage: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) DeleteSupportCoverage(ctx context.Context, userID string) error {
+	if err := s.write.DeleteSupportCoverage(ctx, userID); err != nil {
+		return fmt.Errorf("delete support coverage: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) PaymentMethod(ctx context.Context, userID string) (billing.PaymentMethod, bool, error) {
@@ -262,7 +326,7 @@ func (s *Store) InsertProviderNotification(ctx context.Context, n billing.Provid
 	return nil
 }
 
-func toSubscription(row sqlc.Subscription) (billing.Subscription, error) {
+func toSubscription(row sqlc.GetSubscriptionRow) (billing.Subscription, error) {
 	tier, err := plan.Parse(row.Tier)
 	if err != nil {
 		return billing.Subscription{}, err
@@ -291,7 +355,7 @@ func toSubscription(row sqlc.Subscription) (billing.Subscription, error) {
 	if err != nil {
 		return billing.Subscription{}, err
 	}
-	result := billing.Subscription{UserID: row.UserID, Tier: tier, Term: billing.Term(row.Term), AnchorAt: anchor, TermStart: start, TermEnd: end, NextGrantAt: next, AutoRenew: row.AutoRenew != 0, Status: row.Status, CreatedAt: created, UpdatedAt: updated}
+	result := billing.Subscription{UserID: row.UserID, CoverageID: row.CoverageID.String, Tier: tier, Term: billing.Term(row.Term), AnchorAt: anchor, TermStart: start, TermEnd: end, NextGrantAt: next, AutoRenew: row.AutoRenew != 0, Status: row.Status, CreatedAt: created, UpdatedAt: updated}
 	if row.ScheduledTier.Valid {
 		value, err := plan.Parse(row.ScheduledTier.String)
 		if err != nil {
@@ -306,7 +370,7 @@ func toSubscription(row sqlc.Subscription) (billing.Subscription, error) {
 	return result, nil
 }
 
-func toEvent(row sqlc.BillingEvent) (billing.Event, error) {
+func toEvent(row sqlc.ListBillingEventsRow) (billing.Event, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return billing.Event{}, err

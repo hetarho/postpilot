@@ -22,6 +22,11 @@ type Store interface {
 	MarkPurchaseRefunded(ctx context.Context, userID, purchaseID string, at time.Time) (bool, error)
 	UpsertSubscription(ctx context.Context, subscription Subscription) error
 	DueSubscriptions(ctx context.Context, at time.Time) ([]Subscription, error)
+	TierAt(ctx context.Context, userID, coverageID string, at time.Time) (plan.Plan, error)
+	InsertTierTransition(ctx context.Context, userID, coverageID string, at time.Time, tier plan.Plan, correlationID string) error
+	SupportCoverage(ctx context.Context, userID string) (SupportCoverage, bool, error)
+	UpsertSupportCoverage(ctx context.Context, coverage SupportCoverage) error
+	DeleteSupportCoverage(ctx context.Context, userID string) error
 }
 
 type Provider interface {
@@ -40,6 +45,8 @@ type Rates interface {
 }
 
 type Credits interface {
+	OpenCoverage(ctx context.Context, userID string, coverage Coverage, at time.Time, correlationID string) error
+	AddUpgradeBonus(ctx context.Context, userID string, coverage Coverage, at time.Time, credits, exportDelta int, correlationID string) error
 	// StartMonthlyWindow opens the window a first subscription charge paid for: the running
 	// window closes with no carry-over and the tier's whole grant opens (QUOTA-42).
 	StartMonthlyWindow(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error

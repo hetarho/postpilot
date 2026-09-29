@@ -18,7 +18,7 @@ import (
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
 
-func TestRegistrationReplacesTheCardAndPersistsOneNonExpiringBonus(t *testing.T) {
+func TestRegistrationReplacesTheCardWithoutMintingCredits(t *testing.T) {
 	ctx := context.Background()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "billing.db"))
 	if err != nil {
@@ -36,14 +36,14 @@ func TestRegistrationReplacesTheCardAndPersistsOneNonExpiringBonus(t *testing.T)
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})}
 	})
 	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	provider := &registrationProvider{label: "11 1234"}
 	service := billing.NewService(store, provider, registrationRates{}, nil, nil, registrationAccounts{}, nil)
 
 	first, err := service.RegisterPaymentMethod(ctx, "alice", "auth-1", billing.CustomerKey("alice"))
-	if err != nil || !first.BonusGranted {
+	if err != nil || first.BonusGranted {
 		t.Fatalf("first registration = %+v, %v", first, err)
 	}
 	provider.label = "22 9876"
@@ -57,27 +57,25 @@ func TestRegistrationReplacesTheCardAndPersistsOneNonExpiringBonus(t *testing.T)
 		"SELECT card_label FROM payment_methods WHERE user_id = ?", "alice").Scan(&label); err != nil || label != "22 9876" {
 		t.Fatalf("stored label = %q, %v", label, err)
 	}
-	var kind string
-	var granted int
-	var expiresAt sql.NullString
+	var grants int
 	if err := handle.Reader.QueryRowContext(ctx,
-		"SELECT kind, granted, expires_at FROM credit_lots WHERE id = ?", "payment-method-bonus:alice").Scan(&kind, &granted, &expiresAt); err != nil {
+		"SELECT count(*) FROM credit_lots WHERE user_id = ?", "alice").Scan(&grants); err != nil {
 		t.Fatal(err)
 	}
-	if kind != "bonus" || granted != 100 || expiresAt.Valid {
-		t.Fatalf("bonus lot = kind %q, granted %d, expires %+v", kind, granted, expiresAt)
+	if grants != 0 {
+		t.Fatalf("registration minted %d credit lots", grants)
 	}
-	var registrations, grants int
+	var registrations, grantEvents int
 	if err := handle.Reader.QueryRowContext(ctx,
 		"SELECT count(*) FROM billing_events WHERE user_id = ? AND kind = 'method_registered'", "alice").Scan(&registrations); err != nil {
 		t.Fatal(err)
 	}
 	if err := handle.Reader.QueryRowContext(ctx,
-		"SELECT count(*) FROM billing_events WHERE user_id = ? AND kind = 'grant'", "alice").Scan(&grants); err != nil {
+		"SELECT count(*) FROM billing_events WHERE user_id = ? AND kind = 'grant'", "alice").Scan(&grantEvents); err != nil {
 		t.Fatal(err)
 	}
-	if registrations != 2 || grants != 1 {
-		t.Fatalf("events: registrations=%d grants=%d", registrations, grants)
+	if registrations != 2 || grantEvents != 0 {
+		t.Fatalf("events: registrations=%d grants=%d", registrations, grantEvents)
 	}
 }
 
@@ -100,7 +98,7 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})}
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
@@ -157,7 +155,7 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	ledger := usage.NewService(usageStore, nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})}
 	})
 	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
@@ -166,7 +164,7 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	service := billing.NewService(store, &registrationProvider{}, registrationRates{}, ledger, nil, nil, nil)
+	service := billing.NewService(store, &registrationProvider{}, registrationRates{}, testCredits{Service: ledger}, nil, nil, nil)
 	purchase, err := service.PurchaseCredits(ctx, "alice", 500)
 	if err != nil {
 		t.Fatal(err)

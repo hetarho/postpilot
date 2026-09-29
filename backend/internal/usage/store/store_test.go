@@ -41,6 +41,10 @@ type fixedAnchors struct{ anchor time.Time }
 func (a fixedAnchors) AnchorFor(context.Context, string) (time.Time, error) {
 	return a.anchor, nil
 }
+func (a fixedAnchors) CoverageFor(context.Context, string, time.Time) (usage.Coverage, bool, error) {
+	return usage.Coverage{ID: "test-coverage", Anchor: a.anchor,
+		Tier: plan.Basic, DailyTier: plan.Basic}, true, nil
+}
 
 func newService(t *testing.T) *usage.Service {
 	t.Helper()

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/billing"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 func TestWebhookReReadsAndStoresProviderPayment(t *testing.T) {
@@ -108,3 +109,16 @@ func (s *webhookStore) UpsertSubscription(context.Context, billing.Subscription)
 func (s *webhookStore) DueSubscriptions(context.Context, time.Time) ([]billing.Subscription, error) {
 	return nil, nil
 }
+func (s *webhookStore) TierAt(context.Context, string, string, time.Time) (plan.Plan, error) {
+	return plan.Basic, nil
+}
+func (s *webhookStore) InsertTierTransition(context.Context, string, string, time.Time, plan.Plan, string) error {
+	return nil
+}
+func (s *webhookStore) SupportCoverage(context.Context, string) (billing.SupportCoverage, bool, error) {
+	return billing.SupportCoverage{}, false, nil
+}
+func (s *webhookStore) UpsertSupportCoverage(context.Context, billing.SupportCoverage) error {
+	return nil
+}
+func (s *webhookStore) DeleteSupportCoverage(context.Context, string) error { return nil }

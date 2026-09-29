@@ -11,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
@@ -22,8 +23,13 @@ import (
 // there rather than here is what makes "which procedures are privileged" answerable by
 // reading one map.
 type AdminHandler struct {
-	svc    *auth.Service
+	svc    AdminAccounts
 	combos EstimatorAssigner
+}
+
+type AdminAccounts interface {
+	ListUsers(ctx context.Context) ([]auth.User, error)
+	SetUserPlan(ctx context.Context, userID string, target plan.Plan) error
 }
 
 // EstimatorAssigner points an estimator combo at two curated models. Declared here by its
@@ -43,7 +49,7 @@ var (
 	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
 )
 
-func NewAdminHandler(svc *auth.Service, combos EstimatorAssigner) *AdminHandler {
+func NewAdminHandler(svc AdminAccounts, combos EstimatorAssigner) *AdminHandler {
 	return &AdminHandler{svc: svc, combos: combos}
 }
 

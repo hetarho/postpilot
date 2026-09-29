@@ -20,6 +20,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,6 +29,9 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/billing"
+	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/clip"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/devseed"
 	"github.com/postpilot/backend/internal/llm"
@@ -74,16 +78,20 @@ func run(ctx context.Context) error {
 	}
 
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
+	boundary := anchors{auth: authSvc}
+	benefitStore := billingstore.New(handle.Writer, handle.Reader)
+	benefitStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return seedBenefitCredits{Service: usage.NewService(usagestore.NewTx(tx), noModels{}, 0, boundary), exports: clipstore.NewTx(tx)}
+	})
+	benefitStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
+		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
+	})
+	support := billing.NewService(benefitStore, nil, nil, nil, nil, nil, nil)
 	report, err := devseed.Run(ctx, devseed.Deps{
 		Accounts: accounts{svc: authSvc, store: authstore.New(handle.Writer, handle.Reader)},
-		Credits: credits{ledger: usage.NewService(
-			usagestore.New(handle.Writer, handle.Reader),
-			noModels{},
-			0,
-			anchors{auth: authSvc},
-		)},
-		Posts: posts{store: poststore.New(handle.Writer, handle.Reader)},
-		Media: media{store: clipstore.New(handle.Writer, handle.Reader)},
+		Credits:  credits{support: support},
+		Posts:    posts{store: poststore.New(handle.Writer, handle.Reader)},
+		Media:    media{store: clipstore.New(handle.Writer, handle.Reader)},
 		Templates: templates{svc: template.NewService(
 			templatestore.New(handle.Writer, handle.Reader),
 			// cmd/api's templateLimits, so the fixture is held to the same ceilings a real save is.
@@ -119,10 +127,13 @@ func (a accounts) Create(ctx context.Context, loginID, password string, tier pla
 
 // credits adapts the ledger, making the same call `adduser` makes so a seeded account's
 // balance is the one its plan entitles it to rather than a number invented here.
-type credits struct{ ledger *usage.Service }
+type credits struct{ support *billing.Service }
 
 func (c credits) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan) error {
-	return c.ledger.EnsureMonthlyLot(ctx, userID, tier)
+	if tier == plan.Free || tier == plan.Master {
+		return nil
+	}
+	return c.support.AssignSupportTier(ctx, userID, tier)
 }
 
 // anchors is the ledger's monthly boundary. The seed creates no subscriptions, so the
@@ -131,6 +142,34 @@ type anchors struct{ auth *auth.Service }
 
 func (a anchors) AnchorFor(ctx context.Context, userID string) (time.Time, error) {
 	return a.auth.CreatedAt(ctx, userID)
+}
+func (a anchors) CoverageFor(context.Context, string, time.Time) (usage.Coverage, bool, error) {
+	return usage.Coverage{}, false, nil
+}
+
+type seedBenefitCredits struct {
+	*usage.Service
+	exports clip.ExportWindows
+}
+
+func (c seedBenefitCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlation string) error {
+	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, correlation); err != nil {
+		return err
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	if !coverage.End.IsZero() && coverage.End.Before(end) {
+		end = coverage.End
+	}
+	offer, _ := plan.CommercialOffer(coverage.Tier)
+	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, correlation)
+}
+func (c seedBenefitCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlation string) error {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, credits, correlation); err != nil {
+		return err
+	}
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	offer, _ := plan.CommercialOffer(coverage.Tier)
+	return c.exports.RaiseExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, exportDelta, correlation)
 }
 
 // noModels stands in for the model registry. The ledger only consults it to price a call,

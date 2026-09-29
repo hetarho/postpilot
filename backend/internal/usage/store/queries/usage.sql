@@ -15,7 +15,8 @@
 --
 -- Keep every comment in this file ASCII: sqlc slices the emitted query text by byte offset,
 -- so one multi-byte character shifts it and generates SQL that will not parse.
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
@@ -24,15 +25,17 @@ ORDER BY CASE WHEN kind = 'purchased' THEN 2 WHEN expires_at IS NULL THEN 1 ELSE
          expires_at, created_at, id;
 
 -- name: ActiveMonthlyLot :one
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE user_id = ? AND kind = 'monthly' AND expires_at IS NOT NULL AND expires_at > ?
 ORDER BY expires_at DESC
 LIMIT 1;
 
 -- name: InsertLot :exec
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at,
+                         coverage_id, window_start, issuance_cause, correlation_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: RaiseLot :exec
 -- Grows a lot that already exists, on both sides at once so the granted/remaining CHECK
@@ -74,7 +77,8 @@ WHERE id = ? AND kind = 'voucher' AND expires_at > ?;
 -- name: VoucherLots :many
 -- Where each of these voucher lots stands, in one statement on the read pool. The operator's
 -- voucher list is its only reader, and the answer decides nothing but what a row shows.
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE id IN (sqlc.slice('ids'))
   AND kind = 'voucher';
@@ -93,19 +97,23 @@ UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ?
 UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
 
 -- name: InsertAdmission :exec
-INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
+                              coverage_id,daily_window_start,benefit_window_start)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: DeleteAdmissionForJob :exec
 DELETE FROM usage_admissions WHERE job_id = ?;
 
 -- name: InsertLotIfAbsent :execrows
--- For a grant whose id is derived from what it is FOR rather than randomly: the signup
--- monthly window today and the payment-method bonus later. Re-running the operation must
--- not mint a second lot.
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO NOTHING;
+-- Window grants never refill. A successful term renewal may extend the expiry of
+-- an already opened day or month that crossed the old paid term boundary.
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at,
+                         coverage_id, window_start, issuance_cause, correlation_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at
+WHERE credit_lots.kind IN ('daily', 'monthly')
+  AND credit_lots.coverage_id = excluded.coverage_id
+  AND credit_lots.expires_at < excluded.expires_at;
 
 -- name: UpsertLot :exec
 -- The window write behind a subscription's first charge (QUOTA-42). Unlike
@@ -133,8 +141,29 @@ WHERE user_id = ?
   AND expires_at IS NOT NULL
   AND expires_at > ?;
 
+-- name: ExpireLegacyMonthlyLots :exec
+UPDATE credit_lots SET expires_at = ?
+WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
+  AND expires_at > ?;
+
 -- name: InsertHoldDebit :exec
-INSERT INTO credit_hold_lots (job_id, lot_id, credits) VALUES (?, ?, ?);
+INSERT INTO credit_hold_lots (job_id, lot_id, credits, origin_coverage_id, origin_window_start)
+VALUES (?, ?, ?, ?, ?);
+
+-- name: InsertEligibleLot :exec
+INSERT INTO usage_admission_eligible_lots(job_id,lot_id) VALUES (?, ?)
+ON CONFLICT(job_id,lot_id) DO NOTHING;
+
+-- name: EligibleLotsForJob :many
+SELECT l.id,l.user_id,l.kind,l.granted,l.remaining,l.expires_at,l.created_at,
+       l.coverage_id,l.window_start,l.issuance_cause,l.correlation_id
+FROM usage_admission_eligible_lots e JOIN credit_lots l ON l.id=e.lot_id
+WHERE e.job_id=? AND l.remaining>0
+ORDER BY CASE WHEN l.kind='purchased' THEN 2 WHEN l.expires_at IS NULL THEN 1 ELSE 0 END,
+         l.expires_at,l.created_at,l.id;
+
+-- name: DeleteEligibleLotsForJob :exec
+DELETE FROM usage_admission_eligible_lots WHERE job_id=?;
 
 -- name: HoldDebitsForJob :many
 SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid;
@@ -142,7 +171,8 @@ SELECT lot_id, credits FROM credit_hold_lots WHERE job_id = ? ORDER BY rowid;
 -- name: OpenAdmissionForJob :one
 -- Only an unsettled admission is returned, which is what makes settlement idempotent: a
 -- terminal transition that runs twice finds nothing the second time.
-SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version
+SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
+       coverage_id,daily_window_start,benefit_window_start
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL;
 

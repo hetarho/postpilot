@@ -47,9 +47,10 @@ func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, 
 		return Subscription{}, errors.Join(ErrChargeFailed, err)
 	}
 
-	next := plan.NextRenewal(now, now)
+	_, next := plan.BenefitWindow(now, now)
+	coverageID := "paid:" + userID + ":" + now.UTC().Format(time.RFC3339Nano)
 	subscription := Subscription{
-		UserID: userID, Tier: tier, Term: term, AnchorAt: now, TermStart: now,
+		UserID: userID, CoverageID: coverageID, Tier: tier, Term: term, AnchorAt: now, TermStart: now,
 		TermEnd: TermEnd(now, now, term), NextGrantAt: next, AutoRenew: true,
 		Status: "active", CreatedAt: now, UpdatedAt: now,
 	}
@@ -66,9 +67,14 @@ func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, 
 		if err := plans.AssignTier(ctx, userID, tier); err != nil {
 			return err
 		}
-		// Not OpenMonthlyLot: a first charge buys a whole month, so the free window it
-		// replaces closes here and its remainder does not carry over (QUOTA-42).
-		return credits.StartMonthlyWindow(ctx, userID, tier, now, next)
+		if err := tx.DeleteSupportCoverage(ctx, userID); err != nil {
+			return err
+		}
+		if err := tx.InsertTierTransition(ctx, userID, coverageID, now, tier, orderID); err != nil {
+			return err
+		}
+		return credits.OpenCoverage(ctx, userID, Coverage{ID: coverageID, Anchor: now,
+			End: subscription.TermEnd, Tier: tier, DailyTier: tier}, now, orderID)
 	})
 	if err != nil {
 		return Subscription{}, err
@@ -82,6 +88,38 @@ func (s *Service) AnchorFor(ctx context.Context, userID string) (time.Time, bool
 		return time.Time{}, false, err
 	}
 	return subscription.AnchorAt, true, nil
+}
+
+// CoverageAt is the subscription owner's answer for a paid benefit instant. The daily
+// tier is resolved at that day's original boundary, not from the current user row.
+func (s *Service) CoverageAt(ctx context.Context, userID string, at time.Time) (Coverage, bool, error) {
+	support, assigned, err := s.store.SupportCoverage(ctx, userID)
+	if err != nil {
+		return Coverage{}, false, err
+	}
+	if assigned && !at.Before(support.Anchor) {
+		dailyStart, _ := plan.DailyWindow(support.Anchor, at)
+		dailyTier, err := s.store.TierAt(ctx, userID, support.ID, dailyStart)
+		if err != nil {
+			return Coverage{}, false, err
+		}
+		return Coverage{ID: support.ID, Anchor: support.Anchor,
+			Tier: support.Tier, DailyTier: dailyTier}, true, nil
+	}
+	sub, found, err := s.store.Subscription(ctx, userID)
+	if err != nil {
+		return Coverage{}, false, err
+	}
+	if !found || sub.Status != "active" || at.Before(sub.AnchorAt) || !at.Before(sub.TermEnd) {
+		return Coverage{}, false, nil
+	}
+	dailyStart, _ := plan.DailyWindow(sub.AnchorAt, at)
+	dailyTier, err := s.store.TierAt(ctx, userID, sub.CoverageID, dailyStart)
+	if err != nil {
+		return Coverage{}, false, err
+	}
+	return Coverage{ID: sub.CoverageID, Anchor: sub.AnchorAt, End: sub.TermEnd,
+		Tier: sub.Tier, DailyTier: dailyTier}, true, nil
 }
 
 // RunDue advances every subscription that was due when the pass started. Each account is
@@ -120,19 +158,15 @@ func (s *Service) runDueStep(ctx context.Context, subscription Subscription, now
 
 func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
 	start := subscription.NextGrantAt
-	end := plan.NextRenewal(subscription.AnchorAt, start)
+	_, end := plan.BenefitWindow(subscription.AnchorAt, start)
 	updated := subscription
 	updated.NextGrantAt = end
 	updated.UpdatedAt = now
-	creditsGranted := plan.MonthlyCredits(subscription.Tier)
-	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits, _ Plans) error {
+	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
-		if err := credits.OpenMonthlyLot(ctx, subscription.UserID, subscription.Tier, start, end); err != nil {
-			return err
-		}
-		return tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "grant", Tier: &subscription.Tier, Term: &subscription.Term, Credits: &creditsGranted, CreatedAt: now})
+		return nil
 	})
 	return updated, err
 }
@@ -170,11 +204,15 @@ func (s *Service) renew(ctx context.Context, subscription Subscription, now time
 	updated.Term = term
 	updated.TermStart = start
 	updated.TermEnd = TermEnd(subscription.AnchorAt, start, term)
-	updated.NextGrantAt = plan.NextRenewal(subscription.AnchorAt, start)
+	_, updated.NextGrantAt = plan.BenefitWindow(subscription.AnchorAt, start)
 	updated.ScheduledTier = nil
 	updated.ScheduledTerm = nil
 	updated.UpdatedAt = now
 	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
+		_, supportAssigned, err := tx.SupportCoverage(ctx, subscription.UserID)
+		if err != nil {
+			return err
+		}
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
@@ -185,11 +223,27 @@ func (s *Service) renew(ctx context.Context, subscription Subscription, now time
 			if err := tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "tier_change", Tier: &tier, Term: &term, CreatedAt: now}); err != nil {
 				return err
 			}
-			if err := plans.AssignTier(ctx, subscription.UserID, tier); err != nil {
+			if !supportAssigned {
+				if err := plans.AssignTier(ctx, subscription.UserID, tier); err != nil {
+					return err
+				}
+			}
+		}
+		if supportAssigned {
+			return nil
+		}
+		if tier != subscription.Tier {
+			if err := tx.InsertTierTransition(ctx, subscription.UserID, subscription.CoverageID, start, tier, orderID); err != nil {
 				return err
 			}
 		}
-		return credits.OpenMonthlyLot(ctx, subscription.UserID, tier, start, updated.NextGrantAt)
+		dailyStart, _ := plan.DailyWindow(subscription.AnchorAt, start)
+		dailyTier := subscription.Tier
+		if !dailyStart.Before(start) {
+			dailyTier = tier
+		}
+		return credits.OpenCoverage(ctx, subscription.UserID, Coverage{ID: subscription.CoverageID,
+			Anchor: subscription.AnchorAt, End: updated.TermEnd, Tier: tier, DailyTier: dailyTier}, start, orderID)
 	})
 	if err != nil {
 		return subscription, err
@@ -208,7 +262,13 @@ func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscript
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
-		if err := plans.AssignTier(ctx, subscription.UserID, plan.Free); err != nil {
+		if support, assigned, err := tx.SupportCoverage(ctx, subscription.UserID); err != nil {
+			return err
+		} else if assigned {
+			if err := plans.AssignTier(ctx, subscription.UserID, support.Tier); err != nil {
+				return err
+			}
+		} else if err := plans.AssignTier(ctx, subscription.UserID, plan.Free); err != nil {
 			return err
 		}
 		note := orderID
@@ -231,7 +291,13 @@ func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription,
 		if err := tx.UpsertSubscription(ctx, updated); err != nil {
 			return err
 		}
-		if err := plans.AssignTier(ctx, subscription.UserID, plan.Free); err != nil {
+		if support, assigned, err := tx.SupportCoverage(ctx, subscription.UserID); err != nil {
+			return err
+		} else if assigned {
+			if err := plans.AssignTier(ctx, subscription.UserID, support.Tier); err != nil {
+				return err
+			}
+		} else if err := plans.AssignTier(ctx, subscription.UserID, plan.Free); err != nil {
 			return err
 		}
 		return tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "cancelled", Tier: &subscription.Tier, Term: &subscription.Term, CreatedAt: now})
@@ -301,9 +367,9 @@ func chargeEvent(userID string, tier plan.Plan, term Term, quote Quote, payment 
 }
 
 func subscriptionOrderID(userID string, start time.Time) string {
-	return "sub:" + userID + ":" + start.In(seoul).Format(time.DateOnly)
+	return "sub:" + userID + ":" + start.UTC().Format(time.RFC3339Nano)
 }
 
 func billableTier(tier plan.Plan) bool {
-	return tier == plan.Basic || tier == plan.Pro || tier == plan.Max
+	return tier == plan.Light || tier == plan.Basic || tier == plan.Pro || tier == plan.Max
 }

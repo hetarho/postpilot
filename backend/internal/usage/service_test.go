@@ -20,6 +20,7 @@ type fakeStore struct {
 	lots        []Lot
 	admissions  []Admission
 	holdDebits  map[string][]LotDebit
+	eligible    map[string][]string
 	settled     map[string]int
 	settlements map[string]Settlement
 	events      []Event
@@ -30,7 +31,7 @@ type fakeStore struct {
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{holdDebits: map[string][]LotDebit{}, settled: map[string]int{}, settlements: map[string]Settlement{}}
+	return &fakeStore{holdDebits: map[string][]LotDebit{}, eligible: map[string][]string{}, settled: map[string]int{}, settlements: map[string]Settlement{}}
 }
 
 // InWriteTx is a pass-through here: these tests assert the rules, and the real store's
@@ -254,6 +255,41 @@ func (f *fakeStore) InsertHoldDebits(_ context.Context, jobID string, debits []L
 	return nil
 }
 
+func (f *fakeStore) InsertEligibleLots(_ context.Context, jobID string, lots []Lot) error {
+	for _, lot := range lots {
+		f.eligible[jobID] = append(f.eligible[jobID], lot.ID)
+	}
+	return nil
+}
+func (f *fakeStore) EligibleLotsForJob(_ context.Context, jobID string) ([]Lot, error) {
+	wanted := map[string]bool{}
+	for _, id := range f.eligible[jobID] {
+		wanted[id] = true
+	}
+	var lots []Lot
+	for _, lot := range f.lots {
+		if wanted[lot.ID] && lot.Remaining > 0 {
+			lots = append(lots, lot)
+		}
+	}
+	return lots, nil
+}
+func (f *fakeStore) DeleteEligibleLotsForJob(_ context.Context, jobID string) error {
+	delete(f.eligible, jobID)
+	return nil
+}
+func (f *fakeStore) OpenExportWindow(context.Context, ExportWindow) error { return nil }
+func (f *fakeStore) ExpireLegacyMonthlyLots(_ context.Context, userID string, at time.Time) error {
+	for i := range f.lots {
+		lot := &f.lots[i]
+		if lot.UserID == userID && lot.Kind == LotMonthly && lot.CoverageID == "" && lot.ExpiresAt != nil && lot.ExpiresAt.After(at) {
+			end := at
+			lot.ExpiresAt = &end
+		}
+	}
+	return nil
+}
+
 func (f *fakeStore) HoldForJob(_ context.Context, jobID string) (Admission, []LotDebit, bool, error) {
 	for _, admission := range f.admissions {
 		if admission.JobID != jobID {
@@ -362,6 +398,13 @@ type fakeAnchors struct {
 
 func (a fakeAnchors) AnchorFor(context.Context, string) (time.Time, error) {
 	return a.anchor, a.err
+}
+func (a fakeAnchors) CoverageFor(_ context.Context, _ string, at time.Time) (Coverage, bool, error) {
+	if a.err != nil {
+		return Coverage{}, false, a.err
+	}
+	return Coverage{ID: "test-coverage", Anchor: a.anchor,
+		Tier: plan.Basic, DailyTier: plan.Basic}, true, nil
 }
 
 // seoulNoon is a fixed instant inside one Asia/Seoul month, far from either boundary.
@@ -577,7 +620,7 @@ func TestConsumptionSpendsTheSoonestExpiryFirst(t *testing.T) {
 		{ID: "monthly", UserID: "alice", Kind: LotMonthly, Granted: 4, Remaining: 4, ExpiresAt: &monthEnd},
 	}
 
-	if err := svc.Hold(context.Background(), holdStart("alice", plan.Basic, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 1})); err != nil {
 		t.Fatal(err)
 	}
 
@@ -609,33 +652,34 @@ func TestExpiredLotsAreNotSpendable(t *testing.T) {
 	}
 }
 
-func TestRenewalOpensTheMonthlyGrantOnAccess(t *testing.T) {
+func TestAccessOpensOnlyTheCurrentDailyAndMonthlyBenefits(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
 
 	balance, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if balance.Credits != plan.MonthlyCredits(plan.Basic) {
-		t.Errorf("credits = %d, want the basic grant %d", balance.Credits, plan.MonthlyCredits(plan.Basic))
+	if balance.Credits != 45+510 || balance.DailyGrant != 45 || balance.MonthlyBonus != 510 {
+		t.Errorf("balance = %+v, want separate basic daily and monthly benefits", balance)
 	}
-	if !balance.RenewsAt.Equal(plan.NextRenewal(testAnchor, seoulNoon)) {
-		t.Errorf("renews at %s, want the anchor boundary %s", balance.RenewsAt, plan.NextRenewal(testAnchor, seoulNoon))
+	_, dayEnd := plan.DailyWindow(testAnchor, seoulNoon)
+	if !balance.RenewsAt.Equal(dayEnd) || !balance.DailyResetsAt.Equal(dayEnd) {
+		t.Errorf("daily reset = %+v, want %s", balance, dayEnd)
 	}
-	if len(store.lots) != 1 {
-		t.Fatalf("lots = %+v, want exactly one opened", store.lots)
+	if len(store.lots) != 2 {
+		t.Fatalf("lots = %+v, want one daily and one monthly benefit", store.lots)
 	}
 
 	// A second read must not mint a second grant.
 	if _, err := svc.BalanceFor(context.Background(), "alice", plan.Basic); err != nil {
 		t.Fatal(err)
 	}
-	if len(store.lots) != 1 {
-		t.Errorf("lots = %+v, want the same one", store.lots)
+	if len(store.lots) != 2 {
+		t.Errorf("lots = %+v, want the same two", store.lots)
 	}
 }
 
-func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
+func TestBenefitWindowsKeepExactAnchorAndIdempotentGrants(t *testing.T) {
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
 	anchor := time.Date(2025, 1, 20, 11, 0, 0, 0, seoul)
 	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
@@ -647,18 +691,17 @@ func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(store.lots) != 1 || store.lots[0].ID != "monthly:alice:2026-08-20" {
-		t.Fatalf("first lots = %+v, want the deterministic August window", store.lots)
+	if len(store.lots) != 2 || store.lots[0].Kind != LotDaily || store.lots[1].Kind != LotMonthly {
+		t.Fatalf("first lots = %+v, want daily and monthly windows", store.lots)
 	}
-	if store.lots[0].Granted != plan.MonthlyCredits(plan.Basic) ||
-		store.lots[0].Remaining != plan.MonthlyCredits(plan.Basic) ||
+	if store.lots[0].Granted != 45 || store.lots[1].Granted != 510 ||
 		store.lots[0].ExpiresAt == nil || !store.lots[0].ExpiresAt.Equal(first.RenewsAt) {
-		t.Errorf("first lot = %+v, balance = %+v", store.lots[0], first)
+		t.Errorf("first lots = %+v, balance = %+v", store.lots, first)
 	}
 	if _, err := svc.BalanceFor(context.Background(), "alice", plan.Basic); err != nil {
 		t.Fatal(err)
 	}
-	if len(store.lots) != 1 {
+	if len(store.lots) != 2 {
 		t.Fatalf("second open in one window minted %d lots", len(store.lots))
 	}
 
@@ -667,11 +710,11 @@ func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(store.lots) != 2 || store.lots[1].ID != "monthly:alice:2026-09-20" {
-		t.Fatalf("next-window lots = %+v, want the September window beside the lapsed row", store.lots)
+	if len(store.lots) != 3 || store.lots[2].Kind != LotDaily {
+		t.Fatalf("next-window lots = %+v, want only the next daily grant", store.lots)
 	}
-	if !second.RenewsAt.Equal(time.Date(2026, 10, 20, 0, 0, 0, 0, seoul)) {
-		t.Errorf("next renewal = %s, want October 20", second.RenewsAt)
+	if !second.RenewsAt.Equal(first.RenewsAt.Add(24 * time.Hour)) {
+		t.Errorf("next daily reset = %s, want 24 hours later", second.RenewsAt)
 	}
 }
 
@@ -725,23 +768,22 @@ func TestRenewalAfterTheBoundaryOpensTheNextGrant(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The lapsed lot's 8 remaining credits do not carry over.
-	if balance.Credits != plan.MonthlyCredits(plan.Basic) {
+	if balance.Credits != 45+510 {
 		t.Errorf("credits = %d, want a fresh grant with nothing carried over", balance.Credits)
 	}
-	if len(store.lots) != 2 {
-		t.Errorf("lots = %d, want the lapsed one kept and a new one opened", len(store.lots))
+	if len(store.lots) != 3 {
+		t.Errorf("lots = %d, want the lapsed one kept and two current grants", len(store.lots))
 	}
 }
 
 func TestMasterIsNeverRefusedButIsStillHeldAndRecorded(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
-	wantRenewal := plan.NextRenewal(testAnchor, seoulNoon)
 	balance, err := svc.BalanceFor(context.Background(), "root", plan.Master)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !balance.Unlimited || !balance.RenewsAt.Equal(wantRenewal) {
-		t.Fatalf("master balance = %+v, want unlimited and renewal %s", balance, wantRenewal)
+	if !balance.Unlimited || !balance.RenewsAt.IsZero() {
+		t.Fatalf("master balance = %+v, want unlimited without a credit reset", balance)
 	}
 
 	// No lots at all: an account that would be refused on any other tier.

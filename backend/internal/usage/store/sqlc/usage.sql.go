@@ -58,7 +58,8 @@ func (q *Queries) AccountingForJob(ctx context.Context, arg AccountingForJobPara
 }
 
 const activeMonthlyLot = `-- name: ActiveMonthlyLot :one
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE user_id = ? AND kind = 'monthly' AND expires_at IS NOT NULL AND expires_at > ?
 ORDER BY expires_at DESC
@@ -81,6 +82,10 @@ func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotPara
 		&i.Remaining,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.CoverageID,
+		&i.WindowStart,
+		&i.IssuanceCause,
+		&i.CorrelationID,
 	)
 	return i, err
 }
@@ -113,6 +118,76 @@ DELETE FROM usage_admissions WHERE job_id = ?
 
 func (q *Queries) DeleteAdmissionForJob(ctx context.Context, jobID string) error {
 	_, err := q.db.ExecContext(ctx, deleteAdmissionForJob, jobID)
+	return err
+}
+
+const deleteEligibleLotsForJob = `-- name: DeleteEligibleLotsForJob :exec
+DELETE FROM usage_admission_eligible_lots WHERE job_id=?
+`
+
+func (q *Queries) DeleteEligibleLotsForJob(ctx context.Context, jobID string) error {
+	_, err := q.db.ExecContext(ctx, deleteEligibleLotsForJob, jobID)
+	return err
+}
+
+const eligibleLotsForJob = `-- name: EligibleLotsForJob :many
+SELECT l.id,l.user_id,l.kind,l.granted,l.remaining,l.expires_at,l.created_at,
+       l.coverage_id,l.window_start,l.issuance_cause,l.correlation_id
+FROM usage_admission_eligible_lots e JOIN credit_lots l ON l.id=e.lot_id
+WHERE e.job_id=? AND l.remaining>0
+ORDER BY CASE WHEN l.kind='purchased' THEN 2 WHEN l.expires_at IS NULL THEN 1 ELSE 0 END,
+         l.expires_at,l.created_at,l.id
+`
+
+func (q *Queries) EligibleLotsForJob(ctx context.Context, jobID string) ([]CreditLot, error) {
+	rows, err := q.db.QueryContext(ctx, eligibleLotsForJob, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CreditLot
+	for rows.Next() {
+		var i CreditLot
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Kind,
+			&i.Granted,
+			&i.Remaining,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.CoverageID,
+			&i.WindowStart,
+			&i.IssuanceCause,
+			&i.CorrelationID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const expireLegacyMonthlyLots = `-- name: ExpireLegacyMonthlyLots :exec
+UPDATE credit_lots SET expires_at = ?
+WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
+  AND expires_at > ?
+`
+
+type ExpireLegacyMonthlyLotsParams struct {
+	ExpiresAt   sql.NullString
+	UserID      string
+	ExpiresAt_2 sql.NullString
+}
+
+func (q *Queries) ExpireLegacyMonthlyLots(ctx context.Context, arg ExpireLegacyMonthlyLotsParams) error {
+	_, err := q.db.ExecContext(ctx, expireLegacyMonthlyLots, arg.ExpiresAt, arg.UserID, arg.ExpiresAt_2)
 	return err
 }
 
@@ -203,8 +278,9 @@ func (q *Queries) HoldDebitsForJob(ctx context.Context, jobID string) ([]HoldDeb
 }
 
 const insertAdmission = `-- name: InsertAdmission :exec
-INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO usage_admissions (user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
+                              coverage_id,daily_window_start,benefit_window_start)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertAdmissionParams struct {
@@ -215,6 +291,9 @@ type InsertAdmissionParams struct {
 	CreatedAt                 string
 	ApprovedMaxCredits        sql.NullInt64
 	CancellationPolicyVersion int64
+	CoverageID                sql.NullString
+	DailyWindowStart          sql.NullString
+	BenefitWindowStart        sql.NullString
 }
 
 func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams) error {
@@ -226,7 +305,25 @@ func (q *Queries) InsertAdmission(ctx context.Context, arg InsertAdmissionParams
 		arg.CreatedAt,
 		arg.ApprovedMaxCredits,
 		arg.CancellationPolicyVersion,
+		arg.CoverageID,
+		arg.DailyWindowStart,
+		arg.BenefitWindowStart,
 	)
+	return err
+}
+
+const insertEligibleLot = `-- name: InsertEligibleLot :exec
+INSERT INTO usage_admission_eligible_lots(job_id,lot_id) VALUES (?, ?)
+ON CONFLICT(job_id,lot_id) DO NOTHING
+`
+
+type InsertEligibleLotParams struct {
+	JobID string
+	LotID string
+}
+
+func (q *Queries) InsertEligibleLot(ctx context.Context, arg InsertEligibleLotParams) error {
+	_, err := q.db.ExecContext(ctx, insertEligibleLot, arg.JobID, arg.LotID)
 	return err
 }
 
@@ -272,33 +369,47 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 }
 
 const insertHoldDebit = `-- name: InsertHoldDebit :exec
-INSERT INTO credit_hold_lots (job_id, lot_id, credits) VALUES (?, ?, ?)
+INSERT INTO credit_hold_lots (job_id, lot_id, credits, origin_coverage_id, origin_window_start)
+VALUES (?, ?, ?, ?, ?)
 `
 
 type InsertHoldDebitParams struct {
-	JobID   string
-	LotID   string
-	Credits int64
+	JobID             string
+	LotID             string
+	Credits           int64
+	OriginCoverageID  sql.NullString
+	OriginWindowStart sql.NullString
 }
 
 func (q *Queries) InsertHoldDebit(ctx context.Context, arg InsertHoldDebitParams) error {
-	_, err := q.db.ExecContext(ctx, insertHoldDebit, arg.JobID, arg.LotID, arg.Credits)
+	_, err := q.db.ExecContext(ctx, insertHoldDebit,
+		arg.JobID,
+		arg.LotID,
+		arg.Credits,
+		arg.OriginCoverageID,
+		arg.OriginWindowStart,
+	)
 	return err
 }
 
 const insertLot = `-- name: InsertLot :exec
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at,
+                         coverage_id, window_start, issuance_cause, correlation_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertLotParams struct {
-	ID        string
-	UserID    string
-	Kind      string
-	Granted   int64
-	Remaining int64
-	ExpiresAt sql.NullString
-	CreatedAt string
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
 }
 
 func (q *Queries) InsertLot(ctx context.Context, arg InsertLotParams) error {
@@ -310,29 +421,40 @@ func (q *Queries) InsertLot(ctx context.Context, arg InsertLotParams) error {
 		arg.Remaining,
 		arg.ExpiresAt,
 		arg.CreatedAt,
+		arg.CoverageID,
+		arg.WindowStart,
+		arg.IssuanceCause,
+		arg.CorrelationID,
 	)
 	return err
 }
 
 const insertLotIfAbsent = `-- name: InsertLotIfAbsent :execrows
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO NOTHING
+INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at,
+                         coverage_id, window_start, issuance_cause, correlation_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at
+WHERE credit_lots.kind IN ('daily', 'monthly')
+  AND credit_lots.coverage_id = excluded.coverage_id
+  AND credit_lots.expires_at < excluded.expires_at
 `
 
 type InsertLotIfAbsentParams struct {
-	ID        string
-	UserID    string
-	Kind      string
-	Granted   int64
-	Remaining int64
-	ExpiresAt sql.NullString
-	CreatedAt string
+	ID            string
+	UserID        string
+	Kind          string
+	Granted       int64
+	Remaining     int64
+	ExpiresAt     sql.NullString
+	CreatedAt     string
+	CoverageID    sql.NullString
+	WindowStart   sql.NullString
+	IssuanceCause sql.NullString
+	CorrelationID sql.NullString
 }
 
-// For a grant whose id is derived from what it is FOR rather than randomly: the signup
-// monthly window today and the payment-method bonus later. Re-running the operation must
-// not mint a second lot.
+// Window grants never refill. A successful term renewal may extend the expiry of
+// an already opened day or month that crossed the old paid term boundary.
 func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, insertLotIfAbsent,
 		arg.ID,
@@ -342,6 +464,10 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 		arg.Remaining,
 		arg.ExpiresAt,
 		arg.CreatedAt,
+		arg.CoverageID,
+		arg.WindowStart,
+		arg.IssuanceCause,
+		arg.CorrelationID,
 	)
 	if err != nil {
 		return 0, err
@@ -365,7 +491,8 @@ func (q *Queries) LotUntouched(ctx context.Context, id string) (bool, error) {
 
 const lotsInConsumptionOrder = `-- name: LotsInConsumptionOrder :many
 
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE user_id = ?
   AND remaining > 0
@@ -411,6 +538,10 @@ func (q *Queries) LotsInConsumptionOrder(ctx context.Context, arg LotsInConsumpt
 			&i.Remaining,
 			&i.ExpiresAt,
 			&i.CreatedAt,
+			&i.CoverageID,
+			&i.WindowStart,
+			&i.IssuanceCause,
+			&i.CorrelationID,
 		); err != nil {
 			return nil, err
 		}
@@ -452,7 +583,8 @@ func (q *Queries) MarkAdmissionSettled(ctx context.Context, arg MarkAdmissionSet
 }
 
 const openAdmissionForJob = `-- name: OpenAdmissionForJob :one
-SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version
+SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, cancellation_policy_version,
+       coverage_id,daily_window_start,benefit_window_start
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL
 `
@@ -465,6 +597,9 @@ type OpenAdmissionForJobRow struct {
 	CreatedAt                 string
 	ApprovedMaxCredits        sql.NullInt64
 	CancellationPolicyVersion int64
+	CoverageID                sql.NullString
+	DailyWindowStart          sql.NullString
+	BenefitWindowStart        sql.NullString
 }
 
 // Only an unsettled admission is returned, which is what makes settlement idempotent: a
@@ -480,6 +615,9 @@ func (q *Queries) OpenAdmissionForJob(ctx context.Context, jobID string) (OpenAd
 		&i.CreatedAt,
 		&i.ApprovedMaxCredits,
 		&i.CancellationPolicyVersion,
+		&i.CoverageID,
+		&i.DailyWindowStart,
+		&i.BenefitWindowStart,
 	)
 	return i, err
 }
@@ -740,7 +878,8 @@ func (q *Queries) VoidUntouchedLot(ctx context.Context, id string) (int64, error
 }
 
 const voucherLots = `-- name: VoucherLots :many
-SELECT id, user_id, kind, granted, remaining, expires_at, created_at
+SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
+       coverage_id, window_start, issuance_cause, correlation_id
 FROM credit_lots
 WHERE id IN (/*SLICE:ids*/?)
   AND kind = 'voucher'
@@ -775,6 +914,10 @@ func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]CreditLot, e
 			&i.Remaining,
 			&i.ExpiresAt,
 			&i.CreatedAt,
+			&i.CoverageID,
+			&i.WindowStart,
+			&i.IssuanceCause,
+			&i.CorrelationID,
 		); err != nil {
 			return nil, err
 		}

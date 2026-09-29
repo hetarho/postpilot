@@ -58,7 +58,11 @@ type Balance struct {
 	Lots      []Lot
 	// RenewsAt is when the next monthly grant opens: every refusal names it, so a user is
 	// never told "later" without being told when.
-	RenewsAt time.Time
+	RenewsAt                              time.Time
+	DailyGrant, MonthlyBonus              int
+	DailyResetsAt, BonusResetsAt          time.Time
+	CoverageID                            string
+	CoverageEnd, BenefitStart, BenefitEnd time.Time
 }
 
 // Lot is one grant as the plan screen shows it.
@@ -67,7 +71,10 @@ type Lot struct {
 	Granted   int
 	Remaining int
 	// ExpiresAt is nil for a grant that does not expire.
-	ExpiresAt *time.Time
+	ExpiresAt     *time.Time
+	CoverageID    string
+	WindowStart   *time.Time
+	IssuanceCause string
 }
 
 // Ledger is the balance this handler reports. Declared here by its consumer; the usage
@@ -137,10 +144,13 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			expires = lot.ExpiresAt.UTC().Format(time.RFC3339)
 		}
 		lots = append(lots, &postpilotv1.CreditLot{
-			Kind:      lot.Kind,
-			Granted:   int32(lot.Granted),
-			Remaining: int32(lot.Remaining),
-			ExpiresAt: expires,
+			Kind:          lot.Kind,
+			Granted:       int32(lot.Granted),
+			Remaining:     int32(lot.Remaining),
+			ExpiresAt:     expires,
+			CoverageId:    lot.CoverageID,
+			WindowStart:   wireTimePointer(lot.WindowStart),
+			IssuanceCause: lot.IssuanceCause,
 		})
 	}
 
@@ -193,10 +203,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		})
 	}
 
-	legacyGrant := plan.MonthlyCredits(acting)
-	if acting == plan.Free {
-		legacyGrant = 0
-	}
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
 		Plan:              ToProto(acting),
 		Offers:            offers,
@@ -204,13 +210,33 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		ClipSourceSeconds: plan.EstimatorClipSourceSeconds,
 		CreditPacks:       packs,
 		Balance: &postpilotv1.CreditBalance{
-			Credits:      int32(balance.Credits),
-			Unlimited:    balance.Unlimited,
-			Lots:         lots,
-			RenewsAt:     balance.RenewsAt.UTC().Format(time.RFC3339),
-			MonthlyGrant: int32(legacyGrant),
+			Credits:            int32(balance.Credits),
+			Unlimited:          balance.Unlimited,
+			Lots:               lots,
+			RenewsAt:           wireTime(balance.RenewsAt),
+			DailyGrant:         int32(balance.DailyGrant),
+			MonthlyBonus:       int32(balance.MonthlyBonus),
+			DailyResetsAt:      wireTime(balance.DailyResetsAt),
+			BonusResetsAt:      wireTime(balance.BonusResetsAt),
+			CoverageId:         balance.CoverageID,
+			CoverageEndsAt:     wireTime(balance.CoverageEnd),
+			BenefitWindowStart: wireTime(balance.BenefitStart),
+			BenefitWindowEnd:   wireTime(balance.BenefitEnd),
 		},
 	}), nil
+}
+
+func wireTime(at time.Time) string {
+	if at.IsZero() {
+		return ""
+	}
+	return at.UTC().Format(time.RFC3339Nano)
+}
+func wireTimePointer(at *time.Time) string {
+	if at == nil {
+		return ""
+	}
+	return wireTime(*at)
 }
 
 var _ postpilotv1connect.PlanServiceHandler = (*Handler)(nil)

@@ -134,12 +134,14 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// without that context knowing the ledger exists.
 	anchors := usageAnchors{auth: c.auth, late: c}
 	c.ledger = usage.NewService(
-		usagestore.New(handle.Writer, handle.Reader), registry,
+		usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
+			return usageExports{clipstore.NewTx(tx)}
+		}), registry,
 		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
 	)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return billingCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}
+		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...), exports: clipstore.NewTx(tx)}
 	})
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})
@@ -150,7 +152,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		exchangeRates = fxrate.NewEximbank(cfg.EximAPIKey, http.DefaultClient)
 	}
 	c.billing = billing.NewService(
-		c.billingStore, c.payments, exchangeRates, billingCredits{c.ledger}, c.auth, c.auth,
+		c.billingStore, c.payments, exchangeRates, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
 	)
 	voucherStore := voucherstore.New(handle.Writer, handle.Reader)

@@ -21,6 +21,9 @@ type fixedAnchors struct{}
 func (fixedAnchors) AnchorFor(context.Context, string) (time.Time, error) {
 	return time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil
 }
+func (fixedAnchors) CoverageFor(context.Context, string, time.Time) (usage.Coverage, bool, error) {
+	return usage.Coverage{}, false, nil
+}
 
 // ledgerCredits is the composition root's adapter, restated here so the test wires the store
 // the way production does: the redemption's lot rides the voucher store's transaction.
