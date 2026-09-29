@@ -4,19 +4,18 @@ import type { Voice } from '@/entities/voice'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
 import { useDeleteVoice } from '@/entities/voice'
 
-/** Soft-deletes a voice after the sheet explains what stays. Never offered for the default: the
- *  server refuses it, and a button that always fails is not a control. */
+/** Soft-deletes a voice after the sheet explains what stays (VOICE-13). The 기본 and the last
+ *  voice delete like any other; only a voice with running work refuses. */
 export function DeleteVoiceButton({
   ownerId,
   voice,
 }: {
   ownerId: string
-  voice: Pick<Voice, 'id' | 'name' | 'isDefault'>
+  voice: Pick<Voice, 'id' | 'name'>
 }) {
   const { t } = useTranslation(['voices', 'common'])
   const remove = useDeleteVoice(ownerId)
   const [confirming, setConfirming] = useState(false)
-  if (voice.isDefault) return null
 
   const confirm = async () => {
     try {
@@ -41,8 +40,7 @@ export function DeleteVoiceButton({
       </Button>
       {remove.isError && (
         <FieldMessage className="w-full">
-          {remove.failure?.reason === 'VOICE_BUSY' ||
-          remove.failure?.reason === 'VOICE_DEFAULT_DELETE_FORBIDDEN'
+          {remove.failure?.reason === 'VOICE_BUSY'
             ? t('error.deleteBlockedDetail', {
                 ns: 'voices',
                 error: remove.errorMessage,
@@ -59,7 +57,7 @@ export function DeleteVoiceButton({
         onClose={() => setConfirming(false)}
         onConfirm={() => void confirm()}
       >
-        {t('delete.description', { ns: 'voices', name: voice.name })}
+        {t('delete.description', { ns: 'voices' })}
       </Dialog>
     </>
   )

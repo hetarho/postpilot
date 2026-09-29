@@ -86,7 +86,7 @@ func TestVersionSampleIsPrivateToOneVoiceAndOneAccount(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	alice := h.voice("alice")
-	other, _, err := h.svc.CreateVoice(ctx, "alice", "다른 말투", voice.LanguageKorean, nil)
+	other, err := h.svc.CreateVoice(ctx, "alice", "다른 말투")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestVersionSampleNeedsAPublishedVersionAndAnActiveVoice(t *testing.T) {
 	}
 	// A deleted voice takes no new writing, but its record stays READABLE like the rest of its
 	// profile.
-	gone, _, err := h.svc.CreateVoice(ctx, "alice", "사라질 말투", voice.LanguageKorean, nil)
+	gone, err := h.svc.CreateVoice(ctx, "alice", "사라질 말투")
 	if err != nil {
 		t.Fatal(err)
 	}

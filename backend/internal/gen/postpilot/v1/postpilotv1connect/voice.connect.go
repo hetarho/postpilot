@@ -76,7 +76,7 @@ const (
 // VoiceServiceClient is a client for the postpilot.v1.VoiceService service.
 type VoiceServiceClient interface {
 	// The voice directory. A voice owns exactly one profile and every row that can change
-	// it; an account always has at least one active voice and exactly one active default.
+	// it; an account has zero or more voices and at most one active, made default.
 	ListVoices(context.Context, *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error)
 	CreateVoice(context.Context, *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error)
 	RenameVoice(context.Context, *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error)
@@ -273,7 +273,7 @@ func (c *voiceServiceClient) RestoreVoiceProfile(ctx context.Context, req *conne
 // VoiceServiceHandler is an implementation of the postpilot.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	// The voice directory. A voice owns exactly one profile and every row that can change
-	// it; an account always has at least one active voice and exactly one active default.
+	// it; an account has zero or more voices and at most one active, made default.
 	ListVoices(context.Context, *connect.Request[v1.ListVoicesRequest]) (*connect.Response[v1.ListVoicesResponse], error)
 	CreateVoice(context.Context, *connect.Request[v1.CreateVoiceRequest]) (*connect.Response[v1.CreateVoiceResponse], error)
 	RenameVoice(context.Context, *connect.Request[v1.RenameVoiceRequest]) (*connect.Response[v1.RenameVoiceResponse], error)

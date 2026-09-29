@@ -21,10 +21,10 @@ type VoiceDirectoryStore interface {
 	InsertVoice(ctx context.Context, v Voice) error
 	ListVoices(ctx context.Context, userID string) ([]Voice, error)
 	GetVoice(ctx context.Context, userID, voiceID string) (Voice, error)
-	DefaultVoice(ctx context.Context, userID string) (Voice, bool, error)
-	CountActiveVoices(ctx context.Context, userID string) (int, error)
 	RenameVoice(ctx context.Context, userID, voiceID, name string, now time.Time) error
 	SetDefaultVoice(ctx context.Context, userID, voiceID string, now time.Time) error
+	// ClearDefaultVoice leaves the account with no 기본 (VOICE-2).
+	ClearDefaultVoice(ctx context.Context, userID string, now time.Time) error
 	SoftDeleteVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
 	RestoreVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error)
 }
@@ -110,15 +110,8 @@ type Models interface {
 type Jobs interface {
 	Enqueue(ctx context.Context, request AnalysisJobRequest) (string, error)
 	ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*ActiveJob, error)
-	// LatestForVoiceKind is the most recent job of the kind frozen to the voice, whatever its
-	// status, or nil.
-	LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*FinishedJob, error)
 	// HasActiveForVoice reports any queued/running job frozen to the voice, whatever its kind
 	// or post — the whole set a soft delete must wait for.
 	HasActiveForVoice(ctx context.Context, voiceID string) (bool, error)
 }
-type PersonalizationJobs interface {
-	EnqueuePersonalization(ctx context.Context, request PersonalizationJobRequest) (string, error)
-}
-
 type Progress func(stage string, done, total int)

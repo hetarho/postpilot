@@ -73,17 +73,6 @@ func (q *Queries) ClearDefaultVoice(ctx context.Context, arg ClearDefaultVoicePa
 	return err
 }
 
-const countActiveVoices = `-- name: CountActiveVoices :one
-SELECT count(*) FROM voices WHERE user_id = ? AND deleted_at IS NULL
-`
-
-func (q *Queries) CountActiveVoices(ctx context.Context, userID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countActiveVoices, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countSamples = `-- name: CountSamples :one
 SELECT count(*) FROM voice_samples WHERE voice_id = ? AND user_id = ?
 `
@@ -156,44 +145,6 @@ func (q *Queries) GetCorpusVersion(ctx context.Context, arg GetCorpusVersionPara
 	var corpus_version int64
 	err := row.Scan(&corpus_version)
 	return corpus_version, err
-}
-
-const getDefaultVoice = `-- name: GetDefaultVoice :one
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
-       CAST(EXISTS (
-           SELECT 1 FROM voice_profiles p
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
-FROM voices v WHERE v.user_id = ? AND v.is_default = 1 AND v.deleted_at IS NULL
-`
-
-type GetDefaultVoiceRow struct {
-	ID             string
-	UserID         string
-	Name           string
-	IsDefault      int64
-	DeletedAt      sql.NullString
-	CreatedAt      string
-	UpdatedAt      string
-	SourceLanguage string
-	Made           int64
-}
-
-func (q *Queries) GetDefaultVoice(ctx context.Context, userID string) (GetDefaultVoiceRow, error) {
-	row := q.db.QueryRowContext(ctx, getDefaultVoice, userID)
-	var i GetDefaultVoiceRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Name,
-		&i.IsDefault,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.SourceLanguage,
-		&i.Made,
-	)
-	return i, err
 }
 
 const getProfile = `-- name: GetProfile :one
@@ -311,11 +262,21 @@ func (q *Queries) GetVersionSample(ctx context.Context, arg GetVersionSamplePara
 }
 
 const getVoice = `-- name: GetVoice :one
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
            SELECT 1 FROM voice_profiles p
            WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
+       ) AS INTEGER) AS made,
+       CAST((
+           SELECT count(*) FROM voice_samples s
+           WHERE s.voice_id = v.id AND s.user_id = v.user_id
+       ) AS INTEGER) AS sample_count,
+       CAST(coalesce((
+           SELECT pv.created_at FROM voice_profiles p
+           JOIN voice_profile_versions pv
+             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+       ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.id = ? AND v.user_id = ?
 `
 
@@ -325,15 +286,16 @@ type GetVoiceParams struct {
 }
 
 type GetVoiceRow struct {
-	ID             string
-	UserID         string
-	Name           string
-	IsDefault      int64
-	DeletedAt      sql.NullString
-	CreatedAt      string
-	UpdatedAt      string
-	SourceLanguage string
-	Made           int64
+	ID          string
+	UserID      string
+	Name        string
+	IsDefault   int64
+	DeletedAt   sql.NullString
+	CreatedAt   string
+	UpdatedAt   string
+	Made        int64
+	SampleCount int64
+	AnalyzedAt  string
 }
 
 func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow, error) {
@@ -347,8 +309,9 @@ func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SourceLanguage,
 		&i.Made,
+		&i.SampleCount,
+		&i.AnalyzedAt,
 	)
 	return i, err
 }
@@ -431,18 +394,17 @@ func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) erro
 
 const insertVoice = `-- name: InsertVoice :exec
 
-INSERT INTO voices (id, user_id, name, source_language, is_default, deleted_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
+INSERT INTO voices (id, user_id, name, is_default, deleted_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, NULL, ?, ?)
 `
 
 type InsertVoiceParams struct {
-	ID             string
-	UserID         string
-	Name           string
-	SourceLanguage string
-	IsDefault      int64
-	CreatedAt      string
-	UpdatedAt      string
+	ID        string
+	UserID    string
+	Name      string
+	IsDefault int64
+	CreatedAt string
+	UpdatedAt string
 }
 
 // Voices. The account owns the directory; every profile row below belongs to exactly one
@@ -455,7 +417,6 @@ func (q *Queries) InsertVoice(ctx context.Context, arg InsertVoiceParams) error 
 		arg.ID,
 		arg.UserID,
 		arg.Name,
-		arg.SourceLanguage,
 		arg.IsDefault,
 		arg.CreatedAt,
 		arg.UpdatedAt,
@@ -659,29 +620,41 @@ func (q *Queries) ListSamples(ctx context.Context, arg ListSamplesParams) ([]Lis
 
 const listVoices = `-- name: ListVoices :many
 
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
            SELECT 1 FROM voice_profiles p
            WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
+       ) AS INTEGER) AS made,
+       CAST((
+           SELECT count(*) FROM voice_samples s
+           WHERE s.voice_id = v.id AND s.user_id = v.user_id
+       ) AS INTEGER) AS sample_count,
+       CAST(coalesce((
+           SELECT pv.created_at FROM voice_profiles p
+           JOIN voice_profile_versions pv
+             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+       ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.user_id = ?
 ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id
 `
 
 type ListVoicesRow struct {
-	ID             string
-	UserID         string
-	Name           string
-	IsDefault      int64
-	DeletedAt      sql.NullString
-	CreatedAt      string
-	UpdatedAt      string
-	SourceLanguage string
-	Made           int64
+	ID          string
+	UserID      string
+	Name        string
+	IsDefault   int64
+	DeletedAt   sql.NullString
+	CreatedAt   string
+	UpdatedAt   string
+	Made        int64
+	SampleCount int64
+	AnalyzedAt  string
 }
 
-// Every directory read carries made: a published analysis exists (POST-23). The three reads
-// select the same columns, so their rows convert to one another.
+// Every directory read carries made (a published analysis exists, POST-23), the sample count
+// and the current analysis's publication time for the row's meta line (VOICE-52). The two
+// reads select the same columns, so their rows convert to one another.
 func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listVoices, userID)
 	if err != nil {
@@ -699,8 +672,9 @@ func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRo
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SourceLanguage,
 			&i.Made,
+			&i.SampleCount,
+			&i.AnalyzedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -801,8 +775,8 @@ func (q *Queries) SetProfileHead(ctx context.Context, arg SetProfileHeadParams) 
 }
 
 const softDeleteVoice = `-- name: SoftDeleteVoice :execrows
-UPDATE voices SET deleted_at = ?, updated_at = ?
-WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND is_default = 0
+UPDATE voices SET deleted_at = ?, updated_at = ?, is_default = 0
+WHERE id = ? AND user_id = ? AND deleted_at IS NULL
 `
 
 type SoftDeleteVoiceParams struct {
@@ -812,6 +786,7 @@ type SoftDeleteVoiceParams struct {
 	UserID    string
 }
 
+// Deleting the default leaves the account with none (VOICE-13): a tombstone is never it.
 func (q *Queries) SoftDeleteVoice(ctx context.Context, arg SoftDeleteVoiceParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, softDeleteVoice,
 		arg.DeletedAt,

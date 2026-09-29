@@ -33,9 +33,6 @@ func New(writer, reader *sql.DB) *Store {
 // unique indexes on active name and active default are the arbiter of a race between two
 // creates; either failure surfaces as ErrVoiceNameTaken.
 func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
-	if !v.SourceLanguage.Valid() {
-		return voice.ErrLanguageRequired
-	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin insert voice: %w", err)
@@ -47,7 +44,7 @@ func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
 		isDefault = 1
 	}
 	if err := q.InsertVoice(ctx, sqlc.InsertVoiceParams{
-		ID: v.ID, UserID: v.UserID, Name: v.Name, SourceLanguage: string(v.SourceLanguage), IsDefault: isDefault,
+		ID: v.ID, UserID: v.UserID, Name: v.Name, IsDefault: isDefault,
 		CreatedAt: formatTime(v.CreatedAt), UpdatedAt: formatTime(v.UpdatedAt),
 	}); err != nil {
 		if isUniqueViolation(err) {
@@ -93,26 +90,6 @@ func (s *Store) GetVoice(ctx context.Context, userID, voiceID string) (voice.Voi
 	return toVoice(sqlc.ListVoicesRow(row))
 }
 
-func (s *Store) DefaultVoice(ctx context.Context, userID string) (voice.Voice, bool, error) {
-	row, err := s.read.GetDefaultVoice(ctx, userID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return voice.Voice{}, false, nil
-	}
-	if err != nil {
-		return voice.Voice{}, false, fmt.Errorf("select default voice: %w", err)
-	}
-	v, err := toVoice(sqlc.ListVoicesRow(row))
-	return v, err == nil, err
-}
-
-func (s *Store) CountActiveVoices(ctx context.Context, userID string) (int, error) {
-	n, err := s.read.CountActiveVoices(ctx, userID)
-	if err != nil {
-		return 0, fmt.Errorf("count active voices: %w", err)
-	}
-	return int(n), nil
-}
-
 func (s *Store) RenameVoice(ctx context.Context, userID, voiceID, name string, now time.Time) error {
 	n, err := s.write.RenameVoice(ctx, sqlc.RenameVoiceParams{Name: name, UpdatedAt: formatTime(now), ID: voiceID, UserID: userID})
 	if err != nil {
@@ -153,6 +130,14 @@ func (s *Store) SetDefaultVoice(ctx context.Context, userID, voiceID string, now
 	return nil
 }
 
+// ClearDefaultVoice leaves the account with no default (VOICE-2).
+func (s *Store) ClearDefaultVoice(ctx context.Context, userID string, now time.Time) error {
+	if err := s.write.ClearDefaultVoice(ctx, sqlc.ClearDefaultVoiceParams{UpdatedAt: formatTime(now), UserID: userID}); err != nil {
+		return fmt.Errorf("clear default voice: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) SoftDeleteVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error) {
 	stamp := formatTime(now)
 	n, err := s.write.SoftDeleteVoice(ctx, sqlc.SoftDeleteVoiceParams{DeletedAt: nullableString(stamp), UpdatedAt: stamp, ID: voiceID, UserID: userID})
@@ -176,8 +161,8 @@ func (s *Store) RestoreVoice(ctx context.Context, userID, voiceID string, now ti
 	return n > 0, nil
 }
 
-// toVoice maps a directory row. The three directory reads select the same columns, so a
-// GetVoice or GetDefaultVoice row converts to this one.
+// toVoice maps a directory row. The two directory reads select the same columns, so a
+// GetVoice row converts to this one.
 func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
@@ -195,11 +180,18 @@ func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 		}
 		deleted = &value
 	}
-	sourceLanguage, err := voice.ParseLanguage(row.SourceLanguage)
-	if err != nil {
-		return voice.Voice{}, fmt.Errorf("voice %s source language: %w", row.ID, err)
+	var analyzed *time.Time
+	if row.AnalyzedAt != "" {
+		value, err := parseTime(row.AnalyzedAt)
+		if err != nil {
+			return voice.Voice{}, fmt.Errorf("voice %s analyzed_at: %w", row.ID, err)
+		}
+		analyzed = &value
 	}
-	return voice.Voice{ID: row.ID, UserID: row.UserID, Name: row.Name, SourceLanguage: sourceLanguage, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated, DeletedAt: deleted, Made: row.Made == 1}, nil
+	return voice.Voice{
+		ID: row.ID, UserID: row.UserID, Name: row.Name, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated,
+		DeletedAt: deleted, Made: row.Made == 1, SampleCount: int(row.SampleCount), AnalyzedAt: analyzed,
+	}, nil
 }
 
 // --- profile and samples ---

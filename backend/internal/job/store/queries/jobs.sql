@@ -60,13 +60,6 @@ SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technic
 WHERE status = 'running' AND cancel_requested_at IS NULL
 AND NOT EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.state IN ('waiting','ready'));
 
--- name: SweepQueuedPersonalization :execrows
-UPDATE generation_jobs
-SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
-    finished_at = ?, updated_at = ?
-WHERE status = 'queued'
-  AND kind = 'seed_voice';
-
 -- name: ActiveForPost :one
 SELECT * FROM generation_jobs
 WHERE post_slug = ? AND status IN ('queued', 'running')

@@ -218,21 +218,6 @@ func (s *Store) SweepRunning(ctx context.Context, failure job.Failure, now time.
 	return n, nil
 }
 
-func (s *Store) SweepQueuedPersonalization(ctx context.Context, failure job.Failure, now time.Time) (int64, error) {
-	reason, params, detail, err := failureColumns(&failure)
-	if err != nil {
-		return 0, fmt.Errorf("sweep queued personalization failure: %w", err)
-	}
-	n, err := s.write.SweepQueuedPersonalization(ctx, sqlc.SweepQueuedPersonalizationParams{
-		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
-		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
-	})
-	if err != nil {
-		return 0, fmt.Errorf("sweep queued personalization: %w", err)
-	}
-	return n, nil
-}
-
 // ActiveFor resolves the dimension the caller named to its column. A dimension this
 // schema does not know is an error: matching nothing would read as "not busy".
 func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error) {

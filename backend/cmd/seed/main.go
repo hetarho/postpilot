@@ -42,8 +42,6 @@ import (
 	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
-	"github.com/postpilot/backend/internal/voice"
-	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 func main() {
@@ -78,7 +76,6 @@ func run(ctx context.Context) error {
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	report, err := devseed.Run(ctx, devseed.Deps{
 		Accounts: accounts{svc: authSvc, store: authstore.New(handle.Writer, handle.Reader)},
-		Voices:   voices{svc: voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)},
 		Credits: credits{ledger: usage.NewService(
 			usagestore.New(handle.Writer, handle.Reader),
 			noModels{},
@@ -118,19 +115,6 @@ func (a accounts) DeleteAll(ctx context.Context) (int64, error) {
 
 func (a accounts) Create(ctx context.Context, loginID, password string, tier plan.Plan) error {
 	return a.svc.CreateUser(ctx, loginID, password, tier)
-}
-
-// voices adapts the voice context. The service is built without a model port or a job queue
-// because establishing an account's default voice needs neither — it is a row, not a
-// learning run, and a seeded voice holds no profile.
-type voices struct{ svc *voice.Service }
-
-func (v voices) EnsureDefault(ctx context.Context, userID string) (string, error) {
-	created, _, err := v.svc.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
-	if err != nil {
-		return "", err
-	}
-	return created.ID, nil
 }
 
 // credits adapts the ledger, making the same call `adduser` makes so a seeded account's
@@ -178,7 +162,6 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	created := post.Post{
 		Slug:           slug,
 		UserID:         article.UserID,
-		VoiceID:        article.VoiceID,
 		Title:          article.Title,
 		Memo:           article.Memo,
 		TargetLanguage: language,

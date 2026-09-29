@@ -73,7 +73,6 @@ export interface FakePostVoice {
   deleted?: boolean
   /** Omitted is made: a voice not yet made is the case a test opts into (POST-23). */
   made?: boolean
-  sourceLanguage?: ContentLanguage
 }
 
 /** The voice every fixture post is written in unless it says otherwise — the same one the voice
@@ -81,7 +80,6 @@ export interface FakePostVoice {
 export const DEFAULT_POST_VOICE: FakePostVoice = {
   id: 'voice-default',
   name: '기본 말투',
-  sourceLanguage: 'ko',
 }
 
 /** A 템플릿 as the post fake knows it: just enough to answer a post's `template` projection and to
@@ -408,7 +406,6 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       name: voice.name,
       deleted: voice.deleted ?? false,
       made: voice.made ?? true,
-      sourceLanguage: contentLanguageToProto(voice.sourceLanguage ?? 'ko'),
     })
 
   /** Like the server: '' is 말투 없음, an unknown voice is 404, and a deleted one or one not yet

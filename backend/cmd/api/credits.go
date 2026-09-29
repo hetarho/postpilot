@@ -19,6 +19,9 @@ import (
 	"github.com/postpilot/backend/internal/voucher"
 )
 
+// usageAnchors is the composition seam between the credit ledger, subscriptions and
+// account identity. It prefers an active subscription without teaching either context
+// about the other's persistence.
 type usageAnchors struct {
 	auth    *auth.Service
 	billing interface {

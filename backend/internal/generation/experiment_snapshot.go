@@ -77,10 +77,9 @@ type snapshotPost struct {
 }
 
 type snapshotVoice struct {
-	ID             string `json:"ID"`
-	Name           string `json:"Name"`
-	Deleted        bool   `json:"Deleted"`
-	SourceLanguage string `json:"SourceLanguage"`
+	ID      string `json:"ID"`
+	Name    string `json:"Name"`
+	Deleted bool   `json:"Deleted"`
 }
 
 type snapshotTemplate struct {
@@ -142,7 +141,6 @@ type snapshotProfile struct {
 	Styleguide           string   `json:"Styleguide"`
 	Excerpts             []string `json:"Excerpts"`
 	EndingMaxConsecutive int      `json:"EndingMaxConsecutive"`
-	SourceLanguage       string   `json:"SourceLanguage"`
 	TargetLanguage       string   `json:"TargetLanguage"`
 	Portable             bool     `json:"Portable"`
 	// Version is the profile version the projection was read from; absent in a snapshot taken
@@ -385,14 +383,14 @@ func toSnapshotVoice(voice VoiceRef) *snapshotVoice {
 	if voice.ID == "" {
 		return nil
 	}
-	return &snapshotVoice{ID: voice.ID, Name: voice.Name, Deleted: voice.Deleted, SourceLanguage: string(voice.SourceLanguage)}
+	return &snapshotVoice{ID: voice.ID, Name: voice.Name, Deleted: voice.Deleted}
 }
 
 func fromSnapshotVoice(wire *snapshotVoice) VoiceRef {
 	if wire == nil {
 		return VoiceRef{}
 	}
-	return VoiceRef{ID: wire.ID, Name: wire.Name, Deleted: wire.Deleted, SourceLanguage: Language(wire.SourceLanguage)}
+	return VoiceRef{ID: wire.ID, Name: wire.Name, Deleted: wire.Deleted}
 }
 
 func toSnapshotProfile(profile Profile) *snapshotProfile {
@@ -401,8 +399,8 @@ func toSnapshotProfile(profile Profile) *snapshotProfile {
 	}
 	return &snapshotProfile{
 		Styleguide: profile.Styleguide, Excerpts: copyTexts(profile.Excerpts),
-		EndingMaxConsecutive: profile.EndingMaxConsecutive, SourceLanguage: string(profile.SourceLanguage),
-		TargetLanguage: string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
+		EndingMaxConsecutive: profile.EndingMaxConsecutive,
+		TargetLanguage:       string(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version,
 	}
 }
 
@@ -414,7 +412,7 @@ func fromSnapshotProfile(wire *snapshotProfile) Profile {
 	}
 	return Profile{
 		Styleguide: wire.Styleguide, Excerpts: copyTexts(wire.Excerpts),
-		EndingMaxConsecutive: wire.EndingMaxConsecutive, SourceLanguage: Language(wire.SourceLanguage),
-		TargetLanguage: Language(wire.TargetLanguage), Portable: wire.Portable, Version: wire.Version,
+		EndingMaxConsecutive: wire.EndingMaxConsecutive,
+		TargetLanguage:       Language(wire.TargetLanguage), Portable: wire.Portable, Version: wire.Version,
 	}
 }

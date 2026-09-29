@@ -12,9 +12,6 @@ import (
 
 	"github.com/postpilot/backend/internal/auth/provision"
 	"github.com/postpilot/backend/internal/platform/config"
-	"github.com/postpilot/backend/internal/platform/db"
-	"github.com/postpilot/backend/internal/voice"
-	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 func main() {
@@ -27,16 +24,8 @@ func main() {
 		os.Exit(1)
 	}
 	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
-	if err := provision.Run(context.Background(), settings, os.Args[1:], defaultVoiceBootstrap); err != nil {
+	if err := provision.Run(context.Background(), settings, os.Args[1:]); err != nil {
 		slog.Error("adduser failed", "err", err)
 		os.Exit(1)
 	}
-}
-
-// defaultVoiceBootstrap mirrors cmd/api: the account's `기본 말투` must exist before the
-// account can create a post, and rerunning repairs an account left without one.
-func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
-	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	_, _, err := directory.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
-	return err
 }

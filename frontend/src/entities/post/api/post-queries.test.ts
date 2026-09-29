@@ -12,7 +12,6 @@ import { toPostDraft } from './post-queries'
 const voice = create(VoiceRefSchema, {
   id: 'voice-a',
   name: '일상 말투',
-  sourceLanguage: contentLanguageToProto('ko'),
 })
 
 describe('toPostDraft', () => {

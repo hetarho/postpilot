@@ -206,9 +206,7 @@ const (
 	FailureReason_VERIFICATION_LINK_INVALID                  FailureReason = 191
 	FailureReason_VOICE_ANALYZE_MODEL_REQUIRED               FailureReason = 193
 	FailureReason_VOICE_BUSY                                 FailureReason = 195
-	FailureReason_VOICE_DEFAULT_DELETE_FORBIDDEN             FailureReason = 199
 	FailureReason_VOICE_DELETED                              FailureReason = 200
-	FailureReason_VOICE_DESCRIPTION_TOO_LONG                 FailureReason = 201
 	FailureReason_VOICE_INVALID_LIFECYCLE                    FailureReason = 204
 	FailureReason_VOICE_LEARNING_NOT_FOUND                   FailureReason = 205
 	FailureReason_VOICE_NAME_REQUIRED                        FailureReason = 206
@@ -219,8 +217,6 @@ const (
 	FailureReason_VOICE_SAMPLE_MUTATION_FAILED               FailureReason = 212
 	FailureReason_VOICE_SAMPLE_NOT_FOUND                     FailureReason = 213
 	FailureReason_VOICE_SAMPLE_TOO_SHORT                     FailureReason = 214
-	FailureReason_VOICE_SOURCE_LANGUAGE_REQUIRED             FailureReason = 215
-	FailureReason_VOICE_SOURCE_LANGUAGE_UNSUPPORTED          FailureReason = 216
 	// Reasons no Connect status carries: a durable job failure the browser renders from the
 	// job record, and one the browser raises itself. They are values of the same enum because
 	// the browser renders them from the same catalogue.
@@ -480,9 +476,7 @@ var (
 		191: "VERIFICATION_LINK_INVALID",
 		193: "VOICE_ANALYZE_MODEL_REQUIRED",
 		195: "VOICE_BUSY",
-		199: "VOICE_DEFAULT_DELETE_FORBIDDEN",
 		200: "VOICE_DELETED",
-		201: "VOICE_DESCRIPTION_TOO_LONG",
 		204: "VOICE_INVALID_LIFECYCLE",
 		205: "VOICE_LEARNING_NOT_FOUND",
 		206: "VOICE_NAME_REQUIRED",
@@ -493,8 +487,6 @@ var (
 		212: "VOICE_SAMPLE_MUTATION_FAILED",
 		213: "VOICE_SAMPLE_NOT_FOUND",
 		214: "VOICE_SAMPLE_TOO_SHORT",
-		215: "VOICE_SOURCE_LANGUAGE_REQUIRED",
-		216: "VOICE_SOURCE_LANGUAGE_UNSUPPORTED",
 		218: "CLIP_PROCESSING_FAILED",
 		220: "CLIP_LAYOUT_FREQUENCY",
 		221: "VOICE_PROFILE_FIELD_REQUIRED",
@@ -711,9 +703,7 @@ var (
 		"VERIFICATION_LINK_INVALID":                  191,
 		"VOICE_ANALYZE_MODEL_REQUIRED":               193,
 		"VOICE_BUSY":                                 195,
-		"VOICE_DEFAULT_DELETE_FORBIDDEN":             199,
 		"VOICE_DELETED":                              200,
-		"VOICE_DESCRIPTION_TOO_LONG":                 201,
 		"VOICE_INVALID_LIFECYCLE":                    204,
 		"VOICE_LEARNING_NOT_FOUND":                   205,
 		"VOICE_NAME_REQUIRED":                        206,
@@ -724,8 +714,6 @@ var (
 		"VOICE_SAMPLE_MUTATION_FAILED":               212,
 		"VOICE_SAMPLE_NOT_FOUND":                     213,
 		"VOICE_SAMPLE_TOO_SHORT":                     214,
-		"VOICE_SOURCE_LANGUAGE_REQUIRED":             215,
-		"VOICE_SOURCE_LANGUAGE_UNSUPPORTED":          216,
 		"CLIP_PROCESSING_FAILED":                     218,
 		"CLIP_LAYOUT_FREQUENCY":                      220,
 		"VOICE_PROFILE_FIELD_REQUIRED":               221,
@@ -938,7 +926,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf08\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xfc8\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1113,10 +1101,8 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x19VERIFICATION_LINK_INVALID\x10\xbf\x01\x12!\n" +
 	"\x1cVOICE_ANALYZE_MODEL_REQUIRED\x10\xc1\x01\x12\x0f\n" +
 	"\n" +
-	"VOICE_BUSY\x10\xc3\x01\x12#\n" +
-	"\x1eVOICE_DEFAULT_DELETE_FORBIDDEN\x10\xc7\x01\x12\x12\n" +
-	"\rVOICE_DELETED\x10\xc8\x01\x12\x1f\n" +
-	"\x1aVOICE_DESCRIPTION_TOO_LONG\x10\xc9\x01\x12\x1c\n" +
+	"VOICE_BUSY\x10\xc3\x01\x12\x12\n" +
+	"\rVOICE_DELETED\x10\xc8\x01\x12\x1c\n" +
 	"\x17VOICE_INVALID_LIFECYCLE\x10\xcc\x01\x12\x1d\n" +
 	"\x18VOICE_LEARNING_NOT_FOUND\x10\xcd\x01\x12\x18\n" +
 	"\x13VOICE_NAME_REQUIRED\x10\xce\x01\x12\x15\n" +
@@ -1126,9 +1112,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x0eVOICE_REQUIRED\x10\xd2\x01\x12!\n" +
 	"\x1cVOICE_SAMPLE_MUTATION_FAILED\x10\xd4\x01\x12\x1b\n" +
 	"\x16VOICE_SAMPLE_NOT_FOUND\x10\xd5\x01\x12\x1b\n" +
-	"\x16VOICE_SAMPLE_TOO_SHORT\x10\xd6\x01\x12#\n" +
-	"\x1eVOICE_SOURCE_LANGUAGE_REQUIRED\x10\xd7\x01\x12&\n" +
-	"!VOICE_SOURCE_LANGUAGE_UNSUPPORTED\x10\xd8\x01\x12\x1b\n" +
+	"\x16VOICE_SAMPLE_TOO_SHORT\x10\xd6\x01\x12\x1b\n" +
 	"\x16CLIP_PROCESSING_FAILED\x10\xda\x01\x12\x1a\n" +
 	"\x15CLIP_LAYOUT_FREQUENCY\x10\xdc\x01\x12!\n" +
 	"\x1cVOICE_PROFILE_FIELD_REQUIRED\x10\xdd\x01\x12\x18\n" +
@@ -1170,7 +1154,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x16CLIP_STORYLINE_INVALID\x10\x81\x02\x12\x1d\n" +
 	"\x18GUIDELINE_TITLE_TOO_LONG\x10\x82\x02\x12\x1c\n" +
 	"\x17CLIP_RENDER_NOT_SAMPLED\x10\x83\x02\x12\x13\n" +
-	"\x0eVOICE_NOT_MADE\x10\x84\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e\"\x06\b\xc2\x01\x10\xc2\x01\"\x06\b\xc4\x01\x10\xc4\x01\"\x06\b\xc5\x01\x10\xc5\x01\"\x06\b\xc6\x01\x10\xc6\x01\"\x06\b\xca\x01\x10\xca\x01\"\x06\b\xcb\x01\x10\xcb\x01\"\x06\b\xd3\x01\x10\xd3\x01\"\x06\b\xd9\x01\x10\xd9\x01\"\x04\bF\x10F\"\x04\b=\x10=*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIRED*\x17VOICE_BASELINE_MISMATCH*\x1aVOICE_COMPARISON_NOT_FOUND*\x1cVOICE_CONFIRMATION_NOT_FOUND*\x1fVOICE_CONTENT_LANGUAGE_MISMATCH*\x16VOICE_FEEDBACK_INVALID*\x1aVOICE_INSUFFICIENT_SOURCES*\x14VOICE_RULE_NOT_FOUND*\x1aVOICE_VALIDATION_NOT_FOUND*\x19EXPERIMENT_VOICE_REQUIRED* EXPERIMENT_CONFIRMATION_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x0eVOICE_NOT_MADE\x10\x84\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e\"\x06\b\xc2\x01\x10\xc2\x01\"\x06\b\xc4\x01\x10\xc4\x01\"\x06\b\xc5\x01\x10\xc5\x01\"\x06\b\xc6\x01\x10\xc6\x01\"\x06\b\xca\x01\x10\xca\x01\"\x06\b\xcb\x01\x10\xcb\x01\"\x06\b\xd3\x01\x10\xd3\x01\"\x06\b\xd9\x01\x10\xd9\x01\"\x04\bF\x10F\"\x04\b=\x10=\"\x06\b\xc7\x01\x10\xc7\x01\"\x06\b\xc9\x01\x10\xc9\x01\"\x06\b\xd7\x01\x10\xd7\x01\"\x06\b\xd8\x01\x10\xd8\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIRED*\x17VOICE_BASELINE_MISMATCH*\x1aVOICE_COMPARISON_NOT_FOUND*\x1cVOICE_CONFIRMATION_NOT_FOUND*\x1fVOICE_CONTENT_LANGUAGE_MISMATCH*\x16VOICE_FEEDBACK_INVALID*\x1aVOICE_INSUFFICIENT_SOURCES*\x14VOICE_RULE_NOT_FOUND*\x1aVOICE_VALIDATION_NOT_FOUND*\x19EXPERIMENT_VOICE_REQUIRED* EXPERIMENT_CONFIRMATION_REQUIRED*\x1eVOICE_DEFAULT_DELETE_FORBIDDEN*\x1aVOICE_DESCRIPTION_TOO_LONG*\x1eVOICE_SOURCE_LANGUAGE_REQUIRED*!VOICE_SOURCE_LANGUAGE_UNSUPPORTEDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

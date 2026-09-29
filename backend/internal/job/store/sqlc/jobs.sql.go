@@ -824,36 +824,6 @@ func (q *Queries) SaveJobPayload(ctx context.Context, arg SaveJobPayloadParams) 
 	return result.RowsAffected()
 }
 
-const sweepQueuedPersonalization = `-- name: SweepQueuedPersonalization :execrows
-UPDATE generation_jobs
-SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
-    finished_at = ?, updated_at = ?
-WHERE status = 'queued'
-  AND kind = 'seed_voice'
-`
-
-type SweepQueuedPersonalizationParams struct {
-	ErrorReason     sql.NullString
-	ErrorParams     sql.NullString
-	TechnicalDetail sql.NullString
-	FinishedAt      sql.NullString
-	UpdatedAt       string
-}
-
-func (q *Queries) SweepQueuedPersonalization(ctx context.Context, arg SweepQueuedPersonalizationParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, sweepQueuedPersonalization,
-		arg.ErrorReason,
-		arg.ErrorParams,
-		arg.TechnicalDetail,
-		arg.FinishedAt,
-		arg.UpdatedAt,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
 const sweepRunning = `-- name: SweepRunning :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,

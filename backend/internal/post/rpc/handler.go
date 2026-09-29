@@ -537,7 +537,7 @@ func toProtoVoiceRef(ref post.VoiceRef) *postpilotv1.VoiceRef {
 	if ref.ID == "" {
 		return nil
 	}
-	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted, SourceLanguage: languageToProto(ref.SourceLanguage), Made: ref.Made}
+	return &postpilotv1.VoiceRef{Id: ref.ID, Name: ref.Name, Deleted: ref.Deleted, Made: ref.Made}
 }
 
 func optionalLanguageFromProto(value *postpilotv1.ContentLanguage) (*post.Language, error) {

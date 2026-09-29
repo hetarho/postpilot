@@ -22,6 +22,7 @@ export {
   sortVoices,
   unmadeVoiceAIReason,
   voiceAIRefusal,
+  voiceAnalysisDate,
   voiceRefLabel,
 } from './model/types'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'

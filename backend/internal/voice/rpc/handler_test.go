@@ -32,10 +32,6 @@ func (models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response
 type jobs struct{}
 
 func (jobs) Enqueue(context.Context, voice.AnalysisJobRequest) (string, error) { return "job", nil }
-func (jobs) LatestForVoiceKind(context.Context, string, string) (*voice.FinishedJob, error) {
-	return nil, nil
-}
-
 func (jobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJob, error) {
 	return nil, nil
 }
@@ -83,7 +79,7 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
 	voices := map[string]string{}
 	for _, userID := range []string{"alice", "bob"} {
-		created, _, err := service.EnsureDefaultVoice(context.Background(), userID, voice.LanguageKorean)
+		created, err := service.CreateVoice(context.Background(), userID, "기본 말투")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -100,7 +96,7 @@ func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
 		}
 		// The profile no longer carries a styleguide or a rules string at all (VOICE-6):
 		// what it reports is the structured profile, its samples and its voice.
-		if got := response.Msg.GetProfile(); got.GetVoice().GetId() != voices[userID] || !got.GetVoice().GetIsDefault() {
+		if got := response.Msg.GetProfile(); got.GetVoice().GetId() != voices[userID] {
 			t.Fatalf("%s received foreign profile: %+v", userID, got)
 		}
 	}
@@ -161,7 +157,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 		}
 	}
 	service := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models{}, jobs{})
-	defaultVoice, _, err := service.EnsureDefaultVoice(context.Background(), "alice", voice.LanguageKorean)
+	defaultVoice, err := service.CreateVoice(context.Background(), "alice", "기본 말투")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,22 +165,32 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	alice := auth.WithUser(context.Background(), "alice")
 	bob := auth.WithUser(context.Background(), "bob")
 
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "  ", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "  "})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("blank name code = %v", err)
 	}
-	created, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)}))
+	created, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰"}))
 	if err != nil || created.Msg.GetVoice().GetName() != "리뷰" || created.Msg.GetVoice().GetIsDefault() {
 		t.Fatalf("create = %+v err=%v", created, err)
 	}
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰", SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); connect.CodeOf(err) != connect.CodeAlreadyExists {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "리뷰"})); connect.CodeOf(err) != connect.CodeAlreadyExists {
 		t.Fatalf("duplicate name code = %v", err)
 	}
 	review := created.Msg.GetVoice().GetId()
 	if _, err := handler.RenameVoice(bob, connect.NewRequest(&postpilotv1.RenameVoiceRequest{VoiceId: review, Name: "훔친 이름"})); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("foreign rename code = %v", err)
 	}
-	if _, err := handler.DeleteVoice(alice, connect.NewRequest(&postpilotv1.DeleteVoiceRequest{VoiceId: defaultVoice.ID})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatalf("delete default code = %v", err)
+	// A voice not yet made cannot be the 기본 (VOICE-32).
+	if _, err := handler.SetDefaultVoice(alice, connect.NewRequest(&postpilotv1.SetDefaultVoiceRequest{VoiceId: review})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("unmade default code = %v", err)
+	}
+	store := voicestore.New(handle.Writer, handle.Reader)
+	for _, id := range []string{review, defaultVoice.ID} {
+		if _, err := store.PublishProfileVersion(context.Background(), "alice", id, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := handler.SetDefaultVoice(alice, connect.NewRequest(&postpilotv1.SetDefaultVoiceRequest{VoiceId: defaultVoice.ID})); err != nil {
+		t.Fatal(err)
 	}
 	swapped, err := handler.SetDefaultVoice(alice, connect.NewRequest(&postpilotv1.SetDefaultVoiceRequest{VoiceId: review}))
 	if err != nil {
@@ -195,12 +201,29 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 		if v.GetIsDefault() {
 			defaults++
 		}
+		if v.GetId() == review && (v.GetAnalyzedAt() == "" || !v.GetMade()) {
+			t.Fatalf("a made voice lacks its analysis date: %+v", v)
+		}
 	}
 	if defaults != 1 {
 		t.Fatalf("defaults after swap = %d: %+v", defaults, swapped.Msg.GetVoices())
 	}
+	// An empty id clears the 기본 (VOICE-12).
+	cleared, err := handler.SetDefaultVoice(alice, connect.NewRequest(&postpilotv1.SetDefaultVoiceRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range cleared.Msg.GetVoices() {
+		if v.GetIsDefault() {
+			t.Fatalf("a cleared directory still has a 기본: %+v", cleared.Msg.GetVoices())
+		}
+	}
+	if _, err := handler.SetDefaultVoice(alice, connect.NewRequest(&postpilotv1.SetDefaultVoiceRequest{VoiceId: defaultVoice.ID})); err != nil {
+		t.Fatal(err)
+	}
+	// The 기본 deletes like any other voice (VOICE-13).
 	deleted, err := handler.DeleteVoice(alice, connect.NewRequest(&postpilotv1.DeleteVoiceRequest{VoiceId: defaultVoice.ID}))
-	if err != nil || !deleted.Msg.GetVoice().GetDeleted() || deleted.Msg.GetVoice().GetDeletedAt() == "" {
+	if err != nil || !deleted.Msg.GetVoice().GetDeleted() || deleted.Msg.GetVoice().GetDeletedAt() == "" || deleted.Msg.GetVoice().GetIsDefault() {
 		t.Fatalf("delete = %+v err=%v", deleted, err)
 	}
 	if _, err := handler.AddVoiceSample(alice, connect.NewRequest(&postpilotv1.AddVoiceSampleRequest{VoiceId: defaultVoice.ID, Body: strings.Repeat("가", 200), Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
@@ -210,7 +233,7 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	if err != nil || len(listed.Msg.GetVoices()) != 2 || listed.Msg.GetVoices()[1].GetId() != defaultVoice.ID || !listed.Msg.GetVoices()[1].GetDeleted() {
 		t.Fatalf("list = %+v err=%v", listed, err)
 	}
-	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: voice.DefaultVoiceName, SourceLanguage: contentLanguagePtr(postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN)})); err != nil {
+	if _, err := handler.CreateVoice(alice, connect.NewRequest(&postpilotv1.CreateVoiceRequest{Name: "기본 말투"})); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := handler.RestoreVoice(alice, connect.NewRequest(&postpilotv1.RestoreVoiceRequest{VoiceId: defaultVoice.ID})); connect.CodeOf(err) != connect.CodeAlreadyExists {
@@ -228,10 +251,6 @@ func TestVoiceDirectoryRPCCodes(t *testing.T) {
 	}
 }
 
-func contentLanguagePtr(value postpilotv1.ContentLanguage) *postpilotv1.ContentLanguage {
-	return &value
-}
-
 // The version preview's RPC: it is where the stored snapshot stops being opaque text and
 // becomes the post content the client already decodes.
 func TestGetVoiceProfileVersionSampleIsOwnedAndOptional(t *testing.T) {
@@ -240,7 +259,7 @@ func TestGetVoiceProfileVersionSampleIsOwnedAndOptional(t *testing.T) {
 	ctx := context.Background()
 	voices := map[string]string{}
 	for _, userID := range []string{"alice", "bob"} {
-		created, _, err := service.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
+		created, err := service.CreateVoice(ctx, userID, "기본 말투")
 		if err != nil {
 			t.Fatal(err)
 		}

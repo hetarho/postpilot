@@ -27,7 +27,7 @@ function post(
     status: 'draft',
     observations: [],
     pendingExperimentId: '',
-    voice: { id: 'voice', name: 'Voice', deleted: false, made: true, sourceLanguage: 'ko' },
+    voice: { id: 'voice', name: 'Voice', deleted: false, made: true },
     content: undefined,
     contentRevision: 0n,
     machineBaselineRevision: 0n,

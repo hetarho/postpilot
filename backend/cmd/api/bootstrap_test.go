@@ -85,10 +85,6 @@ func (j *trackingVoiceJobs) Enqueue(context.Context, voice.AnalysisJobRequest) (
 	j.calls++
 	return "", nil
 }
-func (j *trackingVoiceJobs) LatestForVoiceKind(context.Context, string, string) (*voice.FinishedJob, error) {
-	return nil, nil
-}
-
 func (j *trackingVoiceJobs) ActiveForVoiceKind(context.Context, string, string) (*voice.ActiveJob, error) {
 	j.calls++
 	return nil, nil
@@ -97,19 +93,6 @@ func (j *trackingVoiceJobs) HasActiveForVoice(context.Context, string) (bool, er
 	j.calls++
 	return false, nil
 }
-func (j *trackingVoiceJobs) EnqueuePersonalization(context.Context, voice.PersonalizationJobRequest) (string, error) {
-	j.calls++
-	return "", nil
-}
-func (j *trackingVoiceJobs) IsPersonalizationJobActive(context.Context, string, string) (bool, error) {
-	j.calls++
-	return false, nil
-}
-func (j *trackingVoiceJobs) FailQueuedPersonalization(context.Context, string, string, voice.Failure) (bool, error) {
-	j.calls++
-	return false, nil
-}
-
 func TestCreditBootstrapOpensOnlyOneMonthlyLotForAFreeAccount(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "credits.db"))
 	if err != nil {
@@ -159,7 +142,7 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 	authStore := authstore.New(handle.Writer, handle.Reader)
 	authSvc := auth.NewService(authStore, time.Hour, auth.Deps{
 		Mailer: mailer, WebOrigin: "https://postpilot.example.com",
-		Bootstraps: []auth.AccountBootstrap{func(context.Context, string) error { return errors.New("voice unavailable") }},
+		Bootstraps: []auth.AccountBootstrap{func(context.Context, string) error { return errors.New("ledger unavailable") }},
 	})
 	if err := authSvc.Signup(ctx, "alice@example.com", "password1"); err == nil {
 		t.Fatal("signup with a failed bootstrap returned nil")
@@ -171,7 +154,6 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 	authSvc = auth.NewService(authStore, time.Hour, auth.Deps{
 		Mailer: mailer, WebOrigin: "https://postpilot.example.com",
 		Bootstraps: []auth.AccountBootstrap{
-			func(ctx context.Context, userID string) error { return defaultVoiceBootstrap(ctx, handle, userID) },
 			func(ctx context.Context, userID string) error {
 				return ledger.EnsureMonthlyLot(ctx, userID, plan.Free)
 			},
@@ -187,7 +169,8 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for table, want := range map[string]int{"voices": 1, "credit_lots": 1} {
+	// VOICE-4: no bootstrap creates a voice.
+	for table, want := range map[string]int{"voices": 0, "credit_lots": 1} {
 		var count int
 		if err := handle.Reader.QueryRowContext(ctx,
 			"SELECT COUNT(*) FROM "+table+" WHERE user_id = ?", "alice@example.com",
@@ -204,9 +187,9 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 	}
 }
 
-// VOICE-4: a new account cannot create a post until the adduser bootstrap has given it
-// an active default voice, and rerunning the bootstrap never duplicates that voice.
-func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
+// VOICE-4, POST r25: a new account holds no voice, writes a post with 말투 없음 at once, and
+// names a voice only once it created one by name and that voice is made.
+func TestANewAccountHasNoVoiceUntilItMakesOne(t *testing.T) {
 	handle, err := db.Open(filepath.Join(t.TempDir(), "bootstrap.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -219,38 +202,34 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
+	if err := creditBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 
-	if _, err := voiceSvc.DefaultVoice(ctx, "alice"); !errors.Is(err, voice.ErrVoiceNotFound) {
-		t.Fatalf("default before bootstrap = %v", err)
+	if voices, err := voiceSvc.ListVoices(ctx, "alice"); err != nil || len(voices) != 0 {
+		t.Fatalf("a new account lists %+v, %v", voices, err)
 	}
 	guess := "any"
 	language := post.LanguageKorean
 	if _, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &guess, TargetLanguage: &language}); !errors.Is(err, post.ErrVoiceNotFound) {
-		t.Fatalf("post before bootstrap = %v", err)
-	}
-	for range 2 {
-		if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
-			t.Fatal(err)
-		}
-	}
-	voices, err := voiceSvc.ListVoices(ctx, "alice")
-	if err != nil || len(voices) != 1 || !voices[0].IsDefault || voices[0].Name != voice.DefaultVoiceName {
-		t.Fatalf("voices after two bootstraps = %+v err=%v", voices, err)
-	}
-	// POST r25: the bootstrapped 기본 is not made yet, so a post may not name it; 말투 없음
-	// needs no voice at all.
-	if _, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &voices[0].ID, TargetLanguage: &language}); !errors.Is(err, post.ErrVoiceNotMade) {
-		t.Fatalf("post in the unmade 기본 = %v", err)
+		t.Fatalf("post in a guessed voice = %v", err)
 	}
 	if none, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", TargetLanguage: &language}); err != nil || none.VoiceID != "" {
 		t.Fatalf("post with no voice = %+v err=%v", none, err)
 	}
-	makeVoice(t, handle, "alice", voices[0].ID)
-	created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &voices[0].ID, TargetLanguage: &language})
-	if err != nil || created.VoiceID != voices[0].ID || created.Voice.Name != voice.DefaultVoiceName || !created.Voice.Made {
-		t.Fatalf("post after bootstrap = %+v err=%v", created, err)
+	created, err := voiceSvc.CreateVoice(ctx, "alice", testVoiceName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &created.ID, TargetLanguage: &language}); !errors.Is(err, post.ErrVoiceNotMade) {
+		t.Fatalf("post in an unmade voice = %v", err)
+	}
+	makeVoice(t, handle, "alice", created.ID)
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &created.ID, TargetLanguage: &language})
+	if err != nil || saved.VoiceID != created.ID || saved.Voice.Name != testVoiceName || !saved.Voice.Made {
+		t.Fatalf("post in a made voice = %+v err=%v", saved, err)
 	}
 }
 
@@ -279,7 +258,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -295,7 +274,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +332,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -369,7 +348,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -477,7 +456,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -493,7 +472,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,12 +528,12 @@ func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -602,7 +581,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -640,7 +619,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatal(err)
 	}
 
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -743,7 +722,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -766,7 +745,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -937,7 +916,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
@@ -968,7 +947,7 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 			t.Fatalf("create %q: %v", create.text, err)
 		}
 	}
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}

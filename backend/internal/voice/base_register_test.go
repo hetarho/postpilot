@@ -16,18 +16,18 @@ func TestAnEmptyModelRegisterLeavesTheMeasuredOne(t *testing.T) {
 		}
 		return VoiceValue{Value: strings.TrimSpace(v), Source: SourceAnalyzed}
 	}
-	profile := MeasuredProfileForLanguage("오늘은 맛있게 먹었어요. 다음에 또 갈 거예요. 정말 좋았어요.", LanguageKorean, time.Now)
+	profile := MeasuredProfile("오늘은 맛있게 먹었어요. 다음에 또 갈 거예요. 정말 좋았어요.", time.Now)
 	measured := profile.Endings.BaseRegister
 	if measured.Unknown || measured.Value == "" {
 		t.Fatalf("the fixture measured no register: %+v", measured)
 	}
-	mergeQualitativeProfile(&profile, qualitativeJSON{}, LanguageKorean, unknown)
+	mergeQualitativeProfile(&profile, qualitativeJSON{}, unknown)
 	if profile.Endings.BaseRegister != measured {
 		t.Fatalf("an empty model register replaced the measured %+v with %+v", measured, profile.Endings.BaseRegister)
 	}
 	unmeasured := StructuredProfile{}
 	unmeasured.Endings.BaseRegister = VoiceValue{Unknown: true, Source: SourceUnknown}
-	mergeQualitativeProfile(&unmeasured, qualitativeJSON{BaseRegister: "해요체"}, LanguageKorean, unknown)
+	mergeQualitativeProfile(&unmeasured, qualitativeJSON{BaseRegister: "해요체"}, unknown)
 	if unmeasured.Endings.BaseRegister.Value != "해요체" || unmeasured.Endings.BaseRegister.Unknown {
 		t.Fatalf("the model did not fill a register measurement lacked: %+v", unmeasured.Endings.BaseRegister)
 	}

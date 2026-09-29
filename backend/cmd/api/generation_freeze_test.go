@@ -206,7 +206,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
@@ -218,7 +218,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
 	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
 
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,14 +315,14 @@ func TestGenerationQualityRendersTheTicksInTheRunsLanguage(t *testing.T) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
 	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
 	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}

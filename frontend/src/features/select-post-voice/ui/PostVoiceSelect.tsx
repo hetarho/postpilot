@@ -8,7 +8,6 @@ import {
   type VoiceRef,
 } from '@/entities/voice'
 import {
-  Badge,
   Dialog,
   FieldLabel,
   FieldMessage,
@@ -79,7 +78,6 @@ export function PostVoiceSelect({
   // 말투 없음 under a post that plainly has a voice reads as if the assignment were lost — and a
   // deleted one stays listed, disabled, so the field can still say what the post is written in.
   const unlisted = current && !active.some((voice) => voice.id === current.id) ? current : undefined
-  const selectedVoice = active.find((voice) => voice.id === value) ?? unlisted
   // A voice not yet made, as the list shows it: disabled, and saying why (POST-101).
   const makingLabel = (name: string) => t('picker.making', { name })
 
@@ -159,15 +157,6 @@ export function PostVoiceSelect({
             aria-describedby={describedBy || undefined}
           />
         </span>
-        {/* Provenance, not a decision the row is for, and it costs a third of the trigger's width
-            on a phone. A voice written in the wrong language is called out by the 글 언어 field's
-            own mismatch line, which this chip is not standing in for, so it appears only where
-            there is room for it. */}
-        {selectedVoice?.sourceLanguage && (
-          <Badge className="hidden sm:inline-flex">
-            {t(`contentLanguage.${selectedVoice.sourceLanguage}`, { ns: 'common' })}
-          </Badge>
-        )}
       </div>
       {blocked && (
         <Typography variant="label" as="p" id={hintId} role="status" className="mt-2">

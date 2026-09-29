@@ -6,11 +6,11 @@ import (
 )
 
 type PromptProfile struct {
-	Styleguide                     string
-	Excerpts                       []string
-	Empty                          bool
-	SourceLanguage, TargetLanguage Language
-	Portable                       bool
+	Styleguide     string
+	Excerpts       []string
+	Empty          bool
+	TargetLanguage Language
+	Portable       bool
 	// Version is the published profile version this projection was read from, so a post
 	// generated from it can be filed under it (VOICE-29).
 	Version int64
@@ -18,7 +18,7 @@ type PromptProfile struct {
 
 // PromptProfileForLanguage publishes a deterministic full or portable projection for one
 // concrete target. Voice owns the field selection so no consumer can accidentally leak
-// source-language excerpts or lexical rules across languages.
+// Korean excerpts or lexical rules into another language.
 func (s *Service) PromptProfileForLanguage(ctx context.Context, userID, voiceID string, target Language) (PromptProfile, error) {
 	return s.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, target, "", nil)
 }
@@ -32,31 +32,28 @@ func (s *Service) PromptProfileForTopicAndLanguage(ctx context.Context, userID, 
 	return s.promptProfileForTopic(ctx, userID, voiceID, target)
 }
 
-// PromptProfileForTopic projects exactly one voice. Every row it reads is keyed by that
-// voice, so a well-trained sibling voice contributes nothing — an empty voice prompts as
-// empty rather than borrowing. A deleted voice is refused: nothing may be written in it.
+// PromptProfileForTopic projects exactly one voice for a Korean target. Every row it reads is
+// keyed by that voice, so a well-trained sibling voice contributes nothing — an empty voice
+// prompts as empty rather than borrowing. A deleted voice is refused: nothing may be written
+// in it.
 func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, _ string, _ []string) (PromptProfile, error) {
-	voice, err := s.activeVoice(ctx, userID, voiceID)
-	if err != nil {
-		return PromptProfile{}, err
-	}
-	return s.promptProfileForTopic(ctx, userID, voiceID, voice.SourceLanguage)
+	return s.promptProfileForTopic(ctx, userID, voiceID, LanguageKorean)
 }
 
+// promptProfileForTopic compares the target with Korean, the only language a voice has
+// (VOICE-10): a Korean target gets the complete projection, any other the portable one.
 func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID string, target Language) (PromptProfile, error) {
-	voice, err := s.activeVoice(ctx, userID, voiceID)
-	if err != nil {
+	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return PromptProfile{}, err
 	}
 	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("get profile for prompt: %w", err)
 	}
-	if target != voice.SourceLanguage {
+	if target != LanguageKorean {
 		style := renderPortableProfile(profile.Structured)
 		return PromptProfile{
-			Styleguide: style, Empty: style == "", SourceLanguage: voice.SourceLanguage,
-			TargetLanguage: target, Portable: true, Version: profile.Structured.Version,
+			Styleguide: style, Empty: style == "", TargetLanguage: target, Portable: true, Version: profile.Structured.Version,
 		}, nil
 	}
 	// The pasted samples, newest first, are the only excerpt source: one budget of
@@ -77,9 +74,9 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 	}
 	// ONE representation, injected ONCE. The analysis text reaches the model through the
 	// structured profile's lexical description and nowhere else.
-	style := renderStructuredProfileForLanguage(profile.Structured, voice.SourceLanguage)
+	style := renderStructuredProfile(profile.Structured)
 	// An empty voice is exactly "nothing to learn from and nothing published": no samples and
 	// no structured version.
 	empty := len(samples) == 0 && profile.Structured.Version == 0
-	return PromptProfile{Styleguide: style, Excerpts: excerpts, Empty: empty, SourceLanguage: voice.SourceLanguage, TargetLanguage: target, Version: profile.Structured.Version}, nil
+	return PromptProfile{Styleguide: style, Excerpts: excerpts, Empty: empty, TargetLanguage: target, Version: profile.Structured.Version}, nil
 }

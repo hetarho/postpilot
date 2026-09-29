@@ -77,7 +77,7 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 		t.Fatal(err)
 	}
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
-	if err != nil || finalized.Status != StatusFinalized || finalized.TargetLanguage != LanguageEnglish || finalized.ContentLanguage == nil || *finalized.ContentLanguage != LanguageEnglish || finalized.Voice.SourceLanguage != LanguageKorean {
+	if err != nil || finalized.Status != StatusFinalized || finalized.TargetLanguage != LanguageEnglish || finalized.ContentLanguage == nil || *finalized.ContentLanguage != LanguageEnglish {
 		t.Fatalf("cross-language finalize = %#v, err=%v", finalized, err)
 	}
 }

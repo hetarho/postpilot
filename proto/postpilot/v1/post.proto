@@ -136,7 +136,9 @@ message VoiceRef {
   string id = 1;
   string name = 2;
   bool deleted = 3;
-  ContentLanguage source_language = 4;
+  // A voice carries no language: it is Korean (VOICE-10).
+  reserved 4;
+  reserved "source_language";
   // Whether the voice has a published analysis; one not yet made refuses AI work the way a
   // deleted one does (POST-23).
   bool made = 5;

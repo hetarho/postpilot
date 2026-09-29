@@ -74,7 +74,6 @@ var Fixtures = []Account{
 // that was never generated — the content it holds.
 type Article struct {
 	UserID   string
-	VoiceID  string
 	Title    string
 	Memo     string
 	Status   string
@@ -279,7 +278,7 @@ var topics = []topic{
 // a suffix. Repeating is on purpose rather than a limitation — a list screen has to survive
 // similar titles, and inventing sixty distinct posts would put more prose in this file than
 // code.
-func (a Account) Articles(voiceID, templateID string, now time.Time) []Article {
+func (a Account) Articles(templateID string, now time.Time) []Article {
 	articles := make([]Article, 0, a.Posts())
 	index := 0
 	// Each account starts its own run at a different point in the topic list, so two
@@ -295,7 +294,7 @@ func (a Account) Articles(voiceID, templateID string, now time.Time) []Article {
 		{StatusPublished, a.Published},
 	} {
 		for range group.count {
-			article := a.article(voiceID, group.status, index, offset, now)
+			article := a.article(group.status, index, offset, now)
 			if index == 0 && group.status == StatusDraft {
 				article.TemplateID = templateID
 			}
@@ -308,7 +307,7 @@ func (a Account) Articles(voiceID, templateID string, now time.Time) []Article {
 
 // article assembles one post. `index` is the account's own running count, which sets both
 // the topic and how far back the post is dated.
-func (a Account) article(voiceID, status string, index, offset int, now time.Time) Article {
+func (a Account) article(status string, index, offset int, now time.Time) Article {
 	source := topics[(index+offset)%len(topics)]
 	// The round counts how many times THIS account has been round the topic list, not how
 	// far the offset has shifted it. Counting the offset in would put "(2)" on the very
@@ -323,11 +322,10 @@ func (a Account) article(voiceID, status string, index, offset int, now time.Tim
 	}
 
 	article := Article{
-		UserID:  a.LoginID,
-		VoiceID: voiceID,
-		Title:   title,
-		Memo:    source.memo,
-		Status:  status,
+		UserID: a.LoginID,
+		Title:  title,
+		Memo:   source.memo,
+		Status: status,
 		// 19 hours apart rather than 24: consecutive posts then fall on different times
 		// of day and occasionally skip a date, which is what a real account looks like
 		// and what any date grouping in the list has to handle.

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -43,29 +42,11 @@ func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilo
 	if err != nil {
 		return nil, err
 	}
-	if req.Msg.SourceLanguage == nil {
-		return nil, toConnectError("create voice", voice.ErrLanguageRequired)
-	}
-	sourceLanguage, err := languageFromProto(req.Msg.GetSourceLanguage())
+	created, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName())
 	if err != nil {
 		return nil, toConnectError("create voice", err)
 	}
-	// A seed is attached only when the client actually described a register; an absent
-	// description must not drag the analyze-model requirement into plain creation.
-	var seed *voice.VoiceSeed
-	if strings.TrimSpace(req.Msg.GetDescription()) != "" {
-		seed = &voice.VoiceSeed{
-			Description: req.Msg.GetDescription(),
-			AnalyzeModel: llm.ModelRef{
-				ProviderID: req.Msg.GetAnalyzeModel().GetProviderId(), ModelID: req.Msg.GetAnalyzeModel().GetModelId(),
-			},
-		}
-	}
-	created, jobID, err := h.service.CreateVoice(ctx, userID, req.Msg.GetName(), sourceLanguage, seed)
-	if err != nil {
-		return nil, toConnectError("create voice", err)
-	}
-	return connect.NewResponse(&postpilotv1.CreateVoiceResponse{Voice: toProtoVoice(created), JobId: jobID}), nil
+	return connect.NewResponse(&postpilotv1.CreateVoiceResponse{Voice: toProtoVoice(created)}), nil
 }
 
 func (h *Handler) RenameVoice(ctx context.Context, req *connect.Request[postpilotv1.RenameVoiceRequest]) (*connect.Response[postpilotv1.RenameVoiceResponse], error) {
@@ -262,7 +243,6 @@ func toConnectError(op string, err error) error {
 	}
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
-	var longDescription *voice.VoiceDescriptionTooLongError
 	switch {
 	case errors.As(err, &tooShort):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", postpilotv1.FailureReason_VOICE_SAMPLE_TOO_SHORT, map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
@@ -271,14 +251,8 @@ func toConnectError(op string, err error) error {
 			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", postpilotv1.FailureReason_VOICE_NAME_REQUIRED, nil)
 		}
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
-	case errors.As(err, &longDescription):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice description is too long", postpilotv1.FailureReason_VOICE_DESCRIPTION_TOO_LONG, map[string]string{"actual": fmt.Sprint(longDescription.Chars), "max": fmt.Sprint(voice.VoiceDescriptionMaxChars)})
 	case errors.Is(err, voice.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
-	case errors.Is(err, voice.ErrLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is required", postpilotv1.FailureReason_VOICE_SOURCE_LANGUAGE_REQUIRED, nil)
-	case errors.Is(err, voice.ErrLanguageUnsupported):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is unsupported", postpilotv1.FailureReason_VOICE_SOURCE_LANGUAGE_UNSUPPORTED, nil)
 	case errors.Is(err, voice.ErrVoiceNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleNotFound):
@@ -291,8 +265,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "voice name already exists", postpilotv1.FailureReason_VOICE_NAME_TAKEN, nil)
 	case errors.Is(err, voice.ErrVoiceDeleted):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
-	case errors.Is(err, voice.ErrVoiceIsDefault):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "default voice cannot be deleted", postpilotv1.FailureReason_VOICE_DEFAULT_DELETE_FORBIDDEN, nil)
+	case errors.Is(err, voice.ErrVoiceNotMade):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is not made yet", postpilotv1.FailureReason_VOICE_NOT_MADE, nil)
 	case errors.Is(err, voice.ErrVoiceBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice has unfinished work", postpilotv1.FailureReason_VOICE_BUSY, nil)
 	case errors.Is(err, voice.ErrAnalyzeModelRequired):
@@ -321,37 +295,15 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 	if v.DeletedAt != nil {
 		deleted = v.DeletedAt.UTC().Format(timeLayout)
 	}
+	analyzed := ""
+	if v.AnalyzedAt != nil {
+		analyzed = v.AnalyzedAt.UTC().Format(timeLayout)
+	}
 	return &postpilotv1.Voice{
 		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
 		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
-		SourceLanguage: languageToProto(v.SourceLanguage), Made: v.Made,
+		Made: v.Made, MaterialCount: int32(v.SampleCount), AnalyzedAt: analyzed,
 	}
-}
-
-func languageFromProto(value postpilotv1.ContentLanguage) (voice.Language, error) {
-	tag, ok := rpcserver.ContentLanguageFromProto(value)
-	if !ok {
-		if value == postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
-			return "", voice.ErrLanguageRequired
-		}
-		return "", voice.ErrLanguageUnsupported
-	}
-	return voice.ParseLanguage(tag)
-}
-
-func languageToProto(value voice.Language) postpilotv1.ContentLanguage {
-	return rpcserver.ContentLanguageToProto(string(value))
-}
-
-func toProtoFailure(value *voice.Failure) *postpilotv1.Failure {
-	if value == nil || value.Empty() {
-		return nil
-	}
-	params := make(map[string]string, len(value.Params))
-	for key, item := range value.Params {
-		params[key] = item
-	}
-	return &postpilotv1.Failure{Reason: value.Reason, Params: params, TechnicalDetail: value.TechnicalDetail}
 }
 
 func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
@@ -366,8 +318,7 @@ func toProtoProfile(profile voice.Profile) *postpilotv1.VoiceProfile {
 	return &postpilotv1.VoiceProfile{
 		Voice:   toProtoVoice(profile.Voice),
 		Samples: samples, UpdatedAt: updated, ActiveJobId: profile.ActiveJobID,
-		Structured:  toProtoStructured(profile.Structured),
-		SeedFailure: toProtoFailure(profile.SeedFailure),
+		Structured: toProtoStructured(profile.Structured),
 	}
 }
 
@@ -392,7 +343,7 @@ func toProtoStructured(p voice.StructuredProfile) *postpilotv1.StructuredVoicePr
 	if !p.UpdatedAt.IsZero() {
 		updated = p.UpdatedAt.UTC().Format(timeLayout)
 	}
-	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, AverageSentenceWords: p.Syntax.AverageSentenceWords, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, Empty: p.Empty}
+	return &postpilotv1.StructuredVoiceProfile{Meta: &postpilotv1.VoiceProfileMeta{Version: p.Version, UpdatedAt: updated, SourceCount: int32(p.SourceCount)}, Lexical: &postpilotv1.VoiceLexical{PreferredWords: words, BannedWords: bannedWords, BannedPatterns: bannedPatterns, Description: toProtoValue(p.Lexical.Description)}, Endings: &postpilotv1.VoiceEndings{BaseRegister: toProtoValue(p.Endings.BaseRegister), Distribution: ending, BannedEndings: p.Endings.BannedEndings, SignatureEndings: p.Endings.SignatureEndings, Constraints: p.Endings.Constraints}, Syntax: &postpilotv1.VoiceSyntax{AverageSentenceChars: p.Syntax.AverageSentenceChars, SentenceLength: toProtoValue(p.Syntax.SentenceLength), ConnectiveStyle: toProtoValue(p.Syntax.ConnectiveStyle), PreferredConnectives: p.Syntax.PreferredConnectives, Nominalization: toProtoValue(p.Syntax.Nominalization), PassiveTendency: toProtoValue(p.Syntax.PassiveTendency)}, Structure: &postpilotv1.VoiceStructure{IntroPattern: toProtoValue(p.Structure.IntroPattern), ClosingPattern: toProtoValue(p.Structure.ClosingPattern), ParagraphSentencesMin: int32(p.Structure.ParagraphSentencesMin), ParagraphSentencesMax: int32(p.Structure.ParagraphSentencesMax), HeadingHabit: toProtoValue(p.Structure.HeadingHabit), ListHabit: toProtoValue(p.Structure.ListHabit), EmojiUse: toProtoValue(p.Structure.EmojiUse)}, Axes: &postpilotv1.VoiceAxes{Involvement: toProtoAxis(p.Axes.Involvement), Narrativity: toProtoAxis(p.Axes.Narrativity), PersuasionOvertness: toProtoAxis(p.Axes.PersuasionOvertness), Abstractness: toProtoAxis(p.Axes.Abstractness), AddresseeFocus: toProtoAxis(p.Axes.AddresseeFocus), Humor: toProtoAxis(p.Axes.Humor)}, Empty: p.Empty}
 }
 func toProtoValue(v voice.VoiceValue) *postpilotv1.VoiceValue {
 	return &postpilotv1.VoiceValue{Value: v.Value, Source: toProtoSource(v.Source), Unknown: v.Unknown}

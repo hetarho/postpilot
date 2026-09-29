@@ -32,8 +32,7 @@ func excerptAroundTarget(body string, target, limit int) string {
 }
 
 // A measurement only a corpus can produce, rendered the way an unmeasured axis is. Zero is
-// never a real average sentence length or paragraph size, and a seeded profile (written from a
-// description, with nothing measured) would otherwise state "0.00 chars" as a fact.
+// never a real average sentence length or paragraph size, so it is not stated as a fact.
 func renderChars(value float64) string {
 	if value <= 0 {
 		return "unknown"
@@ -131,32 +130,9 @@ func renderEndingLists(b *strings.Builder, endings EndingsProfile) {
 	}
 }
 
-func renderStructuredProfileForLanguage(p StructuredProfile, language Language) string {
-	if language != LanguageEnglish {
-		return renderStructuredProfile(p)
-	}
-	if p.Empty || p.Version == 0 {
-		return ""
-	}
-	averageWords := "unknown"
-	if p.Syntax.AverageSentenceWords != nil && *p.Syntax.AverageSentenceWords > 0 {
-		averageWords = fmt.Sprintf("%.2f", *p.Syntax.AverageSentenceWords)
-	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "[Structured English voice profile v%d]\n[Lexical]\n%s", p.Version, renderValue(p.Lexical.Description))
-	renderPreferredWords(&b, p.Lexical.PreferredWords)
-	fmt.Fprintf(&b, "\n[Register and cadence]\nregister: %s\ncadence:", renderValue(p.Endings.BaseRegister))
-	for _, ratio := range p.Endings.Distribution {
-		fmt.Fprintf(&b, " %s=%.2f", ratio.Ending, ratio.Ratio)
-	}
-	fmt.Fprintf(&b, "\n[Syntax]\naverage sentence: %s / %s words\nconnectives: %s\npreferred connectives: %s\npassive: %s\nnominalization: %s", renderChars(p.Syntax.AverageSentenceChars), averageWords, renderValue(p.Syntax.ConnectiveStyle), strings.Join(p.Syntax.PreferredConnectives, ", "), renderValue(p.Syntax.PassiveTendency), renderValue(p.Syntax.Nominalization))
-	fmt.Fprintf(&b, "\n[Structure]\nintro: %s\nclosing: %s\nparagraph sentences: %s\nheadings: %s\nlists: %s\nemojis: %s\n[Axes]\n%s", renderValue(p.Structure.IntroPattern), renderValue(p.Structure.ClosingPattern), renderParagraphSentences(p.Structure.ParagraphSentencesMin, p.Structure.ParagraphSentencesMax), renderValue(p.Structure.HeadingHabit), renderValue(p.Structure.ListHabit), renderValue(p.Structure.EmojiUse), renderAxes(p.Axes))
-	return b.String()
-}
-
 // renderPortableProfile is intentionally a separate allowlist, not a redaction pass over
-// the full rendering. Adding a new source-language field to the full profile therefore
-// cannot make it cross languages by accident.
+// the full rendering. Adding a new Korean-only field to the full profile therefore cannot
+// make it reach a non-Korean target by accident (VOICE-46).
 func renderPortableProfile(p StructuredProfile) string {
 	if p.Empty || p.Version == 0 {
 		return ""

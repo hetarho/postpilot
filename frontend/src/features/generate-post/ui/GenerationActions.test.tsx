@@ -64,7 +64,7 @@ function setup(signedVideoUrl: boolean) {
         images: [],
         observations: [],
         pendingExperimentId: '',
-        voice: { id: 'voice', name: 'Voice', deleted: false, made: true, sourceLanguage: 'ko' },
+        voice: { id: 'voice', name: 'Voice', deleted: false, made: true },
         videos: [
           {
             id: 'video',
@@ -167,7 +167,7 @@ function renderActions(post: Partial<ActionsPost> = {}, providers: FakeProviders
         videos: [],
         observations: [],
         pendingExperimentId: '',
-        voice: { id: 'voice', name: 'Voice', deleted: false, made: true, sourceLanguage: 'ko' },
+        voice: { id: 'voice', name: 'Voice', deleted: false, made: true },
         ...post,
       }}
       onStarted={onStarted}

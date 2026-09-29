@@ -155,7 +155,7 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
 	profile, err := a.service.PromptProfileForTopicAndLanguage(ctx, userID, voiceID, voice.Language(target), topic, tags)
-	return generation.Profile{Styleguide: profile.Styleguide, Excerpts: profile.Excerpts, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), SourceLanguage: generation.Language(profile.SourceLanguage), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
+	return generation.Profile{Styleguide: profile.Styleguide, Excerpts: profile.Excerpts, EndingMaxConsecutive: a.service.EndingMaxConsecutive(), TargetLanguage: generation.Language(profile.TargetLanguage), Portable: profile.Portable, Version: profile.Version}, generationVoiceError(err)
 }
 
 // generationVersionSamples adapts at the boundary the way generationProfiles does. The wire
@@ -208,7 +208,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, SourceLanguage: generation.Language(found.Voice.SourceLanguage), Made: found.Voice.Made},
+		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, Made: found.Voice.Made},
 		TargetLanguage: generation.Language(found.TargetLanguage),
 		// The id, never the brief: only the enqueue resolves it, and only through the template
 		// context's own port. Dropping it here is what would make the whole feature a silent

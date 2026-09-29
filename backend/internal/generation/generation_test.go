@@ -23,7 +23,7 @@ var (
 	testBudget = fakeBudget{observe: 2048, floor: 8192, perChar: 4, ceiling: 32768}
 	// liveVoice is the post's active voice in every fixture; voice_test.go covers the
 	// deleted and reassigned cases.
-	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true}
+	liveVoice = VoiceRef{ID: "voice-live", Name: "기본 말투", Made: true}
 )
 
 func TestValidateBlocks(t *testing.T) {
@@ -574,9 +574,6 @@ func (f *fakePosts) AttachedImages(context.Context, string, string) (PostInput, 
 	if value.TargetLanguage == "" && !f.preserveMissingLanguages {
 		value.TargetLanguage = LanguageKorean
 	}
-	if value.Voice.SourceLanguage == "" && !f.preserveMissingLanguages {
-		value.Voice.SourceLanguage = LanguageKorean
-	}
 	if value.Content != nil && value.ContentLanguage == nil && !f.preserveMissingLanguages {
 		language := LanguageKorean
 		value.ContentLanguage = &language
@@ -615,9 +612,6 @@ func (f fakeProfiles) ProfileForPrompt(_ context.Context, _, _ string, target La
 	profile := f.profile
 	if profile.TargetLanguage == "" {
 		profile.TargetLanguage = target
-	}
-	if profile.SourceLanguage == "" {
-		profile.SourceLanguage = target
 	}
 	return profile, nil
 }

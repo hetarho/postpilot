@@ -93,11 +93,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 
 	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})
 	c.jobs.AllowCancellation(clipCancellation{})
-	if n, err := c.jobs.SweepQueuedPersonalization(ctx); err != nil {
-		return nil, fmt.Errorf("queued personalization sweep: %w", err)
-	} else if n > 0 {
-		slog.Info("held queued personalization for explicit retry", "count", n)
-	}
 
 	// auth ↔ ledger is a genuine cycle: the ledger's monthly windows anchor on the account
 	// (and its subscription), and a tier upgrade owes the ledger credits (QUOTA-35). auth is
@@ -110,9 +105,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			return c.ledger.TopUpMonthlyLot(ctx, userID, credits)
 		},
 		Bootstraps: []auth.AccountBootstrap{
-			func(ctx context.Context, userID string) error {
-				return defaultVoiceBootstrap(ctx, handle, userID)
-			},
 			func(ctx context.Context, userID string) error {
 				acting, err := c.auth.PlanOf(ctx, userID)
 				if err != nil {
@@ -283,7 +275,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voiceModels{selections: c.provider, registry: c.metered, plans: c.auth},
 		voiceJobs{queue: c.jobs},
 	)
-	c.voice.ConfigurePersonalization(voice.PersonalizationThresholds())
 
 	c.generation = generation.NewService(
 		generationPosts{service: c.post},

@@ -32,7 +32,7 @@ func fullSnapshotFixture() snapshotFixture {
 		prepared: true, snapshotOnly: true, language: LanguageKorean, observeModel: "p/observer", observeFiles: &files,
 		post: PostInput{
 			Slug: "post", UserID: "alice",
-			Voice:      VoiceRef{ID: "voice-1", Name: "기본", Deleted: true, SourceLanguage: LanguageKorean},
+			Voice:      VoiceRef{ID: "voice-1", Name: "기본", Deleted: true},
 			TemplateID: "tmpl",
 			Template: &TemplateBrief{
 				Name: "하루 기록", Body: "<write>인트로를 씁니다</write>네이버 지도",
@@ -64,7 +64,7 @@ func fullSnapshotFixture() snapshotFixture {
 		},
 		profile: Profile{
 			Styleguide: "스타일", Excerpts: []string{"발췌"},
-			EndingMaxConsecutive: 2, SourceLanguage: LanguageKorean, TargetLanguage: LanguageKorean, Portable: true,
+			EndingMaxConsecutive: 2, TargetLanguage: LanguageKorean, Portable: true,
 		},
 		observations: []Observation{{
 			File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},

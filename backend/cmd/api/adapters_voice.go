@@ -58,40 +58,12 @@ func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest
 	return id, err
 }
 
-func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.PersonalizationJobRequest) (string, error) {
-	subjects, guards := postVoiceWork(request.Kind, request.UserID, "", request.VoiceID)
-	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: request.Kind, UserID: request.UserID, Subjects: subjects, Guards: guards,
-		WriteModel: request.Model, Payload: []byte(request.Payload),
-	})
-	var active *job.ErrAlreadyInProgress
-	if errors.As(err, &active) {
-		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
-	}
-	if errors.Is(err, job.ErrVoiceUnavailable) {
-		return "", voice.ErrVoiceDeleted
-	}
-	return id, err
-}
-
 func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
 	found, err := a.queue.ActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
 	if err != nil || found == nil {
 		return nil, err
 	}
 	return &voice.ActiveJob{ID: found.ID}, nil
-}
-
-func (a voiceJobs) LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
-	found, err := a.queue.LatestFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
-	if err != nil || found == nil {
-		return nil, err
-	}
-	finished := &voice.FinishedJob{ID: found.ID, Status: found.Status}
-	if found.Failure != nil {
-		finished.Failure = &voice.Failure{Reason: found.Failure.Reason, Params: found.Failure.Params, TechnicalDetail: found.Failure.TechnicalDetail}
-	}
-	return finished, nil
 }
 
 func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {

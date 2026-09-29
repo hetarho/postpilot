@@ -30,7 +30,6 @@ export const i18n = {
       confirm: '다시 분석',
       confirmDescription:
         '재분석하면 현재 문체 규칙을 덮어씁니다. 직접 작성한 추가 규칙은 그대로 유지됩니다.',
-      declaredLanguage: '{{language}}로 쓴 글만 붙여 넣어 주세요.',
     },
     deletedWarning:
       '삭제된 말투예요. 기록은 볼 수 있지만, 복원하기 전에는 배우거나 고칠 수 없어요.',
@@ -67,7 +66,6 @@ export const i18n = {
       confirm: 'Analyze again',
       confirmDescription:
         'Reanalysis replaces the current styleguide. Additional rules you wrote manually stay unchanged.',
-      declaredLanguage: 'Paste only writing in {{language}}.',
     },
     deletedWarning:
       'This voice has been deleted. You can view its history, but it cannot learn or be edited until it is restored.',

@@ -97,10 +97,6 @@ type emptyModels struct{}
 
 func (emptyModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
 
-// defaultVoiceBootstrap gives a freshly provisioned account its `기본 말투` before it can
-// create a post. It is idempotent, so `adduser` may be rerun to repair an account that was
-// left without a voice; a failure exits non-zero because the invariant is not established.
-
 // planBalance is the ledger as the plan edge asks for it: the translation ARCH-7 wants at the
 // boundary, so `plan/rpc` publishes its own shape and the ledger's lot row stops here.
 type planBalance struct{ ledger *usage.Service }

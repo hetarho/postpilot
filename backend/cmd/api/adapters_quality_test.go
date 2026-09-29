@@ -61,7 +61,7 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
@@ -71,7 +71,7 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 		Measurements: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now,
 	})
 
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}

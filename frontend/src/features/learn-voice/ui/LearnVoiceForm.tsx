@@ -100,11 +100,6 @@ export function LearnVoiceForm({
       </div>
       <div>
         <FieldLabel htmlFor={bodyId}>{t('learn.body')}</FieldLabel>
-        <Typography variant="label" as="p" className="mt-1">
-          {t('learn.declaredLanguage', {
-            language: t(`contentLanguage.${profile.voice.sourceLanguage}`, { ns: 'common' }),
-          })}
-        </Typography>
         <Textarea
           id={bodyId}
           value={body}

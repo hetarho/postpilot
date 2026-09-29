@@ -2,8 +2,6 @@ import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import {
-  appFailureFromProto,
-  requireContentLanguage,
   VoiceValueSource,
   type ProtoVoice,
   type ProtoVoiceProfile,
@@ -49,8 +47,9 @@ export function toVoice(voice: ProtoVoice | undefined): Voice {
     createdAt: voice.createdAt,
     updatedAt: voice.updatedAt,
     deletedAt: voice.deletedAt,
-    sourceLanguage: requireContentLanguage(voice.sourceLanguage),
     made: voice.made,
+    materialCount: voice.materialCount,
+    analyzedAt: voice.analyzedAt,
   }
 }
 /** A post's voice, or undefined for 말투 없음: the wire leaves the message unset rather than
@@ -62,7 +61,6 @@ export function toVoiceRef(ref: ProtoVoiceRef | undefined): VoiceRef | undefined
     name: ref.name,
     deleted: ref.deleted,
     made: ref.made,
-    sourceLanguage: requireContentLanguage(ref.sourceLanguage),
   }
 }
 export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
@@ -96,7 +94,6 @@ export function toStructured(p: ProtoStructured | undefined): StructuredVoicePro
     },
     syntax: {
       averageSentenceChars: p?.syntax?.averageSentenceChars ?? 0,
-      averageSentenceWords: p?.syntax?.averageSentenceWords,
       sentenceLength: voiceValue(p?.syntax?.sentenceLength),
       connectiveStyle: voiceValue(p?.syntax?.connectiveStyle),
       preferredConnectives: [...(p?.syntax?.preferredConnectives ?? [])],
@@ -131,7 +128,6 @@ export function toVoiceProfile(profile: ProtoVoiceProfile | undefined): VoicePro
     samples: profile?.samples.map(toVoiceSample) ?? [],
     activeJobId: profile?.activeJobId ?? '',
     structured: toStructured(profile?.structured),
-    ...(profile?.seedFailure ? { seedFailure: appFailureFromProto(profile.seedFailure) } : {}),
   }
 }
 export function toVoiceVersion(version: ProtoVersion): VoiceVersion {

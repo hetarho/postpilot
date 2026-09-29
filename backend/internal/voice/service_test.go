@@ -93,15 +93,12 @@ func (f *fakeModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Req
 
 // fakeJobs keys its active analyses by VOICE, which is the guard the service must ask for.
 type fakeJobs struct {
-	mu                   sync.Mutex
-	active               map[string]*voice.ActiveJob
-	busy                 map[string]bool
-	enqueueID            string
-	enqueueErr           error
-	enqueueCalls         []voice.AnalysisJobRequest
-	personalizationCalls []voice.PersonalizationJobRequest
-	// latest is each voice's most recent job of a kind, keyed voiceID+"/"+kind.
-	latest map[string]*voice.FinishedJob
+	mu           sync.Mutex
+	active       map[string]*voice.ActiveJob
+	busy         map[string]bool
+	enqueueID    string
+	enqueueErr   error
+	enqueueCalls []voice.AnalysisJobRequest
 }
 
 func (f *fakeJobs) Enqueue(_ context.Context, request voice.AnalysisJobRequest) (string, error) {
@@ -115,19 +112,8 @@ func (f *fakeJobs) ActiveForVoiceKind(_ context.Context, voiceID, _ string) (*vo
 	return f.active[voiceID], nil
 }
 
-func (f *fakeJobs) LatestForVoiceKind(_ context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
-	return f.latest[voiceID+"/"+kind], nil
-}
-
 func (f *fakeJobs) HasActiveForVoice(_ context.Context, voiceID string) (bool, error) {
 	return f.active[voiceID] != nil || f.busy[voiceID], nil
-}
-
-func (f *fakeJobs) EnqueuePersonalization(_ context.Context, request voice.PersonalizationJobRequest) (string, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.personalizationCalls = append(f.personalizationCalls, request)
-	return f.enqueueID, f.enqueueErr
 }
 
 func (f *fakeJobs) calls() []voice.AnalysisJobRequest {
@@ -145,8 +131,11 @@ type voiceHarness struct {
 	voices map[string]string
 }
 
-// newVoiceHarness seeds two accounts and gives each its default voice through the same
-// bootstrap adduser uses, so every test starts from the state a real account is in.
+// firstVoiceName is the voice each harness account creates for the older single-voice tests.
+const firstVoiceName = "기본 말투"
+
+// newVoiceHarness seeds two accounts and gives each one voice created by name, the way an
+// owner makes their first one: no account is given a voice (VOICE-4).
 func newVoiceHarness(t *testing.T) *voiceHarness {
 	t.Helper()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "voice.db"))
@@ -170,16 +159,24 @@ func newVoiceHarness(t *testing.T) *voiceHarness {
 	jobs := &fakeJobs{active: map[string]*voice.ActiveJob{}, busy: map[string]bool{}, enqueueID: "job-new"}
 	h := &voiceHarness{store: store, db: handle, models: models, jobs: jobs, svc: voice.NewService(store, models, jobs), voices: map[string]string{}}
 	for _, userID := range []string{"alice", "bob"} {
-		created, isNew, err := h.svc.EnsureDefaultVoice(context.Background(), userID, voice.LanguageKorean)
-		if err != nil || !isNew || !created.IsDefault || created.Name != voice.DefaultVoiceName {
-			t.Fatalf("bootstrap %s: voice=%+v new=%v err=%v", userID, created, isNew, err)
+		created, err := h.svc.CreateVoice(context.Background(), userID, firstVoiceName)
+		if err != nil || created.IsDefault || created.Made {
+			t.Fatalf("create %s: voice=%+v err=%v", userID, created, err)
 		}
 		h.voices[userID] = created.ID
 	}
 	return h
 }
 
-// voice returns the account's default voice id; the older single-voice tests run inside it.
+// makeVoice publishes an analysis, which is what makes a voice (VOICE-25).
+func (h *voiceHarness) makeVoice(t *testing.T, user, voiceID string) {
+	t.Helper()
+	if _, err := h.store.PublishProfileVersion(context.Background(), user, voiceID, voice.StructuredProfile{}, "analysis", 0, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// voice returns the account's first voice id; the older single-voice tests run inside it.
 func (h *voiceHarness) voice(user string) string { return h.voices[user] }
 
 func (h *voiceHarness) addSample(t *testing.T, user, voiceID, id, label, body string, at time.Time) {
@@ -193,45 +190,18 @@ func longSample(char string) string { return strings.Repeat(char, voice.SampleMi
 
 // --- directory (VOICE-4, VOICE-10..VOICE-14) ---
 
-func TestBootstrapIsIdempotentAndRepairsAMissingDefault(t *testing.T) {
+// VOICE-4: an account starts with no voice, and reads never create one.
+func TestANewAccountListsNoVoice(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	again, isNew, err := h.svc.EnsureDefaultVoice(ctx, "alice", voice.LanguageKorean)
-	if err != nil || isNew || again.ID != h.voice("alice") {
-		t.Fatalf("second bootstrap = %+v new=%v err=%v", again, isNew, err)
-	}
-	voices, _ := h.svc.ListVoices(ctx, "alice")
-	if len(voices) != 1 {
-		t.Fatalf("bootstrap duplicated the default: %+v", voices)
-	}
-	// An account whose default flag was lost gets its oldest active voice promoted, never a
-	// second `기본 말투`.
-	if _, err := h.db.Writer.Exec("UPDATE voices SET is_default = 0 WHERE user_id = 'alice'"); err != nil {
+	if _, err := h.db.Writer.Exec("INSERT INTO users (id, password_hash, created_at) VALUES ('charlie', 'hash', ?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
-	repaired, isNew, err := h.svc.EnsureDefaultVoice(ctx, "alice", voice.LanguageKorean)
-	if err != nil || isNew || repaired.ID != h.voice("alice") || !repaired.IsDefault {
-		t.Fatalf("repair = %+v new=%v err=%v", repaired, isNew, err)
-	}
-}
-
-func TestBootstrapRequiresExplicitLanguageAndFreezesItOnFirstCreation(t *testing.T) {
-	h := newVoiceHarness(t)
-	ctx := context.Background()
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	if _, err := h.db.Writer.Exec("INSERT INTO users (id, password_hash, created_at) VALUES ('charlie', 'hash', ?)", now); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := h.svc.EnsureDefaultVoice(ctx, "charlie", voice.Language("fr")); !errors.Is(err, voice.ErrLanguageRequired) {
-		t.Fatalf("invalid bootstrap language = %v", err)
-	}
-	created, isNew, err := h.svc.EnsureDefaultVoice(ctx, "charlie", voice.LanguageEnglish)
-	if err != nil || !isNew || created.SourceLanguage != voice.LanguageEnglish {
-		t.Fatalf("English bootstrap = %+v new=%v err=%v", created, isNew, err)
-	}
-	again, isNew, err := h.svc.EnsureDefaultVoice(ctx, "charlie", voice.LanguageKorean)
-	if err != nil || isNew || again.ID != created.ID || again.SourceLanguage != voice.LanguageEnglish {
-		t.Fatalf("rerun changed source = %+v new=%v err=%v", again, isNew, err)
+	for range 2 {
+		voices, err := h.svc.ListVoices(ctx, "charlie")
+		if err != nil || len(voices) != 0 {
+			t.Fatalf("a new account lists %+v, %v", voices, err)
+		}
 	}
 }
 
@@ -239,23 +209,23 @@ func TestCreateRenameValidateAndUniqueNames(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	var badName *voice.VoiceNameError
-	if _, _, err := h.svc.CreateVoice(ctx, "alice", "   ", voice.LanguageKorean, nil); !errors.As(err, &badName) || badName.Chars != 0 {
+	if _, err := h.svc.CreateVoice(ctx, "alice", "   "); !errors.As(err, &badName) || badName.Chars != 0 {
 		t.Fatalf("blank name = %v", err)
 	}
-	if _, _, err := h.svc.CreateVoice(ctx, "alice", strings.Repeat("가", voice.VoiceNameMaxChars+1), voice.LanguageKorean, nil); !errors.As(err, &badName) || badName.Chars != voice.VoiceNameMaxChars+1 {
+	if _, err := h.svc.CreateVoice(ctx, "alice", strings.Repeat("가", voice.VoiceNameMaxChars+1)); !errors.As(err, &badName) || badName.Chars != voice.VoiceNameMaxChars+1 {
 		t.Fatalf("long name = %v", err)
 	}
-	review, _, err := h.svc.CreateVoice(ctx, "alice", "  리뷰 말투  ", voice.LanguageKorean, nil)
+	review, err := h.svc.CreateVoice(ctx, "alice", "  리뷰 말투  ")
 	if err != nil || review.Name != "리뷰 말투" || review.IsDefault || review.Deleted() {
 		t.Fatalf("create = %+v err=%v", review, err)
 	}
-	if _, _, err := h.svc.CreateVoice(ctx, "alice", "리뷰 말투", voice.LanguageKorean, nil); !errors.Is(err, voice.ErrVoiceNameTaken) {
+	if _, err := h.svc.CreateVoice(ctx, "alice", "리뷰 말투"); !errors.Is(err, voice.ErrVoiceNameTaken) {
 		t.Fatalf("duplicate active name = %v", err)
 	}
-	if _, _, err := h.svc.CreateVoice(ctx, "bob", "리뷰 말투", voice.LanguageKorean, nil); err != nil {
+	if _, err := h.svc.CreateVoice(ctx, "bob", "리뷰 말투"); err != nil {
 		t.Fatalf("same name in another account = %v", err)
 	}
-	if _, err := h.svc.RenameVoice(ctx, "alice", review.ID, voice.DefaultVoiceName); !errors.Is(err, voice.ErrVoiceNameTaken) {
+	if _, err := h.svc.RenameVoice(ctx, "alice", review.ID, firstVoiceName); !errors.Is(err, voice.ErrVoiceNameTaken) {
 		t.Fatalf("rename onto active name = %v", err)
 	}
 	renamed, err := h.svc.RenameVoice(ctx, "alice", review.ID, " 제품 리뷰 ")
@@ -270,10 +240,20 @@ func TestCreateRenameValidateAndUniqueNames(t *testing.T) {
 	}
 }
 
-func TestSetDefaultSwapsAtomicallyAndRefusesTombstones(t *testing.T) {
+// VOICE-12: the 기본 is one active, made voice, swapped atomically, or none at all.
+func TestSetDefaultSwapsAtomicallyClearsAndRefusesUnmadeAndTombstones(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	second, _, _ := h.svc.CreateVoice(ctx, "alice", "둘째", voice.LanguageKorean, nil)
+	first := h.voice("alice")
+	second, _ := h.svc.CreateVoice(ctx, "alice", "둘째")
+	if _, err := h.svc.SetDefaultVoice(ctx, "alice", second.ID); !errors.Is(err, voice.ErrVoiceNotMade) {
+		t.Fatalf("an unmade 기본 = %v", err)
+	}
+	h.makeVoice(t, "alice", first)
+	h.makeVoice(t, "alice", second.ID)
+	if _, err := h.svc.SetDefaultVoice(ctx, "alice", first); err != nil {
+		t.Fatal(err)
+	}
 	voices, err := h.svc.SetDefaultVoice(ctx, "alice", second.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -287,34 +267,78 @@ func TestSetDefaultSwapsAtomicallyAndRefusesTombstones(t *testing.T) {
 			}
 		}
 	}
-	if defaults != 1 {
+	if defaults != 1 || voices[0].ID != second.ID {
 		t.Fatalf("defaults=%d voices=%+v", defaults, voices)
 	}
 	if _, err := h.svc.SetDefaultVoice(ctx, "bob", second.ID); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("foreign set default = %v", err)
 	}
-	old := h.voice("alice")
-	if _, err := h.svc.DeleteVoice(ctx, "alice", old); err != nil {
+	cleared, err := h.svc.SetDefaultVoice(ctx, "alice", "")
+	if err != nil {
+		t.Fatalf("clear = %v", err)
+	}
+	for _, v := range cleared {
+		if v.IsDefault {
+			t.Fatalf("a cleared account still has a 기본: %+v", cleared)
+		}
+	}
+	if _, err := h.svc.DeleteVoice(ctx, "alice", first); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.svc.SetDefaultVoice(ctx, "alice", old); !errors.Is(err, voice.ErrVoiceDeleted) {
+	if _, err := h.svc.SetDefaultVoice(ctx, "alice", first); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("set deleted default = %v", err)
 	}
-	if _, err := h.svc.SetDefaultVoice(ctx, "alice", ""); !errors.Is(err, voice.ErrVoiceRequired) {
-		t.Fatalf("empty id = %v", err)
+}
+
+// VOICE-13: the 기본 and the last voice delete like any other and leave the account with none.
+func TestDeleteTheDefaultAndTheLastVoice(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	only := h.voice("alice")
+	h.makeVoice(t, "alice", only)
+	if _, err := h.svc.SetDefaultVoice(ctx, "alice", only); err != nil {
+		t.Fatal(err)
+	}
+	deleted, err := h.svc.DeleteVoice(ctx, "alice", only)
+	if err != nil || !deleted.Deleted() || deleted.IsDefault {
+		t.Fatalf("delete the 기본 and last voice = %+v err=%v", deleted, err)
+	}
+	voices, err := h.svc.ListVoices(ctx, "alice")
+	if err != nil || len(voices) != 1 || !voices[0].Deleted() || voices[0].IsDefault {
+		t.Fatalf("after deleting the last voice: %+v err=%v", voices, err)
+	}
+	restored, err := h.svc.RestoreVoice(ctx, "alice", only)
+	if err != nil || restored.Deleted() || restored.IsDefault {
+		t.Fatalf("a restore made the voice the 기본 again: %+v err=%v", restored, err)
+	}
+}
+
+// VOICE-9, VOICE-52: the directory carries each voice's 학습 글 count and, once made, the
+// time its current analysis was published.
+func TestListVoicesCarriesTheMetaLine(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	id := h.voice("alice")
+	h.addSample(t, "alice", id, "s1", "하나", longSample("하"), time.Now())
+	h.addSample(t, "alice", id, "s2", "둘", longSample("둘"), time.Now())
+	voices, _ := h.svc.ListVoices(ctx, "alice")
+	if len(voices) != 1 || voices[0].SampleCount != 2 || voices[0].Made || voices[0].AnalyzedAt != nil {
+		t.Fatalf("an unmade voice's row = %+v", voices)
+	}
+	h.makeVoice(t, "alice", id)
+	voices, _ = h.svc.ListVoices(ctx, "alice")
+	if !voices[0].Made || voices[0].AnalyzedAt == nil || voices[0].AnalyzedAt.IsZero() {
+		t.Fatalf("a made voice's row = %+v", voices[0])
 	}
 }
 
 func TestDeleteAndRestoreLifecycle(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	if _, err := h.svc.DeleteVoice(ctx, "alice", h.voice("alice")); !errors.Is(err, voice.ErrVoiceIsDefault) {
-		t.Fatalf("delete default = %v", err)
-	}
-	extra, _, _ := h.svc.CreateVoice(ctx, "alice", "일기", voice.LanguageEnglish, nil)
+	extra, _ := h.svc.CreateVoice(ctx, "alice", "일기")
 	h.addSample(t, "alice", extra.ID, "s1", "일기", longSample("일"), time.Now())
 	deleted, err := h.svc.DeleteVoice(ctx, "alice", extra.ID)
-	if err != nil || !deleted.Deleted() || deleted.Name != "일기" || deleted.SourceLanguage != voice.LanguageEnglish {
+	if err != nil || !deleted.Deleted() || deleted.Name != "일기" {
 		t.Fatalf("delete = %+v err=%v", deleted, err)
 	}
 	// Idempotent, and the tombstone keeps its whole profile readable.
@@ -322,7 +346,7 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 		t.Fatalf("second delete = %+v err=%v", again, err)
 	}
 	profile, err := h.svc.Get(ctx, "alice", extra.ID)
-	if err != nil || len(profile.Samples) != 1 || !profile.Voice.Deleted() || profile.Voice.SourceLanguage != voice.LanguageEnglish {
+	if err != nil || len(profile.Samples) != 1 || !profile.Voice.Deleted() {
 		t.Fatalf("tombstone profile = %+v err=%v", profile, err)
 	}
 	voices, _ := h.svc.ListVoices(ctx, "alice")
@@ -331,7 +355,7 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 	}
 	// Restore is blocked by an active voice holding the name, and unblocked by renaming
 	// the tombstone; it never changes the default.
-	if _, _, err := h.svc.CreateVoice(ctx, "alice", "일기", voice.LanguageKorean, nil); err != nil {
+	if _, err := h.svc.CreateVoice(ctx, "alice", "일기"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.svc.RestoreVoice(ctx, "alice", extra.ID); !errors.Is(err, voice.ErrVoiceNameTaken) {
@@ -341,10 +365,10 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	restored, err := h.svc.RestoreVoice(ctx, "alice", extra.ID)
-	if err != nil || restored.Deleted() || restored.IsDefault || restored.Name != "옛 일기" || restored.SourceLanguage != voice.LanguageEnglish {
+	if err != nil || restored.Deleted() || restored.IsDefault || restored.Name != "옛 일기" {
 		t.Fatalf("restore = %+v err=%v", restored, err)
 	}
-	if len(h.jobs.calls()) != 0 || len(h.jobs.personalizationCalls) != 0 {
+	if len(h.jobs.calls()) != 0 {
 		t.Fatal("lifecycle enqueued work")
 	}
 	if h.models.completeCalls != 0 {
@@ -357,7 +381,7 @@ func TestDeleteAndRestoreLifecycle(t *testing.T) {
 func TestDeleteRefusesVoiceWithPublishableWork(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	busy, _, _ := h.svc.CreateVoice(ctx, "alice", "바쁜 말투", voice.LanguageKorean, nil)
+	busy, _ := h.svc.CreateVoice(ctx, "alice", "바쁜 말투")
 	h.jobs.busy[busy.ID] = true
 	if _, err := h.svc.DeleteVoice(ctx, "alice", busy.ID); !errors.Is(err, voice.ErrVoiceBusy) {
 		t.Fatalf("delete with active job = %v", err)
@@ -374,7 +398,7 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	casual := h.voice("alice")
-	formal, _, _ := h.svc.CreateVoice(ctx, "alice", "격식", voice.LanguageKorean, nil)
+	formal, _ := h.svc.CreateVoice(ctx, "alice", "격식")
 	h.addSample(t, "alice", casual, "casual-sample", "캐주얼", longSample("해"), time.Now())
 	h.addSample(t, "alice", formal.ID, "formal-sample", "격식", longSample("습"), time.Now())
 	h.jobs.active[casual] = &voice.ActiveJob{ID: "analysis-casual"}
@@ -414,7 +438,7 @@ func TestProfilesAndSamplesAreIsolatedByVoiceAndAccount(t *testing.T) {
 func TestDeletedVoiceStaysReadableButRefusesMutations(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
-	gone, _, _ := h.svc.CreateVoice(ctx, "alice", "사라질 말투", voice.LanguageKorean, nil)
+	gone, _ := h.svc.CreateVoice(ctx, "alice", "사라질 말투")
 	h.addSample(t, "alice", gone.ID, "gone-sample", "사라질", longSample("사"), time.Now())
 	if _, err := h.svc.DeleteVoice(ctx, "alice", gone.ID); err != nil {
 		t.Fatal(err)
@@ -642,7 +666,7 @@ func TestAnalyzeRetriesWhenCorpusChangesDuringProviderCall(t *testing.T) {
 func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
-	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
+	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식")
 	h.addSample(t, "alice", casual, "c", "casual", longSample("해"), time.Now())
 	h.addSample(t, "alice", formal.ID, "f", "formal", longSample("습"), time.Now())
 	models := &changingCorpusModels{started: make(chan struct{}), release: make(chan struct{})}
@@ -727,18 +751,6 @@ func (a queueJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 	return &voice.ActiveJob{ID: found.ID}, nil
 }
 
-func (a queueJobs) LatestForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.FinishedJob, error) {
-	found, err := a.queue.LatestFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
-	if err != nil || found == nil {
-		return nil, err
-	}
-	finished := &voice.FinishedJob{ID: found.ID, Status: found.Status}
-	if found.Failure != nil {
-		finished.Failure = &voice.Failure{Reason: found.Failure.Reason, Params: found.Failure.Params}
-	}
-	return finished, nil
-}
-
 func (a queueJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
 	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
 }
@@ -781,7 +793,7 @@ func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
 func TestAnalysesAreGuardedPerVoiceThroughTheQueue(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
-	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
+	formal, _ := h.svc.CreateVoice(context.Background(), "alice", "격식")
 	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, jobKindsForTest()), time.Second, jobReportingForTest())
 	svc := voice.NewService(h.store, h.models, queueJobs{queue: queue})
 	h.addSample(t, "alice", casual, "c", "casual", longSample("해"), time.Now())

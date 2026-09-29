@@ -238,7 +238,7 @@ describe('opening a post', () => {
             machineBaselineRevision: 1n,
             canFinalize: true,
             contentLanguage: 'ko',
-            voice: { id: 'voice-english', name: '영어 말투', sourceLanguage: 'en' },
+            voice: { id: 'voice-english', name: '영어 말투' },
           },
         ],
       },

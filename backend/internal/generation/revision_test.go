@@ -77,9 +77,6 @@ func (f *recordingProfiles) ProfileForPrompt(_ context.Context, _, voiceID strin
 	f.targets = append(f.targets, target)
 	profile := f.profile
 	profile.TargetLanguage = target
-	if profile.SourceLanguage == "" {
-		profile.SourceLanguage = target
-	}
 	return profile, nil
 }
 

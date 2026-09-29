@@ -98,11 +98,11 @@ func publishedPostService(t *testing.T) (*post.Service, *voice.Service) {
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+	if err := createTestVoice(ctx, handle, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func publishedPostService(t *testing.T) (*post.Service, *voice.Service) {
 func publishedSlug(t *testing.T, postSvc *post.Service, voiceSvc *voice.Service) string {
 	t.Helper()
 	ctx := context.Background()
-	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	defaultVoice, err := firstTestVoice(ctx, voiceSvc, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}

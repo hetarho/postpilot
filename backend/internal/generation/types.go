@@ -119,10 +119,9 @@ type Image struct {
 // VoiceRef is the post's voice as the post context projects it. Deleted is what makes a
 // start or a handler refuse before any provider call.
 type VoiceRef struct {
-	ID             string
-	Name           string
-	Deleted        bool
-	SourceLanguage Language
+	ID      string
+	Name    string
+	Deleted bool
 	// Made is whether the voice has a published analysis; a run needs a made voice (GEN-23).
 	Made bool
 }
@@ -237,7 +236,6 @@ type Profile struct {
 	Styleguide           string
 	Excerpts             []string
 	EndingMaxConsecutive int
-	SourceLanguage       Language
 	TargetLanguage       Language
 	Portable             bool
 	// Version is the published voice profile version the projection was read from.

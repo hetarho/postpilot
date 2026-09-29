@@ -103,7 +103,8 @@ describe('PostsPage', () => {
 
     const voiced = await screen.findByRole('link', { name: /제주 3일/ })
     expect(voiced).toHaveTextContent('기본 말투')
-    expect(voiced).toHaveTextContent('한국어')
+    // A voice carries no language, so the row shows no language chip (VOICE-10).
+    expect(voiced).not.toHaveTextContent('한국어')
     const plain = screen.getByRole('link', { name: /말투 없는 글/ })
     expect(plain).toHaveTextContent('초안')
     expect(plain).not.toHaveTextContent('기본 말투')

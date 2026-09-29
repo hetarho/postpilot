@@ -510,7 +510,6 @@ type VoiceSyntax struct {
 	PreferredConnectives []string               `protobuf:"bytes,4,rep,name=preferred_connectives,json=preferredConnectives,proto3" json:"preferred_connectives,omitempty"`
 	Nominalization       *VoiceValue            `protobuf:"bytes,5,opt,name=nominalization,proto3" json:"nominalization,omitempty"`
 	PassiveTendency      *VoiceValue            `protobuf:"bytes,6,opt,name=passive_tendency,json=passiveTendency,proto3" json:"passive_tendency,omitempty"`
-	AverageSentenceWords *float64               `protobuf:"fixed64,7,opt,name=average_sentence_words,json=averageSentenceWords,proto3,oneof" json:"average_sentence_words,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -585,13 +584,6 @@ func (x *VoiceSyntax) GetPassiveTendency() *VoiceValue {
 		return x.PassiveTendency
 	}
 	return nil
-}
-
-func (x *VoiceSyntax) GetAverageSentenceWords() float64 {
-	if x != nil && x.AverageSentenceWords != nil {
-		return *x.AverageSentenceWords
-	}
-	return 0
 }
 
 type VoiceStructure struct {
@@ -927,14 +919,11 @@ type VoiceProfile struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The owning voice travels with the profile so a cache entry and a deleted-state screen
 	// can never become detached from the voice they describe.
-	Voice       *Voice                  `protobuf:"bytes,10,opt,name=voice,proto3" json:"voice,omitempty"`
-	UpdatedAt   string                  `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Samples     []*VoiceSample          `protobuf:"bytes,4,rep,name=samples,proto3" json:"samples,omitempty"`
-	ActiveJobId string                  `protobuf:"bytes,5,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
-	Structured  *StructuredVoiceProfile `protobuf:"bytes,6,opt,name=structured,proto3" json:"structured,omitempty"`
-	// Why the seeding a described creation started failed, while the voice still has no published
-	// version; absent otherwise (VOICE-19).
-	SeedFailure   *Failure `protobuf:"bytes,11,opt,name=seed_failure,json=seedFailure,proto3" json:"seed_failure,omitempty"`
+	Voice         *Voice                  `protobuf:"bytes,10,opt,name=voice,proto3" json:"voice,omitempty"`
+	UpdatedAt     string                  `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Samples       []*VoiceSample          `protobuf:"bytes,4,rep,name=samples,proto3" json:"samples,omitempty"`
+	ActiveJobId   string                  `protobuf:"bytes,5,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
+	Structured    *StructuredVoiceProfile `protobuf:"bytes,6,opt,name=structured,proto3" json:"structured,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1000,13 +989,6 @@ func (x *VoiceProfile) GetActiveJobId() string {
 func (x *VoiceProfile) GetStructured() *StructuredVoiceProfile {
 	if x != nil {
 		return x.Structured
-	}
-	return nil
-}
-
-func (x *VoiceProfile) GetSeedFailure() *Failure {
-	if x != nil {
-		return x.SeedFailure
 	}
 	return nil
 }
@@ -1168,18 +1150,21 @@ func (x *VoiceSample) GetCreatedAt() string {
 // A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
 // profile and its posts and stays readable, but cannot start or receive AI work.
 type Voice struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	IsDefault      bool                   `protobuf:"varint,3,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
-	Deleted        bool                   `protobuf:"varint,4,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	CreatedAt      string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      string                 `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt      string                 `protobuf:"bytes,7,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
-	SourceLanguage ContentLanguage        `protobuf:"varint,8,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"source_language,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IsDefault bool                   `protobuf:"varint,3,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	Deleted   bool                   `protobuf:"varint,4,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	CreatedAt string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt string                 `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DeletedAt string                 `protobuf:"bytes,7,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	// Whether the voice has a published analysis. Only a made voice can be assigned to a post
 	// or write one; the picker lists one not yet made disabled (POST-101).
-	Made          bool `protobuf:"varint,9,opt,name=made,proto3" json:"made,omitempty"`
+	Made bool `protobuf:"varint,9,opt,name=made,proto3" json:"made,omitempty"`
+	// The directory row's meta line (VOICE-52): how many 학습 글 the voice holds and when its
+	// current analysis was published, empty until it is made.
+	MaterialCount int32  `protobuf:"varint,10,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
+	AnalyzedAt    string `protobuf:"bytes,11,opt,name=analyzed_at,json=analyzedAt,proto3" json:"analyzed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1263,18 +1248,25 @@ func (x *Voice) GetDeletedAt() string {
 	return ""
 }
 
-func (x *Voice) GetSourceLanguage() ContentLanguage {
-	if x != nil {
-		return x.SourceLanguage
-	}
-	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-}
-
 func (x *Voice) GetMade() bool {
 	if x != nil {
 		return x.Made
 	}
 	return false
+}
+
+func (x *Voice) GetMaterialCount() int32 {
+	if x != nil {
+		return x.MaterialCount
+	}
+	return 0
+}
+
+func (x *Voice) GetAnalyzedAt() string {
+	if x != nil {
+		return x.AnalyzedAt
+	}
+	return ""
 }
 
 type ListVoicesRequest struct {
@@ -1357,16 +1349,11 @@ func (x *ListVoicesResponse) GetVoices() []*Voice {
 	return nil
 }
 
+// A voice is created by name alone, as a Korean voice not yet made (VOICE-10). 2-4 were its
+// language and the description seed, retired in T468.
 type CreateVoiceRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	SourceLanguage *ContentLanguage       `protobuf:"varint,2,opt,name=source_language,json=sourceLanguage,proto3,enum=postpilot.v1.ContentLanguage,oneof" json:"source_language,omitempty"`
-	// Optional. A free-text description of the wanted register. It is an instruction, never
-	// evidence: it is not stored as a sample, not counted as a source, and not measured. When
-	// present the server also enqueues one seeding job that writes the voice's first profile,
-	// and analyze_model must be the account's saved analyze-stage selection.
-	Description   string    `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	AnalyzeModel  *ModelRef `protobuf:"bytes,4,opt,name=analyze_model,json=analyzeModel,proto3" json:"analyze_model,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1408,32 +1395,9 @@ func (x *CreateVoiceRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateVoiceRequest) GetSourceLanguage() ContentLanguage {
-	if x != nil && x.SourceLanguage != nil {
-		return *x.SourceLanguage
-	}
-	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-}
-
-func (x *CreateVoiceRequest) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *CreateVoiceRequest) GetAnalyzeModel() *ModelRef {
-	if x != nil {
-		return x.AnalyzeModel
-	}
-	return nil
-}
-
-// job_id is the seeding job, and is empty whenever no description was submitted.
 type CreateVoiceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Voice         *Voice                 `protobuf:"bytes,1,opt,name=voice,proto3" json:"voice,omitempty"`
-	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1473,13 +1437,6 @@ func (x *CreateVoiceResponse) GetVoice() *Voice {
 		return x.Voice
 	}
 	return nil
-}
-
-func (x *CreateVoiceResponse) GetJobId() string {
-	if x != nil {
-		return x.JobId
-	}
-	return ""
 }
 
 type RenameVoiceRequest struct {
@@ -1578,6 +1535,7 @@ func (x *RenameVoiceResponse) GetVoice() *Voice {
 	return nil
 }
 
+// An empty voice_id clears the 기본 so the account has none (VOICE-12).
 type SetDefaultVoiceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	VoiceId       string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
@@ -2554,7 +2512,7 @@ var File_postpilot_v1_voice_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\n" +
-	"\x18postpilot/v1/voice.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/language.proto\x1a\x18postpilot/v1/error.proto\x1a\x17postpilot/v1/post.proto\"t\n" +
+	"\x18postpilot/v1/voice.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a\x17postpilot/v1/post.proto\"t\n" +
 	"\n" +
 	"VoiceValue\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x126\n" +
@@ -2581,16 +2539,14 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\fdistribution\x18\x02 \x03(\v2\x19.postpilot.v1.EndingRatioR\fdistribution\x12%\n" +
 	"\x0ebanned_endings\x18\x03 \x03(\tR\rbannedEndings\x12+\n" +
 	"\x11signature_endings\x18\x04 \x03(\tR\x10signatureEndings\x12 \n" +
-	"\vconstraints\x18\x05 \x03(\tR\vconstraints\"\xdd\x03\n" +
+	"\vconstraints\x18\x05 \x03(\tR\vconstraints\"\xa5\x03\n" +
 	"\vVoiceSyntax\x124\n" +
 	"\x16average_sentence_chars\x18\x01 \x01(\x01R\x14averageSentenceChars\x12A\n" +
 	"\x0fsentence_length\x18\x02 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0esentenceLength\x12C\n" +
 	"\x10connective_style\x18\x03 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0fconnectiveStyle\x123\n" +
 	"\x15preferred_connectives\x18\x04 \x03(\tR\x14preferredConnectives\x12@\n" +
 	"\x0enominalization\x18\x05 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0enominalization\x12C\n" +
-	"\x10passive_tendency\x18\x06 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0fpassiveTendency\x129\n" +
-	"\x16average_sentence_words\x18\a \x01(\x01H\x00R\x14averageSentenceWords\x88\x01\x01B\x19\n" +
-	"\x17_average_sentence_words\"\xb1\x03\n" +
+	"\x10passive_tendency\x18\x06 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0fpassiveTendencyJ\x04\b\a\x10\bR\x16average_sentence_words\"\xb1\x03\n" +
 	"\x0eVoiceStructure\x12=\n" +
 	"\rintro_pattern\x18\x01 \x01(\v2\x18.postpilot.v1.VoiceValueR\fintroPattern\x12A\n" +
 	"\x0fclosing_pattern\x18\x02 \x01(\v2\x18.postpilot.v1.VoiceValueR\x0eclosingPattern\x126\n" +
@@ -2627,7 +2583,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x04axes\x18\x06 \x01(\v2\x17.postpilot.v1.VoiceAxesR\x04axes\x12\x14\n" +
 	"\x05empty\x18\n" +
 	" \x01(\bR\x05emptyJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
-	"R\x0econtrast_rulesR\rfew_shot_bankR\ffeedback_log\"\xf5\x02\n" +
+	"R\x0econtrast_rulesR\rfew_shot_bankR\ffeedback_log\"\xcf\x02\n" +
 	"\fVoiceProfile\x12)\n" +
 	"\x05voice\x18\n" +
 	" \x01(\v2\x13.postpilot.v1.VoiceR\x05voice\x12\x1d\n" +
@@ -2637,9 +2593,8 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\ractive_job_id\x18\x05 \x01(\tR\vactiveJobId\x12D\n" +
 	"\n" +
 	"structured\x18\x06 \x01(\v2$.postpilot.v1.StructuredVoiceProfileR\n" +
-	"structured\x128\n" +
-	"\fseed_failure\x18\v \x01(\v2\x15.postpilot.v1.FailureR\vseedFailureJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
-	"R\x16finalized_source_countR\fcan_validate\"\xf9\x01\n" +
+	"structuredJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\v\x10\fR\x16finalized_source_countR\fcan_validateR\fseed_failure\"\xf9\x01\n" +
 	"\x13VoiceProfileVersion\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x03R\aversion\x12>\n" +
 	"\aprofile\x18\x02 \x01(\v2$.postpilot.v1.StructuredVoiceProfileR\aprofile\x12\x16\n" +
@@ -2654,7 +2609,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
 	"\x05chars\x18\x03 \x01(\x05R\x05chars\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x9d\x02\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\xb4\x02\n" +
 	"\x05Voice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
@@ -2666,21 +2621,19 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"deleted_at\x18\a \x01(\tR\tdeletedAt\x12F\n" +
-	"\x0fsource_language\x18\b \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\x12\x12\n" +
-	"\x04made\x18\t \x01(\bR\x04made\"\x13\n" +
+	"deleted_at\x18\a \x01(\tR\tdeletedAt\x12\x12\n" +
+	"\x04made\x18\t \x01(\bR\x04made\x12%\n" +
+	"\x0ematerial_count\x18\n" +
+	" \x01(\x05R\rmaterialCount\x12\x1f\n" +
+	"\vanalyzed_at\x18\v \x01(\tR\n" +
+	"analyzedAtJ\x04\b\b\x10\tR\x0fsource_language\"\x13\n" +
 	"\x11ListVoicesRequest\"A\n" +
 	"\x12ListVoicesResponse\x12+\n" +
-	"\x06voices\x18\x01 \x03(\v2\x13.postpilot.v1.VoiceR\x06voices\"\xe8\x01\n" +
+	"\x06voices\x18\x01 \x03(\v2\x13.postpilot.v1.VoiceR\x06voices\"g\n" +
 	"\x12CreateVoiceRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12K\n" +
-	"\x0fsource_language\x18\x02 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageH\x00R\x0esourceLanguage\x88\x01\x01\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12;\n" +
-	"\ranalyze_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\fanalyzeModelB\x12\n" +
-	"\x10_source_language\"W\n" +
+	"\x04name\x18\x01 \x01(\tR\x04nameJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fsource_languageR\vdescriptionR\ranalyze_model\"N\n" +
 	"\x13CreateVoiceResponse\x12)\n" +
-	"\x05voice\x18\x01 \x01(\v2\x13.postpilot.v1.VoiceR\x05voice\x12\x15\n" +
-	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"C\n" +
+	"\x05voice\x18\x01 \x01(\v2\x13.postpilot.v1.VoiceR\x05voiceJ\x04\b\x02\x10\x03R\x06job_id\"C\n" +
 	"\x12RenameVoiceRequest\x12\x19\n" +
 	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
@@ -2828,10 +2781,8 @@ var file_postpilot_v1_voice_proto_goTypes = []any{
 	(*UpdateVoiceOverrideResponse)(nil),          // 40: postpilot.v1.UpdateVoiceOverrideResponse
 	(*RestoreVoiceProfileRequest)(nil),           // 41: postpilot.v1.RestoreVoiceProfileRequest
 	(*RestoreVoiceProfileResponse)(nil),          // 42: postpilot.v1.RestoreVoiceProfileResponse
-	(*Failure)(nil),                              // 43: postpilot.v1.Failure
-	(ContentLanguage)(0),                         // 44: postpilot.v1.ContentLanguage
-	(*ModelRef)(nil),                             // 45: postpilot.v1.ModelRef
-	(*PostContent)(nil),                          // 46: postpilot.v1.PostContent
+	(*ModelRef)(nil),                             // 43: postpilot.v1.ModelRef
+	(*PostContent)(nil),                          // 44: postpilot.v1.PostContent
 }
 var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.VoiceValue.source:type_name -> postpilot.v1.VoiceValueSource
@@ -2859,56 +2810,52 @@ var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	16, // 22: postpilot.v1.VoiceProfile.voice:type_name -> postpilot.v1.Voice
 	15, // 23: postpilot.v1.VoiceProfile.samples:type_name -> postpilot.v1.VoiceSample
 	12, // 24: postpilot.v1.VoiceProfile.structured:type_name -> postpilot.v1.StructuredVoiceProfile
-	43, // 25: postpilot.v1.VoiceProfile.seed_failure:type_name -> postpilot.v1.Failure
-	12, // 26: postpilot.v1.VoiceProfileVersion.profile:type_name -> postpilot.v1.StructuredVoiceProfile
-	44, // 27: postpilot.v1.Voice.source_language:type_name -> postpilot.v1.ContentLanguage
-	16, // 28: postpilot.v1.ListVoicesResponse.voices:type_name -> postpilot.v1.Voice
-	44, // 29: postpilot.v1.CreateVoiceRequest.source_language:type_name -> postpilot.v1.ContentLanguage
-	45, // 30: postpilot.v1.CreateVoiceRequest.analyze_model:type_name -> postpilot.v1.ModelRef
-	16, // 31: postpilot.v1.CreateVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	16, // 32: postpilot.v1.RenameVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	16, // 33: postpilot.v1.SetDefaultVoiceResponse.voices:type_name -> postpilot.v1.Voice
-	16, // 34: postpilot.v1.DeleteVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	16, // 35: postpilot.v1.RestoreVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	13, // 36: postpilot.v1.GetVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	45, // 37: postpilot.v1.AddVoiceSampleRequest.model:type_name -> postpilot.v1.ModelRef
-	15, // 38: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
-	14, // 39: postpilot.v1.ListVoiceProfileVersionsResponse.versions:type_name -> postpilot.v1.VoiceProfileVersion
-	46, // 40: postpilot.v1.GetVoiceProfileVersionSampleResponse.sample:type_name -> postpilot.v1.PostContent
-	1,  // 41: postpilot.v1.UpdateVoiceOverrideRequest.layer:type_name -> postpilot.v1.VoiceLayer
-	13, // 42: postpilot.v1.UpdateVoiceOverrideResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	13, // 43: postpilot.v1.RestoreVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	17, // 44: postpilot.v1.VoiceService.ListVoices:input_type -> postpilot.v1.ListVoicesRequest
-	19, // 45: postpilot.v1.VoiceService.CreateVoice:input_type -> postpilot.v1.CreateVoiceRequest
-	21, // 46: postpilot.v1.VoiceService.RenameVoice:input_type -> postpilot.v1.RenameVoiceRequest
-	23, // 47: postpilot.v1.VoiceService.SetDefaultVoice:input_type -> postpilot.v1.SetDefaultVoiceRequest
-	25, // 48: postpilot.v1.VoiceService.DeleteVoice:input_type -> postpilot.v1.DeleteVoiceRequest
-	27, // 49: postpilot.v1.VoiceService.RestoreVoice:input_type -> postpilot.v1.RestoreVoiceRequest
-	29, // 50: postpilot.v1.VoiceService.GetVoiceProfile:input_type -> postpilot.v1.GetVoiceProfileRequest
-	31, // 51: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
-	33, // 52: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
-	35, // 53: postpilot.v1.VoiceService.ListVoiceProfileVersions:input_type -> postpilot.v1.ListVoiceProfileVersionsRequest
-	37, // 54: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:input_type -> postpilot.v1.GetVoiceProfileVersionSampleRequest
-	39, // 55: postpilot.v1.VoiceService.UpdateVoiceOverride:input_type -> postpilot.v1.UpdateVoiceOverrideRequest
-	41, // 56: postpilot.v1.VoiceService.RestoreVoiceProfile:input_type -> postpilot.v1.RestoreVoiceProfileRequest
-	18, // 57: postpilot.v1.VoiceService.ListVoices:output_type -> postpilot.v1.ListVoicesResponse
-	20, // 58: postpilot.v1.VoiceService.CreateVoice:output_type -> postpilot.v1.CreateVoiceResponse
-	22, // 59: postpilot.v1.VoiceService.RenameVoice:output_type -> postpilot.v1.RenameVoiceResponse
-	24, // 60: postpilot.v1.VoiceService.SetDefaultVoice:output_type -> postpilot.v1.SetDefaultVoiceResponse
-	26, // 61: postpilot.v1.VoiceService.DeleteVoice:output_type -> postpilot.v1.DeleteVoiceResponse
-	28, // 62: postpilot.v1.VoiceService.RestoreVoice:output_type -> postpilot.v1.RestoreVoiceResponse
-	30, // 63: postpilot.v1.VoiceService.GetVoiceProfile:output_type -> postpilot.v1.GetVoiceProfileResponse
-	32, // 64: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
-	34, // 65: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
-	36, // 66: postpilot.v1.VoiceService.ListVoiceProfileVersions:output_type -> postpilot.v1.ListVoiceProfileVersionsResponse
-	38, // 67: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:output_type -> postpilot.v1.GetVoiceProfileVersionSampleResponse
-	40, // 68: postpilot.v1.VoiceService.UpdateVoiceOverride:output_type -> postpilot.v1.UpdateVoiceOverrideResponse
-	42, // 69: postpilot.v1.VoiceService.RestoreVoiceProfile:output_type -> postpilot.v1.RestoreVoiceProfileResponse
-	57, // [57:70] is the sub-list for method output_type
-	44, // [44:57] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	12, // 25: postpilot.v1.VoiceProfileVersion.profile:type_name -> postpilot.v1.StructuredVoiceProfile
+	16, // 26: postpilot.v1.ListVoicesResponse.voices:type_name -> postpilot.v1.Voice
+	16, // 27: postpilot.v1.CreateVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	16, // 28: postpilot.v1.RenameVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	16, // 29: postpilot.v1.SetDefaultVoiceResponse.voices:type_name -> postpilot.v1.Voice
+	16, // 30: postpilot.v1.DeleteVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	16, // 31: postpilot.v1.RestoreVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	13, // 32: postpilot.v1.GetVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	43, // 33: postpilot.v1.AddVoiceSampleRequest.model:type_name -> postpilot.v1.ModelRef
+	15, // 34: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
+	14, // 35: postpilot.v1.ListVoiceProfileVersionsResponse.versions:type_name -> postpilot.v1.VoiceProfileVersion
+	44, // 36: postpilot.v1.GetVoiceProfileVersionSampleResponse.sample:type_name -> postpilot.v1.PostContent
+	1,  // 37: postpilot.v1.UpdateVoiceOverrideRequest.layer:type_name -> postpilot.v1.VoiceLayer
+	13, // 38: postpilot.v1.UpdateVoiceOverrideResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	13, // 39: postpilot.v1.RestoreVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	17, // 40: postpilot.v1.VoiceService.ListVoices:input_type -> postpilot.v1.ListVoicesRequest
+	19, // 41: postpilot.v1.VoiceService.CreateVoice:input_type -> postpilot.v1.CreateVoiceRequest
+	21, // 42: postpilot.v1.VoiceService.RenameVoice:input_type -> postpilot.v1.RenameVoiceRequest
+	23, // 43: postpilot.v1.VoiceService.SetDefaultVoice:input_type -> postpilot.v1.SetDefaultVoiceRequest
+	25, // 44: postpilot.v1.VoiceService.DeleteVoice:input_type -> postpilot.v1.DeleteVoiceRequest
+	27, // 45: postpilot.v1.VoiceService.RestoreVoice:input_type -> postpilot.v1.RestoreVoiceRequest
+	29, // 46: postpilot.v1.VoiceService.GetVoiceProfile:input_type -> postpilot.v1.GetVoiceProfileRequest
+	31, // 47: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
+	33, // 48: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
+	35, // 49: postpilot.v1.VoiceService.ListVoiceProfileVersions:input_type -> postpilot.v1.ListVoiceProfileVersionsRequest
+	37, // 50: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:input_type -> postpilot.v1.GetVoiceProfileVersionSampleRequest
+	39, // 51: postpilot.v1.VoiceService.UpdateVoiceOverride:input_type -> postpilot.v1.UpdateVoiceOverrideRequest
+	41, // 52: postpilot.v1.VoiceService.RestoreVoiceProfile:input_type -> postpilot.v1.RestoreVoiceProfileRequest
+	18, // 53: postpilot.v1.VoiceService.ListVoices:output_type -> postpilot.v1.ListVoicesResponse
+	20, // 54: postpilot.v1.VoiceService.CreateVoice:output_type -> postpilot.v1.CreateVoiceResponse
+	22, // 55: postpilot.v1.VoiceService.RenameVoice:output_type -> postpilot.v1.RenameVoiceResponse
+	24, // 56: postpilot.v1.VoiceService.SetDefaultVoice:output_type -> postpilot.v1.SetDefaultVoiceResponse
+	26, // 57: postpilot.v1.VoiceService.DeleteVoice:output_type -> postpilot.v1.DeleteVoiceResponse
+	28, // 58: postpilot.v1.VoiceService.RestoreVoice:output_type -> postpilot.v1.RestoreVoiceResponse
+	30, // 59: postpilot.v1.VoiceService.GetVoiceProfile:output_type -> postpilot.v1.GetVoiceProfileResponse
+	32, // 60: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
+	34, // 61: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
+	36, // 62: postpilot.v1.VoiceService.ListVoiceProfileVersions:output_type -> postpilot.v1.ListVoiceProfileVersionsResponse
+	38, // 63: postpilot.v1.VoiceService.GetVoiceProfileVersionSample:output_type -> postpilot.v1.GetVoiceProfileVersionSampleResponse
+	40, // 64: postpilot.v1.VoiceService.UpdateVoiceOverride:output_type -> postpilot.v1.UpdateVoiceOverrideResponse
+	42, // 65: postpilot.v1.VoiceService.RestoreVoiceProfile:output_type -> postpilot.v1.RestoreVoiceProfileResponse
+	53, // [53:66] is the sub-list for method output_type
+	40, // [40:53] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_voice_proto_init() }
@@ -2917,12 +2864,8 @@ func file_postpilot_v1_voice_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
-	file_postpilot_v1_language_proto_init()
-	file_postpilot_v1_error_proto_init()
 	file_postpilot_v1_post_proto_init()
-	file_postpilot_v1_voice_proto_msgTypes[6].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[8].OneofWrappers = []any{}
-	file_postpilot_v1_voice_proto_msgTypes[17].OneofWrappers = []any{}
 	file_postpilot_v1_voice_proto_msgTypes[37].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

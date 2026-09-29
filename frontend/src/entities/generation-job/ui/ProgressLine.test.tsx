@@ -27,10 +27,10 @@ it('names the running stage as a live status, with no counts in the prose', () =
   expect(screen.getByRole('status')).not.toHaveTextContent('3/8')
 })
 
-// The voice screen's seed run reports a stage nothing here knows, and it used to render the
-// literal sentence 작업 준비 중 for the whole run.
+// A run can report a stage nothing here knows, and it used to render the literal sentence
+// 작업 준비 중 for the whole run.
 it('reports an unrecognized stage as a running job rather than as a job not yet started', () => {
-  render(<ProgressLine job={{ ...JOB, stage: 'seed' }} />)
+  render(<ProgressLine job={{ ...JOB, stage: 'unlisted' }} />)
   expect(screen.getByRole('status')).toHaveTextContent('생성 중')
 })
 

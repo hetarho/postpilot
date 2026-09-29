@@ -33,16 +33,16 @@ func TestExperimentVoicesTellAnUnknownVoiceFromADeletedOne(t *testing.T) {
 		if err := users.CreateUser(ctx, auth.User{ID: id, PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 			t.Fatal(err)
 		}
-		if err := defaultVoiceBootstrap(ctx, handle, id); err != nil {
+		if err := createTestVoice(ctx, handle, id); err != nil {
 			t.Fatal(err)
 		}
 	}
 	voices := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	active, err := voices.DefaultVoice(ctx, "alice")
+	active, err := firstTestVoice(ctx, voices, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gone, _, err := voices.CreateVoice(ctx, "alice", "옛 말투", voice.LanguageKorean, nil)
+	gone, err := voices.CreateVoice(ctx, "alice", "옛 말투")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestExperimentVoicesTellAnUnknownVoiceFromADeletedOne(t *testing.T) {
 	if _, err := handle.Writer.ExecContext(ctx, `UPDATE voices SET deleted_at = ? WHERE id = ?`, time.Now().UTC().Format(time.RFC3339), gone.ID); err != nil {
 		t.Fatal(err)
 	}
-	foreign, err := voices.DefaultVoice(ctx, "bob")
+	foreign, err := firstTestVoice(ctx, voices, "bob")
 	if err != nil {
 		t.Fatal(err)
 	}

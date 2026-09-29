@@ -123,3 +123,38 @@ func wiringPlatform(t *testing.T, cfg *config.Config) *platform {
 	}
 	return &platform{cfg: cfg, db: handle, catalog: catalog, registry: &llm.Registry{}, mailer: mail.NewLog()}
 }
+
+// VOICE-4: the account bootstraps the server boots with create no voice — a verified signup
+// lists none, while its credit grant still opens.
+func TestAVerifiedSignupListsNoVoice(t *testing.T) {
+	t.Setenv("MAIL_DRIVER", "log")
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	p := wiringPlatform(t, cfg)
+	mailer := &captureMailer{}
+	p.mailer = mailer
+	app, err := buildContexts(ctx, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.auth.Signup(ctx, "alice@example.com", "password1"); err != nil {
+		t.Fatal(err)
+	}
+	if len(mailer.sent) != 1 {
+		t.Fatalf("verification mails = %d", len(mailer.sent))
+	}
+	if err := app.auth.VerifyEmail(ctx, mailToken(t, mailer.sent[0])); err != nil {
+		t.Fatal(err)
+	}
+	voices, err := app.voice.ListVoices(ctx, "alice@example.com")
+	if err != nil || len(voices) != 0 {
+		t.Fatalf("a verified signup lists %+v, %v", voices, err)
+	}
+	var lots int
+	if err := p.db.Reader.QueryRowContext(ctx, "SELECT COUNT(*) FROM credit_lots WHERE user_id = ?", "alice@example.com").Scan(&lots); err != nil || lots == 0 {
+		t.Fatalf("the credit bootstrap did not run: %d lots, %v", lots, err)
+	}
+}

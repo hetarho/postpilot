@@ -19,7 +19,6 @@ const CURRENT = {
   name: '기본 말투',
   deleted: false,
   made: true,
-  sourceLanguage: 'ko' as const,
 }
 
 function renderSelect(
@@ -85,6 +84,8 @@ it('lists 말투 없음, the made voices, the unmade ones disabled, then 새 말
     true,
     false,
   ])
+  // A voice carries no language, so the picker shows no language chip (VOICE-10).
+  expect(screen.queryByText('한국어')).not.toBeInTheDocument()
 })
 
 it('keeps the selection when a voice not yet made is pressed', async () => {
@@ -150,7 +151,7 @@ it("lists the post's own deleted voice, disabled", async () => {
   const user = userEvent.setup()
   renderSelect({
     value: 'voice-gone',
-    current: { id: 'voice-gone', name: '옛 말투', deleted: true, made: true, sourceLanguage: 'ko' },
+    current: { id: 'voice-gone', name: '옛 말투', deleted: true, made: true },
   })
 
   expect(await picker()).toHaveTextContent('삭제된 말투 · 옛 말투')

@@ -3,8 +3,6 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "postpilot/v1/provider.proto";
-import "postpilot/v1/language.proto";
-import "postpilot/v1/error.proto";
 // A version's generation snapshot IS a post content -- the raw AI output of the post that
 // version produced -- so it is typed as the message the client already decodes rather than as
 // a second, voice-flavoured copy of the same shape.
@@ -15,7 +13,7 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 // Every procedure is scoped by the authenticated context. No request carries a user id.
 service VoiceService {
   // The voice directory. A voice owns exactly one profile and every row that can change
-  // it; an account always has at least one active voice and exactly one active default.
+  // it; an account has zero or more voices and at most one active, made default.
   rpc ListVoices(ListVoicesRequest) returns (ListVoicesResponse) {}
   rpc CreateVoice(CreateVoiceRequest) returns (CreateVoiceResponse) {}
   rpc RenameVoice(RenameVoiceRequest) returns (RenameVoiceResponse) {}
@@ -73,7 +71,9 @@ message VoiceSyntax {
   repeated string preferred_connectives = 4;
   VoiceValue nominalization = 5;
   VoiceValue passive_tendency = 6;
-  optional double average_sentence_words = 7;
+  // 7 was the English average sentence length in words, retired with English voices.
+  reserved 7;
+  reserved "average_sentence_words";
 }
 message VoiceStructure {
   VoiceValue intro_pattern = 1;
@@ -126,12 +126,9 @@ message VoiceProfile {
   string active_job_id = 5;
   StructuredVoiceProfile structured = 6;
   // 8 and 9 were the finalized-post source count and whether profile validation could run,
-  // retired in T465.
-  reserved 8, 9;
-  reserved "finalized_source_count", "can_validate";
-  // Why the seeding a described creation started failed, while the voice still has no published
-  // version; absent otherwise (VOICE-19).
-  Failure seed_failure = 11;
+  // retired in T465; 11 was the failure of the description seed, retired in T468.
+  reserved 8, 9, 11;
+  reserved "finalized_source_count", "can_validate", "seed_failure";
 }
 
 message VoiceProfileVersion {
@@ -159,28 +156,36 @@ message Voice {
   string created_at = 5;
   string updated_at = 6;
   string deleted_at = 7;
-  ContentLanguage source_language = 8;
+  // A voice carries no language: it is Korean (VOICE-10).
+  reserved 8;
+  reserved "source_language";
   // Whether the voice has a published analysis. Only a made voice can be assigned to a post
   // or write one; the picker lists one not yet made disabled (POST-101).
   bool made = 9;
+  // The directory row's meta line (VOICE-52): how many 학습 글 the voice holds and when its
+  // current analysis was published, empty until it is made.
+  int32 material_count = 10;
+  string analyzed_at = 11;
 }
 
 message ListVoicesRequest {}
 message ListVoicesResponse { repeated Voice voices = 1; }
+// A voice is created by name alone, as a Korean voice not yet made (VOICE-10). 2-4 were its
+// language and the description seed, retired in T468.
 message CreateVoiceRequest {
   string name = 1;
-  optional ContentLanguage source_language = 2;
-  // Optional. A free-text description of the wanted register. It is an instruction, never
-  // evidence: it is not stored as a sample, not counted as a source, and not measured. When
-  // present the server also enqueues one seeding job that writes the voice's first profile,
-  // and analyze_model must be the account's saved analyze-stage selection.
-  string description = 3;
-  ModelRef analyze_model = 4;
+  reserved 2, 3, 4;
+  reserved "source_language", "description", "analyze_model";
 }
-// job_id is the seeding job, and is empty whenever no description was submitted.
-message CreateVoiceResponse { Voice voice = 1; string job_id = 2; }
+message CreateVoiceResponse {
+  Voice voice = 1;
+  // 2 was the description seed's job.
+  reserved 2;
+  reserved "job_id";
+}
 message RenameVoiceRequest { string voice_id = 1; string name = 2; }
 message RenameVoiceResponse { Voice voice = 1; }
+// An empty voice_id clears the 기본 so the account has none (VOICE-12).
 message SetDefaultVoiceRequest { string voice_id = 1; }
 message SetDefaultVoiceResponse { repeated Voice voices = 1; }
 message DeleteVoiceRequest { string voice_id = 1; }

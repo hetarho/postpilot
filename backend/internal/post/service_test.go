@@ -48,12 +48,12 @@ func (f fakeVoices) Voices(_ context.Context, userID string) ([]VoiceRef, error)
 func testVoices() fakeVoices {
 	return fakeVoices{
 		alice: {
-			{ID: aliceVoice, Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true},
-			{ID: aliceReview, Name: "리뷰", SourceLanguage: LanguageKorean, Made: true},
-			{ID: aliceDeleted, Name: "옛 말투", Deleted: true, SourceLanguage: LanguageKorean, Made: true},
-			{ID: aliceUnmade, Name: "새 말투", SourceLanguage: LanguageKorean},
+			{ID: aliceVoice, Name: "기본 말투", Made: true},
+			{ID: aliceReview, Name: "리뷰", Made: true},
+			{ID: aliceDeleted, Name: "옛 말투", Deleted: true, Made: true},
+			{ID: aliceUnmade, Name: "새 말투"},
 		},
-		bob: {{ID: bobVoice, Name: "기본 말투", SourceLanguage: LanguageKorean, Made: true}},
+		bob: {{ID: bobVoice, Name: "기본 말투", Made: true}},
 	}
 }
 

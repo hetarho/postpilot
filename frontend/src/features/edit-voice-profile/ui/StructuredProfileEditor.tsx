@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { VoiceAxes, VoiceProfile } from '@/entities/voice'
-import { type ContentLanguage, VoiceLayer } from '@/shared/api'
+import { VoiceLayer } from '@/shared/api'
 import { formatNumber, formatPercent } from '@/shared/lib'
 import { Badge, Typography, typographyStyles } from '@/shared/ui'
 import { ProfileField } from './ProfileField'
@@ -12,13 +12,11 @@ export function StructuredProfileEditor({
   ownerId,
   voiceId,
   profile,
-  sourceLanguage,
   readOnly = false,
 }: {
   ownerId: string
   voiceId: string
   profile: VoiceProfile
-  sourceLanguage: ContentLanguage
   readOnly?: boolean
 }) {
   const { t } = useTranslation('voices')
@@ -39,7 +37,7 @@ export function StructuredProfileEditor({
       value: structured.lexical.description,
     },
     {
-      label: t(`profile.field.${sourceLanguage === 'en' ? 'endingEn' : 'endingKo'}`),
+      label: t('profile.field.ending'),
       layer: VoiceLayer.ENDINGS,
       field: 'base_register',
       value: structured.endings.baseRegister,
@@ -116,34 +114,13 @@ export function StructuredProfileEditor({
               })}
             >
               <div>
-                <dt className="text-content-tertiary">
-                  {sourceLanguage === 'en'
-                    ? t('profile.averageSentenceWords')
-                    : t('profile.averageSentenceChars')}
-                </dt>
-                {sourceLanguage === 'en' ? (
-                  <dd
-                    className={
-                      structured.syntax.averageSentenceWords === undefined
-                        ? 'text-content-tertiary'
-                        : undefined
-                    }
-                  >
-                    {structured.syntax.averageSentenceWords === undefined
-                      ? t('profile.unknown')
-                      : t('profile.words', {
-                          count: structured.syntax.averageSentenceWords,
-                          formatted: formatNumber(structured.syntax.averageSentenceWords),
-                        })}
-                  </dd>
-                ) : (
-                  <dd>
-                    {t('profile.characters', {
-                      count: structured.syntax.averageSentenceChars,
-                      formatted: formatNumber(structured.syntax.averageSentenceChars),
-                    })}
-                  </dd>
-                )}
+                <dt className="text-content-tertiary">{t('profile.averageSentenceChars')}</dt>
+                <dd>
+                  {t('profile.characters', {
+                    count: structured.syntax.averageSentenceChars,
+                    formatted: formatNumber(structured.syntax.averageSentenceChars),
+                  })}
+                </dd>{' '}
               </div>
               <div>
                 <dt className="text-content-tertiary">{t('profile.sentencesPerParagraph')}</dt>

@@ -1,32 +1,18 @@
 // Package voice owns an account's voices: each is an independent writing profile with its
-// own samples and versions, and a post names exactly one of them.
+// own samples and versions, and a post names at most one of them.
 package voice
 
 import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/postpilot/backend/internal/llm"
 )
 
 const AnalysisJobKind = "analyze_voice"
 
-const SeedJobKind = "seed_voice"
-
-// DefaultVoiceName is the name of an account's first voice — created by migration 0009 for
-// existing accounts and by the adduser bootstrap for new ones. The frontend renders the
-// server value rather than repeating it.
-const DefaultVoiceName = "기본 말투"
-
 // VoiceNameMaxChars bounds a display name in Unicode scalar values; the frontend mirrors it
-// in shared/config for early feedback, but this is the authoritative check.
+// in entities/voice/config for early feedback, but this is the authoritative check.
 const VoiceNameMaxChars = 50
-
-// VoiceDescriptionMaxChars bounds the optional creation-time description in Unicode scalar
-// values, mirrored in shared/config the same way. It is deliberately far below a sample's
-// length: a description states a wanted register, it does not demonstrate one.
-const VoiceDescriptionMaxChars = 500
 
 var (
 	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
@@ -45,29 +31,22 @@ var (
 	ErrVoiceNotFound  = errors.New("voice not found")
 	ErrVoiceDeleted   = errors.New("voice is deleted")
 	ErrVoiceNameTaken = errors.New("an active voice already has that name")
-	ErrVoiceIsDefault = errors.New("the default voice cannot be deleted")
+	// ErrVoiceNotMade is a voice with no published analysis: it cannot be the 기본 (VOICE-32).
+	ErrVoiceNotMade = errors.New("voice is not made yet")
 	// ErrVoiceBusy refuses a soft delete while a job could still publish into the voice.
-	ErrVoiceBusy           = errors.New("voice has unfinished work that could still publish to it")
-	ErrLanguageRequired    = errors.New("a content language is required")
-	ErrLanguageUnsupported = errors.New("the content language is unsupported")
+	ErrVoiceBusy = errors.New("voice has unfinished work that could still publish to it")
+	// ErrLanguageRequired is a projection asked for no valid target language.
+	ErrLanguageRequired = errors.New("a target language is required")
 )
 
-// Language is the voice context's pure canonical source/target language. Conversion to
-// proto enums and SQL tags stays at the context edges.
+// Language is a projection's target language. A voice itself is Korean (VOICE-10): the
+// target only decides whether the projection is complete or portable (VOICE-46).
 type Language string
 
 const (
 	LanguageKorean  Language = "ko"
 	LanguageEnglish Language = "en"
 )
-
-func ParseLanguage(value string) (Language, error) {
-	language := Language(value)
-	if !language.Valid() {
-		return "", fmt.Errorf("%w: %q", ErrLanguageRequired, value)
-	}
-	return language, nil
-}
 
 func (l Language) Valid() bool { return l == LanguageKorean || l == LanguageEnglish }
 
@@ -87,35 +66,23 @@ func (e *VoiceNameError) Error() string {
 	return fmt.Sprintf("voice name has %d characters; at most %d are allowed", e.Chars, VoiceNameMaxChars)
 }
 
-// VoiceSeed is CreateVoice's optional described-voice request. A nil seed is the plain
-// creation the product always had: an empty isolated profile and no provider work at all.
-type VoiceSeed struct {
-	Description  string
-	AnalyzeModel llm.ModelRef
-}
-
-// VoiceDescriptionTooLongError is an over-long creation-time description. An empty one is
-// not an error: the description is optional and its absence simply skips seeding.
-type VoiceDescriptionTooLongError struct{ Chars int }
-
-func (e *VoiceDescriptionTooLongError) Error() string {
-	return fmt.Sprintf("voice description has %d characters; at most %d are allowed", e.Chars, VoiceDescriptionMaxChars)
-}
-
 // Voice is the aggregate root the directory manages. DeletedAt is a tombstone: the voice
 // keeps its profile and its posts and stays readable, but cannot start or receive AI work.
 type Voice struct {
-	ID             string
-	UserID         string
-	Name           string
-	IsDefault      bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      *time.Time
-	SourceLanguage Language
+	ID        string
+	UserID    string
+	Name      string
+	IsDefault bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
 	// Made is whether the voice has a published analysis: only a made voice can be assigned
 	// to a post or write one (POST-23).
 	Made bool
+	// SampleCount and AnalyzedAt are the directory row's meta line (VOICE-52): how many 학습
+	// 글 the voice holds and when its current analysis was published (nil until made).
+	SampleCount int
+	AnalyzedAt  *time.Time
 }
 
 func (v Voice) Deleted() bool { return v.DeletedAt != nil }
@@ -139,10 +106,6 @@ type Profile struct {
 	ActiveJobID string
 	Structured  StructuredProfile
 	Versions    []ProfileVersion
-	// SeedFailure is why the seeding a described creation started failed, kept while the
-	// voice still has no published version (VOICE-19): the 말투 tab says so after the job ends
-	// and after a reload, until 기존 글 가져오기 publishes one.
-	SeedFailure *Failure
 }
 
 type ValueSource string
@@ -184,7 +147,6 @@ type EndingsProfile struct {
 }
 type SyntaxProfile struct {
 	AverageSentenceChars            float64
-	AverageSentenceWords            *float64
 	SentenceLength, ConnectiveStyle VoiceValue
 	PreferredConnectives            []string
 	Nominalization, PassiveTendency VoiceValue
@@ -287,19 +249,7 @@ type AnalysisJobRequest struct {
 	WriteModel string
 }
 
-// PersonalizationJobRequest freezes the owning voice on every provider-backed job so the
-// queue guards per voice and a handler can recheck eligibility when it finally runs.
-type PersonalizationJobRequest struct {
-	Kind, UserID, VoiceID, Model, Payload string
-}
-
 type ActiveJob struct{ ID string }
-
-// FinishedJob is the latest job of a kind, terminal or not, as the profile reads it.
-type FinishedJob struct {
-	ID, Status string
-	Failure    *Failure
-}
 
 type JobAlreadyInProgressError struct{ ActiveID string }
 

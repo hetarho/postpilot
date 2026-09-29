@@ -15,8 +15,6 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
-	"github.com/postpilot/backend/internal/voice"
-	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
 func creditBootstrap(ctx context.Context, handle *db.DB, userID string) error {
@@ -46,15 +44,6 @@ func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits i
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
 	return ledger.Grant(ctx, userID, credits, expiresAt)
-}
-
-// usageAnchors is the composition seam between the credit ledger, subscriptions and
-// account identity. It prefers an active subscription without teaching either context
-// about the other's persistence.
-func defaultVoiceBootstrap(ctx context.Context, handle *db.DB, userID string) error {
-	directory := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	_, _, err := directory.EnsureDefaultVoice(ctx, userID, voice.LanguageKorean)
-	return err
 }
 
 var _ experiment.Runner = experimentRunner{}
@@ -90,7 +79,7 @@ func runCommand(args []string) bool {
 	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
 	switch args[0] {
 	case "adduser":
-		if err := provision.Run(ctx, settings, args[1:], defaultVoiceBootstrap, creditBootstrap); err != nil {
+		if err := provision.Run(ctx, settings, args[1:], creditBootstrap); err != nil {
 			fatal("adduser", err)
 		}
 	case "grantcredits":

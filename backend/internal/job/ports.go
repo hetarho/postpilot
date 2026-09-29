@@ -51,7 +51,6 @@ type Store interface {
 	Finish(ctx context.Context, id, status string, failure *Failure, now time.Time) error
 	FailQueued(ctx context.Context, id, userID string, failure Failure, now time.Time) (bool, error)
 	SweepRunning(ctx context.Context, failure Failure, now time.Time) (int64, error)
-	SweepQueuedPersonalization(ctx context.Context, failure Failure, now time.Time) (int64, error)
 	// ActiveFor and LatestFor address a job by the subject it belongs to; the store maps
 	// the dimension to its column and refuses one it does not know.
 	ActiveFor(ctx context.Context, subject Subject, filter Filter) (*Job, error)

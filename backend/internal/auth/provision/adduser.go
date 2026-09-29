@@ -24,9 +24,9 @@ import (
 )
 
 // Bootstrap runs once the user row exists. The composition root supplies it so this
-// package stays inside the auth context: the account's default voice is established here
-// (cmd/api, cmd/adduser), and a failure is the operator's signal that the account is not
-// usable yet.
+// package stays inside the auth context: the account's credit grant is opened here (cmd/api),
+// and a failure is the operator's signal that the account is not usable yet. No bootstrap
+// creates a voice (VOICE-4).
 type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
 
 // Run executes `adduser <login_id> [--plan=<free|basic|pro|max|master>]`, returning an error

@@ -44,7 +44,7 @@ func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef,
 	}
 	out := make([]post.VoiceRef, 0, len(voices))
 	for _, v := range voices {
-		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted(), SourceLanguage: post.Language(v.SourceLanguage), Made: v.Made})
+		out = append(out, post.VoiceRef{ID: v.ID, Name: v.Name, Deleted: v.Deleted(), Made: v.Made})
 	}
 	return out, nil
 }

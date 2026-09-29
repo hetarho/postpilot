@@ -22,9 +22,6 @@ import {
   StructuredVoiceProfileSchema,
   UpdateVoiceOverrideResponseSchema,
   type ProtoVoiceProfile,
-  contentLanguageFromProto,
-  contentLanguageToProto,
-  type ContentLanguage,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -44,11 +41,13 @@ export interface FakeVoiceRow {
   deleted?: boolean
   /** Omitted is made; a voice this fake creates starts not made, as on the server (VOICE-10). */
   made?: boolean
-  sourceLanguage?: ContentLanguage
+  /** How many 학습 글 the directory row says the voice holds. */
+  materialCount?: number
 }
 
-/** The one voice every account starts with (the migration and adduser create it). The profile
- *  options below describe THIS voice's profile; every other voice starts empty, like the server. */
+/** The voice a fixture account holds unless a test lists its own directory: no account is given
+ *  one (VOICE-4), so this stands for the one its owner made. The profile options below describe
+ *  THIS voice's profile; every other voice starts empty, like the server. */
 export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
   id: 'voice-default',
   name: '기본 말투',
@@ -58,8 +57,6 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 export interface FakeVoiceOptions {
   updatedAt?: string
   activeJobId?: string
-  /** A failed seed the server keeps on the unversioned profile (VOICE-19). */
-  seedFailure?: { reason: string; params?: Record<string, string> }
   /** Returned from the second profile read, simulating a completed analysis. */
   /** The analysis the profile publishes on the read AFTER the first one — the shape a resumed
    *  analysis has when its job is already done. It lands in the structured profile's lexical
@@ -85,29 +82,20 @@ export interface FakeVoiceOptions {
   busyVoices?: string[]
   /** Make ListVoices fail. */
   listFails?: boolean
-  /** Voice creates, including the concrete language that must never be inferred server-side and
-   *  the optional description with the analyze ref that must travel with it. */
-  creates?: Array<{
-    name: string
-    sourceLanguage: ContentLanguage
-    description: string
-    analyzeModel: string
-  }>
-  /** The seeding job a described create answers with. */
-  createJobId?: string
+  /** Voice creates: a voice is created by name alone (VOICE-10). */
+  creates?: Array<{ name: string }>
 }
 
 const NOW = '2026-08-29T12:00:00Z'
 const NAME_MAX_CHARS = 50
-const DESCRIPTION_MAX_CHARS = 500
 
 interface VoiceRow {
   id: string
   name: string
   isDefault: boolean
   deletedAt: string
-  sourceLanguage: ContentLanguage
   made: boolean
+  materialCount: number
 }
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
@@ -123,8 +111,8 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         name: row.name,
         isDefault: row.isDefault ?? false,
         deletedAt: row.deleted ? NOW : '',
-        sourceLanguage: row.sourceLanguage ?? 'ko',
         made: row.made ?? true,
+        materialCount: row.materialCount ?? 0,
       },
     ]),
   )
@@ -141,8 +129,9 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       createdAt: NOW,
       updatedAt: NOW,
       deletedAt: row.deletedAt,
-      sourceLanguage: contentLanguageToProto(row.sourceLanguage),
       made: row.made,
+      materialCount: row.materialCount,
+      analyzedAt: row.made ? NOW : '',
     })
   const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
   // The server's order: active before deleted, the default first, then by name.
@@ -187,14 +176,6 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     create(VoiceProfileSchema, {
       updatedAt: options.updatedAt ?? '',
       activeJobId: options.activeJobId ?? '',
-      ...(options.seedFailure
-        ? {
-            seedFailure: {
-              reason: options.seedFailure.reason,
-              params: options.seedFailure.params ?? {},
-            },
-          }
-        : {}),
       samples: (options.samples ?? []).map((sample) =>
         create(VoiceSampleSchema, {
           ...sample,
@@ -230,43 +211,18 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('CreateVoice')
     const name = validName(request.name)
     if (nameTaken(name, '')) throw connectAppError('VOICE_NAME_TAKEN', Code.AlreadyExists)
-    const sourceLanguage = contentLanguageFromProto(request.sourceLanguage ?? 0)
-    if (!sourceLanguage)
-      throw connectAppError('VOICE_SOURCE_LANGUAGE_REQUIRED', Code.InvalidArgument)
-    const description = request.description.trim()
-    const describedChars = Array.from(description).length
-    if (describedChars > DESCRIPTION_MAX_CHARS) {
-      throw connectAppError('VOICE_DESCRIPTION_TOO_LONG', Code.InvalidArgument, {
-        actual: String(describedChars),
-        max: String(DESCRIPTION_MAX_CHARS),
-      })
-    }
-    // Every reason to refuse is checked before the row exists, as on the server.
-    const analyzeModel = request.analyzeModel
-    if (description && (!analyzeModel?.providerId || !analyzeModel.modelId)) {
-      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
-    }
-    options.creates?.push({
-      name,
-      sourceLanguage,
-      description,
-      analyzeModel: description ? `${analyzeModel!.providerId}/${analyzeModel!.modelId}` : '',
-    })
+    options.creates?.push({ name })
     voiceSequence += 1
     const row: VoiceRow = {
       id: `voice-${voiceSequence}`,
       name,
       isDefault: false,
       deletedAt: '',
-      sourceLanguage,
       made: false,
+      materialCount: 0,
     }
     voices.set(row.id, row)
-    // Only a described create enqueues, and the new voice's profile carries that run so the
-    // screen it lands on can show it.
-    const jobId = description ? (options.createJobId ?? 'seed-job') : ''
-    if (jobId) profiles.set(row.id, create(VoiceProfileSchema, { activeJobId: jobId }))
-    return create(CreateVoiceResponseSchema, { voice: toProtoVoice(row), jobId })
+    return create(CreateVoiceResponseSchema, { voice: toProtoVoice(row) })
   })
 
   rpc(VoiceService.method.renameVoice, (request) => {
@@ -282,7 +238,13 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
 
   rpc(VoiceService.method.setDefaultVoice, (request) => {
     options.calls?.push('SetDefaultVoice')
+    // An empty id clears the 기본 (VOICE-12); a voice not yet made cannot be it.
+    if (!request.voiceId) {
+      for (const other of voices.values()) other.isDefault = false
+      return create(SetDefaultVoiceResponseSchema, { voices: directory().map(toProtoVoice) })
+    }
     const row = active(request.voiceId)
+    if (!row.made) throw connectAppError('VOICE_NOT_MADE', Code.FailedPrecondition)
     for (const other of voices.values()) other.isDefault = false
     row.isDefault = true
     return create(SetDefaultVoiceResponseSchema, { voices: directory().map(toProtoVoice) })
@@ -291,15 +253,13 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   rpc(VoiceService.method.deleteVoice, (request) => {
     options.calls?.push('DeleteVoice')
     const row = owned(request.voiceId)
+    // The 기본 and the last voice delete like any other (VOICE-13).
     if (!row.deletedAt) {
-      const activeCount = [...voices.values()].filter((other) => !other.deletedAt).length
-      if (row.isDefault || activeCount <= 1) {
-        throw connectAppError('VOICE_DEFAULT_DELETE_FORBIDDEN', Code.FailedPrecondition)
-      }
       if (options.busyVoices?.includes(row.id)) {
         throw connectAppError('VOICE_BUSY', Code.FailedPrecondition)
       }
       row.deletedAt = NOW
+      row.isDefault = false
     }
     return create(DeleteVoiceResponseSchema, { voice: toProtoVoice(row) })
   })

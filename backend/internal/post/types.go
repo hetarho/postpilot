@@ -195,10 +195,9 @@ func (e *InvalidContentError) Unwrap() error { return ErrInvalidContent }
 // stores plus the name/tombstone the voice context publishes. A deleted voice still names
 // itself here so the post stays readable and exportable while AI actions refuse.
 type VoiceRef struct {
-	ID             string
-	Name           string
-	Deleted        bool
-	SourceLanguage Language
+	ID      string
+	Name    string
+	Deleted bool
 	// Made is whether the voice has a published analysis; only a made voice can be assigned.
 	Made bool
 }

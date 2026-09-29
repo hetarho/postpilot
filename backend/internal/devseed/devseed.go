@@ -39,12 +39,6 @@ type Accounts interface {
 	Create(ctx context.Context, loginID, password string, tier plan.Plan) error
 }
 
-// Voices is the voice context's half. An account cannot hold a post without a default
-// voice ([I4]: every post selects exactly one), so this runs before any article is written.
-type Voices interface {
-	EnsureDefault(ctx context.Context, userID string) (voiceID string, err error)
-}
-
 // Credits is the ledger's half: the monthly grant the account's plan entitles it to. It is
 // the same call `adduser` makes, so a seeded account's balance screen shows what a really
 // provisioned account of that tier would show.
@@ -75,11 +69,11 @@ type Media interface {
 }
 
 // Deps are the context halves a seed needs. Every one is required (ARCH-40): a seed that
-// silently skipped voices would produce five accounts that cannot open the post editor,
-// and the failure would surface as an empty screen rather than as this error.
+// silently skipped templates would produce accounts missing the fixture the builder reads,
+// and the failure would surface as an empty screen rather than as this error. There is no
+// voice half: an account starts with no voice (VOICE-4) and every seeded post has 말투 없음.
 type Deps struct {
 	Accounts  Accounts
-	Voices    Voices
 	Credits   Credits
 	Posts     Posts
 	Media     Media
@@ -149,8 +143,8 @@ func Run(ctx context.Context, deps Deps) (Report, error) {
 }
 
 // seedAccount establishes one account and everything behind it, in the order the product's
-// own rules require: the account exists, then it can be funded, then it has a
-// voice and its template, and only then can it hold a post that names them.
+// own rules require: the account exists, then it can be funded, then it has its template,
+// and only then can it hold a post that names it.
 func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time) (AccountReport, error) {
 	if err := deps.Accounts.Create(ctx, fixture.LoginID, Password, fixture.Plan); err != nil {
 		return AccountReport{}, fmt.Errorf("create: %w", err)
@@ -158,21 +152,17 @@ func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time)
 	if err := deps.Credits.OpenMonthlyLot(ctx, fixture.LoginID, fixture.Plan); err != nil {
 		return AccountReport{}, fmt.Errorf("open monthly grant: %w", err)
 	}
-	voiceID, err := deps.Voices.EnsureDefault(ctx, fixture.LoginID)
-	if err != nil {
-		return AccountReport{}, fmt.Errorf("default voice: %w", err)
-	}
-
 	templateID := ""
 	if fixture.Template {
 		template := TitleAreaTemplate
 		template.UserID = fixture.LoginID
+		var err error
 		if templateID, err = deps.Templates.Create(ctx, template); err != nil {
 			return AccountReport{}, fmt.Errorf("template %q: %w", template.Name, err)
 		}
 	}
 
-	for _, article := range fixture.Articles(voiceID, templateID, now) {
+	for _, article := range fixture.Articles(templateID, now) {
 		if err := deps.Posts.Write(ctx, article); err != nil {
 			return AccountReport{}, fmt.Errorf("write post %q: %w", article.Title, err)
 		}
@@ -193,8 +183,6 @@ func (d Deps) valid() error {
 	switch {
 	case d.Accounts == nil:
 		missing = "accounts"
-	case d.Voices == nil:
-		missing = "voices"
 	case d.Credits == nil:
 		missing = "credits"
 	case d.Posts == nil:

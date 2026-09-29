@@ -34,10 +34,10 @@ func descriptorProfile() StructuredProfile {
 	}
 }
 
-// VOICE-46, LANG-15: a Korean voice writing Korean receives the complete typed descriptors,
-// its own structure included — never less than the same voice writing English.
+// VOICE-46, LANG-15: a Korean target receives the complete typed descriptors, its own
+// structure included; any other target receives the portable allowlist alone.
 func TestTheKoreanProjectionCarriesEveryTypedDescriptor(t *testing.T) {
-	rendered := renderStructuredProfileForLanguage(descriptorProfile(), LanguageKorean)
+	rendered := renderStructuredProfile(descriptorProfile())
 	for _, want := range []string{
 		"paragraph sentences: 2-4", "headings: 소제목 없음", "lists: 목록 드묾", "emojis: 안 씀",
 		"sentence length: 짧음", "nominalization: 낮음", "passive: 거의 없음",
@@ -47,10 +47,6 @@ func TestTheKoreanProjectionCarriesEveryTypedDescriptor(t *testing.T) {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("the Korean projection lacks %q:\n%s", want, rendered)
 		}
-	}
-	english := renderStructuredProfileForLanguage(descriptorProfile(), LanguageEnglish)
-	if !strings.Contains(english, "preferred words: 맛있다 (→고소하다), 천천히") {
-		t.Fatalf("the English projection lacks the preferred words:\n%s", english)
 	}
 	// Still an allowlist across languages: none of these crosses.
 	portable := renderPortableProfile(descriptorProfile())

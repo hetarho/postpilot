@@ -38,6 +38,10 @@ enum FailureReason {
   // The model lab's 문체 분석 comparison was retired in T466 (VOICE r5, MODEL r20).
   reserved 70, 61;
   reserved "EXPERIMENT_VOICE_REQUIRED", "EXPERIMENT_CONFIRMATION_REQUIRED";
+  // The protected 기본, the description seed and voice languages were retired in T468.
+  reserved 199, 201, 215, 216;
+  reserved "VOICE_DEFAULT_DELETE_FORBIDDEN", "VOICE_DESCRIPTION_TOO_LONG";
+  reserved "VOICE_SOURCE_LANGUAGE_REQUIRED", "VOICE_SOURCE_LANGUAGE_UNSUPPORTED";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -209,9 +213,7 @@ enum FailureReason {
   VERIFICATION_LINK_INVALID = 191;
   VOICE_ANALYZE_MODEL_REQUIRED = 193;
   VOICE_BUSY = 195;
-  VOICE_DEFAULT_DELETE_FORBIDDEN = 199;
   VOICE_DELETED = 200;
-  VOICE_DESCRIPTION_TOO_LONG = 201;
   VOICE_INVALID_LIFECYCLE = 204;
   VOICE_LEARNING_NOT_FOUND = 205;
   VOICE_NAME_REQUIRED = 206;
@@ -222,8 +224,6 @@ enum FailureReason {
   VOICE_SAMPLE_MUTATION_FAILED = 212;
   VOICE_SAMPLE_NOT_FOUND = 213;
   VOICE_SAMPLE_TOO_SHORT = 214;
-  VOICE_SOURCE_LANGUAGE_REQUIRED = 215;
-  VOICE_SOURCE_LANGUAGE_UNSUPPORTED = 216;
 
   // Reasons no Connect status carries: a durable job failure the browser renders from the
   // job record, and one the browser raises itself. They are values of the same enum because

@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import type { AppFailure, ContentLanguage, PostContent } from '@/shared/api'
+import type { PostContent } from '@/shared/api'
 
 export interface VoiceSample {
   id: string
@@ -43,7 +43,6 @@ export interface StructuredVoiceProfile {
   }
   syntax: {
     averageSentenceChars: number
-    averageSentenceWords?: number
     sentenceLength: VoiceValue
     connectiveStyle: VoiceValue
     preferredConnectives: string[]
@@ -73,10 +72,13 @@ export interface Voice {
   createdAt: string
   updatedAt: string
   deletedAt: string
-  sourceLanguage: ContentLanguage
   /** Whether the voice has a published analysis. Only a made voice can be assigned to a post or
    *  write one; one not yet made is still in the directory, 만드는 중 (POST-101). */
   made: boolean
+  /** The directory row's meta line (VOICE-52): how many 학습 글 the voice holds, and when its
+   *  current analysis was published ('' until it is made). */
+  materialCount: number
+  analyzedAt: string
 }
 
 /** The voice a post is written in, as a post screen needs it — just enough to name it, including
@@ -88,7 +90,6 @@ export interface VoiceRef {
   deleted: boolean
   /** A voice not yet made refuses every AI action the way a deleted one does (POST-25). */
   made: boolean
-  sourceLanguage: ContentLanguage | undefined
 }
 
 export interface VoiceProfile {
@@ -97,9 +98,6 @@ export interface VoiceProfile {
   samples: VoiceSample[]
   activeJobId: string
   structured: StructuredVoiceProfile
-  /** Why the seeding a described creation started failed, while the voice has no published
-   *  version yet (VOICE-19). Stays after the job ended and after a reload. */
-  seedFailure?: AppFailure
 }
 export interface VoiceVersion {
   version: bigint
@@ -128,8 +126,9 @@ export function emptyVoice(): Voice {
     createdAt: '',
     updatedAt: '',
     deletedAt: '',
-    sourceLanguage: 'ko',
     made: false,
+    materialCount: 0,
+    analyzedAt: '',
   }
 }
 
@@ -155,7 +154,6 @@ export function emptyStructuredVoiceProfile(): StructuredVoiceProfile {
     },
     syntax: {
       averageSentenceChars: 0,
-      averageSentenceWords: undefined,
       sentenceLength: unknownValue(),
       connectiveStyle: unknownValue(),
       preferredConnectives: [],
@@ -209,6 +207,15 @@ export function voiceAIRefusal(voice: Pick<VoiceRef, 'deleted' | 'made'> | undef
   if (voice.deleted) return deletedVoiceAIReason()
   if (!voice.made) return unmadeVoiceAIReason()
   return ''
+}
+
+/** The day a voice's current analysis was published, as its directory row writes it:
+ *  `YYYY.MM.DD` in the viewer's own calendar (VOICE-52). '' for an unparsable or absent time. */
+export function voiceAnalysisDate(value: string): string {
+  const date = new Date(value)
+  if (!value || Number.isNaN(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`
 }
 
 export function activeVoices<T extends Pick<Voice, 'deleted'>>(voices: readonly T[]): T[] {

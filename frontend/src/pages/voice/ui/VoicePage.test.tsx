@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { BlockType, VoiceValueSource } from '@/shared/api'
@@ -67,45 +67,6 @@ describe('the 프로필 tab', () => {
     const label = await screen.findByText('평균 문장 길이(글자)')
     expect(label.nextElementSibling).toHaveTextContent('14자')
     expect(screen.getByText('주 종결어미')).toBeInTheDocument()
-  })
-
-  it('shows English syntax measurement in words and preserves unknown presence', async () => {
-    const englishVoice = [
-      {
-        id: 'voice-default',
-        name: 'English voice',
-        isDefault: true,
-        sourceLanguage: 'en' as const,
-      },
-    ]
-    renderAppAt(DEFAULT, {
-      user: { id: 'alice' },
-      voice: {
-        voices: englishVoice,
-        structured: {
-          ...LEARNED,
-          syntax: { averageSentenceChars: 99, averageSentenceWords: 12.5 },
-        },
-      },
-    })
-
-    const measured = await screen.findByText('평균 문장 길이(단어)')
-    expect(measured.nextElementSibling).toHaveTextContent('12.5단어')
-    expect(screen.getByText('기본 문체 격식')).toBeInTheDocument()
-    expect(screen.queryByText('주 종결어미')).not.toBeInTheDocument()
-
-    cleanup()
-    renderAppAt(DEFAULT, {
-      user: { id: 'alice' },
-      voice: {
-        voices: englishVoice,
-        structured: { ...LEARNED, syntax: { averageSentenceChars: 99 } },
-      },
-    })
-
-    const unknown = await screen.findByText('평균 문장 길이(단어)')
-    expect(unknown.nextElementSibling).toHaveTextContent('알 수 없음')
-    expect(unknown.nextElementSibling).not.toHaveTextContent('99')
   })
 
   // VOICE-10: another voice of the same account is genuinely empty.
@@ -191,6 +152,76 @@ describe('the voice tab row', () => {
     expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
     expect(screen.queryByText('현재 말투 프로필')).not.toBeInTheDocument()
+  })
+})
+
+// VOICE-12, VOICE-13, VOICE-54: the title row carries the rename, 기본으로 설정 or 기본 해제 on
+// a made voice, and 삭제 confirmed by a sheet saying what stays.
+describe('the voice title row', () => {
+  const VOICES = [
+    { id: 'voice-default', name: '기본 말투', isDefault: true },
+    { id: 'voice-review', name: '리뷰' },
+    { id: 'voice-new', name: '새 말투', made: false },
+  ]
+
+  it('makes a made voice the 기본 and clears it again', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/voices/voice-review', { user: { id: 'alice' }, calls, voice: { voices: VOICES } })
+
+    await screen.findByRole('heading', { level: 1, name: '리뷰' })
+    await user.click(screen.getByRole('button', { name: '기본으로 설정' }))
+    await waitFor(() => expect(calls).toContain('SetDefaultVoice'))
+    await user.click(await screen.findByRole('button', { name: '기본 해제' }))
+    await waitFor(() => expect(calls.filter((call) => call === 'SetDefaultVoice')).toHaveLength(2))
+    expect(await screen.findByRole('button', { name: '기본으로 설정' })).toBeInTheDocument()
+  })
+
+  it('offers no 기본 on a voice not yet made, but still deletes it', async () => {
+    renderAppAt('/voices/voice-new', { user: { id: 'alice' }, voice: { voices: VOICES } })
+
+    await screen.findByRole('heading', { level: 1, name: '새 말투' })
+    expect(screen.queryByRole('button', { name: '기본으로 설정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기본 해제' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투 삭제' })).toBeInTheDocument()
+    // No language badge anywhere on the title row (VOICE-10).
+    expect(screen.queryByText('한국어')).not.toBeInTheDocument()
+  })
+
+  it('deletes the 기본 after the sheet says what stays', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { voices: VOICES } })
+
+    await screen.findByRole('heading', { level: 1, name: '기본 말투' })
+    expect(screen.getByRole('button', { name: '기본 해제' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '기본 말투 삭제' }))
+    const sheet = await screen.findByRole('dialog')
+    expect(sheet).toHaveTextContent(
+      '글은 그대로 남고 이 말투는 삭제된 말투로 표시돼요. 학습 글과 분석은 함께 보관되고, 복원하면 다시 쓸 수 있어요.',
+    )
+    await user.click(within(sheet).getByRole('button', { name: '삭제' }))
+
+    await waitFor(() => expect(calls).toContain('DeleteVoice'))
+    expect(await screen.findByRole('button', { name: '복원' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기본 해제' })).not.toBeInTheDocument()
+  })
+
+  it('explains a refused delete instead of erasing anything', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/voices/voice-review', {
+      user: { id: 'alice' },
+      voice: { voices: VOICES, busyVoices: ['voice-review'] },
+    })
+
+    await user.click(await screen.findByRole('button', { name: '리뷰 삭제' }))
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: '삭제' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('지금은 삭제할 수 없어요')
+    expect(screen.getByRole('alert')).toHaveTextContent('이 말투에서 작업이 진행 중이에요.')
+    expect(screen.queryByRole('button', { name: '복원' })).not.toBeInTheDocument()
   })
 })
 
@@ -337,20 +368,20 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByText('이 버전으로 쓴 글이 아직 없어요.')).toBeInTheDocument()
   })
 
-  // VOICE-53: the tab a described create lands on reports the seeding run.
-  it('shows the seeding run started by a described creation', async () => {
+  // VOICE-31: the voice's queued or running analysis reports on its tab.
+  it('shows the running analysis of the voice', async () => {
     const calls: string[] = []
     renderAppAt(DEFAULT, {
       user: { id: 'alice' },
       calls,
-      voice: { activeJobId: 'seed-job' },
+      voice: { activeJobId: 'analysis-job' },
       jobs: {
         jobs: [
           {
-            id: 'seed-job',
-            kind: 'seed_voice',
+            id: 'analysis-job',
+            kind: 'analyze_voice',
             status: 'running',
-            stage: 'seed',
+            stage: 'analyze',
             progressDone: 0,
             progressTotal: 1,
           },
@@ -363,16 +394,16 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(screen.getByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
   })
 
-  // VOICE-19: a failed seed leaves a usable voice and says why, on that same tab.
-  it('reports a failed seed without losing the voice', async () => {
+  // VOICE-45: a failed analysis leaves the voice as it was and says why, on that same tab.
+  it('reports a failed analysis without losing the voice', async () => {
     renderAppAt(DEFAULT, {
       user: { id: 'alice' },
-      voice: { activeJobId: 'seed-job' },
+      voice: { activeJobId: 'analysis-job' },
       jobs: {
         jobs: [
           {
-            id: 'seed-job',
-            kind: 'seed_voice',
+            id: 'analysis-job',
+            kind: 'analyze_voice',
             status: 'failed',
             failureReason: 'PROVIDER_DISABLED',
           },
@@ -383,18 +414,6 @@ describe('the 기존 글 가져오기 tab', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     // The profile is simply empty; nothing partial was written.
-    expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
-  })
-
-  // VOICE-19: the job's own status ends with the job, so the failure the server keeps on the
-  // unversioned profile is what still says why after the job ended and after a reload.
-  it('keeps a failed seed on the tab once no job is running', async () => {
-    renderAppAt(DEFAULT, {
-      user: { id: 'alice' },
-      voice: { seedFailure: { reason: 'PROVIDER_DISABLED' } },
-    })
-    expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('현재 말투 프로필')).toBeInTheDocument()
   })
 
@@ -445,7 +464,6 @@ describe('the 기존 글 가져오기 tab', () => {
     })
 
     expect(await screen.findByRole('heading', { level: 1, name: '옛 말투' })).toBeInTheDocument()
-    expect(screen.getByText('삭제됨')).toBeInTheDocument()
     expect(screen.getByText(/삭제된 말투예요\. 기록은 볼 수 있지만/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '복원' })).toBeInTheDocument()
     expect(await screen.findByText(/삭제된 말투에는 글을 가져올 수 없어요/)).toBeInTheDocument()

@@ -16,8 +16,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	}
 	// The job froze its voice at enqueue; recheck before the provider call so a voice
 	// deleted while the job waited never receives a new styleguide.
-	active, err := s.activeVoice(ctx, found.UserID, found.VoiceID)
-	if err != nil {
+	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
 		return voiceUnavailableError(err)
 	}
 	attempted := false
@@ -42,7 +41,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		progress("analyze", 0, 1)
 		// The typed analysis, with its schema: the voice gets its axes and structure habits
 		// from this call (VOICE-27).
-		qualitative, err := s.completeAnalysis(ctx, ref, corpus, active.SourceLanguage)
+		qualitative, err := s.completeAnalysis(ctx, ref, corpus)
 		if err != nil {
 			return err
 		}
@@ -54,8 +53,8 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
 		if stored {
-			measured := MeasuredProfileForLanguage(corpus, active.SourceLanguage, s.now)
-			mergeQualitativeProfile(&measured, qualitative, active.SourceLanguage, analyzedValue)
+			measured := MeasuredProfile(corpus, s.now)
+			mergeQualitativeProfile(&measured, qualitative, analyzedValue)
 			if err := validateAxes(measured.Axes); err != nil {
 				return err
 			}
@@ -107,22 +106,11 @@ func voiceUnavailableError(err error) error {
 }
 
 func hasRequiredAnalysisShape(styleguide string) bool {
-	return hasRequiredAnalysisShapeForLanguage(styleguide, LanguageKorean)
-}
-
-func hasRequiredAnalysisShapeForLanguage(styleguide string, language Language) bool {
 	lines := strings.Split(strings.TrimSpace(styleguide), "\n")
-	if len(lines) == 0 {
+	if len(lines) == 0 || !strings.Contains(lines[0], "종결어미") {
 		return false
 	}
 	lower := strings.ToLower(styleguide)
-	if language == LanguageEnglish {
-		first := strings.ToLower(lines[0])
-		return (strings.Contains(first, "register") || strings.Contains(first, "formality")) && strings.Contains(lower, "never uses")
-	}
-	if !strings.Contains(lines[0], "종결어미") {
-		return false
-	}
 	return strings.Contains(lower, "never uses") || strings.Contains(styleguide, "사용하지 않는") || strings.Contains(styleguide, "쓰지 않는")
 }
 

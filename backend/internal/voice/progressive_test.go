@@ -17,7 +17,6 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	voiceID := h.voice("alice")
-	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	measured := func(value string) voice.VoiceValue {
 		return voice.VoiceValue{Value: value, Source: voice.SourceMeasured}
 	}
@@ -48,7 +47,7 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 	if err != nil {
 		t.Fatal(err)
 	}
-	if full.Portable || full.SourceLanguage != voice.LanguageKorean || full.TargetLanguage != voice.LanguageKorean {
+	if full.Portable || full.TargetLanguage != voice.LanguageKorean {
 		t.Fatalf("full tags = %+v", full)
 	}
 	for _, required := range []string{"LEXICAL_SECRET", "ENDING_REGISTER_SECRET", "SYNTAX_SECRET"} {
@@ -64,7 +63,7 @@ func TestPromptProfileProjectionKeepsSourceSpecificEvidenceOutOfCrossLanguagePro
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !portable.Portable || portable.SourceLanguage != voice.LanguageKorean || portable.TargetLanguage != voice.LanguageEnglish || len(portable.Excerpts) != 0 {
+	if !portable.Portable || portable.TargetLanguage != voice.LanguageEnglish || len(portable.Excerpts) != 0 {
 		t.Fatalf("portable tags/evidence = %+v", portable)
 	}
 	for _, required := range []string{"PORTABLE_INTRO", "PORTABLE_CLOSE", "PORTABLE_HEADINGS", "PORTABLE_LISTS", "PORTABLE_EMOJIS", "paragraph sentences: 2-4", "involvement=1", "humor=6"} {
@@ -104,7 +103,7 @@ func TestManualOverrideClearAndRestorePublishImmutableWholeVersions(t *testing.T
 		t.Fatalf("versions=%+v err=%v", versions, err)
 	}
 	// Version numbers count per voice: a sibling voice starts at v1 and sees none of these.
-	other, _, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투", voice.LanguageKorean, nil)
+	other, _ := h.svc.CreateVoice(context.Background(), "alice", "다른 말투")
 	if otherVersions, err := h.svc.ListVersions(context.Background(), "alice", other.ID); err != nil || len(otherVersions) != 0 {
 		t.Fatalf("other voice versions=%+v err=%v", otherVersions, err)
 	}
@@ -267,7 +266,6 @@ func TestProjectionExcerptsComeFromPastedSamplesNewestFirst(t *testing.T) {
 	h := newVoiceHarness(t)
 	ctx := context.Background()
 	alice := h.voice("alice")
-	h.svc.ConfigurePersonalization(voice.PersonalizationThresholds())
 	base := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
 	for i, char := range []string{"가", "나", "다", "라"} {
 		h.addSample(t, "alice", alice, "sample-"+char, char, longSample(char), base.Add(time.Duration(i)*time.Hour))
@@ -283,7 +281,7 @@ func TestProjectionExcerptsComeFromPastedSamplesNewestFirst(t *testing.T) {
 	if !slices.Equal(profile.Excerpts, want) {
 		t.Fatalf("excerpts = %q, want the three newest samples, newest first", profile.Excerpts)
 	}
-	other, _, err := h.svc.CreateVoice(ctx, "alice", "빈 말투", voice.LanguageKorean, nil)
+	other, err := h.svc.CreateVoice(ctx, "alice", "빈 말투")
 	if err != nil {
 		t.Fatal(err)
 	}

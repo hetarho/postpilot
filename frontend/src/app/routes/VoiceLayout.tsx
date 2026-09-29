@@ -3,10 +3,11 @@ import { FolderInput, History, IdCard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
+import { DeleteVoiceButton } from '@/features/delete-voice'
 import { RenameVoiceField } from '@/features/rename-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
+import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import {
-  Badge,
   Button,
   Notice,
   TabLinks,
@@ -73,22 +74,22 @@ export function VoiceLayout() {
         </Typography>
       ) : (
         <>
-          {/* The name is edited where the voice is, not on the directory: a row there is one
-              target that leads here, and this is the screen that shows what it is being named. */}
-          <RenameVoiceField ownerId={ownerId} voice={voice} className="mt-4">
-            <div className="flex flex-wrap items-center gap-2">
+          {/* The title row carries every lifecycle action of the voice (VOICE-54): the rename,
+              then 기본으로 설정 or 기본 해제 on a made voice, then 삭제 — a directory row is one
+              target that leads here, and this is the screen that shows what they act on. */}
+          <div className="mt-4 flex flex-wrap items-start gap-x-3 gap-y-2">
+            <RenameVoiceField ownerId={ownerId} voice={voice} className="min-w-0 flex-1">
               <Typography variant="display" className="min-w-0 break-words">
                 {voice.name}
               </Typography>
-              {voice.isDefault && (
-                <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>
-              )}
-              {voice.deleted && (
-                <Badge tone="warning">{t('state.deleted', { ns: 'common' })}</Badge>
-              )}
-              <Badge>{t(`contentLanguage.${voice.sourceLanguage}`, { ns: 'common' })}</Badge>
-            </div>
-          </RenameVoiceField>
+            </RenameVoiceField>
+            {!voice.deleted && (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
+                <DeleteVoiceButton ownerId={ownerId} voice={voice} />
+              </div>
+            )}
+          </div>
           {voice.deleted && (
             <Notice tone="warning" role="status" className="mt-4">
               <span className="w-full min-w-0">{t('deletedWarning', { ns: 'voices' })}</span>

@@ -229,7 +229,7 @@ func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
 	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"}, "", "voice-alice")); !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("same voice analysis = %v, want active %s", err, first)
 	}
-	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindSeedVoice, UserID: "alice"}, "", "voice-alice")); err != nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: "other_voice_work", UserID: "alice"}, "", "voice-alice")); err != nil {
 		t.Fatalf("another kind for the same voice: %v", err)
 	}
 	found, err := h.queue.Get(ctx, second, "alice")
@@ -401,40 +401,10 @@ func TestSweepAndOwnership(t *testing.T) {
 	}
 }
 
-func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
-	h := newHarness(t)
-	ctx := context.Background()
-	ids := make([]string, 0, 1)
-	for _, kind := range []string{job.KindSeedVoice} {
-		id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: kind, UserID: "alice"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		ids = append(ids, id)
-	}
-	ordinary, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: "ordinary", UserID: "alice"}, "post-a", ""))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n, err := h.queue.SweepQueuedPersonalization(ctx); err != nil || n != 1 {
-		t.Fatalf("sweep queued personalization = %d, %v", n, err)
-	}
-	for _, id := range ids {
-		found, err := h.queue.Get(ctx, id, "alice")
-		if err != nil || found.Status != job.StatusFailed || found.Failure == nil || found.Failure.Reason != job.FailureReasonInterrupted {
-			t.Fatalf("personalization job = %+v err=%v", found, err)
-		}
-	}
-	found, err := h.queue.Get(ctx, ordinary, "alice")
-	if err != nil || found.Status != job.StatusQueued {
-		t.Fatalf("ordinary queued job changed: %+v err=%v", found, err)
-	}
-}
-
 func TestFailQueuedIsOwnerScopedAndCannotStopRunningWork(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindSeedVoice, UserID: "alice"})
+	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}

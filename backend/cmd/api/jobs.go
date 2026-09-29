@@ -29,11 +29,6 @@ func registerJobs(c *contexts) {
 			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	}))
-	q.Register(job.KindSeedVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return voiceSvc.Seed(ctx, voice.SeedJob{
-			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), Description: string(found.Payload), WriteModel: found.WriteModel,
-		}, voice.Progress(progress))
-	}))
 	// The one job the memory context owns. It reads the post frozen onto its own row and
 	// writes its candidates back onto it; it touches no memory table at all (MEM-14).
 	q.Register(job.KindExtractMemory, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {

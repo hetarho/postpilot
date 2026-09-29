@@ -80,7 +80,6 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 		job.KindModelExperiment: true,
 		job.KindExtractMemory:   false,
 		job.KindAnalyzeVoice:    false,
-		job.KindSeedVoice:       false,
 		// A storyline job writes the storyline, never the content (GEN-68, GEN-69).
 		job.KindStoryline:       false,
 		job.KindReviseStoryline: false,

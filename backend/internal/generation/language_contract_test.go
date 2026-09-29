@@ -18,9 +18,6 @@ func (p *languageRecordingProfiles) ProfileForPrompt(_ context.Context, _, _ str
 	p.targets = append(p.targets, target)
 	profile := p.profile
 	profile.TargetLanguage = target
-	if profile.SourceLanguage == "" {
-		profile.SourceLanguage = target
-	}
 	return profile, nil
 }
 
@@ -50,11 +47,11 @@ func TestGenerationPayloadRequiresAndFreezesCanonicalTargetLanguage(t *testing.T
 
 func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true},
 		Title: "title", Memo: "memo", TargetLanguage: LanguageEnglish,
 	}}
 	jobs := &fakeJobs{id: "job"}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "The output language is English") {
@@ -143,7 +140,7 @@ func TestObservationInputsAreByteIdenticalAcrossTargets(t *testing.T) {
 func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *testing.T) {
 	leaky := Profile{
 		Styleguide: "PORTABLE-STRUCTURE", Excerpts: []string{"DO-NOT-LEAK-EXCERPT"},
-		EndingMaxConsecutive: 7, SourceLanguage: LanguageKorean, TargetLanguage: LanguageEnglish, Portable: true,
+		EndingMaxConsecutive: 7, TargetLanguage: LanguageEnglish, Portable: true,
 	}
 	english, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: leaky, Memo: "memo", Title: "title", TagCount: 4})
 	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE alt and caption", "PORTABLE-STRUCTURE", "Portable voice profile"} {
@@ -192,7 +189,7 @@ func TestAnEnglishTargetGetsTheEnglishDefaultTextsInAKoreanFrame(t *testing.T) {
 
 func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true},
 		TargetLanguage: LanguageEnglish,
 	}}
 	models := newFakeModels()
@@ -200,7 +197,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	models.complete = func(ref llm.ModelRef, _ llm.Request) (llm.Response, error) {
 		return llm.Response{Text: `{"title":"` + ref.ModelID + `","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"body"}]}`}, nil
 	}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
 	svc := NewService(posts, profiles, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
@@ -238,11 +235,11 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 
 func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", SourceLanguage: LanguageKorean, Made: true},
+		Slug: "post", UserID: "alice", Voice: VoiceRef{ID: "voice", Made: true},
 		TargetLanguage: LanguageEnglish, ContentLanguage: languagePointer(LanguageEnglish), Content: revisionContent("pass-0"),
 	}}
 	jobs := &fakeJobs{id: "revision-job"}
-	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
+	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", Portable: true}}
 	models := newFakeModels()
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		if !strings.Contains(request.System, "Preserve English") || !strings.Contains(request.System, "Translation is outside revision semantics") {

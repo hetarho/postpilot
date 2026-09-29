@@ -5,39 +5,49 @@
 -- rune offsets, so one multibyte character here corrupts every later expansion.
 
 -- name: InsertVoice :exec
-INSERT INTO voices (id, user_id, name, source_language, is_default, deleted_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NULL, ?, ?);
+INSERT INTO voices (id, user_id, name, is_default, deleted_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, NULL, ?, ?);
 
--- Every directory read carries made: a published analysis exists (POST-23). The three reads
--- select the same columns, so their rows convert to one another.
+-- Every directory read carries made (a published analysis exists, POST-23), the sample count
+-- and the current analysis's publication time for the row's meta line (VOICE-52). The two
+-- reads select the same columns, so their rows convert to one another.
 
 -- name: ListVoices :many
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
            SELECT 1 FROM voice_profiles p
            WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
+       ) AS INTEGER) AS made,
+       CAST((
+           SELECT count(*) FROM voice_samples s
+           WHERE s.voice_id = v.id AND s.user_id = v.user_id
+       ) AS INTEGER) AS sample_count,
+       CAST(coalesce((
+           SELECT pv.created_at FROM voice_profiles p
+           JOIN voice_profile_versions pv
+             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+       ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.user_id = ?
 ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id;
 
 -- name: GetVoice :one
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
+SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
        CAST(EXISTS (
            SELECT 1 FROM voice_profiles p
            WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
+       ) AS INTEGER) AS made,
+       CAST((
+           SELECT count(*) FROM voice_samples s
+           WHERE s.voice_id = v.id AND s.user_id = v.user_id
+       ) AS INTEGER) AS sample_count,
+       CAST(coalesce((
+           SELECT pv.created_at FROM voice_profiles p
+           JOIN voice_profile_versions pv
+             ON pv.voice_id = p.voice_id AND pv.user_id = p.user_id AND pv.version = p.current_version
+           WHERE p.voice_id = v.id AND p.user_id = v.user_id
+       ), '') AS TEXT) AS analyzed_at
 FROM voices v WHERE v.id = ? AND v.user_id = ?;
-
--- name: GetDefaultVoice :one
-SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at, v.source_language,
-       CAST(EXISTS (
-           SELECT 1 FROM voice_profiles p
-           WHERE p.voice_id = v.id AND p.user_id = v.user_id AND p.current_version > 0
-       ) AS INTEGER) AS made
-FROM voices v WHERE v.user_id = ? AND v.is_default = 1 AND v.deleted_at IS NULL;
-
--- name: CountActiveVoices :one
-SELECT count(*) FROM voices WHERE user_id = ? AND deleted_at IS NULL;
 
 -- name: RenameVoice :execrows
 UPDATE voices SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?;
@@ -50,8 +60,9 @@ UPDATE voices SET is_default = 1, updated_at = ?
 WHERE id = ? AND user_id = ? AND deleted_at IS NULL;
 
 -- name: SoftDeleteVoice :execrows
-UPDATE voices SET deleted_at = ?, updated_at = ?
-WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND is_default = 0;
+-- Deleting the default leaves the account with none (VOICE-13): a tombstone is never it.
+UPDATE voices SET deleted_at = ?, updated_at = ?, is_default = 0
+WHERE id = ? AND user_id = ? AND deleted_at IS NULL;
 
 -- name: RestoreVoice :execrows
 UPDATE voices SET deleted_at = NULL, updated_at = ?

@@ -29,10 +29,9 @@ type Service struct {
 	config         PersonalizationConfig
 	// personalization is the versioned profile store as one handle, held only to answer "is
 	// it wired at all" — every call goes through one of the narrow ports below it.
-	personalization     PersonalizationStorage
-	versions            ProfileVersionStore
-	overrides           ManualOverrideStore
-	personalizationJobs PersonalizationJobs
+	personalization PersonalizationStorage
+	versions        ProfileVersionStore
+	overrides       ManualOverrideStore
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
@@ -43,23 +42,6 @@ func NewService(store Storage, models Models, jobs Jobs) *Service {
 		svc.versions, svc.overrides = p, p
 	}
 	return svc
-}
-
-// ConfigurePersonalization wires what a described creation's seeding needs: the thresholds
-// and the queue that runs the seed.
-func (s *Service) ConfigurePersonalization(config PersonalizationConfig) {
-	if config.FewShotMax <= 0 {
-		panic("voice: invalid personalization configuration")
-	}
-	s.config = config
-	if s.personalization == nil {
-		panic("voice: personalization store is not configured")
-	}
-	if jobs, ok := s.jobs.(PersonalizationJobs); ok {
-		s.personalizationJobs = jobs
-	} else {
-		panic("voice: personalization jobs are not configured")
-	}
 }
 
 func (s *Service) EndingMaxConsecutive() int {
@@ -80,114 +62,24 @@ func (s *Service) GetVoice(ctx context.Context, userID, voiceID string) (Voice, 
 	return s.ownedVoice(ctx, userID, voiceID)
 }
 
-// DefaultVoice is the account's one active default. Reads never create it: an account
-// without one is a bootstrap failure, surfaced rather than papered over.
-func (s *Service) DefaultVoice(ctx context.Context, userID string) (Voice, error) {
-	found, ok, err := s.directory.DefaultVoice(ctx, userID)
-	if err != nil {
-		return Voice{}, fmt.Errorf("default voice: %w", err)
-	}
-	if !ok {
-		return Voice{}, ErrVoiceNotFound
-	}
-	return found, nil
-}
-
-// EnsureDefaultVoice is the account bootstrap: idempotent, safe to rerun, and the only
-// path that creates a voice without a user asking for one. An account that already has an
-// active default is left alone; one whose default is missing gets its oldest active voice
-// promoted; one with no active voice at all gets `기본 말투`. The bool reports a new row.
-func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceLanguage Language) (Voice, bool, error) {
-	if !sourceLanguage.Valid() {
-		return Voice{}, false, ErrLanguageRequired
-	}
-	s.directoryMu.Lock()
-	defer s.directoryMu.Unlock()
-	if found, ok, err := s.directory.DefaultVoice(ctx, userID); err != nil {
-		return Voice{}, false, fmt.Errorf("default voice: %w", err)
-	} else if ok {
-		return found, false, nil
-	}
-	voices, err := s.directory.ListVoices(ctx, userID)
-	if err != nil {
-		return Voice{}, false, fmt.Errorf("list voices: %w", err)
-	}
-	var oldest *Voice
-	for i := range voices {
-		if voices[i].Deleted() {
-			continue
-		}
-		if oldest == nil || voices[i].CreatedAt.Before(oldest.CreatedAt) {
-			oldest = &voices[i]
-		}
-	}
-	if oldest != nil {
-		if err := s.directory.SetDefaultVoice(ctx, userID, oldest.ID, s.now()); err != nil {
-			return Voice{}, false, fmt.Errorf("promote default voice: %w", err)
-		}
-		promoted, err := s.ownedVoice(ctx, userID, oldest.ID)
-		return promoted, false, err
-	}
-	now := s.now()
-	created := Voice{ID: s.newID(), UserID: userID, Name: DefaultVoiceName, IsDefault: true, CreatedAt: now, UpdatedAt: now, SourceLanguage: sourceLanguage}
-	if err := s.directory.InsertVoice(ctx, created); err != nil {
-		return Voice{}, false, fmt.Errorf("create default voice: %w", err)
-	}
-	return created, true, nil
-}
-
-// CreateVoice makes an empty isolated voice and, when the caller described the register they
-// want, ONE seeding job that writes its first profile. The returned job id is empty whenever
-// no description was submitted.
-//
-// Every reason to refuse is checked BEFORE the insert — including the analyze model, which a
-// description needs — so a refusal never leaves a voice behind. The reverse is also true and
-// deliberate: once the row exists the voice is real even if the seed cannot be scheduled,
-// because this product has no hard delete to undo it with.
-func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLanguage Language, seed *VoiceSeed) (Voice, string, error) {
-	if !sourceLanguage.Valid() {
-		return Voice{}, "", ErrLanguageRequired
-	}
+// CreateVoice makes a Korean voice that is not yet made (VOICE-10): the directory row and its
+// empty profile, nothing else. It takes no language, description or 분야 and enqueues nothing.
+func (s *Service) CreateVoice(ctx context.Context, userID, name string) (Voice, error) {
 	name, err := normalizeVoiceName(name)
 	if err != nil {
-		return Voice{}, "", err
-	}
-	description, model := "", llm.ModelRef{}
-	if seed != nil {
-		if description, err = normalizeVoiceDescription(seed.Description); err != nil {
-			return Voice{}, "", err
-		}
-		if description != "" {
-			// Checked before the insert, with the model: seeding is the one part of creation
-			// that needs the personalization wiring, and a refusal must not leave a voice.
-			if s.personalizationJobs == nil {
-				return Voice{}, "", errors.New("voice: personalization jobs are not configured")
-			}
-			if model, err = s.resolveAnalyzeModel(ctx, userID, seed.AnalyzeModel); err != nil {
-				return Voice{}, "", err
-			}
-		}
+		return Voice{}, err
 	}
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
 	now := s.now()
-	created := Voice{ID: s.newID(), UserID: userID, Name: name, SourceLanguage: sourceLanguage, CreatedAt: now, UpdatedAt: now}
+	created := Voice{ID: s.newID(), UserID: userID, Name: name, CreatedAt: now, UpdatedAt: now}
 	if err := s.directory.InsertVoice(ctx, created); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) {
-			return Voice{}, "", err
+			return Voice{}, err
 		}
-		return Voice{}, "", fmt.Errorf("create voice: %w", err)
+		return Voice{}, fmt.Errorf("create voice: %w", err)
 	}
-	if description == "" {
-		return created, "", nil
-	}
-	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{
-		Kind: SeedJobKind, UserID: userID, VoiceID: created.ID, Model: model.String(), Payload: description,
-	})
-	if err != nil {
-		return created, "", fmt.Errorf("말투는 만들었지만 첫 말투 생성을 시작하지 못했어요: %w", err)
-	}
-	return created, jobID, nil
+	return created, nil
 }
 
 // RenameVoice changes only the display name — post rows and immutable snapshots never
@@ -213,14 +105,24 @@ func (s *Service) RenameVoice(ctx context.Context, userID, voiceID, name string)
 	return s.ownedVoice(ctx, userID, voiceID)
 }
 
-// SetDefaultVoice swaps the default in one store transaction and returns the whole
-// directory, since two rows changed. No profile or provider work is involved.
+// SetDefaultVoice makes one active, made voice the 기본 — clearing the previous one in the
+// same store transaction — or, given an empty id, clears the 기본 so the account has none
+// (VOICE-12). It returns the whole directory, since two rows may have changed.
 func (s *Service) SetDefaultVoice(ctx context.Context, userID, voiceID string) ([]Voice, error) {
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
+	if strings.TrimSpace(voiceID) == "" {
+		if err := s.directory.ClearDefaultVoice(ctx, userID, s.now()); err != nil {
+			return nil, fmt.Errorf("clear default voice: %w", err)
+		}
+		return s.ListVoices(ctx, userID)
+	}
 	found, err := s.activeVoice(ctx, userID, voiceID)
 	if err != nil {
 		return nil, err
+	}
+	if !found.Made {
+		return nil, ErrVoiceNotMade
 	}
 	if !found.IsDefault {
 		if err := s.directory.SetDefaultVoice(ctx, userID, voiceID, s.now()); err != nil {
@@ -233,9 +135,9 @@ func (s *Service) SetDefaultVoice(ctx context.Context, userID, voiceID string) (
 	return s.ListVoices(ctx, userID)
 }
 
-// DeleteVoice is a soft delete. It refuses the default (so the last active voice can never
-// go) and a queued/running job frozen to it, which could still publish into the voice. No
-// experiment holds a voice (VOICE-13). Posts and profile history stay exactly as they are.
+// DeleteVoice is a soft delete (VOICE-13). It refuses only a voice with a queued or running
+// job frozen to it, which could still publish into the voice; the 기본 and the last voice
+// delete like any other and leave the account with none. Posts and profile history stay.
 func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voice, error) {
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
@@ -246,16 +148,6 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 	if found.Deleted() {
 		return found, nil
 	}
-	if found.IsDefault {
-		return Voice{}, ErrVoiceIsDefault
-	}
-	active, err := s.directory.CountActiveVoices(ctx, userID)
-	if err != nil {
-		return Voice{}, fmt.Errorf("count active voices: %w", err)
-	}
-	if active <= 1 {
-		return Voice{}, ErrVoiceIsDefault
-	}
 	if busy, err := s.jobs.HasActiveForVoice(ctx, voiceID); err != nil {
 		return Voice{}, fmt.Errorf("check voice jobs: %w", err)
 	} else if busy {
@@ -263,6 +155,9 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 	}
 	deleted, err := s.directory.SoftDeleteVoice(ctx, userID, voiceID, s.now())
 	if err != nil {
+		if errors.Is(err, ErrVoiceBusy) {
+			return Voice{}, err
+		}
 		return Voice{}, fmt.Errorf("delete voice: %w", err)
 	}
 	current, err := s.ownedVoice(ctx, userID, voiceID)
@@ -294,16 +189,6 @@ func (s *Service) RestoreVoice(ctx context.Context, userID, voiceID string) (Voi
 		return Voice{}, fmt.Errorf("restore voice: %w", err)
 	}
 	return s.ownedVoice(ctx, userID, voiceID)
-}
-
-// normalizeVoiceDescription accepts an absent description: it is optional, and an empty one
-// simply means the voice starts blank the way it always has.
-func normalizeVoiceDescription(description string) (string, error) {
-	description = strings.TrimSpace(description)
-	if chars := utf8.RuneCountInString(description); chars > VoiceDescriptionMaxChars {
-		return "", &VoiceDescriptionTooLongError{Chars: chars}
-	}
-	return description, nil
 }
 
 func normalizeVoiceName(name string) (string, error) {
@@ -363,31 +248,10 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	if err != nil {
 		return Profile{}, fmt.Errorf("get active analysis: %w", err)
 	}
-	// A seeding run is the other job that writes this profile, and it is the only work a
-	// just-created voice can have. Without it the detail screen would show no progress and no
-	// failure for the run the creation sheet just started.
-	if active == nil {
-		if active, err = s.jobs.ActiveForVoiceKind(ctx, voiceID, SeedJobKind); err != nil {
-			return Profile{}, fmt.Errorf("get active seeding: %w", err)
-		}
-	}
 	profile.UserID, profile.VoiceID, profile.Voice = userID, voiceID, found
 	profile.Samples = samples
 	if active != nil {
 		profile.ActiveJobID = active.ID
-	}
-	if active == nil && profile.Structured.Version == 0 {
-		seed, err := s.jobs.LatestForVoiceKind(ctx, voiceID, SeedJobKind)
-		if err != nil {
-			return Profile{}, fmt.Errorf("get latest seeding: %w", err)
-		}
-		if seed != nil && seed.Status == "failed" {
-			failure := Failure{Reason: FailureReasonUnknown}
-			if seed.Failure != nil {
-				failure = *seed.Failure
-			}
-			profile.SeedFailure = &failure
-		}
 	}
 	return profile, nil
 }

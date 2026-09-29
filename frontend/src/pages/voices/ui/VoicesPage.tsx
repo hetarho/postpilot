@@ -1,11 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
-import { useVoices, type Voice } from '@/entities/voice'
+import { useVoices, voiceAnalysisDate, type Voice } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
-import { DeleteVoiceButton } from '@/features/delete-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
-import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import {
   ActionBar,
   Badge,
@@ -16,9 +14,14 @@ import {
   pageStyles,
 } from '@/shared/ui'
 
-/** The account's voices (PRD §3.4): a list, and the one action that adds to it. Composition only —
- *  every action is its own feature, and a row is a way into one voice. Renaming lives on the
- *  voice's own screen, so the directory carries nothing but the list. */
+/** 내 글's row: two stacked lines on a phone, one line on the desk, the whole row one link
+ *  (VOICE-52, POST-43). */
+const rowClass =
+  'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
+
+/** The account's voices (VOICE-52): one list in 내 글's row shape and the one action that adds
+ *  to it. Every lifecycle action lives on the voice's own title row, so a row here is nothing
+ *  but a way into one voice. */
 export function VoicesPage() {
   const { t } = useTranslation(['voices', 'common'])
   const { user } = useSession()
@@ -26,14 +29,21 @@ export function VoicesPage() {
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
-      <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.description', { ns: 'voices' })}
-      </Typography>
+    // The page gutter lives on each block rather than on `main`, so the rows run edge to edge
+    // the way 내 글's do (THEME-23).
+    <main
+      className={pageStyles({
+        width: 'wide',
+        gutters: false,
+        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+      })}
+    >
+      <div className="px-4 sm:px-6 lg:px-8">
+        <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
+      </div>
 
       {isError && (
-        <Notice tone="danger" role="alert" className="mt-8">
+        <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
           <span>{t('loadFailed', { ns: 'voices' })}</span>
           <Button
             variant="ghost"
@@ -45,25 +55,31 @@ export function VoicesPage() {
           </Button>
         </Notice>
       )}
-      {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
+      {/* One live region for both states, so finishing the load is a text change inside it
+          rather than two nodes swapping (THEME-33). */}
+      {!isError && (isPending || active.length === 0) && (
+        <Typography
+          variant="body"
+          role="status"
+          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
+        >
+          {isPending ? t('state.loading', { ns: 'common' }) : t('page.empty', { ns: 'voices' })}
         </Typography>
       )}
 
       {!isError && !isPending && (
         <>
-          <section aria-labelledby="active-voices-heading" className="mt-8">
-            <Typography variant="title" id="active-voices-heading">
-              {t('page.active', { ns: 'voices' })}
-            </Typography>
-            {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
-            <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
+          {active.length > 0 && (
+            <ul className="divide-divider mt-4 shrink-0 divide-y">
               {active.map((voice) => (
-                <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+                <li key={voice.id}>
+                  <Link to="/voices/$voiceId" params={{ voiceId: voice.id }} className={rowClass}>
+                    <VoiceRowContent voice={voice} />
+                  </Link>
+                </li>
               ))}
             </ul>
-          </section>
+          )}
 
           {deleted.length > 0 && (
             // Closed by default: a tombstone is history, and the list the user came for is the
@@ -73,28 +89,22 @@ export function VoicesPage() {
                 className={typographyStyles({
                   variant: 'label',
                   className:
-                    'active:bg-row-bg-active text-content-secondary min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+                    'active:bg-row-bg-active text-content-secondary mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none sm:mx-6 lg:mx-8',
                 })}
               >
                 {t('page.deleted', { ns: 'voices', count: deleted.length })}
               </summary>
-              <Typography variant="body" className="text-content-secondary mt-2 px-4">
-                {t('page.deletedHelp', { ns: 'voices' })}
-              </Typography>
-              <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6">
+              <ul className="divide-divider mt-3 divide-y">
                 {deleted.map((voice) => (
-                  <VoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+                  <DeletedVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
                 ))}
               </ul>
             </details>
           )}
 
-          {/* One instance at every width, not a phone bar plus a desktop copy: the trigger owns
-              the sheet's open state, and two of them would be two overlays waiting to be opened.
-              It docks at every width — `mt-auto` puts it below a short list, `sticky` keeps it
-              there once the list is long enough to scroll (THEME-24). Above the phone the
-              bar narrows to its trigger and sits against the right edge, so the action stays
-              full-bleed only where the thumb needs it. */}
+          {/* One instance at every width: the trigger owns the sheet's open state. It docks at
+              every width — `mt-auto` puts it below a short list, `sticky` keeps it there once
+              the list is long enough to scroll (THEME-24). */}
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'voices' })}
@@ -108,19 +118,39 @@ export function VoicesPage() {
   )
 }
 
-/** One voice, one target. The link stretches over the whole row through its `::after`, so the
- *  padding, the badges and the empty space all navigate, while the lifecycle controls paint above
- *  that layer and act without navigating — a row is one target, not a row with buttons inside it
- *  (THEME-23), and nothing interactive is nested inside the anchor. */
-function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
-  const { t } = useTranslation('common')
+/** A row's two lines: the name, then the 기본 badge and the meta line — `만드는 중` until the voice
+ *  is made, then how many 학습 글 it holds and the day its analysis was published. */
+function VoiceRowContent({ voice }: { voice: Voice }) {
+  const { t } = useTranslation(['voices', 'common'])
   return (
-    // `min-h-16`, not the list row's usual `min-h-11`, and `py-2` rather than `py-3`: the
-    // lifecycle controls keep the 44px touch floor (THEME-23), so a row that carries them is 44 + its
-    // padding tall while the default voice — the one row that offers neither, since the server
-    // refuses both for it — stayed at 44. The list was one short row among tall ones. The floor is
-    // now set by the tallest thing a row can hold, so every row is 64px and the controls sit
-    // inside it instead of stretching it (THEME-23).
+    <>
+      <Typography
+        variant="label"
+        className="text-content-primary w-full truncate lg:w-auto lg:min-w-0 lg:flex-1"
+      >
+        {voice.name}
+      </Typography>
+      <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
+        {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
+        <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
+          {voice.made
+            ? t('page.meta', {
+                ns: 'voices',
+                count: voice.materialCount,
+                date: voiceAnalysisDate(voice.analyzedAt),
+              })
+            : t('page.making', { ns: 'voices' })}
+        </span>
+      </span>
+    </>
+  )
+}
+
+/** A tombstone keeps its `복원` (VOICE-52). The link stretches over the row through its
+ *  `::after` and the button paints above that layer, so nothing interactive nests in the
+ *  anchor. */
+function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
+  return (
     <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
       <Link
         to="/voices/$voiceId"
@@ -132,21 +162,9 @@ function VoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
       >
         {voice.name}
       </Link>
-      {voice.isDefault && <Badge tone="accent">{t('state.default')}</Badge>}
-      {voice.deleted && <Badge tone="warning">{t('state.deleted')}</Badge>}
-      <Badge>{t(`contentLanguage.${voice.sourceLanguage}`)}</Badge>
-      {(voice.deleted || !voice.isDefault) && (
-        <div className="relative ml-auto flex shrink-0 flex-wrap items-center gap-2">
-          {voice.deleted ? (
-            <RestoreVoiceButton ownerId={ownerId} voiceId={voice.id} />
-          ) : (
-            <>
-              <SetDefaultVoiceButton ownerId={ownerId} voiceId={voice.id} />
-              <DeleteVoiceButton ownerId={ownerId} voice={voice} />
-            </>
-          )}
-        </div>
-      )}
+      <div className="relative ml-auto flex shrink-0 items-center">
+        <RestoreVoiceButton ownerId={ownerId} voiceId={voice.id} />
+      </div>
     </li>
   )
 }

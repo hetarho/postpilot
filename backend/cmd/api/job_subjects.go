@@ -49,7 +49,7 @@ func (clipCancellation) Allowed(kind string, cancellationPolicyVersion int) bool
 // does not know which kind belongs to whom.
 func voiceOwnedKind(kind string) bool {
 	switch kind {
-	case job.KindAnalyzeVoice, job.KindSeedVoice:
+	case job.KindAnalyzeVoice:
 		return true
 	default:
 		return false

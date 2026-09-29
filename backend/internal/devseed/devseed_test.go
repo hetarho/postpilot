@@ -67,9 +67,6 @@ func TestRunWritesEveryFixtureAccount(t *testing.T) {
 		if h.credits.opened[fixture.LoginID] != fixture.Plan {
 			t.Errorf("account %q got no monthly grant for its plan", fixture.LoginID)
 		}
-		if h.voices.ensured[fixture.LoginID] != 1 {
-			t.Errorf("account %q had its default voice established %d times, want once", fixture.LoginID, h.voices.ensured[fixture.LoginID])
-		}
 		if report.Accounts[i].LoginID != fixture.LoginID {
 			t.Errorf("report row %d is %q, want %q in fixture order", i, report.Accounts[i].LoginID, fixture.LoginID)
 		}
@@ -378,16 +375,13 @@ func TestEveryFixtureArticlePassesTheDraftingContextsOwnValidation(t *testing.T)
 	}
 }
 
-func TestEveryArticleNamesItsAccountsOwnVoiceAndATargetLanguage(t *testing.T) {
+// VOICE-4: a seeded account gets no voice, so every seeded post has 말투 없음.
+func TestEveryArticleNamesATargetLanguage(t *testing.T) {
 	h := newHarness()
 	if _, err := devseed.Run(context.Background(), h.deps()); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, article := range h.posts.written {
-		// [I4]: voices are isolated per account and every post selects exactly one.
-		if want := voiceFor(article.UserID); article.VoiceID != want {
-			t.Errorf("post %q names voice %q, want %q", article.Title, article.VoiceID, want)
-		}
 		if article.Language == "" {
 			t.Errorf("post %q names no target language", article.Title)
 		}
@@ -487,7 +481,7 @@ func TestRunReportsWhichAccountItFailedOn(t *testing.T) {
 
 func TestRunRefusesAMissingCollaborator(t *testing.T) {
 	for name, drop := range map[string]func(*devseed.Deps){
-		"voices":    func(d *devseed.Deps) { d.Voices = nil },
+		"credits":   func(d *devseed.Deps) { d.Credits = nil },
 		"templates": func(d *devseed.Deps) { d.Templates = nil },
 	} {
 		h := newHarness()
@@ -536,13 +530,10 @@ func TestEachAccountHoldsADifferentNumberOfPosts(t *testing.T) {
 
 // --- harness ---------------------------------------------------------------------------
 
-func voiceFor(userID string) string { return "voice-" + userID }
-
 func templateFor(userID string) string { return "template-" + userID }
 
 type harness struct {
 	accounts  *fakeAccounts
-	voices    *fakeVoices
 	credits   *fakeCredits
 	posts     *fakePosts
 	media     *fakeMedia
@@ -554,7 +545,6 @@ func newHarness() *harness {
 	h := &harness{}
 	record := func(step string) { h.order = append(h.order, step) }
 	h.accounts = &fakeAccounts{record: record, created: map[string]createdAccount{}}
-	h.voices = &fakeVoices{record: record, ensured: map[string]int{}}
 	h.credits = &fakeCredits{record: record, opened: map[string]plan.Plan{}}
 	h.posts = &fakePosts{record: record, byUser: map[string][]devseed.Article{}}
 	h.media = &fakeMedia{record: record}
@@ -565,7 +555,6 @@ func newHarness() *harness {
 func (h *harness) deps() devseed.Deps {
 	return devseed.Deps{
 		Accounts:  h.accounts,
-		Voices:    h.voices,
 		Credits:   h.credits,
 		Posts:     h.posts,
 		Media:     h.media,
@@ -599,17 +588,6 @@ func (f *fakeAccounts) Create(_ context.Context, loginID, password string, tier 
 	}
 	f.created[loginID] = createdAccount{password: password, tier: tier}
 	return nil
-}
-
-type fakeVoices struct {
-	record  func(string)
-	ensured map[string]int
-}
-
-func (f *fakeVoices) EnsureDefault(_ context.Context, userID string) (string, error) {
-	f.record("voice:" + userID)
-	f.ensured[userID]++
-	return voiceFor(userID), nil
 }
 
 type fakeCredits struct {

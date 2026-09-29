@@ -19,16 +19,6 @@ func (q *Queue) SweepRunning(ctx context.Context) (int64, error) {
 	return n, nil
 }
 
-// SweepQueuedPersonalization prevents boot's worker drain from becoming the user
-// action that starts a provider call.
-func (q *Queue) SweepQueuedPersonalization(ctx context.Context) (int64, error) {
-	n, err := q.store.SweepQueuedPersonalization(ctx, interruptedFailure, q.now())
-	if err != nil {
-		return 0, fmt.Errorf("sweep queued personalization jobs: %w", err)
-	}
-	return n, nil
-}
-
 // SweepOpenHolds settles every hold left open behind a job that has already finished.
 //
 // The gap it closes is a crash between the terminal write and the settle that follows it:
