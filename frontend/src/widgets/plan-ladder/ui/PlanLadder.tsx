@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import { Crown, Gift, Leaf, Rocket, Sparkles, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { planLabel, type EstimatorComboName, type PlanName, type PlanOffer } from '@/entities/plan'
+import type { BillingTerm } from '@/entities/subscription'
 import { PROMO_COUNT_UP_MS, PROMO_RISE_STAGGER_MS } from '../config'
 import { Badge, PromoFrame, PromoText, Typography } from '@/shared/ui'
 import { useCountUp } from '../model/useCountUp'
@@ -25,6 +26,7 @@ export function PlanLadder({
   currentPlan,
   estimates,
   action,
+  term,
   headingLevel = 'h2',
   className,
 }: {
@@ -35,6 +37,8 @@ export function PlanLadder({
   estimates?: (offer: PlanOffer) => readonly PlanEstimate[]
   /** The rung's action, or nothing. The caller owns what an action is and where it leads. */
   action?: (offer: PlanOffer) => ReactNode
+  /** Omitted on the public About ladder, which presents both list prices. */
+  term?: BillingTerm
   /** The outline level the tier names take: `h2` on `/plans`, whose title is the page's `h1`;
    *  `h3` under a section title elsewhere. */
   headingLevel?: 'h2' | 'h3'
@@ -50,6 +54,7 @@ export function PlanLadder({
             current={offer.plan === currentPlan}
             estimates={estimates?.(offer)}
             action={action?.(offer)}
+            term={term}
             headingLevel={headingLevel}
           />
         </li>
@@ -66,6 +71,7 @@ function PlanCard({
   current,
   estimates,
   action,
+  term,
   headingLevel,
 }: {
   offer: PlanOffer
@@ -74,11 +80,13 @@ function PlanCard({
   current: boolean
   estimates: readonly PlanEstimate[] | undefined
   action: ReactNode
+  term: BillingTerm | undefined
   headingLevel: 'h2' | 'h3'
 }) {
   const { t } = useTranslation('plans')
   const Icon = TIER_ICON[offer.plan ?? 'free']
   const priced = offer.monthlyKrw > 0
+  const annual = term === 'annual'
 
   return (
     <PromoFrame
@@ -104,22 +112,31 @@ function PlanCard({
           </div>
           <p className="flex flex-wrap items-baseline gap-x-1 md:w-full">
             <PromoText variant="hero" as="span" className="tabular-nums">
-              {priced ? t('compare.priceKrw', { price: offer.monthlyKrw }) : t('compare.priceFree')}
+              {priced
+                ? t('compare.priceKrw', { price: annual ? offer.annualKrw : offer.monthlyKrw })
+                : t('compare.priceFree')}
             </PromoText>
             {priced && (
               <Typography variant="meta" as="span" className="text-content-secondary">
-                {t('compare.perMonth')}
+                {t(annual ? 'compare.perYear' : 'compare.perMonth')}
               </Typography>
             )}
           </p>
         </div>
         <div className="text-content-secondary mt-2 grid gap-1">
-          {priced && (
+          {priced && term === undefined && (
             <Typography variant="meta">
               {t('compare.annual', { price: offer.annualKrw })}
             </Typography>
           )}
-          {priced && <Typography variant="meta">{t('compare.annualSaving')}</Typography>}
+          {priced && annual && (
+            <Typography variant="meta">
+              {t('compare.monthlyEquivalent', { price: Math.round(offer.annualKrw / 12) })}
+            </Typography>
+          )}
+          {priced && (term === undefined || annual) && (
+            <Typography variant="meta">{t('compare.annualSaving')}</Typography>
+          )}
           <Typography variant="body">
             {t('compare.dailyCredits', { credits: offer.dailyCredits })}
           </Typography>

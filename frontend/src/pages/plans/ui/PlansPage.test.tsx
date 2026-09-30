@@ -34,7 +34,7 @@ describe('the published plans', () => {
     ).toHaveAttribute('href', '/billing')
     expect(within(items[4]).getByRole('link', { name: '업그레이드' })).toHaveAttribute(
       'href',
-      '/billing/checkout?tier=max',
+      '/billing/checkout?tier=max&term=monthly',
     )
     await user.click(within(items[2]).getByRole('button', { name: '다음 결제일부터' }))
     const dialog = await screen.findByRole('dialog')
@@ -81,11 +81,8 @@ describe('the published plans', () => {
       expect(card.getByText('클립 원본·완성본 최대 60초')).toBeInTheDocument()
       if (monthly) {
         expect(card.getByText(`${monthly.toLocaleString('en-US')}원`)).toBeInTheDocument()
-        expect(
-          card.getByText(`연간 선결제 ${annual.toLocaleString('en-US')}원`),
-        ).toBeInTheDocument()
         expect(annual).toBe(monthly * 10)
-        expect(card.getByText(/약 16.7% 절약/)).toBeInTheDocument()
+        expect(card.queryByText(`${annual.toLocaleString('en-US')}원`)).not.toBeInTheDocument()
       } else {
         expect(card.getByText('무료 모델은 제공사 제한에 따라 사용')).toBeInTheDocument()
       }
@@ -95,7 +92,28 @@ describe('the published plans', () => {
     expect(within(items[2]).getByText('지금 쓰는 플랜')).toBeInTheDocument()
     expect(within(items[3]).getByRole('link', { name: '구독하기' })).toHaveAttribute(
       'href',
-      '/billing/checkout?tier=pro',
+      '/billing/checkout?tier=pro&term=monthly',
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('tab', { name: '연간 · 약 16.7% 절약' }))
+    for (const [index, monthly, annual] of [
+      [1, 1900, 19000],
+      [2, 4900, 49000],
+      [3, 9900, 99000],
+      [4, 29900, 299000],
+    ] as const) {
+      const card = within(items[index])
+      expect(card.getByText(`${annual.toLocaleString('en-US')}원`)).toBeInTheDocument()
+      expect(
+        card.getByText(`월 약 ${Math.round(annual / 12).toLocaleString('en-US')}원꼴`),
+      ).toBeInTheDocument()
+      expect(card.getByText(/12개월을 10개월 요금으로/)).toBeInTheDocument()
+      expect(card.queryByText(`${monthly.toLocaleString('en-US')}원`)).not.toBeInTheDocument()
+    }
+    expect(within(items[0]).getByText('무료')).toBeInTheDocument()
+    expect(within(items[3]).getByRole('link', { name: '구독하기' })).toHaveAttribute(
+      'href',
+      '/billing/checkout?tier=pro&term=annual',
     )
   })
 

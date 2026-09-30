@@ -13,7 +13,7 @@ import {
   useMyPlan,
   type PlanOffer,
 } from '@/entities/plan'
-import { billablePlan, useMyBilling } from '@/entities/subscription'
+import { billablePlan, useMyBilling, type BillingTerm } from '@/entities/subscription'
 import { formatNumber } from '@/shared/lib'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
 import {
@@ -51,6 +51,7 @@ export function PlansPage() {
   const { myBilling } = useMyBilling()
   const [estimatorOpen, setEstimatorOpen] = useState(false)
   const [kind, setKind] = useState<EstimateKind>('blog')
+  const [term, setTerm] = useState<BillingTerm>('monthly')
   const [clipInput, setClipInput] = useClipEstimateInput()
   const combos = myPlan?.estimatorCombos ?? []
 
@@ -83,7 +84,7 @@ export function PlansPage() {
       return (
         <Link
           to="/billing/checkout"
-          search={{ tier: offer.plan }}
+          search={{ tier: offer.plan, term: subscribedTerm ?? term }}
           className={buttonStyles({
             variant: offer.recommended ? 'cta' : 'secondary',
             className: 'w-full',
@@ -238,10 +239,32 @@ export function PlansPage() {
               {t('estimator.fxUnavailable', { ns: 'plans' })}
             </Notice>
           )}
+          <div className="mx-auto mb-5 max-w-md">
+            <SegmentedControl
+              ariaLabel={t('compare.period', { ns: 'plans' })}
+              value={term}
+              options={
+                [
+                  { value: 'monthly', label: t('compare.monthly', { ns: 'plans' }) },
+                  { value: 'annual', label: t('compare.yearly', { ns: 'plans' }) },
+                ] as const
+              }
+              onChange={setTerm}
+            />
+            {subscribedPlan && (
+              <Typography variant="meta" className="text-content-secondary mt-2 block text-center">
+                {t('compare.existingTermNote', { ns: 'plans' })}{' '}
+                <Link to="/billing" className="text-link-fg underline">
+                  {t('compare.billingSettings', { ns: 'plans' })}
+                </Link>
+              </Typography>
+            )}
+          </div>
           <PlanLadder
             className="mt-2 md:mt-6"
             offers={myPlan.offers}
             currentPlan={myPlan.plan}
+            term={term}
             estimates={(offer) =>
               ESTIMATOR_COMBOS.map((level) => {
                 const rates = combos.find((assigned) => assigned.combo === level)

@@ -1,5 +1,5 @@
 # BILL subscriptions, charges, credit purchase
-> r6 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
+> r7 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
 
 ## decisions
 - BILL-1 [o] a subscription belongs to the account that pays for it: a signed-in non-master account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; a master account buys nothing (→BILL-20); the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
@@ -32,9 +32,10 @@
 - BILL-20 [o] a master account is never charged: subscription start, tier/term change and pack purchase are refused server-side, and `/plans` and the billing screen show operator coverage with no checkout, change or pack action (→QUOTA-63) ← master is not sold (→QUOTA-7), and a paid tier bought by a master would demote it
   - a subscription the account still holds from before promotion ends at its paid term end without a renewal charge, as a cancellation does (→BILL-7), and the tier stays master
   - refund requests for its past payments remain available (→BILL-11); a confirmed refund voids the refunded entitlements, never the master tier
+- BILL-21 [o] `/plans`' selected billing term accompanies a new paid-tier subscription entry into checkout; checkout keeps the tier and term selected, then shows the server-confirmed amount and requires the owner's final payment action (→BILL-2 →BILL-16). For an active subscription, a tier upgrade keeps the current term and its applicable prorated quote; a term change follows BILL-19's scheduled timing. A period preview never silently changes an existing subscription.
 
 ## flow
-- subscribe: `/plans` → master(no checkout, operator coverage) | term/tier → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
+- subscribe: `/plans` tier/term selection → master(no checkout, operator coverage) | checkout with selected tier/term → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
 - renew: payment boundary → confirmed payment(next paid term) | confirmed failure(free + notice); monthly benefit boundary → bonus/export renewal only while covered
 - upgrade: quote current-tier prorated KRW → confirm payment → immediate model/bonus/export change; next daily reset → higher daily grant
 - term switch/downgrade: schedule or replace → effective paid-term boundary → new term/tier and full applicable charge
@@ -51,4 +52,4 @@
 - placement: `backend/internal/billing`, its store/RPC adapters, `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and billing/refund features; the payment adapter stays behind consumer-declared ports
 
 ## chg
-- r6 260930 BILL-1✎ every signed-in account picks its own tier→every non-master account · BILL-20+ a master account is never charged
+-

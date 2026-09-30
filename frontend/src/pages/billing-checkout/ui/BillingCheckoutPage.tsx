@@ -27,8 +27,8 @@ const terms = ['monthly', 'annual'] as const
  * value that can move before money is charged: term, server quote and registered card. */
 export function BillingCheckoutPage() {
   const { t } = useTranslation(['billing', 'common'])
-  const { tier } = useSearch({ from: '/authenticated/billing/checkout' })
-  const [term, setTerm] = useState<BillingTerm>('monthly')
+  const { tier, term: requestedTerm } = useSearch({ from: '/authenticated/billing/checkout' })
+  const [term, setTerm] = useState<BillingTerm>(requestedTerm ?? 'monthly')
   const [paymentPending, setPaymentPending] = useState(false)
   const { myPlan, isPending: planPending, isError: planError } = useMyPlan()
   const { myBilling, isPending: billingPending, isError: billingError } = useMyBilling()
@@ -59,7 +59,9 @@ export function BillingCheckoutPage() {
         myPlan.plan === 'master' ||
         (activeSubscription?.plan !== undefined &&
           PLANS.indexOf(tier) <= PLANS.indexOf(activeSubscription.plan))))
-  const returnTo = tier ? `/billing/checkout?tier=${tier}` : '/billing/checkout'
+  const returnTo = tier
+    ? `/billing/checkout?tier=${tier}&term=${selectedTerm}`
+    : '/billing/checkout'
 
   const submit = async () => {
     if (!tier || !myBilling?.paymentMethod) return

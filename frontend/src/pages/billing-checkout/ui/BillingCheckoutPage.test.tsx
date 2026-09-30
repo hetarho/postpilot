@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { ProtoPlan, ProtoTerm } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
+const openTossBillingAuth = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+vi.mock('@/features/register-payment-method/lib/toss', () => ({ openTossBillingAuth }))
+
 vi.mock('@/shared/config', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/config')>()),
   TOSS_CLIENT_KEY: 'test-client-key',
@@ -21,7 +24,7 @@ describe('BillingCheckoutPage', () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const changeRequests: Array<{ plan: ProtoPlan; term: ProtoTerm }> = []
-    const { router } = renderAppAt('/billing/checkout?tier=max', {
+    const { router } = renderAppAt('/billing/checkout?tier=max&term=annual', {
       user: { ...verifiedUser, plan: ProtoPlan.PRO },
       calls,
       plans: { plan: ProtoPlan.PRO },
@@ -69,13 +72,20 @@ describe('BillingCheckoutPage', () => {
   })
 
   it('offers card registration that returns to this checkout', async () => {
-    renderAppAt('/billing/checkout?tier=basic', {
+    const user = userEvent.setup()
+    renderAppAt('/billing/checkout?tier=basic&term=annual', {
       user: verifiedUser,
       plans: { plan: ProtoPlan.FREE },
     })
 
     expect(await screen.findByText('구독하려면 먼저 카드를 등록해 주세요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '카드 등록' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '연간' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByText('49,000원')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '카드 등록' }))
+    expect(openTossBillingAuth).toHaveBeenCalledWith(
+      expect.objectContaining({ returnTo: '/billing/checkout?tier=basic&term=annual' }),
+    )
     expect(screen.queryByRole('button', { name: '결제하고 구독하기' })).not.toBeInTheDocument()
   })
 
@@ -114,5 +124,20 @@ describe('BillingCheckoutPage', () => {
       '구독할 유료 플랜을 다시 선택해 주세요.',
     )
     expect(screen.queryByRole('button', { name: '결제하고 구독하기' })).not.toBeInTheDocument()
+  })
+
+  it('falls back to monthly for an invalid term while refusing an unknown tier', async () => {
+    const { unmount } = renderAppAt('/billing/checkout?tier=pro&term=invalid', {
+      user: verifiedUser,
+      plans: { plan: ProtoPlan.FREE },
+      billing: { paymentMethod: true },
+    })
+    expect(await screen.findByText('9,900원')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '월간' })).toHaveAttribute('aria-selected', 'true')
+    unmount()
+    renderAppAt('/billing/checkout?tier=unknown&term=annual', { user: verifiedUser })
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '구독할 유료 플랜을 다시 선택해 주세요.',
+    )
   })
 })

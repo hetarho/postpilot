@@ -2,7 +2,7 @@
  *  and the page that consumes it move together (ARCH-16). */
 export const searchSchema = (
   search: Record<string, unknown>,
-): { tier?: 'light' | 'basic' | 'pro' | 'max' } => ({
+): { tier?: 'light' | 'basic' | 'pro' | 'max'; term?: 'monthly' | 'annual' } => ({
   tier:
     search.tier === 'light' ||
     search.tier === 'basic' ||
@@ -10,4 +10,5 @@ export const searchSchema = (
     search.tier === 'max'
       ? search.tier
       : undefined,
+  term: search.term === 'monthly' || search.term === 'annual' ? search.term : undefined,
 })

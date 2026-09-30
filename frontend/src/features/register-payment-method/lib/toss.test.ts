@@ -33,7 +33,7 @@ describe('openTossBillingAuth', () => {
         clientKey: 'client-key',
         customerKey: 'customer-key',
         customerEmail: 'alice@example.com',
-        returnTo: '/billing/checkout?tier=pro',
+        returnTo: '/billing/checkout?tier=pro&term=annual',
       },
       {
         load: vi.fn().mockResolvedValue(undefined),
@@ -45,9 +45,9 @@ describe('openTossBillingAuth', () => {
     expect(requestBillingAuth).toHaveBeenCalledWith(
       expect.objectContaining({
         successUrl:
-          'https://postpilot.test/billing/method/success?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro',
+          'https://postpilot.test/billing/method/success?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro%26term%3Dannual',
         failUrl:
-          'https://postpilot.test/billing/method/fail?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro',
+          'https://postpilot.test/billing/method/fail?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro%26term%3Dannual',
       }),
     )
   })

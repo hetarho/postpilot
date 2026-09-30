@@ -23,7 +23,7 @@
 |---|---|---|---|---|
 | ARCH | 14 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 27 | 27 | - | 0 |
+| QUOTA | 28 | 28 | - | 0 |
 | POST | 25 | 25 | - | 0 |
 | VOICE | 5 | 5 | - | 0 |
 | GEN | 19 | 19 | - | 0 |
@@ -32,12 +32,12 @@
 | GUIDE | 12 | 12 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 20 | 20 | - | 0 |
+| THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 53 | 53 | - | 2 |
 | CDS | 31 | 31 | - | 1 |
-| BILL | 6 | 6 | - | 0 |
+| BILL | 7 | 7 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 6 | 6 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
@@ -58,12 +58,20 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T498 | Simplify /plans cards and move post and clip estimates below them | QUOTA THEME | T497 | todo |
 
 ## next
-- next: no remaining tasks; create-task for pending ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate.
+- next: implement-task T498 when resumed; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ remain pending separately.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 260930 T497 done: period selector, checkout term handoff and card-registration return; full FE/BE and project checks passed
+- 260930 T497 claimed (cx): /plans period selection and checkout handoff
+- 260930 create-task QUOTA r28 BILL r7 THEME r21 → T497 (period selector and checkout handoff), T498 (concise cards and combined estimates)
+- 260930 create-task QUOTA BILL THEME start: /plans pricing selector, comparison layout and checkout handoff
+- 260930 update-ssot QUOTA r28 BILL r7 THEME r21: unified /plans comparison, period pricing and checkout selection, concise cards with a separate post/clip estimate area
+- 260930 update-ssot QUOTA THEME start: unified /plans comparison and visual hierarchy
+- 260930 update-ssot BILL start: /plans comparison, billing-period control, subscription action, and visual hierarchy
 - 260930 T496 done: 글 1개당 크레딧 on selectors, post creation and /plans (blog inputs gone, clip-only sheet); old hold estimate and blog milli rates reserved; full FE/BE checks passed (one known clip/store ordering flake)
 - 260930 T496 claimed (mk): 글 1개당 크레딧 on model selectors, post creation and /plans
 - 260930 T495 done: ListModels and GetMyPlan carry recent-usage per-post credits (upper median, 10 posts / 3 accounts floor, catalog estimate below it), cached an hour; full FE/BE checks passed
@@ -77,10 +85,3 @@
 - 260930 update-ssot QUOTA MODEL start: supplier cost master-only, credit conversion undisclosed, recent-usage per-post credits
 - 260930 T493 claimed (rcs): capped 일괄 편집 current document with a copy control
 - 260930 create-task THEME r20: T493
-- 260930 update-ssot THEME r20: the 일괄 편집 current document is capped at max-h-field with a pinned copy control (fourth scroller exception)
-- 260930 T492 done: 추천 조합 is 모델 관리's sixth tab (/admin back to four); the 일괄 편집 preview shows set changes and new causes; full FE checks passed
-- 260930 T492 claimed (rcs): 추천 조합 as a 모델 관리 tab and the document's set diff
-- 260930 T491 done: the models-v1 document carries `[recommendations]`, validated against its own registrations and applied in one transaction; unique set labels; full BE/FE checks passed
-- 260930 T491 claimed (rcs): recommendation sets in the models-v1 document
-- 260930 create-task MODEL r23: T491 document section + one-transaction apply, T492 sixth 모델 관리 tab + preview set diff
-- 260930 create-task MODEL start: r23 recommendation sets in 모델 관리 and the document
