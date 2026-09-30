@@ -337,8 +337,12 @@ type releaseModelSource struct{}
 
 const releaseModel = "google/gemini-2.5-flash"
 
+// releaseGrade is the curated grade a paid model needs before a graded ledger
+// admits it; the split release's account holds the first offer that allows it.
+const releaseGrade = "value"
+
 func (releaseModelSource) Models() []llm.SourceModel {
-	return []llm.SourceModel{{ModelID: releaseModel, Vision: true, VideoInput: true, StructuredOutput: true, ContextTokens: 1048576, InputUSDPerMillion: "0.3", OutputUSDPerMillion: "2.5", Stages: []string{"observe", "write"}}}
+	return []llm.SourceModel{{ModelID: releaseModel, Vision: true, VideoInput: true, StructuredOutput: true, ContextTokens: 1048576, InputUSDPerMillion: "0.3", OutputUSDPerMillion: "2.5", Stages: []string{"observe", "write"}, Levels: map[string]string{"observe": releaseGrade, "write": releaseGrade}}}
 }
 func (s releaseModelSource) Lookup(id string) (llm.SourceModel, bool) {
 	return s.Models()[0], id == releaseModel

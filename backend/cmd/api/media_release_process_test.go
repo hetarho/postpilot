@@ -24,6 +24,8 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
 
 type splitSeed struct{ Cookie, Project string }
@@ -48,15 +50,20 @@ func TestMediaReleaseAPIProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer p.db.Close()
-	p.registry, err = llm.Parse([]byte("providers:\n  - id: fixture\n    adapter: openai\n    base_url: http://127.0.0.1:8081/v1\n    reasoning_format: openrouter\n"), func(string) string { return "" }, map[string]llm.AdapterFactory{"openai": func(c llm.AdapterConfig) (llm.Provider, error) { return openaicompat.New(c, http.DefaultClient), nil }}, releaseModelSource{}, llm.Options{Timeout: time.Minute, MaxTokens: 8192})
+	registry, err := llm.Parse([]byte("providers:\n  - id: fixture\n    adapter: openai\n    base_url: http://127.0.0.1:8081/v1\n    reasoning_format: openrouter\n"), func(string) string { return "" }, map[string]llm.AdapterFactory{"openai": func(c llm.AdapterConfig) (llm.Provider, error) { return openaicompat.New(c, http.DefaultClient), nil }}, releaseModelSource{}, llm.Options{Timeout: time.Minute, MaxTokens: 8192})
 	if err != nil {
 		t.Fatal(err)
 	}
+	// loadPlatform grades its registry; the fixture replacement keeps that gate.
+	p.registry = registry.WithModelGrades()
 	c, err := buildContexts(ctx, p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	registerJobs(c)
+	// A paid model needs a paid offer, and a server render needs that offer's
+	// export window, so the account is assigned the way `api setplan` assigns it.
+	tier, _ := plan.ModelGradeRequired(releaseGrade)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/seed", func(w http.ResponseWriter, r *http.Request) {
 		// Unique disposable database only. The fixture account is never a production user.
@@ -67,9 +74,14 @@ func TestMediaReleaseAPIProcess(t *testing.T) {
 			err = as.CreateUser(ctx, auth.User{ID: "release-user", PasswordHash: "fixture-only", Plan: plan.Free, CreatedAt: time.Now()})
 		}
 		if err == nil {
-			err = c.ledger.EnsureMonthlyLot(ctx, "release-user", plan.Free)
+			err = c.billing.AssignSupportTier(ctx, "release-user", tier)
 		}
-
+		if err == nil {
+			err = c.ledger.EnsureMonthlyLot(ctx, "release-user", tier)
+		}
+		if err == nil {
+			err = seedReleaseRate(ctx, usagestore.New(p.db.Writer, p.db.Reader), time.Now())
+		}
 		if err == nil {
 			_, err = p.db.Writer.ExecContext(ctx, "INSERT OR IGNORE INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('split-extra','release-user','purchased',5000,5000,?)", time.Now().UTC().Format(time.RFC3339Nano))
 		}
@@ -176,6 +188,19 @@ func TestMediaReleaseRelay(t *testing.T) {
 		go func() { errs <- server.ListenAndServe() }()
 	}
 	t.Fatal(<-errs)
+}
+
+// seedReleaseRate records the official publication a paid admission freezes. The
+// disposable network cannot reach the exchange-rate API, and a confirmed weekday
+// in the cache is exactly what the selector reads before it would call out.
+func seedReleaseRate(ctx context.Context, cache usage.RateCache, now time.Time) error {
+	day := now.In(time.FixedZone("Asia/Seoul", 9*60*60))
+	for {
+		day = day.AddDate(0, 0, -1)
+		if day.Weekday() != time.Saturday && day.Weekday() != time.Sunday {
+			return cache.RecordRateDay(ctx, usage.RateDay{Date: day.Format(time.DateOnly), ReferenceE4: 14_000_000, Published: true})
+		}
+	}
 }
 
 func splitJSON[T any](ctx context.Context, endpoint string) (T, error) {
