@@ -31,12 +31,6 @@ export const adminEstimatorRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminEstimatorPage'),
 })
 
-export const adminRecommendationsRoute = createRoute({
-  getParentRoute: () => adminRoute,
-  path: '/recommendations',
-  component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminRecommendationsPage'),
-})
-
 export const adminVouchersRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: '/vouchers',
@@ -49,6 +43,5 @@ export const adminRoutes = [
   adminAccountsRoute,
   adminModelsRoute,
   adminEstimatorRoute,
-  adminRecommendationsRoute,
   adminVouchersRoute,
 ]

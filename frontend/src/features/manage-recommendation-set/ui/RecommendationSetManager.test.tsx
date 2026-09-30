@@ -78,12 +78,13 @@ function set(id: string, label: string, writeB = 'vendor/sight'): FakeRecommenda
   }
 }
 
-function renderTab(options: {
+/** Opens 모델 관리 and its sixth tab, where the sets live (MODEL-28, MODEL-69). */
+async function renderTab(options: {
   sets: FakeRecommendationSet[]
   calls?: string[]
   saveRecommendationFailure?: FakeProviderMutationFailure
 }) {
-  return renderAppAt('/admin/recommendations', {
+  const view = renderAppAt('/admin/models', {
     user: MASTER,
     calls: options.calls,
     providers: {
@@ -94,6 +95,8 @@ function renderTab(options: {
     },
     modelCatalog: { entries: CATALOG },
   })
+  await userEvent.setup().click(await screen.findByRole('tab', { name: '추천 조합' }))
+  return view
 }
 
 async function findTab() {
@@ -101,27 +104,40 @@ async function findTab() {
 }
 
 describe('the 추천 조합 tab', () => {
-  it('is the fourth of five admin tabs', async () => {
-    renderTab({ sets: [] })
+  // MODEL-28: /admin keeps four tabs, and 추천 조합 is 모델 관리's sixth, after the five purposes.
+  // It is not a purpose: the search, filters and provider refresh go away, 일괄 편집 stays.
+  it('is 모델 관리’s sixth tab and keeps only the shared 일괄 편집 entry', async () => {
+    await renderTab({ sets: [] })
     await findTab()
-    const tabs = screen
+    const adminTabs = screen
       .getAllByRole('link')
       .filter((link) => link.getAttribute('href')?.startsWith('/admin'))
       .map((link) => link.getAttribute('href'))
-    expect(tabs).toEqual([
-      '/admin',
-      '/admin/models',
-      '/admin/estimator',
-      '/admin/recommendations',
-      '/admin/vouchers',
+    expect(adminTabs).toEqual(['/admin', '/admin/models', '/admin/estimator', '/admin/vouchers'])
+    const tabs = within(screen.getByRole('tablist', { name: '모델 용도' })).getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      '사진 해석',
+      '문체 분석',
+      '글 작성',
+      '이미지 생성',
+      '비디오 생성',
+      '추천 조합',
     ])
-    expect(screen.getByRole('link', { name: /추천 조합/ })).toHaveAttribute('aria-current', 'page')
+    expect(tabs[5]).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '일괄 편집' })).toBeInTheDocument()
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '목록 새로고침' })).not.toBeInTheDocument()
+
+    await userEvent.setup().click(tabs[2])
+    expect(await screen.findByRole('searchbox')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '목록 새로고침' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '추천 조합' })).not.toBeInTheDocument()
   })
 
   // MODEL-70: a saved set keeps a model the catalog has since moved away from, and the list
   // says so beside the slot rather than editing the set.
   it('lists each set with its grades and flags slots the catalog no longer supports', async () => {
-    renderTab({
+    await renderTab({
       sets: [
         {
           ...set('balanced', 'Balanced', 'vendor/draft'),
@@ -147,7 +163,7 @@ describe('the 추천 조합 tab', () => {
   it('creates a set from seven chosen slots and lists it last', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderTab({ sets: [set('first', 'First')], calls })
+    await renderTab({ sets: [set('first', 'First')], calls })
     const tab = await findTab()
     await tab.findByRole('group', { name: 'First' })
 
@@ -170,7 +186,7 @@ describe('the 추천 조합 tab', () => {
     await waitFor(() => expect(calls).toContain('SaveRecommendationSet:new:  Second  '))
     // The server stores the label trimmed, and the editor closes onto the refreshed list.
     await tab.findByRole('group', { name: 'Second' })
-    expect(tab.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(
+    expect(tab.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual(
       ['First', 'Second'],
     )
   })
@@ -179,7 +195,7 @@ describe('the 추천 조합 tab', () => {
   // field and the draft survives the refusal.
   it('shows every refused field beside itself and keeps the draft', async () => {
     const user = userEvent.setup()
-    renderTab({
+    await renderTab({
       sets: [],
       saveRecommendationFailure: {
         reason: 'MODEL_SET_INVALID',
@@ -210,10 +226,29 @@ describe('the 추천 조합 tab', () => {
     expect(editor.getByRole('combobox', { name: /사진 관찰 A/ })).toHaveAccessibleName(/Eyes/)
   })
 
+  // MODEL-69: labels are unique; a clash is named as a name problem, not a repeated model.
+  it('says a label is already taken', async () => {
+    const user = userEvent.setup()
+    await renderTab({
+      sets: [],
+      saveRecommendationFailure: {
+        reason: 'MODEL_SET_INVALID',
+        params: { fields: 'label', label: 'duplicate' },
+      },
+    })
+    const tab = await findTab()
+    await user.click(await tab.findByRole('button', { name: '조합 추가' }))
+    const editor = within(await tab.findByRole('form', { name: '새 추천 조합' }))
+    await user.type(editor.getByRole('textbox', { name: '이름' }), 'Balanced')
+    await user.click(editor.getByRole('button', { name: '저장' }))
+    expect(await editor.findByText('다른 조합이 이미 쓰는 이름이에요.')).toBeInTheDocument()
+    expect(editor.queryByText('A와 다른 모델을 고르세요.')).not.toBeInTheDocument()
+  })
+
   it('edits a set from its saved values', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderTab({ sets: [set('first', 'First')], calls })
+    await renderTab({ sets: [set('first', 'First')], calls })
     const tab = await findTab()
     await user.click(await tab.findByRole('button', { name: 'First 수정' }))
     const editor = within(await tab.findByRole('form', { name: '추천 조합 수정' }))
@@ -230,7 +265,7 @@ describe('the 추천 조합 tab', () => {
   it('moves sets one place and disables the move at either end', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderTab({ sets: [set('first', 'First'), set('second', 'Second')], calls })
+    await renderTab({ sets: [set('first', 'First'), set('second', 'Second')], calls })
     const tab = await findTab()
     await tab.findByRole('group', { name: 'Second' })
     expect(tab.getByRole('button', { name: 'First 위로 옮기기' })).toBeDisabled()
@@ -239,7 +274,7 @@ describe('the 추천 조합 tab', () => {
     await user.click(tab.getByRole('button', { name: 'Second 위로 옮기기' }))
     await waitFor(() => expect(calls).toContain('MoveRecommendationSet:second:up'))
     await waitFor(() =>
-      expect(tab.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      expect(tab.getAllByRole('heading', { level: 4 }).map((h) => h.textContent)).toEqual([
         'Second',
         'First',
       ]),
@@ -249,7 +284,7 @@ describe('the 추천 조합 tab', () => {
   it('deletes a set only after the confirmation', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderTab({ sets: [set('first', 'First')], calls })
+    await renderTab({ sets: [set('first', 'First')], calls })
     const tab = await findTab()
     await user.click(await tab.findByRole('button', { name: 'First 삭제' }))
     const dialog = within(await screen.findByRole('dialog'))
@@ -263,7 +298,7 @@ describe('the 추천 조합 tab', () => {
 
   // MODEL-69: at most ten sets.
   it('stops offering a new set at the limit', async () => {
-    renderTab({
+    await renderTab({
       sets: Array.from({ length: 10 }, (_, index) => set(`set-${index}`, `Set ${index}`)),
     })
     const tab = await findTab()

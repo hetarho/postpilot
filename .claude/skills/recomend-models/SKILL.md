@@ -2,8 +2,8 @@
 name: recomend-models
 description: >-
   OpenRouter가 지금 제공하는 모델 중에서 postpilot 모델 관리(/admin) 탭별로 무료 / 가성비 / 밸런스 /
-  고급 / 최고 추천(각 3~5개)을 만들고, 제품의 등급(가성비·밸런스·고급·최고)까지 매긴 붙여넣기 문서를
-  낸다. "/recomend-models, 모델 추천해줘, 어떤 모델 등록할지 모르겠어, 모델 관리 뭐 켤까,
+  고급 / 최고 추천(각 3~5개)을 만들고, 제품의 등급(무료·가성비·밸런스·고급·최고)과 등급별 추천 조합까지
+  담은 붙여넣기 문서를 낸다. "/recomend-models, 모델 추천해줘, 어떤 모델 등록할지 모르겠어, 모델 관리 뭐 켤까,
   무료 모델 뭐 있어, 가성비 모델 추천" 일 때 사용. 라이브 카탈로그를 직접 받아 가격·모달리티·등록일을
   근거로 고르고, 기억에 있는 모델명으로 답하지 않는다. 카탈로그 DB나 설정은 바꾸지 않는다 —
   등록은 사용자가 모델 관리에서 한다.
@@ -23,10 +23,9 @@ python3 .claude/skills/recomend-models/scripts/openrouter_models.py --all-provid
 ```
 - 앱과 같은 엔드포인트·모달리티 쿼리(MODEL-17)를 쓰고 `:batch` 변형은 뺀다(MODEL-50, 동기 호출만 있어 쓸 수 없음).
 - 출력 flags: `V` 이미지 입력 · `M` 영상 입력 · `R` reasoning 파라미터 · `S` structured_outputs. 가격은 USD / 1M 토큰.
-- 마지막에 `backend/config/providers.yaml`의 현재 추천 세트가 붙는다 — "지금 쓰는 것"과 비교하는 기준.
-- **이 스크립트는 지금 등록된 모델도, 매겨진 등급도 모른다**: 등록과 등급은 DB에 있고 providers.yaml에는
-  없다. 현재 상태가 필요하면 사용자에게 모델 관리 `일괄 편집`의 내보내기(MODEL-55)를 붙여달라고 하고,
-  없으면 "지금 세트와 비교"는 providers.yaml 범위까지만 말한다 — 등급을 아는 척하지 않는다.
+- **이 스크립트는 지금 등록된 모델도, 매겨진 등급도, 추천 조합도 모른다**: 셋 다 DB에 있다(MODEL-10·69).
+  현재 상태가 필요하면 사용자에게 모델 관리 `일괄 편집`의 내보내기(MODEL-55)를 붙여달라고 한다. 내보내기가
+  없으면 "지금 세트와 비교"는 하지 않는다 — 등급이나 조합을 아는 척하지 않는다.
 - fetch가 실패하면 추천을 지어내지 말고 실패를 보고한다.
 
 ## 2. 용도(탭)별 조건
@@ -48,14 +47,15 @@ python3 .claude/skills/recomend-models/scripts/openrouter_models.py --all-provid
 
 | 단계 | 등급 토큰 | 정의 | 고르는 법 |
 |---|---|---|---|
-| 무료 | `value` | `:free` 변형 | 게이트 통과 + 활성 파라미터 큰 순. `exp=`가 있으면 만료일을 적는다. 레이트리밋(`MODEL_RATE_LIMITED`, MODEL-4)·프롬프트 학습 사용 가능성을 항상 경고한다. |
+| 무료 | `free` | `:free` 변형 | 게이트 통과 + 활성 파라미터 큰 순. `exp=`가 있으면 만료일을 적는다. 레이트리밋(`MODEL_RATE_LIMITED`, MODEL-4)·프롬프트 학습 사용 가능성을 항상 경고한다. |
 | 가성비 | `value` | 출력 ≤ ~$1.5/M | 그 가격대에서 가장 최신 세대. 주요 제공사의 flash/mini/luna급. |
 | 밸런스 | `balanced` | 출력 ~$2–12/M | 품질과 비용 중간. 각 제공사의 중간 티어(sonnet/terra/max/glm 정규) + 최신 flash 상위. |
 | 고급 | `premium` | 플래그십 아래 최상위 | 플래그십과 같은 급이지만 입력·출력이 확연히 싼 것(예: 플래그십 $10/$50 대비 $3/$15). 상시 켜둘 만한 고품질. |
 | 최고 | `top` | 가격 무관 | 각 제공사 플래그십 최신 세대. `-pro` 변형은 같은 모델의 고강도 reasoning이니 하나로 묶어 언급. |
 
-- **무료에 등급이 따로 없는 것은 의도다**(MODEL-57): 가격이 `0달러`라는 사실이 이미 무료라고 말하므로 운영자는 무료
-  모델도 `value`로 분류한다. 표에서는 무료를 따로 보여주되, 문서에는 `value`로 적는다.
+- **무료는 유료 등급과 따로 관리되는 분류 `free`다**(MODEL-57). 서버는 적용 경로의 무료 가격을 검증하고
+  (MODEL-68), 검증되지 않는 모델을 `free`로 적은 줄은 `free_path_ineligible`로 거절한다(MODEL-53) — `:free`
+  변형만 `free`로 적는다.
 - 고급과 최고를 나누는 기준은 이름이 아니라 **가격대**다. 카탈로그가 실제로 두 무리로 갈릴 때만 나누고,
   한 무리뿐이면 최고만 낸다 — 없는 구분을 지어내지 않는다.
 - 단계마다 3~5개, **서로 다른 제공사가 최소 3곳** 섞이게(한 제공사 장애가 세트를 못 죽이도록).
@@ -66,7 +66,7 @@ python3 .claude/skills/recomend-models/scripts/openrouter_models.py --all-provid
 ## 4. 출력 형식
 탭별로 하나의 표. 열: 단계 · 모델 id · 입력/출력 $/M · flags · 한 줄 이유. 단계 칸의 말은 3절 표와
 같은 다섯 개(무료·가성비·밸런스·고급·최고)만 쓴다. 표 아래에 두 줄:
-"지금 세트와 비교" (providers.yaml의 active/candidate 대비 바꿀 게 있는지), "주의" (무료 리밋·reasoning 잘림·신규 모델).
+"지금 세트와 비교" (사용자가 준 내보내기의 등록·`[recommendations]` 대비 바꿀 게 있는지, 내보내기가 없으면 생략), "주의" (무료 리밋·reasoning 잘림·신규 모델).
 cfg.lang이 있으면 그 언어로, 없으면 한국어로 쓴다. 모델 id는 그대로 복사해 모델 관리 검색창에 붙일 수 있게 백틱으로 감싼다.
 
 ### 4-1. 붙여넣기 블록 (필수)
@@ -77,18 +77,28 @@ cfg.lang이 있으면 그 언어로, 없으면 한국어로 쓴다. 모델 id는
 # postpilot models v1
 [photo-analysis]
 z-ai/glm-5.3-flash value
+qwen/qwen3.8-flash value
 google/gemini-3.8-flash balanced
+[style-analysis]
+deepseek/deepseek-v4-flash-0731 value
 [writing]
 deepseek/deepseek-v4-flash-0731 value
+mistralai/mistral-small-4 value
 anthropic/claude-sonnet-5 balanced
 moonshotai/kimi-k3 premium
 openai/gpt-6-astra top
+
+[recommendations]
+set 가성비 추천
+observe z-ai/glm-5.3-flash z-ai/glm-5.3-flash qwen/qwen3.8-flash
+analyze deepseek/deepseek-v4-flash-0731
+write deepseek/deepseek-v4-flash-0731 deepseek/deepseek-v4-flash-0731 mistralai/mistral-small-4
 ```
 
 - 첫 줄은 `# postpilot models v1` 그대로 — 등급이 붙어도 버전은 `v1`이다(MODEL-59). 섹션 헤더는
   `[<purpose>]`, 그 아래 한 줄에 `<모델 id> <등급>` 하나씩.
 - id는 스크립트 출력 그대로 복사한다 — 백틱·따옴표·쉼표·순위 번호·가격을 id 줄에 붙이지 않는다.
-- **등급은 3절 표의 토큰 네 개(`value` `balanced` `premium` `top`)뿐**이고, id와 등급 사이는 공백
+- **등급은 3절 표의 토큰 다섯 개(`free` `value` `balanced` `premium` `top`)뿐**이고, id와 등급 사이는 공백
   하나. 한글(가성비…)이나 그 외 값을 쓰면 그 줄이 `unknown_level`로 거절되고 문서 전체가 반려된다.
   토큰이 세 개가 되어도(`<id> <등급> <무엇>`) 마찬가지다.
 - **모든 id 줄에 등급을 적는다.** 등급을 비운 줄은 "등급 없음"을 지시하는 것이라, 이미 등급이 매겨진
@@ -102,9 +112,25 @@ openai/gpt-6-astra top
   무엇을 담았는지 한 줄로 밝힌다.
 - 사진 분석 섹션에는 `V` 없는 모델을, 생성 탭 섹션에는 해당 출력 모달리티 없는 모델을 넣지 않는다 —
   게이트에 걸려 문서 전체가 거절된다(MODEL-15·53).
-- effort는 이 문서가 다루지 않는다(MODEL-52 — 문서가 나르는 건 등록과 등급뿐이다). 글쓰기 low 지침은
-  표 아래 "주의"에 문장으로 남긴다.
+- effort는 이 문서가 다루지 않는다(MODEL-52 — 문서가 나르는 건 등록·등급과 추천 조합뿐이다). 글쓰기 low
+  지침은 표 아래 "주의"에 문장으로 남긴다.
+
+### 4-2. 추천 조합 섹션 (`[recommendations]`, MODEL-72·73)
+- 등급마다 조합 하나를 낸다(`무료 추천` `가성비 추천` `밸런스 추천` `고급 추천` `최고 추천`). 조합에 쓴 모델의
+  등급을 받을 수 있는 플랜만 그 조합을 적용할 수 있으므로(MODEL-58), 등급별로 나눠야 모든 플랜이 적용할
+  조합을 하나씩 갖는다.
+- 그 등급에 사진 분석 모델 2개(A·B는 서로 달라야 한다), 스타일 분석 모델 1개, 글쓰기 모델 2개가 없으면 그
+  등급의 조합은 내지 않고 이유를 한 줄로 적는다. 조합 하나는 `set <이름>` 줄 다음에 세 줄이다:
+  `observe <활성> <A> <B>` · `analyze <활성>` · `write <활성> <A> <B>`. 활성은 그 등급의 첫 추천, A는 활성과
+  같게, B는 다른 제공사의 대안으로 둔다.
+- 조합의 모든 id는 **같은 문서의 해당 용도 섹션에 같은 등급으로** 적혀 있어야 한다. 서버는 문서가 남기는
+  등록 기준으로 조합을 검증하고, 등록되지 않았거나 등급이 없는 모델은 `slot_unregistered` ·
+  `slot_unclassified`로 거절한다. 그래서 조합을 내면 스타일 분석 섹션도 함께 낸다.
+- **이 섹션은 추천 조합의 전체 목록이다.** 적용하면 섹션에 없는 기존 조합은 지워지고, 이름이 같은 조합은
+  교체된다. 블록 아래 줄에 이 사실을 알리고, 기존 조합을 남기려면 내보내기의 `[recommendations]`를
+  이어 붙이라고 안내한다. 이 섹션을 빼면 조합은 그대로 남는다.
+- 이름은 60자 이하이고 서로 달라야 하며, 조합은 10개까지다.
 
 ## 5. 하지 않는 것
-- DB·providers.yaml·프론트 설정을 고치지 않는다. 등록은 사용자가 모델 관리에서 한다 — 이 스킬이 내는 건 붙여넣을 문서까지다. 사용자가 "추천 세트를 코드에 반영하자"고 하면 그건 update-ssot(MODEL-26) → create-task 경로다.
+- DB·providers.yaml·프론트 설정을 고치지 않는다. 등록과 추천 조합 적용은 사용자가 모델 관리에서 한다 — 이 스킬이 내는 건 붙여넣을 문서까지다.
 - 벤치마크 점수를 인용하지 않는다 — 출력에 없는 수치는 근거가 아니다. 근거는 가격·플래그·등록일·설명문뿐이다.

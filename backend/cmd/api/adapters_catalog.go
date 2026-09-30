@@ -13,8 +13,61 @@ import (
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
+	"github.com/postpilot/backend/internal/provider"
+	providerstore "github.com/postpilot/backend/internal/provider/store"
 	"github.com/postpilot/backend/internal/usage"
 )
+
+// catalogRecommendations is the provider context's recommendation-set rows as the models
+// document reads and replaces them (MODEL-72, MODEL-73), bound to the document's own
+// transaction. The document names models by id alone; the registry's single provider fills
+// the rest of each ref (MODEL-10), and a new set gets its identity here, where provider's
+// id rule lives.
+type catalogRecommendations struct {
+	rows       *providerstore.TxStore
+	providerID string
+}
+
+func (a catalogRecommendations) List(ctx context.Context) ([]modelcatalog.StoredSet, error) {
+	sets, err := a.rows.ListRecommendationSets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]modelcatalog.StoredSet, 0, len(sets))
+	for _, set := range sets {
+		stored := modelcatalog.StoredSet{ID: set.ID, Label: set.Label}
+		for _, selection := range set.Selections {
+			ids := [3]string{selection.Active.ModelID, selection.CandidateA.ModelID, selection.CandidateB.ModelID}
+			switch selection.Stage {
+			case provider.StageObserve:
+				stored.Observe = ids
+			case provider.StageAnalyze:
+				stored.Analyze = selection.Active.ModelID
+			case provider.StageWrite:
+				stored.Write = ids
+			}
+		}
+		out = append(out, stored)
+	}
+	return out, nil
+}
+
+func (a catalogRecommendations) Replace(ctx context.Context, sets []modelcatalog.StoredSet, at time.Time) error {
+	ref := func(modelID string) llm.ModelRef { return llm.ModelRef{ProviderID: a.providerID, ModelID: modelID} }
+	out := make([]provider.RecommendationSet, 0, len(sets))
+	for _, set := range sets {
+		id := set.ID
+		if id == "" {
+			id = provider.NewRecommendationID()
+		}
+		out = append(out, provider.RecommendationSet{ID: id, Label: set.Label, Selections: []provider.RecommendationStageSelection{
+			{Stage: provider.StageObserve, Active: ref(set.Observe[0]), CandidateA: ref(set.Observe[1]), CandidateB: ref(set.Observe[2])},
+			{Stage: provider.StageAnalyze, Active: ref(set.Analyze)},
+			{Stage: provider.StageWrite, Active: ref(set.Write[0]), CandidateA: ref(set.Write[1]), CandidateB: ref(set.Write[2])},
+		}})
+	}
+	return a.rows.ReplaceRecommendationSets(ctx, out, at)
+}
 
 type catalogReasoningSpend struct {
 	ledger     *usage.Service

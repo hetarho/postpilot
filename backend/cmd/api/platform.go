@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	modelcatalogstore "github.com/postpilot/backend/internal/modelcatalog/store"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
+	providerstore "github.com/postpilot/backend/internal/provider/store"
 	"github.com/postpilot/backend/internal/storage"
 )
 
@@ -67,7 +69,8 @@ func (p *platform) load(ctx context.Context) error {
 	//
 	// An empty catalog is a valid state. A fresh install has curated nothing, and the right
 	// answer is an empty dropdown and a trip to /admin/models, not a refused boot.
-	p.catalog = modelcatalog.NewService(modelcatalogstore.New(p.db.Writer, p.db.Reader))
+	catalogStore := modelcatalogstore.New(p.db.Writer, p.db.Reader)
+	p.catalog = modelcatalog.NewService(catalogStore)
 	if err := p.catalog.Reload(ctx); err != nil {
 		return fmt.Errorf("model catalog load: %w", err)
 	}
@@ -81,6 +84,11 @@ func (p *platform) load(ctx context.Context) error {
 		return fmt.Errorf("providers config invalid: %w", err)
 	}
 	p.registry = registry.WithModelGrades()
+	// The models document writes recommendation sets in its own transaction (MODEL-73); the
+	// rows are the provider context's, named by the registry's one provider.
+	catalogStore.SetRecommendationsForTx(func(tx *sql.Tx) modelcatalog.RecommendationRows {
+		return catalogRecommendations{rows: providerstore.NewTx(tx), providerID: registry.ProviderID()}
+	})
 	// The upstream catalog lives at the registered endpoint, so its address is configured in
 	// exactly one place. Attached after Load because that is where the address comes from;
 	// boot itself never calls it.

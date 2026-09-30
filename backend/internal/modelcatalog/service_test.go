@@ -3,6 +3,7 @@ package modelcatalog_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"maps"
 	"reflect"
 	"slices"
@@ -24,6 +25,11 @@ type fakeStore struct {
 	listErr   error
 	syncErr   error
 	combos    map[modelcatalog.Combo]modelcatalog.ComboAssignment
+	// sets are the stored recommendation sets, in order; setWrites counts the document writes
+	// that replaced them.
+	sets      []modelcatalog.StoredSet
+	setWrites int
+	newSets   int
 }
 
 func newFakeStore(rows ...modelcatalog.Model) *fakeStore {
@@ -139,13 +145,29 @@ func (s *fakeStore) DeregisterPurpose(_ context.Context, modelID string, purpose
 	return nil
 }
 
-// SyncPurposes is the document path's one write. The fake applies the writes in order; the
-// real store's atomicity is pinned in store_test.
-func (s *fakeStore) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeWrite, at time.Time) error {
+func (s *fakeStore) RecommendationSets(context.Context) ([]modelcatalog.StoredSet, error) {
+	return slices.Clone(s.sets), nil
+}
+
+// SyncDocument is the document path's one write. The fake applies the writes in order and
+// then the set list, giving a new set the next "new-N" id; the real store's atomicity is
+// pinned in store_test.
+func (s *fakeStore) SyncDocument(ctx context.Context, writes []modelcatalog.PurposeWrite, sets *[]modelcatalog.StoredSet, at time.Time) error {
 	if s.syncErr != nil {
 		return s.syncErr
 	}
 	s.syncs++
+	if sets != nil {
+		s.setWrites++
+		s.sets = nil
+		for _, set := range *sets {
+			if set.ID == "" {
+				s.newSets++
+				set.ID = fmt.Sprintf("new-%d", s.newSets)
+			}
+			s.sets = append(s.sets, set)
+		}
+	}
 	for _, write := range writes {
 		if write.Register {
 			if err := s.RegisterPurpose(ctx, write.Model, write.Purpose); err != nil {

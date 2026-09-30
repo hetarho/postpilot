@@ -1,11 +1,16 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   useApplyCatalogDocument,
   useCatalogDocument,
   usePreviewCatalogDocument,
 } from '@/entities/model-catalog'
-import type { CatalogDocumentIssue, CatalogDocumentPlan } from '@/entities/model-catalog'
+import type {
+  CatalogDocumentIssue,
+  CatalogDocumentPlan,
+  CatalogDocumentRecommendationPlan,
+} from '@/entities/model-catalog'
 import {
   AppFailureMessage,
   Button,
@@ -16,7 +21,15 @@ import {
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import { canApply, documentDiff, isKnownCause, type DocumentDiffRow } from '../model/document-view'
+import { copyText } from '@/shared/lib'
+import { COPY_CONFIRM_MS } from '../config'
+import {
+  canApply,
+  changesSets,
+  documentDiff,
+  isKnownCause,
+  type DocumentDiffRow,
+} from '../model/document-view'
 
 interface CatalogDocumentPanelProps {
   open: boolean
@@ -28,7 +41,8 @@ interface CatalogDocumentPanelProps {
  *  the state IS the session, so a new session is a new component. */
 
 /** 일괄 편집: the operator arrives with a list, and this is where it goes in. One surface for
- *  all five tabs rather than a control per tab, because one document names any purpose.
+ *  all six tabs rather than a control per tab, because one document names any purpose and the
+ *  recommendation sets.
  *
  *  The flow is deliberately two-step: 미리보기 shows what would change and writes nothing,
  *  확정 sends the SAME TEXT again for the server to validate from scratch. The preview's answer
@@ -40,6 +54,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
   const preview = usePreviewCatalogDocument()
   const apply = useApplyCatalogDocument()
   const fieldId = useId()
+  const currentId = `${fieldId}-current`
 
   // The plan on screen is the apply's answer once there is one, so a rejection the catalog
   // moved into between the two calls replaces the preview that no longer holds.
@@ -96,11 +111,11 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
       {/* Said before anything is pasted, not after the diff: a section is the purpose's FINAL
           state, so what it leaves out is deregistered. */}
       <Notice tone="warning" className="mt-3">
-        {t('document.syncWarning')}
+        {t('document.syncWarning')} {t('document.setsWarning')}
       </Notice>
 
       <section className="mt-6">
-        <Typography variant="label" className="block">
+        <Typography variant="label" id={currentId} className="block">
           {t('document.currentTitle')}
         </Typography>
         <Typography variant="meta" className="text-content-tertiary mt-1 block">
@@ -111,17 +126,11 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
             {t('document.currentFailed')}
           </Notice>
         ) : (
-          <pre
-            className={typographyStyles({
-              variant: 'meta',
-              mono: true,
-              // A stepped surface, not a bordered box (THEME-12), and no scroller of its own: the
-              // sheet's body is the one that scrolls (THEME-25), so long lines wrap.
-              className: 'bg-surface-recessed mt-2 rounded-md p-3 break-all whitespace-pre-wrap',
-            })}
-          >
-            {exported.isPending ? t('document.currentLoading') : exported.document}
-          </pre>
+          <CurrentDocument
+            labelledBy={currentId}
+            text={exported.isPending ? t('document.currentLoading') : exported.document}
+            ready={!exported.isPending}
+          />
         )}
       </section>
 
@@ -171,6 +180,16 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
             registered: diff.registerCount,
             deregistered: diff.deregisterCount,
           })}
+          {plan?.recommendations && changesSets(plan.recommendations) && (
+            <>
+              {' '}
+              {t('document.appliedSets', {
+                added: plan.recommendations.added.length,
+                removed: plan.recommendations.removed.length,
+                changed: plan.recommendations.changed.length,
+              })}
+            </>
+          )}
         </Notice>
       )}
 
@@ -179,7 +198,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
           <Typography variant="label" className="block">
             {t('document.diffTitle')}
           </Typography>
-          {diff.rows.length === 0 ? (
+          {diff.rows.length === 0 && !plan.recommendations ? (
             <Typography variant="body" className="text-content-tertiary mt-2 block">
               {t('document.diffEmpty')}
             </Typography>
@@ -188,7 +207,13 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
               {diff.rows.map((row) => (
                 <DiffRow key={row.purpose} row={row} />
               ))}
+              {plan.recommendations && <SetsDiff sets={plan.recommendations} />}
             </ul>
+          )}
+          {!plan.recommendations && (
+            <Typography variant="meta" className="text-content-tertiary mt-4 block">
+              {t('document.setsUntouched')}
+            </Typography>
           )}
           {diff.untouched.length > 0 && (
             <Typography variant="meta" className="text-content-tertiary mt-4 block">
@@ -202,6 +227,84 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
         </section>
       )}
     </Sheet>
+  )
+}
+
+/** The export the operator edits from (MODEL-55). It runs to hundreds of lines, so it stops at
+ *  `max-h-field` and scrolls inside itself (THEME-43, the fourth THEME-25 exception) rather than
+ *  pushing the paste field a sheet's height away — and the copy button is pinned over its corner,
+ *  in reach however far the text is scrolled. A stepped surface, not a bordered box (THEME-12). */
+function CurrentDocument({
+  labelledBy,
+  text,
+  ready,
+}: {
+  labelledBy: string
+  text: string
+  ready: boolean
+}) {
+  const { t } = useTranslation('models')
+  const block = useRef<HTMLPreElement>(null)
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  useEffect(() => {
+    if (status !== 'copied') return
+    const timer = window.setTimeout(() => setStatus('idle'), COPY_CONFIRM_MS)
+    return () => window.clearTimeout(timer)
+  }, [status])
+
+  const copy = async () => {
+    const { copied } = await copyText(text)
+    if (copied) {
+      setStatus('copied')
+      return
+    }
+    // copyText's own fallback selects an input; this is a `pre`, so the text is selected here
+    // for the operator to copy by hand.
+    const range = document.createRange()
+    if (block.current) range.selectNodeContents(block.current)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    setStatus('failed')
+  }
+
+  return (
+    <div className="relative mt-2">
+      <pre
+        ref={block}
+        role="region"
+        aria-labelledby={labelledBy}
+        // Focusable so the keyboard can scroll it (THEME-43).
+        tabIndex={0}
+        className={typographyStyles({
+          variant: 'meta',
+          mono: true,
+          className:
+            'bg-surface-recessed max-h-field overflow-y-auto overscroll-contain rounded-md p-3 pr-12 break-all whitespace-pre-wrap',
+        })}
+      >
+        {text}
+      </pre>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1 right-1"
+        disabled={!ready}
+        aria-label={t('document.copyCurrent')}
+        onClick={() => void copy()}
+      >
+        {status === 'copied' ? (
+          <Check className="size-4" aria-hidden />
+        ) : (
+          <Copy className="size-4" aria-hidden />
+        )}
+      </Button>
+      <Typography variant="meta" as="p" role="status" className="mt-1 block">
+        {status === 'copied' && t('document.copied')}
+        {status === 'failed' && t('document.copyFailed')}
+      </Typography>
+    </div>
   )
 }
 
@@ -222,6 +325,59 @@ function IssueRow({ issue }: { issue: CatalogDocumentIssue }) {
       {issue.text !== '' && (
         <Typography variant="meta" as="code" mono className="mt-1 block break-all">
           {issue.text}
+        </Typography>
+      )}
+    </li>
+  )
+}
+
+/** The recommendation sets' share of the diff (MODEL-72), after the purposes. Deletion is the
+ *  loud half, as deregistration is above: it takes a set away from every account's screen. */
+function SetsDiff({ sets }: { sets: CatalogDocumentRecommendationPlan }) {
+  const { t } = useTranslation('models')
+  const groups = [
+    { key: 'removed', labels: sets.removed, copy: 'document.setsRemoved', loud: true },
+    { key: 'added', labels: sets.added, copy: 'document.setsAdded', loud: false },
+    { key: 'changed', labels: sets.changed, copy: 'document.setsChanged', loud: false },
+  ] as const
+  return (
+    <li>
+      <Typography variant="label" className="block">
+        {t('document.setsTitle')}
+      </Typography>
+      {!changesSets(sets) && (
+        <Typography variant="meta" className="text-content-tertiary mt-1 block">
+          {t('document.noChange')}
+        </Typography>
+      )}
+      {groups.map(
+        ({ key, labels, copy, loud }) =>
+          labels.length > 0 && (
+            <div key={key} className="mt-1">
+              <Typography
+                variant="meta"
+                className={loud ? 'text-notice-danger-fg block' : 'text-content-secondary block'}
+              >
+                {t(copy, { count: labels.length })}
+              </Typography>
+              <ul className="mt-1 grid gap-0.5">
+                {labels.map((label) => (
+                  <Typography key={label} variant="meta" as="li" className="break-words">
+                    {label}
+                  </Typography>
+                ))}
+              </ul>
+            </div>
+          ),
+      )}
+      {sets.reordered && (
+        <Typography variant="meta" className="text-content-secondary mt-1 block">
+          {t('document.setsReordered')}
+        </Typography>
+      )}
+      {sets.unchanged.length > 0 && (
+        <Typography variant="meta" className="text-content-tertiary mt-1 block">
+          {t('document.setsUnchanged', { count: sets.unchanged.length })}
         </Typography>
       )}
     </li>

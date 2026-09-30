@@ -71,9 +71,10 @@ export function RecommendationSetEditor({
     save.failure?.reason === 'MODEL_SET_INVALID' ? save.failure.params : {}
   const causeText = (field: string) => {
     const cause = causes[field]
-    return cause && isRecommendationFieldCause(cause)
-      ? t(`recommendationSets.cause.${cause}`, { max: MAX_RECOMMENDATION_LABEL_LENGTH })
-      : ''
+    if (!cause || !isRecommendationFieldCause(cause)) return ''
+    // A duplicate label is another set's name, not a repeated model (MODEL-69).
+    if (field === 'label' && cause === 'duplicate') return t('recommendationSets.cause.labelTaken')
+    return t(`recommendationSets.cause.${cause}`, { max: MAX_RECOMMENDATION_LABEL_LENGTH })
   }
 
   const submit = (event: FormEvent) => {
@@ -104,7 +105,7 @@ export function RecommendationSetEditor({
       onSubmit={submit}
       className="bg-surface-raised grid gap-4 rounded-lg p-4"
     >
-      <Typography variant="fieldTitle" as="h3" id={headingId}>
+      <Typography variant="fieldTitle" as="h4" id={headingId}>
         {t(
           initial.id ? 'recommendationSets.editor.editTitle' : 'recommendationSets.editor.newTitle',
         )}

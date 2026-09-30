@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r22 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
+> r23 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; the model is an input to every call (`Registry.Complete(ctx, ref, req)`), the port reads no default, and the observe, write and analyze stages each carry their own ModelRef (I3, →ARCH-9)
@@ -64,8 +64,9 @@
 - MODEL-26 [o] recommendation refs are validated against current registration, compatibility and plan entitlement at apply time; the operator's save checks registration and classification only (→MODEL-70). No tier may apply a set containing a ref outside its rights. Removed models remain readable in snapshots, and newly adopted active refs must pass the same gate as manual selection.
   - a fresh installation starts with one seeded set `balanced-2026-08` (Gemini/Qwen observe, GPT analyze, Claude/Grok write) that the operator edits or deletes like any other, without promising that every tier can apply it
 - MODEL-27 [o] browser model projections include ids, labels, capabilities, the purpose-specific classification, plan eligibility/required plan and affordability/unavailability reasons. Operator views additionally expose public descriptions/prices; keys, SDK payloads and base URLs never cross the wire.
-- MODEL-28 [o] `/admin` is five routed tabs — 계정 관리 (the user-plan table, QUOTA), 모델 관리, 편수 기준 조합 (estimator-combo assignment, →QUOTA-25 →QUOTA-39), 추천 조합 (recommendation sets, →MODEL-69) and 이용권 (the voucher list, GIFT)
-  - 모델 관리 shows the live catalog merged with DB state on five purpose tabs, each capability-force-filtered, featured providers first in the `FEATURED_MODEL_PROVIDERS` order then the rest alphabetically, newest first within a provider, with client-side search over id and name, provider / capability / registered filters and a 정렬 control, over one response, on a virtualized list (`@tanstack/react-virtual`, `CATALOG_ROW_ESTIMATE_PX` 132, `CATALOG_ROW_OVERSCAN` 6) that virtualizes the window and keeps the page's single scroller while search and filters reach every model including unmounted ones
+- MODEL-28 [o] `/admin` is four routed tabs — 계정 관리 (the user-plan table, QUOTA), 모델 관리, 편수 기준 조합 (estimator-combo assignment, →QUOTA-25 →QUOTA-39) and 이용권 (the voucher list, GIFT)
+  - 모델 관리 holds five purpose tabs and a sixth 추천 조합 tab (→MODEL-69)
+  - 모델 관리 shows the live catalog merged with DB state on the five purpose tabs, each capability-force-filtered, featured providers first in the `FEATURED_MODEL_PROVIDERS` order then the rest alphabetically, newest first within a provider, with client-side search over id and name, provider / capability / registered filters and a 정렬 control, over one response, on a virtualized list (`@tanstack/react-virtual`, `CATALOG_ROW_ESTIMATE_PX` 132, `CATALOG_ROW_OVERSCAN` 6) that virtualizes the window and keeps the page's single scroller while search and filters reach every model including unmounted ones
   - the 정렬 control: 기본 (the provider/newest order above) · 등급순 (→MODEL-57 order, unlevelled last, 기본 inside a level) · 가격 낮은순 · 가격 높은순, the price pair keyed on output price per million with input price as the tie-break and unpriced models last in both directions ← output tokens dominate the app's spend, so one key is enough
   - `ListCatalog` is read per purpose and each entry reports that purpose's effort and a spend signal — the recent reasoning-vs-completion split per model for that purpose's stage, read from the ledger through a consumer-declared port (the context never reads `usage_events`; the adapter translates the registry ref to the provider-local id; a model with no call carries nothing rather than zero)
   - the row's effort and 등급 Listboxes appear only on a tab the model serves, the 등급 one marked while unset (→MODEL-58)
@@ -139,15 +140,15 @@
 - MODEL-48 [o] a reasoning-caused truncation stays a failure — no automatic retry, no in-app model fallback, `MODEL_OUTPUT_TRUNCATED` with its ordinary user-facing message, `technical_detail` carrying the split — and the 모델 관리 surface shows, per model and purpose, how many calls ended in a reasoning-caused truncation beside the reasoning spend (→MODEL-28), sourced from the ledger the same way
 - MODEL-49 [o] `video_input` is a recorded capability, not a purpose or a registration gate: it is shown as a 영상 badge on the observe selector and the `photo-analysis` admin tab and checked per run only when the post carries videos (→VIDEO-11) ← a sixth purpose would make every account curate two observe selections for one stage; the badge is derived from the stored flag and, like every capability, a falsy value is unknown rather than "cannot" (→MODEL-21)
 - MODEL-50 [o] the source's `:batch` variants (the asynchronous batch endpoint's half-price twins) are dropped at mapping — never a candidate, never curatable — while `:free` variants stay ← every stage call is synchronous, so a batch variant could serve nothing; a `:batch` row already curated is treated as delisted (→MODEL-20)
-- MODEL-51 [o] the paste protocol is one plain-text document: the first non-blank line is `# postpilot models v1` and any other version is refused, then `[<purpose>]` section headers each followed by one model id per line, ids verbatim as the source writes them (`:free` and other variant suffixes included); further `#` comment lines, blank lines and surrounding whitespace are ignored, and the five purposes of MODEL-13 are the only accepted headers ← the operator hand-edits and pastes a curator's list, so a format a stray space survives beats one a quote mark breaks
+- MODEL-51 [o] the paste protocol is one plain-text document: the first non-blank line is `# postpilot models v1` and any other version is refused, then `[<purpose>]` section headers each followed by one model id per line, ids verbatim as the source writes them (`:free` and other variant suffixes included); further `#` comment lines, blank lines and surrounding whitespace are ignored, and the five purposes of MODEL-13 and one `[recommendations]` section (→MODEL-72) are the only accepted headers ← the operator hand-edits and pastes a curator's list, so a format a stray space survives beats one a quote mark breaks
 - MODEL-52 [o] a section is that purpose's complete membership: applying registers every id it lists and deregisters every current registration it omits, while a purpose the document gives no section is left untouched; each write is the same one the tab's checkbox makes, so a deregistration drops that registration's effort override and level with it (→MODEL-20), and the document carries registrations and their level (→MODEL-59) — no label, effort or any other column is read from it or written by it
 - MODEL-53 [o] bulk curation validates the whole document before any write; apply all sections atomically or none.
   - reject unknown versions/purposes, duplicate sections or ids, malformed lines, classification tokens outside MODEL-57, unavailable catalog ids and purpose-incompatible refs
   - a free classification also requires a verified zero-cost usable path (→MODEL-68); an unknown or positive applicable price cannot be labelled free
   - report every rejected line grouped by cause; classification never bypasses stage capabilities
 - MODEL-54 [o] applying takes two calls: a preview parses and validates the document, returns per purpose what would be registered, what deregistered, whose level would change and what already holds, plus every rejected line, and writes nothing; the apply carries the same document text and validates it again from scratch — a preview is never a token the apply trusts ← the catalog moves between the two calls
-- MODEL-55 [o] the reverse direction renders the current registrations of all five purposes, each id followed by its level when one is set, as the same document; a purpose with no registration is emitted as an empty section, so an exported document pasted straight back previews as no change
-- MODEL-56 [o] 모델 관리 carries one 일괄 편집 entry shared by the five tabs rather than a control per tab, since one document names any purpose; both directions are `ModelCatalogService` RPCs behind the master check (→MODEL-13) and neither touches `model_selections` — a deregistration strands a saved selection exactly as unchecking does (→MODEL-24)
+- MODEL-55 [o] the reverse direction renders the current registrations of all five purposes, each id followed by its level when one is set, and the recommendation sets (→MODEL-72) as the same document; a purpose with no registration is emitted as an empty section, so an exported document pasted straight back previews as no change
+- MODEL-56 [o] 모델 관리 carries one 일괄 편집 entry shared by its six tabs rather than a control per tab, since one document names any purpose and the recommendation sets; both directions are `ModelCatalogService` RPCs behind the master check (→MODEL-13) and neither touches `model_selections` — a deregistration strands a saved selection exactly as unchecking does (→MODEL-24)
 - MODEL-57 [o] each purpose registration has an operator-selected classification: free (무료), or one of the four paid grades value/balanced/premium/top (가성비/밸런스/고급/최고).
   - free is managed as a separate group, not a paid grade or an automatically selected zero-price row; MODEL-68 qualifies its price safety
   - classification is per purpose, may be unset for operator curation, and disappears with deregistration; paid grades are not inferred from price
@@ -184,12 +185,13 @@
   - provider refusal offers an explicit retry; operator product exemptions cannot bypass provider limits
   - if no compatible free model exists for a feature, show why it cannot run on the free plan rather than inventing a compatible model
 
-- MODEL-69 [o] recommendation sets are operator-curated rows managed on the /admin 추천 조합 tab by master-only procedures (→AUTH-18); the operator adds, edits, deletes and reorders them, at most 10 sets ← each set is one full section of the phone page
-  - a set is a server-assigned immutable id, a label of 1–60 characters after trimming, and seven filled slots: observe active · A · B, analyze active, write active · A · B (→MODEL-23)
+- MODEL-69 [o] recommendation sets are operator-curated rows managed on 모델 관리's 추천 조합 tab and in its 일괄 편집 document (→MODEL-72) by master-only procedures (→AUTH-18); the operator adds, edits, deletes and reorders them, at most 10 sets ← each set is one full section of the phone page
+  - a set is a server-assigned immutable id, a label of 1–60 characters after trimming that no other set uses, and seven filled slots: observe active · A · B, analyze active, write active · A · B (→MODEL-23)
   - each slot picker offers the models registered to that stage's purpose with their classification shown; the server rule (→MODEL-70) is the contract
 
 - MODEL-70 [o] saving validates the whole set before any write and refuses it whole, reporting every offending slot by cause:
   - a missing slot, or an observe or write pair naming one model twice
+  - a label another set already uses (→MODEL-72)
   - a ref not currently registered to its stage's purpose (→MODEL-14) or registered without a classification (→MODEL-57) ← a set naming either could be applied by no tier
   - no plan or balance check: which tiers can apply a set is settled per account at apply time (→MODEL-26)
   - a later deregistration, delisting or declassification never edits a saved set; the admin list flags the affected slots, derived at read time (→MODEL-22)
@@ -198,11 +200,27 @@
   - `/ai-models` lists every set in the operator's order, each with its label, its blocking reasons and its own apply control (→MODEL-26); the id is never shown; with no set the section says there is no recommendation
   - the leaderboard's 추천 mark names a ref filling a slot of that stage in any current set
 
+- MODEL-72 [o] the document's `[recommendations]` section is the complete ordered list of recommendation sets: applying makes the sets exactly the section's, in its order; a document without the section leaves the sets untouched, and an empty section removes every set
+  - a set is a `set <label>` line followed by exactly one line per stage, ids verbatim as MODEL-51 with the registry's single provider implied (→MODEL-10):
+    | line | ids |
+    |---|---|
+    | `observe <active> <a> <b>` | three |
+    | `analyze <active>` | one |
+    | `write <active> <a> <b>` | three |
+  - sets are matched to current ones by label: a matched set keeps its identity, a current set the section does not name is deleted, and a new label creates a set ← an account's open page applies by identity, so a set the document only reorders or retunes stays applicable
+  - export emits the section after the five purpose sections with every set in order, and an empty section when there is none
+
+- MODEL-73 [o] the document validates its sets with the rest of the document before any write (→MODEL-53) and applies them in the same transaction:
+  - reject a label that is empty, over 60 characters or repeated within the section, an 11th set (→MODEL-69), a stage line before any `set` line, a set missing or repeating a stage, and a stage line with the wrong number of ids
+  - an added or changed set passes MODEL-70 against the registrations and classifications as the same document leaves them: a set may use a model the document registers and may not use one it deregisters
+  - a set identical to a current set in label and slots is kept without re-validation ← a later deregistration never edits a saved set (→MODEL-70), so an exported document pasted back previews as no change
+  - preview reports the sets added, removed, changed and reordered beside the purpose diff (→MODEL-54); applying rewrites no account's selections (→MODEL-71)
+
 ## flow
 - call: caller(stage, ref, request) → Registry.Complete(admitted entitlement + stage membership + capability/price checks → effort resolution(override → stage → none) → budget → adapter stream → normalized usage / error)
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it
-- recommend: 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
-- bulk curate: 일괄 편집 → export(current five sections) | paste → preview(per-purpose diff | rejected lines, no write) → apply(re-validate → one transaction) → the next Complete sees it
+- recommend: 모델 관리 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
+- bulk curate: 일괄 편집 → export(current five sections + recommendations) | paste → preview(per-purpose diff + set diff | rejected lines, no write) → apply(re-validate against the document's own registrations → one transaction) → the next Complete sees it
 - experiment: Start(freeze snapshot → hash → origin → experiment + job) → compare_<stage>(both candidates) → review(blind) → winner action → badge sheet(confirm) → decided(editor: apply | apply + adopt · lab: pick → optional content application while draft/review | adoption) | dismissed → 30-day purge
 - leaderboard: (scope, stage, window) → winner verdicts + dismissals decided in window → Elo replay from 1500 (integer deltas; a dismissal = one loss per candidate vs the fixed 1500 reference) → rank + wins/losses/win rate + badge tallies
 
@@ -215,4 +233,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
-- r22 260930 MODEL-10✎ providers.yaml declares the provider and the versioned recommendation_sets→the provider only · MODEL-26✎ shipped yaml set with a CI seeded-row check→a seeded row the operator edits or deletes; boot shape check→save-time check · MODEL-28✎ four→five /admin tabs (+추천 조합) · MODEL-69+ operator-curated recommendation sets · MODEL-70+ whole-set save validation · MODEL-71+ sets are advice; /ai-models lists every set
+- r23 260930 MODEL-28✎ five→four /admin tabs; 추천 조합 moves into 모델 관리 as a sixth tab · MODEL-51✎ headers five purposes→five purposes + `[recommendations]` · MODEL-55✎ export registrations→registrations + recommendation sets · MODEL-56✎ 일괄 편집 shared by five→six tabs · MODEL-69✎ managed on the /admin 추천 조합 tab→모델 관리's tab and document; labels unique · MODEL-70✎ + a duplicate label refuses a save · MODEL-72+ `[recommendations]` section semantics · MODEL-73+ document validation of sets

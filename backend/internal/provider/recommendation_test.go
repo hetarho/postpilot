@@ -3,6 +3,7 @@ package provider_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -164,7 +165,7 @@ func TestSaveRecommendationSetRefusesTheEleventh(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{}}
 	svc := provider.NewService(store, operatorCatalog(), fakeCredits{})
 	for i := 0; i < provider.MaxRecommendationSets; i++ {
-		if _, err := svc.SaveRecommendationSet(context.Background(), completeDraft("", "Set")); err != nil {
+		if _, err := svc.SaveRecommendationSet(context.Background(), completeDraft("", fmt.Sprintf("Set %d", i+1))); err != nil {
 			t.Fatalf("set %d: %v", i+1, err)
 		}
 	}
@@ -223,4 +224,27 @@ type refusingCredits struct{}
 func (refusingCredits) ForCalls([]provider.PlannedCall) int { return -1 }
 func (refusingCredits) Balance(context.Context, string) (int, bool, error) {
 	return 0, false, errors.New("the operator's balance was read")
+}
+
+// MODEL-69: labels are unique — the models document matches sets by label. The set's own label
+// is not a clash, and the duplicate is reported beside every other offending field.
+func TestSaveRecommendationSetRefusesALabelAnotherSetUses(t *testing.T) {
+	store := &fakeStore{rows: map[string]provider.Selection{}, sets: []provider.RecommendationSet{
+		completeDraft("first", "First"), completeDraft("second", "Second"),
+	}}
+	svc := provider.NewService(store, operatorCatalog(), fakeCredits{})
+
+	if _, err := svc.SaveRecommendationSet(context.Background(), completeDraft("first", " First ")); err != nil {
+		t.Fatalf("keeping a set's own label was refused: %v", err)
+	}
+	clash := completeDraft("first", "Second")
+	clash.Selections[0].CandidateB = clash.Selections[0].CandidateA
+	_, err := svc.SaveRecommendationSet(context.Background(), clash)
+	var refusal *provider.SetDraftRefusal
+	if !errors.As(err, &refusal) || refusal.Fields["label"] != provider.DraftDuplicate || refusal.Fields["observe_candidate_b"] != provider.DraftDuplicate {
+		t.Fatalf("clash = %v", err)
+	}
+	if _, err := svc.SaveRecommendationSet(context.Background(), completeDraft("", "First")); !errors.As(err, &refusal) || refusal.Fields["label"] != provider.DraftDuplicate {
+		t.Fatalf("a new set reusing a label = %v", err)
+	}
 }

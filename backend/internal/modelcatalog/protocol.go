@@ -3,6 +3,9 @@ package modelcatalog
 import (
 	"slices"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // The paste protocol (MODEL-51) is one plain-text document the operator hand-edits: a
@@ -27,12 +30,54 @@ const (
 	IssueMalformedLine    = "malformed_line"
 	IssueDuplicateID      = "duplicate_id"
 	IssueUnknownLevel     = "unknown_level"
+	// The `[recommendations]` section's own grammar (MODEL-72, MODEL-73).
+	IssueSetLabel       = "set_label_invalid"
+	IssueDuplicateSet   = "duplicate_set"
+	IssueSetLimit       = "set_limit"
+	IssueOrphanStage    = "stage_before_set"
+	IssueDuplicateStage = "duplicate_stage"
+	IssueMissingStage   = "missing_stage"
 	// Validation causes: the text parsed, but the catalog refuses it.
 	IssueUnknownModel   = "unknown_model"
 	IssueUnlisted       = "unlisted_model"
 	IssueIneligible     = "purpose_ineligible"
 	IssueFreeIneligible = "free_path_ineligible"
+	// A set slot the document's own registrations do not support (MODEL-73).
+	IssueSlotUnregistered = "slot_unregistered"
+	IssueSlotUnclassified = "slot_unclassified"
+	IssueSlotDuplicate    = "slot_duplicate"
 )
+
+// RecommendationsHeader names the one section that is not a purpose (MODEL-72).
+const RecommendationsHeader = "recommendations"
+
+// The bounds a document's sets share with every other save (MODEL-69). They mirror the
+// provider context's constants: this context does not import that one.
+const (
+	MaxDocumentSets          = 10
+	MaxDocumentSetLabelRunes = 60
+)
+
+// setStages are the stage lines a set carries, in the order they are written and exported,
+// with the number of ids each takes: the active model, then the A/B pair where the stage
+// keeps one (MODEL-23).
+var setStages = []struct {
+	name string
+	ids  int
+}{
+	{llm.StageNameObserve, 3},
+	{llm.StageNameAnalyze, 1},
+	{llm.StageNameWrite, 3},
+}
+
+func setStageIDs(stage string) (int, bool) {
+	for _, candidate := range setStages {
+		if candidate.name == stage {
+			return candidate.ids, true
+		}
+	}
+	return 0, false
+}
 
 // DocumentIssue is one rejected line. The line number is 1-based over the document as
 // pasted, so the operator can find it without counting the lines the parser ignored.
@@ -62,10 +107,37 @@ type DocumentSection struct {
 	Entries []DocumentEntry
 }
 
+// DocumentStage is one stage line of a set: the stage and its ids in slot order.
+type DocumentStage struct {
+	Stage string
+	IDs   []string
+	Line  int
+}
+
+// DocumentSet is one `set <label>` block and the stage lines under it.
+type DocumentSet struct {
+	Label  string
+	Line   int
+	Stages []DocumentStage
+}
+
+// Stage returns the set's line for one stage, if it has one.
+func (s DocumentSet) Stage(stage string) (DocumentStage, bool) {
+	for _, line := range s.Stages {
+		if line.Stage == stage {
+			return line, true
+		}
+	}
+	return DocumentStage{}, false
+}
+
 // Document is a parsed paste. Only the purposes it actually names are present: a purpose
-// with no section is not "empty", it is untouched (MODEL-52).
+// with no section is not "empty", it is untouched (MODEL-52). Recommendations is nil when the
+// document has no `[recommendations]` section — the sets are untouched — and a non-nil empty
+// list when the section is there with no set in it, which removes every set (MODEL-72).
 type Document struct {
-	Sections []DocumentSection
+	Sections        []DocumentSection
+	Recommendations *[]DocumentSet
 }
 
 // ParseDocument reads the protocol. It returns everything it could parse together with
@@ -84,6 +156,28 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 	current := -1
 	seenPurpose := map[Purpose]bool{}
 	seenID := []map[string]bool{}
+	// Inside the recommendations section, `set` opens the block that stage lines belong to.
+	// A set the parser refused (bad label, repeated label, past the limit) still opens a
+	// block, detached from the document, so its own stage lines are not reported a second
+	// time as orphans.
+	inRecommendations := false
+	var openSet *DocumentSet
+	openSetKept := false
+	seenLabel := map[string]bool{}
+	closeSet := func() {
+		if openSet == nil {
+			return
+		}
+		if openSetKept {
+			for _, stage := range setStages {
+				if _, ok := openSet.Stage(stage.name); !ok {
+					issues = append(issues, DocumentIssue{Line: openSet.Line, Text: stage.name, Cause: IssueMissingStage})
+				}
+			}
+			*doc.Recommendations = append(*doc.Recommendations, *openSet)
+		}
+		openSet, openSetKept = nil, false
+	}
 
 	for i, raw := range lines {
 		number := i + 1
@@ -110,6 +204,17 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 				issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueMalformedLine})
 				continue
 			}
+			closeSet()
+			if strings.TrimSpace(name) == RecommendationsHeader {
+				if doc.Recommendations != nil {
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueDuplicateSection})
+					continue
+				}
+				doc.Recommendations = &[]DocumentSet{}
+				inRecommendations, current = true, -1
+				continue
+			}
+			inRecommendations = false
 			purpose, err := ParsePurpose(strings.TrimSpace(name))
 			if err != nil {
 				issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueUnknownPurpose})
@@ -125,6 +230,46 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 			doc.Sections = append(doc.Sections, DocumentSection{Purpose: purpose, Line: number})
 			seenID = append(seenID, map[string]bool{})
 			current = len(doc.Sections) - 1
+			continue
+		}
+		if inRecommendations {
+			fields := strings.Fields(line)
+			switch {
+			case fields[0] == "set":
+				closeSet()
+				label := strings.TrimSpace(strings.TrimPrefix(line, "set"))
+				openSet = &DocumentSet{Label: label, Line: number}
+				switch count := utf8.RuneCountInString(label); {
+				case count == 0 || count > MaxDocumentSetLabelRunes:
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueSetLabel})
+				case seenLabel[label]:
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueDuplicateSet})
+				case len(*doc.Recommendations) >= MaxDocumentSets:
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueSetLimit})
+				default:
+					seenLabel[label] = true
+					openSetKept = true
+				}
+			default:
+				want, isStage := setStageIDs(fields[0])
+				ids := fields[1:]
+				malformed := !isStage || len(ids) != want
+				for _, id := range ids {
+					malformed = malformed || !looksLikeModelID(id)
+				}
+				switch {
+				case malformed:
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueMalformedLine})
+				case openSet == nil:
+					issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueOrphanStage})
+				default:
+					if _, repeated := openSet.Stage(fields[0]); repeated {
+						issues = append(issues, DocumentIssue{Line: number, Text: line, Cause: IssueDuplicateStage})
+						continue
+					}
+					openSet.Stages = append(openSet.Stages, DocumentStage{Stage: fields[0], IDs: ids, Line: number})
+				}
+			}
 			continue
 		}
 		// An id line is one or two tokens: the model, and optionally its level (MODEL-59).
@@ -165,6 +310,7 @@ func ParseDocument(text string) (Document, []DocumentIssue) {
 		})
 	}
 
+	closeSet()
 	if !versioned {
 		// An empty or all-blank paste is the same mistake as a wrong header.
 		issues = append(issues, DocumentIssue{Line: 1, Cause: IssueBadVersion})
@@ -189,14 +335,17 @@ func looksLikeModelID(token string) bool {
 	return ok && slug != "" && rest != ""
 }
 
-// RenderDocument writes the protocol for the registrations given (MODEL-55). Every purpose
-// gets a section, including the empty ones, so what comes out is a complete statement of
-// the catalog rather than a partial edit — and pasting it straight back is no change.
+// RenderDocument writes the protocol for the registrations and recommendation sets given
+// (MODEL-55, MODEL-72). Every purpose gets a section, including the empty ones, and the
+// recommendations section comes last — empty when there is no set — so what comes out is a
+// complete statement of the catalog rather than a partial edit, and pasting it straight back
+// is no change.
 //
-// The output is byte-stable: fixed purpose order, ids sorted within a section, one trailing
-// newline, and no comment lines beyond the version. Nothing derived from prices or labels
-// is written, because a comment that goes stale is worse than no comment.
-func RenderDocument(registrations map[Purpose][]DocumentEntry) string {
+// The output is byte-stable: fixed purpose order, ids sorted within a section, the sets in
+// their stored order, one trailing newline, and no comment lines beyond the version. Nothing
+// derived from prices or labels is written, because a comment that goes stale is worse than
+// no comment.
+func RenderDocument(registrations map[Purpose][]DocumentEntry, sets []StoredSet) string {
 	var b strings.Builder
 	b.WriteString(DocumentVersionLine)
 	b.WriteString("\n")
@@ -214,6 +363,25 @@ func RenderDocument(registrations map[Purpose][]DocumentEntry) string {
 				b.WriteString(" ")
 				b.WriteString(string(entry.Level))
 			}
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString("\n[")
+	b.WriteString(RecommendationsHeader)
+	b.WriteString("]\n")
+	for index, set := range sets {
+		if index > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString("set ")
+		b.WriteString(set.Label)
+		b.WriteString("\n")
+		for _, line := range [][]string{
+			{llm.StageNameObserve, set.Observe[0], set.Observe[1], set.Observe[2]},
+			{llm.StageNameAnalyze, set.Analyze},
+			{llm.StageNameWrite, set.Write[0], set.Write[1], set.Write[2]},
+		} {
+			b.WriteString(strings.Join(line, " "))
 			b.WriteString("\n")
 		}
 	}

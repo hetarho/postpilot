@@ -70,8 +70,11 @@ func (f *fakeStore) DeregisterPurpose(_ context.Context, modelID string, purpose
 func (f *fakeStore) RefreshAvailability(context.Context, []modelcatalog.Candidate, time.Time) error {
 	return nil
 }
-func (f *fakeStore) SyncPurposes(context.Context, []modelcatalog.PurposeWrite, time.Time) error {
+func (f *fakeStore) SyncDocument(context.Context, []modelcatalog.PurposeWrite, *[]modelcatalog.StoredSet, time.Time) error {
 	return nil
+}
+func (f *fakeStore) RecommendationSets(context.Context) ([]modelcatalog.StoredSet, error) {
+	return nil, nil
 }
 func (f *fakeStore) ListCombos(context.Context) ([]modelcatalog.ComboAssignment, error) {
 	return f.combos, nil

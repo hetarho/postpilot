@@ -110,7 +110,7 @@ func TestRenderDocumentIsCompleteSortedAndStable(t *testing.T) {
 	doc := modelcatalog.RenderDocument(map[modelcatalog.Purpose][]modelcatalog.DocumentEntry{
 		modelcatalog.PurposeWriting:       {{ModelID: "z-ai/glm-5.3"}, {ModelID: "anthropic/claude-sonnet-5"}},
 		modelcatalog.PurposePhotoAnalysis: {{ModelID: "google/gemini-3.8-flash"}},
-	})
+	}, nil)
 	if !strings.HasPrefix(doc, modelcatalog.DocumentVersionLine+"\n") {
 		t.Fatalf("document must open with the version line:\n%s", doc)
 	}
@@ -126,7 +126,7 @@ func TestRenderDocumentIsCompleteSortedAndStable(t *testing.T) {
 	if doc != modelcatalog.RenderDocument(map[modelcatalog.Purpose][]modelcatalog.DocumentEntry{
 		modelcatalog.PurposeWriting:       {{ModelID: "anthropic/claude-sonnet-5"}, {ModelID: "z-ai/glm-5.3"}},
 		modelcatalog.PurposePhotoAnalysis: {{ModelID: "google/gemini-3.8-flash"}},
-	}) {
+	}, nil) {
 		t.Error("input order must not change the rendered bytes")
 	}
 }
@@ -141,7 +141,7 @@ func TestRenderedDocumentParsesBackToWhatWentIn(t *testing.T) {
 		},
 		modelcatalog.PurposePhotoAnalysis: {{ModelID: "google/gemini-3.8-flash", Level: modelcatalog.LevelValue}},
 	}
-	doc, issues := modelcatalog.ParseDocument(modelcatalog.RenderDocument(in))
+	doc, issues := modelcatalog.ParseDocument(modelcatalog.RenderDocument(in, nil))
 	if len(issues) != 0 {
 		t.Fatalf("a rendered document must parse cleanly, got %v", issues)
 	}
@@ -240,7 +240,7 @@ func TestRenderDocument_WritesTheLevelOnlyWhenSet(t *testing.T) {
 			{ModelID: "z-ai/glm-5.3", Level: modelcatalog.LevelBalanced},
 			{ModelID: "anthropic/claude-sonnet-5"},
 		},
-	})
+	}, nil)
 	if !strings.Contains(doc, "\nz-ai/glm-5.3 balanced\n") {
 		t.Errorf("a levelled id renders as `<id> <level>`:\n%s", doc)
 	}

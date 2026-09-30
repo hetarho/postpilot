@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -165,6 +166,72 @@ func insertRecommendationSlots(ctx context.Context, queries *sqlc.Queries, set p
 			}); err != nil {
 				return fmt.Errorf("insert recommendation set slot %s/%s: %w", selection.Stage, entry.Slot, err)
 			}
+		}
+	}
+	return nil
+}
+
+// TxStore is the recommendation-set store bound to a caller's transaction. The models
+// document writes registrations and the set list together (MODEL-73), and a use-case that
+// commits across two contexts' tables runs over transaction-scoped ports (ARCH-6), so the
+// composition root hands the catalog this view of the caller's transaction.
+type TxStore struct{ queries *sqlc.Queries }
+
+// NewTx binds the recommendation-set queries to tx.
+func NewTx(tx *sql.Tx) *TxStore { return &TxStore{queries: sqlc.New(tx)} }
+
+// ListRecommendationSets reads every set inside the transaction, in the operator's order.
+func (s *TxStore) ListRecommendationSets(ctx context.Context) ([]provider.RecommendationSet, error) {
+	return listRecommendationSets(ctx, s.queries)
+}
+
+// ReplaceRecommendationSets makes the stored sets exactly `sets`, in their order: a listed id
+// that is stored keeps its row and creation time with the label, slots and position
+// rewritten, a stored set the list does not name is deleted, and a listed id that is not
+// stored is inserted. Nothing here reaches model_selections (MODEL-71).
+func (s *TxStore) ReplaceRecommendationSets(ctx context.Context, sets []provider.RecommendationSet, at time.Time) error {
+	rows, err := s.queries.ListRecommendationSets(ctx)
+	if err != nil {
+		return fmt.Errorf("list recommendation sets: %w", err)
+	}
+	listed := make(map[string]bool, len(sets))
+	for _, set := range sets {
+		listed[set.ID] = true
+	}
+	stored := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		stored[row.ID] = true
+		if listed[row.ID] {
+			continue
+		}
+		if _, err := s.queries.DeleteRecommendationSet(ctx, row.ID); err != nil {
+			return fmt.Errorf("delete recommendation set: %w", err)
+		}
+	}
+	stamp := at.UTC().Format(writeLayout)
+	for index, set := range sets {
+		position := int64(index + 1)
+		if stored[set.ID] {
+			if _, err := s.queries.UpdateRecommendationSetLabel(ctx, sqlc.UpdateRecommendationSetLabelParams{
+				Label: set.Label, UpdatedAt: stamp, ID: set.ID,
+			}); err != nil {
+				return fmt.Errorf("update recommendation set: %w", err)
+			}
+			if err := s.queries.SetRecommendationSetPosition(ctx, sqlc.SetRecommendationSetPositionParams{
+				Position: position, ID: set.ID,
+			}); err != nil {
+				return fmt.Errorf("reorder recommendation set: %w", err)
+			}
+			if err := s.queries.DeleteRecommendationSetSlots(ctx, set.ID); err != nil {
+				return fmt.Errorf("clear recommendation set slots: %w", err)
+			}
+		} else if err := s.queries.InsertRecommendationSet(ctx, sqlc.InsertRecommendationSetParams{
+			ID: set.ID, Label: set.Label, Position: position, CreatedAt: stamp, UpdatedAt: stamp,
+		}); err != nil {
+			return fmt.Errorf("insert recommendation set: %w", err)
+		}
+		if err := insertRecommendationSlots(ctx, s.queries, set); err != nil {
+			return err
 		}
 	}
 	return nil

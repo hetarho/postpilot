@@ -7,6 +7,8 @@
 package provider
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"maps"
@@ -342,13 +344,16 @@ func (e *SetLimitError) Params() map[string]string {
 func (e *SetLimitError) Unwrap() error { return ErrRecommendationLimit }
 
 // ValidateRecommendationDraft checks a draft set against the catalog as it is now (MODEL-70):
-// a trimmed label of 1–MaxRecommendationLabelRunes runes, every one of the seven slots filled,
-// distinct observe and write candidates, and every ref registered to its stage's purpose with
-// a classification. It never asks about a plan or a balance — which tiers can apply the set is
-// settled per account at apply time (MODEL-26). A nil return means the draft may be saved.
+// a trimmed label of 1–MaxRecommendationLabelRunes runes that no other set uses, every one of
+// the seven slots filled, distinct observe and write candidates, and every ref registered to
+// its stage's purpose with a classification. It never asks about a plan or a balance — which
+// tiers can apply the set is settled per account at apply time (MODEL-26). A nil return means
+// the draft may be saved.
 //
-// The label is returned trimmed so the caller stores what was checked.
-func ValidateRecommendationDraft(draft RecommendationSet, lookup func(llm.ModelRef) (llm.ModelInfo, bool)) (RecommendationSet, *SetDraftRefusal) {
+// otherLabels are the labels of every OTHER stored set: labels are unique because the models
+// document matches sets by label (MODEL-72). The label is returned trimmed so the caller
+// stores what was checked.
+func ValidateRecommendationDraft(draft RecommendationSet, lookup func(llm.ModelRef) (llm.ModelInfo, bool), otherLabels []string) (RecommendationSet, *SetDraftRefusal) {
 	fields := map[string]string{}
 	draft.Label = strings.TrimSpace(draft.Label)
 	switch count := utf8.RuneCountInString(draft.Label); {
@@ -356,6 +361,8 @@ func ValidateRecommendationDraft(draft RecommendationSet, lookup func(llm.ModelR
 		fields[DraftLabelField] = DraftRequired
 	case count > MaxRecommendationLabelRunes:
 		fields[DraftLabelField] = DraftTooLong
+	case slices.Contains(otherLabels, draft.Label):
+		fields[DraftLabelField] = DraftDuplicate
 	}
 	byStage := map[Stage]RecommendationStageSelection{}
 	for _, selection := range draft.Selections {
@@ -393,6 +400,15 @@ func ValidateRecommendationDraft(draft RecommendationSet, lookup func(llm.ModelR
 		return RecommendationSet{}, &SetDraftRefusal{Fields: fields}
 	}
 	return draft, nil
+}
+
+// NewRecommendationID is a new set's server-assigned identity (MODEL-69): 16 random bytes, hex.
+func NewRecommendationID() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		panic("provider: cannot read random bytes for an id: " + err.Error())
+	}
+	return hex.EncodeToString(buf)
 }
 
 // Suitable reports whether a model can serve a stage: pure membership in the stages the

@@ -2,8 +2,6 @@ package provider
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -311,13 +309,23 @@ func (s *Service) RecommendationSets(ctx context.Context) ([]RecommendationSet, 
 // operator is the caller, so no plan or balance is read. Nothing an account already chose is
 // touched: an apply copies the set as it is at that moment (MODEL-71).
 func (s *Service) SaveRecommendationSet(ctx context.Context, draft RecommendationSet) (RecommendationSet, error) {
-	valid, refusal := ValidateRecommendationDraft(draft, s.catalog.Lookup)
+	stored, err := s.store.ListRecommendationSets(ctx)
+	if err != nil {
+		return RecommendationSet{}, fmt.Errorf("list recommendation sets: %w", err)
+	}
+	otherLabels := make([]string, 0, len(stored))
+	for _, set := range stored {
+		if set.ID != draft.ID {
+			otherLabels = append(otherLabels, set.Label)
+		}
+	}
+	valid, refusal := ValidateRecommendationDraft(draft, s.catalog.Lookup, otherLabels)
 	if refusal != nil {
 		return RecommendationSet{}, refusal
 	}
 	now := s.now()
 	if valid.ID == "" {
-		valid.ID = newRecommendationID()
+		valid.ID = NewRecommendationID()
 		if err := s.store.CreateRecommendationSet(ctx, valid, MaxRecommendationSets, now); err != nil {
 			if errors.Is(err, ErrRecommendationLimit) {
 				return RecommendationSet{}, &SetLimitError{Limit: MaxRecommendationSets}
@@ -355,14 +363,6 @@ func (s *Service) MoveRecommendationSet(ctx context.Context, id string, earlier 
 		return fmt.Errorf("move recommendation set: %w", err)
 	}
 	return nil
-}
-
-func newRecommendationID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		panic("provider: cannot read random bytes for an id: " + err.Error())
-	}
-	return hex.EncodeToString(buf)
 }
 
 func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id string) (RecommendationSet, []Selection, []ComparisonPair, error) {

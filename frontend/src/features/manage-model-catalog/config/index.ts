@@ -32,3 +32,7 @@ export const CATALOG_ROW_ESTIMATE_PX = 132
  *  reach blank space before the next row renders, few enough that the mounted subtree stays
  *  small — which is the whole point of virtualizing a several-hundred-row list. */
 export const CATALOG_ROW_OVERSCAN = 6
+
+/** How long the 지금 등록 상태 copy button shows its check after a copy before returning to
+ *  the copy glyph. */
+export const COPY_CONFIRM_MS = 2000

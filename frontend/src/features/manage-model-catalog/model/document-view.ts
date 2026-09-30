@@ -17,6 +17,15 @@ export const DOCUMENT_ISSUE_CAUSES = [
   'unknown_model',
   'unlisted_model',
   'purpose_ineligible',
+  'set_label_invalid',
+  'duplicate_set',
+  'set_limit',
+  'stage_before_set',
+  'duplicate_stage',
+  'missing_stage',
+  'slot_unregistered',
+  'slot_unclassified',
+  'slot_duplicate',
 ] as const
 
 export type DocumentIssueCause = (typeof DOCUMENT_ISSUE_CAUSES)[number]
@@ -76,5 +85,19 @@ export function canApply(plan: CatalogDocumentPlan | undefined): boolean {
   // A re-grade counts as a change. A document that only moves grades around changes the
   // catalog exactly as much as one that moves registrations (MODEL-59), and leaving it
   // uncommittable would make the paste path unable to express what the export can write.
-  return diff.registerCount > 0 || diff.deregisterCount > 0 || diff.relevelCount > 0
+  return (
+    diff.registerCount > 0 ||
+    diff.deregisterCount > 0 ||
+    diff.relevelCount > 0 ||
+    changesSets(plan.recommendations)
+  )
+}
+
+/** A document that only rewrites the recommendation sets changes the catalog as much as one
+ *  that moves registrations (MODEL-72), so it is committable on its own. */
+export function changesSets(sets: CatalogDocumentPlan['recommendations']): boolean {
+  if (!sets) return false
+  return (
+    sets.added.length > 0 || sets.removed.length > 0 || sets.changed.length > 0 || sets.reordered
+  )
 }

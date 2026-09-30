@@ -27,12 +27,12 @@
 | POST | 25 | 25 | - | 0 |
 | VOICE | 5 | 5 | - | 0 |
 | GEN | 19 | 19 | - | 0 |
-| MODEL | 22 | 22 | - | 0 |
+| MODEL | 23 | 23 | - | 0 |
 | TMPL | 17 | 17 | - | 1 |
 | GUIDE | 12 | 12 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 19 | 19 | - | 0 |
+| THEME | 20 | 20 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 53 | 53 | - | 2 |
@@ -64,6 +64,18 @@
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 260930 T493 done: the 일괄 편집 current document is capped at max-h-field with a pinned copy button; full FE checks passed
+- 260930 T493 claimed (rcs): capped 일괄 편집 current document with a copy control
+- 260930 create-task THEME r20: T493
+- 260930 update-ssot THEME r20: the 일괄 편집 current document is capped at max-h-field with a pinned copy control (fourth scroller exception)
+- 260930 T492 done: 추천 조합 is 모델 관리's sixth tab (/admin back to four); the 일괄 편집 preview shows set changes and new causes; full FE checks passed
+- 260930 T492 claimed (rcs): 추천 조합 as a 모델 관리 tab and the document's set diff
+- 260930 T491 done: the models-v1 document carries `[recommendations]`, validated against its own registrations and applied in one transaction; unique set labels; full BE/FE checks passed
+- 260930 T491 claimed (rcs): recommendation sets in the models-v1 document
+- 260930 create-task MODEL r23: T491 document section + one-transaction apply, T492 sixth 모델 관리 tab + preview set diff
+- 260930 create-task MODEL start: r23 recommendation sets in 모델 관리 and the document
+- 260930 update-ssot MODEL r23: 추천 조합 becomes a sixth 모델 관리 tab (/admin back to four) and a `[recommendations]` section of the models-v1 document
+- 260930 update-ssot MODEL start: recommendation sets inside 모델 관리 and in the models-v1 document
 - 260930 T489 done: 추천 조합 admin tab adds, edits, moves and deletes sets with per-field refusals and read-time flags; /ai-models offers every set; full FE checks passed
 - 260930 T489 claimed (rcs): 추천 조합 admin tab and every set on /ai-models
 - 260930 T488 done: recommendation sets are provider rows with master-only save/delete/move under whole-set validation; providers.yaml keeps the provider only; full BE/FE checks passed
@@ -72,15 +84,3 @@
 - 260930 create-task QUOTA r26 BILL r6 → T490 (T488/T489 were taken by a parallel create-task)
 - 260930 update-ssot QUOTA r26 BILL r6: a master account leaves master only by another master or `api setplan`; it is never charged
 - 260930 ops: local and prod run without EXIM_API_KEY, so every paid model is unpriced and paid AI admission refuses (QUOTA-59) until a Korea Eximbank key is set
-- 260930 T488 claimed (rcs): recommendation sets as provider rows with master-only writes
-- 260930 create-task MODEL r22: T488 backend rows + master procedures, T489 admin tab + /ai-models list
-- 260930 create-task MODEL start: r22 recommendation sets
-- 260930 update-ssot MODEL r22: recommendation sets become operator-curated rows on a fifth /admin tab; providers.yaml keeps the provider only
-- 260930 update-ssot MODEL start: operator-editable recommendation sets
-- 260930 T487 done: guarded one-time test entitlement reset, KRW-only wire cleanup and integrated pricing lifecycle verified locally
-- 260930 T487 claimed (p6): prepare a guarded test-entitlement reset and verify the full pricing lifecycle
-- 260930 T486 done: five KRW plans and eligible FX-priced estimates match public About; full FE/BE and local visual checks passed
-- 260930 T486 claimed (p6): publish five KRW offers and eligible cost estimates on plans and About
-- 260930 T485 done: KRW billing, distinct benefit clocks and confirmed-use AI settlement; full frontend and local gates passed
-- 260930 T485 claimed (p6): show KRW billing, benefit clocks and AI settlement
-- 260930 T484 done: reviewed owner refunds use payment-funded evidence, guarded provider cancellation and confirmed scoped entitlement reversal; full local verification passed

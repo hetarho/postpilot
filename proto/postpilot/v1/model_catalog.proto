@@ -55,7 +55,10 @@ enum ModelPurpose {
 //
 // `cause` is a short slug the operator surface renders with its own copy (bad_version,
 // unknown_purpose, duplicate_section, id_before_section, malformed_line, duplicate_id,
-// unknown_model, unlisted_model, purpose_ineligible). It is master-only admin detail, not
+// unknown_model, unlisted_model, purpose_ineligible, and for the `[recommendations]`
+// section (MODEL-72, MODEL-73) set_label_invalid, duplicate_set, set_limit,
+// stage_before_set, duplicate_stage, missing_stage, slot_unregistered, slot_unclassified,
+// slot_duplicate). It is master-only admin detail, not
 // one of the normalized user-facing failure reasons.
 message CatalogDocumentIssue {
   // 1-based, over the document as pasted — including the lines the parser ignores.
@@ -88,6 +91,20 @@ message CatalogDocumentLevelChange {
   string to = 3;
 }
 
+// CatalogDocumentRecommendationPlan is what applying would do to the recommendation sets,
+// by label (MODEL-72). A document with no `[recommendations]` section leaves the sets
+// untouched, which `present = false` says — not the same as a section that changes nothing.
+message CatalogDocumentRecommendationPlan {
+  bool present = 1;
+  repeated string added = 2;
+  repeated string removed = 3;
+  // Same label, different models.
+  repeated string changed = 4;
+  repeated string unchanged = 5;
+  // The kept sets come in a different order than they are stored in.
+  bool reordered = 6;
+}
+
 message PreviewCatalogDocumentRequest {
   string document = 1;
 }
@@ -99,6 +116,7 @@ message PreviewCatalogDocumentResponse {
   // create a row for an id nobody has curated yet, so an unreadable catalog refuses the
   // paste instead of degrading to stored rows the way ListCatalog does.
   string fetch_error = 3;
+  CatalogDocumentRecommendationPlan recommendations = 4;
 }
 
 message ApplyCatalogDocumentRequest {
@@ -113,13 +131,14 @@ message ApplyCatalogDocumentResponse {
   // False when anything was refused, and then nothing was written. A rejection discovered
   // here rather than at preview is the catalog having moved, and renders identically.
   bool applied = 4;
+  CatalogDocumentRecommendationPlan recommendations = 5;
 }
 
 message ExportCatalogDocumentRequest {}
 
 message ExportCatalogDocumentResponse {
-  // Every purpose, including the ones with no registration, so pasting this straight back
-  // previews as no change.
+  // Every purpose, including the ones with no registration, and the recommendation sets, so
+  // pasting this straight back previews as no change.
   string document = 1;
 }
 

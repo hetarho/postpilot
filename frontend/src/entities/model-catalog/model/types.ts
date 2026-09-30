@@ -278,6 +278,20 @@ export interface CatalogDocumentPlan {
   issues: CatalogDocumentIssue[]
   fetchError: string
   applied: boolean
+  /** What the document does to the recommendation sets, by label (MODEL-72). Undefined when it
+   *  has no `[recommendations]` section — the sets are untouched, which is not the same as a
+   *  section that changes nothing. */
+  recommendations?: CatalogDocumentRecommendationPlan
+}
+
+export interface CatalogDocumentRecommendationPlan {
+  added: string[]
+  removed: string[]
+  /** Same label, different models. */
+  changed: string[]
+  unchanged: string[]
+  /** The kept sets come in a different order than they are stored in. */
+  reordered: boolean
 }
 
 export function refKey(ref: ModelRef): string {

@@ -97,6 +97,17 @@ export interface FakeModelCatalogOptions {
   estimatorCombos?: Array<{ combo: string; observeModelId?: string; writeModelId?: string }>
   /** Refuse SetEstimatorCombo the way an unregistered model does. */
   comboWriteFails?: boolean
+  /** What a document's `[recommendations]` section does (MODEL-72). The fake does not plan sets
+   *  itself: it answers with this whenever the pasted document has the section. */
+  documentRecommendations?: {
+    added?: string[]
+    removed?: string[]
+    changed?: string[]
+    unchanged?: string[]
+    reordered?: boolean
+  }
+  /** Line issues added to the answer for a document with the section. */
+  recommendationIssues?: Array<{ line: number; text: string; cause: string }>
   calls?: string[]
 }
 
@@ -176,6 +187,9 @@ export function registerModelCatalogService(
     const issues: Array<{ line: number; text: string; cause: string }> = []
     const sections: Array<{ purpose: string; ids: string[]; levels: Record<string, string> }> = []
     let versioned = false
+    // The `[recommendations]` section is recognized and skipped: its answer is the test's own.
+    let hasRecommendations = false
+    let inRecommendations = false
     text.split('\n').forEach((raw, index) => {
       const line = raw.trim()
       const number = index + 1
@@ -187,6 +201,12 @@ export function registerModelCatalogService(
         return
       }
       if (line.startsWith('#')) return
+      if (line === '[recommendations]') {
+        hasRecommendations = inRecommendations = true
+        return
+      }
+      if (line.startsWith('[')) inRecommendations = false
+      if (inRecommendations) return
       if (line.startsWith('[')) {
         const purpose = line.replace(/^\[|\]$/g, '')
         if (!PURPOSES.includes(purpose)) {
@@ -235,6 +255,7 @@ export function registerModelCatalogService(
       section.levels[modelId] = levelToken ?? ''
     })
     if (!versioned) issues.push({ line: 1, text: '', cause: 'bad_version' })
+    if (hasRecommendations) issues.push(...(options.recommendationIssues ?? []))
     const purposes = sections.map((section) => ({
       purpose: section.purpose,
       register: section.ids.filter(
@@ -263,7 +284,10 @@ export function registerModelCatalogService(
         return from === to ? [] : [{ modelId: id, from, to }]
       }),
     }))
-    return { purposes, issues, sections }
+    const recommendations = hasRecommendations
+      ? { present: true, ...options.documentRecommendations }
+      : undefined
+    return { purposes, issues, sections, recommendations }
   }
 
   rpc(ModelCatalogService.method.exportCatalogDocument, () => {
@@ -292,10 +316,11 @@ export function registerModelCatalogService(
         fetchError: 'the provider catalog could not be read',
       })
     }
-    const { purposes, issues } = planDocument(req.document)
+    const { purposes, issues, recommendations } = planDocument(req.document)
     return create(PreviewCatalogDocumentResponseSchema, {
       purposes: issues.length > 0 ? [] : purposes,
       issues,
+      recommendations,
     })
   })
 
@@ -306,9 +331,9 @@ export function registerModelCatalogService(
         fetchError: 'the provider catalog could not be read',
       })
     }
-    const { purposes, issues, sections } = planDocument(req.document)
+    const { purposes, issues, sections, recommendations } = planDocument(req.document)
     if (issues.length > 0) {
-      return create(ApplyCatalogDocumentResponseSchema, { issues, applied: false })
+      return create(ApplyCatalogDocumentResponseSchema, { issues, applied: false, recommendations })
     }
     entries = entries.map((entry) => {
       let next = [...(entry.purposes ?? [])]
@@ -333,7 +358,12 @@ export function registerModelCatalogService(
         curated: next.length > 0 || (entry.curated ?? false),
       }
     })
-    return create(ApplyCatalogDocumentResponseSchema, { purposes, issues: [], applied: true })
+    return create(ApplyCatalogDocumentResponseSchema, {
+      purposes,
+      issues: [],
+      applied: true,
+      recommendations,
+    })
   })
 
   rpc(ModelCatalogService.method.listCatalog, (req) => {

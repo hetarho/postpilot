@@ -115,9 +115,10 @@ func (h *Handler) PreviewCatalogDocument(ctx context.Context, req *connect.Reque
 		return nil, toConnectError("preview catalog document", err)
 	}
 	return connect.NewResponse(&postpilotv1.PreviewCatalogDocumentResponse{
-		Purposes:   toProtoDocumentPlan(plan.Purposes),
-		Issues:     toProtoDocumentIssues(plan.Issues),
-		FetchError: plan.FetchError,
+		Purposes:        toProtoDocumentPlan(plan.Purposes),
+		Issues:          toProtoDocumentIssues(plan.Issues),
+		FetchError:      plan.FetchError,
+		Recommendations: toProtoRecommendationPlan(plan.Recommendations),
 	}), nil
 }
 
@@ -129,10 +130,11 @@ func (h *Handler) ApplyCatalogDocument(ctx context.Context, req *connect.Request
 	// A refused document is an answer, not an error: the operator gets the same per-line
 	// detail the preview gives, rather than one code standing for nine causes.
 	return connect.NewResponse(&postpilotv1.ApplyCatalogDocumentResponse{
-		Purposes:   toProtoDocumentPlan(plan.Purposes),
-		Issues:     toProtoDocumentIssues(plan.Issues),
-		FetchError: plan.FetchError,
-		Applied:    plan.Applied,
+		Purposes:        toProtoDocumentPlan(plan.Purposes),
+		Issues:          toProtoDocumentIssues(plan.Issues),
+		FetchError:      plan.FetchError,
+		Applied:         plan.Applied,
+		Recommendations: toProtoRecommendationPlan(plan.Recommendations),
 	}), nil
 }
 
@@ -162,6 +164,22 @@ func toProtoDocumentPlan(purposes []modelcatalog.DocumentPurposePlan) []*postpil
 		})
 	}
 	return out
+}
+
+// toProtoRecommendationPlan says `present = false` for a document with no recommendations
+// section: the sets are untouched, which is not the same as a section that changes nothing.
+func toProtoRecommendationPlan(plan *modelcatalog.DocumentRecommendationPlan) *postpilotv1.CatalogDocumentRecommendationPlan {
+	if plan == nil {
+		return &postpilotv1.CatalogDocumentRecommendationPlan{}
+	}
+	return &postpilotv1.CatalogDocumentRecommendationPlan{
+		Present:   true,
+		Added:     plan.Added,
+		Removed:   plan.Removed,
+		Changed:   plan.Changed,
+		Unchanged: plan.Unchanged,
+		Reordered: plan.Reordered,
+	}
 }
 
 func toProtoDocumentIssues(issues []modelcatalog.DocumentIssue) []*postpilotv1.CatalogDocumentIssue {

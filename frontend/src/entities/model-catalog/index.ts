@@ -5,6 +5,7 @@ export type {
   CatalogBrowse,
   CatalogDocumentIssue,
   CatalogDocumentPlan,
+  CatalogDocumentRecommendationPlan,
   CatalogDocumentLevelChange,
   CatalogDocumentPurposePlan,
   EstimatorComboAssignment,

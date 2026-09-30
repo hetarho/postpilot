@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CatalogDocumentPlan } from '@/entities/model-catalog'
-import { canApply, documentDiff, isKnownCause } from './document-view'
+import { DOCUMENT_ISSUE_CAUSES, canApply, documentDiff, isKnownCause } from './document-view'
 
 function plan(over: Partial<CatalogDocumentPlan> = {}): CatalogDocumentPlan {
   return { purposes: [], issues: [], fetchError: '', applied: false, ...over }
@@ -125,5 +125,39 @@ describe('documentDiff relevel (T094/MODEL-59)', () => {
 
   it('knows unknown_level as a cause of its own', () => {
     expect(isKnownCause('unknown_level')).toBe(true)
+  })
+})
+
+// MODEL-72: a document that only rewrites the sets is committable, and one whose section
+// changes nothing is not.
+describe('canApply with recommendation sets', () => {
+  const sets = { added: [], removed: [], changed: [], unchanged: ['Kept'], reordered: false }
+  it('counts a set change as a change', () => {
+    expect(canApply(plan({ recommendations: { ...sets, reordered: true } }))).toBe(true)
+    expect(canApply(plan({ recommendations: { ...sets, removed: ['Old'] } }))).toBe(true)
+    expect(canApply(plan({ recommendations: sets }))).toBe(false)
+    expect(
+      canApply(
+        plan({
+          recommendations: { ...sets, added: ['Fresh'] },
+          issues: [{ line: 3, text: '', cause: 'set_limit' }],
+        }),
+      ),
+    ).toBe(false)
+  })
+})
+
+// Every cause the server names has its own copy in both locales, so none reads as the fallback.
+describe('document issue copy', () => {
+  it.each(['ko', 'en'] as const)('covers every known cause in %s', async (locale) => {
+    const { initializeI18n } = await import('@/app/providers/i18n')
+    const i18next = (await import('i18next')).default
+    initializeI18n(locale)
+    for (const cause of DOCUMENT_ISSUE_CAUSES) {
+      expect(isKnownCause(cause)).toBe(true)
+      const key = `document.issueCause.${cause}`
+      expect(i18next.exists(key, { ns: 'models' }), `${locale} ${cause}`).toBe(true)
+    }
+    initializeI18n('ko')
   })
 })

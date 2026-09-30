@@ -162,3 +162,58 @@ func TestMoveAndDeleteRecommendationSets(t *testing.T) {
 		t.Fatalf("selections = %+v", selections)
 	}
 }
+
+// MODEL-73: the document replaces the whole list inside its own transaction. A listed stored
+// id keeps its row, an unlisted one is deleted, a new id is inserted, and positions follow the
+// list.
+func TestReplaceRecommendationSetsInsideACallersTransaction(t *testing.T) {
+	store, handle := openRecommendationStore(t)
+	ctx := context.Background()
+	at := time.Date(2026, 9, 30, 9, 0, 0, 0, time.UTC)
+	if err := store.CreateRecommendationSet(ctx, storedSet("gone", "Gone", "g"), provider.MaxRecommendationSets, at); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	kept := provider.Selection{Stage: provider.StageObserve, Slot: provider.SlotActive, Ref: llm.ModelRef{ProviderID: "openrouter", ModelID: "google/gemini-3.7-flash"}, UpdatedAt: at}
+	if err := store.UpsertSelection(ctx, "alice", kept); err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := handle.Writer.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := providerstore.NewTx(tx)
+	seeded, err := rows.ListRecommendationSets(ctx)
+	if err != nil || len(seeded) != 2 {
+		t.Fatalf("list in tx = %+v, %v", seeded, err)
+	}
+	renamed := seeded[0]
+	renamed.Label = "Balanced, retuned"
+	renamed.Selections[1].Active.ModelID = "vendor/other"
+	if err := rows.ReplaceRecommendationSets(ctx, []provider.RecommendationSet{storedSet("fresh", "Fresh", "f"), renamed}, at.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	sets, err := store.ListRecommendationSets(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sets) != 2 || sets[0].ID != "fresh" || sets[1].ID != "balanced-2026-08" ||
+		sets[1].Label != "Balanced, retuned" || sets[1].Selections[1].Active.ModelID != "vendor/other" {
+		t.Fatalf("sets = %+v", sets)
+	}
+	var created string
+	if err := handle.Reader.QueryRow(`SELECT created_at FROM recommendation_sets WHERE id = 'balanced-2026-08'`).Scan(&created); err != nil || created != "2026-09-30T00:00:00.000000000Z" {
+		t.Fatalf("a kept set lost its creation time: %q, %v", created, err)
+	}
+	selections, err := store.ListSelectionSlots(ctx, "alice")
+	if err != nil || len(selections) != 1 || selections[0].Ref != kept.Ref {
+		t.Fatalf("a set replace touched selections: %+v, %v", selections, err)
+	}
+}

@@ -35,17 +35,32 @@ type Store interface {
 	// as on an operator's uncheck. It is one transaction so the catalog is never
 	// half-refreshed.
 	RefreshAvailability(ctx context.Context, seen []Candidate, at time.Time) error
-	// SyncPurposes applies a whole paste in ONE transaction (MODEL-53): every registration
-	// the document adds and every one it drops, or nothing at all. Each write is the same
-	// one the single-model path makes — a registration upserts the row snapshot, a
+	// SyncDocument applies a whole paste in ONE transaction (MODEL-53, MODEL-73): every
+	// registration the document adds and every one it drops and, when `sets` is non-nil, the
+	// complete recommendation-set list — or nothing at all. Each registration write is the
+	// same one the single-model path makes — a registration upserts the row snapshot, a
 	// deregistration deletes the registration row and takes its effort override with it.
-	SyncPurposes(ctx context.Context, writes []PurposeWrite, at time.Time) error
+	SyncDocument(ctx context.Context, writes []PurposeWrite, sets *[]StoredSet, at time.Time) error
+	// RecommendationSets reads the stored sets in the operator's order, for the document's
+	// diff and export (MODEL-72).
+	RecommendationSets(ctx context.Context) ([]StoredSet, error)
 	// ListCombos returns every estimator assignment that exists, in combo order. A combo
 	// with no row is simply absent.
 	ListCombos(ctx context.Context) ([]ComboAssignment, error)
 	// AssignCombo replaces one combo's pair. The foreign keys mean an id that is not a
 	// curated model is refused by the database, not only by the service.
 	AssignCombo(ctx context.Context, a ComboAssignment, at time.Time) error
+}
+
+// RecommendationRows is the recommendation-set table as the models document reads and
+// replaces it, bound to the document's own transaction (ARCH-6). It is declared here by its
+// consumer and implemented in the composition root over the provider context's rows, so
+// neither context imports the other.
+type RecommendationRows interface {
+	List(ctx context.Context) ([]StoredSet, error)
+	// Replace makes the stored sets exactly `sets`, in order: a set carrying a stored ID keeps
+	// its identity, a stored set the list omits is deleted, and an empty ID is a new set.
+	Replace(ctx context.Context, sets []StoredSet, at time.Time) error
 }
 
 // Upstream is the provider's own catalog of models that exist — declared here by its

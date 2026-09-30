@@ -23,7 +23,7 @@ const NEW_SET: RecommendationSet = { id: '', label: '', selections: [] }
 
 type SlotFlag = 'unregistered' | 'unclassified'
 
-/** The 추천 조합 tab (MODEL-69): the operator's ordered list of the sets every account is offered,
+/** The 추천 조합 tab of 모델 관리 (MODEL-69): the operator's ordered list of the sets every account is offered,
  *  each editable, movable and deletable, plus one editor at a time.
  *
  *  A set is advice (MODEL-71): nothing here reaches an account's own selections, which is why
@@ -47,7 +47,7 @@ export function RecommendationSetManager() {
   return (
     <section aria-labelledby={titleId} className="mt-8 grid gap-4">
       <div className="grid gap-1">
-        <Typography variant="title" as="h2" id={titleId}>
+        <Typography variant="title" as="h3" id={titleId}>
           {t('recommendationSets.title')}
         </Typography>
         <Typography variant="body" className="text-content-secondary max-w-measure">
@@ -171,7 +171,7 @@ function SetCard({
     // A labelled group rather than a nested list: the set's name titles the slots inside it,
     // and the page's one list is the ordered sets.
     <div role="group" aria-labelledby={headingId} className="bg-surface-raised rounded-lg p-4">
-      <Typography variant="fieldTitle" as="h3" id={headingId} className="break-words">
+      <Typography variant="fieldTitle" as="h4" id={headingId} className="break-words">
         {set.label}
       </Typography>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">

@@ -764,12 +764,30 @@ type DocumentPlan struct {
 	// way Browse does.
 	FetchError string
 	Applied    bool
+	// Recommendations is nil when the document has no `[recommendations]` section — the sets
+	// are untouched — and the set diff when it has one (MODEL-72).
+	Recommendations *DocumentRecommendationPlan
+}
+
+// DocumentRecommendationPlan is what applying would do to the recommendation sets, by label.
+type DocumentRecommendationPlan struct {
+	Added     []string
+	Removed   []string
+	Changed   []string
+	Unchanged []string
+	// Reordered: the kept sets come in a different order than they are stored in.
+	Reordered bool
+}
+
+// changes reports whether applying the plan writes anything to the sets.
+func (p DocumentRecommendationPlan) changes() bool {
+	return len(p.Added) > 0 || len(p.Removed) > 0 || len(p.Changed) > 0 || p.Reordered
 }
 
 // PreviewDocument parses, validates and reports — and writes nothing, including the
 // availability bookkeeping a Browse would do (MODEL-54).
 func (s *Service) PreviewDocument(ctx context.Context, text string) (DocumentPlan, error) {
-	plan, _, err := s.planDocument(ctx, text)
+	plan, _, _, err := s.planDocument(ctx, text)
 	return plan, err
 }
 
@@ -778,15 +796,17 @@ func (s *Service) PreviewDocument(ctx context.Context, text string) (DocumentPla
 // two calls, and a token would let a stale diff be committed against a catalog that no
 // longer matches it.
 func (s *Service) ApplyDocument(ctx context.Context, text string) (DocumentPlan, error) {
-	plan, writes, err := s.planDocument(ctx, text)
+	plan, writes, sets, err := s.planDocument(ctx, text)
 	if err != nil {
 		return DocumentPlan{}, err
 	}
 	if plan.FetchError != "" || len(plan.Issues) > 0 {
 		return plan, nil
 	}
-	if len(writes) > 0 {
-		if err := s.store.SyncPurposes(ctx, writes, s.now()); err != nil {
+	if len(writes) > 0 || sets != nil {
+		// Registrations and the set list are one transaction (MODEL-73): a set that uses a
+		// model this document registers must never land without the registration.
+		if err := s.store.SyncDocument(ctx, writes, sets, s.now()); err != nil {
 			return DocumentPlan{}, fmt.Errorf("sync catalog document: %w", err)
 		}
 		s.invalidate(ctx)
@@ -811,31 +831,36 @@ func (s *Service) ExportDocument(ctx context.Context) (string, error) {
 			})
 		}
 	}
-	return RenderDocument(registrations), nil
+	sets, err := s.store.RecommendationSets(ctx)
+	if err != nil {
+		return "", fmt.Errorf("list recommendation sets: %w", err)
+	}
+	return RenderDocument(registrations, sets), nil
 }
 
 // planDocument is the one path preview and apply share, so the two can never disagree about
-// what a document means. It returns the plan the operator sees and the writes that would
-// realize it; the writes are empty whenever anything was refused.
-func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, []PurposeWrite, error) {
+// what a document means. It returns the plan the operator sees, the registration writes and
+// the complete set list that would realize it (nil when the sets are left as they are); both
+// are empty whenever anything was refused.
+func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, []PurposeWrite, *[]StoredSet, error) {
 	doc, issues := ParseDocument(text)
 
 	// The live read comes before anything else that could fail, and a failure ends the call:
 	// an id nobody has curated has no row to register, and only the snapshot can make one.
 	var snapshot Snapshot
 	if s.upstream == nil {
-		return DocumentPlan{Issues: issues, FetchError: "no upstream catalog is configured"}, nil, nil
+		return DocumentPlan{Issues: issues, FetchError: "no upstream catalog is configured"}, nil, nil, nil
 	}
 	found, err := s.upstream.Fetch(ctx, false)
 	if err != nil {
 		slog.Warn("model catalog fetch failed", "err", err)
-		return DocumentPlan{Issues: issues, FetchError: "the provider catalog could not be read"}, nil, nil
+		return DocumentPlan{Issues: issues, FetchError: "the provider catalog could not be read"}, nil, nil, nil
 	}
 	snapshot = found
 
 	rows, err := s.store.List(ctx)
 	if err != nil {
-		return DocumentPlan{}, nil, fmt.Errorf("list curated models: %w", err)
+		return DocumentPlan{}, nil, nil, fmt.Errorf("list curated models: %w", err)
 	}
 	curated := make(map[string]Model, len(rows))
 	for _, row := range rows {
@@ -850,9 +875,13 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 		plan   = DocumentPlan{Issues: issues}
 		writes []PurposeWrite
 		now    = s.now()
+		// accepted is what each sectioned purpose will hold once applied, id → level — the
+		// registrations a set in the same document is validated against (MODEL-73).
+		accepted = map[Purpose]map[string]Level{}
 	)
 	for _, section := range doc.Sections {
 		wanted := make(map[string]bool, len(section.Entries))
+		accepted[section.Purpose] = map[string]Level{}
 		purposePlan := DocumentPurposePlan{Purpose: section.Purpose}
 
 		for _, entry := range section.Entries {
@@ -880,6 +909,7 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 				continue
 			}
 			wanted[modelID] = true
+			accepted[section.Purpose][modelID] = entry.Level
 			// Every listed id is written, registered or not: the write also carries the
 			// level, and setting it to what it already is costs nothing while leaving the
 			// document as the single statement of the purpose's state (MODEL-52).
@@ -922,12 +952,137 @@ func (s *Service) planDocument(ctx context.Context, text string) (DocumentPlan, 
 		plan.Purposes = append(plan.Purposes, purposePlan)
 	}
 
+	var sets *[]StoredSet
+	if doc.Recommendations != nil {
+		stored, err := s.store.RecommendationSets(ctx)
+		if err != nil {
+			return DocumentPlan{}, nil, nil, fmt.Errorf("list recommendation sets: %w", err)
+		}
+		// Purposes the document gives no section keep what they hold today.
+		for _, purpose := range Purposes {
+			if _, sectioned := accepted[purpose]; sectioned {
+				continue
+			}
+			accepted[purpose] = map[string]Level{}
+			for _, row := range rows {
+				if slices.Contains(row.Purposes, purpose) {
+					accepted[purpose][row.ModelID] = row.Levels[purpose]
+				}
+			}
+		}
+		setPlan, next, setIssues := PlanRecommendations(*doc.Recommendations, stored, accepted)
+		plan.Recommendations = &setPlan
+		plan.Issues = append(plan.Issues, setIssues...)
+		if setPlan.changes() {
+			sets = &next
+		}
+	}
+
 	if len(plan.Issues) > 0 {
 		// Nothing is applied when anything was refused, so the writes are not handed back at
 		// all rather than left for a caller to remember to check.
-		return plan, nil, nil
+		return plan, nil, nil, nil
 	}
-	return plan, writes, nil
+	return plan, writes, sets, nil
+}
+
+// PlanRecommendations turns the document's sets into the complete list to store and the diff
+// the operator sees (MODEL-72, MODEL-73). Sets are matched to stored ones by label. A set that
+// names the same seven models as its stored namesake is kept as it is, without re-validation —
+// a later deregistration never edits a saved set, so an exported document pasted back is no
+// change. Every added or changed set is checked against `holds`, the registrations and levels
+// each purpose will have once the same document is applied.
+func PlanRecommendations(sets []DocumentSet, stored []StoredSet, holds map[Purpose]map[string]Level) (DocumentRecommendationPlan, []StoredSet, []DocumentIssue) {
+	var (
+		plan   DocumentRecommendationPlan
+		next   = make([]StoredSet, 0, len(sets))
+		issues []DocumentIssue
+		byName = make(map[string]StoredSet, len(stored))
+		named  = make(map[string]bool, len(sets))
+		kept   []string
+	)
+	for _, set := range stored {
+		byName[set.Label] = set
+	}
+	for _, set := range sets {
+		named[set.Label] = true
+		candidate := storedFromDocument(set)
+		existing, matched := byName[set.Label]
+		if matched && existing.SameSlots(candidate) {
+			plan.Unchanged = append(plan.Unchanged, set.Label)
+			kept = append(kept, set.Label)
+			next = append(next, existing)
+			continue
+		}
+		issues = append(issues, slotIssues(set, holds)...)
+		if matched {
+			candidate.ID = existing.ID
+			plan.Changed = append(plan.Changed, set.Label)
+			kept = append(kept, set.Label)
+		} else {
+			plan.Added = append(plan.Added, set.Label)
+		}
+		next = append(next, candidate)
+	}
+	var storedOrder []string
+	for _, set := range stored {
+		if !named[set.Label] {
+			plan.Removed = append(plan.Removed, set.Label)
+			continue
+		}
+		storedOrder = append(storedOrder, set.Label)
+	}
+	plan.Reordered = !slices.Equal(kept, storedOrder)
+	return plan, next, issues
+}
+
+// slotIssues checks one set's slots against what each stage's purpose will hold (MODEL-70):
+// registered there, with a classification, and a pair's two models distinct. A stage line the
+// parser refused or never saw has already been reported and adds nothing here.
+func slotIssues(set DocumentSet, holds map[Purpose]map[string]Level) []DocumentIssue {
+	var issues []DocumentIssue
+	for _, line := range set.Stages {
+		purpose, ok := purposeOfStage(line.Stage)
+		if !ok {
+			continue
+		}
+		for index, id := range line.IDs {
+			level, registered := holds[purpose][id]
+			switch {
+			case index == 2 && id == line.IDs[1]:
+				issues = append(issues, DocumentIssue{Line: line.Line, Text: id, Cause: IssueSlotDuplicate})
+			case !registered:
+				issues = append(issues, DocumentIssue{Line: line.Line, Text: id, Cause: IssueSlotUnregistered})
+			case level == "":
+				issues = append(issues, DocumentIssue{Line: line.Line, Text: id, Cause: IssueSlotUnclassified})
+			}
+		}
+	}
+	return issues
+}
+
+func storedFromDocument(set DocumentSet) StoredSet {
+	out := StoredSet{Label: set.Label}
+	if line, ok := set.Stage(llm.StageNameObserve); ok && len(line.IDs) == 3 {
+		out.Observe = [3]string{line.IDs[0], line.IDs[1], line.IDs[2]}
+	}
+	if line, ok := set.Stage(llm.StageNameAnalyze); ok && len(line.IDs) == 1 {
+		out.Analyze = line.IDs[0]
+	}
+	if line, ok := set.Stage(llm.StageNameWrite); ok && len(line.IDs) == 3 {
+		out.Write = [3]string{line.IDs[0], line.IDs[1], line.IDs[2]}
+	}
+	return out
+}
+
+// purposeOfStage is the purpose a user-facing stage is fed by (MODEL-14).
+func purposeOfStage(stage string) (Purpose, bool) {
+	for _, purpose := range Purposes {
+		if purpose.Stage() == stage && stage != "" {
+			return purpose, true
+		}
+	}
+	return "", false
 }
 
 // rowFromCandidate is the row a registration would write: the stored curation, if any, with

@@ -480,3 +480,20 @@ type ComboRates struct {
 	Rates        plan.Rates
 	ClipRates    *plan.ClipRates
 }
+
+// StoredSet is a recommendation set as the models document sees it (MODEL-72): its label and
+// seven model ids, the registry's single provider implied (MODEL-10). ID is the provider
+// context's identity for a stored set and empty for one the document is about to create.
+type StoredSet struct {
+	ID      string
+	Label   string
+	Observe [3]string // active, A, B
+	Analyze string
+	Write   [3]string // active, A, B
+}
+
+// SameSlots reports whether two sets name the same label and the same seven models, whatever
+// their identities.
+func (s StoredSet) SameSlots(other StoredSet) bool {
+	return s.Label == other.Label && s.Observe == other.Observe && s.Analyze == other.Analyze && s.Write == other.Write
+}

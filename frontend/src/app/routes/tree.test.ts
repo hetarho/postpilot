@@ -24,7 +24,6 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/admin/',
     '/admin/estimator',
     '/admin/models',
-    '/admin/recommendations',
     '/admin/vouchers',
     '/ai-models',
     '/ai-models/compare',

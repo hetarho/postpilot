@@ -78,26 +78,9 @@ def fmt(r):
 
 
 def current_sets():
-    """Print the shipped recommendation set from backend/config/providers.yaml, if we are in the repo."""
-    try:
-        root = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
-                              text=True, check=True).stdout.strip()
-    except Exception:
-        return
-    path = os.path.join(root, "backend", "config", "providers.yaml")
-    if not os.path.exists(path):
-        return
-    lines = open(path, encoding="utf-8").read().splitlines()
-    try:
-        start = next(i for i, l in enumerate(lines) if l.strip().startswith("recommendation_sets:"))
-    except StopIteration:
-        return
-    print("\n## 현재 코드에 실린 추천 세트 (backend/config/providers.yaml)")
-    for l in lines[start:]:
-        if l.strip() and not l.startswith((" ", "-", "\t")) and not l.strip().startswith("recommendation_sets"):
-            break
-        if "model_id" in l or "stage:" in l or "id:" in l or "label:" in l:
-            print("  " + l.strip())
+    """Say where the current recommendation sets live: they are DB rows now (MODEL-69), not yaml."""
+    print("\n## 현재 추천 조합")
+    print("  DB에 있다(MODEL-69). 모델 관리 `일괄 편집`의 내보내기(MODEL-55) 끝의 [recommendations] 섹션을 받아 비교한다.")
 
 
 def main():

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoPlan } from '@/shared/api'
@@ -31,7 +31,7 @@ function paste() {
 }
 
 describe('the 일괄 편집 document panel', () => {
-  // MODEL-56: one entry for all five tabs, because one document names any purpose.
+  // MODEL-56: one entry for all six tabs, because one document names any purpose and the sets.
   it('opens from one entry shared by the tabs and shows the current document', async () => {
     const user = userEvent.setup()
     renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
@@ -42,9 +42,12 @@ describe('the 일괄 편집 document panel', () => {
     expect(current.textContent).toContain('[writing]')
     expect(current.textContent).toContain('anthropic/claude-x')
     expect(current.textContent).toContain('[image-generation]')
-    // THEME-12, THEME-25: a stepped surface with no border and no scroller of its own.
-    expect(current.className).not.toMatch(/\bborder\b|overflow-|max-h-/)
-    expect(current).toHaveClass('bg-surface-recessed')
+    // THEME-12: a stepped surface, never a bordered box. THEME-43: capped at max-h-field and
+    // scrolling inside itself, as a focusable region named for its label.
+    expect(current.className).not.toMatch(/\bborder\b/)
+    expect(current).toHaveClass('bg-surface-recessed', 'max-h-field', 'overflow-y-auto')
+    expect(screen.getByRole('region', { name: '지금 등록 상태' })).toBe(current)
+    expect(current).toHaveAttribute('tabindex', '0')
   })
 
   // MODEL-52 + MODEL-54: the diff separates what would be added from what the omission drops,
@@ -264,5 +267,113 @@ describe('the 일괄 편집 document panel', () => {
       ).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
+  })
+
+  // MODEL-72: a document that only rewrites the recommendation sets is a real change — its diff
+  // names the sets and 확정 is available.
+  it('previews and applies a document that only changes the recommendation sets', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      calls,
+      modelCatalog: {
+        entries: CATALOG,
+        documentRecommendations: {
+          added: ['Fresh'],
+          removed: ['Old'],
+          unchanged: ['Kept'],
+          reordered: true,
+        },
+      },
+    })
+    await openPanel(user)
+    await user.click(paste())
+    await user.paste(
+      '# postpilot models v1\n[recommendations]\nset Fresh\nobserve a/b a/b a/c\nanalyze a/d\nwrite a/d a/d a/e\n',
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByText('적용하면 이렇게 바뀌어요')
+
+    // Scoped to the diff's own group: the tab row behind the sheet says 추천 조합 as well.
+    const sets = screen.getByText('추가 1개').closest('li')!
+    expect(within(sets).getByText('추천 조합')).toBeInTheDocument()
+    expect(within(sets).getByText('Fresh')).toBeInTheDocument()
+    expect(within(sets).getByText('삭제 1개')).toBeInTheDocument()
+    expect(within(sets).getByText('Old')).toBeInTheDocument()
+    expect(within(sets).getByText('그대로 1개')).toBeInTheDocument()
+    expect(within(sets).getByText('보여 주는 순서가 바뀌어요.')).toBeInTheDocument()
+    expect(screen.queryByText(/문서가 아무 용도도/)).not.toBeInTheDocument()
+
+    const confirm = screen.getByRole('button', { name: '확정' })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    await user.click(confirm)
+    expect(
+      await screen.findByText(
+        '반영했어요. 등록 0개, 해제 0개. 추천 조합은 추가 1개, 삭제 1개, 교체 0개를 반영했어요.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('says the sets stay when the document has no recommendations section', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
+    await openPanel(user)
+    await user.click(paste())
+    await user.paste('# postpilot models v1\n[writing]\nanthropic/claude-x\nx-ai/grok-x\n')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(
+      await screen.findByText('문서에 추천 조합 섹션이 없어서 추천 조합은 그대로예요.'),
+    ).toBeInTheDocument()
+  })
+
+  // MODEL-73: a set slot the document's own registrations do not support is a refused line with
+  // its own copy, and the whole document is refused.
+  it('renders a refused set slot with its own cause', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', {
+      user: MASTER,
+      modelCatalog: {
+        entries: CATALOG,
+        recommendationIssues: [{ line: 5, text: 'vendor/gone', cause: 'slot_unregistered' }],
+      },
+    })
+    await openPanel(user)
+    await user.click(paste())
+    await user.paste('# postpilot models v1\n[recommendations]\nset X\nanalyze vendor/gone\n')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(
+      await screen.findByText('이 문서를 적용한 뒤에도 그 단계의 용도에 등록되지 않는 모델이에요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '확정' })).toBeDisabled()
+  })
+
+  // THEME-43: the copy button is pinned over the document and copies it exactly.
+  it('copies the current document from the pinned button', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
+    await openPanel(user)
+    const current = await screen.findByText(/# postpilot models v1/)
+    const button = screen.getByRole('button', { name: '지금 등록 상태 복사' })
+    expect(button).toHaveClass('absolute')
+    expect(button.parentElement).toContainElement(current)
+
+    await user.click(button)
+    expect(await navigator.clipboard.readText()).toBe(current.textContent)
+    expect(await screen.findByText('복사했어요.')).toBeInTheDocument()
+  })
+
+  it('selects the text for a manual copy when the clipboard refuses', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/models', { user: MASTER, modelCatalog: { entries: CATALOG } })
+    await openPanel(user)
+    await screen.findByText(/# postpilot models v1/)
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'))
+
+    await user.click(screen.getByRole('button', { name: '지금 등록 상태 복사' }))
+    expect(
+      await screen.findByText('복사하지 못했어요. 선택된 글을 직접 복사하세요.'),
+    ).toBeInTheDocument()
+    expect(window.getSelection()?.toString()).toContain('# postpilot models v1')
   })
 })

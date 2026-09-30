@@ -22,12 +22,43 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
+	reader *sql.DB
 	write  *sqlc.Queries
 	read   *sqlc.Queries
+	// recommendationsForTx binds the provider context's recommendation rows to one of this
+	// store's transactions (ARCH-6). Nil until the composition root attaches it.
+	recommendationsForTx func(*sql.Tx) modelcatalog.RecommendationRows
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+	return &Store{writer: writer, reader: reader, write: sqlc.New(writer), read: sqlc.New(reader)}
+}
+
+// SetRecommendationsForTx attaches the recommendation-set rows at the composition root, so
+// the models document can read the sets and replace them in the same transaction as the
+// registrations it writes (MODEL-73) without either store importing the other.
+func (s *Store) SetRecommendationsForTx(factory func(*sql.Tx) modelcatalog.RecommendationRows) {
+	s.recommendationsForTx = factory
+}
+
+var errRecommendationsUnwired = errors.New("recommendation-set rows are not attached to the catalog store")
+
+// RecommendationSets reads the stored sets through the attached rows, inside a transaction on
+// the reader so the sets and their slots are one consistent read.
+func (s *Store) RecommendationSets(ctx context.Context) ([]modelcatalog.StoredSet, error) {
+	if s.recommendationsForTx == nil {
+		return nil, errRecommendationsUnwired
+	}
+	tx, err := s.reader.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("begin recommendation-set read: %w", err)
+	}
+	defer tx.Rollback()
+	sets, err := s.recommendationsForTx(tx).List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return sets, tx.Commit()
 }
 
 func (s *Store) List(ctx context.Context) ([]modelcatalog.Model, error) {
@@ -255,12 +286,22 @@ func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose m
 	return nil
 }
 
-// SyncPurposes applies a whole document's registration changes in one transaction
-// (MODEL-53). It is built from the same two writes the single-model path uses, so a paste
-// and a checkbox cannot produce different rows: a registration upserts the row snapshot and
-// inserts the registration, a deregistration deletes it and takes its effort override with
-// it. Nothing is visible to a reader until every write in the document has landed.
+// SyncPurposes applies registration writes alone: SyncDocument with the sets left as they are.
 func (s *Store) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeWrite, at time.Time) error {
+	return s.SyncDocument(ctx, writes, nil, at)
+}
+
+// SyncDocument applies a whole document in one transaction (MODEL-53, MODEL-73). The
+// registration writes are the same two the single-model path uses, so a paste and a checkbox
+// cannot produce different rows: a registration upserts the row snapshot and inserts the
+// registration, a deregistration deletes it and takes its effort override with it. When
+// `sets` is non-nil the recommendation-set list is replaced in the same transaction, so a
+// set using a model this document registers never lands without the registration. Nothing
+// is visible to a reader until every write in the document has landed.
+func (s *Store) SyncDocument(ctx context.Context, writes []modelcatalog.PurposeWrite, sets *[]modelcatalog.StoredSet, at time.Time) error {
+	if sets != nil && s.recommendationsForTx == nil {
+		return errRecommendationsUnwired
+	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin catalog document sync: %w", err)
@@ -309,6 +350,11 @@ func (s *Store) SyncPurposes(ctx context.Context, writes []modelcatalog.PurposeW
 			UpdatedAt: stamp, ModelID: write.Model.ModelID,
 		}); err != nil {
 			return fmt.Errorf("stamp catalog model curation: %w", err)
+		}
+	}
+	if sets != nil {
+		if err := s.recommendationsForTx(tx).Replace(ctx, *sets, at); err != nil {
+			return fmt.Errorf("replace recommendation sets: %w", err)
 		}
 	}
 	if err := tx.Commit(); err != nil {

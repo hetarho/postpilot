@@ -290,5 +290,14 @@ export function toCatalogDocumentPlan(
     })),
     fetchError: response.fetchError,
     applied: 'applied' in response ? response.applied : false,
+    recommendations: response.recommendations?.present
+      ? {
+          added: response.recommendations.added,
+          removed: response.recommendations.removed,
+          changed: response.recommendations.changed,
+          unchanged: response.recommendations.unchanged,
+          reordered: response.recommendations.reordered,
+        }
+      : undefined,
   }
 }
