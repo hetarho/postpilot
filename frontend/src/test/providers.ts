@@ -47,6 +47,8 @@ export interface FakeModel {
   requiredCredits?: number
   /** What the server computed for THIS caller — the model's floor is above their tier. */
   affordable?: boolean
+  /** The server could not price one call (QUOTA-59: no eligible official rate). */
+  aiPriceUnavailable?: boolean
   /** The operator's grade PER STAGE (MODEL-57). A stage left out is ungraded, which is what
    *  every registration starts as — and what a test that says nothing about grades gets. */
   levels?: Partial<Record<Stage, 'free' | 'value' | 'balanced' | 'premium' | 'top'>>
@@ -136,6 +138,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           disabledReason: model.disabledReason ?? '',
           requiredCredits: model.requiredCredits ?? 5,
           affordable: model.affordable ?? true,
+          aiPriceUnavailable: model.aiPriceUnavailable ?? false,
           stages:
             model.stages ??
             (model.vision

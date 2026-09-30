@@ -14,6 +14,8 @@ export function modelChoiceIssue(model: CatalogModel, stage: StageName): string 
       ns: 'models',
       plan: planLabel(access.requiredPlan),
     })
+  if (model.priceUnavailable && access?.grade !== 'free')
+    return i18next.t('access.priceUnavailable', { ns: 'models' })
   if (!model.affordable && access?.grade !== 'free')
     return i18next.t('selectField.unaffordable', {
       ns: 'models',

@@ -101,6 +101,7 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
     pricingCheckedAt: info.pricingCheckedAt,
     requiredCredits: info.requiredCredits,
     affordable: info.affordable,
+    priceUnavailable: info.aiPriceUnavailable,
   }
 }
 

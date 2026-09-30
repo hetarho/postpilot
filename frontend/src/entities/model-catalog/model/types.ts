@@ -49,6 +49,10 @@ export interface CatalogModel {
    *  unaffordable start whatever this client rendered — and unlike the plan floor it
    *  replaces, it is temporary, so nothing treats an unaffordable choice as invalid. */
   affordable: boolean
+  /** The server could not price one call — no eligible official rate (QUOTA-59) or no
+   *  bounded model price. As temporary as `affordable`, and it replaces that reason: the
+   *  zero `requiredCredits` it comes with would otherwise read as "costs 0". */
+  priceUnavailable?: boolean
 }
 
 export interface ModelStageAccess {

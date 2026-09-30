@@ -389,6 +389,33 @@ describe('a model above the account tier', () => {
     expect(screen.getByRole('option', { name: 'Writer' })).not.toHaveAttribute('aria-disabled')
   })
 
+  // Without an eligible official rate the server prices nothing and sends 0 with the flag;
+  // "크레딧 0 필요" would name a price the model does not have, even to an unlimited operator.
+  it('says the price is unconfirmed instead of quoting zero credits', async () => {
+    renderSelect('write', {
+      models: [
+        { providerId: 'openrouter', modelId: 'writer', label: 'Writer' },
+        {
+          providerId: 'openrouter',
+          modelId: 'anthropic/claude-opus-5',
+          label: 'Claude Opus 5',
+          requiredCredits: 0,
+          affordable: false,
+          aiPriceUnavailable: true,
+        },
+      ],
+    })
+
+    const user = userEvent.setup()
+    await openPanel(user, /작성 모델/)
+
+    const unpriced = screen.getByRole('option', {
+      name: 'Claude Opus 5 (가격을 확인할 수 없어 지금은 쓸 수 없어요)',
+    })
+    expect(unpriced).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryByText(/크레딧 0 필요/)).not.toBeInTheDocument()
+  })
+
   // A balance is temporary state the next top-up clears, so an unaffordable saved choice is
   // never reported as vanished — and its row is never touched.
   it('keeps a saved choice the balance cannot currently cover', async () => {
