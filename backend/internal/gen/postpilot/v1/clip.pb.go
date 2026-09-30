@@ -2022,15 +2022,13 @@ func (x *ClipSourceUpload) GetExpiresAt() string {
 }
 
 type ClipPricedCall struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Model               *ModelRef              `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	Stage               string                 `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
-	Calls               int32                  `protobuf:"varint,3,opt,name=calls,proto3" json:"calls,omitempty"`
-	PromptTokens        int32                  `protobuf:"varint,4,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
-	CompletionTokens    int32                  `protobuf:"varint,5,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
-	Reasoning           string                 `protobuf:"bytes,6,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
-	InputUsdPerMillion  string                 `protobuf:"bytes,7,opt,name=input_usd_per_million,json=inputUsdPerMillion,proto3" json:"input_usd_per_million,omitempty"`
-	OutputUsdPerMillion string                 `protobuf:"bytes,8,opt,name=output_usd_per_million,json=outputUsdPerMillion,proto3" json:"output_usd_per_million,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Model            *ModelRef              `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	Stage            string                 `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	Calls            int32                  `protobuf:"varint,3,opt,name=calls,proto3" json:"calls,omitempty"`
+	PromptTokens     int32                  `protobuf:"varint,4,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
+	CompletionTokens int32                  `protobuf:"varint,5,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	Reasoning        string                 `protobuf:"bytes,6,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
 	// Which call of its stage this is: `observe`, `flow` or `narration`. A
 	// generation makes two writing calls of the same stage on the same model, so
 	// the label, not the stage, tells the owner which line is which.
@@ -2107,20 +2105,6 @@ func (x *ClipPricedCall) GetCompletionTokens() int32 {
 func (x *ClipPricedCall) GetReasoning() string {
 	if x != nil {
 		return x.Reasoning
-	}
-	return ""
-}
-
-func (x *ClipPricedCall) GetInputUsdPerMillion() string {
-	if x != nil {
-		return x.InputUsdPerMillion
-	}
-	return ""
-}
-
-func (x *ClipPricedCall) GetOutputUsdPerMillion() string {
-	if x != nil {
-		return x.OutputUsdPerMillion
 	}
 	return ""
 }
@@ -5238,17 +5222,15 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"expires_at\x18\x04 \x01(\tR\texpiresAt\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd8\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xab\x02\n" +
 	"\x0eClipPricedCall\x12,\n" +
 	"\x05model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12\x14\n" +
 	"\x05stage\x18\x02 \x01(\tR\x05stage\x12\x14\n" +
 	"\x05calls\x18\x03 \x01(\x05R\x05calls\x12#\n" +
 	"\rprompt_tokens\x18\x04 \x01(\x05R\fpromptTokens\x12+\n" +
 	"\x11completion_tokens\x18\x05 \x01(\x05R\x10completionTokens\x12\x1c\n" +
-	"\treasoning\x18\x06 \x01(\tR\treasoning\x121\n" +
-	"\x15input_usd_per_million\x18\a \x01(\tR\x12inputUsdPerMillion\x123\n" +
-	"\x16output_usd_per_million\x18\b \x01(\tR\x13outputUsdPerMillion\x12\x14\n" +
-	"\x05label\x18\t \x01(\tR\x05label\"\xbb\x01\n" +
+	"\treasoning\x18\x06 \x01(\tR\treasoning\x12\x14\n" +
+	"\x05label\x18\t \x01(\tR\x05labelJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x15input_usd_per_millionR\x16output_usd_per_million\"\xbb\x01\n" +
 	"\x17ClipSequenceCaptionCost\x12\x1b\n" +
 	"\tfrom_plan\x18\x01 \x01(\bR\bfromPlan\x12\x1a\n" +
 	"\bcaptions\x18\x02 \x01(\x05R\bcaptions\x12\x16\n" +

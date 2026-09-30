@@ -115,16 +115,21 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         { id: 'pack-3000', priceKrw: 9000, credits: 3000 },
         { id: 'pack-10000', priceKrw: 30000, credits: 10000 },
       ],
+      // As the server does, the rate behind credits is the operator's only (QUOTA-65); a test
+      // may still hand any plan an explicit rate to prove the screen would show it.
       fxRate:
         options.fxRate === null
           ? undefined
-          : (options.fxRate ?? {
-              source: 'test',
-              publicationDate: '2026-09-30',
-              referenceE4: 14_000_000n,
-              appliedE4: 14_000_000n,
-              temporary: false,
-            }),
+          : (options.fxRate ??
+            ((options.plan ?? ProtoPlan.MASTER) === ProtoPlan.MASTER
+              ? {
+                  source: 'test',
+                  publicationDate: '2026-09-30',
+                  referenceE4: 14_000_000n,
+                  appliedE4: 14_000_000n,
+                  temporary: false,
+                }
+              : undefined)),
       fxUnavailable: options.fxUnavailable ?? false,
       balance: {
         credits: options.balance?.credits ?? 0,

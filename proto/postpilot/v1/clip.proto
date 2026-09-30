@@ -261,8 +261,9 @@ message ClipPricedCall {
   int32 prompt_tokens = 4;
   int32 completion_tokens = 5;
   string reasoning = 6;
-  string input_usd_per_million = 7;
-  string output_usd_per_million = 8;
+  // A quote reaches its owner, who is never shown supplier prices (QUOTA-66).
+  reserved 7, 8;
+  reserved "input_usd_per_million", "output_usd_per_million";
   // Which call of its stage this is: `observe`, `flow` or `narration`. A
   // generation makes two writing calls of the same stage on the same model, so
   // the label, not the stage, tells the owner which line is which.

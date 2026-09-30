@@ -13,8 +13,7 @@ export const i18n = {
       activeSaveFailed: '활성 모델을 저장하지 못했어요. 다시 골라 주세요.',
       saveFailed: 'A/B 조합을 저장하지 못했어요. 다시 시도해 주세요.',
       saving: '저장하는 중…',
-      pricing: '컨텍스트 {{tokens}} · 1M 토큰 기준 입력 ${{input}} / 출력 ${{output}}',
-      priceUnchecked: '가격 미확인',
+      context: '컨텍스트 {{tokens}}',
     },
   },
   en: {
@@ -27,8 +26,7 @@ export const i18n = {
       activeSaveFailed: 'Could not save the active model. Choose again.',
       saveFailed: 'Could not save the A/B pair. Try again.',
       saving: 'Saving…',
-      pricing: '{{tokens}} context · per 1M tokens: ${{input}} input / ${{output}} output',
-      priceUnchecked: 'Price not checked',
+      context: '{{tokens}} context',
     },
   },
 } as const satisfies I18nFragment

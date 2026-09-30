@@ -206,6 +206,7 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	// A comparison with no priced combo shows grants and prices and no post estimate. That
 	// is a state the operator can fix, not a failure of this read, so a combo lookup that
 	// fails is logged and answered as "none assigned" rather than failing GetMyPlan.
+	operator := auth.ActsAsMaster(ctx)
 	var fxRate *postpilotv1.PlanFXRate
 	fxUnavailable := false
 	var selectedRate plan.RateSnapshot
@@ -217,8 +218,12 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			fxUnavailable = true
 		} else {
 			selectedRate = rate
-			fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
-				ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
+			// The conversion behind credits is the operator's to read (QUOTA-65); everyone else
+			// prices in credits only.
+			if operator {
+				fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
+					ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
+			}
 		}
 	}
 	var combos []*postpilotv1.EstimatorCombo
@@ -245,16 +250,20 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 				PerClipBaseMilli:     int32(combo.ClipRates.PerClipBase),
 			}
 		}
-		combos = append(combos, &postpilotv1.EstimatorCombo{
+		mapped := &postpilotv1.EstimatorCombo{
 			Combo:                 combo.Combo,
-			ObserveLabel:          combo.ObserveLabel,
-			WriteLabel:            combo.WriteLabel,
 			PerPhotoMilli:         int32(combo.PerPhotoMilli),
 			PerVideoMilli:         int32(combo.PerVideoMilli),
 			PerThousandCharsMilli: int32(combo.Per1000CharsMilli),
 			PerPostBaseMilli:      int32(combo.PerPostBaseMilli),
 			ClipRates:             clipRates,
-		})
+		}
+		// Rates beside the models they price would give those models' supplier prices back
+		// (QUOTA-66): only the operator's copy names them.
+		if operator {
+			mapped.ObserveLabel, mapped.WriteLabel = combo.ObserveLabel, combo.WriteLabel
+		}
+		combos = append(combos, mapped)
 	}
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
 		Plan:               ToProto(acting),

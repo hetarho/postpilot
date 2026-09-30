@@ -17,9 +17,16 @@ func TestBillingMailsAreKoreanFirstAndCarryChargeFacts(t *testing.T) {
 		if !strings.HasPrefix(message.Text, "Postpilot pro 구독") {
 			t.Errorf("%s is not Korean first: %q", name, message.Text)
 		}
-		for _, fact := range []string{"pro monthly", "$5.00", "6,962원", "1,392.50원/$"} {
+		for _, fact := range []string{"pro monthly", "6,962원"} {
 			if !strings.Contains(message.Text, fact) {
 				t.Errorf("%s missing %q: %s", name, fact, message.Text)
+			}
+		}
+		// QUOTA-65: a mail never states a dollar amount or an exchange rate, even for a row
+		// that recorded one.
+		for _, leak := range []string{"$", "원/$", "1,392"} {
+			if strings.Contains(message.Text, leak) {
+				t.Errorf("%s carries %q: %s", name, leak, message.Text)
 			}
 		}
 	}
@@ -35,9 +42,14 @@ func TestPurchaseAndRefundMailsCarryBilingualPurchaseFacts(t *testing.T) {
 		if !strings.HasPrefix(message.Text, "Postpilot 크레딧 500개") {
 			t.Errorf("%s is not Korean first: %q", name, message.Text)
 		}
-		for _, fact := range []string{"500 credits", "$5.00", "6,963원", "1,392.50원/$", "2026-09-07"} {
+		for _, fact := range []string{"500 credits", "6,963원"} {
 			if !strings.Contains(message.Text, fact) {
 				t.Errorf("%s missing %q: %s", name, fact, message.Text)
+			}
+		}
+		for _, leak := range []string{"$", "원/$", "2026-09-07"} {
+			if strings.Contains(message.Text, leak) {
+				t.Errorf("%s carries %q: %s", name, leak, message.Text)
 			}
 		}
 	}

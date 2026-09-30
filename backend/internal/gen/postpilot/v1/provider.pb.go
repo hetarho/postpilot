@@ -193,14 +193,11 @@ type ModelInfo struct {
 	VideoInput bool `protobuf:"varint,16,opt,name=video_input,json=videoInput,proto3" json:"video_input,omitempty"`
 	// Adapter-derived workflow readiness, independent of catalog video_input.
 	// Unknown paths are false; neither field clears the recorded raw capability.
-	SignedVideoUrl      bool   `protobuf:"varint,17,opt,name=signed_video_url,json=signedVideoUrl,proto3" json:"signed_video_url,omitempty"`
-	InlineStaticVideo   bool   `protobuf:"varint,18,opt,name=inline_static_video,json=inlineStaticVideo,proto3" json:"inline_static_video,omitempty"`
-	Disabled            bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
-	DisabledReason      string `protobuf:"bytes,6,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
-	ContextTokens       int64  `protobuf:"varint,7,opt,name=context_tokens,json=contextTokens,proto3" json:"context_tokens,omitempty"`
-	InputUsdPerMillion  string `protobuf:"bytes,8,opt,name=input_usd_per_million,json=inputUsdPerMillion,proto3" json:"input_usd_per_million,omitempty"`
-	OutputUsdPerMillion string `protobuf:"bytes,9,opt,name=output_usd_per_million,json=outputUsdPerMillion,proto3" json:"output_usd_per_million,omitempty"`
-	PricingCheckedAt    string `protobuf:"bytes,10,opt,name=pricing_checked_at,json=pricingCheckedAt,proto3" json:"pricing_checked_at,omitempty"`
+	SignedVideoUrl    bool   `protobuf:"varint,17,opt,name=signed_video_url,json=signedVideoUrl,proto3" json:"signed_video_url,omitempty"`
+	InlineStaticVideo bool   `protobuf:"varint,18,opt,name=inline_static_video,json=inlineStaticVideo,proto3" json:"inline_static_video,omitempty"`
+	Disabled          bool   `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	DisabledReason    string `protobuf:"bytes,6,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
+	ContextTokens     int64  `protobuf:"varint,7,opt,name=context_tokens,json=contextTokens,proto3" json:"context_tokens,omitempty"`
 	// What one job using this model would hold, for the CALLING account. It is an estimate
 	// over a default job shape, so a picker can price a choice before anything is started.
 	RequiredCredits int32 `protobuf:"varint,13,opt,name=required_credits,json=requiredCredits,proto3" json:"required_credits,omitempty"`
@@ -321,27 +318,6 @@ func (x *ModelInfo) GetContextTokens() int64 {
 		return x.ContextTokens
 	}
 	return 0
-}
-
-func (x *ModelInfo) GetInputUsdPerMillion() string {
-	if x != nil {
-		return x.InputUsdPerMillion
-	}
-	return ""
-}
-
-func (x *ModelInfo) GetOutputUsdPerMillion() string {
-	if x != nil {
-		return x.OutputUsdPerMillion
-	}
-	return ""
-}
-
-func (x *ModelInfo) GetPricingCheckedAt() string {
-	if x != nil {
-		return x.PricingCheckedAt
-	}
-	return ""
 }
 
 func (x *ModelInfo) GetRequiredCredits() int32 {
@@ -1729,7 +1705,7 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\bModelRef\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xad\x06\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"\xec\x05\n" +
 	"\tModelInfo\x12(\n" +
 	"\x03ref\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
@@ -1741,11 +1717,7 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x13inline_static_video\x18\x12 \x01(\bR\x11inlineStaticVideo\x12\x1a\n" +
 	"\bdisabled\x18\x05 \x01(\bR\bdisabled\x12'\n" +
 	"\x0fdisabled_reason\x18\x06 \x01(\tR\x0edisabledReason\x12%\n" +
-	"\x0econtext_tokens\x18\a \x01(\x03R\rcontextTokens\x121\n" +
-	"\x15input_usd_per_million\x18\b \x01(\tR\x12inputUsdPerMillion\x123\n" +
-	"\x16output_usd_per_million\x18\t \x01(\tR\x13outputUsdPerMillion\x12,\n" +
-	"\x12pricing_checked_at\x18\n" +
-	" \x01(\tR\x10pricingCheckedAt\x12)\n" +
+	"\x0econtext_tokens\x18\a \x01(\x03R\rcontextTokens\x12)\n" +
 	"\x10required_credits\x18\r \x01(\x05R\x0frequiredCredits\x12\x1e\n" +
 	"\n" +
 	"affordable\x18\x0e \x01(\bR\n" +
@@ -1753,7 +1725,9 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x06stages\x18\x0f \x03(\x0e2\x13.postpilot.v1.StageR\x06stages\x120\n" +
 	"\x06levels\x18\x13 \x03(\v2\x18.postpilot.v1.StageLevelR\x06levels\x120\n" +
 	"\x14ai_price_unavailable\x18\x14 \x01(\bR\x12aiPriceUnavailable\x126\n" +
-	"\x06access\x18\x15 \x03(\v2\x1e.postpilot.v1.ModelStageAccessR\x06accessJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xf3\x01\n" +
+	"\x06access\x18\x15 \x03(\v2\x1e.postpilot.v1.ModelStageAccessR\x06accessJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\rR\x15input_usd_per_millionR\x16output_usd_per_millionR\x12pricing_checked_at\"\xf3\x01\n" +
 	"\x10ModelStageAccess\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12\x14\n" +
 	"\x05grade\x18\x02 \x01(\tR\x05grade\x12#\n" +

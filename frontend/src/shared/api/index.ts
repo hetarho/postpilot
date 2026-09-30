@@ -370,6 +370,7 @@ export {
   LeaderboardWindow,
   VerdictBadge,
   CostSource,
+  LeaderboardEntrySchema,
   ListExperimentsResponseSchema,
   ModelExperimentSchema,
   StartExperimentResponseSchema,

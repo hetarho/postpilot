@@ -17,9 +17,6 @@ const model = (
   disabled: false,
   disabledReason: '',
   contextTokens: 0n,
-  inputUsdPerMillion: '',
-  outputUsdPerMillion: '',
-  pricingCheckedAt: '',
   requiredCredits: 5,
   affordable: true,
 })

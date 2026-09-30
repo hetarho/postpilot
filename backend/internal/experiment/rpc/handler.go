@@ -83,7 +83,7 @@ func (h *Handler) full(ctx context.Context, found experiment.Experiment) *postpi
 		slog.Warn("voice reflection detail unavailable", "experiment_id", found.ID, "err", err)
 		detail = experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(found)}
 	}
-	return toProtoExperiment(found, detail)
+	return toProtoExperiment(found, detail, auth.ActsAsMaster(ctx))
 }
 
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
@@ -109,8 +109,9 @@ func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[post
 		return nil, toConnectError("list experiments", err)
 	}
 	out := make([]*postpilotv1.ModelExperiment, 0, len(found))
+	operator := auth.ActsAsMaster(ctx)
 	for _, item := range found {
-		out = append(out, toProtoExperiment(item, experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(item)}))
+		out = append(out, toProtoExperiment(item, experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(item)}, operator))
 	}
 	return connect.NewResponse(&postpilotv1.ListExperimentsResponse{Experiments: out}), nil
 }
@@ -223,18 +224,29 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 		return nil, toConnectError("get leaderboard", err)
 	}
 	out := make([]*postpilotv1.LeaderboardEntry, 0, len(entries))
+	operator := auth.ActsAsMaster(ctx)
 	for _, entry := range entries {
-		out = append(out, &postpilotv1.LeaderboardEntry{
-			Rank: int32(entry.Rank), Model: toProtoRef(entry.Model), ModelLabel: entry.ModelLabel,
-			Rating: int32(entry.Rating), Matches: int32(entry.Matches), Wins: int32(entry.Wins), Losses: int32(entry.Losses),
-			WinRate: entry.WinRate(), SuccessfulCalls: int32(entry.SuccessfulCalls), AverageLatencyMs: entry.AverageLatencyMS(),
-			PromptTokens: entry.PromptTokens, CompletionTokens: entry.CompletionTokens, TotalCostMicrousd: entry.TotalCostMicrousd,
-			CostQuality: toProtoCost(entry.CostQuality), Provisional: entry.Provisional, Active: entry.Active,
-			Recommended: entry.Recommended, Disappeared: entry.Disappeared,
-			BadgeTallies: toProtoTallies(entry.BadgeTallies),
-		})
+		out = append(out, toProtoLeaderboardEntry(entry, operator))
 	}
 	return connect.NewResponse(&postpilotv1.GetLeaderboardResponse{Entries: out}), nil
+}
+
+// toProtoLeaderboardEntry projects one board row. Provider spend is supplier cost, and on the
+// `all` scope it is every account's, so only the operator's copy carries it (QUOTA-66, MODEL-39).
+func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry, operator bool) *postpilotv1.LeaderboardEntry {
+	mapped := &postpilotv1.LeaderboardEntry{
+		Rank: int32(entry.Rank), Model: toProtoRef(entry.Model), ModelLabel: entry.ModelLabel,
+		Rating: int32(entry.Rating), Matches: int32(entry.Matches), Wins: int32(entry.Wins), Losses: int32(entry.Losses),
+		WinRate: entry.WinRate(), SuccessfulCalls: int32(entry.SuccessfulCalls), AverageLatencyMs: entry.AverageLatencyMS(),
+		PromptTokens: entry.PromptTokens, CompletionTokens: entry.CompletionTokens,
+		Provisional: entry.Provisional, Active: entry.Active,
+		Recommended: entry.Recommended, Disappeared: entry.Disappeared,
+		BadgeTallies: toProtoTallies(entry.BadgeTallies),
+	}
+	if operator {
+		mapped.TotalCostMicrousd, mapped.CostQuality = entry.TotalCostMicrousd, toProtoCost(entry.CostQuality)
+	}
+	return mapped
 }
 
 func actingUser(ctx context.Context) (string, error) {
@@ -333,10 +345,13 @@ func activeJobParams(id string) map[string]string {
 	return map[string]string{"active_job_id": id}
 }
 
-func toProtoExperiment(found experiment.Experiment, detail experiment.ReflectionDetail) *postpilotv1.ModelExperiment {
+// toProtoExperiment projects one comparison for its reader. operator is whether that reader is
+// master: supplier cost rides only on the operator's copy (QUOTA-66). Provider prose in a
+// failure is cleared at the response edge for everyone else (auth/rpc SupplierRedaction).
+func toProtoExperiment(found experiment.Experiment, detail experiment.ReflectionDetail, operator bool) *postpilotv1.ModelExperiment {
 	candidates := make([]*postpilotv1.ExperimentCandidate, 0, len(found.Candidates))
 	for _, candidate := range found.Candidates {
-		candidates = append(candidates, toProtoCandidate(found, candidate, detail.Comparisons[candidate.ID]))
+		candidates = append(candidates, toProtoCandidate(found, candidate, detail.Comparisons[candidate.ID], operator))
 	}
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
@@ -385,7 +400,7 @@ func optionalTargetLength(value *int32) *int {
 	return &result
 }
 
-func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate, comparison []experiment.ItemComparison) *postpilotv1.ExperimentCandidate {
+func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate, comparison []experiment.ItemComparison, operator bool) *postpilotv1.ExperimentCandidate {
 	out := &postpilotv1.ExperimentCandidate{Id: candidate.ID, DisplaySide: toProtoSide(candidate.DisplaySide), Status: toProtoCandidateStatus(candidate.Status)}
 	if found.Source == experiment.SourceVoice {
 		// A voice-sourced candidate's output is its piece, read as plain text (MODEL-67).
@@ -402,7 +417,10 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 		out.ModelLabel = candidate.ModelLabel
 		out.Failure = failureToProto(candidate.Failure)
 		out.Usage = &postpilotv1.CandidateUsage{PromptTokens: candidate.Usage.PromptTokens, CompletionTokens: candidate.Usage.CompletionTokens,
-			CostMicrousd: candidate.Usage.CostMicrousd, CostSource: toProtoCost(candidate.Usage.CostSource), LatencyMs: candidate.Usage.LatencyMS}
+			LatencyMs: candidate.Usage.LatencyMS}
+		if operator {
+			out.Usage.CostMicrousd, out.Usage.CostSource = candidate.Usage.CostMicrousd, toProtoCost(candidate.Usage.CostSource)
+		}
 		// Inside the reveal, beside the identity: a badge attached to the unchosen candidate
 		// would otherwise say which one it was before the owner decided (MODEL-32).
 		for _, badge := range candidate.Badges {

@@ -22,7 +22,7 @@ export const i18n = {
       modelUnavailable: '등록 해제된 모델',
       usageUnavailable: '사용량 미제공',
       costUnavailable: '비용 미제공',
-      usage: '{{prompt}} 입력 · {{completion}} 출력 · {{latency}}ms · {{cost}}',
+      usage: '{{prompt}} 입력 · {{completion}} 출력 · {{latency}}ms',
     },
   },
   en: {
@@ -49,7 +49,7 @@ export const i18n = {
       modelUnavailable: 'Unregistered model',
       usageUnavailable: 'Usage unavailable',
       costUnavailable: 'Cost unavailable',
-      usage: '{{prompt}} input · {{completion}} output · {{latency}}ms · {{cost}}',
+      usage: '{{prompt}} input · {{completion}} output · {{latency}}ms',
     },
   },
 } as const satisfies I18nFragment

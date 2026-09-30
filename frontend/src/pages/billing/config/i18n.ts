@@ -53,7 +53,7 @@ export const i18n = {
       fx: '{{source}} {{date}} 기준 환율 {{reference}}원/USD · 적용 환율 {{applied}}원/USD',
       temporary: '· 확인된 최근 환율을 임시 적용 중',
       fxUnavailable:
-        '공식 환율을 확인할 수 없어 유료 AI 작업은 잠시 시작할 수 없어요. 무료 모델 작업과 고정 원화 결제는 계속할 수 있어요.',
+        '유료 AI 작업을 잠시 시작할 수 없어요. 무료 모델 작업과 결제는 계속할 수 있어요.',
       lot: {
         daily: '일일',
         monthly: '월 보너스',
@@ -152,8 +152,7 @@ export const i18n = {
       exports: '{{remaining}} / {{allowance}} server exports · renews {{at}}',
       fx: '{{source}} reference {{date}}: ₩{{reference}}/USD · applied ₩{{applied}}/USD',
       temporary: '· temporarily using a recent confirmed rate',
-      fxUnavailable:
-        'The official rate is unavailable, so paid AI cannot start yet. Free model work and fixed KRW checkout remain available.',
+      fxUnavailable: 'Paid AI work cannot start right now. Free-model work and payments continue.',
       lot: {
         daily: 'Daily',
         monthly: 'Monthly bonus',

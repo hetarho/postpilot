@@ -97,6 +97,33 @@ it('reveals label, tokens, latency, and estimated cost only after verdict', () =
   expect(screen.getAllByText(/≈ \$0\.000012/)).toHaveLength(2)
 })
 
+// QUOTA-66: an owner's reveal names the models and keeps tokens and latency, but the server
+// sends them no provider cost, so the line says nothing about cost at all.
+it('reveals no cost to an owner the server withheld it from', () => {
+  const revealed: ModelExperiment = {
+    ...base,
+    status: 'decided',
+    revealed: true,
+    candidates: base.candidates.map((candidate) => ({
+      ...candidate,
+      model: { providerId: 'p', modelId: candidate.id },
+      modelLabel: `모델 ${candidate.id}`,
+      usage: {
+        promptTokens: 100n,
+        completionTokens: 20n,
+        costMicrousd: 0n,
+        costSource: 'withheld',
+        latencyMs: 500n,
+      },
+    })),
+  }
+  render(<CandidateComparison experiment={revealed} activeCandidateId="left" />)
+  expect(screen.getByText('모델 left')).toBeInTheDocument()
+  expect(screen.getAllByText('100 입력 · 20 출력 · 500ms')).toHaveLength(2)
+  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/비용 미제공/)).not.toBeInTheDocument()
+})
+
 // Once the blind is lifted, what the verdict said about each candidate is read beside the
 // model it was said about: the reason one result won is only legible next to the reason the
 // other lost.

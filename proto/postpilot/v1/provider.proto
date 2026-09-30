@@ -74,9 +74,10 @@ message ModelInfo {
   bool disabled = 5;
   string disabled_reason = 6;
   int64 context_tokens = 7;
-  string input_usd_per_million = 8;
-  string output_usd_per_million = 9;
-  string pricing_checked_at = 10;
+  // Supplier prices never reach an ordinary projection (QUOTA-66, MODEL-27); the operator reads
+  // them from ModelCatalogService.
+  reserved 8, 9, 10;
+  reserved "input_usd_per_million", "output_usd_per_million", "pricing_checked_at";
   reserved 11, 12;  // min_plan, locked — model access is decided by the balance now.
   // What one job using this model would hold, for the CALLING account. It is an estimate
   // over a default job shape, so a picker can price a choice before anything is started.

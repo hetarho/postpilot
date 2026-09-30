@@ -81,31 +81,14 @@ func RefundMail(purchase Purchase) MailMessage {
 	}
 }
 
+// purchaseDetail and chargeDetail say what the owner paid in KRW and nothing about a dollar
+// amount or an exchange rate, even for a row priced before fixed KRW (QUOTA-65).
 func purchaseDetail(purchase Purchase) string {
-	if purchase.RatePerUSDE4 == 0 {
-		return fmt.Sprintf("%d credits · %s원", purchase.Credits, comma(int64(purchase.KRW)))
-	}
-	return fmt.Sprintf(
-		"%d credits · $%d.%02d · %s원 · %s원/$ (%s)",
-		purchase.Credits, purchase.USDCents/100, purchase.USDCents%100,
-		comma(int64(purchase.KRW)), rateString(purchase.RatePerUSDE4), purchase.RateDate,
-	)
+	return fmt.Sprintf("%d credits · %s원", purchase.Credits, comma(int64(purchase.KRW)))
 }
 
 func chargeDetail(tier plan.Plan, term Term, quote Quote) string {
-	if quote.RatePerUSDE4 == 0 {
-		return fmt.Sprintf("%s %s · %s원", tier, term, comma(int64(quote.KRW)))
-	}
-	return fmt.Sprintf(
-		"%s %s · $%d.%02d · %s원 · %s원/$",
-		tier, term, quote.USDCents/100, quote.USDCents%100,
-		comma(int64(quote.KRW)), rateString(quote.RatePerUSDE4),
-	)
-}
-
-func rateString(rateE4 int64) string {
-	whole, fraction := rateE4/10_000, rateE4%10_000
-	return fmt.Sprintf("%s.%02d", comma(whole), fraction/100)
+	return fmt.Sprintf("%s %s · %s원", tier, term, comma(int64(quote.KRW)))
 }
 
 func comma(value int64) string {

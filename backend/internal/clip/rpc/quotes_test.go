@@ -1,13 +1,16 @@
 package rpc
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 func TestQuoteFailuresHaveStableReasons(t *testing.T) {
@@ -30,13 +33,38 @@ func TestApprovalAndAccountingWirePreservesPresence(t *testing.T) {
 	}
 	zero := 0
 	maximum := 18
-	pending := accountingProto(&clip.Accounting{JobID: "job", Status: "reserved", ApprovedMax: &maximum, Reserved: &zero})
+	pending := accountingProto(context.Background(), &clip.Accounting{JobID: "job", Status: "reserved", ApprovedMax: &maximum, Reserved: &zero})
 	if pending.ReservedCredits == nil || *pending.ReservedCredits != 0 || pending.FinalChargeCredits != nil || pending.Settled {
 		t.Fatal(pending)
 	}
-	settled := accountingProto(&clip.Accounting{JobID: "job", Status: "settled", FinalCharge: &zero, Refund: &maximum, Settled: true})
+	settled := accountingProto(context.Background(), &clip.Accounting{JobID: "job", Status: "settled", FinalCharge: &zero, Refund: &maximum, Settled: true})
 	if settled.FinalChargeCredits == nil || *settled.FinalChargeCredits != 0 || !settled.Settled {
 		t.Fatal(settled)
+	}
+}
+
+// QUOTA-65: the frozen conversion reaches the operator only; an owner's quote and accounting
+// carry credits and no rate.
+func TestFXRateReachesMasterOnly(t *testing.T) {
+	rate := plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29", ReferenceE4: 13_925_000, AppliedE4: 14_000_000}
+	owner := auth.WithActor(context.Background(), auth.Actor{UserID: "alice", Plan: plan.Max})
+	master := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
+	if got := clipFXProto(owner, rate); got != nil {
+		t.Fatalf("owner quote rate = %v, want none", got)
+	}
+	if got := clipFXProto(context.Background(), rate); got != nil {
+		t.Fatalf("unknown plan quote rate = %v, want none", got)
+	}
+	if got := clipFXProto(master, rate); got == nil || got.GetAppliedE4() != rate.AppliedE4 {
+		t.Fatalf("master quote rate = %v", got)
+	}
+	charge := 7
+	accounting := &clip.Accounting{JobID: "job", Status: "settled", FinalCharge: &charge, Settled: true, Rate: rate}
+	if got := accountingProto(owner, accounting); got.GetRate() != nil || got.GetFinalChargeCredits() != 7 {
+		t.Fatalf("owner accounting = %v", got)
+	}
+	if got := accountingProto(master, accounting); got.GetRate() == nil {
+		t.Fatalf("master accounting lost its rate: %v", got)
 	}
 }
 

@@ -32,7 +32,7 @@ export const i18n = {
       unavailable: '모델·가격 정보 준비 중',
       clipUnavailable: '클립 계산 가능한 모델 미지정',
       locked: '{{plan}} 이상에서 이용 가능',
-      fxUnavailable: '현재 환율 정보가 없어 예상 편수를 계산할 수 없어요.',
+      fxUnavailable: '지금은 예상 편수를 계산할 수 없어요.',
       fxRate:
         '예상 계산 환율 · {{source}} {{date}} · 기준 {{reference}}원/달러, 적용 {{applied}}원/달러',
       freeUnavailable: '무료 모델은 크레딧 비용이 없어 편수로 환산하지 않아요.',
@@ -154,7 +154,7 @@ export const i18n = {
       unavailable: 'Model or pricing not available',
       clipUnavailable: 'No eligible clip model assigned',
       locked: 'Available on {{plan}} or higher',
-      fxUnavailable: 'Estimates are unavailable until the current exchange rate is available.',
+      fxUnavailable: 'Estimates are unavailable right now.',
       fxRate:
         'Estimate exchange rate · {{source}} {{date}} · reference {{reference}} KRW/USD, applied {{applied}} KRW/USD',
       freeUnavailable: 'Free models have no credit cost, so no finite count can be estimated.',

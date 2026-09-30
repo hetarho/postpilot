@@ -219,6 +219,8 @@ export function PlansPage() {
           <Typography variant="body" className="text-content-secondary mt-3 mb-4 text-center">
             {t('benefits.baseline', { ns: 'plans' })}
           </Typography>
+          {/* Only the operator is sent the rate behind credits (QUOTA-65); its absence is not a
+              reason to withhold estimates, which the server prices either way. */}
           {myPlan.fxRate && !myPlan.fxUnavailable && (
             <Typography variant="meta" className="text-content-secondary mb-4 block text-center">
               {t('estimator.fxRate', {
@@ -230,7 +232,7 @@ export function PlansPage() {
               })}
             </Typography>
           )}
-          {(!myPlan.fxRate || myPlan.fxUnavailable) && (
+          {myPlan.fxUnavailable && (
             <Notice tone="info" role="status" className="mb-4">
               {t('estimator.fxUnavailable', { ns: 'plans' })}
             </Notice>
@@ -246,7 +248,7 @@ export function PlansPage() {
                   ? undefined
                   : requiredPlanForLevel(level)
                 const count =
-                  !myPlan.fxRate || myPlan.fxUnavailable || requiredPlan
+                  myPlan.fxUnavailable || requiredPlan
                     ? undefined
                     : kind === 'blog'
                       ? rates && postsPerGrant(illustrativeMonthlyCredits(offer), rates, input)

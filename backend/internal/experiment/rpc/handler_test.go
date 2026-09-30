@@ -91,10 +91,10 @@ func TestExperimentActiveJobParamRejectsNonOpaqueValues(t *testing.T) {
 
 func TestExperimentMapsOnlyFrozenWriteTargetLanguage(t *testing.T) {
 	english := experiment.LanguageEnglish
-	if got := toProtoExperiment(experiment.Experiment{TargetLanguage: &english}, experiment.ReflectionDetail{}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH {
+	if got := toProtoExperiment(experiment.Experiment{TargetLanguage: &english}, experiment.ReflectionDetail{}, false).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH {
 		t.Fatalf("English target = %v", got)
 	}
-	if got := toProtoExperiment(experiment.Experiment{}, experiment.ReflectionDetail{}).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
+	if got := toProtoExperiment(experiment.Experiment{}, experiment.ReflectionDetail{}, false).GetTargetLanguage(); got != postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
 		t.Fatalf("absent target = %v", got)
 	}
 }
@@ -126,7 +126,7 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 		Output: []byte(`[{"file":"IMG_1.jpg","scene":"바다"}]`), Failure: &experiment.Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "upstream secret error"},
 		Usage: experiment.Usage{PromptTokens: 12, CompletionTokens: 3, CostMicrousd: 8, CostSource: experiment.CostReported, LatencyMS: 99},
 	}
-	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusPartial}, candidate, nil)
+	blind := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusPartial}, candidate, nil, true)
 	if blind.GetModel() != nil || blind.GetModelLabel() != "" || blind.GetUsage() != nil || blind.GetFailure() != nil || blind.GetError() != "" {
 		t.Fatalf("pre-verdict response leaked identity/accounting: %+v", blind)
 	}
@@ -134,11 +134,22 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 		t.Fatalf("blind output/id missing: %+v", blind)
 	}
 
-	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate, nil)
+	revealed := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate, nil, true)
 	if revealed.GetModel().GetModelId() != "secret-model" || revealed.GetModelLabel() != "Secret label" ||
 		revealed.GetUsage().GetCostMicrousd() != 8 || revealed.GetFailure().GetReason() != "MODEL_RATE_LIMITED" ||
 		revealed.GetFailure().GetTechnicalDetail() != "upstream secret error" || revealed.GetError() != "" {
 		t.Fatalf("terminal response did not reveal snapshot: %+v", revealed)
+	}
+
+	// QUOTA-66: the owner's reveal names the model and keeps tokens and latency, but carries no
+	// supplier cost (provider prose is cleared at the response edge, auth/rpc).
+	owner := toProtoCandidate(experiment.Experiment{Stage: experiment.StageObserve, Status: experiment.StatusDismissed}, candidate, nil, false)
+	if owner.GetModel().GetModelId() != "secret-model" || owner.GetUsage().GetPromptTokens() != 12 || owner.GetUsage().GetLatencyMs() != 99 {
+		t.Fatalf("owner reveal lost identity or usage: %+v", owner)
+	}
+	if owner.GetUsage().GetCostMicrousd() != 0 || owner.GetUsage().GetCostSource() != postpilotv1.CostSource_COST_SOURCE_UNSPECIFIED ||
+		owner.GetFailure().GetReason() != "MODEL_RATE_LIMITED" {
+		t.Fatalf("owner reveal carries supplier cost: %+v", owner)
 	}
 }
 
@@ -147,7 +158,7 @@ func TestExperimentMappingProjectsStructuredAggregateFailuresOnly(t *testing.T) 
 		ApplyFailure:    &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"safe": "value"}},
 		AdoptionFailure: &experiment.Failure{Reason: "MODEL_UNAVAILABLE", TechnicalDetail: "provider detail"},
 	}
-	mapped := toProtoExperiment(found, experiment.ReflectionDetail{})
+	mapped := toProtoExperiment(found, experiment.ReflectionDetail{}, true)
 	if mapped.GetApplyFailure().GetReason() != "UNKNOWN_FAILURE" || mapped.GetApplyFailure().GetParams()["safe"] != "value" {
 		t.Fatalf("apply failure = %#v", mapped.GetApplyFailure())
 	}
@@ -186,7 +197,7 @@ func TestExperimentOriginMapsBothWays(t *testing.T) {
 		}
 		for _, sample := range cases {
 			found := experiment.Experiment{ID: "exp", Stage: experiment.StageWrite, Origin: sample.origin, Status: experiment.StatusReview}
-			if got := toProtoExperiment(found, experiment.ReflectionDetail{}).GetOrigin(); got != sample.want {
+			if got := toProtoExperiment(found, experiment.ReflectionDetail{}, false).GetOrigin(); got != sample.want {
 				t.Errorf("origin %q maps to %v, want %v", sample.origin, got, sample.want)
 			}
 		}
@@ -200,7 +211,7 @@ func TestExperimentOriginMapsBothWays(t *testing.T) {
 				Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A",
 			}},
 		}
-		mapped := toProtoExperiment(found, experiment.ReflectionDetail{})
+		mapped := toProtoExperiment(found, experiment.ReflectionDetail{}, true)
 		if mapped.GetOrigin() != postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB {
 			t.Fatalf("origin = %v", mapped.GetOrigin())
 		}
@@ -278,7 +289,7 @@ func TestBadgesCrossTheWireOnlyWithTheIdentity(t *testing.T) {
 	blind := toProtoExperiment(experiment.Experiment{
 		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
 		Status: experiment.StatusReview, Candidates: candidates,
-	}, experiment.ReflectionDetail{})
+	}, experiment.ReflectionDetail{}, false)
 	if len(blind.GetCandidates()[0].GetBadges()) != 0 || blind.GetCandidates()[0].GetOtherNote() != "" {
 		t.Fatalf("badges leaked before the verdict: %+v", blind.GetCandidates()[0])
 	}
@@ -286,7 +297,7 @@ func TestBadgesCrossTheWireOnlyWithTheIdentity(t *testing.T) {
 	revealed := toProtoExperiment(experiment.Experiment{
 		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
 		Status: experiment.StatusDecided, WinnerCandidateID: "left", Candidates: candidates,
-	}, experiment.ReflectionDetail{})
+	}, experiment.ReflectionDetail{}, false)
 	got := revealed.GetCandidates()[0]
 	if len(got.GetBadges()) != 2 || got.GetOtherNote() != "설명" {
 		t.Fatalf("revealed candidate = %+v", got)
@@ -361,5 +372,26 @@ func TestAHistoryOrLeaderboardNamingAnalyzeIsRefused(t *testing.T) {
 	}
 	if got := toProtoStage(experiment.Stage("analyze")); got != postpilotv1.Stage_STAGE_UNSPECIFIED {
 		t.Fatalf("an analyze experiment still maps to %v", got)
+	}
+}
+
+// QUOTA-66: a board row carries provider spend only for the operator; everyone else still reads
+// rating, record, calls, latency and tokens.
+func TestLeaderboardCostReachesMasterOnly(t *testing.T) {
+	entry := experiment.LeaderboardEntry{
+		Rank: 1, Model: experiment.ModelRef{ProviderID: "openrouter", ModelID: "vendor/model"}, ModelLabel: "Model",
+		Rating: 1532, Matches: 4, Wins: 3, Losses: 1, PromptTokens: 1200, CompletionTokens: 300,
+		TotalCostMicrousd: 4_200, CostQuality: experiment.CostReported,
+	}
+	owner := toProtoLeaderboardEntry(entry, false)
+	if owner.GetTotalCostMicrousd() != 0 || owner.GetCostQuality() != postpilotv1.CostSource_COST_SOURCE_UNSPECIFIED {
+		t.Fatalf("non-master row carries cost: %+v", owner)
+	}
+	if owner.GetRating() != 1532 || owner.GetPromptTokens() != 1200 || owner.GetModelLabel() != "Model" {
+		t.Fatalf("non-master row lost its metrics: %+v", owner)
+	}
+	operator := toProtoLeaderboardEntry(entry, true)
+	if operator.GetTotalCostMicrousd() != 4_200 || operator.GetCostQuality() != postpilotv1.CostSource_COST_SOURCE_REPORTED {
+		t.Fatalf("master row lost its cost: %+v", operator)
 	}
 }

@@ -68,12 +68,18 @@ func (s snapshotEstimator) ComboRatesAt(_ context.Context, rate plan.RateSnapsho
 	return []planrpc.EstimatorCombo{{Combo: "value", PerPostBaseMilli: 1234}}, nil
 }
 
-func TestGetMyPlanUsesDisclosedRateForEstimates(t *testing.T) {
+// Estimates are priced at the selected rate for everyone, but only the operator is shown that
+// rate (QUOTA-65).
+func TestGetMyPlanPricesAtTheRateItShowsOnlyToMaster(t *testing.T) {
 	rate := plan.RateSnapshot{Source: "test", PublicationDate: "2026-09-30", ReferenceE4: 14_001_000, AppliedE4: 14_100_000}
 	var seen plan.RateSnapshot
 	msg := getMyPlanWith(t, plan.Light, snapshotEstimator{rate: rate, seen: &seen})
-	if seen != rate || msg.FxRate == nil || msg.FxRate.AppliedE4 != rate.AppliedE4 || len(msg.EstimatorCombos) != 1 {
-		t.Fatalf("rate used=%+v published=%+v combos=%+v", seen, msg.FxRate, msg.EstimatorCombos)
+	if seen != rate || msg.FxRate != nil || len(msg.EstimatorCombos) != 1 {
+		t.Fatalf("non-master: rate used=%+v published=%+v combos=%+v", seen, msg.FxRate, msg.EstimatorCombos)
+	}
+	msg = getMyPlanWith(t, plan.Master, snapshotEstimator{rate: rate, seen: &seen})
+	if msg.FxRate == nil || msg.FxRate.AppliedE4 != rate.AppliedE4 {
+		t.Fatalf("master rate = %+v", msg.FxRate)
 	}
 	msg = getMyPlanWith(t, plan.Light, snapshotEstimator{err: errors.New("no FX"), seen: &seen})
 	if !msg.FxUnavailable || len(msg.EstimatorCombos) != 0 {
@@ -177,6 +183,23 @@ func TestGetMyPlanPublishesOptionalClipRatesAndSourceAssumption(t *testing.T) {
 	for _, response := range []*postpilotv1.GetMyPlanResponse{msg, without, failed} {
 		if response.ClipSourceSeconds != plan.EstimatorClipSourceSeconds {
 			t.Fatalf("source assumption lost: %d", response.ClipSourceSeconds)
+		}
+	}
+}
+
+// QUOTA-66: estimator rates beside the models they price would give those prices back, so only
+// the operator's copy names the combo's models.
+func TestEstimatorComboNamesItsModelsToMasterOnly(t *testing.T) {
+	for acting, want := range map[plan.Plan][2]string{
+		plan.Pro:    {"", ""},
+		plan.Master: {"vendor/eyes", "vendor/pen"},
+	} {
+		combos := getMyPlan(t, acting).EstimatorCombos
+		if len(combos) != 1 || combos[0].GetObserveLabel() != want[0] || combos[0].GetWriteLabel() != want[1] {
+			t.Fatalf("%s combos = %+v, want labels %v", acting, combos, want)
+		}
+		if combos[0].GetPerPostBaseMilli() != 3800 {
+			t.Fatalf("%s lost its rates: %+v", acting, combos[0])
 		}
 	}
 }

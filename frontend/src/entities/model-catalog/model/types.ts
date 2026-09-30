@@ -40,9 +40,6 @@ export interface CatalogModel {
   disabled: boolean
   disabledReason: string
   contextTokens: bigint
-  inputUsdPerMillion: string
-  outputUsdPerMillion: string
-  pricingCheckedAt: string
   /** What one job using this model would hold, for the CALLING account. */
   requiredCredits: number
   /** The caller's balance covers `requiredCredits`. Display only: the server refuses an

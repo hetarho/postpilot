@@ -7,7 +7,9 @@ export type ExperimentStatusName =
   'queued' | 'running' | 'review' | 'partial' | 'decided' | 'dismissed' | 'failed'
 export type CandidateStatusName = 'pending' | 'running' | 'succeeded' | 'failed'
 export type DisplaySideName = 'left' | 'right'
-export type CostSourceName = 'reported' | 'estimated' | 'unavailable' | 'mixed'
+/** `withheld` is a reader the server sends no supplier cost to — anyone but the operator
+ *  (QUOTA-66). The screen says nothing about cost then, not "cost unavailable". */
+export type CostSourceName = 'reported' | 'estimated' | 'unavailable' | 'mixed' | 'withheld'
 /** Where a comparison was started, frozen by the server at start. It decides which verdict
  *  the review offers, and it is never the address the review was opened from. */
 export type ExperimentOriginName = 'editor' | 'lab'

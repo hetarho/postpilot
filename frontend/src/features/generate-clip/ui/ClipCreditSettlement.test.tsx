@@ -35,3 +35,24 @@ it('shows confirmed debit, original-expiry return and later compensation as sepa
   expect(settlement).toHaveTextContent('기준 1,412.34원/USD · 적용 1,420원/USD')
   expect(settlement).toHaveTextContent('임시 환율')
 })
+
+// QUOTA-65: an owner is sent no rate, so the settlement speaks in credits only.
+it('shows an owner the settlement without any exchange rate', () => {
+  render(
+    <ClipCreditSettlement
+      job={{ id: 'done', kind: 'generate_clip', status: 'done' } as GenerationJob}
+      accounting={{
+        jobId: 'done',
+        status: 'settled',
+        settled: true,
+        confirmedChargeCredits: 7,
+        finalChargeCredits: 7,
+        refundCredits: 33,
+        netDebitCredits: 7,
+      }}
+    />,
+  )
+  const settlement = screen.getByRole('region', { name: '이번 작업의 크레딧' })
+  expect(settlement).toHaveTextContent('확인된 AI 사용 차감 7 크레딧')
+  expect(settlement).not.toHaveTextContent(/원\/USD|환율/)
+})

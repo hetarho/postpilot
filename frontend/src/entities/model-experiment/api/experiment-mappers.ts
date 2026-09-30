@@ -258,6 +258,7 @@ function costSourceName(value: CostSource): CostSourceName {
         [CostSource.ESTIMATED]: 'estimated',
         [CostSource.UNAVAILABLE]: 'unavailable',
         [CostSource.MIXED]: 'mixed',
+        [CostSource.UNSPECIFIED]: 'withheld',
       } as Partial<Record<CostSource, CostSourceName>>
     )[value] ?? 'unavailable'
   )

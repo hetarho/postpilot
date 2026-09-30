@@ -121,7 +121,7 @@ describe('the published plans', () => {
     expect(within(items[2]).getByText('Max 이상에서 이용 가능')).toBeInTheDocument()
   })
 
-  it('uses 30 assumed daily grants plus bonus, with no estimate when FX is unavailable', async () => {
+  it('uses 30 assumed daily grants plus bonus and never shows a subscriber the rate', async () => {
     renderAppAt('/plans', {
       user: USER,
       plans: {
@@ -133,9 +133,7 @@ describe('the published plans', () => {
     })
     const items = await cards()
     expect(screen.getByText(/30회 받는다고 가정하고 월 보너스를 더해/)).toBeInTheDocument()
-    expect(
-      screen.getByText(/예상 계산 환율 · test 2026-09-30 · 기준 1,400원\/달러, 적용 1,400원\/달러/),
-    ).toBeInTheDocument()
+    expect(screen.queryByText(/예상 계산 환율/)).not.toBeInTheDocument()
     expect(within(items[2]).getByText('글 약 1860편 제작 가능')).toBeInTheDocument()
   })
 
@@ -170,13 +168,33 @@ describe('the published plans', () => {
     )
   })
 
-  it('does not invent counts without the current FX rate', async () => {
+  it('does not invent counts while paid estimates are unavailable', async () => {
     renderAppAt('/plans', {
       user: USER,
       plans: { plan: ProtoPlan.BASIC, fxRate: null, fxUnavailable: true },
     })
     const items = await cards()
-    expect(screen.getByText(/현재 환율 정보가 없어/)).toBeInTheDocument()
+    expect(screen.getByText('지금은 예상 편수를 계산할 수 없어요.')).toBeInTheDocument()
+    expect(screen.queryByText(/환율/)).not.toBeInTheDocument()
     expect(within(items[2]).queryByText(/글 약/)).not.toBeInTheDocument()
+  })
+
+  // QUOTA-65: a subscriber is never shown the rate behind credits, and its absence is no reason
+  // to withhold the counts the server priced.
+  it('shows a subscriber counts without the rate behind them', async () => {
+    renderAppAt('/plans', { user: USER, plans: { plan: ProtoPlan.BASIC } })
+    const items = await cards()
+    expect(within(items[2]).getAllByText(/글 약/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/환율/)).not.toBeInTheDocument()
+    expect(screen.queryByText('지금은 예상 편수를 계산할 수 없어요.')).not.toBeInTheDocument()
+  })
+
+  it('shows the operator the rate the estimates use', async () => {
+    renderAppAt('/plans', {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER },
+    })
+    await cards()
+    expect(screen.getByText(/예상 계산 환율/)).toBeInTheDocument()
   })
 })

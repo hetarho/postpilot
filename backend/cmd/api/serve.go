@@ -47,7 +47,8 @@ func serve(ctx context.Context, c *contexts) error {
 	p := c.platform
 	cfg, handle := p.cfg, p.db
 	server := rpcserver.New(cfg, version, rpcserver.Options{
-		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader)},
+		// Auth is outermost: it puts the caller's plan on the context the redaction reads.
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), authrpc.NewSupplierRedaction()},
 		Handlers:     handlers(c),
 		Routes: map[string]http.Handler{
 			// These plain routes bypass the Connect interceptors, so the throttle the

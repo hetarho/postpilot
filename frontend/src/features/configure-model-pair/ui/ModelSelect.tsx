@@ -104,21 +104,11 @@ function ModelMeta({
 }) {
   const { t } = useTranslation('models')
   if (!model) return null
-  const context = formatNumber(Number(model.contextTokens))
+  // Supplier prices never reach this projection (QUOTA-66, MODEL-27): the line says what the
+  // model can hold, and what a post costs in credits is QUOTA-64's figure.
   return (
     <Typography variant="label" as="p" className="mt-1">
-      {t('pair.pricing', {
-        tokens: context,
-        input: model.inputUsdPerMillion || '?',
-        output: model.outputUsdPerMillion || '?',
-      })}
-      {/* The date the price was checked is provenance, not a decision input, and it is what pushed
-          this line to two rows under each of the three selects — 72px of the fold, three times
-          over, on a 360px phone. It appears only where there is width for it. */}
-      <span className="hidden sm:inline">
-        {' · '}
-        {model.pricingCheckedAt || t('pair.priceUnchecked')}
-      </span>
+      {t('pair.context', { tokens: formatNumber(Number(model.contextTokens)) })}
     </Typography>
   )
 }

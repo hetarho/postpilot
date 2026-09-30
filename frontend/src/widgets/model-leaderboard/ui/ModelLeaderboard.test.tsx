@@ -159,3 +159,24 @@ it('shows the losses a dismissal counts, with no reference opponent on the board
   expect(screen.getByText('Elo 1484')).toBeInTheDocument()
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
 })
+
+// QUOTA-66: provider spend reaches the operator only. A row the server withheld it from says
+// nothing about cost — not a zero, not "비용 미제공" — and keeps the rest of its metrics.
+it('shows no cost at all on a row whose cost was withheld', () => {
+  render(
+    <ModelLeaderboard entries={[{ ...entryFixture(), costQuality: 'withheld' }]} window="week" />,
+  )
+  expect(screen.getByText(/성공 호출 8 · 평균 900ms · 토큰 10 \/ 20/)).toBeInTheDocument()
+  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/비용 미제공/)).not.toBeInTheDocument()
+})
+
+it('shows the operator the cost it was sent', () => {
+  render(
+    <ModelLeaderboard
+      entries={[{ ...entryFixture(), costQuality: 'reported', totalCostMicrousd: 4200n }]}
+      window="week"
+    />,
+  )
+  expect(screen.getByText(/토큰 10 \/ 20 · \$0\.004200/)).toBeInTheDocument()
+})

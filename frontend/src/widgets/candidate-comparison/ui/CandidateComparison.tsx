@@ -266,6 +266,13 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
 function usageLine(candidate: ExperimentCandidate, t: TFunction<'posts'>): string {
   const usage = candidate.usage
   if (!usage) return t('comparison.usageUnavailable')
+  const line = t('comparison.usage', {
+    prompt: formatNumber(usage.promptTokens),
+    completion: formatNumber(usage.completionTokens),
+    latency: formatNumber(usage.latencyMs),
+  })
+  // Provider cost reaches the operator only (QUOTA-66); anyone else is sent none.
+  if (usage.costSource === 'withheld') return line
   const cost =
     usage.costSource === 'unavailable'
       ? t('comparison.costUnavailable')
@@ -280,10 +287,5 @@ function usageLine(candidate: ExperimentCandidate, t: TFunction<'posts'>): strin
             maximumFractionDigits: 6,
           },
         )}`
-  return t('comparison.usage', {
-    prompt: formatNumber(usage.promptTokens),
-    completion: formatNumber(usage.completionTokens),
-    latency: formatNumber(usage.latencyMs),
-    cost,
-  })
+  return `${line} · ${cost}`
 }

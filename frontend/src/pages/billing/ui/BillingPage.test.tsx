@@ -286,11 +286,23 @@ describe('BillingPage', () => {
     expect(screen.getByRole('button', { name: '크레딧 구매' })).toBeDisabled()
   })
 
-  it('distinguishes the temporary official reference from its applied rate', async () => {
+  // QUOTA-65: a subscriber's billing screen shows credits and KRW prices, never the rate
+  // behind credits.
+  it('shows a subscriber no exchange rate', async () => {
     renderAppAt('/billing', {
       user: { id: 'alice', plan: ProtoPlan.PRO },
+      plans: { plan: ProtoPlan.PRO },
+      billing: { subscription: true },
+    })
+    expect(await screen.findByRole('heading', { name: '혜택과 잔액' })).toBeInTheDocument()
+    expect(screen.queryByText(/환율|원\/USD/)).not.toBeInTheDocument()
+  })
+
+  it('distinguishes the temporary official reference from its applied rate for the operator', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
       plans: {
-        plan: ProtoPlan.PRO,
+        plan: ProtoPlan.MASTER,
         fxRate: {
           source: 'BOK',
           publicationDate: '2026-09-29',
@@ -324,8 +336,11 @@ describe('BillingPage', () => {
     expect(await screen.findByText('30 spendable credits')).toBeInTheDocument()
     expect(screen.getByText(/Retained credits do not unlock paid models/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Free model work and fixed KRW checkout remain available/),
+      screen.getByText(
+        'Paid AI work cannot start right now. Free-model work and payments continue.',
+      ),
     ).toBeInTheDocument()
+    expect(screen.queryByText(/exchange rate|official rate|KRW\/USD/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Buy credits' })).toBeDisabled()
   })
 

@@ -294,5 +294,5 @@ export const errors = {
   MASTER_ONLY: '운영자 계정만 쓸 수 있는 기능이에요.',
   NETWORK_UNAVAILABLE: '네트워크에 연결할 수 없어요.',
   AI_FX_RATE_UNAVAILABLE:
-    '공식 환율을 확인할 수 없어 유료 AI를 잠시 시작할 수 없어요. 최근 환율이 확인되면 다시 이용할 수 있어요.',
+    '유료 AI를 잠시 시작할 수 없어요. 잠시 후 다시 시도해 주세요. 무료 모델은 계속 쓸 수 있어요.',
 } as const satisfies Record<AppFailureReason, string>

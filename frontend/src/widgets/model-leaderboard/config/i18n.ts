@@ -23,8 +23,7 @@ export const i18n = {
       recommended: '추천',
       disappeared: '등록 해제',
       record: '{{matches}}전 {{wins}}승 {{losses}}패 · 승률 {{rate}}%',
-      metrics:
-        '성공 호출 {{calls}} · 평균 {{latency}}ms · 토큰 {{prompt}} / {{completion}} · {{cost}}',
+      metrics: '성공 호출 {{calls}} · 평균 {{latency}}ms · 토큰 {{prompt}} / {{completion}}',
       costUnavailable: '비용 미제공',
       partlyEstimated: '일부 ≈ ',
     },
@@ -50,7 +49,7 @@ export const i18n = {
       disappeared: 'Unregistered',
       record: '{{matches}} matches, {{wins}} wins, {{losses}} losses · {{rate}}% win rate',
       metrics:
-        '{{calls}} successful calls · {{latency}}ms average · tokens {{prompt}} / {{completion}} · {{cost}}',
+        '{{calls}} successful calls · {{latency}}ms average · tokens {{prompt}} / {{completion}}',
       costUnavailable: 'Cost unavailable',
       partlyEstimated: 'partly ≈ ',
     },

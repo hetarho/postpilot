@@ -42,6 +42,14 @@ func UserFromContext(ctx context.Context) (string, bool) {
 	return actor.UserID, ok && actor.UserID != ""
 }
 
+// ActsAsMaster reports whether the caller is the operator tier. Supplier cost, the credit
+// conversion and provider prose ride only on such a caller's responses (QUOTA-65, QUOTA-66);
+// an unknown plan is not master, so every such gate fails closed.
+func ActsAsMaster(ctx context.Context) bool {
+	acting, ok := PlanFromContext(ctx)
+	return ok && acting == plan.Master
+}
+
 // PlanFromContext returns the acting account's plan. A false result means the caller's
 // authority is unknown, which every gate must treat as "not allowed" rather than as a
 // default tier.

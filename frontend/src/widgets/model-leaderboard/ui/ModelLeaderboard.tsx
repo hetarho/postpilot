@@ -72,8 +72,9 @@ export function ModelLeaderboard({
                 latency: formatNumber(entry.averageLatencyMs),
                 prompt: formatNumber(entry.promptTokens),
                 completion: formatNumber(entry.completionTokens),
-                cost: costLabel(entry, t),
               })}
+              {/* Provider spend reaches the operator only (QUOTA-66); anyone else is sent none. */}
+              {entry.costQuality !== 'withheld' && ` · ${costLabel(entry, t)}`}
             </Typography>
           </div>
           <Typography variant="label" as="span" className="text-content-primary whitespace-nowrap">
