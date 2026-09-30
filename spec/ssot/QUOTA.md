@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r26 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r27 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -7,7 +7,7 @@
 - QUOTA-3 [o] subscriber changes through BILL and master-only support assignment (`AdminService.SetUserPlan`, `api setplan`) use the same entitlement rules (→QUOTA-35 →QUOTA-42). Support assignment never charges a payment method or creates a second grant for an unchanged period.
 - QUOTA-4 [o] the last master cannot be demoted on either path; the guard is a condition inside the UPDATE statement, not a count taken before it ← two concurrent demotions must not both commit
 - QUOTA-5 [o] the acting plan is resolved once per request on the session path, from the row (→AUTH-15)
-- QUOTA-6 [o] one integer product credit represents KRW 1 of AI cost at the disclosed job-frozen service rate (→QUOTA-59), not a model token or the retail purchase price. Preserve provider micro-USD usage separately; fixed plan grants and KRW checkout prices do not fluctuate with FX.
+- QUOTA-6 [o] one integer product credit represents KRW 1 of AI cost at the job-frozen service rate (→QUOTA-59), a conversion users are never told (→QUOTA-65), not a model token or the retail purchase price. Preserve provider micro-USD usage separately; fixed plan grants and KRW checkout prices do not fluctuate with FX.
 - QUOTA-7 [o] the code-owned offer is:
   | tier / ko name | monthly KRW | annual KRW | daily credits | monthly bonus | paid model ceiling | monthly server exports |
   |---|---|---|---|---|---|---|
@@ -38,7 +38,7 @@
   - compensation is a separate, once-only credit under QUOTA-60, never a second unused-reservation return
 - QUOTA-16 [o] master records admissions and reference AI usage but spends no credit lot and is not refused for model-grade access or insufficient credits. Operator exemption changes neither provider limits nor compatibility, bounded execution, price safety or the 60-second output limit.
 - QUOTA-17 [o] a hold whose job row then failed to insert is released in full on a context that outlives the caller's cancellation; a boot sweep settles any hold left open behind an already-terminal job
-- QUOTA-18 [o] a refusal is `resource_exhausted` with reason `INSUFFICIENT_CREDITS` carrying `required`, `balance`, `renews_at` (RFC3339); it writes no admission or debit and creates no job row except that QUOTA-43 preserves the existing clip preparation job as failed; the client renders copy from the reason and formats machine values (micro-USD, instants, tier names) with i18next, never from the message string
+- QUOTA-18 [o] a refusal is `resource_exhausted` with reason `INSUFFICIENT_CREDITS` carrying `required`, `balance`, `renews_at` (RFC3339); it writes no admission or debit and creates no job row except that QUOTA-43 preserves the existing clip preparation job as failed; the client renders copy from the reason and formats machine values (credits, instants, tier names) with i18next, never from the message string
 - QUOTA-19 [o] paid model access follows the purpose-specific registered grade and QUOTA-7's tier ceiling; sufficient credits are a separate admission check.
   - free accounts use only separately managed free models, even when they retain purchased or voucher credit
   - free models are available to all tiers at zero credit cost and zero balance; provider restrictions still apply (→MODEL-68)
@@ -78,7 +78,7 @@
   - today's daily grant is unchanged; higher daily credit starts at the next existing 24-hour boundary
   - a repeated upgrade starts from the then-current tier, without replaying earlier grants; it clears a scheduled downgrade
   - downgrade/cancellation preserves paid access and remaining grants through purchased coverage, then applies the lower/free offer; purchased credit is preserved
-- QUOTA-36 [o] production counts are labelled estimates based on eligible assigned pairs and stated item conditions, not entitlements. A monthly illustration states its assumed number of daily grants plus the monthly bonus; daily credit is never represented as available upfront. AI clip estimates and included server-export counts are distinct.
+- QUOTA-36 [o] production counts are labelled estimates based on QUOTA-64's per-post figures for eligible assigned pairs, not entitlements. A monthly illustration states its assumed number of daily grants plus the monthly bonus; daily credit is never represented as available upfront. AI clip estimates and included server-export counts are distinct.
 - QUOTA-37 [o] paid daily grants use fixed 24-hour half-open windows from the paid-subscription start instant, independent of login or inactivity.
   - bonus/export periods use anchored calendar months in Asia/Seoul, preserving the original payment day and time; a missing day clamps to month-end and later restores the original day
   - grant only once per eligible window, including coincident daily/monthly boundaries; unused daily and monthly amounts expire with no carryover
@@ -88,8 +88,8 @@
 - QUOTA-39 [o] four estimator combos are the model levels `value` · `balanced` · `premium` · `top` (가성비 · 밸런스 · 고급 · 최고, →MODEL-57)
   - each card offers and accepts only a `photo-analysis` registration and a `writing` registration carrying that same per-purpose level, with the server enforcing both registration and level
   - the operator assigns the pair through the third AdminService procedure, and a combo left unassigned, or whose registration is deregistered or relevelled, is left out of the client response rather than falling back ← quoting real prices means the comparison moves with the operator's curation, and an invented price that never moves would be the alternative
-- QUOTA-40 [o] publish estimator blog rates per photo/video/1000 finished characters and clip rates per source/finished second, from current catalog prices, the disclosed rounded FX and code-owned token assumptions including 1.5x generation tokens for AI edits. Any estimated base represents model work, not a fixed credit surcharge. Missing prices/rate yield unavailable estimates; actual job admission and settlement remain authoritative.
-- QUOTA-41 [o] `/plans` starts with blog-post/clip basis selection and a read-only per-item condition summary; one bottom-right floating "Change conditions" button opens a shared sheet (bottom sheet on mobile, dialog on desktop) containing only per-item inputs, never a model selector or production counts; blog inputs are characters/photos/videos and clip inputs are original-video count and finished-clip duration; the two sets persist independently, switching basis restores its conditions, and every card updates immediately without a request per change
+- QUOTA-40 [o] the catalog-based estimate prices one post from current catalog prices and code-owned token assumptions (including 1.5x generation tokens for AI edits) and the default item conditions, and clip rates per source/finished second the same way; both are published in credits only, never with the conversion (→QUOTA-65) or the models behind a rate to a non-master (→QUOTA-66). Any estimated base represents model work, not a fixed credit surcharge. Missing prices/rate yield unavailable estimates; actual job admission and settlement remain authoritative.
+- QUOTA-41 [o] `/plans` starts with blog-post/clip basis selection and, on the clip basis, a read-only per-item condition summary; one bottom-right floating "Change conditions" button opens a shared sheet (bottom sheet on mobile, dialog on desktop) containing only per-item inputs, never a model selector or production counts; the blog basis takes no inputs, since its per-post figure comes from recent usage (→QUOTA-64), so the button and sheet serve the clip basis only, whose inputs are original-video count and finished-clip duration and persist across basis switches, and every card updates immediately without a request per change
 - QUOTA-42 [o] a successful first subscription or re-subscription opens a new paid anchor with the full first daily grant, monthly bonus and monthly export allowance, once. Existing purchased credit and valid non-subscription lots keep their identities and expiries. Paid-to-paid changes follow QUOTA-35 without reopening a fresh cycle.
 - QUOTA-43 [o] clip generation creates a durable job, validates retained recovery work and verifies only missing source-analysis work before reserving its remaining AI calls including the frozen response-correction allowance; reservation is atomic and within the approved ceiling, and refusal permits zero AI calls and preserves completed work
 - QUOTA-44 [o] clip AI consumes only reserved model refs, call counts and input/completion budgets; only bounded response correction under QUOTA-54 may repeat a call, with no model or supplier fallback or budget increase, and final debit never exceeds reservation or approval while service-owned overage cannot create debt
@@ -107,14 +107,14 @@
 
 - QUOTA-54 [o] clip quotes reserve at most four requests per missing observation chunk and at most four for a missing composition (one initial plus three response corrections); a frozen policy carrying no correction allowance allows one, every issued request is independently metered, reused work is never charged again, and unused correction allowance is refunded under the settlement and cancellation rules
 
-- QUOTA-55 [o] sales copy distinguishes KRW 1 AI-cost denomination from the fixed retail top-up packs and distinguishes daily allowance from monthly bonus. Annual pricing states ten monthly payments for twelve months (about 16.7% off twelve monthly payments), not a 20% discount. No misleading at-par purchase or immediate monthly lump-sum claim is shown.
+- QUOTA-55 [o] sales copy explains credits by what they produce (→QUOTA-64), never by a KRW-per-credit or AI-cost denomination, and distinguishes daily allowance from monthly bonus. Annual pricing states ten monthly payments for twelve months (about 16.7% off twelve monthly payments), not a 20% discount. No misleading at-par purchase or immediate monthly lump-sum claim is shown.
 - QUOTA-56 [o] estimator levels remain value/balanced/premium/top in order. A level outside the compared tier is locked with the required tier, not shown as usable production; a missing/unpriced/incompatible eligible pair has an unavailable explanation. Free models are described with provider-limited availability, never an infinite job estimate from dividing by zero.
 - QUOTA-57 [o] clip estimates cover source analysis plus flow/narration writing from the assigned photo-analysis/writing pair, requiring video input and structured output for the observer and structured output for the writer. Originals assume 60 seconds each, visibly stated; count is 1..20 and finished duration 15..60 seconds. An estimate is neither provider qualification nor an approved reservation and changes no production quote or settlement policy.
 - QUOTA-58 [o] an eligible voucher redemption opens one voucher lot expiring its stated validity after redemption (→GIFT-9); revocation voids only its unspent remainder (→GIFT-10). Subscription lapse does not pause that expiry or grant paid-model access.
 - QUOTA-59 [o] select the previous business day's published KRW/USD reference in Asia/Seoul; `applied_rate = ceil(reference_rate / 10) × 10` KRW per USD.
-  - snapshot the source, publication date, reference and applied rate before paid AI work starts; keep it through the admitted job’s internal retries and settlement, and disclose reference versus applied rate; a new admitted job selects its own snapshot
-  - when the required rate cannot be verified, use the last confirmed publication only if its date is at most seven calendar days old, with a temporary-rate notice
-  - without an eligible rate, refuse new cost-incurring AI work; free-model work, existing frozen jobs and fixed-KRW purchases are unaffected
+  - snapshot the source, publication date, reference and applied rate before paid AI work starts; keep it through the admitted job’s internal retries and settlement, and record reference versus applied rate for master's audit; a new admitted job selects its own snapshot
+  - when the required rate cannot be verified, use the last confirmed publication only if its date is at most seven calendar days old, flagged temporary on master's surfaces
+  - without an eligible rate, refuse new cost-incurring AI work with copy that names no exchange rate (→QUOTA-65); free-model work, existing frozen jobs and fixed-KRW purchases are unaffected
   - subscription prices, purchased packs and grant counts never change with this rate
 - QUOTA-60 [o] service-fault or unknown-cause failure issues `ceil(C / 2)` compensation credits from the confirmed usage debit C, once per job; C=7 yields 4 credits and net burden 3.
   - the compensation is a separate lot valid for seven days from issuance, even if the originating daily/monthly lot expired
@@ -127,6 +127,24 @@
   - `SetUserPlan` targeting the calling account is refused server-side with its own reason, whatever tier is requested and however many masters exist
   - 계정 관리 shows the caller's own row as a fixed tier label with no tier control; hiding the control is an affordance, the server refusal is the rule
   - no billing write (subscription start, change, renewal, lapse, scheduled change, cancellation end, refund reversal) changes a master account's tier (→BILL-20)
+
+- QUOTA-64 [o] user-facing production estimates are credits per post taken from recent actual usage ← a user judges a plan by what their credits produce, not by what the models cost
+  - a model's stage figure is the median, over the last 30 days and across all accounts, of the credits that each successfully generated post's calls for that stage used (an exempt account's reference amount counts as use); only `generate` jobs count
+  - a figure is shown only when its window holds at least 10 such posts from at least 3 accounts; otherwise the catalog-based estimate (→QUOTA-40) stands in, labelled 예상, so every priced model shows a number
+  - a pair's per-post figure is its observe figure plus its write figure; a post with no photo counts the write figure only
+  - shown on the `/ai-models` stage selectors and comparison candidates (the stage figure), on post creation (the selected pair's figure and how many posts the balance covers) and on `/plans` cards (posts a month per estimator level under QUOTA-36)
+  - labelled 최근 사용량 기준 or 예상; figures may lag the window by up to one day; free models show provider-limited availability instead (→QUOTA-56)
+  - an estimate is never a quote: admission, reservation and settlement stay authoritative
+- QUOTA-65 [o] the credit↔KRW conversion is internal: a non-master user sees credit amounts and the fixed KRW retail prices (→QUOTA-7 →QUOTA-34) only ← credits must read as the user's own balance, never as a cost to re-check against what they paid
+  - no non-master response, screen, copy, mail or error states a KRW-per-credit or AI-cost value, the KRW/USD reference or applied rate, the charge formula or a temporary-rate status
+  - master keeps them on operator surfaces (job accounting, shadow amounts, rate audit)
+  - QUOTA-59's snapshot, freezing and settlement are unchanged
+- QUOTA-66 [o] supplier cost is master-only ← model cost and the operator's supplier account are business-confidential
+  - supplier cost = model unit prices in any currency and their pricing date, provider cost per call, job, experiment or leaderboard aggregate, rates that name the models they price, and supplier account state (balance, quota) carried in provider prose
+  - a non-master caller receives none of it in any RPC response, notice, mail or error: the server leaves the fields empty, and a client hiding delivered data does not satisfy this
+  - provider prose that would reach a non-master owner, such as a failure's technical detail, is replaced by product copy
+  - master-only procedures and screens (→QUOTA-25) may carry it
+  - contract tests call every procedure that carries such a field as a non-master and assert it is empty
 
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
@@ -146,6 +164,7 @@
 - applicable text/visual/audio/output pricing must be known and bounded; price safety never becomes a later user overcharge
 - admission, lot mutation, compensation and export settlement are idempotent under retries and concurrent completion; no transaction spans a provider call
 - master remains exempt from AI lot debit and model-plan refusal, not from provider limits or bounded execution
+- non-master responses carry no supplier-cost or credit-conversion value (→QUOTA-65 →QUOTA-66); master-only surfaces may
 - schema/placement: plan rules and RPCs in `backend/internal/plan`; product-agnostic metering, reservations and lot ledger in `backend/internal/usage`; auth owns account plans; clip owns export reservations; billing composes paid coverage through consumer-owned transaction ports
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
