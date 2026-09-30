@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+// The production client must call the Open API domain; the retired www path cannot answer.
+func TestEximbankCallsTheOpenAPIDomain(t *testing.T) {
+	if got := NewEximbank("secret", nil).endpoint; got != "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON" {
+		t.Fatalf("endpoint = %s", got)
+	}
+}
+
 func TestEximbankRateContract(t *testing.T) {
 	for _, tc := range []struct {
 		name, body         string

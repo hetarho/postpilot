@@ -14,7 +14,10 @@ import (
 	"time"
 )
 
-const eximbankEndpoint = "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON"
+// eximbankEndpoint is the Open API domain Korea Eximbank moved the rate API to on 2026-04-30.
+// The former www.koreaexim.go.kr path now only redirects to itself behind an incomplete TLS
+// chain, so no request to it can succeed.
+const eximbankEndpoint = "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON"
 
 type Eximbank struct {
 	authKey  string
