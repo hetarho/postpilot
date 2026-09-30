@@ -152,7 +152,7 @@ type Redemption struct {
 	CreditsExpireAt time.Time
 }
 
-// Preset is one issue shortcut: a paid rung's monthly grant for PresetDays (GIFT-3).
+// Preset is one issue shortcut: a paid rung's monthly bonus for PresetDays (GIFT-3).
 type Preset struct {
 	Plan    plan.Plan
 	Credits int

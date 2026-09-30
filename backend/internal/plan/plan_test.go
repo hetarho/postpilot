@@ -38,34 +38,6 @@ func TestMonthlyGrantsAreTheShippedLadder(t *testing.T) {
 	}
 }
 
-// A paid rung must grant more than its price buys at the par purchase rate of one credit
-// per US cent, or there is no reason to subscribe rather than top up.
-func TestPaidRungsGrantABonusOverThePurchaseRate(t *testing.T) {
-	for _, tc := range []struct {
-		acting  plan.Plan
-		bonusPc int
-	}{
-		{plan.Basic, 10},
-		{plan.Pro, 15},
-		{plan.Max, 20},
-	} {
-		var offer plan.Offer
-		for _, candidate := range plan.Offers() {
-			if candidate.Plan == tc.acting {
-				offer = candidate
-			}
-		}
-		if offer.PriceUSDCents == 0 {
-			t.Fatalf("%s is not an offer with a price", tc.acting)
-		}
-		want := offer.PriceUSDCents + offer.PriceUSDCents*tc.bonusPc/100
-		if offer.MonthlyCredits != want {
-			t.Errorf("%s grants %d credits for %d cents, want %d (+%d%%)",
-				tc.acting, offer.MonthlyCredits, offer.PriceUSDCents, want, tc.bonusPc)
-		}
-	}
-}
-
 // The estimator's rates are what a comparison screen multiplies, so they are pinned with
 // their own arithmetic. The two models are priced differently on purpose: a photo must be
 // priced by the OBSERVE model and a character by the WRITE model, and one shared price pair

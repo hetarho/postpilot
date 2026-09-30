@@ -41,7 +41,7 @@ describe('AccountMenu', () => {
     const user = userEvent.setup()
     renderAppAt('/posts', {
       user: { ...USER, plan: ProtoPlan.FREE },
-      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false } },
     })
 
     const panel = await openAccountPopover(user)
@@ -72,7 +72,6 @@ describe('AccountMenu', () => {
         balance: {
           credits: 962,
           unlimited: false,
-          monthlyGrant: 50,
           renewsAt: '2026-09-30T15:00:00Z',
           lots: [
             { kind: 'voucher', granted: 1150, remaining: 800, expiresAt: '2026-09-28T15:00:00Z' },

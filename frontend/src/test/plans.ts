@@ -31,7 +31,6 @@ export interface FakeCreditBalance {
   unlimited?: boolean
   lots?: FakeCreditLot[]
   renewsAt?: string
-  monthlyGrant?: number
   dailyGrant?: number
   monthlyBonus?: number
   dailyResetsAt?: string
@@ -46,8 +45,6 @@ export interface FakePlansOptions {
   /** The rungs the comparison screen lists. */
   offers?: Array<{
     plan: ProtoPlan
-    monthlyCredits: number
-    priceUsdCents: number
     monthlyKrw?: number
     annualKrw?: number
     dailyCredits?: number
@@ -142,7 +139,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           issuanceCause: lot.issuanceCause ?? '',
         })),
         renewsAt: options.balance?.renewsAt ?? '',
-        monthlyGrant: options.balance?.monthlyGrant ?? 0,
         dailyGrant: options.balance?.dailyGrant ?? 0,
         monthlyBonus: options.balance?.monthlyBonus ?? 0,
         dailyResetsAt: options.balance?.dailyResetsAt ?? '',
@@ -153,16 +149,12 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
       offers: options.offers ?? [
         {
           plan: ProtoPlan.FREE,
-          monthlyCredits: 0,
-          priceUsdCents: 0,
           monthlyKrw: 0,
           annualKrw: 0,
           modelCeiling: 'none',
         },
         {
           plan: ProtoPlan.LIGHT,
-          monthlyCredits: 0,
-          priceUsdCents: 0,
           monthlyKrw: 1900,
           annualKrw: 19000,
           dailyCredits: 15,
@@ -172,8 +164,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         },
         {
           plan: ProtoPlan.BASIC,
-          monthlyCredits: 330,
-          priceUsdCents: 300,
           monthlyKrw: 4900,
           annualKrw: 49000,
           dailyCredits: 45,
@@ -183,8 +173,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         },
         {
           plan: ProtoPlan.PRO,
-          monthlyCredits: 1150,
-          priceUsdCents: 1000,
           monthlyKrw: 9900,
           annualKrw: 99000,
           dailyCredits: 85,
@@ -195,8 +183,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         },
         {
           plan: ProtoPlan.MAX,
-          monthlyCredits: 2400,
-          priceUsdCents: 2000,
           monthlyKrw: 29900,
           annualKrw: 299000,
           dailyCredits: 235,

@@ -56,7 +56,7 @@ type Balance struct {
 	Credits   int
 	Unlimited bool
 	Lots      []Lot
-	// RenewsAt is when the next monthly grant opens: every refusal names it, so a user is
+	// RenewsAt is the next paid credit reset: every refusal names it, so a user is
 	// never told "later" without being told when.
 	RenewsAt                              time.Time
 	DailyGrant, MonthlyBonus              int
@@ -132,10 +132,10 @@ func (h *Handler) WithExports(exports ExportReader) *Handler { h.exports = expor
 //
 // It reads the plan from the request context rather than from a payload — a tier in a
 // message is a claim by the caller — and it publishes the grant table so the frontend
-// renders numbers it never has to know.
+// renders the code-owned offer without keeping a second price table.
 //
-// Reading a balance also renews it: the monthly grant opens on access, so a client that
-// polls at the boundary sees the new lot rather than an expired one.
+// Reading a balance also opens due daily and monthly benefit windows, so a client
+// polling at a boundary sees the current lots.
 func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.GetMyPlanRequest]) (*connect.Response[postpilotv1.GetMyPlanResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
@@ -189,8 +189,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	for _, offer := range plan.Offers() {
 		offers = append(offers, &postpilotv1.PlanOffer{
 			Plan:                 ToProto(offer.Plan),
-			MonthlyCredits:       int32(offer.MonthlyCredits),
-			PriceUsdCents:        int32(offer.PriceUSDCents),
 			Recommended:          offer.Recommended,
 			MonthlyKrw:           int32(offer.MonthlyKRW),
 			AnnualKrw:            int32(offer.AnnualKRW),

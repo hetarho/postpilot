@@ -39,10 +39,9 @@ export interface CreditBalance {
   /** The operator tier, which is never refused for balance: it shows no meter. */
   unlimited: boolean
   lots: CreditLot[]
-  /** RFC3339; the instant the next monthly grant opens, computed by the server. */
+  /** RFC3339; the next paid credit reset computed by the server. */
   renewsAt: string
   /** What this tier is granted each month, so a meter has something to fill against. */
-  monthlyGrant: number
   dailyGrant: number
   monthlyBonus: number
   dailyResetsAt: string

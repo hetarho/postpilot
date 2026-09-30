@@ -161,7 +161,7 @@ func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilot
 		slog.Error("billing quote failed", "user_id", func() string { id, _ := auth.UserFromContext(ctx); return id }(), "err", err)
 		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not quote price", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
-	return connect.NewResponse(&postpilotv1.QuotePriceResponse{UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate, QuoteId: quote.ID}), nil
+	return connect.NewResponse(&postpilotv1.QuotePriceResponse{Krw: int64(quote.KRW), QuoteId: quote.ID}), nil
 }
 
 func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilotv1.QuoteChangeRequest]) (*connect.Response[postpilotv1.QuoteChangeResponse], error) {
@@ -179,8 +179,7 @@ func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilo
 		return nil, changeError(userID, err)
 	}
 	return connect.NewResponse(&postpilotv1.QuoteChangeResponse{
-		UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4,
-		RateDate: quote.RateDate, AppliedNow: quote.AppliedNow, EffectiveAt: instant(quote.EffectiveAt), QuoteId: quote.ID,
+		Krw: int64(quote.KRW), AppliedNow: quote.AppliedNow, EffectiveAt: instant(quote.EffectiveAt), QuoteId: quote.ID,
 	}), nil
 }
 
@@ -189,19 +188,12 @@ func (h *Handler) QuotePurchase(ctx context.Context, req *connect.Request[postpi
 	if !ok {
 		return nil, authRequired()
 	}
-	var quote billing.PurchaseQuote
-	var err error
-	if h.service.FixedKRW() {
-		quote, err = h.service.QuotePack(ctx, req.Msg.GetPackId())
-	} else {
-		quote, err = h.service.QuotePurchase(ctx, int(req.Msg.GetUsdCents()))
-	}
+	quote, err := h.service.QuotePack(ctx, req.Msg.GetPackId())
 	if err != nil {
 		return nil, purchaseError(userID, err)
 	}
 	return connect.NewResponse(&postpilotv1.QuotePurchaseResponse{
-		Credits: int32(quote.Credits), Krw: int64(quote.KRW),
-		KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate, PackId: quote.PackID,
+		Credits: int32(quote.Credits), Krw: int64(quote.KRW), PackId: quote.PackID,
 	}), nil
 }
 
@@ -210,13 +202,7 @@ func (h *Handler) PurchaseCredits(ctx context.Context, req *connect.Request[post
 	if !ok {
 		return nil, authRequired()
 	}
-	var purchase billing.Purchase
-	var err error
-	if h.service.FixedKRW() {
-		purchase, err = h.service.PurchasePack(ctx, userID, req.Msg.GetPackId())
-	} else {
-		purchase, err = h.service.PurchaseCredits(ctx, userID, int(req.Msg.GetUsdCents()))
-	}
+	purchase, err := h.service.PurchasePack(ctx, userID, req.Msg.GetPackId())
 	if err != nil {
 		return nil, purchaseError(userID, err)
 	}
@@ -249,15 +235,6 @@ func toProtoEvent(value billing.Event) *postpilotv1.BillingEvent {
 	if value.Credits != nil {
 		result.Credits = int32(*value.Credits)
 	}
-	if value.USDCents != nil {
-		result.UsdCents = int32(*value.USDCents)
-	}
-	if value.KRWPerUSDE4 != nil {
-		result.KrwPerUsdE4 = *value.KRWPerUSDE4
-	}
-	if value.RateDate != nil {
-		result.RateDate = *value.RateDate
-	}
 	if value.KRW != nil {
 		result.Krw = int64(*value.KRW)
 	}
@@ -274,7 +251,7 @@ func toProtoEvent(value billing.Event) *postpilotv1.BillingEvent {
 }
 
 func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
-	result := &postpilotv1.BillingPurchase{Id: value.ID, PackId: value.PackID, Credits: int32(value.Credits), UsdCents: int32(value.USDCents), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable, RefundOrderId: value.OrderID}
+	result := &postpilotv1.BillingPurchase{Id: value.ID, PackId: value.PackID, Credits: int32(value.Credits), Krw: int64(value.KRW), ChargedAt: instant(value.ChargedAt), Refundable: value.Refundable, RefundOrderId: value.OrderID}
 	if value.RefundedAt != nil {
 		result.RefundedAt = instant(*value.RefundedAt)
 	}

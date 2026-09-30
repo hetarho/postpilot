@@ -9,7 +9,7 @@ import { typographyStyles } from '@/shared/ui'
  *  had no other entry at all, so nothing in the app led anyone to the tiers (QUOTA-27).
  *
  *  The shell mounts this, which means the balance is read on load rather than only when a
- *  popover opens. That read is also what renews the monthly grant (QUOTA-26) — the same
+ *  popover opens. That read also opens due paid benefit windows (QUOTA-26) — the same
  *  idempotent per-cycle insert the server already performed on the popover's read, so this
  *  moves WHEN it happens and adds no new write path. The account popover reads the same
  *  cache entry, so opening it costs no second request.

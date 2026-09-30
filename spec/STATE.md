@@ -58,13 +58,14 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T487 | Reset test entitlements and verify the complete pricing transition | QUOTA BILL MODEL CLIP AUTH MKT ARCH | T483 T486 | todo |
 
 ## next
-- next: implement-task T487. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate
-- update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); T486 includes the /about header check at 320px/200% text; T479/T485 replace the current USD billing flow before any card rollout; unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26)
+- next: no remaining tasks; create-task for pending ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+. Pricing scope includes /plans and /about; infrastructure and PostgreSQL migration remain separate.
+- update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 260930 T487 done: guarded one-time test entitlement reset, KRW-only wire cleanup and integrated pricing lifecycle verified locally
+- 260930 T487 claimed (p6): prepare a guarded test-entitlement reset and verify the full pricing lifecycle
 - 260930 T486 done: five KRW plans and eligible FX-priced estimates match public About; full FE/BE and local visual checks passed
 - 260930 T486 claimed (p6): publish five KRW offers and eligible cost estimates on plans and About
 - 260930 T485 done: KRW billing, distinct benefit clocks and confirmed-use AI settlement; full frontend and local gates passed
@@ -83,5 +84,3 @@
 - 260930 T479 claimed (p6): replace FX-dependent checkout with fixed KRW plans and packs, exact upgrade proration and reconciled subscription outcomes
 - 260930 T478 done: official FX is frozen at paid admission, confirmed usage settles once, and service/unknown faults issue independent seven-day credit compensation; ARCH-26/28 and frontend/deploy regression passed
 - 260930 T478 claimed (p6): freeze one official FX snapshot for AI admission and settle confirmed cost with fault compensation
-- 260930 T477 done: paid daily/monthly credit and export windows are idempotent, upgrade and support transitions are atomic, origin-period holds survive resets; migration 0115 and full verification passed
-- 260930 T477 claimed (p6): daily and monthly entitlements follow the completed T476 period and offer foundation

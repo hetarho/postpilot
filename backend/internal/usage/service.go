@@ -117,6 +117,15 @@ func (s *Service) WithRateSelector(selector *RateSelector) *Service {
 	return &clone
 }
 
+// WithClock keeps entitlement-window tests on the same instant as billing.
+func (s *Service) WithClock(now func() time.Time) *Service {
+	clone := *s
+	if now != nil {
+		clone.now = now
+	}
+	return &clone
+}
+
 func (s *Service) SelectRate(ctx context.Context) (plan.RateSnapshot, error) {
 	if s.rates == nil {
 		return plan.RateSnapshot{}, ErrRateUnavailable

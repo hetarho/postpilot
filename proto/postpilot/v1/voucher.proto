@@ -60,7 +60,7 @@ message Voucher {
   string token = 13;
 }
 
-// One issue preset: a paid rung's monthly grant for a fixed number of days.
+// One issue preset: a paid rung's monthly bonus for a fixed number of days.
 message VoucherPreset {
   Plan plan = 1;
   int32 credits = 2;

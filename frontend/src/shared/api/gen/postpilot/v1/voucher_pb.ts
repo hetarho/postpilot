@@ -125,7 +125,7 @@ export const VoucherSchema: GenMessage<Voucher> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_voucher, 1);
 
 /**
- * One issue preset: a paid rung's monthly grant for a fixed number of days.
+ * One issue preset: a paid rung's monthly bonus for a fixed number of days.
  *
  * @generated from message postpilot.v1.VoucherPreset
  */

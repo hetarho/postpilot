@@ -248,7 +248,10 @@ function CreditSummary({
       <Meter
         label={t('balance.heading')}
         value={balance.credits}
-        max={balance.lots.reduce((total, lot) => total + lot.granted, 0) || balance.monthlyGrant}
+        max={Math.max(
+          balance.credits,
+          balance.lots.reduce((total, lot) => total + lot.granted, 0),
+        )}
         valueText={t('balance.credits', { count: balance.credits })}
         note={undefined}
       />

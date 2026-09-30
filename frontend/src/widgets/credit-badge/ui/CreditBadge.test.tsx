@@ -14,7 +14,7 @@ describe('CreditBadge', () => {
       user: { ...USER, plan: ProtoPlan.BASIC },
       plans: {
         plan: ProtoPlan.BASIC,
-        balance: { credits: 137, unlimited: false, monthlyGrant: 220 },
+        balance: { credits: 137, unlimited: false },
       },
     })
 
@@ -66,7 +66,7 @@ describe('CreditBadge', () => {
     renderAppAt('/posts', {
       user: { ...USER, plan: ProtoPlan.FREE },
       calls,
-      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false } },
     })
 
     await screen.findByRole('link', { name: '플랜 Free, 남은 크레딧 50' })

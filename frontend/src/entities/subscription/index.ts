@@ -31,7 +31,7 @@ export {
   useResumeSubscription,
 } from './api/useSubscriptionChanges'
 export { useRegisterPaymentMethod, useRemovePaymentMethod } from './api/usePaymentMethod'
-export { usePurchaseCredits, useQuotePurchase, useQuotePack } from './api/useCreditPurchases'
+export { usePurchaseCredits, useQuotePack } from './api/useCreditPurchases'
 export {
   useMyRefunds,
   useRefundReviews,

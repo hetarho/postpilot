@@ -33,6 +33,15 @@ func NewService(store Store, credits Credits) *Service {
 	return &Service{store: store, credits: credits, now: time.Now, newToken: newToken, newID: newID}
 }
 
+// WithClock lets a caller keep redemption on the same clock as paid coverage.
+func (s *Service) WithClock(now func() time.Time) *Service {
+	clone := *s
+	if now != nil {
+		clone.now = now
+	}
+	return &clone
+}
+
 // Issue stores a new voucher whose link expires LinkLifetime after now, and returns it with
 // its token (GIFT-3, GIFT-4, GIFT-6, GIFT-7).
 func (s *Service) Issue(ctx context.Context, issuer string, request Issue) (Voucher, error) {

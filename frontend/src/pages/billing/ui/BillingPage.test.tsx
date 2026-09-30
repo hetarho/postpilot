@@ -299,9 +299,7 @@ describe('BillingPage', () => {
       user: { id: 'alice', plan: ProtoPlan.PRO },
       billing: {
         populated: true,
-        extraHistory: [
-          { id: 3n, kind: 'refund', createdAt: '2026-09-09T00:00:00Z', usdCents: 500, krw: 7000n },
-        ],
+        extraHistory: [{ id: 3n, kind: 'refund', createdAt: '2026-09-09T00:00:00Z', krw: 7000n }],
       },
     })
 

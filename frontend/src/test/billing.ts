@@ -115,7 +115,6 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
           id: 'purchase-1',
           refundOrderId: 'purchase-1',
           credits: 100,
-          usdCents: 100,
           krw: 1400n,
           chargedAt: '2026-09-08T00:00:00Z',
           refundedAt: '',
@@ -160,9 +159,6 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
               kind: 'charge',
               plan: ProtoPlan.PRO,
               term: ProtoTerm.MONTHLY,
-              usdCents: 500,
-              krwPerUsdE4: 14000000n,
-              rateDate: '2026-09-07',
               krw: 7000n,
               orderId: 'sub-1',
               createdAt: '2026-09-08T00:00:00Z',
@@ -182,12 +178,8 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
           : request.plan === ProtoPlan.MAX
             ? 29900
             : 9900
-    const usdCents = 0
     return create(QuotePriceResponseSchema, {
-      usdCents,
       krw: BigInt(request.term === ProtoTerm.ANNUAL ? monthly * 10 : monthly),
-      krwPerUsdE4: 14000000n,
-      rateDate: '2026-09-07',
     })
   })
   router.rpc(BillingService.method.quoteChange, (request) => {
@@ -210,12 +202,9 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
             : 9900
     const appliedNow =
       planRank(request.plan) > planRank(currentPlan) && request.term === currentTerm
-    const usdCents = appliedNow ? Math.max(0, monthly - currentMonthly) : monthly
+    const krw = appliedNow ? Math.max(0, monthly - currentMonthly) : monthly
     return create(QuoteChangeResponseSchema, {
-      usdCents,
-      krw: BigInt(usdCents),
-      krwPerUsdE4: 14000000n,
-      rateDate: '2026-09-07',
+      krw: BigInt(krw),
       appliedNow,
       effectiveAt: appliedNow ? '2026-09-08T00:00:00Z' : '2026-10-08T00:00:00Z',
     })
@@ -236,14 +225,13 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   })
   router.rpc(BillingService.method.purchaseCredits, (request) => {
     calls?.push('PurchaseCredits')
-    purchaseRequests?.push(request.packId || request.usdCents)
+    purchaseRequests?.push(request.packId)
     if (purchaseFailure) throw connectAppError(purchaseFailure, Code.FailedPrecondition)
     const pack = packs.find((item) => item.id === request.packId) ?? packs[0]!
     const purchase = {
       id: `purchase-${purchases.length + 1}`,
       refundOrderId: `purchase-${purchases.length + 1}`,
       packId: pack.id,
-      usdCents: 0,
       credits: pack.credits,
       krw: pack.krw,
       chargedAt: '2026-09-08T00:00:01Z',

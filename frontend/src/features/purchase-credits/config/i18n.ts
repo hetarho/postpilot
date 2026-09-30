@@ -17,7 +17,8 @@ export const i18n = {
       purchaseTitle: '크레딧을 구매할까요?',
       purchaseDescription:
         '{{credits}} 크레딧에 {{krw}}원이 결제됩니다. 구매 크레딧은 만료되지 않습니다.',
-      consumption: '구매 크레딧은 월 지급·보너스 크레딧을 모두 사용한 뒤 마지막으로 차감됩니다.',
+      consumption:
+        '구매 크레딧은 만료되는 크레딧과 만료되지 않는 프로모션 크레딧을 사용한 뒤 마지막으로 차감됩니다.',
       row: '{{credits}} 크레딧 · {{krw}}원',
       refund: '환불',
       refundTitle: '크레딧 구매를 환불할까요?',
@@ -44,7 +45,8 @@ export const i18n = {
       purchaseTitle: 'Buy these credits?',
       purchaseDescription:
         '₩{{krw}} will be charged for {{credits}} credits. Purchased credits never expire.',
-      consumption: 'Purchased credits are spent last, after monthly and bonus credits.',
+      consumption:
+        'Purchased credits are spent after expiring credits and non-expiring promotional credits.',
       row: '{{credits}} credits · ₩{{krw}}',
       refund: 'Refund',
       refundTitle: 'Refund this credit purchase?',

@@ -114,7 +114,7 @@ export const i18n = {
       },
       selectModels: 'Choose an observation model and a writing model.',
       creditPolicy:
-        'Generation requires approval of the displayed maximum. After every original and analysis copy is verified, credits are reserved once. Your charge never exceeds either approval or reservation. Failed work without confirmed billable usage costs nothing, including the base charge.',
+        'Generation requires approval of the displayed maximum. After every original and analysis copy is verified, credits are reserved once. Your charge never exceeds either approval or reservation. Failed work without confirmed billable usage costs nothing.',
       plans: 'Check credits and plans',
       reselection:
         'The retained source videos are no longer available. Select them again to generate another clip.',

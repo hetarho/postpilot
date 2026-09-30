@@ -42,7 +42,7 @@ export interface Voucher {
   token: string
 }
 
-/** One issue shortcut: a paid rung's monthly grant for a fixed number of days (GIFT-3). */
+/** One issue shortcut: a paid rung's monthly bonus for a fixed number of days (GIFT-3). */
 export interface VoucherPreset {
   plan: 'light' | 'basic' | 'pro' | 'max' | 'other'
   credits: number

@@ -26,9 +26,6 @@ export interface BillingEvent {
   plan: PlanName | undefined
   term: BillingTerm | undefined
   credits: number
-  usdCents: number
-  krwPerUsdE4: bigint
-  rateDate: string
   krw: bigint
   providerPaymentKey: string
   orderId: string
@@ -41,7 +38,6 @@ export interface Purchase {
   refundOrderId: string
   packId: string
   credits: number
-  usdCents: number
   krw: bigint
   chargedAt: string
   refundedAt: string
@@ -55,10 +51,7 @@ export interface PurchaseQuote extends Quote {
 
 export interface Quote {
   id: string
-  usdCents: number
   krw: bigint
-  ratePerUsdE4: bigint
-  rateDate: string
 }
 
 export interface ChangeQuote extends Quote {

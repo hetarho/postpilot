@@ -99,6 +99,10 @@ func runCommand(args []string) bool {
 	}
 	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
 	switch args[0] {
+	case "reset-test-entitlements":
+		if err := runTestEntitlementReset(ctx, cfg.DBPath, args[1:], os.Stdout); err != nil {
+			fatal("reset-test-entitlements", err)
+		}
 	case "adduser":
 		if err := provision.Run(ctx, settings, args[1:], creditBootstrap); err != nil {
 			fatal("adduser", err)

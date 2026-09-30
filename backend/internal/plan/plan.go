@@ -139,15 +139,13 @@ const recommended = Pro
 
 // Offer is one rung as a comparison screen lists it.
 type Offer struct {
-	Plan           Plan
-	MonthlyCredits int
-	PriceUSDCents  int
-	MonthlyKRW     int
-	AnnualKRW      int
-	DailyCredits   int
-	MonthlyBonus   int
-	ModelCeiling   string
-	ServerExports  int
+	Plan          Plan
+	MonthlyKRW    int
+	AnnualKRW     int
+	DailyCredits  int
+	MonthlyBonus  int
+	ModelCeiling  string
+	ServerExports int
 	// Recommended marks the one rung the screen highlights.
 	Recommended bool
 }
@@ -159,16 +157,14 @@ func Offers() []Offer {
 	offers := make([]Offer, 0, len(rungs))
 	for _, rung := range rungs {
 		offers = append(offers, Offer{
-			Plan:           rung,
-			MonthlyCredits: monthlyCredits[rung],
-			PriceUSDCents:  monthlyPriceUSDCents[rung],
-			MonthlyKRW:     offerRules[rung].monthlyKRW,
-			AnnualKRW:      offerRules[rung].annualKRW,
-			DailyCredits:   offerRules[rung].dailyCredits,
-			MonthlyBonus:   offerRules[rung].monthlyBonus,
-			ModelCeiling:   offerRules[rung].modelCeiling,
-			ServerExports:  offerRules[rung].serverExports,
-			Recommended:    Recommended(rung),
+			Plan:          rung,
+			MonthlyKRW:    offerRules[rung].monthlyKRW,
+			AnnualKRW:     offerRules[rung].annualKRW,
+			DailyCredits:  offerRules[rung].dailyCredits,
+			MonthlyBonus:  offerRules[rung].monthlyBonus,
+			ModelCeiling:  offerRules[rung].modelCeiling,
+			ServerExports: offerRules[rung].serverExports,
+			Recommended:   Recommended(rung),
 		})
 	}
 	return offers

@@ -49,10 +49,7 @@ export function toChangeQuote(response: QuoteChangeResponse | undefined): Change
   if (!response) return undefined
   return {
     id: response.quoteId,
-    usdCents: response.usdCents,
     krw: response.krw,
-    ratePerUsdE4: response.krwPerUsdE4,
-    rateDate: response.rateDate,
     appliedNow: response.appliedNow,
     effectiveAt: response.effectiveAt,
   }
@@ -65,9 +62,6 @@ function toEvent(value: ProtoBillingEvent): BillingEvent {
     plan: planFromProto(value.plan),
     term: termFromProto(value.term),
     credits: value.credits,
-    usdCents: value.usdCents,
-    krwPerUsdE4: value.krwPerUsdE4,
-    rateDate: value.rateDate,
     krw: value.krw,
     providerPaymentKey: value.providerPaymentKey,
     orderId: value.orderId,
@@ -82,7 +76,6 @@ function toPurchase(value: ProtoBillingPurchase): Purchase {
     refundOrderId: value.refundOrderId,
     packId: value.packId,
     credits: value.credits,
-    usdCents: value.usdCents,
     krw: value.krw,
     chargedAt: value.chargedAt,
     refundedAt: value.refundedAt,
@@ -92,17 +85,13 @@ function toPurchase(value: ProtoBillingPurchase): Purchase {
 
 export function toPurchaseQuote(
   response: QuotePurchaseResponse | undefined,
-  usdCents: number,
 ): PurchaseQuote | undefined {
   if (!response) return undefined
   return {
     id: '',
     packId: response.packId,
-    usdCents,
     credits: response.credits,
     krw: response.krw,
-    ratePerUsdE4: response.krwPerUsdE4,
-    rateDate: response.rateDate,
   }
 }
 
@@ -128,10 +117,7 @@ export function toQuote(response: QuotePriceResponse | undefined): Quote | undef
   if (!response) return undefined
   return {
     id: response.quoteId,
-    usdCents: response.usdCents,
     krw: response.krw,
-    ratePerUsdE4: response.krwPerUsdE4,
-    rateDate: response.rateDate,
   }
 }
 

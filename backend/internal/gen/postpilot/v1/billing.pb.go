@@ -248,9 +248,6 @@ type BillingEvent struct {
 	Plan               Plan                   `protobuf:"varint,3,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
 	Term               Term                   `protobuf:"varint,4,opt,name=term,proto3,enum=postpilot.v1.Term" json:"term,omitempty"`
 	Credits            int32                  `protobuf:"varint,5,opt,name=credits,proto3" json:"credits,omitempty"`
-	UsdCents           int32                  `protobuf:"varint,6,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
-	KrwPerUsdE4        int64                  `protobuf:"varint,7,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
-	RateDate           string                 `protobuf:"bytes,8,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
 	Krw                int64                  `protobuf:"varint,9,opt,name=krw,proto3" json:"krw,omitempty"`
 	ProviderPaymentKey string                 `protobuf:"bytes,10,opt,name=provider_payment_key,json=providerPaymentKey,proto3" json:"provider_payment_key,omitempty"`
 	OrderId            string                 `protobuf:"bytes,11,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
@@ -325,27 +322,6 @@ func (x *BillingEvent) GetCredits() int32 {
 	return 0
 }
 
-func (x *BillingEvent) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
-	}
-	return 0
-}
-
-func (x *BillingEvent) GetKrwPerUsdE4() int64 {
-	if x != nil {
-		return x.KrwPerUsdE4
-	}
-	return 0
-}
-
-func (x *BillingEvent) GetRateDate() string {
-	if x != nil {
-		return x.RateDate
-	}
-	return ""
-}
-
 func (x *BillingEvent) GetKrw() int64 {
 	if x != nil {
 		return x.Krw
@@ -385,7 +361,6 @@ type BillingPurchase struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Credits       int32                  `protobuf:"varint,3,opt,name=credits,proto3" json:"credits,omitempty"`
-	UsdCents      int32                  `protobuf:"varint,4,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
 	Krw           int64                  `protobuf:"varint,5,opt,name=krw,proto3" json:"krw,omitempty"`
 	ChargedAt     string                 `protobuf:"bytes,8,opt,name=charged_at,json=chargedAt,proto3" json:"charged_at,omitempty"`
 	RefundedAt    string                 `protobuf:"bytes,9,opt,name=refunded_at,json=refundedAt,proto3" json:"refunded_at,omitempty"`
@@ -436,13 +411,6 @@ func (x *BillingPurchase) GetId() string {
 func (x *BillingPurchase) GetCredits() int32 {
 	if x != nil {
 		return x.Credits
-	}
-	return 0
-}
-
-func (x *BillingPurchase) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
 	}
 	return 0
 }
@@ -1282,10 +1250,7 @@ func (x *QuotePriceRequest) GetTerm() Term {
 
 type QuotePriceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
 	Krw           int64                  `protobuf:"varint,2,opt,name=krw,proto3" json:"krw,omitempty"`
-	KrwPerUsdE4   int64                  `protobuf:"varint,3,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
-	RateDate      string                 `protobuf:"bytes,4,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
 	QuoteId       string                 `protobuf:"bytes,5,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1321,32 +1286,11 @@ func (*QuotePriceResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{21}
 }
 
-func (x *QuotePriceResponse) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
-	}
-	return 0
-}
-
 func (x *QuotePriceResponse) GetKrw() int64 {
 	if x != nil {
 		return x.Krw
 	}
 	return 0
-}
-
-func (x *QuotePriceResponse) GetKrwPerUsdE4() int64 {
-	if x != nil {
-		return x.KrwPerUsdE4
-	}
-	return 0
-}
-
-func (x *QuotePriceResponse) GetRateDate() string {
-	if x != nil {
-		return x.RateDate
-	}
-	return ""
 }
 
 func (x *QuotePriceResponse) GetQuoteId() string {
@@ -1410,10 +1354,7 @@ func (x *QuoteChangeRequest) GetTerm() Term {
 
 type QuoteChangeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
 	Krw           int64                  `protobuf:"varint,2,opt,name=krw,proto3" json:"krw,omitempty"`
-	KrwPerUsdE4   int64                  `protobuf:"varint,3,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
-	RateDate      string                 `protobuf:"bytes,4,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
 	AppliedNow    bool                   `protobuf:"varint,5,opt,name=applied_now,json=appliedNow,proto3" json:"applied_now,omitempty"`
 	EffectiveAt   string                 `protobuf:"bytes,6,opt,name=effective_at,json=effectiveAt,proto3" json:"effective_at,omitempty"`
 	QuoteId       string                 `protobuf:"bytes,7,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
@@ -1451,32 +1392,11 @@ func (*QuoteChangeResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *QuoteChangeResponse) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
-	}
-	return 0
-}
-
 func (x *QuoteChangeResponse) GetKrw() int64 {
 	if x != nil {
 		return x.Krw
 	}
 	return 0
-}
-
-func (x *QuoteChangeResponse) GetKrwPerUsdE4() int64 {
-	if x != nil {
-		return x.KrwPerUsdE4
-	}
-	return 0
-}
-
-func (x *QuoteChangeResponse) GetRateDate() string {
-	if x != nil {
-		return x.RateDate
-	}
-	return ""
 }
 
 func (x *QuoteChangeResponse) GetAppliedNow() bool {
@@ -1502,7 +1422,6 @@ func (x *QuoteChangeResponse) GetQuoteId() string {
 
 type QuotePurchaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
 	PackId        string                 `protobuf:"bytes,2,opt,name=pack_id,json=packId,proto3" json:"pack_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1538,13 +1457,6 @@ func (*QuotePurchaseRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *QuotePurchaseRequest) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
-	}
-	return 0
-}
-
 func (x *QuotePurchaseRequest) GetPackId() string {
 	if x != nil {
 		return x.PackId
@@ -1556,8 +1468,6 @@ type QuotePurchaseResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Credits       int32                  `protobuf:"varint,1,opt,name=credits,proto3" json:"credits,omitempty"`
 	Krw           int64                  `protobuf:"varint,2,opt,name=krw,proto3" json:"krw,omitempty"`
-	KrwPerUsdE4   int64                  `protobuf:"varint,3,opt,name=krw_per_usd_e4,json=krwPerUsdE4,proto3" json:"krw_per_usd_e4,omitempty"`
-	RateDate      string                 `protobuf:"bytes,4,opt,name=rate_date,json=rateDate,proto3" json:"rate_date,omitempty"`
 	PackId        string                 `protobuf:"bytes,5,opt,name=pack_id,json=packId,proto3" json:"pack_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1607,20 +1517,6 @@ func (x *QuotePurchaseResponse) GetKrw() int64 {
 	return 0
 }
 
-func (x *QuotePurchaseResponse) GetKrwPerUsdE4() int64 {
-	if x != nil {
-		return x.KrwPerUsdE4
-	}
-	return 0
-}
-
-func (x *QuotePurchaseResponse) GetRateDate() string {
-	if x != nil {
-		return x.RateDate
-	}
-	return ""
-}
-
 func (x *QuotePurchaseResponse) GetPackId() string {
 	if x != nil {
 		return x.PackId
@@ -1630,7 +1526,6 @@ func (x *QuotePurchaseResponse) GetPackId() string {
 
 type PurchaseCreditsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UsdCents      int32                  `protobuf:"varint,1,opt,name=usd_cents,json=usdCents,proto3" json:"usd_cents,omitempty"`
 	PackId        string                 `protobuf:"bytes,2,opt,name=pack_id,json=packId,proto3" json:"pack_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1664,13 +1559,6 @@ func (x *PurchaseCreditsRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use PurchaseCreditsRequest.ProtoReflect.Descriptor instead.
 func (*PurchaseCreditsRequest) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_billing_proto_rawDescGZIP(), []int{26}
-}
-
-func (x *PurchaseCreditsRequest) GetUsdCents() int32 {
-	if x != nil {
-		return x.UsdCents
-	}
-	return 0
 }
 
 func (x *PurchaseCreditsRequest) GetPackId() string {
@@ -2526,27 +2414,23 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\x14BillingPaymentMethod\x12\x1d\n" +
 	"\n" +
 	"card_label\x18\x01 \x01(\tR\tcardLabel\x12#\n" +
-	"\rregistered_at\x18\x02 \x01(\tR\fregisteredAt\"\x8d\x03\n" +
+	"\rregistered_at\x18\x02 \x01(\tR\fregisteredAt\"\xe6\x02\n" +
 	"\fBillingEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12&\n" +
 	"\x04plan\x18\x03 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
 	"\x04term\x18\x04 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\x12\x18\n" +
-	"\acredits\x18\x05 \x01(\x05R\acredits\x12\x1b\n" +
-	"\tusd_cents\x18\x06 \x01(\x05R\busdCents\x12#\n" +
-	"\x0ekrw_per_usd_e4\x18\a \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
-	"\trate_date\x18\b \x01(\tR\brateDate\x12\x10\n" +
+	"\acredits\x18\x05 \x01(\x05R\acredits\x12\x10\n" +
 	"\x03krw\x18\t \x01(\x03R\x03krw\x120\n" +
 	"\x14provider_payment_key\x18\n" +
 	" \x01(\tR\x12providerPaymentKey\x12\x19\n" +
 	"\border_id\x18\v \x01(\tR\aorderId\x12\x12\n" +
 	"\x04note\x18\f \x01(\tR\x04note\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\r \x01(\tR\tcreatedAt\"\xc5\x02\n" +
+	"created_at\x18\r \x01(\tR\tcreatedAtJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\tusd_centsR\x0ekrw_per_usd_e4R\trate_date\"\xb9\x02\n" +
 	"\x0fBillingPurchase\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\acredits\x18\x03 \x01(\x05R\acredits\x12\x1b\n" +
-	"\tusd_cents\x18\x04 \x01(\x05R\busdCents\x12\x10\n" +
+	"\acredits\x18\x03 \x01(\x05R\acredits\x12\x10\n" +
 	"\x03krw\x18\x05 \x01(\x03R\x03krw\x12\x1d\n" +
 	"\n" +
 	"charged_at\x18\b \x01(\tR\tchargedAt\x12\x1f\n" +
@@ -2557,7 +2441,7 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	" \x01(\bR\n" +
 	"refundable\x12\x17\n" +
 	"\apack_id\x18\v \x01(\tR\x06packId\x12&\n" +
-	"\x0frefund_order_id\x18\f \x01(\tR\rrefundOrderIdJ\x04\b\x02\x10\x03J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x06lot_idR\x14provider_payment_keyR\border_id\"\x15\n" +
+	"\x0frefund_order_id\x18\f \x01(\tR\rrefundOrderIdJ\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x06lot_idR\tusd_centsR\x14provider_payment_keyR\border_id\"\x15\n" +
 	"\x13GetMyBillingRequest\"\xbe\x02\n" +
 	"\x14GetMyBillingResponse\x12E\n" +
 	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\x12I\n" +
@@ -2597,37 +2481,27 @@ const file_postpilot_v1_billing_proto_rawDesc = "" +
 	"\fsubscription\x18\x01 \x01(\v2!.postpilot.v1.BillingSubscriptionR\fsubscription\"c\n" +
 	"\x11QuotePriceRequest\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
-	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\xa0\x01\n" +
-	"\x12QuotePriceResponse\x12\x1b\n" +
-	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x10\n" +
-	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
-	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
-	"\trate_date\x18\x04 \x01(\tR\brateDate\x12\x19\n" +
-	"\bquote_id\x18\x05 \x01(\tR\aquoteId\"d\n" +
+	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"y\n" +
+	"\x12QuotePriceResponse\x12\x10\n" +
+	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12\x19\n" +
+	"\bquote_id\x18\x05 \x01(\tR\aquoteIdJ\x04\b\x01\x10\x02J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\tusd_centsR\x0ekrw_per_usd_e4R\trate_date\"d\n" +
 	"\x12QuoteChangeRequest\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12&\n" +
-	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\xe5\x01\n" +
-	"\x13QuoteChangeResponse\x12\x1b\n" +
-	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x10\n" +
-	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
-	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
-	"\trate_date\x18\x04 \x01(\tR\brateDate\x12\x1f\n" +
+	"\x04term\x18\x02 \x01(\x0e2\x12.postpilot.v1.TermR\x04term\"\xbe\x01\n" +
+	"\x13QuoteChangeResponse\x12\x10\n" +
+	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12\x1f\n" +
 	"\vapplied_now\x18\x05 \x01(\bR\n" +
 	"appliedNow\x12!\n" +
 	"\feffective_at\x18\x06 \x01(\tR\veffectiveAt\x12\x19\n" +
-	"\bquote_id\x18\a \x01(\tR\aquoteId\"L\n" +
-	"\x14QuotePurchaseRequest\x12\x1b\n" +
-	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x17\n" +
-	"\apack_id\x18\x02 \x01(\tR\x06packId\"\x9e\x01\n" +
+	"\bquote_id\x18\a \x01(\tR\aquoteIdJ\x04\b\x01\x10\x02J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\tusd_centsR\x0ekrw_per_usd_e4R\trate_date\"@\n" +
+	"\x14QuotePurchaseRequest\x12\x17\n" +
+	"\apack_id\x18\x02 \x01(\tR\x06packIdJ\x04\b\x01\x10\x02R\tusd_cents\"\x83\x01\n" +
 	"\x15QuotePurchaseResponse\x12\x18\n" +
 	"\acredits\x18\x01 \x01(\x05R\acredits\x12\x10\n" +
-	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12#\n" +
-	"\x0ekrw_per_usd_e4\x18\x03 \x01(\x03R\vkrwPerUsdE4\x12\x1b\n" +
-	"\trate_date\x18\x04 \x01(\tR\brateDate\x12\x17\n" +
-	"\apack_id\x18\x05 \x01(\tR\x06packId\"N\n" +
-	"\x16PurchaseCreditsRequest\x12\x1b\n" +
-	"\tusd_cents\x18\x01 \x01(\x05R\busdCents\x12\x17\n" +
-	"\apack_id\x18\x02 \x01(\tR\x06packId\"T\n" +
+	"\x03krw\x18\x02 \x01(\x03R\x03krw\x12\x17\n" +
+	"\apack_id\x18\x05 \x01(\tR\x06packIdJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0ekrw_per_usd_e4R\trate_date\"B\n" +
+	"\x16PurchaseCreditsRequest\x12\x17\n" +
+	"\apack_id\x18\x02 \x01(\tR\x06packIdJ\x04\b\x01\x10\x02R\tusd_cents\"T\n" +
 	"\x17PurchaseCreditsResponse\x129\n" +
 	"\bpurchase\x18\x01 \x01(\v2\x1d.postpilot.v1.BillingPurchaseR\bpurchase\"\xe2\x02\n" +
 	"\x0eRefundEvidence\x12&\n" +

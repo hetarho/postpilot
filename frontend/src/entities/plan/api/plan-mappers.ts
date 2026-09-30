@@ -66,7 +66,6 @@ function toBalance(balance: ProtoCreditBalance | undefined): CreditBalance {
       issuanceCause: lot.issuanceCause,
     })),
     renewsAt: balance?.renewsAt ?? '',
-    monthlyGrant: balance?.monthlyGrant ?? 0,
     dailyGrant: balance?.dailyGrant ?? 0,
     monthlyBonus: balance?.monthlyBonus ?? 0,
     dailyResetsAt: balance?.dailyResetsAt ?? '',
@@ -76,8 +75,6 @@ function toBalance(balance: ProtoCreditBalance | undefined): CreditBalance {
 
 function toOffer(offer: {
   plan: ProtoPlan
-  monthlyCredits: number
-  priceUsdCents: number
   monthlyKrw: number
   annualKrw: number
   dailyCredits: number

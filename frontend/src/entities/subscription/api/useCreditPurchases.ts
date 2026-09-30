@@ -7,22 +7,13 @@ import { formatAppFailure } from '@/shared/lib'
 import { toPurchase, toPurchaseQuote } from './billing-mappers'
 import { myBillingQueryKey } from './useMyBilling'
 
-export function useQuotePurchase(usdCents: number) {
-  const query = useQuery(
-    BillingService.method.quotePurchase,
-    { usdCents },
-    { enabled: usdCents >= 100 },
-  )
-  return { ...query, quote: toPurchaseQuote(query.data, usdCents) }
-}
-
 export function useQuotePack(packId: string) {
   const query = useQuery(
     BillingService.method.quotePurchase,
     { packId },
     { enabled: packId.length > 0 },
   )
-  return { ...query, quote: toPurchaseQuote(query.data, 0) }
+  return { ...query, quote: toPurchaseQuote(query.data) }
 }
 
 function usePurchaseInvalidation() {
@@ -47,10 +38,6 @@ export function usePurchaseCredits() {
   })
   return {
     ...mutation,
-    purchaseCredits: async (usdCents: number) => {
-      const response = await mutation.mutateAsync({ usdCents })
-      return response.purchase ? toPurchase(response.purchase) : undefined
-    },
     purchasePack: async (packId: string) => {
       const response = await mutation.mutateAsync({ packId })
       return response.purchase ? toPurchase(response.purchase) : undefined

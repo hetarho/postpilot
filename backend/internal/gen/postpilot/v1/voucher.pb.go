@@ -276,7 +276,7 @@ func (x *Voucher) GetToken() string {
 	return ""
 }
 
-// One issue preset: a paid rung's monthly grant for a fixed number of days.
+// One issue preset: a paid rung's monthly bonus for a fixed number of days.
 type VoucherPreset struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Plan          Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`

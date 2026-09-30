@@ -21,9 +21,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// The ladder. A tier decides two things and no more: how many credits it is granted each
-// month, and — for master alone — access to the operator-only procedures. Which models an
-// account may run is not one of them; that is decided by what it can afford.
+// The ladder carries the five commercial offers and the operator-only master tier.
+// Model rights follow the offer's ceiling and a separate affordability check.
 //
 // PLAN_PRO is numbered after the original four rather than between them: enum numbers are
 // wire identity, and renumbering PLAN_MAX would silently change the tier of every account
@@ -196,10 +195,8 @@ type CreditBalance struct {
 	// meaningless and the client shows no meter.
 	Unlimited bool         `protobuf:"varint,2,opt,name=unlimited,proto3" json:"unlimited,omitempty"`
 	Lots      []*CreditLot `protobuf:"bytes,3,rep,name=lots,proto3" json:"lots,omitempty"`
-	// RFC3339 instant the next monthly grant opens — the date every refusal names.
-	RenewsAt string `protobuf:"bytes,4,opt,name=renews_at,json=renewsAt,proto3" json:"renews_at,omitempty"`
-	// What this tier is granted each month, so the client can show a meter against it.
-	MonthlyGrant       int32  `protobuf:"varint,5,opt,name=monthly_grant,json=monthlyGrant,proto3" json:"monthly_grant,omitempty"`
+	// RFC3339 instant of the next paid credit reset.
+	RenewsAt           string `protobuf:"bytes,4,opt,name=renews_at,json=renewsAt,proto3" json:"renews_at,omitempty"`
 	DailyGrant         int32  `protobuf:"varint,6,opt,name=daily_grant,json=dailyGrant,proto3" json:"daily_grant,omitempty"`
 	MonthlyBonus       int32  `protobuf:"varint,7,opt,name=monthly_bonus,json=monthlyBonus,proto3" json:"monthly_bonus,omitempty"`
 	DailyResetsAt      string `protobuf:"bytes,8,opt,name=daily_resets_at,json=dailyResetsAt,proto3" json:"daily_resets_at,omitempty"`
@@ -268,13 +265,6 @@ func (x *CreditBalance) GetRenewsAt() string {
 		return x.RenewsAt
 	}
 	return ""
-}
-
-func (x *CreditBalance) GetMonthlyGrant() int32 {
-	if x != nil {
-		return x.MonthlyGrant
-	}
-	return 0
 }
 
 func (x *CreditBalance) GetDailyGrant() int32 {
@@ -503,13 +493,8 @@ func (x *PlanFXRate) GetTemporary() bool {
 
 // One rung as a plan comparison screen lists it.
 type PlanOffer struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Plan           Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
-	MonthlyCredits int32                  `protobuf:"varint,2,opt,name=monthly_credits,json=monthlyCredits,proto3" json:"monthly_credits,omitempty"`
-	// The intended monthly price, in whole US cents; zero for the free tier. It is the figure
-	// the grant was sized against, published so the client never hardcodes a price that could
-	// drift from the grant beside it. What a card is actually charged is BILLING's.
-	PriceUsdCents int32 `protobuf:"varint,3,opt,name=price_usd_cents,json=priceUsdCents,proto3" json:"price_usd_cents,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Plan  Plan                   `protobuf:"varint,1,opt,name=plan,proto3,enum=postpilot.v1.Plan" json:"plan,omitempty"`
 	// True for the one rung the comparison screen marks. Which rung that is belongs beside the
 	// grants it compares, not in the client.
 	Recommended bool `protobuf:"varint,5,opt,name=recommended,proto3" json:"recommended,omitempty"`
@@ -560,20 +545,6 @@ func (x *PlanOffer) GetPlan() Plan {
 		return x.Plan
 	}
 	return Plan_PLAN_UNSPECIFIED
-}
-
-func (x *PlanOffer) GetMonthlyCredits() int32 {
-	if x != nil {
-		return x.MonthlyCredits
-	}
-	return 0
-}
-
-func (x *PlanOffer) GetPriceUsdCents() int32 {
-	if x != nil {
-		return x.PriceUsdCents
-	}
-	return 0
 }
 
 func (x *PlanOffer) GetRecommended() bool {
@@ -1359,13 +1330,12 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\vcoverage_id\x18\x05 \x01(\tR\n" +
 	"coverageId\x12!\n" +
 	"\fwindow_start\x18\x06 \x01(\tR\vwindowStart\x12%\n" +
-	"\x0eissuance_cause\x18\a \x01(\tR\rissuanceCause\"\xf7\x03\n" +
+	"\x0eissuance_cause\x18\a \x01(\tR\rissuanceCause\"\xe7\x03\n" +
 	"\rCreditBalance\x12\x18\n" +
 	"\acredits\x18\x01 \x01(\x05R\acredits\x12\x1c\n" +
 	"\tunlimited\x18\x02 \x01(\bR\tunlimited\x12+\n" +
 	"\x04lots\x18\x03 \x03(\v2\x17.postpilot.v1.CreditLotR\x04lots\x12\x1b\n" +
-	"\trenews_at\x18\x04 \x01(\tR\brenewsAt\x12#\n" +
-	"\rmonthly_grant\x18\x05 \x01(\x05R\fmonthlyGrant\x12\x1f\n" +
+	"\trenews_at\x18\x04 \x01(\tR\brenewsAt\x12\x1f\n" +
 	"\vdaily_grant\x18\x06 \x01(\x05R\n" +
 	"dailyGrant\x12#\n" +
 	"\rmonthly_bonus\x18\a \x01(\x05R\fmonthlyBonus\x12&\n" +
@@ -1376,7 +1346,7 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"coverageId\x12(\n" +
 	"\x10coverage_ends_at\x18\v \x01(\tR\x0ecoverageEndsAt\x120\n" +
 	"\x14benefit_window_start\x18\f \x01(\tR\x12benefitWindowStart\x12,\n" +
-	"\x12benefit_window_end\x18\r \x01(\tR\x10benefitWindowEnd\"\xd7\x01\n" +
+	"\x12benefit_window_end\x18\r \x01(\tR\x10benefitWindowEndJ\x04\b\x05\x10\x06R\rmonthly_grant\"\xd7\x01\n" +
 	"\x12ServerExportWindow\x12\x1f\n" +
 	"\vcoverage_id\x18\x01 \x01(\tR\n" +
 	"coverageId\x12\x1b\n" +
@@ -1393,11 +1363,9 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\freference_e4\x18\x03 \x01(\x03R\vreferenceE4\x12\x1d\n" +
 	"\n" +
 	"applied_e4\x18\x04 \x01(\x03R\tappliedE4\x12\x1c\n" +
-	"\ttemporary\x18\x05 \x01(\bR\ttemporary\"\x91\x03\n" +
+	"\ttemporary\x18\x05 \x01(\bR\ttemporary\"\xee\x02\n" +
 	"\tPlanOffer\x12&\n" +
-	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12'\n" +
-	"\x0fmonthly_credits\x18\x02 \x01(\x05R\x0emonthlyCredits\x12&\n" +
-	"\x0fprice_usd_cents\x18\x03 \x01(\x05R\rpriceUsdCents\x12 \n" +
+	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12 \n" +
 	"\vrecommended\x18\x05 \x01(\bR\vrecommended\x12\x1f\n" +
 	"\vmonthly_krw\x18\x06 \x01(\x05R\n" +
 	"monthlyKrw\x12\x1d\n" +
@@ -1407,7 +1375,7 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\rmonthly_bonus\x18\t \x01(\x05R\fmonthlyBonus\x12#\n" +
 	"\rmodel_ceiling\x18\n" +
 	" \x01(\tR\fmodelCeiling\x124\n" +
-	"\x16monthly_server_exports\x18\v \x01(\x05R\x14monthlyServerExportsJ\x04\b\x04\x10\x05\"S\n" +
+	"\x16monthly_server_exports\x18\v \x01(\x05R\x14monthlyServerExportsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fmonthly_creditsR\x0fprice_usd_cents\"S\n" +
 	"\n" +
 	"CreditPack\x12\x1b\n" +
 	"\tprice_krw\x18\x01 \x01(\x05R\bpriceKrw\x12\x18\n" +
