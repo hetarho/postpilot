@@ -15,6 +15,7 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
+	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/provider"
 )
@@ -309,6 +310,11 @@ func fromProtoStage(s postpilotv1.Stage) (provider.Stage, bool) {
 }
 
 func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
+	postCredits := make([]*postpilotv1.StagePostCredits, 0, len(m.PostCredits))
+	for _, p := range m.PostCredits {
+		postCredits = append(postCredits, &postpilotv1.StagePostCredits{Stage: stageToProto[p.Stage],
+			Credits: int32(p.Figure.Credits), Basis: planrpc.PostCreditsBasisToProto(p.Figure.Basis)})
+	}
 	access := make([]*postpilotv1.ModelStageAccess, 0, len(m.Access))
 	for _, a := range m.Access {
 		access = append(access, &postpilotv1.ModelStageAccess{Stage: stageToProto[a.Stage], Grade: a.Grade,
@@ -348,6 +354,7 @@ func toProtoModel(m provider.CatalogModel) *postpilotv1.ModelInfo {
 		AiPriceUnavailable: m.PriceUnavailable,
 		Stages:             stages,
 		Levels:             levels,
+		PostCredits:        postCredits,
 		Access:             access,
 	}
 }

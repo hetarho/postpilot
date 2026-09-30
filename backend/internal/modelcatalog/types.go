@@ -477,8 +477,12 @@ type ComboRates struct {
 	Combo        Combo
 	ObserveLabel string
 	WriteLabel   string
-	Rates        plan.Rates
-	ClipRates    *plan.ClipRates
+	// ObserveModelID and WriteModelID name the assigned pair so the composition root can price
+	// one post on it from recent usage (QUOTA-64); they never cross to a non-master.
+	ObserveModelID string
+	WriteModelID   string
+	Rates          plan.Rates
+	ClipRates      *plan.ClipRates
 }
 
 // StoredSet is a recommendation set as the models document sees it (MODEL-72): its label and

@@ -7,6 +7,7 @@
 package provider
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -69,6 +70,22 @@ type CatalogModel struct {
 	Affordable       bool
 	PriceUnavailable bool
 	Access           []StageAccess
+	// PostCredits is what one post costs each paid classified stage, in credits (QUOTA-64).
+	PostCredits []StagePostCredits
+}
+
+// StagePostCredits is one stage's per-post figure. It is the only cost this projection
+// carries, and it is in credits (QUOTA-66).
+type StagePostCredits struct {
+	Stage  Stage
+	Figure plan.PostFigure
+}
+
+// PostFigures prices one post for one stage of a model (QUOTA-64): recent real usage when the
+// sample clears the floor, else the catalog-based estimate. Missing means no figure — an
+// unpriced model, a stage no post runs, or no eligible rate for the estimate.
+type PostFigures interface {
+	StageFigure(ctx context.Context, stage Stage, info llm.ModelInfo) (plan.PostFigure, bool)
 }
 
 type StageAccess struct {

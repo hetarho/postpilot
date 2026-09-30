@@ -676,9 +676,13 @@ type EstimatorCombo struct {
 	PerThousandCharsMilli int32  `protobuf:"varint,6,opt,name=per_thousand_chars_milli,json=perThousandCharsMilli,proto3" json:"per_thousand_chars_milli,omitempty"`
 	PerPostBaseMilli      int32  `protobuf:"varint,7,opt,name=per_post_base_milli,json=perPostBaseMilli,proto3" json:"per_post_base_milli,omitempty"`
 	// Absent when this pair cannot price video observation and structured writing.
-	ClipRates     *ClipEstimatorRates `protobuf:"bytes,8,opt,name=clip_rates,json=clipRates,proto3" json:"clip_rates,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ClipRates *ClipEstimatorRates `protobuf:"bytes,8,opt,name=clip_rates,json=clipRates,proto3" json:"clip_rates,omitempty"`
+	// One post with photos on this level's assigned pair: its observe and write figures summed,
+	// an estimate when either part is (QUOTA-64). Zero with UNSPECIFIED when either is missing.
+	PostCredits      int32            `protobuf:"varint,9,opt,name=post_credits,json=postCredits,proto3" json:"post_credits,omitempty"`
+	PostCreditsBasis PostCreditsBasis `protobuf:"varint,10,opt,name=post_credits_basis,json=postCreditsBasis,proto3,enum=postpilot.v1.PostCreditsBasis" json:"post_credits_basis,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *EstimatorCombo) Reset() {
@@ -765,6 +769,20 @@ func (x *EstimatorCombo) GetClipRates() *ClipEstimatorRates {
 		return x.ClipRates
 	}
 	return nil
+}
+
+func (x *EstimatorCombo) GetPostCredits() int32 {
+	if x != nil {
+		return x.PostCredits
+	}
+	return 0
+}
+
+func (x *EstimatorCombo) GetPostCreditsBasis() PostCreditsBasis {
+	if x != nil {
+		return x.PostCreditsBasis
+	}
+	return PostCreditsBasis_POST_CREDITS_BASIS_UNSPECIFIED
 }
 
 // A clip costs base + sources * per_source + finished_seconds * per_output_second.
@@ -1320,7 +1338,7 @@ var File_postpilot_v1_plan_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\"\xe1\x01\n" +
+	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\xe1\x01\n" +
 	"\tCreditLot\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
 	"\agranted\x18\x02 \x01(\x05R\agranted\x12\x1c\n" +
@@ -1380,7 +1398,7 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"CreditPack\x12\x1b\n" +
 	"\tprice_krw\x18\x01 \x01(\x05R\bpriceKrw\x12\x18\n" +
 	"\acredits\x18\x02 \x01(\x05R\acredits\x12\x0e\n" +
-	"\x02id\x18\x03 \x01(\tR\x02id\"\xe5\x02\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\"\xd6\x03\n" +
 	"\x0eEstimatorCombo\x12\x14\n" +
 	"\x05combo\x18\x01 \x01(\tR\x05combo\x12#\n" +
 	"\robserve_label\x18\x02 \x01(\tR\fobserveLabel\x12\x1f\n" +
@@ -1391,7 +1409,10 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\x18per_thousand_chars_milli\x18\x06 \x01(\x05R\x15perThousandCharsMilli\x12-\n" +
 	"\x13per_post_base_milli\x18\a \x01(\x05R\x10perPostBaseMilli\x12?\n" +
 	"\n" +
-	"clip_rates\x18\b \x01(\v2 .postpilot.v1.ClipEstimatorRatesR\tclipRates\"\xa4\x01\n" +
+	"clip_rates\x18\b \x01(\v2 .postpilot.v1.ClipEstimatorRatesR\tclipRates\x12!\n" +
+	"\fpost_credits\x18\t \x01(\x05R\vpostCredits\x12L\n" +
+	"\x12post_credits_basis\x18\n" +
+	" \x01(\x0e2\x1e.postpilot.v1.PostCreditsBasisR\x10postCreditsBasis\"\xa4\x01\n" +
 	"\x12ClipEstimatorRates\x12(\n" +
 	"\x10per_source_milli\x18\x01 \x01(\x05R\x0eperSourceMilli\x125\n" +
 	"\x17per_output_second_milli\x18\x02 \x01(\x05R\x14perOutputSecondMilli\x12-\n" +
@@ -1475,35 +1496,37 @@ var file_postpilot_v1_plan_proto_goTypes = []any{
 	(*PlanUser)(nil),                  // 15: postpilot.v1.PlanUser
 	(*SetUserPlanRequest)(nil),        // 16: postpilot.v1.SetUserPlanRequest
 	(*SetUserPlanResponse)(nil),       // 17: postpilot.v1.SetUserPlanResponse
+	(PostCreditsBasis)(0),             // 18: postpilot.v1.PostCreditsBasis
 }
 var file_postpilot_v1_plan_proto_depIdxs = []int32{
 	1,  // 0: postpilot.v1.CreditBalance.lots:type_name -> postpilot.v1.CreditLot
 	0,  // 1: postpilot.v1.PlanOffer.plan:type_name -> postpilot.v1.Plan
 	8,  // 2: postpilot.v1.EstimatorCombo.clip_rates:type_name -> postpilot.v1.ClipEstimatorRates
-	0,  // 3: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
-	2,  // 4: postpilot.v1.GetMyPlanResponse.balance:type_name -> postpilot.v1.CreditBalance
-	5,  // 5: postpilot.v1.GetMyPlanResponse.offers:type_name -> postpilot.v1.PlanOffer
-	7,  // 6: postpilot.v1.GetMyPlanResponse.estimator_combos:type_name -> postpilot.v1.EstimatorCombo
-	6,  // 7: postpilot.v1.GetMyPlanResponse.credit_packs:type_name -> postpilot.v1.CreditPack
-	3,  // 8: postpilot.v1.GetMyPlanResponse.server_export_window:type_name -> postpilot.v1.ServerExportWindow
-	4,  // 9: postpilot.v1.GetMyPlanResponse.fx_rate:type_name -> postpilot.v1.PlanFXRate
-	15, // 10: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
-	0,  // 11: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
-	0,  // 12: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
-	15, // 13: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
-	9,  // 14: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
-	13, // 15: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
-	16, // 16: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
-	11, // 17: postpilot.v1.AdminService.SetEstimatorCombo:input_type -> postpilot.v1.SetEstimatorComboRequest
-	10, // 18: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
-	14, // 19: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
-	17, // 20: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
-	12, // 21: postpilot.v1.AdminService.SetEstimatorCombo:output_type -> postpilot.v1.SetEstimatorComboResponse
-	18, // [18:22] is the sub-list for method output_type
-	14, // [14:18] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	18, // 3: postpilot.v1.EstimatorCombo.post_credits_basis:type_name -> postpilot.v1.PostCreditsBasis
+	0,  // 4: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
+	2,  // 5: postpilot.v1.GetMyPlanResponse.balance:type_name -> postpilot.v1.CreditBalance
+	5,  // 6: postpilot.v1.GetMyPlanResponse.offers:type_name -> postpilot.v1.PlanOffer
+	7,  // 7: postpilot.v1.GetMyPlanResponse.estimator_combos:type_name -> postpilot.v1.EstimatorCombo
+	6,  // 8: postpilot.v1.GetMyPlanResponse.credit_packs:type_name -> postpilot.v1.CreditPack
+	3,  // 9: postpilot.v1.GetMyPlanResponse.server_export_window:type_name -> postpilot.v1.ServerExportWindow
+	4,  // 10: postpilot.v1.GetMyPlanResponse.fx_rate:type_name -> postpilot.v1.PlanFXRate
+	15, // 11: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
+	0,  // 12: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
+	0,  // 13: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
+	15, // 14: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
+	9,  // 15: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
+	13, // 16: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
+	16, // 17: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
+	11, // 18: postpilot.v1.AdminService.SetEstimatorCombo:input_type -> postpilot.v1.SetEstimatorComboRequest
+	10, // 19: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
+	14, // 20: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
+	17, // 21: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
+	12, // 22: postpilot.v1.AdminService.SetEstimatorCombo:output_type -> postpilot.v1.SetEstimatorComboResponse
+	19, // [19:23] is the sub-list for method output_type
+	15, // [15:19] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_plan_proto_init() }
@@ -1511,6 +1534,7 @@ func file_postpilot_v1_plan_proto_init() {
 	if File_postpilot_v1_plan_proto != nil {
 		return
 	}
+	file_postpilot_v1_provider_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

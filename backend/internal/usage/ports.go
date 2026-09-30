@@ -81,6 +81,9 @@ type SpendLedger interface {
 	ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]ReasoningSpend, error)
 	// CostForJob preserves the distinction between priced evidence and unavailable cost.
 	CostForJob(ctx context.Context, jobID string) (JobCost, error)
+	// PostStageCosts lists successfully settled post generations since `since`, one row per
+	// job and stage, with the rate each was admitted at (QUOTA-64).
+	PostStageCosts(ctx context.Context, since time.Time) ([]PostStageCost, error)
 }
 
 // HoldLedger is the ceiling a job was admitted under, the credits held against it, and the

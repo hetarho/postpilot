@@ -203,3 +203,28 @@ func TestEstimatorComboNamesItsModelsToMasterOnly(t *testing.T) {
 		}
 	}
 }
+
+// QUOTA-64: each level carries its pair's per-post figure and where it came from; a level with
+// no figure says so with UNSPECIFIED rather than a zero a client could read as free.
+func TestEstimatorComboCarriesItsPerPostFigure(t *testing.T) {
+	msg := getMyPlanWith(t, plan.Pro, figureEstimator{})
+	if len(msg.EstimatorCombos) != 2 {
+		t.Fatalf("combos = %+v", msg.EstimatorCombos)
+	}
+	recent, missing := msg.EstimatorCombos[0], msg.EstimatorCombos[1]
+	if recent.GetPostCredits() != 48 || recent.GetPostCreditsBasis() != postpilotv1.PostCreditsBasis_POST_CREDITS_BASIS_RECENT_USAGE {
+		t.Fatalf("recent combo = %+v", recent)
+	}
+	if missing.GetPostCredits() != 0 || missing.GetPostCreditsBasis() != postpilotv1.PostCreditsBasis_POST_CREDITS_BASIS_UNSPECIFIED {
+		t.Fatalf("figureless combo = %+v", missing)
+	}
+}
+
+type figureEstimator struct{}
+
+func (figureEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+	return []planrpc.EstimatorCombo{
+		{Combo: "value", PerPostBaseMilli: 1000, PostCredits: plan.PostFigure{Credits: 48, Basis: plan.PostCreditsRecentUsage}},
+		{Combo: "top", PerPostBaseMilli: 9000},
+	}, nil
+}

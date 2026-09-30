@@ -4,6 +4,8 @@ package postpilot.v1;
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
+import "postpilot/v1/provider.proto";
+
 // plan.proto is the authorization slice of the contract: which tier an account is on,
 // what it has left to spend, and the operator surface that changes it.
 //
@@ -146,6 +148,10 @@ message EstimatorCombo {
   int32 per_post_base_milli = 7;
   // Absent when this pair cannot price video observation and structured writing.
   ClipEstimatorRates clip_rates = 8;
+  // One post with photos on this level's assigned pair: its observe and write figures summed,
+  // an estimate when either part is (QUOTA-64). Zero with UNSPECIFIED when either is missing.
+  int32 post_credits = 9;
+  PostCreditsBasis post_credits_basis = 10;
 }
 
 // A clip costs base + sources * per_source + finished_seconds * per_output_second.

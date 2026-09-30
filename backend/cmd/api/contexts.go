@@ -55,6 +55,9 @@ type contexts struct {
 	throttle *auth.Throttle
 	ledger   *usage.Service
 	metered  meteredRegistry
+	// postFigures is the per-post credit figure (QUOTA-64), shared by the model list and the
+	// estimator combos so both read one cached aggregate.
+	postFigures *postFigures
 
 	billingStore *billingstore.Store
 	payments     billing.Provider
@@ -152,6 +155,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		officialRate,
 		usagestore.New(handle.Writer, handle.Reader),
 	))
+	c.postFigures = newPostFigures(c.ledger)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
 		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...), exports: clipstore.NewTx(tx)}
@@ -285,7 +289,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.provider = provider.NewService(
 		providerstore.New(handle.Writer, handle.Reader), c.metered,
 		providerCredits{ledger: c.ledger, plans: c.auth, budget: cfg.LLMCompletionBudget},
-	).WithModelGrades()
+	).WithModelGrades().WithPostFigures(c.postFigures)
 	// The extraction path: the account's analyze selection, the post it reads, and the
 	// durable job it runs as. Everything else the memory context does needs none of them.
 	c.memory.ConfigureExtraction(

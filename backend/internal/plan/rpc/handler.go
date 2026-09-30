@@ -107,6 +107,9 @@ type EstimatorCombo struct {
 	Per1000CharsMilli int
 	PerPostBaseMilli  int
 	ClipRates         *plan.ClipRates
+	// PostCredits is one post with photos on this level's pair (QUOTA-64); the zero figure
+	// when either stage has none.
+	PostCredits plan.PostFigure
 }
 
 // Estimator publishes the operator's priced combos (QUOTA-40). Declared here by its
@@ -257,6 +260,8 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			PerThousandCharsMilli: int32(combo.Per1000CharsMilli),
 			PerPostBaseMilli:      int32(combo.PerPostBaseMilli),
 			ClipRates:             clipRates,
+			PostCredits:           int32(combo.PostCredits.Credits),
+			PostCreditsBasis:      PostCreditsBasisToProto(combo.PostCredits.Basis),
 		}
 		// Rates beside the models they price would give those models' supplier prices back
 		// (QUOTA-66): only the operator's copy names them.

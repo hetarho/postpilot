@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/provider"
 )
 
@@ -541,5 +542,56 @@ func TestComparisonPairsNameObserveAndWriteOnly(t *testing.T) {
 	pairs, err := newService(store).GetComparisonPairs(context.Background(), "alice")
 	if err != nil || len(pairs) != 1 || pairs[0].Stage != provider.StageWrite || pairs[0].CandidateA.Ref != live {
 		t.Fatalf("pairs = %+v err=%v", pairs, err)
+	}
+}
+
+type recordingFigures struct{ asked []string }
+
+func (f *recordingFigures) StageFigure(_ context.Context, stage provider.Stage, info llm.ModelInfo) (plan.PostFigure, bool) {
+	f.asked = append(f.asked, info.Ref.ModelID+"/"+string(stage))
+	if stage == provider.StageAnalyze {
+		return plan.PostFigure{}, false
+	}
+	return plan.PostFigure{Credits: 17, Basis: plan.PostCreditsRecentUsage}, true
+}
+
+// QUOTA-64: the list carries a per-post figure for each stage a model serves at a paid grade,
+// none for a free or ungraded stage, and none for a stage the figures have no answer for.
+func TestListModelsCarriesPerPostFiguresForPaidStagesOnly(t *testing.T) {
+	graded := llm.ModelRef{ProviderID: "openrouter", ModelID: "graded"}
+	ungraded := llm.ModelRef{ProviderID: "openrouter", ModelID: "ungraded"}
+	figures := &recordingFigures{}
+	svc := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
+		graded: {Ref: graded, Vision: true, Stages: []string{"observe", "write", "analyze"},
+			Levels: map[string]string{"observe": "free", "write": "balanced", "analyze": "value"}},
+		ungraded: {Ref: ungraded, Stages: []string{"write"}},
+	}, fakeCredits{}).WithPostFigures(figures)
+
+	models, err := svc.ListModels(context.Background(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	byModel := map[string][]provider.StagePostCredits{}
+	for _, model := range models {
+		byModel[model.Info.Ref.ModelID] = model.PostCredits
+	}
+	got := byModel["graded"]
+	if len(got) != 1 || got[0].Stage != provider.StageWrite || got[0].Figure != (plan.PostFigure{Credits: 17, Basis: plan.PostCreditsRecentUsage}) {
+		t.Fatalf("graded figures = %+v, want write only", got)
+	}
+	if len(byModel["ungraded"]) != 0 {
+		t.Fatalf("ungraded figures = %+v, want none", byModel["ungraded"])
+	}
+	for _, asked := range figures.asked {
+		if asked == "graded/observe" || asked == "ungraded/write" {
+			t.Fatalf("figures were asked for a free or ungraded stage: %v", figures.asked)
+		}
+	}
+
+	bare, err := provider.NewService(&fakeStore{rows: map[string]provider.Selection{}}, fakeCatalog{
+		graded: {Ref: graded, Stages: []string{"write"}, Levels: map[string]string{"write": "balanced"}},
+	}, fakeCredits{}).ListModels(context.Background(), "alice")
+	if err != nil || len(bare) != 1 || len(bare[0].PostCredits) != 0 {
+		t.Fatalf("a service without figures listed %+v err=%v", bare, err)
 	}
 }

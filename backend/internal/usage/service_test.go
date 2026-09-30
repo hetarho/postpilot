@@ -17,17 +17,20 @@ import (
 // real statements carry (a lot never drops below zero, never rises above its grant) are
 // reproduced here, because those are the invariant rather than an implementation detail.
 type fakeStore struct {
-	lots        []Lot
-	admissions  []Admission
-	holdDebits  map[string][]LotDebit
-	eligible    map[string][]string
-	settled     map[string]int
-	settlements map[string]Settlement
-	events      []Event
-	lotSeq      int
-	spendCalls  int
-	raiseCalls  int
-	failOnSpend error
+	// postStageCosts is what PostStageCosts answers; postStageSince records the window asked for.
+	postStageCosts []PostStageCost
+	postStageSince time.Time
+	lots           []Lot
+	admissions     []Admission
+	holdDebits     map[string][]LotDebit
+	eligible       map[string][]string
+	settled        map[string]int
+	settlements    map[string]Settlement
+	events         []Event
+	lotSeq         int
+	spendCalls     int
+	raiseCalls     int
+	failOnSpend    error
 }
 
 func newFakeStore() *fakeStore {
@@ -334,6 +337,11 @@ func (f *fakeStore) DeleteAdmissionForJob(_ context.Context, jobID string) error
 func (f *fakeStore) InsertEvent(_ context.Context, event Event) error {
 	f.events = append(f.events, event)
 	return nil
+}
+
+func (f *fakeStore) PostStageCosts(_ context.Context, since time.Time) ([]PostStageCost, error) {
+	f.postStageSince = since
+	return f.postStageCosts, nil
 }
 
 func (f *fakeStore) ReasoningSpend(_ context.Context, stage string, since time.Time) ([]ReasoningSpend, error) {
@@ -1169,5 +1177,48 @@ func TestOpenVoucherLotOpensOneExpiringVoucherLot(t *testing.T) {
 		if _, err := svc.OpenVoucherLot(ctx, tc.user, tc.credits, tc.expires); err == nil {
 			t.Errorf("%s: opened a voucher lot", tc.name)
 		}
+	}
+}
+
+// QUOTA-64: a stage's figure is the upper median of its posts' credits, each converted at its
+// own admission rate, over the last 30 days; the sample behind it decides eligibility, and a
+// row whose rate cannot convert is left out rather than guessed.
+func TestRecentPostFiguresTakeTheUpperMedianOverTheWindow(t *testing.T) {
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	svc, store := newTestService(t, now)
+	rate := plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29", ReferenceE4: 14_000_000, AppliedE4: 14_000_000}
+	write := llm.ModelRef{ProviderID: "openrouter", ModelID: "vendor/writer"}
+	users := []string{"a", "b", "c", "a", "b", "c", "a", "b", "c", "a"}
+	for i, user := range users {
+		// 100,000 micro-USD steps: 140, 280, ... 1,400 credits.
+		store.postStageCosts = append(store.postStageCosts, PostStageCost{
+			JobID: fmt.Sprintf("job-%d", i), UserID: user, Stage: "write", Model: write,
+			CostMicrousd: int64(i+1) * 100_000, Rate: rate,
+		})
+	}
+	store.postStageCosts = append(store.postStageCosts, PostStageCost{
+		JobID: "unfrozen", UserID: "d", Stage: "write", Model: write, CostMicrousd: 1, Rate: plan.RateSnapshot{},
+	})
+
+	figures, err := svc.RecentPostFigures(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := now.Add(-plan.PostFigureWindow); !store.postStageSince.Equal(want) {
+		t.Fatalf("window since = %s, want %s", store.postStageSince, want)
+	}
+	got := figures[StageModel{Stage: "write", Model: write}]
+	// Ten values 140..1,400: the middle pair 700 and 840 give 770.
+	if got.Credits != 770 || got.Posts != 10 || got.Accounts != 3 || !got.Eligible() {
+		t.Fatalf("figure = %+v, want 770 from 10 posts by 3 accounts, eligible", got)
+	}
+
+	store.postStageCosts = store.postStageCosts[:9]
+	thin, err := svc.RecentPostFigures(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if thin[StageModel{Stage: "write", Model: write}].Eligible() {
+		t.Fatal("nine posts read as eligible")
 	}
 }

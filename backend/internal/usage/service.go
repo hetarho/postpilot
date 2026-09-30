@@ -1088,6 +1088,36 @@ func (s *Service) ReasoningSpendByModel(ctx context.Context, stage string) ([]Re
 	return s.charges.ReasoningSpend(ctx, stage, s.now().Add(-ReasoningSpendWindow))
 }
 
+// RecentPostFigures is every (stage, model)'s upper-median per-post credits over the last
+// PostFigureWindow, each with the posts and accounts behind it (QUOTA-64). A row converts at
+// the rate its own job was admitted at; a row whose rate or cost cannot be converted is left
+// out rather than guessed. The floor is the caller's to apply through Eligible.
+func (s *Service) RecentPostFigures(ctx context.Context) (map[StageModel]RecentPostFigure, error) {
+	rows, err := s.charges.PostStageCosts(ctx, s.now().Add(-plan.PostFigureWindow))
+	if err != nil {
+		return nil, err
+	}
+	credits := map[StageModel][]int{}
+	accounts := map[StageModel]map[string]bool{}
+	for _, row := range rows {
+		charged, err := plan.ChargeAt(row.CostMicrousd, row.Rate)
+		if err != nil {
+			continue
+		}
+		key := StageModel{Stage: row.Stage, Model: row.Model}
+		credits[key] = append(credits[key], charged)
+		if accounts[key] == nil {
+			accounts[key] = map[string]bool{}
+		}
+		accounts[key][row.UserID] = true
+	}
+	out := make(map[StageModel]RecentPostFigure, len(credits))
+	for key, values := range credits {
+		out[key] = RecentPostFigure{Credits: plan.UpperMedian(values), Posts: len(values), Accounts: len(accounts[key])}
+	}
+	return out, nil
+}
+
 // BalanceFor reports what the account may spend, renewing the monthly grant first so a
 // balance read at the boundary is never one grant behind.
 func (s *Service) BalanceFor(ctx context.Context, userID string, acting plan.Plan) (Balance, error) {

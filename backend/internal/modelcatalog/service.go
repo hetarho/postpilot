@@ -694,11 +694,13 @@ func (s *Service) comboRates(ctx context.Context, rate *plan.RateSnapshot) ([]Co
 			}
 		}
 		out = append(out, ComboRates{
-			Combo:        combo,
-			ObserveLabel: observe.Label,
-			WriteLabel:   write.Label,
-			Rates:        rates,
-			ClipRates:    clipRates,
+			Combo:          combo,
+			ObserveLabel:   observe.Label,
+			WriteLabel:     write.Label,
+			ObserveModelID: observe.ModelID,
+			WriteModelID:   write.ModelID,
+			Rates:          rates,
+			ClipRates:      clipRates,
 		})
 	}
 	return out, nil

@@ -97,6 +97,25 @@ message ModelInfo {
   repeated StageLevel levels = 19;
   bool ai_price_unavailable = 20;
   repeated ModelStageAccess access = 21;
+  // What one post costs each paid classified stage of this model, in credits (QUOTA-64). A
+  // free stage, an unpriced model and a stage with no figure have no entry.
+  repeated StagePostCredits post_credits = 22;
+}
+
+// Where a per-post credit figure came from (QUOTA-64).
+enum PostCreditsBasis {
+  POST_CREDITS_BASIS_UNSPECIFIED = 0;
+  // The upper median of the last 30 days of real posts across accounts.
+  POST_CREDITS_BASIS_RECENT_USAGE = 1;
+  // The catalog-based estimate, shown as 예상, while recent usage is below the sample floor.
+  POST_CREDITS_BASIS_ESTIMATE = 2;
+}
+
+// What one post costs one stage of a model, in credits. Never a price or a cost (QUOTA-66).
+message StagePostCredits {
+  Stage stage = 1;
+  int32 credits = 2;
+  PostCreditsBasis basis = 3;
 }
 
 message ModelStageAccess {

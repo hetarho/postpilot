@@ -188,6 +188,36 @@ type Event struct {
 // effect rather than being averaged away by the weeks before it.
 const ReasoningSpendWindow = 14 * 24 * time.Hour
 
+// PostStageCost is one successfully settled post generation's cost at one stage, with the
+// rate the job was admitted at. It is the raw material of the per-post credit figure
+// (QUOTA-64) and never leaves this context as it is: supplier cost is master-only.
+type PostStageCost struct {
+	JobID        string
+	UserID       string
+	Stage        string
+	Model        llm.ModelRef
+	CostMicrousd int64
+	Rate         plan.RateSnapshot
+}
+
+// StageModel keys the per-post figure: one model at one stage.
+type StageModel struct {
+	Stage string
+	Model llm.ModelRef
+}
+
+// RecentPostFigure is one model's recent per-post credits at one stage and the sample it
+// came from. Eligible says whether that sample clears the product's floor.
+type RecentPostFigure struct {
+	Credits  int
+	Posts    int
+	Accounts int
+}
+
+func (f RecentPostFigure) Eligible() bool {
+	return f.Posts >= plan.PostFigureMinPosts && f.Accounts >= plan.PostFigureMinAccounts
+}
+
 // ReasoningSpend is one model's recent completion-budget split at one stage, over the
 // window the store defines. It is the published aggregate the curation surface reads.
 type ReasoningSpend struct {

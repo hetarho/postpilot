@@ -7,14 +7,7 @@ func EstimatorRatesAt(observe, write Pricer, rate RateSnapshot) (Rates, bool) {
 	if !rate.Valid() {
 		return Rates{}, false
 	}
-	price := func(p Pricer, in, out int64) (int, bool) {
-		cost, ok := p(estimatorTokenAllowance(in), estimatorTokenAllowance(out))
-		if !ok {
-			return 0, false
-		}
-		milli, err := MilliAt(cost, rate)
-		return milli, err == nil
-	}
+	price := func(p Pricer, in, out int64) (int, bool) { return estimatorMilliAt(p, rate, in, out) }
 	share, ok := price(observe, estimatorObservePromptTokens/estimatorObserveBatch, 0)
 	if !ok {
 		return Rates{}, false
@@ -69,4 +62,15 @@ func ClipEstimatorRatesAt(observe, write Pricer, rate RateSnapshot) (ClipRates, 
 	}
 	return ClipRates{PerSource: source, PerOutputSecond: output,
 		PerClipBase: context + prompts}, true
+}
+
+// estimatorMilliAt prices one assumed call, with the edit allowance applied to both token
+// counts, in KRW milli-credits at the given rate.
+func estimatorMilliAt(p Pricer, rate RateSnapshot, in, out int64) (int, bool) {
+	cost, ok := p(estimatorTokenAllowance(in), estimatorTokenAllowance(out))
+	if !ok {
+		return 0, false
+	}
+	milli, err := MilliAt(cost, rate)
+	return milli, err == nil
 }

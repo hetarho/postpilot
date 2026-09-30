@@ -16,11 +16,17 @@ type Service struct {
 	store       Store
 	catalog     Catalog
 	credits     Credits
+	figures     PostFigures
 	modelGrades bool
 	now         func() time.Time
 }
 
 func (s *Service) WithModelGrades() *Service { s.modelGrades = true; return s }
+
+// WithPostFigures attaches the per-post credit figures ListModels publishes (QUOTA-64). A
+// service without them lists every model with no figure, which is what a catalog with no
+// usage and no rate would show anyway.
+func (s *Service) WithPostFigures(figures PostFigures) *Service { s.figures = figures; return s }
 
 func (s *Service) tier(ctx context.Context, userID string) (plan.Plan, error) {
 	if !s.modelGrades {
@@ -142,9 +148,33 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 				}
 			}
 		}
+		entry.PostCredits = s.postCredits(ctx, info)
 		out = append(out, entry)
 	}
 	return out, nil
+}
+
+// postCredits is the model's per-post figure for each stage it serves at a paid grade. A free
+// stage costs no credits, so it has no figure; neither does a stage the model holds no grade
+// for, which ordinary selectors never list.
+func (s *Service) postCredits(ctx context.Context, info llm.ModelInfo) []StagePostCredits {
+	if s.figures == nil {
+		return nil
+	}
+	var out []StagePostCredits
+	for _, name := range info.Stages {
+		stage, err := ParseStage(name)
+		if err != nil {
+			continue
+		}
+		if grade := info.Levels[name]; grade == "" || grade == "free" {
+			continue
+		}
+		if figure, ok := s.figures.StageFigure(ctx, stage, info); ok {
+			out = append(out, StagePostCredits{Stage: stage, Figure: figure})
+		}
+	}
+	return out
 }
 
 // EstimatePostCredits is what one generated post would hold with the given stage pair.

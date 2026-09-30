@@ -109,6 +109,36 @@ func catalogModelID(recorded, providerID string) (string, bool) {
 type estimatorCombos struct {
 	catalog *modelcatalog.Service
 	ledger  *usage.Service
+	// figures and models price one post on each level's pair (QUOTA-64); without them a
+	// combo carries no per-post figure.
+	figures    provider.PostFigures
+	models     usage.Models
+	providerID string
+}
+
+// postCredits is one post with photos on the combo's pair: both stage figures summed, and no
+// figure when either stage has none.
+func (e estimatorCombos) postCredits(ctx context.Context, combo modelcatalog.ComboRates) plan.PostFigure {
+	if e.figures == nil || e.models == nil {
+		return plan.PostFigure{}
+	}
+	observe, ok := e.models.Lookup(llm.ModelRef{ProviderID: e.providerID, ModelID: combo.ObserveModelID})
+	if !ok {
+		return plan.PostFigure{}
+	}
+	write, ok := e.models.Lookup(llm.ModelRef{ProviderID: e.providerID, ModelID: combo.WriteModelID})
+	if !ok {
+		return plan.PostFigure{}
+	}
+	observeFigure, ok := e.figures.StageFigure(ctx, provider.StageObserve, observe)
+	if !ok {
+		return plan.PostFigure{}
+	}
+	writeFigure, ok := e.figures.StageFigure(ctx, provider.StageWrite, write)
+	if !ok {
+		return plan.PostFigure{}
+	}
+	return observeFigure.Plus(writeFigure)
 }
 
 func (e estimatorCombos) CurrentRate(ctx context.Context) (plan.RateSnapshot, error) {
@@ -144,6 +174,7 @@ func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCom
 			Per1000CharsMilli: combo.Rates.Per1000Chars,
 			PerPostBaseMilli:  combo.Rates.PerPostBase,
 			ClipRates:         combo.ClipRates,
+			PostCredits:       e.postCredits(ctx, combo),
 		})
 	}
 	return out, nil
@@ -161,7 +192,7 @@ func (e estimatorCombos) ComboRatesAt(ctx context.Context, rate plan.RateSnapsho
 			Combo: string(combo.Combo), ObserveLabel: combo.ObserveLabel, WriteLabel: combo.WriteLabel,
 			PerPhotoMilli: combo.Rates.PerPhoto, PerVideoMilli: combo.Rates.PerVideo,
 			Per1000CharsMilli: combo.Rates.Per1000Chars, PerPostBaseMilli: combo.Rates.PerPostBase,
-			ClipRates: combo.ClipRates,
+			ClipRates: combo.ClipRates, PostCredits: e.postCredits(ctx, combo),
 		})
 	}
 	return out, nil

@@ -234,3 +234,28 @@ SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
            WHEN cost_source IN ('reported', 'estimated') AND cost_microusd > 0
            THEN cost_microusd ELSE 0 END), 0) AS INTEGER) AS confirmed_microusd
 FROM usage_events WHERE job_id = ?;
+
+-- One row per successfully settled post generation and stage: the provider cost that stage's
+-- calls recorded and the rate the job was admitted at, which is what the per-post credit
+-- figure is computed from (QUOTA-64). A group holding any call whose cost is unavailable is
+-- left out rather than counted low, and a job admitted before rates were frozen has no rate
+-- to convert with, so it is left out too.
+-- name: RecentPostStageCosts :many
+SELECT a.job_id,
+       a.user_id,
+       e.stage,
+       e.model,
+       CAST(COALESCE(SUM(e.cost_microusd), 0) AS INTEGER) AS cost_microusd,
+       a.fx_source,
+       a.fx_publication_date,
+       a.fx_reference_e4,
+       a.fx_applied_e4
+FROM usage_admissions a
+JOIN usage_events e ON e.job_id = a.job_id
+WHERE a.kind = 'generate'
+  AND a.settlement_reason = 'succeeded'
+  AND a.settled_at >= ?
+  AND a.fx_applied_e4 IS NOT NULL
+GROUP BY a.job_id, a.user_id, e.stage, e.model,
+         a.fx_source, a.fx_publication_date, a.fx_reference_e4, a.fx_applied_e4
+HAVING SUM(CASE WHEN e.cost_source = 'unavailable' THEN 1 ELSE 0 END) = 0;

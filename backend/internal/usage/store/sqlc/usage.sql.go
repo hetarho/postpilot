@@ -805,6 +805,77 @@ func (q *Queries) ReasoningSpendByStage(ctx context.Context, arg ReasoningSpendB
 	return items, nil
 }
 
+const recentPostStageCosts = `-- name: RecentPostStageCosts :many
+SELECT a.job_id,
+       a.user_id,
+       e.stage,
+       e.model,
+       CAST(COALESCE(SUM(e.cost_microusd), 0) AS INTEGER) AS cost_microusd,
+       a.fx_source,
+       a.fx_publication_date,
+       a.fx_reference_e4,
+       a.fx_applied_e4
+FROM usage_admissions a
+JOIN usage_events e ON e.job_id = a.job_id
+WHERE a.kind = 'generate'
+  AND a.settlement_reason = 'succeeded'
+  AND a.settled_at >= ?
+  AND a.fx_applied_e4 IS NOT NULL
+GROUP BY a.job_id, a.user_id, e.stage, e.model,
+         a.fx_source, a.fx_publication_date, a.fx_reference_e4, a.fx_applied_e4
+HAVING SUM(CASE WHEN e.cost_source = 'unavailable' THEN 1 ELSE 0 END) = 0
+`
+
+type RecentPostStageCostsRow struct {
+	JobID             string
+	UserID            string
+	Stage             string
+	Model             string
+	CostMicrousd      int64
+	FxSource          sql.NullString
+	FxPublicationDate sql.NullString
+	FxReferenceE4     sql.NullInt64
+	FxAppliedE4       sql.NullInt64
+}
+
+// One row per successfully settled post generation and stage: the provider cost that stage's
+// calls recorded and the rate the job was admitted at, which is what the per-post credit
+// figure is computed from (QUOTA-64). A group holding any call whose cost is unavailable is
+// left out rather than counted low, and a job admitted before rates were frozen has no rate
+// to convert with, so it is left out too.
+func (q *Queries) RecentPostStageCosts(ctx context.Context, settledAt sql.NullString) ([]RecentPostStageCostsRow, error) {
+	rows, err := q.db.QueryContext(ctx, recentPostStageCosts, settledAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RecentPostStageCostsRow
+	for rows.Next() {
+		var i RecentPostStageCostsRow
+		if err := rows.Scan(
+			&i.JobID,
+			&i.UserID,
+			&i.Stage,
+			&i.Model,
+			&i.CostMicrousd,
+			&i.FxSource,
+			&i.FxPublicationDate,
+			&i.FxReferenceE4,
+			&i.FxAppliedE4,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const refundToLot = `-- name: RefundToLot :exec
 UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted
 `

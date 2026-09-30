@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/usage/store/sqlc"
@@ -578,6 +580,30 @@ func (s *Store) ReasoningSpend(ctx context.Context, stage string, since time.Tim
 			Model: row.Model, Stage: stage, Calls: row.Calls,
 			ReasoningTokens: row.ReasoningTokens, CompletionTokens: row.CompletionTokens,
 			ReasoningTruncations: row.ReasoningTruncations,
+		})
+	}
+	return out, nil
+}
+
+// PostStageCosts reads through the READ pool for the same reason ReasoningSpend does: it is
+// an aggregate over a window, never part of a write.
+func (s *Store) PostStageCosts(ctx context.Context, since time.Time) ([]usage.PostStageCost, error) {
+	rows, err := s.read.RecentPostStageCosts(ctx, sql.NullString{String: formatTime(since), Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("read recent post stage costs: %w", err)
+	}
+	out := make([]usage.PostStageCost, 0, len(rows))
+	for _, row := range rows {
+		providerID, modelID, ok := strings.Cut(row.Model, "/")
+		if !ok {
+			continue
+		}
+		out = append(out, usage.PostStageCost{
+			JobID: row.JobID, UserID: row.UserID, Stage: row.Stage,
+			Model:        llm.ModelRef{ProviderID: providerID, ModelID: modelID},
+			CostMicrousd: row.CostMicrousd,
+			Rate: plan.RateSnapshot{Source: row.FxSource.String, PublicationDate: row.FxPublicationDate.String,
+				ReferenceE4: row.FxReferenceE4.Int64, AppliedE4: row.FxAppliedE4.Int64},
 		})
 	}
 	return out, nil

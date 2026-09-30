@@ -1189,6 +1189,10 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	if priced[0].ObserveLabel != "vendor/eyes" || priced[0].WriteLabel != "vendor/pen" {
 		t.Errorf("labels = %q / %q", priced[0].ObserveLabel, priced[0].WriteLabel)
 	}
+	// The pair's ids let the composition root price one post on it from recent usage (QUOTA-64).
+	if priced[0].ObserveModelID != "vendor/eyes" || priced[0].WriteModelID != "vendor/pen" {
+		t.Errorf("model ids = %q / %q", priced[0].ObserveModelID, priced[0].WriteModelID)
+	}
 }
 
 // T092/MODEL-57: a level is set per registration and reaches the registry view keyed by
