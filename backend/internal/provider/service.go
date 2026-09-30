@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -294,28 +297,81 @@ func (s *Service) SaveComparisonPair(ctx context.Context, userID string, stage S
 	return pair, nil
 }
 
-func (s *Service) RecommendationSets() []RecommendationSet {
-	sets := s.catalog.RecommendationSets()
-	out := make([]RecommendationSet, 0, len(sets))
-	for _, set := range sets {
-		converted := RecommendationSet{ID: set.ID, Label: set.Label}
-		for _, selection := range set.Selections {
-			stage, err := ParseStage(selection.Stage)
-			if err != nil {
-				continue
-			}
-			converted.Selections = append(converted.Selections, RecommendationStageSelection{
-				Stage: stage, Active: selection.Active, CandidateA: selection.CandidateA, CandidateB: selection.CandidateB,
-			})
-		}
-		out = append(out, converted)
+// RecommendationSets is every set in the operator's order (MODEL-71).
+func (s *Service) RecommendationSets(ctx context.Context) ([]RecommendationSet, error) {
+	sets, err := s.store.ListRecommendationSets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list recommendation sets: %w", err)
 	}
-	return out
+	return sets, nil
+}
+
+// SaveRecommendationSet creates a set (empty id, appended last) or replaces one whole. The
+// draft is validated against the catalog as it is now and refused whole (MODEL-70); the
+// operator is the caller, so no plan or balance is read. Nothing an account already chose is
+// touched: an apply copies the set as it is at that moment (MODEL-71).
+func (s *Service) SaveRecommendationSet(ctx context.Context, draft RecommendationSet) (RecommendationSet, error) {
+	valid, refusal := ValidateRecommendationDraft(draft, s.catalog.Lookup)
+	if refusal != nil {
+		return RecommendationSet{}, refusal
+	}
+	now := s.now()
+	if valid.ID == "" {
+		valid.ID = newRecommendationID()
+		if err := s.store.CreateRecommendationSet(ctx, valid, MaxRecommendationSets, now); err != nil {
+			if errors.Is(err, ErrRecommendationLimit) {
+				return RecommendationSet{}, &SetLimitError{Limit: MaxRecommendationSets}
+			}
+			return RecommendationSet{}, fmt.Errorf("create recommendation set: %w", err)
+		}
+		return valid, nil
+	}
+	if err := s.store.ReplaceRecommendationSet(ctx, valid, now); err != nil {
+		if errors.Is(err, ErrRecommendationNotFound) {
+			return RecommendationSet{}, err
+		}
+		return RecommendationSet{}, fmt.Errorf("replace recommendation set: %w", err)
+	}
+	return valid, nil
+}
+
+// DeleteRecommendationSet removes one set. Accounts that applied it keep what they chose.
+func (s *Service) DeleteRecommendationSet(ctx context.Context, id string) error {
+	if err := s.store.DeleteRecommendationSet(ctx, id); err != nil {
+		if errors.Is(err, ErrRecommendationNotFound) {
+			return err
+		}
+		return fmt.Errorf("delete recommendation set: %w", err)
+	}
+	return nil
+}
+
+// MoveRecommendationSet moves one set a place up (earlier) or down in the operator's order.
+func (s *Service) MoveRecommendationSet(ctx context.Context, id string, earlier bool) error {
+	if err := s.store.MoveRecommendationSet(ctx, id, earlier); err != nil {
+		if errors.Is(err, ErrRecommendationNotFound) {
+			return err
+		}
+		return fmt.Errorf("move recommendation set: %w", err)
+	}
+	return nil
+}
+
+func newRecommendationID() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		panic("provider: cannot read random bytes for an id: " + err.Error())
+	}
+	return hex.EncodeToString(buf)
 }
 
 func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id string) (RecommendationSet, []Selection, []ComparisonPair, error) {
+	sets, err := s.RecommendationSets(ctx)
+	if err != nil {
+		return RecommendationSet{}, nil, nil, err
+	}
 	var selected *RecommendationSet
-	for _, set := range s.RecommendationSets() {
+	for _, set := range sets {
 		if set.ID == id {
 			copy := set
 			selected = &copy
@@ -325,10 +381,10 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 	if selected == nil {
 		return RecommendationSet{}, nil, nil, ErrRecommendationNotFound
 	}
-	// A set is applied whole, and the models it names are curated data rather than the
-	// config they used to be — a set that was valid when it shipped can name a model an
-	// operator has since retired. So the gate runs over all seven refs before anything is
-	// written, and reports every selection that blocks the set rather than the first.
+	// A set is applied whole, and the models it names are curated data that changes while the
+	// process runs — a set that was valid when the operator saved it can name a model since
+	// retired. So the gate runs over all seven refs before anything is written, and reports
+	// every selection that blocks the set rather than the first.
 	if err := s.availabilityOf(ctx, userID, *selected); err != nil {
 		return RecommendationSet{}, nil, nil, err
 	}
@@ -399,11 +455,8 @@ func (s *Service) availabilityOf(ctx context.Context, userID string, set Recomme
 	}
 	refusal := &SetRefusal{}
 	for _, stageSelection := range set.Selections {
-		refs := []llm.ModelRef{stageSelection.Active}
-		if HasPair(stageSelection.Stage) {
-			refs = append(refs, stageSelection.CandidateA, stageSelection.CandidateB)
-		}
-		for _, ref := range refs {
+		for _, slot := range stageSelection.Slots() {
+			ref := slot.Ref
 			info, ok := s.catalog.Lookup(ref)
 			switch {
 			case !ok:

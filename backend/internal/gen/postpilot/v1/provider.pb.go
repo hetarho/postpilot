@@ -1385,6 +1385,282 @@ func (x *ApplyRecommendationSetRequest) GetId() string {
 	return ""
 }
 
+// One stage entry per stage, observe/analyze/write each at most once. A stage left out leaves
+// its slots empty, which the validation reports as required.
+type SaveRecommendationSetRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty creates a new set; otherwise the id of the set to replace.
+	Id            string                          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Label         string                          `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Selections    []*RecommendationStageSelection `protobuf:"bytes,3,rep,name=selections,proto3" json:"selections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveRecommendationSetRequest) Reset() {
+	*x = SaveRecommendationSetRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveRecommendationSetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveRecommendationSetRequest) ProtoMessage() {}
+
+func (x *SaveRecommendationSetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveRecommendationSetRequest.ProtoReflect.Descriptor instead.
+func (*SaveRecommendationSetRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SaveRecommendationSetRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SaveRecommendationSetRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *SaveRecommendationSetRequest) GetSelections() []*RecommendationStageSelection {
+	if x != nil {
+		return x.Selections
+	}
+	return nil
+}
+
+type SaveRecommendationSetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Set           *RecommendationSet     `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveRecommendationSetResponse) Reset() {
+	*x = SaveRecommendationSetResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveRecommendationSetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveRecommendationSetResponse) ProtoMessage() {}
+
+func (x *SaveRecommendationSetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveRecommendationSetResponse.ProtoReflect.Descriptor instead.
+func (*SaveRecommendationSetResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *SaveRecommendationSetResponse) GetSet() *RecommendationSet {
+	if x != nil {
+		return x.Set
+	}
+	return nil
+}
+
+type DeleteRecommendationSetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRecommendationSetRequest) Reset() {
+	*x = DeleteRecommendationSetRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRecommendationSetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRecommendationSetRequest) ProtoMessage() {}
+
+func (x *DeleteRecommendationSetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRecommendationSetRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRecommendationSetRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *DeleteRecommendationSetRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteRecommendationSetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRecommendationSetResponse) Reset() {
+	*x = DeleteRecommendationSetResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRecommendationSetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRecommendationSetResponse) ProtoMessage() {}
+
+func (x *DeleteRecommendationSetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRecommendationSetResponse.ProtoReflect.Descriptor instead.
+func (*DeleteRecommendationSetResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{24}
+}
+
+type MoveRecommendationSetRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// true moves the set one place towards the top of the list, false one place down.
+	Earlier       bool `protobuf:"varint,2,opt,name=earlier,proto3" json:"earlier,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MoveRecommendationSetRequest) Reset() {
+	*x = MoveRecommendationSetRequest{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MoveRecommendationSetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveRecommendationSetRequest) ProtoMessage() {}
+
+func (x *MoveRecommendationSetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveRecommendationSetRequest.ProtoReflect.Descriptor instead.
+func (*MoveRecommendationSetRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *MoveRecommendationSetRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MoveRecommendationSetRequest) GetEarlier() bool {
+	if x != nil {
+		return x.Earlier
+	}
+	return false
+}
+
+type MoveRecommendationSetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MoveRecommendationSetResponse) Reset() {
+	*x = MoveRecommendationSetResponse{}
+	mi := &file_postpilot_v1_provider_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MoveRecommendationSetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveRecommendationSetResponse) ProtoMessage() {}
+
+func (x *MoveRecommendationSetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_provider_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveRecommendationSetResponse.ProtoReflect.Descriptor instead.
+func (*MoveRecommendationSetResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{26}
+}
+
 type ApplyRecommendationSetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Set           *RecommendationSet     `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
@@ -1396,7 +1672,7 @@ type ApplyRecommendationSetResponse struct {
 
 func (x *ApplyRecommendationSetResponse) Reset() {
 	*x = ApplyRecommendationSetResponse{}
-	mi := &file_postpilot_v1_provider_proto_msgTypes[21]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1408,7 +1684,7 @@ func (x *ApplyRecommendationSetResponse) String() string {
 func (*ApplyRecommendationSetResponse) ProtoMessage() {}
 
 func (x *ApplyRecommendationSetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_provider_proto_msgTypes[21]
+	mi := &file_postpilot_v1_provider_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1421,7 +1697,7 @@ func (x *ApplyRecommendationSetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyRecommendationSetResponse.ProtoReflect.Descriptor instead.
 func (*ApplyRecommendationSetResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{21}
+	return file_postpilot_v1_provider_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ApplyRecommendationSetResponse) GetSet() *RecommendationSet {
@@ -1545,7 +1821,22 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x1eListRecommendationSetsResponse\x123\n" +
 	"\x04sets\x18\x01 \x03(\v2\x1f.postpilot.v1.RecommendationSetR\x04sets\"/\n" +
 	"\x1dApplyRecommendationSetRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xc0\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x90\x01\n" +
+	"\x1cSaveRecommendationSetRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12J\n" +
+	"\n" +
+	"selections\x18\x03 \x03(\v2*.postpilot.v1.RecommendationStageSelectionR\n" +
+	"selections\"R\n" +
+	"\x1dSaveRecommendationSetResponse\x121\n" +
+	"\x03set\x18\x01 \x01(\v2\x1f.postpilot.v1.RecommendationSetR\x03set\"0\n" +
+	"\x1eDeleteRecommendationSetRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"!\n" +
+	"\x1fDeleteRecommendationSetResponse\"H\n" +
+	"\x1cMoveRecommendationSetRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
+	"\aearlier\x18\x02 \x01(\bR\aearlier\"\x1f\n" +
+	"\x1dMoveRecommendationSetResponse\"\xc0\x01\n" +
 	"\x1eApplyRecommendationSetResponse\x121\n" +
 	"\x03set\x18\x01 \x01(\v2\x1f.postpilot.v1.RecommendationSetR\x03set\x127\n" +
 	"\n" +
@@ -1561,7 +1852,7 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x1aSELECTION_SLOT_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15SELECTION_SLOT_ACTIVE\x10\x01\x12\x1e\n" +
 	"\x1aSELECTION_SLOT_CANDIDATE_A\x10\x02\x12\x1e\n" +
-	"\x1aSELECTION_SLOT_CANDIDATE_B\x10\x032\xe0\x05\n" +
+	"\x1aSELECTION_SLOT_CANDIDATE_B\x10\x032\xc2\b\n" +
 	"\x0fProviderService\x12Q\n" +
 	"\n" +
 	"ListModels\x12\x1f.postpilot.v1.ListModelsRequest\x1a .postpilot.v1.ListModelsResponse\"\x00\x12Z\n" +
@@ -1570,7 +1861,10 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x12GetComparisonPairs\x12'.postpilot.v1.GetComparisonPairsRequest\x1a(.postpilot.v1.GetComparisonPairsResponse\"\x00\x12i\n" +
 	"\x12SaveComparisonPair\x12'.postpilot.v1.SaveComparisonPairRequest\x1a(.postpilot.v1.SaveComparisonPairResponse\"\x00\x12u\n" +
 	"\x16ListRecommendationSets\x12+.postpilot.v1.ListRecommendationSetsRequest\x1a,.postpilot.v1.ListRecommendationSetsResponse\"\x00\x12u\n" +
-	"\x16ApplyRecommendationSet\x12+.postpilot.v1.ApplyRecommendationSetRequest\x1a,.postpilot.v1.ApplyRecommendationSetResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x16ApplyRecommendationSet\x12+.postpilot.v1.ApplyRecommendationSetRequest\x1a,.postpilot.v1.ApplyRecommendationSetResponse\"\x00\x12r\n" +
+	"\x15SaveRecommendationSet\x12*.postpilot.v1.SaveRecommendationSetRequest\x1a+.postpilot.v1.SaveRecommendationSetResponse\"\x00\x12x\n" +
+	"\x17DeleteRecommendationSet\x12,.postpilot.v1.DeleteRecommendationSetRequest\x1a-.postpilot.v1.DeleteRecommendationSetResponse\"\x00\x12r\n" +
+	"\x15MoveRecommendationSet\x12*.postpilot.v1.MoveRecommendationSetRequest\x1a+.postpilot.v1.MoveRecommendationSetResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_provider_proto_rawDescOnce sync.Once
@@ -1585,32 +1879,38 @@ func file_postpilot_v1_provider_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_provider_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_postpilot_v1_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_postpilot_v1_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_postpilot_v1_provider_proto_goTypes = []any{
-	(Stage)(0),                             // 0: postpilot.v1.Stage
-	(SelectionSlot)(0),                     // 1: postpilot.v1.SelectionSlot
-	(*ModelRef)(nil),                       // 2: postpilot.v1.ModelRef
-	(*ModelInfo)(nil),                      // 3: postpilot.v1.ModelInfo
-	(*ModelStageAccess)(nil),               // 4: postpilot.v1.ModelStageAccess
-	(*StageLevel)(nil),                     // 5: postpilot.v1.StageLevel
-	(*Selection)(nil),                      // 6: postpilot.v1.Selection
-	(*ComparisonPair)(nil),                 // 7: postpilot.v1.ComparisonPair
-	(*RecommendationStageSelection)(nil),   // 8: postpilot.v1.RecommendationStageSelection
-	(*RecommendationSet)(nil),              // 9: postpilot.v1.RecommendationSet
-	(*ListModelsRequest)(nil),              // 10: postpilot.v1.ListModelsRequest
-	(*ListModelsResponse)(nil),             // 11: postpilot.v1.ListModelsResponse
-	(*GetSelectionsRequest)(nil),           // 12: postpilot.v1.GetSelectionsRequest
-	(*GetSelectionsResponse)(nil),          // 13: postpilot.v1.GetSelectionsResponse
-	(*SaveSelectionRequest)(nil),           // 14: postpilot.v1.SaveSelectionRequest
-	(*SaveSelectionResponse)(nil),          // 15: postpilot.v1.SaveSelectionResponse
-	(*GetComparisonPairsRequest)(nil),      // 16: postpilot.v1.GetComparisonPairsRequest
-	(*GetComparisonPairsResponse)(nil),     // 17: postpilot.v1.GetComparisonPairsResponse
-	(*SaveComparisonPairRequest)(nil),      // 18: postpilot.v1.SaveComparisonPairRequest
-	(*SaveComparisonPairResponse)(nil),     // 19: postpilot.v1.SaveComparisonPairResponse
-	(*ListRecommendationSetsRequest)(nil),  // 20: postpilot.v1.ListRecommendationSetsRequest
-	(*ListRecommendationSetsResponse)(nil), // 21: postpilot.v1.ListRecommendationSetsResponse
-	(*ApplyRecommendationSetRequest)(nil),  // 22: postpilot.v1.ApplyRecommendationSetRequest
-	(*ApplyRecommendationSetResponse)(nil), // 23: postpilot.v1.ApplyRecommendationSetResponse
+	(Stage)(0),                              // 0: postpilot.v1.Stage
+	(SelectionSlot)(0),                      // 1: postpilot.v1.SelectionSlot
+	(*ModelRef)(nil),                        // 2: postpilot.v1.ModelRef
+	(*ModelInfo)(nil),                       // 3: postpilot.v1.ModelInfo
+	(*ModelStageAccess)(nil),                // 4: postpilot.v1.ModelStageAccess
+	(*StageLevel)(nil),                      // 5: postpilot.v1.StageLevel
+	(*Selection)(nil),                       // 6: postpilot.v1.Selection
+	(*ComparisonPair)(nil),                  // 7: postpilot.v1.ComparisonPair
+	(*RecommendationStageSelection)(nil),    // 8: postpilot.v1.RecommendationStageSelection
+	(*RecommendationSet)(nil),               // 9: postpilot.v1.RecommendationSet
+	(*ListModelsRequest)(nil),               // 10: postpilot.v1.ListModelsRequest
+	(*ListModelsResponse)(nil),              // 11: postpilot.v1.ListModelsResponse
+	(*GetSelectionsRequest)(nil),            // 12: postpilot.v1.GetSelectionsRequest
+	(*GetSelectionsResponse)(nil),           // 13: postpilot.v1.GetSelectionsResponse
+	(*SaveSelectionRequest)(nil),            // 14: postpilot.v1.SaveSelectionRequest
+	(*SaveSelectionResponse)(nil),           // 15: postpilot.v1.SaveSelectionResponse
+	(*GetComparisonPairsRequest)(nil),       // 16: postpilot.v1.GetComparisonPairsRequest
+	(*GetComparisonPairsResponse)(nil),      // 17: postpilot.v1.GetComparisonPairsResponse
+	(*SaveComparisonPairRequest)(nil),       // 18: postpilot.v1.SaveComparisonPairRequest
+	(*SaveComparisonPairResponse)(nil),      // 19: postpilot.v1.SaveComparisonPairResponse
+	(*ListRecommendationSetsRequest)(nil),   // 20: postpilot.v1.ListRecommendationSetsRequest
+	(*ListRecommendationSetsResponse)(nil),  // 21: postpilot.v1.ListRecommendationSetsResponse
+	(*ApplyRecommendationSetRequest)(nil),   // 22: postpilot.v1.ApplyRecommendationSetRequest
+	(*SaveRecommendationSetRequest)(nil),    // 23: postpilot.v1.SaveRecommendationSetRequest
+	(*SaveRecommendationSetResponse)(nil),   // 24: postpilot.v1.SaveRecommendationSetResponse
+	(*DeleteRecommendationSetRequest)(nil),  // 25: postpilot.v1.DeleteRecommendationSetRequest
+	(*DeleteRecommendationSetResponse)(nil), // 26: postpilot.v1.DeleteRecommendationSetResponse
+	(*MoveRecommendationSetRequest)(nil),    // 27: postpilot.v1.MoveRecommendationSetRequest
+	(*MoveRecommendationSetResponse)(nil),   // 28: postpilot.v1.MoveRecommendationSetResponse
+	(*ApplyRecommendationSetResponse)(nil),  // 29: postpilot.v1.ApplyRecommendationSetResponse
 }
 var file_postpilot_v1_provider_proto_depIdxs = []int32{
 	2,  // 0: postpilot.v1.ModelInfo.ref:type_name -> postpilot.v1.ModelRef
@@ -1641,28 +1941,36 @@ var file_postpilot_v1_provider_proto_depIdxs = []int32{
 	2,  // 25: postpilot.v1.SaveComparisonPairRequest.candidate_b:type_name -> postpilot.v1.ModelRef
 	7,  // 26: postpilot.v1.SaveComparisonPairResponse.pair:type_name -> postpilot.v1.ComparisonPair
 	9,  // 27: postpilot.v1.ListRecommendationSetsResponse.sets:type_name -> postpilot.v1.RecommendationSet
-	9,  // 28: postpilot.v1.ApplyRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
-	6,  // 29: postpilot.v1.ApplyRecommendationSetResponse.selections:type_name -> postpilot.v1.Selection
-	7,  // 30: postpilot.v1.ApplyRecommendationSetResponse.pairs:type_name -> postpilot.v1.ComparisonPair
-	10, // 31: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
-	12, // 32: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
-	14, // 33: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
-	16, // 34: postpilot.v1.ProviderService.GetComparisonPairs:input_type -> postpilot.v1.GetComparisonPairsRequest
-	18, // 35: postpilot.v1.ProviderService.SaveComparisonPair:input_type -> postpilot.v1.SaveComparisonPairRequest
-	20, // 36: postpilot.v1.ProviderService.ListRecommendationSets:input_type -> postpilot.v1.ListRecommendationSetsRequest
-	22, // 37: postpilot.v1.ProviderService.ApplyRecommendationSet:input_type -> postpilot.v1.ApplyRecommendationSetRequest
-	11, // 38: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
-	13, // 39: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
-	15, // 40: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
-	17, // 41: postpilot.v1.ProviderService.GetComparisonPairs:output_type -> postpilot.v1.GetComparisonPairsResponse
-	19, // 42: postpilot.v1.ProviderService.SaveComparisonPair:output_type -> postpilot.v1.SaveComparisonPairResponse
-	21, // 43: postpilot.v1.ProviderService.ListRecommendationSets:output_type -> postpilot.v1.ListRecommendationSetsResponse
-	23, // 44: postpilot.v1.ProviderService.ApplyRecommendationSet:output_type -> postpilot.v1.ApplyRecommendationSetResponse
-	38, // [38:45] is the sub-list for method output_type
-	31, // [31:38] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	8,  // 28: postpilot.v1.SaveRecommendationSetRequest.selections:type_name -> postpilot.v1.RecommendationStageSelection
+	9,  // 29: postpilot.v1.SaveRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
+	9,  // 30: postpilot.v1.ApplyRecommendationSetResponse.set:type_name -> postpilot.v1.RecommendationSet
+	6,  // 31: postpilot.v1.ApplyRecommendationSetResponse.selections:type_name -> postpilot.v1.Selection
+	7,  // 32: postpilot.v1.ApplyRecommendationSetResponse.pairs:type_name -> postpilot.v1.ComparisonPair
+	10, // 33: postpilot.v1.ProviderService.ListModels:input_type -> postpilot.v1.ListModelsRequest
+	12, // 34: postpilot.v1.ProviderService.GetSelections:input_type -> postpilot.v1.GetSelectionsRequest
+	14, // 35: postpilot.v1.ProviderService.SaveSelection:input_type -> postpilot.v1.SaveSelectionRequest
+	16, // 36: postpilot.v1.ProviderService.GetComparisonPairs:input_type -> postpilot.v1.GetComparisonPairsRequest
+	18, // 37: postpilot.v1.ProviderService.SaveComparisonPair:input_type -> postpilot.v1.SaveComparisonPairRequest
+	20, // 38: postpilot.v1.ProviderService.ListRecommendationSets:input_type -> postpilot.v1.ListRecommendationSetsRequest
+	22, // 39: postpilot.v1.ProviderService.ApplyRecommendationSet:input_type -> postpilot.v1.ApplyRecommendationSetRequest
+	23, // 40: postpilot.v1.ProviderService.SaveRecommendationSet:input_type -> postpilot.v1.SaveRecommendationSetRequest
+	25, // 41: postpilot.v1.ProviderService.DeleteRecommendationSet:input_type -> postpilot.v1.DeleteRecommendationSetRequest
+	27, // 42: postpilot.v1.ProviderService.MoveRecommendationSet:input_type -> postpilot.v1.MoveRecommendationSetRequest
+	11, // 43: postpilot.v1.ProviderService.ListModels:output_type -> postpilot.v1.ListModelsResponse
+	13, // 44: postpilot.v1.ProviderService.GetSelections:output_type -> postpilot.v1.GetSelectionsResponse
+	15, // 45: postpilot.v1.ProviderService.SaveSelection:output_type -> postpilot.v1.SaveSelectionResponse
+	17, // 46: postpilot.v1.ProviderService.GetComparisonPairs:output_type -> postpilot.v1.GetComparisonPairsResponse
+	19, // 47: postpilot.v1.ProviderService.SaveComparisonPair:output_type -> postpilot.v1.SaveComparisonPairResponse
+	21, // 48: postpilot.v1.ProviderService.ListRecommendationSets:output_type -> postpilot.v1.ListRecommendationSetsResponse
+	29, // 49: postpilot.v1.ProviderService.ApplyRecommendationSet:output_type -> postpilot.v1.ApplyRecommendationSetResponse
+	24, // 50: postpilot.v1.ProviderService.SaveRecommendationSet:output_type -> postpilot.v1.SaveRecommendationSetResponse
+	26, // 51: postpilot.v1.ProviderService.DeleteRecommendationSet:output_type -> postpilot.v1.DeleteRecommendationSetResponse
+	28, // 52: postpilot.v1.ProviderService.MoveRecommendationSet:output_type -> postpilot.v1.MoveRecommendationSetResponse
+	43, // [43:53] is the sub-list for method output_type
+	33, // [33:43] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_provider_proto_init() }
@@ -1676,7 +1984,7 @@ func file_postpilot_v1_provider_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_provider_proto_rawDesc), len(file_postpilot_v1_provider_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

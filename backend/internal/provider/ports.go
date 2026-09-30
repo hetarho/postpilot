@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -16,6 +17,20 @@ type Store interface {
 	// clear of a vanished choice runs after a read, and a save the user made in between
 	// must not be taken with it.
 	DeleteSelection(ctx context.Context, userID string, s Selection) error
+
+	// Recommendation sets are installation-wide rows the operator curates (MODEL-69), listed
+	// in the operator's order. Every write is one transaction, and none of them touches
+	// model_selections (MODEL-71).
+	ListRecommendationSets(ctx context.Context) ([]RecommendationSet, error)
+	// CreateRecommendationSet appends a set after the last one, refusing with
+	// ErrRecommendationLimit when `limit` sets already exist — counted inside the write.
+	CreateRecommendationSet(ctx context.Context, set RecommendationSet, limit int, at time.Time) error
+	// ReplaceRecommendationSet rewrites an existing set's label and all of its slots.
+	ReplaceRecommendationSet(ctx context.Context, set RecommendationSet, at time.Time) error
+	DeleteRecommendationSet(ctx context.Context, id string) error
+	// MoveRecommendationSet swaps a set with its neighbour, towards the top when `earlier`;
+	// at either end it changes nothing. Unknown ids are ErrRecommendationNotFound throughout.
+	MoveRecommendationSet(ctx context.Context, id string, earlier bool) error
 }
 
 // Catalog is what this context reads from the model registry — declared here by its
@@ -23,7 +38,6 @@ type Store interface {
 type Catalog interface {
 	Models() []llm.ModelInfo
 	Lookup(ref llm.ModelRef) (llm.ModelInfo, bool)
-	RecommendationSets() []llm.RecommendationSet
 }
 
 // PlannedCall is one model some work would run, and how many times. It is this context's

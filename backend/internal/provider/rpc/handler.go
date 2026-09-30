@@ -143,7 +143,10 @@ func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request
 	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	sets := h.svc.RecommendationSets()
+	sets, err := h.svc.RecommendationSets(ctx)
+	if err != nil {
+		return nil, toConnectError("list recommendation sets", err)
+	}
 	out := make([]*postpilotv1.RecommendationSet, 0, len(sets))
 	for _, set := range sets {
 		out = append(out, toProtoRecommendation(set))
@@ -173,6 +176,68 @@ func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Reque
 	}), nil
 }
 
+// SaveRecommendationSet is master-only by the interceptor's set (MODEL-69); this handler adds no
+// authorization of its own, the same posture as AdminHandler.
+func (h *Handler) SaveRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.SaveRecommendationSetRequest]) (*connect.Response[postpilotv1.SaveRecommendationSetResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	draft, err := fromProtoDraft(req.Msg)
+	if err != nil {
+		return nil, toConnectError("save recommendation set", err)
+	}
+	saved, err := h.svc.SaveRecommendationSet(ctx, draft)
+	if err != nil {
+		return nil, toConnectError("save recommendation set", err)
+	}
+	return connect.NewResponse(&postpilotv1.SaveRecommendationSetResponse{Set: toProtoRecommendation(saved)}), nil
+}
+
+func (h *Handler) DeleteRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.DeleteRecommendationSetRequest]) (*connect.Response[postpilotv1.DeleteRecommendationSetResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	if err := h.svc.DeleteRecommendationSet(ctx, req.Msg.GetId()); err != nil {
+		return nil, toConnectError("delete recommendation set", err)
+	}
+	return connect.NewResponse(&postpilotv1.DeleteRecommendationSetResponse{}), nil
+}
+
+func (h *Handler) MoveRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.MoveRecommendationSetRequest]) (*connect.Response[postpilotv1.MoveRecommendationSetResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	if err := h.svc.MoveRecommendationSet(ctx, req.Msg.GetId(), req.Msg.GetEarlier()); err != nil {
+		return nil, toConnectError("move recommendation set", err)
+	}
+	return connect.NewResponse(&postpilotv1.MoveRecommendationSetResponse{}), nil
+}
+
+// fromProtoDraft reads a draft set. The stage list is the one thing the transport itself
+// refuses: an unknown or repeated stage, or candidates on analyze, is a malformed request
+// rather than a draft to annotate. A stage left out is not — its slots stay empty and the
+// domain validation names them as required, beside everything else wrong with the draft.
+func fromProtoDraft(msg *postpilotv1.SaveRecommendationSetRequest) (provider.RecommendationSet, error) {
+	draft := provider.RecommendationSet{ID: msg.GetId(), Label: msg.GetLabel()}
+	seen := map[provider.Stage]bool{}
+	for _, wire := range msg.GetSelections() {
+		stage, ok := fromProtoStage(wire.GetStage())
+		if !ok || seen[stage] {
+			return provider.RecommendationSet{}, provider.ErrUnknownStage
+		}
+		seen[stage] = true
+		selection := provider.RecommendationStageSelection{Stage: stage, Active: fromProtoRef(wire.GetActive())}
+		candidateA, candidateB := fromProtoRef(wire.GetCandidateA()), fromProtoRef(wire.GetCandidateB())
+		if provider.HasPair(stage) {
+			selection.CandidateA, selection.CandidateB = candidateA, candidateB
+		} else if candidateA != (llm.ModelRef{}) || candidateB != (llm.ModelRef{}) {
+			return provider.RecommendationSet{}, provider.ErrStageWithoutPair
+		}
+		draft.Selections = append(draft.Selections, selection)
+	}
+	return draft, nil
+}
+
 // actingUser resolves the caller. The tier is no longer part of it: what a model costs
 // and whether it is affordable is a property of the account's balance, which the service
 // reads for itself.
@@ -198,6 +263,14 @@ func toConnectError(op string, err error) error {
 	var refusal *provider.SetRefusal
 	if errors.As(err, &refusal) {
 		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, refusal)
+	}
+	var draft *provider.SetDraftRefusal
+	if errors.As(err, &draft) {
+		return rpcserver.AppErrorFrom(connect.CodeInvalidArgument, draft)
+	}
+	var limit *provider.SetLimitError
+	if errors.As(err, &limit) {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, limit)
 	}
 	switch {
 	case errors.Is(err, provider.ErrUnknownStage):

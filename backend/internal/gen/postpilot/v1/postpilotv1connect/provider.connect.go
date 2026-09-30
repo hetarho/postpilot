@@ -54,6 +54,15 @@ const (
 	// ProviderServiceApplyRecommendationSetProcedure is the fully-qualified name of the
 	// ProviderService's ApplyRecommendationSet RPC.
 	ProviderServiceApplyRecommendationSetProcedure = "/postpilot.v1.ProviderService/ApplyRecommendationSet"
+	// ProviderServiceSaveRecommendationSetProcedure is the fully-qualified name of the
+	// ProviderService's SaveRecommendationSet RPC.
+	ProviderServiceSaveRecommendationSetProcedure = "/postpilot.v1.ProviderService/SaveRecommendationSet"
+	// ProviderServiceDeleteRecommendationSetProcedure is the fully-qualified name of the
+	// ProviderService's DeleteRecommendationSet RPC.
+	ProviderServiceDeleteRecommendationSetProcedure = "/postpilot.v1.ProviderService/DeleteRecommendationSet"
+	// ProviderServiceMoveRecommendationSetProcedure is the fully-qualified name of the
+	// ProviderService's MoveRecommendationSet RPC.
+	ProviderServiceMoveRecommendationSetProcedure = "/postpilot.v1.ProviderService/MoveRecommendationSet"
 )
 
 // ProviderServiceClient is a client for the postpilot.v1.ProviderService service.
@@ -67,8 +76,17 @@ type ProviderServiceClient interface {
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	// Every set in the operator's order.
 	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
 	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
+	// Master only. Create (empty id, appended last) or replace one set whole. The draft is
+	// validated whole and refused whole, naming every offending field (MODEL_SET_INVALID).
+	// Saving never touches anyone's selections: an apply copies the set as it is then (MODEL-71).
+	SaveRecommendationSet(context.Context, *connect.Request[v1.SaveRecommendationSetRequest]) (*connect.Response[v1.SaveRecommendationSetResponse], error)
+	// Master only.
+	DeleteRecommendationSet(context.Context, *connect.Request[v1.DeleteRecommendationSetRequest]) (*connect.Response[v1.DeleteRecommendationSetResponse], error)
+	// Master only. Swap a set with its neighbour; at either end of the list it is a no-op.
+	MoveRecommendationSet(context.Context, *connect.Request[v1.MoveRecommendationSetRequest]) (*connect.Response[v1.MoveRecommendationSetResponse], error)
 }
 
 // NewProviderServiceClient constructs a client for the postpilot.v1.ProviderService service. By
@@ -124,18 +142,39 @@ func NewProviderServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(providerServiceMethods.ByName("ApplyRecommendationSet")),
 			connect.WithClientOptions(opts...),
 		),
+		saveRecommendationSet: connect.NewClient[v1.SaveRecommendationSetRequest, v1.SaveRecommendationSetResponse](
+			httpClient,
+			baseURL+ProviderServiceSaveRecommendationSetProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("SaveRecommendationSet")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteRecommendationSet: connect.NewClient[v1.DeleteRecommendationSetRequest, v1.DeleteRecommendationSetResponse](
+			httpClient,
+			baseURL+ProviderServiceDeleteRecommendationSetProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("DeleteRecommendationSet")),
+			connect.WithClientOptions(opts...),
+		),
+		moveRecommendationSet: connect.NewClient[v1.MoveRecommendationSetRequest, v1.MoveRecommendationSetResponse](
+			httpClient,
+			baseURL+ProviderServiceMoveRecommendationSetProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("MoveRecommendationSet")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // providerServiceClient implements ProviderServiceClient.
 type providerServiceClient struct {
-	listModels             *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
-	getSelections          *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
-	saveSelection          *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
-	getComparisonPairs     *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
-	saveComparisonPair     *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
-	listRecommendationSets *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
-	applyRecommendationSet *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
+	listModels              *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
+	getSelections           *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
+	saveSelection           *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
+	getComparisonPairs      *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
+	saveComparisonPair      *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
+	listRecommendationSets  *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
+	applyRecommendationSet  *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
+	saveRecommendationSet   *connect.Client[v1.SaveRecommendationSetRequest, v1.SaveRecommendationSetResponse]
+	deleteRecommendationSet *connect.Client[v1.DeleteRecommendationSetRequest, v1.DeleteRecommendationSetResponse]
+	moveRecommendationSet   *connect.Client[v1.MoveRecommendationSetRequest, v1.MoveRecommendationSetResponse]
 }
 
 // ListModels calls postpilot.v1.ProviderService.ListModels.
@@ -173,6 +212,21 @@ func (c *providerServiceClient) ApplyRecommendationSet(ctx context.Context, req 
 	return c.applyRecommendationSet.CallUnary(ctx, req)
 }
 
+// SaveRecommendationSet calls postpilot.v1.ProviderService.SaveRecommendationSet.
+func (c *providerServiceClient) SaveRecommendationSet(ctx context.Context, req *connect.Request[v1.SaveRecommendationSetRequest]) (*connect.Response[v1.SaveRecommendationSetResponse], error) {
+	return c.saveRecommendationSet.CallUnary(ctx, req)
+}
+
+// DeleteRecommendationSet calls postpilot.v1.ProviderService.DeleteRecommendationSet.
+func (c *providerServiceClient) DeleteRecommendationSet(ctx context.Context, req *connect.Request[v1.DeleteRecommendationSetRequest]) (*connect.Response[v1.DeleteRecommendationSetResponse], error) {
+	return c.deleteRecommendationSet.CallUnary(ctx, req)
+}
+
+// MoveRecommendationSet calls postpilot.v1.ProviderService.MoveRecommendationSet.
+func (c *providerServiceClient) MoveRecommendationSet(ctx context.Context, req *connect.Request[v1.MoveRecommendationSetRequest]) (*connect.Response[v1.MoveRecommendationSetResponse], error) {
+	return c.moveRecommendationSet.CallUnary(ctx, req)
+}
+
 // ProviderServiceHandler is an implementation of the postpilot.v1.ProviderService service.
 type ProviderServiceHandler interface {
 	// The registry snapshot: every model of every provider, with its flags. A model whose
@@ -184,8 +238,17 @@ type ProviderServiceHandler interface {
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	// Every set in the operator's order.
 	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
 	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
+	// Master only. Create (empty id, appended last) or replace one set whole. The draft is
+	// validated whole and refused whole, naming every offending field (MODEL_SET_INVALID).
+	// Saving never touches anyone's selections: an apply copies the set as it is then (MODEL-71).
+	SaveRecommendationSet(context.Context, *connect.Request[v1.SaveRecommendationSetRequest]) (*connect.Response[v1.SaveRecommendationSetResponse], error)
+	// Master only.
+	DeleteRecommendationSet(context.Context, *connect.Request[v1.DeleteRecommendationSetRequest]) (*connect.Response[v1.DeleteRecommendationSetResponse], error)
+	// Master only. Swap a set with its neighbour; at either end of the list it is a no-op.
+	MoveRecommendationSet(context.Context, *connect.Request[v1.MoveRecommendationSetRequest]) (*connect.Response[v1.MoveRecommendationSetResponse], error)
 }
 
 // NewProviderServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -237,6 +300,24 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 		connect.WithSchema(providerServiceMethods.ByName("ApplyRecommendationSet")),
 		connect.WithHandlerOptions(opts...),
 	)
+	providerServiceSaveRecommendationSetHandler := connect.NewUnaryHandler(
+		ProviderServiceSaveRecommendationSetProcedure,
+		svc.SaveRecommendationSet,
+		connect.WithSchema(providerServiceMethods.ByName("SaveRecommendationSet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceDeleteRecommendationSetHandler := connect.NewUnaryHandler(
+		ProviderServiceDeleteRecommendationSetProcedure,
+		svc.DeleteRecommendationSet,
+		connect.WithSchema(providerServiceMethods.ByName("DeleteRecommendationSet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceMoveRecommendationSetHandler := connect.NewUnaryHandler(
+		ProviderServiceMoveRecommendationSetProcedure,
+		svc.MoveRecommendationSet,
+		connect.WithSchema(providerServiceMethods.ByName("MoveRecommendationSet")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ProviderService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProviderServiceListModelsProcedure:
@@ -253,6 +334,12 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 			providerServiceListRecommendationSetsHandler.ServeHTTP(w, r)
 		case ProviderServiceApplyRecommendationSetProcedure:
 			providerServiceApplyRecommendationSetHandler.ServeHTTP(w, r)
+		case ProviderServiceSaveRecommendationSetProcedure:
+			providerServiceSaveRecommendationSetHandler.ServeHTTP(w, r)
+		case ProviderServiceDeleteRecommendationSetProcedure:
+			providerServiceDeleteRecommendationSetHandler.ServeHTTP(w, r)
+		case ProviderServiceMoveRecommendationSetProcedure:
+			providerServiceMoveRecommendationSetHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -288,4 +375,16 @@ func (UnimplementedProviderServiceHandler) ListRecommendationSets(context.Contex
 
 func (UnimplementedProviderServiceHandler) ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.ApplyRecommendationSet is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) SaveRecommendationSet(context.Context, *connect.Request[v1.SaveRecommendationSetRequest]) (*connect.Response[v1.SaveRecommendationSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.SaveRecommendationSet is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) DeleteRecommendationSet(context.Context, *connect.Request[v1.DeleteRecommendationSetRequest]) (*connect.Response[v1.DeleteRecommendationSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.DeleteRecommendationSet is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) MoveRecommendationSet(context.Context, *connect.Request[v1.MoveRecommendationSetRequest]) (*connect.Response[v1.MoveRecommendationSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.MoveRecommendationSet is not implemented"))
 }

@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next'
-import { useModelSetup } from '@/entities/model-catalog'
+import { useRecommendationSets } from '@/entities/model-catalog'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
 import { ActiveModelForm } from '@/features/configure-model-pair'
 import { PostCreditEstimate } from '@/features/select-model'
-import { Typography, pageStyles } from '@/shared/ui'
+import { Notice, Typography, pageStyles } from '@/shared/ui'
 import { ModelPageHeader } from './ModelPageHeader'
 
 export function AIModelsPage() {
   const { t } = useTranslation('models')
-  const setup = useModelSetup()
+  const recommendations = useRecommendationSets()
   return (
     <main className={pageStyles({ className: 'pt-0 sm:pt-0 lg:pt-8' })}>
       <ModelPageHeader title="modelSettings" description="settingsDescription" />
@@ -22,13 +22,30 @@ export function AIModelsPage() {
         <Typography variant="title" id="recommendation-heading">
           {t('page.recommendation')}
         </Typography>
+        {/* Every set the operator curated, in their order (MODEL-71). Loading, failure and an
+            installation with no set are three different answers, so none of them borrows
+            another's copy. */}
         <div className="mt-4">
-          {setup.recommendations[0] ? (
-            <ApplyRecommendation recommendation={setup.recommendations[0]} />
-          ) : (
-            <Typography variant="body" className="text-content-tertiary">
+          {recommendations.isError ? (
+            <Notice tone="danger" role="alert">
+              {t('page.recommendationFailed')}
+            </Notice>
+          ) : recommendations.isPending ? (
+            <Typography variant="body" role="status" className="text-content-tertiary">
               {t('page.recommendationLoading')}
             </Typography>
+          ) : recommendations.sets.length === 0 ? (
+            <Typography variant="body" className="text-content-tertiary">
+              {t('page.recommendationEmpty')}
+            </Typography>
+          ) : (
+            <ul className="grid gap-8">
+              {recommendations.sets.map((set) => (
+                <li key={set.id}>
+                  <ApplyRecommendation recommendation={set} />
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </section>

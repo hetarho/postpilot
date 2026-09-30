@@ -289,6 +289,9 @@ export {
   ListRecommendationSetsResponseSchema,
   SaveComparisonPairResponseSchema,
   ApplyRecommendationSetResponseSchema,
+  SaveRecommendationSetResponseSchema,
+  DeleteRecommendationSetResponseSchema,
+  MoveRecommendationSetResponseSchema,
 } from './gen/postpilot/v1/provider_pb'
 export { VoiceService } from './gen/postpilot/v1/voice_pb'
 export {

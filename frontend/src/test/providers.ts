@@ -8,6 +8,10 @@ import { create } from '@bufbuild/protobuf'
 import {
   ApplyRecommendationSetResponseSchema,
   type AppFailureReason,
+  DeleteRecommendationSetResponseSchema,
+  MoveRecommendationSetResponseSchema,
+  RecommendationSetSchema,
+  SaveRecommendationSetResponseSchema,
   GetSelectionsResponseSchema,
   GetComparisonPairsResponseSchema,
   ListRecommendationSetsResponseSchema,
@@ -74,6 +78,19 @@ export interface FakeSelection {
   unavailableReason?: string
 }
 
+/** A recommendation set as the operator saved it (MODEL-69). Analyze carries its active model
+ *  alone. */
+export interface FakeRecommendationSet {
+  id: string
+  label: string
+  selections: Array<{
+    stage: Stage
+    active: { providerId: string; modelId: string }
+    candidateA?: { providerId: string; modelId: string }
+    candidateB?: { providerId: string; modelId: string }
+  }>
+}
+
 export interface FakeProviderMutationFailure {
   reason: AppFailureReason
   code?: Code
@@ -94,6 +111,13 @@ export interface FakeProvidersOptions {
   savePairFailure?: FakeProviderMutationFailure
   /** Return a structured application failure from ApplyRecommendationSet. */
   applyRecommendationFailure?: FakeProviderMutationFailure
+  /** The operator's sets, in order. List, save, delete and move keep them in memory, so a
+   *  screen that writes one reads its own write back the way it would from the server. */
+  recommendationSets?: FakeRecommendationSet[]
+  /** Return a structured application failure from SaveRecommendationSet. */
+  saveRecommendationFailure?: FakeProviderMutationFailure
+  /** Make ListRecommendationSets fail. */
+  recommendationsFail?: boolean
   /** Hold SaveSelection open until this promise settles. */
   saveGate?: Promise<void>
   /** Records every procedure the transport was asked for. */
@@ -117,6 +141,10 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
   const models = options.models ?? []
   let selections = [...(options.selections ?? [])]
   let comparisonPairs = [...(options.comparisonPairs ?? [])]
+  let recommendationSets = (options.recommendationSets ?? []).map((set) =>
+    create(RecommendationSetSchema, set),
+  )
+  let createdSets = 0
 
   const registered = (providerId: string, modelId: string) =>
     models.find((model) => model.providerId === providerId && model.modelId === modelId)
@@ -234,9 +262,47 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
       ),
     }),
   )
-  rpc(ProviderService.method.listRecommendationSets, () =>
-    create(ListRecommendationSetsResponseSchema, {}),
-  )
+  rpc(ProviderService.method.listRecommendationSets, () => {
+    if (options.recommendationsFail) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    return create(ListRecommendationSetsResponseSchema, { sets: recommendationSets })
+  })
+  rpc(ProviderService.method.saveRecommendationSet, (request) => {
+    calls?.push(`SaveRecommendationSet:${request.id || 'new'}:${request.label}`)
+    if (options.saveRecommendationFailure) {
+      throwFakeMutationFailure(options.saveRecommendationFailure)
+    }
+    const id = request.id || `set-${++createdSets}`
+    const saved = create(RecommendationSetSchema, {
+      id,
+      label: request.label.trim(),
+      selections: request.selections,
+    })
+    if (request.id) {
+      if (!recommendationSets.some((set) => set.id === id)) {
+        throw connectAppError('MODEL_RECOMMENDATION_NOT_FOUND', Code.NotFound)
+      }
+      recommendationSets = recommendationSets.map((set) => (set.id === id ? saved : set))
+    } else {
+      recommendationSets = [...recommendationSets, saved]
+    }
+    return create(SaveRecommendationSetResponseSchema, { set: saved })
+  })
+  rpc(ProviderService.method.deleteRecommendationSet, (request) => {
+    calls?.push(`DeleteRecommendationSet:${request.id}`)
+    recommendationSets = recommendationSets.filter((set) => set.id !== request.id)
+    return create(DeleteRecommendationSetResponseSchema, {})
+  })
+  rpc(ProviderService.method.moveRecommendationSet, (request) => {
+    calls?.push(`MoveRecommendationSet:${request.id}:${request.earlier ? 'up' : 'down'}`)
+    const index = recommendationSets.findIndex((set) => set.id === request.id)
+    const target = request.earlier ? index - 1 : index + 1
+    if (index >= 0 && target >= 0 && target < recommendationSets.length) {
+      const next = [...recommendationSets]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      recommendationSets = next
+    }
+    return create(MoveRecommendationSetResponseSchema, {})
+  })
   rpc(ProviderService.method.saveComparisonPair, (request) => {
     calls?.push('SaveComparisonPair')
     if (options.savePairFailure) throwFakeMutationFailure(options.savePairFailure)

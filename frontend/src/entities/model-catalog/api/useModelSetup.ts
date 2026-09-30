@@ -15,17 +15,14 @@ import {
   getSelectionsQueryKey,
   stageToProto,
   toComparisonPair,
-  toRecommendationSet,
 } from './catalog-mappers'
 
 export function useModelSetup() {
   const pairs = useQuery(ProviderService.method.getComparisonPairs, {})
-  const recommendations = useQuery(ProviderService.method.listRecommendationSets, {})
   return {
     pairs: pairs.data?.pairs.flatMap((pair) => toComparisonPair(pair) ?? []) ?? [],
-    recommendations: recommendations.data?.sets.map(toRecommendationSet) ?? [],
-    isPending: pairs.isPending || recommendations.isPending,
-    isError: pairs.isError || recommendations.isError,
+    isPending: pairs.isPending,
+    isError: pairs.isError,
   }
 }
 

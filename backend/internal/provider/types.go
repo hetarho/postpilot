@@ -9,8 +9,12 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
@@ -106,6 +110,22 @@ type RecommendationStageSelection struct {
 	CandidateB llm.ModelRef
 }
 
+// RecommendationSlot is one of the seven places a set names a model.
+type RecommendationSlot struct {
+	Slot SelectionSlot
+	Ref  llm.ModelRef
+}
+
+// Slots lists the stage's slots in order: the active model, then the A/B pair on a stage that
+// keeps one. Analyze's candidates are never part of a set (MODEL-23).
+func (s RecommendationStageSelection) Slots() []RecommendationSlot {
+	slots := []RecommendationSlot{{SlotActive, s.Active}}
+	if HasPair(s.Stage) {
+		slots = append(slots, RecommendationSlot{SlotCandidateA, s.CandidateA}, RecommendationSlot{SlotCandidateB, s.CandidateB})
+	}
+	return slots
+}
+
 var (
 	ErrUnknownStage       = errors.New("unknown stage")
 	ErrModelNotRegistered = errors.New("model not registered")
@@ -121,6 +141,8 @@ var (
 	// ErrStageWithoutPair refuses a comparison pair for a stage that keeps none (HasPair).
 	ErrStageWithoutPair       = errors.New("stage keeps no comparison pair")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
+	// ErrRecommendationLimit refuses a new set once MaxRecommendationSets exist (MODEL-69).
+	ErrRecommendationLimit = errors.New("recommendation set limit reached")
 )
 
 const (
@@ -248,6 +270,130 @@ func (e *SetRefusal) All() []string {
 
 // Empty reports whether the set passed.
 func (e *SetRefusal) Empty() bool { return len(e.All()) == 0 }
+
+// The operator's bounds on recommendation sets (MODEL-69).
+const (
+	MaxRecommendationSets       = 10
+	MaxRecommendationLabelRunes = 60
+)
+
+// Wire reasons for an operator's recommendation-set write.
+const (
+	ReasonSetInvalid = "MODEL_SET_INVALID"
+	ReasonSetLimit   = "MODEL_SET_LIMIT"
+)
+
+// Why one field of a draft set is refused (MODEL-70). The values are wire params the editor
+// renders beside the field, so they are part of the contract with the browser.
+const (
+	DraftRequired     = "required"
+	DraftTooLong      = "too_long"
+	DraftDuplicate    = "duplicate"
+	DraftUnregistered = "unregistered"
+	DraftUnclassified = "unclassified"
+)
+
+// DraftLabelField is the label's field key; a slot's is DraftSlotField.
+const DraftLabelField = "label"
+
+// DraftSlotField names one of the seven slots on the wire: `<stage>_<slot>`.
+func DraftSlotField(stage Stage, slot SelectionSlot) string {
+	return string(stage) + "_" + string(slot)
+}
+
+// SetDraftRefusal names every field of a draft set that blocks saving it, each with its cause.
+// A set is saved whole, so one refusal reports the whole draft rather than its first problem.
+type SetDraftRefusal struct {
+	Fields map[string]string
+}
+
+func (e *SetDraftRefusal) Error() string {
+	parts := make([]string, 0, len(e.Fields))
+	for _, field := range e.fieldNames() {
+		parts = append(parts, field+": "+e.Fields[field])
+	}
+	return "recommendation set draft refused — " + strings.Join(parts, ", ")
+}
+
+func (e *SetDraftRefusal) Reason() string { return ReasonSetInvalid }
+
+// Params carry each offending field's cause under its own key, and `fields` lists the keys so
+// a reader does not have to know the vocabulary to find them.
+func (e *SetDraftRefusal) Params() map[string]string {
+	params := maps.Clone(e.Fields)
+	params["fields"] = strings.Join(e.fieldNames(), ",")
+	return params
+}
+
+func (e *SetDraftRefusal) fieldNames() []string {
+	return slices.Sorted(maps.Keys(e.Fields))
+}
+
+// SetLimitError refuses an operator's new set once the installation holds the most it offers.
+type SetLimitError struct{ Limit int }
+
+func (e *SetLimitError) Error() string {
+	return fmt.Sprintf("at most %d recommendation sets", e.Limit)
+}
+func (e *SetLimitError) Reason() string { return ReasonSetLimit }
+func (e *SetLimitError) Params() map[string]string {
+	return map[string]string{"limit": strconv.Itoa(e.Limit)}
+}
+func (e *SetLimitError) Unwrap() error { return ErrRecommendationLimit }
+
+// ValidateRecommendationDraft checks a draft set against the catalog as it is now (MODEL-70):
+// a trimmed label of 1–MaxRecommendationLabelRunes runes, every one of the seven slots filled,
+// distinct observe and write candidates, and every ref registered to its stage's purpose with
+// a classification. It never asks about a plan or a balance — which tiers can apply the set is
+// settled per account at apply time (MODEL-26). A nil return means the draft may be saved.
+//
+// The label is returned trimmed so the caller stores what was checked.
+func ValidateRecommendationDraft(draft RecommendationSet, lookup func(llm.ModelRef) (llm.ModelInfo, bool)) (RecommendationSet, *SetDraftRefusal) {
+	fields := map[string]string{}
+	draft.Label = strings.TrimSpace(draft.Label)
+	switch count := utf8.RuneCountInString(draft.Label); {
+	case count == 0:
+		fields[DraftLabelField] = DraftRequired
+	case count > MaxRecommendationLabelRunes:
+		fields[DraftLabelField] = DraftTooLong
+	}
+	byStage := map[Stage]RecommendationStageSelection{}
+	for _, selection := range draft.Selections {
+		byStage[selection.Stage] = selection
+	}
+	normalized := make([]RecommendationStageSelection, 0, len(Stages))
+	for _, stage := range []Stage{StageObserve, StageAnalyze, StageWrite} {
+		selection := byStage[stage]
+		selection.Stage = stage
+		if !HasPair(stage) {
+			selection.CandidateA, selection.CandidateB = llm.ModelRef{}, llm.ModelRef{}
+		}
+		for _, entry := range selection.Slots() {
+			field := DraftSlotField(stage, entry.Slot)
+			if entry.Ref.ProviderID == "" || entry.Ref.ModelID == "" {
+				fields[field] = DraftRequired
+				continue
+			}
+			if entry.Slot == SlotCandidateB && entry.Ref == selection.CandidateA {
+				fields[field] = DraftDuplicate
+				continue
+			}
+			info, found := lookup(entry.Ref)
+			switch {
+			case !found || !Suitable(stage, info):
+				fields[field] = DraftUnregistered
+			case info.Levels[string(stage)] == "":
+				fields[field] = DraftUnclassified
+			}
+		}
+		normalized = append(normalized, selection)
+	}
+	draft.Selections = normalized
+	if len(fields) > 0 {
+		return RecommendationSet{}, &SetDraftRefusal{Fields: fields}
+	}
+	return draft, nil
+}
 
 // Suitable reports whether a model can serve a stage: pure membership in the stages the
 // catalog registered it for (MODEL-14). Capability fitness — observe needing vision — is

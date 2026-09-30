@@ -87,6 +87,12 @@ var masterProcedures = map[string]bool{
 	postpilotv1connect.ModelCatalogServicePreviewCatalogDocumentProcedure: true,
 	postpilotv1connect.ModelCatalogServiceApplyCatalogDocumentProcedure:   true,
 	postpilotv1connect.ModelCatalogServiceExportCatalogDocumentProcedure:  true,
+
+	// Recommendation sets are advice every account is shown, so writing them is curation too
+	// (MODEL-69). Listing and applying one stay any account's.
+	postpilotv1connect.ProviderServiceSaveRecommendationSetProcedure:   true,
+	postpilotv1connect.ProviderServiceDeleteRecommendationSetProcedure: true,
+	postpilotv1connect.ProviderServiceMoveRecommendationSetProcedure:   true,
 }
 
 // masterOnlyMessage is what a non-master caller sees. It names no account and no tier

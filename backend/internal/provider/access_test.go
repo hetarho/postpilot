@@ -59,16 +59,16 @@ func TestRecommendationReportsPlanAndUnclassifiedRefsBeforeAnyWrite(t *testing.T
 	free := llm.ModelRef{ProviderID: "openrouter", ModelID: "free"}
 	paid := llm.ModelRef{ProviderID: "openrouter", ModelID: "paid"}
 	unset := llm.ModelRef{ProviderID: "openrouter", ModelID: "unset"}
-	store := &fakeStore{rows: map[string]provider.Selection{}}
-	catalog := recommendationCatalog{fakeCatalog: fakeCatalog{
+	store := &fakeStore{rows: map[string]provider.Selection{}, sets: []provider.RecommendationSet{{ID: "mixed", Selections: []provider.RecommendationStageSelection{
+		{Stage: provider.StageObserve, Active: free, CandidateA: paid, CandidateB: unset},
+		{Stage: provider.StageWrite, Active: free, CandidateA: paid, CandidateB: unset},
+		{Stage: provider.StageAnalyze, Active: free},
+	}}}}
+	catalog := fakeCatalog{
 		free:  {Ref: free, Stages: allStages, Levels: map[string]string{"observe": "free", "write": "free", "analyze": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
 		paid:  {Ref: paid, Stages: allStages, Levels: map[string]string{"observe": "top", "write": "top"}, InputUSDPerMillion: "1", OutputUSDPerMillion: "1"},
 		unset: {Ref: unset, Stages: allStages},
-	}, sets: []llm.RecommendationSet{{ID: "mixed", Selections: []llm.RecommendationSelection{
-		{Stage: "observe", Active: free, CandidateA: paid, CandidateB: unset},
-		{Stage: "write", Active: free, CandidateA: paid, CandidateB: unset},
-		{Stage: "analyze", Active: free},
-	}}}}
+	}
 	svc := provider.NewService(store, catalog, tierCredits{tier: plan.Free}).WithModelGrades()
 	_, _, _, err := svc.ApplyRecommendationSet(context.Background(), "alice", "mixed")
 	var refusal *provider.SetRefusal

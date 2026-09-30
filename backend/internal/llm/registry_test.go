@@ -78,9 +78,9 @@ func env(values map[string]string) func(string) string {
 	return func(k string) string { return values[k] }
 }
 
-// The shipped file now declares the CONNECTION and the recommendation sets; its models
-// live in catalog_models, so loading it must not depend on any catalog being present.
-func TestLoad_ShippedConnectionAndRecommendation(t *testing.T) {
+// The shipped file declares the CONNECTION alone; its models live in catalog_models and its
+// recommendation sets in recommendation_sets, so loading it depends on neither (MODEL-10).
+func TestLoad_ShippedConnection(t *testing.T) {
 	provider := &fakeProvider{}
 	registry, err := llm.Load("../../config/providers.yaml", env(map[string]string{"OPENROUTER_API_KEY": "test"}), map[string]llm.AdapterFactory{
 		"openai_compatible": func(cfg llm.AdapterConfig) (llm.Provider, error) {
@@ -96,10 +96,6 @@ func TestLoad_ShippedConnectionAndRecommendation(t *testing.T) {
 	}
 	if registry.BaseURL() != "https://openrouter.ai/api/v1" {
 		t.Errorf("base url = %q", registry.BaseURL())
-	}
-	sets := registry.RecommendationSets()
-	if len(sets) != 1 || sets[0].ID != "balanced-2026-08" || len(sets[0].Selections) != 3 {
-		t.Fatalf("sets = %+v", sets)
 	}
 }
 
@@ -212,8 +208,9 @@ func TestParse_KeylessProviderIsEnabled(t *testing.T) {
 	}
 }
 
-// MODEL-10: a broken file is refused with a clear error — including a leftover models list,
-// which a stack mounting an old override would otherwise serve silently.
+// MODEL-10: a broken file is refused with a clear error — including a leftover models or
+// recommendation_sets list, which a stack mounting an old override would otherwise lose
+// silently.
 func TestParse_RejectsBrokenConfigs(t *testing.T) {
 	cases := map[string]struct {
 		yaml string
@@ -229,6 +226,10 @@ func TestParse_RejectsBrokenConfigs(t *testing.T) {
 		},
 		"leftover models list": {
 			yaml: goodYAML + "    models:\n      - id: text-only\n        min_plan: free\n",
+			want: "invalid yaml",
+		},
+		"leftover recommendation_sets list": {
+			yaml: goodYAML + "recommendation_sets:\n  - id: set\n    label: Set\n",
 			want: "invalid yaml",
 		},
 		"adapter validation (missing base_url)": {
@@ -253,45 +254,6 @@ func TestParse_RejectsBrokenConfigs(t *testing.T) {
 			_, err := llm.Parse([]byte(tc.yaml), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), twoModels(), opts)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("err = %v, want containing %q", err, tc.want)
-			}
-		})
-	}
-}
-
-// A10: a recommendation set is SHAPE-checked at boot only. Whether its models exist is
-// curated data that changes while the process runs, so it is settled where the set is
-// applied — a set naming an unknown model must not stop the API from starting.
-func TestParse_RecommendationShapeOnly(t *testing.T) {
-	withSet := goodYAML + `
-recommendation_sets:
-  - id: set
-    label: Set
-    selections:
-      - stage: observe
-        active: {provider_id: openrouter, model_id: nobody-has-this}
-        candidate_a: {provider_id: openrouter, model_id: nobody-has-this}
-        candidate_b: {provider_id: openrouter, model_id: nor-this}
-      - stage: analyze
-        active: {provider_id: openrouter, model_id: text-only}
-      - stage: write
-        active: {provider_id: openrouter, model_id: text-only}
-        candidate_a: {provider_id: openrouter, model_id: text-only}
-        candidate_b: {provider_id: openrouter, model_id: vision-json}
-`
-	if _, err := llm.Parse([]byte(withSet), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), twoModels(), opts); err != nil {
-		t.Fatalf("an unresolvable ref stopped boot: %v", err)
-	}
-
-	for name, broken := range map[string]string{
-		"duplicate pair": strings.Replace(withSet, "model_id: nor-this}", "model_id: nobody-has-this}", 1),
-		"missing stage":  strings.Replace(withSet, "      - stage: write\n", "", 1),
-		"empty ref":      strings.Replace(withSet, "active: {provider_id: openrouter, model_id: nobody-has-this}", "active: {provider_id: openrouter, model_id: \"\"}", 1),
-		// MODEL-23: analyze keeps its active selection alone.
-		"analyze pair": strings.Replace(withSet, "        active: {provider_id: openrouter, model_id: text-only}\n      - stage: write", "        active: {provider_id: openrouter, model_id: text-only}\n        candidate_a: {provider_id: openrouter, model_id: text-only}\n        candidate_b: {provider_id: openrouter, model_id: vision-json}\n      - stage: write", 1),
-	} {
-		t.Run(name, func(t *testing.T) {
-			if _, err := llm.Parse([]byte(broken), env(map[string]string{"TEST_KEY": "k"}), adaptersWith(&fakeProvider{}), twoModels(), opts); err == nil {
-				t.Fatal("a malformed recommendation set was accepted")
 			}
 		})
 	}

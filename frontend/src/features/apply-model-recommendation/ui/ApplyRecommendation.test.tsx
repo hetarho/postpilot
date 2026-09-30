@@ -73,6 +73,15 @@ describe('ApplyRecommendation over a seven-model set', () => {
     ).toBeInTheDocument()
   })
 
+  // MODEL-71: the operator's label names the set; its id is the server's handle.
+  it('names the set by its label and never shows its id', () => {
+    render(<ApplyRecommendation recommendation={sevenRefSet} />, {
+      wrapper: withProviders(createFakeProviderTransport(), createTestQueryClient()),
+    })
+    expect(screen.getByText('Balanced')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('balanced-2026-08')
+  })
+
   // A set is applied whole, so every one of its seven refs is asked about — and the analyze
   // stage, which has no pair, adds its active model and nothing else.
   it('names every one of the seven refs the balance cannot cover, in set order', async () => {

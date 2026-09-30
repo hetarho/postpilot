@@ -13,6 +13,7 @@ export type {
   ModelRef,
   ReasoningEffortName,
   ReasoningSpend,
+  RecommendationFieldCause,
   RecommendationSet,
   RecommendationStageSelection,
   SelectionSlotName,
@@ -32,10 +33,15 @@ export { modelChoiceIssue, savedChoiceIssue, freeProviderNote } from './model/ac
 export { useInvalidateModelAccess } from './api/model-access-cache'
 export {
   REASONING_EFFORTS,
+  RECOMMENDATION_STAGES,
   STAGES,
+  STAGE_PURPOSE,
   filterForStage,
   isModelPurpose,
   isReasoningEffort,
+  isRecommendationFieldCause,
+  recommendationField,
+  recommendationSlots,
   reasoningShare,
   refKey,
   sameRef,
@@ -66,6 +72,12 @@ export {
   useModelSetup,
   useSaveComparisonPair,
 } from './api/useModelSetup'
+export {
+  useDeleteRecommendationSet,
+  useMoveRecommendationSet,
+  useRecommendationSets,
+  useSaveRecommendationSet,
+} from './api/useRecommendationSets'
 export { getSelectionsQueryKey } from './api/catalog-mappers'
 export type { ModelAvailability, ModelVerdict } from './model/availability'
 export { verdictOf } from './model/availability'

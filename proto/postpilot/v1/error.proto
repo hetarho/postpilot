@@ -338,6 +338,11 @@ enum FailureReason {
   MODEL_FREE_PATH_UNAVAILABLE = 276;
   MODEL_FREE_INELIGIBLE = 277;
   CLIP_SERVER_EXPORT_EXHAUSTED = 278;
+  // An operator's recommendation-set draft failed whole-set validation (MODEL-70). params name
+  // every offending field (`fields`, then one key per field carrying its cause).
+  MODEL_SET_INVALID = 279;
+  // The installation already holds the most recommendation sets it offers (MODEL-69).
+  MODEL_SET_LIMIT = 280;
   // SetUserPlan on the calling account: a master leaves master only by another master (QUOTA-63).
   MASTER_SELF_PLAN = 281;
   // A master account starts no subscription, change or pack purchase (BILL-20).

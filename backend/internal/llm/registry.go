@@ -23,7 +23,7 @@ const DisabledReasonNoKey = "API key not configured"
 const DisabledReasonDelisted = "the provider no longer lists this model"
 
 // The user-facing stage names, as the stable strings that cross this boundary in
-// RecommendationSelection.Stage and SourceModel.Stages. Owned here so the contexts on
+// SourceModel.Stages. Owned here so the contexts on
 // either side of the port spell them identically — the strings are a cross-package
 // contract a typo would break with no compile error.
 const (
@@ -98,8 +98,8 @@ type SourceModel struct {
 	// headroom for writing and revision.
 	ReasoningEfforts      []ReasoningEffort
 	ReasoningNativeEffort bool
-	// Stages this model is registered to serve, in the same stable string form
-	// RecommendationSelection.Stage uses ("observe"/"write"/"analyze"). The strings are the
+	// Stages this model is registered to serve, in the stable string form the StageName
+	// constants spell ("observe"/"write"/"analyze"). The strings are the
 	// source's to define — the registry passes them through without interpreting them, the
 	// same posture it takes to labels. An empty set is a model curated for a purpose no
 	// stage consumes yet (image/video generation).
@@ -126,23 +126,6 @@ type ModelSource interface {
 	Lookup(modelID string) (SourceModel, bool)
 }
 
-// RecommendationSelection is the registry-owned, versioned selection for one stage.
-// Stage remains its stable string form so the llm boundary does not import provider.
-type RecommendationSelection struct {
-	Stage      string
-	Active     ModelRef
-	CandidateA ModelRef
-	CandidateB ModelRef
-}
-
-// RecommendationSet is display/config metadata. Applying one is provider-context
-// behavior because it owns model_selections and the acting account.
-type RecommendationSet struct {
-	ID         string
-	Label      string
-	Selections []RecommendationSelection
-}
-
 // Options tune every call the registry dispatches.
 type Options struct {
 	// Timeout bounds one provider call (PRD §6.6: 단계당 5분).
@@ -159,11 +142,11 @@ type Options struct {
 }
 
 // The yaml shape. Field names are the contract documented in providers.yaml; unknown
-// fields are an error, which is also what retires the old per-provider `models:` list: a
-// stack still mounting one is told at boot rather than quietly serving an empty catalog.
+// fields are an error, which is also what retires the old per-provider `models:` list and
+// the old `recommendation_sets:` list (those are rows now, MODEL-10): a stack still mounting
+// either is told at boot rather than quietly serving an empty catalog or losing its sets.
 type registryFile struct {
-	Providers          []providerEntry          `yaml:"providers"`
-	RecommendationSets []recommendationSetEntry `yaml:"recommendation_sets"`
+	Providers []providerEntry `yaml:"providers"`
 }
 
 type providerEntry struct {
@@ -172,24 +155,6 @@ type providerEntry struct {
 	BaseURL         string `yaml:"base_url"`
 	APIKeyEnv       string `yaml:"api_key_env"`
 	ReasoningFormat string `yaml:"reasoning_format"`
-}
-
-type recommendationSetEntry struct {
-	ID         string                         `yaml:"id"`
-	Label      string                         `yaml:"label"`
-	Selections []recommendationSelectionEntry `yaml:"selections"`
-}
-
-type recommendationSelectionEntry struct {
-	Stage      string        `yaml:"stage"`
-	Active     modelRefEntry `yaml:"active"`
-	CandidateA modelRefEntry `yaml:"candidate_a"`
-	CandidateB modelRefEntry `yaml:"candidate_b"`
-}
-
-type modelRefEntry struct {
-	ProviderID string `yaml:"provider_id"`
-	ModelID    string `yaml:"model_id"`
 }
 
 // Registry joins the two halves of "which model can I call": the connection, which is
@@ -201,12 +166,11 @@ type Registry struct {
 	provider    Provider
 	// disabled/disabledReason describe the provider, not one model: an unset key takes the
 	// whole endpoint out at once.
-	disabled        bool
-	disabledReason  string
-	baseURL         string
-	source          ModelSource
-	recommendations []RecommendationSet
-	opts            Options
+	disabled       bool
+	disabledReason string
+	baseURL        string
+	source         ModelSource
+	opts           Options
 }
 
 // WithModelGrades requires a trusted, durable admission on every provider call.
@@ -340,9 +304,6 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 		reg.disabled = true
 		reg.disabledReason = DisabledReasonNoKey
 	}
-	if err := reg.loadRecommendations(file.RecommendationSets); err != nil {
-		return nil, err
-	}
 	return reg, nil
 }
 
@@ -353,68 +314,6 @@ func (r *Registry) ProviderID() string { return r.providerID }
 // from it, so the address is configured in one place; it never crosses to a client.
 func (r *Registry) BaseURL() string { return r.baseURL }
 
-// loadRecommendations validates SHAPE only. Whether a referenced model is usable can no
-// longer be settled at boot — the catalog is curated data that changes while the process
-// runs — so existence, capability and plan are checked where the set is applied, against
-// the registry as it is at that moment.
-func (r *Registry) loadRecommendations(entries []recommendationSetEntry) error {
-	seenSets := map[string]bool{}
-	for i, item := range entries {
-		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Label) == "" {
-			return fmt.Errorf("recommendation_sets[%d]: id and label are required", i)
-		}
-		if seenSets[item.ID] {
-			return fmt.Errorf("recommendation set %q: duplicate id", item.ID)
-		}
-		seenSets[item.ID] = true
-		if len(item.Selections) != 3 {
-			return fmt.Errorf("recommendation set %q: exactly three stage selections are required", item.ID)
-		}
-		set := RecommendationSet{ID: item.ID, Label: item.Label}
-		seenStages := map[string]bool{}
-		for _, selection := range item.Selections {
-			if selection.Stage != StageNameObserve && selection.Stage != StageNameWrite && selection.Stage != StageNameAnalyze {
-				return fmt.Errorf("recommendation set %q: unknown stage %q", item.ID, selection.Stage)
-			}
-			if seenStages[selection.Stage] {
-				return fmt.Errorf("recommendation set %q: duplicate stage %q", item.ID, selection.Stage)
-			}
-			seenStages[selection.Stage] = true
-			converted := RecommendationSelection{
-				Stage:      selection.Stage,
-				Active:     toModelRef(selection.Active),
-				CandidateA: toModelRef(selection.CandidateA),
-				CandidateB: toModelRef(selection.CandidateB),
-			}
-			refs := []ModelRef{converted.Active}
-			if selection.Stage == StageNameAnalyze {
-				// Analyze keeps its active selection alone: the lab compares observe and write
-				// only (MODEL-23), so a pair here would be a set no apply could honour.
-				if converted.CandidateA != (ModelRef{}) || converted.CandidateB != (ModelRef{}) {
-					return fmt.Errorf("recommendation set %q stage %q: analyze takes no candidates", item.ID, selection.Stage)
-				}
-			} else {
-				refs = append(refs, converted.CandidateA, converted.CandidateB)
-				if converted.CandidateA == converted.CandidateB {
-					return fmt.Errorf("recommendation set %q stage %q: candidates must differ", item.ID, selection.Stage)
-				}
-			}
-			for _, ref := range refs {
-				if ref.ProviderID == "" || ref.ModelID == "" {
-					return fmt.Errorf("recommendation set %q stage %q: every ref needs a provider_id and a model_id", item.ID, selection.Stage)
-				}
-			}
-			set.Selections = append(set.Selections, converted)
-		}
-		r.recommendations = append(r.recommendations, set)
-	}
-	return nil
-}
-
-func toModelRef(ref modelRefEntry) ModelRef {
-	return ModelRef{ProviderID: strings.TrimSpace(ref.ProviderID), ModelID: strings.TrimSpace(ref.ModelID)}
-}
-
 // Models is the curated catalog in source order. An empty catalog is a valid state — a
 // fresh install has nothing curated yet — and renders as an empty dropdown, not a failure.
 func (r *Registry) Models() []ModelInfo {
@@ -422,16 +321,6 @@ func (r *Registry) Models() []ModelInfo {
 	out := make([]ModelInfo, 0, len(models))
 	for _, m := range models {
 		out = append(out, r.describe(m))
-	}
-	return out
-}
-
-// RecommendationSets returns defensive copies in yaml order.
-func (r *Registry) RecommendationSets() []RecommendationSet {
-	out := make([]RecommendationSet, len(r.recommendations))
-	for i, set := range r.recommendations {
-		out[i] = set
-		out[i].Selections = append([]RecommendationSelection(nil), set.Selections...)
 	}
 	return out
 }

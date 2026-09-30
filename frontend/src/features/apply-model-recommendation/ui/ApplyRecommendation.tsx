@@ -21,15 +21,14 @@ export function ApplyRecommendation({ recommendation }: { recommendation: Recomm
     // card contract. On a 360px phone its padding cost 32px of a 328px column in the one region
     // THEME-8 says content should be largest, and pushed everything below it further from the thumb.
     <div>
-      <Typography variant="label" as="p" className="text-content-primary">
+      {/* `break-words`: the label is operator-written and may run long (THEME-21). */}
+      <Typography variant="label" as="p" className="text-content-primary break-words">
         {recommendation.label}
       </Typography>
-      {/* `break-words`: the set id is a server-supplied slug (THEME-21). */}
-      <Typography variant="body" as="p" className="text-content-secondary mt-1 break-words">
-        <Typography variant="meta" as="span" mono>
-          {recommendation.id}
-        </Typography>{' '}
-        · {t('recommendation.description')}
+      {/* The set's id is the server's handle, never shown (MODEL-71): the label is what the
+          operator named it. */}
+      <Typography variant="body" as="p" className="text-content-secondary mt-1">
+        {t('recommendation.description')}
       </Typography>
       <Button
         variant="secondary"

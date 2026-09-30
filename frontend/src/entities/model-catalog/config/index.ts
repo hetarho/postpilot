@@ -19,3 +19,9 @@ export const MODEL_PURPOSES = [
 ] as const
 
 export type ModelPurpose = (typeof MODEL_PURPOSES)[number]
+
+/** The operator's bounds on recommendation sets, mirrored from the server (MODEL-69). The
+ *  server refuses past them whatever this client rendered; these only let the form say so
+ *  before the round trip. */
+export const MAX_RECOMMENDATION_SETS = 10
+export const MAX_RECOMMENDATION_LABEL_LENGTH = 60

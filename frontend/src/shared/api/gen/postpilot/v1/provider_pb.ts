@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/provider.proto.
  */
 export const file_postpilot_v1_provider: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvcHJvdmlkZXIucHJvdG8SDHBvc3RwaWxvdC52MSIxCghNb2RlbFJlZhITCgtwcm92aWRlcl9pZBgBIAEoCRIQCghtb2RlbF9pZBgCIAEoCSKrBAoJTW9kZWxJbmZvEiMKA3JlZhgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhINCgVsYWJlbBgCIAEoCRIOCgZ2aXNpb24YAyABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBCABKAgSEwoLdmlkZW9faW5wdXQYECABKAgSGAoQc2lnbmVkX3ZpZGVvX3VybBgRIAEoCBIbChNpbmxpbmVfc3RhdGljX3ZpZGVvGBIgASgIEhAKCGRpc2FibGVkGAUgASgIEhcKD2Rpc2FibGVkX3JlYXNvbhgGIAEoCRIWCg5jb250ZXh0X3Rva2VucxgHIAEoAxIdChVpbnB1dF91c2RfcGVyX21pbGxpb24YCCABKAkSHgoWb3V0cHV0X3VzZF9wZXJfbWlsbGlvbhgJIAEoCRIaChJwcmljaW5nX2NoZWNrZWRfYXQYCiABKAkSGAoQcmVxdWlyZWRfY3JlZGl0cxgNIAEoBRISCgphZmZvcmRhYmxlGA4gASgIEiMKBnN0YWdlcxgPIAMoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIoCgZsZXZlbHMYEyADKAsyGC5wb3N0cGlsb3QudjEuU3RhZ2VMZXZlbBIcChRhaV9wcmljZV91bmF2YWlsYWJsZRgUIAEoCBIuCgZhY2Nlc3MYFSADKAsyHi5wb3N0cGlsb3QudjEuTW9kZWxTdGFnZUFjY2Vzc0oECAsQDEoECAwQDSKnAQoQTW9kZWxTdGFnZUFjY2VzcxIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRINCgVncmFkZRgCIAEoCRIVCg1yZXF1aXJlZF9wbGFuGAMgASgJEhAKCGVudGl0bGVkGAQgASgIEhsKE2ZyZWVfcGF0aF9hdmFpbGFibGUYBSABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAYgASgJIj8KClN0YWdlTGV2ZWwSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USDQoFbGV2ZWwYAiABKAkiwwEKCVNlbGVjdGlvbhIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIjCgNyZWYYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSDwoHbWlzc2luZxgDIAEoCBIpCgRzbG90GAQgASgOMhsucG9zdHBpbG90LnYxLlNlbGVjdGlvblNsb3QSFQoNcmVxdWlyZWRfcGxhbhgFIAEoCRIaChJ1bmF2YWlsYWJsZV9yZWFzb24YBiABKAkikAEKDkNvbXBhcmlzb25QYWlyEiIKBXN0YWdlGAEgASgOMhMucG9zdHBpbG90LnYxLlN0YWdlEiwKC2NhbmRpZGF0ZV9hGAIgASgLMhcucG9zdHBpbG90LnYxLlNlbGVjdGlvbhIsCgtjYW5kaWRhdGVfYhgDIAEoCzIXLnBvc3RwaWxvdC52MS5TZWxlY3Rpb24ixAEKHFJlY29tbWVuZGF0aW9uU3RhZ2VTZWxlY3Rpb24SIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USJgoGYWN0aXZlGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC2NhbmRpZGF0ZV9hGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC2NhbmRpZGF0ZV9iGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIm4KEVJlY29tbWVuZGF0aW9uU2V0EgoKAmlkGAEgASgJEg0KBWxhYmVsGAIgASgJEj4KCnNlbGVjdGlvbnMYAyADKAsyKi5wb3N0cGlsb3QudjEuUmVjb21tZW5kYXRpb25TdGFnZVNlbGVjdGlvbiITChFMaXN0TW9kZWxzUmVxdWVzdCI9ChJMaXN0TW9kZWxzUmVzcG9uc2USJwoGbW9kZWxzGAEgAygLMhcucG9zdHBpbG90LnYxLk1vZGVsSW5mbyIWChRHZXRTZWxlY3Rpb25zUmVxdWVzdCKCAQoVR2V0U2VsZWN0aW9uc1Jlc3BvbnNlEisKCnNlbGVjdGlvbnMYASADKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uEh4KFmVzdGltYXRlZF9wb3N0X2NyZWRpdHMYAiABKAUSHAoUYWlfcHJpY2VfdW5hdmFpbGFibGUYAyABKAgiXwoUU2F2ZVNlbGVjdGlvblJlcXVlc3QSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USIwoDcmVmGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIkMKFVNhdmVTZWxlY3Rpb25SZXNwb25zZRIqCglzZWxlY3Rpb24YASABKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uIhsKGUdldENvbXBhcmlzb25QYWlyc1JlcXVlc3QiSQoaR2V0Q29tcGFyaXNvblBhaXJzUmVzcG9uc2USKwoFcGFpcnMYASADKAsyHC5wb3N0cGlsb3QudjEuQ29tcGFyaXNvblBhaXIimQEKGVNhdmVDb21wYXJpc29uUGFpclJlcXVlc3QSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USKwoLY2FuZGlkYXRlX2EYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLY2FuZGlkYXRlX2IYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYiSAoaU2F2ZUNvbXBhcmlzb25QYWlyUmVzcG9uc2USKgoEcGFpchgBIAEoCzIcLnBvc3RwaWxvdC52MS5Db21wYXJpc29uUGFpciIfCh1MaXN0UmVjb21tZW5kYXRpb25TZXRzUmVxdWVzdCJPCh5MaXN0UmVjb21tZW5kYXRpb25TZXRzUmVzcG9uc2USLQoEc2V0cxgBIAMoCzIfLnBvc3RwaWxvdC52MS5SZWNvbW1lbmRhdGlvblNldCIrCh1BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBIKCgJpZBgBIAEoCSKoAQoeQXBwbHlSZWNvbW1lbmRhdGlvblNldFJlc3BvbnNlEiwKA3NldBgBIAEoCzIfLnBvc3RwaWxvdC52MS5SZWNvbW1lbmRhdGlvblNldBIrCgpzZWxlY3Rpb25zGAIgAygLMhcucG9zdHBpbG90LnYxLlNlbGVjdGlvbhIrCgVwYWlycxgDIAMoCzIcLnBvc3RwaWxvdC52MS5Db21wYXJpc29uUGFpcipVCgVTdGFnZRIVChFTVEFHRV9VTlNQRUNJRklFRBAAEhEKDVNUQUdFX09CU0VSVkUQARIPCgtTVEFHRV9XUklURRACEhEKDVNUQUdFX0FOQUxZWkUQAyqKAQoNU2VsZWN0aW9uU2xvdBIeChpTRUxFQ1RJT05fU0xPVF9VTlNQRUNJRklFRBAAEhkKFVNFTEVDVElPTl9TTE9UX0FDVElWRRABEh4KGlNFTEVDVElPTl9TTE9UX0NBTkRJREFURV9BEAISHgoaU0VMRUNUSU9OX1NMT1RfQ0FORElEQVRFX0IQAzLgBQoPUHJvdmlkZXJTZXJ2aWNlElEKCkxpc3RNb2RlbHMSHy5wb3N0cGlsb3QudjEuTGlzdE1vZGVsc1JlcXVlc3QaIC5wb3N0cGlsb3QudjEuTGlzdE1vZGVsc1Jlc3BvbnNlIgASWgoNR2V0U2VsZWN0aW9ucxIiLnBvc3RwaWxvdC52MS5HZXRTZWxlY3Rpb25zUmVxdWVzdBojLnBvc3RwaWxvdC52MS5HZXRTZWxlY3Rpb25zUmVzcG9uc2UiABJaCg1TYXZlU2VsZWN0aW9uEiIucG9zdHBpbG90LnYxLlNhdmVTZWxlY3Rpb25SZXF1ZXN0GiMucG9zdHBpbG90LnYxLlNhdmVTZWxlY3Rpb25SZXNwb25zZSIAEmkKEkdldENvbXBhcmlzb25QYWlycxInLnBvc3RwaWxvdC52MS5HZXRDb21wYXJpc29uUGFpcnNSZXF1ZXN0GigucG9zdHBpbG90LnYxLkdldENvbXBhcmlzb25QYWlyc1Jlc3BvbnNlIgASaQoSU2F2ZUNvbXBhcmlzb25QYWlyEicucG9zdHBpbG90LnYxLlNhdmVDb21wYXJpc29uUGFpclJlcXVlc3QaKC5wb3N0cGlsb3QudjEuU2F2ZUNvbXBhcmlzb25QYWlyUmVzcG9uc2UiABJ1ChZMaXN0UmVjb21tZW5kYXRpb25TZXRzEisucG9zdHBpbG90LnYxLkxpc3RSZWNvbW1lbmRhdGlvblNldHNSZXF1ZXN0GiwucG9zdHBpbG90LnYxLkxpc3RSZWNvbW1lbmRhdGlvblNldHNSZXNwb25zZSIAEnUKFkFwcGx5UmVjb21tZW5kYXRpb25TZXQSKy5wb3N0cGlsb3QudjEuQXBwbHlSZWNvbW1lbmRhdGlvblNldFJlcXVlc3QaLC5wb3N0cGlsb3QudjEuQXBwbHlSZWNvbW1lbmRhdGlvblNldFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("Chtwb3N0cGlsb3QvdjEvcHJvdmlkZXIucHJvdG8SDHBvc3RwaWxvdC52MSIxCghNb2RlbFJlZhITCgtwcm92aWRlcl9pZBgBIAEoCRIQCghtb2RlbF9pZBgCIAEoCSKrBAoJTW9kZWxJbmZvEiMKA3JlZhgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhINCgVsYWJlbBgCIAEoCRIOCgZ2aXNpb24YAyABKAgSGQoRc3RydWN0dXJlZF9vdXRwdXQYBCABKAgSEwoLdmlkZW9faW5wdXQYECABKAgSGAoQc2lnbmVkX3ZpZGVvX3VybBgRIAEoCBIbChNpbmxpbmVfc3RhdGljX3ZpZGVvGBIgASgIEhAKCGRpc2FibGVkGAUgASgIEhcKD2Rpc2FibGVkX3JlYXNvbhgGIAEoCRIWCg5jb250ZXh0X3Rva2VucxgHIAEoAxIdChVpbnB1dF91c2RfcGVyX21pbGxpb24YCCABKAkSHgoWb3V0cHV0X3VzZF9wZXJfbWlsbGlvbhgJIAEoCRIaChJwcmljaW5nX2NoZWNrZWRfYXQYCiABKAkSGAoQcmVxdWlyZWRfY3JlZGl0cxgNIAEoBRISCgphZmZvcmRhYmxlGA4gASgIEiMKBnN0YWdlcxgPIAMoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIoCgZsZXZlbHMYEyADKAsyGC5wb3N0cGlsb3QudjEuU3RhZ2VMZXZlbBIcChRhaV9wcmljZV91bmF2YWlsYWJsZRgUIAEoCBIuCgZhY2Nlc3MYFSADKAsyHi5wb3N0cGlsb3QudjEuTW9kZWxTdGFnZUFjY2Vzc0oECAsQDEoECAwQDSKnAQoQTW9kZWxTdGFnZUFjY2VzcxIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRINCgVncmFkZRgCIAEoCRIVCg1yZXF1aXJlZF9wbGFuGAMgASgJEhAKCGVudGl0bGVkGAQgASgIEhsKE2ZyZWVfcGF0aF9hdmFpbGFibGUYBSABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAYgASgJIj8KClN0YWdlTGV2ZWwSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USDQoFbGV2ZWwYAiABKAkiwwEKCVNlbGVjdGlvbhIiCgVzdGFnZRgBIAEoDjITLnBvc3RwaWxvdC52MS5TdGFnZRIjCgNyZWYYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSDwoHbWlzc2luZxgDIAEoCBIpCgRzbG90GAQgASgOMhsucG9zdHBpbG90LnYxLlNlbGVjdGlvblNsb3QSFQoNcmVxdWlyZWRfcGxhbhgFIAEoCRIaChJ1bmF2YWlsYWJsZV9yZWFzb24YBiABKAkikAEKDkNvbXBhcmlzb25QYWlyEiIKBXN0YWdlGAEgASgOMhMucG9zdHBpbG90LnYxLlN0YWdlEiwKC2NhbmRpZGF0ZV9hGAIgASgLMhcucG9zdHBpbG90LnYxLlNlbGVjdGlvbhIsCgtjYW5kaWRhdGVfYhgDIAEoCzIXLnBvc3RwaWxvdC52MS5TZWxlY3Rpb24ixAEKHFJlY29tbWVuZGF0aW9uU3RhZ2VTZWxlY3Rpb24SIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USJgoGYWN0aXZlGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC2NhbmRpZGF0ZV9hGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC2NhbmRpZGF0ZV9iGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIm4KEVJlY29tbWVuZGF0aW9uU2V0EgoKAmlkGAEgASgJEg0KBWxhYmVsGAIgASgJEj4KCnNlbGVjdGlvbnMYAyADKAsyKi5wb3N0cGlsb3QudjEuUmVjb21tZW5kYXRpb25TdGFnZVNlbGVjdGlvbiITChFMaXN0TW9kZWxzUmVxdWVzdCI9ChJMaXN0TW9kZWxzUmVzcG9uc2USJwoGbW9kZWxzGAEgAygLMhcucG9zdHBpbG90LnYxLk1vZGVsSW5mbyIWChRHZXRTZWxlY3Rpb25zUmVxdWVzdCKCAQoVR2V0U2VsZWN0aW9uc1Jlc3BvbnNlEisKCnNlbGVjdGlvbnMYASADKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uEh4KFmVzdGltYXRlZF9wb3N0X2NyZWRpdHMYAiABKAUSHAoUYWlfcHJpY2VfdW5hdmFpbGFibGUYAyABKAgiXwoUU2F2ZVNlbGVjdGlvblJlcXVlc3QSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USIwoDcmVmGAIgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmIkMKFVNhdmVTZWxlY3Rpb25SZXNwb25zZRIqCglzZWxlY3Rpb24YASABKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uIhsKGUdldENvbXBhcmlzb25QYWlyc1JlcXVlc3QiSQoaR2V0Q29tcGFyaXNvblBhaXJzUmVzcG9uc2USKwoFcGFpcnMYASADKAsyHC5wb3N0cGlsb3QudjEuQ29tcGFyaXNvblBhaXIimQEKGVNhdmVDb21wYXJpc29uUGFpclJlcXVlc3QSIgoFc3RhZ2UYASABKA4yEy5wb3N0cGlsb3QudjEuU3RhZ2USKwoLY2FuZGlkYXRlX2EYAiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLY2FuZGlkYXRlX2IYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYiSAoaU2F2ZUNvbXBhcmlzb25QYWlyUmVzcG9uc2USKgoEcGFpchgBIAEoCzIcLnBvc3RwaWxvdC52MS5Db21wYXJpc29uUGFpciIfCh1MaXN0UmVjb21tZW5kYXRpb25TZXRzUmVxdWVzdCJPCh5MaXN0UmVjb21tZW5kYXRpb25TZXRzUmVzcG9uc2USLQoEc2V0cxgBIAMoCzIfLnBvc3RwaWxvdC52MS5SZWNvbW1lbmRhdGlvblNldCIrCh1BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBIKCgJpZBgBIAEoCSJ5ChxTYXZlUmVjb21tZW5kYXRpb25TZXRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWxhYmVsGAIgASgJEj4KCnNlbGVjdGlvbnMYAyADKAsyKi5wb3N0cGlsb3QudjEuUmVjb21tZW5kYXRpb25TdGFnZVNlbGVjdGlvbiJNCh1TYXZlUmVjb21tZW5kYXRpb25TZXRSZXNwb25zZRIsCgNzZXQYASABKAsyHy5wb3N0cGlsb3QudjEuUmVjb21tZW5kYXRpb25TZXQiLAoeRGVsZXRlUmVjb21tZW5kYXRpb25TZXRSZXF1ZXN0EgoKAmlkGAEgASgJIiEKH0RlbGV0ZVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2UiOwocTW92ZVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdlYXJsaWVyGAIgASgIIh8KHU1vdmVSZWNvbW1lbmRhdGlvblNldFJlc3BvbnNlIqgBCh5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2USLAoDc2V0GAEgASgLMh8ucG9zdHBpbG90LnYxLlJlY29tbWVuZGF0aW9uU2V0EisKCnNlbGVjdGlvbnMYAiADKAsyFy5wb3N0cGlsb3QudjEuU2VsZWN0aW9uEisKBXBhaXJzGAMgAygLMhwucG9zdHBpbG90LnYxLkNvbXBhcmlzb25QYWlyKlUKBVN0YWdlEhUKEVNUQUdFX1VOU1BFQ0lGSUVEEAASEQoNU1RBR0VfT0JTRVJWRRABEg8KC1NUQUdFX1dSSVRFEAISEQoNU1RBR0VfQU5BTFlaRRADKooBCg1TZWxlY3Rpb25TbG90Eh4KGlNFTEVDVElPTl9TTE9UX1VOU1BFQ0lGSUVEEAASGQoVU0VMRUNUSU9OX1NMT1RfQUNUSVZFEAESHgoaU0VMRUNUSU9OX1NMT1RfQ0FORElEQVRFX0EQAhIeChpTRUxFQ1RJT05fU0xPVF9DQU5ESURBVEVfQhADMsIICg9Qcm92aWRlclNlcnZpY2USUQoKTGlzdE1vZGVscxIfLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVxdWVzdBogLnBvc3RwaWxvdC52MS5MaXN0TW9kZWxzUmVzcG9uc2UiABJaCg1HZXRTZWxlY3Rpb25zEiIucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkdldFNlbGVjdGlvbnNSZXNwb25zZSIAEloKDVNhdmVTZWxlY3Rpb24SIi5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlcXVlc3QaIy5wb3N0cGlsb3QudjEuU2F2ZVNlbGVjdGlvblJlc3BvbnNlIgASaQoSR2V0Q29tcGFyaXNvblBhaXJzEicucG9zdHBpbG90LnYxLkdldENvbXBhcmlzb25QYWlyc1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuR2V0Q29tcGFyaXNvblBhaXJzUmVzcG9uc2UiABJpChJTYXZlQ29tcGFyaXNvblBhaXISJy5wb3N0cGlsb3QudjEuU2F2ZUNvbXBhcmlzb25QYWlyUmVxdWVzdBooLnBvc3RwaWxvdC52MS5TYXZlQ29tcGFyaXNvblBhaXJSZXNwb25zZSIAEnUKFkxpc3RSZWNvbW1lbmRhdGlvblNldHMSKy5wb3N0cGlsb3QudjEuTGlzdFJlY29tbWVuZGF0aW9uU2V0c1JlcXVlc3QaLC5wb3N0cGlsb3QudjEuTGlzdFJlY29tbWVuZGF0aW9uU2V0c1Jlc3BvbnNlIgASdQoWQXBwbHlSZWNvbW1lbmRhdGlvblNldBIrLnBvc3RwaWxvdC52MS5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBosLnBvc3RwaWxvdC52MS5BcHBseVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2UiABJyChVTYXZlUmVjb21tZW5kYXRpb25TZXQSKi5wb3N0cGlsb3QudjEuU2F2ZVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBorLnBvc3RwaWxvdC52MS5TYXZlUmVjb21tZW5kYXRpb25TZXRSZXNwb25zZSIAEngKF0RlbGV0ZVJlY29tbWVuZGF0aW9uU2V0EiwucG9zdHBpbG90LnYxLkRlbGV0ZVJlY29tbWVuZGF0aW9uU2V0UmVxdWVzdBotLnBvc3RwaWxvdC52MS5EZWxldGVSZWNvbW1lbmRhdGlvblNldFJlc3BvbnNlIgAScgoVTW92ZVJlY29tbWVuZGF0aW9uU2V0EioucG9zdHBpbG90LnYxLk1vdmVSZWNvbW1lbmRhdGlvblNldFJlcXVlc3QaKy5wb3N0cGlsb3QudjEuTW92ZVJlY29tbWVuZGF0aW9uU2V0UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * Reused by the Start* RPCs of the generation plans: a job records exactly which model
@@ -607,6 +607,122 @@ export const ApplyRecommendationSetRequestSchema: GenMessage<ApplyRecommendation
   messageDesc(file_postpilot_v1_provider, 20);
 
 /**
+ * One stage entry per stage, observe/analyze/write each at most once. A stage left out leaves
+ * its slots empty, which the validation reports as required.
+ *
+ * @generated from message postpilot.v1.SaveRecommendationSetRequest
+ */
+export type SaveRecommendationSetRequest = Message<"postpilot.v1.SaveRecommendationSetRequest"> & {
+  /**
+   * Empty creates a new set; otherwise the id of the set to replace.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * @generated from field: repeated postpilot.v1.RecommendationStageSelection selections = 3;
+   */
+  selections: RecommendationStageSelection[];
+};
+
+/**
+ * Describes the message postpilot.v1.SaveRecommendationSetRequest.
+ * Use `create(SaveRecommendationSetRequestSchema)` to create a new message.
+ */
+export const SaveRecommendationSetRequestSchema: GenMessage<SaveRecommendationSetRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 21);
+
+/**
+ * @generated from message postpilot.v1.SaveRecommendationSetResponse
+ */
+export type SaveRecommendationSetResponse = Message<"postpilot.v1.SaveRecommendationSetResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.RecommendationSet set = 1;
+   */
+  set?: RecommendationSet | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveRecommendationSetResponse.
+ * Use `create(SaveRecommendationSetResponseSchema)` to create a new message.
+ */
+export const SaveRecommendationSetResponseSchema: GenMessage<SaveRecommendationSetResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 22);
+
+/**
+ * @generated from message postpilot.v1.DeleteRecommendationSetRequest
+ */
+export type DeleteRecommendationSetRequest = Message<"postpilot.v1.DeleteRecommendationSetRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message postpilot.v1.DeleteRecommendationSetRequest.
+ * Use `create(DeleteRecommendationSetRequestSchema)` to create a new message.
+ */
+export const DeleteRecommendationSetRequestSchema: GenMessage<DeleteRecommendationSetRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 23);
+
+/**
+ * @generated from message postpilot.v1.DeleteRecommendationSetResponse
+ */
+export type DeleteRecommendationSetResponse = Message<"postpilot.v1.DeleteRecommendationSetResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.DeleteRecommendationSetResponse.
+ * Use `create(DeleteRecommendationSetResponseSchema)` to create a new message.
+ */
+export const DeleteRecommendationSetResponseSchema: GenMessage<DeleteRecommendationSetResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 24);
+
+/**
+ * @generated from message postpilot.v1.MoveRecommendationSetRequest
+ */
+export type MoveRecommendationSetRequest = Message<"postpilot.v1.MoveRecommendationSetRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * true moves the set one place towards the top of the list, false one place down.
+   *
+   * @generated from field: bool earlier = 2;
+   */
+  earlier: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.MoveRecommendationSetRequest.
+ * Use `create(MoveRecommendationSetRequestSchema)` to create a new message.
+ */
+export const MoveRecommendationSetRequestSchema: GenMessage<MoveRecommendationSetRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 25);
+
+/**
+ * @generated from message postpilot.v1.MoveRecommendationSetResponse
+ */
+export type MoveRecommendationSetResponse = Message<"postpilot.v1.MoveRecommendationSetResponse"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.MoveRecommendationSetResponse.
+ * Use `create(MoveRecommendationSetResponseSchema)` to create a new message.
+ */
+export const MoveRecommendationSetResponseSchema: GenMessage<MoveRecommendationSetResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_provider, 26);
+
+/**
  * @generated from message postpilot.v1.ApplyRecommendationSetResponse
  */
 export type ApplyRecommendationSetResponse = Message<"postpilot.v1.ApplyRecommendationSetResponse"> & {
@@ -631,7 +747,7 @@ export type ApplyRecommendationSetResponse = Message<"postpilot.v1.ApplyRecommen
  * Use `create(ApplyRecommendationSetResponseSchema)` to create a new message.
  */
 export const ApplyRecommendationSetResponseSchema: GenMessage<ApplyRecommendationSetResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_provider, 21);
+  messageDesc(file_postpilot_v1_provider, 27);
 
 /**
  * The two generation stages and the voice-analysis stage each choose their own model
@@ -700,7 +816,9 @@ export const SelectionSlotSchema: GenEnum<SelectionSlot> = /*@__PURE__*/
 
 /**
  * provider.proto is the model catalog: what is registered in providers.yaml, what each
- * model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4).
+ * model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4). It also
+ * carries the recommendation sets: any account lists and applies them, and only the operator
+ * tier writes them (the three write procedures are in the interceptor's master set, MODEL-69).
  *
  * Nothing here carries an API key or a provider SDK payload — ids, labels and flags
  * only. Keys live in the server's environment and never cross this wire.
@@ -755,6 +873,8 @@ export const ProviderService: GenService<{
     output: typeof SaveComparisonPairResponseSchema;
   },
   /**
+   * Every set in the operator's order.
+   *
    * @generated from rpc postpilot.v1.ProviderService.ListRecommendationSets
    */
   listRecommendationSets: {
@@ -769,6 +889,38 @@ export const ProviderService: GenService<{
     methodKind: "unary";
     input: typeof ApplyRecommendationSetRequestSchema;
     output: typeof ApplyRecommendationSetResponseSchema;
+  },
+  /**
+   * Master only. Create (empty id, appended last) or replace one set whole. The draft is
+   * validated whole and refused whole, naming every offending field (MODEL_SET_INVALID).
+   * Saving never touches anyone's selections: an apply copies the set as it is then (MODEL-71).
+   *
+   * @generated from rpc postpilot.v1.ProviderService.SaveRecommendationSet
+   */
+  saveRecommendationSet: {
+    methodKind: "unary";
+    input: typeof SaveRecommendationSetRequestSchema;
+    output: typeof SaveRecommendationSetResponseSchema;
+  },
+  /**
+   * Master only.
+   *
+   * @generated from rpc postpilot.v1.ProviderService.DeleteRecommendationSet
+   */
+  deleteRecommendationSet: {
+    methodKind: "unary";
+    input: typeof DeleteRecommendationSetRequestSchema;
+    output: typeof DeleteRecommendationSetResponseSchema;
+  },
+  /**
+   * Master only. Swap a set with its neighbour; at either end of the list it is a no-op.
+   *
+   * @generated from rpc postpilot.v1.ProviderService.MoveRecommendationSet
+   */
+  moveRecommendationSet: {
+    methodKind: "unary";
+    input: typeof MoveRecommendationSetRequestSchema;
+    output: typeof MoveRecommendationSetResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_provider, 0);

@@ -70,8 +70,9 @@ it.each(['ko', 'en'] as const)(
           null,
       ).toBe(path === '/ai-models/compare')
       expect(
-        main.queryByRole('heading', { name: locale === 'ko' ? '추천 조합' : 'Recommended set' }) !==
-          null,
+        main.queryByRole('heading', {
+          name: locale === 'ko' ? '추천 조합' : 'Recommended sets',
+        }) !== null,
       ).toBe(path === '/ai-models')
     }
     expect(calls.filter((call) => /Save|Apply/.test(call))).toEqual([])
@@ -229,4 +230,50 @@ it('reads 말투 반영 as the write board on the leaderboard', async () => {
       expect.objectContaining({ kind: 'leaderboard', stage: Stage.WRITE }),
     ),
   )
+})
+
+// MODEL-71: every set the operator curated is offered, in their order, each with its own apply
+// control; the set id is the server's handle and is never shown.
+it('offers every recommended set in the operator order', async () => {
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      recommendationSets: [
+        {
+          id: 'set-free',
+          label: 'Free start',
+          selections: [
+            { stage: Stage.ANALYZE, active: { providerId: 'openrouter', modelId: 'a' } },
+          ],
+        },
+        {
+          id: 'set-top',
+          label: 'Best quality',
+          selections: [
+            { stage: Stage.ANALYZE, active: { providerId: 'openrouter', modelId: 'b' } },
+          ],
+        },
+      ],
+    },
+  })
+  const section = within(
+    (await screen.findByRole('heading', { name: '추천 조합' })).closest('section')!,
+  )
+  const items = await section.findAllByRole('listitem')
+  expect(
+    items.map((item) => within(item).getByText(/Free start|Best quality/).textContent),
+  ).toEqual(['Free start', 'Best quality'])
+  expect(section.getAllByRole('button', { name: '추천 조합 적용' })).toHaveLength(2)
+  expect(section.queryByText('set-free')).not.toBeInTheDocument()
+})
+
+it('says there is no recommended set rather than loading forever', async () => {
+  renderAppAt('/ai-models', { user: { id: 'alice' }, providers: { recommendationSets: [] } })
+  expect(await screen.findByText('아직 추천 조합이 없어요.')).toBeInTheDocument()
+  expect(screen.queryByText('추천 조합을 불러오는 중…')).not.toBeInTheDocument()
+})
+
+it('reports a failed recommendations read as a failure', async () => {
+  renderAppAt('/ai-models', { user: { id: 'alice' }, providers: { recommendationsFail: true } })
+  expect(await screen.findByText('추천 조합을 불러오지 못했어요.')).toBeInTheDocument()
 })

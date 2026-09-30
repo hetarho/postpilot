@@ -217,19 +217,25 @@ func (a experimentCatalog) Active(ctx context.Context, userID string, stage expe
 	return experiment.ModelRef{}, false, nil
 }
 
-func (a experimentCatalog) Recommended(stage experiment.Stage, ref experiment.ModelRef) bool {
-	for _, set := range a.registry.RecommendationSets() {
+// Recommended is every ref some current set names for the stage, in any of its slots
+// (MODEL-71). The sets are the operator's rows, so this is a read of the provider context.
+func (a experimentCatalog) Recommended(ctx context.Context, stage experiment.Stage) ([]experiment.ModelRef, error) {
+	sets, err := a.selections.RecommendationSets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var refs []experiment.ModelRef
+	for _, set := range sets {
 		for _, selection := range set.Selections {
-			if selection.Stage != string(stage) {
+			if string(selection.Stage) != string(stage) {
 				continue
 			}
-			candidate := llmRef(ref)
-			if selection.Active == candidate || selection.CandidateA == candidate || selection.CandidateB == candidate {
-				return true
+			for _, slot := range selection.Slots() {
+				refs = append(refs, experiment.ModelRef{ProviderID: slot.Ref.ProviderID, ModelID: slot.Ref.ModelID})
 			}
 		}
 	}
-	return false
+	return refs, nil
 }
 
 type experimentRunner struct {

@@ -4,7 +4,7 @@ import { authenticatedRoute, masterOnly } from './tree'
 // Master-only, and redirected rather than refused: the account HAS a session, so bouncing it to
 // /login would be a lie. The redirect is UX only — every admin procedure is refused server-side
 // for a non-master caller, whatever route the client managed to render.
-// The three operator surfaces share one frame and one guard; each keeps its own address so a tab
+// The operator surfaces share one frame and one guard; each keeps its own address so a tab
 // is bookmarkable and the back button moves between them.
 export const adminRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -31,6 +31,12 @@ export const adminEstimatorRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminEstimatorPage'),
 })
 
+export const adminRecommendationsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/recommendations',
+  component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminRecommendationsPage'),
+})
+
 export const adminVouchersRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: '/vouchers',
@@ -43,5 +49,6 @@ export const adminRoutes = [
   adminAccountsRoute,
   adminModelsRoute,
   adminEstimatorRoute,
+  adminRecommendationsRoute,
   adminVouchersRoute,
 ]

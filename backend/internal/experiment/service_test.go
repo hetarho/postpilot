@@ -395,6 +395,9 @@ type fakeCatalog struct {
 	active    ModelRef
 	selected  bool
 	activeErr error
+	// recommended is the refs the current sets name, per stage.
+	recommended    map[Stage][]ModelRef
+	recommendedErr error
 }
 
 func (c *fakeCatalog) Resolve(ref ModelRef) (Model, bool) {
@@ -502,7 +505,9 @@ func TestConcurrentWriteDecisionAppliesAndAdoptsExactlyOnce(t *testing.T) {
 func (c *fakeCatalog) Active(context.Context, string, Stage) (ModelRef, bool, error) {
 	return c.active, c.selected, c.activeErr
 }
-func (c *fakeCatalog) Recommended(Stage, ModelRef) bool { return false }
+func (c *fakeCatalog) Recommended(_ context.Context, stage Stage) ([]ModelRef, error) {
+	return c.recommended[stage], c.recommendedErr
+}
 
 type fakeJobs struct {
 	ids      []string

@@ -214,6 +214,22 @@ export const appFailureSpecs = {
       'free_path',
     ],
   },
+  // An operator's draft set is refused whole (MODEL-70): `fields` lists the offending field
+  // keys and each key carries its own cause, so the editor marks every field at once.
+  MODEL_SET_INVALID: {
+    optional: [
+      'fields',
+      'label',
+      'observe_active',
+      'observe_candidate_a',
+      'observe_candidate_b',
+      'analyze_active',
+      'write_active',
+      'write_candidate_a',
+      'write_candidate_b',
+    ],
+  },
+  MODEL_SET_LIMIT: { required: ['limit'] },
   MODEL_NOT_FOUND: {},
   MODEL_ID_REQUIRED: {},
   MODEL_REASONING_INVALID: {},

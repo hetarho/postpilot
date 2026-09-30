@@ -292,6 +292,36 @@ export function isModelPurpose(value: string): value is ModelPurpose {
   return (MODEL_PURPOSES as readonly string[]).includes(value)
 }
 
+/** The purpose each user-facing stage is fed by (MODEL-14). */
+export const STAGE_PURPOSE: Readonly<Record<StageName, ModelPurpose>> = {
+  observe: 'photo-analysis',
+  analyze: 'style-analysis',
+  write: 'writing',
+}
+
+/** A recommendation set's stages in the order its seven slots are shown and saved. */
+export const RECOMMENDATION_STAGES: readonly StageName[] = ['observe', 'analyze', 'write']
+
+/** The slots a set fills for a stage: the active model, plus the A/B pair where the stage keeps
+ *  one (MODEL-23). */
+export function recommendationSlots(stage: StageName): readonly SelectionSlotName[] {
+  return stage === 'analyze' ? ['active'] : ['active', 'candidateA', 'candidateB']
+}
+
+/** The wire key a refused draft names a field by (MODEL-70): `label`, or `<stage>_<slot>`. */
+export function recommendationField(stage: StageName, slot: SelectionSlotName): string {
+  const wireSlot = { active: 'active', candidateA: 'candidate_a', candidateB: 'candidate_b' }[slot]
+  return `${stage}_${wireSlot}`
+}
+
+/** Why the server refused one field of a draft set (MODEL-70). */
+export type RecommendationFieldCause =
+  'required' | 'too_long' | 'duplicate' | 'unregistered' | 'unclassified'
+
+export function isRecommendationFieldCause(value: string): value is RecommendationFieldCause {
+  return ['required', 'too_long', 'duplicate', 'unregistered', 'unclassified'].includes(value)
+}
+
 /** A stage lists exactly the models registered to its purpose (MODEL-14) — observe's old
  *  vision-only rule is subsumed, because photo-analysis registration already requires
  *  vision. Disabled models stay in the list — greyed, with the reason — rather than

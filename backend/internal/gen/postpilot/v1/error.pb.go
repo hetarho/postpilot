@@ -324,6 +324,11 @@ const (
 	FailureReason_MODEL_FREE_PATH_UNAVAILABLE  FailureReason = 276
 	FailureReason_MODEL_FREE_INELIGIBLE        FailureReason = 277
 	FailureReason_CLIP_SERVER_EXPORT_EXHAUSTED FailureReason = 278
+	// An operator's recommendation-set draft failed whole-set validation (MODEL-70). params name
+	// every offending field (`fields`, then one key per field carrying its cause).
+	FailureReason_MODEL_SET_INVALID FailureReason = 279
+	// The installation already holds the most recommendation sets it offers (MODEL-69).
+	FailureReason_MODEL_SET_LIMIT FailureReason = 280
 	// SetUserPlan on the calling account: a master leaves master only by another master (QUOTA-63).
 	FailureReason_MASTER_SELF_PLAN FailureReason = 281
 	// A master account starts no subscription, change or pack purchase (BILL-20).
@@ -573,6 +578,8 @@ var (
 		276: "MODEL_FREE_PATH_UNAVAILABLE",
 		277: "MODEL_FREE_INELIGIBLE",
 		278: "CLIP_SERVER_EXPORT_EXHAUSTED",
+		279: "MODEL_SET_INVALID",
+		280: "MODEL_SET_LIMIT",
 		281: "MASTER_SELF_PLAN",
 		282: "BILLING_MASTER_ACCOUNT",
 	}
@@ -817,6 +824,8 @@ var (
 		"MODEL_FREE_PATH_UNAVAILABLE":                276,
 		"MODEL_FREE_INELIGIBLE":                      277,
 		"CLIP_SERVER_EXPORT_EXHAUSTED":               278,
+		"MODEL_SET_INVALID":                          279,
+		"MODEL_SET_LIMIT":                            280,
 		"MASTER_SELF_PLAN":                           281,
 		"BILLING_MASTER_ACCOUNT":                     282,
 	}
@@ -989,7 +998,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xc8=\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf6=\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1232,7 +1241,9 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x12MODEL_UNCLASSIFIED\x10\x93\x02\x12 \n" +
 	"\x1bMODEL_FREE_PATH_UNAVAILABLE\x10\x94\x02\x12\x1a\n" +
 	"\x15MODEL_FREE_INELIGIBLE\x10\x95\x02\x12!\n" +
-	"\x1cCLIP_SERVER_EXPORT_EXHAUSTED\x10\x96\x02\x12\x15\n" +
+	"\x1cCLIP_SERVER_EXPORT_EXHAUSTED\x10\x96\x02\x12\x16\n" +
+	"\x11MODEL_SET_INVALID\x10\x97\x02\x12\x14\n" +
+	"\x0fMODEL_SET_LIMIT\x10\x98\x02\x12\x15\n" +
 	"\x10MASTER_SELF_PLAN\x10\x99\x02\x12\x1b\n" +
 	"\x16BILLING_MASTER_ACCOUNT\x10\x9a\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e\"\x06\b\xc2\x01\x10\xc2\x01\"\x06\b\xc4\x01\x10\xc4\x01\"\x06\b\xc5\x01\x10\xc5\x01\"\x06\b\xc6\x01\x10\xc6\x01\"\x06\b\xca\x01\x10\xca\x01\"\x06\b\xcb\x01\x10\xcb\x01\"\x06\b\xd3\x01\x10\xd3\x01\"\x06\b\xd9\x01\x10\xd9\x01\"\x04\bF\x10F\"\x04\b=\x10=\"\x06\b\xc7\x01\x10\xc7\x01\"\x06\b\xc9\x01\x10\xc9\x01\"\x06\b\xd7\x01\x10\xd7\x01\"\x06\b\xd8\x01\x10\xd8\x01\"\x06\b\xd4\x01\x10\xd4\x01\"\x06\b\xcd\x01\x10\xcd\x01\"\x06\b\xdd\x01\x10\xdd\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIRED*\x17VOICE_BASELINE_MISMATCH*\x1aVOICE_COMPARISON_NOT_FOUND*\x1cVOICE_CONFIRMATION_NOT_FOUND*\x1fVOICE_CONTENT_LANGUAGE_MISMATCH*\x16VOICE_FEEDBACK_INVALID*\x1aVOICE_INSUFFICIENT_SOURCES*\x14VOICE_RULE_NOT_FOUND*\x1aVOICE_VALIDATION_NOT_FOUND*\x19EXPERIMENT_VOICE_REQUIRED* EXPERIMENT_CONFIRMATION_REQUIRED*\x1eVOICE_DEFAULT_DELETE_FORBIDDEN*\x1aVOICE_DESCRIPTION_TOO_LONG*\x1eVOICE_SOURCE_LANGUAGE_REQUIRED*!VOICE_SOURCE_LANGUAGE_UNSUPPORTED*\x1cVOICE_SAMPLE_MUTATION_FAILED*\x18VOICE_LEARNING_NOT_FOUND*\x1cVOICE_PROFILE_FIELD_REQUIREDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 

@@ -105,7 +105,8 @@ type Catalog interface {
 	Resolve(ref ModelRef) (Model, bool)
 	Adopt(ctx context.Context, userID string, stage Stage, ref ModelRef) error
 	Active(ctx context.Context, userID string, stage Stage) (ModelRef, bool, error)
-	Recommended(stage Stage, ref ModelRef) bool
+	// Recommended is every ref a current recommendation set names for the stage.
+	Recommended(ctx context.Context, stage Stage) ([]ModelRef, error)
 }
 
 type Jobs interface {

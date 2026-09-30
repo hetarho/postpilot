@@ -214,6 +214,8 @@ export const errors = {
   MODEL_RECOMMENDATION_NOT_FOUND: '모델 추천 조합을 찾을 수 없어요.',
   MODEL_SET_UNAVAILABLE:
     '이 추천 조합에 들어 있는 {{models}} 모델을 지금은 쓸 수 없어서 적용하지 못했어요. 단계별로 직접 선택해 주세요.',
+  MODEL_SET_INVALID: '추천 조합을 저장하지 못했어요. 표시된 칸을 고쳐 주세요.',
+  MODEL_SET_LIMIT: '추천 조합은 {{limit}}개까지 만들 수 있어요.',
   MODEL_NOT_FOUND: '그 모델을 찾을 수 없어요.',
   MODEL_ID_REQUIRED: '모델을 선택해 주세요.',
   MODEL_REASONING_INVALID: '지원하지 않는 추론 강도예요.',

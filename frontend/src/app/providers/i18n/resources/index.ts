@@ -43,6 +43,7 @@ import { i18n as accountMenuI18n } from '@/widgets/account-menu/config/i18n'
 import { i18n as aiModelsI18n } from '@/pages/ai-models/config/i18n'
 import { i18n as applyModelRecommendationI18n } from '@/features/apply-model-recommendation/config/i18n'
 import { i18n as assignEstimatorComboI18n } from '@/features/assign-estimator-combo/config/i18n'
+import { i18n as manageRecommendationSetI18n } from '@/features/manage-recommendation-set/config/i18n'
 import { i18n as billingCheckoutI18n } from '@/pages/billing-checkout/config/i18n'
 import { i18n as billingI18n } from '@/pages/billing/config/i18n'
 import { i18n as blogFieldI18n } from '@/entities/blog-field/config/i18n'
@@ -186,6 +187,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   aiModelsI18n,
   applyModelRecommendationI18n,
   assignEstimatorComboI18n,
+  manageRecommendationSetI18n,
   configureModelPairI18n,
   manageModelCatalogI18n,
   modelCatalogI18n,
@@ -311,6 +313,7 @@ export const resources = {
       ...aiModelsI18n.ko,
       ...applyModelRecommendationI18n.ko,
       ...assignEstimatorComboI18n.ko,
+      ...manageRecommendationSetI18n.ko,
       ...configureModelPairI18n.ko,
       ...manageModelCatalogI18n.ko,
       ...modelCatalogI18n.ko,
@@ -433,6 +436,7 @@ export const resources = {
       ...aiModelsI18n.en,
       ...applyModelRecommendationI18n.en,
       ...assignEstimatorComboI18n.en,
+      ...manageRecommendationSetI18n.en,
       ...configureModelPairI18n.en,
       ...manageModelCatalogI18n.en,
       ...modelCatalogI18n.en,

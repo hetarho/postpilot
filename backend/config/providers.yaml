@@ -1,11 +1,13 @@
 # The provider connection (PRD §6.4). This file says how to REACH the model endpoint and
-# which versioned recommendation sets exist. It no longer lists models: the usable-model
-# catalog is curated data in `catalog_models`, browsed live from OpenRouter and enabled by
-# an operator on /admin/models (MODEL-10). Connection is a file; models are rows.
+# nothing else. The usable-model catalog is curated data in `catalog_models`, browsed live
+# from OpenRouter and enabled by an operator on /admin/models, and the recommendation sets
+# are rows the operator edits on /admin/recommendations (MODEL-10, MODEL-69). Connection is
+# a file; models and recommendations are rows.
 #
 # The file is validated at boot and a broken entry stops the API from starting, the same
-# posture as a bad migration. A leftover `models:` list is rejected by the strict parser
-# rather than silently ignored, so a stack mounting an old override hears about it.
+# posture as a bad migration. A leftover `models:` or `recommendation_sets:` list is rejected
+# by the strict parser rather than silently ignored, so a stack mounting an old override
+# hears about it.
 #
 # Exactly one provider may be declared. The curated catalog has no provider dimension —
 # every row is served by the registered endpoint — so a second vendor is a design change
@@ -26,21 +28,3 @@ providers:
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
     reasoning_format: openrouter
-
-# Opt-in versioned pairings (MODEL-26). Never applied automatically. The refs name curated
-# models, so whether a set can be applied is decided when a user applies it — against the
-# catalog as it is then — not at boot.
-recommendation_sets:
-  - id: balanced-2026-08
-    label: Balanced · August 2026
-    selections:
-      - stage: observe
-        active: {provider_id: openrouter, model_id: google/gemini-3.7-flash}
-        candidate_a: {provider_id: openrouter, model_id: google/gemini-3.7-flash}
-        candidate_b: {provider_id: openrouter, model_id: qwen/qwen3.8-flash}
-      - stage: analyze
-        active: {provider_id: openrouter, model_id: openai/gpt-5.6-luna}
-      - stage: write
-        active: {provider_id: openrouter, model_id: anthropic/claude-sonnet-5}
-        candidate_a: {provider_id: openrouter, model_id: anthropic/claude-sonnet-5}
-        candidate_b: {provider_id: openrouter, model_id: x-ai/grok-4.6}

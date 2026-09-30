@@ -708,9 +708,13 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 	if err != nil {
 		return nil, err
 	}
+	recommended, err := s.catalog.Recommended(ctx, stage)
+	if err != nil {
+		return nil, err
+	}
 	for i := range entries {
 		entries[i].Active = hasActive && entries[i].Model == active
-		entries[i].Recommended = s.catalog.Recommended(stage, entries[i].Model)
+		entries[i].Recommended = slices.Contains(recommended, entries[i].Model)
 		_, present := s.catalog.Resolve(entries[i].Model)
 		entries[i].Disappeared = !present
 	}

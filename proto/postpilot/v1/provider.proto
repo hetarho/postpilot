@@ -6,7 +6,9 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 
 
 // provider.proto is the model catalog: what is registered in providers.yaml, what each
-// model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4).
+// model can do, and the acting user's last choice per stage (PRD §3.3, §6.4, F-4). It also
+// carries the recommendation sets: any account lists and applies them, and only the operator
+// tier writes them (the three write procedures are in the interceptor's master set, MODEL-69).
 //
 // Nothing here carries an API key or a provider SDK payload — ids, labels and flags
 // only. Keys live in the server's environment and never cross this wire.
@@ -20,8 +22,17 @@ service ProviderService {
   rpc SaveSelection(SaveSelectionRequest) returns (SaveSelectionResponse) {}
   rpc GetComparisonPairs(GetComparisonPairsRequest) returns (GetComparisonPairsResponse) {}
   rpc SaveComparisonPair(SaveComparisonPairRequest) returns (SaveComparisonPairResponse) {}
+  // Every set in the operator's order.
   rpc ListRecommendationSets(ListRecommendationSetsRequest) returns (ListRecommendationSetsResponse) {}
   rpc ApplyRecommendationSet(ApplyRecommendationSetRequest) returns (ApplyRecommendationSetResponse) {}
+  // Master only. Create (empty id, appended last) or replace one set whole. The draft is
+  // validated whole and refused whole, naming every offending field (MODEL_SET_INVALID).
+  // Saving never touches anyone's selections: an apply copies the set as it is then (MODEL-71).
+  rpc SaveRecommendationSet(SaveRecommendationSetRequest) returns (SaveRecommendationSetResponse) {}
+  // Master only.
+  rpc DeleteRecommendationSet(DeleteRecommendationSetRequest) returns (DeleteRecommendationSetResponse) {}
+  // Master only. Swap a set with its neighbour; at either end of the list it is a no-op.
+  rpc MoveRecommendationSet(MoveRecommendationSetRequest) returns (MoveRecommendationSetResponse) {}
 }
 
 // The two generation stages and the voice-analysis stage each choose their own model
@@ -177,6 +188,26 @@ message ListRecommendationSetsRequest {}
 message ListRecommendationSetsResponse { repeated RecommendationSet sets = 1; }
 
 message ApplyRecommendationSetRequest { string id = 1; }
+
+// One stage entry per stage, observe/analyze/write each at most once. A stage left out leaves
+// its slots empty, which the validation reports as required.
+message SaveRecommendationSetRequest {
+  // Empty creates a new set; otherwise the id of the set to replace.
+  string id = 1;
+  string label = 2;
+  repeated RecommendationStageSelection selections = 3;
+}
+message SaveRecommendationSetResponse { RecommendationSet set = 1; }
+
+message DeleteRecommendationSetRequest { string id = 1; }
+message DeleteRecommendationSetResponse {}
+
+message MoveRecommendationSetRequest {
+  string id = 1;
+  // true moves the set one place towards the top of the list, false one place down.
+  bool earlier = 2;
+}
+message MoveRecommendationSetResponse {}
 message ApplyRecommendationSetResponse {
   RecommendationSet set = 1;
   repeated Selection selections = 2;

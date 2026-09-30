@@ -12,3 +12,11 @@ type ModelSelection struct {
 	ModelID    string
 	UpdatedAt  string
 }
+
+type RecommendationSetSlot struct {
+	SetID      string
+	Stage      string
+	Slot       string
+	ProviderID string
+	ModelID    string
+}

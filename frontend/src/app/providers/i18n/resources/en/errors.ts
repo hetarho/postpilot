@@ -221,6 +221,8 @@ export const errors = {
   MODEL_RECOMMENDATION_NOT_FOUND: 'Could not find the model recommendation.',
   MODEL_SET_UNAVAILABLE:
     'This recommendation could not be applied: {{models}} cannot be used right now. Choose each stage yourself.',
+  MODEL_SET_INVALID: 'The recommended set was not saved. Fix the marked fields.',
+  MODEL_SET_LIMIT: 'You can keep up to {{limit}} recommended sets.',
   MODEL_NOT_FOUND: 'That model could not be found.',
   MODEL_ID_REQUIRED: 'Select a model.',
   MODEL_REASONING_INVALID: 'That reasoning effort is not supported.',

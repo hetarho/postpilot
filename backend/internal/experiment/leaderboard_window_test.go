@@ -77,6 +77,36 @@ func TestANarrowerWindowReplaysRatingsFromScratch(t *testing.T) {
 	}
 }
 
+// The 추천 mark follows the operator's current sets (MODEL-71): a model some set names for the
+// board's stage is marked, one named only for another stage is not, and a failed read of the
+// sets fails the board rather than drawing it with every mark missing.
+func TestLeaderboardMarksModelsTheCurrentSetsNameForTheStage(t *testing.T) {
+	svc, store, catalog, _, _ := newTestService()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+	a := ModelRef{ProviderID: "p", ModelID: "a"}
+	b := ModelRef{ProviderID: "p", ModelID: "b"}
+	seedVerdict(store, "fresh", "alice", StageWrite, a, b, now.Add(-time.Hour))
+	catalog.recommended = map[Stage][]ModelRef{StageWrite: {a}, StageObserve: {b}}
+
+	entries, err := svc.Leaderboard(context.Background(), "alice", StageWrite, WindowWeek, ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marked := map[ModelRef]bool{}
+	for _, entry := range entries {
+		marked[entry.Model] = entry.Recommended
+	}
+	if !marked[a] || marked[b] {
+		t.Fatalf("recommended marks = %v, want a only", marked)
+	}
+
+	catalog.recommendedErr = errors.New("sets unreadable")
+	if _, err := svc.Leaderboard(context.Background(), "alice", StageWrite, WindowWeek, ScopeMe); err == nil {
+		t.Fatal("a failed read of the sets was drawn as a board")
+	}
+}
+
 // ScopeAll is a flag, not an account: it reads every account's verdicts and the entries it
 // returns carry model-level figures only.
 func TestAllScopeAggregatesEveryAccountAndNamesNone(t *testing.T) {

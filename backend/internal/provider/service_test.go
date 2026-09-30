@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/provider"
@@ -15,6 +16,57 @@ type fakeStore struct {
 	failDel   bool
 	lastBatch []provider.Selection
 	batchErr  error
+	// sets are the operator's recommendation sets, in order.
+	sets []provider.RecommendationSet
+}
+
+func (f *fakeStore) ListRecommendationSets(context.Context) ([]provider.RecommendationSet, error) {
+	return append([]provider.RecommendationSet(nil), f.sets...), nil
+}
+
+func (f *fakeStore) CreateRecommendationSet(_ context.Context, set provider.RecommendationSet, limit int, _ time.Time) error {
+	if len(f.sets) >= limit {
+		return provider.ErrRecommendationLimit
+	}
+	f.sets = append(f.sets, set)
+	return nil
+}
+
+func (f *fakeStore) ReplaceRecommendationSet(_ context.Context, set provider.RecommendationSet, _ time.Time) error {
+	for i := range f.sets {
+		if f.sets[i].ID == set.ID {
+			f.sets[i] = set
+			return nil
+		}
+	}
+	return provider.ErrRecommendationNotFound
+}
+
+func (f *fakeStore) DeleteRecommendationSet(_ context.Context, id string) error {
+	for i := range f.sets {
+		if f.sets[i].ID == id {
+			f.sets = append(f.sets[:i], f.sets[i+1:]...)
+			return nil
+		}
+	}
+	return provider.ErrRecommendationNotFound
+}
+
+func (f *fakeStore) MoveRecommendationSet(_ context.Context, id string, earlier bool) error {
+	for i := range f.sets {
+		if f.sets[i].ID != id {
+			continue
+		}
+		target := i + 1
+		if earlier {
+			target = i - 1
+		}
+		if target >= 0 && target < len(f.sets) {
+			f.sets[i], f.sets[target] = f.sets[target], f.sets[i]
+		}
+		return nil
+	}
+	return provider.ErrRecommendationNotFound
 }
 
 func (f *fakeStore) UpsertSelection(_ context.Context, _ string, s provider.Selection) error {
@@ -74,15 +126,6 @@ func (c fakeCatalog) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	m, ok := c[ref]
 	return m, ok
 }
-
-func (c fakeCatalog) RecommendationSets() []llm.RecommendationSet { return nil }
-
-type recommendationCatalog struct {
-	fakeCatalog
-	sets []llm.RecommendationSet
-}
-
-func (c recommendationCatalog) RecommendationSets() []llm.RecommendationSet { return c.sets }
 
 var (
 	live     = llm.ModelRef{ProviderID: "openrouter", ModelID: "live"}
@@ -305,20 +348,17 @@ func TestComparisonPairValidation(t *testing.T) {
 // MODEL-26: a set is seven refs — observe's and write's active model and pair, analyze's
 // active model alone — validated whole before one batch writes them.
 func TestRecommendationValidatesAllSevenBeforeOneBatch(t *testing.T) {
-	store := &fakeStore{rows: map[string]provider.Selection{}}
-	catalog := recommendationCatalog{
-		fakeCatalog: fakeCatalog{
-			live:   {Ref: live, Stages: textStages},
-			seeing: {Ref: seeing, Vision: true, Stages: allStages},
+	store := &fakeStore{rows: map[string]provider.Selection{}, sets: []provider.RecommendationSet{{
+		ID: "balanced", Label: "Balanced",
+		Selections: []provider.RecommendationStageSelection{
+			{Stage: provider.StageObserve, Active: seeing, CandidateA: seeing, CandidateB: live},
+			{Stage: provider.StageAnalyze, Active: live},
+			{Stage: provider.StageWrite, Active: live, CandidateA: live, CandidateB: seeing},
 		},
-		sets: []llm.RecommendationSet{{
-			ID: "balanced", Label: "Balanced",
-			Selections: []llm.RecommendationSelection{
-				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
-				{Stage: "analyze", Active: live},
-				{Stage: "write", Active: live, CandidateA: live, CandidateB: seeing},
-			},
-		}},
+	}}}
+	catalog := fakeCatalog{
+		live:   {Ref: live, Stages: textStages},
+		seeing: {Ref: seeing, Vision: true, Stages: allStages},
 	}
 	svc := provider.NewService(store, catalog, fakeCredits{})
 	if _, _, _, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced"); !errors.Is(err, provider.ErrModelUnsuitable) {
@@ -328,9 +368,9 @@ func TestRecommendationValidatesAllSevenBeforeOneBatch(t *testing.T) {
 		t.Fatalf("invalid recommendation partially wrote: %+v", store.lastBatch)
 	}
 
-	catalog.sets[0].Selections[0].CandidateB = llm.ModelRef{ProviderID: "p", ModelID: "vision-two"}
-	visionTwo := catalog.sets[0].Selections[0].CandidateB
-	catalog.fakeCatalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true, Stages: allStages}
+	store.sets[0].Selections[0].CandidateB = llm.ModelRef{ProviderID: "p", ModelID: "vision-two"}
+	visionTwo := store.sets[0].Selections[0].CandidateB
+	catalog[visionTwo] = llm.ModelInfo{Ref: visionTwo, Vision: true, Stages: allStages}
 	svc = provider.NewService(store, catalog, fakeCredits{})
 	_, active, pairs, err := svc.ApplyRecommendationSet(context.Background(), "alice", "balanced")
 	if err != nil || len(active) != 3 || len(pairs) != 2 || len(store.lastBatch) != 7 {
@@ -343,29 +383,26 @@ func TestRecommendationValidatesAllSevenBeforeOneBatch(t *testing.T) {
 	}
 }
 
-// MODEL-25: the set's models are curated data now, so a shipped set can name one an
-// operator has since retired or disabled. The refusal names every offending ref at once,
+// MODEL-25: the set's models are curated data, so a saved set can name one an operator has
+// since retired or disabled. The refusal names every offending ref at once,
 // grouped by cause — discovering them one apply at a time would be seven round trips.
 func TestRecommendationRefusalNamesEveryOffendingRef(t *testing.T) {
-	store := &fakeStore{rows: map[string]provider.Selection{}}
 	retired := llm.ModelRef{ProviderID: "openrouter", ModelID: "retired"}
-	catalog := recommendationCatalog{
-		fakeCatalog: fakeCatalog{
-			live:     {Ref: live, Stages: textStages},
-			seeing:   {Ref: seeing, Vision: true, Stages: allStages},
-			disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonDelisted, Stages: allStages},
+	store := &fakeStore{rows: map[string]provider.Selection{}, sets: []provider.RecommendationSet{{
+		ID: "balanced", Label: "Balanced",
+		Selections: []provider.RecommendationStageSelection{
+			// `live` is not registered to photo-analysis, so it is unusable for observe;
+			// `retired` is gone from the catalog entirely; `disabled` is curated but
+			// delisted.
+			{Stage: provider.StageObserve, Active: seeing, CandidateA: seeing, CandidateB: live},
+			{Stage: provider.StageAnalyze, Active: retired},
+			{Stage: provider.StageWrite, Active: disabled, CandidateA: live, CandidateB: seeing},
 		},
-		sets: []llm.RecommendationSet{{
-			ID: "balanced", Label: "Balanced",
-			Selections: []llm.RecommendationSelection{
-				// `live` is not registered to photo-analysis, so it is unusable for observe;
-				// `retired` is gone from the catalog entirely; `disabled` is curated but
-				// delisted.
-				{Stage: "observe", Active: seeing, CandidateA: seeing, CandidateB: live},
-				{Stage: "analyze", Active: retired},
-				{Stage: "write", Active: disabled, CandidateA: live, CandidateB: seeing},
-			},
-		}},
+	}}}
+	catalog := fakeCatalog{
+		live:     {Ref: live, Stages: textStages},
+		seeing:   {Ref: seeing, Vision: true, Stages: allStages},
+		disabled: {Ref: disabled, Disabled: true, DisabledReason: llm.DisabledReasonDelisted, Stages: allStages},
 	}
 	svc := provider.NewService(store, catalog, fakeCredits{})
 
