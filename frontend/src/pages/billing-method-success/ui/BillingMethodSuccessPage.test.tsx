@@ -24,9 +24,7 @@ describe('BillingMethodSuccessPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/billing'))
     expect(registrationRequests).toEqual([{ authKey: 'one-time-auth', customerKey: 'account-key' }])
     expect(calls.filter((call) => call === 'RegisterPaymentMethod')).toHaveLength(1)
-    expect(
-      await screen.findByText('11 1234 카드가 등록되었고 100 크레딧 보너스가 지급되었습니다.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('11 1234 카드가 등록되었습니다.')).toBeInTheDocument()
   })
 
   it('returns a registered card to the checkout that requested it', async () => {

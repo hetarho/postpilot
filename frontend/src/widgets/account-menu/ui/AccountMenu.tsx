@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { CreditCard, LogOut, Settings, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { useMyPlan, planLabel, type MyPlan } from '@/entities/plan'
+import { formatDateTime } from '@/shared/lib'
 import { useLogout, useSession } from '@/entities/session'
 import {
   AppFailureMessage,
@@ -193,10 +194,12 @@ function AccountPanel({
 /** Which label names a lot. A lookup rather than a ternary because there are four kinds
  *  (QUOTA-12, QUOTA-58) and a ternary would silently call a purchase a bonus. */
 const LOT_LABEL = {
+  daily: 'Daily',
   monthly: 'Monthly',
   bonus: 'Bonus',
   purchased: 'Purchased',
   voucher: 'Voucher',
+  compensation: 'Compensation',
 } as const
 
 /** The balance and the lots behind it.
@@ -247,8 +250,56 @@ function CreditSummary({
         value={balance.credits}
         max={balance.lots.reduce((total, lot) => total + lot.granted, 0) || balance.monthlyGrant}
         valueText={t('balance.credits', { count: balance.credits })}
-        note={balance.renewsAt ? t('balance.renews', { at: balance.renewsAt }) : undefined}
+        note={undefined}
       />
+      {myPlan.plan === 'free' && <Typography variant="meta">{t('balance.freeAccess')}</Typography>}
+      {myPlan.plan !== 'free' && (
+        <dl className={typographyStyles({ variant: 'meta', className: 'grid gap-1' })}>
+          <div className="flex flex-wrap justify-between gap-x-2">
+            <dt>{t('balance.dailyAllowance')}</dt>
+            <dd>
+              {t('balance.ofGrant', {
+                remaining: balance.lots
+                  .filter((lot) => lot.kind === 'daily')
+                  .reduce((n, lot) => n + lot.remaining, 0),
+                granted: balance.dailyGrant,
+              })}
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-x-2">
+            <dt>{t('balance.monthlyBonus')}</dt>
+            <dd>
+              {t('balance.ofGrant', {
+                remaining: balance.lots
+                  .filter((lot) => lot.kind === 'monthly')
+                  .reduce((n, lot) => n + lot.remaining, 0),
+                granted: balance.monthlyBonus,
+              })}
+            </dd>
+          </div>
+          {balance.dailyResetsAt && (
+            <div className="flex flex-wrap justify-between gap-x-2">
+              <dt>{t('balance.dailyReset')}</dt>
+              <dd>{formatDateTime(balance.dailyResetsAt)}</dd>
+            </div>
+          )}
+          {balance.bonusResetsAt && (
+            <div className="flex flex-wrap justify-between gap-x-2">
+              <dt>{t('balance.monthlyReset')}</dt>
+              <dd>{formatDateTime(balance.bonusResetsAt)}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+      {myPlan.serverExportWindow && (
+        <Typography variant="meta">
+          {t('balance.exports', {
+            remaining: myPlan.serverExportWindow.remaining,
+            allowance: myPlan.serverExportWindow.allowance,
+            at: formatDateTime(myPlan.serverExportWindow.endsAt),
+          })}
+        </Typography>
+      )}
       {/* The lots behind the total, in the order they will be spent. A single number cannot say
           that half the balance lapses at the month boundary and half does not, which is the one
           thing a bonus holder needs to know. */}
@@ -259,7 +310,7 @@ function CreditSummary({
               {t(`balance.lot${LOT_LABEL[lot.kind]}`)}
               {' · '}
               {lot.expiresAt
-                ? t('balance.lotExpires', { at: lot.expiresAt })
+                ? t('balance.lotExpires', { at: formatDateTime(lot.expiresAt) })
                 : t('balance.lotNoExpiry')}
             </Typography>
             <Typography variant="meta">

@@ -25,6 +25,19 @@ export function toClipAccounting(value: ProtoClipAccounting): ClipAccounting {
     nominalReservedCredits: amount(value.nominalReservedCredits),
     confirmedChargeCredits: amount(value.confirmedChargeCredits),
     cancellationFeeCredits: amount(value.cancellationFeeCredits),
+    compensationCredits: amount(value.compensationCredits),
+    compensationExpiresAt: value.compensationExpiresAt,
+    netDebitCredits: amount(value.netDebitCredits),
+    faultCause: value.faultCause,
+    ...(value.rate && {
+      rate: {
+        source: value.rate.source,
+        publicationDate: value.rate.publicationDate,
+        referenceE4: value.rate.referenceE4,
+        appliedE4: value.rate.appliedE4,
+        temporary: value.rate.temporary,
+      },
+    }),
     shadowConfirmedChargeCredits: amount(value.shadowConfirmedChargeCredits),
     shadowCancellationFeeCredits: amount(value.shadowCancellationFeeCredits),
     settlementReason: ['succeeded', 'failed', 'cancelled'].includes(value.settlementReason)
@@ -87,9 +100,17 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
   if (
     policy &&
     (policy.version !== 1 ||
-      policy.unusedReservationNumerator !== 1 ||
-      policy.unusedReservationDenominator !== 2 ||
-      policy.rounding !== 'ceil')
+      !(
+        (policy.unusedReservationNumerator === 0 &&
+          policy.unusedReservationDenominator === 1 &&
+          policy.rounding === 'none' &&
+          policy.serviceFaultCompensationNumerator === 1 &&
+          policy.serviceFaultCompensationDenominator === 2 &&
+          policy.serviceFaultCompensationValidDays === 7) ||
+        (policy.unusedReservationNumerator === 1 &&
+          policy.unusedReservationDenominator === 2 &&
+          policy.rounding === 'ceil')
+      ))
   )
     throw new Error('Unsupported clip cancellation policy')
   return {
@@ -99,7 +120,10 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
             version: policy.version,
             numerator: policy.unusedReservationNumerator,
             denominator: policy.unusedReservationDenominator,
-            rounding: 'ceil' as const,
+            rounding: policy.rounding as 'ceil' | 'none',
+            compensationNumerator: policy.serviceFaultCompensationNumerator,
+            compensationDenominator: policy.serviceFaultCompensationDenominator,
+            compensationValidDays: policy.serviceFaultCompensationValidDays,
           },
         }
       : {}),
@@ -119,6 +143,15 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
+    ...(value.rate && {
+      rate: {
+        source: value.rate.source,
+        publicationDate: value.rate.publicationDate,
+        referenceE4: value.rate.referenceE4,
+        appliedE4: value.rate.appliedE4,
+        temporary: value.rate.temporary,
+      },
+    }),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,
@@ -145,9 +178,17 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
   if (
     policy &&
     (policy.version !== 1 ||
-      policy.unusedReservationNumerator !== 1 ||
-      policy.unusedReservationDenominator !== 2 ||
-      policy.rounding !== 'ceil')
+      !(
+        (policy.unusedReservationNumerator === 0 &&
+          policy.unusedReservationDenominator === 1 &&
+          policy.rounding === 'none' &&
+          policy.serviceFaultCompensationNumerator === 1 &&
+          policy.serviceFaultCompensationDenominator === 2 &&
+          policy.serviceFaultCompensationValidDays === 7) ||
+        (policy.unusedReservationNumerator === 1 &&
+          policy.unusedReservationDenominator === 2 &&
+          policy.rounding === 'ceil')
+      ))
   )
     throw new Error('Unsupported clip cancellation policy')
   return {
@@ -157,7 +198,10 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
             version: policy.version,
             numerator: policy.unusedReservationNumerator,
             denominator: policy.unusedReservationDenominator,
-            rounding: 'ceil' as const,
+            rounding: policy.rounding as 'ceil' | 'none',
+            compensationNumerator: policy.serviceFaultCompensationNumerator,
+            compensationDenominator: policy.serviceFaultCompensationDenominator,
+            compensationValidDays: policy.serviceFaultCompensationValidDays,
           },
         }
       : {}),
@@ -167,6 +211,15 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
+    ...(value.rate && {
+      rate: {
+        source: value.rate.source,
+        publicationDate: value.rate.publicationDate,
+        referenceE4: value.rate.referenceE4,
+        appliedE4: value.rate.appliedE4,
+        temporary: value.rate.temporary,
+      },
+    }),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,

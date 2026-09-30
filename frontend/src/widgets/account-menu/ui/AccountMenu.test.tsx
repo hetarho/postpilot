@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { myPlanQueryKey } from '@/entities/plan'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
@@ -108,6 +109,8 @@ describe('AccountMenu', () => {
     expect(within(panel).getByText('800 / 1150 크레딧')).toBeInTheDocument()
     expect(within(panel).getByText(/^이용권 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^월 정기 ·/)).toBeInTheDocument()
+    expect(within(panel).getByText(/무료 모델을 이용할 수 있어요/)).toBeInTheDocument()
+    expect(within(panel).queryByText('다음 일일 지급')).not.toBeInTheDocument()
     expect(within(panel).getByText(/^보너스 ·/)).toBeInTheDocument()
     expect(within(panel).getByText(/^구매 ·/)).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
@@ -121,6 +124,62 @@ describe('AccountMenu', () => {
     expect(meter).toHaveAttribute('aria-valuetext', '962 크레딧')
   })
 
+  it('shows daily and monthly clocks and a later-expiring compensation lot separately', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts', {
+      user: { ...USER, plan: ProtoPlan.PRO },
+      plans: {
+        plan: ProtoPlan.PRO,
+        balance: {
+          credits: 15,
+          dailyGrant: 85,
+          monthlyBonus: 1070,
+          dailyResetsAt: '2026-10-01T00:00:00Z',
+          bonusResetsAt: '2026-10-31T00:00:00Z',
+          lots: [
+            { kind: 'daily', granted: 85, remaining: 0, expiresAt: '2026-09-30T00:00:00Z' },
+            { kind: 'monthly', granted: 1070, remaining: 8, expiresAt: '2026-10-31T00:00:00Z' },
+            { kind: 'compensation', granted: 7, remaining: 7, expiresAt: '2026-10-07T00:00:00Z' },
+          ],
+        },
+      },
+    })
+    const panel = await openAccountPopover(user)
+    expect(within(panel).getByText('일일 지급')).toBeInTheDocument()
+    expect(within(panel).getByText('월 보너스')).toBeInTheDocument()
+    expect(within(panel).getByText('다음 일일 지급')).toBeInTheDocument()
+    expect(within(panel).getByText('다음 월 혜택 갱신')).toBeInTheDocument()
+    expect(within(panel).getByText(/^오류 보상 ·/)).toBeInTheDocument()
+    expect(within(panel).getByText('7 / 7 크레딧')).toBeInTheDocument()
+  })
+
+  it('uses the next server read when a daily reset overlaps outstanding usage', async () => {
+    const plans = {
+      plan: ProtoPlan.PRO,
+      balance: {
+        credits: 8,
+        unlimited: false,
+        dailyGrant: 85,
+        monthlyBonus: 1070,
+        dailyResetsAt: '2026-10-01T00:00:00Z',
+        lots: [{ kind: 'daily', granted: 85, remaining: 8, expiresAt: '2026-10-01T00:00:00Z' }],
+      },
+    }
+    const { queryClient, transport } = renderAppAt('/posts', {
+      user: { ...USER, plan: ProtoPlan.PRO },
+      plans,
+    })
+    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 8' })).toBeInTheDocument()
+    // The server has atomically settled the admitted job across the boundary. A refetch
+    // replaces the displayed position; the browser does not mint the next daily grant.
+    plans.balance.credits = 3
+    plans.balance.lots = [
+      { kind: 'daily', granted: 85, remaining: 3, expiresAt: '2026-10-02T00:00:00Z' },
+    ]
+    await act(() => queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) }))
+    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 3' })).toBeInTheDocument()
+  })
+
   // An unlimited account is stated, not drawn as an empty bar that reads as "none left".
   it('states unlimited for the operator tier and links the admin screen', async () => {
     const user = userEvent.setup()
@@ -130,7 +189,7 @@ describe('AccountMenu', () => {
     })
 
     const panel = await openAccountPopover(user)
-    expect(await within(panel).findByText('제한 없음')).toBeInTheDocument()
+    expect(await within(panel).findByText('운영자 면제')).toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
     // The operator chip is the first thing in the panel's top-right corner.
     const operator = within(panel).getByText('운영자')

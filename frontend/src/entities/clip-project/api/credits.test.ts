@@ -157,7 +157,33 @@ it('preserves cancellation breakdowns and rejects an undisclosed policy version'
     numerator: 1,
     denominator: 2,
     rounding: 'ceil',
+    compensationNumerator: 0,
+    compensationDenominator: 0,
+    compensationValidDays: 0,
   })
   quote.cancellationPolicy!.version = 2
   expect(() => toClipQuote(quote, 'binding')).toThrow('Unsupported clip cancellation policy')
+})
+
+it('keeps a post-expiry compensation lot separate from confirmed usage', () => {
+  const settled = toClipAccounting(
+    create(ClipAccountingSchema, {
+      jobId: 'fault',
+      status: 'settled',
+      settled: true,
+      confirmedChargeCredits: 7,
+      finalChargeCredits: 7,
+      refundCredits: 0,
+      compensationCredits: 4,
+      compensationExpiresAt: '2026-10-07T12:00:00Z',
+      netDebitCredits: 3,
+      faultCause: 'service',
+    }),
+  )
+  expect(settled).toMatchObject({
+    confirmedChargeCredits: 7,
+    compensationCredits: 4,
+    compensationExpiresAt: '2026-10-07T12:00:00Z',
+    netDebitCredits: 3,
+  })
 })

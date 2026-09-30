@@ -34,8 +34,8 @@ describe('BillingCheckoutPage', () => {
     })
 
     await waitFor(() => expect(calls).toContain('QuoteChange'))
-    expect(await screen.findByText('$10.00 · 14,000원')).toBeInTheDocument()
-    expect(screen.getByText('지금 결제되는 업그레이드 금액입니다.')).toBeInTheDocument()
+    expect(await screen.findByText('20,000원')).toBeInTheDocument()
+    expect(screen.getByText(/정확한 업그레이드 금액입니다/)).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '연간' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '지금 결제하고 업그레이드' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/billing'))
@@ -54,11 +54,13 @@ describe('BillingCheckoutPage', () => {
     })
 
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument()
-    expect(screen.getByText('매달 1150 크레딧')).toBeInTheDocument()
-    expect(screen.getByText('$10.00 · 14,000원')).toBeInTheDocument()
+    expect(
+      screen.getByText('하루 85 크레딧 · 매월 보너스 1070 크레딧 · 서버 내보내기 15회'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('9,900원')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: '연간' }))
     expect(screen.getByText('12개월에 10개월 요금')).toBeInTheDocument()
-    expect(await screen.findByText('$100.00 · 140,000원')).toBeInTheDocument()
+    expect(await screen.findByText('99,000원')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '결제하고 구독하기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/billing'))
@@ -91,6 +93,19 @@ describe('BillingCheckoutPage', () => {
 
     await user.click(await screen.findByRole('button', { name: '결제하고 구독하기' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
+  })
+
+  it('keeps a provider-pending purchase on checkout without a success notice', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/billing/checkout?tier=pro', {
+      user: verifiedUser,
+      plans: { plan: ProtoPlan.FREE },
+      billing: { paymentMethod: true, subscribePending: true },
+    })
+    await user.click(await screen.findByRole('button', { name: '결제하고 구독하기' }))
+    expect(await screen.findByText(/결제사 결과를 확인 중입니다/)).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/billing/checkout')
+    expect(screen.queryByText(/구독을 시작했습니다/)).not.toBeInTheDocument()
   })
 
   it('refuses an invalid or missing paid rung', async () => {

@@ -120,6 +120,17 @@ export interface ClipAccounting {
   nominalReservedCredits?: number
   confirmedChargeCredits?: number
   cancellationFeeCredits?: number
+  compensationCredits?: number
+  compensationExpiresAt?: string
+  netDebitCredits?: number
+  faultCause?: string
+  rate?: {
+    source: string
+    publicationDate: string
+    referenceE4: bigint
+    appliedE4: bigint
+    temporary: boolean
+  }
   shadowConfirmedChargeCredits?: number
   shadowCancellationFeeCredits?: number
   settlementReason?: 'succeeded' | 'failed' | 'cancelled'
@@ -164,7 +175,15 @@ export interface ClipQuote {
     renderOnly: boolean
     responseRetries: number
   }
-  cancellationPolicy?: { version: number; numerator: number; denominator: number; rounding: 'ceil' }
+  cancellationPolicy?: {
+    version: number
+    numerator: number
+    denominator: number
+    rounding: 'ceil' | 'none'
+    compensationNumerator?: number
+    compensationDenominator?: number
+    compensationValidDays?: number
+  }
   /** What the sequence-rendered captions add to the render this approval leads
    *  to (CDS-81). Counted from the plan the project holds, or — before the first
    *  generation — from the selection alone, where only the styles are known.
@@ -176,6 +195,13 @@ export interface ClipQuote {
     frames: number
     addedRenderMs: number
     selectedStyles: number
+  }
+  rate?: {
+    source: string
+    publicationDate: string
+    referenceE4: bigint
+    appliedE4: bigint
+    temporary: boolean
   }
   quoteId: string
   maxCredits: number

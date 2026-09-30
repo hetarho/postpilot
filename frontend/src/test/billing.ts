@@ -27,9 +27,10 @@ import { connectAppError } from './app-error'
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 function planRank(value: ProtoPlan) {
-  if (value === ProtoPlan.BASIC) return 1
-  if (value === ProtoPlan.PRO) return 2
-  if (value === ProtoPlan.MAX) return 3
+  if (value === ProtoPlan.LIGHT) return 1
+  if (value === ProtoPlan.BASIC) return 2
+  if (value === ProtoPlan.PRO) return 3
+  if (value === ProtoPlan.MAX) return 4
   return 0
 }
 
@@ -44,6 +45,9 @@ export interface FakeBillingOptions {
     autoRenew?: boolean
     scheduledPlan?: ProtoPlan
     scheduledTerm?: ProtoTerm
+    anchorAt?: string
+    termEnd?: string
+    nextGrantAt?: string
   }
   changeRequests?: Array<{ plan: ProtoPlan; term: ProtoTerm }>
   changeFailure?:
@@ -53,11 +57,12 @@ export interface FakeBillingOptions {
     | 'CHANGE_UNSUPPORTED'
     | 'CHARGE_FAILED'
   subscribeRequests?: Array<{ plan: ProtoPlan; term: ProtoTerm }>
+  subscribePending?: boolean
   subscribeFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'EMAIL_VERIFICATION_REQUIRED'
   registrationRequests?: Array<{ authKey: string; customerKey: string }>
   registerFailure?: 'EMAIL_VERIFICATION_REQUIRED' | 'CUSTOMER_KEY_MISMATCH' | 'BILLING_UNAVAILABLE'
   removeFailure?: 'SUBSCRIPTION_NEEDS_METHOD' | 'BILLING_UNAVAILABLE'
-  purchaseRequests?: number[]
+  purchaseRequests?: Array<number | string>
   refundRequests?: string[]
   refundReviewCalls?: Array<{ requestId: string; outcome: string; amount: bigint }>
   initialRefunds?: Array<{
@@ -85,6 +90,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     changeFailure,
     subscribeRequests,
     subscribeFailure,
+    subscribePending,
     registrationRequests,
     registerFailure,
     removeFailure,
@@ -126,10 +132,10 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
         ? {
             plan: currentPlan,
             term: currentTerm,
-            anchorAt: '2026-09-07T16:00:00Z',
+            anchorAt: subscriptionState?.anchorAt ?? '2026-09-07T16:00:00Z',
             termStart: '2026-09-07T16:00:00Z',
-            termEnd: '2026-10-08T00:00:00Z',
-            nextGrantAt: '2026-10-08T00:00:00Z',
+            termEnd: subscriptionState?.termEnd ?? '2026-10-08T00:00:00Z',
+            nextGrantAt: subscriptionState?.nextGrantAt ?? '2026-10-08T00:00:00Z',
             autoRenew,
             scheduledPlan,
             scheduledTerm,
@@ -169,11 +175,17 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   router.rpc(BillingService.method.quotePrice, (request) => {
     calls?.push('QuotePrice')
     const monthly =
-      request.plan === ProtoPlan.BASIC ? 300 : request.plan === ProtoPlan.MAX ? 2000 : 1000
-    const usdCents = request.term === ProtoTerm.ANNUAL ? monthly * 10 : monthly
+      request.plan === ProtoPlan.LIGHT
+        ? 1900
+        : request.plan === ProtoPlan.BASIC
+          ? 4900
+          : request.plan === ProtoPlan.MAX
+            ? 29900
+            : 9900
+    const usdCents = 0
     return create(QuotePriceResponseSchema, {
       usdCents,
-      krw: BigInt(usdCents * 14),
+      krw: BigInt(request.term === ProtoTerm.ANNUAL ? monthly * 10 : monthly),
       krwPerUsdE4: 14000000n,
       rateDate: '2026-09-07',
     })
@@ -181,45 +193,59 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   router.rpc(BillingService.method.quoteChange, (request) => {
     calls?.push('QuoteChange')
     const monthly =
-      request.plan === ProtoPlan.BASIC ? 300 : request.plan === ProtoPlan.MAX ? 2000 : 1000
+      request.plan === ProtoPlan.LIGHT
+        ? 1900
+        : request.plan === ProtoPlan.BASIC
+          ? 4900
+          : request.plan === ProtoPlan.MAX
+            ? 29900
+            : 9900
     const currentMonthly =
-      currentPlan === ProtoPlan.BASIC ? 300 : currentPlan === ProtoPlan.MAX ? 2000 : 1000
+      currentPlan === ProtoPlan.LIGHT
+        ? 1900
+        : currentPlan === ProtoPlan.BASIC
+          ? 4900
+          : currentPlan === ProtoPlan.MAX
+            ? 29900
+            : 9900
     const appliedNow =
       planRank(request.plan) > planRank(currentPlan) && request.term === currentTerm
     const usdCents = appliedNow ? Math.max(0, monthly - currentMonthly) : monthly
     return create(QuoteChangeResponseSchema, {
       usdCents,
-      krw: BigInt(usdCents * 14),
+      krw: BigInt(usdCents),
       krwPerUsdE4: 14000000n,
       rateDate: '2026-09-07',
       appliedNow,
       effectiveAt: appliedNow ? '2026-09-08T00:00:00Z' : '2026-10-08T00:00:00Z',
     })
   })
+  const packs = [
+    { id: 'pack-1000', credits: 1000, krw: 3000n },
+    { id: 'pack-3000', credits: 3000, krw: 9000n },
+    { id: 'pack-10000', credits: 10000, krw: 30000n },
+  ]
   router.rpc(BillingService.method.quotePurchase, (request) => {
     calls?.push('QuotePurchase')
+    const pack = packs.find((item) => item.id === request.packId) ?? packs[0]!
     return create(QuotePurchaseResponseSchema, {
-      credits: request.usdCents,
-      krw: BigInt(request.usdCents * 14),
-      krwPerUsdE4: 14000000n,
-      rateDate: '2026-09-07',
+      packId: pack.id,
+      credits: pack.credits,
+      krw: pack.krw,
     })
   })
   router.rpc(BillingService.method.purchaseCredits, (request) => {
     calls?.push('PurchaseCredits')
-    purchaseRequests?.push(request.usdCents)
-    if (purchaseFailure) {
-      throw connectAppError(
-        purchaseFailure,
-        purchaseFailure === 'PURCHASE_TOO_SMALL' ? Code.InvalidArgument : Code.FailedPrecondition,
-      )
-    }
+    purchaseRequests?.push(request.packId || request.usdCents)
+    if (purchaseFailure) throw connectAppError(purchaseFailure, Code.FailedPrecondition)
+    const pack = packs.find((item) => item.id === request.packId) ?? packs[0]!
     const purchase = {
       id: `purchase-${purchases.length + 1}`,
       refundOrderId: `purchase-${purchases.length + 1}`,
-      credits: request.usdCents,
-      usdCents: request.usdCents,
-      krw: BigInt(request.usdCents * 14),
+      packId: pack.id,
+      usdCents: 0,
+      credits: pack.credits,
+      krw: pack.krw,
       chargedAt: '2026-09-08T00:00:01Z',
       refundedAt: '',
       refundable: true,
@@ -290,7 +316,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     hasPaymentMethod = true
     return create(RegisterPaymentMethodResponseSchema, {
       paymentMethod: { cardLabel: '11 1234', registeredAt: '2026-09-08T00:00:00Z' },
-      bonusGranted: true,
+      bonusGranted: false,
     })
   })
   router.rpc(BillingService.method.removePaymentMethod, () => {
@@ -315,7 +341,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
           request.term === ProtoTerm.ANNUAL ? '2027-09-08T00:00:00Z' : '2026-10-08T00:00:00Z',
         nextGrantAt: '2026-10-08T00:00:00Z',
         autoRenew: true,
-        status: 'active',
+        status: subscribePending ? 'pending' : 'active',
       },
     })
   })

@@ -26,7 +26,6 @@ export const i18n = {
       failed: '카드 등록을 완료하지 못했습니다. 다시 시도해 주세요.',
       back: '결제 관리로 돌아가기',
       done: '{{label}} 카드가 등록되었습니다.',
-      doneWithBonus: '{{label}} 카드가 등록되었고 {{credits}} 크레딧 보너스가 지급되었습니다.',
     },
   },
   en: {
@@ -52,7 +51,6 @@ export const i18n = {
       failed: 'Card registration could not be completed. Please try again.',
       back: 'Back to billing',
       done: '{{label}} was registered.',
-      doneWithBonus: '{{label}} was registered and the {{credits}}-credit bonus was granted.',
     },
   },
 } as const satisfies I18nFragment

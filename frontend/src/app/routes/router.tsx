@@ -71,7 +71,7 @@ declare module '@tanstack/react-router' {
   }
   interface HistoryState {
     notice?: 'password-changed'
-    billingRegistration?: { cardLabel: string; bonusGranted: boolean }
+    billingRegistration?: { cardLabel: string }
     billingSubscription?: { tier: string; changed?: boolean }
   }
 }

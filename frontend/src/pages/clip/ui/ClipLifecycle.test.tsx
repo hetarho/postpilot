@@ -163,11 +163,17 @@ it.each(['ko', 'en'] as const)(
     expect(screen.queryByLabelText('편집 타임라인')).not.toBeInTheDocument()
     expect(screen.getAllByRole('progressbar')).toHaveLength(1)
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
-    expect(screen.getByText(/50%/)).toBeVisible()
+    expect(
+      screen.getByText(lang === 'ko' ? /추가 취소 수수료는 없어요/ : /no extra cancellation fee/),
+    ).toBeVisible()
     await userEvent.dblClick(cancel)
     expect(calls).not.toContain('CancelClipJob')
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/50%/)).toBeVisible()
+    expect(
+      within(dialog).getByText(
+        lang === 'ko' ? /추가 취소 수수료는 없어요/ : /no extra cancellation fee/,
+      ),
+    ).toBeVisible()
     await userEvent.click(
       within(dialog).getByRole('button', { name: lang === 'ko' ? '계속 제작' : 'Keep going' }),
     )
@@ -242,14 +248,14 @@ it.each([false, true])('states only the credits the job used (exempt=%s)', async
             approvedMaxCredits: 21,
             reservedCredits: exempt ? 0 : 21,
             confirmedChargeCredits: exempt ? 0 : 4,
-            cancellationFeeCredits: exempt ? 0 : 9,
-            finalChargeCredits: exempt ? 0 : 13,
-            refundCredits: exempt ? 0 : 8,
+            cancellationFeeCredits: 0,
+            finalChargeCredits: exempt ? 0 : 4,
+            refundCredits: exempt ? 0 : 17,
             ...(exempt
               ? {
                   shadowConfirmedChargeCredits: 4,
-                  shadowCancellationFeeCredits: 9,
-                  shadowChargeCredits: 13,
+                  shadowCancellationFeeCredits: 0,
+                  shadowChargeCredits: 4,
                 }
               : {}),
           },
@@ -261,10 +267,10 @@ it.each([false, true])('states only the credits the job used (exempt=%s)', async
   await confirm()
   const credit = within(screen.getByRole('region', { name: '이번 작업의 크레딧' }))
   expect(credit.getByRole('status')).toHaveTextContent(
-    exempt ? '13 크레딧 사용 · 마스터 계정은 차감하지 않아요' : '13 크레딧 사용',
+    exempt ? '4 크레딧 사용 · 마스터 계정은 차감하지 않아요' : '4 크레딧 사용',
   )
   if (!exempt) expect(credit.getByRole('status')).not.toHaveTextContent('마스터')
-  expect(screen.queryByText('확인된 AI 사용분')).not.toBeInTheDocument()
+  if (!exempt) expect(screen.getByText('확인된 AI 사용 차감 4 크레딧')).toBeInTheDocument()
   expect(screen.queryByText('취소 추가분')).not.toBeInTheDocument()
   expect(screen.queryByText('8 크레딧')).not.toBeInTheDocument()
   expect(screen.queryByText('21 크레딧')).not.toBeInTheDocument()

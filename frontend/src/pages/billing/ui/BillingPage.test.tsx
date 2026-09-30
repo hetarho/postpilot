@@ -1,31 +1,35 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { initializeI18n } from '@/app/providers/i18n'
 import { ProtoPlan, ProtoTerm } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
+afterEach(() => initializeI18n('ko'))
+
 describe('BillingPage', () => {
-  it('quotes and confirms an at-par credit purchase, then refreshes billing and balance', async () => {
+  it('quotes and confirms a fixed credit pack, then refreshes billing and balance', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    const purchaseRequests: number[] = []
+    const purchaseRequests: Array<number | string> = []
     renderAppAt('/billing', {
-      user: { id: 'alice', plan: ProtoPlan.FREE },
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      plans: { plan: ProtoPlan.PRO },
       calls,
-      billing: { paymentMethod: true, purchaseRequests },
+      billing: { paymentMethod: true, subscription: true, purchaseRequests },
     })
 
-    expect(await screen.findByText('500 크레딧 · 7,000원')).toBeInTheDocument()
-    expect(screen.getByRole('spinbutton', { name: '구매 금액' })).toHaveTextContent('$5')
+    expect(await screen.findByRole('radio', { name: '1000 크레딧 · 3,000원' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '1000 크레딧 · 3,000원' })).toBeChecked()
     await user.click(screen.getByRole('button', { name: '크레딧 구매' }))
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveTextContent('$5.00 · 500 크레딧 · 7,000원')
+    expect(dialog).toHaveTextContent('1000 크레딧에 3,000원이 결제됩니다')
     expect(dialog).toHaveTextContent('만료되지 않습니다')
     expect(dialog).toHaveTextContent('마지막으로 차감됩니다')
     await user.click(within(dialog).getByRole('button', { name: '크레딧 구매' }))
 
-    await waitFor(() => expect(purchaseRequests).toEqual([500]))
-    expect(await screen.findByText('500 크레딧을 구매했습니다.')).toBeInTheDocument()
+    await waitFor(() => expect(purchaseRequests).toEqual(['pack-1000']))
+    expect(await screen.findByText('1000 크레딧을 구매했습니다.')).toBeInTheDocument()
     expect(calls.filter((call) => call === 'GetMyBilling').length).toBeGreaterThan(1)
     expect(calls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1)
   })
@@ -69,8 +73,9 @@ describe('BillingPage', () => {
   it('localizes a failed purchase charge in its confirmation dialog', async () => {
     const user = userEvent.setup()
     renderAppAt('/billing', {
-      user: { id: 'alice', plan: ProtoPlan.FREE },
-      billing: { paymentMethod: true, purchaseFailure: 'CHARGE_FAILED' },
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      plans: { plan: ProtoPlan.PRO },
+      billing: { paymentMethod: true, subscription: true, purchaseFailure: 'CHARGE_FAILED' },
     })
 
     await user.click(await screen.findByRole('button', { name: '크레딧 구매' }))
@@ -133,7 +138,14 @@ describe('BillingPage', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
-    expect(headings).toEqual(['구독', '결제 수단', '결제 및 지급 기록', '크레딧 구매', '환불 요청'])
+    expect(headings).toEqual([
+      '혜택과 잔액',
+      '구독',
+      '결제 수단',
+      '결제 및 지급 기록',
+      '크레딧 구매',
+      '환불 요청',
+    ])
     expect(screen.getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
     expect(screen.getByText('등록된 결제 수단이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 결제 기록이 없습니다.')).toBeInTheDocument()
@@ -161,23 +173,124 @@ describe('BillingPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders active subscription timing, a moving quote, and newest-first history', async () => {
+  it('renders active subscription clocks and KRW history', async () => {
     renderAppAt('/billing', {
       user: { id: 'alice', plan: ProtoPlan.PRO },
       billing: { populated: true },
     })
 
-    expect(await screen.findByText('Pro')).toBeInTheDocument()
+    expect((await screen.findAllByText('Pro')).length).toBeGreaterThan(0)
     expect(screen.getByText('월간')).toBeInTheDocument()
     expect(screen.getByText('매월 8일')).toBeInTheDocument()
-    expect(await screen.findByText(/오늘 기준 약 14,000원 · 변동/)).toBeInTheDocument()
+    expect(await screen.findByText('다음 실제 결제일')).toBeInTheDocument()
     const history = screen.getByRole('heading', { name: '결제 및 지급 기록' }).parentElement
     const rows = within(history as HTMLElement).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(rows[0]).toHaveTextContent('플랜 변경')
     expect(rows[1]).toHaveTextContent('결제')
-    expect(rows[1]).toHaveTextContent('$5.00 · 7,000원')
-    expect(rows[1]).toHaveTextContent('1달러당 1,400원')
+    expect(rows[1]).toHaveTextContent('7,000원')
+    expect(rows[1]).not.toHaveTextContent('$')
+  })
+
+  it('separates annual payment, monthly benefit and daily reset at month end', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      plans: {
+        plan: ProtoPlan.PRO,
+        balance: {
+          credits: 70,
+          dailyGrant: 85,
+          monthlyBonus: 1070,
+          dailyResetsAt: '2026-10-01T02:00:00Z',
+          bonusResetsAt: '2026-10-31T14:30:00Z',
+          lots: [
+            { kind: 'daily', granted: 85, remaining: 10, expiresAt: '2026-10-01T02:00:00Z' },
+            { kind: 'monthly', granted: 1070, remaining: 40, expiresAt: '2026-10-31T14:30:00Z' },
+            { kind: 'purchased', granted: 20, remaining: 20 },
+          ],
+        },
+        serverExportWindow: {
+          coverageId: 'paid:alice',
+          endsAt: '2026-10-31T14:30:00Z',
+          allowance: 15,
+          remaining: 12,
+        },
+      },
+      billing: {
+        subscription: true,
+        subscriptionState: {
+          plan: ProtoPlan.PRO,
+          term: ProtoTerm.ANNUAL,
+          anchorAt: '2026-09-30T14:30:00Z',
+          termEnd: '2027-09-30T14:30:00Z',
+          nextGrantAt: '2026-10-31T14:30:00Z',
+        },
+      },
+    })
+    expect(await screen.findByText('사용 가능 70 크레딧')).toBeInTheDocument()
+    expect(screen.getByText('일일 지급 · 다음 지급')).toBeInTheDocument()
+    expect(screen.getByText('월 보너스 · 다음 갱신')).toBeInTheDocument()
+    expect(screen.getByText('다음 실제 결제')).toBeInTheDocument()
+    expect(screen.getByText(/서버 내보내기 12 \/ 15회/)).toBeInTheDocument()
+    expect(screen.getByText(/구매 · 20 \/ 20/)).toBeInTheDocument()
+  })
+
+  it('keeps a free account’s retained purchase visible while blocking a new pack', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.FREE },
+      plans: {
+        plan: ProtoPlan.FREE,
+        balance: { credits: 100, lots: [{ kind: 'purchased', granted: 100, remaining: 100 }] },
+      },
+      billing: { paymentMethod: true },
+    })
+    expect(await screen.findByText('사용 가능 100 크레딧')).toBeInTheDocument()
+    expect(screen.getByText(/구매 · 100 \/ 100/)).toBeInTheDocument()
+    expect(screen.getByText('크레딧 구매는 활성 유료 구독에서만 가능해요.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '크레딧 구매' })).toBeDisabled()
+  })
+
+  it('distinguishes the temporary official reference from its applied rate', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.PRO },
+      plans: {
+        plan: ProtoPlan.PRO,
+        fxRate: {
+          source: 'BOK',
+          publicationDate: '2026-09-29',
+          referenceE4: 14123400n,
+          appliedE4: 14200000n,
+          temporary: true,
+        },
+      },
+      billing: { subscription: true },
+    })
+    expect(
+      await screen.findByText(/기준 환율 1,412.34원\/USD · 적용 환율 1,420원\/USD/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/임시 적용 중/)).toBeInTheDocument()
+  })
+
+  it('explains retained credits and FX recovery in English without promising a purchase', async () => {
+    initializeI18n('en')
+    renderAppAt('/billing', {
+      user: { id: 'alice', plan: ProtoPlan.FREE },
+      plans: {
+        plan: ProtoPlan.FREE,
+        fxUnavailable: true,
+        balance: {
+          credits: 30,
+          lots: [{ kind: 'purchased', granted: 30, remaining: 30 }],
+        },
+      },
+      billing: { paymentMethod: true },
+    })
+    expect(await screen.findByText('30 spendable credits')).toBeInTheDocument()
+    expect(screen.getByText(/Retained credits do not unlock paid models/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Free model work and fixed KRW checkout remain available/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Buy credits' })).toBeDisabled()
   })
 
   // BILL-15, F118: a refund row is labelled as a refund, not as a generic subscription event.

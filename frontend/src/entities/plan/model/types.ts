@@ -27,11 +27,12 @@ export const OFFERED_PLANS = ['free', 'light', 'basic', 'pro', 'max'] as const
  *  voucher and an expiring bonus alike — then never-expiring bonus, then purchased (QUOTA-12),
  *  which is the order the server sends and the order they are rendered in. */
 export interface CreditLot {
-  kind: 'monthly' | 'bonus' | 'purchased' | 'voucher'
+  kind: 'monthly' | 'bonus' | 'purchased' | 'voucher' | 'daily' | 'compensation'
   granted: number
   remaining: number
   /** RFC3339, or empty for a grant that does not expire. */
   expiresAt: string
+  issuanceCause: string
 }
 
 /** What the account may spend. Credits are the product's own unit, so there is no currency
@@ -45,6 +46,10 @@ export interface CreditBalance {
   renewsAt: string
   /** What this tier is granted each month, so a meter has something to fill against. */
   monthlyGrant: number
+  dailyGrant: number
+  monthlyBonus: number
+  dailyResetsAt: string
+  bonusResetsAt: string
 }
 
 /** One rung as the comparison screen lists it. Both figures come from the server: the grant
@@ -101,6 +106,14 @@ export interface MyPlan {
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]
   clipSourceSeconds: number
+  fxRate?: {
+    source: string
+    publicationDate: string
+    referenceE4: bigint
+    appliedE4: bigint
+    temporary: boolean
+  }
+  fxUnavailable: boolean
   serverExportWindow?: {
     coverageId: string
     startsAt: string

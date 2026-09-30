@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ClipAccounting } from '@/entities/clip-project'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
+import { formatDateTime, formatNumber } from '@/shared/lib'
 import { Typography } from '@/shared/ui'
 
 /** What this generation cost, as ONE figure (CLIP-81, owner decision 2026-09-19): the credits it
@@ -22,9 +23,7 @@ export function ClipCreditSettlement({
   const a = accounting?.jobId === job.id ? accounting : undefined
   const settled = !!a?.settled
   const exempt = a?.status === 'exempt'
-  const reference =
-    a?.shadowChargeCredits ??
-    (a?.shadowConfirmedChargeCredits ?? 0) + (a?.shadowCancellationFeeCredits ?? 0)
+  const reference = a?.shadowConfirmedChargeCredits ?? a?.shadowChargeCredits ?? 0
   const value =
     !a || a.status === 'unavailable'
       ? t('credits.pendingAmount')
@@ -46,6 +45,40 @@ export function ClipCreditSettlement({
       <Typography variant="body" role="status">
         {value}
       </Typography>
+      {settled && !exempt && a && (
+        <div className="grid w-full gap-1">
+          <Typography variant="meta" as="span">
+            {t('credits.debit', { amount: a.confirmedChargeCredits ?? a.finalChargeCredits ?? 0 })}
+          </Typography>
+          {(a.refundCredits ?? 0) > 0 && (
+            <Typography variant="meta" as="span">
+              {t('credits.returned', { amount: a.refundCredits ?? 0 })}
+            </Typography>
+          )}
+          {(a.compensationCredits ?? 0) > 0 && (
+            <Typography variant="meta" as="span">
+              {t('credits.compensation', {
+                amount: a.compensationCredits ?? 0,
+                at: a.compensationExpiresAt ? formatDateTime(a.compensationExpiresAt) : '—',
+              })}
+            </Typography>
+          )}
+          <Typography variant="meta" as="span">
+            {t('credits.net', { amount: a.netDebitCredits ?? a.finalChargeCredits ?? 0 })}
+          </Typography>
+          {a.rate && (
+            <Typography variant="meta" as="span">
+              {t('credits.fx', {
+                source: a.rate.source,
+                date: a.rate.publicationDate,
+                reference: formatNumber(Number(a.rate.referenceE4) / 10000),
+                applied: formatNumber(Number(a.rate.appliedE4) / 10000),
+              })}
+              {a.rate.temporary && t('credits.temporary')}
+            </Typography>
+          )}
+        </div>
+      )}
     </section>
   )
 }

@@ -1,26 +1,37 @@
 import { useState } from 'react'
+import { useMyPlan } from '@/entities/plan'
 import { useTranslation } from 'react-i18next'
-import { usePurchaseCredits, useQuotePurchase, type Purchase } from '@/entities/subscription'
+import { usePurchaseCredits, useQuotePack, type Purchase } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { Button, Dialog, FieldMessage, Notice, Stepper, Typography } from '@/shared/ui'
+import { Button, Dialog, FieldMessage, Notice, Typography } from '@/shared/ui'
 
 export function CreditPurchaseSection({
   hasPaymentMethod,
   purchases,
+  activePaid,
 }: {
   hasPaymentMethod: boolean
   purchases: Purchase[]
+  activePaid: boolean
 }) {
   const { t } = useTranslation('billing')
-  const [dollars, setDollars] = useState(5)
+  const { myPlan } = useMyPlan()
+  const packs = myPlan?.creditPacks ?? []
+  const [packId, setPackId] = useState('')
+  const selectedPack = packs.find((pack) => pack.id === packId) ?? packs[0]
+  const paid = activePaid && ['light', 'basic', 'pro', 'max'].includes(myPlan?.plan ?? '')
   const [confirmingPurchase, setConfirmingPurchase] = useState(false)
   const [success, setSuccess] = useState<{ kind: 'purchase'; credits: number }>()
-  const { quote, isPending: quotePending, isError: quoteError } = useQuotePurchase(dollars * 100)
+  const {
+    quote,
+    isPending: quotePending,
+    isError: quoteError,
+  } = useQuotePack(paid ? (selectedPack?.id ?? '') : '')
   const purchaseMutation = usePurchaseCredits()
 
   const confirmPurchase = async () => {
     try {
-      const purchased = await purchaseMutation.purchaseCredits(dollars * 100)
+      const purchased = await purchaseMutation.purchasePack(selectedPack!.id)
       if (!purchased) return
       setConfirmingPurchase(false)
       setSuccess({ kind: 'purchase', credits: purchased.credits })
@@ -44,37 +55,35 @@ export function CreditPurchaseSection({
         </Notice>
       )}
       <div className="border-divider grid gap-3 rounded-xl border p-4">
-        <Stepper
-          label={t('purchases.amountLabel')}
-          value={dollars}
-          min={1}
-          max={100}
-          onChange={setDollars}
-          decrementLabel={t('purchases.decrement')}
-          incrementLabel={t('purchases.increment')}
-          formatValue={(value) => t('purchases.dollars', { value })}
-        />
+        <fieldset className="grid gap-2" disabled={!paid}>
+          <legend className="mb-2">{t('purchases.amountLabel')}</legend>
+          {packs.map((pack) => (
+            <label
+              key={pack.id}
+              className="border-divider flex min-h-11 items-center gap-2 rounded-md border p-2"
+            >
+              <input
+                type="radio"
+                name="credit-pack"
+                value={pack.id}
+                checked={selectedPack?.id === pack.id}
+                onChange={() => setPackId(pack.id)}
+              />
+              {t('purchases.pack', { credits: pack.credits, krw: formatNumber(pack.priceKrw) })}
+            </label>
+          ))}
+        </fieldset>
         {quote && (
-          <div className="grid gap-1">
-            <Typography variant="fieldTitle">
-              {t('purchases.quote', {
-                credits: quote.credits,
-                krw: formatNumber(quote.krw),
-              })}
-            </Typography>
-            <Typography variant="meta" className="text-content-secondary">
-              {t('purchases.rate', {
-                date: quote.rateDate,
-                rate: formatNumber(Number(quote.ratePerUsdE4) / 10_000),
-              })}
-            </Typography>
-          </div>
+          <Typography variant="fieldTitle">
+            {t('purchases.quote', { credits: quote.credits, krw: formatNumber(quote.krw) })}
+          </Typography>
         )}
+        {!paid && <FieldMessage>{t('purchases.paidRequired')}</FieldMessage>}
         {quoteError && <FieldMessage>{t('purchases.quoteFailed')}</FieldMessage>}
         {!hasPaymentMethod && <FieldMessage>{t('purchases.paymentRequired')}</FieldMessage>}
         <Button
           variant="cta"
-          disabled={!hasPaymentMethod || !quote || quotePending}
+          disabled={!paid || !hasPaymentMethod || !quote || quotePending}
           onClick={() => {
             purchaseMutation.reset()
             setConfirmingPurchase(true)
@@ -97,7 +106,6 @@ export function CreditPurchaseSection({
                 <Typography variant="label">
                   {t('purchases.row', {
                     credits: purchase.credits,
-                    usd: (purchase.usdCents / 100).toFixed(2),
                     krw: formatNumber(purchase.krw),
                   })}
                 </Typography>
@@ -126,8 +134,7 @@ export function CreditPurchaseSection({
         <span className="grid gap-2">
           <span>
             {t('purchases.purchaseDescription', {
-              usd: dollars.toFixed(2),
-              credits: quote?.credits ?? dollars * 100,
+              credits: quote?.credits ?? selectedPack?.credits ?? 0,
               krw: quote ? formatNumber(quote.krw) : '—',
             })}
           </span>

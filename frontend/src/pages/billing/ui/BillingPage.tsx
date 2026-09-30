@@ -1,8 +1,8 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { planLabel } from '@/entities/plan'
-import { useMyBilling, useQuote, type BillingEvent } from '@/entities/subscription'
+import { planLabel, useMyPlan, type MyPlan } from '@/entities/plan'
+import { useMyBilling, type BillingEvent } from '@/entities/subscription'
 import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
 import { BillingSubscriptionActions } from '@/features/manage-subscription'
@@ -14,7 +14,7 @@ import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 export function BillingPage() {
   const { t } = useTranslation(['billing', 'common'])
   const { myBilling, isPending, isError } = useMyBilling()
-  const { quote } = useQuote(myBilling?.subscription?.plan, myBilling?.subscription?.term)
+  const { myPlan } = useMyPlan()
   const navigate = useNavigate()
   const initialRegistration = useRouterState({
     select: (state) => state.location.state.billingRegistration,
@@ -49,11 +49,7 @@ export function BillingPage() {
 
       {registration && (
         <Notice tone="success" role="status" className="mt-6">
-          {t(registration.bonusGranted ? 'registration.doneWithBonus' : 'registration.done', {
-            ns: 'billing',
-            label: registration.cardLabel,
-            credits: 100,
-          })}
+          {t('registration.done', { ns: 'billing', label: registration.cardLabel })}
         </Notice>
       )}
       {subscribed && (
@@ -77,6 +73,14 @@ export function BillingPage() {
       )}
       {myBilling && (
         <div className="mt-10 grid gap-10">
+          {myPlan && (
+            <BenefitsSummary
+              plan={myPlan}
+              nextPaymentAt={
+                myBilling.subscription?.autoRenew ? myBilling.subscription.termEnd : ''
+              }
+            />
+          )}
           <section className="grid gap-2">
             <Typography variant="title" as="h2">
               {t('subscription.heading', { ns: 'billing' })}
@@ -93,7 +97,12 @@ export function BillingPage() {
             )}
             {myBilling.subscription && (
               <>
-                <SubscriptionDetails subscription={myBilling.subscription} quote={quote} />
+                <SubscriptionDetails
+                  subscription={myBilling.subscription}
+                  offer={myPlan?.offers.find(
+                    (offer) => offer.plan === myBilling.subscription?.plan,
+                  )}
+                />
                 <BillingSubscriptionActions subscription={myBilling.subscription} />
               </>
             )}
@@ -146,6 +155,7 @@ export function BillingPage() {
           </section>
           <CreditPurchaseSection
             hasPaymentMethod={myBilling.paymentMethod !== undefined}
+            activePaid={myBilling.subscription?.status === 'active'}
             purchases={myBilling.purchases}
           />
           <RefundRequestSection charges={myBilling.history} />
@@ -157,10 +167,10 @@ export function BillingPage() {
 
 function SubscriptionDetails({
   subscription,
-  quote,
+  offer,
 }: {
   subscription: NonNullable<ReturnType<typeof useMyBilling>['myBilling']>['subscription']
-  quote: ReturnType<typeof useQuote>['quote']
+  offer?: MyPlan['offers'][number]
 }) {
   const { t } = useTranslation('billing')
   if (!subscription) return null
@@ -180,6 +190,20 @@ function SubscriptionDetails({
       <dd className={typographyStyles({ variant: 'body' })}>
         {t(`subscription.term.${subscription.term ?? 'monthly'}`)}
       </dd>
+      {offer && (
+        <>
+          <dt className={typographyStyles({ variant: 'label', className: 'mt-2' })}>
+            {t('subscription.fixedPrice')}
+          </dt>
+          <dd className={typographyStyles({ variant: 'body' })}>
+            {t('subscription.price', {
+              krw: formatNumber(
+                subscription.term === 'annual' ? (offer.annualKrw ?? 0) : (offer.monthlyKrw ?? 0),
+              ),
+            })}
+          </dd>
+        </>
+      )}
       <dt className={typographyStyles({ variant: 'label', className: 'mt-2' })}>
         {t('subscription.anchor')}
       </dt>
@@ -187,17 +211,79 @@ function SubscriptionDetails({
         {t('subscription.anchorDay', { day: anchorDay })}
       </dd>
       <dt className={typographyStyles({ variant: 'label', className: 'mt-2' })}>
-        {t('subscription.nextCharge')}
+        {t(subscription.autoRenew ? 'subscription.nextCharge' : 'subscription.coverageEnds')}
       </dt>
-      <dd className={typographyStyles({ variant: 'body' })}>
-        {formatDate(subscription.termEnd)}
-        {quote && (
-          <Typography variant="meta" as="span" className="text-content-secondary ml-2">
-            {t('subscription.movingQuote', { krw: formatNumber(quote.krw) })}
-          </Typography>
-        )}
-      </dd>
+      <dd className={typographyStyles({ variant: 'body' })}>{formatDate(subscription.termEnd)}</dd>
     </dl>
+  )
+}
+
+function BenefitsSummary({ plan, nextPaymentAt }: { plan: MyPlan; nextPaymentAt: string }) {
+  const { t } = useTranslation('billing')
+  const balance = plan.balance
+  return (
+    <section className="grid gap-2">
+      <Typography variant="title" as="h2">
+        {t('benefits.heading')}
+      </Typography>
+      <Typography variant="body">
+        {balance.unlimited
+          ? t('benefits.exempt')
+          : t('benefits.spendable', { count: balance.credits })}
+      </Typography>
+      {plan.plan === 'free' && <Typography variant="meta">{t('benefits.free')}</Typography>}
+      {plan.plan !== 'free' && !balance.unlimited && (
+        <dl className="grid gap-1">
+          <dt>{t('benefits.daily')}</dt>
+          <dd>
+            {balance.dailyGrant} ·{' '}
+            {balance.dailyResetsAt ? formatDateTime(balance.dailyResetsAt) : '—'}
+          </dd>
+          <dt>{t('benefits.monthly')}</dt>
+          <dd>
+            {balance.monthlyBonus} ·{' '}
+            {balance.bonusResetsAt ? formatDateTime(balance.bonusResetsAt) : '—'}
+          </dd>
+          {nextPaymentAt && (
+            <>
+              <dt>{t('benefits.payment')}</dt>
+              <dd>{formatDateTime(nextPaymentAt)}</dd>
+            </>
+          )}
+        </dl>
+      )}
+      {balance.lots.length > 0 && (
+        <ul className="grid gap-1">
+          {balance.lots.map((lot, index) => (
+            <li key={`${lot.kind}-${index}`} className={typographyStyles({ variant: 'meta' })}>
+              {t(`benefits.lot.${lot.kind}`)} · {lot.remaining} / {lot.granted} ·{' '}
+              {lot.expiresAt ? formatDateTime(lot.expiresAt) : t('benefits.noExpiry')}
+            </li>
+          ))}
+        </ul>
+      )}
+      {plan.serverExportWindow && (
+        <Typography variant="meta">
+          {t('benefits.exports', {
+            remaining: plan.serverExportWindow.remaining,
+            allowance: plan.serverExportWindow.allowance,
+            at: formatDateTime(plan.serverExportWindow.endsAt),
+          })}
+        </Typography>
+      )}
+      {plan.fxRate && (
+        <Typography variant="meta">
+          {t('benefits.fx', {
+            source: plan.fxRate.source,
+            date: plan.fxRate.publicationDate,
+            reference: formatNumber(Number(plan.fxRate.referenceE4) / 10000),
+            applied: formatNumber(Number(plan.fxRate.appliedE4) / 10000),
+          })}{' '}
+          {plan.fxRate.temporary && t('benefits.temporary')}
+        </Typography>
+      )}
+      {plan.fxUnavailable && <Notice tone="info">{t('benefits.fxUnavailable')}</Notice>}
+    </section>
   )
 }
 
@@ -218,10 +304,9 @@ function BillingHistory({ events }: { events: BillingEvent[] }) {
               {formatDateTime(event.createdAt)}
             </Typography>
           </div>
-          {(event.usdCents > 0 || event.krw > 0n) && (
+          {event.krw > 0n && (
             <Typography variant="body">
               {t('history.amount', {
-                usd: (event.usdCents / 100).toFixed(2),
                 krw: formatNumber(event.krw),
               })}
             </Typography>
@@ -231,12 +316,14 @@ function BillingHistory({ events }: { events: BillingEvent[] }) {
               {t('history.credits', { credits: event.credits })}
             </Typography>
           )}
-          {event.krwPerUsdE4 > 0n && (
-            <Typography variant="meta" className="text-content-secondary">
-              {t('history.rate', {
-                rate: formatNumber(Number(event.krwPerUsdE4) / 10_000),
-                date: event.rateDate,
-              })}
+          {event.plan && event.term && (
+            <Typography variant="meta">
+              {planLabel(event.plan)} · {t(`subscription.term.${event.term}`)}
+            </Typography>
+          )}
+          {(event.providerPaymentKey || event.orderId) && (
+            <Typography variant="meta">
+              {t('history.provider', { key: event.providerPaymentKey || event.orderId })}
             </Typography>
           )}
         </li>

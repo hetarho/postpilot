@@ -77,9 +77,9 @@ it.each(['completed', 'replaced', 'accepted'] as const)(
 
 it.each([
   ['manual', 'not_reserved', /다시 렌더는 취소해도 크레딧이 차감되지/],
-  ['ai', 'not_reserved', /아직 크레딧을 예약하지 않아/],
+  ['ai', 'not_reserved', /아직 예약하지 않았다면/],
   ['ai', 'exempt', /실제 크레딧 차감이 없어요/],
-  ['ai', 'reserved', /남은 예약 크레딧 50%/],
+  ['ai', 'reserved', /추가 취소 수수료는 없어요/],
 ] as const)(
   'shows the applicable %s/%s cost in the guard and confirms only once',
   async (kind, status, message) => {

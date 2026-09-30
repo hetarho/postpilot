@@ -23,6 +23,7 @@ export interface FakeCreditLot {
   granted?: number
   remaining?: number
   expiresAt?: string
+  issuanceCause?: string
 }
 
 export interface FakeCreditBalance {
@@ -31,6 +32,10 @@ export interface FakeCreditBalance {
   lots?: FakeCreditLot[]
   renewsAt?: string
   monthlyGrant?: number
+  dailyGrant?: number
+  monthlyBonus?: number
+  dailyResetsAt?: string
+  bonusResetsAt?: string
 }
 
 export interface FakePlansOptions {
@@ -43,6 +48,11 @@ export interface FakePlansOptions {
     plan: ProtoPlan
     monthlyCredits: number
     priceUsdCents: number
+    monthlyKrw?: number
+    annualKrw?: number
+    dailyCredits?: number
+    monthlyBonus?: number
+    monthlyServerExports?: number
     recommended?: boolean
   }>
   /** The priced combos the estimator publishes. Defaults to one assigned tier so a screen
@@ -71,6 +81,15 @@ export interface FakePlansOptions {
     reserved?: number
     remaining?: number
   }
+  creditPacks?: Array<{ id: string; priceKrw: number; credits: number }>
+  fxRate?: {
+    source: string
+    publicationDate: string
+    referenceE4: bigint
+    appliedE4: bigint
+    temporary: boolean
+  }
+  fxUnavailable?: boolean
   /** Make GetMyPlan fail. */
   planFails?: boolean
   /** The accounts the admin screen lists. */
@@ -93,26 +112,67 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
       plan: options.plan ?? ProtoPlan.MASTER,
       clipSourceSeconds: options.clipSourceSeconds ?? 60,
       serverExportWindow: options.serverExportWindow,
+      creditPacks: options.creditPacks ?? [
+        { id: 'pack-1000', priceKrw: 3000, credits: 1000 },
+        { id: 'pack-3000', priceKrw: 9000, credits: 3000 },
+        { id: 'pack-10000', priceKrw: 30000, credits: 10000 },
+      ],
+      fxRate: options.fxRate,
+      fxUnavailable: options.fxUnavailable ?? false,
       balance: {
         credits: options.balance?.credits ?? 0,
         // The session fake signs in as master, whose balance is not a number at all.
-        unlimited: options.balance?.unlimited ?? true,
+        unlimited:
+          options.balance?.unlimited ?? (options.plan ?? ProtoPlan.MASTER) === ProtoPlan.MASTER,
         lots: (options.balance?.lots ?? []).map((lot) => ({
           kind: lot.kind ?? 'monthly',
           granted: lot.granted ?? 0,
           remaining: lot.remaining ?? 0,
           expiresAt: lot.expiresAt ?? '',
+          issuanceCause: lot.issuanceCause ?? '',
         })),
         renewsAt: options.balance?.renewsAt ?? '',
         monthlyGrant: options.balance?.monthlyGrant ?? 0,
+        dailyGrant: options.balance?.dailyGrant ?? 0,
+        monthlyBonus: options.balance?.monthlyBonus ?? 0,
+        dailyResetsAt: options.balance?.dailyResetsAt ?? '',
+        bonusResetsAt: options.balance?.bonusResetsAt ?? '',
       },
       // The shipped ladder, so a test that does not care about the figures still renders
       // what the server would actually send.
       offers: options.offers ?? [
-        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 },
-        { plan: ProtoPlan.BASIC, monthlyCredits: 330, priceUsdCents: 300 },
-        { plan: ProtoPlan.PRO, monthlyCredits: 1150, priceUsdCents: 1000, recommended: true },
-        { plan: ProtoPlan.MAX, monthlyCredits: 2400, priceUsdCents: 2000 },
+        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0, monthlyKrw: 0, annualKrw: 0 },
+        {
+          plan: ProtoPlan.BASIC,
+          monthlyCredits: 330,
+          priceUsdCents: 300,
+          monthlyKrw: 4900,
+          annualKrw: 49000,
+          dailyCredits: 45,
+          monthlyBonus: 510,
+          monthlyServerExports: 6,
+        },
+        {
+          plan: ProtoPlan.PRO,
+          monthlyCredits: 1150,
+          priceUsdCents: 1000,
+          monthlyKrw: 9900,
+          annualKrw: 99000,
+          dailyCredits: 85,
+          monthlyBonus: 1070,
+          monthlyServerExports: 15,
+          recommended: true,
+        },
+        {
+          plan: ProtoPlan.MAX,
+          monthlyCredits: 2400,
+          priceUsdCents: 2000,
+          monthlyKrw: 29900,
+          annualKrw: 299000,
+          dailyCredits: 235,
+          monthlyBonus: 3170,
+          monthlyServerExports: 60,
+        },
       ],
       // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.
       estimatorCombos: (options.estimatorCombos ?? [{ combo: 'value' }, { combo: 'balanced' }]).map(

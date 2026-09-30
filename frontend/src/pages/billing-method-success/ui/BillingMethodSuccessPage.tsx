@@ -31,7 +31,6 @@ export function BillingMethodSuccessPage() {
             ...previous,
             billingRegistration: {
               cardLabel: response.paymentMethod?.cardLabel ?? '',
-              bonusGranted: response.bonusGranted,
             },
           }),
         })

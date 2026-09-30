@@ -43,7 +43,14 @@ export function planFromProto(plan: ProtoPlan): PlanName | undefined {
 /** An unknown lot kind is read as a bonus: the distinction is a label, and a grant that
  *  cannot be named is still a grant the account holds. */
 function toLot(kind: string): CreditLot['kind'] {
-  if (kind === 'monthly' || kind === 'purchased' || kind === 'voucher') return kind
+  if (
+    kind === 'monthly' ||
+    kind === 'purchased' ||
+    kind === 'voucher' ||
+    kind === 'daily' ||
+    kind === 'compensation'
+  )
+    return kind
   return 'bonus'
 }
 
@@ -56,9 +63,14 @@ function toBalance(balance: ProtoCreditBalance | undefined): CreditBalance {
       granted: lot.granted,
       remaining: lot.remaining,
       expiresAt: lot.expiresAt,
+      issuanceCause: lot.issuanceCause,
     })),
     renewsAt: balance?.renewsAt ?? '',
     monthlyGrant: balance?.monthlyGrant ?? 0,
+    dailyGrant: balance?.dailyGrant ?? 0,
+    monthlyBonus: balance?.monthlyBonus ?? 0,
+    dailyResetsAt: balance?.dailyResetsAt ?? '',
+    bonusResetsAt: balance?.bonusResetsAt ?? '',
   }
 }
 
@@ -131,6 +143,16 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     plan: planFromProto(response.plan),
     balance: toBalance(response.balance),
     clipSourceSeconds: response.clipSourceSeconds,
+    fxUnavailable: response.fxUnavailable,
+    ...(response.fxRate && {
+      fxRate: {
+        source: response.fxRate.source,
+        publicationDate: response.fxRate.publicationDate,
+        referenceE4: response.fxRate.referenceE4,
+        appliedE4: response.fxRate.appliedE4,
+        temporary: response.fxRate.temporary,
+      },
+    }),
     ...(response.serverExportWindow && {
       serverExportWindow: {
         coverageId: response.serverExportWindow.coverageId,
