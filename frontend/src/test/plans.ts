@@ -13,6 +13,7 @@ import {
   PlanService,
   ProtoPlan,
   SetUserPlanResponseSchema,
+  PostCreditsBasis,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -59,10 +60,9 @@ export interface FakePlansOptions {
     combo: string
     observeLabel?: string
     writeLabel?: string
-    perPhotoMilli?: number
-    perVideoMilli?: number
-    perThousandCharsMilli?: number
-    perPostBaseMilli?: number
+    /** One post's credits on the level's pair; defaults to 15 from recent usage. */
+    postCredits?: number
+    postCreditsBasis?: PostCreditsBasis
     clipRates?: {
       perSourceMilli: number
       perOutputSecondMilli: number
@@ -196,16 +196,14 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           modelCeiling: 'top',
         },
       ],
-      // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.
+      // One post's credits per level (QUOTA-64); clip rates stay the ones plan_test pins.
       estimatorCombos: (options.estimatorCombos ?? [{ combo: 'value' }, { combo: 'balanced' }]).map(
         (combo) => ({
           combo: combo.combo,
           observeLabel: combo.observeLabel ?? 'vendor/eyes',
           writeLabel: combo.writeLabel ?? 'vendor/pen',
-          perPhotoMilli: combo.perPhotoMilli ?? 835,
-          perVideoMilli: combo.perVideoMilli ?? 1399,
-          perThousandCharsMilli: combo.perThousandCharsMilli ?? 5400,
-          perPostBaseMilli: combo.perPostBaseMilli ?? 4700,
+          postCredits: combo.postCredits ?? 15,
+          postCreditsBasis: combo.postCreditsBasis ?? PostCreditsBasis.RECENT_USAGE,
           clipRates:
             combo.clipRates === null
               ? undefined

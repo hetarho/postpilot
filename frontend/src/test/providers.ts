@@ -25,6 +25,7 @@ import {
   SelectionSchema,
   SelectionSlot,
   Stage,
+  PostCreditsBasis,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -53,6 +54,8 @@ export interface FakeModel {
   affordable?: boolean
   /** The server could not price one call (QUOTA-59: no eligible official rate). */
   aiPriceUnavailable?: boolean
+  /** One post's credits per stage (QUOTA-64), exactly as the server sends it. */
+  postCredits?: Array<{ stage: Stage; credits: number; basis: PostCreditsBasis }>
   /** The operator's grade PER STAGE (MODEL-57). A stage left out is ungraded, which is what
    *  every registration starts as — and what a test that says nothing about grades gets. */
   levels?: Partial<Record<Stage, 'free' | 'value' | 'balanced' | 'premium' | 'top'>>
@@ -167,6 +170,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           requiredCredits: model.requiredCredits ?? 5,
           affordable: model.affordable ?? true,
           aiPriceUnavailable: model.aiPriceUnavailable ?? false,
+          postCredits: model.postCredits ?? [],
           stages:
             model.stages ??
             (model.vision

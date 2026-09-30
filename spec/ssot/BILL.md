@@ -51,4 +51,4 @@
 - placement: `backend/internal/billing`, its store/RPC adapters, `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and billing/refund features; the payment adapter stays behind consumer-declared ports
 
 ## chg
--
+- r6 260930 BILL-1✎ every signed-in account picks its own tier→every non-master account · BILL-20+ a master account is never charged

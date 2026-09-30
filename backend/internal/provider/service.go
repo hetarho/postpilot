@@ -177,27 +177,6 @@ func (s *Service) postCredits(ctx context.Context, info llm.ModelInfo) []StagePo
 	return out
 }
 
-// EstimatePostCredits is what one generated post would hold with the given stage pair.
-//
-// It is the number a "your balance covers about N posts" estimate divides into, and it is
-// computed here rather than in the browser because the charge formula — its per-request
-// base especially — is a server-owned product rule the client must never re-implement.
-func (s *Service) EstimatePostCredits(observe, write llm.ModelRef) int {
-	calls := make([]PlannedCall, 0, 2)
-	if observe != (llm.ModelRef{}) {
-		observeInfo, _ := s.catalog.Lookup(observe)
-		calls = append(calls, PlannedCall{Ref: observe, Count: 1, Stage: StageObserve, NativeEffort: observeInfo.ReasoningNativeEffort})
-	}
-	if write != (llm.ModelRef{}) {
-		writeInfo, _ := s.catalog.Lookup(write)
-		calls = append(calls, PlannedCall{Ref: write, Count: 1, Stage: StageWrite, NativeEffort: writeInfo.ReasoningNativeEffort})
-	}
-	if len(calls) == 0 {
-		return 0
-	}
-	return s.credits.ForCalls(calls)
-}
-
 // GetSelections returns the user's per-stage choices. A choice whose model is no longer
 // registered is reported `Missing` and cleared here (PRD §7: 마지막 선택 초기화), so the
 // user sees the greyed entry once and then must choose again.

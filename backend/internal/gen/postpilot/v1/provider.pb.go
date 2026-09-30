@@ -1017,16 +1017,10 @@ func (*GetSelectionsRequest) Descriptor() ([]byte, []int) {
 }
 
 type GetSelectionsResponse struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Selections []*Selection           `protobuf:"bytes,1,rep,name=selections,proto3" json:"selections,omitempty"`
-	// What one generated post would hold with the CALLER's current observe+write pair. It is
-	// the number a "your credits cover about N posts" estimate divides into, computed here
-	// because the charge formula — its per-request base especially — is a server-owned rule
-	// the client must never re-implement. Zero when no pair is selected yet.
-	EstimatedPostCredits int32 `protobuf:"varint,2,opt,name=estimated_post_credits,json=estimatedPostCredits,proto3" json:"estimated_post_credits,omitempty"`
-	AiPriceUnavailable   bool  `protobuf:"varint,3,opt,name=ai_price_unavailable,json=aiPriceUnavailable,proto3" json:"ai_price_unavailable,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Selections    []*Selection           `protobuf:"bytes,1,rep,name=selections,proto3" json:"selections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSelectionsResponse) Reset() {
@@ -1064,20 +1058,6 @@ func (x *GetSelectionsResponse) GetSelections() []*Selection {
 		return x.Selections
 	}
 	return nil
-}
-
-func (x *GetSelectionsResponse) GetEstimatedPostCredits() int32 {
-	if x != nil {
-		return x.EstimatedPostCredits
-	}
-	return 0
-}
-
-func (x *GetSelectionsResponse) GetAiPriceUnavailable() bool {
-	if x != nil {
-		return x.AiPriceUnavailable
-	}
-	return false
 }
 
 type SaveSelectionRequest struct {
@@ -1896,13 +1876,11 @@ const file_postpilot_v1_provider_proto_rawDesc = "" +
 	"\x11ListModelsRequest\"E\n" +
 	"\x12ListModelsResponse\x12/\n" +
 	"\x06models\x18\x01 \x03(\v2\x17.postpilot.v1.ModelInfoR\x06models\"\x16\n" +
-	"\x14GetSelectionsRequest\"\xb8\x01\n" +
+	"\x14GetSelectionsRequest\"\x8a\x01\n" +
 	"\x15GetSelectionsResponse\x127\n" +
 	"\n" +
 	"selections\x18\x01 \x03(\v2\x17.postpilot.v1.SelectionR\n" +
-	"selections\x124\n" +
-	"\x16estimated_post_credits\x18\x02 \x01(\x05R\x14estimatedPostCredits\x120\n" +
-	"\x14ai_price_unavailable\x18\x03 \x01(\bR\x12aiPriceUnavailable\"k\n" +
+	"selectionsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x16estimated_post_creditsR\x14ai_price_unavailable\"k\n" +
 	"\x14SaveSelectionRequest\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x12(\n" +
 	"\x03ref\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x03ref\"N\n" +

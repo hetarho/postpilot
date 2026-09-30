@@ -226,17 +226,6 @@ func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
 		}
 	}
 
-	credits.calls = nil
-	if got := svc.EstimatePostCredits(seeing, live); got != 5 {
-		t.Fatalf("post estimate = %d", got)
-	}
-	if len(credits.calls) != 1 || len(credits.calls[0]) != 2 ||
-		credits.calls[0][0].Stage != provider.StageObserve || credits.calls[0][1].Stage != provider.StageWrite {
-		t.Fatalf("post estimate calls = %+v", credits.calls)
-	}
-	if !credits.calls[0][1].NativeEffort {
-		t.Fatal("post estimate dropped the writer's native-effort pricing")
-	}
 }
 
 // A model not registered to observe's purpose (photo-analysis) is as gone for observe as a

@@ -1,3 +1,4 @@
+import type { PostCreditsBasisName } from '@/shared/api'
 import i18next from 'i18next'
 import { PAID_LEVELS, type LevelName } from '@/entities/model-catalog/@x/plan'
 
@@ -75,10 +76,9 @@ export interface EstimatorCombo {
   /** The models behind the tier, for the operator's own screen only. */
   observeLabel: string
   writeLabel: string
-  perPhotoMilli: number
-  perVideoMilli: number
-  perThousandCharsMilli: number
-  perPostBaseMilli: number
+  /** One post with photos on this level's pair, in credits, and where the figure came from
+   *  (QUOTA-64). Absent when either stage has no figure. */
+  postCredits?: { credits: number; basis: PostCreditsBasisName }
   clipRates?: ClipEstimatorRates
 }
 
@@ -124,34 +124,11 @@ export function postsAffordable(credits: number, perPost: number): number {
   return Math.floor(credits / perPost)
 }
 
-/** What one post of the given shape costs, in MILLI-credits, at one combo's rates.
- *
- *  This is the whole of the client's arithmetic (QUOTA-40): the server owns the charge
- *  formula and publishes rates, and the page multiplies. Characters round UP to the next
- *  thousand — a partial thousand still costs a whole call's output ceiling — which also
- *  keeps the figure monotonic as a slider moves. */
-export function postCostMilli(
-  rates: EstimatorCombo,
-  input: { chars: number; photos: number; videos: number },
-): number {
-  const thousands = Math.max(0, Math.ceil(input.chars / 1000))
-  return (
-    rates.perPostBaseMilli +
-    Math.max(0, input.photos) * rates.perPhotoMilli +
-    Math.max(0, input.videos) * rates.perVideoMilli +
-    thousands * rates.perThousandCharsMilli
-  )
-}
-
-/** How many posts an illustrative credit amount covers. Zero means it covers less than one. */
-export function postsPerGrant(
-  illustrativeCredits: number,
-  rates: EstimatorCombo,
-  input: { chars: number; photos: number; videos: number },
-): number {
-  const costMilli = postCostMilli(rates, input)
-  if (costMilli <= 0) return 0
-  return Math.floor((illustrativeCredits * 1000) / costMilli)
+/** How many posts an illustrative credit amount covers at a level's per-post figure. A floor,
+ *  like postsAffordable; zero means it covers less than one. */
+export function postsPerFigure(illustrativeCredits: number, perPostCredits: number): number {
+  if (perPostCredits <= 0) return 0
+  return Math.floor(illustrativeCredits / perPostCredits)
 }
 
 /** Clip conditions describe original count and FINISHED duration. Original duration is

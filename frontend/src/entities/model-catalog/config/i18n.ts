@@ -8,6 +8,10 @@ export const i18n = {
     active: '활성 모델',
     vanished: '등록된 모델 목록에서 사라졌어요',
     unsuitable: '이 단계에서는 쓸 수 없는 모델이에요',
+    postCredits: {
+      recent: '최근 사용량 기준 글 1개당 약 {{credits}}크레딧',
+      estimate: '예상 글 1개당 약 {{credits}}크레딧',
+    },
     access: {
       planRequired: '{{plan}} 요금제부터 쓸 수 있어요',
       unclassified: '운영자가 아직 등급을 분류하지 않았어요',
@@ -24,6 +28,10 @@ export const i18n = {
     active: 'Active model',
     vanished: 'No longer appears in the registered model list',
     unsuitable: 'Cannot be used for this stage',
+    postCredits: {
+      recent: 'About {{credits}} credits per post, from recent usage',
+      estimate: 'About {{credits}} credits per post (estimate)',
+    },
     access: {
       planRequired: 'Available from the {{plan}} plan',
       unclassified: 'Awaiting an operator classification',

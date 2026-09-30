@@ -177,12 +177,9 @@ message GetSelectionsRequest {}
 
 message GetSelectionsResponse {
   repeated Selection selections = 1;
-  // What one generated post would hold with the CALLER's current observe+write pair. It is
-  // the number a "your credits cover about N posts" estimate divides into, computed here
-  // because the charge formula — its per-request base especially — is a server-owned rule
-  // the client must never re-implement. Zero when no pair is selected yet.
-  int32 estimated_post_credits = 2;
-  bool ai_price_unavailable = 3;
+  // A post's estimate is ModelInfo.post_credits per stage now (QUOTA-64), not a hold quote.
+  reserved 2, 3;
+  reserved "estimated_post_credits", "ai_price_unavailable";
 }
 
 message SaveSelectionRequest {

@@ -10,6 +10,7 @@ import {
   type ProtoModelRef,
   type ProtoSelection,
   ProviderService,
+  postCreditsBasisName,
   SelectionSlot,
   Stage,
   type ProtoComparisonPair,
@@ -92,6 +93,17 @@ export function toCatalogModel(info: ProtoModelInfo): CatalogModel {
                   : []
               },
             ),
+          ),
+    // A stage or a basis this build does not know is dropped: no figure beats a wrong one.
+    postCredits:
+      info.postCredits.length === 0
+        ? undefined
+        : Object.fromEntries(
+            info.postCredits.flatMap(({ stage, credits, basis }) => {
+              const name = stageFromProto(stage)
+              const source = postCreditsBasisName(basis)
+              return name && source ? [[name, { credits, basis: source }] as const] : []
+            }),
           ),
     disabled: info.disabled,
     disabledReason: info.disabledReason,

@@ -4,6 +4,8 @@ import {
   refKey,
   levelPrefix,
   modelChoiceIssue,
+  postCreditLabel,
+  stagePostFigure,
   type StageName,
   type useModels,
 } from '@/entities/model-catalog'
@@ -71,7 +73,9 @@ export function ModelSelect({
         aria-describedby={error || notice ? errorId : undefined}
         onChange={onChange}
       />
-      {value && <ModelMeta model={models.find((model) => refKey(model.ref) === value)} />}
+      {value && (
+        <ModelMeta model={models.find((model) => refKey(model.ref) === value)} stage={stage} />
+      )}
       {/* The live region stays mounted so it announces when it fills, and `empty:hidden` keeps it
           out of the layout while it is idle. */}
       <Typography
@@ -99,16 +103,21 @@ export function ModelSelect({
 
 function ModelMeta({
   model,
+  stage,
 }: {
   model: ReturnType<typeof useModels>['models'][number] | undefined
+  stage: StageName
 }) {
   const { t } = useTranslation('models')
   if (!model) return null
   // Supplier prices never reach this projection (QUOTA-66, MODEL-27): the line says what the
-  // model can hold, and what a post costs in credits is QUOTA-64's figure.
+  // model can hold and what one post costs this stage in credits (QUOTA-64). A free model, and
+  // one the server has no figure for, show the context alone.
+  const figure = stagePostFigure(model, stage)
   return (
     <Typography variant="label" as="p" className="mt-1">
       {t('pair.context', { tokens: formatNumber(Number(model.contextTokens)) })}
+      {figure && ` · ${postCreditLabel(figure)}`}
     </Typography>
   )
 }

@@ -166,15 +166,11 @@ func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCom
 	out := make([]planrpc.EstimatorCombo, 0, len(priced))
 	for _, combo := range priced {
 		out = append(out, planrpc.EstimatorCombo{
-			Combo:             string(combo.Combo),
-			ObserveLabel:      combo.ObserveLabel,
-			WriteLabel:        combo.WriteLabel,
-			PerPhotoMilli:     combo.Rates.PerPhoto,
-			PerVideoMilli:     combo.Rates.PerVideo,
-			Per1000CharsMilli: combo.Rates.Per1000Chars,
-			PerPostBaseMilli:  combo.Rates.PerPostBase,
-			ClipRates:         combo.ClipRates,
-			PostCredits:       e.postCredits(ctx, combo),
+			Combo:        string(combo.Combo),
+			ObserveLabel: combo.ObserveLabel,
+			WriteLabel:   combo.WriteLabel,
+			ClipRates:    combo.ClipRates,
+			PostCredits:  e.postCredits(ctx, combo),
 		})
 	}
 	return out, nil
@@ -190,8 +186,6 @@ func (e estimatorCombos) ComboRatesAt(ctx context.Context, rate plan.RateSnapsho
 	for _, combo := range priced {
 		out = append(out, planrpc.EstimatorCombo{
 			Combo: string(combo.Combo), ObserveLabel: combo.ObserveLabel, WriteLabel: combo.WriteLabel,
-			PerPhotoMilli: combo.Rates.PerPhoto, PerVideoMilli: combo.Rates.PerVideo,
-			Per1000CharsMilli: combo.Rates.Per1000Chars, PerPostBaseMilli: combo.Rates.PerPostBase,
 			ClipRates: combo.ClipRates, PostCredits: e.postCredits(ctx, combo),
 		})
 	}

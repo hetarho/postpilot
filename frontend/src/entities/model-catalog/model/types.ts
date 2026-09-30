@@ -1,5 +1,6 @@
 import { orderModelsForStage, type LevelName } from './level'
 import i18next from 'i18next'
+import type { PostCreditsBasisName } from '@/shared/api'
 import { MODEL_PURPOSES } from '../config'
 import { type ModelPurpose } from '../config'
 /** The three places a model is chosen ([I3]); the app never fills one in. */
@@ -37,6 +38,9 @@ export interface CatalogModel {
   levels: Partial<Record<StageName, LevelName>>
   /** Server-owned plan and free-route decision for each listed stage. */
   access?: Partial<Record<StageName, ModelStageAccess>>
+  /** What one post costs each paid stage, in credits (QUOTA-64). A free stage and a stage the
+   *  server has no figure for are absent. */
+  postCredits?: Partial<Record<StageName, PostCreditFigure>>
   disabled: boolean
   disabledReason: string
   contextTokens: bigint
@@ -50,6 +54,12 @@ export interface CatalogModel {
    *  bounded model price. As temporary as `affordable`, and it replaces that reason: the
    *  zero `requiredCredits` it comes with would otherwise read as "costs 0". */
   priceUnavailable?: boolean
+}
+
+/** One stage's per-post figure: credits, never a price (QUOTA-66), and where it came from. */
+export interface PostCreditFigure {
+  credits: number
+  basis: PostCreditsBasisName
 }
 
 export interface ModelStageAccess {

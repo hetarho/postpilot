@@ -275,7 +275,13 @@ export type {
   ApplyCatalogDocumentResponse as ProtoApplyCatalogDocumentResponse,
   PreviewCatalogDocumentResponse as ProtoPreviewCatalogDocumentResponse,
 } from './gen/postpilot/v1/model_catalog_pb'
-export { ProviderService, Stage, SelectionSlot } from './gen/postpilot/v1/provider_pb'
+export {
+  ProviderService,
+  Stage,
+  SelectionSlot,
+  PostCreditsBasis,
+} from './gen/postpilot/v1/provider_pb'
+export { postCreditsBasisName, type PostCreditsBasisName } from './post-credits'
 export {
   GetSelectionsResponseSchema,
   ListModelsResponseSchema,

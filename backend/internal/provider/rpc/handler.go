@@ -56,29 +56,11 @@ func (h *Handler) GetSelections(ctx context.Context, _ *connect.Request[postpilo
 		return nil, toConnectError("get selections", err)
 	}
 	out := make([]*postpilotv1.Selection, 0, len(selections))
-	var observe, write llm.ModelRef
 	for _, s := range selections {
 		out = append(out, toProtoSelection(s))
-		if s.Missing || s.Slot != provider.SlotActive {
-			continue
-		}
-		switch s.Stage {
-		case provider.StageObserve:
-			observe = s.Ref
-		case provider.StageWrite:
-			write = s.Ref
-		}
 	}
-	estimated := h.svc.EstimatePostCredits(observe, write)
-	unavailable := estimated < 0
-	if unavailable {
-		estimated = 0
-	}
-	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{
-		Selections:           out,
-		EstimatedPostCredits: int32(estimated),
-		AiPriceUnavailable:   unavailable,
-	}), nil
+	// A post's estimate is each model's per-stage figure on ListModels (QUOTA-64).
+	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{Selections: out}), nil
 }
 
 func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpilotv1.SaveSelectionRequest]) (*connect.Response[postpilotv1.SaveSelectionResponse], error) {

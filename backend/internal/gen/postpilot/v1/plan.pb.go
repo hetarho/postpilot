@@ -659,22 +659,17 @@ func (x *CreditPack) GetId() string {
 // One estimator combo: a pair of models the operator assigned to a price tier, reduced to
 // the unit rates a comparison screen multiplies (QUOTA-40).
 //
-// Rates are MILLI-credits, so a client stays in integers: a post costs
-// `per_post_base + photos × per_photo + videos × per_video + ceil(chars/1000) × per_thousand_chars`
-// milli-credits, and a grant covers `floor(credits × 1000 / that)` posts.
+// A level prices one post as post_credits (QUOTA-64); a grant covers `floor(credits / that)`
+// posts. Clip rates stay MILLI-credits so a client stays in integers.
 //
 // The models behind a combo are named only for the operator's own screen; a comparison
 // names the combo (QUOTA-39).
 type EstimatorCombo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// One of the model levels `value` `balanced` `premium` `top`.
-	Combo                 string `protobuf:"bytes,1,opt,name=combo,proto3" json:"combo,omitempty"`
-	ObserveLabel          string `protobuf:"bytes,2,opt,name=observe_label,json=observeLabel,proto3" json:"observe_label,omitempty"`
-	WriteLabel            string `protobuf:"bytes,3,opt,name=write_label,json=writeLabel,proto3" json:"write_label,omitempty"`
-	PerPhotoMilli         int32  `protobuf:"varint,4,opt,name=per_photo_milli,json=perPhotoMilli,proto3" json:"per_photo_milli,omitempty"`
-	PerVideoMilli         int32  `protobuf:"varint,5,opt,name=per_video_milli,json=perVideoMilli,proto3" json:"per_video_milli,omitempty"`
-	PerThousandCharsMilli int32  `protobuf:"varint,6,opt,name=per_thousand_chars_milli,json=perThousandCharsMilli,proto3" json:"per_thousand_chars_milli,omitempty"`
-	PerPostBaseMilli      int32  `protobuf:"varint,7,opt,name=per_post_base_milli,json=perPostBaseMilli,proto3" json:"per_post_base_milli,omitempty"`
+	Combo        string `protobuf:"bytes,1,opt,name=combo,proto3" json:"combo,omitempty"`
+	ObserveLabel string `protobuf:"bytes,2,opt,name=observe_label,json=observeLabel,proto3" json:"observe_label,omitempty"`
+	WriteLabel   string `protobuf:"bytes,3,opt,name=write_label,json=writeLabel,proto3" json:"write_label,omitempty"`
 	// Absent when this pair cannot price video observation and structured writing.
 	ClipRates *ClipEstimatorRates `protobuf:"bytes,8,opt,name=clip_rates,json=clipRates,proto3" json:"clip_rates,omitempty"`
 	// One post with photos on this level's assigned pair: its observe and write figures summed,
@@ -734,34 +729,6 @@ func (x *EstimatorCombo) GetWriteLabel() string {
 		return x.WriteLabel
 	}
 	return ""
-}
-
-func (x *EstimatorCombo) GetPerPhotoMilli() int32 {
-	if x != nil {
-		return x.PerPhotoMilli
-	}
-	return 0
-}
-
-func (x *EstimatorCombo) GetPerVideoMilli() int32 {
-	if x != nil {
-		return x.PerVideoMilli
-	}
-	return 0
-}
-
-func (x *EstimatorCombo) GetPerThousandCharsMilli() int32 {
-	if x != nil {
-		return x.PerThousandCharsMilli
-	}
-	return 0
-}
-
-func (x *EstimatorCombo) GetPerPostBaseMilli() int32 {
-	if x != nil {
-		return x.PerPostBaseMilli
-	}
-	return 0
 }
 
 func (x *EstimatorCombo) GetClipRates() *ClipEstimatorRates {
@@ -1398,21 +1365,17 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"CreditPack\x12\x1b\n" +
 	"\tprice_krw\x18\x01 \x01(\x05R\bpriceKrw\x12\x18\n" +
 	"\acredits\x18\x02 \x01(\x05R\acredits\x12\x0e\n" +
-	"\x02id\x18\x03 \x01(\tR\x02id\"\xd6\x03\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\"\x87\x03\n" +
 	"\x0eEstimatorCombo\x12\x14\n" +
 	"\x05combo\x18\x01 \x01(\tR\x05combo\x12#\n" +
 	"\robserve_label\x18\x02 \x01(\tR\fobserveLabel\x12\x1f\n" +
 	"\vwrite_label\x18\x03 \x01(\tR\n" +
-	"writeLabel\x12&\n" +
-	"\x0fper_photo_milli\x18\x04 \x01(\x05R\rperPhotoMilli\x12&\n" +
-	"\x0fper_video_milli\x18\x05 \x01(\x05R\rperVideoMilli\x127\n" +
-	"\x18per_thousand_chars_milli\x18\x06 \x01(\x05R\x15perThousandCharsMilli\x12-\n" +
-	"\x13per_post_base_milli\x18\a \x01(\x05R\x10perPostBaseMilli\x12?\n" +
+	"writeLabel\x12?\n" +
 	"\n" +
 	"clip_rates\x18\b \x01(\v2 .postpilot.v1.ClipEstimatorRatesR\tclipRates\x12!\n" +
 	"\fpost_credits\x18\t \x01(\x05R\vpostCredits\x12L\n" +
 	"\x12post_credits_basis\x18\n" +
-	" \x01(\x0e2\x1e.postpilot.v1.PostCreditsBasisR\x10postCreditsBasis\"\xa4\x01\n" +
+	" \x01(\x0e2\x1e.postpilot.v1.PostCreditsBasisR\x10postCreditsBasisJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x0fper_photo_milliR\x0fper_video_milliR\x18per_thousand_chars_milliR\x13per_post_base_milli\"\xa4\x01\n" +
 	"\x12ClipEstimatorRates\x12(\n" +
 	"\x10per_source_milli\x18\x01 \x01(\x05R\x0eperSourceMilli\x125\n" +
 	"\x17per_output_second_milli\x18\x02 \x01(\x05R\x14perOutputSecondMilli\x12-\n" +

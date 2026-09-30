@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoPlan, ProtoTerm } from '@/shared/api'
-import { CLIP_ESTIMATE_STORAGE_KEY, PLAN_ESTIMATE_STORAGE_KEY } from '../config'
+import { PostCreditsBasis, ProtoPlan, ProtoTerm } from '@/shared/api'
+import { CLIP_ESTIMATE_STORAGE_KEY } from '../config'
 import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice', plan: ProtoPlan.BASIC }
 
 beforeEach(() => {
-  localStorage.removeItem(PLAN_ESTIMATE_STORAGE_KEY)
   localStorage.removeItem(CLIP_ESTIMATE_STORAGE_KEY)
 })
 
@@ -126,18 +125,36 @@ describe('the published plans', () => {
       user: USER,
       plans: {
         plan: ProtoPlan.BASIC,
-        estimatorCombos: [
-          { combo: 'balanced', perPhotoMilli: 0, perThousandCharsMilli: 0, perPostBaseMilli: 1000 },
-        ],
+        estimatorCombos: [{ combo: 'balanced', postCredits: 1 }],
       },
     })
     const items = await cards()
     expect(screen.getByText(/30회 받는다고 가정하고 월 보너스를 더해/)).toBeInTheDocument()
     expect(screen.queryByText(/예상 계산 환율/)).not.toBeInTheDocument()
     expect(within(items[2]).getByText('글 약 1860편 제작 가능')).toBeInTheDocument()
+    expect(within(items[2]).getByText('글 1개당 약 1크레딧 · 최근 사용량 기준')).toBeInTheDocument()
   })
 
-  it('keeps missing prices and capabilities unavailable, and blog and clip inputs independent', async () => {
+  // QUOTA-64: a level whose pair has too little recent usage prices a post from the catalog
+  // and says so.
+  it('labels an estimated per-post figure as one', async () => {
+    renderAppAt('/plans', {
+      user: USER,
+      plans: {
+        plan: ProtoPlan.BASIC,
+        estimatorCombos: [
+          { combo: 'balanced', postCredits: 20, postCreditsBasis: PostCreditsBasis.ESTIMATE },
+        ],
+      },
+    })
+    const items = await cards()
+    expect(within(items[2]).getByText('글 1개당 약 20크레딧 · 예상')).toBeInTheDocument()
+    expect(within(items[2]).getByText('글 약 93편 제작 가능')).toBeInTheDocument()
+  })
+
+  // QUOTA-41: a post's figure is recent real usage, so the blog basis has no conditions to
+  // change; the conditions button and sheet belong to the clip basis alone.
+  it('keeps missing prices unavailable and offers conditions on the clip basis only', async () => {
     const user = userEvent.setup()
     renderAppAt('/plans', {
       user: USER,
@@ -145,9 +162,8 @@ describe('the published plans', () => {
     })
     const items = await cards()
     expect(within(items[2]).getAllByText('모델·가격 정보 준비 중')).toHaveLength(1)
-    await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
-    fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '12' } })
-    await user.keyboard('{Escape}')
+    expect(screen.getByText('최근 실제 사용량으로 계산해요')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '조건 바꾸기' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: '클립 기준' }))
     expect(screen.getByText('원본 영상은 개당 60초로 가정해요.')).toBeInTheDocument()
     expect(within(items[2]).getAllByText('클립 계산 가능한 모델 미지정')).toHaveLength(2)
@@ -161,7 +177,7 @@ describe('the published plans', () => {
     })
     await user.keyboard('{Escape}')
     await user.click(screen.getByRole('tab', { name: '블로그 글 기준' }))
-    expect(screen.getByText('1000자 · 사진 12장 · 영상 0개 기준')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '조건 바꾸기' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: '클립 기준' }))
     await waitFor(() =>
       expect(screen.getByText('원본 영상 4개 → 완성 클립 30초')).toBeInTheDocument(),

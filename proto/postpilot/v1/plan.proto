@@ -131,9 +131,8 @@ message CreditPack {
 // One estimator combo: a pair of models the operator assigned to a price tier, reduced to
 // the unit rates a comparison screen multiplies (QUOTA-40).
 //
-// Rates are MILLI-credits, so a client stays in integers: a post costs
-// `per_post_base + photos × per_photo + videos × per_video + ceil(chars/1000) × per_thousand_chars`
-// milli-credits, and a grant covers `floor(credits × 1000 / that)` posts.
+// A level prices one post as post_credits (QUOTA-64); a grant covers `floor(credits / that)`
+// posts. Clip rates stay MILLI-credits so a client stays in integers.
 //
 // The models behind a combo are named only for the operator's own screen; a comparison
 // names the combo (QUOTA-39).
@@ -142,10 +141,9 @@ message EstimatorCombo {
   string combo = 1;
   string observe_label = 2;
   string write_label = 3;
-  int32 per_photo_milli = 4;
-  int32 per_video_milli = 5;
-  int32 per_thousand_chars_milli = 6;
-  int32 per_post_base_milli = 7;
+  // Blog rates became post_credits from recent usage (QUOTA-64).
+  reserved 4, 5, 6, 7;
+  reserved "per_photo_milli", "per_video_milli", "per_thousand_chars_milli", "per_post_base_milli";
   // Absent when this pair cannot price video observation and structured writing.
   ClipEstimatorRates clip_rates = 8;
   // One post with photos on this level's assigned pair: its observe and write figures summed,

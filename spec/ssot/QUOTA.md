@@ -169,4 +169,4 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
--
+- r27 260930 QUOTA-6✎ 55✎ 59✎ disclosed conversion→undisclosed · QUOTA-18✎ micro-USD→credits · QUOTA-36✎ 40✎ 41✎ item conditions→QUOTA-64 figures, blog inputs→none · QUOTA-64+ recent-usage per-post credits · QUOTA-65+ conversion undisclosed · QUOTA-66+ supplier cost master-only

@@ -1,6 +1,8 @@
 // Proto ↔ domain for the plan ladder. The Plan enum crosses here and nowhere else.
 import {
   type GetMyPlanResponse,
+  type PostCreditsBasis,
+  postCreditsBasisName,
   ProtoPlan,
   type ProtoPlanUser,
   type ProtoCreditBalance,
@@ -107,21 +109,19 @@ function toCombo(combo: {
   combo: string
   observeLabel: string
   writeLabel: string
-  perPhotoMilli: number
-  perVideoMilli: number
-  perThousandCharsMilli: number
-  perPostBaseMilli: number
+  postCredits: number
+  postCreditsBasis: PostCreditsBasis
   clipRates?: ClipEstimatorRates
 }): EstimatorCombo | undefined {
   if (!(ESTIMATOR_COMBOS as readonly string[]).includes(combo.combo)) return undefined
+  // A figure with no basis this build can name is no figure: an unlabelled number would read
+  // as a promise the screen cannot qualify.
+  const basis = postCreditsBasisName(combo.postCreditsBasis)
   return {
     combo: combo.combo as EstimatorComboName,
     observeLabel: combo.observeLabel,
     writeLabel: combo.writeLabel,
-    perPhotoMilli: combo.perPhotoMilli,
-    perVideoMilli: combo.perVideoMilli,
-    perThousandCharsMilli: combo.perThousandCharsMilli,
-    perPostBaseMilli: combo.perPostBaseMilli,
+    ...(basis && combo.postCredits > 0 && { postCredits: { credits: combo.postCredits, basis } }),
     ...(combo.clipRates && {
       clipRates: {
         perSourceMilli: combo.clipRates.perSourceMilli,

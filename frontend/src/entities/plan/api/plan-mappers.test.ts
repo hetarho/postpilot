@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { create } from '@bufbuild/protobuf'
-import { GetMyPlanResponseSchema, ProtoPlan } from '@/shared/api'
+import { GetMyPlanResponseSchema, PostCreditsBasis, ProtoPlan } from '@/shared/api'
 import { toMyPlan } from './plan-mappers'
 
 describe('toMyPlan offers', () => {
@@ -116,7 +116,9 @@ describe('toMyPlan lots', () => {
 })
 
 describe('toMyPlan estimator combos', () => {
-  it('carries every rate a client multiplies', () => {
+  // QUOTA-64: a level carries one post's credits and where the figure came from; a figure with
+  // no basis this build can name is no figure at all.
+  it("carries each level's per-post figure with its basis", () => {
     const myPlan = toMyPlan(
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.FREE,
@@ -125,11 +127,11 @@ describe('toMyPlan estimator combos', () => {
             combo: 'balanced',
             observeLabel: 'vendor/eyes',
             writeLabel: 'vendor/pen',
-            perPhotoMilli: 723,
-            perVideoMilli: 1100,
-            perThousandCharsMilli: 3600,
-            perPostBaseMilli: 3800,
+            postCredits: 38,
+            postCreditsBasis: PostCreditsBasis.RECENT_USAGE,
           },
+          { combo: 'premium', postCredits: 90, postCreditsBasis: PostCreditsBasis.ESTIMATE },
+          { combo: 'top', postCredits: 12, postCreditsBasis: PostCreditsBasis.UNSPECIFIED },
         ],
       }),
     )
@@ -139,11 +141,15 @@ describe('toMyPlan estimator combos', () => {
         combo: 'balanced',
         observeLabel: 'vendor/eyes',
         writeLabel: 'vendor/pen',
-        perPhotoMilli: 723,
-        perVideoMilli: 1100,
-        perThousandCharsMilli: 3600,
-        perPostBaseMilli: 3800,
+        postCredits: { credits: 38, basis: 'recent' },
       },
+      {
+        combo: 'premium',
+        observeLabel: '',
+        writeLabel: '',
+        postCredits: { credits: 90, basis: 'estimate' },
+      },
+      { combo: 'top', observeLabel: '', writeLabel: '' },
     ])
   })
 
@@ -153,7 +159,7 @@ describe('toMyPlan estimator combos', () => {
     const unknown = toMyPlan(
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.FREE,
-        estimatorCombos: [{ combo: 'legacy', perPostBaseMilli: 10 }],
+        estimatorCombos: [{ combo: 'legacy', postCredits: 10 }],
       }),
     )
     expect(unknown?.estimatorCombos).toEqual([])

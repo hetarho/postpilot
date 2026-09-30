@@ -65,7 +65,7 @@ func (s snapshotEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo
 }
 func (s snapshotEstimator) ComboRatesAt(_ context.Context, rate plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	*s.seen = rate
-	return []planrpc.EstimatorCombo{{Combo: "value", PerPostBaseMilli: 1234}}, nil
+	return []planrpc.EstimatorCombo{{Combo: "value", PostCredits: plan.PostFigure{Credits: 12, Basis: plan.PostCreditsEstimate}}}, nil
 }
 
 // Estimates are priced at the selected rate for everyone, but only the operator is shown that
@@ -93,8 +93,8 @@ func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, er
 	}
 	return []planrpc.EstimatorCombo{{
 		Combo: "top", ObserveLabel: "vendor/eyes", WriteLabel: "vendor/pen",
-		PerPhotoMilli: 723, PerVideoMilli: 1100, Per1000CharsMilli: 3600, PerPostBaseMilli: 3800,
-		ClipRates: s.clipRates,
+		PostCredits: plan.PostFigure{Credits: 38, Basis: plan.PostCreditsRecentUsage},
+		ClipRates:   s.clipRates,
 	}}, nil
 }
 
@@ -148,11 +148,8 @@ func TestGetMyPlanPublishesTheRungsAndTheEstimatorRates(t *testing.T) {
 		t.Fatalf("combos = %d, want the one assigned", len(msg.EstimatorCombos))
 	}
 	combo := msg.EstimatorCombos[0]
-	if combo.Combo != "top" || combo.PerPhotoMilli != 723 || combo.PerPostBaseMilli != 3800 {
+	if combo.Combo != "top" || combo.PostCredits != 38 || combo.PostCreditsBasis != postpilotv1.PostCreditsBasis_POST_CREDITS_BASIS_RECENT_USAGE {
 		t.Errorf("combo = %+v", combo)
-	}
-	if combo.PerThousandCharsMilli != 3600 || combo.PerVideoMilli != 1100 {
-		t.Errorf("combo rates = %+v", combo)
 	}
 }
 
@@ -198,8 +195,8 @@ func TestEstimatorComboNamesItsModelsToMasterOnly(t *testing.T) {
 		if len(combos) != 1 || combos[0].GetObserveLabel() != want[0] || combos[0].GetWriteLabel() != want[1] {
 			t.Fatalf("%s combos = %+v, want labels %v", acting, combos, want)
 		}
-		if combos[0].GetPerPostBaseMilli() != 3800 {
-			t.Fatalf("%s lost its rates: %+v", acting, combos[0])
+		if combos[0].GetPostCredits() != 38 {
+			t.Fatalf("%s lost its per-post figure: %+v", acting, combos[0])
 		}
 	}
 }
@@ -224,7 +221,7 @@ type figureEstimator struct{}
 
 func (figureEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
 	return []planrpc.EstimatorCombo{
-		{Combo: "value", PerPostBaseMilli: 1000, PostCredits: plan.PostFigure{Credits: 48, Basis: plan.PostCreditsRecentUsage}},
-		{Combo: "top", PerPostBaseMilli: 9000},
+		{Combo: "value", PostCredits: plan.PostFigure{Credits: 48, Basis: plan.PostCreditsRecentUsage}},
+		{Combo: "top"},
 	}, nil
 }

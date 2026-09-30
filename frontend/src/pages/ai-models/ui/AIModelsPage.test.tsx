@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { ExperimentSource, ProtoPlan, Stage } from '@/shared/api'
+import { ExperimentSource, PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
@@ -110,6 +110,69 @@ it('describes a chosen model without any price', async () => {
   await chooseOption(user, main.getByRole('combobox', { name: /관찰/ }), 'Vision')
   expect(await main.findByText('컨텍스트 0')).toBeInTheDocument()
   expect(main.queryByText(/\$|1M 토큰|가격 미확인/)).not.toBeInTheDocument()
+})
+
+// QUOTA-64: under each stage the chosen model says what one post costs that stage in credits,
+// and the page prices the saved pair and how many posts the balance covers.
+it('shows per-post credits for the chosen model and the saved pair', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/ai-models', {
+    user: { id: 'alice', plan: ProtoPlan.BASIC },
+    plans: { plan: ProtoPlan.BASIC, balance: { credits: 90, unlimited: false } },
+    providers: {
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'eyes',
+          label: 'Eyes',
+          vision: true,
+          postCredits: [
+            { stage: Stage.OBSERVE, credits: 20, basis: PostCreditsBasis.RECENT_USAGE },
+          ],
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'pen',
+          label: 'Pen',
+          postCredits: [{ stage: Stage.WRITE, credits: 10, basis: PostCreditsBasis.ESTIMATE }],
+        },
+      ],
+      selections: [{ stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'eyes' }],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  expect(
+    await main.findByText('컨텍스트 0 · 최근 사용량 기준 글 1개당 약 20크레딧'),
+  ).toBeInTheDocument()
+  // With no write model yet there is no post to price.
+  expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
+  await chooseOption(user, main.getByRole('combobox', { name: /작성/ }), 'Pen')
+  expect(await main.findByText('컨텍스트 0 · 예상 글 1개당 약 10크레딧')).toBeInTheDocument()
+  expect(await main.findByText('남은 크레딧으로 약 3편 쓸 수 있어요')).toBeInTheDocument()
+  expect(main.getByText(/예상 글 1개당 약 30크레딧/)).toBeInTheDocument()
+})
+
+// The operator is exempt from credits, so the page names what a post costs everyone else and
+// counts no posts against a balance it never spends.
+it('shows the operator the per-post figure without a posts count', async () => {
+  renderAppAt('/ai-models', {
+    user: { id: 'root', plan: ProtoPlan.MASTER },
+    plans: { plan: ProtoPlan.MASTER, balance: { credits: 0, unlimited: true } },
+    providers: {
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'pen',
+          label: 'Pen',
+          postCredits: [{ stage: Stage.WRITE, credits: 10, basis: PostCreditsBasis.RECENT_USAGE }],
+        },
+      ],
+      selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'pen' }],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  expect(await main.findByText('최근 사용량 기준 글 1개당 약 10크레딧')).toBeInTheDocument()
+  expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
 })
 
 it('preserves the stage through the group menu, browser history, and saved experiment links', async () => {

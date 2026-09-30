@@ -46,17 +46,15 @@ export const plansI18n = {
   namespace: 'plans',
   ko: {
     estimate: {
-      perPost: '글 1편당 약 {{credits}} 크레딧',
       posts: '남은 크레딧으로 약 {{count}}편 쓸 수 있어요',
-      none: '남은 크레딧으로는 이 모델을 쓸 수 없어요',
+      none: '남은 크레딧으로는 이 조합으로 글을 쓸 수 없어요',
       caveat: '사진 수와 글 길이에 따라 달라져요.',
     },
   },
   en: {
     estimate: {
-      perPost: 'About {{credits}} credits per post',
       posts: 'About {{count}} posts with your remaining credits',
-      none: 'Your credits do not cover this model',
+      none: 'Your credits do not cover a post with this pair',
       caveat: 'Varies with photo count and post length.',
     },
   },

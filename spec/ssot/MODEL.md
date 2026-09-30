@@ -233,4 +233,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
-- r23 260930 MODEL-28✎ five→four /admin tabs; 추천 조합 moves into 모델 관리 as a sixth tab · MODEL-51✎ headers five purposes→five purposes + `[recommendations]` · MODEL-55✎ export registrations→registrations + recommendation sets · MODEL-56✎ 일괄 편집 shared by five→six tabs · MODEL-69✎ managed on the /admin 추천 조합 tab→모델 관리's tab and document; labels unique · MODEL-70✎ + a duplicate label refuses a save · MODEL-72+ `[recommendations]` section semantics · MODEL-73+ document validation of sets
+- r24 260930 MODEL-19✎ prices inform display→displayed to master only · MODEL-27✎ + per-post credit figure, no price/cost/pricing date · MODEL-32✎ reveals accounting→identities, latency and tokens · MODEL-39✎ + cost reaches master only · MODEL-44✎ cost estimate→per-post credit estimate

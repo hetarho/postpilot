@@ -11,9 +11,11 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router'
-import { Stage } from '@/shared/api'
+import { PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
 import { chooseOption } from '@/test/listbox'
 import type { FakeOptionsSave } from '@/test/posts'
+import type { FakePlansOptions } from '@/test/plans'
+import type { FakeProvidersOptions } from '@/test/providers'
 import type { FakeQualityOptions } from '@/test/quality'
 import { createFakeAuthTransport, createTestQueryClient } from '@/test/session'
 import { GenerationBrief } from './GenerationBrief'
@@ -90,7 +92,17 @@ function renderBrief(
     savedPair = false,
     quality,
     options,
-  }: { savedPair?: boolean; quality?: FakeQualityOptions; options?: Partial<BriefOptions> } = {},
+    models,
+    selections,
+    plans,
+  }: {
+    savedPair?: boolean
+    quality?: FakeQualityOptions
+    options?: Partial<BriefOptions>
+    models?: FakeProvidersOptions['models']
+    selections?: FakeProvidersOptions['selections']
+    plans?: FakePlansOptions
+  } = {},
 ) {
   const calls: string[] = []
   const optionSaves: FakeOptionsSave[] = []
@@ -101,12 +113,14 @@ function renderBrief(
       calls,
       // Three, not two: with each field hiding what the other holds, a two-model catalog cannot
       // show the difference between "excluded" and "the only one left".
-      models: [
+      models: models ?? [
         { providerId: 'openrouter', modelId: 'writer', label: 'Writer', vision: true },
         { providerId: 'openrouter', modelId: 'rival', label: 'Rival', vision: true },
         { providerId: 'openrouter', modelId: 'third', label: 'Third', vision: true },
       ],
-      selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      selections: selections ?? [
+        { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+      ],
       comparisonPairs: savedPair
         ? [
             {
@@ -121,6 +135,7 @@ function renderBrief(
     templates: { templates: [{ id: 'template-a', name: '일기' }] },
     posts: { posts: [{ slug: 'post-a' }], calls, optionSaves },
     quality,
+    plans,
   })
   renderInRouter(
     <GenerationBrief
@@ -431,5 +446,54 @@ describe('GenerationBrief', () => {
     expect(screen.queryByRole('group', { name: '분야' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: '기억 사용' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+  })
+})
+
+// QUOTA-64: the brief says what one post costs on the chosen pair in credits and how many the
+// balance covers; the observe part counts only when this post has a photo.
+describe('GenerationBrief per-post credits', () => {
+  const models: FakeProvidersOptions['models'] = [
+    {
+      providerId: 'openrouter',
+      modelId: 'eyes',
+      label: 'Eyes',
+      vision: true,
+      postCredits: [{ stage: Stage.OBSERVE, credits: 30, basis: PostCreditsBasis.ESTIMATE }],
+    },
+    {
+      providerId: 'openrouter',
+      modelId: 'writer',
+      label: 'Writer',
+      postCredits: [{ stage: Stage.WRITE, credits: 12, basis: PostCreditsBasis.RECENT_USAGE }],
+    },
+  ]
+  const selections: FakeProvidersOptions['selections'] = [
+    { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'eyes' },
+    { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+  ]
+  const plans: FakePlansOptions = {
+    plan: ProtoPlan.BASIC,
+    balance: { credits: 100, unlimited: false },
+  }
+
+  it('prices a post with no photo on the write model alone', async () => {
+    const user = userEvent.setup()
+    renderBrief({ photoCount: 0 }, { models, selections, plans })
+    const panel = await openBrief(user)
+    expect(
+      await within(panel).findByText('남은 크레딧으로 약 8편 쓸 수 있어요'),
+    ).toBeInTheDocument()
+    expect(within(panel).getByText(/최근 사용량 기준 글 1개당 약 12크레딧/)).toBeInTheDocument()
+  })
+
+  it('adds the observe part for a post with photos, and says the sum is an estimate', async () => {
+    const user = userEvent.setup()
+    renderBrief({ photoCount: 3 }, { models, selections, plans })
+    const panel = await openBrief(user)
+    expect(
+      await within(panel).findByText('남은 크레딧으로 약 2편 쓸 수 있어요'),
+    ).toBeInTheDocument()
+    expect(within(panel).getByText(/예상 글 1개당 약 42크레딧/)).toBeInTheDocument()
+    expect(within(panel).queryByText(/\$|USD|원가/)).not.toBeInTheDocument()
   })
 })

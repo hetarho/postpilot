@@ -10,6 +10,7 @@ export type {
   CatalogDocumentPurposePlan,
   EstimatorComboAssignment,
   CatalogModel,
+  PostCreditFigure,
   ComparisonPair,
   ModelRef,
   ReasoningEffortName,
@@ -31,6 +32,7 @@ export {
   orderModelsForStage,
 } from './model/level'
 export { modelChoiceIssue, savedChoiceIssue, freeProviderNote } from './model/access'
+export { pairPostFigure, postCreditLabel, stagePostFigure } from './model/post-credits'
 export { useInvalidateModelAccess } from './api/model-access-cache'
 export {
   REASONING_EFFORTS,

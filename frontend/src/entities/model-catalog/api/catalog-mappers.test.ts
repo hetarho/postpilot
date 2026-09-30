@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
-import { ModelInfoSchema, SelectionSchema, Stage } from '@/shared/api'
+import { ModelInfoSchema, PostCreditsBasis, SelectionSchema, Stage } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import { modelChoiceIssue } from '../model/access'
 import { toCatalogModel, toStageSelection } from './catalog-mappers'
@@ -87,3 +87,22 @@ it.each([
     expect(modelChoiceIssue(toCatalogModel(info), 'write')).toBe('')
   },
 )
+
+// QUOTA-64: a stage's per-post figure crosses as credits and a basis; a stage or basis this
+// build cannot name is dropped rather than shown unlabelled.
+it('maps per-post credits by stage and drops what it cannot name', () => {
+  const model = toCatalogModel(
+    create(ModelInfoSchema, {
+      postCredits: [
+        { stage: Stage.OBSERVE, credits: 30, basis: PostCreditsBasis.ESTIMATE },
+        { stage: Stage.WRITE, credits: 12, basis: PostCreditsBasis.RECENT_USAGE },
+        { stage: Stage.ANALYZE, credits: 9, basis: PostCreditsBasis.UNSPECIFIED },
+      ],
+    }),
+  )
+  expect(model.postCredits).toEqual({
+    observe: { credits: 30, basis: 'estimate' },
+    write: { credits: 12, basis: 'recent' },
+  })
+  expect(toCatalogModel(create(ModelInfoSchema, {})).postCredits).toBeUndefined()
+})

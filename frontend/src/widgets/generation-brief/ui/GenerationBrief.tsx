@@ -11,7 +11,7 @@ import {
   type BriefField,
   type GenerationMode,
 } from '@/features/generate-post'
-import { StageModelSelect } from '@/features/select-model'
+import { PostCreditEstimate, StageModelSelect } from '@/features/select-model'
 import { PostFieldSelect } from '@/features/select-post-field'
 import { PostLanguageSelect } from '@/features/select-post-language'
 import { UseMemoriesField } from '@/features/use-post-memories'
@@ -147,6 +147,9 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
               </>,
             )}
             {marked('write', <StageModelSelect stage="write" error={issues.write} />)}
+            {/* What one post costs on the pair just chosen, and how many the balance covers
+                (QUOTA-64): the observe part counts only when this post has a photo. */}
+            <PostCreditEstimate className="mt-2" photoCount={photoCount} />
             {/* Directly under the model the ordinary run uses, because that is the comparison the
                 A/B pair is: the same step, run twice. The link to the AI 모델 page this replaced
                 asked the user to leave the draft to make a two-dropdown choice. */}

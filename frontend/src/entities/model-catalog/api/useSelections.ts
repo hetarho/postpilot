@@ -16,12 +16,10 @@ import { useModels } from './useModels'
 
 export type SelectionsByStage = Partial<Record<StageName, StageSelection>>
 
-/** The acting user's saved choice per stage, as the server reports it, plus what one post
- *  would cost with that pair. The estimate rides this query rather than a second one
- *  because it is a property of the very selection being read. */
+/** The acting user's saved choice per stage, as the server reports it. What one post costs is
+ *  each model's per-stage figure on the model list (QUOTA-64). */
 export function useSelections(): {
   selections: SelectionsByStage
-  estimatedPostCredits: number
   isPending: boolean
   isError: boolean
 } {
@@ -36,7 +34,6 @@ export function useSelections(): {
   }, [data])
   return {
     selections,
-    estimatedPostCredits: data?.estimatedPostCredits ?? 0,
     isPending,
     isError,
   }

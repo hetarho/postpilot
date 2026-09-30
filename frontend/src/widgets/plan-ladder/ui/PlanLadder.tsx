@@ -155,6 +155,9 @@ interface PlanEstimate {
   kind: 'blog' | 'clip'
   count: number | undefined
   requiredPlan?: PlanName
+  /** A blog level's per-post figure and its basis (QUOTA-64), said beside the count so the
+   *  count reads as credits a post uses, never as a price. */
+  perPost?: { credits: number; basis: 'recent' | 'estimate' }
 }
 
 function ModelEstimate({ estimate }: { estimate: PlanEstimate }) {
@@ -176,6 +179,17 @@ function ModelEstimate({ estimate }: { estimate: PlanEstimate }) {
                   count: shown,
                 })}
       </Typography>
+      {estimate.perPost && !estimate.requiredPlan && estimate.count !== undefined && (
+        <Typography variant="meta" as="dd" className="text-content-tertiary tabular-nums">
+          {t('estimator.perPost', { credits: estimate.perPost.credits })}
+          {' · '}
+          {t(
+            estimate.perPost.basis === 'recent'
+              ? 'estimator.basisRecent'
+              : 'estimator.basisEstimate',
+          )}
+        </Typography>
+      )}
     </div>
   )
 }

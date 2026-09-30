@@ -7,7 +7,7 @@ import {
   canEstimate,
   ESTIMATOR_COMBOS,
   illustrativeMonthlyCredits,
-  postsPerGrant,
+  postsPerFigure,
   PLANS,
   requiredPlanForLevel,
   useMyPlan,
@@ -30,7 +30,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import { PlanLadder } from '@/widgets/plan-ladder'
-import { useClipEstimateInput, useEstimateInput, type EstimateKind } from '../model/estimate-input'
+import { useClipEstimateInput, type EstimateKind } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
 
 /** The plan comparison and the place a subscription starts (QUOTA-28). Composition
@@ -49,7 +49,6 @@ export function PlansPage() {
   const { t } = useTranslation(['plans', 'common'])
   const { myPlan, isPending, isError } = useMyPlan()
   const { myBilling } = useMyBilling()
-  const [input, setInput] = useEstimateInput()
   const [estimatorOpen, setEstimatorOpen] = useState(false)
   const [kind, setKind] = useState<EstimateKind>('blog')
   const [clipInput, setClipInput] = useClipEstimateInput()
@@ -198,13 +197,15 @@ export function PlansPage() {
             aria-live="polite"
           >
             <Typography variant="label" className="text-badge-accent-fg">
-              {t(kind === 'blog' ? 'estimator.blogCondition' : 'estimator.clipCondition', {
+              {t(kind === 'blog' ? 'estimator.blogBasisLabel' : 'estimator.clipCondition', {
                 ns: 'plans',
               })}
             </Typography>
+            {/* A post's figure comes from recent real usage (QUOTA-64), so the blog basis has
+                no condition to state or change; the clip basis keeps its inputs (QUOTA-41). */}
             <Typography variant="fieldTitle" className="text-balance tabular-nums">
               {kind === 'blog'
-                ? t('estimator.summary', { ns: 'plans', ...input })
+                ? t('estimator.blogBasisSummary', { ns: 'plans' })
                 : t('estimator.clipSummary', { ns: 'plans', ...clipInput })}
             </Typography>
             {kind === 'clip' && myPlan.clipSourceSeconds > 0 && (
@@ -247,14 +248,16 @@ export function PlansPage() {
                 const requiredPlan = canEstimate(offer, level)
                   ? undefined
                   : requiredPlanForLevel(level)
+                const perPost = kind === 'blog' ? rates?.postCredits : undefined
                 const count =
                   myPlan.fxUnavailable || requiredPlan
                     ? undefined
                     : kind === 'blog'
-                      ? rates && postsPerGrant(illustrativeMonthlyCredits(offer), rates, input)
+                      ? perPost &&
+                        postsPerFigure(illustrativeMonthlyCredits(offer), perPost.credits)
                       : rates?.clipRates &&
                         clipsPerGrant(illustrativeMonthlyCredits(offer), rates.clipRates, clipInput)
-                return { level, kind, count, requiredPlan }
+                return { level, kind, count, requiredPlan, perPost }
               })
             }
             action={action}
@@ -265,64 +268,63 @@ export function PlansPage() {
           >
             {t(kind === 'blog' ? 'estimator.caveat' : 'estimator.clipCaveat', { ns: 'plans' })}
           </Typography>
-          <ActionBar dock="list" className="fixed right-4 sm:right-6 lg:right-8">
-            <Button
-              variant="secondary"
-              className="gap-2 rounded-full px-5"
-              aria-haspopup="dialog"
-              aria-expanded={estimatorOpen}
-              onClick={() => setEstimatorOpen(true)}
-            >
-              <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
-              {t('estimator.title', { ns: 'plans' })}
-            </Button>
-          </ActionBar>
+          {kind === 'clip' && (
+            <ActionBar dock="list" className="fixed right-4 sm:right-6 lg:right-8">
+              <Button
+                variant="secondary"
+                className="gap-2 rounded-full px-5"
+                aria-haspopup="dialog"
+                aria-expanded={estimatorOpen}
+                onClick={() => setEstimatorOpen(true)}
+              >
+                <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
+                {t('estimator.title', { ns: 'plans' })}
+              </Button>
+            </ActionBar>
+          )}
           <Typography variant="body" className="text-content-secondary mt-5 text-center">
             {t('compare.closing', { ns: 'plans' })}
           </Typography>
-          <Sheet
-            open={estimatorOpen}
-            onClose={() => setEstimatorOpen(false)}
-            labelledBy="plan-estimator-title"
-            header={
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <Typography variant="title" id="plan-estimator-title">
-                  {t(kind === 'blog' ? 'estimator.blogCondition' : 'estimator.clipCondition', {
-                    ns: 'plans',
-                  })}
-                </Typography>
+          {kind === 'clip' && (
+            <Sheet
+              open={estimatorOpen}
+              onClose={() => setEstimatorOpen(false)}
+              labelledBy="plan-estimator-title"
+              header={
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <Typography variant="title" id="plan-estimator-title">
+                    {t('estimator.clipCondition', { ns: 'plans' })}
+                  </Typography>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t('action.close', { ns: 'common' })}
+                    onClick={() => setEstimatorOpen(false)}
+                  >
+                    <X aria-hidden="true" className="size-5" />
+                  </Button>
+                </div>
+              }
+              footer={
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('action.close', { ns: 'common' })}
+                  variant="secondary"
+                  className="mt-5 w-full"
                   onClick={() => setEstimatorOpen(false)}
                 >
-                  <X aria-hidden="true" className="size-5" />
+                  {t('estimator.viewPlans', { ns: 'plans' })}
                 </Button>
-              </div>
-            }
-            footer={
-              <Button
-                variant="secondary"
-                className="mt-5 w-full"
-                onClick={() => setEstimatorOpen(false)}
-              >
-                {t('estimator.viewPlans', { ns: 'plans' })}
-              </Button>
-            }
-          >
-            <PlanEstimator
-              kind={kind}
-              input={input}
-              clipInput={clipInput}
-              sourceSeconds={myPlan.clipSourceSeconds}
-              onInputChange={setInput}
-              onClipInputChange={setClipInput}
-            />
-            <Typography variant="meta" as="p" className="mt-4">
-              {t('estimator.allowance', { ns: 'plans' })}
-            </Typography>
-          </Sheet>
+              }
+            >
+              <PlanEstimator
+                clipInput={clipInput}
+                sourceSeconds={myPlan.clipSourceSeconds}
+                onClipInputChange={setClipInput}
+              />
+              <Typography variant="meta" as="p" className="mt-4">
+                {t('estimator.allowance', { ns: 'plans' })}
+              </Typography>
+            </Sheet>
+          )}
         </section>
       )}
     </main>
