@@ -173,8 +173,16 @@ type handlerStore struct {
 }
 
 func (s handlerStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
-	return fn(s, nil, nil)
+	return fn(s, nil, handlerPlans{})
 }
+
+// handlerPlans answers every account as free: these cases are about the wire mapping, and
+// BILL-20's master refusal reads the tier through the transaction's port.
+type handlerPlans struct{}
+
+func (handlerPlans) AssignTier(context.Context, string, plan.Plan) error   { return nil }
+func (handlerPlans) ReassignTier(context.Context, string, plan.Plan) error { return nil }
+func (handlerPlans) TierOf(context.Context, string) (plan.Plan, error)     { return plan.Free, nil }
 func (s handlerStore) Subscription(context.Context, string) (billing.Subscription, bool, error) {
 	if s.subscription == nil {
 		return billing.Subscription{}, false, nil

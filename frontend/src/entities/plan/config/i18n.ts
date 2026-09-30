@@ -116,7 +116,9 @@ export const i18n = {
       loadFailed: '계정을 불러오지 못했어요.',
       saving: '플랜을 바꾸는 중이에요.',
       empty: '계정이 없어요.',
+      ownPlanFixed: '본인 플랜은 바꿀 수 없어요',
     },
+    operatorCoverage: '운영자 계정이라 결제 없이 모든 기능을 써요.',
   },
   en: {
     benefits: {
@@ -236,6 +238,8 @@ export const i18n = {
       loadFailed: 'Could not load accounts.',
       saving: 'Changing the plan…',
       empty: 'No accounts yet.',
+      ownPlanFixed: 'You cannot change your own plan',
     },
+    operatorCoverage: 'This operator account uses everything without payment.',
   },
 } as const satisfies I18nFragment

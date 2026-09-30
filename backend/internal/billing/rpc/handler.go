@@ -260,6 +260,8 @@ func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
 
 func purchaseError(userID string, err error) error {
 	switch {
+	case errors.Is(err, billing.ErrMasterAccount):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a master account starts no payment", postpilotv1.FailureReason_BILLING_MASTER_ACCOUNT, nil)
 	case errors.Is(err, billing.ErrUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrPurchaseTooSmall):
@@ -337,6 +339,8 @@ func removalError(userID string, err error) error {
 
 func subscriptionError(userID string, err error) error {
 	switch {
+	case errors.Is(err, billing.ErrMasterAccount):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a master account starts no payment", postpilotv1.FailureReason_BILLING_MASTER_ACCOUNT, nil)
 	case errors.Is(err, billing.ErrUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrTierNotSubscribable):
@@ -363,6 +367,8 @@ func changeError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
 	case errors.Is(err, billing.ErrStaleQuote):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refresh the billing quote", postpilotv1.FailureReason_BILLING_STALE_QUOTE, nil)
+	case errors.Is(err, billing.ErrMasterAccount):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a master account starts no payment", postpilotv1.FailureReason_BILLING_MASTER_ACCOUNT, nil)
 	case errors.Is(err, billing.ErrUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrTierNotSubscribable):

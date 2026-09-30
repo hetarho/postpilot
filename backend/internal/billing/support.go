@@ -25,7 +25,7 @@ func (s *Service) AssignSupportTier(ctx context.Context, userID string, target p
 			if current == target {
 				return nil
 			}
-			if err := plans.AssignTier(ctx, userID, target); err != nil {
+			if err := plans.ReassignTier(ctx, userID, target); err != nil {
 				return err
 			}
 			return tx.DeleteSupportCoverage(ctx, userID)
@@ -82,7 +82,7 @@ func (s *Service) AssignSupportTier(ctx context.Context, userID string, target p
 				return err
 			}
 		}
-		if err := plans.AssignTier(ctx, userID, target); err != nil {
+		if err := plans.ReassignTier(ctx, userID, target); err != nil {
 			return err
 		}
 		if err := tx.UpsertSupportCoverage(ctx, SupportCoverage{UserID: userID, ID: coverage.ID, Tier: target,

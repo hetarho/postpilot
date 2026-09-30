@@ -48,6 +48,31 @@ func TestSubscribeRefusalsAndProviderFailure(t *testing.T) {
 	}
 }
 
+// BILL-20 on the non-fixed paths: a master account starts no subscription or change, and the
+// refusal names the account rather than the tier it asked for.
+func TestMasterAccountStartsNoLegacySubscriptionOrChange(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
+	store := newSubscriptionStore()
+	store.plans.tiers["alice"] = plan.Master
+	provider := newSubscriptionProvider()
+	service := newSubscriptionService(store, provider, now)
+
+	if _, err := service.Subscribe(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
+		t.Fatalf("subscribe = %v, want ErrMasterAccount", err)
+	}
+	store.subscriptions["alice"] = activeSubscription("alice", plan.Basic, TermMonthly, now, now.AddDate(0, 1, 0), now.AddDate(0, 1, 0), true)
+	if _, err := service.QuoteChange(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
+		t.Fatalf("quote change = %v, want ErrMasterAccount", err)
+	}
+	if _, _, err := service.ChangeSubscription(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
+		t.Fatalf("change = %v, want ErrMasterAccount", err)
+	}
+	if len(provider.requests) != 0 || store.plans.tiers["alice"] != plan.Master || len(store.events) != 0 {
+		t.Fatalf("requests=%+v tier=%s events=%+v", provider.requests, store.plans.tiers["alice"], store.events)
+	}
+}
+
 func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 1, 31, 9, 30, 0, 0, seoul)
@@ -144,6 +169,25 @@ func TestRunDueCoversAnnualGrantRenewalFailureAndCancellation(t *testing.T) {
 		}
 		if err := service.RunDue(ctx, due.Add(time.Hour)); err != nil || len(provider.requests) != 1 || len(store.events) != 1 {
 			t.Fatalf("lapsed retry: requests=%d events=%d err=%v", len(provider.requests), len(store.events), err)
+		}
+	})
+
+	// BILL-20: a subscription a master account still holds ends uncharged even with
+	// auto-renew on, the tier stays master and the notice does not claim a drop to free.
+	t.Run("master account lapses without charge and stays master", func(t *testing.T) {
+		store := newSubscriptionStore()
+		store.plans.tiers["alice"] = plan.Master
+		store.subscriptions["alice"] = activeSubscription("alice", plan.Basic, TermMonthly, anchor, due, due, true)
+		provider := newSubscriptionProvider()
+		service := newSubscriptionService(store, provider, due)
+		if err := service.RunDue(ctx, due); err != nil {
+			t.Fatal(err)
+		}
+		if store.subscriptions["alice"].Status != "lapsed" || store.plans.tiers["alice"] != plan.Master || len(provider.requests) != 0 {
+			t.Fatalf("subscription=%+v tier=%s requests=%+v", store.subscriptions["alice"], store.plans.tiers["alice"], provider.requests)
+		}
+		if len(store.mailer.messages) != 1 || !strings.Contains(store.mailer.messages[0].text, "운영자 계정이라") || strings.Contains(store.mailer.messages[0].text, "free") {
+			t.Fatalf("mail = %+v", store.mailer.messages)
 		}
 	})
 
@@ -381,7 +425,16 @@ func (*subscriptionCredits) GrantBonusOnce(context.Context, string, string, int)
 
 type subscriptionPlans struct{ tiers map[string]plan.Plan }
 
+// AssignTier mirrors auth's master hold (QUOTA-63), so billing tests see the tier the real
+// port would leave.
 func (p *subscriptionPlans) AssignTier(_ context.Context, userID string, tier plan.Plan) error {
+	if p.tiers[userID] == plan.Master {
+		return nil
+	}
+	p.tiers[userID] = tier
+	return nil
+}
+func (p *subscriptionPlans) ReassignTier(_ context.Context, userID string, tier plan.Plan) error {
 	p.tiers[userID] = tier
 	return nil
 }

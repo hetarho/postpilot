@@ -338,6 +338,10 @@ enum FailureReason {
   MODEL_FREE_PATH_UNAVAILABLE = 276;
   MODEL_FREE_INELIGIBLE = 277;
   CLIP_SERVER_EXPORT_EXHAUSTED = 278;
+  // SetUserPlan on the calling account: a master leaves master only by another master (QUOTA-63).
+  MASTER_SELF_PLAN = 281;
+  // A master account starts no subscription, change or pack purchase (BILL-20).
+  BILLING_MASTER_ACCOUNT = 282;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

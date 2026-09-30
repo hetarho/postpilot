@@ -37,6 +37,9 @@ var (
 	ErrPaymentPending = errors.New("payment outcome is pending")
 	ErrStaleQuote     = errors.New("billing quote no longer matches subscription")
 	ErrInvalidPack    = errors.New("unknown fixed credit pack")
+	// ErrMasterAccount refuses every payment a master account would start (BILL-20): the
+	// operator tier is not sold, and a paid tier it bought would demote it.
+	ErrMasterAccount = errors.New("a master account starts no payment")
 )
 
 type Term string

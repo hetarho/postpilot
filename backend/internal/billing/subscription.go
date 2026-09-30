@@ -17,6 +17,11 @@ func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, 
 	if !s.Enabled() {
 		return Subscription{}, ErrUnavailable
 	}
+	if master, err := s.masterAccount(ctx, userID); err != nil {
+		return Subscription{}, err
+	} else if master {
+		return Subscription{}, ErrMasterAccount
+	}
 	if !billableTier(tier) {
 		return Subscription{}, ErrTierNotSubscribable
 	}
@@ -164,8 +169,17 @@ func (s *Service) runDueStep(ctx context.Context, subscription Subscription, now
 	if subscription.TermEnd.After(now) {
 		return s.grantAnnualWindow(ctx, subscription, now)
 	}
+	// A master account is never charged (BILL-20): a subscription it still holds from before
+	// its promotion ends here as a cancellation would, whatever its auto-renew flag says.
+	master, err := s.masterAccount(ctx, subscription.UserID)
+	if err != nil {
+		return subscription, err
+	}
+	if master {
+		return s.lapseCancelled(ctx, subscription, now, OperatorSubscriptionEndedMail(subscription.Tier, subscription.Term))
+	}
 	if !subscription.AutoRenew {
-		return s.lapseCancelled(ctx, subscription, now)
+		return s.lapseCancelled(ctx, subscription, now, CancellationMail(subscription.Tier, subscription.Term))
 	}
 	return s.renew(ctx, subscription, now)
 }
@@ -300,7 +314,9 @@ func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscript
 	return updated, nil
 }
 
-func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
+// lapseCancelled ends a subscription at its term end without a charge. Its tier write goes
+// through AssignTier, which leaves a master account on master (QUOTA-63).
+func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription, now time.Time, notice MailMessage) (Subscription, error) {
 	updated := subscription
 	updated.Status = "lapsed"
 	updated.UpdatedAt = now
@@ -322,7 +338,7 @@ func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription,
 	if err != nil {
 		return subscription, err
 	}
-	if err := s.sendMail(ctx, subscription.UserID, CancellationMail(subscription.Tier, subscription.Term)); err != nil {
+	if err := s.sendMail(ctx, subscription.UserID, notice); err != nil {
 		return updated, err
 	}
 	return updated, nil

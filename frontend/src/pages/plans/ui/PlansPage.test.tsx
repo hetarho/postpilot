@@ -52,6 +52,7 @@ describe('the published plans', () => {
     })
     await cards()
     expect(screen.queryByRole('link', { name: '구독하기' })).not.toBeInTheDocument()
+    expect(screen.getByText('운영자 계정이라 결제 없이 모든 기능을 써요.')).toBeInTheDocument()
     unmount()
     renderAppAt('/plans', {
       user: { id: 'alice', plan: ProtoPlan.FREE },

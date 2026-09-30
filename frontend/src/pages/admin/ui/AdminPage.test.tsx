@@ -42,27 +42,49 @@ describe('the admin screen', () => {
     )
   })
 
-  // A10: the last-master guard lives on the server, so the screen renders its refusal rather
-  // than predicting one — and the row keeps the tier the database still has.
-  it('reports the server’s refusal to demote the last master', async () => {
+  // QUOTA-63: the operator's own row is a fixed tier, not a control — a master leaves master
+  // only by another master, and every other row keeps its switch.
+  it('shows the operator’s own tier as fixed', async () => {
+    renderAppAt('/admin', {
+      user: MASTER,
+      plans: {
+        plan: ProtoPlan.MASTER,
+        accounts: [
+          { id: 'root', plan: ProtoPlan.MASTER },
+          { id: 'alice', plan: ProtoPlan.FREE },
+        ],
+      },
+    })
+
+    expect(await screen.findByText('본인 플랜은 바꿀 수 없어요')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: 'root 계정의 플랜' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: 'alice 계정의 플랜' })).toBeInTheDocument()
+  })
+
+  // A10: refusals live on the server (the last-master guard among them), so the screen renders
+  // what came back rather than predicting it — and the row keeps the tier the database has.
+  it('reports the server’s refusal to change another master', async () => {
     const user = userEvent.setup()
     renderAppAt('/admin', {
       user: MASTER,
       plans: {
         plan: ProtoPlan.MASTER,
-        accounts: [{ id: 'root', plan: ProtoPlan.MASTER }],
+        accounts: [
+          { id: 'root', plan: ProtoPlan.MASTER },
+          { id: 'ops', plan: ProtoPlan.MASTER },
+        ],
         setPlanFails: true,
       },
     })
 
-    const root = await screen.findByRole('tablist', { name: 'root 계정의 플랜' })
-    await user.click(within(root).getByRole('tab', { name: 'Basic' }))
+    const ops = await screen.findByRole('tablist', { name: 'ops 계정의 플랜' })
+    await user.click(within(ops).getByRole('tab', { name: 'Basic' }))
 
     const alert = await screen.findByRole('alert')
     expect(
       within(alert).getByText('마지막 운영자 계정은 다른 플랜으로 바꿀 수 없어요.'),
     ).toBeInTheDocument()
-    expect(within(root).getByRole('tab', { name: '운영자', selected: true })).toBeInTheDocument()
+    expect(within(ops).getByRole('tab', { name: '운영자', selected: true })).toBeInTheDocument()
   })
 
   // A10: a tier that cannot use the screen never reaches it. The server refuses the two

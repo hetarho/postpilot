@@ -30,6 +30,35 @@ type Service struct {
 	rateCache map[string]int64
 }
 
+// refuseMaster is BILL-20's gate, read through a transaction's Plans port so the check and
+// the write it guards see one snapshot.
+func refuseMaster(ctx context.Context, plans Plans, userID string) error {
+	tier, err := plans.TierOf(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if tier == plan.Master {
+		return ErrMasterAccount
+	}
+	return nil
+}
+
+// masterAccount reads the account's tier for a path that writes nothing itself (a quote, a
+// renewal decision). Every billing store supplies Plans to its transactions, so this needs
+// no separately wired collaborator.
+func (s *Service) masterAccount(ctx context.Context, userID string) (bool, error) {
+	var master bool
+	err := s.store.InWriteTx(ctx, func(_ Store, _ Credits, plans Plans) error {
+		err := refuseMaster(ctx, plans, userID)
+		master = errors.Is(err, ErrMasterAccount)
+		if master {
+			return nil
+		}
+		return err
+	})
+	return master, err
+}
+
 func NewService(store Store, provider Provider, rates Rates, credits Credits, plans Plans, accounts Accounts, mailer Mailer) *Service {
 	return &Service{
 		store: store, provider: provider, rates: rates, credits: credits,

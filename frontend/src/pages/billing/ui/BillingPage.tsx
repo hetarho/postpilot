@@ -12,7 +12,7 @@ import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
 import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function BillingPage() {
-  const { t } = useTranslation(['billing', 'common'])
+  const { t } = useTranslation(['billing', 'common', 'plans'])
   const { myBilling, isPending, isError } = useMyBilling()
   const { myPlan } = useMyPlan()
   const navigate = useNavigate()
@@ -22,6 +22,9 @@ export function BillingPage() {
   const initialSubscription = useRouterState({
     select: (state) => state.location.state.billingSubscription,
   })
+  // A master account is never charged (BILL-20): no plan link, subscription action or pack,
+  // and a subscription it still holds ends at its term without renewal.
+  const master = myPlan?.plan === 'master'
   const [registration] = useState(initialRegistration)
   const [subscribed] = useState(initialSubscription)
   const noticeCleared = useRef(false)
@@ -77,7 +80,7 @@ export function BillingPage() {
             <BenefitsSummary
               plan={myPlan}
               nextPaymentAt={
-                myBilling.subscription?.autoRenew ? myBilling.subscription.termEnd : ''
+                myBilling.subscription?.autoRenew && !master ? myBilling.subscription.termEnd : ''
               }
             />
           )}
@@ -85,7 +88,12 @@ export function BillingPage() {
             <Typography variant="title" as="h2">
               {t('subscription.heading', { ns: 'billing' })}
             </Typography>
-            {!myBilling.subscription && (
+            {master && (
+              <Typography variant="body" className="text-content-secondary">
+                {t('operatorCoverage', { ns: 'plans' })}
+              </Typography>
+            )}
+            {!myBilling.subscription && !master && (
               <>
                 <Typography variant="body" className="text-content-secondary">
                   {t('subscription.empty', { ns: 'billing' })}
@@ -102,8 +110,9 @@ export function BillingPage() {
                   offer={myPlan?.offers.find(
                     (offer) => offer.plan === myBilling.subscription?.plan,
                   )}
+                  renews={myBilling.subscription.autoRenew && !master}
                 />
-                <BillingSubscriptionActions subscription={myBilling.subscription} />
+                {!master && <BillingSubscriptionActions subscription={myBilling.subscription} />}
               </>
             )}
           </section>
@@ -153,11 +162,13 @@ export function BillingPage() {
             )}
             {myBilling.history.length > 0 && <BillingHistory events={myBilling.history} />}
           </section>
-          <CreditPurchaseSection
-            hasPaymentMethod={myBilling.paymentMethod !== undefined}
-            activePaid={myBilling.subscription?.status === 'active'}
-            purchases={myBilling.purchases}
-          />
+          {!master && (
+            <CreditPurchaseSection
+              hasPaymentMethod={myBilling.paymentMethod !== undefined}
+              activePaid={myBilling.subscription?.status === 'active'}
+              purchases={myBilling.purchases}
+            />
+          )}
           <RefundRequestSection charges={myBilling.history} />
         </div>
       )}
@@ -168,9 +179,12 @@ export function BillingPage() {
 function SubscriptionDetails({
   subscription,
   offer,
+  renews,
 }: {
   subscription: NonNullable<ReturnType<typeof useMyBilling>['myBilling']>['subscription']
   offer?: MyPlan['offers'][number]
+  /** The term end is a next charge rather than the coverage end. */
+  renews: boolean
 }) {
   const { t } = useTranslation('billing')
   if (!subscription) return null
@@ -211,7 +225,7 @@ function SubscriptionDetails({
         {t('subscription.anchorDay', { day: anchorDay })}
       </dd>
       <dt className={typographyStyles({ variant: 'label', className: 'mt-2' })}>
-        {t(subscription.autoRenew ? 'subscription.nextCharge' : 'subscription.coverageEnds')}
+        {t(renews ? 'subscription.nextCharge' : 'subscription.coverageEnds')}
       </dt>
       <dd className={typographyStyles({ variant: 'body' })}>{formatDate(subscription.termEnd)}</dd>
     </dl>

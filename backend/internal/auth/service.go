@@ -755,7 +755,23 @@ func (s *Service) SetUserPlan(ctx context.Context, userID string, target plan.Pl
 // AssignTier is billing's plan write. Unlike the operator SetUserPlan path it grants no
 // credits: billing coordinates its own charge and usage lot, so a hidden top-up here would
 // duplicate that grant.
+//
+// A master account is left on master (QUOTA-63): every billing tier write — settlement,
+// renewal, upgrade, scheduled change, lapse, refund reversal — funnels through here, so this
+// one refusal is what keeps a payment event from demoting the operator. Only ReassignTier,
+// the support path another master drives, may move a master.
 func (s *Service) AssignTier(ctx context.Context, userID string, target plan.Plan) error {
+	return s.assignTier(ctx, userID, target, false)
+}
+
+// ReassignTier is the support path's plan write (AdminService.SetUserPlan through billing's
+// support coverage). It is AssignTier without the master hold; the store's last-master guard
+// (QUOTA-4) still applies, and the RPC edge has already refused a self-assignment.
+func (s *Service) ReassignTier(ctx context.Context, userID string, target plan.Plan) error {
+	return s.assignTier(ctx, userID, target, true)
+}
+
+func (s *Service) assignTier(ctx context.Context, userID string, target plan.Plan, moveMaster bool) error {
 	if !target.Valid() {
 		return fmt.Errorf("unknown plan %q", target)
 	}
@@ -763,7 +779,7 @@ func (s *Service) AssignTier(ctx context.Context, userID string, target plan.Pla
 	if err != nil {
 		return err
 	}
-	if current == target {
+	if current == target || (current == plan.Master && !moveMaster) {
 		return nil
 	}
 	return s.plans.SetUserPlan(ctx, userID, target)

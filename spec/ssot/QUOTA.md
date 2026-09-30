@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r25 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r26 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -123,6 +123,10 @@
   - this grants credit, not cash or model rights; cash refunds remain BILL-11's
 - QUOTA-61 [o] an admitted job retains the credit/export period secured at start across daily/monthly resets and paid-coverage expiry; newly issued grants are untouched. Unused reserved credit retains its original expiry and does not revive if expired. New jobs and explicit new retries require current entitlement; settlement never charges the same job twice.
 - QUOTA-62 [o] successful server exports use a separate monthly allowance under QUOTA-7 and CLIP-193/194, not AI credits. Monthly benefit renewal replaces unused counts without rollover, including during annual coverage; extra-credit purchases and vouchers buy no export counts.
+- QUOTA-63 [o] a master account leaves master only through another master's support assignment (`AdminService.SetUserPlan`, →QUOTA-4) or the shell `api setplan`; no other path moves it ← an operator must never lose administrative access to their own click, and the shell stays the recovery path
+  - `SetUserPlan` targeting the calling account is refused server-side with its own reason, whatever tier is requested and however many masters exist
+  - 계정 관리 shows the caller's own row as a fixed tier label with no tier control; hiding the control is an affordance, the server refusal is the rule
+  - no billing write (subscription start, change, renewal, lapse, scheduled change, cancellation end, refund reversal) changes a master account's tier (→BILL-20)
 
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
@@ -132,6 +136,7 @@
 - paid subscriber → pack purchase or explicit voucher redemption → independent lot with its own expiry policy
 - upgrade → prorated successful payment → model access + current-month bonus/export deltas → higher daily grant at next existing reset
 - downgrade/cancel → keep purchased coverage → lower/free offer; server render admission/completion follows CLIP-194
+- tier write on a master account → another master's SetUserPlan(last-master guard) | `api setplan` | self-assignment(refused) | any billing write(tier stays master)
 
 ## constraints
 - product constants belong to `internal/plan`, not environment variables; AI completion budgets and upload limits retain their owning-context configuration

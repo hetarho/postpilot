@@ -84,8 +84,12 @@ type Credits interface {
 	GrantBonusOnce(ctx context.Context, id, userID string, credits int) (created bool, err error)
 }
 
+// Plans is the account tier as billing writes it. AssignTier leaves a master account on
+// master (QUOTA-63) and is what every payment-driven write uses; ReassignTier is the support
+// path's write, which another master drives and which may move a master.
 type Plans interface {
 	AssignTier(ctx context.Context, userID string, tier plan.Plan) error
+	ReassignTier(ctx context.Context, userID string, tier plan.Plan) error
 	TierOf(ctx context.Context, userID string) (plan.Plan, error)
 }
 

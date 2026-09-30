@@ -25,6 +25,8 @@ export const errors = {
   BILLING_PAYMENT_PENDING: '결제 결과를 확인하고 있어요. 잠시 후 결제 내역을 다시 확인해 주세요.',
   BILLING_STALE_QUOTE: '요금제 상태가 바뀌었어요. 금액을 다시 확인해 주세요.',
   BILLING_PACK_INVALID: '목록에 있는 크레딧 상품을 선택해 주세요.',
+  BILLING_MASTER_ACCOUNT:
+    '운영자 계정은 결제 없이 모든 기능을 써요. 구독이나 크레딧 구매가 필요 없어요.',
   BILLING_SELECTION_INVALID: '선택한 요금제와 결제 주기를 다시 확인해 주세요.',
   POST_NOT_FOUND: '글을 찾을 수 없어요.',
   POST_FORBIDDEN: '이 글에 접근할 수 없어요.',
@@ -284,6 +286,7 @@ export const errors = {
     '크레딧이 {{required}} 필요한데 {{balance}}만 남았어요. {{renews_at, instant}}에 충전돼요.',
   PLAN_REQUIRED: '플랜을 선택해 주세요.',
   LAST_MASTER: '마지막 운영자 계정은 다른 플랜으로 바꿀 수 없어요.',
+  MASTER_SELF_PLAN: '본인 계정의 플랜은 바꿀 수 없어요. 다른 운영자 계정에서 바꿔 주세요.',
   USER_NOT_FOUND: '계정을 찾을 수 없어요.',
   USER_ID_REQUIRED: '계정을 선택해 주세요.',
   MASTER_ONLY: '운영자 계정만 쓸 수 있는 기능이에요.',

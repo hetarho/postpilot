@@ -77,7 +77,7 @@ type webhookStore struct {
 }
 
 func (s *webhookStore) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Credits, billing.Plans) error) error {
-	return fn(s, nil, nil)
+	return fn(s, nil, handlerPlans{})
 }
 func (s *webhookStore) Subscription(context.Context, string) (billing.Subscription, bool, error) {
 	return billing.Subscription{}, false, nil

@@ -21,6 +21,11 @@ func (s *Service) QuoteChange(ctx context.Context, userID string, tier plan.Plan
 	if !s.Enabled() {
 		return ChangeQuote{}, ErrUnavailable
 	}
+	if master, err := s.masterAccount(ctx, userID); err != nil {
+		return ChangeQuote{}, err
+	} else if master {
+		return ChangeQuote{}, ErrMasterAccount
+	}
 	now := s.now()
 	subscription, kind, err := s.classifyChange(ctx, userID, tier, term, now)
 	if err != nil {
@@ -39,6 +44,11 @@ func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier pl
 	}
 	if !s.Enabled() {
 		return Subscription{}, false, ErrUnavailable
+	}
+	if master, err := s.masterAccount(ctx, userID); err != nil {
+		return Subscription{}, false, err
+	} else if master {
+		return Subscription{}, false, ErrMasterAccount
 	}
 	now := s.now()
 	subscription, kind, err := s.classifyChange(ctx, userID, tier, term, now)

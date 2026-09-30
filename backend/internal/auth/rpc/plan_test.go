@@ -201,29 +201,44 @@ func TestAdminIsMasterOnly(t *testing.T) {
 	}
 }
 
-// A10: the ladder must not be able to lock administration out of the deployment.
-func TestTheLastMasterCannotBeDemoted(t *testing.T) {
+// QUOTA-63: an operator cannot change their own tier on the RPC path, for any target — the
+// last-master guard (QUOTA-4) is no longer what stands between a lone operator and a click.
+func TestAnOperatorCannotChangeTheirOwnPlan(t *testing.T) {
 	authClient, admin, _ := newPlanServer(t)
 	master := loginAs(t, authClient, "root")
 
-	_, err := admin.SetUserPlan(context.Background(),
-		withCookie(&postpilotv1.SetUserPlanRequest{UserId: "root", Plan: postpilotv1.Plan_PLAN_MAX}, master))
-	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatalf("demoting the last master = %v, want failed_precondition", err)
+	for _, target := range []postpilotv1.Plan{postpilotv1.Plan_PLAN_MAX, postpilotv1.Plan_PLAN_FREE, postpilotv1.Plan_PLAN_MASTER} {
+		_, err := admin.SetUserPlan(context.Background(),
+			withCookie(&postpilotv1.SetUserPlanRequest{UserId: "root", Plan: target}, master))
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("self-assigning %v = %v, want failed_precondition", target, err)
+		}
+		if detail := authAppErrorDetail(t, err); detail.GetReason() != "MASTER_SELF_PLAN" {
+			t.Errorf("self-assigning %v: reason = %q", target, detail.GetReason())
+		}
 	}
-	if detail := authAppErrorDetail(t, err); detail.GetReason() != "LAST_MASTER" {
-		t.Errorf("reason = %q", detail.GetReason())
+	res, err := admin.ListUsers(context.Background(), withCookie(&postpilotv1.ListUsersRequest{}, master))
+	if err != nil {
+		t.Fatalf("ListUsers: %v", err)
+	}
+	for _, user := range res.Msg.GetUsers() {
+		if user.GetId() == "root" && user.GetPlan() != postpilotv1.Plan_PLAN_MASTER {
+			t.Errorf("root plan = %v after refused self-assignments, want master", user.GetPlan())
+		}
 	}
 
-	// With a second master the same demotion is allowed — the guard is about the last one,
-	// not about master accounts in general.
+	// Another master may still move this account: that is the one ordinary way out.
 	if _, err := admin.SetUserPlan(context.Background(),
 		withCookie(&postpilotv1.SetUserPlanRequest{UserId: "alice", Plan: postpilotv1.Plan_PLAN_MASTER}, master)); err != nil {
 		t.Fatalf("promote alice: %v", err)
 	}
+	second := loginAs(t, authClient, "alice")
 	if _, err := admin.SetUserPlan(context.Background(),
-		withCookie(&postpilotv1.SetUserPlanRequest{UserId: "root", Plan: postpilotv1.Plan_PLAN_MAX}, master)); err != nil {
-		t.Fatalf("demoting one of two masters: %v", err)
+		withCookie(&postpilotv1.SetUserPlanRequest{UserId: "root", Plan: postpilotv1.Plan_PLAN_MAX}, second)); err != nil {
+		t.Fatalf("another master demoting root: %v", err)
+	}
+	if _, err := admin.ListUsers(context.Background(), withCookie(&postpilotv1.ListUsersRequest{}, master)); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("demoted root = %v, want permission_denied", err)
 	}
 }
 

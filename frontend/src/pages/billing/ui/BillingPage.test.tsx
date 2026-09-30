@@ -154,6 +154,42 @@ describe('BillingPage', () => {
     expect(screen.getByRole('button', { name: '환불 요청하기' })).toBeDisabled()
   })
 
+  // BILL-20: a master account is never charged, so the screen offers no plan link, subscription
+  // action or credit pack — refunds and the payment method stay.
+  it('shows operator coverage to a master account with no payment entry', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER },
+    })
+
+    expect(
+      await screen.findByText('운영자 계정이라 결제 없이 모든 기능을 써요.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('활성 구독이 없습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '플랜 보기' })).not.toBeInTheDocument()
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent)
+    expect(headings).not.toContain('크레딧 구매')
+    expect(headings).toContain('결제 수단')
+    expect(headings).toContain('환불 요청')
+  })
+
+  // BILL-20: a subscription held from before the promotion ends at its term, uncharged, so its
+  // date reads as the coverage end and it carries no cancel, resume or change action.
+  it('shows a master account’s held subscription as ending without renewal', async () => {
+    renderAppAt('/billing', {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER },
+      billing: { populated: true },
+    })
+
+    expect(await screen.findByText('유료 이용 종료일')).toBeInTheDocument()
+    expect(screen.queryByText('다음 실제 결제일')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '구독 해지' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '연간으로 바꾸기' })).not.toBeInTheDocument()
+  })
+
   it('renders the active-renewal refusal beside the remove action', async () => {
     const user = userEvent.setup()
     renderAppAt('/billing', {

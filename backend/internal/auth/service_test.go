@@ -361,6 +361,38 @@ func TestBillingAccountAdaptersAssignTierAndReturnOnlyReachableVerifiedEmail(t *
 	}
 }
 
+// QUOTA-63: billing's tier write leaves a master on master whatever a payment event asks
+// for; only the support path's ReassignTier moves it.
+func TestAssignTierLeavesAMasterAndReassignTierMovesIt(t *testing.T) {
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	svc, _ := newTestService(t, now)
+	ctx := context.Background()
+	if err := svc.ReassignTier(ctx, "alice", plan.Master); err != nil {
+		t.Fatalf("ReassignTier to master: %v", err)
+	}
+	for _, target := range []plan.Plan{plan.Free, plan.Pro} {
+		if err := svc.AssignTier(ctx, "alice", target); err != nil {
+			t.Fatalf("AssignTier(%s): %v", target, err)
+		}
+		if got, err := svc.TierOf(ctx, "alice"); err != nil || got != plan.Master {
+			t.Fatalf("after AssignTier(%s) tier = %q, %v; want master", target, got, err)
+		}
+	}
+	// The last-master guard (QUOTA-4) still stands on the support path.
+	if err := svc.ReassignTier(ctx, "alice", plan.Pro); !errors.Is(err, ErrLastMaster) {
+		t.Fatalf("ReassignTier of the last master = %v, want ErrLastMaster", err)
+	}
+	if err := svc.CreateUser(ctx, "root", "s3cret", plan.Master); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ReassignTier(ctx, "alice", plan.Pro); err != nil {
+		t.Fatalf("ReassignTier to pro: %v", err)
+	}
+	if got, err := svc.TierOf(ctx, "alice"); err != nil || got != plan.Pro {
+		t.Fatalf("after ReassignTier tier = %q, %v; want pro", got, err)
+	}
+}
+
 func TestLoginSuccessIssuesSession(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)

@@ -76,6 +76,18 @@ func (h *AdminHandler) SetUserPlan(ctx context.Context, req *connect.Request[pos
 	if userID == "" {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a user id is required", postpilotv1.FailureReason_USER_ID_REQUIRED, nil)
 	}
+	// A master leaves master only by ANOTHER master (QUOTA-63), whatever tier is asked for:
+	// an operator must not be able to click away their own administration. The shell's
+	// `api setplan` has no actor and stays the recovery path.
+	caller, ok := auth.UserFromContext(ctx)
+	if !ok {
+		slog.Error("set user plan reached without an actor", "user_id", userID)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not change the plan", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+	}
+	if caller == userID {
+		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition,
+			"an operator cannot change their own plan", postpilotv1.FailureReason_MASTER_SELF_PLAN, nil)
+	}
 
 	switch err := h.svc.SetUserPlan(ctx, userID, target); {
 	case errors.Is(err, auth.ErrUserNotFound):

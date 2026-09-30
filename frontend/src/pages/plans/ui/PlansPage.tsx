@@ -150,6 +150,13 @@ export function PlansPage() {
         </div>
       </header>
 
+      {/* The operator is never charged (BILL-20): the offers stay readable, with no action. */}
+      {myPlan?.plan === 'master' && (
+        <Notice tone="info" role="status" className="mt-6">
+          {t('operatorCoverage', { ns: 'plans' })}
+        </Notice>
+      )}
+
       {/* The one thing a user arriving here from a refusal needs told: what still works. */}
       {empty && (
         <Notice tone="info" role="status" className="mt-6">

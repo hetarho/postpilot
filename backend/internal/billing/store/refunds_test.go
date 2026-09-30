@@ -449,3 +449,31 @@ func TestRefundOfUpgradeRevertsOnlyUpgradeFunding(t *testing.T) {
 		t.Fatalf("base after upgrade=%+v err=%v", baseDecision, err)
 	}
 }
+
+// QUOTA-63: a confirmed refund voids the entitlement the refunded payment funded, never the
+// master tier the account holds since (BILL-20).
+func TestConfirmedRefundNeverDemotesAMaster(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	h, _, clock := refundHarness(t, at)
+	if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+		t.Fatal(err)
+	}
+	order := chargeOrder(t, h, "subscribe")
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Master); err != nil {
+		t.Fatal(err)
+	}
+	*clock = at.Add(24 * time.Hour)
+	request, err := h.service.RequestRefund(ctx, "alice", order, "promoted to operator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	decided, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW)
+	if err != nil || decided.Status != "completed" {
+		t.Fatalf("review=%+v err=%v", decided, err)
+	}
+	var tier string
+	if err := h.handle.Reader.QueryRow(`SELECT plan FROM users WHERE id='alice'`).Scan(&tier); err != nil || tier != "master" {
+		t.Fatalf("plan after refund = %s err=%v, want master", tier, err)
+	}
+}

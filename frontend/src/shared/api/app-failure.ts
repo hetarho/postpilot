@@ -41,6 +41,7 @@ export const appFailureSpecs = {
   BILLING_PAYMENT_PENDING: {},
   BILLING_STALE_QUOTE: {},
   BILLING_PACK_INVALID: {},
+  BILLING_MASTER_ACCOUNT: {},
   TIER_NOT_SUBSCRIBABLE: {},
   BILLING_SELECTION_INVALID: {},
   SUBSCRIPTION_EXISTS: {},
@@ -290,6 +291,7 @@ export const appFailureSpecs = {
   PLAN_REQUIRED: {},
   MASTER_ONLY: {},
   LAST_MASTER: {},
+  MASTER_SELF_PLAN: {},
   USER_NOT_FOUND: {},
   USER_ID_REQUIRED: {},
 } as const satisfies Readonly<Record<AppFailureReason, FailureParamSpec>>

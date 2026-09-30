@@ -203,8 +203,9 @@ func (registrationRates) KRWPerUSD(context.Context, time.Time) (int64, bool, err
 
 type registrationPlans struct{}
 
-func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error { return nil }
-func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)   { return plan.Free, nil }
+func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error   { return nil }
+func (registrationPlans) ReassignTier(context.Context, string, plan.Plan) error { return nil }
+func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)     { return plan.Free, nil }
 
 type registrationProvider struct{ label string }
 

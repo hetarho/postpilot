@@ -25,6 +25,8 @@ export const errors = {
     'Your payment is still being confirmed. Check your billing history shortly.',
   BILLING_STALE_QUOTE: 'Your subscription changed. Refresh the quote before continuing.',
   BILLING_PACK_INVALID: 'Choose one of the listed credit packs.',
+  BILLING_MASTER_ACCOUNT:
+    'Operator accounts use everything without payment; no subscription or credit purchase is needed.',
   BILLING_SELECTION_INVALID: 'Check the plan and billing cycle you selected.',
   POST_NOT_FOUND: 'Could not find the post.',
   POST_FORBIDDEN: 'You do not have access to this post.',
@@ -291,6 +293,7 @@ export const errors = {
     'This needs {{required}} credits and you have {{balance}}. Tops up {{renews_at, instant}}.',
   PLAN_REQUIRED: 'Choose a plan.',
   LAST_MASTER: 'The last operator account cannot be moved to another plan.',
+  MASTER_SELF_PLAN: 'You cannot change your own plan. Ask another operator account.',
   USER_NOT_FOUND: 'Account not found.',
   USER_ID_REQUIRED: 'Choose an account.',
   MASTER_ONLY: 'This is available to operator accounts only.',

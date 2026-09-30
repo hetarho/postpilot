@@ -47,6 +47,18 @@ func CancellationMail(tier plan.Plan, term Term) MailMessage {
 	}
 }
 
+// OperatorSubscriptionEndedMail is the lapse notice for a master account (BILL-20): the
+// subscription ended uncharged and, unlike CancellationMail's, the plan did not become free.
+func OperatorSubscriptionEndedMail(tier plan.Plan, term Term) MailMessage {
+	return MailMessage{
+		Subject: "Postpilot 구독이 종료되었습니다 / Subscription ended",
+		Text: fmt.Sprintf(
+			"운영자 계정이라 Postpilot %s %s 구독을 갱신하지 않고 종료했습니다. 결제는 없었고 플랜은 운영자로 유지됩니다.\n\nBecause this is an operator account, the Postpilot %s %s subscription ended without renewal. Nothing was charged and the plan stays operator.",
+			tier, term, tier, term,
+		),
+	}
+}
+
 func PurchaseMail(purchase Purchase) MailMessage {
 	detail := purchaseDetail(purchase)
 	return MailMessage{

@@ -74,7 +74,10 @@ func (s *Service) changeFixed(ctx context.Context, userID string, tier plan.Plan
 	now := s.now()
 	var updated Subscription
 	var intent Intent
-	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
+		if err := refuseMaster(ctx, plans, userID); err != nil {
+			return err
+		}
 		subscription, quote, err := s.fixedQuoteInTx(ctx, tx, userID, tier, term, quoteID, now)
 		if err != nil {
 			return err
@@ -169,7 +172,10 @@ func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.P
 	intent := Intent{OrderID: "pp-sub-" + s.newID(), UserID: userID, Kind: "subscribe",
 		Tier: tier, Term: term, KRW: quote.KRW, QuotedAt: now,
 		Status: "pending", CreatedAt: now, UpdatedAt: now}
-	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
+		if err := refuseMaster(ctx, plans, userID); err != nil {
+			return err
+		}
 		journals, ok := tx.(IntentStore)
 		if !ok {
 			return ErrUnavailable
@@ -305,7 +311,10 @@ func (s *Service) PurchasePack(ctx context.Context, userID, packID string) (Purc
 	intent := Intent{OrderID: "pp-buy-" + s.newID(), UserID: userID, Kind: "pack",
 		PackID: packID, KRW: quote.KRW, QuotedAt: now, Status: "pending",
 		CreatedAt: now, UpdatedAt: now}
-	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
+		if err := refuseMaster(ctx, plans, userID); err != nil {
+			return err
+		}
 		journals, ok := tx.(IntentStore)
 		if !ok {
 			return ErrUnavailable

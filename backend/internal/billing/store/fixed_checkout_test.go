@@ -430,3 +430,69 @@ func TestFixedKRWAnnualUpgradeAndCancelResumeKeepAnchors(t *testing.T) {
 		t.Fatalf("paid rejoin=%+v charges=%v err=%v", rejoined, provider.charges, err)
 	}
 }
+
+// BILL-20 and QUOTA-63 on the production (fixed-KRW) path over the real account store: once a
+// subscriber is promoted to master, every payment start is refused before any intent or charge,
+// and the subscription it still holds ends at term end uncharged with the tier left on master.
+func TestFixedKRWMasterAccountStartsNoPaymentAndOutlivesItsSubscription(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 5, 31, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
+	h, provider, clock := fixedService(t, at)
+	sub, err := h.service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.service.AssignSupportTier(ctx, "alice", plan.Master); err != nil {
+		t.Fatalf("support promotion: %v", err)
+	}
+	tierOf := func() string {
+		t.Helper()
+		var tier string
+		if err := h.handle.Reader.QueryRowContext(ctx, "SELECT plan FROM users WHERE id='alice'").Scan(&tier); err != nil {
+			t.Fatal(err)
+		}
+		return tier
+	}
+	if got := tierOf(); got != "master" {
+		t.Fatalf("promoted plan = %s", got)
+	}
+	var intents int
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_intents").Scan(&intents); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := h.service.Subscribe(ctx, "alice", plan.Pro, billing.TermMonthly); !errors.Is(err, billing.ErrMasterAccount) {
+		t.Fatalf("subscribe = %v, want ErrMasterAccount", err)
+	}
+	if _, err := h.service.QuoteChange(ctx, "alice", plan.Pro, billing.TermMonthly); !errors.Is(err, billing.ErrMasterAccount) {
+		t.Fatalf("quote change = %v, want ErrMasterAccount", err)
+	}
+	if _, _, err := h.service.ChangeSubscriptionQuoted(ctx, "alice", plan.Pro, billing.TermMonthly, "quote-1"); !errors.Is(err, billing.ErrMasterAccount) {
+		t.Fatalf("change = %v, want ErrMasterAccount", err)
+	}
+	if _, err := h.service.PurchasePack(ctx, "alice", "pack-3000"); !errors.Is(err, billing.ErrMasterAccount) {
+		t.Fatalf("pack = %v, want ErrMasterAccount", err)
+	}
+	var after int
+	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_intents").Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if after != intents || len(provider.charges) != 1 {
+		t.Fatalf("refusals wrote intents %d→%d or charged %v", intents, after, provider.charges)
+	}
+
+	*clock = sub.TermEnd
+	if err := h.service.RunDue(ctx, *clock); err != nil {
+		t.Fatal(err)
+	}
+	ended, _, err := h.store.Subscription(ctx, "alice")
+	if err != nil || ended.Status != "lapsed" {
+		t.Fatalf("subscription at term end = %+v err=%v", ended, err)
+	}
+	if len(provider.charges) != 1 {
+		t.Fatalf("master renewal charged: %v", provider.charges)
+	}
+	if got := tierOf(); got != "master" {
+		t.Fatalf("plan after lapse = %s, want master", got)
+	}
+}

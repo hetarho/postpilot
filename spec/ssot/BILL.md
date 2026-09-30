@@ -1,8 +1,8 @@
 # BILL subscriptions, charges, credit purchase
-> r5 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
+> r6 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
 
 ## decisions
-- BILL-1 [o] a subscription belongs to the account that pays for it: the signed-in account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
+- BILL-1 [o] a subscription belongs to the account that pays for it: a signed-in non-master account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; a master account buys nothing (→BILL-20); the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
 - BILL-2 [o] charge the fixed VAT-inclusive KRW prices in QUOTA-7 and QUOTA-34; checkout shows the actual amount payable. FX changes AI-use conversion only (→QUOTA-59), never subscription or pack prices.
 - BILL-3 [o] subscription payment anchors preserve the initial payment day and time in Asia/Seoul. Monthly benefit boundaries clamp a missing day to month-end and restore the original day later; ordinary renewal never shifts the anchor. Daily grants follow QUOTA-37 rather than calendar midnight.
 - BILL-4 [o] monthly coverage costs one listed monthly price; annual coverage costs ten listed monthly prices for twelve calendar months. Both carry the same daily and monthly benefits (→QUOTA-38); annual payment renewal and monthly benefit renewal are distinct displayed dates.
@@ -29,9 +29,12 @@
 - BILL-18 [o] an annual upgrade charges `ceil((new_annual_KRW - current_annual_KRW) × remaining_paid_year / current_paid_year_duration)` without moving annual expiry or the monthly benefit anchor. Current bonus/export top-ups use the remaining benefit-month fraction (→QUOTA-35), future months grant the full higher amounts, and daily credit increases at the next existing reset.
 - BILL-17 [x] promotion codes, automatic top-up, postpaid usage, team billing, self-serve tax documents, dunning, automatic prorated refunds and extra server-export sales — out of scope; operator-issued vouchers are GIFT's
 - BILL-19 [o] monthly→annual switches at the next monthly renewal and charges the full selected annual price then. Annual→monthly and annual downgrades wait for paid annual expiry; no immediate term conversion or unused-month refund is implied.
+- BILL-20 [o] a master account is never charged: subscription start, tier/term change and pack purchase are refused server-side, and `/plans` and the billing screen show operator coverage with no checkout, change or pack action (→QUOTA-63) ← master is not sold (→QUOTA-7), and a paid tier bought by a master would demote it
+  - a subscription the account still holds from before promotion ends at its paid term end without a renewal charge, as a cancellation does (→BILL-7), and the tier stays master
+  - refund requests for its past payments remain available (→BILL-11); a confirmed refund voids the refunded entitlements, never the master tier
 
 ## flow
-- subscribe: `/plans` → term/tier → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
+- subscribe: `/plans` → master(no checkout, operator coverage) | term/tier → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
 - renew: payment boundary → confirmed payment(next paid term) | confirmed failure(free + notice); monthly benefit boundary → bonus/export renewal only while covered
 - upgrade: quote current-tier prorated KRW → confirm payment → immediate model/bonus/export change; next daily reset → higher daily grant
 - term switch/downgrade: schedule or replace → effective paid-term boundary → new term/tier and full applicable charge
