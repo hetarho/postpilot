@@ -947,7 +947,9 @@ it.each([0, 7])(
     await waitFor(() =>
       expect(credit.getByRole('status')).toHaveTextContent(`${charge} 크레딧 사용`),
     )
-    expect(credit.queryByText(new RegExp(`${40 - charge} 크레딧`))).not.toBeInTheDocument()
+    expect(
+      credit.getByText(new RegExp(`사용하지 않은 예약 ${40 - charge} 크레딧`)),
+    ).toBeInTheDocument()
     // The settlement and the preserved result remain in correction.
     await goToStep('수정')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)

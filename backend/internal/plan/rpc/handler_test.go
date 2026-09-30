@@ -51,6 +51,36 @@ type stubEstimator struct {
 	clipRates *plan.ClipRates
 }
 
+type snapshotEstimator struct {
+	rate plan.RateSnapshot
+	err  error
+	seen *plan.RateSnapshot
+}
+
+func (s snapshotEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) {
+	return s.rate, s.err
+}
+func (s snapshotEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+	panic("unrounded fallback must not be used")
+}
+func (s snapshotEstimator) ComboRatesAt(_ context.Context, rate plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
+	*s.seen = rate
+	return []planrpc.EstimatorCombo{{Combo: "value", PerPostBaseMilli: 1234}}, nil
+}
+
+func TestGetMyPlanUsesDisclosedRateForEstimates(t *testing.T) {
+	rate := plan.RateSnapshot{Source: "test", PublicationDate: "2026-09-30", ReferenceE4: 14_001_000, AppliedE4: 14_100_000}
+	var seen plan.RateSnapshot
+	msg := getMyPlanWith(t, plan.Light, snapshotEstimator{rate: rate, seen: &seen})
+	if seen != rate || msg.FxRate == nil || msg.FxRate.AppliedE4 != rate.AppliedE4 || len(msg.EstimatorCombos) != 1 {
+		t.Fatalf("rate used=%+v published=%+v combos=%+v", seen, msg.FxRate, msg.EstimatorCombos)
+	}
+	msg = getMyPlanWith(t, plan.Light, snapshotEstimator{err: errors.New("no FX"), seen: &seen})
+	if !msg.FxUnavailable || len(msg.EstimatorCombos) != 0 {
+		t.Fatalf("missing FX published estimates: %+v", msg)
+	}
+}
+
 func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
 	if s.err != nil {
 		return nil, s.err

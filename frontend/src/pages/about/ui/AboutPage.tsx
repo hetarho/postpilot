@@ -125,7 +125,7 @@ export function AboutPage() {
                 variant="label"
                 as="li"
                 key={format}
-                className="bg-surface-raised text-content-primary rounded-md px-3 py-1.5 whitespace-nowrap"
+                className="bg-surface-raised text-content-primary min-w-0 rounded-md px-3 py-1.5 break-words"
               >
                 {t(`outputs.${format}`)}
               </Typography>

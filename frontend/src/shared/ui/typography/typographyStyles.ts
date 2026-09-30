@@ -23,7 +23,8 @@ const VARIANT_STYLES: Record<TypographyVariant, string> = {
      outside the plan ladder reaching for it is the promotional exception spreading. */
   // The named promotional exception: a campaign headline, never an ordinary page title.
   promoDisplay: 'text-4xl font-bold tracking-tight leading-tight sm:text-6xl',
-  hero: 'text-3xl font-bold tracking-tight sm:text-4xl',
+  // Five-digit KRW prices still fit a narrow card with text enlarged to 200%.
+  hero: 'text-xl font-bold tracking-tight sm:text-4xl',
   display: 'text-2xl font-semibold tracking-tight',
   title: 'text-lg font-semibold tracking-tight',
   /* A field's own heading, where it stands beside the step title rather than under it: SMALLER

@@ -4,13 +4,17 @@ import { Check, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   clipsPerGrant,
+  canEstimate,
   ESTIMATOR_COMBOS,
+  illustrativeMonthlyCredits,
   postsPerGrant,
   PLANS,
+  requiredPlanForLevel,
   useMyPlan,
   type PlanOffer,
 } from '@/entities/plan'
 import { billablePlan, useMyBilling } from '@/entities/subscription'
+import { formatNumber } from '@/shared/lib'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
 import {
   ActionBar,
@@ -208,6 +212,22 @@ export function PlansPage() {
           <Typography variant="body" className="text-content-secondary mt-3 mb-4 text-center">
             {t('benefits.baseline', { ns: 'plans' })}
           </Typography>
+          {myPlan.fxRate && !myPlan.fxUnavailable && (
+            <Typography variant="meta" className="text-content-secondary mb-4 block text-center">
+              {t('estimator.fxRate', {
+                ns: 'plans',
+                source: myPlan.fxRate.source,
+                date: myPlan.fxRate.publicationDate,
+                reference: formatNumber(Number(myPlan.fxRate.referenceE4) / 10000),
+                applied: formatNumber(Number(myPlan.fxRate.appliedE4) / 10000),
+              })}
+            </Typography>
+          )}
+          {(!myPlan.fxRate || myPlan.fxUnavailable) && (
+            <Notice tone="info" role="status" className="mb-4">
+              {t('estimator.fxUnavailable', { ns: 'plans' })}
+            </Notice>
+          )}
           <PlanLadder
             className="mt-2 md:mt-6"
             offers={myPlan.offers}
@@ -215,12 +235,17 @@ export function PlansPage() {
             estimates={(offer) =>
               ESTIMATOR_COMBOS.map((level) => {
                 const rates = combos.find((assigned) => assigned.combo === level)
+                const requiredPlan = canEstimate(offer, level)
+                  ? undefined
+                  : requiredPlanForLevel(level)
                 const count =
-                  kind === 'blog'
-                    ? rates && postsPerGrant(offer.monthlyCredits, rates, input)
-                    : rates?.clipRates &&
-                      clipsPerGrant(offer.monthlyCredits, rates.clipRates, clipInput)
-                return { level, kind, count }
+                  !myPlan.fxRate || myPlan.fxUnavailable || requiredPlan
+                    ? undefined
+                    : kind === 'blog'
+                      ? rates && postsPerGrant(illustrativeMonthlyCredits(offer), rates, input)
+                      : rates?.clipRates &&
+                        clipsPerGrant(illustrativeMonthlyCredits(offer), rates.clipRates, clipInput)
+                return { level, kind, count, requiredPlan }
               })
             }
             action={action}

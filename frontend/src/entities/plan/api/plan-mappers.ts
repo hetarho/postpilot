@@ -88,8 +88,6 @@ function toOffer(offer: {
 }): PlanOffer {
   return {
     plan: planFromProto(offer.plan),
-    monthlyCredits: offer.monthlyCredits,
-    priceUsdCents: offer.priceUsdCents,
     monthlyKrw: offer.monthlyKrw,
     annualKrw: offer.annualKrw,
     dailyCredits: offer.dailyCredits,

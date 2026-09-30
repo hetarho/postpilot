@@ -1,10 +1,7 @@
 import i18next from 'i18next'
 import { PAID_LEVELS, type LevelName } from '@/entities/model-catalog/@x/plan'
 
-/** The ladder, in order. A tier decides two things and no more: how many credits it is
- *  granted each month, and — for `master` alone — access to the operator-only surfaces.
- *  Which models an account may run is not one of them; that is decided by what it can
- *  afford. */
+/** The ladder, in order. */
 export const PLANS = ['free', 'light', 'basic', 'pro', 'max', 'master'] as const
 
 export type PlanName = (typeof PLANS)[number]
@@ -52,20 +49,15 @@ export interface CreditBalance {
   bonusResetsAt: string
 }
 
-/** One rung as the comparison screen lists it. Both figures come from the server: the grant
- *  and the price it was sized against are one product decision, and a client that carried
- *  its own copy of either would eventually disagree with the ladder it is describing. */
+/** One published rung. The server owns its price, benefit clocks, model ceiling and exports. */
 export interface PlanOffer {
   plan: PlanName | undefined
-  monthlyCredits: number
-  /** Whole US cents; zero for the free tier. What a card is charged is BILLING's. */
-  priceUsdCents: number
-  monthlyKrw?: number
-  annualKrw?: number
-  dailyCredits?: number
-  monthlyBonus?: number
-  modelCeiling?: 'none' | 'value' | 'balanced' | 'premium' | 'top'
-  monthlyServerExports?: number
+  monthlyKrw: number
+  annualKrw: number
+  dailyCredits: number
+  monthlyBonus: number
+  modelCeiling: 'none' | 'value' | 'balanced' | 'premium' | 'top'
+  monthlyServerExports: number
   /** The one rung the comparison screen marks. The server decides which. */
   recommended: boolean
 }
@@ -152,16 +144,15 @@ export function postCostMilli(
   )
 }
 
-/** How many posts of that shape a monthly grant covers. Zero means the grant does not cover
- *  one, which a screen states rather than rendering as "about 0". */
+/** How many posts an illustrative credit amount covers. Zero means it covers less than one. */
 export function postsPerGrant(
-  monthlyCredits: number,
+  illustrativeCredits: number,
   rates: EstimatorCombo,
   input: { chars: number; photos: number; videos: number },
 ): number {
   const costMilli = postCostMilli(rates, input)
   if (costMilli <= 0) return 0
-  return Math.floor((monthlyCredits * 1000) / costMilli)
+  return Math.floor((illustrativeCredits * 1000) / costMilli)
 }
 
 /** Clip conditions describe original count and FINISHED duration. Original duration is
@@ -178,12 +169,28 @@ export function clipCostMilli(
 }
 
 export function clipsPerGrant(
-  monthlyCredits: number,
+  illustrativeCredits: number,
   rates: ClipEstimatorRates,
   input: { sources: number; seconds: number },
 ): number {
   const cost = clipCostMilli(rates, input)
-  return cost > 0 ? Math.floor((monthlyCredits * 1000) / cost) : 0
+  return cost > 0 ? Math.floor((illustrativeCredits * 1000) / cost) : 0
+}
+
+/** Illustration only: daily grants expire daily and are not available upfront. */
+export function illustrativeMonthlyCredits(offer: PlanOffer, assumedDays = 30): number {
+  return offer.dailyCredits * assumedDays + offer.monthlyBonus
+}
+
+export function requiredPlanForLevel(level: EstimatorComboName): PlanName {
+  return ({ value: 'light', balanced: 'basic', premium: 'pro', top: 'max' } as const)[level]
+}
+
+export function canEstimate(offer: PlanOffer, level: EstimatorComboName): boolean {
+  return (
+    offer.plan !== undefined &&
+    PLANS.indexOf(offer.plan) >= PLANS.indexOf(requiredPlanForLevel(level))
+  )
 }
 
 /** One account as the operator screen sees it. */
@@ -191,15 +198,4 @@ export interface PlanAccount {
   id: string
   plan: PlanName | undefined
   createdAt: string
-}
-
-/** Top-ups are at par: one credit per USD cent (QUOTA-34). Compare an offer with
- * the same spend, so changing the server's ladder also changes its advertised bonus. */
-export function subscriptionBonus(
-  offer: PlanOffer,
-): { credits: number; percent: number } | undefined {
-  if (offer.priceUsdCents <= 0) return undefined
-  const credits = offer.monthlyCredits - offer.priceUsdCents
-  if (credits <= 0) return undefined
-  return { credits, percent: Math.round((credits * 100) / offer.priceUsdCents) }
 }

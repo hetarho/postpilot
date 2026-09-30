@@ -1,4 +1,4 @@
-import { clipCostMilli, clipsPerGrant, subscriptionBonus } from './types'
+import { canEstimate, clipCostMilli, clipsPerGrant, illustrativeMonthlyCredits } from './types'
 import { describe, expect, it } from 'vitest'
 import { postCostMilli, postsPerGrant, type EstimatorCombo } from './types'
 
@@ -47,27 +47,26 @@ describe('postsPerGrant', () => {
   })
 })
 
-describe('subscriptionBonus', () => {
-  it('compares the published grant with the same at-par purchase instead of tier names', () => {
-    expect(
-      subscriptionBonus({
-        plan: 'basic',
-        monthlyCredits: 480,
-        priceUsdCents: 400,
-        recommended: false,
-      }),
-    ).toEqual({ credits: 80, percent: 20 })
-    expect(
-      subscriptionBonus({ plan: 'free', monthlyCredits: 50, priceUsdCents: 0, recommended: false }),
-    ).toBeUndefined()
-    expect(
-      subscriptionBonus({
-        plan: 'pro',
-        monthlyCredits: 100,
-        priceUsdCents: 100,
-        recommended: false,
-      }),
-    ).toBeUndefined()
+describe('monthly illustrations and rights', () => {
+  const offer = {
+    plan: 'basic',
+    monthlyKrw: 4900,
+    annualKrw: 49000,
+    dailyCredits: 45,
+    monthlyBonus: 510,
+    modelCeiling: 'balanced',
+    monthlyServerExports: 6,
+    recommended: false,
+  } as const
+  it('uses assumed daily grants plus the bonus', () => {
+    expect(illustrativeMonthlyCredits(offer)).toBe(1860)
+    expect(illustrativeMonthlyCredits(offer, 28)).toBe(1770)
+  })
+  it('locks levels above the tier and has no paid estimate for free', () => {
+    expect(canEstimate(offer, 'value')).toBe(true)
+    expect(canEstimate(offer, 'balanced')).toBe(true)
+    expect(canEstimate(offer, 'premium')).toBe(false)
+    expect(canEstimate({ ...offer, plan: 'free' }, 'value')).toBe(false)
   })
 })
 

@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { buttonStyles, Logo } from '@/shared/ui'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
-/** The public header: wordmark, the way in, and the shared preferences — ONE row at every width
- *  (MKT-11).
+/** The public header: wordmark, the way in, and the shared preferences (MKT-11).
  *
  *  It used to stack on a phone, the wordmark over a centred pair of Get started and Login, which
  *  left the wordmark flush against the top edge and two controls reading as two buttons. Now the
@@ -17,17 +16,16 @@ import { InterfacePreferences } from '@/widgets/interface-preferences'
  *  at the bottom would be the second one MKT-6 forbids, so the single one stays reachable
  *  instead. `pt-safe-t` is what a notched phone in landscape needs on its leading edge.
  *
- *  The wordmark is a step smaller on a phone than in the app: at 320px the row holds the mark,
- *  the CTA and two icon buttons at their touch size, and `h-6` is the 5px that would push it into
- *  horizontal scroll. */
+ *  The wordmark is a step smaller on a phone than in the app. At 200% text zoom the header
+ *  wraps its controls rather than widening the viewport. */
 export function AboutHeader() {
   const { t } = useTranslation('marketing')
   return (
-    <header className="bg-surface-raised pt-safe-t sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 px-4 sm:min-h-16 sm:px-6">
+    <header className="bg-surface-raised pt-safe-t sticky top-0 z-20 flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2 sm:min-h-16 sm:px-6">
       {/* The wordmark is the page's own identity here, not a link: `/about` IS this page, and a
           link to the current route is a dead control. */}
       <Logo className="h-5 shrink-0 sm:h-6" />
-      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
         <Link to="/signup" className={buttonStyles({ variant: 'cta', className: 'shrink-0' })}>
           {t('header.getStarted')}
         </Link>

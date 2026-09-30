@@ -5,11 +5,12 @@ export const i18n = {
   namespace: 'plans',
   ko: {
     benefits: {
-      baseline: '일반 충전은 $1당 100크레딧. 구독하면 매달 더 받아요.',
+      baseline:
+        '월 예상치는 매일 지급을 30회 받는다고 가정하고 월 보너스를 더해 계산해요. 크레딧은 한 번에 지급되지 않아요.',
       extra: '매달 {{credits}}크레딧 추가',
       percent: '같은 금액 충전보다 +{{percent}}%',
-      models: '모든 AI 모델 선택 가능',
-      renewal: '매달 크레딧 자동 충전',
+      models: '등급별 AI 모델 선택 가능',
+      renewal: '매일 크레딧 지급과 월 보너스',
       free: '결제 없이 가볍게 시작',
     },
     estimator: {
@@ -30,8 +31,13 @@ export const i18n = {
       clips: '클립 약 {{count}}편 제작 가능',
       unavailable: '모델·가격 정보 준비 중',
       clipUnavailable: '클립 계산 가능한 모델 미지정',
+      locked: '{{plan}} 이상에서 이용 가능',
+      fxUnavailable: '현재 환율 정보가 없어 예상 편수를 계산할 수 없어요.',
+      fxRate:
+        '예상 계산 환율 · {{source}} {{date}} · 기준 {{reference}}원/달러, 적용 {{applied}}원/달러',
+      freeUnavailable: '무료 모델은 크레딧 비용이 없어 편수로 환산하지 않아요.',
       clipCaveat:
-        '원본 분석·구성·내레이션에 드는 토큰의 1.5배로 수정 여유분을 포함했어요. 실제 작업 비용은 원본 길이와 내용, 사용 모델에 따라 달라져요. 클립 계산은 영상 입력·구조화 출력을 지원하고 가격이 확인된 모델 조합에서 제공해요.',
+        '원본 분석·구성·내레이션에 드는 토큰의 1.5배로 수정 여유분을 포함했어요. 실제 작업 비용은 원본 길이와 내용, 사용 모델에 따라 달라져요. AI 클립 예상 편수는 월 서버 내보내기 횟수와 별개예요. 클립 계산은 영상 입력·구조화 출력을 지원하고 가격이 확인된 모델 조합에서 제공해요.',
       summary: '{{chars}}자 · 사진 {{photos}}장 · 영상 {{videos}}개 기준',
       viewPlans: '이 조건으로 비교하기',
       result: '이 조건으로 매달 쓸 수 있는 글',
@@ -114,11 +120,12 @@ export const i18n = {
   },
   en: {
     benefits: {
-      baseline: 'Top-ups give you 100 credits per $1. Subscribe for extra credits every month.',
+      baseline:
+        'Monthly illustrations assume 30 daily grants plus the monthly bonus. Credits are not granted upfront.',
       extra: '{{credits}} extra credits every month',
       percent: '+{{percent}}% compared with the same top-up',
-      models: 'Access to every AI model',
-      renewal: 'Automatic monthly credits',
+      models: 'AI models by plan level',
+      renewal: 'Daily credits and a monthly bonus',
       free: 'Start without a payment',
     },
     estimator: {
@@ -139,8 +146,13 @@ export const i18n = {
       clips: 'About {{count}} clips',
       unavailable: 'Model or pricing not available',
       clipUnavailable: 'No eligible clip model assigned',
+      locked: 'Available on {{plan}} or higher',
+      fxUnavailable: 'Estimates are unavailable until the current exchange rate is available.',
+      fxRate:
+        'Estimate exchange rate · {{source}} {{date}} · reference {{reference}} KRW/USD, applied {{applied}} KRW/USD',
+      freeUnavailable: 'Free models have no credit cost, so no finite count can be estimated.',
       clipCaveat:
-        'Includes 1.5× tokens for source analysis, flow and narration to allow for edits. Actual costs depend on original length, content and models. Clip estimates require priced models supporting video input and structured output.',
+        'Includes 1.5× tokens for source analysis, flow and narration to allow for edits. Actual costs depend on original length, content and models. AI clip estimates are separate from included server exports. Clip estimates require priced models supporting video input and structured output.',
       summary: '{{chars}} characters · {{photos}} photos · {{videos}} videos',
       viewPlans: 'Compare with these conditions',
       result: 'Your estimated posts per month',

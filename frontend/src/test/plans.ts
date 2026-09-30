@@ -53,6 +53,7 @@ export interface FakePlansOptions {
     dailyCredits?: number
     monthlyBonus?: number
     monthlyServerExports?: number
+    modelCeiling?: string
     recommended?: boolean
   }>
   /** The priced combos the estimator publishes. Defaults to one assigned tier so a screen
@@ -88,7 +89,7 @@ export interface FakePlansOptions {
     referenceE4: bigint
     appliedE4: bigint
     temporary: boolean
-  }
+  } | null
   fxUnavailable?: boolean
   /** Make GetMyPlan fail. */
   planFails?: boolean
@@ -117,7 +118,16 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         { id: 'pack-3000', priceKrw: 9000, credits: 3000 },
         { id: 'pack-10000', priceKrw: 30000, credits: 10000 },
       ],
-      fxRate: options.fxRate,
+      fxRate:
+        options.fxRate === null
+          ? undefined
+          : (options.fxRate ?? {
+              source: 'test',
+              publicationDate: '2026-09-30',
+              referenceE4: 14_000_000n,
+              appliedE4: 14_000_000n,
+              temporary: false,
+            }),
       fxUnavailable: options.fxUnavailable ?? false,
       balance: {
         credits: options.balance?.credits ?? 0,
@@ -141,7 +151,25 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
       // The shipped ladder, so a test that does not care about the figures still renders
       // what the server would actually send.
       offers: options.offers ?? [
-        { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0, monthlyKrw: 0, annualKrw: 0 },
+        {
+          plan: ProtoPlan.FREE,
+          monthlyCredits: 0,
+          priceUsdCents: 0,
+          monthlyKrw: 0,
+          annualKrw: 0,
+          modelCeiling: 'none',
+        },
+        {
+          plan: ProtoPlan.LIGHT,
+          monthlyCredits: 0,
+          priceUsdCents: 0,
+          monthlyKrw: 1900,
+          annualKrw: 19000,
+          dailyCredits: 15,
+          monthlyBonus: 290,
+          modelCeiling: 'value',
+          monthlyServerExports: 2,
+        },
         {
           plan: ProtoPlan.BASIC,
           monthlyCredits: 330,
@@ -151,6 +179,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           dailyCredits: 45,
           monthlyBonus: 510,
           monthlyServerExports: 6,
+          modelCeiling: 'balanced',
         },
         {
           plan: ProtoPlan.PRO,
@@ -161,6 +190,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           dailyCredits: 85,
           monthlyBonus: 1070,
           monthlyServerExports: 15,
+          modelCeiling: 'premium',
           recommended: true,
         },
         {
@@ -172,6 +202,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           dailyCredits: 235,
           monthlyBonus: 3170,
           monthlyServerExports: 60,
+          modelCeiling: 'top',
         },
       ],
       // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.

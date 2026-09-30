@@ -21,7 +21,9 @@ export {
   postCostMilli,
   postsAffordable,
   postsPerGrant,
-  subscriptionBonus,
+  illustrativeMonthlyCredits,
+  requiredPlanForLevel,
+  canEstimate,
 } from './model/types'
 export { planFromProto, planToProto, toPlanAccount } from './api/plan-mappers'
 export { myPlanQueryKey, useMyPlanQueryKey, useMyPlan } from './api/useMyPlan'

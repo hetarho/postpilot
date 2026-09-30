@@ -96,6 +96,24 @@ func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCom
 	return out, nil
 }
 
+// ComboRatesAt uses the exact rate already disclosed on GetMyPlan.
+func (e estimatorCombos) ComboRatesAt(ctx context.Context, rate plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
+	priced, err := e.catalog.ComboRatesAt(ctx, rate)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]planrpc.EstimatorCombo, 0, len(priced))
+	for _, combo := range priced {
+		out = append(out, planrpc.EstimatorCombo{
+			Combo: string(combo.Combo), ObserveLabel: combo.ObserveLabel, WriteLabel: combo.WriteLabel,
+			PerPhotoMilli: combo.Rates.PerPhoto, PerVideoMilli: combo.Rates.PerVideo,
+			Per1000CharsMilli: combo.Rates.Per1000Chars, PerPostBaseMilli: combo.Rates.PerPostBase,
+			ClipRates: combo.ClipRates,
+		})
+	}
+	return out, nil
+}
+
 // comboAssigner lets the admin edge assign a combo, translating the catalog's refusals into
 // the sentinels that edge declared. Without the translation the auth context would have to
 // import the catalog to recognise its own error cases.

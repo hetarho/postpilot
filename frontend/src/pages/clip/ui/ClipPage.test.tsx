@@ -328,6 +328,7 @@ describe('clip page local upload lifecycle', () => {
         .getQueryCache()
         .getAll()
         .map((q) => q.state.data),
+      (_, value: unknown) => (typeof value === 'bigint' ? value.toString() : value),
     )
     expect(json).not.toMatch(/blob:|clip.mp4|storage.test/)
     expect(calls.filter((c) => c === 'CreateClipSourceBatch')).toHaveLength(1)

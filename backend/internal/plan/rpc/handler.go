@@ -208,8 +208,33 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	// A comparison with no priced combo shows grants and prices and no post estimate. That
 	// is a state the operator can fix, not a failure of this read, so a combo lookup that
 	// fails is logged and answered as "none assigned" rather than failing GetMyPlan.
+	var fxRate *postpilotv1.PlanFXRate
+	fxUnavailable := false
+	var selectedRate plan.RateSnapshot
+	if source, ok := h.estimator.(interface {
+		CurrentRate(context.Context) (plan.RateSnapshot, error)
+	}); ok {
+		rate, err := source.CurrentRate(ctx)
+		if err != nil || !rate.Valid() {
+			fxUnavailable = true
+		} else {
+			selectedRate = rate
+			fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
+				ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
+		}
+	}
 	var combos []*postpilotv1.EstimatorCombo
-	priced, comboErr := h.estimator.ComboRates(ctx)
+	var priced []EstimatorCombo
+	var comboErr error
+	if source, ok := h.estimator.(interface {
+		ComboRatesAt(context.Context, plan.RateSnapshot) ([]EstimatorCombo, error)
+	}); ok {
+		if selectedRate.Valid() {
+			priced, comboErr = source.ComboRatesAt(ctx, selectedRate)
+		}
+	} else if !fxUnavailable {
+		priced, comboErr = h.estimator.ComboRates(ctx)
+	}
 	if comboErr != nil {
 		slog.Error("estimator combo read failed", "user_id", userID, "err", comboErr)
 	}
@@ -233,20 +258,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			ClipRates:             clipRates,
 		})
 	}
-	var fxRate *postpilotv1.PlanFXRate
-	fxUnavailable := false
-	if source, ok := h.estimator.(interface {
-		CurrentRate(context.Context) (plan.RateSnapshot, error)
-	}); ok {
-		rate, err := source.CurrentRate(ctx)
-		if err != nil {
-			fxUnavailable = true
-		} else if rate.Valid() {
-			fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
-				ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
-		}
-	}
-
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
 		Plan:               ToProto(acting),
 		Offers:             offers,

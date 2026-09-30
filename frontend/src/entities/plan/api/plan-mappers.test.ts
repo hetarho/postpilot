@@ -36,8 +36,6 @@ describe('toMyPlan offers', () => {
     expect(myPlan?.offers).toEqual([
       {
         plan: 'light',
-        monthlyCredits: 0,
-        priceUsdCents: 0,
         monthlyKrw: 1900,
         annualKrw: 19000,
         dailyCredits: 15,
@@ -48,8 +46,6 @@ describe('toMyPlan offers', () => {
       },
       {
         plan: 'pro',
-        monthlyCredits: 0,
-        priceUsdCents: 0,
         monthlyKrw: 9900,
         annualKrw: 99000,
         dailyCredits: 85,
