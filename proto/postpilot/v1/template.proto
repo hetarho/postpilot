@@ -31,6 +31,8 @@ service TemplateService {
   // answer is read once the job is done.
   rpc StartTemplateRequest(StartTemplateRequestRequest) returns (StartTemplateRequestResponse) {}
   rpc GetTemplateRequestResult(GetTemplateRequestResultRequest) returns (GetTemplateRequestResultResponse) {}
+  // What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
+  rpc EstimateTemplateRequest(EstimateTemplateRequestRequest) returns (EstimateTemplateRequestResponse) {}
 }
 
 message Template {
@@ -159,4 +161,17 @@ message GetTemplateRequestResultResponse {
   TemplateDraft draft = 1;
   // Wishes about how to write, separated out of the template as material for 지침 (TMPL-61).
   repeated string wishes = 2;
+}
+
+message EstimateTemplateRequestRequest {
+  ModelRef write_model = 1;
+}
+
+// The catalog estimate of one template request, in credits only: never a cost, a price or the
+// credit conversion (QUOTA-65). Neither set means no figure can be stated for this model.
+message EstimateTemplateRequestResponse {
+  // A free-classified write model: the request costs no credits.
+  bool free = 1;
+  // About this many credits for one request; never a quote.
+  optional int32 credits = 2;
 }

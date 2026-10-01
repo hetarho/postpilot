@@ -54,6 +54,9 @@ const (
 	// TemplateServiceGetTemplateRequestResultProcedure is the fully-qualified name of the
 	// TemplateService's GetTemplateRequestResult RPC.
 	TemplateServiceGetTemplateRequestResultProcedure = "/postpilot.v1.TemplateService/GetTemplateRequestResult"
+	// TemplateServiceEstimateTemplateRequestProcedure is the fully-qualified name of the
+	// TemplateService's EstimateTemplateRequest RPC.
+	TemplateServiceEstimateTemplateRequestProcedure = "/postpilot.v1.TemplateService/EstimateTemplateRequest"
 )
 
 // TemplateServiceClient is a client for the postpilot.v1.TemplateService service.
@@ -70,6 +73,8 @@ type TemplateServiceClient interface {
 	// answer is read once the job is done.
 	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
 	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
+	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
+	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
 }
 
 // NewTemplateServiceClient constructs a client for the postpilot.v1.TemplateService service. By
@@ -125,6 +130,12 @@ func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
 			connect.WithClientOptions(opts...),
 		),
+		estimateTemplateRequest: connect.NewClient[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse](
+			httpClient,
+			baseURL+TemplateServiceEstimateTemplateRequestProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateRequest")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -137,6 +148,7 @@ type templateServiceClient struct {
 	getFormatGuide           *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
 	startTemplateRequest     *connect.Client[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse]
 	getTemplateRequestResult *connect.Client[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse]
+	estimateTemplateRequest  *connect.Client[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse]
 }
 
 // ListTemplates calls postpilot.v1.TemplateService.ListTemplates.
@@ -174,6 +186,11 @@ func (c *templateServiceClient) GetTemplateRequestResult(ctx context.Context, re
 	return c.getTemplateRequestResult.CallUnary(ctx, req)
 }
 
+// EstimateTemplateRequest calls postpilot.v1.TemplateService.EstimateTemplateRequest.
+func (c *templateServiceClient) EstimateTemplateRequest(ctx context.Context, req *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error) {
+	return c.estimateTemplateRequest.CallUnary(ctx, req)
+}
+
 // TemplateServiceHandler is an implementation of the postpilot.v1.TemplateService service.
 type TemplateServiceHandler interface {
 	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
@@ -188,6 +205,8 @@ type TemplateServiceHandler interface {
 	// answer is read once the job is done.
 	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
 	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
+	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
+	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
 }
 
 // NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -239,6 +258,12 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 		connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	templateServiceEstimateTemplateRequestHandler := connect.NewUnaryHandler(
+		TemplateServiceEstimateTemplateRequestProcedure,
+		svc.EstimateTemplateRequest,
+		connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TemplateServiceListTemplatesProcedure:
@@ -255,6 +280,8 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 			templateServiceStartTemplateRequestHandler.ServeHTTP(w, r)
 		case TemplateServiceGetTemplateRequestResultProcedure:
 			templateServiceGetTemplateRequestResultHandler.ServeHTTP(w, r)
+		case TemplateServiceEstimateTemplateRequestProcedure:
+			templateServiceEstimateTemplateRequestHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -290,4 +317,8 @@ func (UnimplementedTemplateServiceHandler) StartTemplateRequest(context.Context,
 
 func (UnimplementedTemplateServiceHandler) GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetTemplateRequestResult is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.EstimateTemplateRequest is not implemented"))
 }

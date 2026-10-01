@@ -151,6 +151,24 @@ func (h *Handler) GetTemplateRequestResult(ctx context.Context, req *connect.Req
 	}), nil
 }
 
+// EstimateTemplateRequest states 무료 or 약 n 크레딧 for one request on the named write model
+// (QUOTA-67). A model with no figure answers with neither, which the box shows as no figure.
+func (h *Handler) EstimateTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.EstimateTemplateRequestRequest]) (*connect.Response[postpilotv1.EstimateTemplateRequestResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	estimate, err := h.service.EstimateRequest(ctx, modelRefValue(req.Msg.GetWriteModel()))
+	if err != nil {
+		return nil, toConnectError("estimate template request", err)
+	}
+	out := &postpilotv1.EstimateTemplateRequestResponse{Free: estimate.Free}
+	if estimate.Available && !estimate.Free {
+		credits := int32(estimate.Credits)
+		out.Credits = &credits
+	}
+	return connect.NewResponse(out), nil
+}
+
 // guideLanguage is the reader's language, which every guide-teaching procedure needs and none
 // guesses.
 func guideLanguage(value postpilotv1.ContentLanguage) (template.Language, error) {

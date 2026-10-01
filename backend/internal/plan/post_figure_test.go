@@ -71,3 +71,33 @@ func TestStageEstimatesMatchTheEstimatorRates(t *testing.T) {
 		t.Fatal("an invalid rate produced a write estimate")
 	}
 }
+
+// One assumed call is the estimator's own price for it, rounded up once (QUOTA-40, QUOTA-67).
+func TestCallCreditsAtPricesOneCallAndRoundsUp(t *testing.T) {
+	rate := plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+		ReferenceE4: 13_600_000, AppliedE4: 13_600_000}
+	var asked [2]int64
+	pricer := func(in, out int64) (int64, bool) {
+		asked = [2]int64{in, out}
+		return 1_000, true
+	}
+	credits, ok := plan.CallCreditsAt(pricer, rate, 6_000, 3_000)
+	if !ok || credits < 1 {
+		t.Fatalf("credits = %d ok=%v", credits, ok)
+	}
+	// The edit allowance applies to both counts, as it does to every estimator call.
+	if asked[0] <= 6_000 || asked[1] <= 3_000 {
+		t.Fatalf("priced %v, want the allowance on both counts", asked)
+	}
+	free := func(int64, int64) (int64, bool) { return 0, true }
+	if got, ok := plan.CallCreditsAt(free, rate, 6_000, 3_000); !ok || got != 0 {
+		t.Fatalf("free call = %d ok=%v", got, ok)
+	}
+	unpriced := func(int64, int64) (int64, bool) { return 0, false }
+	if _, ok := plan.CallCreditsAt(unpriced, rate, 6_000, 3_000); ok {
+		t.Fatal("an unpriced model produced an estimate")
+	}
+	if _, ok := plan.CallCreditsAt(pricer, plan.RateSnapshot{}, 6_000, 3_000); ok {
+		t.Fatal("an invalid rate produced an estimate")
+	}
+}

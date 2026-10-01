@@ -94,6 +94,21 @@ func WritePostCreditsAt(write Pricer, rate RateSnapshot, chars int) (int, bool) 
 	return wholeCredits(base + chars*perThousand/1_000), true
 }
 
+// CallCreditsAt is the catalog-based price of ONE assumed call of `prompt` input and
+// `completion` output tokens, with the same edit allowance the post estimate applies, rounded up
+// to a whole credit (QUOTA-40). It is an estimate, never a quote: a job's hold and settlement
+// stay authoritative.
+func CallCreditsAt(p Pricer, rate RateSnapshot, prompt, completion int64) (int, bool) {
+	if !rate.Valid() || prompt < 0 || completion < 0 {
+		return 0, false
+	}
+	milli, ok := estimatorMilliAt(p, rate, prompt, completion)
+	if !ok {
+		return 0, false
+	}
+	return wholeCredits(milli), true
+}
+
 func wholeCredits(milli int) int {
 	if milli <= 0 {
 		return 0

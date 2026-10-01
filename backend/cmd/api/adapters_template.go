@@ -7,6 +7,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/template"
 )
@@ -129,4 +130,16 @@ func (a templateRequestJobs) RequestPayload(ctx context.Context, userID, jobID s
 		return nil, template.ErrRequestNotReady
 	}
 	return found.Payload, nil
+}
+
+// templateEstimates prices one template request the way the post estimate prices a post: the
+// registry's catalog prices at the current eligible rate, credits only (QUOTA-40, QUOTA-65).
+type templateEstimates struct{ rates estimateRates }
+
+func (a templateEstimates) CallCredits(ctx context.Context, info llm.ModelInfo, promptTokens, completionTokens int64) (int, bool) {
+	rate, err := a.rates.SelectRate(ctx)
+	if err != nil {
+		return 0, false
+	}
+	return plan.CallCreditsAt(catalogPricer(info), rate, promptTokens, completionTokens)
 }

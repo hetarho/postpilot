@@ -18,6 +18,8 @@ type Service struct {
 	newID  func() string
 	// requests is the template request's wiring (TMPL-58), nil until ConfigureRequests.
 	requests *requests
+	// estimator prices one request for the box's credit figure (QUOTA-67).
+	estimator RequestEstimator
 }
 
 func NewService(store Store, limits Limits) *Service {

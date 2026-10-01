@@ -11,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/template"
@@ -191,5 +192,27 @@ func TestSampleTextKeepsTheShapeAndDropsThePhotos(t *testing.T) {
 	}
 	if sampleText(nil) != "" || sampleText(&post.PostContent{}) != "" {
 		t.Fatal("a post with no content must have no sample")
+	}
+}
+
+type stubRates struct {
+	rate plan.RateSnapshot
+	err  error
+}
+
+func (s stubRates) SelectRate(context.Context) (plan.RateSnapshot, error) { return s.rate, s.err }
+
+// The request box's figure is the post estimate's own pricing of one call: catalog prices at the
+// current eligible rate, and no figure without a rate (QUOTA-67).
+func TestTemplateEstimatesPriceOneCallAtTheCatalog(t *testing.T) {
+	info := llm.ModelInfo{InputUSDPerMillion: "1", OutputUSDPerMillion: "4"}
+	rate := plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29", ReferenceE4: 13_600_000, AppliedE4: 13_600_000}
+	credits, ok := templateEstimates{rates: stubRates{rate: rate}}.CallCredits(context.Background(), info, 6_000, 3_000)
+	want, wantOK := plan.CallCreditsAt(catalogPricer(info), rate, 6_000, 3_000)
+	if !ok || !wantOK || credits != want || credits < 1 {
+		t.Fatalf("credits = %d ok=%v, want %d", credits, ok, want)
+	}
+	if _, ok := (templateEstimates{rates: stubRates{err: errors.New("no rate")}}).CallCredits(context.Background(), info, 6_000, 3_000); ok {
+		t.Fatal("a missing rate produced a figure")
 	}
 }

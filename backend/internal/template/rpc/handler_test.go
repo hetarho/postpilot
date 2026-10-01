@@ -373,3 +373,39 @@ func TestGetTemplateRequestResult(t *testing.T) {
 		}
 	}
 }
+
+type rpcEstimator struct {
+	credits int
+	ok      bool
+}
+
+func (e rpcEstimator) CallCredits(context.Context, llm.ModelInfo, int64, int64) (int, bool) {
+	return e.credits, e.ok
+}
+
+// The figure travels as credits only, and a model with none answers with neither field.
+func TestEstimateTemplateRequest(t *testing.T) {
+	estimate := func(level string, estimator rpcEstimator) *postpilotv1.EstimateTemplateRequestResponse {
+		t.Helper()
+		models := writer()
+		models.info.Levels = map[string]string{llm.StageNameWrite: level}
+		h := requestHandler(models, rpcSamples{}, rpcJobs{})
+		h.service.ConfigureEstimate(estimator)
+		resp, err := h.EstimateTemplateRequest(signedIn(t), connect.NewRequest(&postpilotv1.EstimateTemplateRequestRequest{
+			WriteModel: &postpilotv1.ModelRef{ProviderId: "openrouter", ModelId: "writer"},
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp.Msg
+	}
+	if got := estimate("balanced", rpcEstimator{credits: 2, ok: true}); got.GetFree() || got.Credits == nil || got.GetCredits() != 2 {
+		t.Fatalf("priced = %v", got)
+	}
+	if got := estimate("free", rpcEstimator{credits: 2, ok: true}); !got.GetFree() || got.Credits != nil {
+		t.Fatalf("free = %v", got)
+	}
+	if got := estimate("balanced", rpcEstimator{}); got.GetFree() || got.Credits != nil {
+		t.Fatalf("unpriced = %v", got)
+	}
+}

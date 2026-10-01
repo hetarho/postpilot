@@ -273,6 +273,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		templateModels{registry: c.metered}, templateSamples{service: c.post},
 		templateRequestJobs{queue: c.jobs}, template.RequestLimits(cfg.TemplateRequest),
 	)
+	c.template.ConfigureEstimate(templateEstimates{rates: c.ledger})
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
 
 	// Template names are a live projection and owned-id validation, never a stored column or
