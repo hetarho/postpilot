@@ -189,15 +189,22 @@ func (s *Store) InsertSample(ctx context.Context, sample voice.Sample) error {
 }
 
 // AnswerPrompt writes the answer and drops its pending photo upload in one transaction, so a
-// photo is never both answered and reclaimable. The partial unique index on
-// (voice_id, prompt_key) is the arbiter of a second answer.
-func (s *Store) AnswerPrompt(ctx context.Context, sample voice.Sample, uploadID string) error {
+// photo is never both answered and reclaimable. A rewrite removes the previous answer in the
+// same transaction; the partial unique index on (voice_id, prompt_key) is the arbiter of a
+// second answer.
+func (s *Store) AnswerPrompt(ctx context.Context, sample voice.Sample, uploadID, replaceID string) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin answer prompt: %w", err)
 	}
 	defer tx.Rollback()
 	queries := s.write.WithTx(tx)
+	if replaceID != "" {
+		_, err := queries.DeleteSample(ctx, sqlc.DeleteSampleParams{ID: replaceID, VoiceID: sample.VoiceID, UserID: sample.UserID})
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("drop previous answer: %w", err)
+		}
+	}
 	if err := queries.InsertSample(ctx, sampleParams(sample)); err != nil {
 		if isUniqueViolation(err) {
 			return voice.ErrPromptAnswered

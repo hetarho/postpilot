@@ -586,7 +586,8 @@ func (h *voiceHarness) withPhotos() *fakeObjects {
 	return objects
 }
 
-// VOICE-60: an answer is trimmed and non-empty, one per prompt, and names a known prompt.
+// VOICE-60: an answer is trimmed and non-empty, one per prompt, and names a known prompt; a
+// second answer rewrites the first.
 func TestAnswerPromptValidatesAndHoldsOneAnswerPerPrompt(t *testing.T) {
 	h := newVoiceHarness(t)
 	h.withPhotos()
@@ -602,9 +603,15 @@ func TestAnswerPromptValidatesAndHoldsOneAnswerPerPrompt(t *testing.T) {
 	if err != nil || answer.Kind != voice.SampleKindAnswer || answer.PromptKey != "opening_greeting" || answer.Body != "안녕하세요! 오늘도 반가워요." || answer.Label != "" || answer.HasPhoto() {
 		t.Fatalf("answer = %+v err=%v", answer, err)
 	}
-	if _, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "또 안녕하세요"}); !errors.Is(err, voice.ErrPromptAnswered) {
-		t.Fatalf("second answer = %v", err)
+	rewritten, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "또 안녕하세요. 오늘은 두 문장을 더 써요. 반가워요."})
+	if err != nil || rewritten.ID == answer.ID {
+		t.Fatalf("rewrite = %+v err=%v", rewritten, err)
 	}
+	samples, err := h.store.ListSamples(ctx, "alice", alice)
+	if err != nil || len(samples) != 1 || samples[0].ID != rewritten.ID {
+		t.Fatalf("after the rewrite the prompt holds %+v err=%v", samples, err)
+	}
+	answer = rewritten
 	// Another voice's prompt is its own: bob answers the same prompt freely.
 	if _, err := h.svc.AnswerPrompt(ctx, "bob", h.voice("bob"), voice.Answer{PromptKey: "opening_greeting", Body: "반가워요"}); err != nil {
 		t.Fatalf("another voice's answer = %v", err)
@@ -663,10 +670,25 @@ func TestAPhotoPromptIsAnsweredOnTheOwnersUploadedPhoto(t *testing.T) {
 	if _, _, err := h.svc.GetSample(ctx, "bob", alice, saved.ID); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("a foreign read = %v", err)
 	}
-	if err := h.svc.DeleteSample(ctx, "alice", alice, saved.ID); err != nil {
+	// A rewrite with no new photo stays on the photo the answer was written about.
+	kept, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요. 면이 쫄깃했어요."})
+	if err != nil || kept.PhotoKey != upload.Key || kept.PhotoWidth != 1024 || kept.PhotoHeight != 768 || len(objects.deleted) != 0 {
+		t.Fatalf("rewrite keeping the photo = %+v err=%v deleted=%v", kept, err, objects.deleted)
+	}
+	// A rewrite on a new photo drops the old object.
+	second, _, err := h.svc.CreatePhotoUpload(ctx, "alice", alice, "photo_food")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if len(objects.deleted) != 1 || objects.deleted[0] != upload.Key {
+	objects.objects[second.Key] = 5000
+	replaced, err := h.svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짬뽕이에요.", UploadID: second.ID, PhotoWidth: 800, PhotoHeight: 600})
+	if err != nil || replaced.PhotoKey != second.Key || len(objects.deleted) != 1 || objects.deleted[0] != upload.Key {
+		t.Fatalf("rewrite on a new photo = %+v err=%v deleted=%v", replaced, err, objects.deleted)
+	}
+	if err := h.svc.DeleteSample(ctx, "alice", alice, replaced.ID); err != nil {
+		t.Fatal(err)
+	}
+	if len(objects.deleted) != 2 || objects.deleted[1] != second.Key {
 		t.Fatalf("deleted objects = %v", objects.deleted)
 	}
 }

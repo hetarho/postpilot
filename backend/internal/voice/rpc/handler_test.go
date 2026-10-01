@@ -183,11 +183,13 @@ func TestVoiceMaterialRPCs(t *testing.T) {
 	if err != nil || answered.Msg.GetSample().GetKind() != postpilotv1.VoiceSampleKind_VOICE_SAMPLE_KIND_ANSWER || answered.Msg.GetSample().GetPromptKey() != "opening_greeting" {
 		t.Fatalf("answer = %+v err=%v", answered, err)
 	}
-	if _, err := handler.AnswerVoicePrompt(alice, connect.NewRequest(&postpilotv1.AnswerVoicePromptRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Body: "또"})); connect.CodeOf(err) != connect.CodeAlreadyExists {
-		t.Fatalf("second answer code = %v", err)
+	// A second answer rewrites the first.
+	answered, err = handler.AnswerVoicePrompt(alice, connect.NewRequest(&postpilotv1.AnswerVoicePromptRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Body: "안녕하세요! 반가워요."}))
+	if err != nil {
+		t.Fatalf("second answer = %v", err)
 	}
 	opened, err := handler.GetVoiceSample(alice, connect.NewRequest(&postpilotv1.GetVoiceSampleRequest{VoiceId: created.ID, SampleId: answered.Msg.GetSample().GetId()}))
-	if err != nil || opened.Msg.GetBody() != "안녕하세요!" || opened.Msg.GetPhotoUrl() != "" {
+	if err != nil || opened.Msg.GetBody() != "안녕하세요! 반가워요." || opened.Msg.GetPhotoUrl() != "" {
 		t.Fatalf("opened = %+v err=%v", opened, err)
 	}
 	if _, err := handler.GetVoiceSample(auth.WithUser(ctx, "bob"), connect.NewRequest(&postpilotv1.GetVoiceSampleRequest{VoiceId: created.ID, SampleId: answered.Msg.GetSample().GetId()})); connect.CodeOf(err) != connect.CodeNotFound {

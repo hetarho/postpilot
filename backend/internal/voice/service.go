@@ -434,7 +434,8 @@ type Answer struct {
 
 // AnswerPrompt stores an answer as a 학습 글 (VOICE-60): trimmed and non-empty, one per prompt,
 // and a photo prompt's photo confirmed by a HEAD against the post photo's size and dimension
-// limits (→POST-36). It enqueues nothing.
+// limits (→POST-36). Answering a prompt that holds an answer rewrites it: the new answer
+// replaces the old one, keeping its photo unless a new one is uploaded. It enqueues nothing.
 func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answer Answer) (Sample, error) {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return Sample{}, err
@@ -447,12 +448,19 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 	if body == "" {
 		return Sample{}, ErrAnswerRequired
 	}
+	previous, err := s.previousAnswer(ctx, userID, voiceID, prompt.Key)
+	if err != nil {
+		return Sample{}, err
+	}
 	sample := Sample{
 		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindAnswer, PromptKey: prompt.Key,
 		Body: body, Chars: utf8.RuneCountInString(body), CreatedAt: s.now(),
 	}
 	uploadID := ""
-	if prompt.Photo {
+	if prompt.Photo && answer.UploadID == "" && previous != nil && previous.HasPhoto() {
+		// A rewrite that picks no new photo stays on the photo the answer was written about.
+		sample.PhotoKey, sample.PhotoWidth, sample.PhotoHeight = previous.PhotoKey, previous.PhotoWidth, previous.PhotoHeight
+	} else if prompt.Photo {
 		if answer.UploadID == "" || s.objects == nil {
 			return Sample{}, ErrPhotoRequired
 		}
@@ -483,13 +491,42 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 		sample.PhotoKey, sample.PhotoWidth, sample.PhotoHeight = upload.Key, answer.PhotoWidth, answer.PhotoHeight
 		uploadID = upload.ID
 	}
-	if err := s.samples.AnswerPrompt(ctx, sample, uploadID); err != nil {
+	replaceID := ""
+	if previous != nil {
+		replaceID = previous.ID
+	}
+	if err := s.samples.AnswerPrompt(ctx, sample, uploadID, replaceID); err != nil {
 		if errors.Is(err, ErrPromptAnswered) {
 			return Sample{}, err
 		}
 		return Sample{}, fmt.Errorf("answer prompt: %w", err)
 	}
+	// A rewrite on a new photo drops the old object after its row (→POST-39).
+	if previous != nil && previous.HasPhoto() && previous.PhotoKey != sample.PhotoKey && s.objects != nil {
+		if err := s.objects.Delete(ctx, previous.PhotoKey); err != nil {
+			slog.WarnContext(ctx, "voice photo delete failed; the sweep reclaims it", "voice_id", voiceID, "err", err)
+		}
+	}
 	return sample, nil
+}
+
+// previousAnswer is the answer the prompt holds now, read with its photo, or nil.
+func (s *Service) previousAnswer(ctx context.Context, userID, voiceID, promptKey string) (*Sample, error) {
+	samples, err := s.samples.ListSamples(ctx, userID, voiceID)
+	if err != nil {
+		return nil, fmt.Errorf("list samples: %w", err)
+	}
+	for _, sample := range samples {
+		if sample.Kind != SampleKindAnswer || sample.PromptKey != promptKey {
+			continue
+		}
+		previous, err := s.samples.GetSampleBody(ctx, userID, voiceID, sample.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get previous answer: %w", err)
+		}
+		return previous, nil
+	}
+	return nil, nil
 }
 
 // GetSample opens one 학습 글 for its owner: the full text and, for a photo answer, a view URL

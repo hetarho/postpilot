@@ -650,12 +650,18 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     if (!prompt) throw connectAppError('VOICE_PROMPT_NOT_FOUND', Code.NotFound)
     const body = request.body.trim()
     if (!body) throw connectAppError('VOICE_ANSWER_REQUIRED', Code.InvalidArgument)
-    if (materialsOf(request.voiceId).some((row) => row.sample.promptKey === prompt.key)) {
-      throw connectAppError('VOICE_PROMPT_ANSWERED', Code.AlreadyExists)
-    }
-    if (prompt.photo && pendingUploads.get(request.uploadId) !== prompt.key) {
+    // A second answer rewrites the first, on its photo unless another is uploaded (VOICE-60).
+    const rows = materialsOf(request.voiceId)
+    const previous = rows.find((row) => row.sample.promptKey === prompt.key)
+    const keepsPhoto = !request.uploadId && previous?.sample.hasPhoto === true
+    if (prompt.photo && !keepsPhoto && pendingUploads.get(request.uploadId) !== prompt.key) {
       throw connectAppError('VOICE_PHOTO_REQUIRED', Code.FailedPrecondition)
     }
+    if (previous)
+      materials.set(
+        request.voiceId,
+        rows.filter((row) => row !== previous),
+      )
     options.answers?.push({ promptKey: prompt.key, body, uploadId: request.uploadId })
     pendingUploads.delete(request.uploadId)
     sequence += 1

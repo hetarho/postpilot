@@ -52,6 +52,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
           ownerId={ownerId}
           voiceId={voiceId}
           samples={profile.samples}
+          readiness={profile.made ? undefined : profile.readiness}
           disabled={voice.deleted}
         />
       </div>

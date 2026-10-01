@@ -39,7 +39,8 @@ function renderMaterials(
 }
 
 describe('the 학습 글 tab', () => {
-  // VOICE-32: the meter counts sentences and names a missing part; 100% says so.
+  // VOICE-32: the meter counts sentences, says how many are still needed and names a missing
+  // part; 100% says so.
   it('shows the readiness meter with its missing parts', async () => {
     renderMaterials({
       samples: [
@@ -48,7 +49,9 @@ describe('the 학습 글 tab', () => {
     })
     expect(await screen.findByText('말투 학습에 필요한 정보')).toBeInTheDocument()
     expect(screen.getByText('50% 확보')).toBeInTheDocument()
-    expect(screen.getByText('아직 없는 부분: 본문 · 마무리')).toBeInTheDocument()
+    expect(
+      screen.getByText('30문장이 더 필요해요. 아직 없는 부분: 본문 · 마무리'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
     expect(
       screen.getByText('말투 학습에 필요한 정보가 100%가 되면 누를 수 있어요.'),
@@ -148,7 +151,8 @@ describe('the 학습 글 tab', () => {
   })
 
   // VOICE-60, VOICE-65: 문항 풀기 lists the prompts in their groups, answers one, moves on to the
-  // next unanswered prompt — wrapping past the last — and marks the answered one.
+  // next unanswered prompt — wrapping past the last — and marks the answered one, which stays
+  // open to a rewrite.
   it('answers a prompt and moves on to the next one', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
@@ -177,13 +181,15 @@ describe('the 학습 글 tab', () => {
     await user.type(sheet.getByLabelText('답'), '안')
     expect(sheet.getByRole('status')).toHaveTextContent('')
     await user.click(sheet.getByRole('button', { name: '문항 목록' }))
-    expect(
-      await sheet.findByRole('button', { name: /글을 마무리할 때 쓰는 끝인사.*답함/ }),
-    ).toBeDisabled()
+    await waitFor(() =>
+      expect(
+        sheet.getByRole('button', { name: /글을 마무리할 때 쓰는 끝인사.*답함/ }),
+      ).toBeEnabled(),
+    )
   })
 
   // VOICE-65: 건너뛰기 moves on without saving, and the prompt list returns once every prompt
-  // holds an answer.
+  // holds an answer — saying, while the voice is short of 100%, that answers can take more.
   it('skips a prompt and shows the list after the last answer', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -227,10 +233,80 @@ describe('the 학습 글 tab', () => {
       ]),
     )
     expect(await sheet.findByRole('heading', { name: '글머리' })).toBeInTheDocument()
-    expect(sheet.getByRole('status')).toHaveTextContent('답을 저장했어요')
+    expect(sheet.getByText('답을 저장했어요')).toBeInTheDocument()
+    expect(
+      sheet.getByText(
+        '모든 문항에 답했어요. 답한 문항을 눌러 문장을 더 보태면 나머지를 채울 수 있어요.',
+      ),
+    ).toBeInTheDocument()
+    expect(sheet.getByText(/문장이 더 필요해요\./)).toBeInTheDocument()
     for (const prompt of [/첫인사/, /음식이나 음료 사진/, /가격이나 양/, /끝인사/]) {
-      expect(sheet.getByRole('button', { name: prompt })).toBeDisabled()
+      await waitFor(() => expect(sheet.getByRole('button', { name: prompt })).toBeEnabled())
     }
+  })
+
+  // VOICE-60, VOICE-32: an answered prompt reopens on its answer; the rewrite replaces it — a
+  // photo answer on its own photo — and the meter counts the added sentences.
+  it('rewrites an answered prompt with more sentences', async () => {
+    const user = userEvent.setup()
+    const answers: NonNullable<FakeVoiceOptions['answers']> = []
+    renderMaterials({
+      answers,
+      samples: [
+        {
+          id: 'a1',
+          label: '',
+          kind: 'answer',
+          promptKey: 'opening_greeting',
+          body: '안녕하세요. 반가워요.',
+        },
+        {
+          id: 'a2',
+          label: '',
+          kind: 'answer',
+          promptKey: 'photo_food',
+          hasPhoto: true,
+          body: '짜장면이에요. 맛있었어요.',
+        },
+      ],
+    })
+
+    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(await sheet.findByText('6% 확보')).toBeInTheDocument()
+    await user.click(await sheet.findByRole('button', { name: /첫인사.*답함/ }))
+    const field = await sheet.findByLabelText('답')
+    expect(field).toHaveValue('안녕하세요. 반가워요.')
+    expect(field).toHaveFocus()
+    await user.type(field, ' 오늘도 와 주셔서 고마워요.')
+    await user.click(sheet.getByRole('button', { name: '답 고치기' }))
+
+    await waitFor(() =>
+      expect(answers).toEqual([
+        {
+          promptKey: 'opening_greeting',
+          body: '안녕하세요. 반가워요. 오늘도 와 주셔서 고마워요.',
+          uploadId: '',
+        },
+      ]),
+    )
+    expect(await sheet.findByText('8% 확보')).toBeInTheDocument()
+
+    await user.click(sheet.getByRole('button', { name: '문항 목록' }))
+    await user.click(await sheet.findByRole('button', { name: /음식이나 음료 사진.*답함/ }))
+    expect(await sheet.findByRole('img', { name: '고른 사진' })).toHaveAttribute(
+      'src',
+      'https://storage.test/voices/a2.jpg',
+    )
+    await user.type(sheet.getByLabelText('답'), ' 면이 쫄깃했어요.')
+    await user.click(sheet.getByRole('button', { name: '답 고치기' }))
+    await waitFor(() =>
+      expect(answers.at(-1)).toEqual({
+        promptKey: 'photo_food',
+        body: '짜장면이에요. 맛있었어요. 면이 쫄깃했어요.',
+        uploadId: '',
+      }),
+    )
   })
 
   // VOICE-60: a photo prompt is answered on the owner's own photo, converted and PUT first.

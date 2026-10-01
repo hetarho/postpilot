@@ -53,8 +53,9 @@ type SampleStore interface {
 	DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (photoKey string, deleted bool, err error)
 	CountSamples(ctx context.Context, userID, voiceID string) (int, error)
 	// AnswerPrompt writes an answer and, for a photo prompt, drops its pending upload in one
-	// transaction; a prompt that already holds an answer is ErrPromptAnswered.
-	AnswerPrompt(ctx context.Context, sample Sample, uploadID string) error
+	// transaction; a non-empty replaceID is the prompt's previous answer, removed in the same
+	// transaction. A prompt that still holds another answer is ErrPromptAnswered.
+	AnswerPrompt(ctx context.Context, sample Sample, uploadID, replaceID string) error
 }
 
 // PhotoUploadStore is a photo prompt's photo between its presign and its answer.

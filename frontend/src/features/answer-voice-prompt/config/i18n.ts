@@ -21,7 +21,10 @@ export const i18n = {
       uploadFailed: '사진을 올리지 못했어요. 다시 시도해 주세요.',
       answer: '답',
       submit: '답하기',
+      rewrite: '답 고치기',
+      short: '모든 문항에 답했어요. 답한 문항을 눌러 문장을 더 보태면 나머지를 채울 수 있어요.',
       loadFailed: '문항을 불러오지 못했어요.',
+      answerLoadFailed: '답을 불러오지 못했어요.',
     },
   },
   en: {
@@ -42,7 +45,11 @@ export const i18n = {
       uploadFailed: 'Could not upload the photo. Try again.',
       answer: 'Answer',
       submit: 'Answer',
+      rewrite: 'Update answer',
+      short:
+        'Every prompt is answered. Open an answered prompt and add sentences to fill the rest.',
       loadFailed: 'Could not load the prompts.',
+      answerLoadFailed: 'Could not load the answer.',
     },
   },
 } as const satisfies I18nFragment
