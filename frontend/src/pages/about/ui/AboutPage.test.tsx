@@ -110,7 +110,8 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
     const region = within(
       await screen.findByRole('region', { name: locale === 'ko' ? '요금제' : 'Plans' }),
     )
-    const cards = region.getAllByRole('listitem')
+    // Each card holds its own benefit list, so the rungs are the ladder's direct children.
+    const cards = Array.from(region.getAllByRole('list')[0].children) as HTMLElement[]
     expect(cards).toHaveLength(5)
     for (const [index, tier] of TIERS.entries()) {
       const card = within(cards[index])
@@ -120,24 +121,33 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
           name: tier.plan[0].toUpperCase() + tier.plan.slice(1),
         }),
       ).toBeInTheDocument()
+      if (!tier.monthlyKrw) {
+        // Free names what it gives, never a zero-valued benefit (QUOTA-28).
+        expect(card.getByText(locale === 'ko' ? '무료 모델' : 'Free models')).toBeInTheDocument()
+        expect(card.queryByText(/\b0\b/)).not.toBeInTheDocument()
+        continue
+      }
       expect(card.getAllByText(new RegExp(tier.dailyCredits.toString())).length).toBeGreaterThan(0)
       expect(
         card.getAllByText(new RegExp(tier.monthlyServerExports.toString())).length,
       ).toBeGreaterThan(0)
-      if (tier.monthlyKrw) {
-        expect(
-          card.getByText(new RegExp(tier.monthlyKrw.toLocaleString('en-US'))),
-        ).toBeInTheDocument()
-        expect(
-          card.getByText(new RegExp(tier.annualKrw.toLocaleString('en-US'))),
-        ).toBeInTheDocument()
-      }
+      expect(
+        card.getByText(new RegExp(tier.monthlyKrw.toLocaleString('en-US'))),
+      ).toBeInTheDocument()
+      expect(card.getByText(new RegExp(tier.annualKrw.toLocaleString('en-US')))).toBeInTheDocument()
     }
     expect(calls).toEqual([])
     expect(region.queryByRole('button')).not.toBeInTheDocument()
     expect(region.queryByRole('link')).not.toBeInTheDocument()
     expect(container.querySelector('form, input, textarea')).toBeNull()
-    expect(region.getByRole('list')).toHaveClass('md:grid-cols-2', 'xl:grid-cols-5')
+    expect(region.getAllByRole('list')[0]).toHaveClass('md:grid-cols-2', 'xl:grid-cols-5')
+    expect(
+      region.getAllByText(
+        locale === 'ko'
+          ? '클립 원본·완성본 최대 60초'
+          : '60-second cap for source and finished clips',
+      ),
+    ).toHaveLength(1)
   })
 })
 

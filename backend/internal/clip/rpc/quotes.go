@@ -6,12 +6,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 )
 
@@ -47,7 +45,7 @@ func generationQuoteProto(ctx context.Context, h *Handler, user, project string,
 	if q.Pricing.Storyline {
 		calls = []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "storyline", q.Pricing.FlowCalls())}
 	}
-	return &v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, project), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: cancellationPolicyProto(q.Pricing), Rate: clipFXProto(ctx, q.Pricing.Rate), QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: calls}
+	return &v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, project), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: cancellationPolicyProto(q.Pricing), QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: calls}
 }
 
 // QuoteClipRevision prices ONE written revision of the plan the owner is
@@ -75,7 +73,6 @@ func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1
 		QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano),
 		ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), PlanRevision: int32(project.EditPlanRevision),
 		CancellationPolicy: cancellationPolicyProto(q.Pricing),
-		Rate:               clipFXProto(ctx, q.Pricing.Rate),
 		PricedCalls:        []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())},
 		SequenceCaptions:   sequenceCostProto(ctx, h, user, req.Msg.GetProjectId()),
 	}), nil
@@ -89,16 +86,6 @@ func cancellationPolicyProto(pricing clip.GenerationPricing) *v1.ClipCancellatio
 			ServiceFaultCompensationValidDays: 7}
 	}
 	return &v1.ClipCancellationPolicy{Version: int32(pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}
-}
-
-// clipFXProto is the frozen conversion as only the operator may read it: an owner sees credits,
-// never the rate behind them (QUOTA-65).
-func clipFXProto(ctx context.Context, rate plan.RateSnapshot) *v1.ClipFXRate {
-	if !rate.Valid() || !auth.ActsAsMaster(ctx) {
-		return nil
-	}
-	return &v1.ClipFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
-		ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
 }
 
 // sequenceCostProto states what the sequence-rendered captions add to the render
@@ -149,7 +136,7 @@ func optionalInt32(n *int) *int32 {
 	value := int32(*n)
 	return &value
 }
-func accountingProto(ctx context.Context, a *clip.Accounting) *v1.ClipAccounting {
+func accountingProto(a *clip.Accounting) *v1.ClipAccounting {
 	if a == nil {
 		return nil
 	}
@@ -157,5 +144,5 @@ func accountingProto(ctx context.Context, a *clip.Accounting) *v1.ClipAccounting
 	if a.CompensationExpiresAt != nil {
 		expires = a.CompensationExpiresAt.UTC().Format(time.RFC3339Nano)
 	}
-	return &v1.ClipAccounting{CancellationPolicyVersion: int32(a.CancellationPolicyVersion), SettlementReason: a.SettlementReason, NominalReservedCredits: optionalInt32(a.NominalReservation), ConfirmedChargeCredits: optionalInt32(a.ConfirmedCharge), CancellationFeeCredits: optionalInt32(a.CancellationFee), ShadowConfirmedChargeCredits: optionalInt32(a.ShadowConfirmedCharge), ShadowCancellationFeeCredits: optionalInt32(a.ShadowCancellationFee), JobId: a.JobID, Status: a.Status, ApprovedMaxCredits: optionalInt32(a.ApprovedMax), ReservedCredits: optionalInt32(a.Reserved), FinalChargeCredits: optionalInt32(a.FinalCharge), RefundCredits: optionalInt32(a.Refund), ShadowChargeCredits: optionalInt32(a.ShadowCharge), Settled: a.Settled, FaultCause: a.FaultCause, CompensationCredits: optionalInt32(a.CompensationCredits), CompensationExpiresAt: expires, NetDebitCredits: optionalInt32(a.NetCharge), Rate: clipFXProto(ctx, a.Rate)}
+	return &v1.ClipAccounting{CancellationPolicyVersion: int32(a.CancellationPolicyVersion), SettlementReason: a.SettlementReason, NominalReservedCredits: optionalInt32(a.NominalReservation), ConfirmedChargeCredits: optionalInt32(a.ConfirmedCharge), CancellationFeeCredits: optionalInt32(a.CancellationFee), ShadowConfirmedChargeCredits: optionalInt32(a.ShadowConfirmedCharge), ShadowCancellationFeeCredits: optionalInt32(a.ShadowCancellationFee), JobId: a.JobID, Status: a.Status, ApprovedMaxCredits: optionalInt32(a.ApprovedMax), ReservedCredits: optionalInt32(a.Reserved), FinalChargeCredits: optionalInt32(a.FinalCharge), RefundCredits: optionalInt32(a.Refund), ShadowChargeCredits: optionalInt32(a.ShadowCharge), Settled: a.Settled, FaultCause: a.FaultCause, CompensationCredits: optionalInt32(a.CompensationCredits), CompensationExpiresAt: expires, NetDebitCredits: optionalInt32(a.NetCharge)}
 }

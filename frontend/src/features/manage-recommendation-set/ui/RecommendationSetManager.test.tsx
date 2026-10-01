@@ -113,7 +113,13 @@ describe('the 추천 조합 tab', () => {
       .getAllByRole('link')
       .filter((link) => link.getAttribute('href')?.startsWith('/admin'))
       .map((link) => link.getAttribute('href'))
-    expect(adminTabs).toEqual(['/admin', '/admin/models', '/admin/estimator', '/admin/vouchers'])
+    expect(adminTabs).toEqual([
+      '/admin',
+      '/admin/models',
+      '/admin/estimator',
+      '/admin/vouchers',
+      '/admin/costs',
+    ])
     const tabs = within(screen.getByRole('tablist', { name: '모델 용도' })).getAllByRole('tab')
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       '사진 해석',

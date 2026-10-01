@@ -230,8 +230,8 @@ it('keeps cancellation unavailable for a legacy attempt', async () => {
 })
 
 // The workspace states ONE figure for the job — the credits it used — and for an exempt
-// account the reference amount the server recorded, marked as not debited (CLIP-81, owner
-// decision 2026-09-19). The ceiling, the reservation, the refund and the cancellation split stay
+// account the reference amount the server recorded, with no operator wording (CLIP-81,
+// QUOTA-68). The ceiling, the reservation, the refund and the cancellation split stay
 // the server's bookkeeping.
 it.each([false, true])('states only the credits the job used (exempt=%s)', async (exempt) => {
   const job = { id: 'cancelled', kind: 'generate_clip', status: 'cancelled', stage: 'render' }
@@ -266,10 +266,8 @@ it.each([false, true])('states only the credits the job used (exempt=%s)', async
   )
   await confirm()
   const credit = within(screen.getByRole('region', { name: '이번 작업의 크레딧' }))
-  expect(credit.getByRole('status')).toHaveTextContent(
-    exempt ? '4 크레딧 사용 · 마스터 계정은 차감하지 않아요' : '4 크레딧 사용',
-  )
-  if (!exempt) expect(credit.getByRole('status')).not.toHaveTextContent('마스터')
+  expect(credit.getByRole('status')).toHaveTextContent('4 크레딧 사용')
+  expect(credit.getByRole('status')).not.toHaveTextContent(/마스터|차감하지/)
   if (!exempt) expect(screen.getByText('확인된 AI 사용 차감 4 크레딧')).toBeInTheDocument()
   expect(screen.queryByText('취소 추가분')).not.toBeInTheDocument()
   expect(screen.queryByText('8 크레딧')).not.toBeInTheDocument()

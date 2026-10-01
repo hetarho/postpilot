@@ -125,8 +125,6 @@ describe('toMyPlan estimator combos', () => {
         estimatorCombos: [
           {
             combo: 'balanced',
-            observeLabel: 'vendor/eyes',
-            writeLabel: 'vendor/pen',
             postCredits: 38,
             postCreditsBasis: PostCreditsBasis.RECENT_USAGE,
           },
@@ -137,19 +135,9 @@ describe('toMyPlan estimator combos', () => {
     )
 
     expect(myPlan?.estimatorCombos).toEqual([
-      {
-        combo: 'balanced',
-        observeLabel: 'vendor/eyes',
-        writeLabel: 'vendor/pen',
-        postCredits: { credits: 38, basis: 'recent' },
-      },
-      {
-        combo: 'premium',
-        observeLabel: '',
-        writeLabel: '',
-        postCredits: { credits: 90, basis: 'estimate' },
-      },
-      { combo: 'top', observeLabel: '', writeLabel: '' },
+      { combo: 'balanced', postCredits: { credits: 38, basis: 'recent' } },
+      { combo: 'premium', postCredits: { credits: 90, basis: 'estimate' } },
+      { combo: 'top' },
     ])
   })
 

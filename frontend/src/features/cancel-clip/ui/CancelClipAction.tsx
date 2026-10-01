@@ -31,11 +31,9 @@ export function CancelClipAction({
     ? 'cancellation.legacy'
     : job?.kind === 'render_clip'
       ? 'cancellation.free'
-      : a?.status === 'exempt'
-        ? 'cancellation.exempt'
-        : a?.status === 'not_reserved'
-          ? 'cancellation.beforeReservation'
-          : 'cancellation.rule'
+      : a?.status === 'not_reserved'
+        ? 'cancellation.beforeReservation'
+        : 'cancellation.rule'
   return (
     <div className="space-y-3">
       <Typography variant="body">{t(rule)}</Typography>

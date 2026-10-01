@@ -115,7 +115,9 @@ message QuoteClipRevisionResponse {
   // The plan revision this quote was taken against.
   int32 plan_revision = 7;
   ClipSequenceCaptionCost sequence_captions = 8;
-  ClipFXRate rate = 9;
+  // A quote names no exchange rate, master included (QUOTA-65).
+  reserved 9;
+  reserved "rate";
 }
 
 message StartClipRevisionRequest {

@@ -71,11 +71,22 @@ export type EstimatorComboName = Exclude<LevelName, 'free'>
 /** One combo's unit costs in MILLI-credits — thousandths, so the arithmetic stays in
  *  integers. The server derives them from what its two models really charge (QUOTA-40) and
  *  the client is only allowed to multiply. */
+/** The rate paid AI work is priced at, as only /admin's 비용·환율 tab reads it (QUOTA-65).
+ *  `undefined` rate with `unavailable` means no eligible rate: paid AI work cannot start. */
+export interface ExchangeRate {
+  rate?: {
+    source: string
+    publicationDate: string
+    /** KRW per USD, with the four decimals the wire carries as `_e4` already divided out. */
+    reference: number
+    applied: number
+    temporary: boolean
+  }
+  unavailable: boolean
+}
+
 export interface EstimatorCombo {
   combo: EstimatorComboName
-  /** The models behind the tier, for the operator's own screen only. */
-  observeLabel: string
-  writeLabel: string
   /** One post with photos on this level's pair, in credits, and where the figure came from
    *  (QUOTA-64). Absent when either stage has no figure. */
   postCredits?: { credits: number; basis: PostCreditsBasisName }
@@ -97,13 +108,6 @@ export interface MyPlan {
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]
   clipSourceSeconds: number
-  fxRate?: {
-    source: string
-    publicationDate: string
-    referenceE4: bigint
-    appliedE4: bigint
-    temporary: boolean
-  }
   fxUnavailable: boolean
   serverExportWindow?: {
     coverageId: string
@@ -156,17 +160,6 @@ export function clipsPerGrant(
 /** Illustration only: daily grants expire daily and are not available upfront. */
 export function illustrativeMonthlyCredits(offer: PlanOffer, assumedDays = 30): number {
   return offer.dailyCredits * assumedDays + offer.monthlyBonus
-}
-
-export function requiredPlanForLevel(level: EstimatorComboName): PlanName {
-  return ({ value: 'light', balanced: 'basic', premium: 'pro', top: 'max' } as const)[level]
-}
-
-export function canEstimate(offer: PlanOffer, level: EstimatorComboName): boolean {
-  return (
-    offer.plan !== undefined &&
-    PLANS.indexOf(offer.plan) >= PLANS.indexOf(requiredPlanForLevel(level))
-  )
 }
 
 /** One account as the operator screen sees it. */

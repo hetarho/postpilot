@@ -445,7 +445,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		if err != nil {
 			return nil, toConnectError(err)
 		}
-		out.Accounting = accountingProto(ctx, accounting)
+		out.Accounting = accountingProto(accounting)
 	}
 	if h.jobs != nil {
 		j := latest

@@ -68,20 +68,22 @@ func (s snapshotEstimator) ComboRatesAt(_ context.Context, rate plan.RateSnapsho
 	return []planrpc.EstimatorCombo{{Combo: "value", PostCredits: plan.PostFigure{Credits: 12, Basis: plan.PostCreditsEstimate}}}, nil
 }
 
-// Estimates are priced at the selected rate for everyone, but only the operator is shown that
-// rate (QUOTA-65).
-func TestGetMyPlanPricesAtTheRateItShowsOnlyToMaster(t *testing.T) {
+// Estimates are priced at the selected rate for everyone, and no caller of this customer read
+// is shown that rate, master included (QUOTA-65, QUOTA-68).
+func TestGetMyPlanPricesAtTheRateItShowsNoCaller(t *testing.T) {
+	if (&postpilotv1.GetMyPlanResponse{}).ProtoReflect().Descriptor().Fields().ByName("fx_rate") != nil {
+		t.Fatal("GetMyPlanResponse still carries the exchange rate")
+	}
 	rate := plan.RateSnapshot{Source: "test", PublicationDate: "2026-09-30", ReferenceE4: 14_001_000, AppliedE4: 14_100_000}
+	for _, acting := range []plan.Plan{plan.Light, plan.Master} {
+		var seen plan.RateSnapshot
+		msg := getMyPlanWith(t, acting, snapshotEstimator{rate: rate, seen: &seen})
+		if seen != rate || msg.FxUnavailable || len(msg.EstimatorCombos) != 1 {
+			t.Fatalf("%s: rate used=%+v unavailable=%v combos=%+v", acting, seen, msg.FxUnavailable, msg.EstimatorCombos)
+		}
+	}
 	var seen plan.RateSnapshot
-	msg := getMyPlanWith(t, plan.Light, snapshotEstimator{rate: rate, seen: &seen})
-	if seen != rate || msg.FxRate != nil || len(msg.EstimatorCombos) != 1 {
-		t.Fatalf("non-master: rate used=%+v published=%+v combos=%+v", seen, msg.FxRate, msg.EstimatorCombos)
-	}
-	msg = getMyPlanWith(t, plan.Master, snapshotEstimator{rate: rate, seen: &seen})
-	if msg.FxRate == nil || msg.FxRate.AppliedE4 != rate.AppliedE4 {
-		t.Fatalf("master rate = %+v", msg.FxRate)
-	}
-	msg = getMyPlanWith(t, plan.Light, snapshotEstimator{err: errors.New("no FX"), seen: &seen})
+	msg := getMyPlanWith(t, plan.Light, snapshotEstimator{err: errors.New("no FX"), seen: &seen})
 	if !msg.FxUnavailable || len(msg.EstimatorCombos) != 0 {
 		t.Fatalf("missing FX published estimates: %+v", msg)
 	}
@@ -92,7 +94,7 @@ func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, er
 		return nil, s.err
 	}
 	return []planrpc.EstimatorCombo{{
-		Combo: "top", ObserveLabel: "vendor/eyes", WriteLabel: "vendor/pen",
+		Combo:       "top",
 		PostCredits: plan.PostFigure{Credits: 38, Basis: plan.PostCreditsRecentUsage},
 		ClipRates:   s.clipRates,
 	}}, nil
@@ -184,16 +186,17 @@ func TestGetMyPlanPublishesOptionalClipRatesAndSourceAssumption(t *testing.T) {
 	}
 }
 
-// QUOTA-66: estimator rates beside the models they price would give those prices back, so only
-// the operator's copy names the combo's models.
-func TestEstimatorComboNamesItsModelsToMasterOnly(t *testing.T) {
-	for acting, want := range map[plan.Plan][2]string{
-		plan.Pro:    {"", ""},
-		plan.Master: {"vendor/eyes", "vendor/pen"},
-	} {
+// QUOTA-66, QUOTA-68: estimator rates beside the models they price would give those prices
+// back, so no caller of this customer read is told the combo's models, master included.
+func TestEstimatorComboNamesNoModelsToAnyCaller(t *testing.T) {
+	fields := (&postpilotv1.EstimatorCombo{}).ProtoReflect().Descriptor().Fields()
+	if fields.ByName("observe_label") != nil || fields.ByName("write_label") != nil {
+		t.Fatal("EstimatorCombo still carries the models behind a combo")
+	}
+	for _, acting := range []plan.Plan{plan.Pro, plan.Master} {
 		combos := getMyPlan(t, acting).EstimatorCombos
-		if len(combos) != 1 || combos[0].GetObserveLabel() != want[0] || combos[0].GetWriteLabel() != want[1] {
-			t.Fatalf("%s combos = %+v, want labels %v", acting, combos, want)
+		if len(combos) != 1 || combos[0].GetCombo() != "top" {
+			t.Fatalf("%s combos = %+v", acting, combos)
 		}
 		if combos[0].GetPostCredits() != 38 {
 			t.Fatalf("%s lost its per-post figure: %+v", acting, combos[0])

@@ -33,5 +33,5 @@ func (h *Handler) CancelClipJob(ctx context.Context, req *connect.Request[v1.Can
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.CancelClipJobResponse{Job: jobrpc.ToProto(j), Accounting: accountingProto(ctx, a), Accepted: j.CancelRequestedAt != nil}), nil
+	return connect.NewResponse(&v1.CancelClipJobResponse{Job: jobrpc.ToProto(j), Accounting: accountingProto(a), Accepted: j.CancelRequestedAt != nil}), nil
 }

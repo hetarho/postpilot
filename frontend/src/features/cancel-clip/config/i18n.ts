@@ -13,7 +13,6 @@ export const i18n = {
       beforeReservation:
         '아직 예약하지 않았다면 취소 비용은 0이에요. 예약 후에도 확인된 AI 사용분만 차감해요.',
       free: '다시 렌더는 취소해도 크레딧이 차감되지 않아요.',
-      exempt: '이 계정은 실제 크레딧 차감이 없어요. 확인된 AI 사용분은 참고 사용량으로만 기록해요.',
       legacy: '이 작업은 취소 기능을 지원하지 않아요.',
       confirmTitle: '제작을 취소할까요?',
       continueProduction: '계속 제작',
@@ -37,8 +36,6 @@ export const i18n = {
       beforeReservation:
         'Cancellation before reservation costs zero. After reservation, only confirmed AI use is charged.',
       free: 'Cancelling a rerender costs no credits.',
-      exempt:
-        'No credits are debited from this account. Confirmed AI use is recorded as reference usage only.',
       legacy: 'Cancellation is not supported for this job.',
       confirmTitle: 'Cancel production?',
       continueProduction: 'Keep going',

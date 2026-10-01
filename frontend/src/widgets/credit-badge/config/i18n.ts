@@ -6,13 +6,13 @@ export const i18n = {
   ko: {
     badge: {
       label: '플랜 {{tier}}, 남은 크레딧 {{count}}',
-      labelUnlimited: '플랜 {{tier}}, 크레딧 차감 면제',
+      labelUnlimited: '플랜 {{tier}}, 크레딧 무제한',
     },
   },
   en: {
     badge: {
       label: 'Plan {{tier}}, {{count}} credits left',
-      labelUnlimited: 'Plan {{tier}}, credit debit exempt',
+      labelUnlimited: 'Plan {{tier}}, unlimited credits',
     },
   },
 } as const satisfies I18nFragment

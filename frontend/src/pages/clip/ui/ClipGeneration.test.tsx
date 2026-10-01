@@ -839,9 +839,9 @@ it.each([false, true])(
     const button = await openApproval(79)
     if (master) {
       expect(button).toBeEnabled()
-      // Folded away with the rest of the breakdown until the owner asks for it.
+      // The breakdown reads as a customer's, with no exemption notice (QUOTA-68).
       await userEvent.click(screen.getByRole('button', { name: '요금 자세히' }))
-      expect(screen.getByText(/마스터는 크레딧을 차감하지/)).toBeVisible()
+      expect(screen.queryByText(/마스터는 크레딧을 차감하지/)).not.toBeInTheDocument()
     } else {
       expect(button).toBeDisabled()
       expect(screen.getByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeVisible()

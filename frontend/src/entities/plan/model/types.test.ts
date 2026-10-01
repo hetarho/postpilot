@@ -1,4 +1,4 @@
-import { canEstimate, clipCostMilli, clipsPerGrant, illustrativeMonthlyCredits } from './types'
+import { clipCostMilli, clipsPerGrant, illustrativeMonthlyCredits } from './types'
 import { describe, expect, it } from 'vitest'
 import { postsPerFigure } from './types'
 
@@ -30,12 +30,6 @@ describe('monthly illustrations and rights', () => {
   it('uses assumed daily grants plus the bonus', () => {
     expect(illustrativeMonthlyCredits(offer)).toBe(1860)
     expect(illustrativeMonthlyCredits(offer, 28)).toBe(1770)
-  })
-  it('locks levels above the tier and has no paid estimate for free', () => {
-    expect(canEstimate(offer, 'value')).toBe(true)
-    expect(canEstimate(offer, 'balanced')).toBe(true)
-    expect(canEstimate(offer, 'premium')).toBe(false)
-    expect(canEstimate({ ...offer, plan: 'free' }, 'value')).toBe(false)
   })
 })
 

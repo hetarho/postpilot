@@ -22,8 +22,9 @@ export function BillingPage() {
   const initialSubscription = useRouterState({
     select: (state) => state.location.state.billingSubscription,
   })
-  // A master account is never charged (BILL-20): no plan link, subscription action or pack,
-  // and a subscription it still holds ends at its term without renewal.
+  // A master account is never charged (BILL-20), but it sees this screen as a customer does
+  // (QUOTA-68): the controls the server refuses it are present and disabled, and a subscription
+  // it still holds ends at its term without renewal.
   const master = myPlan?.plan === 'master'
   const [registration] = useState(initialRegistration)
   const [subscribed] = useState(initialSubscription)
@@ -88,12 +89,7 @@ export function BillingPage() {
             <Typography variant="title" as="h2">
               {t('subscription.heading', { ns: 'billing' })}
             </Typography>
-            {master && (
-              <Typography variant="body" className="text-content-secondary">
-                {t('operatorCoverage', { ns: 'plans' })}
-              </Typography>
-            )}
-            {!myBilling.subscription && !master && (
+            {!myBilling.subscription && (
               <>
                 <Typography variant="body" className="text-content-secondary">
                   {t('subscription.empty', { ns: 'billing' })}
@@ -112,7 +108,10 @@ export function BillingPage() {
                   )}
                   renews={myBilling.subscription.autoRenew && !master}
                 />
-                {!master && <BillingSubscriptionActions subscription={myBilling.subscription} />}
+                <BillingSubscriptionActions
+                  subscription={myBilling.subscription}
+                  disabled={master}
+                />
               </>
             )}
           </section>
@@ -162,13 +161,13 @@ export function BillingPage() {
             )}
             {myBilling.history.length > 0 && <BillingHistory events={myBilling.history} />}
           </section>
-          {!master && (
-            <CreditPurchaseSection
-              hasPaymentMethod={myBilling.paymentMethod !== undefined}
-              activePaid={myBilling.subscription?.status === 'active'}
-              purchases={myBilling.purchases}
-            />
-          )}
+          {/* Packs are sold to active paid tiers only, so master meets the section's own disabled
+              state rather than a section that is missing (QUOTA-68). */}
+          <CreditPurchaseSection
+            hasPaymentMethod={myBilling.paymentMethod !== undefined}
+            activePaid={myBilling.subscription?.status === 'active'}
+            purchases={myBilling.purchases}
+          />
           <RefundRequestSection charges={myBilling.history} />
         </div>
       )}
@@ -242,7 +241,7 @@ function BenefitsSummary({ plan, nextPaymentAt }: { plan: MyPlan; nextPaymentAt:
       </Typography>
       <Typography variant="body">
         {balance.unlimited
-          ? t('benefits.exempt')
+          ? t('benefits.unlimited')
           : t('benefits.spendable', { count: balance.credits })}
       </Typography>
       {plan.plan === 'free' && <Typography variant="meta">{t('benefits.free')}</Typography>}
@@ -283,17 +282,6 @@ function BenefitsSummary({ plan, nextPaymentAt }: { plan: MyPlan; nextPaymentAt:
             allowance: plan.serverExportWindow.allowance,
             at: formatDateTime(plan.serverExportWindow.endsAt),
           })}
-        </Typography>
-      )}
-      {plan.fxRate && (
-        <Typography variant="meta">
-          {t('benefits.fx', {
-            source: plan.fxRate.source,
-            date: plan.fxRate.publicationDate,
-            reference: formatNumber(Number(plan.fxRate.referenceE4) / 10000),
-            applied: formatNumber(Number(plan.fxRate.appliedE4) / 10000),
-          })}{' '}
-          {plan.fxRate.temporary && t('benefits.temporary')}
         </Typography>
       )}
       {plan.fxUnavailable && <Notice tone="info">{t('benefits.fxUnavailable')}</Notice>}

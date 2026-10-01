@@ -17,10 +17,15 @@ export function ScheduledChangeButton({
   plan,
   term,
   label,
+  disabled = false,
+  className,
 }: {
   plan: PlanName
   term: BillingTerm
   label: string
+  /** Present but inert, for an account the server refuses the change (QUOTA-68). */
+  disabled?: boolean
+  className?: string
 }) {
   const { t } = useTranslation('billing')
   const [open, setOpen] = useState(false)
@@ -41,7 +46,12 @@ export function ScheduledChangeButton({
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
+      <Button
+        variant="secondary"
+        disabled={disabled}
+        className={className}
+        onClick={() => setOpen(true)}
+      >
         {label}
       </Button>
       <Dialog
@@ -69,7 +79,15 @@ export function ScheduledChangeButton({
   )
 }
 
-export function BillingSubscriptionActions({ subscription }: { subscription: Subscription }) {
+/** `disabled` keeps every control in place but inert: master sees the screen a customer sees,
+ *  and the server refuses it every one of these changes (BILL-20, QUOTA-68). */
+export function BillingSubscriptionActions({
+  subscription,
+  disabled = false,
+}: {
+  subscription: Subscription
+  disabled?: boolean
+}) {
   const { t } = useTranslation('billing')
   const [cancelling, setCancelling] = useState(false)
   const cancelSchedule = useCancelScheduledChange()
@@ -118,6 +136,7 @@ export function BillingSubscriptionActions({ subscription }: { subscription: Sub
             </Typography>
             <Button
               variant="ghost"
+              disabled={disabled}
               pending={cancelSchedule.isPending}
               onClick={() => void clearScheduled()}
             >
@@ -132,12 +151,13 @@ export function BillingSubscriptionActions({ subscription }: { subscription: Sub
             plan={subscription.plan}
             term={nextTerm}
             label={t('change.switchTerm', { term: t(`subscription.term.${nextTerm}`) })}
+            disabled={disabled}
           />
         )
       )}
 
       {subscription.autoRenew ? (
-        <Button variant="danger" onClick={() => setCancelling(true)}>
+        <Button variant="danger" disabled={disabled} onClick={() => setCancelling(true)}>
           {t('change.cancelSubscription')}
         </Button>
       ) : (
@@ -147,6 +167,7 @@ export function BillingSubscriptionActions({ subscription }: { subscription: Sub
           </Notice>
           <Button
             variant="secondary"
+            disabled={disabled}
             pending={resume.isPending}
             onClick={() => void resumeRenewal()}
           >

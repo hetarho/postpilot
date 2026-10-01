@@ -25,6 +25,7 @@ import (
 type AdminHandler struct {
 	svc    AdminAccounts
 	combos EstimatorAssigner
+	rates  RateReader
 }
 
 type AdminAccounts interface {
@@ -41,6 +42,13 @@ type EstimatorAssigner interface {
 	AssignCombo(ctx context.Context, combo, observeModelID, writeModelID string) error
 }
 
+// RateReader reports the rate a paid job admitted now would select (QUOTA-59). Declared by its
+// consumer; the composition root passes the same source GetMyPlan prices estimates at, so the
+// operator reads exactly the rate customers are priced at without being told it (QUOTA-65).
+type RateReader interface {
+	CurrentRate(ctx context.Context) (plan.RateSnapshot, error)
+}
+
 var (
 	// ErrComboUnknown is a combo name off the four the product has.
 	ErrComboUnknown = errors.New("unknown estimator combo")
@@ -49,8 +57,28 @@ var (
 	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
 )
 
-func NewAdminHandler(svc AdminAccounts, combos EstimatorAssigner) *AdminHandler {
-	return &AdminHandler{svc: svc, combos: combos}
+func NewAdminHandler(svc AdminAccounts, combos EstimatorAssigner, rates RateReader) *AdminHandler {
+	return &AdminHandler{svc: svc, combos: combos, rates: rates}
+}
+
+// GetExchangeRate is the operator's one view of the rate behind credits (QUOTA-65). A missing or
+// ineligible rate is a state to show, not a failed read: paid AI work is what it stops.
+func (h *AdminHandler) GetExchangeRate(ctx context.Context, _ *connect.Request[postpilotv1.GetExchangeRateRequest]) (*connect.Response[postpilotv1.GetExchangeRateResponse], error) {
+	unavailable := connect.NewResponse(&postpilotv1.GetExchangeRateResponse{Unavailable: true})
+	if h.rates == nil {
+		return unavailable, nil
+	}
+	rate, err := h.rates.CurrentRate(ctx)
+	if err != nil || !rate.Valid() {
+		if err != nil {
+			slog.Warn("exchange rate unavailable", "err", err)
+		}
+		return unavailable, nil
+	}
+	return connect.NewResponse(&postpilotv1.GetExchangeRateResponse{Rate: &postpilotv1.PlanFXRate{
+		Source: rate.Source, PublicationDate: rate.PublicationDate,
+		ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary,
+	}}), nil
 }
 
 func (h *AdminHandler) ListUsers(ctx context.Context, _ *connect.Request[postpilotv1.ListUsersRequest]) (*connect.Response[postpilotv1.ListUsersResponse], error) {

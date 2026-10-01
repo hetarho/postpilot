@@ -1,7 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppFailure } from '@/shared/api'
-import { formatNumber } from '@/shared/lib'
 import { Button, Typography } from '@/shared/ui'
 import type { ClipQuote } from '../model/types'
 import { ClipFailureNotice } from './ClipFailureNotice'
@@ -63,17 +62,6 @@ export function ClipQuoteApproval({
   }
   return (
     <div className="w-full min-w-0 space-y-2">
-      {quote?.rate && (
-        <Typography variant="meta">
-          {t('credits.fx', {
-            source: quote.rate.source,
-            date: quote.rate.publicationDate,
-            reference: formatNumber(Number(quote.rate.referenceE4) / 10000),
-            applied: formatNumber(Number(quote.rate.appliedE4) / 10000),
-          })}
-          {quote.rate.temporary && t('credits.temporary')}
-        </Typography>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-x-3">
         {/* One live region whose TEXT changes: a region mounted only when it already holds its
             message announces nothing. */}
@@ -112,7 +100,6 @@ export function ClipQuoteApproval({
               ))}
           </ul>
         )}
-        {balance?.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
       </div>
       {children}
       {/* What the sequence-rendered captions add to the render this approval

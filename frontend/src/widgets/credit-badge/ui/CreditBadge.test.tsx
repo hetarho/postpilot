@@ -38,9 +38,10 @@ describe('CreditBadge', () => {
       plans: { plan: ProtoPlan.MASTER, balance: { unlimited: true } },
     })
 
-    const link = await screen.findByRole('link', { name: '플랜 운영자, 크레딧 차감 면제' })
+    const link = await screen.findByRole('link', { name: '플랜 운영자, 크레딧 무제한' })
     expect(link).toHaveAttribute('href', '/plans')
-    expect(link).toHaveTextContent('운영자 면제')
+    expect(link).toHaveTextContent('무제한')
+    expect(link).not.toHaveTextContent('면제')
   })
 
   // A failed read leaves the way to `/plans` open and says nothing: the popover is where a

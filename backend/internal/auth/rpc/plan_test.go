@@ -36,7 +36,7 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
 	mux.Handle(postpilotv1connect.NewAdminServiceHandler(
-		authrpc.NewAdminHandler(svc, &fakeComboAssigner{}), interceptor))
+		authrpc.NewAdminHandler(svc, &fakeComboAssigner{}, fakeRates{}), interceptor))
 	mux.Handle(postpilotv1connect.NewModelCatalogServiceHandler(
 		postpilotv1connect.UnimplementedModelCatalogServiceHandler{}, interceptor))
 
@@ -282,7 +282,7 @@ func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
 		t.Fatalf("seed alice: %v", err)
 	}
 
-	admin := authrpc.NewAdminHandler(svc, &fakeComboAssigner{})
+	admin := authrpc.NewAdminHandler(svc, &fakeComboAssigner{}, nil)
 	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
 
 	if _, err := admin.SetUserPlan(ctx, connect.NewRequest(&postpilotv1.SetUserPlanRequest{
@@ -307,6 +307,58 @@ func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
 }
 
 // fakeComboAssigner records the assignment and can answer with either refusal the edge maps.
+type fakeRates struct {
+	rate plan.RateSnapshot
+	err  error
+}
+
+func (f fakeRates) CurrentRate(context.Context) (plan.RateSnapshot, error) { return f.rate, f.err }
+
+// QUOTA-65: the operator reads the rate customers are priced at on /admin only, so the read is
+// master-only, and a missing or ineligible rate is a state to show rather than a failed read.
+func TestGetExchangeRateIsMasterOnlyAndShowsEveryState(t *testing.T) {
+	authClient, admin, _ := newPlanServer(t)
+	free := loginAs(t, authClient, "alice")
+	_, err := admin.GetExchangeRate(context.Background(), withCookie(&postpilotv1.GetExchangeRateRequest{}, free))
+	var ce *connect.Error
+	if connect.CodeOf(err) != connect.CodePermissionDenied || !errors.As(err, &ce) || len(ce.Details()) != 1 {
+		t.Fatalf("as free = %v, want permission_denied", err)
+	}
+	if detail, derr := ce.Details()[0].Value(); derr != nil || detail.(*postpilotv1.AppErrorDetail).GetReason() != "MASTER_ONLY" {
+		t.Fatalf("refusal detail = %v (%v), want MASTER_ONLY", detail, derr)
+	}
+
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
+	confirmed := plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-30", ReferenceE4: 13_584_000, AppliedE4: 13_600_000}
+	temporary := confirmed
+	temporary.Temporary = true
+	for name, tc := range map[string]struct {
+		rates       authrpc.RateReader
+		unavailable bool
+		temporary   bool
+	}{
+		"confirmed":   {rates: fakeRates{rate: confirmed}},
+		"temporary":   {rates: fakeRates{rate: temporary}, temporary: true},
+		"unavailable": {rates: fakeRates{err: errors.New("no eligible rate")}, unavailable: true},
+		"invalid":     {rates: fakeRates{}, unavailable: true},
+		"unwired":     {rates: nil, unavailable: true},
+	} {
+		handler := authrpc.NewAdminHandler(nil, nil, tc.rates)
+		res, err := handler.GetExchangeRate(ctx, connect.NewRequest(&postpilotv1.GetExchangeRateRequest{}))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		got := res.Msg
+		if got.GetUnavailable() != tc.unavailable || (got.GetRate() == nil) != tc.unavailable {
+			t.Fatalf("%s: response = %+v", name, got)
+		}
+		if !tc.unavailable && (got.GetRate().GetAppliedE4() != 13_600_000 || got.GetRate().GetReferenceE4() != 13_584_000 ||
+			got.GetRate().GetSource() != "korea-eximbank" || got.GetRate().GetTemporary() != tc.temporary) {
+			t.Fatalf("%s: rate = %+v", name, got.GetRate())
+		}
+	}
+}
+
 type fakeComboAssigner struct {
 	calls []string
 	err   error
@@ -332,7 +384,7 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 
 	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}, TopUp: func(context.Context, string, int) error { return nil }})
 	assigner := &fakeComboAssigner{}
-	handler := authrpc.NewAdminHandler(svc, assigner)
+	handler := authrpc.NewAdminHandler(svc, assigner, nil)
 	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
 
 	if _, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{

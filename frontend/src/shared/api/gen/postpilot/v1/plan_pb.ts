@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/plan.proto.
  */
 export const file_postpilot_v1_plan: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIpQBCglDcmVkaXRMb3QSDAoEa2luZBgBIAEoCRIPCgdncmFudGVkGAIgASgFEhEKCXJlbWFpbmluZxgDIAEoBRISCgpleHBpcmVzX2F0GAQgASgJEhMKC2NvdmVyYWdlX2lkGAUgASgJEhQKDHdpbmRvd19zdGFydBgGIAEoCRIWCg5pc3N1YW5jZV9jYXVzZRgHIAEoCSLJAgoNQ3JlZGl0QmFsYW5jZRIPCgdjcmVkaXRzGAEgASgFEhEKCXVubGltaXRlZBgCIAEoCBIlCgRsb3RzGAMgAygLMhcucG9zdHBpbG90LnYxLkNyZWRpdExvdBIRCglyZW5ld3NfYXQYBCABKAkSEwoLZGFpbHlfZ3JhbnQYBiABKAUSFQoNbW9udGhseV9ib251cxgHIAEoBRIXCg9kYWlseV9yZXNldHNfYXQYCCABKAkSFwoPYm9udXNfcmVzZXRzX2F0GAkgASgJEhMKC2NvdmVyYWdlX2lkGAogASgJEhgKEGNvdmVyYWdlX2VuZHNfYXQYCyABKAkSHAoUYmVuZWZpdF93aW5kb3dfc3RhcnQYDCABKAkSGgoSYmVuZWZpdF93aW5kb3dfZW5kGA0gASgJSgQIBRAGUg1tb250aGx5X2dyYW50IpMBChJTZXJ2ZXJFeHBvcnRXaW5kb3cSEwoLY292ZXJhZ2VfaWQYASABKAkSEQoJc3RhcnRzX2F0GAIgASgJEg8KB2VuZHNfYXQYAyABKAkSEQoJYWxsb3dhbmNlGAQgASgFEgwKBHVzZWQYBSABKAUSEAoIcmVzZXJ2ZWQYBiABKAUSEQoJcmVtYWluaW5nGAcgASgFInMKClBsYW5GWFJhdGUSDgoGc291cmNlGAEgASgJEhgKEHB1YmxpY2F0aW9uX2RhdGUYAiABKAkSFAoMcmVmZXJlbmNlX2U0GAMgASgDEhIKCmFwcGxpZWRfZTQYBCABKAMSEQoJdGVtcG9yYXJ5GAUgASgIIoQCCglQbGFuT2ZmZXISIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEhMKC3JlY29tbWVuZGVkGAUgASgIEhMKC21vbnRobHlfa3J3GAYgASgFEhIKCmFubnVhbF9rcncYByABKAUSFQoNZGFpbHlfY3JlZGl0cxgIIAEoBRIVCg1tb250aGx5X2JvbnVzGAkgASgFEhUKDW1vZGVsX2NlaWxpbmcYCiABKAkSHgoWbW9udGhseV9zZXJ2ZXJfZXhwb3J0cxgLIAEoBUoECAIQA0oECAMQBEoECAQQBVIPbW9udGhseV9jcmVkaXRzUg9wcmljZV91c2RfY2VudHMiPAoKQ3JlZGl0UGFjaxIRCglwcmljZV9rcncYASABKAUSDwoHY3JlZGl0cxgCIAEoBRIKCgJpZBgDIAEoCSK8AgoORXN0aW1hdG9yQ29tYm8SDQoFY29tYm8YASABKAkSFQoNb2JzZXJ2ZV9sYWJlbBgCIAEoCRITCgt3cml0ZV9sYWJlbBgDIAEoCRI0CgpjbGlwX3JhdGVzGAggASgLMiAucG9zdHBpbG90LnYxLkNsaXBFc3RpbWF0b3JSYXRlcxIUCgxwb3N0X2NyZWRpdHMYCSABKAUSOgoScG9zdF9jcmVkaXRzX2Jhc2lzGAogASgOMh4ucG9zdHBpbG90LnYxLlBvc3RDcmVkaXRzQmFzaXNKBAgEEAVKBAgFEAZKBAgGEAdKBAgHEAhSD3Blcl9waG90b19taWxsaVIPcGVyX3ZpZGVvX21pbGxpUhhwZXJfdGhvdXNhbmRfY2hhcnNfbWlsbGlSE3Blcl9wb3N0X2Jhc2VfbWlsbGkibAoSQ2xpcEVzdGltYXRvclJhdGVzEhgKEHBlcl9zb3VyY2VfbWlsbGkYASABKAUSHwoXcGVyX291dHB1dF9zZWNvbmRfbWlsbGkYAiABKAUSGwoTcGVyX2NsaXBfYmFzZV9taWxsaRgDIAEoBSISChBHZXRNeVBsYW5SZXF1ZXN0IpQDChFHZXRNeVBsYW5SZXNwb25zZRIgCgRwbGFuGAEgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SLAoHYmFsYW5jZRgCIAEoCzIbLnBvc3RwaWxvdC52MS5DcmVkaXRCYWxhbmNlEicKBm9mZmVycxgDIAMoCzIXLnBvc3RwaWxvdC52MS5QbGFuT2ZmZXISNgoQZXN0aW1hdG9yX2NvbWJvcxgEIAMoCzIcLnBvc3RwaWxvdC52MS5Fc3RpbWF0b3JDb21ibxIbChNjbGlwX3NvdXJjZV9zZWNvbmRzGAUgASgFEi4KDGNyZWRpdF9wYWNrcxgGIAMoCzIYLnBvc3RwaWxvdC52MS5DcmVkaXRQYWNrEj4KFHNlcnZlcl9leHBvcnRfd2luZG93GAcgASgLMiAucG9zdHBpbG90LnYxLlNlcnZlckV4cG9ydFdpbmRvdxIpCgdmeF9yYXRlGAggASgLMhgucG9zdHBpbG90LnYxLlBsYW5GWFJhdGUSFgoOZnhfdW5hdmFpbGFibGUYCSABKAgiWwoYU2V0RXN0aW1hdG9yQ29tYm9SZXF1ZXN0Eg0KBWNvbWJvGAEgASgJEhgKEG9ic2VydmVfbW9kZWxfaWQYAiABKAkSFgoOd3JpdGVfbW9kZWxfaWQYAyABKAkiGwoZU2V0RXN0aW1hdG9yQ29tYm9SZXNwb25zZSISChBMaXN0VXNlcnNSZXF1ZXN0IjoKEUxpc3RVc2Vyc1Jlc3BvbnNlEiUKBXVzZXJzGAEgAygLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyIkwKCFBsYW5Vc2VyEgoKAmlkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhISCgpjcmVhdGVkX2F0GAMgASgJIkcKElNldFVzZXJQbGFuUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEiAKBHBsYW4YAiABKA4yEi5wb3N0cGlsb3QudjEuUGxhbiI7ChNTZXRVc2VyUGxhblJlc3BvbnNlEiQKBHVzZXIYASABKAsyFi5wb3N0cGlsb3QudjEuUGxhblVzZXIqeAoEUGxhbhIUChBQTEFOX1VOU1BFQ0lGSUVEEAASDQoJUExBTl9GUkVFEAESDgoKUExBTl9CQVNJQxACEgwKCFBMQU5fTUFYEAMSDwoLUExBTl9NQVNURVIQBBIMCghQTEFOX1BSTxAFEg4KClBMQU5fTElHSFQQBjJdCgtQbGFuU2VydmljZRJOCglHZXRNeVBsYW4SHi5wb3N0cGlsb3QudjEuR2V0TXlQbGFuUmVxdWVzdBofLnBvc3RwaWxvdC52MS5HZXRNeVBsYW5SZXNwb25zZSIAMpwCCgxBZG1pblNlcnZpY2USTgoJTGlzdFVzZXJzEh4ucG9zdHBpbG90LnYxLkxpc3RVc2Vyc1JlcXVlc3QaHy5wb3N0cGlsb3QudjEuTGlzdFVzZXJzUmVzcG9uc2UiABJUCgtTZXRVc2VyUGxhbhIgLnBvc3RwaWxvdC52MS5TZXRVc2VyUGxhblJlcXVlc3QaIS5wb3N0cGlsb3QudjEuU2V0VXNlclBsYW5SZXNwb25zZSIAEmYKEVNldEVzdGltYXRvckNvbWJvEiYucG9zdHBpbG90LnYxLlNldEVzdGltYXRvckNvbWJvUmVxdWVzdBonLnBvc3RwaWxvdC52MS5TZXRFc3RpbWF0b3JDb21ib1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_provider]);
+  fileDesc("Chdwb3N0cGlsb3QvdjEvcGxhbi5wcm90bxIMcG9zdHBpbG90LnYxIpQBCglDcmVkaXRMb3QSDAoEa2luZBgBIAEoCRIPCgdncmFudGVkGAIgASgFEhEKCXJlbWFpbmluZxgDIAEoBRISCgpleHBpcmVzX2F0GAQgASgJEhMKC2NvdmVyYWdlX2lkGAUgASgJEhQKDHdpbmRvd19zdGFydBgGIAEoCRIWCg5pc3N1YW5jZV9jYXVzZRgHIAEoCSLJAgoNQ3JlZGl0QmFsYW5jZRIPCgdjcmVkaXRzGAEgASgFEhEKCXVubGltaXRlZBgCIAEoCBIlCgRsb3RzGAMgAygLMhcucG9zdHBpbG90LnYxLkNyZWRpdExvdBIRCglyZW5ld3NfYXQYBCABKAkSEwoLZGFpbHlfZ3JhbnQYBiABKAUSFQoNbW9udGhseV9ib251cxgHIAEoBRIXCg9kYWlseV9yZXNldHNfYXQYCCABKAkSFwoPYm9udXNfcmVzZXRzX2F0GAkgASgJEhMKC2NvdmVyYWdlX2lkGAogASgJEhgKEGNvdmVyYWdlX2VuZHNfYXQYCyABKAkSHAoUYmVuZWZpdF93aW5kb3dfc3RhcnQYDCABKAkSGgoSYmVuZWZpdF93aW5kb3dfZW5kGA0gASgJSgQIBRAGUg1tb250aGx5X2dyYW50IpMBChJTZXJ2ZXJFeHBvcnRXaW5kb3cSEwoLY292ZXJhZ2VfaWQYASABKAkSEQoJc3RhcnRzX2F0GAIgASgJEg8KB2VuZHNfYXQYAyABKAkSEQoJYWxsb3dhbmNlGAQgASgFEgwKBHVzZWQYBSABKAUSEAoIcmVzZXJ2ZWQYBiABKAUSEQoJcmVtYWluaW5nGAcgASgFInMKClBsYW5GWFJhdGUSDgoGc291cmNlGAEgASgJEhgKEHB1YmxpY2F0aW9uX2RhdGUYAiABKAkSFAoMcmVmZXJlbmNlX2U0GAMgASgDEhIKCmFwcGxpZWRfZTQYBCABKAMSEQoJdGVtcG9yYXJ5GAUgASgIIhgKFkdldEV4Y2hhbmdlUmF0ZVJlcXVlc3QiVgoXR2V0RXhjaGFuZ2VSYXRlUmVzcG9uc2USJgoEcmF0ZRgBIAEoCzIYLnBvc3RwaWxvdC52MS5QbGFuRlhSYXRlEhMKC3VuYXZhaWxhYmxlGAIgASgIIoQCCglQbGFuT2ZmZXISIAoEcGxhbhgBIAEoDjISLnBvc3RwaWxvdC52MS5QbGFuEhMKC3JlY29tbWVuZGVkGAUgASgIEhMKC21vbnRobHlfa3J3GAYgASgFEhIKCmFubnVhbF9rcncYByABKAUSFQoNZGFpbHlfY3JlZGl0cxgIIAEoBRIVCg1tb250aGx5X2JvbnVzGAkgASgFEhUKDW1vZGVsX2NlaWxpbmcYCiABKAkSHgoWbW9udGhseV9zZXJ2ZXJfZXhwb3J0cxgLIAEoBUoECAIQA0oECAMQBEoECAQQBVIPbW9udGhseV9jcmVkaXRzUg9wcmljZV91c2RfY2VudHMiPAoKQ3JlZGl0UGFjaxIRCglwcmljZV9rcncYASABKAUSDwoHY3JlZGl0cxgCIAEoBRIKCgJpZBgDIAEoCSK4AgoORXN0aW1hdG9yQ29tYm8SDQoFY29tYm8YASABKAkSNAoKY2xpcF9yYXRlcxgIIAEoCzIgLnBvc3RwaWxvdC52MS5DbGlwRXN0aW1hdG9yUmF0ZXMSFAoMcG9zdF9jcmVkaXRzGAkgASgFEjoKEnBvc3RfY3JlZGl0c19iYXNpcxgKIAEoDjIeLnBvc3RwaWxvdC52MS5Qb3N0Q3JlZGl0c0Jhc2lzSgQIAhADSgQIAxAESgQIBBAFSgQIBRAGSgQIBhAHSgQIBxAIUg1vYnNlcnZlX2xhYmVsUgt3cml0ZV9sYWJlbFIPcGVyX3Bob3RvX21pbGxpUg9wZXJfdmlkZW9fbWlsbGlSGHBlcl90aG91c2FuZF9jaGFyc19taWxsaVITcGVyX3Bvc3RfYmFzZV9taWxsaSJsChJDbGlwRXN0aW1hdG9yUmF0ZXMSGAoQcGVyX3NvdXJjZV9taWxsaRgBIAEoBRIfChdwZXJfb3V0cHV0X3NlY29uZF9taWxsaRgCIAEoBRIbChNwZXJfY2xpcF9iYXNlX21pbGxpGAMgASgFIhIKEEdldE15UGxhblJlcXVlc3Qi+AIKEUdldE15UGxhblJlc3BvbnNlEiAKBHBsYW4YASABKA4yEi5wb3N0cGlsb3QudjEuUGxhbhIsCgdiYWxhbmNlGAIgASgLMhsucG9zdHBpbG90LnYxLkNyZWRpdEJhbGFuY2USJwoGb2ZmZXJzGAMgAygLMhcucG9zdHBpbG90LnYxLlBsYW5PZmZlchI2ChBlc3RpbWF0b3JfY29tYm9zGAQgAygLMhwucG9zdHBpbG90LnYxLkVzdGltYXRvckNvbWJvEhsKE2NsaXBfc291cmNlX3NlY29uZHMYBSABKAUSLgoMY3JlZGl0X3BhY2tzGAYgAygLMhgucG9zdHBpbG90LnYxLkNyZWRpdFBhY2sSPgoUc2VydmVyX2V4cG9ydF93aW5kb3cYByABKAsyIC5wb3N0cGlsb3QudjEuU2VydmVyRXhwb3J0V2luZG93EhYKDmZ4X3VuYXZhaWxhYmxlGAkgASgISgQICBAJUgdmeF9yYXRlIlsKGFNldEVzdGltYXRvckNvbWJvUmVxdWVzdBINCgVjb21ibxgBIAEoCRIYChBvYnNlcnZlX21vZGVsX2lkGAIgASgJEhYKDndyaXRlX21vZGVsX2lkGAMgASgJIhsKGVNldEVzdGltYXRvckNvbWJvUmVzcG9uc2UiEgoQTGlzdFVzZXJzUmVxdWVzdCI6ChFMaXN0VXNlcnNSZXNwb25zZRIlCgV1c2VycxgBIAMoCzIWLnBvc3RwaWxvdC52MS5QbGFuVXNlciJMCghQbGFuVXNlchIKCgJpZBgBIAEoCRIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4SEgoKY3JlYXRlZF9hdBgDIAEoCSJHChJTZXRVc2VyUGxhblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIgCgRwbGFuGAIgASgOMhIucG9zdHBpbG90LnYxLlBsYW4iOwoTU2V0VXNlclBsYW5SZXNwb25zZRIkCgR1c2VyGAEgASgLMhYucG9zdHBpbG90LnYxLlBsYW5Vc2VyKngKBFBsYW4SFAoQUExBTl9VTlNQRUNJRklFRBAAEg0KCVBMQU5fRlJFRRABEg4KClBMQU5fQkFTSUMQAhIMCghQTEFOX01BWBADEg8KC1BMQU5fTUFTVEVSEAQSDAoIUExBTl9QUk8QBRIOCgpQTEFOX0xJR0hUEAYyXQoLUGxhblNlcnZpY2USTgoJR2V0TXlQbGFuEh4ucG9zdHBpbG90LnYxLkdldE15UGxhblJlcXVlc3QaHy5wb3N0cGlsb3QudjEuR2V0TXlQbGFuUmVzcG9uc2UiADL+AgoMQWRtaW5TZXJ2aWNlEk4KCUxpc3RVc2VycxIeLnBvc3RwaWxvdC52MS5MaXN0VXNlcnNSZXF1ZXN0Gh8ucG9zdHBpbG90LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlIgASVAoLU2V0VXNlclBsYW4SIC5wb3N0cGlsb3QudjEuU2V0VXNlclBsYW5SZXF1ZXN0GiEucG9zdHBpbG90LnYxLlNldFVzZXJQbGFuUmVzcG9uc2UiABJmChFTZXRFc3RpbWF0b3JDb21ibxImLnBvc3RwaWxvdC52MS5TZXRFc3RpbWF0b3JDb21ib1JlcXVlc3QaJy5wb3N0cGlsb3QudjEuU2V0RXN0aW1hdG9yQ29tYm9SZXNwb25zZSIAEmAKD0dldEV4Y2hhbmdlUmF0ZRIkLnBvc3RwaWxvdC52MS5HZXRFeGNoYW5nZVJhdGVSZXF1ZXN0GiUucG9zdHBpbG90LnYxLkdldEV4Y2hhbmdlUmF0ZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_provider]);
 
 /**
  * One grant of credits. Lots arrive in the order they are spent (QUOTA-12): every expiring
@@ -198,6 +198,8 @@ export const ServerExportWindowSchema: GenMessage<ServerExportWindow> = /*@__PUR
   messageDesc(file_postpilot_v1_plan, 2);
 
 /**
+ * The rate paid AI work is priced at, read only on the operator's 비용·환율 tab (QUOTA-65).
+ *
  * @generated from message postpilot.v1.PlanFXRate
  */
 export type PlanFXRate = Message<"postpilot.v1.PlanFXRate"> & {
@@ -233,6 +235,45 @@ export type PlanFXRate = Message<"postpilot.v1.PlanFXRate"> & {
  */
 export const PlanFXRateSchema: GenMessage<PlanFXRate> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_plan, 3);
+
+/**
+ * @generated from message postpilot.v1.GetExchangeRateRequest
+ */
+export type GetExchangeRateRequest = Message<"postpilot.v1.GetExchangeRateRequest"> & {
+};
+
+/**
+ * Describes the message postpilot.v1.GetExchangeRateRequest.
+ * Use `create(GetExchangeRateRequestSchema)` to create a new message.
+ */
+export const GetExchangeRateRequestSchema: GenMessage<GetExchangeRateRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 4);
+
+/**
+ * @generated from message postpilot.v1.GetExchangeRateResponse
+ */
+export type GetExchangeRateResponse = Message<"postpilot.v1.GetExchangeRateResponse"> & {
+  /**
+   * Absent when `unavailable`.
+   *
+   * @generated from field: postpilot.v1.PlanFXRate rate = 1;
+   */
+  rate?: PlanFXRate | undefined;
+
+  /**
+   * No eligible rate: new paid AI work cannot start until one is confirmed (QUOTA-59).
+   *
+   * @generated from field: bool unavailable = 2;
+   */
+  unavailable: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.GetExchangeRateResponse.
+ * Use `create(GetExchangeRateResponseSchema)` to create a new message.
+ */
+export const GetExchangeRateResponseSchema: GenMessage<GetExchangeRateResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_plan, 5);
 
 /**
  * One rung as a plan comparison screen lists it.
@@ -293,7 +334,7 @@ export type PlanOffer = Message<"postpilot.v1.PlanOffer"> & {
  * Use `create(PlanOfferSchema)` to create a new message.
  */
 export const PlanOfferSchema: GenMessage<PlanOffer> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 4);
+  messageDesc(file_postpilot_v1_plan, 6);
 
 /**
  * @generated from message postpilot.v1.CreditPack
@@ -320,7 +361,7 @@ export type CreditPack = Message<"postpilot.v1.CreditPack"> & {
  * Use `create(CreditPackSchema)` to create a new message.
  */
 export const CreditPackSchema: GenMessage<CreditPack> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 5);
+  messageDesc(file_postpilot_v1_plan, 7);
 
 /**
  * One estimator combo: a pair of models the operator assigned to a price tier, reduced to
@@ -329,8 +370,7 @@ export const CreditPackSchema: GenMessage<CreditPack> = /*@__PURE__*/
  * A level prices one post as post_credits (QUOTA-64); a grant covers `floor(credits / that)`
  * posts. Clip rates stay MILLI-credits so a client stays in integers.
  *
- * The models behind a combo are named only for the operator's own screen; a comparison
- * names the combo (QUOTA-39).
+ * A comparison names the combo, never the models behind it (QUOTA-39, QUOTA-68).
  *
  * @generated from message postpilot.v1.EstimatorCombo
  */
@@ -341,16 +381,6 @@ export type EstimatorCombo = Message<"postpilot.v1.EstimatorCombo"> & {
    * @generated from field: string combo = 1;
    */
   combo: string;
-
-  /**
-   * @generated from field: string observe_label = 2;
-   */
-  observeLabel: string;
-
-  /**
-   * @generated from field: string write_label = 3;
-   */
-  writeLabel: string;
 
   /**
    * Absent when this pair cannot price video observation and structured writing.
@@ -378,7 +408,7 @@ export type EstimatorCombo = Message<"postpilot.v1.EstimatorCombo"> & {
  * Use `create(EstimatorComboSchema)` to create a new message.
  */
 export const EstimatorComboSchema: GenMessage<EstimatorCombo> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 6);
+  messageDesc(file_postpilot_v1_plan, 8);
 
 /**
  * A clip costs base + sources * per_source + finished_seconds * per_output_second.
@@ -408,7 +438,7 @@ export type ClipEstimatorRates = Message<"postpilot.v1.ClipEstimatorRates"> & {
  * Use `create(ClipEstimatorRatesSchema)` to create a new message.
  */
 export const ClipEstimatorRatesSchema: GenMessage<ClipEstimatorRates> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 7);
+  messageDesc(file_postpilot_v1_plan, 9);
 
 /**
  * @generated from message postpilot.v1.GetMyPlanRequest
@@ -421,7 +451,7 @@ export type GetMyPlanRequest = Message<"postpilot.v1.GetMyPlanRequest"> & {
  * Use `create(GetMyPlanRequestSchema)` to create a new message.
  */
 export const GetMyPlanRequestSchema: GenMessage<GetMyPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 8);
+  messageDesc(file_postpilot_v1_plan, 10);
 
 /**
  * @generated from message postpilot.v1.GetMyPlanResponse
@@ -472,11 +502,6 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
   serverExportWindow?: ServerExportWindow | undefined;
 
   /**
-   * @generated from field: postpilot.v1.PlanFXRate fx_rate = 8;
-   */
-  fxRate?: PlanFXRate | undefined;
-
-  /**
    * @generated from field: bool fx_unavailable = 9;
    */
   fxUnavailable: boolean;
@@ -487,7 +512,7 @@ export type GetMyPlanResponse = Message<"postpilot.v1.GetMyPlanResponse"> & {
  * Use `create(GetMyPlanResponseSchema)` to create a new message.
  */
 export const GetMyPlanResponseSchema: GenMessage<GetMyPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 9);
+  messageDesc(file_postpilot_v1_plan, 11);
 
 /**
  * @generated from message postpilot.v1.SetEstimatorComboRequest
@@ -519,7 +544,7 @@ export type SetEstimatorComboRequest = Message<"postpilot.v1.SetEstimatorComboRe
  * Use `create(SetEstimatorComboRequestSchema)` to create a new message.
  */
 export const SetEstimatorComboRequestSchema: GenMessage<SetEstimatorComboRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 10);
+  messageDesc(file_postpilot_v1_plan, 12);
 
 /**
  * @generated from message postpilot.v1.SetEstimatorComboResponse
@@ -532,7 +557,7 @@ export type SetEstimatorComboResponse = Message<"postpilot.v1.SetEstimatorComboR
  * Use `create(SetEstimatorComboResponseSchema)` to create a new message.
  */
 export const SetEstimatorComboResponseSchema: GenMessage<SetEstimatorComboResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 11);
+  messageDesc(file_postpilot_v1_plan, 13);
 
 /**
  * @generated from message postpilot.v1.ListUsersRequest
@@ -545,7 +570,7 @@ export type ListUsersRequest = Message<"postpilot.v1.ListUsersRequest"> & {
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 12);
+  messageDesc(file_postpilot_v1_plan, 14);
 
 /**
  * @generated from message postpilot.v1.ListUsersResponse
@@ -562,7 +587,7 @@ export type ListUsersResponse = Message<"postpilot.v1.ListUsersResponse"> & {
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 13);
+  messageDesc(file_postpilot_v1_plan, 15);
 
 /**
  * PlanUser is an account as the admin screen sees it. There is still no display name or
@@ -592,7 +617,7 @@ export type PlanUser = Message<"postpilot.v1.PlanUser"> & {
  * Use `create(PlanUserSchema)` to create a new message.
  */
 export const PlanUserSchema: GenMessage<PlanUser> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 14);
+  messageDesc(file_postpilot_v1_plan, 16);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanRequest
@@ -614,7 +639,7 @@ export type SetUserPlanRequest = Message<"postpilot.v1.SetUserPlanRequest"> & {
  * Use `create(SetUserPlanRequestSchema)` to create a new message.
  */
 export const SetUserPlanRequestSchema: GenMessage<SetUserPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 15);
+  messageDesc(file_postpilot_v1_plan, 17);
 
 /**
  * @generated from message postpilot.v1.SetUserPlanResponse
@@ -631,7 +656,7 @@ export type SetUserPlanResponse = Message<"postpilot.v1.SetUserPlanResponse"> & 
  * Use `create(SetUserPlanResponseSchema)` to create a new message.
  */
 export const SetUserPlanResponseSchema: GenMessage<SetUserPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_plan, 16);
+  messageDesc(file_postpilot_v1_plan, 18);
 
 /**
  * The ladder carries the five commercial offers and the operator-only master tier.
@@ -745,6 +770,17 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof SetEstimatorComboRequestSchema;
     output: typeof SetEstimatorComboResponseSchema;
+  },
+  /**
+   * The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
+   * (QUOTA-65). Customer reads carry no rate, master included.
+   *
+   * @generated from rpc postpilot.v1.AdminService.GetExchangeRate
+   */
+  getExchangeRate: {
+    methodKind: "unary";
+    input: typeof GetExchangeRateRequestSchema;
+    output: typeof GetExchangeRateResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_plan, 1);

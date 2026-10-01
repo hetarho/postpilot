@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ClipAccounting } from '@/entities/clip-project'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
-import { formatDateTime, formatNumber } from '@/shared/lib'
+import { formatDateTime } from '@/shared/lib'
 import { Typography } from '@/shared/ui'
 
 /** What this generation cost, as ONE figure (CLIP-81, owner decision 2026-09-19): the credits it
@@ -28,9 +28,7 @@ export function ClipCreditSettlement({
     !a || a.status === 'unavailable'
       ? t('credits.pendingAmount')
       : settled
-        ? exempt
-          ? t('credits.usedExempt', { amount: reference })
-          : t('credits.used', { amount: a.finalChargeCredits ?? 0 })
+        ? t('credits.used', { amount: exempt ? reference : (a.finalChargeCredits ?? 0) })
         : isTerminal(job)
           ? t('credits.settling')
           : t('credits.pendingAmount')
@@ -66,17 +64,6 @@ export function ClipCreditSettlement({
           <Typography variant="meta" as="span">
             {t('credits.net', { amount: a.netDebitCredits ?? a.finalChargeCredits ?? 0 })}
           </Typography>
-          {a.rate && (
-            <Typography variant="meta" as="span">
-              {t('credits.fx', {
-                source: a.rate.source,
-                date: a.rate.publicationDate,
-                reference: formatNumber(Number(a.rate.referenceE4) / 10000),
-                applied: formatNumber(Number(a.rate.appliedE4) / 10000),
-              })}
-              {a.rate.temporary && t('credits.temporary')}
-            </Typography>
-          )}
         </div>
       )}
     </section>

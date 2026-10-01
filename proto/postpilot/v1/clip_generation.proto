@@ -127,7 +127,9 @@ message QuoteClipGenerationResponse {
   bool render_only = 8;
   int32 response_retries = 9;
   ClipSequenceCaptionCost sequence_captions = 10;
-  ClipFXRate rate = 11;
+  // A quote names no exchange rate, master included (QUOTA-65).
+  reserved 11;
+  reserved "rate";
 }
 
 message StartClipGenerationRequest {

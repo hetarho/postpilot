@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CLIP_ESTIMATE_BOUNDS, CLIP_ESTIMATE_DEFAULTS, CLIP_ESTIMATE_STORAGE_KEY } from '../config'
 
-export type EstimateKind = 'blog' | 'clip'
 export interface ClipEstimateInput {
   sources: number
   seconds: number

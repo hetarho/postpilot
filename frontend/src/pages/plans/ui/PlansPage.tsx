@@ -1,37 +1,44 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
-import { Check, SlidersHorizontal, Sparkles, X } from 'lucide-react'
+import { useId, useState, type ReactNode } from 'react'
+import { ChevronDown, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   clipsPerGrant,
-  canEstimate,
-  ESTIMATOR_COMBOS,
   illustrativeMonthlyCredits,
   postsPerFigure,
   PLANS,
-  requiredPlanForLevel,
   useMyPlan,
+  type EstimatorCombo,
+  type MyPlan,
   type PlanOffer,
 } from '@/entities/plan'
 import { billablePlan, useMyBilling, type BillingTerm } from '@/entities/subscription'
-import { formatNumber } from '@/shared/lib'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
 import {
-  ActionBar,
   Badge,
   Button,
   Notice,
   PromoText,
-  Sheet,
   SegmentedControl,
   Typography,
   buttonStyles,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
-import { PlanLadder } from '@/widgets/plan-ladder'
-import { useClipEstimateInput, type EstimateKind } from '../model/estimate-input'
+import {
+  PlanComparison,
+  PlanLadder,
+  type PlanComparisonFigure,
+  type PlanComparisonRow,
+} from '@/widgets/plan-ladder'
+import { useClipEstimateInput, type ClipEstimateInput } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
+
+/** A card's non-CTA button. The secondary plane is the card's own raised surface, so on a plan
+ *  card it read as bare text; the accent's subtle plane keeps it a visible control in both themes
+ *  without competing with pro's one filled CTA (THEME-37 lets promotional surfaces use it). */
+const CARD_BUTTON =
+  'w-full bg-badge-accent-bg text-badge-accent-fg hover:bg-badge-accent-bg hover:brightness-95 active:bg-badge-accent-bg active:brightness-90'
 
 /** The plan comparison and the place a subscription starts (QUOTA-28). Composition
  *  only: it reads the ladder the server publishes and renders it.
@@ -44,31 +51,52 @@ import { PlanEstimator } from './PlanEstimator'
  *  Nothing on this screen charges anyone: a paid rung only hands the selection to BILLING's
  *  checkout, which owns the term, quote, payment method and committing action. The recommended
  *  rung's subscribe action is the view's ONE filled CTA (THEME-18): the product is pointing at
- *  it, so the button may too. */
+ *  it, so the button may too. Master reads the page as a customer does, with every button it
+ *  may not press disabled (QUOTA-68). */
 export function PlansPage() {
   const { t } = useTranslation(['plans', 'common'])
   const { myPlan, isPending, isError } = useMyPlan()
   const { myBilling } = useMyBilling()
-  const [estimatorOpen, setEstimatorOpen] = useState(false)
-  const [kind, setKind] = useState<EstimateKind>('blog')
   const [term, setTerm] = useState<BillingTerm>('monthly')
   const [clipInput, setClipInput] = useClipEstimateInput()
-  const combos = myPlan?.estimatorCombos ?? []
 
   const empty = myPlan !== undefined && !myPlan.balance.unlimited && myPlan.balance.credits <= 0
   const subscribedPlan =
     myBilling?.subscription?.status === 'active' ? myBilling.subscription.plan : undefined
   const subscribedTerm = myBilling?.subscription?.term
 
-  /** A rung's one action. A paid rung links to checkout — as an upgrade when a subscription
-   *  exists, as a scheduled change when it is lower than the one paid for; the free rung under
-   *  a subscription points at Billing, which owns cancellation; the current rung and the
-   *  operator account have no commercial action. */
-  const action = (offer: PlanOffer) => {
-    if (!myPlan || offer.plan === myPlan.plan || myPlan.plan === 'master') return null
+  /** A rung's one button, chosen by billing state (QUOTA-28). A state with nothing to press
+   *  still shows a disabled button in the same slot, so the five cards read alike. */
+  const action = (offer: PlanOffer): ReactNode => {
+    if (!myPlan || offer.plan === undefined) return null
+    const disabled = (label: string) => (
+      <Button variant="secondary" disabled className={CARD_BUTTON}>
+        {label}
+      </Button>
+    )
+    // The operator is never charged (BILL-20), so it sees a customer's first-purchase buttons,
+    // none of which it can press.
+    if (myPlan.plan === 'master') {
+      return disabled(
+        billablePlan(offer.plan)
+          ? t('compare.select', { ns: 'plans' })
+          : t('compare.freePlan', { ns: 'plans' }),
+      )
+    }
+    if (offer.plan === myPlan.plan) {
+      return billablePlan(offer.plan) ? (
+        <Link
+          to="/billing"
+          className={buttonStyles({ variant: 'secondary', className: CARD_BUTTON })}
+        >
+          {t('compare.manage', { ns: 'plans' })}
+        </Link>
+      ) : (
+        disabled(t('compare.inUse', { ns: 'plans' }))
+      )
+    }
     if (billablePlan(offer.plan)) {
       if (
-        offer.plan !== undefined &&
         subscribedPlan !== undefined &&
         subscribedTerm !== undefined &&
         PLANS.indexOf(offer.plan) < PLANS.indexOf(subscribedPlan)
@@ -78,6 +106,7 @@ export function PlansPage() {
             plan={offer.plan}
             term={subscribedTerm}
             label={t('compare.nextBilling', { ns: 'plans' })}
+            className={CARD_BUTTON}
           />
         )
       }
@@ -85,10 +114,11 @@ export function PlansPage() {
         <Link
           to="/billing/checkout"
           search={{ tier: offer.plan, term: subscribedTerm ?? term }}
-          className={buttonStyles({
-            variant: offer.recommended ? 'cta' : 'secondary',
-            className: 'w-full',
-          })}
+          className={buttonStyles(
+            offer.recommended
+              ? { variant: 'cta', className: 'w-full' }
+              : { variant: 'secondary', className: CARD_BUTTON },
+          )}
         >
           {subscribedPlan
             ? t('compare.upgrade', { ns: 'plans' })
@@ -96,34 +126,27 @@ export function PlansPage() {
         </Link>
       )
     }
-    if (offer.plan === 'free' && subscribedPlan) {
+    if (subscribedPlan) {
       return (
-        <Link to="/billing" className={buttonStyles({ variant: 'secondary', className: 'w-full' })}>
+        <Link
+          to="/billing"
+          className={buttonStyles({ variant: 'secondary', className: CARD_BUTTON })}
+        >
           {t('compare.cancelFromBilling', { ns: 'plans' })}
         </Link>
       )
     }
-    return null
+    return disabled(t('compare.freePlan', { ns: 'plans' }))
   }
 
   return (
     <main
       className={pageStyles({
         width: 'board',
-        className: 'relative flex-1 pb-28 sm:pt-10 sm:pb-28',
+        className: 'relative flex-1 pb-16 sm:pt-10 sm:pb-20',
       })}
     >
-      <SegmentedControl
-        ariaLabel={t('estimator.basis', { ns: 'plans' })}
-        className="mx-auto mb-4 max-w-md sm:mb-8"
-        value={kind}
-        options={[
-          { value: 'blog', label: t('estimator.blogBasis', { ns: 'plans' }) },
-          { value: 'clip', label: t('estimator.clipBasis', { ns: 'plans' }) },
-        ]}
-        onChange={setKind}
-      />
-      <header className="animate-rise mx-auto flex max-w-3xl flex-col items-center pb-4 text-center sm:pb-10">
+      <header className="animate-rise mx-auto flex max-w-3xl flex-col items-center pb-4 text-center sm:pb-8">
         <Badge tone="accent">
           <Sparkles aria-hidden="true" className="mr-1.5 inline size-3.5" />
           {t('compare.title', { ns: 'plans' })}
@@ -140,22 +163,7 @@ export function PlansPage() {
         >
           {t('compare.description', { ns: 'plans' })}
         </Typography>
-        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 sm:mt-5">
-          {(['allModels', 'monthlyRefill', 'editAllowance'] as const).map((benefit) => (
-            <Typography key={benefit} variant="label" className="inline-flex items-center gap-1.5">
-              <Check aria-hidden="true" className="text-badge-accent-fg size-4 shrink-0" />
-              {t(`compare.${benefit}`, { ns: 'plans' })}
-            </Typography>
-          ))}
-        </div>
       </header>
-
-      {/* The operator is never charged (BILL-20): the offers stay readable, with no action. */}
-      {myPlan?.plan === 'master' && (
-        <Notice tone="info" role="status" className="mt-6">
-          {t('operatorCoverage', { ns: 'plans' })}
-        </Notice>
-      )}
 
       {/* The one thing a user arriving here from a refusal needs told: what still works. */}
       {empty && (
@@ -192,164 +200,173 @@ export function PlansPage() {
       )}
 
       {!isError && !isPending && myPlan && (
-        <section aria-label={t('compare.title', { ns: 'plans' })}>
-          <div
-            className="mx-auto mb-3 flex max-w-3xl flex-col items-center gap-2 text-center"
-            aria-live="polite"
-          >
-            <Typography variant="label" className="text-badge-accent-fg">
-              {t(kind === 'blog' ? 'estimator.blogBasisLabel' : 'estimator.clipCondition', {
-                ns: 'plans',
-              })}
-            </Typography>
-            {/* A post's figure comes from recent real usage (QUOTA-64), so the blog basis has
-                no condition to state or change; the clip basis keeps its inputs (QUOTA-41). */}
-            <Typography variant="fieldTitle" className="text-balance tabular-nums">
-              {kind === 'blog'
-                ? t('estimator.blogBasisSummary', { ns: 'plans' })
-                : t('estimator.clipSummary', { ns: 'plans', ...clipInput })}
-            </Typography>
-            {kind === 'clip' && myPlan.clipSourceSeconds > 0 && (
-              <Typography variant="meta" className="text-content-secondary">
-                {t('estimator.sourceAssumption', {
-                  ns: 'plans',
-                  seconds: myPlan.clipSourceSeconds,
-                })}
-              </Typography>
-            )}
-          </div>
-          <Typography variant="body" className="text-content-secondary mt-3 mb-4 text-center">
-            {t('benefits.baseline', { ns: 'plans' })}
-          </Typography>
-          {/* Only the operator is sent the rate behind credits (QUOTA-65); its absence is not a
-              reason to withhold estimates, which the server prices either way. */}
-          {myPlan.fxRate && !myPlan.fxUnavailable && (
-            <Typography variant="meta" className="text-content-secondary mb-4 block text-center">
-              {t('estimator.fxRate', {
-                ns: 'plans',
-                source: myPlan.fxRate.source,
-                date: myPlan.fxRate.publicationDate,
-                reference: formatNumber(Number(myPlan.fxRate.referenceE4) / 10000),
-                applied: formatNumber(Number(myPlan.fxRate.appliedE4) / 10000),
-              })}
-            </Typography>
-          )}
-          {myPlan.fxUnavailable && (
-            <Notice tone="info" role="status" className="mb-4">
-              {t('estimator.fxUnavailable', { ns: 'plans' })}
-            </Notice>
-          )}
-          <div className="mx-auto mb-5 max-w-md">
-            <SegmentedControl
-              ariaLabel={t('compare.period', { ns: 'plans' })}
-              value={term}
-              options={
-                [
-                  { value: 'monthly', label: t('compare.monthly', { ns: 'plans' }) },
-                  { value: 'annual', label: t('compare.yearly', { ns: 'plans' }) },
-                ] as const
-              }
-              onChange={setTerm}
+        <>
+          <section aria-label={t('compare.title', { ns: 'plans' })}>
+            <div className="mx-auto mb-5 max-w-md">
+              <SegmentedControl
+                ariaLabel={t('compare.period', { ns: 'plans' })}
+                value={term}
+                options={
+                  [
+                    { value: 'monthly', label: t('compare.monthly', { ns: 'plans' }) },
+                    { value: 'annual', label: t('compare.yearly', { ns: 'plans' }) },
+                  ] as const
+                }
+                onChange={setTerm}
+              />
+              {/* The ten-for-twelve saving is said once, here, never on a card (QUOTA-28). */}
+              {term === 'annual' && (
+                <Typography
+                  variant="meta"
+                  className="text-content-secondary mt-2 block text-center"
+                >
+                  {t('compare.termSaving', { ns: 'plans' })}
+                </Typography>
+              )}
+              {subscribedPlan && (
+                <Typography
+                  variant="meta"
+                  className="text-content-secondary mt-2 block text-center"
+                >
+                  {t('compare.existingTermNote', { ns: 'plans' })}{' '}
+                  <Link to="/billing" className="text-link-fg underline">
+                    {t('compare.billingSettings', { ns: 'plans' })}
+                  </Link>
+                </Typography>
+              )}
+            </div>
+            <PlanLadder
+              className="mt-2 md:mt-6"
+              offers={myPlan.offers}
+              currentPlan={myPlan.plan}
+              term={term}
+              action={action}
             />
-            {subscribedPlan && (
-              <Typography variant="meta" className="text-content-secondary mt-2 block text-center">
-                {t('compare.existingTermNote', { ns: 'plans' })}{' '}
-                <Link to="/billing" className="text-link-fg underline">
-                  {t('compare.billingSettings', { ns: 'plans' })}
-                </Link>
-              </Typography>
-            )}
-          </div>
-          <PlanLadder
-            className="mt-2 md:mt-6"
-            offers={myPlan.offers}
-            currentPlan={myPlan.plan}
-            term={term}
-            estimates={(offer) =>
-              ESTIMATOR_COMBOS.map((level) => {
-                const rates = combos.find((assigned) => assigned.combo === level)
-                const requiredPlan = canEstimate(offer, level)
-                  ? undefined
-                  : requiredPlanForLevel(level)
-                const perPost = kind === 'blog' ? rates?.postCredits : undefined
-                const count =
-                  myPlan.fxUnavailable || requiredPlan
-                    ? undefined
-                    : kind === 'blog'
-                      ? perPost &&
-                        postsPerFigure(illustrativeMonthlyCredits(offer), perPost.credits)
-                      : rates?.clipRates &&
-                        clipsPerGrant(illustrativeMonthlyCredits(offer), rates.clipRates, clipInput)
-                return { level, kind, count, requiredPlan, perPost }
-              })
-            }
-            action={action}
+            <Typography variant="meta" className="text-content-secondary mt-6 block text-center">
+              {t('compare.clipCap', { ns: 'plans' })}
+            </Typography>
+          </section>
+
+          <ProductionComparison
+            myPlan={myPlan}
+            clipInput={clipInput}
+            onClipInputChange={setClipInput}
           />
-          <Typography
-            variant="meta"
-            className="text-content-secondary max-w-measure mx-auto mt-8 block text-center"
-          >
-            {t(kind === 'blog' ? 'estimator.caveat' : 'estimator.clipCaveat', { ns: 'plans' })}
-          </Typography>
-          {kind === 'clip' && (
-            <ActionBar dock="list" className="fixed right-4 sm:right-6 lg:right-8">
-              <Button
-                variant="secondary"
-                className="gap-2 rounded-full px-5"
-                aria-haspopup="dialog"
-                aria-expanded={estimatorOpen}
-                onClick={() => setEstimatorOpen(true)}
-              >
-                <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
-                {t('estimator.title', { ns: 'plans' })}
-              </Button>
-            </ActionBar>
-          )}
-          <Typography variant="body" className="text-content-secondary mt-5 text-center">
+
+          <Typography variant="body" className="text-content-secondary mt-10 text-center">
             {t('compare.closing', { ns: 'plans' })}
           </Typography>
-          {kind === 'clip' && (
-            <Sheet
-              open={estimatorOpen}
-              onClose={() => setEstimatorOpen(false)}
-              labelledBy="plan-estimator-title"
-              header={
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <Typography variant="title" id="plan-estimator-title">
-                    {t('estimator.clipCondition', { ns: 'plans' })}
-                  </Typography>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t('action.close', { ns: 'common' })}
-                    onClick={() => setEstimatorOpen(false)}
-                  >
-                    <X aria-hidden="true" className="size-5" />
-                  </Button>
-                </div>
-              }
-              footer={
-                <Button
-                  variant="secondary"
-                  className="mt-5 w-full"
-                  onClick={() => setEstimatorOpen(false)}
-                >
-                  {t('estimator.viewPlans', { ns: 'plans' })}
-                </Button>
-              }
-            >
-              <PlanEstimator
-                clipInput={clipInput}
-                sourceSeconds={myPlan.clipSourceSeconds}
-                onClipInputChange={setClipInput}
-              />
-              <Typography variant="meta" as="p" className="mt-4">
-                {t('estimator.allowance', { ns: 'plans' })}
-              </Typography>
-            </Sheet>
-          )}
-        </section>
+        </>
       )}
     </main>
   )
+}
+
+/** Posts and AI clips a month for every tier, together below the cards (QUOTA-36, QUOTA-41).
+ *  Each paid tier is priced on its own highest level only; a level whose pair is missing,
+ *  unpriced or incompatible says so instead of borrowing another level's count (QUOTA-56). */
+function ProductionComparison({
+  myPlan,
+  clipInput,
+  onClipInputChange,
+}: {
+  myPlan: MyPlan
+  clipInput: ClipEstimateInput
+  onClipInputChange: (input: ClipEstimateInput) => void
+}) {
+  const { t } = useTranslation('plans')
+  const titleId = useId()
+  const conditionsId = useId()
+  const [conditionsOpen, setConditionsOpen] = useState(false)
+  const rows = myPlan.offers.flatMap((offer): PlanComparisonRow[] => {
+    if (offer.plan === undefined) return []
+    if (offer.modelCeiling === 'none') return [{ plan: offer.plan }]
+    const combo = myPlan.estimatorCombos.find((assigned) => assigned.combo === offer.modelCeiling)
+    return [
+      {
+        plan: offer.plan,
+        level: offer.modelCeiling,
+        ...comparisonFigures(offer, combo, myPlan.fxUnavailable, clipInput),
+        ...(combo?.postCredits && !myPlan.fxUnavailable && { perPost: combo.postCredits }),
+      },
+    ]
+  })
+
+  return (
+    <section aria-labelledby={titleId} className="mx-auto mt-12 grid max-w-3xl gap-4">
+      <div className="text-center">
+        <Typography variant="title" as="h2" id={titleId}>
+          {t('comparison.title')}
+        </Typography>
+        <Typography variant="body" className="text-content-secondary mt-2 text-balance">
+          {t('benefits.baseline')}
+        </Typography>
+      </div>
+      {myPlan.fxUnavailable && (
+        <Notice tone="info" role="status">
+          {t('estimator.fxUnavailable')}
+        </Notice>
+      )}
+      <div>
+        <Button
+          variant="secondary"
+          className="w-full justify-between gap-3 text-left"
+          aria-expanded={conditionsOpen}
+          aria-controls={conditionsId}
+          onClick={() => setConditionsOpen((open) => !open)}
+        >
+          <span className="min-w-0">
+            {t('comparison.conditions')}
+            {' · '}
+            <span className="tabular-nums">
+              {t('estimator.clipSummary', {
+                sources: clipInput.sources,
+                seconds: clipInput.seconds,
+              })}
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className={conditionsOpen ? 'size-4 shrink-0 rotate-180' : 'size-4 shrink-0'}
+          />
+        </Button>
+        {conditionsOpen && (
+          <div id={conditionsId} className="bg-surface-raised mt-2 rounded-md p-4">
+            <PlanEstimator
+              clipInput={clipInput}
+              sourceSeconds={myPlan.clipSourceSeconds}
+              onClipInputChange={onClipInputChange}
+            />
+          </div>
+        )}
+      </div>
+      <PlanComparison rows={rows} />
+      <div className="grid gap-2">
+        <Typography variant="meta" className="text-content-secondary">
+          {t('estimator.caveat')}
+        </Typography>
+        <Typography variant="meta" className="text-content-secondary">
+          {t('estimator.clipCaveat')}
+        </Typography>
+      </div>
+    </section>
+  )
+}
+
+function comparisonFigures(
+  offer: PlanOffer,
+  combo: EstimatorCombo | undefined,
+  fxUnavailable: boolean,
+  clipInput: ClipEstimateInput,
+): { posts: PlanComparisonFigure; clips: PlanComparisonFigure } {
+  if (fxUnavailable) return { posts: { unavailable: 'rate' }, clips: { unavailable: 'rate' } }
+  const credits = illustrativeMonthlyCredits(offer)
+  return {
+    posts: combo?.postCredits
+      ? { count: postsPerFigure(credits, combo.postCredits.credits) }
+      : { unavailable: 'pricing' },
+    clips: combo?.clipRates
+      ? { count: clipsPerGrant(credits, combo.clipRates, clipInput) }
+      : { unavailable: combo ? 'clip' : 'pricing' },
+  }
 }

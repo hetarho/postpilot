@@ -188,7 +188,8 @@ describe('AccountMenu', () => {
     })
 
     const panel = await openAccountPopover(user)
-    expect(await within(panel).findByText('운영자 면제')).toBeInTheDocument()
+    expect(await within(panel).findByText('무제한')).toBeInTheDocument()
+    expect(within(panel).queryByText(/면제/)).not.toBeInTheDocument()
     expect(within(panel).queryAllByRole('meter')).toHaveLength(0)
     // The operator chip is the first thing in the panel's top-right corner.
     const operator = within(panel).getByText('운영자')

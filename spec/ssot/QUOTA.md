@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r30 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r32 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -49,16 +49,28 @@
 - QUOTA-22 [o] recording happens at the llm boundary: `cmd/api` wraps the registry every context receives and the worker stamps `usage.Work{user, kind, job}` on the handler context ← every present and future call site is metered by construction
 - QUOTA-23 [o] the ledger `stage` is the stage the call named for itself (`observe` · `write` · `analyze`), falling back to ref inference; every comparison candidate call appears in both the experiment tables and the ledger; credit math never joins experiment internals
 - QUOTA-24 [o] a post holds at most 30 photos (`UPLOAD_MAX_PHOTOS_PER_POST`, in both config owners); the server refuses the upload that would cross it and the browser reports the excess as skipped before decoding ← it bounds the worst case a hold must price, not storage
-- QUOTA-25 [o] master-only surfaces are the AdminService procedures, including account administration and estimator-combo assignment (→QUOTA-39), in the closed masterProcedures set (→AUTH-18); the frontend hides /admin and redirects non-master visitors away from it while the server remains authoritative; no tier exposes a publishing entry, panel or pairing screen
+- QUOTA-25 [o] master-only surfaces are the AdminService procedures, including account administration and estimator-combo assignment (→QUOTA-39), in the closed masterProcedures set (→AUTH-18); /admin's 비용·환율 tab is where the exchange rate in effect (→QUOTA-65) and comparison supplier cost (→MODEL-39) are read; the frontend hides /admin and redirects non-master visitors away from it while the server remains authoritative; no tier exposes a publishing entry, panel or pairing screen
 - QUOTA-26 [o] GetMyPlan publishes the acting tier, owned credit lots and expiries, spendable credit, separate daily/bonus entitlements and next reset instants, monthly export used/reserved/remaining counts and renewal, the five offers with monthly/annual KRW prices and recommendation, and estimator rates.
   - a balance read materializes only the current eligible daily/monthly grants, once; it does not grant missed days
   - a free account can inspect retained balances but cannot spend them on a paid model or buy/redeem new credit without paid coverage
-- QUOTA-27 [o] the header credit control links to `/plans` and reads GetMyPlan; the account popover explains daily allowance, monthly bonus, purchased/voucher/compensation lots, expiries and next daily/monthly resets separately. Free accounts see free-model access without a fictitious credit reset or unlimited-use claim; master is labelled as operator-exempt.
+- QUOTA-27 [o] the header credit control links to `/plans` and reads GetMyPlan; the account popover explains daily allowance, monthly bonus, purchased/voucher/compensation lots, expiries and next daily/monthly resets separately. Free accounts see free-model access without a fictitious credit reset or unlimited-use claim; master's balance reads as unlimited credits with no operator wording (→QUOTA-68).
 - QUOTA-28 [o] `/plans` compares free/light/basic/pro/max and is the subscription entry.
-  - one monthly/annual selector immediately above the cards changes every paid card's displayed price together; monthly is the initial selection
-  - monthly shows the listed monthly charge; annual shows the full twelve-month upfront charge and a clearly approximate monthly equivalent, with the ten-for-twelve saving stated accurately (→QUOTA-55)
-  - each card leads with tier, price and one applicable action, then separately shows daily credits, monthly bonus, highest eligible model grade and monthly server exports; the 60-second clip cap is shared copy below the cards, not repeated in each card; free-model provider limits remain visible
-  - a paid offer available for a first subscription has a labelled Subscribe action; current, upgrade, scheduled change, cancellation and master states follow BILL, without suggesting that a card itself charges money
+  - one monthly/annual selector immediately above the cards changes every paid card's displayed price together; monthly is the initial selection, and the ten-for-twelve saving is stated accurately once, on the annual option (→QUOTA-55), never on a card
+  - monthly shows the listed monthly charge; annual shows the full twelve-month upfront charge with one clearly approximate monthly-equivalent line beneath it
+  - a card holds only, in this order: tier with at most one state label (current or recommended), the selected-term price, its button, then four benefit lines: daily credits, monthly bonus, highest eligible model grade and monthly server exports
+  - the free card replaces the four lines with free-model access and its provider-limited caveat, and shows no zero-valued benefit
+  - no production estimate, per-post figure, estimate basis or shared condition sits inside a card; the 60-second clip cap is stated once below the cards
+  - every card has exactly one button in the same position under the price, chosen by billing state; no button suggests that the card itself charges money:
+    | state | button |
+    |---|---|
+    | paid offer, no active subscription | Subscribe, into checkout with the selected term (→BILL-21) |
+    | paid tier above the active subscription | Upgrade, into checkout (→BILL-21) |
+    | paid tier below the active subscription | schedule the change from the next billing date (→BILL-6) |
+    | free, under an active subscription | cancel on Billing (→BILL-7) |
+    | the active paid tier | manage on Billing (→BILL-14) |
+    | free, as the current plan | disabled, naming the current plan |
+    | a paid card, for master | Subscribe, disabled (→QUOTA-68 →BILL-20) |
+    | free, for master | disabled, naming the free plan |
   - keep only pro marked as recommended and make price/action and the four benefit labels legible in both themes without relying on colour alone (→THEME-41)
   - stack on phones and reflow five offers without horizontal scroll; retain THEME-37/41's promotional primitives
   - current-tier management and renewal/cancellation/refund details live on BILL's screen; About mirrors the offer without checkout (→MKT-5)
@@ -105,7 +117,7 @@
 - QUOTA-48 [o] a clip quote accounts for the documented billing units of its bounded text, visual and audible inputs and generated output, including applicable reasoning, caching and conditional prices, without double-counting overlapping usage; optional billable features outside the quoted work remain disabled, and an estimated final cost uses only sufficiently specified reported usage rather than charging the reserved maximum as if it were measured use
 
 - QUOTA-49 [o] accepted owner cancellation charges confirmed AI usage C only, with no additional cancellation fee. Return unused reservation under its original expiry; clips cap C at their reserved and approved amount. Cause/settlement races follow QUOTA-52.
-- QUOTA-50 [o] approval, cancellation and accounting surfaces explain confirmed usage only, ordinary reservation returns and any separate half-cost compensation. Show usage debit, compensation amount/expiry and resulting net credit effect distinctly where applicable; raw provider usage is never rewritten as compensation or a cancellation fee. Operator shadow amounts are explicitly not debited.
+- QUOTA-50 [o] approval, cancellation and accounting surfaces explain confirmed usage only, ordinary reservation returns and any separate half-cost compensation. Show usage debit, compensation amount/expiry and resulting net credit effect distinctly where applicable; raw provider usage is never rewritten as compensation or a cancellation fee. Master's recorded usage reads as credits used, with no debit, return or compensation line and no exemption notice (→QUOTA-68).
 - QUOTA-51 [o] cancellation before reservation or without confirmed billable usage costs zero; render-only cancellation spends neither AI credits nor a successful server-export count. Master records reference usage without credit debit or a compensating credit lot.
 - QUOTA-52 [o] accepted cancellation is a durable settlement cause, including after restart; cancellation/completion races and repeated requests settle once, already-completed jobs keep their normal settlement, and unconfirmed in-flight provider usage never causes a later extra debit
 
@@ -119,7 +131,7 @@
 - QUOTA-58 [o] an eligible voucher redemption opens one voucher lot expiring its stated validity after redemption (→GIFT-9); revocation voids only its unspent remainder (→GIFT-10). Subscription lapse does not pause that expiry or grant paid-model access.
 - QUOTA-59 [o] select the previous business day's published KRW/USD reference in Asia/Seoul; `applied_rate = ceil(reference_rate / 10) × 10` KRW per USD.
   - snapshot the source, publication date, reference and applied rate before paid AI work starts; keep it through the admitted job’s internal retries and settlement, and record reference versus applied rate for master's audit; a new admitted job selects its own snapshot
-  - when the required rate cannot be verified, use the last confirmed publication only if its date is at most seven calendar days old, flagged temporary on master's surfaces
+  - when the required rate cannot be verified, use the last confirmed publication only if its date is at most seven calendar days old, flagged temporary on /admin's 비용·환율 tab
   - without an eligible rate, refuse new cost-incurring AI work with copy that names no exchange rate (→QUOTA-65); free-model work, existing frozen jobs and fixed-KRW purchases are unaffected
   - subscription prices, purchased packs and grant counts never change with this rate
 - QUOTA-60 [o] service-fault or unknown-cause failure issues `ceil(C / 2)` compensation credits from the confirmed usage debit C, once per job; C=7 yields 4 credits and net burden 3.
@@ -144,16 +156,22 @@
 - QUOTA-67 [o] a template request (→TMPL-58) is one admission whose reservation plans its first call and `TEMPLATE_REQUEST_CORRECTIONS_MAX` corrections, each priced as QUOTA-14 and QUOTA-32 price a call; every issued call is metered, unused correction allowance returns under settlement and cancellation (→QUOTA-49), and a request that fails charges confirmed usage only (→QUOTA-46) ← the corrections are bounded, so the reservation can cover them as clip composition's do (→QUOTA-54)
   - the editor's 약 n 크레딧 is the catalog-based estimate of one call on the 글 작성 모델 (→QUOTA-40), a free model shows 무료, and no recent-usage figure exists for it ← QUOTA-64's figures are credits per post from `generate` jobs, which say nothing about one request
   - the figure is never a quote: admission, reservation and settlement stay authoritative, and it carries no conversion or cost (→QUOTA-65)
-- QUOTA-65 [o] the credit↔KRW conversion is internal: a non-master user sees credit amounts and the fixed KRW retail prices (→QUOTA-7 →QUOTA-34) only ← credits must read as the user's own balance, never as a cost to re-check against what they paid
-  - no non-master response, screen, copy, mail or error states a KRW-per-credit or AI-cost value, the KRW/USD reference or applied rate, the charge formula or a temporary-rate status
-  - master keeps them on operator surfaces (job accounting, shadow amounts, rate audit)
+- QUOTA-65 [o] the credit↔KRW conversion is internal: customer-facing screens show credit amounts and the fixed KRW retail prices (→QUOTA-7 →QUOTA-34) only, to every tier ← credits must read as the user's own balance, never as a cost to re-check against what they paid
+  - no customer-facing response, screen, copy, mail or error states a KRW-per-credit or AI-cost value, the KRW/USD reference or applied rate, the charge formula or a temporary-rate status, master included (→QUOTA-68)
+  - /admin's 비용·환율 tab shows the rate in effect with its source, publication date, reference and applied values and temporary flag; per-job snapshots stay recorded for audit (→QUOTA-59) without a screen
   - QUOTA-59's snapshot, freezing and settlement are unchanged
-- QUOTA-66 [o] supplier cost is master-only ← model cost and the operator's supplier account are business-confidential
+- QUOTA-66 [o] supplier cost is read only on /admin ← model cost and the operator's supplier account are business-confidential
   - supplier cost = model unit prices in any currency and their pricing date, provider cost per call, job, experiment or leaderboard aggregate, rates that name the models they price, and supplier account state (balance, quota) carried in provider prose
-  - a non-master caller receives none of it in any RPC response, notice, mail or error: the server leaves the fields empty, and a client hiding delivered data does not satisfy this
-  - provider prose that would reach a non-master owner, such as a failure's technical detail, is replaced by product copy
-  - master-only procedures and screens (→QUOTA-25) may carry it
-  - contract tests call every procedure that carries such a field as a non-master and assert it is empty
+  - no customer-facing RPC response, notice, mail or error carries it to any caller, master included (→QUOTA-68): the server leaves the fields empty, and a client hiding delivered data does not satisfy this
+  - provider prose that would reach a non-master owner, such as a failure's technical detail, is replaced by product copy; master alone keeps that technical-detail disclosure
+  - only master-only procedures (→QUOTA-25) carry it, and only /admin shows it: model prices on 모델 관리 (→MODEL-27) and comparison cost on the 비용·환율 tab (→MODEL-39)
+  - contract tests call every customer-facing procedure that could carry such a field, as master and as a non-master, and assert it is empty
+- QUOTA-68 [o] a master account sees every customer-facing screen as a customer does ← the operator uses the product the way its customers do, and operating figures belong in one place (→QUOTA-25)
+  - no operator notice, exemption label or internal value (credit conversion, exchange rate, supplier cost) appears on a customer-facing screen
+  - an action master may not take (subscribe, change tier or term, buy a pack →BILL-20) keeps the customer's control in place, disabled; every other behaviour is the customer's
+  - master's balance reads as unlimited credits and its AI usage as credits used, never as a debit (→QUOTA-16 →QUOTA-50)
+  - a failure's technical-detail disclosure stays available to master (→QUOTA-66) ← it is where a failed job's provider cause can be read
+  - the account's plan name and its /admin entry remain
 
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
@@ -173,9 +191,11 @@
 - applicable text/visual/audio/output pricing must be known and bounded; price safety never becomes a later user overcharge
 - admission, lot mutation, compensation and export settlement are idempotent under retries and concurrent completion; no transaction spans a provider call
 - master remains exempt from AI lot debit and model-plan refusal, not from provider limits or bounded execution
-- non-master responses carry no supplier-cost or credit-conversion value (→QUOTA-65 →QUOTA-66); master-only surfaces may
+- customer-facing responses carry no supplier-cost or credit-conversion value for any caller (→QUOTA-65 →QUOTA-66 →QUOTA-68); only master-only procedures may
 - schema/placement: plan rules and RPCs in `backend/internal/plan`; product-agnostic metering, reservations and lot ledger in `backend/internal/usage`; auth owns account plans; clip owns export reservations; billing composes paid coverage through consumer-owned transaction ports
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
+- r32 261001 QUOTA-68+ master sees customer screens as a customer · QUOTA-25✎ +비용·환율 tab · QUOTA-27✎ operator-exempt→unlimited · QUOTA-28✎ master card naming operator→customer button disabled · QUOTA-50✎ QUOTA-59✎ QUOTA-65✎ QUOTA-66✎ master's surfaces→/admin only
+- r31 261001 QUOTA-28✎ saving per card→once on the annual option · card→tier/state, price, button, four benefits · action on eligible cards→a button on every card · QUOTA-65✎ rate on master's surfaces→operator surfaces only
 - r30 261001 QUOTA-13✎ gated starts …storyline jobs→…storyline jobs, a template request · QUOTA-67+ template request reservation with bounded corrections and a one-call catalog estimate

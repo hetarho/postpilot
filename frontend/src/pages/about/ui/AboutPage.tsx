@@ -143,6 +143,10 @@ export function AboutPage() {
               the tier names take `h3`. */}
           <PromoStage className="mt-5 px-2 py-3 sm:px-6 sm:py-6">
             <PlanLadder offers={PUBLIC_LADDER} headingLevel="h3" />
+            {/* Shared by every rung, so said once below them rather than on each card. */}
+            <Typography variant="meta" className="text-content-secondary mt-4 block text-center">
+              {t('compare.clipCap', { ns: 'plans' })}
+            </Typography>
           </PromoStage>
           <Typography variant="body" className="text-content-secondary max-w-measure mt-5">
             {t('plans.assignment')}

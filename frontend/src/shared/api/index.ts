@@ -185,12 +185,14 @@ export type {
 } from './gen/postpilot/v1/voucher_pb'
 export { AdminService, Plan as ProtoPlan, PlanService } from './gen/postpilot/v1/plan_pb'
 export {
+  GetExchangeRateResponseSchema,
   GetMyPlanResponseSchema,
   ListUsersResponseSchema,
   SetEstimatorComboResponseSchema,
   SetUserPlanResponseSchema,
 } from './gen/postpilot/v1/plan_pb'
 export type {
+  GetExchangeRateResponse,
   GetMyPlanResponse,
   CreditBalance as ProtoCreditBalance,
   CreditLot as ProtoCreditLot,

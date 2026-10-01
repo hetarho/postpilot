@@ -27,6 +27,9 @@ service AdminService {
   // both must be registered to the purpose they serve; the assignment is what makes a combo
   // appear in GetMyPlan at all.
   rpc SetEstimatorCombo(SetEstimatorComboRequest) returns (SetEstimatorComboResponse) {}
+  // The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
+  // (QUOTA-65). Customer reads carry no rate, master included.
+  rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse) {}
 }
 
 // The ladder carries the five commercial offers and the operator-only master tier.
@@ -93,12 +96,22 @@ message ServerExportWindow {
   int32 remaining = 7;
 }
 
+// The rate paid AI work is priced at, read only on the operator's 비용·환율 tab (QUOTA-65).
 message PlanFXRate {
   string source = 1;
   string publication_date = 2;
   int64 reference_e4 = 3;
   int64 applied_e4 = 4;
   bool temporary = 5;
+}
+
+message GetExchangeRateRequest {}
+
+message GetExchangeRateResponse {
+  // Absent when `unavailable`.
+  PlanFXRate rate = 1;
+  // No eligible rate: new paid AI work cannot start until one is confirmed (QUOTA-59).
+  bool unavailable = 2;
 }
 
 // One rung as a plan comparison screen lists it.
@@ -134,13 +147,13 @@ message CreditPack {
 // A level prices one post as post_credits (QUOTA-64); a grant covers `floor(credits / that)`
 // posts. Clip rates stay MILLI-credits so a client stays in integers.
 //
-// The models behind a combo are named only for the operator's own screen; a comparison
-// names the combo (QUOTA-39).
+// A comparison names the combo, never the models behind it (QUOTA-39, QUOTA-68).
 message EstimatorCombo {
   // One of the model levels `value` `balanced` `premium` `top`.
   string combo = 1;
-  string observe_label = 2;
-  string write_label = 3;
+  // The model labels reached only master, on a customer screen that never showed them (QUOTA-68).
+  reserved 2, 3;
+  reserved "observe_label", "write_label";
   // Blog rates became post_credits from recent usage (QUOTA-64).
   reserved 4, 5, 6, 7;
   reserved "per_photo_milli", "per_video_milli", "per_thousand_chars_milli", "per_post_base_milli";
@@ -176,7 +189,9 @@ message GetMyPlanResponse {
   int32 clip_source_seconds = 5;
   repeated CreditPack credit_packs = 6;
   ServerExportWindow server_export_window = 7;
-  PlanFXRate fx_rate = 8;
+  // The rate behind credits is read on the operator's 비용·환율 tab, never here (QUOTA-65).
+  reserved 8;
+  reserved "fx_rate";
   bool fx_unavailable = 9;
 }
 

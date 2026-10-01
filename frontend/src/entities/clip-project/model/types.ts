@@ -124,13 +124,6 @@ export interface ClipAccounting {
   compensationExpiresAt?: string
   netDebitCredits?: number
   faultCause?: string
-  rate?: {
-    source: string
-    publicationDate: string
-    referenceE4: bigint
-    appliedE4: bigint
-    temporary: boolean
-  }
   shadowConfirmedChargeCredits?: number
   shadowCancellationFeeCredits?: number
   settlementReason?: 'succeeded' | 'failed' | 'cancelled'
@@ -195,13 +188,6 @@ export interface ClipQuote {
     frames: number
     addedRenderMs: number
     selectedStyles: number
-  }
-  rate?: {
-    source: string
-    publicationDate: string
-    referenceE4: bigint
-    appliedE4: bigint
-    temporary: boolean
   }
   quoteId: string
   maxCredits: number

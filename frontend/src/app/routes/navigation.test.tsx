@@ -136,19 +136,24 @@ it.each(['/clips/new', '/clips/one'])(
   },
 )
 
-it.each(['/plans', '/billing', '/account', '/admin', '/admin/models', '/admin/estimator'])(
-  'keeps primary destinations visible but unselected on %s',
-  async (path) => {
-    const { router } = renderAppAt(path, { user: { id: 'root', plan: ProtoPlan.MASTER } })
-    await screen.findAllByRole('navigation', { name: '주요' })
-    await waitFor(() => expect(router.state.status).toBe('idle'))
-    assertPrimary(undefined)
-    expect(screen.queryAllByRole('navigation', { name: '글 메뉴' })).toHaveLength(0)
-    expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
-    expect(rows('group')).toHaveLength(0)
-    expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/posts')
-  },
-)
+it.each([
+  '/plans',
+  '/billing',
+  '/account',
+  '/admin',
+  '/admin/models',
+  '/admin/estimator',
+  '/admin/costs',
+])('keeps primary destinations visible but unselected on %s', async (path) => {
+  const { router } = renderAppAt(path, { user: { id: 'root', plan: ProtoPlan.MASTER } })
+  await screen.findAllByRole('navigation', { name: '주요' })
+  await waitFor(() => expect(router.state.status).toBe('idle'))
+  assertPrimary(undefined)
+  expect(screen.queryAllByRole('navigation', { name: '글 메뉴' })).toHaveLength(0)
+  expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
+  expect(rows('group')).toHaveLength(0)
+  expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/posts')
+})
 it.each(['/ai-models', '/ai-models/experiments/one'])(
   'marks the standalone matched destination at %s',
   async (path) => {

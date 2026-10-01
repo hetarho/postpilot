@@ -1,5 +1,5 @@
 import { Outlet } from '@tanstack/react-router'
-import { Calculator, Gift, KeyRound, Users } from 'lucide-react'
+import { Calculator, Coins, Gift, KeyRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TabLinks, Typography, type TabLink, pageStyles } from '@/shared/ui'
 
@@ -12,12 +12,13 @@ import { TabLinks, Typography, type TabLink, pageStyles } from '@/shared/ui'
  *  away from the tab row that named the page, and the operator setting a price tier is doing a
  *  different job from the one registering models. */
 const ADMIN_TABS: readonly (Omit<TabLink, 'label' | 'shortLabel'> & {
-  labelKey: 'accounts' | 'models' | 'estimator' | 'vouchers'
+  labelKey: 'accounts' | 'models' | 'estimator' | 'vouchers' | 'costs'
 })[] = [
   { to: '/admin', labelKey: 'accounts', icon: Users },
   { to: '/admin/models', labelKey: 'models', icon: KeyRound },
   { to: '/admin/estimator', labelKey: 'estimator', icon: Calculator },
   { to: '/admin/vouchers', labelKey: 'vouchers', icon: Gift },
+  { to: '/admin/costs', labelKey: 'costs', icon: Coins },
 ]
 
 /** The frame of `/admin`: what the operator surface is, and the tab row over its screens.

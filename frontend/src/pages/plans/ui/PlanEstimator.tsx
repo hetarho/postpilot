@@ -3,8 +3,8 @@ import { CLIP_ESTIMATE_BOUNDS } from '../config'
 import { Slider, Typography } from '@/shared/ui'
 import type { ClipEstimateInput } from '../model/estimate-input'
 
-/** Conditions for ONE finished clip. A post needs none: its figure comes from recent real usage
- *  (QUOTA-64). Capacity comparisons stay in the plan cards. */
+/** Conditions for ONE finished clip, inside the comparison's inline disclosure (QUOTA-41). A
+ *  post needs none: its figure comes from recent real usage (QUOTA-64). */
 export function PlanEstimator({
   clipInput,
   sourceSeconds,

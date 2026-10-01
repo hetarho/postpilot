@@ -5,6 +5,7 @@ export type {
   ClipEstimatorRates,
   EstimatorCombo,
   EstimatorComboName,
+  ExchangeRate,
   MyPlan,
   PlanAccount,
   PlanName,
@@ -21,9 +22,8 @@ export {
   postsAffordable,
   postsPerFigure,
   illustrativeMonthlyCredits,
-  requiredPlanForLevel,
-  canEstimate,
 } from './model/types'
 export { planFromProto, planToProto, toPlanAccount } from './api/plan-mappers'
 export { myPlanQueryKey, useMyPlanQueryKey, useMyPlan } from './api/useMyPlan'
 export { useAccounts, useSetUserPlan } from './api/useAccounts'
+export { useExchangeRate } from './api/useExchangeRate'

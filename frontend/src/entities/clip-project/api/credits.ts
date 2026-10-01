@@ -29,15 +29,6 @@ export function toClipAccounting(value: ProtoClipAccounting): ClipAccounting {
     compensationExpiresAt: value.compensationExpiresAt,
     netDebitCredits: amount(value.netDebitCredits),
     faultCause: value.faultCause,
-    ...(value.rate && {
-      rate: {
-        source: value.rate.source,
-        publicationDate: value.rate.publicationDate,
-        referenceE4: value.rate.referenceE4,
-        appliedE4: value.rate.appliedE4,
-        temporary: value.rate.temporary,
-      },
-    }),
     shadowConfirmedChargeCredits: amount(value.shadowConfirmedChargeCredits),
     shadowCancellationFeeCredits: amount(value.shadowCancellationFeeCredits),
     settlementReason: ['succeeded', 'failed', 'cancelled'].includes(value.settlementReason)
@@ -143,15 +134,6 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
-    ...(value.rate && {
-      rate: {
-        source: value.rate.source,
-        publicationDate: value.rate.publicationDate,
-        referenceE4: value.rate.referenceE4,
-        appliedE4: value.rate.appliedE4,
-        temporary: value.rate.temporary,
-      },
-    }),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,
@@ -211,15 +193,6 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
-    ...(value.rate && {
-      rate: {
-        source: value.rate.source,
-        publicationDate: value.rate.publicationDate,
-        referenceE4: value.rate.referenceE4,
-        appliedE4: value.rate.appliedE4,
-        temporary: value.rate.temporary,
-      },
-    }),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,

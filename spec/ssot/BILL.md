@@ -1,5 +1,5 @@
 # BILL subscriptions, charges, credit purchase
-> r7 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
+> r8 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
 
 ## decisions
 - BILL-1 [o] a subscription belongs to the account that pays for it: a signed-in non-master account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; a master account buys nothing (→BILL-20); the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
@@ -29,13 +29,13 @@
 - BILL-18 [o] an annual upgrade charges `ceil((new_annual_KRW - current_annual_KRW) × remaining_paid_year / current_paid_year_duration)` without moving annual expiry or the monthly benefit anchor. Current bonus/export top-ups use the remaining benefit-month fraction (→QUOTA-35), future months grant the full higher amounts, and daily credit increases at the next existing reset.
 - BILL-17 [x] promotion codes, automatic top-up, postpaid usage, team billing, self-serve tax documents, dunning, automatic prorated refunds and extra server-export sales — out of scope; operator-issued vouchers are GIFT's
 - BILL-19 [o] monthly→annual switches at the next monthly renewal and charges the full selected annual price then. Annual→monthly and annual downgrades wait for paid annual expiry; no immediate term conversion or unused-month refund is implied.
-- BILL-20 [o] a master account is never charged: subscription start, tier/term change and pack purchase are refused server-side, and `/plans` and the billing screen show operator coverage with no checkout, change or pack action (→QUOTA-63) ← master is not sold (→QUOTA-7), and a paid tier bought by a master would demote it
+- BILL-20 [o] a master account is never charged: subscription start, tier/term change and pack purchase are refused server-side, and `/plans` and the billing screen look as they do to a customer, with those controls disabled and no operator notice (→QUOTA-68 →QUOTA-63) ← master is not sold (→QUOTA-7), and a paid tier bought by a master would demote it
   - a subscription the account still holds from before promotion ends at its paid term end without a renewal charge, as a cancellation does (→BILL-7), and the tier stays master
   - refund requests for its past payments remain available (→BILL-11); a confirmed refund voids the refunded entitlements, never the master tier
 - BILL-21 [o] `/plans`' selected billing term accompanies a new paid-tier subscription entry into checkout; checkout keeps the tier and term selected, then shows the server-confirmed amount and requires the owner's final payment action (→BILL-2 →BILL-16). For an active subscription, a tier upgrade keeps the current term and its applicable prorated quote; a term change follows BILL-19's scheduled timing. A period preview never silently changes an existing subscription.
 
 ## flow
-- subscribe: `/plans` tier/term selection → master(no checkout, operator coverage) | checkout with selected tier/term → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
+- subscribe: `/plans` tier/term selection → master(the same controls, disabled) | checkout with selected tier/term → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
 - renew: payment boundary → confirmed payment(next paid term) | confirmed failure(free + notice); monthly benefit boundary → bonus/export renewal only while covered
 - upgrade: quote current-tier prorated KRW → confirm payment → immediate model/bonus/export change; next daily reset → higher daily grant
 - term switch/downgrade: schedule or replace → effective paid-term boundary → new term/tier and full applicable charge
@@ -52,4 +52,4 @@
 - placement: `backend/internal/billing`, its store/RPC adapters, `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and billing/refund features; the payment adapter stays behind consumer-declared ports
 
 ## chg
--
+- r8 261001 BILL-20✎ /plans and billing show operator coverage with no action→the customer's screens with those controls disabled, no operator notice

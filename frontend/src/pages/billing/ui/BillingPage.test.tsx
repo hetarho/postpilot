@@ -154,25 +154,27 @@ describe('BillingPage', () => {
     expect(screen.getByRole('button', { name: '환불 요청하기' })).toBeDisabled()
   })
 
-  // BILL-20: a master account is never charged, so the screen offers no plan link, subscription
-  // action or credit pack — refunds and the payment method stay.
-  it('shows operator coverage to a master account with no payment entry', async () => {
+  // BILL-20, QUOTA-68: a master account is never charged, but it sees the customer's screen:
+  // the pack purchase it is refused is present and disabled, refunds and the payment method
+  // stay usable, and nothing names the operator or an exemption.
+  it('shows a master account the customer screen with the pack purchase disabled', async () => {
     renderAppAt('/billing', {
       user: { id: 'root', plan: ProtoPlan.MASTER },
-      plans: { plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER, balance: { unlimited: true } },
     })
 
-    expect(
-      await screen.findByText('운영자 계정이라 결제 없이 모든 기능을 써요.'),
-    ).toBeInTheDocument()
-    expect(screen.queryByText('활성 구독이 없습니다.')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '플랜 보기' })).not.toBeInTheDocument()
+    expect(await screen.findByText('활성 구독이 없습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
+    expect(screen.getByText('크레딧 무제한')).toBeInTheDocument()
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
-    expect(headings).not.toContain('크레딧 구매')
+    expect(headings).toContain('크레딧 구매')
     expect(headings).toContain('결제 수단')
     expect(headings).toContain('환불 요청')
+    expect(screen.getByRole('button', { name: '크레딧 구매' })).toBeDisabled()
+    // The plan's own name stays; no notice explains an operator exemption.
+    expect(screen.queryByText(/운영자 계정|면제|참고 사용량/)).not.toBeInTheDocument()
   })
 
   // BILL-20: a subscription held from before the promotion ends at its term, uncharged, so its
@@ -186,8 +188,22 @@ describe('BillingPage', () => {
 
     expect(await screen.findByText('유료 이용 종료일')).toBeInTheDocument()
     expect(screen.queryByText('다음 실제 결제일')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '구독 해지' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '연간으로 바꾸기' })).not.toBeInTheDocument()
+    // The customer's controls stay in place, inert: the server refuses master every change.
+    expect(screen.getByRole('button', { name: '구독 해지' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '연간으로 바꾸기' })).toBeDisabled()
+    // The payment method is the account's own to manage; nothing refuses it for master.
+    expect(screen.getByRole('button', { name: '카드 삭제' })).toBeEnabled()
+  })
+
+  it('shows a master account the customer screen in English with no operator wording', async () => {
+    initializeI18n('en')
+    renderAppAt('/billing', {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
+      plans: { plan: ProtoPlan.MASTER, balance: { unlimited: true } },
+    })
+    expect(await screen.findByText('Unlimited credits')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Buy credits' })).toBeDisabled()
+    expect(screen.queryByText(/exempt|operator account|reference usage/i)).not.toBeInTheDocument()
   })
 
   it('renders the active-renewal refusal beside the remove action', async () => {
@@ -298,25 +314,15 @@ describe('BillingPage', () => {
     expect(screen.queryByText(/환율|원\/USD/)).not.toBeInTheDocument()
   })
 
-  it('distinguishes the temporary official reference from its applied rate for the operator', async () => {
+  // QUOTA-65, QUOTA-68: billing is a customer screen, so the operator is shown no rate either.
+  it('shows the operator no exchange rate', async () => {
     renderAppAt('/billing', {
       user: { id: 'root', plan: ProtoPlan.MASTER },
-      plans: {
-        plan: ProtoPlan.MASTER,
-        fxRate: {
-          source: 'BOK',
-          publicationDate: '2026-09-29',
-          referenceE4: 14123400n,
-          appliedE4: 14200000n,
-          temporary: true,
-        },
-      },
+      plans: { plan: ProtoPlan.MASTER },
       billing: { subscription: true },
     })
-    expect(
-      await screen.findByText(/기준 환율 1,412.34원\/USD · 적용 환율 1,420원\/USD/),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/임시 적용 중/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '혜택과 잔액' })).toBeInTheDocument()
+    expect(screen.queryByText(/환율|원\/USD|임시 적용/)).not.toBeInTheDocument()
   })
 
   it('explains retained credits and FX recovery in English without promising a purchase', async () => {

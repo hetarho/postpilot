@@ -37,6 +37,12 @@ export const adminVouchersRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminVouchersPage'),
 })
 
+export const adminCostsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/costs',
+  component: lazyRouteComponent(() => import('@/pages/admin'), 'AdminCostsPage'),
+})
+
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
 export const adminRoutes = [
@@ -44,4 +50,5 @@ export const adminRoutes = [
   adminModelsRoute,
   adminEstimatorRoute,
   adminVouchersRoute,
+  adminCostsRoute,
 ]

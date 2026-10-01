@@ -8,6 +8,7 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   AdminService,
+  GetExchangeRateResponseSchema,
   GetMyPlanResponseSchema,
   ListUsersResponseSchema,
   PlanService,
@@ -58,8 +59,6 @@ export interface FakePlansOptions {
    *  test renders a post count; pass `[]` for the state an operator has not set up. */
   estimatorCombos?: Array<{
     combo: string
-    observeLabel?: string
-    writeLabel?: string
     /** One post's credits on the level's pair; defaults to 15 from recent usage. */
     postCredits?: number
     postCreditsBasis?: PostCreditsBasis
@@ -80,13 +79,6 @@ export interface FakePlansOptions {
     remaining?: number
   }
   creditPacks?: Array<{ id: string; priceKrw: number; credits: number }>
-  fxRate?: {
-    source: string
-    publicationDate: string
-    referenceE4: bigint
-    appliedE4: bigint
-    temporary: boolean
-  } | null
   fxUnavailable?: boolean
   /** Make GetMyPlan fail. */
   planFails?: boolean
@@ -95,6 +87,18 @@ export interface FakePlansOptions {
   /** Refuse SetUserPlan the way the last-master guard does. */
   setPlanFails?: boolean
   listUsersFails?: boolean
+  /** The rate /admin's 비용·환율 tab reads: a confirmed one by default, `'unavailable'` for none. */
+  exchangeRate?:
+    | {
+        source: string
+        publicationDate: string
+        referenceE4: bigint
+        appliedE4: bigint
+        temporary?: boolean
+      }
+    | 'unavailable'
+  /** How many GetExchangeRate calls fail before one succeeds. */
+  exchangeRateFailures?: number
   calls?: string[]
 }
 
@@ -115,21 +119,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         { id: 'pack-3000', priceKrw: 9000, credits: 3000 },
         { id: 'pack-10000', priceKrw: 30000, credits: 10000 },
       ],
-      // As the server does, the rate behind credits is the operator's only (QUOTA-65); a test
-      // may still hand any plan an explicit rate to prove the screen would show it.
-      fxRate:
-        options.fxRate === null
-          ? undefined
-          : (options.fxRate ??
-            ((options.plan ?? ProtoPlan.MASTER) === ProtoPlan.MASTER
-              ? {
-                  source: 'test',
-                  publicationDate: '2026-09-30',
-                  referenceE4: 14_000_000n,
-                  appliedE4: 14_000_000n,
-                  temporary: false,
-                }
-              : undefined)),
       fxUnavailable: options.fxUnavailable ?? false,
       balance: {
         credits: options.balance?.credits ?? 0,
@@ -200,8 +189,6 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
       estimatorCombos: (options.estimatorCombos ?? [{ combo: 'value' }, { combo: 'balanced' }]).map(
         (combo) => ({
           combo: combo.combo,
-          observeLabel: combo.observeLabel ?? 'vendor/eyes',
-          writeLabel: combo.writeLabel ?? 'vendor/pen',
           postCredits: combo.postCredits ?? 15,
           postCreditsBasis: combo.postCreditsBasis ?? PostCreditsBasis.RECENT_USAGE,
           clipRates:
@@ -227,6 +214,25 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         createdAt: account.createdAt ?? '2026-08-01T00:00:00Z',
       })),
     })
+  })
+
+  let exchangeRateFailures = options.exchangeRateFailures ?? 0
+  rpc(AdminService.method.getExchangeRate, () => {
+    calls?.push('GetExchangeRate')
+    if (exchangeRateFailures > 0) {
+      exchangeRateFailures -= 1
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    }
+    const rate = options.exchangeRate ?? {
+      source: 'korea-eximbank',
+      publicationDate: '2026-09-30',
+      referenceE4: 13_584_000n,
+      appliedE4: 13_600_000n,
+    }
+    return create(
+      GetExchangeRateResponseSchema,
+      rate === 'unavailable' ? { unavailable: true } : { rate: { temporary: false, ...rate } },
+    )
   })
 
   rpc(AdminService.method.setUserPlan, (req) => {

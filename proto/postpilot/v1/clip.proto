@@ -211,14 +211,9 @@ message ClipAccounting {
   optional int32 compensation_credits = 17;
   string compensation_expires_at = 18;
   optional int32 net_debit_credits = 19;
-  ClipFXRate rate = 20;
-}
-message ClipFXRate {
-  string source = 1;
-  string publication_date = 2;
-  int64 reference_e4 = 3;
-  int64 applied_e4 = 4;
-  bool temporary = 5;
+  // The job's frozen rate stays recorded for audit, never on a customer screen (QUOTA-65).
+  reserved 20;
+  reserved "rate";
 }
 // Source bytes travel directly to object storage, never in an RPC body.
 message ClipSourceMetadata {

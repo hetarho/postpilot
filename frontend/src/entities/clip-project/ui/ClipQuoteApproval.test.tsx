@@ -64,7 +64,7 @@ it('folds the breakdown while the approval keeps saying what it charges for', as
   await userEvent.click(screen.getByRole('button', { name: '요금 자세히' }))
   expect(screen.getByText(/청구 상한/)).toBeVisible()
   expect(screen.getByRole('list', { name: '작성 호출' })).toBeVisible()
-  expect(screen.getByText(/마스터는 크레딧을 차감하지/)).toBeVisible()
+  expect(screen.queryByText(/마스터는 크레딧을 차감하지/)).not.toBeInTheDocument()
 
   await userEvent.click(screen.getByRole('button', { name: '요금 접기' }))
   expect(screen.queryByRole('list', { name: '작성 호출' })).not.toBeInTheDocument()
@@ -154,4 +154,24 @@ it('keeps approval available for a large sequence estimate', async () => {
   ).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
   expect(onApprove).toHaveBeenCalledOnce()
+})
+
+// QUOTA-65, QUOTA-68: a quote carries no rate for anyone, so the approval states credits only,
+// for the operator (an unlimited balance) as for an owner.
+it.each([true, false])('names no exchange rate (unlimited balance: %s)', (unlimited) => {
+  approval({ balance: { credits: 100, unlimited, renewsAt: '2026-09-30T15:00:00Z' } })
+  expect(screen.queryByText(/환율|원\/USD/)).not.toBeInTheDocument()
+})
+
+// QUOTA-68: an unlimited (master) balance reads the quote as a customer does, with no
+// exemption notice beside it.
+it('shows an unlimited balance no exemption notice', () => {
+  approval()
+  expect(screen.queryByText(/마스터|차감하지 않아요/)).not.toBeInTheDocument()
+})
+
+it('shows an unlimited balance no exemption notice in English', () => {
+  initializeI18n('en')
+  approval()
+  expect(screen.queryByText(/not debited|exempt/i)).not.toBeInTheDocument()
 })

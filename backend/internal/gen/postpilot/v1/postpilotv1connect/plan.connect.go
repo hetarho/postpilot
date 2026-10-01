@@ -45,6 +45,9 @@ const (
 	// AdminServiceSetEstimatorComboProcedure is the fully-qualified name of the AdminService's
 	// SetEstimatorCombo RPC.
 	AdminServiceSetEstimatorComboProcedure = "/postpilot.v1.AdminService/SetEstimatorCombo"
+	// AdminServiceGetExchangeRateProcedure is the fully-qualified name of the AdminService's
+	// GetExchangeRate RPC.
+	AdminServiceGetExchangeRateProcedure = "/postpilot.v1.AdminService/GetExchangeRate"
 )
 
 // PlanServiceClient is a client for the postpilot.v1.PlanService service.
@@ -129,6 +132,9 @@ type AdminServiceClient interface {
 	// both must be registered to the purpose they serve; the assignment is what makes a combo
 	// appear in GetMyPlan at all.
 	SetEstimatorCombo(context.Context, *connect.Request[v1.SetEstimatorComboRequest]) (*connect.Response[v1.SetEstimatorComboResponse], error)
+	// The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
+	// (QUOTA-65). Customer reads carry no rate, master included.
+	GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the postpilot.v1.AdminService service. By default,
@@ -160,6 +166,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetEstimatorCombo")),
 			connect.WithClientOptions(opts...),
 		),
+		getExchangeRate: connect.NewClient[v1.GetExchangeRateRequest, v1.GetExchangeRateResponse](
+			httpClient,
+			baseURL+AdminServiceGetExchangeRateProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetExchangeRate")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -168,6 +180,7 @@ type adminServiceClient struct {
 	listUsers         *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
 	setUserPlan       *connect.Client[v1.SetUserPlanRequest, v1.SetUserPlanResponse]
 	setEstimatorCombo *connect.Client[v1.SetEstimatorComboRequest, v1.SetEstimatorComboResponse]
+	getExchangeRate   *connect.Client[v1.GetExchangeRateRequest, v1.GetExchangeRateResponse]
 }
 
 // ListUsers calls postpilot.v1.AdminService.ListUsers.
@@ -185,6 +198,11 @@ func (c *adminServiceClient) SetEstimatorCombo(ctx context.Context, req *connect
 	return c.setEstimatorCombo.CallUnary(ctx, req)
 }
 
+// GetExchangeRate calls postpilot.v1.AdminService.GetExchangeRate.
+func (c *adminServiceClient) GetExchangeRate(ctx context.Context, req *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error) {
+	return c.getExchangeRate.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the postpilot.v1.AdminService service.
 type AdminServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
@@ -193,6 +211,9 @@ type AdminServiceHandler interface {
 	// both must be registered to the purpose they serve; the assignment is what makes a combo
 	// appear in GetMyPlan at all.
 	SetEstimatorCombo(context.Context, *connect.Request[v1.SetEstimatorComboRequest]) (*connect.Response[v1.SetEstimatorComboResponse], error)
+	// The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
+	// (QUOTA-65). Customer reads carry no rate, master included.
+	GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -220,6 +241,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetEstimatorCombo")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetExchangeRateHandler := connect.NewUnaryHandler(
+		AdminServiceGetExchangeRateProcedure,
+		svc.GetExchangeRate,
+		connect.WithSchema(adminServiceMethods.ByName("GetExchangeRate")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListUsersProcedure:
@@ -228,6 +255,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSetUserPlanHandler.ServeHTTP(w, r)
 		case AdminServiceSetEstimatorComboProcedure:
 			adminServiceSetEstimatorComboHandler.ServeHTTP(w, r)
+		case AdminServiceGetExchangeRateProcedure:
+			adminServiceGetExchangeRateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -247,4 +276,8 @@ func (UnimplementedAdminServiceHandler) SetUserPlan(context.Context, *connect.Re
 
 func (UnimplementedAdminServiceHandler) SetEstimatorCombo(context.Context, *connect.Request[v1.SetEstimatorComboRequest]) (*connect.Response[v1.SetEstimatorComboResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AdminService.SetEstimatorCombo is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AdminService.GetExchangeRate is not implemented"))
 }

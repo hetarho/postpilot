@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r27 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
+> r28 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; the model is an input to every call (`Registry.Complete(ctx, ref, req)`), the port reads no default, and the observe, write and analyze stages each carry their own ModelRef (I3, →ARCH-9)
@@ -113,7 +113,7 @@
   - usage, latency, cost-quality and badge aggregates use each participating candidate once per counted comparison
   - every board is recomputed from immutable ranked and legacy outcome metadata (a materialized table, if ever added, must be rebuildable and never the source of truth)
   - target language does not partition the leaderboard
-- MODEL-39 [o] each candidate records prompt/completion tokens, wall-clock provider latency and cost; cost and its quality marker reach master only, on experiment and leaderboard reads alike (→QUOTA-66)
+- MODEL-39 [o] each candidate records prompt/completion tokens, wall-clock provider latency and cost; cost and its quality marker reach no experiment or leaderboard read, master included; /admin's 비용·환율 tab shows each model's comparison cost by stage and leaderboard window across all accounts, with its quality marker (→QUOTA-66)
   - provider-reported cost is authoritative ← routing, caching, reasoning and promotions make a static token-rate calculation wrong
   - otherwise a catalog-price estimate marked `≈` only when usage tokens are present
   - missing usage or pricing is `unavailable`, never an estimated zero (the port defines zero token counts as "not reported")
@@ -253,4 +253,5 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r28 261001 MODEL-39✎ cost on master's experiment and leaderboard reads→on /admin's 비용·환율 tab only
 - r27 261001 MODEL-9✎ + template request `low` · MODEL-14✎ writing → write→writing → write, also answering a template request

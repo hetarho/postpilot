@@ -99,10 +99,8 @@ type ExportBalance struct {
 // context that owns the assignment never learns the wire shape, and the composition root
 // maps between the two.
 type EstimatorCombo struct {
-	Combo        string
-	ObserveLabel string
-	WriteLabel   string
-	ClipRates    *plan.ClipRates
+	Combo     string
+	ClipRates *plan.ClipRates
 	// PostCredits is one post with photos on this level's pair (QUOTA-64); the zero figure
 	// when either stage has none.
 	PostCredits plan.PostFigure
@@ -205,8 +203,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	// A comparison with no priced combo shows grants and prices and no post estimate. That
 	// is a state the operator can fix, not a failure of this read, so a combo lookup that
 	// fails is logged and answered as "none assigned" rather than failing GetMyPlan.
-	operator := auth.ActsAsMaster(ctx)
-	var fxRate *postpilotv1.PlanFXRate
 	fxUnavailable := false
 	var selectedRate plan.RateSnapshot
 	if source, ok := h.estimator.(interface {
@@ -216,13 +212,9 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		if err != nil || !rate.Valid() {
 			fxUnavailable = true
 		} else {
+			// Estimates are priced at the rate a new job would select, which no caller of this
+			// customer read is shown, master included (QUOTA-65, QUOTA-68).
 			selectedRate = rate
-			// The conversion behind credits is the operator's to read (QUOTA-65); everyone else
-			// prices in credits only.
-			if operator {
-				fxRate = &postpilotv1.PlanFXRate{Source: rate.Source, PublicationDate: rate.PublicationDate,
-					ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary}
-			}
 		}
 	}
 	var combos []*postpilotv1.EstimatorCombo
@@ -255,11 +247,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			PostCredits:      int32(combo.PostCredits.Credits),
 			PostCreditsBasis: PostCreditsBasisToProto(combo.PostCredits.Basis),
 		}
-		// Rates beside the models they price would give those models' supplier prices back
-		// (QUOTA-66): only the operator's copy names them.
-		if operator {
-			mapped.ObserveLabel, mapped.WriteLabel = combo.ObserveLabel, combo.WriteLabel
-		}
 		combos = append(combos, mapped)
 	}
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
@@ -268,7 +255,6 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		EstimatorCombos:    combos,
 		ClipSourceSeconds:  plan.EstimatorClipSourceSeconds,
 		CreditPacks:        packs,
-		FxRate:             fxRate,
 		FxUnavailable:      fxUnavailable,
 		ServerExportWindow: serverWindow,
 		Balance: &postpilotv1.CreditBalance{

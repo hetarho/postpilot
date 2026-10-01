@@ -43,15 +43,13 @@ export const i18n = {
     benefits: {
       heading: '혜택과 잔액',
       spendable: '사용 가능 {{count}} 크레딧',
-      exempt: '운영자 면제 · 참고 사용량만 기록',
+      unlimited: '크레딧 무제한',
       free: '무료 모델을 이용할 수 있어요. 보유 크레딧은 유료 모델이나 새 구매 권한을 주지 않아요.',
       daily: '일일 지급 · 다음 지급',
       monthly: '월 보너스 · 다음 갱신',
       payment: '다음 실제 결제',
       noExpiry: '만료 없음',
       exports: '서버 내보내기 {{remaining}} / {{allowance}}회 · {{at}} 갱신',
-      fx: '{{source}} {{date}} 기준 환율 {{reference}}원/USD · 적용 환율 {{applied}}원/USD',
-      temporary: '· 확인된 최근 환율을 임시 적용 중',
       fxUnavailable:
         '유료 AI 작업을 잠시 시작할 수 없어요. 무료 모델 작업과 결제는 계속할 수 있어요.',
       lot: {
@@ -143,15 +141,13 @@ export const i18n = {
     benefits: {
       heading: 'Benefits and balance',
       spendable: '{{count}} spendable credits',
-      exempt: 'Operator exempt · reference usage only',
+      unlimited: 'Unlimited credits',
       free: 'Free models are available. Retained credits do not unlock paid models or new purchases.',
       daily: 'Daily allowance · next grant',
       monthly: 'Monthly bonus · next renewal',
       payment: 'Next actual payment',
       noExpiry: 'No expiry',
       exports: '{{remaining}} / {{allowance}} server exports · renews {{at}}',
-      fx: '{{source}} reference {{date}}: ₩{{reference}}/USD · applied ₩{{applied}}/USD',
-      temporary: '· temporarily using a recent confirmed rate',
       fxUnavailable: 'Paid AI work cannot start right now. Free-model work and payments continue.',
       lot: {
         daily: 'Daily',

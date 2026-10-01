@@ -1,5 +1,6 @@
 // Proto ↔ domain for the plan ladder. The Plan enum crosses here and nowhere else.
 import {
+  type GetExchangeRateResponse,
   type GetMyPlanResponse,
   type PostCreditsBasis,
   postCreditsBasisName,
@@ -14,6 +15,7 @@ import {
   type CreditLot,
   type EstimatorCombo,
   type EstimatorComboName,
+  type ExchangeRate,
   type MyPlan,
   type PlanAccount,
   type PlanName,
@@ -107,8 +109,6 @@ function isModelCeiling(value: string): value is NonNullable<PlanOffer['modelCei
  *  label this build does not know is nothing a screen can offer as a choice. */
 function toCombo(combo: {
   combo: string
-  observeLabel: string
-  writeLabel: string
   postCredits: number
   postCreditsBasis: PostCreditsBasis
   clipRates?: ClipEstimatorRates
@@ -119,8 +119,6 @@ function toCombo(combo: {
   const basis = postCreditsBasisName(combo.postCreditsBasis)
   return {
     combo: combo.combo as EstimatorComboName,
-    observeLabel: combo.observeLabel,
-    writeLabel: combo.writeLabel,
     ...(basis && combo.postCredits > 0 && { postCredits: { credits: combo.postCredits, basis } }),
     ...(combo.clipRates && {
       clipRates: {
@@ -139,15 +137,6 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     balance: toBalance(response.balance),
     clipSourceSeconds: response.clipSourceSeconds,
     fxUnavailable: response.fxUnavailable,
-    ...(response.fxRate && {
-      fxRate: {
-        source: response.fxRate.source,
-        publicationDate: response.fxRate.publicationDate,
-        referenceE4: response.fxRate.referenceE4,
-        appliedE4: response.fxRate.appliedE4,
-        temporary: response.fxRate.temporary,
-      },
-    }),
     ...(response.serverExportWindow && {
       serverExportWindow: {
         coverageId: response.serverExportWindow.coverageId,
@@ -170,6 +159,26 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
     estimatorCombos: (response.estimatorCombos ?? [])
       .map(toCombo)
       .filter((combo): combo is EstimatorCombo => combo !== undefined),
+  }
+}
+
+/** The operator's rate read (QUOTA-65). A rate the wire omits is the unavailable state, whatever
+ *  the flag says: there is nothing to show beside it. */
+export function toExchangeRate(
+  response: GetExchangeRateResponse | undefined,
+): ExchangeRate | undefined {
+  if (!response) return undefined
+  const rate = response.rate
+  if (!rate || response.unavailable) return { unavailable: true }
+  return {
+    unavailable: false,
+    rate: {
+      source: rate.source,
+      publicationDate: rate.publicationDate,
+      reference: Number(rate.referenceE4) / 10_000,
+      applied: Number(rate.appliedE4) / 10_000,
+      temporary: rate.temporary,
+    },
   }
 }
 
