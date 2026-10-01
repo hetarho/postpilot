@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useAnswerVoicePrompt,
@@ -7,42 +7,28 @@ import {
   useVoiceSample,
   VoiceReadinessMeter,
   type VoicePrompt,
-  type VoicePromptPart,
-  type VoiceReadiness,
+  type VoiceProfile,
   type VoiceSample,
 } from '@/entities/voice'
 import type { ResizedJpeg } from '@/shared/lib'
-import {
-  Badge,
-  Button,
-  FieldLabel,
-  FieldMessage,
-  Notice,
-  Sheet,
-  Textarea,
-  Typography,
-} from '@/shared/ui'
+import { Button, FieldLabel, FieldMessage, Notice, Sheet, Textarea, Typography } from '@/shared/ui'
 import { preparePhoto, putPhoto } from '../api/photo'
 
-const PARTS: readonly VoicePromptPart[] = ['opening', 'description', 'closing']
-
-/** `문항 풀기` and its sheet (VOICE-60, VOICE-64): the shared prompts grouped 글머리 · 본문 · 마무리,
- *  answered ones marked — a photo prompt on a photo the owner picks from their device. The sheet
- *  stays open after each answer and moves on to the next unanswered prompt until the owner closes
- *  it (VOICE-65). An answered prompt opens on its answer to rewrite it, so a voice whose answers
- *  fall short of 100% can still get there. For a voice not yet made, `readiness` is its meter.
- *  Answering enqueues nothing. */
+/** One prompt at a time (VOICE-65). Once all are answered, an unmade voice below 100% cycles
+ *  through existing answers so the owner can add sentences without losing the chosen photo. */
 export function AnswerPromptsSheet({
   ownerId,
   voiceId,
   samples,
-  readiness,
+  profile,
+  renderMakeVoice,
   disabled = false,
 }: {
   ownerId: string
   voiceId: string
   samples: readonly VoiceSample[]
-  readiness?: VoiceReadiness
+  profile: VoiceProfile
+  renderMakeVoice: (onStarted: () => void) => ReactNode
   disabled?: boolean
 }) {
   const { t } = useTranslation('voices')
@@ -57,7 +43,8 @@ export function AnswerPromptsSheet({
           ownerId={ownerId}
           voiceId={voiceId}
           samples={samples}
-          readiness={readiness}
+          profile={profile}
+          renderMakeVoice={renderMakeVoice}
           onClose={() => setOpen(false)}
         />
       )}
@@ -69,54 +56,44 @@ function PromptsPanel({
   ownerId,
   voiceId,
   samples,
-  readiness,
+  profile,
+  renderMakeVoice,
   onClose,
 }: {
   ownerId: string
   voiceId: string
   samples: readonly VoiceSample[]
-  readiness?: VoiceReadiness
+  profile: VoiceProfile
+  renderMakeVoice: (onStarted: () => void) => ReactNode
   onClose: () => void
 }) {
   const { t } = useTranslation('voices')
   const titleId = useId()
   const { prompts, isPending, isError } = useVoicePrompts()
-  const [chosen, setChosen] = useState<VoicePrompt | null>(null)
-  // Keys saved in this sitting: the save resolves before the profile refetch that lists it, and
-  // without these the prompt just answered would be offered again as the next one.
+  // A save resolves before the profile refetch lists it. These keys advance the question
+  // immediately while the server remains the source of the readiness percentage.
   const [savedKeys, setSavedKeys] = useState<ReadonlySet<string>>(() => new Set())
   const [saved, setSaved] = useState(false)
+  const [rewriteIndex, setRewriteIndex] = useState(0)
   const answers = new Map(
     samples
       .filter((sample) => sample.kind === 'answer')
       .map((sample) => [sample.promptKey, sample] as const),
   )
   const answered = new Set([...answers.keys(), ...savedKeys])
-  const allAnswered = prompts.length > 0 && prompts.every((prompt) => answered.has(prompt.key))
+  const unanswered = prompts.find((prompt) => !answered.has(prompt.key))
+  const allAnswered = prompts.length > 0 && !unanswered
+  const needsMore = !profile.made && profile.readiness.percent < 100
+  const rewriteCandidates =
+    allAnswered && needsMore ? prompts.filter((prompt) => answers.has(prompt.key)) : []
+  const chosen = unanswered ?? rewriteCandidates[rewriteIndex % rewriteCandidates.length]
+  const rewriting = chosen && allAnswered ? answers.get(chosen.key) : undefined
 
-  /** The first unanswered prompt after `key` in the served order, wrapping, never `key` itself. */
-  const nextAfter = (key: string, done: ReadonlySet<string>) => {
-    const at = prompts.findIndex((prompt) => prompt.key === key)
-    for (let step = 1; step < prompts.length; step++) {
-      const prompt = prompts[(at + step) % prompts.length]
-      if (!done.has(prompt.key)) return prompt
-    }
-    return null
-  }
-
-  const open = (prompt: VoicePrompt | null) => {
-    setSaved(false)
-    setChosen(prompt)
-  }
-
-  const answeredOne = (key: string) => {
+  const answeredOne = (key: string, wasRewrite = false) => {
     setSavedKeys((keys) => new Set([...keys, key]))
-    setChosen(nextAfter(key, new Set([...answered, key])))
+    if (wasRewrite) setRewriteIndex((index) => index + 1)
     setSaved(true)
   }
-
-  const next = chosen ? nextAfter(chosen.key, answered) : null
-  const rewriting = chosen ? answers.get(chosen.key) : undefined
 
   return (
     <Sheet open labelledBy={titleId} onClose={onClose}>
@@ -127,8 +104,27 @@ function PromptsPanel({
       <Typography variant="meta" as="p" role="status" className="mt-1">
         {saved ? t('prompts.saved') : ''}
       </Typography>
-      {readiness && <VoiceReadinessMeter readiness={readiness} className="mt-4" />}
-      {chosen && rewriting ? (
+      {!profile.made && (
+        <div className="mt-4">
+          <VoiceReadinessMeter readiness={profile.readiness} />
+          {profile.readiness.percent >= 80 && profile.readiness.percent < 100 && (
+            <Typography variant="body" as="p" className="mt-2">
+              {t('prompts.almostReady')}
+            </Typography>
+          )}
+          {profile.readiness.percent >= 100 && (
+            <div className="mt-4">{renderMakeVoice(onClose)}</div>
+          )}
+        </div>
+      )}
+      {allAnswered && needsMore && (
+        <Notice tone="info" className="mt-4">
+          {t('prompts.short')}
+        </Notice>
+      )}
+      {isError ? (
+        <FieldMessage className="mt-4">{t('prompts.loadFailed')}</FieldMessage>
+      ) : isPending ? null : chosen && rewriting ? (
         <RewriteForm
           key={rewriting.id}
           ownerId={ownerId}
@@ -136,8 +132,9 @@ function PromptsPanel({
           prompt={chosen}
           sample={rewriting}
           onEdit={() => setSaved(false)}
-          onBack={() => open(null)}
-          onDone={() => answeredOne(chosen.key)}
+          onBack={onClose}
+          backLabel={t('prompts.close')}
+          onDone={() => answeredOne(chosen.key, true)}
         />
       ) : chosen ? (
         <AnswerForm
@@ -147,51 +144,19 @@ function PromptsPanel({
           prompt={chosen}
           focusOnMount
           onEdit={() => setSaved(false)}
-          onBack={() => open(null)}
-          onSkip={next ? () => open(next) : undefined}
+          onBack={onClose}
+          backLabel={t('prompts.close')}
           onDone={() => answeredOne(chosen.key)}
         />
-      ) : isError ? (
-        <FieldMessage className="mt-4">{t('prompts.loadFailed')}</FieldMessage>
-      ) : isPending ? null : (
-        <>
-          {allAnswered && readiness && readiness.percent < 100 && (
-            <Notice tone="info" role="status" className="mt-4">
-              {t('prompts.short')}
-            </Notice>
-          )}
-          {PARTS.map((part) => (
-            <section key={part} className="mt-6" aria-labelledby={`${titleId}-${part}`}>
-              <Typography variant="fieldTitle" as="h3" id={`${titleId}-${part}`}>
-                {t(`prompts.group.${part}`)}
-              </Typography>
-              <ul className="divide-divider mt-2 divide-y">
-                {prompts
-                  .filter((prompt) => prompt.part === part)
-                  .map((prompt) => {
-                    const done = answered.has(prompt.key)
-                    return (
-                      <li key={prompt.key}>
-                        <button
-                          type="button"
-                          // Saved this sitting but not yet listed: there is no answer to open yet.
-                          disabled={done && !answers.has(prompt.key)}
-                          onClick={() => open(prompt)}
-                          className="hover:bg-row-bg-hover active:bg-row-bg-active disabled:text-content-tertiary flex min-h-11 w-full items-center gap-2 py-3 text-left"
-                        >
-                          <Typography variant="body" as="span" className="min-w-0 flex-1">
-                            {prompt.text}
-                          </Typography>
-                          {prompt.photo && <Badge>{t('prompts.photo')}</Badge>}
-                          {done && <Badge tone="accent">{t('prompts.answered')}</Badge>}
-                        </button>
-                      </li>
-                    )
-                  })}
-              </ul>
-            </section>
-          ))}
-        </>
+      ) : (
+        <div className="mt-6">
+          <Typography variant="body" as="p">
+            {t('prompts.complete')}
+          </Typography>
+          <Button variant="secondary" className="mt-4" onClick={onClose}>
+            {t('prompts.close')}
+          </Button>
+        </div>
       )}
     </Sheet>
   )
@@ -206,6 +171,7 @@ function RewriteForm({
   sample,
   onEdit,
   onBack,
+  backLabel,
   onDone,
 }: {
   ownerId: string
@@ -214,6 +180,7 @@ function RewriteForm({
   sample: VoiceSample
   onEdit: () => void
   onBack: () => void
+  backLabel: string
   onDone: () => void
 }) {
   const { t } = useTranslation('voices')
@@ -234,6 +201,7 @@ function RewriteForm({
       focusOnMount
       onEdit={onEdit}
       onBack={onBack}
+      backLabel={backLabel}
       onDone={onDone}
     />
   )
@@ -245,10 +213,8 @@ type PhotoState =
   | { phase: 'ready'; photo: ResizedJpeg; preview: string }
   | { phase: 'failed' }
 
-/** One prompt's answer form, also opened from 검증 for a prompt not yet answered (VOICE-43).
- *  `onSkip` adds 건너뛰기, and `focusOnMount` puts the cursor in the answer — the sheet's run of
- *  prompts passes both, 검증's single answer neither (VOICE-65). A rewrite passes the answer it
- *  replaces as `initialBody` and its photo as `currentPhoto`, kept unless another is picked. */
+/** One prompt's answer form, also opened from 검증 (VOICE-43). A rewrite starts with the saved
+ *  answer and photo; the quiz closes from here, while 검증 returns to its prompt picker. */
 export function AnswerForm({
   ownerId,
   voiceId,
@@ -258,7 +224,7 @@ export function AnswerForm({
   focusOnMount = false,
   onEdit,
   onBack,
-  onSkip,
+  backLabel,
   onDone,
 }: {
   ownerId: string
@@ -270,7 +236,7 @@ export function AnswerForm({
   /** Any change to the answer or its photo. */
   onEdit?: () => void
   onBack: () => void
-  onSkip?: () => void
+  backLabel?: string
   onDone: () => void
 }) {
   const { t } = useTranslation(['voices', 'common'])
@@ -426,13 +392,8 @@ export function AnswerForm({
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="ghost" disabled={pending} onClick={onBack}>
-          {t('prompts.back', { ns: 'voices' })}
+          {backLabel ?? t('prompts.back', { ns: 'voices' })}
         </Button>
-        {onSkip && (
-          <Button variant="ghost" disabled={pending} onClick={onSkip}>
-            {t('prompts.skip', { ns: 'voices' })}
-          </Button>
-        )}
         <Button type="submit" variant="cta" disabled={disabled} pending={pending}>
           {rewrite ? t('prompts.rewrite', { ns: 'voices' }) : t('prompts.submit', { ns: 'voices' })}
         </Button>

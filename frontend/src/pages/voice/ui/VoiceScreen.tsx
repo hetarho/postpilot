@@ -23,7 +23,7 @@ export function VoiceScreen({
   description,
   children,
 }: {
-  title: string
+  title: string | ((context: VoiceScreenContext) => string)
   description?: ReactNode
   children: (context: VoiceScreenContext) => ReactNode
 }) {
@@ -52,15 +52,18 @@ export function VoiceScreen({
       </main>
     )
   }
+  const context = { profile, voice: profile.voice, ownerId, voiceId }
   return (
     <main className="mt-6 pb-12">
-      <Typography variant="title">{title}</Typography>
+      <Typography variant="title">
+        {typeof title === 'function' ? title(context) : title}
+      </Typography>
       {description && (
         <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
           {description}
         </Typography>
       )}
-      <div className="mt-8">{children({ profile, voice: profile.voice, ownerId, voiceId })}</div>
+      <div className="mt-8">{children(context)}</div>
     </main>
   )
 }

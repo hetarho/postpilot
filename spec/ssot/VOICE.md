@@ -1,5 +1,5 @@
 # VOICE voices
-> r6 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
+> r7 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
 
 ## decisions
 - VOICE-1 [o] an account owns zero or more voices (`voices`), the user-facing noun 말투 — several when the owner writes in more than one mood, a calm one and a cheerful one; each voice owns its 학습 글, its current analysis, at most one previous analysis and its 검증 results, all keyed by `(user_id, voice_id)`; no shared account-level analysis, inheritance, copying or fallback: a voice with no 학습 글 holds nothing even when a sibling is made ← a merged analysis can never be separated again
@@ -8,7 +8,7 @@
 - VOICE-4 [o] no voice is created automatically: `adduser`, sign-up and reads never create a voice or an analysis, and a new account starts with none ← a voice holds only prose its owner chose to give it
 - VOICE-5 [o] a voice belongs to no 분야 and no template: it is the owner's own voice on a post of any 분야 and any template, and neither a template's text nor a guideline enters its analysis or changes it; no revision path writes voice state ← a fingerprint is surface habit, which holds across topics and forms, while the template decides the post's form (→TMPL-1)
 - VOICE-6 [o] a voice's analysis is the fingerprint (→VOICE-24) of the 학습 글 it read with one example sentence per item; nothing else is voice state — no rule list, no override, and no history beyond the one previous analysis (→VOICE-30)
-- VOICE-8 [o] a 학습 글 is private to its owner: its full text — and an answered photo prompt's photo — opens for the owner on the voice's 학습 글 tab (→VOICE-64) and reaches no other account, voice or log
+- VOICE-8 [o] a 학습 글 is private to its owner: its full text — and an answered photo prompt's photo — opens for the owner on the voice's 학습 데이터 screen (→VOICE-64) and reaches no other account, voice or log
 - VOICE-9 [o] ListVoices returns the account's voices including tombstones — active first, the 기본 first among them, then by name and id — each carrying whether it is made and, until it is, its readiness (→VOICE-32); the order is part of the contract and the frontend re-applies it after a cache patch; GetVoiceProfile returns the voice summary with its current analysis
 - VOICE-10 [o] CreateVoice trims the name, requires 1–`VoiceNameMaxChars` (50) Unicode scalar values (`InvalidArgument` otherwise), refuses an active-name collision (`AlreadyExists`) and creates a Korean voice that is not yet made (`만드는 중`, no analysis); it takes no language, description or 분야, calls no model, and there is no voice-count limit
 - VOICE-12 [o] RenameVoice changes the display name of an active or deleted owned voice with the same validation, rewriting no post row and no frozen snapshot; SetDefaultVoice makes one active, made, owned voice the 기본 — atomically clearing the previous one — or clears the 기본 so the account has none, and answers with the whole directory ← the previous 기본 changed too
@@ -77,9 +77,10 @@
   - the page's one CTA is a docked `새 말투 만들기`, and an empty list says in plain words what a voice is
 - VOICE-53 [o] `새 말투 만들기` — on the list and in a post's voice picker (→POST-101) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
   - the commit action sits in flow after the field rather than in the pinned footer ← the panel is anchored to the layout viewport the software keyboard does not resize
-  - success closes the sheet and opens the new voice on 학습 글
+  - success closes the sheet and opens the new voice on `/materials` 말투 학습
   - a refusal (a duplicate name) renders under the field in the user's words
-- VOICE-54 [o] one voice is `/voices/$voiceId` with three sibling tabs sharing one row of links, the matching tab carrying `aria-current="page"`: 말투 분석 (the index) · `/materials` 학습 글 · `/checks` 검증
+- VOICE-54 [o] one made voice is `/voices/$voiceId` with three sibling tabs sharing one row of links, the matching tab carrying `aria-current="page"`: 말투 분석 (the index) · `/materials` 학습 데이터 · `/checks` 검증
+  - until its first analysis succeeds, the voice shows only the `/materials` 말투 학습 screen with no tab row; the index and `/checks` addresses lead to that screen
   - the title row names the voice and carries its rename (read-first behind a pencil; a tombstone stays renameable so a restore conflict can be resolved), `기본으로 설정` or `기본 해제` on a made voice, and `삭제`, confirmed through the sheet, which says what stays
   - a tombstone shows a notice with `복원` and blocks every change with the reason; an unowned id reads `없는 말투예요.`
   - `/voice` and `/voice/<tab>` redirect to the same tab of the 기본 voice, or to `/voices` when there is none, creating nothing
@@ -95,25 +96,26 @@
 - VOICE-59 [o] a voice is made only of 학습 글 the owner adds — posts they wrote by hand, pasted, and their answers to the product's prompts — and grows only the same two ways, then 다시 분석; never from a finished post, a revision, an edit diff or any AI output ← only the owner's own writing carries the owner's voice
 - VOICE-60 [o] the prompts are one code-owned set shared by every voice, `VOICE_PROMPT_COUNT` (20): 4 openings, 12 descriptions (6 on a photo, 6 on a situation) and 4 closings, each asking for 2~5 sentences (`고른 사진을 블로그에 쓰듯 2~5문장으로 써 보세요`, `처음 가 본 곳에 들어섰을 때를 써 보세요`)
   - a photo prompt's photo is the owner's own, picked on their device, converted in the browser and stored privately as a post photo is (→POST-31 … POST-39); the product supplies no photo ← the owner writes about what they actually ate or saw, as when writing a post
-  - the owner answers any prompt in any order and skips any; each prompt holds one answer, and deleting it frees the prompt
+  - each prompt holds one answer; answering it again replaces the answer in one save, keeping its photo unless the owner picks a new one, and deleting it frees the prompt
   - an answer is trimmed and non-empty; the prompt texts are product copy, never rows or config
 - VOICE-61 [o] a line that is not the owner's prose counts toward no sentence and feeds no item: a hashtag-only line, a `[출처]` line, an info line (one that opens with 주소 · 영업시간 · 운영시간 · 전화 · 휴무 · 주차 · 가격 · 위치 followed by `:` or a space, or with 📍 ⏰ ☎️), a Korean address line, and a line holding no Hangul ← a voice is learned only from prose the owner wrote, and a pasted Naver post carries its place card and hashtags
 - VOICE-62 [o] the fingerprint comparison measures a text by the analysis's own counting and shows each counted item as the voice's value beside the text's, in the item's own unit, the item farthest from the voice first (distance relative to the voice's own value); an item the text is too short to show reads 알 수 없음; it makes no call and is used by 검증 (→VOICE-43), ② (→POST-102) and 말투 반영 비교 (→MODEL-67)
-- VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only in two groups, `숫자로 본 습관` (each counted item as one plain sentence with its number, e.g. `문장의 32%를 느낌표로 끝내요`) and `AI가 읽은 인상` (the AI part), each item with its example sentence; no provenance badge and no per-item edit ← the group title says where a value came from, and the example lets the owner judge it at once
-  - until the voice is made it shows the readiness meter and the way to 학습 글 in place of an analysis
+- VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only: each counted item as one plain sentence with its number (e.g. `문장의 32%를 느낌표로 끝내요`) without a `숫자로 본 습관` group title, followed by `AI가 읽은 인상`; each item has its example sentence, with no provenance badge or per-item edit
   - VOICE-21's notice and `이전 분석으로 되돌리기` sit above the groups
-- VOICE-64 [o] the 학습 글 tab lists the voice's 학습 글 newest first — a pasted post by its label, an answer by its prompt — each opening to its full text and photo with `삭제`; it carries `글 붙여넣기` (the paste form, 제목 (선택) first) and `문항 풀기` (the prompt list, answered ones marked), both taking entries until closed (→VOICE-65), and until the voice is made the readiness meter
-- VOICE-65 [o] a 학습 글 sheet keeps taking entries until the owner closes it: a save never closes the sheet ← enough 학습 글 takes many entries, and reopening the sheet for each one breaks the run
-  - 문항 풀기: a saved answer opens the next unanswered prompt in the set's order after it, wrapping to the start, on a blank form
-  - `건너뛰기` opens that same next prompt without saving, offered only while another unanswered prompt exists; `문항 목록` returns to the list
-  - once no unanswered prompt remains, the sheet shows the list with every prompt marked answered
+- VOICE-64 [o] the 학습 데이터 tab lists the voice's 학습 글 newest first — a pasted post by its label, an answer by its prompt — each opening to its full text and photo with `삭제`; it carries `글 붙여넣기` (the paste form, 제목 (선택) first) and `문항 풀기` (the sequential prompt sheet →VOICE-65), both taking entries until closed, and until the voice is made the readiness meter
+- VOICE-65 [o] a learning sheet keeps taking entries until the owner closes it: a save never closes the sheet ← enough 학습 글 takes many entries, and reopening the sheet for each one breaks the run
+  - 문항 풀기 opens the first unanswered prompt in the set's order, one question at a time; each saved answer opens the next unanswered prompt on a blank form
+  - the sheet has no skip or prompt-list control; closing it preserves saved answers and discards only the unsaved answer, and reopening resumes at the first unanswered prompt
+  - for an unmade voice the sheet shows its current readiness progress bar after each answer, including the missing part; from 80% until 100% it says `거의 다 왔어요`, and at 100% it offers the explicit 말투 만들기 action
+  - once no unanswered prompt remains, a voice below 100% continues one answered prompt at a time, prefilled for adding sentences; each save advances to the next answered prompt, wrapping as needed, and keeps that prompt's photo unless the owner changes it
+  - once no unanswered prompt remains and readiness is 100% (or the voice is made), the sheet shows completion and the close action
   - 글 붙여넣기: a saved post empties the form for the next one, and its cancel action reads `닫기` from then on
   - each save is confirmed in place (`답을 저장했어요`, `글을 추가했어요`)
   - a refused save keeps the same entry with its text; closing the sheet discards only the unsaved entry
   - 검증's answer-one path still saves one answer and returns to 검증 (→VOICE-43)
 
 ## flow
-- create: 새 말투 만들기 → CreateVoice(name) → `만드는 중` → 학습 글(글 붙여넣기 | 문항 풀기(photo on the owner's own photo | situation)) → next entry in the same sheet until it closes (→VOICE-65) → meter N% (no call) → 100% → 말투 만들기 → `analyze_voice`(count → one call) → made → 말투 분석
+- create: 새 말투 만들기 → CreateVoice(name) → `만드는 중` → 말투 학습(`/materials`: 글 붙여넣기 | 문항 풀기 one question at a time) → next entry in the same sheet until it closes (→VOICE-65) → meter N% (no call) → 100% → 말투 만들기 → `analyze_voice`(count → one call) → made → 말투 분석 · 학습 데이터 · 검증 tabs
 - grow: 학습 글 added | deleted → notice → 다시 분석(at 100%) → current = new, previous kept → 이전 분석으로 되돌리기
 - check: 검증 → an answered prompt | answer one → `check_voice`(one write call, that answer withheld) → piece beside the answer + fingerprint comparison
 - delete: DeleteVoice(busy → refuse | tombstone) → posts keep `VoiceRef{deleted}` → RestoreVoice | reassign the post

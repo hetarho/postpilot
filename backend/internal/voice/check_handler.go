@@ -92,6 +92,7 @@ func (s *Service) writePiece(ctx context.Context, ref llm.ModelRef, projection s
 	}
 	// No MaxTokens of its own: the registry's default is the write stage's floor.
 	response, err := s.models.Complete(ctx, ref, llm.Request{
+		Stage:    llm.StageNameWrite,
 		System:   projection,
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: parts}},
 	})

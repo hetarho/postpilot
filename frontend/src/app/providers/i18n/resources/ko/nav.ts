@@ -29,14 +29,15 @@ export const nav = {
   models: 'AI 모델',
   voice: {
     analysis: '말투 분석',
-    materials: '학습 글',
+    learning: '말투 학습',
+    materials: '학습 데이터',
     checks: '검증',
     settings: '말투 설정',
     backToList: '← 말투 목록',
     // Compact tab captions: the full labels above outgrow evenly divided tabs at 320px.
     short: {
       analysis: '말투 분석',
-      materials: '학습 글',
+      materials: '학습 데이터',
       checks: '검증',
     },
   },

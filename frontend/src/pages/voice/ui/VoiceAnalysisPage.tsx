@@ -13,9 +13,8 @@ import { Notice, Typography, typographyStyles } from '@/shared/ui'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
-/** 말투 분석, the voice's first tab (VOICE-63): until the voice is made, the readiness meter, the way
- *  to 학습 글 and 말투 만들기; once made, the notice and the undo above `숫자로 본 습관` and
- *  `AI가 읽은 인상`, each item with the owner's own example sentence. */
+/** 말투 분석, the voice's first tab (VOICE-63): counted rows without a visible group title,
+ *  followed by `AI가 읽은 인상`, each with the owner's own example sentence. */
 export function VoiceAnalysisPage() {
   const { t } = useTranslation('nav')
   return (
@@ -103,10 +102,7 @@ function Quote({ sentence }: { sentence?: string }) {
 function CountedHabits({ analysis }: { analysis: VoiceAnalysis }) {
   const { t } = useTranslation('voices')
   return (
-    <section aria-labelledby="counted-habits" className="mt-8">
-      <Typography variant="title" as="h3" id="counted-habits">
-        {t('analysis.counted')}
-      </Typography>
+    <section aria-label={t('analysis.counted')} className="mt-8">
       <ul className="divide-divider mt-3 divide-y">
         {fingerprintRows(analysis.counted).map((row) => (
           <li key={row.item} className="py-3">

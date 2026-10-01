@@ -12,7 +12,7 @@ export const i18n = {
       profileLoadFailed: '말투를 불러오지 못했어요.',
     },
     analysis: {
-      counted: '숫자로 본 습관',
+      counted: '분석 항목',
       ai: 'AI가 읽은 인상',
       impression: '전체 인상',
       tics: '말버릇',
@@ -45,7 +45,7 @@ export const i18n = {
       profileLoadFailed: 'Could not load the voice.',
     },
     analysis: {
-      counted: 'Counted habits',
+      counted: 'Measured details',
       ai: 'What the AI read',
       impression: 'Overall impression',
       tics: 'Verbal tics',

@@ -166,7 +166,7 @@ export function fingerprintSentence(fingerprint: VoiceFingerprint, item: Fingerp
   }
 }
 
-/** The eight rows of 숫자로 본 습관, 알 수 없음 where an item is unknown. */
+/** The eight measured analysis rows, 알 수 없음 where an item is unknown. */
 export function fingerprintRows(fingerprint: VoiceFingerprint): FingerprintRow[] {
   return FINGERPRINT_ITEMS.map((item) => {
     const unknown = fingerprint[item].unknown

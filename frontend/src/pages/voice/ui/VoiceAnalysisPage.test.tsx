@@ -48,7 +48,7 @@ const DEFAULT = '/voices/voice-default'
 afterEach(() => initializeI18n('ko'))
 
 describe('the 말투 분석 tab', () => {
-  // VOICE-63: 숫자로 본 습관 in eight rows, 알 수 없음 where unknown, each with its example, then
+  // VOICE-63: counted habits in eight rows without a visible title, then
   // AI가 읽은 인상; nothing to edit.
   it("reads the analysis back in two groups with the owner's own sentences", async () => {
     renderAppAt(DEFAULT, {
@@ -56,7 +56,8 @@ describe('the 말투 분석 tab', () => {
       voice: { analysis: ANALYSIS, samples: [{ id: 'sample-1', label: '국숫집' }] },
     })
 
-    const counted = within(await screen.findByRole('region', { name: '숫자로 본 습관' }))
+    const counted = within(await screen.findByRole('region', { name: '분석 항목' }))
+    expect(screen.queryByRole('heading', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
     const rows = counted.getAllByRole('listitem')
     expect(rows).toHaveLength(8)
     expect(rows[1]).toHaveTextContent('문장의 32%를 느낌표로')
@@ -77,20 +78,30 @@ describe('the 말투 분석 tab', () => {
     expect(screen.queryByText('측정값')).not.toBeInTheDocument()
   })
 
-  // VOICE-63: until the voice is made, the meter, the way to 학습 글 and 말투 만들기.
-  it('shows the meter and the way to 학습 글 for a voice not yet made', async () => {
-    renderAppAt(DEFAULT, {
+  // VOICE-54: before the first analysis the only voice screen is 말투 학습.
+  it('redirects an unmade voice to 말투 학습 without tabs', async () => {
+    const { router } = renderAppAt(DEFAULT, {
       user: { id: 'alice' },
       voice: { voices: [{ id: 'voice-default', name: '기본 말투', made: false }] },
     })
 
-    expect(await screen.findByText('말투 학습에 필요한 정보')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '학습 글 모으기' })).toHaveAttribute(
-      'href',
-      `${DEFAULT}/materials`,
-    )
+    expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
+    expect(screen.getByText('말투 학습에 필요한 정보')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
+    expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
-    expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
+  })
+
+  it('redirects an unmade voice checks link to the learning screen', async () => {
+    const { router } = renderAppAt(`${DEFAULT}/checks`, {
+      user: { id: 'alice' },
+      voice: { voices: [{ id: 'voice-default', name: '기본 말투', made: false }] },
+    })
+
+    expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
+    expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
   })
 
   // VOICE-21: the notice sits above the groups with 다시 분석.
@@ -141,7 +152,7 @@ describe('the 말투 분석 tab', () => {
         ],
       },
     })
-    expect(await screen.findByRole('region', { name: '숫자로 본 습관' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '분석 항목' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '이전 분석으로 되돌리기' })).not.toBeInTheDocument()
   })
 })
@@ -154,7 +165,7 @@ describe('the voice tab row', () => {
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
-    // Three tabs: 말투 분석 · 학습 글 · 검증 (VOICE-54).
+    // Three tabs: 말투 분석 · 학습 데이터 · 검증 (VOICE-54).
     expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
       DEFAULT,
       `${DEFAULT}/materials`,
@@ -171,21 +182,23 @@ describe('the voice tab row', () => {
 
     await userEvent.setup().click(tabs[1])
     await waitFor(() => expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`))
-    expect(await screen.findByRole('heading', { level: 2, name: '학습 글' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '학습 데이터' }),
+    ).toBeInTheDocument()
 
     router.history.back()
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
   })
 
   it.each([
-    [`${DEFAULT}/materials`, '학습 글'],
+    [`${DEFAULT}/materials`, '학습 데이터'],
     [`${DEFAULT}/checks`, '검증'],
   ])('renders %s as its own screen on reload', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
     expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
-    expect(screen.queryByRole('region', { name: '숫자로 본 습관' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
   })
 })
 
@@ -349,7 +362,7 @@ describe('the 학습 글 tab', () => {
   // VOICE-6: the 이전 수동 안내 section and both of its editors are gone from every tab.
   it('offers no free-text guidance editors anywhere on the voice screens', async () => {
     renderAppAt(`${DEFAULT}/materials`, { user: { id: 'alice' } })
-    await screen.findByRole('heading', { level: 2, name: '학습 글' })
+    await screen.findByRole('heading', { level: 2, name: '학습 데이터' })
     expect(screen.queryByText('이전 수동 안내')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('문체 규칙')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('추가 규칙')).not.toBeInTheDocument()
@@ -411,7 +424,7 @@ describe('the 학습 글 tab', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '기본 말투' })).toBeInTheDocument()
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     // The analysis stays as it was; nothing partial was published.
-    expect(screen.getByRole('region', { name: '숫자로 본 습관' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '분석 항목' })).toBeInTheDocument()
   })
 
   // VOICE-54: renaming lives on the voice, not on the directory row that leads here.

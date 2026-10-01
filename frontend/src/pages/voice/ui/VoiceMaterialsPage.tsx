@@ -9,12 +9,12 @@ import { Notice } from '@/shared/ui'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
-/** The 학습 글 tab (VOICE-64): the readiness meter until the voice is made, 말투 만들기 or 다시
+/** The 학습 데이터 screen (VOICE-64): the readiness meter until the voice is made, 말투 만들기 or 다시
  *  분석, the two ways to add 학습 글, and the list. */
 export function VoiceMaterialsPage() {
   const { t } = useTranslation('nav')
   return (
-    <VoiceScreen title={t('voice.materials')}>
+    <VoiceScreen title={({ profile }) => t(profile.made ? 'voice.materials' : 'voice.learning')}>
       {(context) => <MaterialsPanel {...context} />}
     </VoiceScreen>
   )
@@ -52,7 +52,18 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
           ownerId={ownerId}
           voiceId={voiceId}
           samples={profile.samples}
-          readiness={profile.made ? undefined : profile.readiness}
+          profile={profile}
+          renderMakeVoice={(close) => (
+            <MakeVoiceButton
+              ownerId={ownerId}
+              voiceId={voiceId}
+              profile={profile}
+              onStarted={(jobId) => {
+                close()
+                setStartedJobId(jobId)
+              }}
+            />
+          )}
           disabled={voice.deleted}
         />
       </div>

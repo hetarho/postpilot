@@ -108,6 +108,9 @@ func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := h.models.request
+	if request.Stage != llm.StageNameWrite {
+		t.Fatalf("check stage = %q, want %q", request.Stage, llm.StageNameWrite)
+	}
 	if h.models.completeCalls != 1 || request.System != started.Projection || len(request.Messages) != 1 || len(request.Messages[0].Parts) != 1 {
 		t.Fatalf("calls=%d request=%+v", h.models.completeCalls, request)
 	}
@@ -135,6 +138,73 @@ func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 	// A second run of the same job finds nothing waiting and calls nothing.
 	if err := h.svc.CheckVoice(ctx, voice.CheckJob{UserID: "alice", VoiceID: alice, CheckID: started.ID, WriteModel: writeOnlyRef.String()}, func(string, int, int) {}); err == nil || h.models.completeCalls != 1 {
 		t.Fatalf("a finished check ran again: err=%v calls=%d", err, h.models.completeCalls)
+	}
+}
+
+type admittedCheckProvider struct {
+	calls int
+}
+
+func (p *admittedCheckProvider) Name() string { return "check-test" }
+func (p *admittedCheckProvider) Complete(_ context.Context, _ llm.Request) (llm.Response, error) {
+	p.calls++
+	return llm.Response{Text: "안녕하세요. 빵집을 소개할게요."}, nil
+}
+
+type admittedCheckSource struct{}
+
+type admittedCheckModels struct{ registry *llm.Registry }
+
+func (m admittedCheckModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	return m.registry.Lookup(ref)
+}
+func (m admittedCheckModels) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
+	return m.registry.Complete(ctx, ref, req)
+}
+
+func (admittedCheckSource) Models() []llm.SourceModel {
+	return []llm.SourceModel{{ModelID: "writer", Stages: []string{llm.StageNameWrite}}}
+}
+func (s admittedCheckSource) Lookup(id string) (llm.SourceModel, bool) {
+	if id == "writer" {
+		return s.Models()[0], true
+	}
+	return llm.SourceModel{}, false
+}
+
+// VOICE-43: production requires a durable write-stage admission. The registry rejects the
+// same model when the request stage is absent; the check handler must supply it to reach the
+// provider and finish the result.
+func TestVoiceCheckUsesDurablyAdmittedWriteStage(t *testing.T) {
+	h, alice := checkHarness(t)
+	provider := &admittedCheckProvider{}
+	registry, err := llm.Parse([]byte("providers:\n  - id: check-test\n    adapter: check-test\n    base_url: https://example.test/v1\n    api_key_env: CHECK_TEST_KEY\n"),
+		func(string) string { return "key" },
+		map[string]llm.AdapterFactory{"check-test": func(llm.AdapterConfig) (llm.Provider, error) { return provider, nil }},
+		admittedCheckSource{}, llm.Options{Timeout: time.Minute, MaxTokens: 1024})
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry.WithModelGrades()
+	ref := llm.ModelRef{ProviderID: "check-test", ModelID: "writer"}
+	ctx := llm.WithAdmittedCalls(context.Background(), []llm.AdmittedCall{{Ref: ref, Stage: llm.StageNameWrite, Grade: "balanced"}})
+	if _, err := registry.Complete(ctx, ref, llm.Request{}); !errors.Is(err, llm.ErrModelUnavailable) {
+		t.Fatalf("missing stage = %v, want model unavailable", err)
+	}
+	if provider.calls != 0 {
+		t.Fatalf("provider called before admitted check: %d", provider.calls)
+	}
+	h.svc = voice.NewService(h.store, admittedCheckModels{registry}, h.jobs)
+	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.svc.CheckVoice(ctx, voice.CheckJob{UserID: "alice", VoiceID: alice, CheckID: started.ID, WriteModel: ref.String()}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	checks, _, err := h.svc.ListVoiceChecks(ctx, "alice", alice)
+	if err != nil || len(checks) != 1 || checks[0].Status != voice.CheckDone || provider.calls != 1 {
+		t.Fatalf("check = %+v; provider calls=%d; err=%v", checks, provider.calls, err)
 	}
 }
 
@@ -279,6 +349,9 @@ func TestAReflectionFreezesAndRunsTheCheckPrompt(t *testing.T) {
 		t.Fatalf("run = %+v err=%v calls=%d", result, err, h.models.completeCalls)
 	}
 	request := h.models.request
+	if request.Stage != llm.StageNameWrite {
+		t.Fatalf("reflection stage = %q, want %q", request.Stage, llm.StageNameWrite)
+	}
 	if strings.Contains(request.System, "먹음직스러웠어요") || len(request.Messages[0].Parts) != 2 || !strings.Contains(request.Messages[0].Parts[0].Text, "[문항]") {
 		t.Fatalf("the call = %+v", request)
 	}

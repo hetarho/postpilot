@@ -1,8 +1,8 @@
-import { Link, Outlet, useParams } from '@tanstack/react-router'
+import { Link, Navigate, Outlet, useParams, useRouterState } from '@tanstack/react-router'
 import { ClipboardCheck, FileText, IdCard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
-import { useVoices } from '@/entities/voice'
+import { useVoiceProfile, useVoices } from '@/entities/voice'
 import { DeleteVoiceButton } from '@/features/delete-voice'
 import { RenameVoiceField } from '@/features/rename-voice'
 import { RestoreVoiceButton } from '@/features/restore-voice'
@@ -39,6 +39,10 @@ export function VoiceLayout() {
   const ownerId = user?.id ?? ''
   const { voices, isPending, isError, isFetching, refetch } = useVoices(ownerId)
   const voice = voices.find((candidate) => candidate.id === voiceId)
+  const { profile, isPending: profilePending } = useVoiceProfile(ownerId, voice ? voiceId : '')
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const made = profile?.made ?? voice?.made ?? false
+  const learningPath = `/voices/${voiceId}/materials`
 
   return (
     <div className={pageStyles({ width: 'wide' })}>
@@ -72,6 +76,12 @@ export function VoiceLayout() {
         <Typography variant="body" role="alert" className="text-notice-danger-fg mt-4">
           {t('missing', { ns: 'voices' })}
         </Typography>
+      ) : profilePending ? (
+        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
+          {t('state.loading', { ns: 'common' })}
+        </Typography>
+      ) : !made && pathname !== learningPath ? (
+        <Navigate to="/voices/$voiceId/materials" params={{ voiceId }} replace />
       ) : (
         <>
           {/* The title row carries every lifecycle action of the voice (VOICE-54): the rename,
@@ -101,16 +111,18 @@ export function VoiceLayout() {
               />
             </Notice>
           )}
-          <TabLinks
-            items={VOICE_TABS.map(({ labelKey, ...tab }) => ({
-              ...tab,
-              label: t(`voice.${labelKey}`, { ns: 'nav' }),
-              shortLabel: t(`voice.short.${labelKey}`, { ns: 'nav' }),
-              params: { voiceId },
-            }))}
-            ariaLabel={t('voice.settings', { ns: 'nav' })}
-            className="mt-4"
-          />
+          {made && (
+            <TabLinks
+              items={VOICE_TABS.map(({ labelKey, ...tab }) => ({
+                ...tab,
+                label: t(`voice.${labelKey}`, { ns: 'nav' }),
+                shortLabel: t(`voice.short.${labelKey}`, { ns: 'nav' }),
+                params: { voiceId },
+              }))}
+              ariaLabel={t('voice.settings', { ns: 'nav' })}
+              className="mt-4"
+            />
+          )}
           <Outlet />
         </>
       )}

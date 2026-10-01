@@ -38,7 +38,7 @@ function renderMaterials(
   })
 }
 
-describe('the 학습 글 tab', () => {
+describe('the 학습 데이터 screen', () => {
   // VOICE-32: the meter counts sentences, says how many are still needed and names a missing
   // part; 100% says so.
   it('shows the readiness meter with its missing parts', async () => {
@@ -58,6 +58,23 @@ describe('the 학습 글 tab', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows live quiz progress and offers 말투 만들기 at 100%', async () => {
+    const user = userEvent.setup()
+    renderMaterials({ samples: [{ id: 'p', label: '글', body: sentences(48) }] })
+
+    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(await sheet.findByRole('meter')).toHaveAttribute('aria-valuenow', '80')
+    expect(sheet.getByText('거의 다 왔어요')).toBeInTheDocument()
+    await user.click(sheet.getByLabelText('답'))
+    await user.paste(sentences(12))
+    await user.click(sheet.getByRole('button', { name: '답하기' }))
+
+    await waitFor(() => expect(sheet.getByRole('meter')).toHaveAttribute('aria-valuenow', '100'))
+    expect(sheet.queryByText('거의 다 왔어요')).not.toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: '말투 만들기' })).toBeEnabled()
+  })
+
   // VOICE-23, VOICE-55: at 100% 말투 만들기 starts one analysis on the active analyze selection.
   it('makes the voice at 100% on the active analyze selection', async () => {
     const user = userEvent.setup()
@@ -71,6 +88,26 @@ describe('the 학습 글 tab', () => {
       expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/analyze' }]),
     )
     expect(await screen.findByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
+  })
+
+  it('reveals the three tabs when the first analysis publishes', async () => {
+    const user = userEvent.setup()
+    renderMaterials({
+      samples: [{ id: 'p', label: '글', body: sentences(60) }],
+      analysisAfterAnalysis: '차분한 말투예요.',
+    })
+
+    expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
+      'link',
+    )
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      '말투 분석',
+      '학습 데이터',
+      '검증',
+    ])
   })
 
   it('says a model is needed, with the way to choose one, when there is none', async () => {
@@ -150,9 +187,7 @@ describe('the 학습 글 tab', () => {
     expect(sheet.getByRole('button', { name: '취소' })).toBeInTheDocument()
   })
 
-  // VOICE-60, VOICE-65: 문항 풀기 lists the prompts in their groups, answers one, moves on to the
-  // next unanswered prompt — wrapping past the last — and marks the answered one, which stays
-  // open to a rewrite.
+  // VOICE-65: the sheet starts with the first unanswered prompt, then advances after a save.
   it('answers a prompt and moves on to the next one', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
@@ -160,10 +195,52 @@ describe('the 학습 글 tab', () => {
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    for (const group of ['글머리', '본문', '마무리']) {
-      expect(await sheet.findByRole('heading', { name: group })).toBeInTheDocument()
-    }
-    await user.click(sheet.getByRole('button', { name: /글을 마무리할 때 쓰는 끝인사/ }))
+    expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
+    expect(sheet.getByRole('meter')).toHaveAttribute('aria-valuenow', '0')
+    expect(sheet.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument()
+    expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
+    await user.type(sheet.getByLabelText('답'), '안녕하세요!')
+    await user.click(sheet.getByRole('button', { name: '답하기' }))
+
+    await waitFor(() =>
+      expect(answers).toEqual([
+        { promptKey: 'opening_greeting', body: '안녕하세요!', uploadId: '' },
+      ]),
+    )
+    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
+    expect(sheet.getByRole('status')).toHaveTextContent('답을 저장했어요')
+    expect(sheet.getByLabelText('답')).toHaveValue('')
+    expect(sheet.getByLabelText('답')).toHaveFocus()
+    await user.click(sheet.getByRole('button', { name: '닫기' }))
+    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    expect(
+      await within(screen.getByRole('dialog')).findByText(/음식이나 음료 사진/),
+    ).toBeInTheDocument()
+  })
+
+  // VOICE-65: at 100%, the last answer shows completion and a close action.
+  it('shows completion after the last unanswered prompt at 100%', async () => {
+    const user = userEvent.setup()
+    const answers: NonNullable<FakeVoiceOptions['answers']> = []
+    renderMaterials({
+      answers,
+      samples: [
+        { id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting', body: sentences(57) },
+        {
+          id: 'a1',
+          label: '',
+          kind: 'answer',
+          promptKey: 'photo_food',
+          hasPhoto: true,
+          body: sentences(1),
+        },
+        { id: 'a2', label: '', kind: 'answer', promptKey: 'situation_value', body: sentences(1) },
+      ],
+    })
+
+    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '다음에 또 만나요!')
     await user.click(sheet.getByRole('button', { name: '답하기' }))
 
@@ -172,77 +249,53 @@ describe('the 학습 글 tab', () => {
         { promptKey: 'closing_greeting', body: '다음에 또 만나요!', uploadId: '' },
       ]),
     )
-    // closing_greeting is the last prompt, so the next one is the first.
-    expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
+    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
     expect(sheet.getByRole('status')).toHaveTextContent('답을 저장했어요')
-    expect(sheet.getByLabelText('답')).toHaveValue('')
-    expect(sheet.getByLabelText('답')).toHaveFocus()
-
-    await user.type(sheet.getByLabelText('답'), '안')
-    expect(sheet.getByRole('status')).toHaveTextContent('')
-    await user.click(sheet.getByRole('button', { name: '문항 목록' }))
-    await waitFor(() =>
-      expect(
-        sheet.getByRole('button', { name: /글을 마무리할 때 쓰는 끝인사.*답함/ }),
-      ).toBeEnabled(),
-    )
+    expect(sheet.queryByLabelText('답')).not.toBeInTheDocument()
+    await user.click(sheet.getByRole('button', { name: '닫기' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  // VOICE-65: 건너뛰기 moves on without saving, and the prompt list returns once every prompt
-  // holds an answer — saying, while the voice is short of 100%, that answers can take more.
-  it('skips a prompt and shows the list after the last answer', async () => {
+  // VOICE-65: after the last answer below 100%, continue with a prefilled answer to extend.
+  it('continues into answered prompts when readiness is short', async () => {
     const user = userEvent.setup()
-    const calls: string[] = []
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials(
-      {
-        answers,
-        samples: [
-          { id: 'a1', label: '', kind: 'answer', promptKey: 'photo_food', hasPhoto: true },
-          { id: 'a2', label: '', kind: 'answer', promptKey: 'closing_greeting' },
-        ],
-      },
-      calls,
-    )
+    renderMaterials({
+      answers,
+      samples: [
+        { id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting', body: '안녕하세요.' },
+        {
+          id: 'a1',
+          label: '',
+          kind: 'answer',
+          promptKey: 'photo_food',
+          hasPhoto: true,
+          body: '맛있어요.',
+        },
+        { id: 'a2', label: '', kind: 'answer', promptKey: 'situation_value', body: '좋았어요.' },
+      ],
+    })
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    await user.click(
-      await sheet.findByRole('button', { name: /블로그 글을 시작할 때 쓰는 첫인사/ }),
-    )
-    await user.type(sheet.getByLabelText('답'), '버려질 답')
-    await user.click(sheet.getByRole('button', { name: '건너뛰기' }))
-
-    // photo_food is answered, so the next prompt is situation_value.
-    expect(await sheet.findByText(/가격이나 양, 가성비/)).toBeInTheDocument()
-    expect(sheet.getByLabelText('답')).toHaveValue('')
-    expect(calls).not.toContain('AnswerVoicePrompt')
-    await user.type(sheet.getByLabelText('답'), '가성비가 좋았어요.')
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
-
-    // Back on opening_greeting, the one prompt left: there is nothing to skip to.
-    expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
+    expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
     expect(sheet.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument()
-    await user.type(sheet.getByLabelText('답'), '안녕하세요!')
+    expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
+    await user.type(sheet.getByLabelText('답'), '다음에 만나요.')
     await user.click(sheet.getByRole('button', { name: '답하기' }))
 
     await waitFor(() =>
       expect(answers).toEqual([
-        { promptKey: 'situation_value', body: '가성비가 좋았어요.', uploadId: '' },
-        { promptKey: 'opening_greeting', body: '안녕하세요!', uploadId: '' },
+        { promptKey: 'closing_greeting', body: '다음에 만나요.', uploadId: '' },
       ]),
     )
-    expect(await sheet.findByRole('heading', { name: '글머리' })).toBeInTheDocument()
-    expect(sheet.getByText('답을 저장했어요')).toBeInTheDocument()
     expect(
-      sheet.getByText(
-        '모든 문항에 답했어요. 답한 문항을 눌러 문장을 더 보태면 나머지를 채울 수 있어요.',
-      ),
+      await sheet.findByText('모든 문항에 답했어요. 지금부터 답에 문장을 더 보태 볼게요.'),
     ).toBeInTheDocument()
+    expect(sheet.getByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
+    expect(await sheet.findByLabelText('답')).toHaveValue('안녕하세요.')
+    expect(sheet.getByRole('button', { name: '답 고치기' })).toBeInTheDocument()
     expect(sheet.getByText(/문장이 더 필요해요\./)).toBeInTheDocument()
-    for (const prompt of [/첫인사/, /음식이나 음료 사진/, /가격이나 양/, /끝인사/]) {
-      await waitFor(() => expect(sheet.getByRole('button', { name: prompt })).toBeEnabled())
-    }
   })
 
   // VOICE-60, VOICE-32: an answered prompt reopens on its answer; the rewrite replaces it — a
@@ -268,13 +321,26 @@ describe('the 학습 글 tab', () => {
           hasPhoto: true,
           body: '짜장면이에요. 맛있었어요.',
         },
+        {
+          id: 'a3',
+          label: '',
+          kind: 'answer',
+          promptKey: 'situation_value',
+          body: '가격이 좋아요. 양도 좋아요.',
+        },
+        {
+          id: 'a4',
+          label: '',
+          kind: 'answer',
+          promptKey: 'closing_greeting',
+          body: '다음에 봐요. 안녕히 계세요.',
+        },
       ],
     })
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    expect(await sheet.findByText('6% 확보')).toBeInTheDocument()
-    await user.click(await sheet.findByRole('button', { name: /첫인사.*답함/ }))
+    expect(await sheet.findByText('13% 확보')).toBeInTheDocument()
     const field = await sheet.findByLabelText('답')
     expect(field).toHaveValue('안녕하세요. 반가워요.')
     expect(field).toHaveFocus()
@@ -290,10 +356,8 @@ describe('the 학습 글 tab', () => {
         },
       ]),
     )
-    expect(await sheet.findByText('8% 확보')).toBeInTheDocument()
-
-    await user.click(sheet.getByRole('button', { name: '문항 목록' }))
-    await user.click(await sheet.findByRole('button', { name: /음식이나 음료 사진.*답함/ }))
+    expect(await sheet.findByText('15% 확보')).toBeInTheDocument()
+    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     expect(await sheet.findByRole('img', { name: '고른 사진' })).toHaveAttribute(
       'src',
       'https://storage.test/voices/a2.jpg',
@@ -307,6 +371,7 @@ describe('the 학습 글 tab', () => {
         uploadId: '',
       }),
     )
+    expect(await sheet.findByText(/가격이나 양, 가성비/)).toBeInTheDocument()
   })
 
   // VOICE-60: a photo prompt is answered on the owner's own photo, converted and PUT first.
@@ -314,11 +379,17 @@ describe('the 학습 글 tab', () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials({ answers }, calls)
+    renderMaterials(
+      {
+        answers,
+        samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],
+      },
+      calls,
+    )
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    await user.click(await sheet.findByRole('button', { name: /음식이나 음료 사진/ }))
+    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
     // Without a photo there is nothing to answer on.
     expect(sheet.getByRole('button', { name: '답하기' })).toBeDisabled()
@@ -345,11 +416,14 @@ describe('the 학습 글 tab', () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
     vi.mocked(putPhoto).mockRejectedValueOnce(new Error('offline'))
-    renderMaterials({ answers })
+    renderMaterials({
+      answers,
+      samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],
+    })
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    await user.click(await sheet.findByRole('button', { name: /음식이나 음료 사진/ }))
+    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
     await user.upload(
       sheet.getByLabelText('사진 고르기'),

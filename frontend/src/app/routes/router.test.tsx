@@ -415,7 +415,7 @@ describe('lazily loaded routes', () => {
     const { router } = renderAppAt('/voices/voice-default/materials', { user: { id: 'alice' } })
 
     expect(await screen.findByRole('link', { name: '말투 분석' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '학습 글' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '학습 데이터' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/voices/voice-default/materials')
   })
 })
@@ -665,7 +665,7 @@ describe('localized registered-route smoke', () => {
       guidelines: '지침',
       about: '사진과 메모를 내 말투의 블로그 초안으로',
       analysis: '말투 분석',
-      materials: '학습 글',
+      materials: '학습 데이터',
       models: '모델 변경',
       retry: '다시 시도',
       title: '제목',
@@ -678,7 +678,7 @@ describe('localized registered-route smoke', () => {
       guidelines: 'Guidelines',
       about: 'Photos and rough notes into a blog draft in your own voice',
       analysis: 'Voice analysis',
-      materials: 'Writing',
+      materials: 'Training data',
       models: 'Change models',
       retry: 'Try again',
       title: 'Title',

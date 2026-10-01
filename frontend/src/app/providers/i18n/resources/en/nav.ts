@@ -29,13 +29,14 @@ export const nav = {
   models: 'AI models',
   voice: {
     analysis: 'Voice analysis',
-    materials: 'Writing',
+    learning: 'Teach voice',
+    materials: 'Training data',
     checks: 'Checks',
     settings: 'Voice settings',
     backToList: '← Voices',
     short: {
       analysis: 'Analysis',
-      materials: 'Writing',
+      materials: 'Training data',
       checks: 'Checks',
     },
   },
