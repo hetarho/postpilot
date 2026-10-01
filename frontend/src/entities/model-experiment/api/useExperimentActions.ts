@@ -15,6 +15,8 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
   const queryClient = useQueryClient()
   const choose = useMutation(ModelExperimentService.method.chooseWinner)
   const complete = useMutation(ModelExperimentService.method.completeExperimentReview)
+  const applyCandidate = useMutation(ModelExperimentService.method.applyCandidateOutput)
+  const adoptCandidate = useMutation(ModelExperimentService.method.adoptCandidateModel)
   const decideWrite = useMutation(ModelExperimentService.method.decideWriteExperiment)
   const useSingle = useMutation(ModelExperimentService.method.useSingleCandidate)
   const dismiss = useMutation(ModelExperimentService.method.dismissExperiment)
@@ -48,6 +50,16 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
         skip,
         ranks: ranks.map((item) => ({ ...item, badges: item.badges.map(badgeToProto) })),
       })
+      await refresh()
+      return value
+    },
+    applyCandidate: async (candidateId: string, adoptModel = false) => {
+      const value = await applyCandidate.mutateAsync({ experimentId: id, candidateId, adoptModel })
+      await refresh()
+      return value
+    },
+    adoptCandidate: async (candidateId: string) => {
+      const value = await adoptCandidate.mutateAsync({ experimentId: id, candidateId })
       await refresh()
       return value
     },
@@ -100,6 +112,8 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       return value
     },
     isPending:
+      applyCandidate.isPending ||
+      adoptCandidate.isPending ||
       complete.isPending ||
       choose.isPending ||
       decideWrite.isPending ||
@@ -109,7 +123,9 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       apply.isPending ||
       adopt.isPending,
     failure: mutationFailure(
-      complete.error ??
+      applyCandidate.error ??
+        adoptCandidate.error ??
+        complete.error ??
         choose.error ??
         decideWrite.error ??
         useSingle.error ??

@@ -10,6 +10,7 @@ import { needsExperimentReview, type ModelExperiment } from '@/entities/model-ex
 export function hasExperimentActions(experiment: ModelExperiment): boolean {
   return (
     needsExperimentReview(experiment.status) ||
+    (experiment.reviewMode === 'candidate_ranking' && experiment.status === 'completed') ||
     experiment.status === 'decided' ||
     Boolean(experiment.applyFailure) ||
     Boolean(experiment.adoptionFailure)

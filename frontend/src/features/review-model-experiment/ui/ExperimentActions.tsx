@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelExperiment } from '@/entities/model-experiment'
 import {
+  candidateSides,
   needsExperimentReview,
   useExperimentActions,
   useExperimentOwnerRefresh,
@@ -68,7 +69,11 @@ export function ExperimentActions({
   // Asked for only where the answer changes the screen: what a decided lab comparison may
   // still write to. A finalized post keeps its confirmed content, so it is offered nothing.
   const { post, isPending: postPending } = usePost(experiment.postSlug, {
-    enabled: offersContent && experiment.status === 'decided' && !experiment.appliedAt,
+    enabled:
+      !writesNothing &&
+      !experiment.appliedAt &&
+      ((offersContent && experiment.status === 'decided') ||
+        (experiment.reviewMode === 'candidate_ranking' && experiment.status === 'completed')),
   })
   const postWritable = Boolean(post && isUnfinalized(post))
   if (experiment.reviewMode === 'candidate_ranking') {
@@ -77,6 +82,9 @@ export function ExperimentActions({
         experiment={experiment}
         actions={actions}
         voiceWorkBlocked={voiceWorkBlocked}
+        activeCandidateId={activeCandidateId}
+        postWritable={postWritable}
+        postPending={postPending}
       />
     )
   }
@@ -285,27 +293,57 @@ function RankedExperimentActions({
   experiment,
   actions,
   voiceWorkBlocked,
+  activeCandidateId,
+  postWritable,
+  postPending,
 }: {
   experiment: ModelExperiment
   actions: ReturnType<typeof useExperimentActions>
   voiceWorkBlocked: boolean
+  activeCandidateId: string
+  postWritable: boolean
+  postPending: boolean
 }) {
   const { t } = useTranslation('models')
   const [open, setOpen] = useState(false)
-  const [pressed, setPressed] = useState<'retry' | 'skip' | ''>('')
+  const [pressed, setPressed] = useState('')
   const pendingReview = needsExperimentReview(experiment.status)
   const succeeded = experiment.candidates.filter((candidate) => candidate.status === 'succeeded')
-  if (!pendingReview) return null
-  const run = (kind: 'retry' | 'skip', action: () => Promise<unknown>) => {
+  const selected = succeeded.find((candidate) => candidate.id === activeCandidateId)
+  const sides = candidateSides(experiment.candidates)
+  const labelOf = (id: string) => sides.find(({ candidate }) => candidate.id === id)?.label ?? '?'
+  const appliedId = experiment.appliedCandidateId ?? ''
+  const adoptedId = experiment.adoptedCandidateId ?? ''
+  const applyTarget = appliedId || selected?.id || ''
+  const adoptTarget = adoptedId || selected?.id || ''
+  const completed = experiment.status === 'completed'
+  const canApply = completed && experiment.source !== 'voice' && !experiment.appliedAt
+  const canAdopt =
+    completed &&
+    !experiment.adoptedAt &&
+    (experiment.origin === 'lab' || Boolean(experiment.appliedAt))
+  const readOnly = canApply && !postPending && !postWritable
+  const run = (kind: string, action: () => Promise<unknown>) => {
     setPressed(kind)
     void action()
       .catch(() => {})
       .finally(() => setPressed(''))
   }
+  if (!pendingReview && !completed) return null
   return (
     <div className="grid gap-3">
+      {completed && selected && (
+        <Notice tone="info" role="status">
+          {t('ranking.actionCandidate', { label: labelOf(selected.id) })}
+        </Notice>
+      )}
+      {completed && !selected && (
+        <Notice tone="warning" role="status">
+          {t('ranking.selectedFailed')}
+        </Notice>
+      )}
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
-        {(experiment.status === 'partial' || experiment.status === 'failed') && (
+        {pendingReview && (experiment.status === 'partial' || experiment.status === 'failed') && (
           <Button
             variant="secondary"
             disabled={actions.isPending || voiceWorkBlocked}
@@ -315,7 +353,7 @@ function RankedExperimentActions({
             {t('actions.retryFailed')}
           </Button>
         )}
-        {succeeded.length > 0 && (
+        {pendingReview && succeeded.length > 0 && (
           <Button
             variant="ghost"
             disabled={actions.isPending}
@@ -325,25 +363,121 @@ function RankedExperimentActions({
             {t('ranking.skip')}
           </Button>
         )}
-        {succeeded.length >= 2 && (
+        {pendingReview && succeeded.length >= 2 && (
           <Button variant="cta" disabled={actions.isPending} onClick={() => setOpen(true)}>
             {t('ranking.open')}
           </Button>
         )}
+        {canApply &&
+          applyTarget &&
+          !postPending &&
+          postWritable &&
+          !voiceWorkBlocked &&
+          (experiment.origin === 'editor' && !appliedId ? (
+            <div className="grid grid-cols-2 gap-3 sm:contents" key="editor-apply">
+              <Button
+                variant="secondary"
+                disabled={actions.isPending}
+                pending={pressed === 'apply'}
+                onClick={() => run('apply', () => actions.applyCandidate(applyTarget))}
+              >
+                {t('actions.apply')}
+              </Button>
+              <Button
+                variant="cta"
+                disabled={actions.isPending}
+                pending={pressed === 'applyAdopt'}
+                onClick={() => run('applyAdopt', () => actions.applyCandidate(applyTarget, true))}
+              >
+                {t('actions.applyAndAdopt')}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="cta"
+              disabled={actions.isPending}
+              pending={pressed === 'apply'}
+              onClick={() =>
+                run('apply', () =>
+                  actions.applyCandidate(applyTarget, experiment.adoptionRequested),
+                )
+              }
+            >
+              {appliedId
+                ? t('ranking.retryApplyCandidate', { label: labelOf(appliedId) })
+                : t('actions.apply')}
+            </Button>
+          ))}
+        {canAdopt && adoptTarget && !voiceWorkBlocked && (
+          <Button
+            variant="secondary"
+            disabled={actions.isPending}
+            pending={pressed === 'adopt'}
+            onClick={() =>
+              run('adopt', () =>
+                experiment.adoptionRequested && appliedId
+                  ? actions.applyCandidate(appliedId, true)
+                  : actions.adoptCandidate(adoptTarget),
+              )
+            }
+          >
+            {adoptedId || experiment.adoptionRequested
+              ? t('ranking.retryAdoptCandidate', { label: labelOf(adoptedId || appliedId) })
+              : t('actions.useActive')}
+          </Button>
+        )}
       </div>
+      {readOnly && (
+        <Notice tone="warning" role="status">
+          {t('ranking.postReadOnly')}
+        </Notice>
+      )}
+      {completed && voiceWorkBlocked && (
+        <Notice tone="warning" role="status">
+          {t('actions.voiceUnavailable')}
+        </Notice>
+      )}
+      {experiment.applyFailure && (
+        <Notice tone="danger" role="alert">
+          <AppFailureMessage failure={experiment.applyFailure} />
+        </Notice>
+      )}
+      {experiment.adoptionFailure && (
+        <Notice tone="danger" role="alert">
+          <AppFailureMessage failure={experiment.adoptionFailure} />
+        </Notice>
+      )}
+      {completed && experiment.appliedAt && appliedId && (
+        <Notice tone="success" role="status">
+          {t('ranking.appliedCandidate', {
+            label: labelOf(appliedId),
+            when: new Date(experiment.appliedAt).toLocaleString(),
+          })}
+        </Notice>
+      )}
+      {completed && experiment.adoptedAt && adoptedId && (
+        <Notice tone="success" role="status">
+          {t('ranking.adoptedCandidate', {
+            label: labelOf(adoptedId),
+            when: new Date(experiment.adoptedAt).toLocaleString(),
+          })}
+        </Notice>
+      )}
       {actions.failure && !open && (
         <Notice tone="danger" role="alert">
           <AppFailureMessage failure={actions.failure} />
         </Notice>
       )}
-      <RankedReviewSheet
-        experiment={experiment}
-        open={open}
-        pending={actions.isPending}
-        failure={actions.failure}
-        onConfirm={(ranks) => actions.complete(ranks)}
-        onClose={() => setOpen(false)}
-      />
+      {pendingReview && (
+        <RankedReviewSheet
+          experiment={experiment}
+          open={open}
+          pending={actions.isPending}
+          failure={actions.failure}
+          onConfirm={(ranks) => actions.complete(ranks)}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -18,6 +18,13 @@ export const i18n = {
       skip: '순위 건너뛰기',
       skipped: '순위를 남기지 않고 비교를 마쳤어요.',
       recorded: '후보 순위가 저장됐어요. 같은 순위는 동순위예요.',
+      actionCandidate: '현재 후보 {{label}}의 결과를 사용합니다. 저장된 순위는 바뀌지 않아요.',
+      selectedFailed: '실패한 후보의 결과는 사용할 수 없어요. 성공한 후보를 골라 주세요.',
+      postReadOnly: '이 글은 더 이상 결과를 적용할 수 없어요.',
+      appliedCandidate: '후보 {{label}} 결과를 {{when}}에 적용했어요.',
+      adoptedCandidate: '후보 {{label}} 모델을 {{when}}에 활성 모델로 변경했어요.',
+      retryApplyCandidate: '후보 {{label}} 적용 다시 시도',
+      retryAdoptCandidate: '후보 {{label}} 모델 변경 다시 시도',
     },
     verdict: {
       badgesOptional: '고른 이유를 남기면 다음 비교에 도움이 돼요. 안 골라도 그대로 확정돼요.',
@@ -62,6 +69,14 @@ export const i18n = {
       skip: 'Skip ranking',
       skipped: 'Comparison completed without a ranking.',
       recorded: 'Candidate ranks were saved. Equal ranks are ties.',
+      actionCandidate:
+        'Use candidate {{label}} for this action. The saved ranking will not change.',
+      selectedFailed: 'A failed result cannot be used. Select a successful candidate.',
+      postReadOnly: 'This post can no longer accept a result.',
+      appliedCandidate: 'Applied candidate {{label}} at {{when}}.',
+      adoptedCandidate: 'Made candidate {{label}} active at {{when}}.',
+      retryApplyCandidate: 'Retry applying candidate {{label}}',
+      retryAdoptCandidate: 'Retry activating candidate {{label}}',
     },
     verdict: {
       badgesOptional:

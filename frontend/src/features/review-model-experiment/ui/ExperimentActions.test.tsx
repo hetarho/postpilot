@@ -85,6 +85,8 @@ function actionSet() {
   // mock returning undefined fails inside React's event handler rather than in the assertion.
   return {
     complete: vi.fn().mockResolvedValue({}),
+    applyCandidate: vi.fn().mockResolvedValue({}),
+    adoptCandidate: vi.fn().mockResolvedValue({}),
     choose: vi.fn().mockResolvedValue({}),
     decideWrite: vi.fn().mockResolvedValue({}),
     useSingle: vi.fn().mockResolvedValue({}),
@@ -127,19 +129,104 @@ it('lets a single survivor skip and retry failure, without offering a rank submi
   expect(actions.complete).toHaveBeenCalledWith([], true)
 })
 
+it('offers explicit editor apply actions only after completion', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions({ ...base, reviewMode: 'candidate_ranking', status: 'completed', revealed: true })
+  const user = userEvent.setup()
+  const apply = await screen.findByRole('button', { name: '결과 적용' })
+  await user.click(apply)
+  expect(actions.applyCandidate).toHaveBeenCalledWith('left')
+  await user.click(screen.getByRole('button', { name: '결과 적용하고 활성 모델로 변경' }))
+  expect(actions.applyCandidate).toHaveBeenCalledWith('left', true)
+  expect(actions.complete).not.toHaveBeenCalled()
+})
+
+it('retries the persisted candidate after apply or adoption failure despite a changed panel', async () => {
+  const user = userEvent.setup()
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  const failed = {
+    ...base,
+    reviewMode: 'candidate_ranking' as const,
+    status: 'completed' as const,
+    appliedCandidateId: 'left',
+    applyFailure: { reason: 'MODEL_UNAVAILABLE' as const, params: {} },
+  }
+  const view = renderActions(failed, undefined, undefined, 'right')
+  await user.click(await screen.findByRole('button', { name: '후보 A 적용 다시 시도' }))
+  expect(actions.applyCandidate).toHaveBeenCalledWith('left', false)
+  view.unmount()
+
+  renderActions(
+    {
+      ...failed,
+      applyFailure: undefined,
+      appliedAt: '2026-10-01T00:00:00Z',
+      adoptionRequested: true,
+      adoptedCandidateId: 'left',
+      adoptionFailure: { reason: 'MODEL_UNAVAILABLE', params: {} },
+    },
+    undefined,
+    undefined,
+    'right',
+  )
+  await user.click(screen.getByRole('button', { name: '후보 A 모델 변경 다시 시도' }))
+  expect(actions.applyCandidate).toHaveBeenCalledWith('left', true)
+  expect(screen.getByText(/후보 A 결과를 .*적용했어요/)).toBeInTheDocument()
+})
+
+it('keeps a published lab post from applying while allowing model adoption', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(
+    { ...base, reviewMode: 'candidate_ranking', origin: 'lab', status: 'completed' },
+    undefined,
+    [{ slug: 'post', status: 'published' }],
+  )
+  const user = userEvent.setup()
+  expect(await screen.findByText('이 글은 더 이상 결과를 적용할 수 없어요.')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '활성 모델로 사용' }))
+  expect(actions.adoptCandidate).toHaveBeenCalledWith('left')
+})
+
+it('offers adoption alone for a completed voice comparison and blocks a deleted voice', () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(
+    {
+      ...base,
+      reviewMode: 'candidate_ranking',
+      origin: 'lab',
+      status: 'completed',
+      source: 'voice',
+      voiceId: 'voice-old',
+    },
+    [{ id: 'voice-old', name: '옛 말투', deleted: true }],
+  )
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '활성 모델로 사용' })).not.toBeInTheDocument()
+  expect(screen.getByText(/삭제되었거나 찾을 수 없는 말투/)).toBeInTheDocument()
+})
+
 function renderActions(
   experiment = base,
   voices: FakeVoiceRow[] = [{ id: 'voice-default', name: '기본 말투', isDefault: true }],
   posts: FakePostRow[] = [{ slug: 'post', status: 'draft' }],
+  activeCandidateId = 'left',
 ) {
   const backend = createFakeAuthBackend({
     user: { id: 'alice' },
     voice: { voices },
     posts: { posts },
   })
-  return render(<ExperimentActions experiment={experiment} activeCandidateId="left" />, {
-    wrapper: withProviders(backend.transport, createTestQueryClient()),
-  })
+  return render(
+    <ExperimentActions experiment={experiment} activeCandidateId={activeCandidateId} />,
+    {
+      wrapper: withProviders(backend.transport, createTestQueryClient()),
+    },
+  )
 }
 
 /** The sheet's confirm, told apart from the dock button that opened it: both carry the same

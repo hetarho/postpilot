@@ -87,6 +87,8 @@ export interface ModelExperiment {
   finishedAt: string
   decidedAt: string
   completedAt?: string
+  appliedCandidateId?: string
+  adoptedCandidateId?: string
   revealed: boolean
   targetLanguage: ContentLanguage | undefined
   source: ExperimentSourceName

@@ -59,6 +59,8 @@ export function toExperiment(value: ProtoModelExperiment): ModelExperiment {
     finishedAt: value.finishedAt,
     decidedAt: value.decidedAt,
     completedAt: value.completedAt,
+    appliedCandidateId: value.appliedCandidateId,
+    adoptedCandidateId: value.adoptedCandidateId,
     revealed: value.revealed,
     targetLanguage: contentLanguageFromProto(value.targetLanguage),
     source: value.source === ExperimentSource.VOICE ? 'voice' : 'post',
