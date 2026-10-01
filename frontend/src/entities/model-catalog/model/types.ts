@@ -71,6 +71,7 @@ export interface ModelStageAccess {
 }
 
 export type SelectionSlotName = 'active' | 'candidateA' | 'candidateB'
+export type LabSelectionSlotName = SelectionSlotName | 'candidateC' | 'candidateD' | 'candidateE'
 
 /** The acting user's saved choice for a stage. `missing`: the model is no longer
  *  registered — the server has already cleared the row; this is shown once. */
@@ -78,7 +79,7 @@ export interface StageSelection {
   stage: StageName
   ref: ModelRef
   missing: boolean
-  slot: SelectionSlotName
+  slot: LabSelectionSlotName
   requiredPlan?: string
   unavailableReason?: string
 }
@@ -87,6 +88,7 @@ export interface ComparisonPair {
   stage: StageName
   candidateA?: StageSelection
   candidateB?: StageSelection
+  extraCandidates: StageSelection[]
 }
 
 /** One stage of a recommendation set. Analyze keeps its active selection alone, so its

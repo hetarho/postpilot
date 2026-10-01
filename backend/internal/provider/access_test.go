@@ -90,3 +90,45 @@ func TestDisabledComparisonRefRemainsSavedWithProviderReason(t *testing.T) {
 		t.Fatalf("pair=%+v deleted=%v err=%v", pairs, store.deleted, err)
 	}
 }
+
+func TestLabExtraProjectionKeepsLockedAndDisabledAndClearsMissingOnce(t *testing.T) {
+	locked := llm.ModelRef{ProviderID: "openrouter", ModelID: "locked"}
+	disabled := llm.ModelRef{ProviderID: "openrouter", ModelID: "disabled"}
+	missing := llm.ModelRef{ProviderID: "openrouter", ModelID: "missing"}
+	store := &fakeStore{rows: map[string]provider.Selection{
+		"write/candidate_a": {Stage: provider.StageWrite, Slot: provider.SlotCandidateA, Ref: live},
+		"write/candidate_b": {Stage: provider.StageWrite, Slot: provider.SlotCandidateB, Ref: seeing},
+		"write/candidate_c": {Stage: provider.StageWrite, Slot: provider.SlotCandidateC, Ref: locked},
+		"write/candidate_d": {Stage: provider.StageWrite, Slot: provider.SlotCandidateD, Ref: disabled},
+		"write/candidate_e": {Stage: provider.StageWrite, Slot: provider.SlotCandidateE, Ref: missing},
+	}}
+	catalog := fakeCatalog{
+		live:     {Ref: live, Stages: textStages, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
+		seeing:   {Ref: seeing, Stages: allStages, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
+		locked:   {Ref: locked, Stages: textStages, Levels: map[string]string{"write": "top"}},
+		disabled: {Ref: disabled, Stages: textStages, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0", Disabled: true},
+	}
+	svc := provider.NewService(store, catalog, tierCredits{tier: plan.Free}).WithModelGrades()
+	pairs, err := svc.GetComparisonPairs(context.Background(), "alice")
+	if err != nil || len(pairs) != 1 || len(pairs[0].ExtraCandidates) != 3 {
+		t.Fatalf("first read: %+v %v", pairs, err)
+	}
+	extras := pairs[0].ExtraCandidates
+	if extras[0].UnavailableReason != "MODEL_PLAN_REQUIRED" || extras[1].UnavailableReason != "MODEL_PROVIDER_UNAVAILABLE" || !extras[2].Missing {
+		t.Fatalf("extra access: %+v", extras)
+	}
+	pairs, err = svc.GetComparisonPairs(context.Background(), "alice")
+	if err != nil || len(pairs[0].ExtraCandidates) != 2 {
+		t.Fatalf("missing was not cleared once: %+v %v", pairs, err)
+	}
+	if pairs[0].ExtraCandidates[0].Slot != provider.SlotCandidateC || pairs[0].ExtraCandidates[1].Slot != provider.SlotCandidateD {
+		t.Fatalf("read compacted before save: %+v", pairs[0].ExtraCandidates)
+	}
+	if _, err := svc.SaveLabExtraCandidates(context.Background(), "alice", provider.StageWrite, []llm.ModelRef{locked}); !errors.Is(err, provider.ErrModelPlanRequired) {
+		t.Fatalf("locked extra was saved: %v", err)
+	}
+	pairs, err = svc.GetComparisonPairs(context.Background(), "alice")
+	if err != nil || len(pairs[0].ExtraCandidates) != 2 {
+		t.Fatalf("refused replacement changed extras: %+v %v", pairs, err)
+	}
+}

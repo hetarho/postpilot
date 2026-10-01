@@ -9,6 +9,21 @@ import (
 	"context"
 )
 
+const deleteLabExtraSlots = `-- name: DeleteLabExtraSlots :exec
+DELETE FROM model_selections
+WHERE user_id = ? AND stage = ? AND slot IN ('candidate_c', 'candidate_d', 'candidate_e')
+`
+
+type DeleteLabExtraSlotsParams struct {
+	UserID string
+	Stage  string
+}
+
+func (q *Queries) DeleteLabExtraSlots(ctx context.Context, arg DeleteLabExtraSlotsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteLabExtraSlots, arg.UserID, arg.Stage)
+	return err
+}
+
 const deleteSelectionIfRef = `-- name: DeleteSelectionIfRef :exec
 DELETE FROM model_selections
 WHERE user_id = ? AND stage = ? AND slot = ? AND provider_id = ? AND model_id = ?
@@ -33,6 +48,45 @@ func (q *Queries) DeleteSelectionIfRef(ctx context.Context, arg DeleteSelectionI
 		arg.ModelID,
 	)
 	return err
+}
+
+const listPairSlotsForExtraSave = `-- name: ListPairSlotsForExtraSave :many
+SELECT slot, provider_id, model_id FROM model_selections
+WHERE user_id = ? AND stage = ? AND slot IN ('candidate_a', 'candidate_b')
+`
+
+type ListPairSlotsForExtraSaveParams struct {
+	UserID string
+	Stage  string
+}
+
+type ListPairSlotsForExtraSaveRow struct {
+	Slot       string
+	ProviderID string
+	ModelID    string
+}
+
+func (q *Queries) ListPairSlotsForExtraSave(ctx context.Context, arg ListPairSlotsForExtraSaveParams) ([]ListPairSlotsForExtraSaveRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPairSlotsForExtraSave, arg.UserID, arg.Stage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPairSlotsForExtraSaveRow
+	for rows.Next() {
+		var i ListPairSlotsForExtraSaveRow
+		if err := rows.Scan(&i.Slot, &i.ProviderID, &i.ModelID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSelectionSlots = `-- name: ListSelectionSlots :many

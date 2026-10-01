@@ -122,6 +122,26 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 	return connect.NewResponse(&postpilotv1.SaveComparisonPairResponse{Pair: toProtoPair(pair)}), nil
 }
 
+func (h *Handler) SaveLabExtraCandidates(ctx context.Context, req *connect.Request[postpilotv1.SaveLabExtraCandidatesRequest]) (*connect.Response[postpilotv1.SaveLabExtraCandidatesResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stage, ok := fromProtoStage(req.Msg.GetStage())
+	if !ok {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid stage", postpilotv1.FailureReason_MODEL_STAGE_INVALID, nil)
+	}
+	refs := make([]llm.ModelRef, 0, len(req.Msg.GetExtraCandidates()))
+	for _, ref := range req.Msg.GetExtraCandidates() {
+		refs = append(refs, fromProtoRef(ref))
+	}
+	pair, err := h.svc.SaveLabExtraCandidates(ctx, userID, stage, refs)
+	if err != nil {
+		return nil, toConnectError("save lab extra candidates", err)
+	}
+	return connect.NewResponse(&postpilotv1.SaveLabExtraCandidatesResponse{Pair: toProtoPair(pair)}), nil
+}
+
 func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request[postpilotv1.ListRecommendationSetsRequest]) (*connect.Response[postpilotv1.ListRecommendationSetsResponse], error) {
 	if _, err := actingUser(ctx); err != nil {
 		return nil, err
@@ -233,6 +253,14 @@ func actingUser(ctx context.Context) (string, error) {
 }
 
 func toConnectError(op string, err error) error {
+	var candidate *provider.LabCandidateError
+	if errors.As(err, &candidate) {
+		code := connect.CodeFailedPrecondition
+		if errors.Is(candidate, provider.ErrModelNotRegistered) {
+			code = connect.CodeNotFound
+		}
+		return rpcserver.AppErrorFrom(code, candidate)
+	}
 	var access *provider.ModelAccessError
 	if errors.As(err, &access) {
 		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
@@ -270,6 +298,10 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model unsuitable", postpilotv1.FailureReason_MODEL_UNSUITABLE, nil)
 	case errors.Is(err, provider.ErrDuplicateCandidates):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "duplicate candidates", postpilotv1.FailureReason_MODEL_CANDIDATES_DUPLICATE, nil)
+	case errors.Is(err, provider.ErrComparisonPairIncomplete):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "comparison pair is incomplete", postpilotv1.FailureReason_MODEL_COMPARISON_PAIR_INCOMPLETE, nil)
+	case errors.Is(err, provider.ErrTooManyLabCandidates):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "too many lab candidates", postpilotv1.FailureReason_MODEL_LAB_CANDIDATES_INVALID, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
@@ -363,17 +395,31 @@ func toProtoRef(ref llm.ModelRef) *postpilotv1.ModelRef {
 
 func slotToProto(slot provider.SelectionSlot) postpilotv1.SelectionSlot {
 	switch slot {
+	case "":
+		return postpilotv1.SelectionSlot_SELECTION_SLOT_UNSPECIFIED
+	case provider.SlotActive:
+		return postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE
 	case provider.SlotCandidateA:
 		return postpilotv1.SelectionSlot_SELECTION_SLOT_CANDIDATE_A
 	case provider.SlotCandidateB:
 		return postpilotv1.SelectionSlot_SELECTION_SLOT_CANDIDATE_B
+	case provider.SlotCandidateC:
+		return postpilotv1.SelectionSlot_SELECTION_SLOT_CANDIDATE_C
+	case provider.SlotCandidateD:
+		return postpilotv1.SelectionSlot_SELECTION_SLOT_CANDIDATE_D
+	case provider.SlotCandidateE:
+		return postpilotv1.SelectionSlot_SELECTION_SLOT_CANDIDATE_E
 	default:
-		return postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE
+		panic("unknown provider selection slot: " + string(slot))
 	}
 }
 
 func toProtoPair(pair provider.ComparisonPair) *postpilotv1.ComparisonPair {
-	return &postpilotv1.ComparisonPair{Stage: stageToProto[pair.Stage], CandidateA: toProtoSelection(pair.CandidateA), CandidateB: toProtoSelection(pair.CandidateB)}
+	out := &postpilotv1.ComparisonPair{Stage: stageToProto[pair.Stage], CandidateA: toProtoSelection(pair.CandidateA), CandidateB: toProtoSelection(pair.CandidateB)}
+	for _, extra := range pair.ExtraCandidates {
+		out.ExtraCandidates = append(out.ExtraCandidates, toProtoSelection(extra))
+	}
+	return out
 }
 
 func toProtoRecommendation(set provider.RecommendationSet) *postpilotv1.RecommendationSet {

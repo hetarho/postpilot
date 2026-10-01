@@ -132,6 +132,52 @@ func (s *Store) SaveSelections(ctx context.Context, userID string, selections []
 	return nil
 }
 
+func (s *Store) ReplaceLabExtraCandidates(ctx context.Context, userID string, stage provider.Stage, extras []provider.Selection) error {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin lab candidates: %w", err)
+	}
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+	pairRows, err := queries.ListPairSlotsForExtraSave(ctx, sqlc.ListPairSlotsForExtraSaveParams{UserID: userID, Stage: string(stage)})
+	if err != nil {
+		return fmt.Errorf("read comparison pair: %w", err)
+	}
+	pair := map[string]llm.ModelRef{}
+	for _, row := range pairRows {
+		pair[row.Slot] = llm.ModelRef{ProviderID: row.ProviderID, ModelID: row.ModelID}
+	}
+	if len(pair) != 2 {
+		return provider.ErrComparisonPairIncomplete
+	}
+	seen := map[llm.ModelRef]bool{pair[string(provider.SlotCandidateA)]: true, pair[string(provider.SlotCandidateB)]: true}
+	slots := []provider.SelectionSlot{provider.SlotCandidateC, provider.SlotCandidateD, provider.SlotCandidateE}
+	if len(extras) > len(slots) {
+		return provider.ErrTooManyLabCandidates
+	}
+	for i, extra := range extras {
+		if extra.Stage != stage || extra.Slot != slots[i] || extra.Ref.ProviderID == "" || extra.Ref.ModelID == "" {
+			return &provider.LabCandidateError{Slot: slots[i], Ref: extra.Ref, Cause: provider.ErrModelUnsuitable}
+		}
+		if seen[extra.Ref] {
+			return &provider.LabCandidateError{Slot: slots[i], Ref: extra.Ref, Cause: provider.ErrDuplicateCandidates}
+		}
+		seen[extra.Ref] = true
+	}
+	if err := queries.DeleteLabExtraSlots(ctx, sqlc.DeleteLabExtraSlotsParams{UserID: userID, Stage: string(stage)}); err != nil {
+		return fmt.Errorf("clear lab candidates: %w", err)
+	}
+	for _, extra := range extras {
+		if err := s.upsertSlot(ctx, queries, userID, extra); err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit lab candidates: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) DeleteSelection(ctx context.Context, userID string, sel provider.Selection) error {
 	if sel.Slot == "" {
 		sel.Slot = provider.SlotActive

@@ -211,6 +211,8 @@ export const errors = {
   MODEL_UNCLASSIFIED: '운영자가 아직 등급을 분류하지 않은 모델이에요.',
   MODEL_FREE_PATH_UNAVAILABLE: '지금은 이 모델에 검증된 무료 공급자 경로가 없어요.',
   MODEL_CANDIDATES_DUPLICATE: '서로 다른 모델을 선택해 주세요.',
+  MODEL_LAB_CANDIDATES_INVALID: '추가 후보는 최대 3개까지 선택할 수 있어요.',
+  MODEL_COMPARISON_PAIR_INCOMPLETE: '먼저 비교할 모델 A와 B를 선택해 주세요.',
   MODEL_RECOMMENDATION_NOT_FOUND: '모델 추천 조합을 찾을 수 없어요.',
   MODEL_SET_UNAVAILABLE:
     '이 추천 조합에 들어 있는 {{models}} 모델을 지금은 쓸 수 없어서 적용하지 못했어요. 단계별로 직접 선택해 주세요.',

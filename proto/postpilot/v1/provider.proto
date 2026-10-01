@@ -22,6 +22,7 @@ service ProviderService {
   rpc SaveSelection(SaveSelectionRequest) returns (SaveSelectionResponse) {}
   rpc GetComparisonPairs(GetComparisonPairsRequest) returns (GetComparisonPairsResponse) {}
   rpc SaveComparisonPair(SaveComparisonPairRequest) returns (SaveComparisonPairResponse) {}
+  rpc SaveLabExtraCandidates(SaveLabExtraCandidatesRequest) returns (SaveLabExtraCandidatesResponse) {}
   // Every set in the operator's order.
   rpc ListRecommendationSets(ListRecommendationSetsRequest) returns (ListRecommendationSetsResponse) {}
   rpc ApplyRecommendationSet(ApplyRecommendationSetRequest) returns (ApplyRecommendationSetResponse) {}
@@ -49,6 +50,9 @@ enum SelectionSlot {
   SELECTION_SLOT_ACTIVE = 1;
   SELECTION_SLOT_CANDIDATE_A = 2;
   SELECTION_SLOT_CANDIDATE_B = 3;
+  SELECTION_SLOT_CANDIDATE_C = 4;
+  SELECTION_SLOT_CANDIDATE_D = 5;
+  SELECTION_SLOT_CANDIDATE_E = 6;
 }
 
 // Reused by the Start* RPCs of the generation plans: a job records exactly which model
@@ -151,6 +155,7 @@ message ComparisonPair {
   Stage stage = 1;
   Selection candidate_a = 2;
   Selection candidate_b = 3;
+  repeated Selection extra_candidates = 4;
 }
 
 // Analyze keeps its active selection alone, so its candidates are unset (MODEL-23).
@@ -200,6 +205,13 @@ message SaveComparisonPairRequest {
   ModelRef candidate_b = 3;
 }
 message SaveComparisonPairResponse { ComparisonPair pair = 1; }
+
+// Replaces only the lab's optional C/D/E list. Empty explicitly clears it.
+message SaveLabExtraCandidatesRequest {
+  Stage stage = 1;
+  repeated ModelRef extra_candidates = 2;
+}
+message SaveLabExtraCandidatesResponse { ComparisonPair pair = 1; }
 
 message ListRecommendationSetsRequest {}
 message ListRecommendationSetsResponse { repeated RecommendationSet sets = 1; }

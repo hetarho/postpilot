@@ -71,7 +71,11 @@ func (f *fakeStore) MoveRecommendationSet(_ context.Context, id string, earlier 
 }
 
 func (f *fakeStore) UpsertSelection(_ context.Context, _ string, s provider.Selection) error {
-	f.rows[string(s.Stage)] = s
+	key := string(s.Stage)
+	if s.Slot != "" && s.Slot != provider.SlotActive {
+		key += "/" + string(s.Slot)
+	}
+	f.rows[key] = s
 	return nil
 }
 
@@ -86,7 +90,19 @@ func (f *fakeStore) ListSelections(_ context.Context, _ string) ([]provider.Sele
 }
 
 func (f *fakeStore) ListSelectionSlots(ctx context.Context, userID string) ([]provider.Selection, error) {
-	return f.ListSelections(ctx, userID)
+	var out []provider.Selection
+	for _, stage := range provider.Stages {
+		for _, slot := range []provider.SelectionSlot{provider.SlotActive, provider.SlotCandidateA, provider.SlotCandidateB, provider.SlotCandidateC, provider.SlotCandidateD, provider.SlotCandidateE} {
+			key := string(stage)
+			if slot != provider.SlotActive {
+				key += "/" + string(slot)
+			}
+			if s, ok := f.rows[key]; ok {
+				out = append(out, s)
+			}
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeStore) SaveSelections(ctx context.Context, userID string, selections []provider.Selection) error {
@@ -102,13 +118,39 @@ func (f *fakeStore) SaveSelections(ctx context.Context, userID string, selection
 	return nil
 }
 
+func (f *fakeStore) ReplaceLabExtraCandidates(_ context.Context, _ string, stage provider.Stage, extras []provider.Selection) error {
+	a, aok := f.rows[string(stage)+"/candidate_a"]
+	b, bok := f.rows[string(stage)+"/candidate_b"]
+	if !aok || !bok {
+		return provider.ErrComparisonPairIncomplete
+	}
+	seen := map[llm.ModelRef]bool{a.Ref: true, b.Ref: true}
+	for _, extra := range extras {
+		if seen[extra.Ref] {
+			return &provider.LabCandidateError{Slot: extra.Slot, Ref: extra.Ref, Cause: provider.ErrDuplicateCandidates}
+		}
+		seen[extra.Ref] = true
+	}
+	for _, slot := range []string{"candidate_c", "candidate_d", "candidate_e"} {
+		delete(f.rows, string(stage)+"/"+slot)
+	}
+	for _, extra := range extras {
+		f.rows[string(stage)+"/"+string(extra.Slot)] = extra
+	}
+	return nil
+}
+
 func (f *fakeStore) DeleteSelection(_ context.Context, _ string, s provider.Selection) error {
 	if f.failDel {
 		return errors.New("boom")
 	}
 	f.deleted = append(f.deleted, s.Stage)
-	if current, ok := f.rows[string(s.Stage)]; ok && current.Ref == s.Ref {
-		delete(f.rows, string(s.Stage))
+	key := string(s.Stage)
+	if s.Slot != "" && s.Slot != provider.SlotActive {
+		key += "/" + string(s.Slot)
+	}
+	if current, ok := f.rows[key]; ok && current.Ref == s.Ref {
+		delete(f.rows, key)
 	}
 	return nil
 }
@@ -134,6 +176,68 @@ var (
 	disabled = llm.ModelRef{ProviderID: "anthropic", ModelID: "claude"}
 	gone     = llm.ModelRef{ProviderID: "openrouter", ModelID: "gone"}
 )
+
+func TestLabExtraCandidatesReplaceAndPairStaySeparate(t *testing.T) {
+	ctx := context.Background()
+	store := &fakeStore{rows: map[string]provider.Selection{}}
+	refs := []llm.ModelRef{live, seeing,
+		{ProviderID: "openrouter", ModelID: "extra-c"},
+		{ProviderID: "openrouter", ModelID: "extra-d"},
+		{ProviderID: "openrouter", ModelID: "extra-e"},
+	}
+	catalog := fakeCatalog{}
+	for _, ref := range refs {
+		catalog[ref] = llm.ModelInfo{Ref: ref, Stages: allStages}
+	}
+	svc := provider.NewService(store, catalog, fakeCredits{})
+	if _, err := svc.SaveLabExtraCandidates(ctx, "alice", provider.StageWrite, refs[2:]); !errors.Is(err, provider.ErrComparisonPairIncomplete) {
+		t.Fatalf("missing pair: %v", err)
+	}
+	if _, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, refs[0], refs[1]); err != nil {
+		t.Fatal(err)
+	}
+	pair, err := svc.SaveLabExtraCandidates(ctx, "alice", provider.StageWrite, refs[2:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pair.ExtraCandidates) != 3 || pair.ExtraCandidates[0].Slot != provider.SlotCandidateC || pair.ExtraCandidates[2].Slot != provider.SlotCandidateE {
+		t.Fatalf("extra slots: %+v", pair.ExtraCandidates)
+	}
+	if _, err := svc.SaveLabExtraCandidates(ctx, "alice", provider.StageWrite, []llm.ModelRef{refs[2], refs[0]}); !errors.Is(err, provider.ErrDuplicateCandidates) {
+		t.Fatalf("pair duplicate: %v", err)
+	}
+	pairs, err := svc.GetComparisonPairs(ctx, "alice")
+	if err != nil || len(pairs) != 1 || len(pairs[0].ExtraCandidates) != 3 {
+		t.Fatalf("failed save changed rows: %+v %v", pairs, err)
+	}
+	updatedPair, err := svc.SaveComparisonPair(ctx, "alice", provider.StageWrite, refs[1], refs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updatedPair.ExtraCandidates) != 3 {
+		t.Fatalf("pair response erased extras: %+v", updatedPair)
+	}
+	pairs, err = svc.GetComparisonPairs(ctx, "alice")
+	if err != nil || len(pairs[0].ExtraCandidates) != 3 {
+		t.Fatalf("pair change erased extras: %+v %v", pairs, err)
+	}
+	store.sets = []provider.RecommendationSet{{ID: "set", Selections: []provider.RecommendationStageSelection{
+		{Stage: provider.StageObserve, Active: refs[0], CandidateA: refs[0], CandidateB: refs[1]},
+		{Stage: provider.StageAnalyze, Active: refs[0]},
+		{Stage: provider.StageWrite, Active: refs[0], CandidateA: refs[0], CandidateB: refs[1]},
+	}}}
+	if _, _, _, err := svc.ApplyRecommendationSet(ctx, "alice", "set"); err != nil {
+		t.Fatal(err)
+	}
+	pairs, err = svc.GetComparisonPairs(ctx, "alice")
+	if err != nil || len(pairs[1].ExtraCandidates) != 3 {
+		t.Fatalf("recommendation erased extras: %+v %v", pairs, err)
+	}
+	pair, err = svc.SaveLabExtraCandidates(ctx, "alice", provider.StageWrite, nil)
+	if err != nil || len(pair.ExtraCandidates) != 0 || pair.CandidateA.Ref != refs[0] {
+		t.Fatalf("clear extras: %+v %v", pair, err)
+	}
+}
 
 func newService(store *fakeStore) *provider.Service {
 	return provider.NewService(store, fakeCatalog{

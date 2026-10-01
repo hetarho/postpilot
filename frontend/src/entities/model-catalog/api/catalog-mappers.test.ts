@@ -1,9 +1,16 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
-import { ModelInfoSchema, PostCreditsBasis, SelectionSchema, Stage } from '@/shared/api'
+import {
+  ComparisonPairSchema,
+  ModelInfoSchema,
+  PostCreditsBasis,
+  SelectionSchema,
+  SelectionSlot,
+  Stage,
+} from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import { modelChoiceIssue } from '../model/access'
-import { toCatalogModel, toStageSelection } from './catalog-mappers'
+import { toCatalogModel, toComparisonPair, toStageSelection } from './catalog-mappers'
 
 it('keeps raw video capability separate from each workflow transport', () => {
   const model = toCatalogModel(
@@ -57,6 +64,63 @@ it('maps stage access and retained locked selections without guessing an unknown
     requiredPlan: 'plus',
     unavailableReason: 'MODEL_PLAN_REQUIRED',
   })
+})
+
+it('maps every generated selection slot, including optional lab candidates', () => {
+  const expected: Record<SelectionSlot, string> = {
+    [SelectionSlot.UNSPECIFIED]: 'active',
+    [SelectionSlot.ACTIVE]: 'active',
+    [SelectionSlot.CANDIDATE_A]: 'candidateA',
+    [SelectionSlot.CANDIDATE_B]: 'candidateB',
+    [SelectionSlot.CANDIDATE_C]: 'candidateC',
+    [SelectionSlot.CANDIDATE_D]: 'candidateD',
+    [SelectionSlot.CANDIDATE_E]: 'candidateE',
+  }
+  for (const slot of Object.values(SelectionSlot).filter(
+    (value): value is SelectionSlot => typeof value === 'number',
+  )) {
+    expect(toStageSelection(create(SelectionSchema, { stage: Stage.WRITE, slot }))?.slot).toBe(
+      expected[slot],
+    )
+  }
+})
+
+it('keeps optional candidates in saved C/D/E order and leaves the A/B pair separate', () => {
+  const pair = toComparisonPair(
+    create(ComparisonPairSchema, {
+      stage: Stage.WRITE,
+      candidateA: {
+        stage: Stage.WRITE,
+        slot: SelectionSlot.CANDIDATE_A,
+        ref: { providerId: 'p', modelId: 'a' },
+      },
+      candidateB: {
+        stage: Stage.WRITE,
+        slot: SelectionSlot.CANDIDATE_B,
+        ref: { providerId: 'p', modelId: 'b' },
+      },
+      extraCandidates: [
+        {
+          stage: Stage.WRITE,
+          slot: SelectionSlot.CANDIDATE_C,
+          ref: { providerId: 'p', modelId: 'c' },
+        },
+        {
+          stage: Stage.WRITE,
+          slot: SelectionSlot.CANDIDATE_D,
+          ref: { providerId: 'p', modelId: 'd' },
+        },
+        {
+          stage: Stage.WRITE,
+          slot: SelectionSlot.CANDIDATE_E,
+          ref: { providerId: 'p', modelId: 'e' },
+        },
+      ],
+    }),
+  )
+  expect(pair?.candidateA?.ref.modelId).toBe('a')
+  expect(pair?.candidateB?.ref.modelId).toBe('b')
+  expect(pair?.extraCandidates.map((candidate) => candidate.ref.modelId)).toEqual(['c', 'd', 'e'])
 })
 
 it.each([

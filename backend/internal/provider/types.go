@@ -45,6 +45,9 @@ const (
 	SlotActive     SelectionSlot = "active"
 	SlotCandidateA SelectionSlot = "candidate_a"
 	SlotCandidateB SelectionSlot = "candidate_b"
+	SlotCandidateC SelectionSlot = "candidate_c"
+	SlotCandidateD SelectionSlot = "candidate_d"
+	SlotCandidateE SelectionSlot = "candidate_e"
 )
 
 // ParseStage accepts the stored/wire form.
@@ -111,9 +114,10 @@ type Selection struct {
 }
 
 type ComparisonPair struct {
-	Stage      Stage
-	CandidateA Selection
-	CandidateB Selection
+	Stage           Stage
+	CandidateA      Selection
+	CandidateB      Selection
+	ExtraCandidates []Selection
 }
 
 type RecommendationSet struct {
@@ -152,17 +156,58 @@ var (
 	// selected, the same rule the dropdown enforces.
 	ErrModelDisabled = errors.New("model disabled")
 	// ErrModelUnsuitable: the model is not registered to this stage's purpose (MODEL-25).
-	ErrModelUnsuitable     = errors.New("model unsuitable for stage")
-	ErrModelPlanRequired   = errors.New("model requires a higher plan")
-	ErrModelUnclassified   = errors.New("model has no classification")
-	ErrFreePathUnavailable = errors.New("free model has no verified zero-cost path")
-	ErrDuplicateCandidates = errors.New("comparison candidates must differ")
+	ErrModelUnsuitable          = errors.New("model unsuitable for stage")
+	ErrModelPlanRequired        = errors.New("model requires a higher plan")
+	ErrModelUnclassified        = errors.New("model has no classification")
+	ErrFreePathUnavailable      = errors.New("free model has no verified zero-cost path")
+	ErrDuplicateCandidates      = errors.New("comparison candidates must differ")
+	ErrComparisonPairIncomplete = errors.New("comparison pair is incomplete")
+	ErrTooManyLabCandidates     = errors.New("at most three optional comparison candidates")
 	// ErrStageWithoutPair refuses a comparison pair for a stage that keeps none (HasPair).
 	ErrStageWithoutPair       = errors.New("stage keeps no comparison pair")
 	ErrRecommendationNotFound = errors.New("recommendation set not found")
 	// ErrRecommendationLimit refuses a new set once MaxRecommendationSets exist (MODEL-69).
 	ErrRecommendationLimit = errors.New("recommendation set limit reached")
 )
+
+// LabCandidateError identifies the optional row refused by a save. The underlying
+// model or duplicate reason remains available to the RPC's normal error mapping.
+type LabCandidateError struct {
+	Slot  SelectionSlot
+	Ref   llm.ModelRef
+	Cause error
+}
+
+func (e *LabCandidateError) Error() string { return fmt.Sprintf("%s: %v", e.Slot, e.Cause) }
+func (e *LabCandidateError) Unwrap() error { return e.Cause }
+func (e *LabCandidateError) Params() map[string]string {
+	params := map[string]string{"slot": string(e.Slot), "model": e.Ref.String()}
+	var access *ModelAccessError
+	if errors.As(e.Cause, &access) {
+		for key, value := range access.Params() {
+			params[key] = value
+		}
+	}
+	return params
+}
+func (e *LabCandidateError) Reason() string {
+	var access *ModelAccessError
+	if errors.As(e.Cause, &access) {
+		return access.Reason()
+	}
+	switch {
+	case errors.Is(e.Cause, ErrDuplicateCandidates):
+		return "MODEL_CANDIDATES_DUPLICATE"
+	case errors.Is(e.Cause, ErrModelNotRegistered):
+		return "MODEL_NOT_REGISTERED"
+	case errors.Is(e.Cause, ErrModelDisabled):
+		return "MODEL_DISABLED"
+	case errors.Is(e.Cause, ErrModelUnsuitable):
+		return "MODEL_UNSUITABLE"
+	default:
+		return "MODEL_LAB_CANDIDATES_INVALID"
+	}
+}
 
 const (
 	ReasonModelPlanRequired = "MODEL_PLAN_REQUIRED"

@@ -48,6 +48,9 @@ const (
 	// ProviderServiceSaveComparisonPairProcedure is the fully-qualified name of the ProviderService's
 	// SaveComparisonPair RPC.
 	ProviderServiceSaveComparisonPairProcedure = "/postpilot.v1.ProviderService/SaveComparisonPair"
+	// ProviderServiceSaveLabExtraCandidatesProcedure is the fully-qualified name of the
+	// ProviderService's SaveLabExtraCandidates RPC.
+	ProviderServiceSaveLabExtraCandidatesProcedure = "/postpilot.v1.ProviderService/SaveLabExtraCandidates"
 	// ProviderServiceListRecommendationSetsProcedure is the fully-qualified name of the
 	// ProviderService's ListRecommendationSets RPC.
 	ProviderServiceListRecommendationSetsProcedure = "/postpilot.v1.ProviderService/ListRecommendationSets"
@@ -76,6 +79,7 @@ type ProviderServiceClient interface {
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	SaveLabExtraCandidates(context.Context, *connect.Request[v1.SaveLabExtraCandidatesRequest]) (*connect.Response[v1.SaveLabExtraCandidatesResponse], error)
 	// Every set in the operator's order.
 	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
 	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
@@ -130,6 +134,12 @@ func NewProviderServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(providerServiceMethods.ByName("SaveComparisonPair")),
 			connect.WithClientOptions(opts...),
 		),
+		saveLabExtraCandidates: connect.NewClient[v1.SaveLabExtraCandidatesRequest, v1.SaveLabExtraCandidatesResponse](
+			httpClient,
+			baseURL+ProviderServiceSaveLabExtraCandidatesProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("SaveLabExtraCandidates")),
+			connect.WithClientOptions(opts...),
+		),
 		listRecommendationSets: connect.NewClient[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse](
 			httpClient,
 			baseURL+ProviderServiceListRecommendationSetsProcedure,
@@ -170,6 +180,7 @@ type providerServiceClient struct {
 	saveSelection           *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
 	getComparisonPairs      *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
 	saveComparisonPair      *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
+	saveLabExtraCandidates  *connect.Client[v1.SaveLabExtraCandidatesRequest, v1.SaveLabExtraCandidatesResponse]
 	listRecommendationSets  *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
 	applyRecommendationSet  *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
 	saveRecommendationSet   *connect.Client[v1.SaveRecommendationSetRequest, v1.SaveRecommendationSetResponse]
@@ -200,6 +211,11 @@ func (c *providerServiceClient) GetComparisonPairs(ctx context.Context, req *con
 // SaveComparisonPair calls postpilot.v1.ProviderService.SaveComparisonPair.
 func (c *providerServiceClient) SaveComparisonPair(ctx context.Context, req *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error) {
 	return c.saveComparisonPair.CallUnary(ctx, req)
+}
+
+// SaveLabExtraCandidates calls postpilot.v1.ProviderService.SaveLabExtraCandidates.
+func (c *providerServiceClient) SaveLabExtraCandidates(ctx context.Context, req *connect.Request[v1.SaveLabExtraCandidatesRequest]) (*connect.Response[v1.SaveLabExtraCandidatesResponse], error) {
+	return c.saveLabExtraCandidates.CallUnary(ctx, req)
 }
 
 // ListRecommendationSets calls postpilot.v1.ProviderService.ListRecommendationSets.
@@ -238,6 +254,7 @@ type ProviderServiceHandler interface {
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
+	SaveLabExtraCandidates(context.Context, *connect.Request[v1.SaveLabExtraCandidatesRequest]) (*connect.Response[v1.SaveLabExtraCandidatesResponse], error)
 	// Every set in the operator's order.
 	ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error)
 	ApplyRecommendationSet(context.Context, *connect.Request[v1.ApplyRecommendationSetRequest]) (*connect.Response[v1.ApplyRecommendationSetResponse], error)
@@ -288,6 +305,12 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 		connect.WithSchema(providerServiceMethods.ByName("SaveComparisonPair")),
 		connect.WithHandlerOptions(opts...),
 	)
+	providerServiceSaveLabExtraCandidatesHandler := connect.NewUnaryHandler(
+		ProviderServiceSaveLabExtraCandidatesProcedure,
+		svc.SaveLabExtraCandidates,
+		connect.WithSchema(providerServiceMethods.ByName("SaveLabExtraCandidates")),
+		connect.WithHandlerOptions(opts...),
+	)
 	providerServiceListRecommendationSetsHandler := connect.NewUnaryHandler(
 		ProviderServiceListRecommendationSetsProcedure,
 		svc.ListRecommendationSets,
@@ -330,6 +353,8 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 			providerServiceGetComparisonPairsHandler.ServeHTTP(w, r)
 		case ProviderServiceSaveComparisonPairProcedure:
 			providerServiceSaveComparisonPairHandler.ServeHTTP(w, r)
+		case ProviderServiceSaveLabExtraCandidatesProcedure:
+			providerServiceSaveLabExtraCandidatesHandler.ServeHTTP(w, r)
 		case ProviderServiceListRecommendationSetsProcedure:
 			providerServiceListRecommendationSetsHandler.ServeHTTP(w, r)
 		case ProviderServiceApplyRecommendationSetProcedure:
@@ -367,6 +392,10 @@ func (UnimplementedProviderServiceHandler) GetComparisonPairs(context.Context, *
 
 func (UnimplementedProviderServiceHandler) SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.SaveComparisonPair is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) SaveLabExtraCandidates(context.Context, *connect.Request[v1.SaveLabExtraCandidatesRequest]) (*connect.Response[v1.SaveLabExtraCandidatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.SaveLabExtraCandidates is not implemented"))
 }
 
 func (UnimplementedProviderServiceHandler) ListRecommendationSets(context.Context, *connect.Request[v1.ListRecommendationSetsRequest]) (*connect.Response[v1.ListRecommendationSetsResponse], error) {

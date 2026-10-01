@@ -34,3 +34,11 @@ SELECT user_id, stage, slot, provider_id, model_id, updated_at
 FROM model_selections
 WHERE user_id = ?
 ORDER BY stage, slot;
+
+-- name: ListPairSlotsForExtraSave :many
+SELECT slot, provider_id, model_id FROM model_selections
+WHERE user_id = ? AND stage = ? AND slot IN ('candidate_a', 'candidate_b');
+
+-- name: DeleteLabExtraSlots :exec
+DELETE FROM model_selections
+WHERE user_id = ? AND stage = ? AND slot IN ('candidate_c', 'candidate_d', 'candidate_e');

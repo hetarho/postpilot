@@ -249,10 +249,13 @@ func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]Comp
 			pair = &ComparisonPair{Stage: selection.Stage}
 			byStage[selection.Stage] = pair
 		}
-		if selection.Slot == SlotCandidateA {
+		switch selection.Slot {
+		case SlotCandidateA:
 			pair.CandidateA = selection
-		} else if selection.Slot == SlotCandidateB {
+		case SlotCandidateB:
 			pair.CandidateB = selection
+		case SlotCandidateC, SlotCandidateD, SlotCandidateE:
+			pair.ExtraCandidates = append(pair.ExtraCandidates, selection)
 		}
 	}
 	out := make([]ComparisonPair, 0, len(Stages))
@@ -301,7 +304,57 @@ func (s *Service) SaveComparisonPair(ctx context.Context, userID string, stage S
 	if err := s.store.SaveSelections(ctx, userID, []Selection{pair.CandidateA, pair.CandidateB}); err != nil {
 		return ComparisonPair{}, fmt.Errorf("save comparison pair: %w", err)
 	}
-	return pair, nil
+	pairs, err := s.GetComparisonPairs(ctx, userID)
+	if err != nil {
+		return ComparisonPair{}, err
+	}
+	for _, saved := range pairs {
+		if saved.Stage == stage {
+			return saved, nil
+		}
+	}
+	return ComparisonPair{}, ErrComparisonPairIncomplete
+}
+
+// SaveLabExtraCandidates replaces only the lab's C/D/E list. The store validates the
+// currently saved pair in the same transaction as the replacement, so an intervening
+// pair change cannot silently make a duplicate candidate list.
+func (s *Service) SaveLabExtraCandidates(ctx context.Context, userID string, stage Stage, refs []llm.ModelRef) (ComparisonPair, error) {
+	if _, err := ParseStage(string(stage)); err != nil {
+		return ComparisonPair{}, err
+	}
+	if !HasPair(stage) {
+		return ComparisonPair{}, fmt.Errorf("%w: %s", ErrStageWithoutPair, stage)
+	}
+	if len(refs) > 3 {
+		return ComparisonPair{}, ErrTooManyLabCandidates
+	}
+	slots := []SelectionSlot{SlotCandidateC, SlotCandidateD, SlotCandidateE}
+	extras := make([]Selection, 0, len(refs))
+	seen := map[llm.ModelRef]bool{}
+	for i, ref := range refs {
+		if seen[ref] {
+			return ComparisonPair{}, &LabCandidateError{Slot: slots[i], Ref: ref, Cause: ErrDuplicateCandidates}
+		}
+		seen[ref] = true
+		if err := s.validateRef(ctx, userID, stage, ref); err != nil {
+			return ComparisonPair{}, &LabCandidateError{Slot: slots[i], Ref: ref, Cause: err}
+		}
+		extras = append(extras, Selection{Stage: stage, Slot: slots[i], Ref: ref, UpdatedAt: s.now()})
+	}
+	if err := s.store.ReplaceLabExtraCandidates(ctx, userID, stage, extras); err != nil {
+		return ComparisonPair{}, fmt.Errorf("replace lab candidates: %w", err)
+	}
+	pairs, err := s.GetComparisonPairs(ctx, userID)
+	if err != nil {
+		return ComparisonPair{}, err
+	}
+	for _, pair := range pairs {
+		if pair.Stage == stage {
+			return pair, nil
+		}
+	}
+	return ComparisonPair{}, ErrComparisonPairIncomplete
 }
 
 // RecommendationSets is every set in the operator's order (MODEL-71).
@@ -400,7 +453,6 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 	now := s.now()
 	all := make([]Selection, 0, 7)
 	active := make([]Selection, 0, 3)
-	pairs := make([]ComparisonPair, 0, 2)
 	for _, stageSelection := range selected.Selections {
 		activeSelection := Selection{Stage: stageSelection.Stage, Slot: SlotActive, Ref: stageSelection.Active, UpdatedAt: now}
 		all = append(all, activeSelection)
@@ -414,10 +466,13 @@ func (s *Service) ApplyRecommendationSet(ctx context.Context, userID string, id 
 		a := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateA, Ref: stageSelection.CandidateA, UpdatedAt: now}
 		b := Selection{Stage: stageSelection.Stage, Slot: SlotCandidateB, Ref: stageSelection.CandidateB, UpdatedAt: now}
 		all = append(all, a, b)
-		pairs = append(pairs, ComparisonPair{Stage: stageSelection.Stage, CandidateA: a, CandidateB: b})
 	}
 	if err := s.store.SaveSelections(ctx, userID, all); err != nil {
 		return RecommendationSet{}, nil, nil, fmt.Errorf("apply recommendation set: %w", err)
+	}
+	pairs, err := s.GetComparisonPairs(ctx, userID)
+	if err != nil {
+		return RecommendationSet{}, nil, nil, err
 	}
 	return *selected, active, pairs, nil
 }

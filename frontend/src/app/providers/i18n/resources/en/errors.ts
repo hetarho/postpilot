@@ -218,6 +218,8 @@ export const errors = {
   MODEL_FREE_PATH_UNAVAILABLE:
     'No verified free provider route is available for this model right now.',
   MODEL_CANDIDATES_DUPLICATE: 'Select two different models.',
+  MODEL_LAB_CANDIDATES_INVALID: 'Select at most three extra candidates.',
+  MODEL_COMPARISON_PAIR_INCOMPLETE: 'Choose comparison models A and B first.',
   MODEL_RECOMMENDATION_NOT_FOUND: 'Could not find the model recommendation.',
   MODEL_SET_UNAVAILABLE:
     'This recommendation could not be applied: {{models}} cannot be used right now. Choose each stage yourself.',

@@ -13,6 +13,8 @@ type Store interface {
 	ListSelections(ctx context.Context, userID string) ([]Selection, error)
 	ListSelectionSlots(ctx context.Context, userID string) ([]Selection, error)
 	SaveSelections(ctx context.Context, userID string, selections []Selection) error
+	// ReplaceLabExtraCandidates validates the current pair and atomically replaces C/D/E.
+	ReplaceLabExtraCandidates(ctx context.Context, userID string, stage Stage, extras []Selection) error
 	// DeleteSelection removes the stage's row only while it still holds `s.Ref`. The
 	// clear of a vanished choice runs after a read, and a save the user made in between
 	// must not be taken with it.

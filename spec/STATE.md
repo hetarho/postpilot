@@ -59,7 +59,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T498 | Simplify /plans cards and move post and clip estimates below them | QUOTA THEME | T497 | todo |
-| T499 | Save optional model lab candidates without changing the A/B pair | MODEL | - | todo |
 | T500 | Run two to five candidates from one frozen comparison input | MODEL GEN QUOTA | T499 | todo |
 | T501 | Complete comparisons with ranked candidates and result actions | MODEL GEN POST | T500 | todo |
 | T502 | Replay ranked comparisons into a normalized Elo leaderboard | MODEL | T501 | todo |
@@ -69,10 +68,13 @@
 | T506 | Show ranked-comparison Elo on the model leaderboard | MODEL | T502 T504 | todo |
 
 ## next
-- next: implement-task T499 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
+- next: implement-task T500 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T499 done: optional lab candidates saved atomically; full FE/BE and project checks passed
+- 261001 T499 freshness: MODEL@26→27 changed template-request effort and stage use only; lab candidate contract unchanged
+- 261001 T499 claimed (mc): optional model lab candidate persistence
 - 261001 create-architecture ARCH r15: explicit editor-two and model-lab-two-to-five fan-out align I3 with MODEL-75
 - 261001 create-architecture ARCH start: align explicit comparison fan-out invariant with two-to-five candidate model lab
 - 261001 create-task MODEL r26 → refreshed T499–T506 for complete rankings with ties, result actions and normalized Elo
@@ -90,6 +92,3 @@
 - 261001 update-ssot GEN start: comparison fan-out and result application
 - 261001 update-ssot MODEL start: compare up to five model candidates with one input
 - 260930 T497 done: period selector, checkout term handoff and card-registration return; full FE/BE and project checks passed
-- 260930 T497 claimed (cx): /plans period selection and checkout handoff
-- 260930 create-task QUOTA r28 BILL r7 THEME r21 → T497 (period selector and checkout handoff), T498 (concise cards and combined estimates)
-- 260930 create-task QUOTA BILL THEME start: /plans pricing selector, comparison layout and checkout handoff

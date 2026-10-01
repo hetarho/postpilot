@@ -20,12 +20,14 @@ func TestProviderErrorsHaveStableReasons(t *testing.T) {
 		code   connect.Code
 		reason string
 	}{
-		"stage":          {provider.ErrUnknownStage, connect.CodeInvalidArgument, "MODEL_STAGE_INVALID"},
-		"missing model":  {provider.ErrModelNotRegistered, connect.CodeNotFound, "MODEL_NOT_REGISTERED"},
-		"recommendation": {provider.ErrRecommendationNotFound, connect.CodeNotFound, "MODEL_RECOMMENDATION_NOT_FOUND"},
-		"disabled":       {provider.ErrModelDisabled, connect.CodeFailedPrecondition, "MODEL_DISABLED"},
-		"unsuitable":     {provider.ErrModelUnsuitable, connect.CodeFailedPrecondition, "MODEL_UNSUITABLE"},
-		"duplicates":     {provider.ErrDuplicateCandidates, connect.CodeFailedPrecondition, "MODEL_CANDIDATES_DUPLICATE"},
+		"stage":           {provider.ErrUnknownStage, connect.CodeInvalidArgument, "MODEL_STAGE_INVALID"},
+		"missing model":   {provider.ErrModelNotRegistered, connect.CodeNotFound, "MODEL_NOT_REGISTERED"},
+		"recommendation":  {provider.ErrRecommendationNotFound, connect.CodeNotFound, "MODEL_RECOMMENDATION_NOT_FOUND"},
+		"disabled":        {provider.ErrModelDisabled, connect.CodeFailedPrecondition, "MODEL_DISABLED"},
+		"unsuitable":      {provider.ErrModelUnsuitable, connect.CodeFailedPrecondition, "MODEL_UNSUITABLE"},
+		"duplicates":      {provider.ErrDuplicateCandidates, connect.CodeFailedPrecondition, "MODEL_CANDIDATES_DUPLICATE"},
+		"too many extras": {provider.ErrTooManyLabCandidates, connect.CodeInvalidArgument, "MODEL_LAB_CANDIDATES_INVALID"},
+		"missing pair":    {provider.ErrComparisonPairIncomplete, connect.CodeFailedPrecondition, "MODEL_COMPARISON_PAIR_INCOMPLETE"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := toConnectError("provider operation", tc.err)

@@ -24,7 +24,7 @@ import type {
   ComparisonPair,
   ModelRef,
   RecommendationSet,
-  SelectionSlotName,
+  LabSelectionSlotName,
   StageName,
   StageSelection,
 } from '../model/types'
@@ -194,10 +194,14 @@ export function toStageSelection(selection: ProtoSelection): StageSelection | un
   }
 }
 
-function slotFromProto(slot: SelectionSlot): SelectionSlotName {
+function slotFromProto(slot: SelectionSlot): LabSelectionSlotName {
   if (slot === SelectionSlot.CANDIDATE_A) return 'candidateA'
   if (slot === SelectionSlot.CANDIDATE_B) return 'candidateB'
-  return 'active'
+  if (slot === SelectionSlot.CANDIDATE_C) return 'candidateC'
+  if (slot === SelectionSlot.CANDIDATE_D) return 'candidateD'
+  if (slot === SelectionSlot.CANDIDATE_E) return 'candidateE'
+  if (slot === SelectionSlot.ACTIVE || slot === SelectionSlot.UNSPECIFIED) return 'active'
+  throw new Error(`unknown selection slot: ${slot}`)
 }
 
 export function toComparisonPair(value: ProtoComparisonPair): ComparisonPair | undefined {
@@ -207,6 +211,9 @@ export function toComparisonPair(value: ProtoComparisonPair): ComparisonPair | u
     stage,
     candidateA: value.candidateA ? toStageSelection(value.candidateA) : undefined,
     candidateB: value.candidateB ? toStageSelection(value.candidateB) : undefined,
+    extraCandidates: value.extraCandidates.flatMap(
+      (candidate) => toStageSelection(candidate) ?? [],
+    ),
   }
 }
 

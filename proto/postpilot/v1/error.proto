@@ -347,6 +347,8 @@ enum FailureReason {
   MASTER_SELF_PLAN = 281;
   // A master account starts no subscription, change or pack purchase (BILL-20).
   BILLING_MASTER_ACCOUNT = 282;
+  MODEL_LAB_CANDIDATES_INVALID = 283;
+  MODEL_COMPARISON_PAIR_INCOMPLETE = 284;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
