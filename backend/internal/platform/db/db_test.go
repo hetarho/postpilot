@@ -103,6 +103,55 @@ func TestMigrateAppliesSchemaAndIsIdempotent(t *testing.T) {
 	assertPublishingTablesAbsent(t, handle)
 }
 
+func TestMigration0124PreservesLegacyCandidatesAndBadges(t *testing.T) {
+	handle := openTemp(t)
+	ctx := context.Background()
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(ctx, 123); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`INSERT INTO users(id,password_hash,created_at) VALUES('legacy-user','hash','2026-08-29T00:00:00Z')`,
+		`INSERT INTO model_experiments(id,user_id,stage,status,input_snapshot,input_hash,prompt_version,created_at) VALUES('legacy','legacy-user','observe','review','{"same":true}','hash','v1','2026-08-29T00:00:00Z')`,
+		`INSERT INTO model_experiment_candidates(id,experiment_id,model_provider_id,model_id,model_label,display_side,status,output,error_params) VALUES('legacy-left','legacy','p','a','A','left','succeeded','{"answer":true}','{"retries":1}')`,
+		`INSERT INTO model_experiment_badges(experiment_id,candidate_id,badge) VALUES('legacy','legacy-left','natural')`,
+	} {
+		if _, err := handle.Writer.ExecContext(ctx, statement); err != nil {
+			t.Fatalf("seed %s: %v", statement, err)
+		}
+	}
+	if err := Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	var side, output, params, mode string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT display_side,output,error_params FROM model_experiment_candidates WHERE id='legacy-left'`).Scan(&side, &output, &params); err != nil {
+		t.Fatal(err)
+	}
+	if side != "left" || output != `{"answer":true}` || params != `{"retries":1}` {
+		t.Fatalf("legacy candidate changed: %s %s %s", side, output, params)
+	}
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT review_mode FROM model_experiments WHERE id='legacy'`).Scan(&mode); err != nil {
+		t.Fatal(err)
+	}
+	if mode != "pairwise" {
+		t.Fatalf("legacy mode = %s", mode)
+	}
+	var badge string
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT badge FROM model_experiment_badges WHERE candidate_id='legacy-left'`).Scan(&badge); err != nil || badge != "natural" {
+		t.Fatalf("badge = %s, %v", badge, err)
+	}
+	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO model_experiment_candidates(id,experiment_id,model_provider_id,model_id,model_label,display_side,status) VALUES('new-c','legacy','p','c','C','c','pending')`); err != nil {
+		t.Fatalf("C side rejected: %v", err)
+	}
+}
+
 func TestMigration0012BackfillsLanguagesAndFailuresWithoutLosingLegacyRows(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()

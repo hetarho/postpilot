@@ -91,6 +91,9 @@ const (
 	DisplaySide_DISPLAY_SIDE_UNSPECIFIED DisplaySide = 0
 	DisplaySide_DISPLAY_SIDE_LEFT        DisplaySide = 1
 	DisplaySide_DISPLAY_SIDE_RIGHT       DisplaySide = 2
+	DisplaySide_DISPLAY_SIDE_C           DisplaySide = 3
+	DisplaySide_DISPLAY_SIDE_D           DisplaySide = 4
+	DisplaySide_DISPLAY_SIDE_E           DisplaySide = 5
 )
 
 // Enum value maps for DisplaySide.
@@ -99,11 +102,17 @@ var (
 		0: "DISPLAY_SIDE_UNSPECIFIED",
 		1: "DISPLAY_SIDE_LEFT",
 		2: "DISPLAY_SIDE_RIGHT",
+		3: "DISPLAY_SIDE_C",
+		4: "DISPLAY_SIDE_D",
+		5: "DISPLAY_SIDE_E",
 	}
 	DisplaySide_value = map[string]int32{
 		"DISPLAY_SIDE_UNSPECIFIED": 0,
 		"DISPLAY_SIDE_LEFT":        1,
 		"DISPLAY_SIDE_RIGHT":       2,
+		"DISPLAY_SIDE_C":           3,
+		"DISPLAY_SIDE_D":           4,
+		"DISPLAY_SIDE_E":           5,
 	}
 )
 
@@ -1062,8 +1071,10 @@ type ModelExperiment struct {
 	VoicePromptKey  string           `protobuf:"bytes,25,opt,name=voice_prompt_key,json=voicePromptKey,proto3" json:"voice_prompt_key,omitempty"`
 	VoicePromptText string           `protobuf:"bytes,26,opt,name=voice_prompt_text,json=voicePromptText,proto3" json:"voice_prompt_text,omitempty"`
 	VoiceAnswer     string           `protobuf:"bytes,27,opt,name=voice_answer,json=voiceAnswer,proto3" json:"voice_answer,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Existing pairwise records and legacy starts use pairwise; full-list starts use candidate_ranking.
+	ReviewMode    string `protobuf:"bytes,28,opt,name=review_mode,json=reviewMode,proto3" json:"review_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ModelExperiment) Reset() {
@@ -1287,11 +1298,19 @@ func (x *ModelExperiment) GetVoiceAnswer() string {
 	return ""
 }
 
+func (x *ModelExperiment) GetReviewMode() string {
+	if x != nil {
+		return x.ReviewMode
+	}
+	return ""
+}
+
 type StartObserveExperimentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
 	ModelA        *ModelRef              `protobuf:"bytes,2,opt,name=model_a,json=modelA,proto3" json:"model_a,omitempty"`
 	ModelB        *ModelRef              `protobuf:"bytes,3,opt,name=model_b,json=modelB,proto3" json:"model_b,omitempty"`
+	Candidates    []*ModelRef            `protobuf:"bytes,4,rep,name=candidates,proto3" json:"candidates,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1347,6 +1366,13 @@ func (x *StartObserveExperimentRequest) GetModelB() *ModelRef {
 	return nil
 }
 
+func (x *StartObserveExperimentRequest) GetCandidates() []*ModelRef {
+	if x != nil {
+		return x.Candidates
+	}
+	return nil
+}
+
 type StartWriteExperimentRequest struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug     string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
@@ -1360,6 +1386,7 @@ type StartWriteExperimentRequest struct {
 	// UNSPECIFIED is stored as EDITOR: the pre-origin behaviour, so a stale tab that still
 	// starts a comparison from the editor never turns a forced application into a silent pick.
 	Origin        ExperimentOrigin `protobuf:"varint,7,opt,name=origin,proto3,enum=postpilot.v1.ExperimentOrigin" json:"origin,omitempty"`
+	Candidates    []*ModelRef      `protobuf:"bytes,8,rep,name=candidates,proto3" json:"candidates,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1443,12 +1470,20 @@ func (x *StartWriteExperimentRequest) GetOrigin() ExperimentOrigin {
 	return ExperimentOrigin_EXPERIMENT_ORIGIN_UNSPECIFIED
 }
 
+func (x *StartWriteExperimentRequest) GetCandidates() []*ModelRef {
+	if x != nil {
+		return x.Candidates
+	}
+	return nil
+}
+
 type StartVoiceReflectionExperimentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	VoiceId       string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
 	PromptKey     string                 `protobuf:"bytes,2,opt,name=prompt_key,json=promptKey,proto3" json:"prompt_key,omitempty"`
 	ModelA        *ModelRef              `protobuf:"bytes,3,opt,name=model_a,json=modelA,proto3" json:"model_a,omitempty"`
 	ModelB        *ModelRef              `protobuf:"bytes,4,opt,name=model_b,json=modelB,proto3" json:"model_b,omitempty"`
+	Candidates    []*ModelRef            `protobuf:"bytes,5,rep,name=candidates,proto3" json:"candidates,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1507,6 +1542,13 @@ func (x *StartVoiceReflectionExperimentRequest) GetModelA() *ModelRef {
 func (x *StartVoiceReflectionExperimentRequest) GetModelB() *ModelRef {
 	if x != nil {
 		return x.ModelB
+	}
+	return nil
+}
+
+func (x *StartVoiceReflectionExperimentRequest) GetCandidates() []*ModelRef {
+	if x != nil {
+		return x.Candidates
 	}
 	return nil
 }
@@ -2724,7 +2766,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\n" +
 	"other_note\x18\r \x01(\tR\totherNoteB\b\n" +
 	"\x06outputJ\x04\b\x06\x10\aR\n" +
-	"styleguide\"\x8d\t\n" +
+	"styleguide\"\xae\t\n" +
 	"\x0fModelExperiment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
 	"\x05stage\x18\x02 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x126\n" +
@@ -2761,11 +2803,16 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x06source\x18\x18 \x01(\x0e2\x1e.postpilot.v1.ExperimentSourceR\x06source\x12(\n" +
 	"\x10voice_prompt_key\x18\x19 \x01(\tR\x0evoicePromptKey\x12*\n" +
 	"\x11voice_prompt_text\x18\x1a \x01(\tR\x0fvoicePromptText\x12!\n" +
-	"\fvoice_answer\x18\x1b \x01(\tR\vvoiceAnswer\"\x9e\x01\n" +
+	"\fvoice_answer\x18\x1b \x01(\tR\vvoiceAnswer\x12\x1f\n" +
+	"\vreview_mode\x18\x1c \x01(\tR\n" +
+	"reviewMode\"\xd6\x01\n" +
 	"\x1dStartObserveExperimentRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12/\n" +
 	"\amodel_a\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelA\x12/\n" +
-	"\amodel_b\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\"\x8d\x03\n" +
+	"\amodel_b\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\x126\n" +
+	"\n" +
+	"candidates\x18\x04 \x03(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidates\"\xc5\x03\n" +
 	"\x1bStartWriteExperimentRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12;\n" +
 	"\robserve_model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x12/\n" +
@@ -2773,14 +2820,20 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\amodel_b\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\x12(\n" +
 	"\rtarget_length\x18\x05 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12>\n" +
 	"\treobserve\x18\x06 \x01(\v2 .postpilot.v1.ReobserveSelectionR\treobserve\x126\n" +
-	"\x06origin\x18\a \x01(\x0e2\x1e.postpilot.v1.ExperimentOriginR\x06originB\x10\n" +
-	"\x0e_target_length\"\xc3\x01\n" +
+	"\x06origin\x18\a \x01(\x0e2\x1e.postpilot.v1.ExperimentOriginR\x06origin\x126\n" +
+	"\n" +
+	"candidates\x18\b \x03(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidatesB\x10\n" +
+	"\x0e_target_length\"\xfb\x01\n" +
 	"%StartVoiceReflectionExperimentRequest\x12\x19\n" +
 	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\x12\x1d\n" +
 	"\n" +
 	"prompt_key\x18\x02 \x01(\tR\tpromptKey\x12/\n" +
 	"\amodel_a\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelA\x12/\n" +
-	"\amodel_b\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\"U\n" +
+	"\amodel_b\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelB\x126\n" +
+	"\n" +
+	"candidates\x18\x05 \x03(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"candidates\"U\n" +
 	"\x17StartExperimentResponse\x12#\n" +
 	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"&\n" +
@@ -2874,11 +2927,14 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x19EXPERIMENT_STATUS_PARTIAL\x10\x04\x12\x1d\n" +
 	"\x19EXPERIMENT_STATUS_DECIDED\x10\x05\x12\x1f\n" +
 	"\x1bEXPERIMENT_STATUS_DISMISSED\x10\x06\x12\x1c\n" +
-	"\x18EXPERIMENT_STATUS_FAILED\x10\a*Z\n" +
+	"\x18EXPERIMENT_STATUS_FAILED\x10\a*\x96\x01\n" +
 	"\vDisplaySide\x12\x1c\n" +
 	"\x18DISPLAY_SIDE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11DISPLAY_SIDE_LEFT\x10\x01\x12\x16\n" +
-	"\x12DISPLAY_SIDE_RIGHT\x10\x02*\xac\x01\n" +
+	"\x12DISPLAY_SIDE_RIGHT\x10\x02\x12\x12\n" +
+	"\x0eDISPLAY_SIDE_C\x10\x03\x12\x12\n" +
+	"\x0eDISPLAY_SIDE_D\x10\x04\x12\x12\n" +
+	"\x0eDISPLAY_SIDE_E\x10\x05*\xac\x01\n" +
 	"\x0fCandidateStatus\x12 \n" +
 	"\x1cCANDIDATE_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18CANDIDATE_STATUS_PENDING\x10\x01\x12\x1c\n" +
@@ -3039,63 +3095,66 @@ var file_postpilot_v1_model_experiment_proto_depIdxs = []int32{
 	5,  // 21: postpilot.v1.ModelExperiment.source:type_name -> postpilot.v1.ExperimentSource
 	43, // 22: postpilot.v1.StartObserveExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
 	43, // 23: postpilot.v1.StartObserveExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	43, // 24: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	43, // 25: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	43, // 26: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	47, // 27: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	3,  // 28: postpilot.v1.StartWriteExperimentRequest.origin:type_name -> postpilot.v1.ExperimentOrigin
-	43, // 29: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	43, // 30: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	15, // 31: postpilot.v1.GetExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	45, // 32: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
-	5,  // 33: postpilot.v1.ListExperimentsRequest.source:type_name -> postpilot.v1.ExperimentSource
-	15, // 34: postpilot.v1.ListExperimentsResponse.experiments:type_name -> postpilot.v1.ModelExperiment
-	15, // 35: postpilot.v1.RetryCandidateResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	10, // 36: postpilot.v1.ChooseWinnerRequest.badges:type_name -> postpilot.v1.CandidateBadges
-	10, // 37: postpilot.v1.DecideWriteExperimentRequest.badges:type_name -> postpilot.v1.CandidateBadges
-	15, // 38: postpilot.v1.ChooseWinnerResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 39: postpilot.v1.DismissExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 40: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	48, // 41: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
-	4,  // 42: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
-	43, // 43: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
-	7,  // 44: postpilot.v1.LeaderboardEntry.cost_quality:type_name -> postpilot.v1.CostSource
-	36, // 45: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
-	45, // 46: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
-	8,  // 47: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
-	9,  // 48: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
-	37, // 49: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
-	16, // 50: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
-	17, // 51: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
-	18, // 52: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
-	20, // 53: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
-	22, // 54: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
-	24, // 55: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
-	26, // 56: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
-	27, // 57: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
-	28, // 58: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
-	30, // 59: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
-	32, // 60: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
-	34, // 61: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
-	38, // 62: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
-	19, // 63: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 64: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 65: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	21, // 66: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
-	23, // 67: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
-	25, // 68: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
-	29, // 69: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 70: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 71: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
-	31, // 72: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
-	33, // 73: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
-	35, // 74: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
-	39, // 75: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
-	63, // [63:76] is the sub-list for method output_type
-	50, // [50:63] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	43, // 24: postpilot.v1.StartObserveExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	43, // 25: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	43, // 26: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	43, // 27: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	47, // 28: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	3,  // 29: postpilot.v1.StartWriteExperimentRequest.origin:type_name -> postpilot.v1.ExperimentOrigin
+	43, // 30: postpilot.v1.StartWriteExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	43, // 31: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	43, // 32: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	43, // 33: postpilot.v1.StartVoiceReflectionExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	15, // 34: postpilot.v1.GetExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	45, // 35: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
+	5,  // 36: postpilot.v1.ListExperimentsRequest.source:type_name -> postpilot.v1.ExperimentSource
+	15, // 37: postpilot.v1.ListExperimentsResponse.experiments:type_name -> postpilot.v1.ModelExperiment
+	15, // 38: postpilot.v1.RetryCandidateResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	10, // 39: postpilot.v1.ChooseWinnerRequest.badges:type_name -> postpilot.v1.CandidateBadges
+	10, // 40: postpilot.v1.DecideWriteExperimentRequest.badges:type_name -> postpilot.v1.CandidateBadges
+	15, // 41: postpilot.v1.ChooseWinnerResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 42: postpilot.v1.DismissExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 43: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	48, // 44: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
+	4,  // 45: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
+	43, // 46: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
+	7,  // 47: postpilot.v1.LeaderboardEntry.cost_quality:type_name -> postpilot.v1.CostSource
+	36, // 48: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
+	45, // 49: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
+	8,  // 50: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
+	9,  // 51: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
+	37, // 52: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
+	16, // 53: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
+	17, // 54: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
+	18, // 55: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
+	20, // 56: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
+	22, // 57: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
+	24, // 58: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
+	26, // 59: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
+	27, // 60: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
+	28, // 61: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
+	30, // 62: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
+	32, // 63: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
+	34, // 64: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
+	38, // 65: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
+	19, // 66: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 67: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 68: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	21, // 69: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
+	23, // 70: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
+	25, // 71: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
+	29, // 72: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 73: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 74: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
+	31, // 75: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
+	33, // 76: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
+	35, // 77: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
+	39, // 78: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
+	66, // [66:79] is the sub-list for method output_type
+	53, // [53:66] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_model_experiment_proto_init() }

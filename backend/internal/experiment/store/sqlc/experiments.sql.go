@@ -201,7 +201,7 @@ func (q *Queries) FinishInterruptedExperiment(ctx context.Context, arg FinishInt
 }
 
 const getExperiment = `-- name: GetExperiment :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments WHERE id = ?
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments WHERE id = ?
 `
 
 func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment, error) {
@@ -242,12 +242,13 @@ func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment
 		&i.Source,
 		&i.VoicePromptKey,
 		&i.VoiceMaterialID,
+		&i.ReviewMode,
 	)
 	return i, err
 }
 
 const getExperimentForUser = `-- name: GetExperimentForUser :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments WHERE id = ? AND user_id = ?
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments WHERE id = ? AND user_id = ?
 `
 
 type GetExperimentForUserParams struct {
@@ -293,6 +294,7 @@ func (q *Queries) GetExperimentForUser(ctx context.Context, arg GetExperimentFor
 		&i.Source,
 		&i.VoicePromptKey,
 		&i.VoiceMaterialID,
+		&i.ReviewMode,
 	)
 	return i, err
 }
@@ -330,8 +332,8 @@ const insertExperiment = `-- name: InsertExperiment :exec
 
 INSERT INTO model_experiments (
   id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
-  prompt_version, created_at, source, voice_prompt_key, voice_material_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  prompt_version, created_at, source, voice_prompt_key, voice_material_id, review_mode
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertExperimentParams struct {
@@ -352,6 +354,7 @@ type InsertExperimentParams struct {
 	Source          string
 	VoicePromptKey  sql.NullString
 	VoiceMaterialID sql.NullString
+	ReviewMode      string
 }
 
 // ASCII only: sqlc expands SELECT * by byte offset and a multi-byte character in this
@@ -375,6 +378,7 @@ func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentPara
 		arg.Source,
 		arg.VoicePromptKey,
 		arg.VoiceMaterialID,
+		arg.ReviewMode,
 	)
 	return err
 }
@@ -509,7 +513,9 @@ func (q *Queries) ListBadgeTalliesForLeaderboardAll(ctx context.Context, arg Lis
 }
 
 const listCandidates = `-- name: ListCandidates :many
-SELECT id, experiment_id, model_provider_id, model_id, model_label, display_side, status, output, error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at, finished_at, error_reason, error_params, technical_detail FROM model_experiment_candidates WHERE experiment_id = ? ORDER BY display_side
+SELECT id, experiment_id, model_provider_id, model_id, model_label, display_side, status, output, error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at, finished_at, error_reason, error_params, technical_detail FROM model_experiment_candidates WHERE experiment_id = ?
+ORDER BY CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
+  WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 ELSE 6 END
 `
 
 func (q *Queries) ListCandidates(ctx context.Context, experimentID string) ([]ModelExperimentCandidate, error) {
@@ -673,7 +679,7 @@ func (q *Queries) ListCandidatesForLeaderboardAll(ctx context.Context, arg ListC
 }
 
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments
 WHERE user_id = ? AND stage = ?
   AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
        OR (status = 'dismissed' AND outcome = 'skipped'))
@@ -734,6 +740,7 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 			&i.Source,
 			&i.VoicePromptKey,
 			&i.VoiceMaterialID,
+			&i.ReviewMode,
 		); err != nil {
 			return nil, err
 		}
@@ -749,7 +756,7 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 }
 
 const listDecidedForLeaderboardAll = `-- name: ListDecidedForLeaderboardAll :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments
 WHERE stage = ?
   AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
        OR (status = 'dismissed' AND outcome = 'skipped'))
@@ -808,6 +815,7 @@ func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDeci
 			&i.Source,
 			&i.VoicePromptKey,
 			&i.VoiceMaterialID,
+			&i.ReviewMode,
 		); err != nil {
 			return nil, err
 		}
@@ -823,7 +831,7 @@ func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDeci
 }
 
 const listExperimentsForUser = `-- name: ListExperimentsForUser :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments
 WHERE user_id = ?1
   AND (CAST(?2 AS TEXT) = '' OR stage = CAST(?2 AS TEXT))
   AND (CAST(?3 AS TEXT) = '' OR source = CAST(?3 AS TEXT))
@@ -882,6 +890,7 @@ func (q *Queries) ListExperimentsForUser(ctx context.Context, arg ListExperiment
 			&i.Source,
 			&i.VoicePromptKey,
 			&i.VoiceMaterialID,
+			&i.ReviewMode,
 		); err != nil {
 			return nil, err
 		}
@@ -985,7 +994,7 @@ func (q *Queries) ListVerdictBadges(ctx context.Context, experimentID string) ([
 }
 
 const pendingWriteForPost = `-- name: PendingWriteForPost :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
@@ -1040,6 +1049,7 @@ func (q *Queries) PendingWriteForPost(ctx context.Context, arg PendingWriteForPo
 		&i.Source,
 		&i.VoicePromptKey,
 		&i.VoiceMaterialID,
+		&i.ReviewMode,
 	)
 	return i, err
 }

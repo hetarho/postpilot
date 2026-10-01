@@ -43,6 +43,7 @@ type ModelExperiment struct {
 	Source                  string
 	VoicePromptKey          sql.NullString
 	VoiceMaterialID         sql.NullString
+	ReviewMode              string
 }
 
 type ModelExperimentBadge struct {

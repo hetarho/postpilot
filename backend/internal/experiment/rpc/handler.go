@@ -33,6 +33,7 @@ func (h *Handler) StartObserveExperiment(ctx context.Context, req *connect.Reque
 	started, err := h.service.Start(ctx, experiment.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageObserve,
 		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
+		Candidates: fromProtoRefs(req.Msg.GetCandidates()),
 	})
 	if err != nil {
 		return nil, toConnectError("start observe experiment", err)
@@ -48,6 +49,7 @@ func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request
 	started, err := h.service.Start(ctx, experiment.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageWrite,
 		ObserveModel: fromProtoRef(req.Msg.GetObserveModel()), ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
+		Candidates:   fromProtoRefs(req.Msg.GetCandidates()),
 		TargetLength: optionalTargetLength(req.Msg.TargetLength),
 		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
 		Origin:       fromProtoOrigin(req.Msg.GetOrigin()),
@@ -67,6 +69,7 @@ func (h *Handler) StartVoiceReflectionExperiment(ctx context.Context, req *conne
 	started, err := h.service.StartVoiceReflection(ctx, experiment.ReflectionStartRequest{
 		UserID: userID, VoiceID: req.Msg.GetVoiceId(), PromptKey: req.Msg.GetPromptKey(),
 		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
+		Candidates: fromProtoRefs(req.Msg.GetCandidates()),
 	})
 	if err != nil {
 		return nil, toConnectError("start voice reflection experiment", err)
@@ -284,6 +287,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
 	case errors.Is(err, experiment.ErrDuplicateCandidates):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", postpilotv1.FailureReason_EXPERIMENT_CANDIDATES_DUPLICATE, nil)
+	case errors.Is(err, experiment.ErrCandidateCount), errors.Is(err, experiment.ErrMixedCandidateForms):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment candidate list", postpilotv1.FailureReason_EXPERIMENT_MODELS_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrInvalidTargetLength):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment target length must be positive", postpilotv1.FailureReason_EXPERIMENT_TARGET_LENGTH_INVALID, nil)
 	case errors.Is(err, experiment.ErrModelRequired):
@@ -369,6 +374,7 @@ func toProtoExperiment(found experiment.Experiment, detail experiment.Reflection
 		VoicePromptKey:    found.VoicePromptKey,
 		VoicePromptText:   detail.PromptText,
 		VoiceAnswer:       detail.Answer,
+		ReviewMode:        string(found.ReviewMode),
 	}
 }
 
@@ -500,6 +506,16 @@ func fromProtoRef(ref *postpilotv1.ModelRef) experiment.ModelRef {
 	}
 	return experiment.ModelRef{ProviderID: ref.GetProviderId(), ModelID: ref.GetModelId()}
 }
+func fromProtoRefs(refs []*postpilotv1.ModelRef) []experiment.ModelRef {
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make([]experiment.ModelRef, 0, len(refs))
+	for _, ref := range refs {
+		result = append(result, fromProtoRef(ref))
+	}
+	return result
+}
 func toProtoRef(ref experiment.ModelRef) *postpilotv1.ModelRef {
 	return &postpilotv1.ModelRef{ProviderId: ref.ProviderID, ModelId: ref.ModelID}
 }
@@ -627,10 +643,20 @@ func toProtoStatus(status experiment.Status) postpilotv1.ExperimentStatus {
 	return map[experiment.Status]postpilotv1.ExperimentStatus{experiment.StatusQueued: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_QUEUED, experiment.StatusRunning: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_RUNNING, experiment.StatusReview: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_REVIEW, experiment.StatusPartial: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_PARTIAL, experiment.StatusDecided: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DECIDED, experiment.StatusDismissed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DISMISSED, experiment.StatusFailed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_FAILED}[status]
 }
 func toProtoSide(side experiment.DisplaySide) postpilotv1.DisplaySide {
-	if side == experiment.SideLeft {
+	switch side {
+	case experiment.SideLeft:
 		return postpilotv1.DisplaySide_DISPLAY_SIDE_LEFT
+	case experiment.SideRight:
+		return postpilotv1.DisplaySide_DISPLAY_SIDE_RIGHT
+	case experiment.SideC:
+		return postpilotv1.DisplaySide_DISPLAY_SIDE_C
+	case experiment.SideD:
+		return postpilotv1.DisplaySide_DISPLAY_SIDE_D
+	case experiment.SideE:
+		return postpilotv1.DisplaySide_DISPLAY_SIDE_E
+	default:
+		return postpilotv1.DisplaySide_DISPLAY_SIDE_UNSPECIFIED
 	}
-	return postpilotv1.DisplaySide_DISPLAY_SIDE_RIGHT
 }
 func toProtoCandidateStatus(status experiment.CandidateStatus) postpilotv1.CandidateStatus {
 	return map[experiment.CandidateStatus]postpilotv1.CandidateStatus{experiment.CandidatePending: postpilotv1.CandidateStatus_CANDIDATE_STATUS_PENDING, experiment.CandidateRunning: postpilotv1.CandidateStatus_CANDIDATE_STATUS_RUNNING, experiment.CandidateSucceeded: postpilotv1.CandidateStatus_CANDIDATE_STATUS_SUCCEEDED, experiment.CandidateFailed: postpilotv1.CandidateStatus_CANDIDATE_STATUS_FAILED}[status]

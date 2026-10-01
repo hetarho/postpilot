@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,6 +70,45 @@ func sample(id, user, slug string, at time.Time) experiment.Experiment {
 			{ID: id + "-left", ExperimentID: id, Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A snapshot", DisplaySide: experiment.SideLeft, Status: experiment.CandidatePending},
 			{ID: id + "-right", ExperimentID: id, Model: experiment.ModelRef{ProviderID: "p", ModelID: "b"}, ModelLabel: "B snapshot", DisplaySide: experiment.SideRight, Status: experiment.CandidatePending},
 		},
+	}
+}
+
+func TestStorePersistsFiveRankedCandidatesInDisplayOrder(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	found := sample("exp-five", "alice", "post-a", time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC))
+	found.Origin = experiment.OriginLab
+	found.ReviewMode = experiment.ReviewCandidateRanking
+	found.Candidates = []experiment.Candidate{}
+	for i, side := range []experiment.DisplaySide{experiment.SideE, experiment.SideC, experiment.SideLeft, experiment.SideD, experiment.SideRight} {
+		found.Candidates = append(found.Candidates, experiment.Candidate{
+			ID: fmt.Sprintf("exp-five-%d", i), ExperimentID: found.ID,
+			Model:      experiment.ModelRef{ProviderID: "p", ModelID: fmt.Sprintf("%d", i)},
+			ModelLabel: "Model", DisplaySide: side, Status: experiment.CandidatePending,
+		})
+	}
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.ReviewMode != experiment.ReviewCandidateRanking || len(reloaded.Candidates) != 5 {
+		t.Fatalf("reloaded = %+v", reloaded)
+	}
+	for i, side := range []experiment.DisplaySide{experiment.SideLeft, experiment.SideRight, experiment.SideC, experiment.SideD, experiment.SideE} {
+		if reloaded.Candidates[i].DisplaySide != side {
+			t.Fatalf("position %d = %s, want %s", i, reloaded.Candidates[i].DisplaySide, side)
+		}
+	}
+	legacy := sample("exp-legacy", "alice", "post-b", found.CreatedAt.Add(time.Second))
+	if err := store.Create(ctx, legacy); err != nil {
+		t.Fatal(err)
+	}
+	old, err := store.Get(ctx, legacy.ID)
+	if err != nil || old.ReviewMode != experiment.ReviewPairwise {
+		t.Fatalf("legacy = %+v, %v", old, err)
 	}
 }
 

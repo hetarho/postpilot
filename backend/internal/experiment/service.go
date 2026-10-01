@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"slices"
 	"sync"
 	"time"
@@ -64,14 +65,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return StartResult{}, ErrInvalidTargetLength
 	}
-	if request.ModelA == request.ModelB {
-		return StartResult{}, ErrDuplicateCandidates
-	}
-	modelA, err := s.resolveForStage(request.Stage, request.ModelA)
+	refs, reviewMode, err := startCandidates(request.ModelA, request.ModelB, request.Candidates, startOrigin(request))
 	if err != nil {
 		return StartResult{}, err
 	}
-	modelB, err := s.resolveForStage(request.Stage, request.ModelB)
+	models, err := s.resolveCandidates(request.Stage, refs)
 	if err != nil {
 		return StartResult{}, err
 	}
@@ -90,23 +88,19 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if err != nil {
 		return StartResult{}, err
 	}
-	leftA, err := randomBool()
+	sides, err := shuffledSides(len(refs))
 	if err != nil {
 		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
-	}
-	sides := []DisplaySide{SideLeft, SideRight}
-	if !leftA {
-		sides[0], sides[1] = sides[1], sides[0]
 	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
 		TemplateName: frozen.TemplateName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
-		Origin: startOrigin(request), Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
+		Origin: startOrigin(request), ReviewMode: reviewMode, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
-	found.Candidates = []Candidate{
-		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelA, ModelLabel: modelA.Label, DisplaySide: sides[0], Status: CandidatePending},
-		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelB, ModelLabel: modelB.Label, DisplaySide: sides[1], Status: CandidatePending},
+	found.Candidates = make([]Candidate, 0, len(refs))
+	for i, ref := range refs {
+		found.Candidates = append(found.Candidates, Candidate{ID: s.newID(), ExperimentID: found.ID, Model: ref, ModelLabel: models[i].Label, DisplaySide: sides[i], Status: CandidatePending})
 	}
 	if err := s.runs.Create(ctx, found); err != nil {
 		if errors.Is(err, ErrInvalidState) && request.Stage == StageWrite {
@@ -119,7 +113,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
 		TargetLanguage: cloneLanguage(found.TargetLanguage),
-		Models:         startModels(request),
+		Models:         refsToStrings(refs), ObserveModel: writeObserveModel(request),
 	})
 	if err != nil {
 		_ = s.runs.Delete(ctx, found.ID)
@@ -158,14 +152,11 @@ func (s *Service) StartVoiceReflection(ctx context.Context, request ReflectionSt
 	if request.VoiceID == "" {
 		return StartResult{}, ErrVoiceRequired
 	}
-	if request.ModelA == request.ModelB {
-		return StartResult{}, ErrDuplicateCandidates
-	}
-	modelA, err := s.resolveForStage(StageWrite, request.ModelA)
+	refs, reviewMode, err := startCandidates(request.ModelA, request.ModelB, request.Candidates, OriginLab)
 	if err != nil {
 		return StartResult{}, err
 	}
-	modelB, err := s.resolveForStage(StageWrite, request.ModelB)
+	models, err := s.resolveCandidates(StageWrite, refs)
 	if err != nil {
 		return StartResult{}, err
 	}
@@ -179,38 +170,38 @@ func (s *Service) StartVoiceReflection(ctx context.Context, request ReflectionSt
 	if err != nil {
 		return StartResult{}, err
 	}
-	if input.Photo && !(modelA.Vision && modelB.Vision) {
-		return StartResult{}, ErrPhotoUnsupported
+	if input.Photo {
+		for _, model := range models {
+			if !model.Vision {
+				return StartResult{}, ErrPhotoUnsupported
+			}
+		}
 	}
 	korean := LanguageKorean
 	frozen, hash, err := FreezeSnapshot(Snapshot{Content: input.Content, PromptVersion: input.PromptVersion, VoiceID: request.VoiceID, TargetLanguage: &korean})
 	if err != nil {
 		return StartResult{}, err
 	}
-	leftA, err := randomBool()
+	sides, err := shuffledSides(len(refs))
 	if err != nil {
 		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
-	}
-	sides := []DisplaySide{SideLeft, SideRight}
-	if !leftA {
-		sides[0], sides[1] = sides[1], sides[0]
 	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, VoiceID: request.VoiceID, Source: SourceVoice,
 		VoicePromptKey: input.PromptKey, VoiceMaterialID: input.MaterialID, TargetLanguage: cloneLanguage(frozen.TargetLanguage),
-		Stage: StageWrite, Origin: OriginLab, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
+		Stage: StageWrite, Origin: OriginLab, ReviewMode: reviewMode, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
-	found.Candidates = []Candidate{
-		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelA, ModelLabel: modelA.Label, DisplaySide: sides[0], Status: CandidatePending},
-		{ID: s.newID(), ExperimentID: found.ID, Model: request.ModelB, ModelLabel: modelB.Label, DisplaySide: sides[1], Status: CandidatePending},
+	found.Candidates = make([]Candidate, 0, len(refs))
+	for i, ref := range refs {
+		found.Candidates = append(found.Candidates, Candidate{ID: s.newID(), ExperimentID: found.ID, Model: ref, ModelLabel: models[i].Label, DisplaySide: sides[i], Status: CandidatePending})
 	}
 	if err := s.runs.Create(ctx, found); err != nil {
 		return StartResult{}, err
 	}
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: request.UserID, ExperimentID: found.ID, Stage: StageWrite,
-		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: []string{request.ModelA.String(), request.ModelB.String()},
+		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: refsToStrings(refs),
 	})
 	if err != nil {
 		_ = s.runs.Delete(ctx, found.ID)
@@ -391,6 +382,9 @@ func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, si
 	if err != nil {
 		return Experiment{}, err
 	}
+	if found.ReviewMode == ReviewCandidateRanking {
+		return Experiment{}, ErrInvalidState
+	}
 	if !single && found.AppliesOnVerdict() {
 		return Experiment{}, ErrInvalidState
 	}
@@ -462,6 +456,9 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
+	}
+	if found.ReviewMode == ReviewCandidateRanking {
+		return Experiment{}, ErrInvalidState
 	}
 	if found.Status == StatusDismissed {
 		return found, nil
@@ -583,6 +580,9 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
+	}
+	if found.ReviewMode == ReviewCandidateRanking {
+		return Experiment{}, ErrInvalidState
 	}
 	if found.Stage != StageWrite {
 		return Experiment{}, ErrInvalidStage
@@ -781,12 +781,52 @@ func (s *Service) resolveForStage(stage Stage, ref ModelRef) (Model, error) {
 	return model, nil
 }
 
-func randomBool() (bool, error) {
-	var value [1]byte
-	if _, err := rand.Read(value[:]); err != nil {
-		return false, err
+func startCandidates(a, b ModelRef, full []ModelRef, origin Origin) ([]ModelRef, ReviewMode, error) {
+	mode := ReviewPairwise
+	refs := []ModelRef{a, b}
+	if len(full) > 0 {
+		if a != (ModelRef{}) || b != (ModelRef{}) {
+			return nil, "", ErrMixedCandidateForms
+		}
+		mode = ReviewCandidateRanking
+		refs = full
 	}
-	return value[0]&1 == 0, nil
+	if len(refs) < 2 || len(refs) > 5 || (origin == OriginEditor && len(refs) != 2) {
+		return nil, "", ErrCandidateCount
+	}
+	seen := make(map[ModelRef]bool, len(refs))
+	for _, ref := range refs {
+		if seen[ref] {
+			return nil, "", ErrDuplicateCandidates
+		}
+		seen[ref] = true
+	}
+	return refs, mode, nil
+}
+
+func (s *Service) resolveCandidates(stage Stage, refs []ModelRef) ([]Model, error) {
+	models := make([]Model, 0, len(refs))
+	for _, ref := range refs {
+		model, err := s.resolveForStage(stage, ref)
+		if err != nil {
+			return nil, err
+		}
+		models = append(models, model)
+	}
+	return models, nil
+}
+
+func shuffledSides(count int) ([]DisplaySide, error) {
+	sides := append([]DisplaySide(nil), []DisplaySide{SideLeft, SideRight, SideC, SideD, SideE}[:count]...)
+	for i := count - 1; i > 0; i-- {
+		position, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			return nil, err
+		}
+		j := int(position.Int64())
+		sides[i], sides[j] = sides[j], sides[i]
+	}
+	return sides, nil
 }
 
 func newID() string {
@@ -835,13 +875,18 @@ func (s *Service) runCandidates(ctx context.Context, found Experiment, progress 
 	return nil
 }
 
-// startModels are every ref a comparison will run. A write comparison also runs the caller's
-// explicit observe model over the post's photos, and that call spends tokens like any other —
-// gating only the two candidates would leave one paid stage ungated.
-func startModels(request StartRequest) []string {
-	models := []string{request.ModelA.String(), request.ModelB.String()}
+// The shared preparation call is priced at the observe stage even if its ref also writes.
+func writeObserveModel(request StartRequest) string {
 	if request.Stage == StageWrite && request.ObserveModel.ProviderID != "" {
-		models = append(models, request.ObserveModel.String())
+		return request.ObserveModel.String()
+	}
+	return ""
+}
+
+func refsToStrings(refs []ModelRef) []string {
+	models := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		models = append(models, ref.String())
 	}
 	return models
 }
@@ -850,7 +895,9 @@ func startModels(request StartRequest) []string {
 func candidateModels(found Experiment) []string {
 	models := make([]string, 0, len(found.Candidates))
 	for _, candidate := range found.Candidates {
-		models = append(models, candidate.Model.String())
+		if candidate.Status == CandidateFailed {
+			models = append(models, candidate.Model.String())
+		}
 	}
 	return models
 }

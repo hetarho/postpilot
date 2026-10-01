@@ -118,6 +118,30 @@ func TestAReflectionJobNeverHoldsItsVoice(t *testing.T) {
 	if _, err := voices.DeleteVoice(ctx, "alice", found.ID); err != nil {
 		t.Fatalf("a running comparison held the voice: %v", err)
 	}
+	// The queue permits one active comparison for this account; complete the first fixture
+	// before checking the five-candidate admission shape.
+	if _, err := handle.Writer.ExecContext(ctx, `UPDATE generation_jobs SET status='done' WHERE id=?`, id); err != nil {
+		t.Fatal(err)
+	}
+	_, err = experimentJobs{queue: queue}.EnqueueExperiment(ctx, experiment.JobRequest{
+		UserID: "alice", ExperimentID: "exp-five", Stage: experiment.StageWrite, TargetLanguage: &korean,
+		Models: []string{"p/a", "p/b", "p/c", "p/d", "p/e"}, ObserveModel: "p/observe",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(admission.starts) != 2 || len(admission.starts[1].Calls) != 6 {
+		t.Fatalf("five writers and one shared observe call admitted %+v", admission.starts)
+	}
+	for index, call := range admission.starts[1].Calls {
+		want := "write"
+		if index == 5 {
+			want = "observe"
+		}
+		if call.Stage != want || call.Count != 1 {
+			t.Fatalf("planned call %d = %+v, want %s once", index, call, want)
+		}
+	}
 	for from, want := range map[error]error{
 		voice.ErrVoiceRequired:         experiment.ErrVoiceRequired,
 		voice.ErrVoiceNotFound:         experiment.ErrVoiceNotFound,

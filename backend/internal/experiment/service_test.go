@@ -673,6 +673,177 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 
 var allStages = []string{"observe", "write", "analyze"}
 
+func TestRankedStartRunsFiveAndRetriesOnlyFailedCandidate(t *testing.T) {
+	svc, store, catalog, jobs, runner := newTestService()
+	refs := []ModelRef{{"p", "a"}, {"p", "b"}, {"p", "c"}, {"p", "d"}, {"p", "e"}}
+	for _, ref := range refs {
+		catalog.models[ref] = Model{Ref: ref, Label: ref.ModelID, Enabled: true, Stages: allStages, Vision: true}
+	}
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageObserve, Candidates: refs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, err := store.Get(ctx, started.ExperimentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.ReviewMode != ReviewCandidateRanking || len(found.Candidates) != 5 || len(jobs.requests[0].Models) != 5 || runner.snapshotCalls != 1 {
+		t.Fatalf("start = %+v, job=%+v, snapshots=%d", found, jobs.requests[0], runner.snapshotCalls)
+	}
+	sides := map[DisplaySide]bool{}
+	for _, candidate := range found.Candidates {
+		if sides[candidate.DisplaySide] {
+			t.Fatalf("duplicate display position %s", candidate.DisplaySide)
+		}
+		sides[candidate.DisplaySide] = true
+	}
+	for _, side := range []DisplaySide{SideLeft, SideRight, SideC, SideD, SideE} {
+		if !sides[side] {
+			t.Fatalf("missing display position %s", side)
+		}
+	}
+	runner.fail["e"] = errors.New("provider failed")
+	var progressMu sync.Mutex
+	last, total := 0, 0
+	if err := svc.Handle(ctx, found.ID, func(_ string, current, size int) {
+		progressMu.Lock()
+		defer progressMu.Unlock()
+		if current < last {
+			t.Errorf("non-monotonic progress %d after %d", current, last)
+		}
+		last, total = current, size
+	}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ = store.Get(ctx, found.ID)
+	if found.Status != StatusPartial || runner.runCalls != 5 || total != 5 || last != 5 {
+		t.Fatalf("handle = %+v, calls=%d, progress=%d/%d", found, runner.runCalls, last, total)
+	}
+	for _, candidate := range found.Candidates {
+		if candidate.Model.ModelID == "e" && candidate.Status != CandidateFailed || candidate.Model.ModelID != "e" && candidate.Status != CandidateSucceeded {
+			t.Fatalf("candidate = %+v", candidate)
+		}
+	}
+	if _, err := svc.Choose(ctx, "alice", found.ID, found.Candidates[0].ID, false, nil); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("legacy verdict = %v", err)
+	}
+	delete(runner.fail, "e")
+	if _, err := svc.Retry(ctx, "alice", found.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := jobs.requests[1].Models; !reflect.DeepEqual(got, []string{"p/e"}) {
+		t.Fatalf("retry models = %v", got)
+	}
+	if err := svc.Handle(ctx, found.ID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ = store.Get(ctx, found.ID)
+	if found.Status != StatusReview || runner.runCalls != 6 {
+		t.Fatalf("retry = %+v calls=%d", found, runner.runCalls)
+	}
+	if _, err := svc.Dismiss(ctx, "alice", found.ID); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("legacy dismissal = %v", err)
+	}
+}
+
+func TestRankedStartRejectsInvalidListsBeforeSnapshot(t *testing.T) {
+	svc, store, catalog, jobs, runner := newTestService()
+	refs := []ModelRef{{"p", "a"}, {"p", "b"}, {"p", "c"}, {"p", "d"}, {"p", "e"}}
+	for _, ref := range refs {
+		catalog.models[ref] = Model{Ref: ref, Enabled: true, Stages: allStages}
+	}
+	for _, tc := range []struct {
+		name    string
+		request StartRequest
+		want    error
+	}{
+		{"single", StartRequest{Stage: StageObserve, Candidates: refs[:1]}, ErrCandidateCount},
+		{"six", StartRequest{Stage: StageObserve, Candidates: append(append([]ModelRef{}, refs...), ModelRef{"p", "f"})}, ErrCandidateCount},
+		{"editor three", StartRequest{Stage: StageWrite, Candidates: refs[:3]}, ErrCandidateCount},
+		{"duplicate", StartRequest{Stage: StageObserve, Candidates: []ModelRef{refs[0], refs[0]}}, ErrDuplicateCandidates},
+		{"mixed", StartRequest{Stage: StageObserve, ModelA: refs[0], ModelB: refs[1], Candidates: refs[:2]}, ErrMixedCandidateForms},
+		{"ineligible", StartRequest{Stage: StageObserve, Candidates: []ModelRef{refs[0], {"p", "unknown"}}}, ErrModelRequired},
+	} {
+		_, err := svc.Start(context.Background(), tc.request)
+		if !errors.Is(err, tc.want) {
+			t.Fatalf("%s: got %v, want %v", tc.name, err, tc.want)
+		}
+	}
+	if runner.snapshotCalls != 0 || len(store.rows) != 0 || len(jobs.ids) != 0 {
+		t.Fatalf("invalid starts created work")
+	}
+	started, err := svc.Start(context.Background(), StartRequest{Stage: StageObserve, ModelA: refs[0], ModelB: refs[1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(context.Background(), started.ExperimentID)
+	if found.ReviewMode != ReviewPairwise || len(found.Candidates) != 2 {
+		t.Fatalf("legacy start = %+v", found)
+	}
+	modern, err := svc.Start(context.Background(), StartRequest{Stage: StageObserve, Candidates: refs[:2]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ranked, _ := store.Get(context.Background(), modern.ExperimentID)
+	if ranked.ReviewMode != ReviewCandidateRanking || len(ranked.Candidates) != 2 {
+		t.Fatalf("new two-candidate start = %+v", ranked)
+	}
+}
+
+type concurrentFiveRunner struct {
+	*fakeRunner
+	arrived chan string
+	release chan struct{}
+}
+
+func (r *concurrentFiveRunner) RunCandidate(ctx context.Context, found Experiment, candidate Candidate, progress Progress) (CandidateResult, error) {
+	r.arrived <- found.InputHash + ":" + string(found.InputSnapshot)
+	<-r.release
+	return r.fakeRunner.RunCandidate(ctx, found, candidate, progress)
+}
+
+func TestFiveCandidatesStartConcurrentlyOnOneFrozenInput(t *testing.T) {
+	svc, _, catalog, _, runner := newTestService()
+	refs := []ModelRef{{"p", "a"}, {"p", "b"}, {"p", "c"}, {"p", "d"}, {"p", "e"}}
+	for _, ref := range refs {
+		catalog.models[ref] = Model{Ref: ref, Enabled: true, Stages: allStages}
+	}
+	parallel := &concurrentFiveRunner{fakeRunner: runner, arrived: make(chan string, 5), release: make(chan struct{})}
+	svc.runner = parallel
+	defer func() {
+		select {
+		case <-parallel.release:
+		default:
+			close(parallel.release)
+		}
+	}()
+	started, err := svc.Start(context.Background(), StartRequest{UserID: "alice", Stage: StageObserve, Candidates: refs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}) }()
+	first := ""
+	for i := 0; i < 5; i++ {
+		select {
+		case input := <-parallel.arrived:
+			if first == "" {
+				first = input
+			}
+			if input != first {
+				t.Fatalf("candidate %d saw a different frozen input", i)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("only %d candidates reached the provider before release", i)
+		}
+	}
+	close(parallel.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestVideoSnapshotRefusalPrecedesExperimentAndJobCreation(t *testing.T) {
 	svc, store, _, jobs, runner := newTestService()
 	runner.snapshotErr = &VideoUnsupportedError{Model: "p/inline-only"}

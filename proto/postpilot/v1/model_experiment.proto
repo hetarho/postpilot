@@ -42,6 +42,9 @@ enum DisplaySide {
   DISPLAY_SIDE_UNSPECIFIED = 0;
   DISPLAY_SIDE_LEFT = 1;
   DISPLAY_SIDE_RIGHT = 2;
+  DISPLAY_SIDE_C = 3;
+  DISPLAY_SIDE_D = 4;
+  DISPLAY_SIDE_E = 5;
 }
 
 enum CandidateStatus {
@@ -197,12 +200,15 @@ message ModelExperiment {
   string voice_prompt_key = 25;
   string voice_prompt_text = 26;
   string voice_answer = 27;
+  // Existing pairwise records and legacy starts use pairwise; full-list starts use candidate_ranking.
+  string review_mode = 28;
 }
 
 message StartObserveExperimentRequest {
   string post_slug = 1;
   ModelRef model_a = 2;
   ModelRef model_b = 3;
+  repeated ModelRef candidates = 4;
 }
 message StartWriteExperimentRequest {
   string post_slug = 1;
@@ -216,12 +222,14 @@ message StartWriteExperimentRequest {
   // UNSPECIFIED is stored as EDITOR: the pre-origin behaviour, so a stale tab that still
   // starts a comparison from the editor never turns a forced application into a silent pick.
   ExperimentOrigin origin = 7;
+  repeated ModelRef candidates = 8;
 }
 message StartVoiceReflectionExperimentRequest {
   string voice_id = 1;
   string prompt_key = 2;
   ModelRef model_a = 3;
   ModelRef model_b = 4;
+  repeated ModelRef candidates = 5;
 }
 message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
 

@@ -54,6 +54,37 @@ var (
 	refB = ModelRef{ProviderID: "p", ModelID: "b"}
 )
 
+func TestRankedReflectionChecksAllFivePhotoCandidates(t *testing.T) {
+	svc, store, catalog, jobs, _, _ := reflectionService(t)
+	refs := []ModelRef{refA, refB, {ProviderID: "p", ModelID: "c"}, {ProviderID: "p", ModelID: "d"}, {ProviderID: "p", ModelID: "e"}}
+	for _, ref := range refs[2:] {
+		catalog.models[ref] = Model{Ref: ref, Label: ref.ModelID, Enabled: true, Vision: true, Stages: []string{"write"}}
+	}
+	request := ReflectionStartRequest{UserID: "alice", VoiceID: "voice-a", PromptKey: "photo_food", Candidates: refs}
+	last := catalog.models[refs[4]]
+	last.Vision = false
+	catalog.models[refs[4]] = last
+	if _, err := svc.StartVoiceReflection(context.Background(), request); !errors.Is(err, ErrPhotoUnsupported) {
+		t.Fatalf("last candidate without vision: %v", err)
+	}
+	if len(store.rows) != 0 || len(jobs.ids) != 0 {
+		t.Fatal("refused photo comparison created work")
+	}
+	last.Vision = true
+	catalog.models[refs[4]] = last
+	started, err := svc.StartVoiceReflection(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, err := store.Get(context.Background(), started.ExperimentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.ReviewMode != ReviewCandidateRanking || len(found.Candidates) != 5 || len(jobs.requests[0].Models) != 5 {
+		t.Fatalf("reflection = %+v, job=%+v", found, jobs.requests[0])
+	}
+}
+
 // MODEL-31, MODEL-67: 말투 반영 비교 names a voice and one of its answered prompts and two different
 // write models, both reading images for a photo prompt; each refusal creates nothing and queues
 // nothing.

@@ -44,6 +44,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
 		Source: sourceOf(found.Source), VoicePromptKey: nullString(found.VoicePromptKey), VoiceMaterialID: nullString(found.VoiceMaterialID),
+		ReviewMode: reviewModeOf(found.ReviewMode),
 	})
 	if err != nil {
 		message := strings.ToLower(err.Error())
@@ -534,6 +535,13 @@ func sourceOf(source experiment.Source) string {
 	return string(source)
 }
 
+func reviewModeOf(mode experiment.ReviewMode) string {
+	if mode == "" {
+		return string(experiment.ReviewPairwise)
+	}
+	return string(mode)
+}
+
 func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	created, err := time.Parse(time.RFC3339Nano, row.CreatedAt)
 	if err != nil {
@@ -554,7 +562,7 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	return experiment.Experiment{
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
 		TemplateName: row.TemplateName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
-		Origin: experiment.Origin(row.Origin), Source: experiment.Source(row.Source),
+		Origin: experiment.Origin(row.Origin), Source: experiment.Source(row.Source), ReviewMode: experiment.ReviewMode(row.ReviewMode),
 		VoicePromptKey: row.VoicePromptKey.String, VoiceMaterialID: row.VoiceMaterialID.String,
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,

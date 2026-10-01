@@ -4,8 +4,8 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
   id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
-  prompt_version, created_at, source, voice_prompt_key, voice_material_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+  prompt_version, created_at, source, voice_prompt_key, voice_material_id, review_mode
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertCandidate :exec
 INSERT INTO model_experiment_candidates (
@@ -30,7 +30,9 @@ SELECT * FROM model_experiments WHERE id = ?;
 SELECT * FROM model_experiments WHERE id = ? AND user_id = ?;
 
 -- name: ListCandidates :many
-SELECT * FROM model_experiment_candidates WHERE experiment_id = ? ORDER BY display_side;
+SELECT * FROM model_experiment_candidates WHERE experiment_id = ?
+ORDER BY CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
+  WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 ELSE 6 END;
 
 -- name: ListExperimentsForUser :many
 -- An empty stage or source matches every one: the write history reads post-sourced comparisons

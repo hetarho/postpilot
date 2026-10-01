@@ -145,6 +145,16 @@ type DisplaySide string
 const (
 	SideLeft  DisplaySide = "left"
 	SideRight DisplaySide = "right"
+	SideC     DisplaySide = "c"
+	SideD     DisplaySide = "d"
+	SideE     DisplaySide = "e"
+)
+
+type ReviewMode string
+
+const (
+	ReviewPairwise         ReviewMode = "pairwise"
+	ReviewCandidateRanking ReviewMode = "candidate_ranking"
 )
 
 type Outcome string
@@ -215,6 +225,7 @@ type Experiment struct {
 	TargetLanguage    *Language
 	Stage             Stage
 	Origin            Origin
+	ReviewMode        ReviewMode
 	Status            Status
 	JobID             string
 	InputSnapshot     []byte
@@ -304,6 +315,8 @@ type StartRequest struct {
 	ObserveModel ModelRef
 	ModelA       ModelRef
 	ModelB       ModelRef
+	// Candidates is the full list for a new lab comparison. Empty preserves the legacy pair.
+	Candidates   []ModelRef
 	TargetLength *int
 	// ObserveFiles is the re-observation picker's answer for a write comparison, passed
 	// straight through to the generation context's snapshot, which owns the reuse rule.
@@ -315,11 +328,12 @@ type StartRequest struct {
 // ReflectionStartRequest is 말투 반영 비교's start (MODEL-67): one voice, one of its answered
 // prompts and the write pair.
 type ReflectionStartRequest struct {
-	UserID    string
-	VoiceID   string
-	PromptKey string
-	ModelA    ModelRef
-	ModelB    ModelRef
+	UserID     string
+	VoiceID    string
+	PromptKey  string
+	ModelA     ModelRef
+	ModelB     ModelRef
+	Candidates []ModelRef
 }
 
 // ReflectionSnapshot is the voice context's frozen 말투 반영 비교 input and what the comparison
@@ -373,7 +387,9 @@ type JobRequest struct {
 	Stage        Stage
 	// TargetLanguage is frozen for write jobs and absent for observe jobs.
 	TargetLanguage *Language
-	// Models are the two candidate refs this comparison will run. The enqueue seam gates
+	// ObserveModel is the shared preparation call for a post write comparison.
+	ObserveModel string
+	// Models are every candidate ref this comparison will run. The enqueue seam gates
 	// them against the caller's plan; one comparison still consumes exactly one admission.
 	Models []string
 }
@@ -398,6 +414,8 @@ var (
 	ErrModelRequired         = errors.New("two enabled suitable models are required")
 	ErrVideoUnsupported      = errors.New("the observe model cannot read signed post video URLs")
 	ErrDuplicateCandidates   = errors.New("comparison candidates must differ")
+	ErrCandidateCount        = errors.New("comparison requires two to five candidates, or exactly two in the editor")
+	ErrMixedCandidateForms   = errors.New("legacy pair and full candidate list cannot be combined")
 	ErrInvalidTargetLength   = errors.New("target length must be positive")
 	ErrLanguageRequired      = errors.New("a supported write target language is required")
 	ErrInvalidState          = errors.New("experiment state does not allow this operation")

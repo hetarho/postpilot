@@ -14,11 +14,11 @@ func StatusAfterCandidates(candidates []Candidate) (Status, error) {
 		}
 	}
 	switch {
-	case succeeded == 2:
+	case succeeded >= 2 && failed == 0:
 		return StatusReview, nil
-	case succeeded == 1 && failed == 1:
+	case succeeded >= 1 && failed >= 1:
 		return StatusPartial, nil
-	case failed == 2:
+	case failed >= 2 && succeeded == 0:
 		return StatusFailed, nil
 	default:
 		return "", fmt.Errorf("%w: candidate completion is not terminal", ErrInvalidState)

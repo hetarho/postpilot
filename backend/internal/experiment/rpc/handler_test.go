@@ -395,3 +395,24 @@ func TestLeaderboardCostReachesMasterOnly(t *testing.T) {
 		t.Fatalf("master row lost its cost: %+v", operator)
 	}
 }
+
+func TestFiveCandidateReviewWireKeepsEveryIdentityBlind(t *testing.T) {
+	found := experiment.Experiment{ID: "five", Stage: experiment.StageObserve, Status: experiment.StatusReview,
+		ReviewMode: experiment.ReviewCandidateRanking}
+	for i, side := range []experiment.DisplaySide{experiment.SideLeft, experiment.SideRight, experiment.SideC, experiment.SideD, experiment.SideE} {
+		found.Candidates = append(found.Candidates, experiment.Candidate{
+			ID: string(rune('a' + i)), DisplaySide: side, Status: experiment.CandidateSucceeded,
+			Model: experiment.ModelRef{ProviderID: "secret", ModelID: "model"}, ModelLabel: "private",
+			Usage: experiment.Usage{PromptTokens: 99},
+		})
+	}
+	wire := toProtoExperiment(found, experiment.ReflectionDetail{}, false)
+	if wire.GetReviewMode() != "candidate_ranking" || len(wire.GetCandidates()) != 5 {
+		t.Fatalf("review = %+v", wire)
+	}
+	for i, candidate := range wire.GetCandidates() {
+		if candidate.GetDisplaySide() != postpilotv1.DisplaySide(i+1) || candidate.GetModel() != nil || candidate.GetModelLabel() != "" || candidate.GetUsage() != nil {
+			t.Fatalf("candidate %d leaked identity or has wrong side: %+v", i, candidate)
+		}
+	}
+}
