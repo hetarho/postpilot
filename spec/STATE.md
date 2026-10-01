@@ -59,14 +59,14 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T519 | Refresh six production post templates with experience-first structure | TMPL POST GEN | T518 | doing@261001.exp |
 
 ## next
-- next: finish T519 after the supporting code is live (six production templates); ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
+- next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T519 done: six production templates updated after the matching API rollout; SQLite backup and 49 posts/273 saved answers verified unchanged
 - 261001 T519 start
 - 261001 T518 done: required experience answers gate new writing; Node 24 FE 3,041 tests, BE full tests, build/lint/codegen passed
 - 261001 T517 done: 문항 풀기 moves on to the next unanswered prompt with 건너뛰기, 글 붙여넣기 empties for the next post; full FE checks passed in a clean worktree
@@ -86,6 +86,3 @@
 - 261001 T513 done: no rate or combo model labels on any customer response or screen, master included; full FE, BE 72 packages plus clip/store rerun alone (1595s), codegen idempotent
 - 261001 create-task QUOTA r31–r32 BILL r8 MODEL r28 → T513 (no rate or model labels on customer responses), T514 (master sees customer screens), T515 (/admin 비용·환율 rate), T516 (comparison cost to /admin), re-cut T498 (one button on every card, four benefits, below-card comparison); T501 T502 T506 drop master cost
 - 261001 update-ssot QUOTA r31–r32 BILL r8 MODEL r28: every /plans card one button, trimmed cards, saving once; QUOTA-68+ master sees customer screens as a customer (blocked actions disabled, no operator notice, rate or supplier cost; technical detail stays); rate and comparison cost on /admin's 비용·환율 tab
-- 261001 T512 done: the template editor asks the 글 작성 모델 through the request box, and ③ opens a new template from the post; full FE checks passed
-- 261001 T509 done: an owner cancels a queued or running template request; confirmed usage only is charged; migration 0126 widens the cancellation CHECKs; full FE/BE and project checks passed
-- 261001 T506 done: normalized Elo leaderboard and no supplier-cost view verified
