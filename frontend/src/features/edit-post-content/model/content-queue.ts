@@ -24,9 +24,13 @@ export interface ContentQueueHandle {
 
 interface Attachment {
   revision: bigint
+  machineBaselineRevision: bigint
   saved: ContentSnapshot
   send: SendContent
   onState?: (state: ContentSaveState) => void
+  /** A machine write arrived while this editor still owed a save. Keep the old write protected
+   * by its original revision and refuse this new editor until the owner reloads. */
+  baselineConflict?: boolean
 }
 const attached = new Map<string, Attachment>()
 
@@ -79,6 +83,7 @@ function notify(slug: string) {
 function flushQueue(slug: string): Promise<bigint> {
   const post = attached.get(slug)
   if (!post) return Promise.reject(new Error('session ended'))
+  if (post.baselineConflict) return Promise.reject(new ContentRevisionConflictError())
   return queue.flush(slug, true).then((revision) => revision ?? post.revision)
 }
 
@@ -96,20 +101,50 @@ export function flushContentQueue(slug: string): Promise<bigint> | undefined {
 export function attachContentQueue(options: {
   slug: string
   revision: bigint
+  machineBaselineRevision: bigint
   saved: ContentSnapshot
   send: SendContent
   onState: (state: ContentSaveState) => void
 }): ContentQueueHandle {
   const existing = attached.get(options.slug)
-  // No attachment means nothing owns this slug any more: any queue entry left over from an
-  // editor that has already run dry is dropped, so this editor starts from the server's own
-  // content and revision rather than from a baseline someone else left behind.
-  if (!existing) queue.discard(options.slug)
-  const post: Attachment = existing ?? {
-    revision: options.revision,
-    saved: copy(options.saved),
-    send: options.send,
+  // A machine write replaces the content this editor opened against. React unmounts the old
+  // BlockEditor and mounts the new one in the same commit; release() has only scheduled its
+  // attachment cleanup, so this mount can still see the old attachment. Drop that queue and
+  // start from the server's new content/revision. A normal content autosave advances revision
+  // without moving the machine baseline, so it keeps its in-flight queue instead.
+  const replaced =
+    existing !== undefined && existing.machineBaselineRevision !== options.machineBaselineRevision
+  // A queued, in-flight or failed save still belongs to the owner's previous content. A new
+  // machine result must not make that edit disappear, nor may the old pending snapshot be sent
+  // against the new revision. Leave the old queue guarded by its original revision and show
+  // the same explicit conflict as a save rejected by the server.
+  if (
+    existing?.baselineConflict ||
+    (replaced && !['idle', 'saved'].includes(queue.state(options.slug)))
+  ) {
+    if (existing) existing.baselineConflict = true
+    return {
+      state: () => 'conflict',
+      queue: () => undefined,
+      saveNow: () => undefined,
+      flush: () => Promise.reject(new ContentRevisionConflictError()),
+      release: () => undefined,
+    }
   }
+  if (!existing || replaced)
+    queue.discard(
+      options.slug,
+      replaced ? new Error('content replaced by a new AI result') : undefined,
+    )
+  const post: Attachment =
+    existing && !replaced
+      ? existing
+      : {
+          revision: options.revision,
+          machineBaselineRevision: options.machineBaselineRevision,
+          saved: copy(options.saved),
+          send: options.send,
+        }
   post.send = options.send
   post.onState = options.onState
   attached.set(options.slug, post)
@@ -132,7 +167,8 @@ export function attachContentQueue(options: {
       // from a baseline this one left behind.
       void queue.flush(options.slug).then(
         () => {
-          if (attached.get(options.slug) === post && !post.onState) attached.delete(options.slug)
+          if (attached.get(options.slug) === post && !post.onState && !post.baselineConflict)
+            attached.delete(options.slug)
         },
         () => undefined,
       )

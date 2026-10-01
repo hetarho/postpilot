@@ -6,6 +6,7 @@ import { attachContentQueue, type ContentQueueHandle, type ContentSaveState } fr
 export function useContentAutosave(args: {
   slug: string
   revision: bigint
+  machineBaselineRevision: bigint
   content: PostContent
   valid: boolean
 }): { state: ContentSaveState; flush: () => Promise<bigint> } {
@@ -22,6 +23,7 @@ export function useContentAutosave(args: {
     const handle = attachContentQueue({
       slug: args.slug,
       revision: args.revision,
+      machineBaselineRevision: args.machineBaselineRevision,
       saved: opened.current,
       send: (snapshot, revision) => send.current(args.slug, snapshot.content, revision),
       onState: setState,
@@ -32,7 +34,7 @@ export function useContentAutosave(args: {
       handle.release()
       queue.current = undefined
     }
-  }, [args.revision, args.slug])
+  }, [args.machineBaselineRevision, args.revision, args.slug])
   useLayoutEffect(() => {
     if (args.valid) queue.current?.queue({ content: args.content })
   }, [args.content, args.valid])

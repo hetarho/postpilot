@@ -21,10 +21,15 @@ afterEach(() => {
 
 /** The editor over the post as the cache holds it, keyed by its machine write as ② keys it. */
 function Editor({ slug }: { slug: string }) {
-  const { post } = usePost(slug)
-  return post?.content ? (
-    <BlockEditor key={`${post.slug}:${post.machineBaselineRevision}`} post={post} />
-  ) : null
+  const { post, refetch } = usePost(slug)
+  return (
+    <>
+      <button onClick={refetch}>서버 내용 다시 읽기</button>
+      {post?.content ? (
+        <BlockEditor key={`${post.slug}:${post.machineBaselineRevision}`} post={post} />
+      ) : null}
+    </>
+  )
 }
 
 function renderEditor(row: FakePostRow) {
@@ -99,6 +104,52 @@ describe('the draft read-first', () => {
     await user.click(screen.getByRole('button', { name: '문단 추가' }))
     expect(await screen.findByText('새 문단')).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('SavePostContent'), AUTOSAVED)
+  })
+
+  it('saves an edit against the new revision after an AI result remounts the editor', async () => {
+    const user = userEvent.setup()
+    const contentSaves: Array<{
+      slug: string
+      expectedRevision: bigint
+      content: typeof POST_CONTENT_FIXTURE
+    }> = []
+    const first: FakePostRow = {
+      ...reviewPost,
+      slug: '20261002-ai-rewrite',
+    }
+    const rewritten: FakePostRow = {
+      ...first,
+      content: {
+        ...POST_CONTENT_FIXTURE,
+        blocks: POST_CONTENT_FIXTURE.blocks.map((block, index) =>
+          index === 0 ? { ...block, content: 'AI가 다시 쓴 문단' } : block,
+        ),
+      },
+      contentRevision: 2n,
+      machineBaselineRevision: 2n,
+    }
+    const transport = createFakePostsTransport({
+      posts: [first],
+      getSequence: [first, rewritten],
+      contentSaves,
+    })
+    render(<Editor slug={first.slug} />, {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    })
+    await screen.findByText(POST_CONTENT_FIXTURE.blocks[0].content)
+
+    await user.click(screen.getByRole('button', { name: '서버 내용 다시 읽기' }))
+    await screen.findByText('AI가 다시 쓴 문단')
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '내가 고친 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(contentSaves).toHaveLength(1), AUTOSAVED)
+    expect(contentSaves[0]?.expectedRevision).toBe(2n)
+    expect(contentSaves[0]?.content.blocks[0].content).toBe('내가 고친 문단')
+    expect(screen.queryByText(/다른 화면에서 글이 바뀌었어요/)).not.toBeInTheDocument()
   })
 
   // VIDEO-2: a VIDEO block carries the IMAGE fields and none of its own, so the same three

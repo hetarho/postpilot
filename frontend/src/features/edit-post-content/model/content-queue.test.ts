@@ -38,6 +38,7 @@ describe('content save queue', () => {
     const handle = attachContentQueue({
       slug: 'post',
       revision: 1n,
+      machineBaselineRevision: 1n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),
@@ -64,12 +65,112 @@ describe('content save queue', () => {
     await expect(handle.flush()).resolves.toBe(3n)
   })
 
+  it('starts from a new AI result when the old editor releases in the same commit', async () => {
+    const send = vi.fn(async (_sent: ContentSnapshot, revision: bigint) => revision + 1n)
+    const old = attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      machineBaselineRevision: 1n,
+      saved: snapshot('old AI result'),
+      send,
+      onState: vi.fn(),
+    })
+
+    // React runs the old effect cleanup immediately before the new editor's layout effect.
+    // release() deletes the attachment only after a promise resolves, so this attach used to
+    // inherit revision 1 and the old saved content despite receiving the AI's revision 2.
+    old.release()
+    const fresh = attachContentQueue({
+      slug: 'post',
+      revision: 2n,
+      machineBaselineRevision: 2n,
+      saved: snapshot('new AI result'),
+      send,
+      onState: vi.fn(),
+    })
+    await Promise.resolve()
+    fresh.queue(snapshot('new AI result'))
+    await expect(fresh.flush()).resolves.toBe(2n)
+    expect(send).not.toHaveBeenCalled()
+
+    fresh.queue(snapshot('owner edit'))
+    await expect(fresh.flush()).resolves.toBe(3n)
+    expect(send).toHaveBeenCalledWith(snapshot('owner edit'), 2n)
+  })
+
+  it('keeps a normal content save on the same machine baseline and uses its answered revision', async () => {
+    let finishFirst!: (revision: bigint) => void
+    const firstSend = vi.fn(() => new Promise<bigint>((resolve) => (finishFirst = resolve)))
+    const old = attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      machineBaselineRevision: 1n,
+      saved: snapshot('AI result'),
+      send: firstSend,
+      onState: vi.fn(),
+    })
+    old.queue(snapshot('first edit'))
+    const firstFlush = old.flush()
+    const nextSend = vi.fn(async (_sent: ContentSnapshot, revision: bigint) => revision + 1n)
+    const sameSession = attachContentQueue({
+      slug: 'post',
+      revision: 2n,
+      machineBaselineRevision: 1n,
+      saved: snapshot('first edit'),
+      send: nextSend,
+      onState: vi.fn(),
+    })
+    sameSession.queue(snapshot('second edit'))
+    finishFirst(2n)
+    await expect(firstFlush).resolves.toBe(3n)
+    expect(nextSend).toHaveBeenCalledWith(snapshot('second edit'), 2n)
+  })
+
+  it('refuses a new AI baseline while an old edit is in flight without rebasing that edit', async () => {
+    let finishOld!: (revision: bigint) => void
+    const oldSend = vi.fn(() => new Promise<bigint>((resolve) => (finishOld = resolve)))
+    const old = attachContentQueue({
+      slug: 'post',
+      revision: 1n,
+      machineBaselineRevision: 1n,
+      saved: snapshot('old AI result'),
+      send: oldSend,
+      onState: vi.fn(),
+    })
+    old.queue(snapshot('unsaved owner edit'))
+    const oldFlush = old.flush()
+    old.release()
+
+    const newSend = vi.fn(async (_sent: ContentSnapshot, revision: bigint) => revision + 1n)
+    const blocked = attachContentQueue({
+      slug: 'post',
+      revision: 2n,
+      machineBaselineRevision: 2n,
+      saved: snapshot('new AI result'),
+      send: newSend,
+      onState: vi.fn(),
+    })
+    expect(blocked.state()).toBe('conflict')
+    blocked.queue(snapshot('new owner edit'))
+    await expect(blocked.flush()).rejects.toBeInstanceOf(ContentRevisionConflictError)
+    expect(newSend).not.toHaveBeenCalled()
+    expect(oldSend).toHaveBeenCalledWith(snapshot('unsaved owner edit'), 1n)
+
+    // Even if the old request answers after the machine write, it may not move the new
+    // editor's revision or clear its explicit conflict. Reload is the recovery path.
+    finishOld(2n)
+    await expect(oldFlush).resolves.toBe(2n)
+    expect(blocked.state()).toBe('conflict')
+    await expect(blocked.flush()).rejects.toBeInstanceOf(ContentRevisionConflictError)
+  })
+
   it('stops retry timers and rejects pending flushes when the session ends', async () => {
     vi.useFakeTimers()
     const send = vi.fn().mockRejectedValue(new Error('offline'))
     const handle = attachContentQueue({
       slug: 'post',
       revision: 1n,
+      machineBaselineRevision: 1n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),
@@ -92,6 +193,7 @@ describe('content save queue', () => {
     const deleted = attachContentQueue({
       slug: 'gone',
       revision: 1n,
+      machineBaselineRevision: 1n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),
@@ -99,6 +201,7 @@ describe('content save queue', () => {
     const kept = attachContentQueue({
       slug: 'stays',
       revision: 1n,
+      machineBaselineRevision: 1n,
       saved: snapshot('A'),
       send: other,
       onState: vi.fn(),
@@ -123,6 +226,7 @@ describe('content save queue', () => {
     const handle = attachContentQueue({
       slug: 'gone',
       revision: 1n,
+      machineBaselineRevision: 1n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),
@@ -141,6 +245,7 @@ describe('content save queue', () => {
     const handle = attachContentQueue({
       slug: 'post',
       revision: 7n,
+      machineBaselineRevision: 7n,
       saved: snapshot('A'),
       send,
       onState: (state) => states.push(state),
@@ -162,6 +267,7 @@ describe('content save queue', () => {
     const handle = attachContentQueue({
       slug: 'post',
       revision: 7n,
+      machineBaselineRevision: 7n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),
@@ -180,6 +286,7 @@ describe('content save queue', () => {
     const handle = attachContentQueue({
       slug: 'post',
       revision: 7n,
+      machineBaselineRevision: 7n,
       saved: snapshot('A'),
       send,
       onState: vi.fn(),

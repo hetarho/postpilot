@@ -75,6 +75,7 @@ export const BlockEditor = forwardRef<
   const autosave = useContentAutosave({
     slug: post.slug,
     revision: post.contentRevision,
+    machineBaselineRevision: post.machineBaselineRevision,
     content,
     valid,
   })
