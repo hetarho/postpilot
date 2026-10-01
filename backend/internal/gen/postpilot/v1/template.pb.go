@@ -1143,6 +1143,86 @@ func (x *EstimateTemplateRequestResponse) GetCredits() int32 {
 	return 0
 }
 
+type CancelTemplateRequestRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelTemplateRequestRequest) Reset() {
+	*x = CancelTemplateRequestRequest{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelTemplateRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelTemplateRequestRequest) ProtoMessage() {}
+
+func (x *CancelTemplateRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelTemplateRequestRequest.ProtoReflect.Descriptor instead.
+func (*CancelTemplateRequestRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CancelTemplateRequestRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type CancelTemplateRequestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelTemplateRequestResponse) Reset() {
+	*x = CancelTemplateRequestResponse{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelTemplateRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelTemplateRequestResponse) ProtoMessage() {}
+
+func (x *CancelTemplateRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelTemplateRequestResponse.ProtoReflect.Descriptor instead.
+func (*CancelTemplateRequestResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{20}
+}
+
 var File_postpilot_v1_template_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_template_proto_rawDesc = "" +
@@ -1243,7 +1323,10 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x04free\x18\x01 \x01(\bR\x04free\x12\x1d\n" +
 	"\acredits\x18\x02 \x01(\x05H\x00R\acredits\x88\x01\x01B\n" +
 	"\n" +
-	"\b_credits2\xd1\x06\n" +
+	"\b_credits\"5\n" +
+	"\x1cCancelTemplateRequestRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\x1f\n" +
+	"\x1dCancelTemplateRequestResponse2\xc5\a\n" +
 	"\x0fTemplateService\x12Z\n" +
 	"\rListTemplates\x12\".postpilot.v1.ListTemplatesRequest\x1a#.postpilot.v1.ListTemplatesResponse\"\x00\x12]\n" +
 	"\x0eCreateTemplate\x12#.postpilot.v1.CreateTemplateRequest\x1a$.postpilot.v1.CreateTemplateResponse\"\x00\x12]\n" +
@@ -1251,7 +1334,8 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x0eDeleteTemplate\x12#.postpilot.v1.DeleteTemplateRequest\x1a$.postpilot.v1.DeleteTemplateResponse\"\x00\x12]\n" +
 	"\x0eGetFormatGuide\x12#.postpilot.v1.GetFormatGuideRequest\x1a$.postpilot.v1.GetFormatGuideResponse\"\x00\x12o\n" +
 	"\x14StartTemplateRequest\x12).postpilot.v1.StartTemplateRequestRequest\x1a*.postpilot.v1.StartTemplateRequestResponse\"\x00\x12{\n" +
-	"\x18GetTemplateRequestResult\x12-.postpilot.v1.GetTemplateRequestResultRequest\x1a..postpilot.v1.GetTemplateRequestResultResponse\"\x00\x12x\n" +
+	"\x18GetTemplateRequestResult\x12-.postpilot.v1.GetTemplateRequestResultRequest\x1a..postpilot.v1.GetTemplateRequestResultResponse\"\x00\x12r\n" +
+	"\x15CancelTemplateRequest\x12*.postpilot.v1.CancelTemplateRequestRequest\x1a+.postpilot.v1.CancelTemplateRequestResponse\"\x00\x12x\n" +
 	"\x17EstimateTemplateRequest\x12,.postpilot.v1.EstimateTemplateRequestRequest\x1a-.postpilot.v1.EstimateTemplateRequestResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
@@ -1266,7 +1350,7 @@ func file_postpilot_v1_template_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_template_proto_rawDescData
 }
 
-var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_postpilot_v1_template_proto_goTypes = []any{
 	(*Template)(nil),                         // 0: postpilot.v1.Template
 	(*TemplateRef)(nil),                      // 1: postpilot.v1.TemplateRef
@@ -1287,19 +1371,21 @@ var file_postpilot_v1_template_proto_goTypes = []any{
 	(*GetTemplateRequestResultResponse)(nil), // 16: postpilot.v1.GetTemplateRequestResultResponse
 	(*EstimateTemplateRequestRequest)(nil),   // 17: postpilot.v1.EstimateTemplateRequestRequest
 	(*EstimateTemplateRequestResponse)(nil),  // 18: postpilot.v1.EstimateTemplateRequestResponse
-	(ContentLanguage)(0),                     // 19: postpilot.v1.ContentLanguage
-	(*ModelRef)(nil),                         // 20: postpilot.v1.ModelRef
+	(*CancelTemplateRequestRequest)(nil),     // 19: postpilot.v1.CancelTemplateRequestRequest
+	(*CancelTemplateRequestResponse)(nil),    // 20: postpilot.v1.CancelTemplateRequestResponse
+	(ContentLanguage)(0),                     // 21: postpilot.v1.ContentLanguage
+	(*ModelRef)(nil),                         // 22: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_template_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.ListTemplatesResponse.templates:type_name -> postpilot.v1.Template
 	0,  // 1: postpilot.v1.CreateTemplateResponse.template:type_name -> postpilot.v1.Template
 	0,  // 2: postpilot.v1.UpdateTemplateResponse.template:type_name -> postpilot.v1.Template
-	19, // 3: postpilot.v1.GetFormatGuideRequest.language:type_name -> postpilot.v1.ContentLanguage
-	20, // 4: postpilot.v1.StartTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
-	19, // 5: postpilot.v1.StartTemplateRequestRequest.language:type_name -> postpilot.v1.ContentLanguage
+	21, // 3: postpilot.v1.GetFormatGuideRequest.language:type_name -> postpilot.v1.ContentLanguage
+	22, // 4: postpilot.v1.StartTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
+	21, // 5: postpilot.v1.StartTemplateRequestRequest.language:type_name -> postpilot.v1.ContentLanguage
 	12, // 6: postpilot.v1.StartTemplateRequestRequest.draft:type_name -> postpilot.v1.TemplateDraft
 	12, // 7: postpilot.v1.GetTemplateRequestResultResponse.draft:type_name -> postpilot.v1.TemplateDraft
-	20, // 8: postpilot.v1.EstimateTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
+	22, // 8: postpilot.v1.EstimateTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
 	2,  // 9: postpilot.v1.TemplateService.ListTemplates:input_type -> postpilot.v1.ListTemplatesRequest
 	4,  // 10: postpilot.v1.TemplateService.CreateTemplate:input_type -> postpilot.v1.CreateTemplateRequest
 	6,  // 11: postpilot.v1.TemplateService.UpdateTemplate:input_type -> postpilot.v1.UpdateTemplateRequest
@@ -1307,17 +1393,19 @@ var file_postpilot_v1_template_proto_depIdxs = []int32{
 	10, // 13: postpilot.v1.TemplateService.GetFormatGuide:input_type -> postpilot.v1.GetFormatGuideRequest
 	13, // 14: postpilot.v1.TemplateService.StartTemplateRequest:input_type -> postpilot.v1.StartTemplateRequestRequest
 	15, // 15: postpilot.v1.TemplateService.GetTemplateRequestResult:input_type -> postpilot.v1.GetTemplateRequestResultRequest
-	17, // 16: postpilot.v1.TemplateService.EstimateTemplateRequest:input_type -> postpilot.v1.EstimateTemplateRequestRequest
-	3,  // 17: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
-	5,  // 18: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
-	7,  // 19: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
-	9,  // 20: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
-	11, // 21: postpilot.v1.TemplateService.GetFormatGuide:output_type -> postpilot.v1.GetFormatGuideResponse
-	14, // 22: postpilot.v1.TemplateService.StartTemplateRequest:output_type -> postpilot.v1.StartTemplateRequestResponse
-	16, // 23: postpilot.v1.TemplateService.GetTemplateRequestResult:output_type -> postpilot.v1.GetTemplateRequestResultResponse
-	18, // 24: postpilot.v1.TemplateService.EstimateTemplateRequest:output_type -> postpilot.v1.EstimateTemplateRequestResponse
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
+	19, // 16: postpilot.v1.TemplateService.CancelTemplateRequest:input_type -> postpilot.v1.CancelTemplateRequestRequest
+	17, // 17: postpilot.v1.TemplateService.EstimateTemplateRequest:input_type -> postpilot.v1.EstimateTemplateRequestRequest
+	3,  // 18: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
+	5,  // 19: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
+	7,  // 20: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
+	9,  // 21: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
+	11, // 22: postpilot.v1.TemplateService.GetFormatGuide:output_type -> postpilot.v1.GetFormatGuideResponse
+	14, // 23: postpilot.v1.TemplateService.StartTemplateRequest:output_type -> postpilot.v1.StartTemplateRequestResponse
+	16, // 24: postpilot.v1.TemplateService.GetTemplateRequestResult:output_type -> postpilot.v1.GetTemplateRequestResultResponse
+	20, // 25: postpilot.v1.TemplateService.CancelTemplateRequest:output_type -> postpilot.v1.CancelTemplateRequestResponse
+	18, // 26: postpilot.v1.TemplateService.EstimateTemplateRequest:output_type -> postpilot.v1.EstimateTemplateRequestResponse
+	18, // [18:27] is the sub-list for method output_type
+	9,  // [9:18] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1341,7 +1429,7 @@ func file_postpilot_v1_template_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_template_proto_rawDesc), len(file_postpilot_v1_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

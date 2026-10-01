@@ -52,6 +52,8 @@ type fakeRequestJobs struct {
 	saved     map[string][]byte
 	payload   []byte
 	payloadEr error
+	cancelled []string
+	cancel    error
 }
 
 func (f *fakeRequestJobs) EnqueueRequest(_ context.Context, job RequestJob) (string, error) {
@@ -60,6 +62,11 @@ func (f *fakeRequestJobs) EnqueueRequest(_ context.Context, job RequestJob) (str
 		return "", f.enqueue
 	}
 	return "job-1", nil
+}
+
+func (f *fakeRequestJobs) CancelRequest(_ context.Context, _, jobID string) error {
+	f.cancelled = append(f.cancelled, jobID)
+	return f.cancel
 }
 
 func (f *fakeRequestJobs) SaveRequestResult(_ context.Context, jobID string, payload []byte) error {

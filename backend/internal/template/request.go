@@ -116,9 +116,11 @@ type RequestSamples interface {
 
 // RequestJobs is the queue as a request uses it. Enqueue answers ErrRequestRunning when the
 // account already has one; Payload answers ErrNotFound for a job that is not the owner's
-// template request and ErrRequestNotReady for one that has not finished well.
+// template request and ErrRequestNotReady for one that has not finished well; Cancel answers
+// ErrNotFound for a job that is not the owner's template request and nothing for a finished one.
 type RequestJobs interface {
 	EnqueueRequest(ctx context.Context, job RequestJob) (string, error)
+	CancelRequest(ctx context.Context, userID, jobID string) error
 	SaveRequestResult(ctx context.Context, jobID string, payload []byte) error
 	RequestPayload(ctx context.Context, userID, jobID string) ([]byte, error)
 }
@@ -292,11 +294,25 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 		if attempt >= r.limits.CorrectionsMax {
 			return &RequestAnswerInvalidError{Cause: checkErr}
 		}
+		// The owner may have stopped the request while the last answer was being written; a
+		// correction is another paid call, so none is sent once they have (TMPL-63).
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		messages = append(messages,
 			llm.Message{Role: llm.RoleAssistant, Parts: []llm.Part{llm.TextPart(response.Text)}},
 			llm.Message{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(correctionMessage(input.Language, checkErr))}},
 		)
 	}
+}
+
+// CancelRequest stops the owner's queued or running request (TMPL-63). Only confirmed usage is
+// charged (QUOTA-49); a request that has already finished is left as it is.
+func (s *Service) CancelRequest(ctx context.Context, userID, jobID string) error {
+	if s.requests == nil {
+		return errRequestsUnwired
+	}
+	return s.requests.jobs.CancelRequest(ctx, userID, jobID)
 }
 
 // RequestResult reads a finished request's answer for its owner.

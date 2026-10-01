@@ -16,6 +16,16 @@ func (s *Store) RequestCancellation(ctx context.Context, user, subject, id strin
 	return err
 }
 
+// RequestOwnedCancellation is RequestCancellation for work with no subject at all.
+func (s *Store) RequestOwnedCancellation(ctx context.Context, user, id string, at time.Time) error {
+	kinds, err := kindsJSON(s.kinds.Cancellable)
+	if err != nil {
+		return err
+	}
+	_, err = s.write.RequestOwnedCancellation(ctx, sqlc.RequestOwnedCancellationParams{ID: id, UserID: user, Now: nullString(formatTime(at)), Kinds: kinds})
+	return err
+}
+
 func (s *Store) RecoverCancellations(ctx context.Context, at time.Time) (int64, error) {
 	kinds, err := kindsJSON(s.kinds.Cancellable)
 	if err != nil {

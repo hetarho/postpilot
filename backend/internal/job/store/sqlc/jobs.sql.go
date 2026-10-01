@@ -804,6 +804,39 @@ func (q *Queries) RequestCancellation(ctx context.Context, arg RequestCancellati
 	return result.RowsAffected()
 }
 
+const requestOwnedCancellation = `-- name: RequestOwnedCancellation :execrows
+UPDATE generation_jobs SET cancel_requested_at=?1, updated_at=?1,
+ status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
+ finished_at=CASE WHEN status='queued' THEN ?1 ELSE finished_at END
+WHERE id=?2 AND user_id=?3
+ AND post_slug IS NULL AND voice_id IS NULL AND clip_project_id IS NULL
+ AND status IN ('queued','running') AND cancel_requested_at IS NULL
+ AND kind IN (SELECT value FROM json_each(?4))
+`
+
+type RequestOwnedCancellationParams struct {
+	Now    sql.NullString
+	ID     string
+	UserID string
+	Kinds  interface{}
+}
+
+// The same request for work that belongs to the account alone: a job with no post, voice or
+// clip project at all, such as a template request. Clip work always names its project, so it
+// never matches here.
+func (q *Queries) RequestOwnedCancellation(ctx context.Context, arg RequestOwnedCancellationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, requestOwnedCancellation,
+		arg.Now,
+		arg.ID,
+		arg.UserID,
+		arg.Kinds,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const saveJobPayload = `-- name: SaveJobPayload :execrows
 UPDATE generation_jobs SET payload = ?, updated_at = ? WHERE id = ? AND status = 'running'
 `

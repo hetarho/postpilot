@@ -54,6 +54,9 @@ const (
 	// TemplateServiceGetTemplateRequestResultProcedure is the fully-qualified name of the
 	// TemplateService's GetTemplateRequestResult RPC.
 	TemplateServiceGetTemplateRequestResultProcedure = "/postpilot.v1.TemplateService/GetTemplateRequestResult"
+	// TemplateServiceCancelTemplateRequestProcedure is the fully-qualified name of the
+	// TemplateService's CancelTemplateRequest RPC.
+	TemplateServiceCancelTemplateRequestProcedure = "/postpilot.v1.TemplateService/CancelTemplateRequest"
 	// TemplateServiceEstimateTemplateRequestProcedure is the fully-qualified name of the
 	// TemplateService's EstimateTemplateRequest RPC.
 	TemplateServiceEstimateTemplateRequestProcedure = "/postpilot.v1.TemplateService/EstimateTemplateRequest"
@@ -73,6 +76,8 @@ type TemplateServiceClient interface {
 	// answer is read once the job is done.
 	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
 	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
+	// Stops the owner's queued or running request; only confirmed usage is charged (TMPL-63).
+	CancelTemplateRequest(context.Context, *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error)
 	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
 	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
 }
@@ -130,6 +135,12 @@ func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
 			connect.WithClientOptions(opts...),
 		),
+		cancelTemplateRequest: connect.NewClient[v1.CancelTemplateRequestRequest, v1.CancelTemplateRequestResponse](
+			httpClient,
+			baseURL+TemplateServiceCancelTemplateRequestProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("CancelTemplateRequest")),
+			connect.WithClientOptions(opts...),
+		),
 		estimateTemplateRequest: connect.NewClient[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse](
 			httpClient,
 			baseURL+TemplateServiceEstimateTemplateRequestProcedure,
@@ -148,6 +159,7 @@ type templateServiceClient struct {
 	getFormatGuide           *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
 	startTemplateRequest     *connect.Client[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse]
 	getTemplateRequestResult *connect.Client[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse]
+	cancelTemplateRequest    *connect.Client[v1.CancelTemplateRequestRequest, v1.CancelTemplateRequestResponse]
 	estimateTemplateRequest  *connect.Client[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse]
 }
 
@@ -186,6 +198,11 @@ func (c *templateServiceClient) GetTemplateRequestResult(ctx context.Context, re
 	return c.getTemplateRequestResult.CallUnary(ctx, req)
 }
 
+// CancelTemplateRequest calls postpilot.v1.TemplateService.CancelTemplateRequest.
+func (c *templateServiceClient) CancelTemplateRequest(ctx context.Context, req *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error) {
+	return c.cancelTemplateRequest.CallUnary(ctx, req)
+}
+
 // EstimateTemplateRequest calls postpilot.v1.TemplateService.EstimateTemplateRequest.
 func (c *templateServiceClient) EstimateTemplateRequest(ctx context.Context, req *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error) {
 	return c.estimateTemplateRequest.CallUnary(ctx, req)
@@ -205,6 +222,8 @@ type TemplateServiceHandler interface {
 	// answer is read once the job is done.
 	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
 	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
+	// Stops the owner's queued or running request; only confirmed usage is charged (TMPL-63).
+	CancelTemplateRequest(context.Context, *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error)
 	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
 	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
 }
@@ -258,6 +277,12 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 		connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	templateServiceCancelTemplateRequestHandler := connect.NewUnaryHandler(
+		TemplateServiceCancelTemplateRequestProcedure,
+		svc.CancelTemplateRequest,
+		connect.WithSchema(templateServiceMethods.ByName("CancelTemplateRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
 	templateServiceEstimateTemplateRequestHandler := connect.NewUnaryHandler(
 		TemplateServiceEstimateTemplateRequestProcedure,
 		svc.EstimateTemplateRequest,
@@ -280,6 +305,8 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 			templateServiceStartTemplateRequestHandler.ServeHTTP(w, r)
 		case TemplateServiceGetTemplateRequestResultProcedure:
 			templateServiceGetTemplateRequestResultHandler.ServeHTTP(w, r)
+		case TemplateServiceCancelTemplateRequestProcedure:
+			templateServiceCancelTemplateRequestHandler.ServeHTTP(w, r)
 		case TemplateServiceEstimateTemplateRequestProcedure:
 			templateServiceEstimateTemplateRequestHandler.ServeHTTP(w, r)
 		default:
@@ -317,6 +344,10 @@ func (UnimplementedTemplateServiceHandler) StartTemplateRequest(context.Context,
 
 func (UnimplementedTemplateServiceHandler) GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetTemplateRequestResult is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) CancelTemplateRequest(context.Context, *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.CancelTemplateRequest is not implemented"))
 }
 
 func (UnimplementedTemplateServiceHandler) EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error) {

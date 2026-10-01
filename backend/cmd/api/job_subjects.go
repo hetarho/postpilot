@@ -16,7 +16,7 @@ import (
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
 		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest},
 		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 	}
 }
@@ -27,6 +27,30 @@ func jobKinds() jobstore.Kinds {
 func approvedCeilingKinds() []string {
 	return []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline}
 }
+
+// ownerCancellableKinds is work admitted without an approved ceiling that its owner may still
+// stop: the template request (TMPL-63). Its settlement charges confirmed usage only (QUOTA-49).
+func ownerCancellableKinds() []string { return []string{job.KindTemplateRequest} }
+
+// jobCancellation is the one rule the queue asks before it accepts a stop: the clip work below,
+// and a template request under the cancellation policy it was enqueued with. A template request
+// belongs to the account alone, so it is stopped through CancelOwned and never through a project.
+type jobCancellation struct{ clip clipCancellation }
+
+func (c jobCancellation) Kind(kind string) bool {
+	return kind == job.KindTemplateRequest || c.clip.Kind(kind)
+}
+
+func (c jobCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
+	if kind == job.KindTemplateRequest {
+		return cancellationPolicyVersion == templateRequestCancellationPolicy
+	}
+	return c.clip.Allowed(kind, cancellationPolicyVersion)
+}
+
+// templateRequestCancellationPolicy is the one cancellation policy version the queue honours,
+// carried by every template request it holds.
+const templateRequestCancellationPolicy = 1
 
 // clipCancellation is the rule the queue asks before it accepts a stop: a render and a
 // browser render's sampling may always be stopped because they spend nothing, and

@@ -24,6 +24,11 @@ type CancellationStore interface {
 	RecoverCancellations(ctx context.Context, now time.Time) (int64, error)
 }
 
+// OwnedCancellationStore is the request write for work that belongs to the account alone.
+type OwnedCancellationStore interface {
+	RequestOwnedCancellation(ctx context.Context, user, id string, now time.Time) error
+}
+
 // Cancel first commits the request, then signals its local handler. Queued work has no
 // handler, so its conditional request write is also the terminal write.
 func (q *Queue) Cancel(ctx context.Context, user string, subject Subject, id string) (*JobSummary, error) {
@@ -45,11 +50,42 @@ func (q *Queue) Cancel(ctx context.Context, user string, subject Subject, id str
 		return nil, ErrCancellationUnavailable
 	}
 	requestErr := s.RequestCancellation(ctx, user, subject.ID, id, q.now())
+	return q.resolveCancellation(ctx, id, requestErr)
+}
+
+// CancelOwned is Cancel for work that belongs to the account alone — a job with no subject at
+// all, such as a template request (TMPL-63). Clip work always names its project, so it never
+// passes here; it is stopped through Cancel with that project.
+func (q *Queue) CancelOwned(ctx context.Context, user, id string) (*JobSummary, error) {
+	s, ok := q.store.(OwnedCancellationStore)
+	if !ok || q.cancellation == nil {
+		return nil, ErrCancellationUnavailable
+	}
+	j, err := q.store.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if j.UserID != user || len(j.Subjects) != 0 || !q.cancellation.Kind(j.Kind) {
+		return nil, ErrNotFound
+	}
+	if Terminal(j.Status) {
+		return q.summarize(j), nil
+	}
+	if !q.cancellation.Allowed(j.Kind, j.CancellationPolicyVersion) {
+		return nil, ErrCancellationUnavailable
+	}
+	requestErr := s.RequestOwnedCancellation(ctx, user, id, q.now())
+	return q.resolveCancellation(ctx, id, requestErr)
+}
+
+// resolveCancellation reads back what the request wrote, signals a running handler, and
+// settles work the request itself finished.
+func (q *Queue) resolveCancellation(ctx context.Context, id string, requestErr error) (*JobSummary, error) {
 	// A lost response is not proof of rollback. Resolve the durable request before
 	// signalling or reporting an accepted request to the caller.
 	readCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
 	defer stop()
-	j, err = q.store.GetByID(readCtx, id)
+	j, err := q.store.GetByID(readCtx, id)
 	if err != nil {
 		return nil, errors.Join(requestErr, err)
 	}
@@ -76,7 +112,7 @@ func (q *Queue) Cancel(ctx context.Context, user string, subject Subject, id str
 		}
 		if j.FinishedAt != nil {
 			if err := q.notifyTerminal(readCtx, j, *j.FinishedAt); err != nil {
-				slog.Warn("cancelled clip resource release pending recovery", "job", id)
+				slog.Warn("cancelled job resource release pending recovery", "job", id)
 			}
 		}
 	}

@@ -100,6 +100,8 @@ func (a templateRequestJobs) EnqueueRequest(ctx context.Context, request templat
 	// No subject and no guard: the queue's unattached rule keeps one per account and kind.
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindTemplateRequest, UserID: request.UserID, WriteModel: request.WriteModel, Payload: request.Payload,
+		// The owner may stop it (TMPL-63), under the one policy the queue honours.
+		CancellationPolicyVersion: templateRequestCancellationPolicy,
 		PricingCalls: []job.PlannedCall{{
 			Ref: request.WriteModel, Stage: llm.StageNameWrite, Count: request.Calls, CompletionTokens: request.CompletionTokens,
 		}},
@@ -108,6 +110,25 @@ func (a templateRequestJobs) EnqueueRequest(ctx context.Context, request templat
 		return "", template.ErrRequestRunning
 	}
 	return id, err
+}
+
+// CancelRequest stops the owner's queued or running request; a finished one is left as it is.
+func (a templateRequestJobs) CancelRequest(ctx context.Context, userID, jobID string) error {
+	found, err := a.queue.Result(ctx, userID, jobID)
+	if err != nil {
+		if errors.Is(err, job.ErrNotFound) {
+			return template.ErrNotFound
+		}
+		return err
+	}
+	if found.Kind != job.KindTemplateRequest {
+		return template.ErrNotFound
+	}
+	_, err = a.queue.CancelOwned(ctx, userID, jobID)
+	if errors.Is(err, job.ErrNotFound) {
+		return template.ErrNotFound
+	}
+	return err
 }
 
 func (a templateRequestJobs) SaveRequestResult(ctx context.Context, jobID string, payload []byte) error {

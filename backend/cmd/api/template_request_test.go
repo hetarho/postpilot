@@ -32,6 +32,9 @@ type requestHarness struct {
 type stubRequestModels struct {
 	answers []string
 	calls   int
+	// entered and release hold the first call open, so a test can cancel while it runs.
+	entered chan struct{}
+	release chan struct{}
 }
 
 func (s *stubRequestModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
@@ -41,6 +44,10 @@ func (s *stubRequestModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
 func (s *stubRequestModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
 	answer := s.answers[min(s.calls, len(s.answers)-1)]
 	s.calls++
+	if s.entered != nil && s.calls == 1 {
+		close(s.entered)
+		<-s.release
+	}
 	return llm.Response{Text: answer, FinishReason: "stop"}, nil
 }
 
@@ -69,6 +76,7 @@ func newRequestHarness(t *testing.T) *requestHarness {
 	queue := job.New(jobstore.New(d.Writer, d.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
 	admit := &stubAdmitter{}
 	queue.Admit(admit)
+	queue.AllowCancellation(jobCancellation{})
 	models := &stubRequestModels{answers: []string{`{"name":"맛집 리뷰","description":"","title_area":"","body":"<write>방문 이유</write>","wishes":["친근하게"]}`}}
 	service := template.NewService(templatestore.New(d.Writer, d.Reader), template.NewLimits(template.Ceilings{
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
@@ -214,5 +222,110 @@ func TestTemplateEstimatesPriceOneCallAtTheCatalog(t *testing.T) {
 	}
 	if _, ok := (templateEstimates{rates: stubRates{err: errors.New("no rate")}}).CallCredits(context.Background(), info, 6_000, 3_000); ok {
 		t.Fatal("a missing rate produced a figure")
+	}
+}
+
+func (h *requestHarness) work(t *testing.T) {
+	t.Helper()
+	h.queue.Register(job.KindTemplateRequest, func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return h.service.RunRequest(ctx, template.RequestRun{
+			ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload,
+		}, progress)
+	})
+	workerCtx, stop := context.WithCancel(context.Background())
+	t.Cleanup(stop)
+	go h.queue.Run(workerCtx)
+}
+
+func (h *requestHarness) waitTerminal(t *testing.T, id string) string {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		summary, err := h.queue.Get(context.Background(), id, "alice")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if job.Terminal(summary.Status) {
+			return summary.Status
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("job %s did not finish: %+v", id, summary)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// TMPL-63: a queued request stops at once, makes no call and leaves nothing to read.
+func TestTemplateRequestCancelledWhileQueuedMakesNoCall(t *testing.T) {
+	h := newRequestHarness(t)
+	ctx := context.Background()
+	id, err := h.start(t, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.service.CancelRequest(ctx, "alice", id); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := h.queue.Get(ctx, id, "alice")
+	if err != nil || summary.Status != job.StatusCancelled {
+		t.Fatalf("status = %v, %v", summary, err)
+	}
+	h.work(t)
+	time.Sleep(50 * time.Millisecond)
+	if h.models.calls != 0 {
+		t.Fatalf("a cancelled request called the model %d times", h.models.calls)
+	}
+	if _, err := h.service.RequestResult(ctx, "alice", id); !errors.Is(err, template.ErrRequestNotReady) {
+		t.Fatalf("result of a cancelled request = %v", err)
+	}
+}
+
+// A running request stops before its next paid call: the answer in flight is the last one.
+func TestTemplateRequestCancelledWhileRunningSendsNoCorrection(t *testing.T) {
+	h := newRequestHarness(t)
+	ctx := context.Background()
+	h.models.answers = []string{"not json"}
+	h.models.entered, h.models.release = make(chan struct{}), make(chan struct{})
+	id, err := h.start(t, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.work(t)
+	<-h.models.entered
+	if err := h.service.CancelRequest(ctx, "alice", id); err != nil {
+		t.Fatal(err)
+	}
+	close(h.models.release)
+	if status := h.waitTerminal(t, id); status != job.StatusCancelled {
+		t.Fatalf("status = %s, want cancelled", status)
+	}
+	if h.models.calls != 1 {
+		t.Fatalf("calls = %d: a correction followed the cancellation", h.models.calls)
+	}
+}
+
+// A finished request is left as it is, and another account cannot reach it.
+func TestTemplateRequestCancelAfterItFinishedChangesNothing(t *testing.T) {
+	h := newRequestHarness(t)
+	ctx := context.Background()
+	id, err := h.start(t, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.work(t)
+	if status := h.waitTerminal(t, id); status != job.StatusDone {
+		t.Fatalf("status = %s", status)
+	}
+	if err := h.service.CancelRequest(ctx, "alice", id); err != nil {
+		t.Fatalf("cancel after done = %v", err)
+	}
+	if summary, _ := h.queue.Get(ctx, id, "alice"); summary.Status != job.StatusDone {
+		t.Fatalf("status after a late cancel = %s", summary.Status)
+	}
+	if _, err := h.service.RequestResult(ctx, "alice", id); err != nil {
+		t.Fatalf("the result was lost: %v", err)
+	}
+	if err := h.service.CancelRequest(ctx, "bob", id); !errors.Is(err, template.ErrNotFound) {
+		t.Fatalf("another account's cancel = %v, want ErrNotFound", err)
 	}
 }

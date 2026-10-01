@@ -31,6 +31,8 @@ service TemplateService {
   // answer is read once the job is done.
   rpc StartTemplateRequest(StartTemplateRequestRequest) returns (StartTemplateRequestResponse) {}
   rpc GetTemplateRequestResult(GetTemplateRequestResultRequest) returns (GetTemplateRequestResultResponse) {}
+  // Stops the owner's queued or running request; only confirmed usage is charged (TMPL-63).
+  rpc CancelTemplateRequest(CancelTemplateRequestRequest) returns (CancelTemplateRequestResponse) {}
   // What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
   rpc EstimateTemplateRequest(EstimateTemplateRequestRequest) returns (EstimateTemplateRequestResponse) {}
 }
@@ -175,3 +177,9 @@ message EstimateTemplateRequestResponse {
   // About this many credits for one request; never a quote.
   optional int32 credits = 2;
 }
+
+message CancelTemplateRequestRequest {
+  string job_id = 1;
+}
+
+message CancelTemplateRequestResponse {}

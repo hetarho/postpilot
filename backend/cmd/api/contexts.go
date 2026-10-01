@@ -101,7 +101,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c := &contexts{platform: p}
 
 	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})
-	c.jobs.AllowCancellation(clipCancellation{})
+	c.jobs.AllowCancellation(jobCancellation{})
 
 	// auth ↔ ledger is a genuine cycle: the ledger's monthly windows anchor on the account
 	// (and its subscription), and a tier upgrade owes the ledger credits (QUOTA-35). auth is
@@ -151,7 +151,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			return usageExports{clipstore.NewTx(tx)}
 		}), registry,
 		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
-	).WithModelGrades().WithRateSelector(usage.NewRateSelector(
+	).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithRateSelector(usage.NewRateSelector(
 		officialRate,
 		usagestore.New(handle.Writer, handle.Reader),
 	))

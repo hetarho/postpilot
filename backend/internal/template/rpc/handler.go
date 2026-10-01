@@ -133,6 +133,19 @@ func (h *Handler) StartTemplateRequest(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&postpilotv1.StartTemplateRequestResponse{JobId: jobID}), nil
 }
 
+// CancelTemplateRequest stops the owner's queued or running request (TMPL-63); a finished one
+// answers OK and changes nothing, since the editor discards its result anyway.
+func (h *Handler) CancelTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.CancelTemplateRequestRequest]) (*connect.Response[postpilotv1.CancelTemplateRequestResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.service.CancelRequest(ctx, userID, req.Msg.GetJobId()); err != nil {
+		return nil, toConnectError("cancel template request", err)
+	}
+	return connect.NewResponse(&postpilotv1.CancelTemplateRequestResponse{}), nil
+}
+
 // GetTemplateRequestResult reads a finished request's answer for its owner.
 func (h *Handler) GetTemplateRequestResult(ctx context.Context, req *connect.Request[postpilotv1.GetTemplateRequestResultRequest]) (*connect.Response[postpilotv1.GetTemplateRequestResultResponse], error) {
 	userID, err := actingUser(ctx)

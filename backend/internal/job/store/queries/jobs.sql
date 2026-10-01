@@ -154,6 +154,17 @@ UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.ar
 WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND clip_project_id=sqlc.arg(project_id)
  AND status IN ('queued','running') AND cancel_requested_at IS NULL
  AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
+-- name: RequestOwnedCancellation :execrows
+-- The same request for work that belongs to the account alone: a job with no post, voice or
+-- clip project at all, such as a template request. Clip work always names its project, so it
+-- never matches here.
+UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.arg(now),
+ status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
+ finished_at=CASE WHEN status='queued' THEN sqlc.arg(now) ELSE finished_at END
+WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id)
+ AND post_slug IS NULL AND voice_id IS NULL AND clip_project_id IS NULL
+ AND status IN ('queued','running') AND cancel_requested_at IS NULL
+ AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
 -- name: RecoverCancellations :execrows
 UPDATE generation_jobs SET status='cancelled',finished_at=sqlc.arg(now),updated_at=sqlc.arg(now),
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL

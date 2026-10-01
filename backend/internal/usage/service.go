@@ -48,6 +48,10 @@ type Service struct {
 	// product asked for it.
 	approvedKinds map[string]bool
 
+	// ownerCancellableKinds is work that holds no approved ceiling yet may still be stopped by
+	// its owner (TMPL-63). The composition root names it, as it names approvedKinds.
+	ownerCancellableKinds map[string]bool
+
 	// maxCompletionTokens is the same cap the registry sends on a call that sets none. It is
 	// only a fallback for a planned call whose caller did not declare a stage budget.
 	maxCompletionTokens int64
@@ -56,6 +60,26 @@ type Service struct {
 	// is a calendar boundary, so the only way to exercise one is to move the clock.
 	now   func() time.Time
 	newID func() string
+}
+
+// WithOwnerCancellation lets an owner stop work of these kinds although it was admitted without
+// an approved ceiling; its settlement then charges confirmed usage only and returns the rest of
+// the hold, with no cancellation fee (QUOTA-49).
+func (s *Service) WithOwnerCancellation(kinds ...string) *Service {
+	s.ownerCancellableKinds = make(map[string]bool, len(kinds))
+	for _, kind := range kinds {
+		s.ownerCancellableKinds[kind] = true
+	}
+	return s
+}
+
+// cancellable reports whether an admission may settle as cancelled: approved work under the
+// cancellation policy it was approved with, or unapproved work of a kind its owner may stop.
+func (s *Service) cancellable(admission Admission) bool {
+	if admission.ApprovedMaxCredits != nil {
+		return admission.CancellationPolicyVersion == 1
+	}
+	return s.ownerCancellableKinds[admission.Kind]
 }
 
 // WithModelGrades enforces the code-owned free/paid classification for every
@@ -834,7 +858,7 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 		if !found {
 			return nil
 		}
-		if outcome == OutcomeCancelled && (admission.ApprovedMaxCredits == nil || admission.CancellationPolicyVersion != 1) {
+		if outcome == OutcomeCancelled && !s.cancellable(admission) {
 			return ErrSettlementOutcome
 		}
 

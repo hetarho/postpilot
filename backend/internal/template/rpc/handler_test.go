@@ -291,6 +291,7 @@ func (j rpcJobs) EnqueueRequest(context.Context, template.RequestJob) (string, e
 	return "job-1", j.enqueue
 }
 func (rpcJobs) SaveRequestResult(context.Context, string, []byte) error { return nil }
+func (j rpcJobs) CancelRequest(context.Context, string, string) error   { return j.read }
 func (j rpcJobs) RequestPayload(context.Context, string, string) ([]byte, error) {
 	return j.payload, j.read
 }
