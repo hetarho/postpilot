@@ -21,7 +21,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 14 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ | 0 |
+| ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 29 | 29 | - | 0 |
 | POST | 26 | 26 | - | 0 |
@@ -69,10 +69,12 @@
 | T506 | Show ranked-comparison Elo on the model leaderboard | MODEL | T502 T504 | todo |
 
 ## next
-- next: implement-task T499 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ remain pending separately.
+- next: implement-task T499 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 create-architecture ARCH r15: explicit editor-two and model-lab-two-to-five fan-out align I3 with MODEL-75
+- 261001 create-architecture ARCH start: align explicit comparison fan-out invariant with two-to-five candidate model lab
 - 261001 create-task MODEL r26 → refreshed T499–T506 for complete rankings with ties, result actions and normalized Elo
 - 261001 create-task MODEL r26 start: refresh T499–T506 for complete rankings and Elo
 - 261001 update-ssot MODEL r26: complete rankings with ties and normalized multi-candidate Elo; legacy outcomes remain in replay
