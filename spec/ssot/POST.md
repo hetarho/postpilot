@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r26 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r27 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -103,6 +103,7 @@
 - POST-69 [o] a narrowing that matches nothing says so as page text naming what is narrowing and offering 초기화, worded differently from an account holding no posts at all; neither state is a card or an illustration (→THEME-29)
 - POST-71 [o] `기억 사용` is a labelled checkbox in the writing brief, default off, saved with the brief's run options (→POST-89) as an option save that changes no status, revision or baseline (→MEM-18)
 - POST-72 [o] ③ carries `기억으로 저장`, enabled whenever canonical content exists: it starts the extraction job (→MEM-13), and its candidates open in the shared `Sheet` as a checkbox list the user confirms, a bottom sheet below `sm:` ← the shape 지침 후보 and every other list-you-approve already use; a refusal or failure renders in place and the post is untouched
+- POST-103 [o] ③ carries `이 글 형식으로 템플릿 만들기` beside `기억으로 저장`, enabled whenever canonical content exists: it opens a new template with this post attached as its sample (→TMPL-64), starts no request and changes nothing on the post ← like 기억으로 저장, it takes something reusable out of a finished post
 - POST-70 [o] assigning a template seeds the post's two generation options (→TMPL-48):
   - the copied values are stored and shown like typed ones and nothing records that a template wrote them
   - the write shares the assignment's transaction so a refused assignment seeds nothing and no separate options call is made
@@ -158,4 +159,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
--
+- r27 261001 POST-103+ 이 글 형식으로 템플릿 만들기 on ③

@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r29 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r30 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -30,7 +30,7 @@
   - daily, monthly bonus, voucher and compensation credits participate by their actual expiry, so a sooner-expiring voucher may precede a daily grant
   - expired remainders stay in history and never roll over; unused daily allowance does not accumulate and requires no login claim
   - paid grants renew once per eligible window under QUOTA-37, atomically with balance/admission operations
-- QUOTA-13 [o] every LLM-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, and a post's storyline jobs →GEN-68 →GEN-69) passes one gate at the shared enqueue seam (`job.Queue.Enqueue`, a consumer-declared Admitter port wired in `cmd/api`); one comparison is one admission even when it fans out to two to five candidates, and its reservation includes every planned candidate call plus any shared preparation calls (→GEN-29); clip preparation is the explicitly bounded exception in QUOTA-43
+- QUOTA-13 [o] every LLM-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, a post's storyline jobs →GEN-68 →GEN-69, and a template request →TMPL-58) passes one gate at the shared enqueue seam (`job.Queue.Enqueue`, a consumer-declared Admitter port wired in `cmd/api`); one comparison is one admission even when it fans out to two to five candidates, and its reservation includes every planned candidate call plus any shared preparation calls (→GEN-29); clip preparation is the explicitly bounded exception in QUOTA-43
 - QUOTA-14 [o] hold: price every planned call at its worst case — an assumed 30 000-token prompt (`holdInputTokens`), except clips freeze each stage's enforceable input allowance under QUOTA-53, at the model's input price plus that call's own completion budget at its output price — run the total through the charge formula, and deduct it from the lots in consumption order, inside one `BEGIN IMMEDIATE` transaction with the admission row, before the job row exists except for QUOTA-43's clip preparation; the owning service states the call count ← only it knows that observation batches photos per call
 - QUOTA-15 [o] terminal settlement is once-only against the persisted usage ledger; return unused reservation to its original lots and preserve their original expiries (→QUOTA-61).
   - a non-clip overrun may spend remaining eligible admission-period funds down to zero without debt, never a new period's grant
@@ -141,6 +141,9 @@
   - shown on the `/ai-models` stage selectors and comparison candidates (the stage figure), on post creation (the selected pair's figure and how many posts the balance covers) and in `/plans`' below-card post comparison (→QUOTA-36)
   - labelled 최근 사용량 기준 or 예상; figures may lag the window by up to one day; free models show provider-limited availability instead (→QUOTA-56)
   - an estimate is never a quote: admission, reservation and settlement stay authoritative
+- QUOTA-67 [o] a template request (→TMPL-58) is one admission whose reservation plans its first call and `TEMPLATE_REQUEST_CORRECTIONS_MAX` corrections, each priced as QUOTA-14 and QUOTA-32 price a call; every issued call is metered, unused correction allowance returns under settlement and cancellation (→QUOTA-49), and a request that fails charges confirmed usage only (→QUOTA-46) ← the corrections are bounded, so the reservation can cover them as clip composition's do (→QUOTA-54)
+  - the editor's 약 n 크레딧 is the catalog-based estimate of one call on the 글 작성 모델 (→QUOTA-40), a free model shows 무료, and no recent-usage figure exists for it ← QUOTA-64's figures are credits per post from `generate` jobs, which say nothing about one request
+  - the figure is never a quote: admission, reservation and settlement stay authoritative, and it carries no conversion or cost (→QUOTA-65)
 - QUOTA-65 [o] the credit↔KRW conversion is internal: a non-master user sees credit amounts and the fixed KRW retail prices (→QUOTA-7 →QUOTA-34) only ← credits must read as the user's own balance, never as a cost to re-check against what they paid
   - no non-master response, screen, copy, mail or error states a KRW-per-credit or AI-cost value, the KRW/USD reference or applied rate, the charge formula or a temporary-rate status
   - master keeps them on operator surfaces (job accounting, shadow amounts, rate audit)
@@ -175,4 +178,4 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
--
+- r30 261001 QUOTA-13✎ gated starts …storyline jobs→…storyline jobs, a template request · QUOTA-67+ template request reservation with bounded corrections and a one-call catalog estimate

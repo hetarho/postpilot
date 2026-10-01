@@ -17,18 +17,19 @@
 | storyline-first | converted@260927 |
 | voice-tidy | converted@260929 |
 | daily-credit-plans | converted@260929 |
+| template-from-request | converted@261001 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 29 | 29 | - | 0 |
-| POST | 26 | 26 | - | 0 |
+| QUOTA | 30 | 30 | - | 0 |
+| POST | 27 | 27 | - | 0 |
 | VOICE | 5 | 5 | - | 0 |
 | GEN | 20 | 20 | - | 0 |
-| MODEL | 26 | 26 | - | 0 |
-| TMPL | 17 | 17 | - | 1 |
+| MODEL | 27 | 27 | - | 0 |
+| TMPL | 18 | 18 | - | 1 |
 | GUIDE | 12 | 12 | - | 0 |
 | EXPORT | 6 | 6 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
@@ -66,12 +67,25 @@
 | T504 | Rank every successful comparison candidate with optional ties | MODEL | T503 | todo |
 | T505 | Apply or adopt an explicit candidate after ranking | MODEL GEN POST | T504 | todo |
 | T506 | Show ranked-comparison Elo on the model leaderboard | MODEL | T502 T504 | todo |
+| T507 | Serve the 형식 안내 from the backend | TMPL | - | todo |
+| T508 | Run a template request on the 글 작성 모델 | TMPL QUOTA MODEL POST | T507 | todo |
+| T509 | Cancel a running template request | TMPL QUOTA | T508 | todo |
+| T510 | Quote one template request in credits | QUOTA TMPL | T508 | todo |
+| T511 | Show a live placeholder preview beside the template composition | TMPL | - | todo |
+| T512 | Ask the 글 작성 모델 from the template editor, and start a template from a post | TMPL POST QUOTA | T508 T509 T510 T511 | todo |
 
 ## next
 - next: implement-task T500 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
+- implement-task T507 then T508 → T509/T510 → T512 for the template request; T511 (preview) has no dependency and can run beside them; T499–T506 touch MODEL GEN POST QUOTA in parallel; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 create-task TMPL r18 QUOTA r30 POST r27 MODEL r27 → T507–T512 (backend 형식 안내, template request job, cancellation, estimate, live preview, request box and ③ entry); TMPL-6✎ amended in r18 to mirror TEMPLATE_MAX_PER_ACCOUNT
+- 261001 create-task TMPL QUOTA POST MODEL start: template request, from a post, live preview, backend-owned 형식 안내
+- 261001 update-ssot TMPL r18 QUOTA r30 POST r27 MODEL r27: template request (TMPL-58–TMPL-63), from a post (TMPL-64 POST-103), live preview (TMPL-65–TMPL-67), backend-owned 형식 안내 (TMPL-41✎); ideation template-from-request converted
+- 261001 warn: MODEL r27 touches MODEL-9 MODEL-14 only, outside T499 (doing) and T500–T506
+- 261001 update-ssot TMPL start: in-app template request, entry from a post, live preview, one shared 형식 안내 (ideation template-from-request)
+- 261001 ideation template-from-request ready: in-app template request (input, fields, follow-up, correction, undo, cost, entry from a post) and a live placeholder preview
 - 261001 T499 done: optional lab candidates saved atomically; full FE/BE and project checks passed
 - 261001 T499 freshness: MODEL@26→27 changed template-request effort and stage use only; lab candidate contract unchanged
 - 261001 T499 claimed (mc): optional model lab candidate persistence
@@ -86,9 +100,3 @@
 - 261001 update-ssot MODEL r25: lab candidates two to five, independent candidate ratings, rating-based leaderboard and historical compatibility
 - 261001 update-ssot POST r26: applied comparison candidate owns the canonical result; published content stays locked
 - 261001 update-ssot POST start: candidate application semantics
-- 261001 update-ssot QUOTA r29: one comparison admission reserves every selected candidate call
-- 261001 update-ssot QUOTA start: candidate fan-out reservation and ledger
-- 261001 update-ssot GEN r20: editor two and lab two to five comparison candidates share one snapshot and reserve every call
-- 261001 update-ssot GEN start: comparison fan-out and result application
-- 261001 update-ssot MODEL start: compare up to five model candidates with one input
-- 260930 T497 done: period selector, checkout term handoff and card-registration return; full FE/BE and project checks passed
