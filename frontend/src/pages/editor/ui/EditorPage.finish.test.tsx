@@ -164,11 +164,11 @@ describe('the post language', () => {
   })
 })
 
-// POST-54, POST-72: ③ is what the finished post is for — 기억으로 저장, the manual export and the
-// 발행 URL field at its foot — and nothing else. 말투 학습 and 문장 의견 left it with learning from
+// POST-54, POST-72, POST-103: ③ is what the finished post is for — 기억으로 저장 and 이 글 형식으로
+// 템플릿 만들기 side by side, the manual export and the 발행 URL field at its foot — and nothing else. 말투 학습 and 문장 의견 left it with learning from
 // finalized posts (VOICE r5): a finalized post teaches its voice nothing.
 describe('the finish panel', () => {
-  it('holds 기억으로 저장, the export and the 발행 URL field in that order, and no learning', async () => {
+  it('holds 기억으로 저장, the template link, the export and the 발행 URL field in that order, and no learning', async () => {
     const calls: string[] = []
     renderAppAt('/posts/20260820-final', {
       user: USER,
@@ -179,10 +179,14 @@ describe('the finish panel', () => {
     // A finalized post opens on 글 완성.
     const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
     const memories = await within(panel).findByRole('button', { name: '기억으로 저장' })
+    const templateLink = within(panel).getByRole('link', { name: '이 글 형식으로 템플릿 만들기' })
     const exportHeading = within(panel).getByRole('heading', { name: '내보내기' })
     const publish = within(panel).getByRole('region', { name: '발행' })
     const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING
-    expect(memories.compareDocumentPosition(exportHeading) & FOLLOWING).toBeTruthy()
+    // The link opens a new template with this post as its sample, and starts nothing (POST-103).
+    expect(templateLink).toHaveAttribute('href', '/templates/new?from=20260820-final')
+    expect(memories.compareDocumentPosition(templateLink) & FOLLOWING).toBeTruthy()
+    expect(templateLink.compareDocumentPosition(exportHeading) & FOLLOWING).toBeTruthy()
     expect(exportHeading.compareDocumentPosition(publish) & FOLLOWING).toBeTruthy()
 
     expect(within(panel).queryByRole('heading', { name: '말투 학습' })).not.toBeInTheDocument()
@@ -190,6 +194,7 @@ describe('the finish panel', () => {
       expect(screen.queryByRole('button', { name: gone })).not.toBeInTheDocument()
     }
     expect(calls.filter((call) => /Learn|Feedback|Validation|Comparison/.test(call))).toEqual([])
+    expect(calls).not.toContain('StartTemplateRequest')
   })
 })
 

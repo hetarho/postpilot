@@ -284,8 +284,19 @@ describe('the template screen', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요.')
 
-    const allowed = ['GetMe', 'GetMyPlan', 'ListTemplates', 'UpdateTemplate']
+    // The request box reads the 글 작성 모델 and one request's estimate; nothing here starts a
+    // request or any other job (TMPL-16: the request is the one surface that does, on a press).
+    const allowed = [
+      'GetMe',
+      'GetMyPlan',
+      'ListTemplates',
+      'UpdateTemplate',
+      'ListModels',
+      'GetSelections',
+      'EstimateTemplateRequest',
+    ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
+    expect(calls).not.toContain('StartTemplateRequest')
   })
 
   // TMPL-42: import IS pasting. What the AI wrote is what gets stored — byte for byte, outer

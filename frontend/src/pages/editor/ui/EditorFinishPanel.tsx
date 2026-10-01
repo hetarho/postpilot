@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from '@tanstack/react-router'
 import type { PostDraft } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
 import { ExtractMemoriesButton } from '@/features/extract-memories'
 import { PublishedUrlField } from '@/features/record-published-url'
-import { Notice } from '@/shared/ui'
+import { Notice, buttonStyles } from '@/shared/ui'
 import { ExportPanel } from '@/widgets/export-panel'
 import { EmptyStep } from './EmptyStep'
 
@@ -36,14 +37,26 @@ export function EditorFinishPanel({
     <>
       {/* Enabled by the same thing that makes this step exist: canonical content (POST-72). It
           proposes; nothing is stored until the user checks a row. */}
-      {ownerId && (
-        <ExtractMemoriesButton
-          ownerId={ownerId}
-          postSlug={post.slug}
-          hasContent={Boolean(post.content)}
-          className="mt-10"
-        />
-      )}
+      {/* The two things a finished post can be turned into for later, side by side (POST-72,
+          POST-103). The template link starts nothing: the owner sends the request themselves. */}
+      <div className="mt-10 flex flex-wrap items-start gap-2">
+        {ownerId && (
+          <ExtractMemoriesButton
+            ownerId={ownerId}
+            postSlug={post.slug}
+            hasContent={Boolean(post.content)}
+          />
+        )}
+        {post.content && (
+          <Link
+            to="/templates/new"
+            search={{ from: post.slug }}
+            className={buttonStyles({ variant: 'secondary' })}
+          >
+            {t('editor.templateFromPost')}
+          </Link>
+        )}
+      </div>
       {post.contentLanguage ? (
         <ExportPanel
           videos={post.videos}

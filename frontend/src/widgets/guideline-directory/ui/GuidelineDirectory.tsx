@@ -52,7 +52,16 @@ import {
  *
  *  Nothing on this screen calls a model or enqueues a job: a guideline is authored text, and
  *  reading, editing or deleting one is a plain CRUD round trip ([I5]). */
-export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
+export function GuidelineDirectory({
+  kind,
+  createOpen = false,
+  onCreateClosed,
+}: {
+  kind: GuidelineKind
+  /** Open an empty new guideline once, as the screen mounts (TMPL-61's 지침 만들기). */
+  createOpen?: boolean
+  onCreateClosed?: () => void
+}) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -132,7 +141,12 @@ export function GuidelineDirectory({ kind }: { kind: GuidelineKind }) {
             className="mt-auto flex gap-2"
           >
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-            <CreateGuidelineSheet ownerId={ownerId} kind={kind} />
+            <CreateGuidelineSheet
+              ownerId={ownerId}
+              kind={kind}
+              initialOpen={createOpen}
+              onClosed={onCreateClosed}
+            />
           </ActionBar>
         </>
       )}

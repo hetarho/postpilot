@@ -1154,3 +1154,20 @@ describe('the guideline candidate section', () => {
     expect(queryClient.getQueryData(['guideline-candidates', transport, USER.id])).toBeDefined()
   })
 })
+
+// TMPL-61: the template request's 지침 만들기 lands here with `?new=1`, which opens an empty new
+// guideline at once; closing it drops the parameter so a reload does not open it again.
+describe('/guidelines?new=1', () => {
+  it('opens an empty new guideline and drops the parameter on close', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/guidelines?new=1', { user: USER })
+    const sheet = await screen.findByRole('dialog', { name: '새 지침' })
+    expect(within(sheet).getByLabelText('지침')).toHaveValue('')
+
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: '새 지침' })).not.toBeInTheDocument(),
+    )
+    await waitFor(() => expect(router.state.location.search).toEqual({}))
+  })
+})

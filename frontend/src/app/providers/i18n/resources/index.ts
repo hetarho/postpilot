@@ -102,6 +102,7 @@ import { i18n as renameVoiceI18n } from '@/features/rename-voice/config/i18n'
 import { i18n as reviewGuidelineCandidateI18n } from '@/features/review-guideline-candidate/config/i18n'
 import { i18n as reviewModelExperimentI18n } from '@/features/review-model-experiment/config/i18n'
 import { i18n as selectPostTemplateI18n } from '@/features/select-post-template/config/i18n'
+import { i18n as requestTemplateI18n } from '@/features/request-template/config/i18n'
 import { i18n as selectPostVoiceI18n } from '@/features/select-post-voice/config/i18n'
 import { i18n as setDefaultVoiceI18n } from '@/features/set-default-voice/config/i18n'
 import { i18n as subscriptionI18n } from '@/entities/subscription/config/i18n'
@@ -224,6 +225,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   uploadPhotosI18n,
   deleteTemplateI18n,
   selectPostTemplateI18n,
+  requestTemplateI18n,
   templateEntityI18n,
   templatePageI18n,
   templatesI18n,
@@ -289,6 +291,7 @@ export const resources = {
     templates: {
       ...deleteTemplateI18n.ko,
       ...selectPostTemplateI18n.ko,
+      ...requestTemplateI18n.ko,
       ...templateEntityI18n.ko,
       ...templatePageI18n.ko,
       ...templatesI18n.ko,
@@ -412,6 +415,7 @@ export const resources = {
     templates: {
       ...deleteTemplateI18n.en,
       ...selectPostTemplateI18n.en,
+      ...requestTemplateI18n.en,
       ...templateEntityI18n.en,
       ...templatePageI18n.en,
       ...templatesI18n.en,

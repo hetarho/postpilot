@@ -447,6 +447,10 @@ export {
   UpdateTemplateResponseSchema,
   DeleteTemplateResponseSchema,
   GetFormatGuideResponseSchema,
+  StartTemplateRequestResponseSchema,
+  GetTemplateRequestResultResponseSchema,
+  CancelTemplateRequestResponseSchema,
+  EstimateTemplateRequestResponseSchema,
 } from './gen/postpilot/v1/template_pb'
 export type {
   Template as ProtoTemplate,

@@ -2,13 +2,19 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import {
   CreateTemplateResponseSchema,
+  CancelTemplateRequestResponseSchema,
   DeleteTemplateResponseSchema,
+  EstimateTemplateRequestResponseSchema,
   GetFormatGuideResponseSchema,
+  GetTemplateRequestResultResponseSchema,
+  StartTemplateRequestResponseSchema,
   ListTemplatesResponseSchema,
   TemplateSchema,
   TemplateService,
   UpdateTemplateResponseSchema,
   contentLanguageFromProto,
+  type AppFailureReason,
+  type ContentLanguage,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -41,6 +47,18 @@ export interface FakeTemplatesOptions {
   listFails?: boolean
   /** Make GetFormatGuide fail. */
   guideFails?: boolean
+  /** Every StartTemplateRequest as it arrived (TMPL-58). */
+  requestStarts?: FakeTemplateRequestStart[]
+  /** The job id StartTemplateRequest answers with. */
+  requestJobId?: string
+  /** Refuse every StartTemplateRequest with this reason. */
+  requestRefusal?: { reason: AppFailureReason; code?: Code }
+  /** What GetTemplateRequestResult answers once the job is done. */
+  requestResult?: FakeTemplateRequestResult
+  /** Every CancelTemplateRequest, by job id (TMPL-63). */
+  requestCancels?: string[]
+  /** What EstimateTemplateRequest answers (QUOTA-67). Absent is no figure. */
+  requestEstimate?: { free?: boolean; credits?: number }
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** Records every UpdateTemplate exactly as it arrived, so a test can prove that an edit of
@@ -64,6 +82,20 @@ export interface FakeTemplatesOptions {
     targetLength: number | undefined
     tagCount: number | undefined
   }>
+}
+
+export interface FakeTemplateRequestStart {
+  writeModel?: { providerId: string; modelId: string }
+  language: ContentLanguage | undefined
+  text: string
+  draft: { name: string; description: string; titleArea: string; body: string }
+  templateId: string | undefined
+  samplePostSlug: string | undefined
+}
+
+export interface FakeTemplateRequestResult {
+  draft: { name: string; description: string; titleArea: string; body: string }
+  wishes?: string[]
 }
 
 const DEFAULT_AT = '2026-08-28T12:00:00Z'
@@ -123,6 +155,58 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
     if (options.guideFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     const text = FAKE_FORMAT_GUIDE[contentLanguageFromProto(req.language) ?? 'ko']
     return create(GetFormatGuideResponseSchema, { text })
+  })
+
+  rpc(TemplateService.method.startTemplateRequest, (req) => {
+    calls?.push('StartTemplateRequest')
+    options.requestStarts?.push({
+      writeModel: req.writeModel
+        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+        : undefined,
+      language: contentLanguageFromProto(req.language),
+      text: req.text,
+      draft: {
+        name: req.draft?.name ?? '',
+        description: req.draft?.description ?? '',
+        titleArea: req.draft?.titleArea ?? '',
+        body: req.draft?.body ?? '',
+      },
+      templateId: req.templateId,
+      samplePostSlug: req.samplePostSlug,
+    })
+    if (options.requestRefusal) {
+      throw connectAppError(
+        options.requestRefusal.reason,
+        options.requestRefusal.code ?? Code.FailedPrecondition,
+      )
+    }
+    return create(StartTemplateRequestResponseSchema, {
+      jobId: options.requestJobId ?? 'template-request-1',
+    })
+  })
+
+  rpc(TemplateService.method.getTemplateRequestResult, () => {
+    calls?.push('GetTemplateRequestResult')
+    const result = options.requestResult
+    if (!result) throw connectAppError('TEMPLATE_REQUEST_NOT_READY', Code.FailedPrecondition)
+    return create(GetTemplateRequestResultResponseSchema, {
+      draft: result.draft,
+      wishes: result.wishes ?? [],
+    })
+  })
+
+  rpc(TemplateService.method.cancelTemplateRequest, (req) => {
+    calls?.push('CancelTemplateRequest')
+    options.requestCancels?.push(req.jobId)
+    return create(CancelTemplateRequestResponseSchema, {})
+  })
+
+  rpc(TemplateService.method.estimateTemplateRequest, () => {
+    calls?.push('EstimateTemplateRequest')
+    return create(EstimateTemplateRequestResponseSchema, {
+      free: options.requestEstimate?.free ?? false,
+      credits: options.requestEstimate?.credits,
+    })
   })
 
   rpc(TemplateService.method.createTemplate, (req) => {

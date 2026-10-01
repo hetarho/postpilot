@@ -60,14 +60,14 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T498 | Simplify /plans cards and move post and clip estimates below them | QUOTA THEME | T497 | todo |
-| T512 | Ask the 글 작성 모델 from the template editor, and start a template from a post | TMPL POST QUOTA | T508 T509 T510 T511 | todo |
 
 ## next
 - next: implement-task T516 after T515 for comparison supplier cost; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
-- implement-task T512 for the template request box; job content retention is open in JOB-RETENTION-TODO.md.
+- template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T512 done: the template editor asks the 글 작성 모델 through the request box, and ③ opens a new template from the post; full FE checks passed
 - 261001 T509 done: an owner cancels a queued or running template request; confirmed usage only is charged; migration 0126 widens the cancellation CHECKs; full FE/BE and project checks passed
 - 261001 T506 done: normalized Elo leaderboard and no supplier-cost view verified
 - 261001 T505 done: explicit candidate apply and adoption flows verified
@@ -87,4 +87,3 @@
 - 261001 create-task TMPL QUOTA POST MODEL start: template request, from a post, live preview, backend-owned 형식 안내
 - 261001 update-ssot TMPL r18 QUOTA r30 POST r27 MODEL r27: template request (TMPL-58–TMPL-63), from a post (TMPL-64 POST-103), live preview (TMPL-65–TMPL-67), backend-owned 형식 안내 (TMPL-41✎); ideation template-from-request converted
 - 261001 warn: MODEL r27 touches MODEL-9 MODEL-14 only, outside T499 (doing) and T500–T506
-- 261001 update-ssot TMPL start: in-app template request, entry from a post, live preview, one shared 형식 안내 (ideation template-from-request)

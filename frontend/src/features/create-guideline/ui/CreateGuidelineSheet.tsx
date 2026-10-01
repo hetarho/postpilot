@@ -19,23 +19,30 @@ import { Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@
 export function CreateGuidelineSheet({
   ownerId,
   kind = 'post',
+  initialOpen = false,
+  onClosed,
   className,
 }: {
   ownerId: string
   /** A post's 지침 or a clip's 영상 지침; the copy and the scope follow it. */
   kind?: GuidelineKind
+  /** Open, empty, on the first render: a link asked for a new guideline (TMPL-61). */
+  initialOpen?: boolean
+  onClosed?: () => void
   className?: string
 }) {
   const { t } = useTranslation('guidelines')
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
+  const close = () => {
+    setOpen(false)
+    onClosed?.()
+  }
   return (
     <>
       <Button variant="cta" className={className} onClick={() => setOpen(true)}>
         {t(kind === 'clip' ? 'create.openClip' : 'create.open')}
       </Button>
-      {open && (
-        <CreateGuidelinePanel ownerId={ownerId} kind={kind} onClose={() => setOpen(false)} />
-      )}
+      {open && <CreateGuidelinePanel ownerId={ownerId} kind={kind} onClose={close} />}
     </>
   )
 }

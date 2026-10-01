@@ -9,8 +9,9 @@
  *  Counted in Unicode scalar values, like the backend, so a Hangul syllable is
  *  one character.
  *
- *  The per-account cap is deliberately NOT mirrored: it is a server-owned
- *  storage guard. */
+ *  The per-account cap is mirrored too (TMPL-6): the template request box has to
+ *  refuse a new template's request before it spends credits on a draft whose save
+ *  the server would refuse (TMPL-62). The server still enforces it on every insert. */
 import { ENV_LIMIT_OVERRIDES, positiveIntEnv } from '@/shared/config'
 export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(ENV_LIMIT_OVERRIDES.templateNameMaxChars, 40)
 export const TEMPLATE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
@@ -47,4 +48,17 @@ export const TEMPLATE_ASK_VALUE_MAX_CHARS = positiveIntEnv(
 export const TEMPLATE_ASK_MAX_PER_BODY = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.templateAskMaxPerBody,
   10,
+)
+
+/** How many templates one account may hold (TMPL-6). */
+export const TEMPLATE_MAX_PER_ACCOUNT = positiveIntEnv(
+  ENV_LIMIT_OVERRIDES.templateMaxPerAccount,
+  50,
+)
+
+/** What the template request box takes (TMPL-58): room for the longest post the product writes
+ *  with a description beside it. A live counter; the server refuses beyond it. */
+export const TEMPLATE_REQUEST_MAX_CHARS = positiveIntEnv(
+  ENV_LIMIT_OVERRIDES.templateRequestMaxChars,
+  12_000,
 )

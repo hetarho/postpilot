@@ -1,4 +1,6 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { guidelinesSearchSchema } from '@/pages/guidelines'
+import { newTemplateSearchSchema } from '@/pages/template'
 import { writingGroupRoute } from './tree'
 
 export const templatesRoute = createRoute({
@@ -12,6 +14,7 @@ export const templatesRoute = createRoute({
 export const newTemplateRoute = createRoute({
   getParentRoute: () => writingGroupRoute,
   path: '/templates/new',
+  validateSearch: newTemplateSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
 })
 
@@ -24,6 +27,7 @@ export const templateRoute = createRoute({
 export const guidelinesRoute = createRoute({
   getParentRoute: () => writingGroupRoute,
   path: '/guidelines',
+  validateSearch: guidelinesSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/guidelines'), 'GuidelinesPage'),
 })
 

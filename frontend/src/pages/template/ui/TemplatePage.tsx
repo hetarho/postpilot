@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useBlocker, useNavigate, useParams } from '@tanstack/react-router'
+import { Link, useBlocker, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { twMerge } from 'tailwind-merge'
 import { useSession } from '@/entities/session'
 import {
   TEMPLATE_LIMITS,
+  TEMPLATE_MAX_PER_ACCOUNT,
   TEMPLATE_PARSE_OPTIONS,
   TemplateComposition,
   TemplatePreview,
@@ -18,7 +19,13 @@ import {
   useUpdateTemplate,
   type Template,
   type TemplateArea,
+  type TemplateDraftTexts,
 } from '@/entities/template'
+import {
+  TemplateRequestBox,
+  useTemplateRequest,
+  type TemplateRequestSample,
+} from '@/features/request-template'
 import {
   POST_TAG_COUNT_DEFAULT,
   POST_TAG_COUNT_MAX,
@@ -26,6 +33,7 @@ import {
   POST_TARGET_LENGTH_DEFAULT,
   POST_TARGET_LENGTH_MAX,
   POST_TARGET_LENGTH_MIN,
+  usePost,
 } from '@/entities/post'
 import {
   ActionBar,
@@ -58,6 +66,8 @@ export function TemplatePage() {
   // asking for it strictly there would throw rather than mean "a template that does not exist
   // yet". Creating and editing are the same screen (TMPL-25), so they are the same component.
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
+  // `/templates/new?from=<slug>`: a post attached as the request's sample (TMPL-64).
+  const { from } = useSearch({ strict: false }) as { from?: string }
   const { t } = useTranslation(['templates', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -109,7 +119,15 @@ export function TemplatePage() {
   // must not carry the previous one's unsaved edits, and a refetch must not overwrite what is
   // being typed. `stored` is the baseline the dirty check compares against, and it only moves
   // when the user's own save lands.
-  return <Editor key={stored?.id ?? 'new'} ownerId={ownerId} stored={stored} />
+  return (
+    <Editor
+      key={stored?.id ?? 'new'}
+      ownerId={ownerId}
+      stored={stored}
+      sampleSlug={stored ? undefined : from}
+      templateCount={templates.length}
+    />
+  )
 }
 
 function BackLink() {
@@ -180,7 +198,17 @@ function numberValid(field: NumberDraft, min: number, max: number): boolean {
   return field.text.trim() !== '' && Number.isInteger(parsed) && parsed >= min && parsed <= max
 }
 
-function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undefined }) {
+function Editor({
+  ownerId,
+  stored,
+  sampleSlug: initialSample,
+  templateCount,
+}: {
+  ownerId: string
+  stored: Template | undefined
+  sampleSlug?: string
+  templateCount: number
+}) {
   const { t } = useTranslation(['templates', 'common'])
   const navigate = useNavigate()
   const [draft, setDraft] = useState<Draft>(() => draftOf(stored))
@@ -211,6 +239,34 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   const [view, setView] = useState<'compose' | 'preview'>('compose')
   const create = useCreateTemplate(ownerId)
   const update = useUpdateTemplate(ownerId, stored?.id ?? '')
+  // The template request (TMPL-58): its answer and its undo replace the draft's four texts, never
+  // the two numbers (TMPL-60), and make the draft dirty like any edit (TMPL-63).
+  const applyRequest = useCallback((next: TemplateDraftTexts) => {
+    setDraft((current) => ({
+      ...current,
+      name: next.name,
+      description: next.description,
+      titleArea: next.titleArea,
+      body: next.body,
+    }))
+    setSaved(false)
+  }, [])
+  const request = useTemplateRequest(applyRequest)
+  // The post a new template follows (TMPL-64), until its chip is removed.
+  const [sampleSlug, setSampleSlug] = useState(initialSample ?? '')
+  const samplePost = usePost(sampleSlug, { enabled: sampleSlug !== '' })
+  const sample: TemplateRequestSample | undefined =
+    sampleSlug === ''
+      ? undefined
+      : samplePost.failure
+        ? { kind: 'missing' }
+        : samplePost.post
+          ? {
+              kind: 'post',
+              slug: sampleSlug,
+              title: samplePost.post.content?.title || samplePost.post.title,
+            }
+          : undefined
 
   // The name and the description are user prose and are trimmed. The BODY is not: it is the
   // canonical serialization of the composition, and trimming it would make a stored body with
@@ -234,6 +290,8 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     trimmed.targetLength !== baseline.targetLength ||
     trimmed.tagCount !== baseline.tagCount
   const pending = create.isPending || update.isPending
+  // A running request locks the draft (TMPL-63): its answer lands in it.
+  const locked = pending || request.running
   const errorMessage = create.errorMessage || update.errorMessage
   const failed = create.isError || update.isError
   // Parsed ONCE, here, as the one document the two areas are (TMPL-50): the save gate and the
@@ -269,14 +327,15 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     !parsed.ok ||
     titleAskConflict ||
     bodyAskConflict ||
-    pending
+    locked
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update
   // that would clear `dirty`, and the blocker reads its render-time closure — so without this the
   // screen would intercept its own navigation and ask whether to discard a template it had just
   // created. It needs no reset: the route change remounts this component.
   const leavingAfterSave = useRef(false)
-  const guard = () => !leavingAfterSave.current && dirty && !pending
+  // A running request is something to lose as much as an unsaved draft: leaving cancels it.
+  const guard = () => request.running || (!leavingAfterSave.current && dirty && !pending)
 
   // `enableBeforeUnload` is a FUNCTION, not the default `true`: the beforeunload path does not
   // consult `shouldBlockFn`, so leaving it alone would make the browser prompt on every reload of
@@ -369,13 +428,38 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
         {stored ? stored.name : t('screen.newTitle', { ns: 'templates' })}
       </Typography>
 
+      {/* Above both columns: open as the first action on an empty new template, a collapsed
+          AI에게 요청 once the draft holds anything (TMPL-62). */}
+      <TemplateRequestBox
+        request={request}
+        draft={{
+          name: draft.name,
+          description: draft.description,
+          titleArea: draft.titleArea,
+          body: draft.body,
+        }}
+        templateId={stored?.id}
+        startOpen={
+          !stored &&
+          (sampleSlug !== '' ||
+            (draft.name === '' &&
+              draft.description === '' &&
+              draft.titleArea === '' &&
+              draft.body === ''))
+        }
+        atCap={!stored && templateCount >= TEMPLATE_MAX_PER_ACCOUNT}
+        sample={sample}
+        onRemoveSample={() => setSampleSlug('')}
+        className="mt-6"
+      />
+
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <div className="min-w-0">
-          <NameField value={draft.name} onChange={field('name')} disabled={pending} />
+          <NameField value={draft.name} onChange={field('name')} disabled={locked} />
           <DescriptionField
             value={draft.description}
             onChange={field('description')}
-            disabled={pending}
+            disabled={locked}
           />
           <NumberField
             id="template-target-length"
@@ -386,7 +470,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
             min={POST_TARGET_LENGTH_MIN}
             max={POST_TARGET_LENGTH_MAX}
             valid={lengthValid}
-            disabled={pending}
+            disabled={locked}
             onChange={numberField(setLengthField, POST_TARGET_LENGTH_DEFAULT)}
           />
           <NumberField
@@ -398,7 +482,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
             min={POST_TAG_COUNT_MIN}
             max={POST_TAG_COUNT_MAX}
             valid={tagsValid}
-            disabled={pending}
+            disabled={locked}
             onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
           />
 
@@ -434,7 +518,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
               }}
               ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
               controls={COMPOSITION_PANEL_ID}
-              disabled={pending}
+              disabled={locked}
               className="mt-8"
             />
             <div id={COMPOSITION_PANEL_ID} role="tabpanel">
@@ -457,7 +541,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
                     area="title_area"
                     value={draft.titleArea}
                     onChange={field('titleArea')}
-                    disabled={pending}
+                    disabled={locked}
                     failure={failureIn('title_area')}
                     autoFocus={focusSource === 'title_area'}
                     className="mt-3"
@@ -468,7 +552,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
                     onAskConflict={setTitleAskConflict}
                     value={draft.titleArea}
                     onChange={field('titleArea')}
-                    disabled={pending}
+                    disabled={locked}
                     failure={failureIn('title_area')}
                     onFixInSource={() => {
                       setFocusSource('title_area')
@@ -496,7 +580,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
                   <TemplateSource
                     value={draft.body}
                     onChange={field('body')}
-                    disabled={pending}
+                    disabled={locked}
                     failure={failureIn('body')}
                     autoFocus={focusSource === 'body'}
                     className="mt-3"
@@ -506,7 +590,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
                     onAskConflict={setBodyAskConflict}
                     value={draft.body}
                     onChange={field('body')}
-                    disabled={pending}
+                    disabled={locked}
                     takenAskTitles={titleAskLabels}
                     failure={failureIn('body')}
                     onFixInSource={() => {
@@ -561,12 +645,20 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
 
       <Dialog
         open={blocker.status === 'blocked'}
-        title={t('screen.leaveTitle', { ns: 'templates' })}
-        confirmLabel={t('screen.leaveConfirm', { ns: 'templates' })}
+        title={t(request.running ? 'request.leaveTitle' : 'screen.leaveTitle', { ns: 'templates' })}
+        confirmLabel={t(request.running ? 'request.leaveConfirm' : 'screen.leaveConfirm', {
+          ns: 'templates',
+        })}
         onClose={() => blocker.reset?.()}
-        onConfirm={() => blocker.proceed?.()}
+        onConfirm={() => {
+          // Leaving cancels the running request; it is not awaited (TMPL-63).
+          if (request.running) request.cancel()
+          blocker.proceed?.()
+        }}
       >
-        {t('screen.leaveDescription', { ns: 'templates' })}
+        {t(request.running ? 'request.leaveDescription' : 'screen.leaveDescription', {
+          ns: 'templates',
+        })}
       </Dialog>
     </main>
   )

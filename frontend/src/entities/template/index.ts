@@ -37,6 +37,16 @@ export {
   type TemplateNode,
 } from './lib/grammar'
 export { useFormatGuide } from './api/useFormatGuide'
+export {
+  useCancelTemplateRequest,
+  useStartTemplateRequest,
+  useTemplateRequestEstimate,
+  useTemplateRequestResult,
+  type TemplateDraftTexts,
+  type TemplateRequestInput,
+  type TemplateRequestModel,
+  type TemplateRequestResult,
+} from './api/useTemplateRequest'
 export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
