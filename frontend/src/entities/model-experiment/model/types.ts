@@ -4,7 +4,7 @@ import type { VerdictBadgeName } from './badges'
 import type { AppFailure, ContentLanguage, Observation, PostContent } from '@/shared/api'
 
 export type ExperimentStatusName =
-  'queued' | 'running' | 'review' | 'partial' | 'decided' | 'dismissed' | 'failed'
+  'queued' | 'running' | 'review' | 'partial' | 'completed' | 'decided' | 'dismissed' | 'failed'
 export type CandidateStatusName = 'pending' | 'running' | 'succeeded' | 'failed'
 export type DisplaySideName = 'left' | 'right' | 'c' | 'd' | 'e'
 /** `withheld` is a reader the server sends no supplier cost to — anyone but the operator
@@ -66,6 +66,7 @@ export interface ModelExperiment {
    *  so its verdict applies the winner. `lab`: the verdict is a ranking pick that applies
    *  nothing, and every application is a separate follow-up. */
   origin: ExperimentOriginName
+  reviewMode?: 'pairwise' | 'candidate_ranking'
   status: ExperimentStatusName
   postSlug: string
   /** The frozen voice for write work; observe compares the image snapshot only. */
@@ -85,6 +86,7 @@ export interface ModelExperiment {
   createdAt: string
   finishedAt: string
   decidedAt: string
+  completedAt?: string
   revealed: boolean
   targetLanguage: ContentLanguage | undefined
   source: ExperimentSourceName

@@ -4,6 +4,21 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    ranking: {
+      title: '후보 순위 정하기',
+      instructions:
+        '성공한 결과마다 순위를 정해 주세요. 같은 순위도 허용돼요. 순위는 1위부터 빠짐없이 이어져야 해요.',
+      candidate: '후보 {{label}} 순위',
+      select: '순위 선택',
+      place: '{{rank}}위',
+      tie: '동순위',
+      incomplete: '모든 성공 후보에 1위부터 빠짐없이 순위를 지정해 주세요.',
+      open: '순위 정하기',
+      save: '순위 저장',
+      skip: '순위 건너뛰기',
+      skipped: '순위를 남기지 않고 비교를 마쳤어요.',
+      recorded: '후보 순위가 저장됐어요. 같은 순위는 동순위예요.',
+    },
     verdict: {
       badgesOptional: '고른 이유를 남기면 다음 비교에 도움이 돼요. 안 골라도 그대로 확정돼요.',
       chosen: '선택한 결과 {{label}}',
@@ -33,6 +48,21 @@ export const i18n = {
     },
   },
   en: {
+    ranking: {
+      title: 'Rank candidates',
+      instructions:
+        'Rank every successful result. Ties are allowed. Ranks must begin at 1 with no gaps.',
+      candidate: 'Candidate {{label}} rank',
+      select: 'Select rank',
+      place: 'Rank {{rank}}',
+      tie: 'Tie',
+      incomplete: 'Rank every successful candidate, starting at 1 with no gaps.',
+      open: 'Rank results',
+      save: 'Save ranking',
+      skip: 'Skip ranking',
+      skipped: 'Comparison completed without a ranking.',
+      recorded: 'Candidate ranks were saved. Equal ranks are ties.',
+    },
     verdict: {
       badgesOptional:
         'Telling us why helps the next comparison. Leaving it blank confirms just the same.',

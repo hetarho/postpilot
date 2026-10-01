@@ -1,9 +1,10 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { appFailureFromConnect, ModelExperimentService } from '@/shared/api'
-import type { CandidateBadges } from '../model/badges'
+import type { CandidateBadges, VerdictBadgeName } from '../model/badges'
 import {
   badgesToProto,
+  badgeToProto,
   experimentListQueriesKey,
   experimentQueryKey,
   leaderboardQueriesKey,
@@ -13,6 +14,7 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
   const transport = useTransport()
   const queryClient = useQueryClient()
   const choose = useMutation(ModelExperimentService.method.chooseWinner)
+  const complete = useMutation(ModelExperimentService.method.completeExperimentReview)
   const decideWrite = useMutation(ModelExperimentService.method.decideWriteExperiment)
   const useSingle = useMutation(ModelExperimentService.method.useSingleCandidate)
   const dismiss = useMutation(ModelExperimentService.method.dismissExperiment)
@@ -32,6 +34,23 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
     await onChanged?.()
   }
   return {
+    complete: async (
+      ranks: Array<{
+        candidateId: string
+        rank: number
+        badges: VerdictBadgeName[]
+        otherNote: string
+      }>,
+      skip = false,
+    ) => {
+      const value = await complete.mutateAsync({
+        experimentId: id,
+        skip,
+        ranks: ranks.map((item) => ({ ...item, badges: item.badges.map(badgeToProto) })),
+      })
+      await refresh()
+      return value
+    },
     choose: async (candidateId: string, badges: CandidateBadges[] = []) => {
       const value = await choose.mutateAsync({
         experimentId: id,
@@ -81,6 +100,7 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       return value
     },
     isPending:
+      complete.isPending ||
       choose.isPending ||
       decideWrite.isPending ||
       useSingle.isPending ||
@@ -89,7 +109,8 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       apply.isPending ||
       adopt.isPending,
     failure: mutationFailure(
-      choose.error ??
+      complete.error ??
+        choose.error ??
         decideWrite.error ??
         useSingle.error ??
         dismiss.error ??

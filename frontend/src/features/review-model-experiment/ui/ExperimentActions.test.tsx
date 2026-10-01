@@ -84,6 +84,7 @@ function actionSet() {
   // Every action resolves: the bar awaits what it calls to clear its pressed state, so a
   // mock returning undefined fails inside React's event handler rather than in the assertion.
   return {
+    complete: vi.fn().mockResolvedValue({}),
     choose: vi.fn().mockResolvedValue({}),
     decideWrite: vi.fn().mockResolvedValue({}),
     useSingle: vi.fn().mockResolvedValue({}),
@@ -97,6 +98,34 @@ function actionSet() {
     failure: undefined,
   }
 }
+
+it('offers a ranking or skip for a new pair without legacy winner controls', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions({ ...base, reviewMode: 'candidate_ranking' })
+  const user = userEvent.setup()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '순위 건너뛰기' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '순위 정하기' }))
+  expect(await screen.findByRole('dialog', { name: '후보 순위 정하기' })).toBeInTheDocument()
+  expect(actions.complete).not.toHaveBeenCalled()
+})
+
+it('lets a single survivor skip and retry failure, without offering a rank submission', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions({
+    ...base,
+    reviewMode: 'candidate_ranking',
+    status: 'partial',
+    candidates: [base.candidates[0], { ...base.candidates[1], status: 'failed' }],
+  })
+  const user = userEvent.setup()
+  expect(screen.queryByRole('button', { name: '순위 정하기' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '실패 후보 재시도' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '순위 건너뛰기' }))
+  expect(actions.complete).toHaveBeenCalledWith([], true)
+})
 
 function renderActions(
   experiment = base,

@@ -86,6 +86,7 @@ const STATUS_TONES: Record<ExperimentStatusName, BadgeTone> = {
   running: 'info',
   review: 'info',
   partial: 'warning',
+  completed: 'success',
   failed: 'danger',
   decided: 'success',
   dismissed: 'neutral',

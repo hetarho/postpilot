@@ -85,7 +85,16 @@ export function CandidateComparison({
           </article>
         ))}
       </div>
-      {experiment.revealed && <RevealBand sides={sides} />}
+      {experiment.revealed &&
+        experiment.reviewMode === 'candidate_ranking' &&
+        !sides.some(({ candidate }) => candidate.rank) && (
+          <Typography variant="label" as="p" className="mt-6">
+            {t('ranking.skipped', { ns: 'models' })}
+          </Typography>
+        )}
+      {experiment.revealed && (
+        <RevealBand sides={sides} ranked={experiment.reviewMode === 'candidate_ranking'} />
+      )}
     </div>
   )
 }
@@ -209,7 +218,7 @@ function CandidateOutput({
  *  panels. Inside the panels they could only ever be read one at a time below `md:`, at the very
  *  bottom of a post-length column — so comparing the two costs, the payoff of the whole exercise,
  *  meant memorising one number and switching (THEME-24). */
-function RevealBand({ sides }: { sides: CandidateSide[] }) {
+function RevealBand({ sides, ranked }: { sides: CandidateSide[]; ranked: boolean }) {
   const { t } = useTranslation(['posts', 'models'])
   return (
     <dl className="bg-surface-recessed divide-divider mt-6 divide-y rounded-lg px-4">
@@ -224,6 +233,14 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
             </Typography>
           </dt>
           <dd className="mt-1">
+            {ranked && candidate.rank && (
+              <Typography variant="label" as="p" className="text-content-primary">
+                {t('ranking.place', { ns: 'models', rank: candidate.rank })}
+                {sides.filter(({ candidate: other }) => other.rank === candidate.rank).length > 1
+                  ? ` · ${t('ranking.tie', { ns: 'models' })}`
+                  : ''}
+              </Typography>
+            )}
             {/* The label role, not the metadata one: after the reveal this is the most important
                 content on the screen (THEME-19). */}
             <Typography variant="label" as="p">

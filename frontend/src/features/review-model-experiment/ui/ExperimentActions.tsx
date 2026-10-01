@@ -13,6 +13,7 @@ import type { CandidateBadges } from '@/entities/model-experiment'
 import { AppFailureMessage, Button, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
 import { VerdictSheet } from './VerdictSheet'
+import { RankedReviewSheet } from './RankedReviewSheet'
 
 export function ExperimentActions({
   experiment,
@@ -46,7 +47,9 @@ export function ExperimentActions({
   const [pressed, setPressed] = useState('')
   const run = (name: string, action: () => Promise<unknown>) => {
     setPressed(name)
-    void action().finally(() => setPressed(''))
+    void action()
+      .catch(() => {})
+      .finally(() => setPressed(''))
   }
   // A 말투 반영 비교 wrote nothing anywhere: its only follow-up is adopting the winner (MODEL-36).
   const writesNothing = experiment.source === 'voice'
@@ -68,6 +71,15 @@ export function ExperimentActions({
     enabled: offersContent && experiment.status === 'decided' && !experiment.appliedAt,
   })
   const postWritable = Boolean(post && isUnfinalized(post))
+  if (experiment.reviewMode === 'candidate_ranking') {
+    return (
+      <RankedExperimentActions
+        experiment={experiment}
+        actions={actions}
+        voiceWorkBlocked={voiceWorkBlocked}
+      />
+    )
+  }
   if (!hasExperimentActions(experiment)) return null
   return (
     <div className="grid gap-3">
@@ -264,6 +276,73 @@ export function ExperimentActions({
             actions.decideWrite(activeCandidateId, committing === 'decideAdopt', badges),
           )
         }}
+      />
+    </div>
+  )
+}
+
+function RankedExperimentActions({
+  experiment,
+  actions,
+  voiceWorkBlocked,
+}: {
+  experiment: ModelExperiment
+  actions: ReturnType<typeof useExperimentActions>
+  voiceWorkBlocked: boolean
+}) {
+  const { t } = useTranslation('models')
+  const [open, setOpen] = useState(false)
+  const [pressed, setPressed] = useState<'retry' | 'skip' | ''>('')
+  const pendingReview = needsExperimentReview(experiment.status)
+  const succeeded = experiment.candidates.filter((candidate) => candidate.status === 'succeeded')
+  if (!pendingReview) return null
+  const run = (kind: 'retry' | 'skip', action: () => Promise<unknown>) => {
+    setPressed(kind)
+    void action()
+      .catch(() => {})
+      .finally(() => setPressed(''))
+  }
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:justify-end">
+        {(experiment.status === 'partial' || experiment.status === 'failed') && (
+          <Button
+            variant="secondary"
+            disabled={actions.isPending || voiceWorkBlocked}
+            pending={pressed === 'retry'}
+            onClick={() => run('retry', actions.retry)}
+          >
+            {t('actions.retryFailed')}
+          </Button>
+        )}
+        {succeeded.length > 0 && (
+          <Button
+            variant="ghost"
+            disabled={actions.isPending}
+            pending={pressed === 'skip'}
+            onClick={() => run('skip', () => actions.complete([], true))}
+          >
+            {t('ranking.skip')}
+          </Button>
+        )}
+        {succeeded.length >= 2 && (
+          <Button variant="cta" disabled={actions.isPending} onClick={() => setOpen(true)}>
+            {t('ranking.open')}
+          </Button>
+        )}
+      </div>
+      {actions.failure && !open && (
+        <Notice tone="danger" role="alert">
+          <AppFailureMessage failure={actions.failure} />
+        </Notice>
+      )}
+      <RankedReviewSheet
+        experiment={experiment}
+        open={open}
+        pending={actions.isPending}
+        failure={actions.failure}
+        onConfirm={(ranks) => actions.complete(ranks)}
+        onClose={() => setOpen(false)}
       />
     </div>
   )
