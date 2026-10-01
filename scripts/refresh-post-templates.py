@@ -4,8 +4,9 @@
 The before file is a JSON list of template rows read from this database. The after file
 maps template names to {description, body, required_labels}. Run without --apply to
 inspect eligibility; --apply first takes a consistent SQLite backup, then updates only
-changed rows in one transaction. An explicit --merge-answer option can copy one removed
-question's saved text into another answer on the same post; the original row is kept.
+changed rows in one transaction. An explicit --answer-plan file can carry the saved text of
+questions this update removes into a question it adds on the same post; the original rows
+are kept.
 """
 
 import argparse
@@ -21,7 +22,6 @@ import sqlite3
 FIELDS = ("id", "name", "description", "title_area", "body", "target_length", "tag_count", "updated_at")
 ASK = re.compile(r'<ask\s+label="([^"]+)"(?:\s+required="true")?(?:\s*/>|>)')
 REQUIRED = re.compile(r'<ask\s+label="([^"]+)"\s+required="true"(?:\s*/>|>)')
-MERGE_CAPTION = "직접 먹어본 느낌: "
 
 
 def digest(value):
@@ -41,8 +41,8 @@ def load_inputs(before_path, after_path):
         description = candidate["description"]
         labels = ASK.findall(body)
         required = REQUIRED.findall(body)
-        if not body.lstrip().startswith("<ask ") or not body.rstrip().endswith("</ask>"):
-            raise ValueError(f"{name}: body must open and close with an author answer")
+        if not body.rstrip().endswith("</ask>"):
+            raise ValueError(f"{name}: body must close with an author answer")
         if len(body) > 4000 or len(description) > 200 or len(labels) > 10:
             raise ValueError(f"{name}: a template length or question count exceeds its limit")
         if len(labels) != len(set(labels)) or set(required) != set(candidate["required_labels"]):
@@ -54,6 +54,33 @@ def load_inputs(before_path, after_path):
         if any(len(label) > 40 for label in labels):
             raise ValueError(f"{name}: a question label exceeds its limit")
     return before, after
+
+
+def load_answer_plan(path, before, after, value_limit):
+    """Check an answer plan's shape against the two snapshots, before any database read."""
+    if path is None:
+        return []
+    plan = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(plan, list) or not plan:
+        raise ValueError("an answer plan must be a non-empty list")
+    seen = set()
+    for entry in plan:
+        name, label, answer, sources = entry["template"], entry["label"], entry["answer"], entry["sources"]
+        if name not in before:
+            raise ValueError(f"answer plan names an unknown template: {name}")
+        old_labels = set(ASK.findall(before[name]["body"]))
+        new_labels = set(ASK.findall(after[name]["body"]))
+        if label in old_labels or label not in new_labels:
+            raise ValueError(f"{name}: an answer plan may fill only a question this update adds")
+        if not sources or any(source in new_labels or source not in old_labels for source in sources):
+            raise ValueError(f"{name}: answer plan sources must be questions this update removes")
+        if not answer.strip() or len(answer) > value_limit:
+            raise ValueError(f"{name}: a planned answer is blank or exceeds {value_limit} characters")
+        key = (entry["post_slug"], label)
+        if key in seen:
+            raise ValueError(f"the answer plan fills {key} twice")
+        seen.add(key)
+    return plan
 
 
 def database_rows(connection):
@@ -92,63 +119,46 @@ def dependent_data_fingerprints(connection):
     return tuple(fingerprints)
 
 
-def refuse_hidden_saved_answers(connection, before, after, allowed_removed=None):
+def refuse_hidden_saved_answers(connection, before, after, plan):
+    carried = {(entry["template"], source, entry["post_slug"]) for entry in plan for source in entry["sources"]}
     for name, old in before.items():
         removed = set(ASK.findall(old["body"])) - set(ASK.findall(after[name]["body"]))
         for label in sorted(removed):
-            if (name, label) == allowed_removed:
-                continue
-            filled = connection.execute(
-                "SELECT COUNT(*) FROM post_template_answers a "
+            hidden = [slug for (slug,) in connection.execute(
+                "SELECT a.post_slug FROM post_template_answers a "
                 "JOIN posts p ON p.slug=a.post_slug "
                 "WHERE p.template_id=? AND a.label=? AND trim(a.answer)<>''",
                 (old["id"], label),
-            ).fetchone()[0]
-            if filled:
-                raise RuntimeError(f"{name}: {label} has {filled} saved answers; no rows were written")
+            ) if (name, label, slug) not in carried]
+            if hidden:
+                raise RuntimeError(
+                    f"{name}: {label} has {len(hidden)} saved answers the plan does not carry; no rows were written"
+                )
 
 
-def prepare_answer_merge(connection, before, after, merge_spec, expected_count, value_limit):
-    """Validate one exact label migration and capture both answer rows for CAS."""
-    if merge_spec is None:
+def check_answer_plan(connection, before, plan):
+    """Re-read every row the plan depends on and return their digest for compare-and-swap."""
+    if not plan:
         return None
-    name, old_label, new_label = merge_spec
-    if name not in before or old_label == new_label:
-        raise ValueError("answer merge must name one known template and two distinct labels")
-    old_labels = set(ASK.findall(before[name]["body"]))
-    new_labels = set(ASK.findall(after[name]["body"]))
-    if old_label not in old_labels or old_label in new_labels:
-        raise ValueError("answer merge source must be a label removed by this update")
-    if new_label not in old_labels or new_label not in new_labels:
-        raise ValueError("answer merge destination must be an existing, retained label")
-    rows = [dict(row) for row in connection.execute(
-        "SELECT p.slug AS post_slug, source.answer AS source_answer, "
-        "source.enabled AS source_enabled, source.updated_at AS source_updated_at, "
-        "destination.answer AS destination_answer, destination.enabled AS destination_enabled, "
-        "destination.updated_at AS destination_updated_at "
-        "FROM posts p JOIN post_template_answers source "
-        "ON source.post_slug=p.slug AND source.label=? "
-        "LEFT JOIN post_template_answers destination "
-        "ON destination.post_slug=p.slug AND destination.label=? "
-        "WHERE p.template_id=? AND trim(source.answer)<>'' ORDER BY p.slug",
-        (old_label, new_label, before[name]["id"]),
-    )]
-    if len(rows) != expected_count:
-        raise RuntimeError(f"answer merge expected {expected_count} rows, found {len(rows)}; no rows were written")
-    for row in rows:
-        if row["destination_answer"] is None:
-            raise RuntimeError("answer merge destination row is missing; no rows were written")
-        if row["source_enabled"] != 1 or row["destination_enabled"] != 1:
-            raise RuntimeError("answer merge requires both saved answers to be enabled; no rows were written")
-        suffix = ("\n" if row["destination_answer"] else "") + MERGE_CAPTION + row["source_answer"]
-        if suffix in row["destination_answer"]:
-            raise RuntimeError("answer merge destination already contains the source text; no rows were written")
-        row["merged_answer"] = row["destination_answer"] + suffix
-        if len(row["merged_answer"]) > value_limit:
-            raise RuntimeError(f"answer merge exceeds the {value_limit}-character answer limit; no rows were written")
-    snapshot = [{key: row[key] for key in row if key != "merged_answer"} for row in rows]
-    cas = digest(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-    return {"name": name, "old_label": old_label, "new_label": new_label, "rows": rows, "cas": cas}
+    snapshot = []
+    for entry in plan:
+        slug, label = entry["post_slug"], entry["label"]
+        owner = connection.execute("SELECT template_id FROM posts WHERE slug=?", (slug,)).fetchone()
+        if owner is None or owner[0] != before[entry["template"]]["id"]:
+            raise RuntimeError(f"{slug}: the post does not use {entry['template']}; no rows were written")
+        if connection.execute(
+            "SELECT 1 FROM post_template_answers WHERE post_slug=? AND label=?", (slug, label)
+        ).fetchone() is not None:
+            raise RuntimeError(f"{slug}: {label} already has a saved row; no rows were written")
+        for source in sorted(entry["sources"]):
+            row = connection.execute(
+                "SELECT answer,enabled,updated_at FROM post_template_answers WHERE post_slug=? AND label=?",
+                (slug, source),
+            ).fetchone()
+            if row is None or row[0] != entry["sources"][source] or row[1] != 1:
+                raise RuntimeError(f"{slug}: {source} is not the planned enabled answer; no rows were written")
+            snapshot.append([slug, source, row[0], row[1], row[2]])
+    return digest(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
 
 
 def answer_rows(connection):
@@ -184,22 +194,23 @@ def main():
     parser.add_argument("--backup", type=pathlib.Path)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--expected-changes", type=int, metavar="N")
-    parser.add_argument("--merge-answer", nargs=3, metavar=("TEMPLATE", "OLD_LABEL", "NEW_LABEL"))
-    parser.add_argument("--expected-answer-merges", type=int, metavar="N")
-    parser.add_argument("--answer-merge-cas", metavar="SHA256")
+    parser.add_argument("--answer-plan", type=pathlib.Path, metavar="FILE")
+    parser.add_argument("--expected-answer-inserts", type=int, metavar="N")
+    parser.add_argument("--answer-plan-cas", metavar="SHA256")
     parser.add_argument("--answer-value-limit", type=int, default=500, metavar="N")
     args = parser.parse_args()
-    before, after = load_inputs(args.before, args.after)
-    if args.merge_answer is None and (args.expected_answer_merges is not None or args.answer_merge_cas is not None):
-        parser.error("answer merge count and CAS require --merge-answer")
-    if args.merge_answer is not None and (args.expected_answer_merges is None or args.expected_answer_merges < 1):
-        parser.error("--merge-answer requires a positive --expected-answer-merges")
     if not 1 <= args.answer_value_limit <= 4000:
         parser.error("--answer-value-limit must be between 1 and 4000")
-    if args.answer_merge_cas is not None and not re.fullmatch(r"[0-9a-f]{64}", args.answer_merge_cas):
-        parser.error("--answer-merge-cas must be a lowercase SHA-256 digest")
-    if args.apply and args.merge_answer is not None and args.answer_merge_cas is None:
-        parser.error("--apply with --merge-answer requires a dry-run --answer-merge-cas")
+    before, after = load_inputs(args.before, args.after)
+    plan = load_answer_plan(args.answer_plan, before, after, args.answer_value_limit)
+    if not plan and (args.expected_answer_inserts is not None or args.answer_plan_cas is not None):
+        parser.error("answer insert count and CAS require --answer-plan")
+    if plan and args.expected_answer_inserts != len(plan):
+        parser.error(f"--answer-plan holds {len(plan)} inserts; confirm them with --expected-answer-inserts")
+    if args.answer_plan_cas is not None and not re.fullmatch(r"[0-9a-f]{64}", args.answer_plan_cas):
+        parser.error("--answer-plan-cas must be a lowercase SHA-256 digest")
+    if args.apply and plan and args.answer_plan_cas is None:
+        parser.error("--apply with --answer-plan requires a dry-run --answer-plan-cas")
     changed_names = sorted(
         name for name in after
         if any(before[name][field] != after[name][field] for field in ("description", "body"))
@@ -216,14 +227,10 @@ def main():
     try:
         connection.execute("PRAGMA busy_timeout=15000")
         check_current(connection, before)
-        merge = prepare_answer_merge(
-            connection, before, after, args.merge_answer, args.expected_answer_merges,
-            args.answer_value_limit,
-        )
-        if merge is not None and args.answer_merge_cas is not None and merge["cas"] != args.answer_merge_cas:
-            raise RuntimeError("saved answers changed since the answer-merge dry run; no rows were written")
-        allowed_removed = (merge["name"], merge["old_label"]) if merge is not None else None
-        refuse_hidden_saved_answers(connection, before, after, allowed_removed)
+        plan_cas = check_answer_plan(connection, before, plan)
+        if args.answer_plan_cas is not None and plan_cas != args.answer_plan_cas:
+            raise RuntimeError("saved answers changed since the answer-plan dry run; no rows were written")
+        refuse_hidden_saved_answers(connection, before, after, plan)
         # Exercise the same dependent-row scan on a read-only dry run so a schema or
         # serialization surprise cannot first appear after the production backup.
         dependent_data_fingerprints(connection)
@@ -237,17 +244,10 @@ def main():
                 if connection.execute("PRAGMA data_version").fetchone()[0] != data_version:
                     raise RuntimeError("the database changed after its backup; no rows were written")
                 check_current(connection, before)
-                locked_merge = prepare_answer_merge(
-                    connection, before, after, args.merge_answer, args.expected_answer_merges,
-                    args.answer_value_limit,
-                )
-                if locked_merge is not None and locked_merge["cas"] != args.answer_merge_cas:
-                    raise RuntimeError("saved answers changed since the answer-merge dry run; no rows were written")
-                refuse_hidden_saved_answers(connection, before, after, allowed_removed)
-                counts = tuple(
-                    connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                    for table in ("posts", "post_template_answers")
-                )
+                if check_answer_plan(connection, before, plan) != args.answer_plan_cas:
+                    raise RuntimeError("saved answers changed since the answer-plan dry run; no rows were written")
+                refuse_hidden_saved_answers(connection, before, after, plan)
+                post_count = connection.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
                 dependent_data = dependent_data_fingerprints(connection)
                 previous_answers = answer_rows(connection)
                 timestamp = dt.datetime.now(dt.timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
@@ -259,33 +259,21 @@ def main():
                     )
                     if result.rowcount != 1:
                         raise RuntimeError(f"{name}: update did not match exactly one row")
-                answer_updates = {}
-                if locked_merge is not None:
-                    for row in locked_merge["rows"]:
-                        key = (row["post_slug"], locked_merge["new_label"])
-                        answer_updates[key] = row["merged_answer"]
-                        result = connection.execute(
-                            "UPDATE post_template_answers SET answer=?,updated_at=? "
-                            "WHERE post_slug=? AND label=? AND answer=? AND enabled=? AND updated_at=?",
-                            (row["merged_answer"], timestamp, row["post_slug"], locked_merge["new_label"],
-                             row["destination_answer"], row["destination_enabled"], row["destination_updated_at"]),
-                        )
-                        if result.rowcount != 1:
-                            raise RuntimeError("answer merge CAS update did not match exactly one row")
-                if counts != tuple(
-                    connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                    for table in ("posts", "post_template_answers")
-                ):
-                    raise RuntimeError("a post or saved answer count changed")
+                for entry in plan:
+                    connection.execute(
+                        "INSERT INTO post_template_answers (post_slug,label,answer,enabled,updated_at) "
+                        "VALUES (?,?,?,1,?)",
+                        (entry["post_slug"], entry["label"], entry["answer"], timestamp),
+                    )
+                if post_count != connection.execute("SELECT COUNT(*) FROM posts").fetchone()[0]:
+                    raise RuntimeError("a post count changed")
                 if dependent_data[0] != dependent_data_fingerprints(connection)[0]:
                     raise RuntimeError("post content changed")
-                expected_answers = [
-                    (slug, label, answer_updates[(slug, label)], enabled, timestamp)
-                    if (slug, label) in answer_updates else (slug, label, answer, enabled, updated_at)
-                    for slug, label, answer, enabled, updated_at in previous_answers
-                ]
+                expected_answers = sorted(previous_answers + [
+                    (entry["post_slug"], entry["label"], entry["answer"], 1, timestamp) for entry in plan
+                ])
                 if expected_answers != answer_rows(connection):
-                    raise RuntimeError("a saved answer changed outside the exact merge plan")
+                    raise RuntimeError("a saved answer changed outside the exact answer plan")
                 for name, row in database_rows(connection).items():
                     if row["body"] != after[name]["body"] or row["description"] != after[name]["description"]:
                         raise RuntimeError(f"{name}: read-back failed")
@@ -304,10 +292,9 @@ def main():
             "applied": args.apply,
             "changed_rows": len(changed_names),
             "changed_names": changed_names,
-            "answer_merge": (
-                {"template": merge["name"], "from_label": merge["old_label"],
-                 "into_label": merge["new_label"], "rows": len(merge["rows"]), "cas": merge["cas"]}
-                if merge is not None else None
+            "answer_plan": (
+                {"inserts": [[entry["post_slug"], entry["label"]] for entry in plan], "cas": plan_cas}
+                if plan else None
             ),
             "templates": [
                 {"name": name, "sha256": digest(after[name]["body"]),
