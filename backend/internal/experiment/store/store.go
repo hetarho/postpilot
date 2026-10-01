@@ -329,6 +329,65 @@ func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, stat
 	return true, nil
 }
 
+func (s *Store) CompleteRanking(ctx context.Context, id, userID string, ranks []experiment.CandidateRank, completedAt, expiresAt time.Time) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	q := sqlc.New(tx)
+	count, err := q.CompleteRankedExperiment(ctx, sqlc.CompleteRankedExperimentParams{
+		CompletedAt: nullTime(&completedAt), ContentExpiresAt: nullTime(&expiresAt), ID: id, UserID: userID,
+	})
+	if err != nil || count != 1 {
+		return false, err
+	}
+	for _, candidate := range ranks {
+		count, err := q.SetCandidateRank(ctx, sqlc.SetCandidateRankParams{Rank: sql.NullInt64{Int64: int64(candidate.Rank), Valid: true}, ID: candidate.CandidateID, ExperimentID: id})
+		if err != nil {
+			return false, err
+		}
+		if count != 1 {
+			return false, experiment.ErrInvalidState
+		}
+		for _, badge := range candidate.Badges {
+			note := sql.NullString{}
+			if badge == experiment.BadgeOther {
+				note = nullString(candidate.OtherNote)
+			}
+			if err := q.InsertVerdictBadge(ctx, sqlc.InsertVerdictBadgeParams{ExperimentID: id, CandidateID: candidate.CandidateID, Badge: string(badge), Note: note}); err != nil {
+				return false, err
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *Store) MarkCandidateApply(ctx context.Context, id, userID, candidateID string, adopt bool) error {
+	count, err := s.write.MarkCandidateApply(ctx, sqlc.MarkCandidateApplyParams{CandidateID: nullString(candidateID), AdoptModel: boolValue(adopt), ID: id, UserID: userID})
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return experiment.ErrInvalidState
+	}
+	return nil
+}
+
+func (s *Store) MarkCandidateAdopt(ctx context.Context, id, userID, candidateID string) error {
+	count, err := s.write.MarkCandidateAdopt(ctx, sqlc.MarkCandidateAdoptParams{CandidateID: nullString(candidateID), ID: id, UserID: userID})
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return experiment.ErrInvalidState
+	}
+	return nil
+}
+
 // SetApplyRequested records the application a decided verdict now owes. A repeat, or a
 // verdict whose application already completed, writes nothing and is not a failure: the
 // caller only needs the debt to exist before the runner is invoked.
@@ -563,6 +622,7 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
 		TemplateName: row.TemplateName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
 		Origin: experiment.Origin(row.Origin), Source: experiment.Source(row.Source), ReviewMode: experiment.ReviewMode(row.ReviewMode),
+		CompletedAt: parseOptional(row.CompletedAt), AppliedCandidateID: row.AppliedCandidateID.String, AdoptedCandidateID: row.AdoptedCandidateID.String,
 		VoicePromptKey: row.VoicePromptKey.String, VoiceMaterialID: row.VoiceMaterialID.String,
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
@@ -621,6 +681,7 @@ func toCandidate(row sqlc.ModelExperimentCandidate) (experiment.Candidate, error
 		ID: row.ID, ExperimentID: row.ExperimentID,
 		Model: experiment.ModelRef{ProviderID: row.ModelProviderID, ModelID: row.ModelID}, ModelLabel: row.ModelLabel,
 		DisplaySide: experiment.DisplaySide(row.DisplaySide), Status: experiment.CandidateStatus(row.Status),
+		Rank:   int(row.Rank.Int64),
 		Output: []byte(row.Output.String), Failure: failure,
 		Usage: experiment.Usage{PromptTokens: row.PromptTokens.Int64, CompletionTokens: row.CompletionTokens.Int64,
 			CostMicrousd: row.CostMicrousd.Int64, CostSource: experiment.CostSource(row.CostSource.String), LatencyMS: row.LatencyMs.Int64},

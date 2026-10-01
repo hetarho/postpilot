@@ -177,6 +177,56 @@ func (h *Handler) DismissExperiment(ctx context.Context, req *connect.Request[po
 	return connect.NewResponse(&postpilotv1.DismissExperimentResponse{Experiment: h.full(ctx, found)}), nil
 }
 
+func (h *Handler) CompleteExperimentReview(ctx context.Context, req *connect.Request[postpilotv1.CompleteExperimentReviewRequest]) (*connect.Response[postpilotv1.CompleteExperimentReviewResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ranks := make([]experiment.CandidateRank, 0, len(req.Msg.GetRanks()))
+	for _, rank := range req.Msg.GetRanks() {
+		ranks = append(ranks, experiment.CandidateRank{
+			CandidateID: rank.GetCandidateId(), Rank: int(rank.GetRank()),
+			Badges: fromProtoBadgeList(rank.GetBadges()), OtherNote: rank.GetOtherNote(),
+		})
+	}
+	found, err := h.service.CompleteReview(ctx, userID, req.Msg.GetExperimentId(), ranks, req.Msg.GetSkip())
+	if err != nil {
+		return nil, toConnectError("complete experiment review", err)
+	}
+	return connect.NewResponse(&postpilotv1.CompleteExperimentReviewResponse{Experiment: h.full(ctx, found)}), nil
+}
+
+func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyCandidateOutputRequest]) (*connect.Response[postpilotv1.ApplyCandidateOutputResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := h.service.ApplyCandidateOutput(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), req.Msg.GetAdoptModel())
+	if err != nil {
+		return nil, toConnectError("apply experiment candidate", err)
+	}
+	return connect.NewResponse(&postpilotv1.ApplyCandidateOutputResponse{Experiment: h.full(ctx, found)}), nil
+}
+
+func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptCandidateModelRequest]) (*connect.Response[postpilotv1.AdoptCandidateModelResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ref, stage, err := h.service.AdoptCandidateModel(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId())
+	if err != nil {
+		return nil, toConnectError("adopt experiment candidate", err)
+	}
+	found, err := h.service.Get(ctx, userID, req.Msg.GetExperimentId())
+	if err != nil {
+		return nil, toConnectError("get adopted experiment", err)
+	}
+	return connect.NewResponse(&postpilotv1.AdoptCandidateModelResponse{
+		Experiment: h.full(ctx, found),
+		Selection:  &postpilotv1.Selection{Stage: toProtoStage(stage), Ref: toProtoRef(ref), Slot: postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE},
+	}), nil
+}
+
 func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyWinnerOutputRequest]) (*connect.Response[postpilotv1.ApplyWinnerOutputResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -316,6 +366,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "experiment voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrBadgesInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the badges offered with this verdict are not ones it can carry", postpilotv1.FailureReason_EXPERIMENT_BADGES_INVALID, nil)
+	case errors.Is(err, experiment.ErrRanksInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "rank every successful candidate with dense positive ranks", postpilotv1.FailureReason_EXPERIMENT_STATE_INVALID, nil)
 	case errors.Is(err, experiment.ErrPostFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a finalized post cannot take a comparison result", postpilotv1.FailureReason_EXPERIMENT_POST_FINALIZED, nil)
 	case errors.Is(err, experiment.ErrPostPublished):
@@ -364,17 +416,20 @@ func toProtoExperiment(found experiment.Experiment, detail experiment.Reflection
 		TargetLanguage: toProtoLanguage(found.TargetLanguage),
 		Outcome:        toProtoOutcome(found.Outcome), CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),
-		Origin:            toProtoOrigin(found.Origin),
-		AppliedAt:         formatOptional(found.AppliedAt),
-		AdoptionRequested: found.AdoptionRequested,
-		AdoptedAt:         formatOptional(found.AdoptedAt),
-		ApplyFailure:      failureToProto(found.ApplyFailure),
-		AdoptionFailure:   failureToProto(found.AdoptionFailure),
-		Source:            toProtoSource(found.Source),
-		VoicePromptKey:    found.VoicePromptKey,
-		VoicePromptText:   detail.PromptText,
-		VoiceAnswer:       detail.Answer,
-		ReviewMode:        string(found.ReviewMode),
+		Origin:             toProtoOrigin(found.Origin),
+		AppliedAt:          formatOptional(found.AppliedAt),
+		AdoptionRequested:  found.AdoptionRequested,
+		AdoptedAt:          formatOptional(found.AdoptedAt),
+		ApplyFailure:       failureToProto(found.ApplyFailure),
+		AdoptionFailure:    failureToProto(found.AdoptionFailure),
+		Source:             toProtoSource(found.Source),
+		VoicePromptKey:     found.VoicePromptKey,
+		VoicePromptText:    detail.PromptText,
+		VoiceAnswer:        detail.Answer,
+		ReviewMode:         string(found.ReviewMode),
+		CompletedAt:        formatOptional(found.CompletedAt),
+		AppliedCandidateId: found.AppliedCandidateID,
+		AdoptedCandidateId: found.AdoptedCandidateID,
 	}
 }
 
@@ -433,6 +488,10 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 			out.Badges = append(out.Badges, toProtoBadge(badge))
 		}
 		out.OtherNote = candidate.OtherNote
+		if candidate.Rank > 0 {
+			rank := int32(candidate.Rank)
+			out.Rank = &rank
+		}
 	}
 	return out
 }
@@ -591,6 +650,18 @@ func fromProtoBadges(offered []*postpilotv1.CandidateBadges) []experiment.Candid
 	return out
 }
 
+func fromProtoBadgeList(offered []postpilotv1.VerdictBadge) []experiment.Badge {
+	out := make([]experiment.Badge, 0, len(offered))
+	for _, badge := range offered {
+		name, ok := badgeNames[badge]
+		if !ok {
+			name = experiment.Badge("invalid")
+		}
+		out = append(out, name)
+	}
+	return out
+}
+
 func toProtoBadge(badge experiment.Badge) postpilotv1.VerdictBadge {
 	for wire, name := range badgeNames {
 		if name == badge {
@@ -640,7 +711,7 @@ func toProtoStage(stage experiment.Stage) postpilotv1.Stage {
 	return postpilotv1.Stage_STAGE_UNSPECIFIED
 }
 func toProtoStatus(status experiment.Status) postpilotv1.ExperimentStatus {
-	return map[experiment.Status]postpilotv1.ExperimentStatus{experiment.StatusQueued: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_QUEUED, experiment.StatusRunning: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_RUNNING, experiment.StatusReview: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_REVIEW, experiment.StatusPartial: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_PARTIAL, experiment.StatusDecided: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DECIDED, experiment.StatusDismissed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DISMISSED, experiment.StatusFailed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_FAILED}[status]
+	return map[experiment.Status]postpilotv1.ExperimentStatus{experiment.StatusQueued: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_QUEUED, experiment.StatusRunning: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_RUNNING, experiment.StatusReview: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_REVIEW, experiment.StatusPartial: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_PARTIAL, experiment.StatusDecided: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DECIDED, experiment.StatusDismissed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_DISMISSED, experiment.StatusFailed: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_FAILED, experiment.StatusCompleted: postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_COMPLETED}[status]
 }
 func toProtoSide(side experiment.DisplaySide) postpilotv1.DisplaySide {
 	switch side {

@@ -479,6 +479,227 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 	return s.owned(ctx, userID, id)
 }
 
+// CompleteReview records the complete ordering in one database transaction. A tied
+// position is repeated; the next distinct position is the next integer.
+func (s *Service) CompleteReview(ctx context.Context, userID, id string, offered []CandidateRank, skip bool) (Experiment, error) {
+	found, err := s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.ReviewMode != ReviewCandidateRanking {
+		return Experiment{}, ErrInvalidState
+	}
+	ranks, err := normalizeRanks(found, offered, skip)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.Status == StatusCompleted {
+		if sameRanks(found, ranks) {
+			return found, nil
+		}
+		return Experiment{}, ErrInvalidState
+	}
+	if found.Status != StatusReview && found.Status != StatusPartial && found.Status != StatusFailed {
+		return Experiment{}, ErrInvalidState
+	}
+	now := s.now()
+	changed, err := s.outcome.CompleteRanking(ctx, id, userID, ranks, now, now.Add(s.retention))
+	if err != nil {
+		return Experiment{}, err
+	}
+	if !changed {
+		current, loadErr := s.owned(ctx, userID, id)
+		if loadErr == nil && current.Status == StatusCompleted && sameRanks(current, ranks) {
+			return current, nil
+		}
+		return Experiment{}, ErrInvalidState
+	}
+	return s.owned(ctx, userID, id)
+}
+
+func normalizeRanks(found Experiment, offered []CandidateRank, skip bool) ([]CandidateRank, error) {
+	if skip {
+		if len(offered) != 0 {
+			return nil, ErrRanksInvalid
+		}
+		return nil, nil
+	}
+	successful := map[string]bool{}
+	for _, candidate := range found.Candidates {
+		if candidate.Status == CandidateSucceeded {
+			successful[candidate.ID] = true
+		}
+	}
+	if len(successful) < 2 || len(offered) != len(successful) {
+		return nil, ErrRanksInvalid
+	}
+	seen := map[string]bool{}
+	positions := map[int]bool{}
+	badges := make([]CandidateBadges, 0, len(offered))
+	for _, rank := range offered {
+		if !successful[rank.CandidateID] || seen[rank.CandidateID] || rank.Rank < 1 || rank.Rank > len(successful) {
+			return nil, ErrRanksInvalid
+		}
+		seen[rank.CandidateID] = true
+		positions[rank.Rank] = true
+		badges = append(badges, CandidateBadges{CandidateID: rank.CandidateID, Badges: rank.Badges, OtherNote: rank.OtherNote})
+	}
+	for i := 1; i <= len(positions); i++ {
+		if !positions[i] {
+			return nil, ErrRanksInvalid
+		}
+	}
+	normalized, err := NormalizeBadges(found, badges)
+	if err != nil {
+		return nil, err
+	}
+	byID := map[string]CandidateBadges{}
+	for _, badge := range normalized {
+		byID[badge.CandidateID] = badge
+	}
+	out := make([]CandidateRank, 0, len(offered))
+	for _, rank := range offered {
+		item := byID[rank.CandidateID]
+		out = append(out, CandidateRank{CandidateID: rank.CandidateID, Rank: rank.Rank, Badges: item.Badges, OtherNote: item.OtherNote})
+	}
+	return out, nil
+}
+
+func sameRanks(found Experiment, ranks []CandidateRank) bool {
+	count := 0
+	for _, candidate := range found.Candidates {
+		if candidate.Rank > 0 {
+			count++
+		}
+	}
+	if count != len(ranks) {
+		return false
+	}
+	byID := map[string]CandidateRank{}
+	for _, rank := range ranks {
+		byID[rank.CandidateID] = rank
+	}
+	for _, candidate := range found.Candidates {
+		expected, ok := byID[candidate.ID]
+		if !ok {
+			if candidate.Rank != 0 {
+				return false
+			}
+			continue
+		}
+		// Private notes leave with the frozen input. After that purge the durable rank
+		// and badge ids still identify the same completion; a replay changes nothing.
+		if candidate.Rank != expected.Rank || (len(found.InputSnapshot) > 0 && candidate.OtherNote != expected.OtherNote) {
+			return false
+		}
+		actual := append([]Badge(nil), candidate.Badges...)
+		want := append([]Badge(nil), expected.Badges...)
+		slices.Sort(actual)
+		slices.Sort(want)
+		if !slices.Equal(actual, want) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Service) ApplyCandidateOutput(ctx context.Context, userID, id, candidateID string, adopt bool) (Experiment, error) {
+	found, err := s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.ReviewMode != ReviewCandidateRanking || found.Status != StatusCompleted ||
+		found.Source == SourceVoice || (found.Origin == OriginEditor && found.Stage != StageWrite) {
+		return Experiment{}, ErrInvalidState
+	}
+	candidate := found.Candidate(candidateID)
+	if candidate == nil || candidate.Status != CandidateSucceeded {
+		return Experiment{}, ErrCandidateNotFound
+	}
+	if found.AppliedCandidateID != "" && found.AppliedCandidateID != candidateID {
+		return Experiment{}, ErrInvalidState
+	}
+	if adopt && found.AdoptedCandidateID != "" && found.AdoptedCandidateID != candidateID {
+		return Experiment{}, ErrInvalidState
+	}
+	if found.AppliedAt == nil {
+		if err := s.allowPostWrite(ctx, found); err != nil {
+			return Experiment{}, err
+		}
+	}
+	if err := s.outcome.MarkCandidateApply(ctx, id, userID, candidateID, adopt); err != nil {
+		return Experiment{}, err
+	}
+	found, err = s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if found.AppliedAt == nil {
+		found, err = s.apply(ctx, found)
+		if err != nil || found.AppliedAt == nil {
+			return found, err
+		}
+	}
+	if adopt && found.AdoptedAt == nil {
+		_, _, err = s.AdoptCandidateModel(ctx, userID, id, candidateID)
+		if err != nil {
+			return s.owned(ctx, userID, id)
+		}
+		return s.owned(ctx, userID, id)
+	}
+	return found, nil
+}
+
+func (s *Service) AdoptCandidateModel(ctx context.Context, userID, id, candidateID string) (ModelRef, Stage, error) {
+	s.adoptMu.Lock()
+	defer s.adoptMu.Unlock()
+	found, err := s.owned(ctx, userID, id)
+	if err != nil {
+		return ModelRef{}, "", err
+	}
+	if found.ReviewMode != ReviewCandidateRanking || found.Status != StatusCompleted {
+		return ModelRef{}, "", ErrInvalidState
+	}
+	candidate := found.Candidate(candidateID)
+	if candidate == nil || candidate.Status != CandidateSucceeded {
+		return ModelRef{}, "", ErrCandidateNotFound
+	}
+	if found.AdoptedCandidateID != "" && found.AdoptedCandidateID != candidateID {
+		return ModelRef{}, "", ErrInvalidState
+	}
+	if found.AdoptedAt != nil {
+		return candidate.Model, found.Stage, nil
+	}
+	if found.Origin == OriginEditor && found.AppliedAt == nil {
+		return ModelRef{}, "", ErrInvalidState
+	}
+	if found.Source == SourceVoice {
+		if err := s.requireActiveVoice(ctx, userID, found.VoiceID); err != nil {
+			return ModelRef{}, "", err
+		}
+	}
+	if _, err := s.resolveForStage(found.Stage, candidate.Model); err != nil {
+		return ModelRef{}, "", err
+	}
+	if err := s.outcome.MarkCandidateAdopt(ctx, id, userID, candidateID); err != nil {
+		return ModelRef{}, "", err
+	}
+	active, selected, err := s.catalog.Active(ctx, userID, found.Stage)
+	if err == nil && !(selected && active == candidate.Model) {
+		err = s.catalog.Adopt(ctx, userID, found.Stage, candidate.Model)
+	}
+	if err != nil {
+		if storeErr := s.outcome.SetAdoptionFailure(ctx, id, userID, normalizeFailure(err)); storeErr != nil {
+			return ModelRef{}, "", storeErr
+		}
+		return ModelRef{}, "", err
+	}
+	if err := s.outcome.SetAdopted(ctx, id, userID, s.now()); err != nil {
+		return ModelRef{}, "", err
+	}
+	return candidate.Model, found.Stage, nil
+}
+
 func (s *Service) ApplyWinner(ctx context.Context, userID, id string) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
@@ -736,6 +957,9 @@ func (s *Service) apply(ctx context.Context, found Experiment) (Experiment, erro
 		return found, nil
 	}
 	winner := found.Winner()
+	if found.ReviewMode == ReviewCandidateRanking {
+		winner = found.Candidate(found.AppliedCandidateID)
+	}
 	if winner == nil || len(winner.Output) == 0 {
 		return Experiment{}, ErrInvalidState
 	}

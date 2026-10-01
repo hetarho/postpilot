@@ -48,7 +48,8 @@ SELECT * FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
-	OR (status = 'decided' AND (
+	OR (status = 'completed' AND origin = 'editor' AND applied_at IS NULL)
+	OR (status IN ('decided', 'completed') AND (
 	      (apply_requested = 1 AND applied_at IS NULL)
 	      OR (adoption_requested = 1 AND adopted_at IS NULL)
 	   ))
@@ -63,7 +64,8 @@ SELECT id FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write' AND origin = 'editor'
   AND (
     status IN ('queued', 'running', 'review', 'partial')
-    OR (status = 'decided' AND (
+    OR (status = 'completed' AND applied_at IS NULL)
+    OR (status IN ('decided', 'completed') AND (
           (apply_requested = 1 AND applied_at IS NULL)
           OR (adoption_requested = 1 AND adopted_at IS NULL)
        ))
@@ -134,6 +136,30 @@ SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed');
 
+-- name: CompleteRankedExperiment :execrows
+UPDATE model_experiments
+SET status = 'completed', completed_at = ?, content_expires_at = ?
+WHERE id = ? AND user_id = ? AND review_mode = 'candidate_ranking'
+  AND status IN ('review', 'partial', 'failed');
+
+-- name: SetCandidateRank :execrows
+UPDATE model_experiment_candidates SET rank = ?
+WHERE id = ? AND experiment_id = ? AND status = 'succeeded' AND rank IS NULL;
+
+-- name: MarkCandidateApply :execrows
+UPDATE model_experiments
+SET applied_candidate_id = sqlc.arg(candidate_id), apply_requested = 1,
+    adoption_requested = CASE WHEN sqlc.arg(adopt_model) = 1 THEN 1 ELSE adoption_requested END,
+    adopted_candidate_id = CASE WHEN sqlc.arg(adopt_model) = 1 THEN sqlc.arg(candidate_id) ELSE adopted_candidate_id END
+WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND review_mode = 'candidate_ranking' AND status = 'completed'
+  AND (applied_candidate_id IS NULL OR applied_candidate_id = sqlc.arg(candidate_id))
+  AND (sqlc.arg(adopt_model) = 0 OR adopted_candidate_id IS NULL OR adopted_candidate_id = sqlc.arg(candidate_id));
+
+-- name: MarkCandidateAdopt :execrows
+UPDATE model_experiments SET adopted_candidate_id = sqlc.arg(candidate_id), adoption_requested = 1
+WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND review_mode = 'candidate_ranking' AND status = 'completed'
+  AND (adopted_candidate_id IS NULL OR adopted_candidate_id = sqlc.arg(candidate_id));
+
 -- name: InsertVerdictBadge :exec
 -- Written in the same transaction as the verdict it explains. A repeat of the same badge for
 -- the same candidate is the same row, so a retried write changes nothing.
@@ -158,7 +184,7 @@ UPDATE model_experiment_badges SET note = NULL
 WHERE experiment_id IN (
   SELECT id FROM model_experiments
   WHERE content_expires_at IS NOT NULL AND content_expires_at <= ?
-    AND status IN ('decided', 'dismissed')
+    AND status IN ('decided', 'dismissed', 'completed')
 );
 
 -- name: PurgePostBadgeNotes :exec
@@ -188,7 +214,7 @@ WHERE id = ? AND user_id = ?;
 UPDATE model_experiments
 SET apply_error = NULL, apply_error_reason = NULL, apply_error_params = NULL,
     apply_technical_detail = NULL, applied_at = ?
-WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL;
+WHERE id = ? AND user_id = ? AND status IN ('decided', 'completed') AND applied_at IS NULL;
 
 -- name: SetAdoptionFailure :exec
 UPDATE model_experiments
@@ -200,14 +226,14 @@ WHERE id = ? AND user_id = ? AND adoption_requested = 1 AND adopted_at IS NULL;
 UPDATE model_experiments
 SET adoption_error = NULL, adoption_error_reason = NULL, adoption_error_params = NULL,
     adoption_technical_detail = NULL, adopted_at = ?
-WHERE id = ? AND user_id = ? AND status = 'decided'
+WHERE id = ? AND user_id = ? AND status IN ('decided', 'completed')
   AND adoption_requested = 1 AND adopted_at IS NULL;
 
 -- name: PurgeExpiredContent :execrows
 UPDATE model_experiments
 SET input_snapshot = NULL
 WHERE content_expires_at IS NOT NULL AND content_expires_at <= ?
-  AND status IN ('decided', 'dismissed') AND input_snapshot IS NOT NULL;
+  AND status IN ('decided', 'dismissed', 'completed') AND input_snapshot IS NOT NULL;
 
 -- name: PurgeExpiredCandidateOutput :execrows
 UPDATE model_experiment_candidates
@@ -215,7 +241,7 @@ SET output = NULL
 WHERE experiment_id IN (
   SELECT id FROM model_experiments
   WHERE content_expires_at IS NOT NULL AND content_expires_at <= ?
-    AND status IN ('decided', 'dismissed')
+    AND status IN ('decided', 'dismissed', 'completed')
 );
 
 -- name: PurgePostContent :exec

@@ -22,6 +22,9 @@ service ModelExperimentService {
   rpc DecideWriteExperiment(DecideWriteExperimentRequest) returns (ChooseWinnerResponse) {}
   rpc UseSingleCandidate(UseSingleCandidateRequest) returns (ChooseWinnerResponse) {}
   rpc DismissExperiment(DismissExperimentRequest) returns (DismissExperimentResponse) {}
+  rpc CompleteExperimentReview(CompleteExperimentReviewRequest) returns (CompleteExperimentReviewResponse) {}
+  rpc ApplyCandidateOutput(ApplyCandidateOutputRequest) returns (ApplyCandidateOutputResponse) {}
+  rpc AdoptCandidateModel(AdoptCandidateModelRequest) returns (AdoptCandidateModelResponse) {}
   rpc ApplyWinnerOutput(ApplyWinnerOutputRequest) returns (ApplyWinnerOutputResponse) {}
   rpc AdoptWinnerModel(AdoptWinnerModelRequest) returns (AdoptWinnerModelResponse) {}
   rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse) {}
@@ -36,6 +39,7 @@ enum ExperimentStatus {
   EXPERIMENT_STATUS_DECIDED = 5;
   EXPERIMENT_STATUS_DISMISSED = 6;
   EXPERIMENT_STATUS_FAILED = 7;
+  EXPERIMENT_STATUS_COMPLETED = 8;
 }
 
 enum DisplaySide {
@@ -162,6 +166,7 @@ message ExperimentCandidate {
   // Populated only after a verdict/dismissal, beside the revealed identity.
   repeated VerdictBadge badges = 12;
   string other_note = 13;
+  optional int32 rank = 15;
 }
 
 message ModelExperiment {
@@ -202,6 +207,9 @@ message ModelExperiment {
   string voice_answer = 27;
   // Existing pairwise records and legacy starts use pairwise; full-list starts use candidate_ranking.
   string review_mode = 28;
+  string completed_at = 29;
+  string applied_candidate_id = 30;
+  string adopted_candidate_id = 31;
 }
 
 message StartObserveExperimentRequest {
@@ -262,6 +270,34 @@ message ChooseWinnerResponse { ModelExperiment experiment = 1; }
 
 message DismissExperimentRequest { string experiment_id = 1; }
 message DismissExperimentResponse { ModelExperiment experiment = 1; }
+
+// A complete blind ordering; equal positive ranks are allowed and gaps are not.
+message CandidateRank {
+  string candidate_id = 1;
+  int32 rank = 2;
+  repeated VerdictBadge badges = 3;
+  string other_note = 4;
+}
+message CompleteExperimentReviewRequest {
+  string experiment_id = 1;
+  repeated CandidateRank ranks = 2;
+  bool skip = 3;
+}
+message CompleteExperimentReviewResponse { ModelExperiment experiment = 1; }
+message ApplyCandidateOutputRequest {
+  string experiment_id = 1;
+  string candidate_id = 2;
+  bool adopt_model = 3;
+}
+message ApplyCandidateOutputResponse { ModelExperiment experiment = 1; }
+message AdoptCandidateModelRequest {
+  string experiment_id = 1;
+  string candidate_id = 2;
+}
+message AdoptCandidateModelResponse {
+  ModelExperiment experiment = 1;
+  Selection selection = 2;
+}
 
 message ApplyWinnerOutputRequest {
   string experiment_id = 1;

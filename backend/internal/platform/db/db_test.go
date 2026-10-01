@@ -143,12 +143,25 @@ func TestMigration0124PreservesLegacyCandidatesAndBadges(t *testing.T) {
 	if mode != "pairwise" {
 		t.Fatalf("legacy mode = %s", mode)
 	}
+	var completedAt, appliedID, adoptedID, rank sql.NullString
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT e.completed_at,e.applied_candidate_id,e.adopted_candidate_id,c.rank
+		FROM model_experiments e JOIN model_experiment_candidates c ON c.experiment_id=e.id
+		WHERE e.id='legacy' AND c.id='legacy-left'`).Scan(&completedAt, &appliedID, &adoptedID, &rank); err != nil {
+		t.Fatal(err)
+	}
+	if completedAt.Valid || appliedID.Valid || adoptedID.Valid || rank.Valid {
+		t.Fatalf("legacy record gained ranked metadata: completed=%v applied=%v adopted=%v rank=%v", completedAt, appliedID, adoptedID, rank)
+	}
 	var badge string
 	if err := handle.Reader.QueryRowContext(ctx, `SELECT badge FROM model_experiment_badges WHERE candidate_id='legacy-left'`).Scan(&badge); err != nil || badge != "natural" {
 		t.Fatalf("badge = %s, %v", badge, err)
 	}
 	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO model_experiment_candidates(id,experiment_id,model_provider_id,model_id,model_label,display_side,status) VALUES('new-c','legacy','p','c','C','c','pending')`); err != nil {
 		t.Fatalf("C side rejected: %v", err)
+	}
+	var broken int
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT count(*) FROM pragma_foreign_key_check`).Scan(&broken); err != nil || broken != 0 {
+		t.Fatalf("migration foreign keys = %d, %v", broken, err)
 	}
 }
 

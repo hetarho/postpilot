@@ -112,6 +112,117 @@ func TestStorePersistsFiveRankedCandidatesInDisplayOrder(t *testing.T) {
 	}
 }
 
+func TestRankedCompletionPersistsTiesActionsAndPrivatePurge(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	found := sample("ranked-completion", "alice", "post-a", now)
+	found.ReviewMode = experiment.ReviewCandidateRanking
+	found.Origin = experiment.OriginEditor
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range found.Candidates {
+		candidate.Status = experiment.CandidateSucceeded
+		candidate.Output = []byte(`{"private":"output"}`)
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, nil); err != nil {
+		t.Fatal(err)
+	}
+	ranks := []experiment.CandidateRank{
+		{CandidateID: found.Candidates[0].ID, Rank: 1, Badges: []experiment.Badge{experiment.BadgeFast}},
+		{CandidateID: found.Candidates[1].ID, Rank: 1, Badges: []experiment.Badge{experiment.BadgeOther}, OtherNote: "private note"},
+	}
+	if ok, err := store.CompleteRanking(ctx, found.ID, "bob", ranks, now, now.Add(time.Hour)); err != nil || ok {
+		t.Fatalf("cross-account completion=%v,%v", ok, err)
+	}
+	if ok, err := store.CompleteRanking(ctx, found.ID, "alice", ranks, now, now.Add(time.Hour)); err != nil || !ok {
+		t.Fatalf("completion=%v,%v", ok, err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil || reloaded.Status != experiment.StatusCompleted || reloaded.CompletedAt == nil ||
+		reloaded.Candidates[0].Rank != 1 || reloaded.Candidates[1].Rank != 1 || reloaded.Candidates[1].OtherNote != "private note" {
+		t.Fatalf("reloaded=%+v, %v", reloaded, err)
+	}
+	if blocked, err := store.BlockingWriteForPost(ctx, "alice", "post-a"); err != nil || blocked != found.ID {
+		t.Fatalf("block=%s,%v", blocked, err)
+	}
+	if err := store.MarkCandidateApply(ctx, found.ID, "alice", found.Candidates[0].ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.MarkCandidateApply(ctx, found.ID, "alice", found.Candidates[1].ID, false); !errors.Is(err, experiment.ErrInvalidState) {
+		t.Fatalf("second candidate apply: %v", err)
+	}
+	if err := store.SetApplied(ctx, found.ID, "alice", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.MarkCandidateAdopt(ctx, found.ID, "alice", found.Candidates[1].ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetAdopted(ctx, found.ID, "alice", now); err != nil {
+		t.Fatal(err)
+	}
+	if blocked, err := store.BlockingWriteForPost(ctx, "alice", "post-a"); err != nil || blocked != "" {
+		t.Fatalf("block after apply=%s,%v", blocked, err)
+	}
+	if _, err := store.PurgeExpired(ctx, now.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	purged, err := store.Get(ctx, found.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(purged.InputSnapshot) != 0 || len(purged.Candidates[0].Output) != 0 || purged.Candidates[1].OtherNote != "" ||
+		purged.Candidates[0].Rank != 1 || len(purged.Candidates[0].Badges) != 1 ||
+		purged.AppliedCandidateID != found.Candidates[0].ID || purged.AdoptedCandidateID != found.Candidates[1].ID ||
+		purged.AppliedAt == nil || purged.AdoptedAt == nil {
+		t.Fatalf("purged=%+v", purged)
+	}
+	var fkErrors int
+	if err := handle.Reader.QueryRow(`SELECT count(*) FROM pragma_foreign_key_check`).Scan(&fkErrors); err != nil || fkErrors != 0 {
+		t.Fatalf("foreign keys=%d,%v", fkErrors, err)
+	}
+}
+
+func TestRankedPostPurgeKeepsEvaluationMetadata(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	found := sample("ranked-post-purge", "alice", "post-a", now)
+	found.ReviewMode = experiment.ReviewCandidateRanking
+	found.Origin = experiment.OriginLab
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range found.Candidates {
+		candidate.Status = experiment.CandidateSucceeded
+		candidate.Output = []byte(`{"private":true}`)
+		if err := store.CompleteCandidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, nil); err != nil {
+		t.Fatal(err)
+	}
+	ranks := []experiment.CandidateRank{{CandidateID: found.Candidates[0].ID, Rank: 1, Badges: []experiment.Badge{experiment.BadgeOther}, OtherNote: "private"},
+		{CandidateID: found.Candidates[1].ID, Rank: 2}}
+	if ok, err := store.CompleteRanking(ctx, found.ID, "alice", ranks, now, now.Add(30*24*time.Hour)); err != nil || !ok {
+		t.Fatalf("complete=%v,%v", ok, err)
+	}
+	if err := store.PurgePost(ctx, "alice", "post-a"); err != nil {
+		t.Fatal(err)
+	}
+	purged, err := store.Get(ctx, found.ID)
+	if err != nil || len(purged.InputSnapshot) != 0 || len(purged.Candidates[0].Output) != 0 ||
+		purged.Candidates[0].OtherNote != "" || purged.Candidates[0].Rank != 1 ||
+		len(purged.Candidates[0].Badges) != 1 || purged.Candidates[0].Model.ModelID != "a" {
+		t.Fatalf("post purge=%+v,%v", purged, err)
+	}
+}
+
 func TestStorePersistsAndValidatesFrozenTargetLanguage(t *testing.T) {
 	store, handle := testStore(t)
 	ctx := context.Background()

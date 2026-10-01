@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -150,6 +151,26 @@ func TestCandidateMappingIsBlindUntilVerdict(t *testing.T) {
 	if owner.GetUsage().GetCostMicrousd() != 0 || owner.GetUsage().GetCostSource() != postpilotv1.CostSource_COST_SOURCE_UNSPECIFIED ||
 		owner.GetFailure().GetReason() != "MODEL_RATE_LIMITED" {
 		t.Fatalf("owner reveal carries supplier cost: %+v", owner)
+	}
+}
+
+func TestRankedCompletionRevealsRanksOnlyAfterReview(t *testing.T) {
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	candidate := experiment.Candidate{ID: "opaque", Model: experiment.ModelRef{ProviderID: "p", ModelID: "private"},
+		ModelLabel: "Private", DisplaySide: experiment.SideC, Status: experiment.CandidateSucceeded,
+		Rank: 1, Badges: []experiment.Badge{experiment.BadgeFast}, Usage: experiment.Usage{PromptTokens: 5, LatencyMS: 20}}
+	blind := toProtoCandidate(experiment.Experiment{Status: experiment.StatusReview, ReviewMode: experiment.ReviewCandidateRanking}, candidate, nil, false)
+	if blind.Rank != nil || blind.GetModel() != nil || blind.GetUsage() != nil || len(blind.GetBadges()) != 0 {
+		t.Fatalf("blind candidate leaked: %+v", blind)
+	}
+	found := experiment.Experiment{Status: experiment.StatusCompleted, ReviewMode: experiment.ReviewCandidateRanking,
+		CompletedAt: &now, AppliedCandidateID: "opaque", Candidates: []experiment.Candidate{candidate}}
+	visible := toProtoExperiment(found, experiment.ReflectionDetail{}, false)
+	if visible.GetStatus() != postpilotv1.ExperimentStatus_EXPERIMENT_STATUS_COMPLETED || visible.GetCompletedAt() == "" ||
+		visible.GetAppliedCandidateId() != "opaque" || visible.GetCandidates()[0].GetRank() != 1 ||
+		visible.GetCandidates()[0].GetModel().GetModelId() != "private" ||
+		visible.GetCandidates()[0].GetUsage().GetPromptTokens() != 5 || len(visible.GetCandidates()[0].GetBadges()) != 1 {
+		t.Fatalf("revealed=%+v", visible)
 	}
 }
 

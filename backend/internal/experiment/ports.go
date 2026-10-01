@@ -39,6 +39,9 @@ type CandidateLedger interface {
 
 // OutcomeLedger is what the owner decided and what happened when it was applied.
 type OutcomeLedger interface {
+	CompleteRanking(ctx context.Context, id, userID string, ranks []CandidateRank, completedAt, expiresAt time.Time) (bool, error)
+	MarkCandidateApply(ctx context.Context, id, userID, candidateID string, adopt bool) error
+	MarkCandidateAdopt(ctx context.Context, id, userID, candidateID string) error
 	// Decide writes the verdict and the badges that explain it in one transaction: a board
 	// that counted a badge whose verdict was never recorded would be counting nothing.
 	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, badges []CandidateBadges, decidedAt, expiresAt time.Time) (bool, error)

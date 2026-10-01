@@ -78,8 +78,8 @@ func (s *memoryStore) PendingForPost(_ context.Context, userID, slug string) (*E
 		// The same definition the unresolved-per-post index carries: a decided comparison
 		// still holds its post only while an application or adoption it asked for is
 		// incomplete. A lab pick asks for neither, so it releases the post at once.
-		unresolved := !row.Revealed() ||
-			(row.Status == StatusDecided &&
+		unresolved := !row.Revealed() || (row.Status == StatusCompleted && row.Origin == OriginEditor && row.AppliedAt == nil) ||
+			((row.Status == StatusDecided || row.Status == StatusCompleted) &&
 				((row.ApplyRequested && row.AppliedAt == nil) || (row.AdoptionRequested && row.AdoptedAt == nil)))
 		if unresolved {
 			copy := cloneExperiment(row)
@@ -97,7 +97,8 @@ func (s *memoryStore) BlockingWriteForPost(_ context.Context, userID, slug strin
 		}
 		switch {
 		case row.Status == StatusQueued, row.Status == StatusRunning, row.Status == StatusReview, row.Status == StatusPartial,
-			row.Status == StatusDecided && ((row.ApplyRequested && row.AppliedAt == nil) || (row.AdoptionRequested && row.AdoptedAt == nil)):
+			row.Status == StatusCompleted && row.AppliedAt == nil,
+			(row.Status == StatusDecided || row.Status == StatusCompleted) && ((row.ApplyRequested && row.AppliedAt == nil) || (row.AdoptionRequested && row.AdoptedAt == nil)):
 			return row.ID, nil
 		}
 	}
@@ -273,11 +274,60 @@ func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, 
 	s.rows[id] = row
 	return true, nil
 }
+func (s *memoryStore) CompleteRanking(_ context.Context, id, userID string, ranks []CandidateRank, completedAt, expiresAt time.Time) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.ReviewMode != ReviewCandidateRanking ||
+		(row.Status != StatusReview && row.Status != StatusPartial && row.Status != StatusFailed) {
+		return false, nil
+	}
+	row.Status, row.CompletedAt, row.ContentExpiresAt = StatusCompleted, &completedAt, &expiresAt
+	for i := range row.Candidates {
+		for _, rank := range ranks {
+			if row.Candidates[i].ID == rank.CandidateID {
+				row.Candidates[i].Rank = rank.Rank
+				row.Candidates[i].Badges = append([]Badge(nil), rank.Badges...)
+				row.Candidates[i].OtherNote = rank.OtherNote
+			}
+		}
+	}
+	s.rows[id] = row
+	return true, nil
+}
+func (s *memoryStore) MarkCandidateApply(_ context.Context, id, userID, candidateID string, adopt bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.Status != StatusCompleted ||
+		(row.AppliedCandidateID != "" && row.AppliedCandidateID != candidateID) ||
+		(adopt && row.AdoptedCandidateID != "" && row.AdoptedCandidateID != candidateID) {
+		return ErrInvalidState
+	}
+	row.AppliedCandidateID, row.ApplyRequested = candidateID, true
+	if adopt {
+		row.AdoptedCandidateID, row.AdoptionRequested = candidateID, true
+	}
+	s.rows[id] = row
+	return nil
+}
+func (s *memoryStore) MarkCandidateAdopt(_ context.Context, id, userID, candidateID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.Status != StatusCompleted ||
+		(row.AdoptedCandidateID != "" && row.AdoptedCandidateID != candidateID) {
+		return ErrInvalidState
+	}
+	row.AdoptedCandidateID, row.AdoptionRequested = candidateID, true
+	s.rows[id] = row
+	return nil
+}
 func (s *memoryStore) SetApplyRequested(_ context.Context, id, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
-	if row.UserID != userID || row.Status != StatusDecided || row.AppliedAt != nil {
+	if row.UserID != userID || (row.Status != StatusDecided && row.Status != StatusCompleted) || row.AppliedAt != nil {
 		return nil
 	}
 	row.ApplyRequested = true
@@ -288,7 +338,7 @@ func (s *memoryStore) SetAdoptionRequested(_ context.Context, id, userID string)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
-	if row.UserID != userID || row.Status != StatusDecided || row.AdoptedAt != nil {
+	if row.UserID != userID || (row.Status != StatusDecided && row.Status != StatusCompleted) || row.AdoptedAt != nil {
 		return nil
 	}
 	row.AdoptionRequested = true
@@ -310,7 +360,7 @@ func (s *memoryStore) SetApplied(_ context.Context, id, userID string, now time.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
-	if row.UserID != userID || row.Status != StatusDecided || row.AppliedAt != nil {
+	if row.UserID != userID || (row.Status != StatusDecided && row.Status != StatusCompleted) || row.AppliedAt != nil {
 		return ErrInvalidState
 	}
 	row.ApplyFailure = nil
@@ -333,7 +383,7 @@ func (s *memoryStore) SetAdopted(_ context.Context, id, userID string, now time.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
-	if row.UserID != userID || row.Status != StatusDecided || row.AdoptedAt != nil {
+	if row.UserID != userID || (row.Status != StatusDecided && row.Status != StatusCompleted) || row.AdoptedAt != nil {
 		return ErrInvalidState
 	}
 	row.AdoptionFailure = nil
@@ -744,6 +794,240 @@ func TestRankedStartRunsFiveAndRetriesOnlyFailedCandidate(t *testing.T) {
 	}
 	if _, err := svc.Dismiss(ctx, "alice", found.ID); !errors.Is(err, ErrInvalidState) {
 		t.Fatalf("legacy dismissal = %v", err)
+	}
+}
+
+func TestRankedReviewRequiresAllSuccessesDenseAndAllowsTies(t *testing.T) {
+	svc, store, _, jobs, runner := newTestService()
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, Origin: OriginLab,
+		Candidates: []ModelRef{{"p", "a"}, {"p", "b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	a, b := found.Candidates[0].ID, found.Candidates[1].ID
+	bad := [][]CandidateRank{
+		{{CandidateID: a, Rank: 1}},
+		{{CandidateID: a, Rank: 1}, {CandidateID: a, Rank: 1}},
+		{{CandidateID: a, Rank: 1}, {CandidateID: b, Rank: 3}},
+		{{CandidateID: a, Rank: 0}, {CandidateID: b, Rank: 1}},
+		{{CandidateID: a, Rank: 1}, {CandidateID: "unknown", Rank: 2}},
+		{{CandidateID: a, Rank: 1, OtherNote: "orphan"}, {CandidateID: b, Rank: 2}},
+		{{CandidateID: a, Rank: 1, Badges: []Badge{BadgeOther}, OtherNote: strings.Repeat("x", BadgeNoteMaxLength+1)}, {CandidateID: b, Rank: 2}},
+	}
+	for _, ranks := range bad {
+		if _, err := svc.CompleteReview(ctx, "alice", found.ID, ranks, false); err == nil {
+			t.Fatalf("accepted invalid ranking: %+v", ranks)
+		}
+		current, _ := store.Get(ctx, found.ID)
+		if current.Status != StatusReview || current.Candidates[0].Rank != 0 {
+			t.Fatalf("partial completion persisted: %+v", current)
+		}
+	}
+	if _, err := svc.CompleteReview(ctx, "bob", found.ID, nil, true); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("cross account: %v", err)
+	}
+	ranks := []CandidateRank{{CandidateID: a, Rank: 1, Badges: []Badge{BadgeFast, BadgeFast}}, {CandidateID: b, Rank: 1, Badges: []Badge{BadgeOther}, OtherNote: "distinct"}}
+	completed, err := svc.CompleteReview(ctx, "alice", found.ID, ranks, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completed.Status != StatusCompleted || completed.CompletedAt == nil || completed.Candidates[0].Rank != 1 || completed.Candidates[1].Rank != 1 ||
+		completed.WinnerCandidateID != "" || completed.Outcome != "" || completed.AppliedAt != nil || len(catalogOf(completed)) != 2 {
+		t.Fatalf("completed = %+v", completed)
+	}
+	if len(jobs.ids) != 1 || runner.runCalls != 2 || runner.applyCalls != 0 {
+		t.Fatalf("review invoked provider or post: jobs=%d runs=%d applies=%d", len(jobs.ids), runner.runCalls, runner.applyCalls)
+	}
+	if again, err := svc.CompleteReview(ctx, "alice", found.ID, ranks, false); err != nil || again.CompletedAt == nil {
+		t.Fatalf("exact replay: %v", err)
+	}
+	if _, err := svc.CompleteReview(ctx, "alice", found.ID, []CandidateRank{{CandidateID: a, Rank: 1}, {CandidateID: b, Rank: 2}}, false); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("conflicting replay: %v", err)
+	}
+	purged := completed
+	purged.InputSnapshot = nil
+	purged.Candidates[1].OtherNote = ""
+	normalized, normErr := normalizeRanks(purged, ranks, false)
+	if normErr != nil || !sameRanks(purged, normalized) {
+		t.Fatal("the same completion stopped being idempotent after private notes were purged")
+	}
+}
+
+func catalogOf(found Experiment) []Badge {
+	out := []Badge{}
+	for _, candidate := range found.Candidates {
+		out = append(out, candidate.Badges...)
+	}
+	return out
+}
+
+func TestRankedApplyAndAdoptAreSeparateAndCandidateSpecific(t *testing.T) {
+	svc, store, catalog, _, runner := newTestService()
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, Origin: OriginEditor, Candidates: []ModelRef{{"p", "a"}, {"p", "b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	ranks := []CandidateRank{{CandidateID: found.Candidates[0].ID, Rank: 1}, {CandidateID: found.Candidates[1].ID, Rank: 2}}
+	found, err = svc.CompleteReview(ctx, "alice", found.ID, ranks, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending, _ := store.BlockingWriteForPost(ctx, "alice", "post"); pending != found.ID {
+		t.Fatalf("completed editor did not block: %s", pending)
+	}
+	if _, _, err := svc.AdoptCandidateModel(ctx, "alice", found.ID, ranks[0].CandidateID); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("early adoption: %v", err)
+	}
+	runner.applyErr = errors.New("post failed")
+	failed, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[0].CandidateID, true)
+	if err != nil || failed.ApplyFailure == nil || failed.AppliedAt != nil || len(catalog.adopted) != 0 {
+		t.Fatalf("failed apply = %+v, %v", failed, err)
+	}
+	runner.applyErr = nil
+	applied, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[0].CandidateID, true)
+	if err != nil || applied.AppliedAt == nil || applied.AdoptedAt == nil || applied.AppliedCandidateID != ranks[0].CandidateID ||
+		applied.AdoptedCandidateID != ranks[0].CandidateID || runner.applyCalls != 2 || len(catalog.adopted) != 1 {
+		t.Fatalf("applied = %+v, %v", applied, err)
+	}
+	if _, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[0].CandidateID, true); err != nil || runner.applyCalls != 2 {
+		t.Fatalf("retry reapplied: %v", err)
+	}
+	if _, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[1].CandidateID, false); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("different apply: %v", err)
+	}
+	if _, _, err := svc.AdoptCandidateModel(ctx, "alice", found.ID, ranks[1].CandidateID); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("different adopt: %v", err)
+	}
+	if pending, _ := store.BlockingWriteForPost(ctx, "alice", "post"); pending != "" {
+		t.Fatalf("applied editor remains blocking: %s", pending)
+	}
+}
+
+func TestRankedPartialSkipsWithoutPairwiseVerdictAndCanApplySurvivor(t *testing.T) {
+	svc, store, _, _, runner := newTestService()
+	ctx := context.Background()
+	runner.fail["b"] = errors.New("failed")
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, Origin: OriginLab, Candidates: []ModelRef{{"p", "a"}, {"p", "b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	if found.Status != StatusPartial {
+		t.Fatalf("status=%s", found.Status)
+	}
+	var survivor, failed string
+	for _, candidate := range found.Candidates {
+		if candidate.Status == CandidateSucceeded {
+			survivor = candidate.ID
+		} else {
+			failed = candidate.ID
+		}
+	}
+	if _, err := svc.CompleteReview(ctx, "alice", found.ID, []CandidateRank{{CandidateID: survivor, Rank: 1}}, false); !errors.Is(err, ErrRanksInvalid) {
+		t.Fatalf("single ranked: %v", err)
+	}
+	if _, err := svc.CompleteReview(ctx, "alice", found.ID, []CandidateRank{{CandidateID: survivor, Rank: 1}, {CandidateID: failed, Rank: 2}}, false); !errors.Is(err, ErrRanksInvalid) {
+		t.Fatalf("failed ranked: %v", err)
+	}
+	completed, err := svc.CompleteReview(ctx, "alice", found.ID, nil, true)
+	if err != nil || completed.Status != StatusCompleted || completed.Outcome != "" || completed.WinnerCandidateID != "" {
+		t.Fatalf("skip=%+v,%v", completed, err)
+	}
+	applied, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, survivor, false)
+	if err != nil || applied.AppliedAt == nil || runner.applyCalls != 1 {
+		t.Fatalf("survivor apply=%+v,%v", applied, err)
+	}
+	if _, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, failed, false); !errors.Is(err, ErrCandidateNotFound) {
+		t.Fatalf("failed apply: %v", err)
+	}
+}
+
+func TestRankedLabAdoptionDoesNotApplyAndRespectsDeletedVoice(t *testing.T) {
+	svc, store, catalog, _, runner := newTestService()
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, Origin: OriginLab, Candidates: []ModelRef{{"p", "a"}, {"p", "b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	ranks := []CandidateRank{{CandidateID: found.Candidates[0].ID, Rank: 1}, {CandidateID: found.Candidates[1].ID, Rank: 2}}
+	found, err = svc.CompleteReview(ctx, "alice", found.ID, ranks, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blocked, _ := store.BlockingWriteForPost(ctx, "alice", "post"); blocked != "" {
+		t.Fatalf("lab blocked post: %s", blocked)
+	}
+	ref, stage, err := svc.AdoptCandidateModel(ctx, "alice", found.ID, ranks[1].CandidateID)
+	if err != nil || ref != found.Candidates[1].Model || stage != StageWrite || runner.applyCalls != 0 || len(catalog.adopted) != 1 {
+		t.Fatalf("lab adoption=%+v,%s,%v applies=%d", ref, stage, err, runner.applyCalls)
+	}
+	if _, _, err := svc.AdoptCandidateModel(ctx, "alice", found.ID, ranks[0].CandidateID); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("different adoption: %v", err)
+	}
+	// A voice-sourced comparison offers only model adoption, and its voice must remain active.
+	voice := found
+	voice.ID = "voice-comparison"
+	voice.PostSlug = ""
+	voice.Source = SourceVoice
+	voice.VoiceID = "voice-1"
+	voice.AdoptedAt = nil
+	voice.AdoptedCandidateID = ""
+	for i := range voice.Candidates {
+		voice.Candidates[i].ExperimentID = voice.ID
+	}
+	if err := store.Create(ctx, voice); err != nil {
+		t.Fatal(err)
+	}
+	svc.SetVoiceDirectory(fakeVoices{deleted: map[string]bool{"voice-1": true}})
+	if _, err := svc.ApplyCandidateOutput(ctx, "alice", voice.ID, ranks[0].CandidateID, false); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("voice applied post: %v", err)
+	}
+	if _, _, err := svc.AdoptCandidateModel(ctx, "alice", voice.ID, ranks[0].CandidateID); !errors.Is(err, ErrVoiceUnavailable) {
+		t.Fatalf("deleted voice adopted: %v", err)
+	}
+}
+
+func TestRankedObserveApplyHonorsLabPostStatus(t *testing.T) {
+	svc, store, _, _, runner := newTestService()
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageObserve, Candidates: []ModelRef{{"p", "a"}, {"p", "b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	ranks := []CandidateRank{{CandidateID: found.Candidates[0].ID, Rank: 1}, {CandidateID: found.Candidates[1].ID, Rank: 2}}
+	found, err = svc.CompleteReview(ctx, "alice", found.ID, ranks, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.posts = &fakePosts{statuses: map[string]string{"post": PostStatusFinalized}}
+	if _, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[0].CandidateID, false); !errors.Is(err, ErrPostFinalized) {
+		t.Fatalf("finalized observe apply: %v", err)
+	}
+	svc.posts = &fakePosts{statuses: map[string]string{"post": PostStatusReview}}
+	applied, err := svc.ApplyCandidateOutput(ctx, "alice", found.ID, ranks[0].CandidateID, false)
+	if err != nil || applied.AppliedAt == nil || runner.applyCalls != 1 {
+		t.Fatalf("review observe apply=%+v,%v", applied, err)
 	}
 }
 

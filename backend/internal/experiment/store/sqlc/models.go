@@ -44,6 +44,9 @@ type ModelExperiment struct {
 	VoicePromptKey          sql.NullString
 	VoiceMaterialID         sql.NullString
 	ReviewMode              string
+	CompletedAt             sql.NullString
+	AppliedCandidateID      sql.NullString
+	AdoptedCandidateID      sql.NullString
 }
 
 type ModelExperimentBadge struct {
@@ -73,4 +76,5 @@ type ModelExperimentCandidate struct {
 	ErrorReason      sql.NullString
 	ErrorParams      sql.NullString
 	TechnicalDetail  sql.NullString
+	Rank             sql.NullInt64
 }

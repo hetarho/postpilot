@@ -129,6 +129,7 @@ const (
 	StatusDecided   Status = "decided"
 	StatusDismissed Status = "dismissed"
 	StatusFailed    Status = "failed"
+	StatusCompleted Status = "completed"
 )
 
 type CandidateStatus string
@@ -195,6 +196,7 @@ type Candidate struct {
 	// candidate's identity, never before it.
 	Badges    []Badge
 	OtherNote string
+	Rank      int
 
 	ID           string
 	ExperimentID string
@@ -209,6 +211,13 @@ type Candidate struct {
 	FinishedAt   *time.Time
 }
 
+type CandidateRank struct {
+	CandidateID string
+	Rank        int
+	Badges      []Badge
+	OtherNote   string
+}
+
 // Experiment.VoiceID is frozen at start: the voice the compared post was in for a write
 // comparison. A winner may only ever be applied back to that same voice.
 type Experiment struct {
@@ -218,22 +227,25 @@ type Experiment struct {
 	VoiceID  string
 	// Source, and for a voice-sourced comparison the prompt and the answer it withheld; the
 	// answer's text lives only in the snapshot (MODEL-42).
-	Source            Source
-	VoicePromptKey    string
-	VoiceMaterialID   string
-	TemplateName      string
-	TargetLanguage    *Language
-	Stage             Stage
-	Origin            Origin
-	ReviewMode        ReviewMode
-	Status            Status
-	JobID             string
-	InputSnapshot     []byte
-	InputHash         string
-	PromptVersion     string
-	WinnerCandidateID string
-	Outcome           Outcome
-	ApplyFailure      *Failure
+	Source             Source
+	VoicePromptKey     string
+	VoiceMaterialID    string
+	TemplateName       string
+	TargetLanguage     *Language
+	Stage              Stage
+	Origin             Origin
+	ReviewMode         ReviewMode
+	CompletedAt        *time.Time
+	AppliedCandidateID string
+	AdoptedCandidateID string
+	Status             Status
+	JobID              string
+	InputSnapshot      []byte
+	InputHash          string
+	PromptVersion      string
+	WinnerCandidateID  string
+	Outcome            Outcome
+	ApplyFailure       *Failure
 	// ApplyRequested records that this verdict owes a content application, so a failed one
 	// keeps the comparison unresolved for its post. An editor verdict always owes one; a lab
 	// pick owes one only once its separate application follow-up is taken.
@@ -256,12 +268,21 @@ func (e Experiment) AppliesOnVerdict() bool {
 }
 
 func (e Experiment) Revealed() bool {
-	return e.Status == StatusDecided || e.Status == StatusDismissed
+	return e.Status == StatusDecided || e.Status == StatusDismissed || e.Status == StatusCompleted
 }
 
 func (e Experiment) Winner() *Candidate {
 	for i := range e.Candidates {
 		if e.Candidates[i].ID == e.WinnerCandidateID {
+			return &e.Candidates[i]
+		}
+	}
+	return nil
+}
+
+func (e Experiment) Candidate(id string) *Candidate {
+	for i := range e.Candidates {
+		if e.Candidates[i].ID == id {
 			return &e.Candidates[i]
 		}
 	}
@@ -433,6 +454,7 @@ var (
 	ErrInvalidWindow = errors.New("invalid leaderboard window")
 	ErrInvalidScope  = errors.New("invalid leaderboard scope")
 	ErrBadgesInvalid = errors.New("the badges offered with this verdict are not ones it can carry")
+	ErrRanksInvalid  = errors.New("rank every successful candidate with dense positive ranks")
 	// The 말투 반영 비교 refusals (MODEL-31, MODEL-67): no voice named, a prompt the shared set does
 	// not hold or the voice has not answered, and a photo prompt either candidate cannot read.
 	ErrVoiceRequired    = errors.New("a voice is required")

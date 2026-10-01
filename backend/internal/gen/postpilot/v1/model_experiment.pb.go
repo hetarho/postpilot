@@ -32,6 +32,7 @@ const (
 	ExperimentStatus_EXPERIMENT_STATUS_DECIDED     ExperimentStatus = 5
 	ExperimentStatus_EXPERIMENT_STATUS_DISMISSED   ExperimentStatus = 6
 	ExperimentStatus_EXPERIMENT_STATUS_FAILED      ExperimentStatus = 7
+	ExperimentStatus_EXPERIMENT_STATUS_COMPLETED   ExperimentStatus = 8
 )
 
 // Enum value maps for ExperimentStatus.
@@ -45,6 +46,7 @@ var (
 		5: "EXPERIMENT_STATUS_DECIDED",
 		6: "EXPERIMENT_STATUS_DISMISSED",
 		7: "EXPERIMENT_STATUS_FAILED",
+		8: "EXPERIMENT_STATUS_COMPLETED",
 	}
 	ExperimentStatus_value = map[string]int32{
 		"EXPERIMENT_STATUS_UNSPECIFIED": 0,
@@ -55,6 +57,7 @@ var (
 		"EXPERIMENT_STATUS_DECIDED":     5,
 		"EXPERIMENT_STATUS_DISMISSED":   6,
 		"EXPERIMENT_STATUS_FAILED":      7,
+		"EXPERIMENT_STATUS_COMPLETED":   8,
 	}
 )
 
@@ -871,6 +874,7 @@ type ExperimentCandidate struct {
 	// Populated only after a verdict/dismissal, beside the revealed identity.
 	Badges        []VerdictBadge `protobuf:"varint,12,rep,packed,name=badges,proto3,enum=postpilot.v1.VerdictBadge" json:"badges,omitempty"`
 	OtherNote     string         `protobuf:"bytes,13,opt,name=other_note,json=otherNote,proto3" json:"other_note,omitempty"`
+	Rank          *int32         `protobuf:"varint,15,opt,name=rank,proto3,oneof" json:"rank,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1010,6 +1014,13 @@ func (x *ExperimentCandidate) GetOtherNote() string {
 	return ""
 }
 
+func (x *ExperimentCandidate) GetRank() int32 {
+	if x != nil && x.Rank != nil {
+		return *x.Rank
+	}
+	return 0
+}
+
 type isExperimentCandidate_Output interface {
 	isExperimentCandidate_Output()
 }
@@ -1072,9 +1083,12 @@ type ModelExperiment struct {
 	VoicePromptText string           `protobuf:"bytes,26,opt,name=voice_prompt_text,json=voicePromptText,proto3" json:"voice_prompt_text,omitempty"`
 	VoiceAnswer     string           `protobuf:"bytes,27,opt,name=voice_answer,json=voiceAnswer,proto3" json:"voice_answer,omitempty"`
 	// Existing pairwise records and legacy starts use pairwise; full-list starts use candidate_ranking.
-	ReviewMode    string `protobuf:"bytes,28,opt,name=review_mode,json=reviewMode,proto3" json:"review_mode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReviewMode         string `protobuf:"bytes,28,opt,name=review_mode,json=reviewMode,proto3" json:"review_mode,omitempty"`
+	CompletedAt        string `protobuf:"bytes,29,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	AppliedCandidateId string `protobuf:"bytes,30,opt,name=applied_candidate_id,json=appliedCandidateId,proto3" json:"applied_candidate_id,omitempty"`
+	AdoptedCandidateId string `protobuf:"bytes,31,opt,name=adopted_candidate_id,json=adoptedCandidateId,proto3" json:"adopted_candidate_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ModelExperiment) Reset() {
@@ -1301,6 +1315,27 @@ func (x *ModelExperiment) GetVoiceAnswer() string {
 func (x *ModelExperiment) GetReviewMode() string {
 	if x != nil {
 		return x.ReviewMode
+	}
+	return ""
+}
+
+func (x *ModelExperiment) GetCompletedAt() string {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return ""
+}
+
+func (x *ModelExperiment) GetAppliedCandidateId() string {
+	if x != nil {
+		return x.AppliedCandidateId
+	}
+	return ""
+}
+
+func (x *ModelExperiment) GetAdoptedCandidateId() string {
+	if x != nil {
+		return x.AdoptedCandidateId
 	}
 	return ""
 }
@@ -2198,6 +2233,387 @@ func (x *DismissExperimentResponse) GetExperiment() *ModelExperiment {
 	return nil
 }
 
+// A complete blind ordering; equal positive ranks are allowed and gaps are not.
+type CandidateRank struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CandidateId   string                 `protobuf:"bytes,1,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
+	Rank          int32                  `protobuf:"varint,2,opt,name=rank,proto3" json:"rank,omitempty"`
+	Badges        []VerdictBadge         `protobuf:"varint,3,rep,packed,name=badges,proto3,enum=postpilot.v1.VerdictBadge" json:"badges,omitempty"`
+	OtherNote     string                 `protobuf:"bytes,4,opt,name=other_note,json=otherNote,proto3" json:"other_note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CandidateRank) Reset() {
+	*x = CandidateRank{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CandidateRank) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CandidateRank) ProtoMessage() {}
+
+func (x *CandidateRank) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CandidateRank.ProtoReflect.Descriptor instead.
+func (*CandidateRank) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CandidateRank) GetCandidateId() string {
+	if x != nil {
+		return x.CandidateId
+	}
+	return ""
+}
+
+func (x *CandidateRank) GetRank() int32 {
+	if x != nil {
+		return x.Rank
+	}
+	return 0
+}
+
+func (x *CandidateRank) GetBadges() []VerdictBadge {
+	if x != nil {
+		return x.Badges
+	}
+	return nil
+}
+
+func (x *CandidateRank) GetOtherNote() string {
+	if x != nil {
+		return x.OtherNote
+	}
+	return ""
+}
+
+type CompleteExperimentReviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	Ranks         []*CandidateRank       `protobuf:"bytes,2,rep,name=ranks,proto3" json:"ranks,omitempty"`
+	Skip          bool                   `protobuf:"varint,3,opt,name=skip,proto3" json:"skip,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteExperimentReviewRequest) Reset() {
+	*x = CompleteExperimentReviewRequest{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteExperimentReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteExperimentReviewRequest) ProtoMessage() {}
+
+func (x *CompleteExperimentReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteExperimentReviewRequest.ProtoReflect.Descriptor instead.
+func (*CompleteExperimentReviewRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CompleteExperimentReviewRequest) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
+	}
+	return ""
+}
+
+func (x *CompleteExperimentReviewRequest) GetRanks() []*CandidateRank {
+	if x != nil {
+		return x.Ranks
+	}
+	return nil
+}
+
+func (x *CompleteExperimentReviewRequest) GetSkip() bool {
+	if x != nil {
+		return x.Skip
+	}
+	return false
+}
+
+type CompleteExperimentReviewResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Experiment    *ModelExperiment       `protobuf:"bytes,1,opt,name=experiment,proto3" json:"experiment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteExperimentReviewResponse) Reset() {
+	*x = CompleteExperimentReviewResponse{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteExperimentReviewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteExperimentReviewResponse) ProtoMessage() {}
+
+func (x *CompleteExperimentReviewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteExperimentReviewResponse.ProtoReflect.Descriptor instead.
+func (*CompleteExperimentReviewResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *CompleteExperimentReviewResponse) GetExperiment() *ModelExperiment {
+	if x != nil {
+		return x.Experiment
+	}
+	return nil
+}
+
+type ApplyCandidateOutputRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	CandidateId   string                 `protobuf:"bytes,2,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
+	AdoptModel    bool                   `protobuf:"varint,3,opt,name=adopt_model,json=adoptModel,proto3" json:"adopt_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyCandidateOutputRequest) Reset() {
+	*x = ApplyCandidateOutputRequest{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyCandidateOutputRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyCandidateOutputRequest) ProtoMessage() {}
+
+func (x *ApplyCandidateOutputRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyCandidateOutputRequest.ProtoReflect.Descriptor instead.
+func (*ApplyCandidateOutputRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ApplyCandidateOutputRequest) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
+	}
+	return ""
+}
+
+func (x *ApplyCandidateOutputRequest) GetCandidateId() string {
+	if x != nil {
+		return x.CandidateId
+	}
+	return ""
+}
+
+func (x *ApplyCandidateOutputRequest) GetAdoptModel() bool {
+	if x != nil {
+		return x.AdoptModel
+	}
+	return false
+}
+
+type ApplyCandidateOutputResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Experiment    *ModelExperiment       `protobuf:"bytes,1,opt,name=experiment,proto3" json:"experiment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyCandidateOutputResponse) Reset() {
+	*x = ApplyCandidateOutputResponse{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyCandidateOutputResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyCandidateOutputResponse) ProtoMessage() {}
+
+func (x *ApplyCandidateOutputResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyCandidateOutputResponse.ProtoReflect.Descriptor instead.
+func (*ApplyCandidateOutputResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ApplyCandidateOutputResponse) GetExperiment() *ModelExperiment {
+	if x != nil {
+		return x.Experiment
+	}
+	return nil
+}
+
+type AdoptCandidateModelRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	CandidateId   string                 `protobuf:"bytes,2,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdoptCandidateModelRequest) Reset() {
+	*x = AdoptCandidateModelRequest{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdoptCandidateModelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdoptCandidateModelRequest) ProtoMessage() {}
+
+func (x *AdoptCandidateModelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdoptCandidateModelRequest.ProtoReflect.Descriptor instead.
+func (*AdoptCandidateModelRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *AdoptCandidateModelRequest) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
+	}
+	return ""
+}
+
+func (x *AdoptCandidateModelRequest) GetCandidateId() string {
+	if x != nil {
+		return x.CandidateId
+	}
+	return ""
+}
+
+type AdoptCandidateModelResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Experiment    *ModelExperiment       `protobuf:"bytes,1,opt,name=experiment,proto3" json:"experiment,omitempty"`
+	Selection     *Selection             `protobuf:"bytes,2,opt,name=selection,proto3" json:"selection,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdoptCandidateModelResponse) Reset() {
+	*x = AdoptCandidateModelResponse{}
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdoptCandidateModelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdoptCandidateModelResponse) ProtoMessage() {}
+
+func (x *AdoptCandidateModelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdoptCandidateModelResponse.ProtoReflect.Descriptor instead.
+func (*AdoptCandidateModelResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *AdoptCandidateModelResponse) GetExperiment() *ModelExperiment {
+	if x != nil {
+		return x.Experiment
+	}
+	return nil
+}
+
+func (x *AdoptCandidateModelResponse) GetSelection() *Selection {
+	if x != nil {
+		return x.Selection
+	}
+	return nil
+}
+
 type ApplyWinnerOutputRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
@@ -2207,7 +2623,7 @@ type ApplyWinnerOutputRequest struct {
 
 func (x *ApplyWinnerOutputRequest) Reset() {
 	*x = ApplyWinnerOutputRequest{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[22]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2219,7 +2635,7 @@ func (x *ApplyWinnerOutputRequest) String() string {
 func (*ApplyWinnerOutputRequest) ProtoMessage() {}
 
 func (x *ApplyWinnerOutputRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[22]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2232,7 +2648,7 @@ func (x *ApplyWinnerOutputRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyWinnerOutputRequest.ProtoReflect.Descriptor instead.
 func (*ApplyWinnerOutputRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{22}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ApplyWinnerOutputRequest) GetExperimentId() string {
@@ -2251,7 +2667,7 @@ type ApplyWinnerOutputResponse struct {
 
 func (x *ApplyWinnerOutputResponse) Reset() {
 	*x = ApplyWinnerOutputResponse{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[23]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2263,7 +2679,7 @@ func (x *ApplyWinnerOutputResponse) String() string {
 func (*ApplyWinnerOutputResponse) ProtoMessage() {}
 
 func (x *ApplyWinnerOutputResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[23]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2276,7 +2692,7 @@ func (x *ApplyWinnerOutputResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyWinnerOutputResponse.ProtoReflect.Descriptor instead.
 func (*ApplyWinnerOutputResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{23}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ApplyWinnerOutputResponse) GetExperiment() *ModelExperiment {
@@ -2295,7 +2711,7 @@ type AdoptWinnerModelRequest struct {
 
 func (x *AdoptWinnerModelRequest) Reset() {
 	*x = AdoptWinnerModelRequest{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[24]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2307,7 +2723,7 @@ func (x *AdoptWinnerModelRequest) String() string {
 func (*AdoptWinnerModelRequest) ProtoMessage() {}
 
 func (x *AdoptWinnerModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[24]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2320,7 +2736,7 @@ func (x *AdoptWinnerModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdoptWinnerModelRequest.ProtoReflect.Descriptor instead.
 func (*AdoptWinnerModelRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{24}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *AdoptWinnerModelRequest) GetExperimentId() string {
@@ -2339,7 +2755,7 @@ type AdoptWinnerModelResponse struct {
 
 func (x *AdoptWinnerModelResponse) Reset() {
 	*x = AdoptWinnerModelResponse{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[25]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2351,7 +2767,7 @@ func (x *AdoptWinnerModelResponse) String() string {
 func (*AdoptWinnerModelResponse) ProtoMessage() {}
 
 func (x *AdoptWinnerModelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[25]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2364,7 +2780,7 @@ func (x *AdoptWinnerModelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdoptWinnerModelResponse.ProtoReflect.Descriptor instead.
 func (*AdoptWinnerModelResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{25}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *AdoptWinnerModelResponse) GetSelection() *Selection {
@@ -2386,7 +2802,7 @@ type BadgeTally struct {
 
 func (x *BadgeTally) Reset() {
 	*x = BadgeTally{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[26]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2398,7 +2814,7 @@ func (x *BadgeTally) String() string {
 func (*BadgeTally) ProtoMessage() {}
 
 func (x *BadgeTally) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[26]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2411,7 +2827,7 @@ func (x *BadgeTally) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BadgeTally.ProtoReflect.Descriptor instead.
 func (*BadgeTally) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{26}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *BadgeTally) GetBadge() VerdictBadge {
@@ -2456,7 +2872,7 @@ type LeaderboardEntry struct {
 
 func (x *LeaderboardEntry) Reset() {
 	*x = LeaderboardEntry{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[27]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2468,7 +2884,7 @@ func (x *LeaderboardEntry) String() string {
 func (*LeaderboardEntry) ProtoMessage() {}
 
 func (x *LeaderboardEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[27]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2481,7 +2897,7 @@ func (x *LeaderboardEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaderboardEntry.ProtoReflect.Descriptor instead.
 func (*LeaderboardEntry) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{27}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *LeaderboardEntry) GetRank() int32 {
@@ -2628,7 +3044,7 @@ type GetLeaderboardRequest struct {
 
 func (x *GetLeaderboardRequest) Reset() {
 	*x = GetLeaderboardRequest{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[28]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2640,7 +3056,7 @@ func (x *GetLeaderboardRequest) String() string {
 func (*GetLeaderboardRequest) ProtoMessage() {}
 
 func (x *GetLeaderboardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[28]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2653,7 +3069,7 @@ func (x *GetLeaderboardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLeaderboardRequest.ProtoReflect.Descriptor instead.
 func (*GetLeaderboardRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{28}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetLeaderboardRequest) GetStage() Stage {
@@ -2686,7 +3102,7 @@ type GetLeaderboardResponse struct {
 
 func (x *GetLeaderboardResponse) Reset() {
 	*x = GetLeaderboardResponse{}
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[29]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2698,7 +3114,7 @@ func (x *GetLeaderboardResponse) String() string {
 func (*GetLeaderboardResponse) ProtoMessage() {}
 
 func (x *GetLeaderboardResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[29]
+	mi := &file_postpilot_v1_model_experiment_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2711,7 +3127,7 @@ func (x *GetLeaderboardResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLeaderboardResponse.ProtoReflect.Descriptor instead.
 func (*GetLeaderboardResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{29}
+	return file_postpilot_v1_model_experiment_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetLeaderboardResponse) GetEntries() []*LeaderboardEntry {
@@ -2746,7 +3162,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12G\n" +
 	"\n" +
 	"comparison\x18\x02 \x03(\v2'.postpilot.v1.FingerprintItemComparisonR\n" +
-	"comparison\"\x9d\x05\n" +
+	"comparison\"\xbf\x05\n" +
 	"\x13ExperimentCandidate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
 	"\fdisplay_side\x18\x02 \x01(\x0e2\x19.postpilot.v1.DisplaySideR\vdisplaySide\x125\n" +
@@ -2764,9 +3180,12 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\afailure\x18\v \x01(\v2\x15.postpilot.v1.FailureR\afailure\x122\n" +
 	"\x06badges\x18\f \x03(\x0e2\x1a.postpilot.v1.VerdictBadgeR\x06badges\x12\x1d\n" +
 	"\n" +
-	"other_note\x18\r \x01(\tR\totherNoteB\b\n" +
-	"\x06outputJ\x04\b\x06\x10\aR\n" +
-	"styleguide\"\xae\t\n" +
+	"other_note\x18\r \x01(\tR\totherNote\x12\x17\n" +
+	"\x04rank\x18\x0f \x01(\x05H\x01R\x04rank\x88\x01\x01B\b\n" +
+	"\x06outputB\a\n" +
+	"\x05_rankJ\x04\b\x06\x10\aR\n" +
+	"styleguide\"\xb5\n" +
+	"\n" +
 	"\x0fModelExperiment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
 	"\x05stage\x18\x02 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x126\n" +
@@ -2805,7 +3224,10 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x11voice_prompt_text\x18\x1a \x01(\tR\x0fvoicePromptText\x12!\n" +
 	"\fvoice_answer\x18\x1b \x01(\tR\vvoiceAnswer\x12\x1f\n" +
 	"\vreview_mode\x18\x1c \x01(\tR\n" +
-	"reviewMode\"\xd6\x01\n" +
+	"reviewMode\x12!\n" +
+	"\fcompleted_at\x18\x1d \x01(\tR\vcompletedAt\x120\n" +
+	"\x14applied_candidate_id\x18\x1e \x01(\tR\x12appliedCandidateId\x120\n" +
+	"\x14adopted_candidate_id\x18\x1f \x01(\tR\x12adoptedCandidateId\"\xd6\x01\n" +
 	"\x1dStartObserveExperimentRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12/\n" +
 	"\amodel_a\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x06modelA\x12/\n" +
@@ -2876,7 +3298,38 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x19DismissExperimentResponse\x12=\n" +
 	"\n" +
 	"experiment\x18\x01 \x01(\v2\x1d.postpilot.v1.ModelExperimentR\n" +
-	"experiment\"c\n" +
+	"experiment\"\x99\x01\n" +
+	"\rCandidateRank\x12!\n" +
+	"\fcandidate_id\x18\x01 \x01(\tR\vcandidateId\x12\x12\n" +
+	"\x04rank\x18\x02 \x01(\x05R\x04rank\x122\n" +
+	"\x06badges\x18\x03 \x03(\x0e2\x1a.postpilot.v1.VerdictBadgeR\x06badges\x12\x1d\n" +
+	"\n" +
+	"other_note\x18\x04 \x01(\tR\totherNote\"\x8d\x01\n" +
+	"\x1fCompleteExperimentReviewRequest\x12#\n" +
+	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x121\n" +
+	"\x05ranks\x18\x02 \x03(\v2\x1b.postpilot.v1.CandidateRankR\x05ranks\x12\x12\n" +
+	"\x04skip\x18\x03 \x01(\bR\x04skip\"a\n" +
+	" CompleteExperimentReviewResponse\x12=\n" +
+	"\n" +
+	"experiment\x18\x01 \x01(\v2\x1d.postpilot.v1.ModelExperimentR\n" +
+	"experiment\"\x86\x01\n" +
+	"\x1bApplyCandidateOutputRequest\x12#\n" +
+	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12!\n" +
+	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12\x1f\n" +
+	"\vadopt_model\x18\x03 \x01(\bR\n" +
+	"adoptModel\"]\n" +
+	"\x1cApplyCandidateOutputResponse\x12=\n" +
+	"\n" +
+	"experiment\x18\x01 \x01(\v2\x1d.postpilot.v1.ModelExperimentR\n" +
+	"experiment\"d\n" +
+	"\x1aAdoptCandidateModelRequest\x12#\n" +
+	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12!\n" +
+	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\"\x93\x01\n" +
+	"\x1bAdoptCandidateModelResponse\x12=\n" +
+	"\n" +
+	"experiment\x18\x01 \x01(\v2\x1d.postpilot.v1.ModelExperimentR\n" +
+	"experiment\x125\n" +
+	"\tselection\x18\x02 \x01(\v2\x17.postpilot.v1.SelectionR\tselection\"c\n" +
 	"\x18ApplyWinnerOutputRequest\x12#\n" +
 	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentIdJ\x04\b\x02\x10\x03R\x1cconfirm_styleguide_overwrite\"Z\n" +
 	"\x19ApplyWinnerOutputResponse\x12=\n" +
@@ -2918,7 +3371,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x06window\x18\x02 \x01(\x0e2\x1f.postpilot.v1.LeaderboardWindowR\x06window\x124\n" +
 	"\x05scope\x18\x03 \x01(\x0e2\x1e.postpilot.v1.LeaderboardScopeR\x05scope\"R\n" +
 	"\x16GetLeaderboardResponse\x128\n" +
-	"\aentries\x18\x01 \x03(\v2\x1e.postpilot.v1.LeaderboardEntryR\aentries*\x8d\x02\n" +
+	"\aentries\x18\x01 \x03(\v2\x1e.postpilot.v1.LeaderboardEntryR\aentries*\xae\x02\n" +
 	"\x10ExperimentStatus\x12!\n" +
 	"\x1dEXPERIMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18EXPERIMENT_STATUS_QUEUED\x10\x01\x12\x1d\n" +
@@ -2927,7 +3380,8 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x19EXPERIMENT_STATUS_PARTIAL\x10\x04\x12\x1d\n" +
 	"\x19EXPERIMENT_STATUS_DECIDED\x10\x05\x12\x1f\n" +
 	"\x1bEXPERIMENT_STATUS_DISMISSED\x10\x06\x12\x1c\n" +
-	"\x18EXPERIMENT_STATUS_FAILED\x10\a*\x96\x01\n" +
+	"\x18EXPERIMENT_STATUS_FAILED\x10\a\x12\x1f\n" +
+	"\x1bEXPERIMENT_STATUS_COMPLETED\x10\b*\x96\x01\n" +
 	"\vDisplaySide\x12\x1c\n" +
 	"\x18DISPLAY_SIDE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11DISPLAY_SIDE_LEFT\x10\x01\x12\x16\n" +
@@ -2988,8 +3442,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x10LeaderboardScope\x12!\n" +
 	"\x1dLEADERBOARD_SCOPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14LEADERBOARD_SCOPE_ME\x10\x01\x12\x19\n" +
-	"\x15LEADERBOARD_SCOPE_ALL\x10\x022\xce\n" +
-	"\n" +
+	"\x15LEADERBOARD_SCOPE_ALL\x10\x022\xaa\r\n" +
 	"\x16ModelExperimentService\x12n\n" +
 	"\x16StartObserveExperiment\x12+.postpilot.v1.StartObserveExperimentRequest\x1a%.postpilot.v1.StartExperimentResponse\"\x00\x12j\n" +
 	"\x14StartWriteExperiment\x12).postpilot.v1.StartWriteExperimentRequest\x1a%.postpilot.v1.StartExperimentResponse\"\x00\x12~\n" +
@@ -3000,7 +3453,10 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\fChooseWinner\x12!.postpilot.v1.ChooseWinnerRequest\x1a\".postpilot.v1.ChooseWinnerResponse\"\x00\x12i\n" +
 	"\x15DecideWriteExperiment\x12*.postpilot.v1.DecideWriteExperimentRequest\x1a\".postpilot.v1.ChooseWinnerResponse\"\x00\x12c\n" +
 	"\x12UseSingleCandidate\x12'.postpilot.v1.UseSingleCandidateRequest\x1a\".postpilot.v1.ChooseWinnerResponse\"\x00\x12f\n" +
-	"\x11DismissExperiment\x12&.postpilot.v1.DismissExperimentRequest\x1a'.postpilot.v1.DismissExperimentResponse\"\x00\x12f\n" +
+	"\x11DismissExperiment\x12&.postpilot.v1.DismissExperimentRequest\x1a'.postpilot.v1.DismissExperimentResponse\"\x00\x12{\n" +
+	"\x18CompleteExperimentReview\x12-.postpilot.v1.CompleteExperimentReviewRequest\x1a..postpilot.v1.CompleteExperimentReviewResponse\"\x00\x12o\n" +
+	"\x14ApplyCandidateOutput\x12).postpilot.v1.ApplyCandidateOutputRequest\x1a*.postpilot.v1.ApplyCandidateOutputResponse\"\x00\x12l\n" +
+	"\x13AdoptCandidateModel\x12(.postpilot.v1.AdoptCandidateModelRequest\x1a).postpilot.v1.AdoptCandidateModelResponse\"\x00\x12f\n" +
 	"\x11ApplyWinnerOutput\x12&.postpilot.v1.ApplyWinnerOutputRequest\x1a'.postpilot.v1.ApplyWinnerOutputResponse\"\x00\x12c\n" +
 	"\x10AdoptWinnerModel\x12%.postpilot.v1.AdoptWinnerModelRequest\x1a&.postpilot.v1.AdoptWinnerModelResponse\"\x00\x12]\n" +
 	"\x0eGetLeaderboard\x12#.postpilot.v1.GetLeaderboardRequest\x1a$.postpilot.v1.GetLeaderboardResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
@@ -3018,7 +3474,7 @@ func file_postpilot_v1_model_experiment_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_model_experiment_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
-var file_postpilot_v1_model_experiment_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_postpilot_v1_model_experiment_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_postpilot_v1_model_experiment_proto_goTypes = []any{
 	(ExperimentStatus)(0),                         // 0: postpilot.v1.ExperimentStatus
 	(DisplaySide)(0),                              // 1: postpilot.v1.DisplaySide
@@ -3052,61 +3508,68 @@ var file_postpilot_v1_model_experiment_proto_goTypes = []any{
 	(*ChooseWinnerResponse)(nil),                  // 29: postpilot.v1.ChooseWinnerResponse
 	(*DismissExperimentRequest)(nil),              // 30: postpilot.v1.DismissExperimentRequest
 	(*DismissExperimentResponse)(nil),             // 31: postpilot.v1.DismissExperimentResponse
-	(*ApplyWinnerOutputRequest)(nil),              // 32: postpilot.v1.ApplyWinnerOutputRequest
-	(*ApplyWinnerOutputResponse)(nil),             // 33: postpilot.v1.ApplyWinnerOutputResponse
-	(*AdoptWinnerModelRequest)(nil),               // 34: postpilot.v1.AdoptWinnerModelRequest
-	(*AdoptWinnerModelResponse)(nil),              // 35: postpilot.v1.AdoptWinnerModelResponse
-	(*BadgeTally)(nil),                            // 36: postpilot.v1.BadgeTally
-	(*LeaderboardEntry)(nil),                      // 37: postpilot.v1.LeaderboardEntry
-	(*GetLeaderboardRequest)(nil),                 // 38: postpilot.v1.GetLeaderboardRequest
-	(*GetLeaderboardResponse)(nil),                // 39: postpilot.v1.GetLeaderboardResponse
-	(*Observation)(nil),                           // 40: postpilot.v1.Observation
-	(*FingerprintItemComparison)(nil),             // 41: postpilot.v1.FingerprintItemComparison
-	(*PostContent)(nil),                           // 42: postpilot.v1.PostContent
-	(*ModelRef)(nil),                              // 43: postpilot.v1.ModelRef
-	(*Failure)(nil),                               // 44: postpilot.v1.Failure
-	(Stage)(0),                                    // 45: postpilot.v1.Stage
-	(ContentLanguage)(0),                          // 46: postpilot.v1.ContentLanguage
-	(*ReobserveSelection)(nil),                    // 47: postpilot.v1.ReobserveSelection
-	(*Selection)(nil),                             // 48: postpilot.v1.Selection
+	(*CandidateRank)(nil),                         // 32: postpilot.v1.CandidateRank
+	(*CompleteExperimentReviewRequest)(nil),       // 33: postpilot.v1.CompleteExperimentReviewRequest
+	(*CompleteExperimentReviewResponse)(nil),      // 34: postpilot.v1.CompleteExperimentReviewResponse
+	(*ApplyCandidateOutputRequest)(nil),           // 35: postpilot.v1.ApplyCandidateOutputRequest
+	(*ApplyCandidateOutputResponse)(nil),          // 36: postpilot.v1.ApplyCandidateOutputResponse
+	(*AdoptCandidateModelRequest)(nil),            // 37: postpilot.v1.AdoptCandidateModelRequest
+	(*AdoptCandidateModelResponse)(nil),           // 38: postpilot.v1.AdoptCandidateModelResponse
+	(*ApplyWinnerOutputRequest)(nil),              // 39: postpilot.v1.ApplyWinnerOutputRequest
+	(*ApplyWinnerOutputResponse)(nil),             // 40: postpilot.v1.ApplyWinnerOutputResponse
+	(*AdoptWinnerModelRequest)(nil),               // 41: postpilot.v1.AdoptWinnerModelRequest
+	(*AdoptWinnerModelResponse)(nil),              // 42: postpilot.v1.AdoptWinnerModelResponse
+	(*BadgeTally)(nil),                            // 43: postpilot.v1.BadgeTally
+	(*LeaderboardEntry)(nil),                      // 44: postpilot.v1.LeaderboardEntry
+	(*GetLeaderboardRequest)(nil),                 // 45: postpilot.v1.GetLeaderboardRequest
+	(*GetLeaderboardResponse)(nil),                // 46: postpilot.v1.GetLeaderboardResponse
+	(*Observation)(nil),                           // 47: postpilot.v1.Observation
+	(*FingerprintItemComparison)(nil),             // 48: postpilot.v1.FingerprintItemComparison
+	(*PostContent)(nil),                           // 49: postpilot.v1.PostContent
+	(*ModelRef)(nil),                              // 50: postpilot.v1.ModelRef
+	(*Failure)(nil),                               // 51: postpilot.v1.Failure
+	(Stage)(0),                                    // 52: postpilot.v1.Stage
+	(ContentLanguage)(0),                          // 53: postpilot.v1.ContentLanguage
+	(*ReobserveSelection)(nil),                    // 54: postpilot.v1.ReobserveSelection
+	(*Selection)(nil),                             // 55: postpilot.v1.Selection
 }
 var file_postpilot_v1_model_experiment_proto_depIdxs = []int32{
 	4,  // 0: postpilot.v1.CandidateBadges.badges:type_name -> postpilot.v1.VerdictBadge
 	7,  // 1: postpilot.v1.CandidateUsage.cost_source:type_name -> postpilot.v1.CostSource
-	40, // 2: postpilot.v1.ObservationSet.observations:type_name -> postpilot.v1.Observation
-	41, // 3: postpilot.v1.VoicePiece.comparison:type_name -> postpilot.v1.FingerprintItemComparison
+	47, // 2: postpilot.v1.ObservationSet.observations:type_name -> postpilot.v1.Observation
+	48, // 3: postpilot.v1.VoicePiece.comparison:type_name -> postpilot.v1.FingerprintItemComparison
 	1,  // 4: postpilot.v1.ExperimentCandidate.display_side:type_name -> postpilot.v1.DisplaySide
 	2,  // 5: postpilot.v1.ExperimentCandidate.status:type_name -> postpilot.v1.CandidateStatus
-	42, // 6: postpilot.v1.ExperimentCandidate.post_content:type_name -> postpilot.v1.PostContent
+	49, // 6: postpilot.v1.ExperimentCandidate.post_content:type_name -> postpilot.v1.PostContent
 	12, // 7: postpilot.v1.ExperimentCandidate.observation_set:type_name -> postpilot.v1.ObservationSet
 	13, // 8: postpilot.v1.ExperimentCandidate.voice_piece:type_name -> postpilot.v1.VoicePiece
-	43, // 9: postpilot.v1.ExperimentCandidate.model:type_name -> postpilot.v1.ModelRef
+	50, // 9: postpilot.v1.ExperimentCandidate.model:type_name -> postpilot.v1.ModelRef
 	11, // 10: postpilot.v1.ExperimentCandidate.usage:type_name -> postpilot.v1.CandidateUsage
-	44, // 11: postpilot.v1.ExperimentCandidate.failure:type_name -> postpilot.v1.Failure
+	51, // 11: postpilot.v1.ExperimentCandidate.failure:type_name -> postpilot.v1.Failure
 	4,  // 12: postpilot.v1.ExperimentCandidate.badges:type_name -> postpilot.v1.VerdictBadge
-	45, // 13: postpilot.v1.ModelExperiment.stage:type_name -> postpilot.v1.Stage
+	52, // 13: postpilot.v1.ModelExperiment.stage:type_name -> postpilot.v1.Stage
 	0,  // 14: postpilot.v1.ModelExperiment.status:type_name -> postpilot.v1.ExperimentStatus
 	14, // 15: postpilot.v1.ModelExperiment.candidates:type_name -> postpilot.v1.ExperimentCandidate
 	6,  // 16: postpilot.v1.ModelExperiment.outcome:type_name -> postpilot.v1.ExperimentOutcome
-	46, // 17: postpilot.v1.ModelExperiment.target_language:type_name -> postpilot.v1.ContentLanguage
-	44, // 18: postpilot.v1.ModelExperiment.apply_failure:type_name -> postpilot.v1.Failure
-	44, // 19: postpilot.v1.ModelExperiment.adoption_failure:type_name -> postpilot.v1.Failure
+	53, // 17: postpilot.v1.ModelExperiment.target_language:type_name -> postpilot.v1.ContentLanguage
+	51, // 18: postpilot.v1.ModelExperiment.apply_failure:type_name -> postpilot.v1.Failure
+	51, // 19: postpilot.v1.ModelExperiment.adoption_failure:type_name -> postpilot.v1.Failure
 	3,  // 20: postpilot.v1.ModelExperiment.origin:type_name -> postpilot.v1.ExperimentOrigin
 	5,  // 21: postpilot.v1.ModelExperiment.source:type_name -> postpilot.v1.ExperimentSource
-	43, // 22: postpilot.v1.StartObserveExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	43, // 23: postpilot.v1.StartObserveExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	43, // 24: postpilot.v1.StartObserveExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
-	43, // 25: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	43, // 26: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	43, // 27: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	47, // 28: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	50, // 22: postpilot.v1.StartObserveExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 23: postpilot.v1.StartObserveExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	50, // 24: postpilot.v1.StartObserveExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	50, // 25: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	50, // 26: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 27: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	54, // 28: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
 	3,  // 29: postpilot.v1.StartWriteExperimentRequest.origin:type_name -> postpilot.v1.ExperimentOrigin
-	43, // 30: postpilot.v1.StartWriteExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
-	43, // 31: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	43, // 32: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	43, // 33: postpilot.v1.StartVoiceReflectionExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	50, // 30: postpilot.v1.StartWriteExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	50, // 31: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 32: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	50, // 33: postpilot.v1.StartVoiceReflectionExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
 	15, // 34: postpilot.v1.GetExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	45, // 35: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
+	52, // 35: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
 	5,  // 36: postpilot.v1.ListExperimentsRequest.source:type_name -> postpilot.v1.ExperimentSource
 	15, // 37: postpilot.v1.ListExperimentsResponse.experiments:type_name -> postpilot.v1.ModelExperiment
 	15, // 38: postpilot.v1.RetryCandidateResponse.experiment:type_name -> postpilot.v1.ModelExperiment
@@ -3114,47 +3577,59 @@ var file_postpilot_v1_model_experiment_proto_depIdxs = []int32{
 	10, // 40: postpilot.v1.DecideWriteExperimentRequest.badges:type_name -> postpilot.v1.CandidateBadges
 	15, // 41: postpilot.v1.ChooseWinnerResponse.experiment:type_name -> postpilot.v1.ModelExperiment
 	15, // 42: postpilot.v1.DismissExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 43: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	48, // 44: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
-	4,  // 45: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
-	43, // 46: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
-	7,  // 47: postpilot.v1.LeaderboardEntry.cost_quality:type_name -> postpilot.v1.CostSource
-	36, // 48: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
-	45, // 49: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
-	8,  // 50: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
-	9,  // 51: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
-	37, // 52: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
-	16, // 53: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
-	17, // 54: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
-	18, // 55: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
-	20, // 56: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
-	22, // 57: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
-	24, // 58: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
-	26, // 59: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
-	27, // 60: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
-	28, // 61: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
-	30, // 62: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
-	32, // 63: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
-	34, // 64: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
-	38, // 65: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
-	19, // 66: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 67: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 68: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	21, // 69: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
-	23, // 70: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
-	25, // 71: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
-	29, // 72: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 73: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 74: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
-	31, // 75: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
-	33, // 76: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
-	35, // 77: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
-	39, // 78: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
-	66, // [66:79] is the sub-list for method output_type
-	53, // [53:66] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	4,  // 43: postpilot.v1.CandidateRank.badges:type_name -> postpilot.v1.VerdictBadge
+	32, // 44: postpilot.v1.CompleteExperimentReviewRequest.ranks:type_name -> postpilot.v1.CandidateRank
+	15, // 45: postpilot.v1.CompleteExperimentReviewResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 46: postpilot.v1.ApplyCandidateOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 47: postpilot.v1.AdoptCandidateModelResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	55, // 48: postpilot.v1.AdoptCandidateModelResponse.selection:type_name -> postpilot.v1.Selection
+	15, // 49: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	55, // 50: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
+	4,  // 51: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
+	50, // 52: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
+	7,  // 53: postpilot.v1.LeaderboardEntry.cost_quality:type_name -> postpilot.v1.CostSource
+	43, // 54: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
+	52, // 55: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
+	8,  // 56: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
+	9,  // 57: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
+	44, // 58: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
+	16, // 59: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
+	17, // 60: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
+	18, // 61: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
+	20, // 62: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
+	22, // 63: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
+	24, // 64: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
+	26, // 65: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
+	27, // 66: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
+	28, // 67: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
+	30, // 68: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
+	33, // 69: postpilot.v1.ModelExperimentService.CompleteExperimentReview:input_type -> postpilot.v1.CompleteExperimentReviewRequest
+	35, // 70: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:input_type -> postpilot.v1.ApplyCandidateOutputRequest
+	37, // 71: postpilot.v1.ModelExperimentService.AdoptCandidateModel:input_type -> postpilot.v1.AdoptCandidateModelRequest
+	39, // 72: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
+	41, // 73: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
+	45, // 74: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
+	19, // 75: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 76: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 77: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	21, // 78: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
+	23, // 79: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
+	25, // 80: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
+	29, // 81: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 82: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 83: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
+	31, // 84: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
+	34, // 85: postpilot.v1.ModelExperimentService.CompleteExperimentReview:output_type -> postpilot.v1.CompleteExperimentReviewResponse
+	36, // 86: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:output_type -> postpilot.v1.ApplyCandidateOutputResponse
+	38, // 87: postpilot.v1.ModelExperimentService.AdoptCandidateModel:output_type -> postpilot.v1.AdoptCandidateModelResponse
+	40, // 88: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
+	42, // 89: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
+	46, // 90: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
+	75, // [75:91] is the sub-list for method output_type
+	59, // [59:75] is the sub-list for method input_type
+	59, // [59:59] is the sub-list for extension type_name
+	59, // [59:59] is the sub-list for extension extendee
+	0,  // [0:59] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_model_experiment_proto_init() }
@@ -3179,7 +3654,7 @@ func file_postpilot_v1_model_experiment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_model_experiment_proto_rawDesc), len(file_postpilot_v1_model_experiment_proto_rawDesc)),
 			NumEnums:      10,
-			NumMessages:   30,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
