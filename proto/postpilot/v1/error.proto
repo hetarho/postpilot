@@ -349,6 +349,14 @@ enum FailureReason {
   BILLING_MASTER_ACCOUNT = 282;
   MODEL_LAB_CANDIDATES_INVALID = 283;
   MODEL_COMPARISON_PAIR_INCOMPLETE = 284;
+  // The template request (TMPL-58 … TMPL-64): a press with no text and no sample, a second
+  // request while the account's first still runs, a sample post that cannot be read, an answer
+  // that still broke a rule after every correction (durable), and a result read too early.
+  TEMPLATE_REQUEST_EMPTY = 285;
+  TEMPLATE_REQUEST_RUNNING = 286;
+  TEMPLATE_SAMPLE_UNAVAILABLE = 287;
+  TEMPLATE_REQUEST_ANSWER_INVALID = 288;
+  TEMPLATE_REQUEST_NOT_READY = 289;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

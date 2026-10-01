@@ -6,13 +6,15 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { ContentLanguage } from "./language_pb";
 import { file_postpilot_v1_language } from "./language_pb";
+import type { ModelRef } from "./provider_pb";
+import { file_postpilot_v1_provider } from "./provider_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/template.proto.
  */
 export const file_postpilot_v1_template: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUiSAoVR2V0Rm9ybWF0R3VpZGVSZXF1ZXN0Ei8KCGxhbmd1YWdlGAEgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZSImChZHZXRGb3JtYXRHdWlkZVJlc3BvbnNlEgwKBHRleHQYASABKAky6QMKD1RlbXBsYXRlU2VydmljZRJaCg1MaXN0VGVtcGxhdGVzEiIucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXNwb25zZSIAEl0KDkNyZWF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLkNyZWF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoOVXBkYXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuVXBkYXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5EZWxldGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5EZWxldGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDkdldEZvcm1hdEd1aWRlEiMucG9zdHBpbG90LnYxLkdldEZvcm1hdEd1aWRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5HZXRGb3JtYXRHdWlkZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_language]);
+  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUiSAoVR2V0Rm9ybWF0R3VpZGVSZXF1ZXN0Ei8KCGxhbmd1YWdlGAEgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZSImChZHZXRGb3JtYXRHdWlkZVJlc3BvbnNlEgwKBHRleHQYASABKAkiVAoNVGVtcGxhdGVEcmFmdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEhIKCnRpdGxlX2FyZWEYAyABKAkSDAoEYm9keRgEIAEoCSKTAgobU3RhcnRUZW1wbGF0ZVJlcXVlc3RSZXF1ZXN0EisKC3dyaXRlX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEi8KCGxhbmd1YWdlGAIgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZRIMCgR0ZXh0GAMgASgJEioKBWRyYWZ0GAQgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSGAoLdGVtcGxhdGVfaWQYBSABKAlIAIgBARIdChBzYW1wbGVfcG9zdF9zbHVnGAYgASgJSAGIAQFCDgoMX3RlbXBsYXRlX2lkQhMKEV9zYW1wbGVfcG9zdF9zbHVnIi4KHFN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVzcG9uc2USDgoGam9iX2lkGAEgASgJIjEKH0dldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QSDgoGam9iX2lkGAEgASgJIl4KIEdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlc3BvbnNlEioKBWRyYWZ0GAEgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSDgoGd2lzaGVzGAIgAygJMtcFCg9UZW1wbGF0ZVNlcnZpY2USWgoNTGlzdFRlbXBsYXRlcxIiLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVxdWVzdBojLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVzcG9uc2UiABJdCg5DcmVhdGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuQ3JlYXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDlVwZGF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5VcGRhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoORGVsZXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5HZXRGb3JtYXRHdWlkZRIjLnBvc3RwaWxvdC52MS5HZXRGb3JtYXRHdWlkZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuR2V0Rm9ybWF0R3VpZGVSZXNwb25zZSIAEm8KFFN0YXJ0VGVtcGxhdGVSZXF1ZXN0EikucG9zdHBpbG90LnYxLlN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBoqLnBvc3RwaWxvdC52MS5TdGFydFRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIgASewoYR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0Ei0ucG9zdHBpbG90LnYxLkdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QaLi5wb3N0cGlsb3QudjEuR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_language, file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.Template
@@ -366,13 +368,163 @@ export const GetFormatGuideResponseSchema: GenMessage<GetFormatGuideResponse> = 
   messageDesc(file_postpilot_v1_template, 11);
 
 /**
+ * A template's four authored texts as the editor holds them. The two generation numbers are not
+ * part of it: a request never sets them (TMPL-60).
+ *
+ * @generated from message postpilot.v1.TemplateDraft
+ */
+export type TemplateDraft = Message<"postpilot.v1.TemplateDraft"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string title_area = 3;
+   */
+  titleArea: string;
+
+  /**
+   * @generated from field: string body = 4;
+   */
+  body: string;
+};
+
+/**
+ * Describes the message postpilot.v1.TemplateDraft.
+ * Use `create(TemplateDraftSchema)` to create a new message.
+ */
+export const TemplateDraftSchema: GenMessage<TemplateDraft> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 12);
+
+/**
+ * @generated from message postpilot.v1.StartTemplateRequestRequest
+ */
+export type StartTemplateRequestRequest = Message<"postpilot.v1.StartTemplateRequestRequest"> & {
+  /**
+   * The write model, sent explicitly (MODEL-23); the server infers none.
+   *
+   * @generated from field: postpilot.v1.ModelRef write_model = 1;
+   */
+  writeModel?: ModelRef | undefined;
+
+  /**
+   * The reader's UI language: the 형식 안내 and the request rules are taught in it.
+   *
+   * @generated from field: postpilot.v1.ContentLanguage language = 2;
+   */
+  language: ContentLanguage;
+
+  /**
+   * What the owner typed: a description, a pasted post, both, or what to change.
+   *
+   * @generated from field: string text = 3;
+   */
+  text: string;
+
+  /**
+   * The current draft, sent whole so a follow-up request can change only what it asks.
+   *
+   * @generated from field: postpilot.v1.TemplateDraft draft = 4;
+   */
+  draft?: TemplateDraft | undefined;
+
+  /**
+   * Set for a stored template; absent for a new one, which the account cap then bounds.
+   *
+   * @generated from field: optional string template_id = 5;
+   */
+  templateId?: string | undefined;
+
+  /**
+   * A post attached as the sample (이 글 형식으로 템플릿 만들기, TMPL-64).
+   *
+   * @generated from field: optional string sample_post_slug = 6;
+   */
+  samplePostSlug?: string | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.StartTemplateRequestRequest.
+ * Use `create(StartTemplateRequestRequestSchema)` to create a new message.
+ */
+export const StartTemplateRequestRequestSchema: GenMessage<StartTemplateRequestRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 13);
+
+/**
+ * @generated from message postpilot.v1.StartTemplateRequestResponse
+ */
+export type StartTemplateRequestResponse = Message<"postpilot.v1.StartTemplateRequestResponse"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartTemplateRequestResponse.
+ * Use `create(StartTemplateRequestResponseSchema)` to create a new message.
+ */
+export const StartTemplateRequestResponseSchema: GenMessage<StartTemplateRequestResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 14);
+
+/**
+ * @generated from message postpilot.v1.GetTemplateRequestResultRequest
+ */
+export type GetTemplateRequestResultRequest = Message<"postpilot.v1.GetTemplateRequestResultRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetTemplateRequestResultRequest.
+ * Use `create(GetTemplateRequestResultRequestSchema)` to create a new message.
+ */
+export const GetTemplateRequestResultRequestSchema: GenMessage<GetTemplateRequestResultRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 15);
+
+/**
+ * @generated from message postpilot.v1.GetTemplateRequestResultResponse
+ */
+export type GetTemplateRequestResultResponse = Message<"postpilot.v1.GetTemplateRequestResultResponse"> & {
+  /**
+   * The answer, held to the rules a typed draft is (TMPL-60).
+   *
+   * @generated from field: postpilot.v1.TemplateDraft draft = 1;
+   */
+  draft?: TemplateDraft | undefined;
+
+  /**
+   * Wishes about how to write, separated out of the template as material for 지침 (TMPL-61).
+   *
+   * @generated from field: repeated string wishes = 2;
+   */
+  wishes: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.GetTemplateRequestResultResponse.
+ * Use `create(GetTemplateRequestResultResponseSchema)` to create a new message.
+ */
+export const GetTemplateRequestResultResponseSchema: GenMessage<GetTemplateRequestResultResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 16);
+
+/**
  * template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
  * of a post — its sections, its literal text, the positions it reserves, and what repeats per
  * photo. The voice decides how sentences sound and a guideline decides what to avoid; a
  * template decides the skeleton.
  *
- * A template is authored text only. Nothing here is learned, inferred, or written by a model,
- * and no procedure enqueues work or calls a provider.
+ * A template is authored text. Nothing here is learned or inferred, and a model writes one only
+ * when its owner asks: StartTemplateRequest is the one procedure that enqueues work or calls a
+ * provider (TMPL-16, TMPL-58).
  *
  * Every procedure is scoped to the acting user from the session — no request carries a
  * user id, because a user id in a message is a claim by the caller, not a fact.
@@ -422,6 +574,26 @@ export const TemplateService: GenService<{
     methodKind: "unary";
     input: typeof GetFormatGuideRequestSchema;
     output: typeof GetFormatGuideResponseSchema;
+  },
+  /**
+   * The template request (TMPL-58): the 글 작성 모델 writes the draft's name, description, title
+   * area and body from what the owner asked. It runs as a job polled through GetGeneration; its
+   * answer is read once the job is done.
+   *
+   * @generated from rpc postpilot.v1.TemplateService.StartTemplateRequest
+   */
+  startTemplateRequest: {
+    methodKind: "unary";
+    input: typeof StartTemplateRequestRequestSchema;
+    output: typeof StartTemplateRequestResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.TemplateService.GetTemplateRequestResult
+   */
+  getTemplateRequestResult: {
+    methodKind: "unary";
+    input: typeof GetTemplateRequestResultRequestSchema;
+    output: typeof GetTemplateRequestResultResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_template, 0);

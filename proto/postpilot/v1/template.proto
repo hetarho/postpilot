@@ -5,14 +5,16 @@ package postpilot.v1;
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 import "postpilot/v1/language.proto";
+import "postpilot/v1/provider.proto";
 
 // template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
 // of a post — its sections, its literal text, the positions it reserves, and what repeats per
 // photo. The voice decides how sentences sound and a guideline decides what to avoid; a
 // template decides the skeleton.
 //
-// A template is authored text only. Nothing here is learned, inferred, or written by a model,
-// and no procedure enqueues work or calls a provider.
+// A template is authored text. Nothing here is learned or inferred, and a model writes one only
+// when its owner asks: StartTemplateRequest is the one procedure that enqueues work or calls a
+// provider (TMPL-16, TMPL-58).
 //
 // Every procedure is scoped to the acting user from the session — no request carries a
 // user id, because a user id in a message is a claim by the caller, not a fact.
@@ -24,6 +26,11 @@ service TemplateService {
   // The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
   // and every prompt that teaches the grammar state one text per language.
   rpc GetFormatGuide(GetFormatGuideRequest) returns (GetFormatGuideResponse) {}
+  // The template request (TMPL-58): the 글 작성 모델 writes the draft's name, description, title
+  // area and body from what the owner asked. It runs as a job polled through GetGeneration; its
+  // answer is read once the job is done.
+  rpc StartTemplateRequest(StartTemplateRequestRequest) returns (StartTemplateRequestResponse) {}
+  rpc GetTemplateRequestResult(GetTemplateRequestResultRequest) returns (GetTemplateRequestResultResponse) {}
 }
 
 message Template {
@@ -113,4 +120,43 @@ message GetFormatGuideRequest {
 message GetFormatGuideResponse {
   // The guide with this server's ceilings stated as numbers, ready to put on the clipboard.
   string text = 1;
+}
+
+// A template's four authored texts as the editor holds them. The two generation numbers are not
+// part of it: a request never sets them (TMPL-60).
+message TemplateDraft {
+  string name = 1;
+  string description = 2;
+  string title_area = 3;
+  string body = 4;
+}
+
+message StartTemplateRequestRequest {
+  // The write model, sent explicitly (MODEL-23); the server infers none.
+  ModelRef write_model = 1;
+  // The reader's UI language: the 형식 안내 and the request rules are taught in it.
+  ContentLanguage language = 2;
+  // What the owner typed: a description, a pasted post, both, or what to change.
+  string text = 3;
+  // The current draft, sent whole so a follow-up request can change only what it asks.
+  TemplateDraft draft = 4;
+  // Set for a stored template; absent for a new one, which the account cap then bounds.
+  optional string template_id = 5;
+  // A post attached as the sample (이 글 형식으로 템플릿 만들기, TMPL-64).
+  optional string sample_post_slug = 6;
+}
+
+message StartTemplateRequestResponse {
+  string job_id = 1;
+}
+
+message GetTemplateRequestResultRequest {
+  string job_id = 1;
+}
+
+message GetTemplateRequestResultResponse {
+  // The answer, held to the rules a typed draft is (TMPL-60).
+  TemplateDraft draft = 1;
+  // Wishes about how to write, separated out of the template as material for 지침 (TMPL-61).
+  repeated string wishes = 2;
 }

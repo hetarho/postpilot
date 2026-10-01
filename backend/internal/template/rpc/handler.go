@@ -11,8 +11,10 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/template"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
@@ -94,20 +96,79 @@ func (h *Handler) GetFormatGuide(ctx context.Context, req *connect.Request[postp
 	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	var language template.Language
-	switch req.Msg.GetLanguage() {
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
-		language = template.LanguageKorean
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
-		language = template.LanguageEnglish
-	default:
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "guide language is required", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
+	language, err := guideLanguage(req.Msg.GetLanguage())
+	if err != nil {
+		return nil, err
 	}
 	text, err := h.service.FormatGuide(language)
 	if err != nil {
 		return nil, toConnectError("get format guide", err)
 	}
 	return connect.NewResponse(&postpilotv1.GetFormatGuideResponse{Text: text}), nil
+}
+
+// StartTemplateRequest enqueues a template request on the write model the client names
+// (TMPL-58). Every refusal it can state — the box, the draft, the template, the cap, the model,
+// the sample — comes before the credit hold; plan and credit refusals come from the hold.
+func (h *Handler) StartTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.StartTemplateRequestRequest]) (*connect.Response[postpilotv1.StartTemplateRequestResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	language, err := guideLanguage(req.Msg.GetLanguage())
+	if err != nil {
+		return nil, err
+	}
+	draft := req.Msg.GetDraft()
+	jobID, err := h.service.StartRequest(ctx, userID, template.StartRequest{
+		WriteModel: modelRefValue(req.Msg.GetWriteModel()), Language: language, Text: req.Msg.GetText(),
+		Draft: template.Draft{
+			Name: draft.GetName(), Description: draft.GetDescription(), TitleArea: draft.GetTitleArea(), Body: draft.GetBody(),
+		},
+		TemplateID: req.Msg.GetTemplateId(), SamplePostSlug: req.Msg.GetSamplePostSlug(),
+	})
+	if err != nil {
+		return nil, toConnectError("start template request", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartTemplateRequestResponse{JobId: jobID}), nil
+}
+
+// GetTemplateRequestResult reads a finished request's answer for its owner.
+func (h *Handler) GetTemplateRequestResult(ctx context.Context, req *connect.Request[postpilotv1.GetTemplateRequestResultRequest]) (*connect.Response[postpilotv1.GetTemplateRequestResultResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.service.RequestResult(ctx, userID, req.Msg.GetJobId())
+	if err != nil {
+		return nil, toConnectError("get template request result", err)
+	}
+	return connect.NewResponse(&postpilotv1.GetTemplateRequestResultResponse{
+		Draft: &postpilotv1.TemplateDraft{
+			Name: result.Name, Description: result.Description, TitleArea: result.TitleArea, Body: result.Body,
+		},
+		Wishes: result.Wishes,
+	}), nil
+}
+
+// guideLanguage is the reader's language, which every guide-teaching procedure needs and none
+// guesses.
+func guideLanguage(value postpilotv1.ContentLanguage) (template.Language, error) {
+	switch value {
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
+		return template.LanguageKorean, nil
+	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
+		return template.LanguageEnglish, nil
+	default:
+		return "", rpcserver.NewAppError(connect.CodeInvalidArgument, "guide language is required", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
+	}
+}
+
+func modelRefValue(ref *postpilotv1.ModelRef) string {
+	if ref == nil || ref.GetProviderId() == "" || ref.GetModelId() == "" {
+		return ""
+	}
+	return ref.GetProviderId() + "/" + ref.GetModelId()
 }
 
 func actingUser(ctx context.Context) (string, error) {
@@ -125,6 +186,15 @@ func actingUser(ctx context.Context) (string, error) {
 // editor has to point at the offending line in the right area and it must not parse wire prose
 // to find out which one (TMPL-20).
 func toConnectError(op string, err error) error {
+	// The plan and credit refusals come from the job-enqueue hold, so they translate exactly as
+	// generation's do wherever that seam surfaces them.
+	if access, ok := usage.ModelAccessFailure(err); ok {
+		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
+	}
+	var credits *plan.InsufficientCreditsError
+	if errors.As(err, &credits) {
+		return rpcserver.AppErrorFrom(connect.CodeResourceExhausted, credits)
+	}
 	var tooLong *template.FieldTooLongError
 	var outOfRange *template.NumberOutOfRangeError
 	var parseErr *template.ParseError
@@ -155,6 +225,18 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "template name already exists", postpilotv1.FailureReason_TEMPLATE_NAME_TAKEN, nil)
 	case errors.Is(err, template.ErrTooMany):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "template limit reached", postpilotv1.FailureReason_TEMPLATE_LIMIT_REACHED, nil)
+	case errors.Is(err, template.ErrRequestEmpty):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template request is empty", postpilotv1.FailureReason_TEMPLATE_REQUEST_EMPTY, nil)
+	case errors.Is(err, template.ErrRequestRunning):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a template request is already running", postpilotv1.FailureReason_TEMPLATE_REQUEST_RUNNING, nil)
+	case errors.Is(err, template.ErrSampleUnavailable):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "sample post cannot be read", postpilotv1.FailureReason_TEMPLATE_SAMPLE_UNAVAILABLE, nil)
+	case errors.Is(err, template.ErrWriteModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", postpilotv1.FailureReason_GENERATION_WRITE_MODEL_REQUIRED, nil)
+	case errors.Is(err, template.ErrRequestNotReady):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "template request has no result", postpilotv1.FailureReason_TEMPLATE_REQUEST_NOT_READY, nil)
+	case errors.Is(err, template.ErrUnsupportedLanguage):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guide language is required", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, template.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_TEMPLATE_NOT_FOUND, nil)
 	default:

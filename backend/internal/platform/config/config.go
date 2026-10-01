@@ -221,6 +221,17 @@ type TemplateCeilings struct {
 	AskMaxPerBody    int
 }
 
+// TemplateRequestLimits bound a template request (TMPL-58 … TMPL-61): what the owner may type
+// into the request box, how many times a rule-breaking answer goes back to the model, and how
+// much of the separated 지침 material the result lists. MaxChars is mirrored in the browser as
+// VITE_TEMPLATE_REQUEST_MAX_CHARS for the box's live counter; the other three are server-only.
+type TemplateRequestLimits struct {
+	MaxChars       int
+	CorrectionsMax int
+	WishesMax      int
+	WishMaxChars   int
+}
+
 // Config is the fully-resolved process configuration.
 type Config struct {
 	MediaInternalAddr      string
@@ -340,6 +351,8 @@ type Config struct {
 	// reads it, so it stays beside the ceilings rather than in them; the browser mirrors it as
 	// a live counter.
 	TemplateAskValueMaxChars int
+	// TemplateRequest bounds the in-app template request (TEMPLATE_REQUEST_*).
+	TemplateRequest TemplateRequestLimits
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -541,6 +554,21 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.Template.TitleAreaMaxChars = templateTitleArea
+	for _, limit := range []struct {
+		name, fallback string
+		into           *int
+	}{
+		{"TEMPLATE_REQUEST_MAX_CHARS", "12000", &cfg.TemplateRequest.MaxChars},
+		{"TEMPLATE_REQUEST_CORRECTIONS_MAX", "3", &cfg.TemplateRequest.CorrectionsMax},
+		{"TEMPLATE_REQUEST_WISHES_MAX", "5", &cfg.TemplateRequest.WishesMax},
+		{"TEMPLATE_REQUEST_WISH_MAX_CHARS", "200", &cfg.TemplateRequest.WishMaxChars},
+	} {
+		value, err := positiveInt(limit.name, limit.fallback)
+		if err != nil {
+			return nil, err
+		}
+		*limit.into = value
+	}
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

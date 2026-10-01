@@ -66,7 +66,6 @@
 | T504 | Rank every successful comparison candidate with optional ties | MODEL | T503 | todo |
 | T505 | Apply or adopt an explicit candidate after ranking | MODEL GEN POST | T504 | todo |
 | T506 | Show ranked-comparison Elo on the model leaderboard | MODEL | T502 T504 | todo |
-| T508 | Run a template request on the 글 작성 모델 | TMPL QUOTA MODEL POST | T507 | todo |
 | T509 | Cancel a running template request | TMPL QUOTA | T508 | todo |
 | T510 | Quote one template request in credits | QUOTA TMPL | T508 | todo |
 | T511 | Show a live placeholder preview beside the template composition | TMPL | - | todo |
@@ -74,10 +73,12 @@
 
 ## next
 - next: implement-task T501 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
-- implement-task T508 → T509/T510 → T512 for the template request; T511 (preview) has no dependency and can run beside them; job content retention is open in JOB-RETENTION-TODO.md.
+- implement-task T509/T510 → T512 for the template request; T511 (preview) has no dependency and can run beside them; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T508 done: template requests run as account-owned jobs on the explicit write model, corrected up to three times, with the answer read through GetTemplateRequestResult; full FE/BE and project checks passed
+- 261001 T508 claimed (tr): template request job on the 글 작성 모델
 - 261001 T507 done: the 형식 안내 is backend code served by GetFormatGuide and read by 원문 per locale; full FE/BE and project checks passed
 - 261001 T507 claimed (tr): backend-owned 형식 안내 read by the client
 - 261001 T500 done: five blind candidates, failed-only retry and stage-correct admission; FE/BE, migration, codegen and project checks passed
@@ -96,5 +97,3 @@
 - 261001 create-task MODEL r26 start: refresh T499–T506 for complete rankings and Elo
 - 261001 update-ssot MODEL r26: complete rankings with ties and normalized multi-candidate Elo; legacy outcomes remain in replay
 - 261001 update-ssot MODEL start: replace independent three-step ratings with ranked multi-candidate comparisons and revised Elo
-- 261001 create-task MODEL r25 GEN r20 POST r26 QUOTA r29 → T499–T506 (lab candidates, independent ratings, result actions, leaderboard); T498 QUOTA base refreshed
-- 261001 create-task MODEL GEN POST QUOTA start: two-to-five candidate comparisons and per-candidate evaluations

@@ -14,6 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/voice"
 )
@@ -96,6 +97,13 @@ func registerJobs(c *contexts) {
 		return generationSvc.ReviseStoryline(ctx, generation.StorylineRevisionJob{
 			UserID: found.UserID, PostSlug: slug, WriteModel: found.WriteModel, Payload: found.Payload,
 		}, generation.Progress(progress))
+	}))
+	// The template request (TMPL-58) writes its answer back onto its own row; the draft it is
+	// for lives in the browser, so the job has no subject at all.
+	q.Register(job.KindTemplateRequest, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return c.template.RunRequest(ctx, template.RequestRun{
+			ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload,
+		}, progress)
 	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 }

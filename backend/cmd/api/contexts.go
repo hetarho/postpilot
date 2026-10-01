@@ -267,6 +267,12 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	}
 
 	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
+	// The template request (TMPL-58) is the one template surface that calls a model: the
+	// metered registry, the post it may read as a sample, and the job it runs as.
+	c.template.ConfigureRequests(
+		templateModels{registry: c.metered}, templateSamples{service: c.post},
+		templateRequestJobs{queue: c.jobs}, template.RequestLimits(cfg.TemplateRequest),
+	)
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
 
 	// Template names are a live projection and owned-id validation, never a stored column or

@@ -171,6 +171,14 @@ export const errors = {
   TEMPLATE_NUMBER_OUT_OF_RANGE:
     'The value must be between {{min}} and {{max}}. It is currently {{actual}}.',
   TEMPLATE_PARSE_FAILED: '{{area}} line {{line}}: {{reason}}. Fix it in the source view.',
+  TEMPLATE_REQUEST_EMPTY: 'Describe the template you want or paste a post to follow.',
+  TEMPLATE_REQUEST_RUNNING:
+    'Another template request is still running. Try again once it finishes.',
+  TEMPLATE_SAMPLE_UNAVAILABLE:
+    "Couldn't read the sample post. Check that it is one of your posts and has content.",
+  TEMPLATE_REQUEST_ANSWER_INVALID:
+    "The AI couldn't produce an answer in the template format. Reword the request and try again.",
+  TEMPLATE_REQUEST_NOT_READY: 'The template request has not finished yet.',
   TEMPLATE_LIMIT_REACHED:
     'You cannot add another template. Delete one you no longer use and try again.',
   GUIDELINE_NOT_FOUND: 'Could not find the guideline.',

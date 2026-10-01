@@ -158,6 +158,11 @@ export const appFailureSpecs = {
   TEMPLATE_NUMBER_OUT_OF_RANGE: { required: ['actual', 'min', 'max'], optional: ['field'] },
   // `area` names the part that failed (TMPL-20); a refusal without it reads as the body's.
   TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'], optional: ['area'] },
+  TEMPLATE_REQUEST_EMPTY: {},
+  TEMPLATE_REQUEST_RUNNING: {},
+  TEMPLATE_SAMPLE_UNAVAILABLE: {},
+  TEMPLATE_REQUEST_ANSWER_INVALID: {},
+  TEMPLATE_REQUEST_NOT_READY: {},
   PURPOSE_NOT_FOUND: {},
   GUIDELINE_NOT_FOUND: {},
   GUIDELINE_TEXT_REQUIRED: {},

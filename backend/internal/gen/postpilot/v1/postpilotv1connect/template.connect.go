@@ -48,6 +48,12 @@ const (
 	// TemplateServiceGetFormatGuideProcedure is the fully-qualified name of the TemplateService's
 	// GetFormatGuide RPC.
 	TemplateServiceGetFormatGuideProcedure = "/postpilot.v1.TemplateService/GetFormatGuide"
+	// TemplateServiceStartTemplateRequestProcedure is the fully-qualified name of the TemplateService's
+	// StartTemplateRequest RPC.
+	TemplateServiceStartTemplateRequestProcedure = "/postpilot.v1.TemplateService/StartTemplateRequest"
+	// TemplateServiceGetTemplateRequestResultProcedure is the fully-qualified name of the
+	// TemplateService's GetTemplateRequestResult RPC.
+	TemplateServiceGetTemplateRequestResultProcedure = "/postpilot.v1.TemplateService/GetTemplateRequestResult"
 )
 
 // TemplateServiceClient is a client for the postpilot.v1.TemplateService service.
@@ -59,6 +65,11 @@ type TemplateServiceClient interface {
 	// The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
 	// and every prompt that teaches the grammar state one text per language.
 	GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error)
+	// The template request (TMPL-58): the 글 작성 모델 writes the draft's name, description, title
+	// area and body from what the owner asked. It runs as a job polled through GetGeneration; its
+	// answer is read once the job is done.
+	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
+	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
 }
 
 // NewTemplateServiceClient constructs a client for the postpilot.v1.TemplateService service. By
@@ -102,16 +113,30 @@ func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(templateServiceMethods.ByName("GetFormatGuide")),
 			connect.WithClientOptions(opts...),
 		),
+		startTemplateRequest: connect.NewClient[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse](
+			httpClient,
+			baseURL+TemplateServiceStartTemplateRequestProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("StartTemplateRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		getTemplateRequestResult: connect.NewClient[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse](
+			httpClient,
+			baseURL+TemplateServiceGetTemplateRequestResultProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // templateServiceClient implements TemplateServiceClient.
 type templateServiceClient struct {
-	listTemplates  *connect.Client[v1.ListTemplatesRequest, v1.ListTemplatesResponse]
-	createTemplate *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
-	updateTemplate *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
-	deleteTemplate *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
-	getFormatGuide *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
+	listTemplates            *connect.Client[v1.ListTemplatesRequest, v1.ListTemplatesResponse]
+	createTemplate           *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
+	updateTemplate           *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
+	deleteTemplate           *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
+	getFormatGuide           *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
+	startTemplateRequest     *connect.Client[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse]
+	getTemplateRequestResult *connect.Client[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse]
 }
 
 // ListTemplates calls postpilot.v1.TemplateService.ListTemplates.
@@ -139,6 +164,16 @@ func (c *templateServiceClient) GetFormatGuide(ctx context.Context, req *connect
 	return c.getFormatGuide.CallUnary(ctx, req)
 }
 
+// StartTemplateRequest calls postpilot.v1.TemplateService.StartTemplateRequest.
+func (c *templateServiceClient) StartTemplateRequest(ctx context.Context, req *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error) {
+	return c.startTemplateRequest.CallUnary(ctx, req)
+}
+
+// GetTemplateRequestResult calls postpilot.v1.TemplateService.GetTemplateRequestResult.
+func (c *templateServiceClient) GetTemplateRequestResult(ctx context.Context, req *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error) {
+	return c.getTemplateRequestResult.CallUnary(ctx, req)
+}
+
 // TemplateServiceHandler is an implementation of the postpilot.v1.TemplateService service.
 type TemplateServiceHandler interface {
 	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
@@ -148,6 +183,11 @@ type TemplateServiceHandler interface {
 	// The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
 	// and every prompt that teaches the grammar state one text per language.
 	GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error)
+	// The template request (TMPL-58): the 글 작성 모델 writes the draft's name, description, title
+	// area and body from what the owner asked. It runs as a job polled through GetGeneration; its
+	// answer is read once the job is done.
+	StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error)
+	GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error)
 }
 
 // NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -187,6 +227,18 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 		connect.WithSchema(templateServiceMethods.ByName("GetFormatGuide")),
 		connect.WithHandlerOptions(opts...),
 	)
+	templateServiceStartTemplateRequestHandler := connect.NewUnaryHandler(
+		TemplateServiceStartTemplateRequestProcedure,
+		svc.StartTemplateRequest,
+		connect.WithSchema(templateServiceMethods.ByName("StartTemplateRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	templateServiceGetTemplateRequestResultHandler := connect.NewUnaryHandler(
+		TemplateServiceGetTemplateRequestResultProcedure,
+		svc.GetTemplateRequestResult,
+		connect.WithSchema(templateServiceMethods.ByName("GetTemplateRequestResult")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TemplateServiceListTemplatesProcedure:
@@ -199,6 +251,10 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 			templateServiceDeleteTemplateHandler.ServeHTTP(w, r)
 		case TemplateServiceGetFormatGuideProcedure:
 			templateServiceGetFormatGuideHandler.ServeHTTP(w, r)
+		case TemplateServiceStartTemplateRequestProcedure:
+			templateServiceStartTemplateRequestHandler.ServeHTTP(w, r)
+		case TemplateServiceGetTemplateRequestResultProcedure:
+			templateServiceGetTemplateRequestResultHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -226,4 +282,12 @@ func (UnimplementedTemplateServiceHandler) DeleteTemplate(context.Context, *conn
 
 func (UnimplementedTemplateServiceHandler) GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetFormatGuide is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) StartTemplateRequest(context.Context, *connect.Request[v1.StartTemplateRequestRequest]) (*connect.Response[v1.StartTemplateRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.StartTemplateRequest is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) GetTemplateRequestResult(context.Context, *connect.Request[v1.GetTemplateRequestResultRequest]) (*connect.Response[v1.GetTemplateRequestResultResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetTemplateRequestResult is not implemented"))
 }

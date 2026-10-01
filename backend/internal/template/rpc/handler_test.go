@@ -11,6 +11,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/template"
 )
 
@@ -264,5 +265,111 @@ func TestGetFormatGuide(t *testing.T) {
 	_, err = h.GetFormatGuide(context.Background(), connect.NewRequest(&postpilotv1.GetFormatGuideRequest{Language: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("no session: err = %v", err)
+	}
+}
+
+type rpcModels struct{ info llm.ModelInfo }
+
+func (m rpcModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return m.info, true }
+func (rpcModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
+	return llm.Response{}, errors.New("not called")
+}
+
+type rpcSamples struct{ err error }
+
+func (s rpcSamples) RequestSample(context.Context, string, string) (template.Sample, error) {
+	return template.Sample{Title: "글", Text: "[사진]"}, s.err
+}
+
+type rpcJobs struct {
+	enqueue error
+	payload []byte
+	read    error
+}
+
+func (j rpcJobs) EnqueueRequest(context.Context, template.RequestJob) (string, error) {
+	return "job-1", j.enqueue
+}
+func (rpcJobs) SaveRequestResult(context.Context, string, []byte) error { return nil }
+func (j rpcJobs) RequestPayload(context.Context, string, string) ([]byte, error) {
+	return j.payload, j.read
+}
+
+func requestHandler(models rpcModels, samples rpcSamples, jobs rpcJobs) *Handler {
+	h := handler(&fakeStore{})
+	h.service.ConfigureRequests(models, samples, jobs, template.RequestLimits{MaxChars: 100, CorrectionsMax: 3, WishesMax: 5, WishMaxChars: 200})
+	return h
+}
+
+func writer() rpcModels {
+	return rpcModels{info: llm.ModelInfo{Stages: []string{llm.StageNameWrite}}}
+}
+
+func startRequest(text string) *connect.Request[postpilotv1.StartTemplateRequestRequest] {
+	return connect.NewRequest(&postpilotv1.StartTemplateRequestRequest{
+		WriteModel: &postpilotv1.ModelRef{ProviderId: "openrouter", ModelId: "writer"},
+		Language:   postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN, Text: text,
+		Draft: &postpilotv1.TemplateDraft{},
+	})
+}
+
+func TestStartTemplateRequest(t *testing.T) {
+	resp, err := requestHandler(writer(), rpcSamples{}, rpcJobs{}).StartTemplateRequest(signedIn(t), startRequest("맛집 리뷰"))
+	if err != nil || resp.Msg.GetJobId() != "job-1" {
+		t.Fatalf("start = %v, %v", resp, err)
+	}
+}
+
+// Every refusal the request can state reaches the wire as the reason the browser renders.
+func TestStartTemplateRequestRefusals(t *testing.T) {
+	cases := []struct {
+		name    string
+		handler *Handler
+		req     *connect.Request[postpilotv1.StartTemplateRequestRequest]
+		code    connect.Code
+		reason  postpilotv1.FailureReason
+	}{
+		{"empty", requestHandler(writer(), rpcSamples{}, rpcJobs{}), startRequest(" "), connect.CodeInvalidArgument, postpilotv1.FailureReason_TEMPLATE_REQUEST_EMPTY},
+		{"too long", requestHandler(writer(), rpcSamples{}, rpcJobs{}), startRequest(strings.Repeat("가", 101)), connect.CodeInvalidArgument, postpilotv1.FailureReason_TEMPLATE_FIELD_TOO_LONG},
+		{"running", requestHandler(writer(), rpcSamples{}, rpcJobs{enqueue: template.ErrRequestRunning}), startRequest("맛집"), connect.CodeFailedPrecondition, postpilotv1.FailureReason_TEMPLATE_REQUEST_RUNNING},
+		{"no writer", requestHandler(rpcModels{}, rpcSamples{}, rpcJobs{}), startRequest("맛집"), connect.CodeFailedPrecondition, postpilotv1.FailureReason_GENERATION_WRITE_MODEL_REQUIRED},
+		{"language", requestHandler(writer(), rpcSamples{}, rpcJobs{}), connect.NewRequest(&postpilotv1.StartTemplateRequestRequest{Text: "맛집"}), connect.CodeInvalidArgument, postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.handler.StartTemplateRequest(signedIn(t), tc.req)
+			if connect.CodeOf(err) != tc.code || detail(t, err).GetReason() != tc.reason.String() {
+				t.Fatalf("err = %v", err)
+			}
+		})
+	}
+
+	sample := startRequest("")
+	slug := "gone"
+	sample.Msg.SamplePostSlug = &slug
+	_, err := requestHandler(writer(), rpcSamples{err: template.ErrSampleUnavailable}, rpcJobs{}).StartTemplateRequest(signedIn(t), sample)
+	if detail(t, err).GetReason() != postpilotv1.FailureReason_TEMPLATE_SAMPLE_UNAVAILABLE.String() {
+		t.Fatalf("sample: err = %v", err)
+	}
+}
+
+func TestGetTemplateRequestResult(t *testing.T) {
+	jobs := rpcJobs{payload: []byte(`{"name":"리뷰","description":"방문기","title_area":"","body":"<write>인트로</write>","wishes":["친근하게"]}`)}
+	resp, err := requestHandler(writer(), rpcSamples{}, jobs).GetTemplateRequestResult(signedIn(t), connect.NewRequest(&postpilotv1.GetTemplateRequestResultRequest{JobId: "job-1"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Msg.GetDraft().GetName() != "리뷰" || resp.Msg.GetDraft().GetBody() != "<write>인트로</write>" || len(resp.Msg.GetWishes()) != 1 {
+		t.Fatalf("result = %v", resp.Msg)
+	}
+
+	for read, reason := range map[error]postpilotv1.FailureReason{
+		template.ErrRequestNotReady: postpilotv1.FailureReason_TEMPLATE_REQUEST_NOT_READY,
+		template.ErrNotFound:        postpilotv1.FailureReason_TEMPLATE_NOT_FOUND,
+	} {
+		_, err := requestHandler(writer(), rpcSamples{}, rpcJobs{read: read}).GetTemplateRequestResult(signedIn(t), connect.NewRequest(&postpilotv1.GetTemplateRequestResultRequest{JobId: "job-1"}))
+		if detail(t, err).GetReason() != reason.String() {
+			t.Errorf("%v: err = %v", read, err)
+		}
 	}
 }

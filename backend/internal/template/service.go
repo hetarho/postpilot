@@ -16,6 +16,8 @@ type Service struct {
 	limits Limits
 	now    func() time.Time
 	newID  func() string
+	// requests is the template request's wiring (TMPL-58), nil until ConfigureRequests.
+	requests *requests
 }
 
 func NewService(store Store, limits Limits) *Service {
@@ -45,25 +47,13 @@ func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
 // Create validates the two areas together: they are one document with one data-field
 // namespace (TMPL-50, TMPL-55), so neither can be judged without the other.
 func (s *Service) Create(ctx context.Context, userID string, authored Authored) (Template, error) {
-	name, err := s.validName(authored.Name)
+	draft, err := s.validDraft(Draft{
+		Name: authored.Name, Description: authored.Description, TitleArea: authored.TitleArea, Body: authored.Body,
+	})
 	if err != nil {
 		return Template{}, err
 	}
-	description, err := s.validDescription(authored.Description)
-	if err != nil {
-		return Template{}, err
-	}
-	body, err := s.validBody(authored.Body)
-	if err != nil {
-		return Template{}, err
-	}
-	titleArea, err := s.validTitleArea(authored.TitleArea)
-	if err != nil {
-		return Template{}, err
-	}
-	if err := s.validShape(titleArea, body); err != nil {
-		return Template{}, err
-	}
+	name, description, body, titleArea := draft.Name, draft.Description, draft.Body, draft.TitleArea
 	numbers := authored.Numbers
 	if err := s.validNumbers(numbers); err != nil {
 		return Template{}, err
@@ -191,6 +181,33 @@ func (s *Service) RenderedFor(ctx context.Context, userID, id string, hasPhotos 
 // and project a name.
 func (s *Service) Directory(ctx context.Context, userID string) ([]Template, error) {
 	return s.List(ctx, userID)
+}
+
+// validDraft is the whole field check a template's four authored texts get, in the order a save
+// reports them: name, description, body, title area, then the two areas parsed as one document.
+// A typed save and a template request's answer (TMPL-60) go through this one function, so the
+// model is held to exactly what the owner is.
+func (s *Service) validDraft(draft Draft) (Draft, error) {
+	name, err := s.validName(draft.Name)
+	if err != nil {
+		return Draft{}, err
+	}
+	description, err := s.validDescription(draft.Description)
+	if err != nil {
+		return Draft{}, err
+	}
+	body, err := s.validBody(draft.Body)
+	if err != nil {
+		return Draft{}, err
+	}
+	titleArea, err := s.validTitleArea(draft.TitleArea)
+	if err != nil {
+		return Draft{}, err
+	}
+	if err := s.validShape(titleArea, body); err != nil {
+		return Draft{}, err
+	}
+	return Draft{Name: name, Description: description, TitleArea: titleArea, Body: body}, nil
 }
 
 func (s *Service) validName(value string) (string, error) {

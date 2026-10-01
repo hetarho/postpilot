@@ -167,6 +167,12 @@ export const errors = {
   TEMPLATE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
   TEMPLATE_NUMBER_OUT_OF_RANGE: '{{min}}~{{max}} 사이로 적어 주세요. 지금은 {{actual}}이에요.',
   TEMPLATE_PARSE_FAILED: '{{area}} {{line}}번째 줄: {{reason}}. 원문에서 고쳐 주세요.',
+  TEMPLATE_REQUEST_EMPTY: '원하는 템플릿을 적거나 참고할 글을 붙여 주세요.',
+  TEMPLATE_REQUEST_RUNNING: '다른 템플릿 요청이 아직 진행 중이에요. 끝난 뒤에 다시 요청해 주세요.',
+  TEMPLATE_SAMPLE_UNAVAILABLE: '참고할 글을 읽을 수 없어요. 내용이 있는 내 글인지 확인해 주세요.',
+  TEMPLATE_REQUEST_ANSWER_INVALID:
+    'AI가 템플릿 형식에 맞는 답을 만들지 못했어요. 요청을 조금 바꿔 다시 시도해 주세요.',
+  TEMPLATE_REQUEST_NOT_READY: '템플릿 요청이 아직 끝나지 않았어요.',
   TEMPLATE_LIMIT_REACHED:
     '템플릿을 더 만들 수 없어요. 쓰지 않는 템플릿을 지운 뒤 다시 시도해 주세요.',
   GUIDELINE_NOT_FOUND: '지침을 찾을 수 없어요.',

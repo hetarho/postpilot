@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "description", "title_area", "body", "wishes"],
+  "properties": {
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "title_area": {"type": "string"},
+    "body": {"type": "string"},
+    "wishes": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}
