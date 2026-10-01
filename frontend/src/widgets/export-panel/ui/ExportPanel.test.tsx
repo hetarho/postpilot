@@ -143,6 +143,7 @@ it('renders neither field nor label for a post with no tags', () => {
   expect(screen.queryByLabelText('태그')).not.toBeInTheDocument()
   expect(screen.queryByText('태그')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '태그 복사' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '글+태그 복사' })).not.toBeInTheDocument()
   // The Naver title field is untouched by the tags being absent.
   expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
 })
@@ -359,6 +360,60 @@ it('copies the exact rendered output and shows transient success', async () => {
   expect(screen.getByRole('button', { name: '복사' })).toBeInTheDocument()
   // A successful copy leaves the preview in place.
   expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+})
+
+it('copies the Naver body with normalized tags at its end without changing ordinary copy', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  renderPanel()
+  const body = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
+
+  await user.click(screen.getByRole('button', { name: '글+태그 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${body}\n\n#제주 #산책 #여행`))
+  expect(await screen.findByText('글과 태그가 복사됐어요')).toBeInTheDocument()
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('tab', { name: '티스토리' }))
+  expect(screen.queryByText('글과 태그가 복사됐어요')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '글+태그 복사' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('tab', { name: '네이버 블로그' }))
+
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(body))
+  expect(screen.queryByText('글과 태그가 복사됐어요')).not.toBeInTheDocument()
+})
+
+it('selects the exact combined body on clipboard refusal and clears stale feedback', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
+  const view = render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: '글+태그 복사' }))
+  await waitFor(() => expect(select).toHaveBeenCalled())
+  expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과')).toHaveValue(
+    `${toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')}\n\n#제주 #산책 #여행`,
+  )
+  view.rerender(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, tags: ['다른태그'] }}
+      images={POST_IMAGES_FIXTURE}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
+  expect(
+    screen.queryByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
+  ).not.toBeInTheDocument()
 })
 
 it('reveals, selects and explains the raw text when the Clipboard API is unavailable', async () => {

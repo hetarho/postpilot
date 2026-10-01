@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { clsx } from 'clsx'
@@ -105,6 +105,11 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
   const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
+  const previousStep = useRef(step)
+  useLayoutEffect(() => {
+    if (previousStep.current !== 'finish' && step === 'finish') window.scrollTo(0, 0)
+    previousStep.current = step
+  }, [step])
   const [showRequiredErrors, setShowRequiredErrors] = useState(false)
   const checkRequiredAnswers = () => {
     if (missingRequiredAnswers(fields).length === 0) return true

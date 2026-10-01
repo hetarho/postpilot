@@ -29,7 +29,7 @@ type CopyTarget = TextCopyTarget | `photo:${number}:${string}`
 
 /** The copies that have a field to select as their manual fallback. A caption's field, like the
  *  Naver body's, is mounted only once its copy has fallen back. */
-type TextCopyTarget = 'output' | 'title' | 'tags' | `caption:${number}`
+type TextCopyTarget = 'output' | 'outputWithTags' | 'title' | 'tags' | `caption:${number}`
 
 /** The marker number inside a caption target. The prefix is fixed, so this is a slice, not a
  *  parse that could disagree with the type above. */
@@ -95,6 +95,7 @@ export function ExportPanel({
   // three refs above are: a field that unmounted mid-copy must stop matching.
   const captionFields = useRef(new Map<number, CopyFallbackElement>())
   const copyButtonRef = useRef<HTMLButtonElement>(null)
+  const copyWithTagsButtonRef = useRef<HTMLButtonElement>(null)
   const feedbackTimer = useRef<number | undefined>(undefined)
   const copyGeneration = useRef(0)
   const copyQueue = useRef<Promise<void>>(Promise.resolve())
@@ -112,6 +113,7 @@ export function ExportPanel({
   // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
   // rather than mounting an empty control (THEME-29).
   const hashtags = toHashtags(content.tags)
+  const outputWithTags = hashtags ? `${outputs.naver}\n\n${hashtags}` : ''
   // Marker index per block index, from the SAME canonical block array `toNaver` walks, so a photo
   // in the preview and a `사진_<n>_사진` marker in the copied text cannot drift apart: they match
   // by position. The marker index — not the block index — is the copy target's identity, unchanged
@@ -135,7 +137,13 @@ export function ExportPanel({
   // formats are markup meant to be read as source, so they keep the raw field always. The value
   // comparison is what dismisses the fallback when the content changes under it.
   const outputFellBack =
-    manualCopy?.target === 'output' && manualCopy.value === output && manualCopy.source === content
+    manualCopy?.source === content &&
+    ((manualCopy.target === 'output' && manualCopy.value === output) ||
+      (format === 'naver' &&
+        manualCopy.target === 'outputWithTags' &&
+        manualCopy.value === outputWithTags))
+  const fallbackOutput =
+    outputFellBack && manualCopy?.target === 'outputWithTags' ? outputWithTags : output
   const rawFieldVisible = format !== 'naver' || outputFellBack
 
   useEffect(() => {
@@ -161,19 +169,23 @@ export function ExportPanel({
   // dissolves the fallback by derivation and UNMOUNTS the focused field, which would drop the
   // keyboard onto <body> — the focus is handed back to the copy button instead. A dismissal by
   // tab switch or by pressing another control leaves focus where the user put it.
-  const fallbackWasRevealed = useRef(false)
+  const fallbackWasRevealed = useRef<TextCopyTarget | undefined>(undefined)
   useEffect(() => {
     if (format === 'naver' && outputFellBack) {
-      fallbackWasRevealed.current = true
+      fallbackWasRevealed.current = manualCopy?.target
       outputRef.current?.focus()
       outputRef.current?.select()
       return
     }
     if (fallbackWasRevealed.current) {
-      fallbackWasRevealed.current = false
-      if (document.activeElement === document.body) copyButtonRef.current?.focus()
+      const target = fallbackWasRevealed.current
+      fallbackWasRevealed.current = undefined
+      if (document.activeElement === document.body) {
+        if (target === 'outputWithTags') copyWithTagsButtonRef.current?.focus()
+        else copyButtonRef.current?.focus()
+      }
     }
-  }, [format, outputFellBack])
+  }, [format, manualCopy?.target, manualCopy?.value, outputFellBack])
 
   /** The image copy, on the SAME discipline as the text copy above: one generation counter so a
    *  stale async result cannot land, one queue so two presses do not race for the clipboard, the
@@ -216,6 +228,7 @@ export function ExportPanel({
     const fieldOf = (of: TextCopyTarget): CopyFallbackElement | null => {
       switch (of) {
         case 'output':
+        case 'outputWithTags':
           return outputRef.current
         case 'title':
           return titleRef.current
@@ -271,7 +284,13 @@ export function ExportPanel({
   const outputStatus =
     copied?.target === 'output' && copied.value === output
       ? t('action.copied', { ns: 'common' })
-      : outputFellBack
+      : outputFellBack && manualCopy?.target === 'output'
+        ? t('export.manualCopy')
+        : ''
+  const outputWithTagsStatus =
+    format === 'naver' && copied?.target === 'outputWithTags' && copied.value === outputWithTags
+      ? t('export.withTagsCopied')
+      : format === 'naver' && outputFellBack && manualCopy?.target === 'outputWithTags'
         ? t('export.manualCopy')
         : ''
   // Both comparisons are what make the staleness rule hold by DERIVATION: a confirmation shown
@@ -433,18 +452,42 @@ export function ExportPanel({
               pressed it, and it was also the only signal that anything had happened (THEME-28). */}
           {/* `outputRef.current` is naturally null while the Naver tab shows the preview and the
               live field on every other state — including a Naver retry from the revealed field. */}
-          <Button
-            ref={copyButtonRef}
-            variant="cta"
-            className="w-full sm:w-auto"
-            onClick={() => void copy('output', output, outputRef.current)}
-          >
-            {t('action.copy', { ns: 'common' })}
-          </Button>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button
+              ref={copyButtonRef}
+              variant="cta"
+              className="min-w-0 flex-1 sm:flex-none"
+              onClick={() =>
+                void copy(
+                  'output',
+                  output,
+                  outputRef.current?.value === output ? outputRef.current : null,
+                )
+              }
+            >
+              {t('action.copy', { ns: 'common' })}
+            </Button>
+            {format === 'naver' && hashtags && (
+              <Button
+                ref={copyWithTagsButtonRef}
+                variant="secondary"
+                className="min-w-0 flex-1 sm:flex-none"
+                onClick={() =>
+                  void copy(
+                    'outputWithTags',
+                    outputWithTags,
+                    outputRef.current?.value === outputWithTags ? outputRef.current : null,
+                  )
+                }
+              >
+                {t('export.copyWithTags')}
+              </Button>
+            )}
+          </div>
           {/* Always mounted, never conditionally inserted: a live region that first appears WITH
               its text already in it is not announced (THEME-33). */}
           <Typography variant="body" as="p" role="status" className="text-content-tertiary min-h-5">
-            {outputStatus}
+            {outputStatus || outputWithTagsStatus}
           </Typography>
         </div>
 
@@ -461,7 +504,7 @@ export function ExportPanel({
             <Textarea
               id="export-output"
               ref={outputRef}
-              value={output}
+              value={fallbackOutput}
               readOnly
               spellCheck={false}
               rows={8}

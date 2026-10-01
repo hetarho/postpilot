@@ -25,13 +25,13 @@
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
-| POST | 28 | 28 | - | 0 |
+| POST | 29 | 29 | - | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 21 | 21 | - | 0 |
 | MODEL | 28 | 28 | - | 0 |
 | TMPL | 19 | 19 | - | 1 |
 | GUIDE | 12 | 12 | - | 0 |
-| EXPORT | 6 | 6 | - | 0 |
+| EXPORT | 7 | 7 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
 | THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
@@ -62,11 +62,16 @@
 
 ## next
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
-- template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
-- create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task)
-- update-ssot VOICE-31 remains open (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); doc-review VOICE for lint's split candidate.
+- create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
+- Template request job content retention is open in JOB-RETENTION-TODO.md; doc-review VOICE for lint's split candidate.
 
 ## log
+- 261002 T522 done: finish entry scroll and Naver body-with-tags copy; Node 24 FE 3054 tests and local CI checks passed
+- 261002 T522 start: finish scroll and Naver body-with-tags copy
+- 261002 create-task POST r29 EXPORT r7 → T522
+- 261002 create-task POST EXPORT start
+- 261002 update-ssot POST r29 EXPORT r7: scroll on finish entry and copy Naver body with tags
+- 261002 update-ssot POST EXPORT start: finish navigation and Naver body-with-tags copy
 - 261002 update-ssot VOICE r8: VOICE-32✎ the readiness meter says how many more sentences are needed (already live in 68ae9a79)
 - 261002 update-ssot VOICE start: readiness meter states the sentences still needed
 - 261002 T521 integration: rebased the template fix onto the voice rewrite hotfix; the sequential quiz continues with answer rewrites below 100% and preserves the photo
@@ -81,12 +86,3 @@
 - 261001 T519 done: six production templates updated after the matching API rollout; SQLite backup and 49 posts/273 saved answers verified unchanged
 - 261001 T519 start
 - 261001 T518 done: required experience answers gate new writing; Node 24 FE 3,041 tests, BE full tests, build/lint/codegen passed
-- 261001 T517 done: 문항 풀기 moves on to the next unanswered prompt with 건너뛰기, 글 붙여넣기 empties for the next post; full FE checks passed in a clean worktree
-- 261001 T518 start
-- 261001 create-task TMPL r19 POST r28 GEN r21 → T518 (required answer support), T519 (six production templates)
-- 261001 create-task TMPL POST GEN start
-- 261001 update-ssot TMPL r19 POST r28 GEN r21: required template answers gate new writing; optional answers still drop; revision keeps its existing edit path
-- 261001 update-ssot TMPL POST GEN start: required experience fields for selected post templates
-- 261001 create-task VOICE r6 → T517 (문항 풀기 opens the next unanswered prompt with 건너뛰기, 글 붙여넣기 empties for the next post; frontend only)
-- 261001 create-task VOICE start
-- 261001 update-ssot VOICE r6: VOICE-65+ a 학습 글 sheet keeps taking entries until the owner closes it (next unanswered prompt, 건너뛰기, blank paste form)

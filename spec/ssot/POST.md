@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r28 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r29 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -142,6 +142,7 @@
 
 - POST-101 [o] ①'s 말투 picker offers 말투 없음, then the account's made voices, then `새 말투 만들기` (→VOICE-53); a voice not yet made is listed disabled with `만드는 중 N%`; a new post starts on the 기본 voice, or on 말투 없음 when there is none ← the owner's own default, and no voice is ever forced
 - POST-102 [o] ② shows, with this post's measurements (→POST-83), its fingerprint beside its voice's (→VOICE-62) after each generation and AI 수정, counted from the post's blocks with no call; a post with 말투 없음 shows none; it is the post's own reading, shown whether or not an item differs, with no note about the template ← a voice is tied to no template, and whether the voice held should read on every post
+- POST-104 [o] entering ③ 글 완성 from another editor step scrolls the page to its top after the step changes, whether the owner selects the step or uses the action in ②; opening a post already on ③ does not force a scroll ← the finish panel begins at the editor's top while the action in ② can be docked below a long post
 
 ## flow
 - new post: `/posts/new` (voice picker seeded with the 기본, or 말투 없음) → type or pick photos → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause

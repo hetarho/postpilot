@@ -22,6 +22,42 @@ afterEach(() => {
 })
 
 describe('opening a post', () => {
+  it('scrolls to the top on entering finish from another step', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', status: 'review', content: POST_CONTENT_FIXTURE }],
+      },
+    })
+
+    expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    // TanStack Router also scrolls during initial routing; this transition uses the numeric call.
+    expect(scrollTo.mock.calls).not.toContainEqual([0, 0])
+    await openStep(user, '글 완성')
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+    scrollTo.mockRestore()
+  })
+
+  it('does not force an extra scroll when a finalized post opens on finish', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [finalizedPostRow({ slug: '20260820-jeju' })] },
+    })
+
+    expect(await screen.findByRole('tab', { name: '글 완성' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(scrollTo.mock.calls).not.toContainEqual([0, 0])
+    scrollTo.mockRestore()
+  })
+
   it('switches export formats without making another client request', async () => {
     const calls: string[] = []
     const user = userEvent.setup()

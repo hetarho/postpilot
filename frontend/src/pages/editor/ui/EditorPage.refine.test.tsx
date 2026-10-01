@@ -188,6 +188,7 @@ describe('opening a post', () => {
   // 글 완성, which holds 기억으로 저장, the export and the address field, and no learning control.
   it('finalizes at once on 확정하기 and lands on 글 완성', async () => {
     const calls: string[] = []
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-final', {
       user: USER,
@@ -217,6 +218,8 @@ describe('opening a post', () => {
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
     )
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+    scrollTo.mockRestore()
     expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
     expect(calls.filter((call) => call.includes('Learn'))).toEqual([])

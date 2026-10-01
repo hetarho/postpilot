@@ -1,5 +1,5 @@
 # EXPORT platform export
-> r6 | Four copy-ready formats derived in the browser from the canonical block array — Naver plain text with numbered, captioned photo markers (and per-photo image and caption copy), a Tistory HTML fragment, a standalone fixed-template HTML page, Markdown with front matter — never stored, never served, never publishing.
+> r7 | Four copy-ready formats derived in the browser from the canonical block array — Naver plain text with numbered, captioned photo markers (and per-photo image and caption copy), a Tistory HTML fragment, a standalone fixed-template HTML page, Markdown with front matter — never stored, never served, never publishing.
 
 ## decisions
 - EXPORT-1 [o] Naver, Tistory, standalone site HTML and Markdown are pure synchronous conversions `(PostContent, attachments) → string` of the same block array (I2), computed in the browser; switching formats makes no request; no derived format is stored or served by the API; the export surface never publishes and the copy-ready path is the blog handoff (I1) ← SmartEditor ONE has no HTML input and discards pasted markup, so the Naver output must be plain text the user drags photos into
@@ -36,6 +36,7 @@
 - EXPORT-22 [x] publishing, browser automation or platform credentials inside the export surface; server-side conversion or storage; theming or per-post styling of the site format; embedding image bytes or long-lived URLs; bulk photo download (per-photo copy instead; only Finder can put files on the clipboard); editing the derived text in place; refetching to remint a URL on the copy path — out of scope
 - EXPORT-24 [o] a photo's caption is its own copy control on the Naver tab, under its photo, following the text-copy discipline (confirmation, dwell, manual fallback, staleness →EXPORT-10 →EXPORT-11); a block with no caption renders no control, and the other three formats render none ← the caption inside the marker is folded and goes away with the marker the photo replaces, so a copy of its own is still the only way the platform's caption box gets it
 - EXPORT-23 [o] a VIDEO block maps per format as VIDEO-14 states, in marker order with the images, never with a URL or bytes (→EXPORT-3); the four outputs are byte-identical for a post with no videos
+- EXPORT-25 [o] when tags exist, the Naver tab offers a second body copy action beside the existing copy action; it copies the current Naver body followed by one blank line and the same hashtag string as the tag field (→EXPORT-20), without changing the ordinary body copy or any derived format; the combined copy follows the text-copy confirmation, fallback and staleness rules (→EXPORT-10 →EXPORT-11) ← Naver's plain-text body omits tags, so one paste can carry both when the owner wants tags at the end of the post
 
 ## flow
 - open panel(content exists) → tab(naver rendered | tistory · site · markdown raw) → copy(text | photo | caption) → 복사됨 1500 ms | fallback(select field, hint) — no request, no state change
