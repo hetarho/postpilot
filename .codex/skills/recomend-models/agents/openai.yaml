@@ -1,4 +1,4 @@
 interface:
   display_name: "Recommend Models"
-  short_description: "OpenRouter 라이브 카탈로그에서 탭별 4단계 모델 추천"
-  default_prompt: "Use $recomend-models to recommend catalog models per 모델 관리 tab from the live OpenRouter catalog."
+  short_description: "모델 관리 내보내기를 붙이면 라이브 카탈로그로 고친 붙여넣기 문서를 돌려준다"
+  default_prompt: "Use $recomend-models with the 모델 관리 일괄 편집 export pasted below, and return the corrected paste document."
