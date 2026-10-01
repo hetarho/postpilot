@@ -1,5 +1,5 @@
 # VOICE voices
-> r5 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
+> r6 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
 
 ## decisions
 - VOICE-1 [o] an account owns zero or more voices (`voices`), the user-facing noun 말투 — several when the owner writes in more than one mood, a calm one and a cheerful one; each voice owns its 학습 글, its current analysis, at most one previous analysis and its 검증 results, all keyed by `(user_id, voice_id)`; no shared account-level analysis, inheritance, copying or fallback: a voice with no 학습 글 holds nothing even when a sibling is made ← a merged analysis can never be separated again
@@ -102,10 +102,18 @@
 - VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only in two groups, `숫자로 본 습관` (each counted item as one plain sentence with its number, e.g. `문장의 32%를 느낌표로 끝내요`) and `AI가 읽은 인상` (the AI part), each item with its example sentence; no provenance badge and no per-item edit ← the group title says where a value came from, and the example lets the owner judge it at once
   - until the voice is made it shows the readiness meter and the way to 학습 글 in place of an analysis
   - VOICE-21's notice and `이전 분석으로 되돌리기` sit above the groups
-- VOICE-64 [o] the 학습 글 tab lists the voice's 학습 글 newest first — a pasted post by its label, an answer by its prompt — each opening to its full text and photo with `삭제`; it carries `글 붙여넣기` (the paste form, 제목 (선택) first) and `문항 풀기` (the prompt list, answered ones marked), and until the voice is made the readiness meter
+- VOICE-64 [o] the 학습 글 tab lists the voice's 학습 글 newest first — a pasted post by its label, an answer by its prompt — each opening to its full text and photo with `삭제`; it carries `글 붙여넣기` (the paste form, 제목 (선택) first) and `문항 풀기` (the prompt list, answered ones marked), both taking entries until closed (→VOICE-65), and until the voice is made the readiness meter
+- VOICE-65 [o] a 학습 글 sheet keeps taking entries until the owner closes it: a save never closes the sheet ← enough 학습 글 takes many entries, and reopening the sheet for each one breaks the run
+  - 문항 풀기: a saved answer opens the next unanswered prompt in the set's order after it, wrapping to the start, on a blank form
+  - `건너뛰기` opens that same next prompt without saving, offered only while another unanswered prompt exists; `문항 목록` returns to the list
+  - once no unanswered prompt remains, the sheet shows the list with every prompt marked answered
+  - 글 붙여넣기: a saved post empties the form for the next one, and its cancel action reads `닫기` from then on
+  - each save is confirmed in place (`답을 저장했어요`, `글을 추가했어요`)
+  - a refused save keeps the same entry with its text; closing the sheet discards only the unsaved entry
+  - 검증's answer-one path still saves one answer and returns to 검증 (→VOICE-43)
 
 ## flow
-- create: 새 말투 만들기 → CreateVoice(name) → `만드는 중` → 학습 글(글 붙여넣기 | 문항 풀기(photo on the owner's own photo | situation)) → meter N% (no call) → 100% → 말투 만들기 → `analyze_voice`(count → one call) → made → 말투 분석
+- create: 새 말투 만들기 → CreateVoice(name) → `만드는 중` → 학습 글(글 붙여넣기 | 문항 풀기(photo on the owner's own photo | situation)) → next entry in the same sheet until it closes (→VOICE-65) → meter N% (no call) → 100% → 말투 만들기 → `analyze_voice`(count → one call) → made → 말투 분석
 - grow: 학습 글 added | deleted → notice → 다시 분석(at 100%) → current = new, previous kept → 이전 분석으로 되돌리기
 - check: 검증 → an answered prompt | answer one → `check_voice`(one write call, that answer withheld) → piece beside the answer + fingerprint comparison
 - delete: DeleteVoice(busy → refuse | tombstone) → posts keep `VoiceRef{deleted}` → RestoreVoice | reassign the post
@@ -118,4 +126,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
--
+- r6 261001 VOICE-65+ a 학습 글 sheet keeps taking entries until closed: next unanswered prompt or 건너뛰기, a blank paste form, each save confirmed in place
