@@ -417,7 +417,7 @@ function AddToolbar({
       className={
         title
           ? 'py-2'
-          : 'bg-surface-base top-chrome sticky z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+          : 'bg-surface-base top-chrome sticky z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0'
       }
     >
       <Typography variant="label" as="p" id={id}>

@@ -8,6 +8,19 @@ export const i18n = {
     loadFailed: '템플릿 목록을 불러오지 못했어요.',
     noTemplate: '없음',
     emptyDescription: '설명 없음',
+    // The live preview beside the composition (TMPL-65, TMPL-66): placeholders, never sample prose.
+    preview: {
+      heading: '미리보기',
+      note: '자리 표시 예시예요. AI가 쓰는 글과 사진은 실제 글에서 채워져요.',
+      empty: '구성에 블록을 추가하면 여기에 미리보기가 보여요.',
+      aiWrites: 'AI가 쓰는 글',
+      answer: '입력한 내용',
+      answerOf: '{{label}}: 입력한 내용',
+      repeat: '사진 그룹마다 반복',
+      photos: '사진 {{count}}장',
+      unparsed:
+        '{{area}} {{line}}번째 줄을 읽을 수 없어 마지막으로 읽힌 모습을 보여 줘요. {{reason}}',
+    },
     composition: {
       fixInSource: '원문에서 고치기',
       add: '블록 추가',
@@ -116,6 +129,18 @@ export const i18n = {
     loadFailed: 'Could not load the template list.',
     noTemplate: 'None',
     emptyDescription: 'No description',
+    preview: {
+      heading: 'Preview',
+      note: 'Placeholders only. The AI-written text and the photos are filled in a real post.',
+      empty: 'Add blocks to the composition and the preview appears here.',
+      aiWrites: 'AI writes here',
+      answer: 'what you typed',
+      answerOf: '{{label}}: what you typed',
+      repeat: 'Repeats per photo group',
+      photos: '{{count}} photos',
+      unparsed:
+        "{{area}} line {{line}} doesn't parse, so this shows the last version that did. {{reason}}",
+    },
     composition: {
       fixInSource: 'Fix in source',
       add: 'Add block',

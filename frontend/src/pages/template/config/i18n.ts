@@ -30,6 +30,12 @@ export const i18n = {
         builder: '블록',
         source: '원문',
       },
+      // Below lg the composition and its preview take turns (TMPL-67).
+      view: {
+        aria: '구성과 미리보기',
+        compose: '구성',
+        preview: '미리보기',
+      },
       sourceHelp:
         '템플릿을 저장 형식 그대로 보고 고쳐요. 형식 안내를 AI에게 건네 만든 템플릿을 여기에 붙여 넣을 수 있어요.',
       backToList: '← 템플릿 목록',
@@ -74,6 +80,11 @@ export const i18n = {
         aria: 'How to edit',
         builder: 'Blocks',
         source: 'Source',
+      },
+      view: {
+        aria: 'Composition and preview',
+        compose: 'Composition',
+        preview: 'Preview',
       },
       sourceHelp:
         'See and edit the template in its stored format. Hand the format guide to an AI and paste what it writes here.',

@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useNavigate, useParams } from '@tanstack/react-router'
+import { twMerge } from 'tailwind-merge'
 import { useSession } from '@/entities/session'
 import {
   TEMPLATE_LIMITS,
   TEMPLATE_PARSE_OPTIONS,
   TemplateComposition,
+  TemplatePreview,
   TemplateSource,
   askFields,
   canSaveTemplate,
@@ -127,6 +129,8 @@ function BackLink() {
 }
 
 const COMPOSITION_PANEL_ID = 'template-composition-panel'
+const EDIT_PANEL_ID = 'template-edit-panel'
+const PREVIEW_PANEL_ID = 'template-preview-panel'
 
 interface Draft {
   name: string
@@ -202,6 +206,9 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // of the tab should not steal the caret, but arriving there to fix a parse error should put it
   // in the text that has the error.
   const [focusSource, setFocusSource] = useState<TemplateArea | null>(null)
+  // Below lg the composition and the preview take turns; at lg both stand side by side and this
+  // switch is hidden (TMPL-67). Page-local: it never touches the draft or the leave guard.
+  const [view, setView] = useState<'compose' | 'preview'>('compose')
   const create = useCreateTemplate(ownerId)
   const update = useUpdateTemplate(ownerId, stored?.id ?? '')
 
@@ -356,132 +363,174 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // that lands after a save changes neither: `savedBaseline` already describes the saved state.
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col lg:max-w-7xl' })}>
       <BackLink />
       <Typography variant="display" className="mt-2 block">
         {stored ? stored.name : t('screen.newTitle', { ns: 'templates' })}
       </Typography>
 
-      <NameField value={draft.name} onChange={field('name')} disabled={pending} />
-      <DescriptionField
-        value={draft.description}
-        onChange={field('description')}
-        disabled={pending}
-      />
-      <NumberField
-        id="template-target-length"
-        tick={t('numbers.targetLengthTick', { ns: 'templates' })}
-        label={t('numbers.targetLength', { ns: 'templates' })}
-        help={t('numbers.targetLengthHelp', { ns: 'templates' })}
-        field={lengthField}
-        min={POST_TARGET_LENGTH_MIN}
-        max={POST_TARGET_LENGTH_MAX}
-        valid={lengthValid}
-        disabled={pending}
-        onChange={numberField(setLengthField, POST_TARGET_LENGTH_DEFAULT)}
-      />
-      <NumberField
-        id="template-tag-count"
-        tick={t('numbers.tagCountTick', { ns: 'templates' })}
-        label={t('numbers.tagCount', { ns: 'templates' })}
-        help={t('numbers.tagCountHelp', { ns: 'templates' })}
-        field={tagsField}
-        min={POST_TAG_COUNT_MIN}
-        max={POST_TAG_COUNT_MAX}
-        valid={tagsValid}
-        disabled={pending}
-        onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
-      />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
+        <div className="min-w-0">
+          <NameField value={draft.name} onChange={field('name')} disabled={pending} />
+          <DescriptionField
+            value={draft.description}
+            onChange={field('description')}
+            disabled={pending}
+          />
+          <NumberField
+            id="template-target-length"
+            tick={t('numbers.targetLengthTick', { ns: 'templates' })}
+            label={t('numbers.targetLength', { ns: 'templates' })}
+            help={t('numbers.targetLengthHelp', { ns: 'templates' })}
+            field={lengthField}
+            min={POST_TARGET_LENGTH_MIN}
+            max={POST_TARGET_LENGTH_MAX}
+            valid={lengthValid}
+            disabled={pending}
+            onChange={numberField(setLengthField, POST_TARGET_LENGTH_DEFAULT)}
+          />
+          <NumberField
+            id="template-tag-count"
+            tick={t('numbers.tagCountTick', { ns: 'templates' })}
+            label={t('numbers.tagCount', { ns: 'templates' })}
+            help={t('numbers.tagCountHelp', { ns: 'templates' })}
+            field={tagsField}
+            min={POST_TAG_COUNT_MIN}
+            max={POST_TAG_COUNT_MAX}
+            valid={tagsValid}
+            disabled={pending}
+            onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
+          />
 
-      {/* ONE switch for both texts: they are two parts of one template, edited the same way. */}
-      <SegmentedControl
-        value={mode}
-        options={[
-          { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
-          { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
-        ]}
-        onChange={(next) => {
-          setMode(next)
-          // Only the fix button asks for the caret; picking the tab does not.
-          if (next === 'builder') setFocusSource(null)
-        }}
-        ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
-        controls={COMPOSITION_PANEL_ID}
-        disabled={pending}
-        className="mt-8"
-      />
-      <div id={COMPOSITION_PANEL_ID} role="tabpanel">
-        {/* The title comes first because it reads first — in the post and in the one data-field
+          {/* The phone's one-at-a-time switch. It stands above the composition area and below the
+          fields, which stay where they are (TMPL-67). */}
+          <SegmentedControl
+            value={view}
+            options={[
+              { value: 'compose', label: t('screen.view.compose', { ns: 'templates' }) },
+              { value: 'preview', label: t('screen.view.preview', { ns: 'templates' }) },
+            ]}
+            onChange={setView}
+            ariaLabel={t('screen.view.aria', { ns: 'templates' })}
+            controls={view === 'compose' ? EDIT_PANEL_ID : PREVIEW_PANEL_ID}
+            className="mt-8 lg:hidden"
+          />
+          <div
+            id={EDIT_PANEL_ID}
+            role="tabpanel"
+            className={view === 'preview' ? 'hidden lg:block' : undefined}
+          >
+            {/* ONE switch for both texts: they are two parts of one template, edited the same way. */}
+            <SegmentedControl
+              value={mode}
+              options={[
+                { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
+                { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
+              ]}
+              onChange={(next) => {
+                setMode(next)
+                // Only the fix button asks for the caret; picking the tab does not.
+                if (next === 'builder') setFocusSource(null)
+              }}
+              ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
+              controls={COMPOSITION_PANEL_ID}
+              disabled={pending}
+              className="mt-8"
+            />
+            <div id={COMPOSITION_PANEL_ID} role="tabpanel">
+              {/* The title comes first because it reads first — in the post and in the one data-field
             namespace (TMPL-50, TMPL-55). */}
-        <section aria-labelledby="template-title-area-heading" className="mt-6">
-          <Typography variant="title" id="template-title-area-heading">
-            {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
-            {t('form.optional', { ns: 'common' })}
-          </Typography>
-          <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
-            {t('screen.titleArea.help', { ns: 'templates' })}
-          </Typography>
-          {mode === 'source' ? (
-            <TemplateSource
-              area="title_area"
-              value={draft.titleArea}
-              onChange={field('titleArea')}
-              disabled={pending}
-              failure={failureIn('title_area')}
-              autoFocus={focusSource === 'title_area'}
-              className="mt-3"
-            />
-          ) : (
-            <TemplateComposition
-              area="title_area"
-              onAskConflict={setTitleAskConflict}
-              value={draft.titleArea}
-              onChange={field('titleArea')}
-              disabled={pending}
-              failure={failureIn('title_area')}
-              onFixInSource={() => {
-                setFocusSource('title_area')
-                setMode('source')
-              }}
-              className="mt-3"
-            />
-          )}
-        </section>
+              <section aria-labelledby="template-title-area-heading" className="mt-6">
+                <Typography variant="title" id="template-title-area-heading">
+                  {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
+                  {t('form.optional', { ns: 'common' })}
+                </Typography>
+                <Typography
+                  variant="body"
+                  as="p"
+                  className="text-content-secondary max-w-measure mt-1"
+                >
+                  {t('screen.titleArea.help', { ns: 'templates' })}
+                </Typography>
+                {mode === 'source' ? (
+                  <TemplateSource
+                    area="title_area"
+                    value={draft.titleArea}
+                    onChange={field('titleArea')}
+                    disabled={pending}
+                    failure={failureIn('title_area')}
+                    autoFocus={focusSource === 'title_area'}
+                    className="mt-3"
+                  />
+                ) : (
+                  <TemplateComposition
+                    area="title_area"
+                    onAskConflict={setTitleAskConflict}
+                    value={draft.titleArea}
+                    onChange={field('titleArea')}
+                    disabled={pending}
+                    failure={failureIn('title_area')}
+                    onFixInSource={() => {
+                      setFocusSource('title_area')
+                      setMode('source')
+                    }}
+                    className="mt-3"
+                  />
+                )}
+              </section>
 
-        <section aria-labelledby="template-composition-heading" className="mt-8">
-          <Typography variant="title" id="template-composition-heading">
-            {t('create.body', { ns: 'templates' })}
-          </Typography>
-          <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
-            {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
-              ns: 'templates',
-            })}
-          </Typography>
-          {mode === 'source' ? (
-            <TemplateSource
-              value={draft.body}
-              onChange={field('body')}
-              disabled={pending}
-              failure={failureIn('body')}
-              autoFocus={focusSource === 'body'}
-              className="mt-3"
-            />
-          ) : (
-            <TemplateComposition
-              onAskConflict={setBodyAskConflict}
-              value={draft.body}
-              onChange={field('body')}
-              disabled={pending}
-              takenAskTitles={titleAskLabels}
-              failure={failureIn('body')}
-              onFixInSource={() => {
-                setFocusSource('body')
-                setMode('source')
-              }}
-              className="mt-3"
-            />
+              <section aria-labelledby="template-composition-heading" className="mt-8">
+                <Typography variant="title" id="template-composition-heading">
+                  {t('create.body', { ns: 'templates' })}
+                </Typography>
+                <Typography
+                  variant="body"
+                  as="p"
+                  className="text-content-secondary max-w-measure mt-1"
+                >
+                  {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
+                    ns: 'templates',
+                  })}
+                </Typography>
+                {mode === 'source' ? (
+                  <TemplateSource
+                    value={draft.body}
+                    onChange={field('body')}
+                    disabled={pending}
+                    failure={failureIn('body')}
+                    autoFocus={focusSource === 'body'}
+                    className="mt-3"
+                  />
+                ) : (
+                  <TemplateComposition
+                    onAskConflict={setBodyAskConflict}
+                    value={draft.body}
+                    onChange={field('body')}
+                    disabled={pending}
+                    takenAskTitles={titleAskLabels}
+                    failure={failureIn('body')}
+                    onFixInSource={() => {
+                      setFocusSource('body')
+                      setMode('source')
+                    }}
+                    className="mt-3"
+                  />
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+
+        {/* Beside the composition at lg, kept in view while it scrolls; one tap away below. */}
+        <aside
+          id={PREVIEW_PANEL_ID}
+          className={twMerge(
+            'lg:top-header mt-8 lg:sticky lg:mt-6 lg:max-h-[calc(100dvh-var(--spacing-header)-1.5rem)] lg:overflow-y-auto',
+            view === 'compose' && 'hidden lg:block',
           )}
-        </section>
+        >
+          <TemplatePreview titleArea={draft.titleArea} body={draft.body} />
+        </aside>
       </div>
 
       {/* The state this screen has to report goes in one place, above the control that produced

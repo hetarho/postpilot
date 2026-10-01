@@ -67,15 +67,15 @@
 | T505 | Apply or adopt an explicit candidate after ranking | MODEL GEN POST | T504 | todo |
 | T506 | Show ranked-comparison Elo on the model leaderboard | MODEL | T502 T504 | todo |
 | T509 | Cancel a running template request | TMPL QUOTA | T508 | todo |
-| T511 | Show a live placeholder preview beside the template composition | TMPL | - | todo |
 | T512 | Ask the 글 작성 모델 from the template editor, and start a template from a post | TMPL POST QUOTA | T508 T509 T510 T511 | todo |
 
 ## next
 - next: implement-task T501 for model comparison; T498 remains the earlier /plans task; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
-- implement-task T509 → T512 for the template request; T511 (preview) has no dependency and can run beside them; job content retention is open in JOB-RETENTION-TODO.md.
+- implement-task T509 → T512 for the template request; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T511 done: a live placeholder preview stands beside the template composition at lg and behind a 구성 / 미리보기 switch below it
 - 261001 T510 done: EstimateTemplateRequest states 무료 or about n credits for one request at catalog prices; full FE/BE and project checks passed
 - 261001 T510 claimed (tr): one-call credit estimate for a template request
 - 261001 T508 done: template requests run as account-owned jobs on the explicit write model, corrected up to three times, with the answer read through GetTemplateRequestResult; full FE/BE and project checks passed
@@ -95,4 +95,3 @@
 - 261001 create-architecture ARCH r15: explicit editor-two and model-lab-two-to-five fan-out align I3 with MODEL-75
 - 261001 create-architecture ARCH start: align explicit comparison fan-out invariant with two-to-five candidate model lab
 - 261001 create-task MODEL r26 → refreshed T499–T506 for complete rankings with ties, result actions and normalized Elo
-- 261001 create-task MODEL r26 start: refresh T499–T506 for complete rankings and Elo

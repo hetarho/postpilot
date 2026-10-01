@@ -14,6 +14,10 @@ const paletteButton = (name: string) =>
     name: new RegExp(`^${name}`),
   })
 
+/** The body's composition. The live preview beside it draws the same texts (TMPL-65), so a
+ *  question about the outline is asked inside the outline. */
+const composition = () => within(screen.getByRole('region', { name: '템플릿 구성' }))
+
 const REVIEW: FakeTemplateRow = {
   id: 'template-review',
   name: '정보성 식당 리뷰',
@@ -41,7 +45,7 @@ describe('the template screen', () => {
 
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     // The retired position reads as fixed text carrying its label.
-    expect(screen.getByText('네이버 지도')).toBeInTheDocument()
+    expect(composition().getByText('네이버 지도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
 
     // One real edit, and only then does the save open — writing the row back as literal text.
@@ -57,8 +61,8 @@ describe('the template screen', () => {
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     expect(screen.getByLabelText(/어떤 글인가요/)).toHaveValue('협찬 방문 리뷰')
     // The composition reads as the outline: one row per block, by its own text.
-    expect(screen.getByText('인트로를 씁니다')).toBeInTheDocument()
-    expect(screen.getByText('네이버 지도')).toBeInTheDocument()
+    expect(composition().getByText('인트로를 씁니다')).toBeInTheDocument()
+    expect(composition().getByText('네이버 지도')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '← 템플릿 목록' })).toHaveAttribute(
       'href',
       '/templates',
@@ -376,7 +380,7 @@ describe('the template screen', () => {
 
     await user.click(screen.getByRole('tab', { name: '블록' }))
     // The outline is seeded from the same body, retired position included (TMPL-37).
-    expect(screen.getByText('네이버 지도')).toBeInTheDocument()
+    expect(composition().getByText('네이버 지도')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
@@ -439,7 +443,8 @@ describe('the title area', () => {
     renderTemplate('/templates/template-titled', { templates: [TITLED] })
     await screen.findByLabelText('이름')
 
-    expect(screen.getAllByRole('tablist')).toHaveLength(1)
+    // One 블록 · 원문 switch for both texts; the other tablist is the phone's 구성 / 미리보기.
+    expect(screen.getAllByRole('tablist', { name: '구성 편집 방식' })).toHaveLength(1)
     const title = titleSection()
     expect(
       title.compareDocumentPosition(bodySection()) & Node.DOCUMENT_POSITION_FOLLOWING,

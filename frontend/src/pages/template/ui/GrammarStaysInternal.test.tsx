@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeTemplateRow } from '@/test/templates'
@@ -86,6 +86,23 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
       await user.click(control)
       expectNoGrammar()
     }
+  })
+
+  // The live preview draws every construct as its stand-in and never as the tags that carry it
+  // (TMPL-65, TMPL-66): beside the builder, and on the phone's 미리보기 panel alike.
+  it('renders no grammar in the live preview', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/templates/template-all', {
+      user: USER,
+      templates: { templates: [EVERY_CONSTRUCT] },
+    })
+    await screen.findByLabelText('이름')
+
+    await user.click(screen.getByRole('tab', { name: '미리보기' }))
+    const preview = within(screen.getByRole('article', { name: '미리보기' }))
+    expect(preview.getAllByText('사진 그룹마다 반복').length).toBeGreaterThan(0)
+    expect(preview.getAllByText('네이버 지도').length).toBeGreaterThan(0)
+    expectNoGrammar()
   })
 
   it('renders no grammar on a body it cannot parse until the user asks to fix it', async () => {
