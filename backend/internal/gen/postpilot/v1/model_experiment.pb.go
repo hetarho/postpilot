@@ -2865,7 +2865,11 @@ type LeaderboardEntry struct {
 	Recommended       bool                   `protobuf:"varint,17,opt,name=recommended,proto3" json:"recommended,omitempty"`
 	Disappeared       bool                   `protobuf:"varint,18,opt,name=disappeared,proto3" json:"disappeared,omitempty"`
 	// `other` is counted without its notes, in every scope.
-	BadgeTallies  []*BadgeTally `protobuf:"bytes,19,rep,name=badge_tallies,json=badgeTallies,proto3" json:"badge_tallies,omitempty"`
+	BadgeTallies []*BadgeTally `protobuf:"bytes,19,rep,name=badge_tallies,json=badgeTallies,proto3" json:"badge_tallies,omitempty"`
+	// One per comparison, independent of how many other candidates it faced.
+	EvaluatedComparisons int32 `protobuf:"varint,20,opt,name=evaluated_comparisons,json=evaluatedComparisons,proto3" json:"evaluated_comparisons,omitempty"`
+	// Pairwise draws from equal ranks; a five-way tie contributes four per model.
+	Draws         int32 `protobuf:"varint,21,opt,name=draws,proto3" json:"draws,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3031,6 +3035,20 @@ func (x *LeaderboardEntry) GetBadgeTallies() []*BadgeTally {
 		return x.BadgeTallies
 	}
 	return nil
+}
+
+func (x *LeaderboardEntry) GetEvaluatedComparisons() int32 {
+	if x != nil {
+		return x.EvaluatedComparisons
+	}
+	return 0
+}
+
+func (x *LeaderboardEntry) GetDraws() int32 {
+	if x != nil {
+		return x.Draws
+	}
+	return 0
 }
 
 type GetLeaderboardRequest struct {
@@ -3343,7 +3361,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\n" +
 	"BadgeTally\x120\n" +
 	"\x05badge\x18\x01 \x01(\x0e2\x1a.postpilot.v1.VerdictBadgeR\x05badge\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"\xc3\x05\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\"\x8e\x06\n" +
 	"\x10LeaderboardEntry\x12\x12\n" +
 	"\x04rank\x18\x01 \x01(\x05R\x04rank\x12,\n" +
 	"\x05model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12\x1f\n" +
@@ -3365,7 +3383,9 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x06active\x18\x10 \x01(\bR\x06active\x12 \n" +
 	"\vrecommended\x18\x11 \x01(\bR\vrecommended\x12 \n" +
 	"\vdisappeared\x18\x12 \x01(\bR\vdisappeared\x12=\n" +
-	"\rbadge_tallies\x18\x13 \x03(\v2\x18.postpilot.v1.BadgeTallyR\fbadgeTallies\"\xb1\x01\n" +
+	"\rbadge_tallies\x18\x13 \x03(\v2\x18.postpilot.v1.BadgeTallyR\fbadgeTallies\x123\n" +
+	"\x15evaluated_comparisons\x18\x14 \x01(\x05R\x14evaluatedComparisons\x12\x14\n" +
+	"\x05draws\x18\x15 \x01(\x05R\x05draws\"\xb1\x01\n" +
 	"\x15GetLeaderboardRequest\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x127\n" +
 	"\x06window\x18\x02 \x01(\x0e2\x1f.postpilot.v1.LeaderboardWindowR\x06window\x124\n" +

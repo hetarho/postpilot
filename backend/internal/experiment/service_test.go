@@ -403,7 +403,24 @@ func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage St
 		if row.Stage != stage || (scope == ScopeMe && row.UserID != userID) {
 			continue
 		}
-		if row.DecidedAt == nil || row.DecidedAt.Before(since) {
+		when := row.DecidedAt
+		if row.ReviewMode == ReviewCandidateRanking {
+			when = row.CompletedAt
+		}
+		if when == nil || when.Before(since) {
+			continue
+		}
+		if row.ReviewMode == ReviewCandidateRanking && row.Status == StatusCompleted {
+			hasRank := false
+			for _, candidate := range row.Candidates {
+				if candidate.Rank > 0 {
+					hasRank = true
+					calls = append(calls, candidate)
+				}
+			}
+			if hasRank {
+				decided = append(decided, cloneExperiment(row))
+			}
 			continue
 		}
 		if row.Status == StatusDecided || row.Status == StatusDismissed {
@@ -415,8 +432,15 @@ func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage St
 		}
 	}
 	sort.Slice(decided, func(i, j int) bool {
-		if !decided[i].DecidedAt.Equal(*decided[j].DecidedAt) {
-			return decided[i].DecidedAt.Before(*decided[j].DecidedAt)
+		left, right := decided[i].DecidedAt, decided[j].DecidedAt
+		if decided[i].ReviewMode == ReviewCandidateRanking {
+			left = decided[i].CompletedAt
+		}
+		if decided[j].ReviewMode == ReviewCandidateRanking {
+			right = decided[j].CompletedAt
+		}
+		if !left.Equal(*right) {
+			return left.Before(*right)
 		}
 		return decided[i].ID < decided[j].ID
 	})

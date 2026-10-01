@@ -294,7 +294,8 @@ func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry, operator bool) *
 		PromptTokens: entry.PromptTokens, CompletionTokens: entry.CompletionTokens,
 		Provisional: entry.Provisional, Active: entry.Active,
 		Recommended: entry.Recommended, Disappeared: entry.Disappeared,
-		BadgeTallies: toProtoTallies(entry.BadgeTallies),
+		BadgeTallies:         toProtoTallies(entry.BadgeTallies),
+		EvaluatedComparisons: int32(entry.EvaluatedComparisons), Draws: int32(entry.Draws),
 	}
 	if operator {
 		mapped.TotalCostMicrousd, mapped.CostQuality = entry.TotalCostMicrousd, toProtoCost(entry.CostQuality)

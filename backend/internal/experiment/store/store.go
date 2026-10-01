@@ -458,9 +458,9 @@ func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experi
 	var experimentRows []sqlc.ModelExperiment
 	var err error
 	if scope == experiment.ScopeAll {
-		experimentRows, err = s.read.ListDecidedForLeaderboardAll(ctx, sqlc.ListDecidedForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+		experimentRows, err = s.read.ListDecidedForLeaderboardAll(ctx, sqlc.ListDecidedForLeaderboardAllParams{Stage: string(stage), Since: nullString(from)})
 	} else {
-		experimentRows, err = s.read.ListDecidedForLeaderboard(ctx, sqlc.ListDecidedForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+		experimentRows, err = s.read.ListDecidedForLeaderboard(ctx, sqlc.ListDecidedForLeaderboardParams{UserID: userID, Stage: string(stage), Since: nullString(from)})
 	}
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("list decided experiments: %w", err)
@@ -475,9 +475,9 @@ func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experi
 	}
 	var candidateRows []sqlc.ModelExperimentCandidate
 	if scope == experiment.ScopeAll {
-		candidateRows, err = s.read.ListCandidatesForLeaderboardAll(ctx, sqlc.ListCandidatesForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+		candidateRows, err = s.read.ListCandidatesForLeaderboardAll(ctx, sqlc.ListCandidatesForLeaderboardAllParams{Stage: string(stage), Since: nullString(from)})
 	} else {
-		candidateRows, err = s.read.ListCandidatesForLeaderboard(ctx, sqlc.ListCandidatesForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+		candidateRows, err = s.read.ListCandidatesForLeaderboard(ctx, sqlc.ListCandidatesForLeaderboardParams{UserID: userID, Stage: string(stage), Since: nullString(from)})
 	}
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("list leaderboard candidates: %w", err)
@@ -492,7 +492,7 @@ func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experi
 	}
 	var tallyRows []sqlc.ListBadgeTalliesForLeaderboardRow
 	if scope == experiment.ScopeAll {
-		allRows, allErr := s.read.ListBadgeTalliesForLeaderboardAll(ctx, sqlc.ListBadgeTalliesForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+		allRows, allErr := s.read.ListBadgeTalliesForLeaderboardAll(ctx, sqlc.ListBadgeTalliesForLeaderboardAllParams{Stage: string(stage), Since: nullString(from)})
 		if allErr != nil {
 			return nil, nil, nil, fmt.Errorf("list leaderboard badge tallies: %w", allErr)
 		}
@@ -500,7 +500,7 @@ func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experi
 			tallyRows = append(tallyRows, sqlc.ListBadgeTalliesForLeaderboardRow(row))
 		}
 	} else {
-		tallyRows, err = s.read.ListBadgeTalliesForLeaderboard(ctx, sqlc.ListBadgeTalliesForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+		tallyRows, err = s.read.ListBadgeTalliesForLeaderboard(ctx, sqlc.ListBadgeTalliesForLeaderboardParams{UserID: userID, Stage: string(stage), Since: nullString(from)})
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("list leaderboard badge tallies: %w", err)
 		}

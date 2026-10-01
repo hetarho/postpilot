@@ -5,13 +5,22 @@ import (
 	"sort"
 )
 
-// Match is one counted outcome, replayed in decision order (MODEL-38). A winner verdict names
-// its Winner and Loser. A dismissal of two delivered candidates names neither and carries both
-// in Dismissed instead: each loses one match to the fixed dismissal reference.
+// Match is one counted event, replayed in decision order (MODEL-38). A completed ranking
+// names every participant. Historical winner verdicts retain Winner/Loser, and a legacy
+// two-delivery dismissal carries both in Dismissed against the fixed reference.
 type Match struct {
 	Winner    ModelRef
 	Loser     ModelRef
 	Dismissed []ModelRef
+	Ranked    []RankedParticipant
+}
+
+// RankedParticipant is one model in a completed comparison. DisplaySide breaks
+// equal fractional remainders without depending on request or map iteration order.
+type RankedParticipant struct {
+	Model       ModelRef
+	Rank        int
+	DisplaySide DisplaySide
 }
 
 // BadgeTally is how often one model earned one badge inside a board's own scope, stage and
@@ -23,23 +32,25 @@ type BadgeTally struct {
 }
 
 type LeaderboardEntry struct {
-	Rank              int
-	Model             ModelRef
-	ModelLabel        string
-	Rating            int
-	Matches           int
-	Wins              int
-	Losses            int
-	SuccessfulCalls   int
-	TotalLatencyMS    int64
-	PromptTokens      int64
-	CompletionTokens  int64
-	TotalCostMicrousd int64
-	CostQuality       CostSource
-	Provisional       bool
-	Active            bool
-	Recommended       bool
-	Disappeared       bool
+	Rank                 int
+	Model                ModelRef
+	ModelLabel           string
+	Rating               int
+	Matches              int
+	Wins                 int
+	Losses               int
+	Draws                int
+	EvaluatedComparisons int
+	SuccessfulCalls      int
+	TotalLatencyMS       int64
+	PromptTokens         int64
+	CompletionTokens     int64
+	TotalCostMicrousd    int64
+	CostQuality          CostSource
+	Provisional          bool
+	Active               bool
+	Recommended          bool
+	Disappeared          bool
 	// What this model's verdicts said about it in the same span, most often first. It
 	// explains a rank rather than producing one.
 	BadgeTallies []BadgeTally
@@ -70,6 +81,10 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 	// A model reaches the board only through a counted outcome; the calls beside it are
 	// accounting for a model already there (MODEL-38).
 	for _, match := range matches {
+		if len(match.Ranked) >= 2 {
+			replayRanking(match.Ranked, entry)
+			continue
+		}
 		if len(match.Dismissed) > 0 {
 			for _, ref := range match.Dismissed {
 				loser := entry(ref)
@@ -77,6 +92,7 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 				loser.Rating += int(math.Round(LeaderboardKFactor * (0 - expected)))
 				loser.Matches++
 				loser.Losses++
+				loser.EvaluatedComparisons++
 			}
 			continue
 		}
@@ -88,8 +104,10 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 		loser.Rating -= delta
 		winner.Matches++
 		winner.Wins++
+		winner.EvaluatedComparisons++
 		loser.Matches++
 		loser.Losses++
+		loser.EvaluatedComparisons++
 	}
 	for _, candidate := range candidates {
 		current := entries[candidate.Model]
@@ -112,7 +130,7 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 	}
 	out := make([]LeaderboardEntry, 0, len(entries))
 	for _, current := range entries {
-		current.Provisional = current.Matches < LeaderboardMinMatches
+		current.Provisional = current.EvaluatedComparisons < LeaderboardMinEvaluations
 		out = append(out, *current)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -121,6 +139,9 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 		}
 		if out[i].Rating != out[j].Rating {
 			return out[i].Rating > out[j].Rating
+		}
+		if out[i].EvaluatedComparisons != out[j].EvaluatedComparisons {
+			return out[i].EvaluatedComparisons > out[j].EvaluatedComparisons
 		}
 		return out[i].Model.String() < out[j].Model.String()
 	})
@@ -148,6 +169,98 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 		out[i].BadgeTallies = attached
 	}
 	return out
+}
+
+func replayRanking(participants []RankedParticipant, entry func(ModelRef) *LeaderboardEntry) {
+	n := len(participants)
+	before := make([]int, n)
+	raw := make([]float64, n)
+	for i, candidate := range participants {
+		current := entry(candidate.Model)
+		before[i] = current.Rating
+		current.EvaluatedComparisons++
+	}
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			left, right := participants[i], participants[j]
+			a, b := entry(left.Model), entry(right.Model)
+			score := 0.5
+			switch {
+			case left.Rank < right.Rank:
+				score = 1
+				a.Wins++
+				b.Losses++
+			case left.Rank > right.Rank:
+				score = 0
+				a.Losses++
+				b.Wins++
+			default:
+				a.Draws++
+				b.Draws++
+			}
+			a.Matches++
+			b.Matches++
+			expected := 1 / (1 + math.Pow(10, float64(before[j]-before[i])/400))
+			raw[i] += score - expected
+			raw[j] += expected - score
+		}
+	}
+	for i := range raw {
+		raw[i] *= float64(LeaderboardKFactor) / float64(n-1)
+	}
+	changes := make([]int, n)
+	if n == 2 {
+		changes[0] = int(math.Round(raw[0]))
+		changes[1] = -changes[0]
+	} else {
+		// Every event is zero sum. Floor each value and award the outstanding
+		// integer points to the largest remainders, then persisted position.
+		remainders := make([]float64, n)
+		total := 0
+		for i, value := range raw {
+			nearest := math.Round(value)
+			if math.Abs(value-nearest) < 1e-9 {
+				value = nearest
+			}
+			changes[i] = int(math.Floor(value))
+			remainders[i] = value - float64(changes[i])
+			total += changes[i]
+		}
+		order := make([]int, n)
+		for i := range order {
+			order[i] = i
+		}
+		sort.Slice(order, func(a, b int) bool {
+			i, j := order[a], order[b]
+			if math.Abs(remainders[i]-remainders[j]) > 1e-9 {
+				return remainders[i] > remainders[j]
+			}
+			return sideOrder(participants[i].DisplaySide) < sideOrder(participants[j].DisplaySide)
+		})
+		for i := 0; i < -total; i++ {
+			changes[order[i]]++
+		}
+	}
+	for i, candidate := range participants {
+		entry(candidate.Model).Rating += changes[i]
+	}
+}
+
+func sideOrder(side DisplaySide) int {
+	switch side {
+	case SideLeft:
+		return 0
+	case SideRight:
+		return 1
+	case SideC:
+		return 2
+	case SideD:
+		return 3
+	case SideE:
+		return 4
+	default:
+		return 5
+	}
 }
 
 func mergeCostQuality(current, next CostSource) CostSource {

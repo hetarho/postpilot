@@ -174,6 +174,24 @@ func TestRankedCompletionRevealsRanksOnlyAfterReview(t *testing.T) {
 	}
 }
 
+func TestLeaderboardProjectsEvaluationAndDrawCountsWithoutPrivateDetails(t *testing.T) {
+	entry := experiment.LeaderboardEntry{
+		Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A",
+		Rating: 1512, Matches: 4, Wins: 1, Losses: 1, Draws: 2, EvaluatedComparisons: 1,
+		PromptTokens: 33, TotalCostMicrousd: 17, CostQuality: experiment.CostReported,
+	}
+	owner := toProtoLeaderboardEntry(entry, false)
+	if owner.GetRating() != 1512 || owner.GetEvaluatedComparisons() != 1 || owner.GetDraws() != 2 ||
+		owner.GetWins() != 1 || owner.GetLosses() != 1 || owner.GetPromptTokens() != 33 ||
+		owner.GetTotalCostMicrousd() != 0 {
+		t.Fatalf("owner board=%+v", owner)
+	}
+	operator := toProtoLeaderboardEntry(entry, true)
+	if operator.GetEvaluatedComparisons() != 1 || operator.GetTotalCostMicrousd() != 17 {
+		t.Fatalf("operator board=%+v", operator)
+	}
+}
+
 func TestExperimentMappingProjectsStructuredAggregateFailuresOnly(t *testing.T) {
 	found := experiment.Experiment{
 		ApplyFailure:    &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"safe": "value"}},

@@ -447,15 +447,17 @@ SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
 FROM model_experiment_badges b
 JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
 JOIN model_experiments e ON e.id = b.experiment_id
-WHERE e.user_id = ? AND e.stage = ? AND e.outcome = 'winner'
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+WHERE e.user_id = ?1 AND e.stage = ?2
+  AND ((e.review_mode = 'pairwise' AND e.outcome = 'winner')
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= ?3
 GROUP BY c.model_provider_id, c.model_id, b.badge
 `
 
 type ListBadgeTalliesForLeaderboardParams struct {
-	UserID    string
-	Stage     string
-	DecidedAt sql.NullString
+	UserID string
+	Stage  string
+	Since  sql.NullString
 }
 
 type ListBadgeTalliesForLeaderboardRow struct {
@@ -469,7 +471,7 @@ type ListBadgeTalliesForLeaderboardRow struct {
 // candidate ran, not by the candidate: a board ranks models, and two comparisons of the same
 // model are the same row here. The note is deliberately not selected.
 func (q *Queries) ListBadgeTalliesForLeaderboard(ctx context.Context, arg ListBadgeTalliesForLeaderboardParams) ([]ListBadgeTalliesForLeaderboardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboard, arg.UserID, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}
@@ -501,14 +503,16 @@ SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
 FROM model_experiment_badges b
 JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
 JOIN model_experiments e ON e.id = b.experiment_id
-WHERE e.stage = ? AND e.outcome = 'winner'
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+WHERE e.stage = ?1
+  AND ((e.review_mode = 'pairwise' AND e.outcome = 'winner')
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= ?2
 GROUP BY c.model_provider_id, c.model_id, b.badge
 `
 
 type ListBadgeTalliesForLeaderboardAllParams struct {
-	Stage     string
-	DecidedAt sql.NullString
+	Stage string
+	Since sql.NullString
 }
 
 type ListBadgeTalliesForLeaderboardAllRow struct {
@@ -519,7 +523,7 @@ type ListBadgeTalliesForLeaderboardAllRow struct {
 }
 
 func (q *Queries) ListBadgeTalliesForLeaderboardAll(ctx context.Context, arg ListBadgeTalliesForLeaderboardAllParams) ([]ListBadgeTalliesForLeaderboardAllRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboardAll, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboardAll, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}
@@ -599,22 +603,24 @@ func (q *Queries) ListCandidates(ctx context.Context, experimentID string) ([]Mo
 const listCandidatesForLeaderboard = `-- name: ListCandidatesForLeaderboard :many
 SELECT c.id, c.experiment_id, c.model_provider_id, c.model_id, c.model_label, c.display_side, c.status, c.output, c.error, c.prompt_tokens, c.completion_tokens, c.cost_microusd, c.cost_source, c.latency_ms, c.started_at, c.finished_at, c.error_reason, c.error_params, c.technical_detail, c.rank FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
-WHERE e.user_id = ? AND e.stage = ?
-  AND e.status IN ('decided', 'dismissed')
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
-ORDER BY e.decided_at, e.id, c.display_side
+WHERE e.user_id = ?1 AND e.stage = ?2
+  AND ((e.review_mode = 'pairwise' AND e.status IN ('decided', 'dismissed'))
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= ?3
+ORDER BY COALESCE(e.completed_at, e.decided_at), e.id,
+  CASE c.display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2 WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 END
 `
 
 type ListCandidatesForLeaderboardParams struct {
-	UserID    string
-	Stage     string
-	DecidedAt sql.NullString
+	UserID string
+	Stage  string
+	Since  sql.NullString
 }
 
 // The call accounting beside those verdicts, from the comparisons that were resolved inside
 // the same window: a comparison still awaiting a verdict has not earned a place on a board.
 func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCandidatesForLeaderboardParams) ([]ModelExperimentCandidate, error) {
-	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboard, arg.UserID, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}
@@ -660,19 +666,21 @@ func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCand
 const listCandidatesForLeaderboardAll = `-- name: ListCandidatesForLeaderboardAll :many
 SELECT c.id, c.experiment_id, c.model_provider_id, c.model_id, c.model_label, c.display_side, c.status, c.output, c.error, c.prompt_tokens, c.completion_tokens, c.cost_microusd, c.cost_source, c.latency_ms, c.started_at, c.finished_at, c.error_reason, c.error_params, c.technical_detail, c.rank FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
-WHERE e.stage = ?
-  AND e.status IN ('decided', 'dismissed')
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
-ORDER BY e.decided_at, e.id, c.display_side
+WHERE e.stage = ?1
+  AND ((e.review_mode = 'pairwise' AND e.status IN ('decided', 'dismissed'))
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= ?2
+ORDER BY COALESCE(e.completed_at, e.decided_at), e.id,
+  CASE c.display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2 WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 END
 `
 
 type ListCandidatesForLeaderboardAllParams struct {
-	Stage     string
-	DecidedAt sql.NullString
+	Stage string
+	Since sql.NullString
 }
 
 func (q *Queries) ListCandidatesForLeaderboardAll(ctx context.Context, arg ListCandidatesForLeaderboardAllParams) ([]ModelExperimentCandidate, error) {
-	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboardAll, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboardAll, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}
@@ -717,24 +725,28 @@ func (q *Queries) ListCandidatesForLeaderboardAll(ctx context.Context, arg ListC
 
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode, completed_at, applied_candidate_id, adopted_candidate_id FROM model_experiments
-WHERE user_id = ? AND stage = ?
-  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
-       OR (status = 'dismissed' AND outcome = 'skipped'))
-  AND decided_at IS NOT NULL AND decided_at >= ?
-ORDER BY decided_at, id
+WHERE user_id = ?1 AND stage = ?2
+  AND ((review_mode = 'pairwise' AND
+       ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+        OR (status = 'dismissed' AND outcome = 'skipped')))
+       OR (review_mode = 'candidate_ranking' AND status = 'completed' AND
+           EXISTS (SELECT 1 FROM model_experiment_candidates c
+                   WHERE c.experiment_id = model_experiments.id AND c.rank IS NOT NULL)))
+  AND COALESCE(completed_at, decided_at) >= ?3
+ORDER BY COALESCE(completed_at, decided_at), id
 `
 
 type ListDecidedForLeaderboardParams struct {
-	UserID    string
-	Stage     string
-	DecidedAt sql.NullString
+	UserID string
+	Stage  string
+	Since  sql.NullString
 }
 
 // The winner verdicts and dismissals one account reached inside the window; the service keeps
 // a dismissal only when both of its candidates delivered (MODEL-38). decided_at is stored in a
 // fixed-width UTC layout, so the string comparison is the chronological one.
 func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecidedForLeaderboardParams) ([]ModelExperiment, error) {
-	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}
@@ -797,22 +809,26 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 
 const listDecidedForLeaderboardAll = `-- name: ListDecidedForLeaderboardAll :many
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode, completed_at, applied_candidate_id, adopted_candidate_id FROM model_experiments
-WHERE stage = ?
-  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
-       OR (status = 'dismissed' AND outcome = 'skipped'))
-  AND decided_at IS NOT NULL AND decided_at >= ?
-ORDER BY decided_at, id
+WHERE stage = ?1
+  AND ((review_mode = 'pairwise' AND
+       ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+        OR (status = 'dismissed' AND outcome = 'skipped')))
+       OR (review_mode = 'candidate_ranking' AND status = 'completed' AND
+           EXISTS (SELECT 1 FROM model_experiment_candidates c
+                   WHERE c.experiment_id = model_experiments.id AND c.rank IS NOT NULL)))
+  AND COALESCE(completed_at, decided_at) >= ?2
+ORDER BY COALESCE(completed_at, decided_at), id
 `
 
 type ListDecidedForLeaderboardAllParams struct {
-	Stage     string
-	DecidedAt sql.NullString
+	Stage string
+	Since sql.NullString
 }
 
 // The same, over every account. Only the candidates' model refs leave this query, so no
 // account, experiment or output reaches the board it feeds.
 func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDecidedForLeaderboardAllParams) ([]ModelExperiment, error) {
-	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboardAll, arg.Stage, arg.DecidedAt)
+	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboardAll, arg.Stage, arg.Since)
 	if err != nil {
 		return nil, err
 	}

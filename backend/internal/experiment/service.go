@@ -873,9 +873,8 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	return s.owned(ctx, userID, id)
 }
 
-// Leaderboard replays the counted outcomes of one (scope, stage, window) from 1500: winner
-// verdicts, and dismissals whose two candidates both delivered. The window is rolling and
-// measured here, at the moment of the request (MODEL-38).
+// Leaderboard replays completed rankings and eligible historical pairwise outcomes of one
+// (scope, stage, window) from 1500. The window is rolling from request time (MODEL-38).
 func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, window Window, scope Scope) ([]LeaderboardEntry, error) {
 	if _, err := ParseStage(string(stage)); err != nil {
 		return nil, err
@@ -902,6 +901,25 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 	var counted []Candidate
 	for _, found := range decided {
 		pair := byExperiment[found.ID]
+		if found.ReviewMode == ReviewCandidateRanking {
+			ranked := make([]Candidate, 0, len(pair))
+			for _, candidate := range pair {
+				if candidate.Status == CandidateSucceeded && candidate.Rank > 0 {
+					ranked = append(ranked, candidate)
+				}
+			}
+			if len(ranked) < 2 {
+				continue
+			}
+			slices.SortFunc(ranked, func(a, b Candidate) int { return sideOrder(a.DisplaySide) - sideOrder(b.DisplaySide) })
+			participants := make([]RankedParticipant, 0, len(ranked))
+			for _, candidate := range ranked {
+				participants = append(participants, RankedParticipant{Model: candidate.Model, Rank: candidate.Rank, DisplaySide: candidate.DisplaySide})
+			}
+			matches = append(matches, Match{Ranked: participants})
+			counted = append(counted, ranked...)
+			continue
+		}
 		if found.Status == StatusDismissed {
 			if len(pair) != 2 || pair[0].Status != CandidateSucceeded || pair[1].Status != CandidateSucceeded {
 				continue

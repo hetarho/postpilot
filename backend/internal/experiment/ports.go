@@ -55,8 +55,8 @@ type OutcomeLedger interface {
 	SetAdoptionRequested(ctx context.Context, id, userID string) error
 	SetAdoptionFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetAdopted(ctx context.Context, id, userID string, now time.Time) error
-	// LeaderboardData returns the winner verdicts decided at or after `since` and the call
-	// accounting of the comparisons resolved in the same span. `userID` is honoured only for
+	// LeaderboardData returns completed rankings and eligible historical pairwise verdicts
+	// at or after `since`, plus their candidate accounting. `userID` is honoured only for
 	// ScopeMe; ScopeAll reads every account and the caller's id never reaches the rows.
 	LeaderboardData(ctx context.Context, userID string, stage Stage, since time.Time, scope Scope) ([]Experiment, []Candidate, []BadgeTally, error)
 }

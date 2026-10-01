@@ -338,6 +338,10 @@ message LeaderboardEntry {
   bool disappeared = 18;
   // `other` is counted without its notes, in every scope.
   repeated BadgeTally badge_tallies = 19;
+  // One per comparison, independent of how many other candidates it faced.
+  int32 evaluated_comparisons = 20;
+  // Pairwise draws from equal ranks; a five-way tie contributes four per model.
+  int32 draws = 21;
 }
 
 // A leaderboard is keyed by (scope, stage, window): model quality moves with every release,

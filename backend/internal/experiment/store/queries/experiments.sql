@@ -252,35 +252,42 @@ UPDATE model_experiment_candidates SET output = NULL
 WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND post_slug = ?);
 
 -- name: ListDecidedForLeaderboard :many
--- The winner verdicts and dismissals one account reached inside the window; the service keeps
--- a dismissal only when both of its candidates delivered (MODEL-38). decided_at is stored in a
--- fixed-width UTC layout, so the string comparison is the chronological one.
+-- Ranked completions and eligible historical pairwise outcomes in the window. The service
+-- keeps a legacy dismissal only when both candidates delivered. Both clocks are fixed-width UTC.
 SELECT * FROM model_experiments
-WHERE user_id = ? AND stage = ?
-  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
-       OR (status = 'dismissed' AND outcome = 'skipped'))
-  AND decided_at IS NOT NULL AND decided_at >= ?
-ORDER BY decided_at, id;
+WHERE user_id = sqlc.arg(user_id) AND stage = sqlc.arg(stage)
+  AND ((review_mode = 'pairwise' AND
+       ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+        OR (status = 'dismissed' AND outcome = 'skipped')))
+       OR (review_mode = 'candidate_ranking' AND status = 'completed' AND
+           EXISTS (SELECT 1 FROM model_experiment_candidates c
+                   WHERE c.experiment_id = model_experiments.id AND c.rank IS NOT NULL)))
+  AND COALESCE(completed_at, decided_at) >= sqlc.arg(since)
+ORDER BY COALESCE(completed_at, decided_at), id;
 
 -- name: ListDecidedForLeaderboardAll :many
--- The same, over every account. Only the candidates' model refs leave this query, so no
--- account, experiment or output reaches the board it feeds.
+-- The same, over every account. The service projects only model-level figures to the RPC.
 SELECT * FROM model_experiments
-WHERE stage = ?
-  AND ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
-       OR (status = 'dismissed' AND outcome = 'skipped'))
-  AND decided_at IS NOT NULL AND decided_at >= ?
-ORDER BY decided_at, id;
+WHERE stage = sqlc.arg(stage)
+  AND ((review_mode = 'pairwise' AND
+       ((outcome = 'winner' AND winner_candidate_id IS NOT NULL)
+        OR (status = 'dismissed' AND outcome = 'skipped')))
+       OR (review_mode = 'candidate_ranking' AND status = 'completed' AND
+           EXISTS (SELECT 1 FROM model_experiment_candidates c
+                   WHERE c.experiment_id = model_experiments.id AND c.rank IS NOT NULL)))
+  AND COALESCE(completed_at, decided_at) >= sqlc.arg(since)
+ORDER BY COALESCE(completed_at, decided_at), id;
 
 -- name: ListCandidatesForLeaderboard :many
--- The call accounting beside those verdicts, from the comparisons that were resolved inside
--- the same window: a comparison still awaiting a verdict has not earned a place on a board.
+-- Candidate accounting beside counted decisions; a blind or skipped run has earned no board row.
 SELECT c.* FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
-WHERE e.user_id = ? AND e.stage = ?
-  AND e.status IN ('decided', 'dismissed')
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
-ORDER BY e.decided_at, e.id, c.display_side;
+WHERE e.user_id = sqlc.arg(user_id) AND e.stage = sqlc.arg(stage)
+  AND ((e.review_mode = 'pairwise' AND e.status IN ('decided', 'dismissed'))
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= sqlc.arg(since)
+ORDER BY COALESCE(e.completed_at, e.decided_at), e.id,
+  CASE c.display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2 WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 END;
 
 -- name: ListBadgeTalliesForLeaderboard :many
 -- How often each model earned each badge inside this board's window. Grouped by the model a
@@ -290,8 +297,10 @@ SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
 FROM model_experiment_badges b
 JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
 JOIN model_experiments e ON e.id = b.experiment_id
-WHERE e.user_id = ? AND e.stage = ? AND e.outcome = 'winner'
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+WHERE e.user_id = sqlc.arg(user_id) AND e.stage = sqlc.arg(stage)
+  AND ((e.review_mode = 'pairwise' AND e.outcome = 'winner')
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= sqlc.arg(since)
 GROUP BY c.model_provider_id, c.model_id, b.badge;
 
 -- name: ListBadgeTalliesForLeaderboardAll :many
@@ -299,14 +308,18 @@ SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
 FROM model_experiment_badges b
 JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
 JOIN model_experiments e ON e.id = b.experiment_id
-WHERE e.stage = ? AND e.outcome = 'winner'
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+WHERE e.stage = sqlc.arg(stage)
+  AND ((e.review_mode = 'pairwise' AND e.outcome = 'winner')
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= sqlc.arg(since)
 GROUP BY c.model_provider_id, c.model_id, b.badge;
 
 -- name: ListCandidatesForLeaderboardAll :many
 SELECT c.* FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
-WHERE e.stage = ?
-  AND e.status IN ('decided', 'dismissed')
-  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
-ORDER BY e.decided_at, e.id, c.display_side;
+WHERE e.stage = sqlc.arg(stage)
+  AND ((e.review_mode = 'pairwise' AND e.status IN ('decided', 'dismissed'))
+       OR (e.review_mode = 'candidate_ranking' AND e.status = 'completed' AND c.rank IS NOT NULL))
+  AND COALESCE(e.completed_at, e.decided_at) >= sqlc.arg(since)
+ORDER BY COALESCE(e.completed_at, e.decided_at), e.id,
+  CASE c.display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2 WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 END;

@@ -223,6 +223,62 @@ func TestRankedPostPurgeKeepsEvaluationMetadata(t *testing.T) {
 	}
 }
 
+func TestRankedLeaderboardDataRespectsScopeClockAndTally(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	makeEvent := func(id, user string, when time.Time, rankValues []int) {
+		found := sample(id, user, "", when)
+		found.Stage = experiment.StageObserve
+		found.TargetLanguage = nil
+		found.Origin = experiment.OriginLab
+		found.ReviewMode = experiment.ReviewCandidateRanking
+		if len(rankValues) == 3 {
+			found.Candidates = append(found.Candidates, experiment.Candidate{ID: id + "-third", ExperimentID: id,
+				Model: experiment.ModelRef{ProviderID: "p", ModelID: "c"}, ModelLabel: "C",
+				DisplaySide: experiment.SideC, Status: experiment.CandidatePending})
+		}
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		ranks := []experiment.CandidateRank{}
+		for i, candidate := range found.Candidates {
+			candidate.Status = experiment.CandidateSucceeded
+			candidate.Output = []byte(`[{"private":true}]`)
+			candidate.Usage = experiment.Usage{PromptTokens: 11, LatencyMS: 25, CostSource: experiment.CostReported, CostMicrousd: 5}
+			if err := store.CompleteCandidate(ctx, candidate); err != nil {
+				t.Fatal(err)
+			}
+			rank := experiment.CandidateRank{CandidateID: candidate.ID, Rank: rankValues[i]}
+			if i == 0 {
+				rank.Badges = []experiment.Badge{experiment.BadgeFast}
+			}
+			ranks = append(ranks, rank)
+		}
+		if err := store.SetStatus(ctx, id, experiment.StatusReview, nil); err != nil {
+			t.Fatal(err)
+		}
+		if ok, err := store.CompleteRanking(ctx, id, user, ranks, when, when.Add(30*24*time.Hour)); err != nil || !ok {
+			t.Fatalf("complete %s=%v,%v", id, ok, err)
+		}
+	}
+	makeEvent("ranked-alice", "alice", now, []int{1, 1, 2})
+	makeEvent("ranked-bob", "bob", now.Add(time.Minute), []int{2, 1})
+	mine, candidates, tallies, err := store.LeaderboardData(ctx, "alice", experiment.StageObserve, now.Add(-time.Hour), experiment.ScopeMe)
+	if err != nil || len(mine) != 1 || len(candidates) != 3 || len(tallies) != 1 ||
+		mine[0].Status != experiment.StatusCompleted || candidates[2].Rank != 2 || tallies[0].Badge != experiment.BadgeFast {
+		t.Fatalf("mine events=%+v calls=%+v tallies=%+v err=%v", mine, candidates, tallies, err)
+	}
+	all, candidates, _, err := store.LeaderboardData(ctx, "alice", experiment.StageObserve, now.Add(-time.Hour), experiment.ScopeAll)
+	if err != nil || len(all) != 2 || len(candidates) != 5 || all[0].ID != "ranked-alice" || all[1].ID != "ranked-bob" {
+		t.Fatalf("all events=%+v calls=%d err=%v", all, len(candidates), err)
+	}
+	fromBob, _, _, err := store.LeaderboardData(ctx, "alice", experiment.StageObserve, now.Add(30*time.Second), experiment.ScopeAll)
+	if err != nil || len(fromBob) != 1 || fromBob[0].ID != "ranked-bob" {
+		t.Fatalf("window events=%+v err=%v", fromBob, err)
+	}
+}
+
 func TestStorePersistsAndValidatesFrozenTargetLanguage(t *testing.T) {
 	store, handle := testStore(t)
 	ctx := context.Background()
