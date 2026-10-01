@@ -1,5 +1,5 @@
 # VOICE voices
-> r7 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
+> r8 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
 
 ## decisions
 - VOICE-1 [o] an account owns zero or more voices (`voices`), the user-facing noun 말투 — several when the owner writes in more than one mood, a calm one and a cheerful one; each voice owns its 학습 글, its current analysis, at most one previous analysis and its 검증 results, all keyed by `(user_id, voice_id)`; no shared account-level analysis, inheritance, copying or fallback: a voice with no 학습 글 holds nothing even when a sibling is made ← a merged analysis can never be separated again
@@ -51,7 +51,7 @@
 - VOICE-32 [o] until the voice is made, a readiness meter counts its 학습 글 by the fingerprint's own segmentation and shows `말투 학습에 필요한 정보 N% 확보`, then at 100% `이제 말투를 만들 수 있어요` with 말투 만들기:
   - 100% needs `VOICE_READY_SENTENCES` (60) sentences and at least one opening, one description and one closing
   - a pasted post counts as all three parts; an answer counts as its prompt's part (→VOICE-60)
-  - N is the sentence share, held below 100 while a part is missing, and the meter names the missing part
+  - N is the sentence share, held below 100 while a part is missing; below 100% the meter says how many more sentences are needed (e.g. `20문장이 더 필요해요.`) and names the missing part
   - a voice not yet made cannot be picked for a post or made 기본 ← the analysis needs enough of the owner's own sentences to hold
 - VOICE-43 [o] 검증 checks that the voice applies: the owner picks one of the voice's answered prompts — or answers one there, the answer becoming a 학습 글 too — and one durable `check_voice` job on the account's active write-stage selection writes a short piece on that prompt's subject in this voice
   - the call receives the voice's projection (→VOICE-46) with that prompt's own answer withheld from the excerpts, the prompt, and a photo prompt's photo
@@ -128,4 +128,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
--
+- r8 261002 VOICE-32✎ meter names the missing part→also says how many more sentences are needed

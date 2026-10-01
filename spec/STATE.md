@@ -26,7 +26,7 @@
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
 | POST | 28 | 28 | - | 0 |
-| VOICE | 7 | 7 | - | 0 |
+| VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 21 | 21 | - | 0 |
 | MODEL | 28 | 28 | - | 0 |
 | TMPL | 19 | 19 | - | 1 |
@@ -63,9 +63,12 @@
 ## next
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
+- create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task)
 - update-ssot VOICE-31 remains open (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); doc-review VOICE for lint's split candidate.
 
 ## log
+- 261002 update-ssot VOICE r8: VOICE-32✎ the readiness meter says how many more sentences are needed (already live in 68ae9a79)
+- 261002 update-ssot VOICE start: readiness meter states the sentences still needed
 - 261002 T521 integration: rebased the template fix onto the voice rewrite hotfix; the sequential quiz continues with answer rewrites below 100% and preserves the photo
 - 261002 T521 done: one learning screen and sequential quiz with live readiness; Node 24 FE 3048 tests, lint/FSD/style/build and local CI checks passed
 - 261002 T520 done: write-stage check/reflection requests admitted by model registry; BE full tests and local CI checks passed
