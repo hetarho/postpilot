@@ -126,4 +126,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
-- r6 261001 VOICE-65+ a 학습 글 sheet keeps taking entries until closed: next unanswered prompt or 건너뛰기, a blank paste form, each save confirmed in place
+-

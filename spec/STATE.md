@@ -26,7 +26,7 @@
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
 | POST | 27 | 27 | - | 0 |
-| VOICE | 6 | 5 | VOICE-65+ | 0 |
+| VOICE | 6 | 6 | - | 0 |
 | GEN | 20 | 20 | - | 0 |
 | MODEL | 28 | 28 | - | 0 |
 | TMPL | 18 | 18 | - | 1 |
@@ -59,13 +59,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T517 | Keep a 학습 글 sheet open for the next entry | VOICE | - | todo |
 
 ## next
-- next: create-task VOICE (VOICE-65+ continuous 학습 글 entry); ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
+- next: implement-task T517 (VOICE-65+ continuous 학습 글 entry); ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 create-task VOICE r6 → T517 (문항 풀기 opens the next unanswered prompt with 건너뛰기, 글 붙여넣기 empties for the next post; frontend only)
+- 261001 create-task VOICE start
 - 261001 update-ssot VOICE r6: VOICE-65+ a 학습 글 sheet keeps taking entries until the owner closes it (next unanswered prompt, 건너뛰기, blank paste form)
 - 261001 update-ssot VOICE start: a 학습 글 sheet keeps taking entries until the owner closes it
 - 261001 T516 done: master-only admin comparison cost, no public cost; full FE/BE and project checks passed
@@ -84,5 +87,3 @@
 - 261001 T502 done: normalized multiway Elo, ties and scoped replay verified
 - 261001 T501 done: ranked completion, candidate actions, retention and compatibility verified
 - 261001 T511 done: a live placeholder preview stands beside the template composition at lg and behind a 구성 / 미리보기 switch below it
-- 261001 T510 done: EstimateTemplateRequest states 무료 or about n credits for one request at catalog prices; full FE/BE and project checks passed
-- 261001 T510 claimed (tr): one-call credit estimate for a template request
