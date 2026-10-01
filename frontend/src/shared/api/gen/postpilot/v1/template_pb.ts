@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ContentLanguage } from "./language_pb";
+import { file_postpilot_v1_language } from "./language_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/template.proto.
  */
 export const file_postpilot_v1_template: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUyigMKD1RlbXBsYXRlU2VydmljZRJaCg1MaXN0VGVtcGxhdGVzEiIucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXNwb25zZSIAEl0KDkNyZWF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLkNyZWF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoOVXBkYXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuVXBkYXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5EZWxldGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5EZWxldGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUiSAoVR2V0Rm9ybWF0R3VpZGVSZXF1ZXN0Ei8KCGxhbmd1YWdlGAEgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZSImChZHZXRGb3JtYXRHdWlkZVJlc3BvbnNlEgwKBHRleHQYASABKAky6QMKD1RlbXBsYXRlU2VydmljZRJaCg1MaXN0VGVtcGxhdGVzEiIucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXNwb25zZSIAEl0KDkNyZWF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLkNyZWF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoOVXBkYXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuVXBkYXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5EZWxldGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5EZWxldGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDkdldEZvcm1hdEd1aWRlEiMucG9zdHBpbG90LnYxLkdldEZvcm1hdEd1aWRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5HZXRGb3JtYXRHdWlkZVJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_language]);
 
 /**
  * @generated from message postpilot.v1.Template
@@ -325,6 +327,45 @@ export const DeleteTemplateResponseSchema: GenMessage<DeleteTemplateResponse> = 
   messageDesc(file_postpilot_v1_template, 9);
 
 /**
+ * @generated from message postpilot.v1.GetFormatGuideRequest
+ */
+export type GetFormatGuideRequest = Message<"postpilot.v1.GetFormatGuideRequest"> & {
+  /**
+   * The reader's UI language, never a post's target: the guide frames the task for the person
+   * who copies it. UNSPECIFIED is refused.
+   *
+   * @generated from field: postpilot.v1.ContentLanguage language = 1;
+   */
+  language: ContentLanguage;
+};
+
+/**
+ * Describes the message postpilot.v1.GetFormatGuideRequest.
+ * Use `create(GetFormatGuideRequestSchema)` to create a new message.
+ */
+export const GetFormatGuideRequestSchema: GenMessage<GetFormatGuideRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 10);
+
+/**
+ * @generated from message postpilot.v1.GetFormatGuideResponse
+ */
+export type GetFormatGuideResponse = Message<"postpilot.v1.GetFormatGuideResponse"> & {
+  /**
+   * The guide with this server's ceilings stated as numbers, ready to put on the clipboard.
+   *
+   * @generated from field: string text = 1;
+   */
+  text: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetFormatGuideResponse.
+ * Use `create(GetFormatGuideResponseSchema)` to create a new message.
+ */
+export const GetFormatGuideResponseSchema: GenMessage<GetFormatGuideResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 11);
+
+/**
  * template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
  * of a post — its sections, its literal text, the positions it reserves, and what repeats per
  * photo. The voice decides how sentences sound and a guideline decides what to avoid; a
@@ -370,6 +411,17 @@ export const TemplateService: GenService<{
     methodKind: "unary";
     input: typeof DeleteTemplateRequestSchema;
     output: typeof DeleteTemplateResponseSchema;
+  },
+  /**
+   * The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
+   * and every prompt that teaches the grammar state one text per language.
+   *
+   * @generated from rpc postpilot.v1.TemplateService.GetFormatGuide
+   */
+  getFormatGuide: {
+    methodKind: "unary";
+    input: typeof GetFormatGuideRequestSchema;
+    output: typeof GetFormatGuideResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_template, 0);

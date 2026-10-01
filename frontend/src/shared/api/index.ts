@@ -446,6 +446,7 @@ export {
   CreateTemplateResponseSchema,
   UpdateTemplateResponseSchema,
   DeleteTemplateResponseSchema,
+  GetFormatGuideResponseSchema,
 } from './gen/postpilot/v1/template_pb'
 export type {
   Template as ProtoTemplate,

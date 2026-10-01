@@ -8,11 +8,12 @@ import {
   FieldCount,
   FieldLabel,
   FieldMessage,
+  Notice,
   Textarea,
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import { formatGuide } from '../model/guide'
+import { useFormatGuide } from '../api/useFormatGuide'
 import { TEMPLATE_LIMITS, remainingChars } from '../model/types'
 import type { ParseFailure, TemplateArea } from '../lib/grammar'
 
@@ -146,7 +147,12 @@ function BodySource({
   const [copied, setCopied] = useState<'body' | 'guide' | null>(null)
   const [manual, setManual] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
-  const guide = formatGuide()
+  const {
+    guide,
+    isPending: guidePending,
+    isError: guideFailed,
+    refetch: refetchGuide,
+  } = useFormatGuide()
   // The same pair the name and description counters use, so one bound moves all three.
   const left = remainingChars(value, TEMPLATE_LIMITS.body)
   const errorId = 'template-source-error'
@@ -196,10 +202,23 @@ function BodySource({
         <Button variant="secondary" disabled={disabled} onClick={() => void copy('body')}>
           {t('source.copy')}
         </Button>
-        <Button variant="secondary" onClick={() => void copy('guide')}>
+        <Button variant="secondary" disabled={guide === ''} onClick={() => void copy('guide')}>
           {t('source.copyGuide')}
         </Button>
       </div>
+      {/* A guide that could not be read is said so, with a retry — never copied empty or stale. */}
+      {guideFailed && !guidePending && (
+        <Notice tone="danger" role="alert" className="mt-3">
+          <span className="min-w-0 break-words">{t('source.guideFailed')}</span>
+          <Button
+            variant="ghost"
+            onClick={refetchGuide}
+            className="text-notice-danger-fg shrink-0 underline"
+          >
+            {t('action.retry', { ns: 'common' })}
+          </Button>
+        </Notice>
+      )}
       {/* Always mounted: a live region inserted already holding its message announces nothing. */}
       <Typography variant="meta" as="p" role="status" className="text-content-secondary mt-2">
         {copied ? t('source.copied') : manual ? t('source.manualCopy') : ''}

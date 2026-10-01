@@ -650,11 +650,102 @@ func (x *DeleteTemplateResponse) GetDetachedPosts() int32 {
 	return 0
 }
 
+type GetFormatGuideRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The reader's UI language, never a post's target: the guide frames the task for the person
+	// who copies it. UNSPECIFIED is refused.
+	Language      ContentLanguage `protobuf:"varint,1,opt,name=language,proto3,enum=postpilot.v1.ContentLanguage" json:"language,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFormatGuideRequest) Reset() {
+	*x = GetFormatGuideRequest{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFormatGuideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFormatGuideRequest) ProtoMessage() {}
+
+func (x *GetFormatGuideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFormatGuideRequest.ProtoReflect.Descriptor instead.
+func (*GetFormatGuideRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetFormatGuideRequest) GetLanguage() ContentLanguage {
+	if x != nil {
+		return x.Language
+	}
+	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+type GetFormatGuideResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The guide with this server's ceilings stated as numbers, ready to put on the clipboard.
+	Text          string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFormatGuideResponse) Reset() {
+	*x = GetFormatGuideResponse{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFormatGuideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFormatGuideResponse) ProtoMessage() {}
+
+func (x *GetFormatGuideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFormatGuideResponse.ProtoReflect.Descriptor instead.
+func (*GetFormatGuideResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetFormatGuideResponse) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
 var File_postpilot_v1_template_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\n" +
-	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\"\xcc\x02\n" +
+	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/language.proto\"\xcc\x02\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -714,12 +805,17 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x15DeleteTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
 	"\x16DeleteTemplateResponse\x12%\n" +
-	"\x0edetached_posts\x18\x01 \x01(\x05R\rdetachedPosts2\x8a\x03\n" +
+	"\x0edetached_posts\x18\x01 \x01(\x05R\rdetachedPosts\"R\n" +
+	"\x15GetFormatGuideRequest\x129\n" +
+	"\blanguage\x18\x01 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\",\n" +
+	"\x16GetFormatGuideResponse\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text2\xe9\x03\n" +
 	"\x0fTemplateService\x12Z\n" +
 	"\rListTemplates\x12\".postpilot.v1.ListTemplatesRequest\x1a#.postpilot.v1.ListTemplatesResponse\"\x00\x12]\n" +
 	"\x0eCreateTemplate\x12#.postpilot.v1.CreateTemplateRequest\x1a$.postpilot.v1.CreateTemplateResponse\"\x00\x12]\n" +
 	"\x0eUpdateTemplate\x12#.postpilot.v1.UpdateTemplateRequest\x1a$.postpilot.v1.UpdateTemplateResponse\"\x00\x12]\n" +
-	"\x0eDeleteTemplate\x12#.postpilot.v1.DeleteTemplateRequest\x1a$.postpilot.v1.DeleteTemplateResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x0eDeleteTemplate\x12#.postpilot.v1.DeleteTemplateRequest\x1a$.postpilot.v1.DeleteTemplateResponse\"\x00\x12]\n" +
+	"\x0eGetFormatGuide\x12#.postpilot.v1.GetFormatGuideRequest\x1a$.postpilot.v1.GetFormatGuideResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_template_proto_rawDescOnce sync.Once
@@ -733,7 +829,7 @@ func file_postpilot_v1_template_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_template_proto_rawDescData
 }
 
-var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_postpilot_v1_template_proto_goTypes = []any{
 	(*Template)(nil),               // 0: postpilot.v1.Template
 	(*TemplateRef)(nil),            // 1: postpilot.v1.TemplateRef
@@ -745,24 +841,30 @@ var file_postpilot_v1_template_proto_goTypes = []any{
 	(*UpdateTemplateResponse)(nil), // 7: postpilot.v1.UpdateTemplateResponse
 	(*DeleteTemplateRequest)(nil),  // 8: postpilot.v1.DeleteTemplateRequest
 	(*DeleteTemplateResponse)(nil), // 9: postpilot.v1.DeleteTemplateResponse
+	(*GetFormatGuideRequest)(nil),  // 10: postpilot.v1.GetFormatGuideRequest
+	(*GetFormatGuideResponse)(nil), // 11: postpilot.v1.GetFormatGuideResponse
+	(ContentLanguage)(0),           // 12: postpilot.v1.ContentLanguage
 }
 var file_postpilot_v1_template_proto_depIdxs = []int32{
-	0, // 0: postpilot.v1.ListTemplatesResponse.templates:type_name -> postpilot.v1.Template
-	0, // 1: postpilot.v1.CreateTemplateResponse.template:type_name -> postpilot.v1.Template
-	0, // 2: postpilot.v1.UpdateTemplateResponse.template:type_name -> postpilot.v1.Template
-	2, // 3: postpilot.v1.TemplateService.ListTemplates:input_type -> postpilot.v1.ListTemplatesRequest
-	4, // 4: postpilot.v1.TemplateService.CreateTemplate:input_type -> postpilot.v1.CreateTemplateRequest
-	6, // 5: postpilot.v1.TemplateService.UpdateTemplate:input_type -> postpilot.v1.UpdateTemplateRequest
-	8, // 6: postpilot.v1.TemplateService.DeleteTemplate:input_type -> postpilot.v1.DeleteTemplateRequest
-	3, // 7: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
-	5, // 8: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
-	7, // 9: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
-	9, // 10: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: postpilot.v1.ListTemplatesResponse.templates:type_name -> postpilot.v1.Template
+	0,  // 1: postpilot.v1.CreateTemplateResponse.template:type_name -> postpilot.v1.Template
+	0,  // 2: postpilot.v1.UpdateTemplateResponse.template:type_name -> postpilot.v1.Template
+	12, // 3: postpilot.v1.GetFormatGuideRequest.language:type_name -> postpilot.v1.ContentLanguage
+	2,  // 4: postpilot.v1.TemplateService.ListTemplates:input_type -> postpilot.v1.ListTemplatesRequest
+	4,  // 5: postpilot.v1.TemplateService.CreateTemplate:input_type -> postpilot.v1.CreateTemplateRequest
+	6,  // 6: postpilot.v1.TemplateService.UpdateTemplate:input_type -> postpilot.v1.UpdateTemplateRequest
+	8,  // 7: postpilot.v1.TemplateService.DeleteTemplate:input_type -> postpilot.v1.DeleteTemplateRequest
+	10, // 8: postpilot.v1.TemplateService.GetFormatGuide:input_type -> postpilot.v1.GetFormatGuideRequest
+	3,  // 9: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
+	5,  // 10: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
+	7,  // 11: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
+	9,  // 12: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
+	11, // 13: postpilot.v1.TemplateService.GetFormatGuide:output_type -> postpilot.v1.GetFormatGuideResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_template_proto_init() }
@@ -770,6 +872,7 @@ func file_postpilot_v1_template_proto_init() {
 	if File_postpilot_v1_template_proto != nil {
 		return
 	}
+	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_template_proto_msgTypes[0].OneofWrappers = []any{}
 	file_postpilot_v1_template_proto_msgTypes[4].OneofWrappers = []any{}
 	file_postpilot_v1_template_proto_msgTypes[6].OneofWrappers = []any{}
@@ -779,7 +882,7 @@ func file_postpilot_v1_template_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_template_proto_rawDesc), len(file_postpilot_v1_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

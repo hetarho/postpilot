@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useState } from 'react'
-import { render, screen } from '@testing-library/react'
+import { useState, type ReactElement } from 'react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { formatGuide } from '../model/guide'
+import { createRouterTransport } from '@connectrpc/connect'
+import { create } from '@bufbuild/protobuf'
+import i18next from 'i18next'
+import { GetFormatGuideResponseSchema, TemplateService } from '@/shared/api'
+import { createTestQueryClient, withProviders } from '@/test/session'
+import {
+  FAKE_FORMAT_GUIDE,
+  registerTemplateService,
+  type FakeTemplatesOptions,
+} from '@/test/templates'
 import { TEMPLATE_LIMITS } from '../model/types'
 import { TemplateSource } from './TemplateSource'
 
@@ -12,10 +21,22 @@ function setClipboard(value: Pick<Clipboard, 'writeText'> | Clipboard | undefine
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value })
 }
 
-afterEach(() => {
+afterEach(async () => {
   setClipboard(originalClipboard)
   vi.restoreAllMocks()
+  await i18next.changeLanguage('ko')
 })
+
+/** The guide is the backend's (TMPL-41), so every render carries a transport that serves it. */
+function renderSource(ui: ReactElement, options: FakeTemplatesOptions = {}) {
+  const transport = createRouterTransport((router) => registerTemplateService(router, options))
+  return render(ui, { wrapper: withProviders(transport, createTestQueryClient()) })
+}
+
+/** The copy is enabled once the served guide has arrived. */
+async function guideLoaded() {
+  await waitFor(() => expect(screen.getByRole('button', { name: '형식 안내 복사' })).toBeEnabled())
+}
 
 /** Controlled, through a real parent, so what the assertions read is what a caller would save. */
 function Source({ initial = '' }: { initial?: string }) {
@@ -35,7 +56,7 @@ describe('the source editor', () => {
   // on the way out — an outside AI's body has to survive this field byte for byte.
   it('keeps what is typed byte for byte, outer whitespace included', async () => {
     const user = userEvent.setup()
-    render(<Source />)
+    renderSource(<Source />)
 
     const field = screen.getByLabelText('원문')
     await user.click(field)
@@ -47,7 +68,7 @@ describe('the source editor', () => {
   })
 
   it('shows the failure at its line, in words, and marks the field invalid', () => {
-    render(
+    renderSource(
       <TemplateSource
         value="<write>닫히지 않음"
         onChange={() => {}}
@@ -63,7 +84,9 @@ describe('the source editor', () => {
   })
 
   it('shows no failure and no invalid state when the body parses', () => {
-    render(<TemplateSource value="<write>인트로</write>" onChange={() => {}} failure={null} />)
+    renderSource(
+      <TemplateSource value="<write>인트로</write>" onChange={() => {}} failure={null} />,
+    )
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByLabelText('원문')).not.toHaveAttribute('aria-invalid')
   })
@@ -72,7 +95,7 @@ describe('the source editor', () => {
     const user = userEvent.setup()
     const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
     setClipboard({ writeText })
-    render(<Source initial="<write>인트로</write>" />)
+    renderSource(<Source initial="<write>인트로</write>" />)
 
     await user.click(screen.getByRole('button', { name: '원문 복사' }))
     expect(writeText).toHaveBeenCalledWith('<write>인트로</write>')
@@ -84,10 +107,11 @@ describe('the source editor', () => {
     const user = userEvent.setup()
     const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
     setClipboard({ writeText })
-    render(<Source />)
+    renderSource(<Source />)
+    await guideLoaded()
 
     await user.click(screen.getByRole('button', { name: '형식 안내 복사' }))
-    expect(writeText).toHaveBeenCalledWith(formatGuide())
+    expect(writeText).toHaveBeenCalledWith(FAKE_FORMAT_GUIDE.ko)
     expect(await screen.findByText('복사했어요')).toBeInTheDocument()
   })
 
@@ -95,7 +119,7 @@ describe('the source editor', () => {
   it('falls back to selecting the body when the clipboard is unavailable', async () => {
     const user = userEvent.setup()
     setClipboard(undefined)
-    render(<Source initial="<write>인트로</write>" />)
+    renderSource(<Source initial="<write>인트로</write>" />)
 
     await user.click(screen.getByRole('button', { name: '원문 복사' }))
 
@@ -111,7 +135,8 @@ describe('the source editor', () => {
   it('opens the disclosure and selects the guide when the clipboard is unavailable', async () => {
     const user = userEvent.setup()
     setClipboard(undefined)
-    render(<Source />)
+    renderSource(<Source />)
+    await guideLoaded()
 
     await user.click(screen.getByRole('button', { name: '형식 안내 복사' }))
 
@@ -122,15 +147,66 @@ describe('the source editor', () => {
   })
 
   // What the disclosure shows and what the button copies are one string.
-  it('shows the same guide it copies', () => {
-    render(<Source />)
-    expect(screen.getByLabelText('형식 안내 보기')).toHaveValue(formatGuide())
+  it('shows the same guide it copies', async () => {
+    renderSource(<Source />)
+    await guideLoaded()
+    expect(screen.getByLabelText('형식 안내 보기')).toHaveValue(FAKE_FORMAT_GUIDE.ko)
+  })
+
+  // The clipboard write must be the first thing the click awaits, so the guide is read before any
+  // click — and until it has arrived there is nothing true to copy.
+  it('keeps the guide copy disabled until the guide has been read', async () => {
+    let serve: () => void = () => {}
+    const served = new Promise<void>((resolve) => {
+      serve = resolve
+    })
+    const transport = createRouterTransport(({ rpc }) => {
+      rpc(TemplateService.method.getFormatGuide, async () => {
+        await served
+        return create(GetFormatGuideResponseSchema, { text: FAKE_FORMAT_GUIDE.ko })
+      })
+    })
+    render(<Source />, { wrapper: withProviders(transport, createTestQueryClient()) })
+
+    expect(screen.getByRole('button', { name: '형식 안내 복사' })).toBeDisabled()
+    await act(async () => serve())
+    await guideLoaded()
+  })
+
+  // A guide that could not be read is said so with a retry, never copied empty.
+  it('says the guide failed to load and reads it again on retry', async () => {
+    const user = userEvent.setup()
+    const options: FakeTemplatesOptions = { guideFails: true, calls: [] }
+    renderSource(<Source />, options)
+
+    expect(await screen.findByText('형식 안내를 불러오지 못했어요.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '형식 안내 복사' })).toBeDisabled()
+
+    options.guideFails = false
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    await guideLoaded()
+    expect(screen.queryByText('형식 안내를 불러오지 못했어요.')).not.toBeInTheDocument()
+    expect(options.calls?.filter((call) => call === 'GetFormatGuide')).toHaveLength(2)
+  })
+
+  // The guide follows the reader's language (TMPL-41): switching the UI reads that language's guide.
+  it('reads the guide again in the language the UI switches to', async () => {
+    renderSource(<Source />)
+    await guideLoaded()
+    expect(screen.getByLabelText('형식 안내 보기')).toHaveValue(FAKE_FORMAT_GUIDE.ko)
+
+    await act(async () => {
+      await i18next.changeLanguage('en')
+    })
+    await waitFor(() =>
+      expect(screen.getByLabelText('Show format guide')).toHaveValue(FAKE_FORMAT_GUIDE.en),
+    )
   })
 
   // The same counter the name and description fields carry, over the body's own ceiling.
   it('counts what is left against the body ceiling', async () => {
     const user = userEvent.setup()
-    render(<Source />)
+    renderSource(<Source />)
 
     expect(screen.getByText(`${TEMPLATE_LIMITS.body}자 남음`)).toBeInTheDocument()
     await user.click(screen.getByLabelText('원문'))
@@ -158,7 +234,7 @@ describe('the title area source', () => {
   })
 
   it('shows its own failure at its line and marks itself invalid', () => {
-    render(
+    renderSource(
       <TemplateSource
         area="title_area"
         value={'<slot kind="photo"/>'}
@@ -175,7 +251,7 @@ describe('the title area source', () => {
   })
 
   it('offers no copy and no guide', () => {
-    render(<TemplateSource area="title_area" value="" onChange={() => {}} failure={null} />)
+    renderSource(<TemplateSource area="title_area" value="" onChange={() => {}} failure={null} />)
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByText('형식 안내 보기')).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()

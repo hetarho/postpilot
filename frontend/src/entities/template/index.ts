@@ -36,6 +36,6 @@ export {
   type TemplateArea,
   type TemplateNode,
 } from './lib/grammar'
-export { GUIDE_EXAMPLE_BODY, formatGuide } from './model/guide'
+export { useFormatGuide } from './api/useFormatGuide'
 export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'

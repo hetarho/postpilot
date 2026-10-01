@@ -4,6 +4,8 @@ package postpilot.v1;
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
+import "postpilot/v1/language.proto";
+
 // template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
 // of a post — its sections, its literal text, the positions it reserves, and what repeats per
 // photo. The voice decides how sentences sound and a guideline decides what to avoid; a
@@ -19,6 +21,9 @@ service TemplateService {
   rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse) {}
   rpc UpdateTemplate(UpdateTemplateRequest) returns (UpdateTemplateResponse) {}
   rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse) {}
+  // The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
+  // and every prompt that teaches the grammar state one text per language.
+  rpc GetFormatGuide(GetFormatGuideRequest) returns (GetFormatGuideResponse) {}
 }
 
 message Template {
@@ -97,4 +102,15 @@ message DeleteTemplateResponse {
   // Posts whose assignment was cleared by this delete, in the same transaction. No post
   // or content is deleted, and frozen job/experiment payloads keep the template's text.
   int32 detached_posts = 1;
+}
+
+message GetFormatGuideRequest {
+  // The reader's UI language, never a post's target: the guide frames the task for the person
+  // who copies it. UNSPECIFIED is refused.
+  ContentLanguage language = 1;
+}
+
+message GetFormatGuideResponse {
+  // The guide with this server's ceilings stated as numbers, ready to put on the clipboard.
+  string text = 1;
 }

@@ -45,6 +45,9 @@ const (
 	// TemplateServiceDeleteTemplateProcedure is the fully-qualified name of the TemplateService's
 	// DeleteTemplate RPC.
 	TemplateServiceDeleteTemplateProcedure = "/postpilot.v1.TemplateService/DeleteTemplate"
+	// TemplateServiceGetFormatGuideProcedure is the fully-qualified name of the TemplateService's
+	// GetFormatGuide RPC.
+	TemplateServiceGetFormatGuideProcedure = "/postpilot.v1.TemplateService/GetFormatGuide"
 )
 
 // TemplateServiceClient is a client for the postpilot.v1.TemplateService service.
@@ -53,6 +56,9 @@ type TemplateServiceClient interface {
 	CreateTemplate(context.Context, *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error)
 	UpdateTemplate(context.Context, *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error)
 	DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error)
+	// The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
+	// and every prompt that teaches the grammar state one text per language.
+	GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error)
 }
 
 // NewTemplateServiceClient constructs a client for the postpilot.v1.TemplateService service. By
@@ -90,6 +96,12 @@ func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(templateServiceMethods.ByName("DeleteTemplate")),
 			connect.WithClientOptions(opts...),
 		),
+		getFormatGuide: connect.NewClient[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse](
+			httpClient,
+			baseURL+TemplateServiceGetFormatGuideProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("GetFormatGuide")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -99,6 +111,7 @@ type templateServiceClient struct {
 	createTemplate *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
 	updateTemplate *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
 	deleteTemplate *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
+	getFormatGuide *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
 }
 
 // ListTemplates calls postpilot.v1.TemplateService.ListTemplates.
@@ -121,12 +134,20 @@ func (c *templateServiceClient) DeleteTemplate(ctx context.Context, req *connect
 	return c.deleteTemplate.CallUnary(ctx, req)
 }
 
+// GetFormatGuide calls postpilot.v1.TemplateService.GetFormatGuide.
+func (c *templateServiceClient) GetFormatGuide(ctx context.Context, req *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error) {
+	return c.getFormatGuide.CallUnary(ctx, req)
+}
+
 // TemplateServiceHandler is an implementation of the postpilot.v1.TemplateService service.
 type TemplateServiceHandler interface {
 	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
 	CreateTemplate(context.Context, *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error)
 	UpdateTemplate(context.Context, *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error)
 	DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error)
+	// The 형식 안내 an owner copies for an outside AI (TMPL-41). The backend owns it so the copy
+	// and every prompt that teaches the grammar state one text per language.
+	GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error)
 }
 
 // NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -160,6 +181,12 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 		connect.WithSchema(templateServiceMethods.ByName("DeleteTemplate")),
 		connect.WithHandlerOptions(opts...),
 	)
+	templateServiceGetFormatGuideHandler := connect.NewUnaryHandler(
+		TemplateServiceGetFormatGuideProcedure,
+		svc.GetFormatGuide,
+		connect.WithSchema(templateServiceMethods.ByName("GetFormatGuide")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TemplateServiceListTemplatesProcedure:
@@ -170,6 +197,8 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 			templateServiceUpdateTemplateHandler.ServeHTTP(w, r)
 		case TemplateServiceDeleteTemplateProcedure:
 			templateServiceDeleteTemplateHandler.ServeHTTP(w, r)
+		case TemplateServiceGetFormatGuideProcedure:
+			templateServiceGetFormatGuideHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -193,4 +222,8 @@ func (UnimplementedTemplateServiceHandler) UpdateTemplate(context.Context, *conn
 
 func (UnimplementedTemplateServiceHandler) DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.DeleteTemplate is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) GetFormatGuide(context.Context, *connect.Request[v1.GetFormatGuideRequest]) (*connect.Response[v1.GetFormatGuideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetFormatGuide is not implemented"))
 }

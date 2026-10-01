@@ -3,10 +3,12 @@ import { create } from '@bufbuild/protobuf'
 import {
   CreateTemplateResponseSchema,
   DeleteTemplateResponseSchema,
+  GetFormatGuideResponseSchema,
   ListTemplatesResponseSchema,
   TemplateSchema,
   TemplateService,
   UpdateTemplateResponseSchema,
+  contentLanguageFromProto,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -26,10 +28,19 @@ export interface FakeTemplateRow {
   postCount?: number
 }
 
+/** What the fake GetFormatGuide serves, per UI language. The real text is the backend's (TMPL-41,
+ *  pinned by its own golden test), so a screen test only needs to tell the two apart. */
+export const FAKE_FORMAT_GUIDE = {
+  ko: '형식 안내: 본문만 보내 주세요.',
+  en: 'Format guide: send the body only.',
+} as const
+
 export interface FakeTemplatesOptions {
   templates?: FakeTemplateRow[]
   /** Make ListTemplates fail. */
   listFails?: boolean
+  /** Make GetFormatGuide fail. */
+  guideFails?: boolean
   /** Records every procedure the transport was asked for. */
   calls?: string[]
   /** Records every UpdateTemplate exactly as it arrived, so a test can prove that an edit of
@@ -105,6 +116,13 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
     calls?.push('ListTemplates')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListTemplatesResponseSchema, { templates: listed().map(toProto) })
+  })
+
+  rpc(TemplateService.method.getFormatGuide, (req) => {
+    calls?.push('GetFormatGuide')
+    if (options.guideFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const text = FAKE_FORMAT_GUIDE[contentLanguageFromProto(req.language) ?? 'ko']
+    return create(GetFormatGuideResponseSchema, { text })
   })
 
   rpc(TemplateService.method.createTemplate, (req) => {

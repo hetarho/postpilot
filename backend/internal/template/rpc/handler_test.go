@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -230,5 +231,38 @@ func TestEveryRpcRefusesAnAnonymousCaller(t *testing.T) {
 		if connect.CodeOf(err) != connect.CodeUnauthenticated || detail(t, err).GetReason() != "AUTH_REQUIRED" {
 			t.Errorf("%s without a session = %v", name, err)
 		}
+	}
+}
+
+// TMPL-41: the guide comes from the backend in the reader's language, with this process's own
+// ceilings, and an unnamed language is refused rather than guessed.
+func TestGetFormatGuide(t *testing.T) {
+	h := handler(&fakeStore{})
+	for language, phrase := range map[postpilotv1.ContentLanguage]string{
+		postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:  "본문만 보내 주세요",
+		postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH: "Send the body only",
+	} {
+		resp, err := h.GetFormatGuide(signedIn(t), connect.NewRequest(&postpilotv1.GetFormatGuideRequest{Language: language}))
+		if err != nil {
+			t.Fatalf("%v: %v", language, err)
+		}
+		text := resp.Msg.GetText()
+		if !strings.Contains(text, phrase) || !strings.Contains(text, template.GuideExampleBody) {
+			t.Errorf("%v guide = %q", language, text)
+		}
+		// AskMaxPerBody is 8 in this handler's limits: the number stated is the server's own.
+		if !strings.Contains(text, "8") {
+			t.Errorf("%v guide does not state the configured ask ceiling", language)
+		}
+	}
+
+	_, err := h.GetFormatGuide(signedIn(t), connect.NewRequest(&postpilotv1.GetFormatGuideRequest{}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || detail(t, err).GetReason() != postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED.String() {
+		t.Fatalf("unspecified language: err = %v", err)
+	}
+
+	_, err = h.GetFormatGuide(context.Background(), connect.NewRequest(&postpilotv1.GetFormatGuideRequest{Language: postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("no session: err = %v", err)
 	}
 }
