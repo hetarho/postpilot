@@ -5,7 +5,6 @@ import { toComparisons } from '@/entities/voice/@x/model-experiment'
 import {
   CandidateStatus,
   contentLanguageFromProto,
-  CostSource,
   DisplaySide,
   ExperimentOrigin,
   ExperimentOutcome,
@@ -24,7 +23,6 @@ import {
 import type { CandidateBadges, VerdictBadgeName } from '../model/badges'
 import type {
   CandidateStatusName,
-  CostSourceName,
   ExperimentCandidate,
   ExperimentOriginName,
   ExperimentSourceName,
@@ -110,8 +108,6 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
       ? {
           promptTokens: value.usage.promptTokens,
           completionTokens: value.usage.completionTokens,
-          costMicrousd: value.usage.costMicrousd,
-          costSource: costSourceName(value.usage.costSource),
           latencyMs: value.usage.latencyMs,
         }
       : undefined,
@@ -155,8 +151,6 @@ export function toLeaderboardEntry(value: ProtoLeaderboardEntry): LeaderboardEnt
     averageLatencyMs: value.averageLatencyMs,
     promptTokens: value.promptTokens,
     completionTokens: value.completionTokens,
-    totalCostMicrousd: value.totalCostMicrousd,
-    costQuality: costSourceName(value.costQuality),
     provisional: value.provisional,
     active: value.active,
     recommended: value.recommended,
@@ -277,19 +271,6 @@ function candidateStatusName(value: CandidateStatus): CandidateStatusName {
         [CandidateStatus.FAILED]: 'failed',
       } as Partial<Record<CandidateStatus, CandidateStatusName>>
     )[value] ?? 'failed'
-  )
-}
-function costSourceName(value: CostSource): CostSourceName {
-  return (
-    (
-      {
-        [CostSource.REPORTED]: 'reported',
-        [CostSource.ESTIMATED]: 'estimated',
-        [CostSource.UNAVAILABLE]: 'unavailable',
-        [CostSource.MIXED]: 'mixed',
-        [CostSource.UNSPECIFIED]: 'withheld',
-      } as Partial<Record<CostSource, CostSourceName>>
-    )[value] ?? 'unavailable'
   )
 }
 function outcomeName(value: ExperimentOutcome): ModelExperiment['outcome'] {

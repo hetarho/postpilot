@@ -1,7 +1,14 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
-import { LeaderboardScope, LeaderboardWindow, Stage } from '@/shared/api'
+import { create } from '@bufbuild/protobuf'
+import {
+  LeaderboardEntrySchema,
+  LeaderboardScope,
+  LeaderboardWindow,
+  ProtoPlan,
+  Stage,
+} from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
 
@@ -9,6 +16,32 @@ function readsCollector() {
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
   return reads
 }
+
+it('shows a master the same Elo evidence without supplier cost', async () => {
+  renderAppAt('/ai-models/leaderboard?scope=all', {
+    user: { id: 'root', plan: ProtoPlan.MASTER },
+    plans: { plan: ProtoPlan.MASTER },
+    experiments: {
+      leaderboardEntries: [
+        create(LeaderboardEntrySchema, {
+          rank: 1,
+          model: { providerId: 'p', modelId: 'model' },
+          modelLabel: 'Model',
+          rating: 1516,
+          matches: 1,
+          wins: 1,
+          evaluatedComparisons: 1,
+          successfulCalls: 1,
+          promptTokens: 10n,
+          completionTokens: 20n,
+        }),
+      ],
+    },
+  })
+  expect(await screen.findByText('Elo 1516')).toBeInTheDocument()
+  expect(screen.getByText('1회 평가 · 상대별 1전 1승 0패 0무')).toBeInTheDocument()
+  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+})
 
 // A board is named by three controls at once, so the address has to carry all three. Opening
 // the page with none of them stated asks for 주간 · 나 (MODEL-44).

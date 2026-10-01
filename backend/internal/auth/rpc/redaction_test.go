@@ -91,10 +91,6 @@ var costFieldAllowlist = map[string]string{
 	"postpilot.v1.CreditPack.price_krw":                     "fixed KRW retail pack price (QUOTA-34), not supplier cost",
 	"postpilot.v1.ModelInfo.ai_price_unavailable":           "a bool that says a price is missing, carries no value",
 	"postpilot.v1.Failure.technical_detail":                 "cleared for non-masters at the response edge: TestSupplierRedactionClearsProviderProseForNonMasters",
-	"postpilot.v1.CandidateUsage.cost_microusd":             "master-populated: experiment/rpc TestCandidateMappingIsBlindUntilVerdict",
-	"postpilot.v1.CandidateUsage.cost_source":               "master-populated: experiment/rpc TestCandidateMappingIsBlindUntilVerdict",
-	"postpilot.v1.LeaderboardEntry.total_cost_microusd":     "master-populated: experiment/rpc TestLeaderboardCostReachesMasterOnly",
-	"postpilot.v1.LeaderboardEntry.cost_quality":            "master-populated: experiment/rpc TestLeaderboardCostReachesMasterOnly",
 	"postpilot.v1.QuoteClipGenerationResponse.priced_calls": "per call: label, model, stage, count and token budgets; its USD price fields are reserved",
 	"postpilot.v1.QuoteClipRevisionResponse.priced_calls":   "per call: label, model, stage, count and token budgets; its USD price fields are reserved",
 }

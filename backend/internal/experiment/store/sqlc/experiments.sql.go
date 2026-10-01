@@ -617,8 +617,7 @@ type ListCandidatesForLeaderboardParams struct {
 	Since  sql.NullString
 }
 
-// The call accounting beside those verdicts, from the comparisons that were resolved inside
-// the same window: a comparison still awaiting a verdict has not earned a place on a board.
+// Candidate accounting beside counted decisions; a blind or skipped run has earned no board row.
 func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCandidatesForLeaderboardParams) ([]ModelExperimentCandidate, error) {
 	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboard, arg.UserID, arg.Stage, arg.Since)
 	if err != nil {
@@ -742,9 +741,8 @@ type ListDecidedForLeaderboardParams struct {
 	Since  sql.NullString
 }
 
-// The winner verdicts and dismissals one account reached inside the window; the service keeps
-// a dismissal only when both of its candidates delivered (MODEL-38). decided_at is stored in a
-// fixed-width UTC layout, so the string comparison is the chronological one.
+// Ranked completions and eligible historical pairwise outcomes in the window. The service
+// keeps a legacy dismissal only when both candidates delivered. Both clocks are fixed-width UTC.
 func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecidedForLeaderboardParams) ([]ModelExperiment, error) {
 	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage, arg.Since)
 	if err != nil {
@@ -825,8 +823,7 @@ type ListDecidedForLeaderboardAllParams struct {
 	Since sql.NullString
 }
 
-// The same, over every account. Only the candidates' model refs leave this query, so no
-// account, experiment or output reaches the board it feeds.
+// The same, over every account. The service projects only model-level figures to the RPC.
 func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDecidedForLeaderboardAllParams) ([]ModelExperiment, error) {
 	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboardAll, arg.Stage, arg.Since)
 	if err != nil {

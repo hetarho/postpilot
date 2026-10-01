@@ -5,6 +5,7 @@ package postpilot.v1;
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/model_experiment.proto";
 
 // plan.proto is the authorization slice of the contract: which tier an account is on,
 // what it has left to spend, and the operator surface that changes it.
@@ -30,6 +31,8 @@ service AdminService {
   // The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
   // (QUOTA-65). Customer reads carry no rate, master included.
   rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse) {}
+  // Provider spend is visible only in the operator's 비용·환율 tab (MODEL-39).
+  rpc ListComparisonCosts(ListComparisonCostsRequest) returns (ListComparisonCostsResponse) {}
 }
 
 // The ladder carries the five commercial offers and the operator-only master tier.
@@ -113,6 +116,22 @@ message GetExchangeRateResponse {
   // No eligible rate: new paid AI work cannot start until one is confirmed (QUOTA-59).
   bool unavailable = 2;
 }
+
+message ListComparisonCostsRequest {
+  Stage stage = 1;
+  LeaderboardWindow window = 2;
+}
+
+message ComparisonCostRow {
+  ModelRef model = 1;
+  string model_label = 2;
+  int32 evaluated_comparisons = 3;
+  int64 total_cost_microusd = 4;
+  CostSource cost_quality = 5;
+}
+
+message ListComparisonCostsResponse { repeated ComparisonCostRow rows = 1; }
+
 
 // One rung as a plan comparison screen lists it.
 message PlanOffer {

@@ -112,8 +112,6 @@ it('reveals label, tokens and latency without supplier cost after review', () =>
       usage: {
         promptTokens: 100n,
         completionTokens: 20n,
-        costMicrousd: 12n,
-        costSource: 'estimated',
         latencyMs: 500n,
       },
     })),
@@ -140,8 +138,6 @@ it('reveals no cost to an owner the server withheld it from', () => {
       usage: {
         promptTokens: 100n,
         completionTokens: 20n,
-        costMicrousd: 0n,
-        costSource: 'withheld',
         latencyMs: 500n,
       },
     })),

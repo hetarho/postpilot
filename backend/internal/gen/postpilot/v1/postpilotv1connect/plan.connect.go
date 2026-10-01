@@ -48,6 +48,9 @@ const (
 	// AdminServiceGetExchangeRateProcedure is the fully-qualified name of the AdminService's
 	// GetExchangeRate RPC.
 	AdminServiceGetExchangeRateProcedure = "/postpilot.v1.AdminService/GetExchangeRate"
+	// AdminServiceListComparisonCostsProcedure is the fully-qualified name of the AdminService's
+	// ListComparisonCosts RPC.
+	AdminServiceListComparisonCostsProcedure = "/postpilot.v1.AdminService/ListComparisonCosts"
 )
 
 // PlanServiceClient is a client for the postpilot.v1.PlanService service.
@@ -135,6 +138,8 @@ type AdminServiceClient interface {
 	// The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
 	// (QUOTA-65). Customer reads carry no rate, master included.
 	GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error)
+	// Provider spend is visible only in the operator's 비용·환율 tab (MODEL-39).
+	ListComparisonCosts(context.Context, *connect.Request[v1.ListComparisonCostsRequest]) (*connect.Response[v1.ListComparisonCostsResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the postpilot.v1.AdminService service. By default,
@@ -172,15 +177,22 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetExchangeRate")),
 			connect.WithClientOptions(opts...),
 		),
+		listComparisonCosts: connect.NewClient[v1.ListComparisonCostsRequest, v1.ListComparisonCostsResponse](
+			httpClient,
+			baseURL+AdminServiceListComparisonCostsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListComparisonCosts")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	listUsers         *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
-	setUserPlan       *connect.Client[v1.SetUserPlanRequest, v1.SetUserPlanResponse]
-	setEstimatorCombo *connect.Client[v1.SetEstimatorComboRequest, v1.SetEstimatorComboResponse]
-	getExchangeRate   *connect.Client[v1.GetExchangeRateRequest, v1.GetExchangeRateResponse]
+	listUsers           *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
+	setUserPlan         *connect.Client[v1.SetUserPlanRequest, v1.SetUserPlanResponse]
+	setEstimatorCombo   *connect.Client[v1.SetEstimatorComboRequest, v1.SetEstimatorComboResponse]
+	getExchangeRate     *connect.Client[v1.GetExchangeRateRequest, v1.GetExchangeRateResponse]
+	listComparisonCosts *connect.Client[v1.ListComparisonCostsRequest, v1.ListComparisonCostsResponse]
 }
 
 // ListUsers calls postpilot.v1.AdminService.ListUsers.
@@ -203,6 +215,11 @@ func (c *adminServiceClient) GetExchangeRate(ctx context.Context, req *connect.R
 	return c.getExchangeRate.CallUnary(ctx, req)
 }
 
+// ListComparisonCosts calls postpilot.v1.AdminService.ListComparisonCosts.
+func (c *adminServiceClient) ListComparisonCosts(ctx context.Context, req *connect.Request[v1.ListComparisonCostsRequest]) (*connect.Response[v1.ListComparisonCostsResponse], error) {
+	return c.listComparisonCosts.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the postpilot.v1.AdminService service.
 type AdminServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
@@ -214,6 +231,8 @@ type AdminServiceHandler interface {
 	// The rate a paid job admitted now would be priced at, for the operator's 비용·환율 tab
 	// (QUOTA-65). Customer reads carry no rate, master included.
 	GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error)
+	// Provider spend is visible only in the operator's 비용·환율 tab (MODEL-39).
+	ListComparisonCosts(context.Context, *connect.Request[v1.ListComparisonCostsRequest]) (*connect.Response[v1.ListComparisonCostsResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -247,6 +266,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetExchangeRate")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListComparisonCostsHandler := connect.NewUnaryHandler(
+		AdminServiceListComparisonCostsProcedure,
+		svc.ListComparisonCosts,
+		connect.WithSchema(adminServiceMethods.ByName("ListComparisonCosts")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListUsersProcedure:
@@ -257,6 +282,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSetEstimatorComboHandler.ServeHTTP(w, r)
 		case AdminServiceGetExchangeRateProcedure:
 			adminServiceGetExchangeRateHandler.ServeHTTP(w, r)
+		case AdminServiceListComparisonCostsProcedure:
+			adminServiceListComparisonCostsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -280,4 +307,8 @@ func (UnimplementedAdminServiceHandler) SetEstimatorCombo(context.Context, *conn
 
 func (UnimplementedAdminServiceHandler) GetExchangeRate(context.Context, *connect.Request[v1.GetExchangeRateRequest]) (*connect.Response[v1.GetExchangeRateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AdminService.GetExchangeRate is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListComparisonCosts(context.Context, *connect.Request[v1.ListComparisonCostsRequest]) (*connect.Response[v1.ListComparisonCostsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.AdminService.ListComparisonCosts is not implemented"))
 }

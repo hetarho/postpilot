@@ -22,8 +22,6 @@ function entryFixture(): LeaderboardEntry {
     averageLatencyMs: 900n,
     promptTokens: 10n,
     completionTokens: 20n,
-    totalCostMicrousd: 0n,
-    costQuality: 'unavailable',
     provisional: false,
     active: false,
     recommended: false,
@@ -48,8 +46,6 @@ it('renders Elo and pairwise evidence without supplier cost', () => {
     averageLatencyMs: 200n,
     promptTokens: 10n,
     completionTokens: 2n,
-    totalCostMicrousd: 0n,
-    costQuality: 'unavailable',
     provisional: true,
     active: false,
     recommended: false,
@@ -166,24 +162,11 @@ it('shows the losses a dismissal counts, with no reference opponent on the board
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
 })
 
-it('shows usage but no cost when the server withholds it', () => {
-  render(
-    <ModelLeaderboard entries={[{ ...entryFixture(), costQuality: 'withheld' }]} window="week" />,
-  )
+it('shows usage without supplier cost', () => {
+  render(<ModelLeaderboard entries={[entryFixture()]} window="week" />)
   expect(screen.getByText(/성공 호출 8 · 평균 900ms · 토큰 10 \/ 20/)).toBeInTheDocument()
   expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
   expect(screen.queryByText(/비용 미제공/)).not.toBeInTheDocument()
-})
-
-it('does not show supplier cost even when it is still delivered on the old wire', () => {
-  render(
-    <ModelLeaderboard
-      entries={[{ ...entryFixture(), costQuality: 'reported', totalCostMicrousd: 4200n }]}
-      window="week"
-    />,
-  )
-  expect(screen.getByText(/토큰 10 \/ 20/)).toBeInTheDocument()
-  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
 })
 
 it('counts one five-way ranking once and labels four pairwise outcomes including ties', () => {
@@ -221,8 +204,6 @@ it('explains a provisional tie in English without supplier cost', () => {
             draws: 1,
             evaluatedComparisons: 1,
             provisional: true,
-            costQuality: 'reported',
-            totalCostMicrousd: 4000n,
           },
         ]}
         window="week"

@@ -216,8 +216,8 @@ function CandidateOutput({
 
 /** Once the blind is lifted, both models' identity and accounting sit in ONE band below the
  *  panels. Inside the panels they could only ever be read one at a time below `md:`, at the very
- *  bottom of a post-length column — so comparing the two costs, the payoff of the whole exercise,
- *  meant memorising one number and switching (THEME-24). */
+ *  bottom of a post-length column — so comparing usage and model identity meant memorising
+ *  one result and switching (THEME-24). */
 function RevealBand({ sides, ranked }: { sides: CandidateSide[]; ranked: boolean }) {
   const { t } = useTranslation(['posts', 'models'])
   return (

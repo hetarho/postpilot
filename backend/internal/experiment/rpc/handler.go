@@ -86,7 +86,7 @@ func (h *Handler) full(ctx context.Context, found experiment.Experiment) *postpi
 		slog.Warn("voice reflection detail unavailable", "experiment_id", found.ID, "err", err)
 		detail = experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(found)}
 	}
-	return toProtoExperiment(found, detail, auth.ActsAsMaster(ctx))
+	return toProtoExperiment(found, detail)
 }
 
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
@@ -112,9 +112,8 @@ func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[post
 		return nil, toConnectError("list experiments", err)
 	}
 	out := make([]*postpilotv1.ModelExperiment, 0, len(found))
-	operator := auth.ActsAsMaster(ctx)
 	for _, item := range found {
-		out = append(out, toProtoExperiment(item, experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(item)}, operator))
+		out = append(out, toProtoExperiment(item, experiment.ReflectionDetail{PromptText: h.service.ReflectionPromptText(item)}))
 	}
 	return connect.NewResponse(&postpilotv1.ListExperimentsResponse{Experiments: out}), nil
 }
@@ -277,16 +276,14 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 		return nil, toConnectError("get leaderboard", err)
 	}
 	out := make([]*postpilotv1.LeaderboardEntry, 0, len(entries))
-	operator := auth.ActsAsMaster(ctx)
 	for _, entry := range entries {
-		out = append(out, toProtoLeaderboardEntry(entry, operator))
+		out = append(out, toProtoLeaderboardEntry(entry))
 	}
 	return connect.NewResponse(&postpilotv1.GetLeaderboardResponse{Entries: out}), nil
 }
 
-// toProtoLeaderboardEntry projects one board row. Provider spend is supplier cost, and on the
-// `all` scope it is every account's, so only the operator's copy carries it (QUOTA-66, MODEL-39).
-func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry, operator bool) *postpilotv1.LeaderboardEntry {
+// toProtoLeaderboardEntry projects only public quality and usage evidence (MODEL-39).
+func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry) *postpilotv1.LeaderboardEntry {
 	mapped := &postpilotv1.LeaderboardEntry{
 		Rank: int32(entry.Rank), Model: toProtoRef(entry.Model), ModelLabel: entry.ModelLabel,
 		Rating: int32(entry.Rating), Matches: int32(entry.Matches), Wins: int32(entry.Wins), Losses: int32(entry.Losses),
@@ -296,9 +293,6 @@ func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry, operator bool) *
 		Recommended: entry.Recommended, Disappeared: entry.Disappeared,
 		BadgeTallies:         toProtoTallies(entry.BadgeTallies),
 		EvaluatedComparisons: int32(entry.EvaluatedComparisons), Draws: int32(entry.Draws),
-	}
-	if operator {
-		mapped.TotalCostMicrousd, mapped.CostQuality = entry.TotalCostMicrousd, toProtoCost(entry.CostQuality)
 	}
 	return mapped
 }
@@ -403,13 +397,13 @@ func activeJobParams(id string) map[string]string {
 	return map[string]string{"active_job_id": id}
 }
 
-// toProtoExperiment projects one comparison for its reader. operator is whether that reader is
-// master: supplier cost rides only on the operator's copy (QUOTA-66). Provider prose in a
-// failure is cleared at the response edge for everyone else (auth/rpc SupplierRedaction).
-func toProtoExperiment(found experiment.Experiment, detail experiment.ReflectionDetail, operator bool) *postpilotv1.ModelExperiment {
+// toProtoExperiment projects one comparison for its reader. Supplier cost stays inside the
+// experiment domain. Provider prose in a failure is cleared
+// at the response edge for non-master readers (auth/rpc SupplierRedaction).
+func toProtoExperiment(found experiment.Experiment, detail experiment.ReflectionDetail) *postpilotv1.ModelExperiment {
 	candidates := make([]*postpilotv1.ExperimentCandidate, 0, len(found.Candidates))
 	for _, candidate := range found.Candidates {
-		candidates = append(candidates, toProtoCandidate(found, candidate, detail.Comparisons[candidate.ID], operator))
+		candidates = append(candidates, toProtoCandidate(found, candidate, detail.Comparisons[candidate.ID]))
 	}
 	return &postpilotv1.ModelExperiment{
 		Id: found.ID, Stage: toProtoStage(found.Stage), Status: toProtoStatus(found.Status), PostSlug: found.PostSlug,
@@ -462,7 +456,7 @@ func optionalTargetLength(value *int32) *int {
 	return &result
 }
 
-func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate, comparison []experiment.ItemComparison, operator bool) *postpilotv1.ExperimentCandidate {
+func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidate, comparison []experiment.ItemComparison) *postpilotv1.ExperimentCandidate {
 	out := &postpilotv1.ExperimentCandidate{Id: candidate.ID, DisplaySide: toProtoSide(candidate.DisplaySide), Status: toProtoCandidateStatus(candidate.Status)}
 	if found.Source == experiment.SourceVoice {
 		// A voice-sourced candidate's output is its piece, read as plain text (MODEL-67).
@@ -480,9 +474,6 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 		out.Failure = failureToProto(candidate.Failure)
 		out.Usage = &postpilotv1.CandidateUsage{PromptTokens: candidate.Usage.PromptTokens, CompletionTokens: candidate.Usage.CompletionTokens,
 			LatencyMs: candidate.Usage.LatencyMS}
-		if operator {
-			out.Usage.CostMicrousd, out.Usage.CostSource = candidate.Usage.CostMicrousd, toProtoCost(candidate.Usage.CostSource)
-		}
 		// Inside the reveal, beside the identity: a badge attached to the unchosen candidate
 		// would otherwise say which one it was before the owner decided (MODEL-32).
 		for _, badge := range candidate.Badges {
@@ -735,9 +726,6 @@ func toProtoCandidateStatus(status experiment.CandidateStatus) postpilotv1.Candi
 }
 func toProtoOutcome(outcome experiment.Outcome) postpilotv1.ExperimentOutcome {
 	return map[experiment.Outcome]postpilotv1.ExperimentOutcome{experiment.OutcomeWinner: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_WINNER, experiment.OutcomeSkipped: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_SKIPPED, experiment.OutcomeUnpaired: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_UNPAIRED}[outcome]
-}
-func toProtoCost(source experiment.CostSource) postpilotv1.CostSource {
-	return map[experiment.CostSource]postpilotv1.CostSource{experiment.CostReported: postpilotv1.CostSource_COST_SOURCE_REPORTED, experiment.CostEstimated: postpilotv1.CostSource_COST_SOURCE_ESTIMATED, experiment.CostUnavailable: postpilotv1.CostSource_COST_SOURCE_UNAVAILABLE, experiment.CostMixed: postpilotv1.CostSource_COST_SOURCE_MIXED}[source]
 }
 func blockType(value string) postpilotv1.BlockType {
 	return map[string]postpilotv1.BlockType{"TEXT": postpilotv1.BlockType_TEXT, "HEADING": postpilotv1.BlockType_HEADING, "IMAGE": postpilotv1.BlockType_IMAGE, "QUOTE": postpilotv1.BlockType_QUOTE, "LIST": postpilotv1.BlockType_LIST}[value]

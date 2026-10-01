@@ -56,6 +56,16 @@ type LeaderboardEntry struct {
 	BadgeTallies []BadgeTally
 }
 
+// ComparisonCostRow is the operator-only cost projection of one counted leaderboard model.
+// It deliberately carries no account, experiment, output or note (MODEL-39, MODEL-41).
+type ComparisonCostRow struct {
+	Model                ModelRef
+	ModelLabel           string
+	EvaluatedComparisons int
+	TotalCostMicrousd    int64
+	CostQuality          CostSource
+}
+
 func (e LeaderboardEntry) WinRate() float64 {
 	if e.Matches == 0 {
 		return 0

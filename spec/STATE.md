@@ -59,14 +59,14 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T516 | Read comparison supplier cost on /admin, never on the model lab or leaderboard | MODEL QUOTA AUTH | T506 T515 | todo |
 
 ## next
-- next: implement-task T516 after T515 for comparison supplier cost; ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
+- next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - template request T507–T512 complete; job content retention is open in JOB-RETENTION-TODO.md.
 - update-ssot VOICE-31 (the 검증 job is named by ListVoiceChecks.active_job_id, the profile's by the analysis alone); the voice renewal T465–T475 is complete; ideation searchable-details continues: pooled 유입 검색어 screenshots teach the product's own write prompt, credits paid monthly after verification; open: consent, tying a keyword to the post it reached; Later: update-ssot CLIP-163 then create-task ARCH CLIP (real-GPU validation, profile approval, concurrency); unmeasured: a rapid phrase in a hook-role style against the canvas width; a rapid phrase edge between two frames (e.g. 1020 ms at 30 fps) gives both phrases that frame, and the browser draws the earlier one there; a browser render started 23 s after a server render once showed no outcome for 30 minutes (not reproduced); bare legacy acceptance labels (`A5:`, `A2/A3:`) with no job number remain in ~124 backend and ~110 frontend test comments (T411/T412 results); doc-review split candidates left as blocks, since other SSOTs cite their parts (THEME-24 THEME-38 MODEL-37 GUIDE-26).
 
 ## log
+- 261001 T516 done: master-only admin comparison cost, no public cost; full FE/BE and project checks passed
 - 261001 T498 done: /plans cards carry tier, price, one button by billing state and four benefits; one below-card post/clip comparison with an inline clip disclosure; rendered checks at 320/390/1440 in both themes
 - 261001 T515 done: master-only GetExchangeRate and /admin/costs (비용·환율) with every rate state; BE auth/cmd-api/plan and full FE checks passed
 - 261001 T514 done: master sees billing, credit badge, popover and clip credit surfaces as a customer, blocked actions disabled; full FE checks passed
@@ -86,4 +86,3 @@
 - 261001 T510 claimed (tr): one-call credit estimate for a template request
 - 261001 T508 done: template requests run as account-owned jobs on the explicit write model, corrected up to three times, with the answer read through GetTemplateRequestResult; full FE/BE and project checks passed
 - 261001 T508 claimed (tr): template request job on the 글 작성 모델
-- 261001 T507 done: the 형식 안내 is backend code served by GetFormatGuide and read by 원문 per locale; full FE/BE and project checks passed

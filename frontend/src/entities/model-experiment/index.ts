@@ -3,7 +3,6 @@ export type {
   CandidateOutput,
   CandidateStatusName,
   CandidateUsage,
-  CostSourceName,
   DisplaySideName,
   ExperimentCandidate,
   ExperimentOriginName,
@@ -30,6 +29,11 @@ export {
 } from './model/badges'
 export { isExperimentActive, needsExperimentReview } from './model/types'
 export { useExperiment, useExperiments, useLeaderboard } from './api/useExperiments'
+export {
+  useComparisonCosts,
+  type ComparisonCostRow,
+  type ComparisonCostQuality,
+} from './api/useComparisonCosts'
 export { useExperimentActions } from './api/useExperimentActions'
 export { useExperimentOwnerRefresh } from './api/useExperimentOwners'
 export { useStartModelExperiment } from './api/useStartModelExperiment'

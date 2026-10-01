@@ -684,8 +684,6 @@ type CandidateUsage struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	PromptTokens     int64                  `protobuf:"varint,1,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
 	CompletionTokens int64                  `protobuf:"varint,2,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
-	CostMicrousd     int64                  `protobuf:"varint,3,opt,name=cost_microusd,json=costMicrousd,proto3" json:"cost_microusd,omitempty"`
-	CostSource       CostSource             `protobuf:"varint,4,opt,name=cost_source,json=costSource,proto3,enum=postpilot.v1.CostSource" json:"cost_source,omitempty"`
 	LatencyMs        int64                  `protobuf:"varint,5,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -733,20 +731,6 @@ func (x *CandidateUsage) GetCompletionTokens() int64 {
 		return x.CompletionTokens
 	}
 	return 0
-}
-
-func (x *CandidateUsage) GetCostMicrousd() int64 {
-	if x != nil {
-		return x.CostMicrousd
-	}
-	return 0
-}
-
-func (x *CandidateUsage) GetCostSource() CostSource {
-	if x != nil {
-		return x.CostSource
-	}
-	return CostSource_COST_SOURCE_UNSPECIFIED
 }
 
 func (x *CandidateUsage) GetLatencyMs() int64 {
@@ -2845,25 +2829,23 @@ func (x *BadgeTally) GetCount() int32 {
 }
 
 type LeaderboardEntry struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Rank              int32                  `protobuf:"varint,1,opt,name=rank,proto3" json:"rank,omitempty"`
-	Model             *ModelRef              `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
-	ModelLabel        string                 `protobuf:"bytes,3,opt,name=model_label,json=modelLabel,proto3" json:"model_label,omitempty"`
-	Rating            int32                  `protobuf:"varint,4,opt,name=rating,proto3" json:"rating,omitempty"`
-	Matches           int32                  `protobuf:"varint,5,opt,name=matches,proto3" json:"matches,omitempty"`
-	Wins              int32                  `protobuf:"varint,6,opt,name=wins,proto3" json:"wins,omitempty"`
-	Losses            int32                  `protobuf:"varint,7,opt,name=losses,proto3" json:"losses,omitempty"`
-	WinRate           float64                `protobuf:"fixed64,8,opt,name=win_rate,json=winRate,proto3" json:"win_rate,omitempty"`
-	SuccessfulCalls   int32                  `protobuf:"varint,9,opt,name=successful_calls,json=successfulCalls,proto3" json:"successful_calls,omitempty"`
-	AverageLatencyMs  int64                  `protobuf:"varint,10,opt,name=average_latency_ms,json=averageLatencyMs,proto3" json:"average_latency_ms,omitempty"`
-	PromptTokens      int64                  `protobuf:"varint,11,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
-	CompletionTokens  int64                  `protobuf:"varint,12,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
-	TotalCostMicrousd int64                  `protobuf:"varint,13,opt,name=total_cost_microusd,json=totalCostMicrousd,proto3" json:"total_cost_microusd,omitempty"`
-	CostQuality       CostSource             `protobuf:"varint,14,opt,name=cost_quality,json=costQuality,proto3,enum=postpilot.v1.CostSource" json:"cost_quality,omitempty"`
-	Provisional       bool                   `protobuf:"varint,15,opt,name=provisional,proto3" json:"provisional,omitempty"`
-	Active            bool                   `protobuf:"varint,16,opt,name=active,proto3" json:"active,omitempty"`
-	Recommended       bool                   `protobuf:"varint,17,opt,name=recommended,proto3" json:"recommended,omitempty"`
-	Disappeared       bool                   `protobuf:"varint,18,opt,name=disappeared,proto3" json:"disappeared,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Rank             int32                  `protobuf:"varint,1,opt,name=rank,proto3" json:"rank,omitempty"`
+	Model            *ModelRef              `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
+	ModelLabel       string                 `protobuf:"bytes,3,opt,name=model_label,json=modelLabel,proto3" json:"model_label,omitempty"`
+	Rating           int32                  `protobuf:"varint,4,opt,name=rating,proto3" json:"rating,omitempty"`
+	Matches          int32                  `protobuf:"varint,5,opt,name=matches,proto3" json:"matches,omitempty"`
+	Wins             int32                  `protobuf:"varint,6,opt,name=wins,proto3" json:"wins,omitempty"`
+	Losses           int32                  `protobuf:"varint,7,opt,name=losses,proto3" json:"losses,omitempty"`
+	WinRate          float64                `protobuf:"fixed64,8,opt,name=win_rate,json=winRate,proto3" json:"win_rate,omitempty"`
+	SuccessfulCalls  int32                  `protobuf:"varint,9,opt,name=successful_calls,json=successfulCalls,proto3" json:"successful_calls,omitempty"`
+	AverageLatencyMs int64                  `protobuf:"varint,10,opt,name=average_latency_ms,json=averageLatencyMs,proto3" json:"average_latency_ms,omitempty"`
+	PromptTokens     int64                  `protobuf:"varint,11,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
+	CompletionTokens int64                  `protobuf:"varint,12,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	Provisional      bool                   `protobuf:"varint,15,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	Active           bool                   `protobuf:"varint,16,opt,name=active,proto3" json:"active,omitempty"`
+	Recommended      bool                   `protobuf:"varint,17,opt,name=recommended,proto3" json:"recommended,omitempty"`
+	Disappeared      bool                   `protobuf:"varint,18,opt,name=disappeared,proto3" json:"disappeared,omitempty"`
 	// `other` is counted without its notes, in every scope.
 	BadgeTallies []*BadgeTally `protobuf:"bytes,19,rep,name=badge_tallies,json=badgeTallies,proto3" json:"badge_tallies,omitempty"`
 	// One per comparison, independent of how many other candidates it faced.
@@ -2986,20 +2968,6 @@ func (x *LeaderboardEntry) GetCompletionTokens() int64 {
 		return x.CompletionTokens
 	}
 	return 0
-}
-
-func (x *LeaderboardEntry) GetTotalCostMicrousd() int64 {
-	if x != nil {
-		return x.TotalCostMicrousd
-	}
-	return 0
-}
-
-func (x *LeaderboardEntry) GetCostQuality() CostSource {
-	if x != nil {
-		return x.CostQuality
-	}
-	return CostSource_COST_SOURCE_UNSPECIFIED
 }
 
 func (x *LeaderboardEntry) GetProvisional() bool {
@@ -3164,15 +3132,12 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\fcandidate_id\x18\x01 \x01(\tR\vcandidateId\x122\n" +
 	"\x06badges\x18\x02 \x03(\x0e2\x1a.postpilot.v1.VerdictBadgeR\x06badges\x12\x1d\n" +
 	"\n" +
-	"other_note\x18\x03 \x01(\tR\totherNote\"\xe1\x01\n" +
+	"other_note\x18\x03 \x01(\tR\totherNote\"\xa9\x01\n" +
 	"\x0eCandidateUsage\x12#\n" +
 	"\rprompt_tokens\x18\x01 \x01(\x03R\fpromptTokens\x12+\n" +
-	"\x11completion_tokens\x18\x02 \x01(\x03R\x10completionTokens\x12#\n" +
-	"\rcost_microusd\x18\x03 \x01(\x03R\fcostMicrousd\x129\n" +
-	"\vcost_source\x18\x04 \x01(\x0e2\x18.postpilot.v1.CostSourceR\n" +
-	"costSource\x12\x1d\n" +
+	"\x11completion_tokens\x18\x02 \x01(\x03R\x10completionTokens\x12\x1d\n" +
 	"\n" +
-	"latency_ms\x18\x05 \x01(\x03R\tlatencyMs\"O\n" +
+	"latency_ms\x18\x05 \x01(\x03R\tlatencyMsJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\rcost_microusdR\vcost_source\"O\n" +
 	"\x0eObservationSet\x12=\n" +
 	"\fobservations\x18\x01 \x03(\v2\x19.postpilot.v1.ObservationR\fobservations\"i\n" +
 	"\n" +
@@ -3361,7 +3326,7 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\n" +
 	"BadgeTally\x120\n" +
 	"\x05badge\x18\x01 \x01(\x0e2\x1a.postpilot.v1.VerdictBadgeR\x05badge\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"\x8e\x06\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\"\xd0\x05\n" +
 	"\x10LeaderboardEntry\x12\x12\n" +
 	"\x04rank\x18\x01 \x01(\x05R\x04rank\x12,\n" +
 	"\x05model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12\x1f\n" +
@@ -3376,16 +3341,14 @@ const file_postpilot_v1_model_experiment_proto_rawDesc = "" +
 	"\x12average_latency_ms\x18\n" +
 	" \x01(\x03R\x10averageLatencyMs\x12#\n" +
 	"\rprompt_tokens\x18\v \x01(\x03R\fpromptTokens\x12+\n" +
-	"\x11completion_tokens\x18\f \x01(\x03R\x10completionTokens\x12.\n" +
-	"\x13total_cost_microusd\x18\r \x01(\x03R\x11totalCostMicrousd\x12;\n" +
-	"\fcost_quality\x18\x0e \x01(\x0e2\x18.postpilot.v1.CostSourceR\vcostQuality\x12 \n" +
+	"\x11completion_tokens\x18\f \x01(\x03R\x10completionTokens\x12 \n" +
 	"\vprovisional\x18\x0f \x01(\bR\vprovisional\x12\x16\n" +
 	"\x06active\x18\x10 \x01(\bR\x06active\x12 \n" +
 	"\vrecommended\x18\x11 \x01(\bR\vrecommended\x12 \n" +
 	"\vdisappeared\x18\x12 \x01(\bR\vdisappeared\x12=\n" +
 	"\rbadge_tallies\x18\x13 \x03(\v2\x18.postpilot.v1.BadgeTallyR\fbadgeTallies\x123\n" +
 	"\x15evaluated_comparisons\x18\x14 \x01(\x05R\x14evaluatedComparisons\x12\x14\n" +
-	"\x05draws\x18\x15 \x01(\x05R\x05draws\"\xb1\x01\n" +
+	"\x05draws\x18\x15 \x01(\x05R\x05drawsJ\x04\b\r\x10\x0eJ\x04\b\x0e\x10\x0fR\x13total_cost_microusdR\fcost_quality\"\xb1\x01\n" +
 	"\x15GetLeaderboardRequest\x12)\n" +
 	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x127\n" +
 	"\x06window\x18\x02 \x01(\x0e2\x1f.postpilot.v1.LeaderboardWindowR\x06window\x124\n" +
@@ -3555,101 +3518,99 @@ var file_postpilot_v1_model_experiment_proto_goTypes = []any{
 }
 var file_postpilot_v1_model_experiment_proto_depIdxs = []int32{
 	4,  // 0: postpilot.v1.CandidateBadges.badges:type_name -> postpilot.v1.VerdictBadge
-	7,  // 1: postpilot.v1.CandidateUsage.cost_source:type_name -> postpilot.v1.CostSource
-	47, // 2: postpilot.v1.ObservationSet.observations:type_name -> postpilot.v1.Observation
-	48, // 3: postpilot.v1.VoicePiece.comparison:type_name -> postpilot.v1.FingerprintItemComparison
-	1,  // 4: postpilot.v1.ExperimentCandidate.display_side:type_name -> postpilot.v1.DisplaySide
-	2,  // 5: postpilot.v1.ExperimentCandidate.status:type_name -> postpilot.v1.CandidateStatus
-	49, // 6: postpilot.v1.ExperimentCandidate.post_content:type_name -> postpilot.v1.PostContent
-	12, // 7: postpilot.v1.ExperimentCandidate.observation_set:type_name -> postpilot.v1.ObservationSet
-	13, // 8: postpilot.v1.ExperimentCandidate.voice_piece:type_name -> postpilot.v1.VoicePiece
-	50, // 9: postpilot.v1.ExperimentCandidate.model:type_name -> postpilot.v1.ModelRef
-	11, // 10: postpilot.v1.ExperimentCandidate.usage:type_name -> postpilot.v1.CandidateUsage
-	51, // 11: postpilot.v1.ExperimentCandidate.failure:type_name -> postpilot.v1.Failure
-	4,  // 12: postpilot.v1.ExperimentCandidate.badges:type_name -> postpilot.v1.VerdictBadge
-	52, // 13: postpilot.v1.ModelExperiment.stage:type_name -> postpilot.v1.Stage
-	0,  // 14: postpilot.v1.ModelExperiment.status:type_name -> postpilot.v1.ExperimentStatus
-	14, // 15: postpilot.v1.ModelExperiment.candidates:type_name -> postpilot.v1.ExperimentCandidate
-	6,  // 16: postpilot.v1.ModelExperiment.outcome:type_name -> postpilot.v1.ExperimentOutcome
-	53, // 17: postpilot.v1.ModelExperiment.target_language:type_name -> postpilot.v1.ContentLanguage
-	51, // 18: postpilot.v1.ModelExperiment.apply_failure:type_name -> postpilot.v1.Failure
-	51, // 19: postpilot.v1.ModelExperiment.adoption_failure:type_name -> postpilot.v1.Failure
-	3,  // 20: postpilot.v1.ModelExperiment.origin:type_name -> postpilot.v1.ExperimentOrigin
-	5,  // 21: postpilot.v1.ModelExperiment.source:type_name -> postpilot.v1.ExperimentSource
-	50, // 22: postpilot.v1.StartObserveExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	50, // 23: postpilot.v1.StartObserveExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	50, // 24: postpilot.v1.StartObserveExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
-	50, // 25: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	50, // 26: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	50, // 27: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	54, // 28: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	3,  // 29: postpilot.v1.StartWriteExperimentRequest.origin:type_name -> postpilot.v1.ExperimentOrigin
-	50, // 30: postpilot.v1.StartWriteExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
-	50, // 31: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
-	50, // 32: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
-	50, // 33: postpilot.v1.StartVoiceReflectionExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
-	15, // 34: postpilot.v1.GetExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	52, // 35: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
-	5,  // 36: postpilot.v1.ListExperimentsRequest.source:type_name -> postpilot.v1.ExperimentSource
-	15, // 37: postpilot.v1.ListExperimentsResponse.experiments:type_name -> postpilot.v1.ModelExperiment
-	15, // 38: postpilot.v1.RetryCandidateResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	10, // 39: postpilot.v1.ChooseWinnerRequest.badges:type_name -> postpilot.v1.CandidateBadges
-	10, // 40: postpilot.v1.DecideWriteExperimentRequest.badges:type_name -> postpilot.v1.CandidateBadges
-	15, // 41: postpilot.v1.ChooseWinnerResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 42: postpilot.v1.DismissExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	4,  // 43: postpilot.v1.CandidateRank.badges:type_name -> postpilot.v1.VerdictBadge
-	32, // 44: postpilot.v1.CompleteExperimentReviewRequest.ranks:type_name -> postpilot.v1.CandidateRank
-	15, // 45: postpilot.v1.CompleteExperimentReviewResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 46: postpilot.v1.ApplyCandidateOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	15, // 47: postpilot.v1.AdoptCandidateModelResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	55, // 48: postpilot.v1.AdoptCandidateModelResponse.selection:type_name -> postpilot.v1.Selection
-	15, // 49: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
-	55, // 50: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
-	4,  // 51: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
-	50, // 52: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
-	7,  // 53: postpilot.v1.LeaderboardEntry.cost_quality:type_name -> postpilot.v1.CostSource
-	43, // 54: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
-	52, // 55: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
-	8,  // 56: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
-	9,  // 57: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
-	44, // 58: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
-	16, // 59: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
-	17, // 60: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
-	18, // 61: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
-	20, // 62: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
-	22, // 63: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
-	24, // 64: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
-	26, // 65: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
-	27, // 66: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
-	28, // 67: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
-	30, // 68: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
-	33, // 69: postpilot.v1.ModelExperimentService.CompleteExperimentReview:input_type -> postpilot.v1.CompleteExperimentReviewRequest
-	35, // 70: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:input_type -> postpilot.v1.ApplyCandidateOutputRequest
-	37, // 71: postpilot.v1.ModelExperimentService.AdoptCandidateModel:input_type -> postpilot.v1.AdoptCandidateModelRequest
-	39, // 72: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
-	41, // 73: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
-	45, // 74: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
-	19, // 75: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 76: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	19, // 77: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
-	21, // 78: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
-	23, // 79: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
-	25, // 80: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
-	29, // 81: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 82: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
-	29, // 83: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
-	31, // 84: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
-	34, // 85: postpilot.v1.ModelExperimentService.CompleteExperimentReview:output_type -> postpilot.v1.CompleteExperimentReviewResponse
-	36, // 86: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:output_type -> postpilot.v1.ApplyCandidateOutputResponse
-	38, // 87: postpilot.v1.ModelExperimentService.AdoptCandidateModel:output_type -> postpilot.v1.AdoptCandidateModelResponse
-	40, // 88: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
-	42, // 89: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
-	46, // 90: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
-	75, // [75:91] is the sub-list for method output_type
-	59, // [59:75] is the sub-list for method input_type
-	59, // [59:59] is the sub-list for extension type_name
-	59, // [59:59] is the sub-list for extension extendee
-	0,  // [0:59] is the sub-list for field type_name
+	47, // 1: postpilot.v1.ObservationSet.observations:type_name -> postpilot.v1.Observation
+	48, // 2: postpilot.v1.VoicePiece.comparison:type_name -> postpilot.v1.FingerprintItemComparison
+	1,  // 3: postpilot.v1.ExperimentCandidate.display_side:type_name -> postpilot.v1.DisplaySide
+	2,  // 4: postpilot.v1.ExperimentCandidate.status:type_name -> postpilot.v1.CandidateStatus
+	49, // 5: postpilot.v1.ExperimentCandidate.post_content:type_name -> postpilot.v1.PostContent
+	12, // 6: postpilot.v1.ExperimentCandidate.observation_set:type_name -> postpilot.v1.ObservationSet
+	13, // 7: postpilot.v1.ExperimentCandidate.voice_piece:type_name -> postpilot.v1.VoicePiece
+	50, // 8: postpilot.v1.ExperimentCandidate.model:type_name -> postpilot.v1.ModelRef
+	11, // 9: postpilot.v1.ExperimentCandidate.usage:type_name -> postpilot.v1.CandidateUsage
+	51, // 10: postpilot.v1.ExperimentCandidate.failure:type_name -> postpilot.v1.Failure
+	4,  // 11: postpilot.v1.ExperimentCandidate.badges:type_name -> postpilot.v1.VerdictBadge
+	52, // 12: postpilot.v1.ModelExperiment.stage:type_name -> postpilot.v1.Stage
+	0,  // 13: postpilot.v1.ModelExperiment.status:type_name -> postpilot.v1.ExperimentStatus
+	14, // 14: postpilot.v1.ModelExperiment.candidates:type_name -> postpilot.v1.ExperimentCandidate
+	6,  // 15: postpilot.v1.ModelExperiment.outcome:type_name -> postpilot.v1.ExperimentOutcome
+	53, // 16: postpilot.v1.ModelExperiment.target_language:type_name -> postpilot.v1.ContentLanguage
+	51, // 17: postpilot.v1.ModelExperiment.apply_failure:type_name -> postpilot.v1.Failure
+	51, // 18: postpilot.v1.ModelExperiment.adoption_failure:type_name -> postpilot.v1.Failure
+	3,  // 19: postpilot.v1.ModelExperiment.origin:type_name -> postpilot.v1.ExperimentOrigin
+	5,  // 20: postpilot.v1.ModelExperiment.source:type_name -> postpilot.v1.ExperimentSource
+	50, // 21: postpilot.v1.StartObserveExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 22: postpilot.v1.StartObserveExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	50, // 23: postpilot.v1.StartObserveExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	50, // 24: postpilot.v1.StartWriteExperimentRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	50, // 25: postpilot.v1.StartWriteExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 26: postpilot.v1.StartWriteExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	54, // 27: postpilot.v1.StartWriteExperimentRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	3,  // 28: postpilot.v1.StartWriteExperimentRequest.origin:type_name -> postpilot.v1.ExperimentOrigin
+	50, // 29: postpilot.v1.StartWriteExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	50, // 30: postpilot.v1.StartVoiceReflectionExperimentRequest.model_a:type_name -> postpilot.v1.ModelRef
+	50, // 31: postpilot.v1.StartVoiceReflectionExperimentRequest.model_b:type_name -> postpilot.v1.ModelRef
+	50, // 32: postpilot.v1.StartVoiceReflectionExperimentRequest.candidates:type_name -> postpilot.v1.ModelRef
+	15, // 33: postpilot.v1.GetExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	52, // 34: postpilot.v1.ListExperimentsRequest.stage:type_name -> postpilot.v1.Stage
+	5,  // 35: postpilot.v1.ListExperimentsRequest.source:type_name -> postpilot.v1.ExperimentSource
+	15, // 36: postpilot.v1.ListExperimentsResponse.experiments:type_name -> postpilot.v1.ModelExperiment
+	15, // 37: postpilot.v1.RetryCandidateResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	10, // 38: postpilot.v1.ChooseWinnerRequest.badges:type_name -> postpilot.v1.CandidateBadges
+	10, // 39: postpilot.v1.DecideWriteExperimentRequest.badges:type_name -> postpilot.v1.CandidateBadges
+	15, // 40: postpilot.v1.ChooseWinnerResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 41: postpilot.v1.DismissExperimentResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	4,  // 42: postpilot.v1.CandidateRank.badges:type_name -> postpilot.v1.VerdictBadge
+	32, // 43: postpilot.v1.CompleteExperimentReviewRequest.ranks:type_name -> postpilot.v1.CandidateRank
+	15, // 44: postpilot.v1.CompleteExperimentReviewResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 45: postpilot.v1.ApplyCandidateOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	15, // 46: postpilot.v1.AdoptCandidateModelResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	55, // 47: postpilot.v1.AdoptCandidateModelResponse.selection:type_name -> postpilot.v1.Selection
+	15, // 48: postpilot.v1.ApplyWinnerOutputResponse.experiment:type_name -> postpilot.v1.ModelExperiment
+	55, // 49: postpilot.v1.AdoptWinnerModelResponse.selection:type_name -> postpilot.v1.Selection
+	4,  // 50: postpilot.v1.BadgeTally.badge:type_name -> postpilot.v1.VerdictBadge
+	50, // 51: postpilot.v1.LeaderboardEntry.model:type_name -> postpilot.v1.ModelRef
+	43, // 52: postpilot.v1.LeaderboardEntry.badge_tallies:type_name -> postpilot.v1.BadgeTally
+	52, // 53: postpilot.v1.GetLeaderboardRequest.stage:type_name -> postpilot.v1.Stage
+	8,  // 54: postpilot.v1.GetLeaderboardRequest.window:type_name -> postpilot.v1.LeaderboardWindow
+	9,  // 55: postpilot.v1.GetLeaderboardRequest.scope:type_name -> postpilot.v1.LeaderboardScope
+	44, // 56: postpilot.v1.GetLeaderboardResponse.entries:type_name -> postpilot.v1.LeaderboardEntry
+	16, // 57: postpilot.v1.ModelExperimentService.StartObserveExperiment:input_type -> postpilot.v1.StartObserveExperimentRequest
+	17, // 58: postpilot.v1.ModelExperimentService.StartWriteExperiment:input_type -> postpilot.v1.StartWriteExperimentRequest
+	18, // 59: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:input_type -> postpilot.v1.StartVoiceReflectionExperimentRequest
+	20, // 60: postpilot.v1.ModelExperimentService.GetExperiment:input_type -> postpilot.v1.GetExperimentRequest
+	22, // 61: postpilot.v1.ModelExperimentService.ListExperiments:input_type -> postpilot.v1.ListExperimentsRequest
+	24, // 62: postpilot.v1.ModelExperimentService.RetryCandidate:input_type -> postpilot.v1.RetryCandidateRequest
+	26, // 63: postpilot.v1.ModelExperimentService.ChooseWinner:input_type -> postpilot.v1.ChooseWinnerRequest
+	27, // 64: postpilot.v1.ModelExperimentService.DecideWriteExperiment:input_type -> postpilot.v1.DecideWriteExperimentRequest
+	28, // 65: postpilot.v1.ModelExperimentService.UseSingleCandidate:input_type -> postpilot.v1.UseSingleCandidateRequest
+	30, // 66: postpilot.v1.ModelExperimentService.DismissExperiment:input_type -> postpilot.v1.DismissExperimentRequest
+	33, // 67: postpilot.v1.ModelExperimentService.CompleteExperimentReview:input_type -> postpilot.v1.CompleteExperimentReviewRequest
+	35, // 68: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:input_type -> postpilot.v1.ApplyCandidateOutputRequest
+	37, // 69: postpilot.v1.ModelExperimentService.AdoptCandidateModel:input_type -> postpilot.v1.AdoptCandidateModelRequest
+	39, // 70: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:input_type -> postpilot.v1.ApplyWinnerOutputRequest
+	41, // 71: postpilot.v1.ModelExperimentService.AdoptWinnerModel:input_type -> postpilot.v1.AdoptWinnerModelRequest
+	45, // 72: postpilot.v1.ModelExperimentService.GetLeaderboard:input_type -> postpilot.v1.GetLeaderboardRequest
+	19, // 73: postpilot.v1.ModelExperimentService.StartObserveExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 74: postpilot.v1.ModelExperimentService.StartWriteExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	19, // 75: postpilot.v1.ModelExperimentService.StartVoiceReflectionExperiment:output_type -> postpilot.v1.StartExperimentResponse
+	21, // 76: postpilot.v1.ModelExperimentService.GetExperiment:output_type -> postpilot.v1.GetExperimentResponse
+	23, // 77: postpilot.v1.ModelExperimentService.ListExperiments:output_type -> postpilot.v1.ListExperimentsResponse
+	25, // 78: postpilot.v1.ModelExperimentService.RetryCandidate:output_type -> postpilot.v1.RetryCandidateResponse
+	29, // 79: postpilot.v1.ModelExperimentService.ChooseWinner:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 80: postpilot.v1.ModelExperimentService.DecideWriteExperiment:output_type -> postpilot.v1.ChooseWinnerResponse
+	29, // 81: postpilot.v1.ModelExperimentService.UseSingleCandidate:output_type -> postpilot.v1.ChooseWinnerResponse
+	31, // 82: postpilot.v1.ModelExperimentService.DismissExperiment:output_type -> postpilot.v1.DismissExperimentResponse
+	34, // 83: postpilot.v1.ModelExperimentService.CompleteExperimentReview:output_type -> postpilot.v1.CompleteExperimentReviewResponse
+	36, // 84: postpilot.v1.ModelExperimentService.ApplyCandidateOutput:output_type -> postpilot.v1.ApplyCandidateOutputResponse
+	38, // 85: postpilot.v1.ModelExperimentService.AdoptCandidateModel:output_type -> postpilot.v1.AdoptCandidateModelResponse
+	40, // 86: postpilot.v1.ModelExperimentService.ApplyWinnerOutput:output_type -> postpilot.v1.ApplyWinnerOutputResponse
+	42, // 87: postpilot.v1.ModelExperimentService.AdoptWinnerModel:output_type -> postpilot.v1.AdoptWinnerModelResponse
+	46, // 88: postpilot.v1.ModelExperimentService.GetLeaderboard:output_type -> postpilot.v1.GetLeaderboardResponse
+	73, // [73:89] is the sub-list for method output_type
+	57, // [57:73] is the sub-list for method input_type
+	57, // [57:57] is the sub-list for extension type_name
+	57, // [57:57] is the sub-list for extension extendee
+	0,  // [0:57] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_model_experiment_proto_init() }

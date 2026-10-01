@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/experiment"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/plan"
@@ -18,7 +19,7 @@ import (
 
 // AdminHandler implements postpilotv1connect.AdminServiceHandler.
 //
-// It carries no authorization of its own: both procedures are in the interceptor's
+// It carries no authorization of its own: its procedures are in the interceptor's
 // master-only set, so a non-master call never reaches these functions. Keeping the check
 // there rather than here is what makes "which procedures are privileged" answerable by
 // reading one map.
@@ -26,6 +27,7 @@ type AdminHandler struct {
 	svc    AdminAccounts
 	combos EstimatorAssigner
 	rates  RateReader
+	costs  ComparisonCostReader
 }
 
 type AdminAccounts interface {
@@ -49,6 +51,12 @@ type RateReader interface {
 	CurrentRate(ctx context.Context) (plan.RateSnapshot, error)
 }
 
+// ComparisonCostReader is the operator's cost projection. The experiment context owns the
+// aggregation; the admin RPC only chooses its stage/window and publishes the result.
+type ComparisonCostReader interface {
+	ComparisonCosts(ctx context.Context, stage experiment.Stage, window experiment.Window) ([]experiment.ComparisonCostRow, error)
+}
+
 var (
 	// ErrComboUnknown is a combo name off the four the product has.
 	ErrComboUnknown = errors.New("unknown estimator combo")
@@ -57,8 +65,12 @@ var (
 	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
 )
 
-func NewAdminHandler(svc AdminAccounts, combos EstimatorAssigner, rates RateReader) *AdminHandler {
-	return &AdminHandler{svc: svc, combos: combos, rates: rates}
+func NewAdminHandler(svc AdminAccounts, combos EstimatorAssigner, rates RateReader, costs ...ComparisonCostReader) *AdminHandler {
+	h := &AdminHandler{svc: svc, combos: combos, rates: rates}
+	if len(costs) > 0 {
+		h.costs = costs[0]
+	}
+	return h
 }
 
 // GetExchangeRate is the operator's one view of the rate behind credits (QUOTA-65). A missing or
@@ -79,6 +91,59 @@ func (h *AdminHandler) GetExchangeRate(ctx context.Context, _ *connect.Request[p
 		Source: rate.Source, PublicationDate: rate.PublicationDate,
 		ReferenceE4: rate.ReferenceE4, AppliedE4: rate.AppliedE4, Temporary: rate.Temporary,
 	}}), nil
+}
+
+func (h *AdminHandler) ListComparisonCosts(ctx context.Context, req *connect.Request[postpilotv1.ListComparisonCostsRequest]) (*connect.Response[postpilotv1.ListComparisonCostsResponse], error) {
+	var stage experiment.Stage
+	switch req.Msg.GetStage() {
+	case postpilotv1.Stage_STAGE_OBSERVE:
+		stage = experiment.StageObserve
+	case postpilotv1.Stage_STAGE_WRITE:
+		stage = experiment.StageWrite
+	default:
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a comparison stage is required", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
+	}
+	var window experiment.Window
+	switch req.Msg.GetWindow() {
+	case postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_DAY:
+		window = experiment.WindowDay
+	case postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_WEEK:
+		window = experiment.WindowWeek
+	case postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_MONTH:
+		window = experiment.WindowMonth
+	default:
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a leaderboard window is required", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
+	}
+	if h.costs == nil {
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "comparison costs unavailable", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+	}
+	rows, err := h.costs.ComparisonCosts(ctx, stage, window)
+	if err != nil {
+		slog.Error("list comparison costs failed", "err", err)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not list comparison costs", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+	}
+	out := make([]*postpilotv1.ComparisonCostRow, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &postpilotv1.ComparisonCostRow{
+			Model:      &postpilotv1.ModelRef{ProviderId: row.Model.ProviderID, ModelId: row.Model.ModelID},
+			ModelLabel: row.ModelLabel, EvaluatedComparisons: int32(row.EvaluatedComparisons),
+			TotalCostMicrousd: row.TotalCostMicrousd, CostQuality: adminCostQuality(row.CostQuality),
+		})
+	}
+	return connect.NewResponse(&postpilotv1.ListComparisonCostsResponse{Rows: out}), nil
+}
+
+func adminCostQuality(source experiment.CostSource) postpilotv1.CostSource {
+	switch source {
+	case experiment.CostReported:
+		return postpilotv1.CostSource_COST_SOURCE_REPORTED
+	case experiment.CostEstimated:
+		return postpilotv1.CostSource_COST_SOURCE_ESTIMATED
+	case experiment.CostMixed:
+		return postpilotv1.CostSource_COST_SOURCE_MIXED
+	default:
+		return postpilotv1.CostSource_COST_SOURCE_UNAVAILABLE
+	}
 }
 
 func (h *AdminHandler) ListUsers(ctx context.Context, _ *connect.Request[postpilotv1.ListUsersRequest]) (*connect.Response[postpilotv1.ListUsersResponse], error) {

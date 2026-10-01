@@ -1,6 +1,7 @@
 package experiment
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -876,6 +877,30 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 // Leaderboard replays completed rankings and eligible historical pairwise outcomes of one
 // (scope, stage, window) from 1500. The window is rolling from request time (MODEL-38).
 func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, window Window, scope Scope) ([]LeaderboardEntry, error) {
+	entries, err := s.leaderboardEntries(ctx, userID, stage, window, scope)
+	if err != nil {
+		return nil, err
+	}
+	active, hasActive, err := s.catalog.Active(ctx, userID, stage)
+	if err != nil {
+		return nil, err
+	}
+	recommended, err := s.catalog.Recommended(ctx, stage)
+	if err != nil {
+		return nil, err
+	}
+	for i := range entries {
+		entries[i].Active = hasActive && entries[i].Model == active
+		entries[i].Recommended = slices.Contains(recommended, entries[i].Model)
+		_, present := s.catalog.Resolve(entries[i].Model)
+		entries[i].Disappeared = !present
+	}
+	return entries, nil
+}
+
+// leaderboardEntries replays the same counted events without account-specific display
+// decoration, so the operator's all-account cost read needs no synthetic user id.
+func (s *Service) leaderboardEntries(ctx context.Context, userID string, stage Stage, window Window, scope Scope) ([]LeaderboardEntry, error) {
 	if _, err := ParseStage(string(stage)); err != nil {
 		return nil, err
 	}
@@ -942,22 +967,34 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, w
 			counted = append(counted, pair...)
 		}
 	}
-	entries := BuildLeaderboard(matches, counted, labels, tallies)
-	active, hasActive, err := s.catalog.Active(ctx, userID, stage)
+	return BuildLeaderboard(matches, counted, labels, tallies), nil
+}
+
+// ComparisonCosts uses the same counted all-account events and usage samples as the
+// public leaderboard, then exposes only the cost totals through AdminService.
+func (s *Service) ComparisonCosts(ctx context.Context, stage Stage, window Window) ([]ComparisonCostRow, error) {
+	entries, err := s.leaderboardEntries(ctx, "", stage, window, ScopeAll)
 	if err != nil {
 		return nil, err
 	}
-	recommended, err := s.catalog.Recommended(ctx, stage)
-	if err != nil {
-		return nil, err
+	rows := make([]ComparisonCostRow, 0, len(entries))
+	for _, entry := range entries {
+		rows = append(rows, ComparisonCostRow{
+			Model: entry.Model, ModelLabel: entry.ModelLabel,
+			EvaluatedComparisons: entry.EvaluatedComparisons,
+			TotalCostMicrousd:    entry.TotalCostMicrousd, CostQuality: entry.CostQuality,
+		})
 	}
-	for i := range entries {
-		entries[i].Active = hasActive && entries[i].Model == active
-		entries[i].Recommended = slices.Contains(recommended, entries[i].Model)
-		_, present := s.catalog.Resolve(entries[i].Model)
-		entries[i].Disappeared = !present
-	}
-	return entries, nil
+	slices.SortFunc(rows, func(a, b ComparisonCostRow) int {
+		if a.TotalCostMicrousd > b.TotalCostMicrousd {
+			return -1
+		}
+		if a.TotalCostMicrousd < b.TotalCostMicrousd {
+			return 1
+		}
+		return cmp.Compare(a.Model.String(), b.Model.String())
+	})
+	return rows, nil
 }
 
 func (s *Service) apply(ctx context.Context, found Experiment) (Experiment, error) {

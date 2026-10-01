@@ -72,6 +72,7 @@ var masterProcedures = map[string]bool{
 	postpilotv1connect.AdminServiceSetUserPlanProcedure:         true,
 	postpilotv1connect.AdminServiceSetEstimatorComboProcedure:   true,
 	postpilotv1connect.AdminServiceGetExchangeRateProcedure:     true,
+	postpilotv1connect.AdminServiceListComparisonCostsProcedure: true,
 
 	// Vouchers hand out credits, so issuing, listing and revoking them sit with the tier
 	// assignment (GIFT-2). Redeeming one is any account's.

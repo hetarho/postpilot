@@ -25,7 +25,7 @@ func TestAVoiceSourcedComparisonOnTheWire(t *testing.T) {
 			{Key: "suffixes", Unit: "text", VoiceTerms: []string{"더라구요"}, TextTerms: []string{}},
 		}}},
 	}}
-	mapped := toProtoExperiment(found, detail, false)
+	mapped := toProtoExperiment(found, detail)
 	if mapped.GetSource() != postpilotv1.ExperimentSource_EXPERIMENT_SOURCE_VOICE || mapped.GetVoicePromptKey() != "opening_greeting" ||
 		mapped.GetVoicePromptText() != "첫인사를 써 보세요." || mapped.GetVoiceAnswer() != "안녕하세요, 동네 빵집이에요." {
 		t.Fatalf("experiment = %+v", mapped)
@@ -44,7 +44,7 @@ func TestAVoiceSourcedComparisonOnTheWire(t *testing.T) {
 	if mapped.GetCandidates()[1].GetOutput() != nil {
 		t.Fatal("a failed candidate carried a piece")
 	}
-	post := toProtoExperiment(experiment.Experiment{Stage: experiment.StageWrite, Source: experiment.SourcePost}, experiment.ReflectionDetail{}, false)
+	post := toProtoExperiment(experiment.Experiment{Stage: experiment.StageWrite, Source: experiment.SourcePost}, experiment.ReflectionDetail{})
 	if post.GetSource() != postpilotv1.ExperimentSource_EXPERIMENT_SOURCE_POST {
 		t.Fatalf("a post comparison's source = %v", post.GetSource())
 	}

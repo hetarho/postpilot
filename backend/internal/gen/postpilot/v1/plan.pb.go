@@ -582,6 +582,178 @@ func (x *GetExchangeRateResponse) GetUnavailable() bool {
 	return false
 }
 
+type ListComparisonCostsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         Stage                  `protobuf:"varint,1,opt,name=stage,proto3,enum=postpilot.v1.Stage" json:"stage,omitempty"`
+	Window        LeaderboardWindow      `protobuf:"varint,2,opt,name=window,proto3,enum=postpilot.v1.LeaderboardWindow" json:"window,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListComparisonCostsRequest) Reset() {
+	*x = ListComparisonCostsRequest{}
+	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListComparisonCostsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListComparisonCostsRequest) ProtoMessage() {}
+
+func (x *ListComparisonCostsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListComparisonCostsRequest.ProtoReflect.Descriptor instead.
+func (*ListComparisonCostsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListComparisonCostsRequest) GetStage() Stage {
+	if x != nil {
+		return x.Stage
+	}
+	return Stage_STAGE_UNSPECIFIED
+}
+
+func (x *ListComparisonCostsRequest) GetWindow() LeaderboardWindow {
+	if x != nil {
+		return x.Window
+	}
+	return LeaderboardWindow_LEADERBOARD_WINDOW_UNSPECIFIED
+}
+
+type ComparisonCostRow struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Model                *ModelRef              `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	ModelLabel           string                 `protobuf:"bytes,2,opt,name=model_label,json=modelLabel,proto3" json:"model_label,omitempty"`
+	EvaluatedComparisons int32                  `protobuf:"varint,3,opt,name=evaluated_comparisons,json=evaluatedComparisons,proto3" json:"evaluated_comparisons,omitempty"`
+	TotalCostMicrousd    int64                  `protobuf:"varint,4,opt,name=total_cost_microusd,json=totalCostMicrousd,proto3" json:"total_cost_microusd,omitempty"`
+	CostQuality          CostSource             `protobuf:"varint,5,opt,name=cost_quality,json=costQuality,proto3,enum=postpilot.v1.CostSource" json:"cost_quality,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ComparisonCostRow) Reset() {
+	*x = ComparisonCostRow{}
+	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComparisonCostRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComparisonCostRow) ProtoMessage() {}
+
+func (x *ComparisonCostRow) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComparisonCostRow.ProtoReflect.Descriptor instead.
+func (*ComparisonCostRow) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ComparisonCostRow) GetModel() *ModelRef {
+	if x != nil {
+		return x.Model
+	}
+	return nil
+}
+
+func (x *ComparisonCostRow) GetModelLabel() string {
+	if x != nil {
+		return x.ModelLabel
+	}
+	return ""
+}
+
+func (x *ComparisonCostRow) GetEvaluatedComparisons() int32 {
+	if x != nil {
+		return x.EvaluatedComparisons
+	}
+	return 0
+}
+
+func (x *ComparisonCostRow) GetTotalCostMicrousd() int64 {
+	if x != nil {
+		return x.TotalCostMicrousd
+	}
+	return 0
+}
+
+func (x *ComparisonCostRow) GetCostQuality() CostSource {
+	if x != nil {
+		return x.CostQuality
+	}
+	return CostSource_COST_SOURCE_UNSPECIFIED
+}
+
+type ListComparisonCostsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*ComparisonCostRow   `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListComparisonCostsResponse) Reset() {
+	*x = ListComparisonCostsResponse{}
+	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListComparisonCostsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListComparisonCostsResponse) ProtoMessage() {}
+
+func (x *ListComparisonCostsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListComparisonCostsResponse.ProtoReflect.Descriptor instead.
+func (*ListComparisonCostsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListComparisonCostsResponse) GetRows() []*ComparisonCostRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
 // One rung as a plan comparison screen lists it.
 type PlanOffer struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -603,7 +775,7 @@ type PlanOffer struct {
 
 func (x *PlanOffer) Reset() {
 	*x = PlanOffer{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -615,7 +787,7 @@ func (x *PlanOffer) String() string {
 func (*PlanOffer) ProtoMessage() {}
 
 func (x *PlanOffer) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[6]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -628,7 +800,7 @@ func (x *PlanOffer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanOffer.ProtoReflect.Descriptor instead.
 func (*PlanOffer) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PlanOffer) GetPlan() Plan {
@@ -698,7 +870,7 @@ type CreditPack struct {
 
 func (x *CreditPack) Reset() {
 	*x = CreditPack{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +882,7 @@ func (x *CreditPack) String() string {
 func (*CreditPack) ProtoMessage() {}
 
 func (x *CreditPack) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[7]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +895,7 @@ func (x *CreditPack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreditPack.ProtoReflect.Descriptor instead.
 func (*CreditPack) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreditPack) GetPriceKrw() int32 {
@@ -770,7 +942,7 @@ type EstimatorCombo struct {
 
 func (x *EstimatorCombo) Reset() {
 	*x = EstimatorCombo{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -782,7 +954,7 @@ func (x *EstimatorCombo) String() string {
 func (*EstimatorCombo) ProtoMessage() {}
 
 func (x *EstimatorCombo) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[8]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -795,7 +967,7 @@ func (x *EstimatorCombo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimatorCombo.ProtoReflect.Descriptor instead.
 func (*EstimatorCombo) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EstimatorCombo) GetCombo() string {
@@ -839,7 +1011,7 @@ type ClipEstimatorRates struct {
 
 func (x *ClipEstimatorRates) Reset() {
 	*x = ClipEstimatorRates{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -851,7 +1023,7 @@ func (x *ClipEstimatorRates) String() string {
 func (*ClipEstimatorRates) ProtoMessage() {}
 
 func (x *ClipEstimatorRates) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[9]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -864,7 +1036,7 @@ func (x *ClipEstimatorRates) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEstimatorRates.ProtoReflect.Descriptor instead.
 func (*ClipEstimatorRates) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ClipEstimatorRates) GetPerSourceMilli() int32 {
@@ -896,7 +1068,7 @@ type GetMyPlanRequest struct {
 
 func (x *GetMyPlanRequest) Reset() {
 	*x = GetMyPlanRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[10]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1080,7 @@ func (x *GetMyPlanRequest) String() string {
 func (*GetMyPlanRequest) ProtoMessage() {}
 
 func (x *GetMyPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[10]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1093,7 @@ func (x *GetMyPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyPlanRequest.ProtoReflect.Descriptor instead.
 func (*GetMyPlanRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{13}
 }
 
 type GetMyPlanResponse struct {
@@ -946,7 +1118,7 @@ type GetMyPlanResponse struct {
 
 func (x *GetMyPlanResponse) Reset() {
 	*x = GetMyPlanResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[11]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -958,7 +1130,7 @@ func (x *GetMyPlanResponse) String() string {
 func (*GetMyPlanResponse) ProtoMessage() {}
 
 func (x *GetMyPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[11]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -971,7 +1143,7 @@ func (x *GetMyPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyPlanResponse.ProtoReflect.Descriptor instead.
 func (*GetMyPlanResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetMyPlanResponse) GetPlan() Plan {
@@ -1044,7 +1216,7 @@ type SetEstimatorComboRequest struct {
 
 func (x *SetEstimatorComboRequest) Reset() {
 	*x = SetEstimatorComboRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[12]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1056,7 +1228,7 @@ func (x *SetEstimatorComboRequest) String() string {
 func (*SetEstimatorComboRequest) ProtoMessage() {}
 
 func (x *SetEstimatorComboRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[12]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +1241,7 @@ func (x *SetEstimatorComboRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetEstimatorComboRequest.ProtoReflect.Descriptor instead.
 func (*SetEstimatorComboRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SetEstimatorComboRequest) GetCombo() string {
@@ -1101,7 +1273,7 @@ type SetEstimatorComboResponse struct {
 
 func (x *SetEstimatorComboResponse) Reset() {
 	*x = SetEstimatorComboResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[13]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1113,7 +1285,7 @@ func (x *SetEstimatorComboResponse) String() string {
 func (*SetEstimatorComboResponse) ProtoMessage() {}
 
 func (x *SetEstimatorComboResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[13]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1126,7 +1298,7 @@ func (x *SetEstimatorComboResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetEstimatorComboResponse.ProtoReflect.Descriptor instead.
 func (*SetEstimatorComboResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{16}
 }
 
 type ListUsersRequest struct {
@@ -1137,7 +1309,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[14]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1149,7 +1321,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[14]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1162,7 +1334,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{17}
 }
 
 type ListUsersResponse struct {
@@ -1174,7 +1346,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[15]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1186,7 +1358,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[15]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1199,7 +1371,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{15}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListUsersResponse) GetUsers() []*PlanUser {
@@ -1222,7 +1394,7 @@ type PlanUser struct {
 
 func (x *PlanUser) Reset() {
 	*x = PlanUser{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[16]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1234,7 +1406,7 @@ func (x *PlanUser) String() string {
 func (*PlanUser) ProtoMessage() {}
 
 func (x *PlanUser) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[16]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1247,7 +1419,7 @@ func (x *PlanUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanUser.ProtoReflect.Descriptor instead.
 func (*PlanUser) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{16}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PlanUser) GetId() string {
@@ -1281,7 +1453,7 @@ type SetUserPlanRequest struct {
 
 func (x *SetUserPlanRequest) Reset() {
 	*x = SetUserPlanRequest{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[17]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1293,7 +1465,7 @@ func (x *SetUserPlanRequest) String() string {
 func (*SetUserPlanRequest) ProtoMessage() {}
 
 func (x *SetUserPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[17]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1306,7 +1478,7 @@ func (x *SetUserPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserPlanRequest.ProtoReflect.Descriptor instead.
 func (*SetUserPlanRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{17}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SetUserPlanRequest) GetUserId() string {
@@ -1332,7 +1504,7 @@ type SetUserPlanResponse struct {
 
 func (x *SetUserPlanResponse) Reset() {
 	*x = SetUserPlanResponse{}
-	mi := &file_postpilot_v1_plan_proto_msgTypes[18]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1344,7 +1516,7 @@ func (x *SetUserPlanResponse) String() string {
 func (*SetUserPlanResponse) ProtoMessage() {}
 
 func (x *SetUserPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_plan_proto_msgTypes[18]
+	mi := &file_postpilot_v1_plan_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1357,7 +1529,7 @@ func (x *SetUserPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserPlanResponse.ProtoReflect.Descriptor instead.
 func (*SetUserPlanResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{18}
+	return file_postpilot_v1_plan_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *SetUserPlanResponse) GetUser() *PlanUser {
@@ -1371,7 +1543,7 @@ var File_postpilot_v1_plan_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\n" +
-	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\xe1\x01\n" +
+	"\x17postpilot/v1/plan.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\x1a#postpilot/v1/model_experiment.proto\"\xe1\x01\n" +
 	"\tCreditLot\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
 	"\agranted\x18\x02 \x01(\x05R\agranted\x12\x1c\n" +
@@ -1418,7 +1590,19 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\x16GetExchangeRateRequest\"i\n" +
 	"\x17GetExchangeRateResponse\x12,\n" +
 	"\x04rate\x18\x01 \x01(\v2\x18.postpilot.v1.PlanFXRateR\x04rate\x12 \n" +
-	"\vunavailable\x18\x02 \x01(\bR\vunavailable\"\xee\x02\n" +
+	"\vunavailable\x18\x02 \x01(\bR\vunavailable\"\x80\x01\n" +
+	"\x1aListComparisonCostsRequest\x12)\n" +
+	"\x05stage\x18\x01 \x01(\x0e2\x13.postpilot.v1.StageR\x05stage\x127\n" +
+	"\x06window\x18\x02 \x01(\x0e2\x1f.postpilot.v1.LeaderboardWindowR\x06window\"\x84\x02\n" +
+	"\x11ComparisonCostRow\x12,\n" +
+	"\x05model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12\x1f\n" +
+	"\vmodel_label\x18\x02 \x01(\tR\n" +
+	"modelLabel\x123\n" +
+	"\x15evaluated_comparisons\x18\x03 \x01(\x05R\x14evaluatedComparisons\x12.\n" +
+	"\x13total_cost_microusd\x18\x04 \x01(\x03R\x11totalCostMicrousd\x12;\n" +
+	"\fcost_quality\x18\x05 \x01(\x0e2\x18.postpilot.v1.CostSourceR\vcostQuality\"R\n" +
+	"\x1bListComparisonCostsResponse\x123\n" +
+	"\x04rows\x18\x01 \x03(\v2\x1f.postpilot.v1.ComparisonCostRowR\x04rows\"\xee\x02\n" +
 	"\tPlanOffer\x12&\n" +
 	"\x04plan\x18\x01 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\x12 \n" +
 	"\vrecommended\x18\x05 \x01(\bR\vrecommended\x12\x1f\n" +
@@ -1486,12 +1670,13 @@ const file_postpilot_v1_plan_proto_rawDesc = "" +
 	"\n" +
 	"PLAN_LIGHT\x10\x062]\n" +
 	"\vPlanService\x12N\n" +
-	"\tGetMyPlan\x12\x1e.postpilot.v1.GetMyPlanRequest\x1a\x1f.postpilot.v1.GetMyPlanResponse\"\x002\xfe\x02\n" +
+	"\tGetMyPlan\x12\x1e.postpilot.v1.GetMyPlanRequest\x1a\x1f.postpilot.v1.GetMyPlanResponse\"\x002\xec\x03\n" +
 	"\fAdminService\x12N\n" +
 	"\tListUsers\x12\x1e.postpilot.v1.ListUsersRequest\x1a\x1f.postpilot.v1.ListUsersResponse\"\x00\x12T\n" +
 	"\vSetUserPlan\x12 .postpilot.v1.SetUserPlanRequest\x1a!.postpilot.v1.SetUserPlanResponse\"\x00\x12f\n" +
 	"\x11SetEstimatorCombo\x12&.postpilot.v1.SetEstimatorComboRequest\x1a'.postpilot.v1.SetEstimatorComboResponse\"\x00\x12`\n" +
-	"\x0fGetExchangeRate\x12$.postpilot.v1.GetExchangeRateRequest\x1a%.postpilot.v1.GetExchangeRateResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x0fGetExchangeRate\x12$.postpilot.v1.GetExchangeRateRequest\x1a%.postpilot.v1.GetExchangeRateResponse\"\x00\x12l\n" +
+	"\x13ListComparisonCosts\x12(.postpilot.v1.ListComparisonCostsRequest\x1a).postpilot.v1.ListComparisonCostsResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_plan_proto_rawDescOnce sync.Once
@@ -1506,61 +1691,75 @@ func file_postpilot_v1_plan_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_plan_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_postpilot_v1_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_postpilot_v1_plan_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_postpilot_v1_plan_proto_goTypes = []any{
-	(Plan)(0),                         // 0: postpilot.v1.Plan
-	(*CreditLot)(nil),                 // 1: postpilot.v1.CreditLot
-	(*CreditBalance)(nil),             // 2: postpilot.v1.CreditBalance
-	(*ServerExportWindow)(nil),        // 3: postpilot.v1.ServerExportWindow
-	(*PlanFXRate)(nil),                // 4: postpilot.v1.PlanFXRate
-	(*GetExchangeRateRequest)(nil),    // 5: postpilot.v1.GetExchangeRateRequest
-	(*GetExchangeRateResponse)(nil),   // 6: postpilot.v1.GetExchangeRateResponse
-	(*PlanOffer)(nil),                 // 7: postpilot.v1.PlanOffer
-	(*CreditPack)(nil),                // 8: postpilot.v1.CreditPack
-	(*EstimatorCombo)(nil),            // 9: postpilot.v1.EstimatorCombo
-	(*ClipEstimatorRates)(nil),        // 10: postpilot.v1.ClipEstimatorRates
-	(*GetMyPlanRequest)(nil),          // 11: postpilot.v1.GetMyPlanRequest
-	(*GetMyPlanResponse)(nil),         // 12: postpilot.v1.GetMyPlanResponse
-	(*SetEstimatorComboRequest)(nil),  // 13: postpilot.v1.SetEstimatorComboRequest
-	(*SetEstimatorComboResponse)(nil), // 14: postpilot.v1.SetEstimatorComboResponse
-	(*ListUsersRequest)(nil),          // 15: postpilot.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),         // 16: postpilot.v1.ListUsersResponse
-	(*PlanUser)(nil),                  // 17: postpilot.v1.PlanUser
-	(*SetUserPlanRequest)(nil),        // 18: postpilot.v1.SetUserPlanRequest
-	(*SetUserPlanResponse)(nil),       // 19: postpilot.v1.SetUserPlanResponse
-	(PostCreditsBasis)(0),             // 20: postpilot.v1.PostCreditsBasis
+	(Plan)(0),                           // 0: postpilot.v1.Plan
+	(*CreditLot)(nil),                   // 1: postpilot.v1.CreditLot
+	(*CreditBalance)(nil),               // 2: postpilot.v1.CreditBalance
+	(*ServerExportWindow)(nil),          // 3: postpilot.v1.ServerExportWindow
+	(*PlanFXRate)(nil),                  // 4: postpilot.v1.PlanFXRate
+	(*GetExchangeRateRequest)(nil),      // 5: postpilot.v1.GetExchangeRateRequest
+	(*GetExchangeRateResponse)(nil),     // 6: postpilot.v1.GetExchangeRateResponse
+	(*ListComparisonCostsRequest)(nil),  // 7: postpilot.v1.ListComparisonCostsRequest
+	(*ComparisonCostRow)(nil),           // 8: postpilot.v1.ComparisonCostRow
+	(*ListComparisonCostsResponse)(nil), // 9: postpilot.v1.ListComparisonCostsResponse
+	(*PlanOffer)(nil),                   // 10: postpilot.v1.PlanOffer
+	(*CreditPack)(nil),                  // 11: postpilot.v1.CreditPack
+	(*EstimatorCombo)(nil),              // 12: postpilot.v1.EstimatorCombo
+	(*ClipEstimatorRates)(nil),          // 13: postpilot.v1.ClipEstimatorRates
+	(*GetMyPlanRequest)(nil),            // 14: postpilot.v1.GetMyPlanRequest
+	(*GetMyPlanResponse)(nil),           // 15: postpilot.v1.GetMyPlanResponse
+	(*SetEstimatorComboRequest)(nil),    // 16: postpilot.v1.SetEstimatorComboRequest
+	(*SetEstimatorComboResponse)(nil),   // 17: postpilot.v1.SetEstimatorComboResponse
+	(*ListUsersRequest)(nil),            // 18: postpilot.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),           // 19: postpilot.v1.ListUsersResponse
+	(*PlanUser)(nil),                    // 20: postpilot.v1.PlanUser
+	(*SetUserPlanRequest)(nil),          // 21: postpilot.v1.SetUserPlanRequest
+	(*SetUserPlanResponse)(nil),         // 22: postpilot.v1.SetUserPlanResponse
+	(Stage)(0),                          // 23: postpilot.v1.Stage
+	(LeaderboardWindow)(0),              // 24: postpilot.v1.LeaderboardWindow
+	(*ModelRef)(nil),                    // 25: postpilot.v1.ModelRef
+	(CostSource)(0),                     // 26: postpilot.v1.CostSource
+	(PostCreditsBasis)(0),               // 27: postpilot.v1.PostCreditsBasis
 }
 var file_postpilot_v1_plan_proto_depIdxs = []int32{
 	1,  // 0: postpilot.v1.CreditBalance.lots:type_name -> postpilot.v1.CreditLot
 	4,  // 1: postpilot.v1.GetExchangeRateResponse.rate:type_name -> postpilot.v1.PlanFXRate
-	0,  // 2: postpilot.v1.PlanOffer.plan:type_name -> postpilot.v1.Plan
-	10, // 3: postpilot.v1.EstimatorCombo.clip_rates:type_name -> postpilot.v1.ClipEstimatorRates
-	20, // 4: postpilot.v1.EstimatorCombo.post_credits_basis:type_name -> postpilot.v1.PostCreditsBasis
-	0,  // 5: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
-	2,  // 6: postpilot.v1.GetMyPlanResponse.balance:type_name -> postpilot.v1.CreditBalance
-	7,  // 7: postpilot.v1.GetMyPlanResponse.offers:type_name -> postpilot.v1.PlanOffer
-	9,  // 8: postpilot.v1.GetMyPlanResponse.estimator_combos:type_name -> postpilot.v1.EstimatorCombo
-	8,  // 9: postpilot.v1.GetMyPlanResponse.credit_packs:type_name -> postpilot.v1.CreditPack
-	3,  // 10: postpilot.v1.GetMyPlanResponse.server_export_window:type_name -> postpilot.v1.ServerExportWindow
-	17, // 11: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
-	0,  // 12: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
-	0,  // 13: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
-	17, // 14: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
-	11, // 15: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
-	15, // 16: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
-	18, // 17: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
-	13, // 18: postpilot.v1.AdminService.SetEstimatorCombo:input_type -> postpilot.v1.SetEstimatorComboRequest
-	5,  // 19: postpilot.v1.AdminService.GetExchangeRate:input_type -> postpilot.v1.GetExchangeRateRequest
-	12, // 20: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
-	16, // 21: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
-	19, // 22: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
-	14, // 23: postpilot.v1.AdminService.SetEstimatorCombo:output_type -> postpilot.v1.SetEstimatorComboResponse
-	6,  // 24: postpilot.v1.AdminService.GetExchangeRate:output_type -> postpilot.v1.GetExchangeRateResponse
-	20, // [20:25] is the sub-list for method output_type
-	15, // [15:20] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	23, // 2: postpilot.v1.ListComparisonCostsRequest.stage:type_name -> postpilot.v1.Stage
+	24, // 3: postpilot.v1.ListComparisonCostsRequest.window:type_name -> postpilot.v1.LeaderboardWindow
+	25, // 4: postpilot.v1.ComparisonCostRow.model:type_name -> postpilot.v1.ModelRef
+	26, // 5: postpilot.v1.ComparisonCostRow.cost_quality:type_name -> postpilot.v1.CostSource
+	8,  // 6: postpilot.v1.ListComparisonCostsResponse.rows:type_name -> postpilot.v1.ComparisonCostRow
+	0,  // 7: postpilot.v1.PlanOffer.plan:type_name -> postpilot.v1.Plan
+	13, // 8: postpilot.v1.EstimatorCombo.clip_rates:type_name -> postpilot.v1.ClipEstimatorRates
+	27, // 9: postpilot.v1.EstimatorCombo.post_credits_basis:type_name -> postpilot.v1.PostCreditsBasis
+	0,  // 10: postpilot.v1.GetMyPlanResponse.plan:type_name -> postpilot.v1.Plan
+	2,  // 11: postpilot.v1.GetMyPlanResponse.balance:type_name -> postpilot.v1.CreditBalance
+	10, // 12: postpilot.v1.GetMyPlanResponse.offers:type_name -> postpilot.v1.PlanOffer
+	12, // 13: postpilot.v1.GetMyPlanResponse.estimator_combos:type_name -> postpilot.v1.EstimatorCombo
+	11, // 14: postpilot.v1.GetMyPlanResponse.credit_packs:type_name -> postpilot.v1.CreditPack
+	3,  // 15: postpilot.v1.GetMyPlanResponse.server_export_window:type_name -> postpilot.v1.ServerExportWindow
+	20, // 16: postpilot.v1.ListUsersResponse.users:type_name -> postpilot.v1.PlanUser
+	0,  // 17: postpilot.v1.PlanUser.plan:type_name -> postpilot.v1.Plan
+	0,  // 18: postpilot.v1.SetUserPlanRequest.plan:type_name -> postpilot.v1.Plan
+	20, // 19: postpilot.v1.SetUserPlanResponse.user:type_name -> postpilot.v1.PlanUser
+	14, // 20: postpilot.v1.PlanService.GetMyPlan:input_type -> postpilot.v1.GetMyPlanRequest
+	18, // 21: postpilot.v1.AdminService.ListUsers:input_type -> postpilot.v1.ListUsersRequest
+	21, // 22: postpilot.v1.AdminService.SetUserPlan:input_type -> postpilot.v1.SetUserPlanRequest
+	16, // 23: postpilot.v1.AdminService.SetEstimatorCombo:input_type -> postpilot.v1.SetEstimatorComboRequest
+	5,  // 24: postpilot.v1.AdminService.GetExchangeRate:input_type -> postpilot.v1.GetExchangeRateRequest
+	7,  // 25: postpilot.v1.AdminService.ListComparisonCosts:input_type -> postpilot.v1.ListComparisonCostsRequest
+	15, // 26: postpilot.v1.PlanService.GetMyPlan:output_type -> postpilot.v1.GetMyPlanResponse
+	19, // 27: postpilot.v1.AdminService.ListUsers:output_type -> postpilot.v1.ListUsersResponse
+	22, // 28: postpilot.v1.AdminService.SetUserPlan:output_type -> postpilot.v1.SetUserPlanResponse
+	17, // 29: postpilot.v1.AdminService.SetEstimatorCombo:output_type -> postpilot.v1.SetEstimatorComboResponse
+	6,  // 30: postpilot.v1.AdminService.GetExchangeRate:output_type -> postpilot.v1.GetExchangeRateResponse
+	9,  // 31: postpilot.v1.AdminService.ListComparisonCosts:output_type -> postpilot.v1.ListComparisonCostsResponse
+	26, // [26:32] is the sub-list for method output_type
+	20, // [20:26] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_plan_proto_init() }
@@ -1569,13 +1768,14 @@ func file_postpilot_v1_plan_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_model_experiment_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_plan_proto_rawDesc), len(file_postpilot_v1_plan_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

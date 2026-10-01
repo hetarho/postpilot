@@ -2,6 +2,8 @@ import type { ModelRef } from '@/entities/model-catalog'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import {
+  AdminService,
+  CostSource,
   ExperimentOrigin,
   ExperimentSource,
   LeaderboardScope,
@@ -10,7 +12,9 @@ import {
   StartExperimentResponseSchema,
   ExperimentStatus,
   Stage,
+  type ProtoLeaderboardEntry,
 } from '@/shared/api'
+import { ListComparisonCostsResponseSchema } from '@/shared/api/gen/postpilot/v1/plan_pb'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -28,6 +32,16 @@ export interface FakeWriteExperimentStart {
 }
 
 export interface FakeExperimentsOptions {
+  comparisonCostRows?: Array<{
+    model: ModelRef
+    modelLabel: string
+    evaluatedComparisons: number
+    totalCostMicrousd: bigint
+    costQuality: CostSource
+  }>
+  comparisonCostReads?: Array<{ stage: Stage; window: LeaderboardWindow }>
+  comparisonCostFails?: boolean
+  comparisonCostFailures?: number
   candidateStarts?: Array<{ kind: 'observe' | 'write' | 'voice'; refs: ModelRef[] }>
   observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
   history?: Array<{
@@ -48,6 +62,7 @@ export interface FakeExperimentsOptions {
   }>
   listFails?: boolean
   leaderboardFails?: boolean
+  leaderboardEntries?: ProtoLeaderboardEntry[]
   detailFails?: boolean
   readGate?: Promise<void>
   starts?: FakeWriteExperimentStart[]
@@ -74,6 +89,14 @@ export function registerExperimentService(
     if (stage === Stage.ANALYZE)
       throw connectAppError('EXPERIMENT_STAGE_INVALID', Code.InvalidArgument)
   }
+  let comparisonCostFailures = options.comparisonCostFailures ?? 0
+  router.rpc(AdminService.method.listComparisonCosts, (request) => {
+    options.comparisonCostReads?.push({ stage: request.stage, window: request.window })
+    refuseAnalyze(request.stage)
+    if (options.comparisonCostFails || comparisonCostFailures-- > 0)
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    return create(ListComparisonCostsResponseSchema, { rows: options.comparisonCostRows ?? [] })
+  })
   router.rpc(ModelExperimentService.method.listExperiments, async (request) => {
     options.reads?.push({ kind: 'history', stage: request.stage, source: request.source })
     refuseAnalyze(request.stage)
@@ -101,7 +124,7 @@ export function registerExperimentService(
     refuseAnalyze(request.stage)
     if (options.readGate) await options.readGate
     if (options.leaderboardFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    return { entries: [] }
+    return { entries: options.leaderboardEntries ?? [] }
   })
   router.rpc(ModelExperimentService.method.getExperiment, async (request) => {
     if (options.readGate) await options.readGate
