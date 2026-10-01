@@ -15,8 +15,9 @@ import { preparePhoto, putPhoto } from '../api/photo'
 const PARTS: readonly VoicePromptPart[] = ['opening', 'description', 'closing']
 
 /** `문항 풀기` and its sheet (VOICE-60, VOICE-64): the shared prompts grouped 글머리 · 본문 · 마무리,
- *  answered ones marked, and one prompt answered at a time — a photo prompt on a photo the owner
- *  picks from their device. Answering enqueues nothing. */
+ *  answered ones marked — a photo prompt on a photo the owner picks from their device. The sheet
+ *  stays open after each answer and moves on to the next unanswered prompt until the owner closes
+ *  it (VOICE-65). Answering enqueues nothing. */
 export function AnswerPromptsSheet({
   ownerId,
   voiceId,
@@ -62,22 +63,58 @@ function PromptsPanel({
   const titleId = useId()
   const { prompts, isPending, isError } = useVoicePrompts()
   const [chosen, setChosen] = useState<VoicePrompt | null>(null)
-  const answered = new Set(
-    samples.filter((sample) => sample.kind === 'answer').map((sample) => sample.promptKey),
-  )
+  // Keys saved in this sitting: the save resolves before the profile refetch that lists it, and
+  // without these the prompt just answered would be offered again as the next one.
+  const [savedKeys, setSavedKeys] = useState<ReadonlySet<string>>(() => new Set())
+  const [saved, setSaved] = useState(false)
+  const answered = new Set([
+    ...samples.filter((sample) => sample.kind === 'answer').map((sample) => sample.promptKey),
+    ...savedKeys,
+  ])
+
+  /** The first unanswered prompt after `key` in the served order, wrapping, never `key` itself. */
+  const nextAfter = (key: string, done: ReadonlySet<string>) => {
+    const at = prompts.findIndex((prompt) => prompt.key === key)
+    for (let step = 1; step < prompts.length; step++) {
+      const prompt = prompts[(at + step) % prompts.length]
+      if (!done.has(prompt.key)) return prompt
+    }
+    return null
+  }
+
+  const open = (prompt: VoicePrompt | null) => {
+    setSaved(false)
+    setChosen(prompt)
+  }
+
+  const answeredOne = (key: string) => {
+    setSavedKeys((keys) => new Set([...keys, key]))
+    setChosen(nextAfter(key, new Set([...answered, key])))
+    setSaved(true)
+  }
+
+  const next = chosen ? nextAfter(chosen.key, answered) : null
 
   return (
     <Sheet open labelledBy={titleId} onClose={onClose}>
       <Typography variant="title" as="h2" id={titleId}>
         {t('prompts.title')}
       </Typography>
+      {/* Present at rest, so the save it later names is announced (VOICE-65). */}
+      <Typography variant="meta" as="p" role="status" className="mt-1">
+        {saved ? t('prompts.saved') : ''}
+      </Typography>
       {chosen ? (
         <AnswerForm
+          key={chosen.key}
           ownerId={ownerId}
           voiceId={voiceId}
           prompt={chosen}
-          onBack={() => setChosen(null)}
-          onDone={onClose}
+          focusOnMount
+          onEdit={() => setSaved(false)}
+          onBack={() => open(null)}
+          onSkip={next ? () => open(next) : undefined}
+          onDone={() => answeredOne(chosen.key)}
         />
       ) : isError ? (
         <FieldMessage className="mt-4">{t('prompts.loadFailed')}</FieldMessage>
@@ -97,7 +134,7 @@ function PromptsPanel({
                       <button
                         type="button"
                         disabled={done}
-                        onClick={() => setChosen(prompt)}
+                        onClick={() => open(prompt)}
                         className="hover:bg-row-bg-hover active:bg-row-bg-active disabled:text-content-tertiary flex min-h-11 w-full items-center gap-2 py-3 text-left"
                       >
                         <Typography variant="body" as="span" className="min-w-0 flex-1">
@@ -123,23 +160,33 @@ type PhotoState =
   | { phase: 'ready'; photo: ResizedJpeg; preview: string }
   | { phase: 'failed' }
 
-/** One prompt's answer form, also opened from 검증 for a prompt not yet answered (VOICE-43). */
+/** One prompt's answer form, also opened from 검증 for a prompt not yet answered (VOICE-43).
+ *  `onSkip` adds 건너뛰기, and `focusOnMount` puts the cursor in the answer — the sheet's run of
+ *  prompts passes both, 검증's single answer neither (VOICE-65). */
 export function AnswerForm({
   ownerId,
   voiceId,
   prompt,
+  focusOnMount = false,
+  onEdit,
   onBack,
+  onSkip,
   onDone,
 }: {
   ownerId: string
   voiceId: string
   prompt: VoicePrompt
+  focusOnMount?: boolean
+  /** Any change to the answer or its photo. */
+  onEdit?: () => void
   onBack: () => void
+  onSkip?: () => void
   onDone: () => void
 }) {
   const { t } = useTranslation(['voices', 'common'])
   const id = useId()
   const fileInput = useRef<HTMLInputElement>(null)
+  const answerField = useRef<HTMLTextAreaElement>(null)
   const [body, setBody] = useState('')
   const [photo, setPhoto] = useState<PhotoState>({ phase: 'none' })
   const [uploading, setUploading] = useState(false)
@@ -151,8 +198,14 @@ export function AnswerForm({
   const preview = photo.phase === 'ready' ? photo.preview : ''
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
 
+  // The list row or the form that opened this one is gone, so focus would fall to the page.
+  useEffect(() => {
+    if (focusOnMount) answerField.current?.focus()
+  }, [focusOnMount])
+
   const pick = async (file: File | undefined) => {
     if (!file) return
+    onEdit?.()
     setPhoto({ phase: 'converting' })
     try {
       const converted = await preparePhoto(file)
@@ -247,9 +300,13 @@ export function AnswerForm({
       <div>
         <FieldLabel htmlFor={`${id}-answer`}>{t('prompts.answer', { ns: 'voices' })}</FieldLabel>
         <Textarea
+          ref={answerField}
           id={`${id}-answer`}
           value={body}
-          onChange={(event) => setBody(event.target.value)}
+          onChange={(event) => {
+            onEdit?.()
+            setBody(event.target.value)
+          }}
           rows={4}
           autoGrow
           aria-invalid={answer.isError || undefined}
@@ -266,6 +323,11 @@ export function AnswerForm({
         <Button variant="ghost" disabled={pending} onClick={onBack}>
           {t('prompts.back', { ns: 'voices' })}
         </Button>
+        {onSkip && (
+          <Button variant="ghost" disabled={pending} onClick={onSkip}>
+            {t('prompts.skip', { ns: 'voices' })}
+          </Button>
+        )}
         <Button type="submit" variant="cta" disabled={disabled} pending={pending}>
           {t('prompts.submit', { ns: 'voices' })}
         </Button>

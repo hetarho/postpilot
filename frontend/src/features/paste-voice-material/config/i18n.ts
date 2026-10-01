@@ -18,6 +18,7 @@ export const i18n = {
       remaining_one: '{{count}}자 더 필요해요',
       remaining_other: '{{count}}자 더 필요해요',
       submit: '추가',
+      added: '글을 추가했어요',
     },
   },
   en: {
@@ -35,6 +36,7 @@ export const i18n = {
       remaining_one: '{{count}} more character needed',
       remaining_other: '{{count}} more characters needed',
       submit: 'Add',
+      added: 'Post added',
     },
   },
 } as const satisfies I18nFragment
