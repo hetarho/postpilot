@@ -72,6 +72,34 @@ it('keeps stable side order and hides model/accounting before reveal', () => {
   expect(candidates[0]).not.toHaveClass('overflow-y-auto')
 })
 
+it('renders five shuffled blind outputs as A through E in two desktop columns', () => {
+  const five: ModelExperiment = {
+    ...base,
+    origin: 'lab',
+    candidates: (['e', 'c', 'right', 'd', 'left'] as const).map((side) => ({
+      ...base.candidates[0],
+      id: side,
+      displaySide: side,
+      output: written(`결과 ${side}`),
+      model: { providerId: 'secret-provider', modelId: side },
+      modelLabel: `secret-provider ${side}`,
+    })),
+  }
+  const { container } = render(<CandidateComparison experiment={five} activeCandidateId="left" />)
+  const articles = screen.getAllByRole('article')
+  expect(articles.map((item) => item.getAttribute('aria-label'))).toEqual([
+    '후보 A',
+    '후보 B',
+    '후보 C',
+    '후보 D',
+    '후보 E',
+  ])
+  expect(within(articles[0]).getByText('결과 left')).toBeInTheDocument()
+  expect(within(articles[4]).getByText('결과 e')).toBeInTheDocument()
+  expect(container.querySelector('.md\\:grid-cols-2')).toBeInTheDocument()
+  expect(screen.queryByText(/secret-provider/)).not.toBeInTheDocument()
+})
+
 it('reveals label, tokens, latency, and estimated cost only after verdict', () => {
   const revealed: ModelExperiment = {
     ...base,

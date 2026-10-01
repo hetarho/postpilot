@@ -30,12 +30,14 @@ export function useStartWriteExperiment() {
       modelB: ModelRef,
       targetLength?: number,
       reobserveFiles?: readonly string[],
+      extras: readonly ModelRef[] = [],
     ) =>
       mutation.mutateAsync({
         postSlug,
         observeModel: observeModel ? create(ModelRefSchema, observeModel) : undefined,
         modelA: create(ModelRefSchema, modelA),
         modelB: create(ModelRefSchema, modelB),
+        candidates: [modelA, modelB, ...extras].map((ref) => create(ModelRefSchema, ref)),
         origin: origin === 'lab' ? ExperimentOrigin.LAB : ExperimentOrigin.EDITOR,
         targetLength,
         reobserve: reobserveFiles

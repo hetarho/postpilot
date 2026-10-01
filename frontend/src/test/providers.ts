@@ -27,6 +27,7 @@ import {
   Stage,
   PostCreditsBasis,
 } from '@/shared/api'
+import { SaveLabExtraCandidatesResponseSchema } from '@/shared/api/gen/postpilot/v1/provider_pb'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -132,7 +133,10 @@ export interface FakeProvidersOptions {
     stage: Stage
     candidateA: { providerId: string; modelId: string }
     candidateB: { providerId: string; modelId: string }
+    extraCandidates?: Array<{ providerId: string; modelId: string }>
   }>
+  onSaveLabExtras?: (modelIds: string[]) => void
+  saveExtrasGate?: Promise<void>
   /** Every SaveComparisonPair the screen sent, by model id. A form that writes as it is
    *  chosen is tested by what it wrote and when, not by what it rendered. */
   onSavePair?: (pair: { a: string; b: string }) => void
@@ -262,6 +266,17 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
             slot: SelectionSlot.CANDIDATE_B,
             ref: pair.candidateB,
           }),
+          extraCandidates: (pair.extraCandidates ?? []).map((ref, index) =>
+            create(SelectionSchema, {
+              stage: pair.stage,
+              slot: [
+                SelectionSlot.CANDIDATE_C,
+                SelectionSlot.CANDIDATE_D,
+                SelectionSlot.CANDIDATE_E,
+              ][index],
+              ref,
+            }),
+          ),
         }),
       ),
     }),
@@ -315,7 +330,13 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
     options.onSavePair?.({ a: candidateA.modelId, b: candidateB.modelId })
     comparisonPairs = [
       ...comparisonPairs.filter((pair) => pair.stage !== request.stage),
-      { stage: request.stage, candidateA, candidateB },
+      {
+        stage: request.stage,
+        candidateA,
+        candidateB,
+        extraCandidates:
+          comparisonPairs.find((pair) => pair.stage === request.stage)?.extraCandidates ?? [],
+      },
     ]
     return create(SaveComparisonPairResponseSchema, {
       pair: create(ComparisonPairSchema, {
@@ -330,6 +351,50 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
           slot: SelectionSlot.CANDIDATE_B,
           ref: candidateB,
         }),
+        extraCandidates: (
+          comparisonPairs.find((pair) => pair.stage === request.stage)?.extraCandidates ?? []
+        ).map((ref, index) =>
+          create(SelectionSchema, {
+            stage: request.stage,
+            slot: [SelectionSlot.CANDIDATE_C, SelectionSlot.CANDIDATE_D, SelectionSlot.CANDIDATE_E][
+              index
+            ],
+            ref,
+          }),
+        ),
+      }),
+    })
+  })
+  rpc(ProviderService.method.saveLabExtraCandidates, async (request) => {
+    calls?.push('SaveLabExtraCandidates')
+    await options.saveExtrasGate
+    options.onSaveLabExtras?.(request.extraCandidates.map((ref) => ref.modelId))
+    const old = comparisonPairs.find((pair) => pair.stage === request.stage)
+    if (!old) throw connectAppError('MODEL_COMPARISON_PAIR_INCOMPLETE', Code.FailedPrecondition)
+    const updated = { ...old, extraCandidates: [...request.extraCandidates] }
+    comparisonPairs = [...comparisonPairs.filter((pair) => pair.stage !== request.stage), updated]
+    return create(SaveLabExtraCandidatesResponseSchema, {
+      pair: create(ComparisonPairSchema, {
+        stage: request.stage,
+        candidateA: create(SelectionSchema, {
+          stage: request.stage,
+          slot: SelectionSlot.CANDIDATE_A,
+          ref: updated.candidateA,
+        }),
+        candidateB: create(SelectionSchema, {
+          stage: request.stage,
+          slot: SelectionSlot.CANDIDATE_B,
+          ref: updated.candidateB,
+        }),
+        extraCandidates: updated.extraCandidates.map((ref, index) =>
+          create(SelectionSchema, {
+            stage: request.stage,
+            slot: [SelectionSlot.CANDIDATE_C, SelectionSlot.CANDIDATE_D, SelectionSlot.CANDIDATE_E][
+              index
+            ],
+            ref,
+          }),
+        ),
       }),
     })
   })

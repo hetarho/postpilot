@@ -73,7 +73,7 @@ export function CandidateComparison({
             // the screen, was impossible. The card is a `md:` treatment for the same reason: below
             // that only one panel is on screen, so a raised box around it frames the entire page
             // and costs two Korean characters per line of gutter (THEME-13).
-            className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
+            className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised min-w-0 break-words md:block md:rounded-lg md:p-4`}
           >
             <div className="flex min-h-11 items-center justify-between gap-2">
               <Typography variant="title">{t('comparison.candidate', { label })}</Typography>

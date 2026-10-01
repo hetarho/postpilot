@@ -79,10 +79,11 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
   const output = value.output
   return {
     id: value.id,
-    displaySide: value.displaySide === DisplaySide.LEFT ? 'left' : 'right',
+    displaySide: displaySideName(value.displaySide),
     status: candidateStatusName(value.status),
     badges: value.badges.map(badgeFromProto).filter((badge) => badge !== undefined),
     otherNote: value.otherNote,
+    rank: value.rank,
     output:
       output.case === 'postContent'
         ? { kind: 'write', content: output.value }
@@ -110,6 +111,27 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
           latencyMs: value.usage.latencyMs,
         }
       : undefined,
+  }
+}
+
+function displaySideName(value: DisplaySide): ExperimentCandidate['displaySide'] {
+  switch (value) {
+    case DisplaySide.LEFT:
+      return 'left'
+    case DisplaySide.RIGHT:
+      return 'right'
+    case DisplaySide.C:
+      return 'c'
+    case DisplaySide.D:
+      return 'd'
+    case DisplaySide.E:
+      return 'e'
+    case DisplaySide.UNSPECIFIED:
+      return 'left'
+    default: {
+      const impossible: never = value
+      throw new Error(`Unknown display side: ${impossible}`)
+    }
   }
 }
 

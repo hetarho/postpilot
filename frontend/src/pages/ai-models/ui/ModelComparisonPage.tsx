@@ -1,18 +1,27 @@
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import {
   type ComparisonPair,
   type ModelRef,
+  modelChoiceIssue,
+  filterForStage,
   refKey,
   sameRef,
   useComparisonPairSavePending,
   useModelSetup,
+  useModels,
+  useLabExtraCandidatesSavePending,
   useStageSelection,
 } from '@/entities/model-catalog'
 import { useStartModelExperiment, useStartWriteExperiment } from '@/entities/model-experiment'
 import { displayTitle, usePost, usePosts } from '@/entities/post'
-import { ModelPairForm, type ShownPair } from '@/features/configure-model-pair'
+import {
+  LabExtraCandidates,
+  labCandidateRefs,
+  ModelPairForm,
+  type ShownPair,
+} from '@/features/configure-model-pair'
 import {
   comparisonGenerationPreconditions,
   needsPicker,
@@ -42,6 +51,8 @@ export function ModelComparisonPage() {
   const startHintId = useId()
   const setup = useModelSetup()
   const pairSaving = useComparisonPairSavePending()
+  const extraSaving = useLabExtraCandidatesSavePending()
+  const { models } = useModels()
   const { posts } = usePosts()
   const start = useStartModelExperiment()
   const navigate = useNavigate()
@@ -50,34 +61,52 @@ export function ModelComparisonPage() {
   // wrote nothing — incomplete, or one model twice — the stored pair is not what the owner
   // sees, so nothing may start against it.
   const [shown, setShown] = useState<ShownPair>()
+  const [shownExtras, setShownExtras] = useState<{ stage: string; keys: string[] }>()
+  const onExtrasShown = useCallback((keys: string[]) => setShownExtras({ stage, keys }), [stage])
   const pair = shownIsStored(shown, stage, stored) ? stored : undefined
+  const refs = labCandidateRefs(pair, shownExtras?.stage === stage ? shownExtras.keys : undefined)
+  const suitable = filterForStage(models, stage)
+  const candidatesReady = Boolean(
+    refs?.every((ref) => {
+      const model = suitable.find((item) => sameRef(item.ref, ref))
+      return model && !modelChoiceIssue(model, stage)
+    }),
+  )
   // What the CTA is still waiting for, in the user's words. `pair` comes from the server, so
   // choosing A and B in the form above is not enough — the combination has to have been SAVED,
   // and a greyed button two screens down cannot say that on its own (THEME-24).
   const unmet = [
     !pair?.candidateA || !pair.candidateB ? t('page.requirement.pair', { ns: 'models' }) : '',
+    pair?.candidateA && pair.candidateB && !candidatesReady
+      ? t('page.requirement.candidates', { ns: 'models' })
+      : '',
     stage === 'observe' && !postSlug ? t('page.requirement.photoPost', { ns: 'models' }) : '',
   ].filter(Boolean)
-  const canStart = !pairSaving && unmet.length === 0
-  const startHint = pairSaving
-    ? t('page.pairSaving', { ns: 'models' })
-    : canStart
-      ? ''
-      : t('page.canStart', {
-          ns: 'models',
-          requirements: unmet.join(t('page.requirementSeparator', { ns: 'models' })),
-        })
+  const canStart = !pairSaving && !extraSaving && unmet.length === 0
+  const startHint =
+    pairSaving || extraSaving
+      ? t('page.pairSaving', { ns: 'models' })
+      : canStart
+        ? ''
+        : t('page.canStart', {
+            ns: 'models',
+            requirements: unmet.join(t('page.requirementSeparator', { ns: 'models' })),
+          })
   const startComparison = async () => {
     // The CTA is `aria-disabled`, not `disabled`, so it keeps its place in the focus order and can
     // still be activated from a keyboard — the preconditions are enforced here, not by the browser.
     if (stage === 'write' || !canStart || start.isPending) return
-    if (!pair?.candidateA || !pair.candidateB) return
-    const response = await start.startObserve(postSlug, pair.candidateA.ref, pair.candidateB.ref)
-    void navigate({
-      to: '/ai-models/experiments/$id',
-      params: { id: response.experimentId },
-      search: { stage, from: 'compare' },
-    })
+    if (!refs) return
+    try {
+      const response = await start.startObserve(postSlug, refs[0], refs[1], refs.slice(2))
+      void navigate({
+        to: '/ai-models/experiments/$id',
+        params: { id: response.experimentId },
+        search: { stage, from: 'compare' },
+      })
+    } catch {
+      // The mutation's refusal stays beside the start control.
+    }
   }
   return (
     <main className={pageStyles({ width: 'board', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
@@ -88,9 +117,20 @@ export function ModelComparisonPage() {
           {/* Keyed by stage: the form's save mutations live inside the feature, and a '저장했어요'
               or a save error belongs to the tab it was fired from, not to the next one. */}
           <ModelPairForm key={tab} stage={stage} onShownChange={setShown} />
+          <LabExtraCandidates
+            key={`extras:${tab}:${stored?.extraCandidates.map((candidate) => refKey(candidate.ref)).join('|') ?? ''}`}
+            stage={stage}
+            pair={stored}
+            onShownChange={onExtrasShown}
+          />
         </div>
         {tab === 'voice' ? (
-          <VoiceReflectionStart pair={pair} pairPending={setup.isPending} pairSaving={pairSaving} />
+          <VoiceReflectionStart
+            pair={pair}
+            refs={candidatesReady ? refs : undefined}
+            pairPending={setup.isPending}
+            pairSaving={pairSaving || extraSaving}
+          />
         ) : (
           <PostComparisonStart
             stage={stage}
@@ -98,8 +138,9 @@ export function ModelComparisonPage() {
             onPostChange={setPostSlug}
             posts={posts}
             pair={pair}
+            refs={candidatesReady ? refs : undefined}
             pairPending={setup.isPending}
-            pairSaving={pairSaving}
+            pairSaving={pairSaving || extraSaving}
             canStart={canStart}
             startHint={startHint}
             startHintId={startHintId}
@@ -118,6 +159,7 @@ function PostComparisonStart({
   onPostChange,
   posts,
   pair,
+  refs,
   pairPending,
   pairSaving,
   canStart,
@@ -131,6 +173,7 @@ function PostComparisonStart({
   onPostChange: (slug: string) => void
   posts: ReturnType<typeof usePosts>['posts']
   pair: ComparisonPair | undefined
+  refs: ModelRef[] | undefined
   pairPending: boolean
   pairSaving: boolean
   canStart: boolean
@@ -170,6 +213,7 @@ function PostComparisonStart({
         <WriteComparisonStart
           postSlug={postSlug}
           pair={pair}
+          refs={refs}
           pairPending={pairPending}
           pairSaving={pairSaving}
         />
@@ -207,11 +251,13 @@ function PostComparisonStart({
 function WriteComparisonStart({
   postSlug,
   pair,
+  refs,
   pairPending,
   pairSaving,
 }: {
   postSlug: string
   pair: ComparisonPair | undefined
+  refs: ModelRef[] | undefined
   pairPending: boolean
   pairSaving: boolean
 }) {
@@ -234,6 +280,7 @@ function WriteComparisonStart({
       key={postSlug}
       postSlug={postSlug}
       pair={pair}
+      refs={refs}
       pairPending={pairPending}
       pairSaving={pairSaving}
       hintId={hintId}
@@ -244,12 +291,14 @@ function WriteComparisonStart({
 function SelectedPostWriteComparison({
   postSlug,
   pair,
+  refs,
   pairPending,
   pairSaving,
   hintId,
 }: {
   postSlug: string
   pair: ComparisonPair | undefined
+  refs: ModelRef[] | undefined
   pairPending: boolean
   pairSaving: boolean
   hintId: string
@@ -269,6 +318,7 @@ function SelectedPostWriteComparison({
     write.models,
     pair?.candidateB && !pair.candidateB.missing ? pair.candidateB.ref : undefined,
   )
+  const extraSelections = refs?.slice(2).map((ref) => resolveSelection(write.models, ref))
   const precondition = post
     ? comparisonGenerationPreconditions({
         images: post.images,
@@ -300,9 +350,11 @@ function SelectedPostWriteComparison({
             ? t('page.modelChecking')
             : post.pendingExperimentId
               ? t('page.pendingResult')
-              : precondition && !precondition.ok
-                ? precondition.reason
-                : ''
+              : !refs || extraSelections?.some((item) => !item)
+                ? t('page.requirement.candidates')
+                : precondition && !precondition.ok
+                  ? precondition.reason
+                  : ''
   const canStart = Boolean(post) && !reason && !start.isPending
 
   // The model lab is the write comparison's second entry point (MODEL-31), so it goes through
@@ -310,7 +362,7 @@ function SelectedPostWriteComparison({
   const [picking, setPicking] = useState(false)
 
   const enqueue = async (reobserveFiles?: readonly string[]) => {
-    if (!canStart || !post || !writeA || !writeB) return
+    if (!canStart || !post || !writeA || !writeB || !refs) return
     try {
       const response = await start.start(
         post.slug,
@@ -321,6 +373,7 @@ function SelectedPostWriteComparison({
         writeB.ref,
         post.targetLength,
         reobserveFiles,
+        refs.slice(2),
       )
       void navigate({
         to: '/ai-models/experiments/$id',

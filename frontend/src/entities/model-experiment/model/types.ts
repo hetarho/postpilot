@@ -6,7 +6,7 @@ import type { AppFailure, ContentLanguage, Observation, PostContent } from '@/sh
 export type ExperimentStatusName =
   'queued' | 'running' | 'review' | 'partial' | 'decided' | 'dismissed' | 'failed'
 export type CandidateStatusName = 'pending' | 'running' | 'succeeded' | 'failed'
-export type DisplaySideName = 'left' | 'right'
+export type DisplaySideName = 'left' | 'right' | 'c' | 'd' | 'e'
 /** `withheld` is a reader the server sends no supplier cost to — anyone but the operator
  *  (QUOTA-66). The screen says nothing about cost then, not "cost unavailable". */
 export type CostSourceName = 'reported' | 'estimated' | 'unavailable' | 'mixed' | 'withheld'
@@ -51,6 +51,7 @@ export interface ExperimentCandidate {
   /** What the verdict said about this candidate. Revealed with its identity, never before. */
   badges: VerdictBadgeName[]
   otherNote: string
+  rank?: number
   output?: CandidateOutput
   failure: AppFailure | undefined
   model?: ModelRef

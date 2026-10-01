@@ -13,12 +13,19 @@ export function useStartVoiceReflection() {
     isError: mutation.isError,
     failure,
     errorMessage: failure ? formatAppFailure(failure) : '',
-    start: (voiceId: string, promptKey: string, modelA: ModelRef, modelB: ModelRef) =>
+    start: (
+      voiceId: string,
+      promptKey: string,
+      modelA: ModelRef,
+      modelB: ModelRef,
+      extras: readonly ModelRef[] = [],
+    ) =>
       mutation.mutateAsync({
         voiceId,
         promptKey,
         modelA: create(ModelRefSchema, modelA),
         modelB: create(ModelRefSchema, modelB),
+        candidates: [modelA, modelB, ...extras].map((ref) => create(ModelRefSchema, ref)),
       }),
   }
 }

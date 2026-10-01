@@ -74,6 +74,8 @@ export {
   useComparisonPairSavePending,
   useModelSetup,
   useSaveComparisonPair,
+  useSaveLabExtraCandidates,
+  useLabExtraCandidatesSavePending,
 } from './api/useModelSetup'
 export {
   useDeleteRecommendationSet,

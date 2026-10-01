@@ -30,10 +30,12 @@ import {
  *  choosable unless both write models read images, and the reason says so. */
 export function VoiceReflectionStart({
   pair,
+  refs,
   pairPending,
   pairSaving,
 }: {
   pair: ComparisonPair | undefined
+  refs: ModelRef[] | undefined
   pairPending: boolean
   pairSaving: boolean
 }) {
@@ -63,8 +65,9 @@ export function VoiceReflectionStart({
   const writeB = candidate(
     pair?.candidateB && !pair.candidateB.missing ? pair.candidateB.ref : undefined,
   )
-  const bothReadImages = Boolean(writeA?.vision && writeB?.vision)
-  const choosable = answeredPrompts.filter((prompt) => !prompt.photo || bothReadImages)
+  const candidates = refs?.map((ref) => candidate(ref))
+  const allReadImages = Boolean(candidates?.every((item) => item?.vision))
+  const choosable = answeredPrompts.filter((prompt) => !prompt.photo || allReadImages)
   const [promptKey, setPromptKey] = useState('')
   const prompt = choosable.find((item) => item.key === promptKey) ?? choosable[0]
   const start = useStartVoiceReflection()
@@ -83,15 +86,21 @@ export function VoiceReflectionStart({
               ? t('page.pairSaving')
               : pairPending || write.isPending
                 ? t('page.modelChecking')
-                : !writeA || !writeB
+                : !writeA || !writeB || !refs || candidates?.some((item) => !item)
                   ? t('page.requirement.pair')
                   : ''
   const canStart = !reason && !start.isPending
 
   const begin = async () => {
-    if (!canStart || !voice || !prompt || !writeA || !writeB) return
+    if (!canStart || !voice || !prompt || !writeA || !writeB || !refs) return
     try {
-      const response = await start.start(voice.id, prompt.key, writeA.ref, writeB.ref)
+      const response = await start.start(
+        voice.id,
+        prompt.key,
+        writeA.ref,
+        writeB.ref,
+        refs.slice(2),
+      )
       void navigate({
         to: '/ai-models/experiments/$id',
         params: { id: response.experimentId },
@@ -139,14 +148,14 @@ export function VoiceReflectionStart({
               ? answeredPrompts.map((item) => ({
                   value: item.key,
                   label: item.text,
-                  disabled: item.photo && !bothReadImages,
+                  disabled: item.photo && !allReadImages,
                 }))
               : [{ value: '', label: t('page.voice.noAnswer') }]
           }
           disabled={answeredPrompts.length === 0}
           onChange={setPromptKey}
         />
-        {answeredPrompts.some((item) => item.photo) && !bothReadImages && (
+        {answeredPrompts.some((item) => item.photo) && !allReadImages && (
           <Typography variant="label" as="p" className="mt-2">
             {t('page.voice.photoNeedsVision')}
           </Typography>

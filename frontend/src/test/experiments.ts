@@ -28,6 +28,7 @@ export interface FakeWriteExperimentStart {
 }
 
 export interface FakeExperimentsOptions {
+  candidateStarts?: Array<{ kind: 'observe' | 'write' | 'voice'; refs: ModelRef[] }>
   observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
   history?: Array<{
     id: string
@@ -111,6 +112,10 @@ export function registerExperimentService(
   router.rpc(ModelExperimentService.method.startObserveExperiment, (request) => {
     options.calls?.push('StartObserveExperiment')
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.candidateStarts?.push({
+      kind: 'observe',
+      refs: request.candidates.map((ref) => ({ providerId: ref.providerId, modelId: ref.modelId })),
+    })
     options.observeStarts?.push({
       postSlug: request.postSlug,
       modelA: request.modelA
@@ -128,6 +133,10 @@ export function registerExperimentService(
   router.rpc(ModelExperimentService.method.startVoiceReflectionExperiment, (request) => {
     options.calls?.push('StartVoiceReflectionExperiment')
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.candidateStarts?.push({
+      kind: 'voice',
+      refs: request.candidates.map((ref) => ({ providerId: ref.providerId, modelId: ref.modelId })),
+    })
     const ref = (value?: { providerId: string; modelId: string }) =>
       value ? { providerId: value.providerId, modelId: value.modelId } : undefined
     options.reflectionStarts?.push({
@@ -144,6 +153,10 @@ export function registerExperimentService(
   router.rpc(ModelExperimentService.method.startWriteExperiment, (request) => {
     options.calls?.push('StartWriteExperiment')
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.candidateStarts?.push({
+      kind: 'write',
+      refs: request.candidates.map((ref) => ({ providerId: ref.providerId, modelId: ref.modelId })),
+    })
     options.starts?.push({
       postSlug: request.postSlug,
       origin: request.origin,

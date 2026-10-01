@@ -8,11 +8,17 @@ export function useStartModelExperiment() {
   return {
     isPending: observe.isPending,
     failure: observe.error ? appFailureFromConnect(observe.error) : undefined,
-    startObserve: (postSlug: string, modelA: ModelRef, modelB: ModelRef) =>
+    startObserve: (
+      postSlug: string,
+      modelA: ModelRef,
+      modelB: ModelRef,
+      extras: readonly ModelRef[] = [],
+    ) =>
       observe.mutateAsync({
         postSlug,
         modelA: create(ModelRefSchema, modelA),
         modelB: create(ModelRefSchema, modelB),
+        candidates: [modelA, modelB, ...extras].map((ref) => create(ModelRefSchema, ref)),
       }),
   }
 }

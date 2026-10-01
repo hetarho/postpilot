@@ -12,8 +12,8 @@ export const i18n = {
         noVoice: '만든 말투가 없어요. 말투를 만든 뒤 비교할 수 있어요.',
         noAnswer: '이 말투에는 답한 문항이 없어요. 학습 글에서 문항에 답해 주세요.',
         answerPrompt: '문항에 답하러 가기',
-        photoOnly: '두 모델이 사진을 읽을 때만 비교할 수 있는 문항뿐이에요.',
-        photoNeedsVision: '사진 문항은 두 모델이 모두 사진을 읽을 때만 비교할 수 있어요.',
+        photoOnly: '모든 후보가 사진을 읽을 때만 비교할 수 있는 문항뿐이에요.',
+        photoNeedsVision: '사진 문항은 모든 후보가 사진을 읽을 때만 비교할 수 있어요.',
         row: '{{voice}} · {{prompt}}',
       },
       modelSettings: '모델 변경',
@@ -21,7 +21,7 @@ export const i18n = {
       history: '최근 관찰 비교',
       leaderboardTitle: '리더보드',
       settingsDescription: '관찰·문체 분석·글 작성에 실제로 사용할 모델을 고릅니다.',
-      comparisonDescription: '같은 입력으로 두 모델을 비교하고 더 나은 결과를 선택합니다.',
+      comparisonDescription: '같은 입력으로 최대 다섯 모델을 비교하고 결과마다 순위를 정합니다.',
       historyDescription:
         '최근 비교 결과를 다시 확인합니다. 단계별로 관찰·글 작성 기록을 볼 수 있어요.',
       leaderboardDescription:
@@ -46,6 +46,7 @@ export const i18n = {
       choosePostHelp: '비교할 글을 선택하면 비교를 시작할 수 있어요.',
       requirement: {
         pair: 'A/B 조합을 저장',
+        candidates: '모든 후보를 서로 다른 사용 가능한 모델로 저장',
         photoPost: '사진이 있는 글을 선택',
       },
       canStart: '{{requirements}}하면 비교를 시작할 수 있어요.',
@@ -78,8 +79,8 @@ export const i18n = {
         noAnswer: 'This voice has no answered prompt. Answer one in its writing first.',
         answerPrompt: 'Answer a prompt',
         photoOnly:
-          'Only photo prompts are answered, and both models must read photos to compare them.',
-        photoNeedsVision: 'A photo prompt can be compared only when both models read photos.',
+          'Only photo prompts are answered, and every candidate must read photos to compare them.',
+        photoNeedsVision: 'A photo prompt can be compared only when every candidate reads photos.',
         row: '{{voice}} · {{prompt}}',
       },
       modelSettings: 'Change models',
@@ -87,7 +88,7 @@ export const i18n = {
       history: 'Recent observation comparisons',
       leaderboardTitle: 'Leaderboard',
       settingsDescription: 'Choose the models used for observation, voice analysis, and writing.',
-      comparisonDescription: 'Compare two models on the same input and choose the better result.',
+      comparisonDescription: 'Compare up to five models on the same input and rank their results.',
       historyDescription:
         'Review recent results. Switch stages to see observation or writing comparisons.',
       leaderboardDescription:
@@ -112,6 +113,7 @@ export const i18n = {
       choosePostHelp: 'Select a post to start a comparison.',
       requirement: {
         pair: 'save an A/B pair',
+        candidates: 'save distinct, available models for every candidate',
         photoPost: 'select a post with photos',
       },
       canStart: 'You can start after you {{requirements}}.',

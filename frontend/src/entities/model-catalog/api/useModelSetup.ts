@@ -94,3 +94,48 @@ export function useComparisonPairSavePending(): boolean {
 }
 
 const SAVE_COMPARISON_PAIR_MUTATION_KEY = ['model-comparison-pair', 'save'] as const
+
+/** Lab-only C/D/E choices are saved as one ordered list. The returned pair is written into
+ * the cache before the mutation leaves its pending state, just like the A/B save above. */
+export function useSaveLabExtraCandidates() {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  const mutation = useMutation(ProviderService.method.saveLabExtraCandidates, {
+    mutationKey: SAVE_LAB_EXTRAS_MUTATION_KEY,
+    onSuccess: (data) => {
+      if (!data.pair) return
+      const saved = data.pair
+      cache.setQueryData<GetComparisonPairsResponse>(
+        getComparisonPairsQueryKey(transport),
+        (old) => {
+          const next = old
+            ? clone(GetComparisonPairsResponseSchema, old)
+            : create(GetComparisonPairsResponseSchema, {})
+          next.pairs = [
+            ...next.pairs.filter((existing) => existing.stage !== saved.stage),
+            create(ComparisonPairSchema, saved),
+          ]
+          return next
+        },
+      )
+    },
+  })
+  return {
+    ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
+    save: async (stage: StageName, refs: readonly ModelRef[]) => {
+      const response = await mutation.mutateAsync({
+        stage: stageToProto(stage),
+        extraCandidates: refs.map((ref) => create(ModelRefSchema, ref)),
+      })
+      await cache.invalidateQueries({ queryKey: getComparisonPairsQueryKey(transport) })
+      return response
+    },
+  }
+}
+
+export function useLabExtraCandidatesSavePending(): boolean {
+  return useIsMutating({ mutationKey: SAVE_LAB_EXTRAS_MUTATION_KEY }) > 0
+}
+
+const SAVE_LAB_EXTRAS_MUTATION_KEY = ['model-lab-extra-candidates', 'save'] as const

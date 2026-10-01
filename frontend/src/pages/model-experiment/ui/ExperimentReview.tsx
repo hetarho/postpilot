@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   candidateSides,
@@ -23,6 +23,24 @@ export function ExperimentReview({
   const { t } = useTranslation(['models', 'common'])
   const { experiment, isPending, isError, refetch } = useExperiment(id)
   const [activeCandidateId, setActiveCandidateId] = useState('')
+  const readingPositions = useRef<Record<string, number>>({})
+  const previousCandidate = useRef('')
+  const comparisonTop = useRef<HTMLDivElement>(null)
+  const sides = candidateSides(experiment?.candidates ?? [])
+  const activeId = activeSideId(sides, activeCandidateId)
+  useLayoutEffect(() => {
+    if (
+      previousCandidate.current &&
+      previousCandidate.current !== activeId &&
+      window.matchMedia('(max-width: 767px)').matches
+    ) {
+      const top = comparisonTop.current
+        ? window.scrollY + comparisonTop.current.getBoundingClientRect().top
+        : window.scrollY
+      window.scrollTo(0, readingPositions.current[activeId] ?? top)
+    }
+    previousCandidate.current = activeId
+  }, [activeId])
   if (isPending)
     return (
       <Placeholder backLink={backLink()}>{t('experiment.loading', { ns: 'models' })}</Placeholder>
@@ -36,8 +54,6 @@ export function ExperimentReview({
         </Button>
       </Placeholder>
     )
-  const sides = candidateSides(experiment.candidates)
-  const activeId = activeSideId(sides, activeCandidateId)
   return (
     <main className={pageStyles({ width: 'board' })}>
       {backLink(experiment)}
@@ -65,7 +81,7 @@ export function ExperimentReview({
           {t('experiment.template', { ns: 'models', name: experiment.templateName })}
         </Typography>
       )}
-      <div className="mt-6 sm:mt-8">
+      <div ref={comparisonTop} className="mt-6 sm:mt-8">
         <CandidateComparison
           experiment={experiment}
           activeCandidateId={activeId}
@@ -92,7 +108,10 @@ export function ExperimentReview({
             <SegmentedControl
               value={activeId}
               options={sides.map(({ candidate, label }) => ({ value: candidate.id, label }))}
-              onChange={setActiveCandidateId}
+              onChange={(id) => {
+                if (activeId) readingPositions.current[activeId] = window.scrollY
+                setActiveCandidateId(id)
+              }}
               ariaLabel={t('experiment.selectAria', { ns: 'models' })}
             />
             <ExperimentActions experiment={experiment} activeCandidateId={activeId} />

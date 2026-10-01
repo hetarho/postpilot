@@ -62,6 +62,134 @@ it('starts a no-photo write comparison from the model tab with the persisted tar
   )
 })
 
+it('starts one write comparison with all five persisted lab candidates in order', async () => {
+  const user = userEvent.setup()
+  const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: { posts: [{ slug: 'post-1', title: '첫 글' }] },
+    providers: {
+      models: [
+        ...writeModels,
+        ...['c', 'd', 'e'].map((id) => ({
+          providerId: 'openrouter',
+          modelId: `writer-${id}`,
+          label: `Writer ${id.toUpperCase()}`,
+        })),
+      ],
+      comparisonPairs: [
+        {
+          ...writePair,
+          extraCandidates: ['c', 'd', 'e'].map((id) => ({
+            providerId: 'openrouter',
+            modelId: `writer-${id}`,
+          })),
+        },
+      ],
+    },
+    experiments: { candidateStarts },
+  })
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+  await waitFor(() => expect(candidateStarts).toHaveLength(1))
+  expect(candidateStarts[0]).toEqual({
+    kind: 'write',
+    refs: ['a', 'b', 'c', 'd', 'e'].map((id) => ({
+      providerId: 'openrouter',
+      modelId: `writer-${id}`,
+    })),
+  })
+})
+
+it('blocks a changed or saving C row until the server confirms the visible list', async () => {
+  const user = userEvent.setup()
+  let release!: () => void
+  const saveExtrasGate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: { posts: [{ slug: 'post-1', title: '첫 글' }] },
+    providers: {
+      models: [
+        ...writeModels,
+        { providerId: 'openrouter', modelId: 'writer-c', label: 'Writer C' },
+      ],
+      comparisonPairs: [writePair],
+      saveExtrasGate,
+    },
+    experiments: { candidateStarts },
+  })
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
+  const start = screen.getByRole('button', { name: '비교 시작' })
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(screen.getByRole('button', { name: '후보 추가' }))
+  expect(start).toHaveAttribute('aria-disabled')
+  await chooseOption(user, screen.getByRole('combobox', { name: /후보 C/ }), 'Writer C')
+  expect(start).toHaveAttribute('aria-disabled')
+  release()
+  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
+  await user.click(start)
+  await waitFor(() =>
+    expect(candidateStarts[0]?.refs.map((ref) => ref.modelId)).toEqual([
+      'writer-a',
+      'writer-b',
+      'writer-c',
+    ]),
+  )
+})
+
+it('shows an A/B collision or locked extra and refuses to start', async () => {
+  const user = userEvent.setup()
+  const view = renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: { posts: [{ slug: 'post-1', title: '첫 글' }] },
+    providers: { models: writeModels, comparisonPairs: [writePair] },
+  })
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
+  await user.click(screen.getByRole('button', { name: '후보 추가' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /후보 C/ }), 'Writer A')
+  expect(screen.getByText(/A\/B 후보와 같은 모델/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '비교 시작' })).toHaveAttribute('aria-disabled')
+  view.unmount()
+
+  renderAppAt('/ai-models/compare', {
+    user: { id: 'owner-1' },
+    posts: { posts: [{ slug: 'post-1', title: '첫 글' }] },
+    providers: {
+      models: [
+        ...writeModels,
+        {
+          providerId: 'openrouter',
+          modelId: 'locked',
+          label: 'Locked',
+          access: {
+            [Stage.WRITE]: {
+              grade: 'premium',
+              requiredPlan: 'pro',
+              entitled: false,
+              unavailableReason: 'MODEL_PLAN_REQUIRED',
+            },
+          },
+        },
+      ],
+      comparisonPairs: [
+        { ...writePair, extraCandidates: [{ providerId: 'openrouter', modelId: 'locked' }] },
+      ],
+    },
+  })
+  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
+  expect(screen.getByRole('button', { name: '비교 시작' })).toHaveAttribute('aria-disabled')
+  expect(screen.getByRole('combobox', { name: /후보 C/ })).toHaveTextContent('Locked')
+})
+
 it('requires and sends the explicit active observe model for a post with photos', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
@@ -374,6 +502,7 @@ it('starts nothing while the fields show a pair the store does not hold', async 
 it('opens observation comparison without work and starts only with the chosen saved pair and post', async () => {
   const user = userEvent.setup()
   const observeStarts: NonNullable<FakeExperimentsOptions['observeStarts']> = []
+  const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
   const { router } = renderAppAt('/ai-models/compare', {
     user: { id: 'owner-1' },
     posts: {
@@ -386,10 +515,19 @@ it('opens observation comparison without work and starts only with the chosen sa
       ],
     },
     providers: {
-      models: writeModels.map((model) => ({ ...model, vision: true })),
-      comparisonPairs: [{ ...writePair, stage: Stage.OBSERVE }],
+      models: [
+        ...writeModels,
+        { providerId: 'openrouter', modelId: 'writer-c', label: 'Writer C' },
+      ].map((model) => ({ ...model, vision: true })),
+      comparisonPairs: [
+        {
+          ...writePair,
+          stage: Stage.OBSERVE,
+          extraCandidates: [{ providerId: 'openrouter', modelId: 'writer-c' }],
+        },
+      ],
     },
-    experiments: { observeStarts, experimentId: 'observe-1' },
+    experiments: { observeStarts, candidateStarts, experimentId: 'observe-1' },
   })
   await chooseOption(
     user,
@@ -409,6 +547,14 @@ it('opens observation comparison without work and starts only with the chosen sa
       },
     ]),
   )
+  expect(candidateStarts[0]).toEqual({
+    kind: 'observe',
+    refs: [
+      writePair.candidateA,
+      writePair.candidateB,
+      { providerId: 'openrouter', modelId: 'writer-c' },
+    ],
+  })
   await waitFor(() =>
     expect(router.state.location.pathname).toBe('/ai-models/experiments/observe-1'),
   )
@@ -449,11 +595,20 @@ describe('the 말투 반영 tab', () => {
   it('starts a comparison on the 기본 and an answered prompt', async () => {
     const user = userEvent.setup()
     const reflectionStarts: NonNullable<FakeExperimentsOptions['reflectionStarts']> = []
+    const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
     const { router } = renderAppAt('/ai-models/compare?stage=voice', {
       user: { id: 'owner-1' },
-      providers: { models: writeModels, comparisonPairs: [writePair] },
+      providers: {
+        models: [
+          ...writeModels,
+          { providerId: 'openrouter', modelId: 'writer-c', label: 'Writer C' },
+        ],
+        comparisonPairs: [
+          { ...writePair, extraCandidates: [{ providerId: 'openrouter', modelId: 'writer-c' }] },
+        ],
+      },
       voice: { voices, samples: answers },
-      experiments: { reflectionStarts, experimentId: 'reflection-1' },
+      experiments: { reflectionStarts, candidateStarts, experimentId: 'reflection-1' },
     })
 
     const voice = await screen.findByRole('combobox', { name: /^말투/ })
@@ -476,7 +631,7 @@ describe('the 말투 반영 tab', () => {
     expect(photo).toHaveAttribute('aria-disabled', 'true')
     await user.keyboard('{Escape}')
     expect(
-      screen.getByText('사진 문항은 두 모델이 모두 사진을 읽을 때만 비교할 수 있어요.'),
+      screen.getByText('사진 문항은 모든 후보가 사진을 읽을 때만 비교할 수 있어요.'),
     ).toBeInTheDocument()
 
     const start = screen.getByRole('button', { name: '비교 시작' })
@@ -492,6 +647,14 @@ describe('the 말투 반영 tab', () => {
         },
       ]),
     )
+    expect(candidateStarts[0]).toEqual({
+      kind: 'voice',
+      refs: [
+        writePair.candidateA,
+        writePair.candidateB,
+        { providerId: 'openrouter', modelId: 'writer-c' },
+      ],
+    })
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/ai-models/experiments/reflection-1'),
     )
