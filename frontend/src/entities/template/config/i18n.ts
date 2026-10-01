@@ -83,6 +83,7 @@ export const i18n = {
       },
       block: {
         asksForData: '데이터 받기',
+        required: '필수 입력',
         asksForDataHelp:
           '켜면 글쓰기 화면에서 이 자리에 넣을 내용을 직접 입력받아요. 지어내지 않아요.',
         askTitle: '입력란 제목',
@@ -200,6 +201,7 @@ export const i18n = {
       },
       block: {
         asksForData: 'Ask for data',
+        required: 'Required field',
         asksForDataHelp:
           'On, the write screen asks you for what goes here instead of the AI inventing it.',
         askTitle: 'Field title',

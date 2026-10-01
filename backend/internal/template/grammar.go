@@ -52,6 +52,7 @@ type Node struct {
 	Text     string   // write · ask (empty on an ask means the verbatim flavor)
 	SlotKind SlotKind // slot
 	Label    string   // slot · ask
+	Required bool     // ask; absent required attribute is false
 	// Count is how many photos a photo position holds side by side (TMPL-38). It is 1
 	// when the attribute is absent and 0 on every node that is not a photo slot, so a
 	// non-zero Count always means "this position binds this many photos".
@@ -138,7 +139,7 @@ var tagAttributes = map[string][]string{
 	"write":  nil,
 	"slot":   {"kind", "count", "label"},
 	"repeat": {"each"},
-	"ask":    {"label"},
+	"ask":    {"label", "required"},
 }
 
 // Parse turns one area's text into an ordered node list — a body unless opts.TitleArea says
@@ -415,13 +416,20 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 		if head.stray {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
 		}
+		required := false
+		if raw, present := attrs["required"]; present {
+			if Decode(raw) != "true" {
+				return Node{}, 0, &ParseError{Line: line, Reason: ReasonMalformedTag}
+			}
+			required = true
+		}
 		rawLabel, ok := attrs["label"]
 		if !ok || isBlank(Decode(rawLabel)) {
 			return Node{}, 0, &ParseError{Line: line, Reason: ReasonMissingAttribute}
 		}
 		if selfClosing {
 			return Node{
-				Kind: NodeAsk, Source: body[at:afterOpen], Line: line, Label: rawLabel,
+				Kind: NodeAsk, Source: body[at:afterOpen], Line: line, Label: rawLabel, Required: required,
 			}, afterOpen, nil
 		}
 		inner, afterClose, err := readTextBody(body, afterOpen, name, line)
@@ -435,7 +443,7 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 			inner = ""
 		}
 		return Node{
-			Kind: NodeAsk, Source: body[at:afterClose], Line: line, Label: rawLabel, Text: inner,
+			Kind: NodeAsk, Source: body[at:afterClose], Line: line, Label: rawLabel, Text: inner, Required: required,
 		}, afterClose, nil
 
 	case NodeWrite:

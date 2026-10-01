@@ -214,6 +214,102 @@ describe('opening a post', () => {
     expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
   })
 
+  it('points to a required experience answer before starting either writing path', async () => {
+    const slug = '20260820-memo'
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      calls,
+      posts: {
+        posts: [{ slug, memo: '동네 가게 방문', template: { id: 'visit', name: '방문 기록' } }],
+        templates: [{ id: 'visit', name: '방문 기록' }],
+      },
+      templates: {
+        templates: [
+          {
+            id: 'visit',
+            name: '방문 기록',
+            body: '<ask label="방문 계기" required="true">직접 가게 된 이유</ask>',
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
+    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    const storyline = screen.getByRole('button', { name: '스토리라인 먼저' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.click(generate)
+    expect(screen.getByText('필수 입력란을 확인해 주세요: 방문 계기')).toBeInTheDocument()
+    expect(answer).toHaveFocus()
+    expect(calls).not.toContain('StartGeneration')
+    await user.click(storyline)
+    expect(calls).not.toContain('StartStoryline')
+
+    await user.type(answer, '퇴근길에 간판을 보고 처음 들어갔다.')
+    await user.click(storyline)
+    await waitFor(() => expect(calls).toContain('StartStoryline'))
+  })
+
+  it('requires a previously excluded answer to be restored and saved before writing', async () => {
+    const slug = '20260820-memo'
+    const calls: string[] = []
+    const draftSaves: FakeDraftSave[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      calls,
+      posts: {
+        draftSaves,
+        posts: [
+          {
+            slug,
+            memo: '동네 가게 방문',
+            template: { id: 'visit', name: '방문 기록' },
+            templateAnswers: [{ label: '방문 계기', text: '간판을 보고 들어갔다', enabled: false }],
+          },
+        ],
+        templates: [{ id: 'visit', name: '방문 기록' }],
+      },
+      templates: {
+        templates: [
+          {
+            id: 'visit',
+            name: '방문 기록',
+            body: '<ask label="방문 계기" required="true">직접 가게 된 이유</ask>',
+          },
+        ],
+      },
+      providers: {
+        models: [{ providerId: 'openrouter', modelId: 'writer' }],
+        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' }],
+      },
+    })
+
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
+    expect(answer).toBeEnabled()
+    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    await waitFor(() => expect(generate).toBeEnabled())
+    await user.click(generate)
+    expect(calls).not.toContain('StartGeneration')
+    expect(answer).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: '기존 답변 사용하기' }))
+    await user.click(generate)
+    await waitFor(() => expect(calls).toContain('StartGeneration'))
+    expect(draftSaves.at(-1)?.templateAnswers).toContainEqual({
+      label: '방문 계기',
+      text: '간판을 보고 들어갔다',
+      enabled: true,
+    })
+    expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('StartGeneration'))
+  })
+
   it('flushes the newest memo before it starts generation', async () => {
     const calls: string[] = []
     const user = userEvent.setup()

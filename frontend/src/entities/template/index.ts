@@ -23,6 +23,7 @@ export {
   askFields,
   decode,
   encode,
+  isBlank,
   parse,
   parseTemplate,
   serialize,

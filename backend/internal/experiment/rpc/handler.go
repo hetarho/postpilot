@@ -306,6 +306,7 @@ func actingUser(ctx context.Context) (string, error) {
 }
 
 func toConnectError(op string, err error) error {
+	var requiredAnswer *experiment.RequiredTemplateAnswerError
 	var modelAccess *provider.ModelAccessError
 	if errors.As(err, &modelAccess) {
 		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, modelAccess)
@@ -322,6 +323,8 @@ func toConnectError(op string, err error) error {
 	}
 	var active *experiment.JobAlreadyInProgressError
 	switch {
+	case errors.As(err, &requiredAnswer):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a required template answer is missing", postpilotv1.FailureReason_TEMPLATE_REQUIRED_ANSWER_MISSING, map[string]string{"label": requiredAnswer.Label})
 	case errors.Is(err, experiment.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "experiment not found", postpilotv1.FailureReason_EXPERIMENT_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrCandidateNotFound):

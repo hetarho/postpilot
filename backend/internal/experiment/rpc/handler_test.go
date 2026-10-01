@@ -33,6 +33,7 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"target language":          {experiment.ErrLanguageRequired, connect.CodeFailedPrecondition, "POST_TARGET_LANGUAGE_REQUIRED", nil},
 		"state":                    {experiment.ErrInvalidState, connect.CodeFailedPrecondition, "EXPERIMENT_STATE_INVALID", nil},
 		"snapshot":                 {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
+		"required template answer": {errors.Join(errors.New("private answer detail"), &experiment.RequiredTemplateAnswerError{Label: "직접 겪은 일"}), connect.CodeFailedPrecondition, "TEMPLATE_REQUIRED_ANSWER_MISSING", map[string]string{"label": "직접 겪은 일"}},
 		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
 		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
 		"voice not found":          {experiment.ErrVoiceNotFound, connect.CodeNotFound, "VOICE_NOT_FOUND", nil},

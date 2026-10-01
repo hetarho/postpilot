@@ -15,8 +15,8 @@ import {
  *  anything the builder produced, which is what TMPL-19 asks for — and it is how a body is
  *  authored everywhere but `원문`, the one place the grammar is shown (TMPL-26). */
 export type BuilderBlock =
-  | { id: string; kind: 'write'; text: string; ask?: string }
-  | { id: string; kind: 'text'; text: string; ask?: string }
+  | { id: string; kind: 'write'; text: string; ask?: string; required?: boolean }
+  | { id: string; kind: 'text'; text: string; ask?: string; required?: boolean }
   | { id: string; kind: 'photo'; count: number }
   | { id: string; kind: 'repeat'; children: BuilderBlock[] }
 
@@ -85,12 +85,13 @@ function blockSource(block: BuilderBlock): string {
   const ask = askTitle(block)
   if (ask !== '' && (block.kind === 'write' || block.kind === 'text')) {
     const label = encode(ask)
+    const required = block.required ? ' required="true"' : ''
     // The write flavor keeps its instruction inside the element and the verbatim flavor is
     // self-closing. `isCompleteBlock` is what keeps a write row from ever serializing without
     // one — an empty element would silently mean the other flavor.
     return block.kind === 'write'
-      ? `<ask label="${label}">${encode(block.text)}</ask>`
-      : `<ask label="${label}"/>`
+      ? `<ask label="${label}"${required}>${encode(block.text)}</ask>`
+      : `<ask label="${label}"${required}/>`
   }
   switch (block.kind) {
     case 'write':
@@ -171,10 +172,11 @@ function fromNodes(
         // empty element a 고정 문구 row whose text the post's author supplies (TMPL-43).
         const ask = decodeText(node.label ?? '')
         const text = decodeText(node.text ?? '')
+        const required = node.required === true ? { required: true } : {}
         blocks.push(
           text === ''
-            ? { id: nextBlockId(), kind: 'text', text: '', ask }
-            : { id: nextBlockId(), kind: 'write', text, ask },
+            ? { id: nextBlockId(), kind: 'text', text: '', ask, ...required }
+            : { id: nextBlockId(), kind: 'write', text, ask, ...required },
         )
         break
       }

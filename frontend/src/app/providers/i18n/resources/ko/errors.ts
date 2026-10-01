@@ -167,6 +167,7 @@ export const errors = {
   TEMPLATE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
   TEMPLATE_NUMBER_OUT_OF_RANGE: '{{min}}~{{max}} 사이로 적어 주세요. 지금은 {{actual}}이에요.',
   TEMPLATE_PARSE_FAILED: '{{area}} {{line}}번째 줄: {{reason}}. 원문에서 고쳐 주세요.',
+  TEMPLATE_REQUIRED_ANSWER_MISSING: '필수 입력란 「{{label}}」을 채운 뒤 다시 시도해 주세요.',
   TEMPLATE_REQUEST_EMPTY: '원하는 템플릿을 적거나 참고할 글을 붙여 주세요.',
   TEMPLATE_REQUEST_RUNNING: '다른 템플릿 요청이 아직 진행 중이에요. 끝난 뒤에 다시 요청해 주세요.',
   TEMPLATE_SAMPLE_UNAVAILABLE: '참고할 글을 읽을 수 없어요. 내용이 있는 내 글인지 확인해 주세요.',

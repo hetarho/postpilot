@@ -44,6 +44,7 @@ export function LifecycleSteps({
   targetLength,
   onTitleFinalized,
   beforeStart,
+  checkRequiredAnswers,
   ensureSlug,
   jobView,
   storyline,
@@ -64,6 +65,7 @@ export function LifecycleSteps({
   /** Re-seeds the editor's local 가제 with what 확정 wrote into `posts.title`. */
   onTitleFinalized: (title: string) => void
   beforeStart: () => Promise<void>
+  checkRequiredAnswers: () => boolean
   ensureSlug: () => Promise<string>
   /** The durable job, resolved by the page so the status region and these panels read one poll. */
   jobView: EditorJobView
@@ -133,6 +135,7 @@ export function LifecycleSteps({
           jobPending: jobView.isPending,
           onStarted: (id) => jobView.onStarted(id, 'refine'),
           beforeStart,
+          checkRequiredAnswers,
           // Nothing to save when no block editor is mounted — a post with no content yet.
           flushContent: () => contentEditorRef.current?.flush() ?? Promise.resolve(),
           onOpenBrief,
@@ -210,6 +213,7 @@ export function LifecycleSteps({
         generateRef={generateRef}
         reviseRef={reviseRef}
         beforeStart={beforeStart}
+        checkRequiredAnswers={checkRequiredAnswers}
         onOpenBrief={onOpenBrief}
         onTitleFinalized={onTitleFinalized}
         onStepChange={onStepChange}

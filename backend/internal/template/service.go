@@ -161,6 +161,17 @@ func (s *Service) Delete(ctx context.Context, userID, id string) (int, error) {
 // only happen if a row was edited outside the service, and refusing to generate would be a
 // worse answer than generating without a shape.
 func (s *Service) RenderedFor(ctx context.Context, userID, id string, hasPhotos bool, answers []Answer) (Rendered, bool, error) {
+	return s.renderedFor(ctx, userID, id, hasPhotos, answers, false)
+}
+
+// RenderedForNewWrite resolves and checks the same template row in one read. A required
+// answer is checked before the caller can enqueue or reserve credits; an old revision uses
+// RenderedFor instead so a template tightened since that post's write does not block it.
+func (s *Service) RenderedForNewWrite(ctx context.Context, userID, id string, hasPhotos bool, answers []Answer) (Rendered, bool, error) {
+	return s.renderedFor(ctx, userID, id, hasPhotos, answers, true)
+}
+
+func (s *Service) renderedFor(ctx context.Context, userID, id string, hasPhotos bool, answers []Answer, requireAnswers bool) (Rendered, bool, error) {
 	if strings.TrimSpace(id) == "" {
 		return Rendered{}, false, nil
 	}
@@ -175,7 +186,30 @@ func (s *Service) RenderedFor(ctx context.Context, userID, id string, hasPhotos 
 	if err != nil {
 		return Rendered{}, false, nil
 	}
+	if requireAnswers {
+		if err := s.validateRequiredAnswers(title, nodes, answers); err != nil {
+			return Rendered{}, false, err
+		}
+	}
 	return RenderTemplate(found.Name, title, nodes, hasPhotos, answers), true, nil
+}
+
+// validateRequiredAnswers walks title then body, the same order the editor shows them. It
+// applies the render's own answer usability rule, including its shared blank-rune set.
+func (s *Service) validateRequiredAnswers(title, body []Node, answers []Answer) error {
+	byLabel := answersByLabel(answers)
+	for _, nodes := range [][]Node{title, body} {
+		for _, node := range Asks(nodes) {
+			if !node.Required {
+				continue
+			}
+			label := Decode(node.Label)
+			if !byLabel[label].usable() {
+				return &RequiredAnswerError{Label: label}
+			}
+		}
+	}
+	return nil
 }
 
 // Directory is this context's published behavior for the post and guideline contexts: the

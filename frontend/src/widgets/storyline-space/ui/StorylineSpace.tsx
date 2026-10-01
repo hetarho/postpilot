@@ -60,6 +60,7 @@ export const StorylineSpace = forwardRef<
       jobPending?: boolean
       onStarted: (jobId: string) => void
       beforeStart: () => Promise<void>
+      checkRequiredAnswers?: () => boolean
       flushContent: () => Promise<unknown>
       onOpenBrief: (mode: GenerationMode) => void
     }

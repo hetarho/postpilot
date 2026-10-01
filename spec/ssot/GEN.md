@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r20 | Photos, videos + memo become a validated block-array post — in the author's voice when the post has one — through observe-then-write along a storyline — set inside the one write call, or made first for the owner to change in ② — under the account's 지침; AI revision changes only what was asked; every long model call rides one durable in-process job queue (invariants I2, I3, I5).
+> r21 | Photos, videos + memo become a validated block-array post — in the author's voice when the post has one — through observe-then-write along a storyline — set inside the one write call, or made first for the owner to change in ② — under the account's 지침; AI revision changes only what was asked; every long model call rides one durable in-process job queue (invariants I2, I3, I5).
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -125,6 +125,7 @@
 
 - GEN-74 [o] a post with 말투 없음 carries no voice bytes: no projection, no ending-mix line, and the template and guideline precedence sentences name no voice ← a sentence pointing at a profile that is not there invites the model to invent one
 - GEN-75 [o] 같은 종결어미 세 번 잇지 않기 is a 기본 지침 of the 지침 kind (→GUIDE-41), offered and injected for a Korean target alone inside `[작문 지침]`: no three sentences in a row end with the same ending (`ENDING_MAX_CONSECUTIVE` 2), on every post whether or not it has a voice ← as a fixed line of the voice section it blocked writing that needs its opposite
+- GEN-76 [o] each new writing start checks the selected template's required data fields against the saved post answers before a credit hold, snapshot or job row: direct and storyline-following generation, storyline creation and rewrite, and write comparison share the gate (→TMPL-68); a missing field refuses with its first label, while revision of existing content does not gain this gate
 
 ## flow
 - generate: 바로 글 쓰기 | 이 스토리로 글 쓰기 → StartGeneration(preconditions → freeze target, length, tag count, brief, guidelines (기본 지침 first), voice or 말투 없음, the storyline when writing from one, reobserve selection + snapshot → hold credits → job row) → worker(observe frozen set in batches → merged snapshot persists → write (direct: the storyline, then the post along it | along the frozen storyline) → validate → attachment filter → content + baseline (+ storyline on the direct path), `review`) → `useJob` polls 2 s → `done`

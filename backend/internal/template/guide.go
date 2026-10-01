@@ -29,7 +29,7 @@ const GuideExampleBody = "<write>방문한 이유와 첫인상</write>\n" +
 	"<slot kind=\"photo\" count=\"2\"/>\n" +
 	"<write>이 사진들이 보여주는 장면</write>\n" +
 	"</repeat>\n" +
-	"<ask label=\"총평 별점\">총평</ask>\n" +
+	"<ask label=\"총평 별점\" required=\"true\">직접 매긴 별점과 그 이유는 무엇인가요?</ask>\n" +
 	"오늘도 좋은 하루 보내세요"
 
 // The guide's prose, one per UI language. Tags, attributes and the example are identical in
@@ -48,7 +48,8 @@ const guideKorean = `아래 형식으로 블로그 글 템플릿의 본문을 �
 - <slot kind="photo"/>: 사진이 들어갈 자리입니다. <slot kind="photo" count="2"/>처럼 count를 줄 수 있습니다. count는 한 줄에 나란히 놓을 사진 수이고, 어떤 사진을 놓을지는 AI가 스토리라인을 따라 고릅니다.
 - <repeat each="photo">…</repeat>: 안쪽 내용이 스토리라인의 사진 묶음마다 한 번씩 되풀이됩니다.
 - <ask label="입력란 제목"/>: 글을 쓸 때 사용자가 직접 입력한 내용이 그 자리에 그대로 들어갑니다.
-- <ask label="입력란 제목">총평</ask>: 사용자가 입력한 내용으로 AI가 그 자리의 주제를 씁니다.
+- <ask label="총평 별점">직접 매긴 별점과 그 이유는 무엇인가요?</ask>: 작성자가 질문에 답하면 AI가 그 답을 근거로 이 자리의 총평을 씁니다.
+- <ask label="총평 별점" required="true">직접 매긴 별점과 그 이유는 무엇인가요?</ask>: 해당 입력란을 채워야 새 글을 쓸 수 있습니다. required가 없으면 선택 입력입니다.
 
 [지켜야 할 규칙]
 - write, repeat는 반드시 닫아야 합니다.
@@ -59,7 +60,9 @@ const guideKorean = `아래 형식으로 블로그 글 템플릿의 본문을 �
 - write, ask 안에는 글만 씁니다. 그 안에 다른 태그를 넣으면 저장되지 않습니다.
 - 각 태그에는 위에 나온 속성만 쓰고, 한 태그에 같은 속성을 두 번 쓰지 않습니다.
 - ask는 label이 반드시 있어야 하고, label은 {askLabelMax}자까지이며, 한 본문 안에서 label이 겹치면 안 됩니다. repeat 안에는 넣을 수 없고, 한 본문에 최대 {askMax}개까지입니다.
-- ask는 사용자가 매번 알려줘야 하는 것(별점, 방문일, 가격처럼 AI가 알 수 없는 사실)에만 쓰세요.
+- ask의 required는 true만 쓸 수 있습니다. 비워 두거나 끌 수 없는 입력란에만 붙이세요.
+- write에는 그 자리에 들어갈 주제만 적습니다. 내용 있는 ask에는 작성자의 실제 경험·확인한 사실·불확실한 점을 묻는 구체적인 질문을 적어도 됩니다. 어느 쪽에도 모델의 말투·길이·서식·생략·반복을 지시하지 말고, 그런 작문 규칙은 지침에 적으세요.
+- ask는 사용자가 직접 겪거나 확인해야 아는 내용(별점, 방문일, 가격 등)을 AI가 지어내지 않도록 물을 때 쓰세요.
 - 위 다섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
 - 문장 안에 <로 시작하는 글자를 그대로 쓰려면 &lt;로 적어 주세요.
 - 본문 전체는 {bodyMax}자를 넘을 수 없습니다.
@@ -81,7 +84,8 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - <slot kind="photo"/>: photos go here. It can take a count, as in <slot kind="photo" count="2"/>: count is how many photos stand side by side in one row, and the AI chooses which photos stand there along the storyline.
 - <repeat each="photo">…</repeat>: what is inside repeats once per photo group of the storyline.
 - <ask label="field title"/>: what the author types on the write screen goes here exactly as typed.
-- <ask label="field title">overall verdict</ask>: the AI writes the topic here from what the author typed.
+- <ask label="overall rating">What rating did you give, and why?</ask>: the author answers the question, and the AI writes this section from that answer.
+- <ask label="overall rating" required="true">What rating did you give, and why?</ask>: the author must fill this field before starting a new post. Without required, the field is optional.
 
 [Rules that must hold]
 - write and repeat must be closed.
@@ -92,7 +96,9 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - write and ask hold text only. A tag inside one of them is refused.
 - Each tag takes only the attributes shown above, and no attribute twice.
 - ask must carry a label of at most {askLabelMax} characters, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {askMax}.
-- Use ask only for what the author has to supply each time — a rating, a visit date, a price: facts the AI cannot know.
+- An ask's required attribute may only have the value true. Use it only for a field the author must fill.
+- A write names only what belongs at its position. A text-bearing ask may ask the author a concrete question about firsthand experience, verified facts, or uncertainty. Neither may command the model's tone, length, formatting, omissions, or repetition; those writing rules belong in guidelines.
+- Use ask for what only the author experienced or checked, such as a rating, visit date, or price, so the AI does not invent it.
 - Any tag other than those five is refused.
 - To write a literal < in a sentence, write &lt; instead.
 - The whole body may not exceed {bodyMax} characters.

@@ -55,6 +55,8 @@ export const GenerationActions = forwardRef<
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
+    /** Returns false after pointing the author to missing required template answers. */
+    checkRequiredAnswers?: () => boolean
     /** Opens the writing brief — where the 관찰/작성 모델 and the A/B pair are chosen — for a press
      *  of `mode` that its setup refused, so the brief can mark what that run is missing. Supplied
      *  by `pages/editor`, which owns the brief's open state — a feature may not import the widget
@@ -62,7 +64,16 @@ export const GenerationActions = forwardRef<
     onOpenBrief: (mode: GenerationMode) => void
   }
 >(function GenerationActions(
-  { post, targetLength, activeJob, jobPending = false, onStarted, beforeStart, onOpenBrief },
+  {
+    post,
+    targetLength,
+    activeJob,
+    jobPending = false,
+    onStarted,
+    beforeStart,
+    checkRequiredAnswers,
+    onOpenBrief,
+  },
   ref,
 ) {
   const { t } = useTranslation('posts')
@@ -124,6 +135,7 @@ export const GenerationActions = forwardRef<
       if (sharedDisabled || !precondition.ok) return
       if (mode !== 'comparison' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
+      if (checkRequiredAnswers?.() === false) return
       setPreparing(mode)
       setPrepareFailure(undefined)
       // Deliberately here and not before the picker: a cancelled picker must not have forced a
@@ -168,6 +180,7 @@ export const GenerationActions = forwardRef<
     [
       ab,
       beforeStart,
+      checkRequiredAnswers,
       comparison,
       generation,
       observeSelection,
@@ -199,6 +212,7 @@ export const GenerationActions = forwardRef<
       if (!precondition.ok) return
       if (mode !== 'comparison' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
+      if (checkRequiredAnswers?.() === false) return
       // A post with observations worth reusing decides what to re-observe first; one with
       // nothing to reuse would observe everything either way, so it starts directly.
       if (needsPicker(post.images, post.observations, post.videos)) {
@@ -209,6 +223,7 @@ export const GenerationActions = forwardRef<
     },
     [
       ab,
+      checkRequiredAnswers,
       enqueue,
       onOpenBrief,
       ordinary,

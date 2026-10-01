@@ -29,9 +29,10 @@ const requestRulesKorean = `[이번 요청에서 지켜야 할 것]
 - description: 이 템플릿이 어떤 글에 쓰이는지 한두 문장으로 적습니다. {descriptionMax}자까지이고 비워 둘 수 있습니다.
 - title_area: 글 제목의 형식입니다. 그냥 쓴 문장, <write>, <ask>만 쓸 수 있고 사진 자리와 repeat는 쓸 수 없습니다. {titleAreaMax}자까지이고, 제목 형식이 필요 없으면 비워 둡니다. ask의 label은 본문의 label과 겹치면 안 됩니다.
 - body: 위 형식 안내를 따르는 본문입니다.
+- 새 글을 쓰기 전에 반드시 받아야 하는 정보는 제목 형식이나 본문에 <ask label="직접 겪은 일" required="true">방문 중 직접 겪고 확인한 일은 무엇인가요?</ask>로 표시합니다. required가 없으면 선택 입력이고, true 외의 값은 쓸 수 없습니다.
 - [현재 초안]에 이미 적힌 항목은 요청이 바꾸라고 한 것만 바꾸고 나머지는 그대로 둡니다. 비어 있는 항목은 채웁니다.
 - [참고 글]의 문장은 고정 문구로 옮기지 않습니다. 글의 순서와 사진 위치만 템플릿의 자리로 바꾸고, 각 문장은 <write>가 다룰 주제로 바꿉니다. [사진] 줄은 사진이 놓였던 자리입니다. 요청이 어떤 문장을 그대로 두라고 할 때만 그 문장을 고정 문구로 씁니다.
-- <write>와 내용이 있는 <ask>에는 그 자리에 무엇이 오는지만 적고, 어떻게 쓸지는 적지 않습니다.
+- <write>에는 그 자리에 들어갈 주제만 적습니다. 내용 있는 <ask>에는 작성자의 실제 경험·확인한 사실·불확실한 점을 묻는 구체적인 질문을 적어도 됩니다. 어느 쪽에도 모델의 말투·길이·서식·생략·반복을 지시하지 않습니다.
 - 말투, 길이, 강조, 빼고 싶은 내용처럼 글을 어떻게 쓸지에 대한 바람은 템플릿에 넣지 말고 wishes에 짧은 문장으로 옮깁니다. 그런 바람이 없으면 wishes는 빈 배열입니다.
 - 목표 글자 수나 태그 수는 정하지 않습니다.`
 
@@ -44,9 +45,10 @@ The format guide above is the grammar of a template body. This time, answer with
 - description: one or two sentences on what kind of post this template is for. At most {descriptionMax} characters; it may be empty.
 - title_area: the form of the post's title. It takes plain text, <write> and <ask> only — no photo position and no repeat. At most {titleAreaMax} characters; leave it empty when no title form is needed. An ask label here may not repeat one in the body.
 - body: a body that follows the format guide above.
+- Mark facts the author must supply before a new post in the title area or body with <ask label="firsthand experience" required="true">What did you personally experience or verify?</ask>. Without required, a field is optional; true is its only valid value.
 - In [Current draft], change only what the request asks to change and keep everything else as written. Fill the fields that are empty.
 - Do not carry sentences of [Sample post] over as fixed text. Turn its order and photo positions into the template's places, and turn each sentence into the topic a <write> covers. A [사진] line marks where photos stood. Write a sentence as fixed text only when the request asks to keep it.
-- A <write>, and an <ask> holding text, names what stands at its place, never how to write it.
+- A <write> names only what belongs at its place. An <ask> holding text may ask the author a concrete question about firsthand experience, verified facts, or uncertainty. Neither may command the model's tone, length, formatting, omissions, or repetition.
 - Wishes about how to write — tone, length, emphasis, what to leave out — never go into the template: move them to wishes as short sentences. With no such wish, wishes is an empty array.
 - Never set a target length or a tag count.`
 

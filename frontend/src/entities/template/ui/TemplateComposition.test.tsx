@@ -322,7 +322,8 @@ describe('the composition editor', () => {
 })
 
 describe('데이터 받기', () => {
-  const switchOn = (rowIndex: number) => within(rows()[rowIndex]).getByRole('switch')
+  const switchOn = (rowIndex: number) =>
+    within(rows()[rowIndex]).getByRole('switch', { name: '데이터 받기' })
 
   it('is offered on the two rows whose text a post can decide, and on no other kind', async () => {
     render(
@@ -358,6 +359,16 @@ describe('데이터 받기', () => {
     expect(body()).toBe('<ask label="총평 별점">별점과 총평</ask>')
     // The instruction is still editable beside the title.
     expect(screen.getByLabelText('이 자리에 오는 것')).toHaveValue('별점과 총평')
+  })
+
+  it('toggles whether the post must answer an existing data field', async () => {
+    render(<Editor initial={'<ask label="방문 계기">직접 겪은 상황</ask>'} />)
+    await userEvent.click(toggle(0))
+    const required = within(rows()[0]).getByRole('switch', { name: '필수 입력' })
+    await userEvent.click(required)
+    expect(body()).toBe('<ask label="방문 계기" required="true">직접 겪은 상황</ask>')
+    await userEvent.click(required)
+    expect(body()).toBe('<ask label="방문 계기">직접 겪은 상황</ask>')
   })
 
   it('replaces a 고정 문구 row text with the title, and restores it when switched off', async () => {

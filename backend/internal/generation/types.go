@@ -147,6 +147,14 @@ type TemplateBrief struct {
 	TitleArea string
 }
 
+// RequiredTemplateAnswerError crosses the template port for a new-write start. Label is the
+// first missing field in title-then-body order and is safe to show beside the editor input.
+type RequiredTemplateAnswerError struct{ Label string }
+
+func (e *RequiredTemplateAnswerError) Error() string {
+	return "a required template answer is missing: " + e.Label
+}
+
 // TemplateFact is one data field that survived the freeze: the title the author asked under
 // and the text the post's author typed.
 type TemplateFact struct {

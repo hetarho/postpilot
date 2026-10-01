@@ -65,6 +65,14 @@ func TestPublishedRefusalsCrossTheAdapters(t *testing.T) {
 	}
 }
 
+func TestRequiredTemplateAnswerCrossesComparisonAdapter(t *testing.T) {
+	got := mapSnapshotError(fmt.Errorf("snapshot write input: %w", &generation.RequiredTemplateAnswerError{Label: "직접 겪은 일"}))
+	var missing *experiment.RequiredTemplateAnswerError
+	if !errors.As(got, &missing) || missing.Label != "직접 겪은 일" {
+		t.Fatalf("comparison refusal = %v, want required label", got)
+	}
+}
+
 // The generation context never reads a post's status; it reads this flag, which the adapter
 // derives from the real post: true only while the post is published.
 func TestGenerationPostsCarriesThePublishedFlag(t *testing.T) {

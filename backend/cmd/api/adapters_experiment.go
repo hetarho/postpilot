@@ -431,9 +431,12 @@ func parseLLMRef(value string) llm.ModelRef {
 	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}
 }
 func mapSnapshotError(err error) error {
+	var requiredAnswer *generation.RequiredTemplateAnswerError
 	switch {
 	case err == nil:
 		return nil
+	case errors.As(err, &requiredAnswer):
+		return &experiment.RequiredTemplateAnswerError{Label: requiredAnswer.Label}
 	case errors.Is(err, generation.ErrVideoUnsupported):
 		var unsupported *generation.VideoUnsupportedError
 		if errors.As(err, &unsupported) {

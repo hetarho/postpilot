@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Template } from '@/entities/template'
-import { answerFields, toAnswerPatch, withAnswer } from './answers'
+import {
+  answerFields,
+  firstEnabledAnswer,
+  missingRequiredAnswers,
+  toAnswerPatch,
+  withAnswer,
+} from './answers'
 
 const template = (body: string, titleArea = ''): Template => ({
   id: 'template-review',
@@ -20,8 +26,15 @@ describe('the fields the write screen asks for', () => {
       [{ label: '총평', text: '4.5점', enabled: false }],
     )
     expect(fields).toEqual([
-      { label: '방문일', flavor: 'verbatim', text: '', enabled: true },
-      { label: '총평', flavor: 'write', text: '4.5점', enabled: false },
+      { label: '방문일', flavor: 'verbatim', prompt: '', required: false, text: '', enabled: true },
+      {
+        label: '총평',
+        flavor: 'write',
+        prompt: '총평을 쓰세요',
+        required: false,
+        text: '4.5점',
+        enabled: false,
+      },
     ])
   })
 
@@ -44,7 +57,9 @@ describe('the fields the write screen asks for', () => {
     const fields = answerFields(template('<ask label="방문일"/>'), [
       { label: '다른 템플릿의 칸', text: '값', enabled: true },
     ])
-    expect(fields).toEqual([{ label: '방문일', flavor: 'verbatim', text: '', enabled: true }])
+    expect(fields).toEqual([
+      { label: '방문일', flavor: 'verbatim', prompt: '', required: false, text: '', enabled: true },
+    ])
     expect(toAnswerPatch(fields)).toEqual([{ label: '방문일', text: '', enabled: true }])
   })
 
@@ -55,16 +70,37 @@ describe('the fields the write screen asks for', () => {
       [{ label: '가게 이름', text: '을지로 노포', enabled: true }],
     )
     expect(fields).toEqual([
-      { label: '가게 이름', flavor: 'verbatim', text: '을지로 노포', enabled: true },
-      { label: '총평', flavor: 'write', text: '', enabled: true },
+      {
+        label: '가게 이름',
+        flavor: 'verbatim',
+        prompt: '',
+        required: false,
+        text: '을지로 노포',
+        enabled: true,
+      },
+      {
+        label: '총평',
+        flavor: 'write',
+        prompt: '총평을 쓰세요',
+        required: false,
+        text: '',
+        enabled: true,
+      },
     ])
   })
 
   it('asks exactly what the body asks when the title area is empty', () => {
     const body = '오늘의 기록\n<ask label="방문일"/>\n<ask label="총평">총평을 쓰세요</ask>'
     expect(answerFields(template(body, ''), [])).toEqual([
-      { label: '방문일', flavor: 'verbatim', text: '', enabled: true },
-      { label: '총평', flavor: 'write', text: '', enabled: true },
+      { label: '방문일', flavor: 'verbatim', prompt: '', required: false, text: '', enabled: true },
+      {
+        label: '총평',
+        flavor: 'write',
+        prompt: '총평을 쓰세요',
+        required: false,
+        text: '',
+        enabled: true,
+      },
     ])
   })
 
@@ -84,5 +120,33 @@ describe('the fields the write screen asks for', () => {
     ])
     const switched = withAnswer(typed, '총평', { enabled: false })
     expect(toAnswerPatch(switched)[1]).toEqual({ label: '총평', text: '4.5점', enabled: false })
+  })
+
+  it('keeps a required answer enabled and names missing fields in body order', () => {
+    const selected = template(
+      '<ask label="첫 장면" required="true">직접 겪은 일</ask>\n' +
+        '<ask label="선택 항목"/>\n' +
+        '<ask label="마지막 생각" required="true">남은 인상</ask>',
+    )
+    const fields = answerFields(selected, [
+      { label: '첫 장면', text: '실제로 봤다', enabled: false },
+      { label: '마지막 생각', text: '\u200b', enabled: true },
+    ])
+    expect(fields[0]).toMatchObject({ required: true, prompt: '직접 겪은 일', enabled: false })
+    expect(firstEnabledAnswer(fields)?.label).toBe('첫 장면')
+    expect(missingRequiredAnswers(fields)).toEqual(['첫 장면', '마지막 생각'])
+    expect(toAnswerPatch(withAnswer(fields, '첫 장면', { enabled: false }))[0].enabled).toBe(true)
+    expect(toAnswerPatch(withAnswer(fields, '첫 장면', { text: '다시 확인한 사실' }))[0]).toEqual({
+      label: '첫 장면',
+      text: '다시 확인한 사실',
+      enabled: true,
+    })
+    expect(
+      missingRequiredAnswers(
+        withAnswer(withAnswer(fields, '첫 장면', { enabled: true }), '마지막 생각', {
+          text: '다시 가고 싶다',
+        }),
+      ),
+    ).toEqual([])
   })
 })

@@ -1,5 +1,6 @@
 import {
   templateAskFields,
+  isBlank,
   TEMPLATE_PARSE_OPTIONS,
   type AskField,
   type Template,
@@ -31,7 +32,11 @@ export function answerFields(
   return templateAskFields(template.titleArea, template.body, TEMPLATE_PARSE_OPTIONS).map(
     (field) => {
       const answer = stored.get(field.label)
-      return { ...field, text: answer?.text ?? '', enabled: answer?.enabled ?? true }
+      return {
+        ...field,
+        text: answer?.text ?? '',
+        enabled: answer?.enabled ?? true,
+      }
     },
   )
 }
@@ -53,11 +58,22 @@ export function withAnswer(
   label: string,
   change: Partial<Pick<AnswerField, 'text' | 'enabled'>>,
 ): AnswerField[] {
-  return fields.map((field) => (field.label === label ? { ...field, ...change } : field))
+  return fields.map((field) =>
+    field.label === label
+      ? { ...field, ...change, enabled: field.required ? true : (change.enabled ?? field.enabled) }
+      : field,
+  )
 }
 
-/** The first field the author can type into — a switched-off one is greyed and skipped, the way the
- *  browser's own focus order skips it. Undefined when no field takes typing. */
+/** Required answers are checked from the current editor state before any job starts. */
+export function missingRequiredAnswers(fields: readonly AnswerField[]): string[] {
+  return fields
+    .filter((field) => field.required && (!field.enabled || isBlank(field.text)))
+    .map((field) => field.label)
+}
+
+/** The first field the author can type into. Required fields remain editable even when an old
+ *  saved answer was excluded, so typing can put that answer back into the next run. */
 export function firstEnabledAnswer(fields: readonly AnswerField[]): AnswerField | undefined {
-  return fields.find((field) => field.enabled)
+  return fields.find((field) => field.enabled || field.required)
 }

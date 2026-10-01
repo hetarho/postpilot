@@ -41,6 +41,10 @@ func (neutralBriefs) RenderedFor(context.Context, string, string, bool, []Templa
 	return TemplateBrief{}, false, nil
 }
 
+func (neutralBriefs) RenderedForNewWrite(context.Context, string, string, bool, []TemplateAnswer) (TemplateBrief, bool, error) {
+	return TemplateBrief{}, false, nil
+}
+
 type neutralGuidelines struct{}
 
 func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string, Language, bool) (FrozenGuidelines, error) {

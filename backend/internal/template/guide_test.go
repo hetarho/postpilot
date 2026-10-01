@@ -109,6 +109,20 @@ func TestFormatGuideStatesTheTextOnlyAndAttributeRules(t *testing.T) {
 	}
 }
 
+func TestFormatGuideAllowsExperienceQuestionsWithoutWritingCommands(t *testing.T) {
+	for language, phrases := range map[Language][]string{
+		LanguageKorean:  {"직접 매긴 별점과 그 이유는 무엇인가요?", "실제 경험·확인한 사실·불확실한 점을 묻는 구체적인 질문", "말투·길이·서식·생략·반복을 지시하지"},
+		LanguageEnglish: {"What rating did you give, and why?", "firsthand experience, verified facts, or uncertainty", "tone, length, formatting, omissions, or repetition"},
+	} {
+		guide := guideText(t, language)
+		for _, phrase := range phrases {
+			if !strings.Contains(guide, phrase) {
+				t.Errorf("%s guide does not say %q", language, phrase)
+			}
+		}
+	}
+}
+
 // Retired and never taught again (TMPL-37): a slot label belongs to the retired place and link
 // positions, while `ask` carries a live `label` of its own, so the check is scoped to slots.
 func TestFormatGuideTeachesNothingRetiredAndLeaksNoPlaceholder(t *testing.T) {

@@ -421,6 +421,14 @@ type JobAlreadyInProgressError struct{ ActiveID string }
 // generation adapter without importing another context's domain into this one.
 type VideoUnsupportedError struct{ Model string }
 
+// RequiredTemplateAnswerError keeps the first missing template field across the generation
+// snapshot adapter, before this comparison creates a row or holds credits.
+type RequiredTemplateAnswerError struct{ Label string }
+
+func (e *RequiredTemplateAnswerError) Error() string {
+	return "a required template answer is missing: " + e.Label
+}
+
 func (e *VideoUnsupportedError) Error() string { return ErrVideoUnsupported.Error() + ": " + e.Model }
 func (e *VideoUnsupportedError) Unwrap() error { return ErrVideoUnsupported }
 

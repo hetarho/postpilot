@@ -148,6 +148,7 @@ func toConnectError(op string, err error) error {
 	}
 	var active *generation.JobAlreadyInProgressError
 	var comparison *generation.ExperimentPendingError
+	var requiredAnswer *generation.RequiredTemplateAnswerError
 	switch {
 	case errors.Is(err, generation.ErrNotFound):
 		if op == "get generation" {
@@ -181,6 +182,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "a storyline run takes no re-observation selection", postpilotv1.FailureReason_GENERATION_STORYLINE_REOBSERVE, nil)
 	case errors.Is(err, generation.ErrStorylineMissing):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
+	case errors.As(err, &requiredAnswer):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a required template answer is missing", postpilotv1.FailureReason_TEMPLATE_REQUIRED_ANSWER_MISSING, map[string]string{"label": requiredAnswer.Label})
 	case errors.Is(err, generation.ErrRevisionContentRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content is required for revision", postpilotv1.FailureReason_REVISION_CONTENT_REQUIRED, nil)
 	case errors.Is(err, generation.ErrVoiceDeleted):

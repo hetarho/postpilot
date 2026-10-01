@@ -30,6 +30,7 @@ export function EditorStepDock({
   generateRef,
   reviseRef,
   beforeStart,
+  checkRequiredAnswers,
   onOpenBrief,
   onTitleFinalized,
   onStepChange,
@@ -48,6 +49,7 @@ export function EditorStepDock({
   generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
   beforeStart: () => Promise<void>
+  checkRequiredAnswers: () => boolean
   /** Opens the writing brief marking what a `mode` press was refused for. */
   onOpenBrief: (mode: GenerationMode) => void
   onTitleFinalized: (title: string) => void
@@ -67,6 +69,7 @@ export function EditorStepDock({
           jobPending={jobView.isPending}
           onStarted={(id) => jobView.onStarted(id, 'generate')}
           beforeStart={beforeStart}
+          checkRequiredAnswers={checkRequiredAnswers}
           onOpenBrief={onOpenBrief}
         />
       )}

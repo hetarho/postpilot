@@ -309,7 +309,7 @@ type storylineMaterial struct {
 // freezeStorylineMaterial resolves the material once, at enqueue, through the same freezes a
 // generation uses, so the two can never disagree about what a post's brief or 지침 are.
 func (s *Service) freezeStorylineMaterial(ctx context.Context, post PostInput) (storylineMaterial, error) {
-	brief, err := s.freezeTemplate(ctx, post)
+	brief, err := s.freezeTemplate(ctx, post, true)
 	if err != nil {
 		return storylineMaterial{}, err
 	}

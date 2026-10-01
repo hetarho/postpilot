@@ -467,7 +467,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
-	created, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "맛집 후기", Body: `<ask label="총평">총평을 쓰세요</ask>`, TitleArea: `<ask label="가게 이름">가게 이름을 넣어 쓰세요</ask> 방문 후기`})
+	created, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "맛집 후기", Body: `<ask label="총평" required="true">총평을 쓰세요</ask>`, TitleArea: `<ask label="가게 이름" required="true">가게 이름을 넣어 쓰세요</ask> 방문 후기`})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -489,9 +489,15 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, false, input.TemplateAnswers)
+	bridge := generationTemplates{service: templateSvc}
+	brief, ok, err := bridge.RenderedForNewWrite(ctx, "alice", input.TemplateID, false, input.TemplateAnswers)
 	if err != nil || !ok {
 		t.Fatalf("render: ok=%v err=%v", ok, err)
+	}
+	_, ok, err = bridge.RenderedForNewWrite(ctx, "alice", input.TemplateID, false, input.TemplateAnswers[:1])
+	var missing *generation.RequiredTemplateAnswerError
+	if ok || !errors.As(err, &missing) || missing.Label != "총평" {
+		t.Fatalf("partial new-write render = ok:%v err:%v", ok, err)
 	}
 	if !strings.Contains(brief.TitleArea, `<facts label="가게 이름">을지로 노포</facts>`) || !strings.HasSuffix(brief.TitleArea, " 방문 후기") {
 		t.Fatalf("title area = %q", brief.TitleArea)

@@ -509,6 +509,9 @@ function BlockRow({
         {/* The row keeps its KIND and adds the mark: what it contributes to the post has not
             changed, only where its words come from (TMPL-44). */}
         {asksForData(block) && <Badge tone="accent">{t('builder.block.asksForData')}</Badge>}
+        {asksForData(block) &&
+          (block.kind === 'write' || block.kind === 'text') &&
+          block.required && <Badge tone="accent">{t('builder.block.required')}</Badge>}
         <span
           className={typographyStyles({
             variant: 'body',
@@ -678,11 +681,15 @@ function AskFields({
           disabled={context.disabled || context.nested}
           onChange={(event) => {
             if (!event.target.checked) {
-              onChange({ ...block, ask: undefined })
+              onChange({ ...block, ask: undefined, required: undefined })
               return
             }
             const seed = block.text.replace(/\s+/g, ' ').trim()
-            onChange({ ...block, ask: seed.length <= TEMPLATE_LIMITS.askLabel ? seed : '' })
+            onChange({
+              ...block,
+              ask: seed.length <= TEMPLATE_LIMITS.askLabel ? seed : '',
+              required: false,
+            })
           }}
         />
         <Typography variant="body" as="span" className="min-w-0 flex-1">
@@ -708,6 +715,17 @@ function AskFields({
             message={duplicate ? t('builder.reasons.duplicate_ask_label') : undefined}
             onChange={(next) => onChange({ ...block, ask: next })}
           />
+          <div className="mt-3 flex min-h-11 items-center gap-3">
+            <Switch
+              aria-label={t('builder.block.required')}
+              checked={block.required === true}
+              disabled={context.disabled}
+              onChange={(event) => onChange({ ...block, required: event.target.checked })}
+            />
+            <Typography variant="body" as="span" className="min-w-0 flex-1">
+              {t('builder.block.required')}
+            </Typography>
+          </div>
         </div>
       )}
     </div>

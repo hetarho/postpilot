@@ -295,10 +295,12 @@ func TestTheRevisionPayloadFreezesTheTemplateToo(t *testing.T) {
 // fakeTemplateBriefs is the template context's published render. `deleted` makes it answer
 // like a template removed after the enqueue.
 type fakeTemplateBriefs struct {
-	brief     TemplateBrief
-	deleted   bool
-	calls     int
-	hasPhotos bool
+	brief         TemplateBrief
+	deleted       bool
+	calls         int
+	newWriteCalls int
+	newWriteErr   error
+	hasPhotos     bool
 	// answers records what the enqueue handed over, so a test can prove the post's own
 	// answers reached the render rather than being dropped at the seam.
 	answers []TemplateAnswer
@@ -312,6 +314,14 @@ func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string
 		return TemplateBrief{}, false, nil
 	}
 	return f.brief, true, nil
+}
+
+func (f *fakeTemplateBriefs) RenderedForNewWrite(ctx context.Context, userID, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error) {
+	f.newWriteCalls++
+	if f.newWriteErr != nil {
+		return TemplateBrief{}, false, f.newWriteErr
+	}
+	return f.RenderedFor(ctx, userID, templateID, hasPhotos, answers)
 }
 
 func templateAwareService(t *testing.T, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {

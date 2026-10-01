@@ -357,6 +357,9 @@ enum FailureReason {
   TEMPLATE_SAMPLE_UNAVAILABLE = 287;
   TEMPLATE_REQUEST_ANSWER_INVALID = 288;
   TEMPLATE_REQUEST_NOT_READY = 289;
+  // A new writing start is missing the selected template's first required data field.
+  // AppErrorDetail.params carries its display-safe `label` (TMPL-68, GEN-76).
+  TEMPLATE_REQUIRED_ANSWER_MISSING = 290;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

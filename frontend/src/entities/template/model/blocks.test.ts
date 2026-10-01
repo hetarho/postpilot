@@ -308,6 +308,17 @@ describe('a row that asks the post for its data', () => {
     }
   })
 
+  it('round-trips required fields without changing optional ones', () => {
+    const source =
+      '<ask label="도입" required="true">실제 시작 장면</ask>\n<ask label="마무리" required="true"/>'
+    expect(read(source)).toMatchObject([
+      { kind: 'write', ask: '도입', required: true },
+      { kind: 'text', ask: '마무리', required: true },
+    ])
+    expect(toBody(read(source))).toBe(source)
+    expect(toBody([{ id: 'x', kind: 'text', text: '', ask: '선택' }])).toBe('<ask label="선택"/>')
+  })
+
   it('escapes a title the way any other authored text is escaped', () => {
     const body = toBody([{ id: 'a', kind: 'text', text: '', ask: '네이버 "별점"' }])
     expect(body).toBe('<ask label="네이버 &quot;별점&quot;"/>')

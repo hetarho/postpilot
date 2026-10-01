@@ -71,6 +71,7 @@ type PendingExperiments interface {
 // attachment (TMPL-21). An error is a real failure and stops the start.
 type TemplateBriefs interface {
 	RenderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error)
+	RenderedForNewWrite(ctx context.Context, userID, templateID string, hasPhotos bool, answers []TemplateAnswer) (TemplateBrief, bool, error)
 }
 
 // FrozenGuidelines are the 지침 texts one run is given, in injection order (GUIDE-14): the

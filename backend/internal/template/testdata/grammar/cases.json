@@ -676,6 +676,52 @@
       ]
     },
     {
+      "name": "required data field with an instruction",
+      "body": "<ask label=\"총평\" required=\"true\">실제 총평</ask>",
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "총평",
+          "text": "실제 총평",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "required self-closing data field in title area",
+      "titleArea": "<ask label=\"방문일\" required='true'/>",
+      "body": "<write>방문</write>",
+      "titleNodes": [
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": "",
+          "required": true
+        }
+      ],
+      "nodes": [
+        {
+          "t": "write",
+          "text": "방문"
+        }
+      ]
+    },
+    {
+      "name": "required false is not a supported value",
+      "body": "<ask label=\"총평\" required=\"false\"/>",
+      "error": {"line": 1, "reason": "malformed_tag"}
+    },
+    {
+      "name": "required value is case sensitive",
+      "body": "<ask label=\"총평\" required=\"True\"/>",
+      "error": {"line": 1, "reason": "malformed_tag"}
+    },
+    {
+      "name": "required attribute may not repeat",
+      "body": "<ask label=\"총평\" required=\"true\" required=\"true\"/>",
+      "error": {"line": 1, "reason": "malformed_tag"}
+    },
+    {
       "name": "a self-closing data field takes the answer verbatim",
       "body": "<ask label=\"방문일\"/>",
       "nodes": [

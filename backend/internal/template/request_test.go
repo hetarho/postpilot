@@ -307,6 +307,9 @@ func TestRunRequestTeachesTheSharedGuideAndGivesOnlyTheRequest(t *testing.T) {
 	if !strings.HasPrefix(req.System, guide) || !strings.Contains(req.System, "[이번 요청에서 지켜야 할 것]") {
 		t.Fatalf("system does not start with the shared guide and carry the rules")
 	}
+	if !strings.Contains(req.System, `<ask label="직접 겪은 일" required="true">방문 중 직접 겪고 확인한 일은 무엇인가요?</ask>`) {
+		t.Fatalf("request rules do not teach required fields: %s", req.System)
+	}
 	if strings.Contains(req.System, "{nameMax}") || !strings.Contains(req.System, "40자까지") {
 		t.Fatalf("rules did not state the configured ceilings")
 	}
@@ -318,6 +321,24 @@ func TestRunRequestTeachesTheSharedGuideAndGivesOnlyTheRequest(t *testing.T) {
 	}
 	if len(req.Messages) != 1 {
 		t.Fatalf("messages = %d", len(req.Messages))
+	}
+}
+
+func TestRequestRulesAllowConcreteExperienceQuestions(t *testing.T) {
+	svc, _ := newService(t)
+	for language, phrases := range map[Language][]string{
+		LanguageKorean:  {`<ask label="직접 겪은 일" required="true">방문 중 직접 겪고 확인한 일은 무엇인가요?</ask>`, "실제 경험·확인한 사실·불확실한 점을 묻는 구체적인 질문", "말투·길이·서식·생략·반복을 지시하지"},
+		LanguageEnglish: {`<ask label="firsthand experience" required="true">What did you personally experience or verify?</ask>`, "firsthand experience, verified facts, or uncertainty", "tone, length, formatting, omissions, or repetition"},
+	} {
+		system, err := svc.requestSystem(language)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, phrase := range phrases {
+			if !strings.Contains(system, phrase) {
+				t.Errorf("%s request rules do not say %q", language, phrase)
+			}
+		}
 	}
 }
 

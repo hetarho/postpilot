@@ -171,6 +171,7 @@ export const errors = {
   TEMPLATE_NUMBER_OUT_OF_RANGE:
     'The value must be between {{min}} and {{max}}. It is currently {{actual}}.',
   TEMPLATE_PARSE_FAILED: '{{area}} line {{line}}: {{reason}}. Fix it in the source view.',
+  TEMPLATE_REQUIRED_ANSWER_MISSING: 'Fill the required field “{{label}}” and try again.',
   TEMPLATE_REQUEST_EMPTY: 'Describe the template you want or paste a post to follow.',
   TEMPLATE_REQUEST_RUNNING:
     'Another template request is still running. Try again once it finishes.',

@@ -70,6 +70,7 @@ interface StorylineActionsProps {
   onStarted: (jobId: string) => void
   /** Saves the draft queue — the storyline edits included — before anything starts. */
   beforeStart: () => Promise<void>
+  checkRequiredAnswers?: () => boolean
   /** Saves the block editor's content before a rewrite replaces it. */
   flushContent: () => Promise<unknown>
   onOpenBrief: (mode: GenerationMode) => void
@@ -116,6 +117,7 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
       jobPending = false,
       onStarted,
       beforeStart,
+      checkRequiredAnswers,
       flushContent,
       onOpenBrief,
       children,
@@ -166,13 +168,15 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
         onOpenBrief('generation')
         return false
       }
-      return ordinary.ok && Boolean(writeSelection)
+      if (!ordinary.ok || !writeSelection) return false
+      return checkRequiredAnswers?.() !== false
     }
 
     const run = async (
       kind: 'remake' | 'write' | 'send',
       start: () => Promise<{ jobId: string }>,
     ) => {
+      if (checkRequiredAnswers?.() === false) return false
       setPreparing(kind)
       setPrepareFailure(undefined)
       try {

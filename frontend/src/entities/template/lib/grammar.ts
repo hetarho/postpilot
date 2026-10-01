@@ -21,7 +21,7 @@ const TAG_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
   write: [],
   slot: ['kind', 'count', 'label'],
   repeat: ['each'],
-  ask: ['label'],
+  ask: ['label', 'required'],
 }
 
 /** One parsed construct. `source` is the node's exact source slice and serialization re-emits
@@ -41,6 +41,8 @@ export interface TemplateNode {
   slotKind?: SlotKind
   /** slot · ask (an ask's is the title the write screen shows over the field) */
   label?: string
+  /** An ask with required="true" must have an enabled, nonblank answer before a run. */
+  required?: boolean
   /** How many photos a photo position holds side by side. 1 when the attribute is absent and
    *  0 on every node that is not a photo slot, so a non-zero count always means "this position
    *  binds this many photos". */
@@ -141,7 +143,7 @@ const BLANK = new Set([
   0x205f, 0x3000, 0xfeff,
 ])
 
-function isBlank(value: string): boolean {
+export function isBlank(value: string): boolean {
   for (const char of value) {
     if (!BLANK.has(char.codePointAt(0) ?? 0)) return false
   }
@@ -275,6 +277,8 @@ function toAskFields(nodes: readonly TemplateNode[]): AskField[] {
     .map((node) => ({
       label: decode(node.label ?? ''),
       flavor: (node.text ?? '') === '' ? ('verbatim' as const) : ('write' as const),
+      prompt: decode(node.text ?? ''),
+      required: node.required === true,
     }))
 }
 
@@ -283,6 +287,9 @@ export interface AskField {
   /** `verbatim` puts the answer on the page as typed; `write` hands it to the model as the
    *  only facts that position's prose may state. */
   flavor: 'verbatim' | 'write'
+  /** What this position asks the author to describe, shown below its answer field. */
+  prompt: string
+  required: boolean
 }
 
 type Scan = { ok: true; nodes: TemplateNode[]; end: number } | { ok: false; failure: ScanFailure }
@@ -390,6 +397,11 @@ function parseTag(
     // its title is.
     if (inRepeat) return { ok: false, failure: { line, reason: 'ask_in_repeat' } }
     if (head.stray) return { ok: false, failure: { line, reason: 'malformed_tag' } }
+    const requiredValue = head.attrs.get('required')
+    if (requiredValue !== undefined && decode(requiredValue) !== 'true') {
+      return { ok: false, failure: { line, reason: 'malformed_tag' } }
+    }
+    const required = requiredValue !== undefined
     const rawLabel = head.attrs.get('label')
     if (rawLabel === undefined || isBlank(decode(rawLabel))) {
       return { ok: false, failure: { line, reason: 'missing_attribute' } }
@@ -397,7 +409,14 @@ function parseTag(
     if (head.selfClosing) {
       return {
         ok: true,
-        node: { kind: 'ask', source: body.slice(at, head.after), line, label: rawLabel, text: '' },
+        node: {
+          kind: 'ask',
+          source: body.slice(at, head.after),
+          line,
+          label: rawLabel,
+          text: '',
+          required,
+        },
         after: head.after,
       }
     }
@@ -408,7 +427,14 @@ function parseTag(
     const text = isBlank(decode(inner.text)) ? '' : inner.text
     return {
       ok: true,
-      node: { kind: 'ask', source: body.slice(at, inner.after), line, label: rawLabel, text },
+      node: {
+        kind: 'ask',
+        source: body.slice(at, inner.after),
+        line,
+        label: rawLabel,
+        text,
+        required,
+      },
       after: inner.after,
     }
   }

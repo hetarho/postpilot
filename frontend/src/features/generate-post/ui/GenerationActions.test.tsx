@@ -30,7 +30,7 @@ async function press(user: User, name: '바로 글 쓰기' | '스토리라인 �
   await user.click(button)
 }
 
-function setup(signedVideoUrl: boolean) {
+function setup(signedVideoUrl: boolean, checkRequiredAnswers = vi.fn(() => true)) {
   const starts: FakeGenerationStart[] = []
   const storylineStarts: FakeGenerationStart[] = []
   const comparisons: FakeWriteExperimentStart[] = []
@@ -80,12 +80,35 @@ function setup(signedVideoUrl: boolean) {
       }}
       onStarted={vi.fn()}
       beforeStart={beforeStart}
+      checkRequiredAnswers={checkRequiredAnswers}
       onOpenBrief={onOpenBrief}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
-  return { starts, storylineStarts, comparisons, beforeStart, onOpenBrief, observe }
+  return {
+    starts,
+    storylineStarts,
+    comparisons,
+    beforeStart,
+    checkRequiredAnswers,
+    onOpenBrief,
+    observe,
+  }
 }
+
+it('checks required template answers before writing, planning or comparing', async () => {
+  const user = userEvent.setup()
+  const checkRequiredAnswers = vi.fn(() => false)
+  const { starts, storylineStarts, comparisons, beforeStart } = setup(true, checkRequiredAnswers)
+  for (const name of ['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const) {
+    await press(user, name)
+  }
+  expect(checkRequiredAnswers).toHaveBeenCalledTimes(3)
+  expect(beforeStart).not.toHaveBeenCalled()
+  expect(starts).toHaveLength(0)
+  expect(storylineStarts).toHaveLength(0)
+  expect(comparisons).toHaveLength(0)
+})
 
 // A refusal for the setup is not said under the row: the press opens the brief for its own run,
 // where the field that cannot serve the post is marked.

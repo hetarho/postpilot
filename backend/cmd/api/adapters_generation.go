@@ -111,11 +111,30 @@ func (a clipGuidelineCandidates) ForClip(ctx context.Context, userID, videoTempl
 // postCandidateLinks lets post deletion drop the link without the post context learning what
 // a guideline candidate is: it hands over the account and the slug, and nothing comes back.
 func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+	return a.renderedFor(ctx, userID, templateID, hasPhotos, answers, false)
+}
+
+func (a generationTemplates) RenderedForNewWrite(ctx context.Context, userID, templateID string, hasPhotos bool, answers []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+	return a.renderedFor(ctx, userID, templateID, hasPhotos, answers, true)
+}
+
+func (a generationTemplates) renderedFor(ctx context.Context, userID, templateID string, hasPhotos bool, answers []generation.TemplateAnswer, requireAnswers bool) (generation.TemplateBrief, bool, error) {
 	owned := make([]template.Answer, 0, len(answers))
 	for _, answer := range answers {
 		owned = append(owned, template.Answer{Label: answer.Label, Text: answer.Text, Enabled: answer.Enabled})
 	}
-	rendered, ok, err := a.service.RenderedFor(ctx, userID, templateID, hasPhotos, owned)
+	var rendered template.Rendered
+	var ok bool
+	var err error
+	if requireAnswers {
+		rendered, ok, err = a.service.RenderedForNewWrite(ctx, userID, templateID, hasPhotos, owned)
+	} else {
+		rendered, ok, err = a.service.RenderedFor(ctx, userID, templateID, hasPhotos, owned)
+	}
+	var missing *template.RequiredAnswerError
+	if errors.As(err, &missing) {
+		return generation.TemplateBrief{}, false, &generation.RequiredTemplateAnswerError{Label: missing.Label}
+	}
 	if err != nil || !ok {
 		return generation.TemplateBrief{}, false, err
 	}

@@ -31,7 +31,19 @@ var (
 	// ErrTooMany is the per-account cap. It is a storage guard rather than a prompt guard —
 	// only the one assigned template ever reaches a prompt.
 	ErrTooMany = errors.New("this account already holds the maximum number of templates")
+	// ErrRequiredAnswerMissing is a new-write refusal for a selected template whose
+	// first required field has no enabled, nonblank post answer (TMPL-68).
+	ErrRequiredAnswerMissing = errors.New("a required template answer is missing")
 )
+
+// RequiredAnswerError names the first missing field in template order, title before body.
+// The transport sends Label as a display-safe parameter so the editor can focus that field.
+type RequiredAnswerError struct{ Label string }
+
+func (e *RequiredAnswerError) Error() string {
+	return ErrRequiredAnswerMissing.Error() + ": " + e.Label
+}
+func (e *RequiredAnswerError) Unwrap() error { return ErrRequiredAnswerMissing }
 
 // NumberOutOfRangeError is a generation number a template may not hold. The bounds are the
 // POST option's own (TMPL-6): a template's number only ever lands in a post's option, so

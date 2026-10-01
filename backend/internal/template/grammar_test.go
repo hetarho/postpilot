@@ -15,6 +15,7 @@ type fixtureNode struct {
 	Text     string        `json:"text"`
 	Kind     string        `json:"kind"`
 	Label    string        `json:"label"`
+	Required bool          `json:"required"`
 	Count    int           `json:"count"`
 	Each     string        `json:"each"`
 	Children []fixtureNode `json:"children"`
@@ -185,6 +186,9 @@ func assertNodes(t *testing.T, got []Node, want []fixtureNode, path string) {
 			}
 			if Decode(got[i].Text) != want[i].Text {
 				t.Fatalf("%s: ask text %q, want %q", at, Decode(got[i].Text), want[i].Text)
+			}
+			if got[i].Required != want[i].Required {
+				t.Fatalf("%s: ask required %t, want %t", at, got[i].Required, want[i].Required)
 			}
 		case "repeat":
 			if got[i].Each != want[i].Each {

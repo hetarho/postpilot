@@ -15,6 +15,7 @@ import {
   TemplateAnswerFields,
   answerFields,
   firstEnabledAnswer,
+  missingRequiredAnswers,
   toAnswerPatch,
   withAnswer,
 } from '@/features/fill-template-answers'
@@ -104,6 +105,17 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
   const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
+  const [showRequiredErrors, setShowRequiredErrors] = useState(false)
+  const checkRequiredAnswers = () => {
+    if (missingRequiredAnswers(fields).length === 0) return true
+    setShowRequiredErrors(true)
+    setStep('generate')
+    // The field lives in ①, which may have to mount again after leaving the storyline step.
+    window.setTimeout(() => {
+      document.querySelector<HTMLTextAreaElement>('[data-required-answer-missing="true"]')?.focus()
+    }, 0)
+    return false
+  }
 
   // The brief widget SETS the target length and the tag count while the generate action SENDS
   // them from another layer, so the screen they both hang off owns the values.
@@ -138,6 +150,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   const answerFieldsPanel = (
     <TemplateAnswerFields
       fields={fields}
+      showRequiredErrors={showRequiredErrors}
       firstFieldRef={firstAnswerRef}
       disabled={published}
       onChange={(label, change) =>
@@ -268,6 +281,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
           targetLength={brief.targetLength}
           onTitleFinalized={autosave.setTitle}
           beforeStart={autosave.flush}
+          checkRequiredAnswers={checkRequiredAnswers}
           ensureSlug={autosave.ensureSlug}
           jobView={jobView}
           storyline={{

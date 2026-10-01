@@ -24,6 +24,7 @@ interface FixtureNode {
   text?: string
   kind?: string
   label?: string
+  required?: boolean
   count?: number
   each?: string
   children?: FixtureNode[]
@@ -72,6 +73,7 @@ function expectNodes(got: readonly TemplateNode[], want: readonly FixtureNode[],
     if (expected.t === 'ask') {
       expect(decode(actual.label ?? ''), at).toBe(expected.label)
       expect(decode(actual.text ?? ''), at).toBe(expected.text)
+      expect(actual.required, at).toBe(expected.required ?? false)
     }
     if (expected.t === 'repeat') {
       expect(actual.each, at).toBe(expected.each)
@@ -241,6 +243,26 @@ describe('the TypeScript parser agrees with the Go parser', () => {
 /** What the write screen reads off a body (TMPL-43). It is the one place ① learns which
  *  fields exist, so it has to answer for a body nobody can fix from there. */
 describe('the data fields a body asks for', () => {
+  it('accepts only required="true" and exposes the field prompt', () => {
+    const body = '<ask label="시작" required="true">직접 겪은 시작 장면</ask>\n<ask label="끝"/>'
+    expect(askFields(body, options)).toEqual([
+      { label: '시작', flavor: 'write', prompt: '직접 겪은 시작 장면', required: true },
+      { label: '끝', flavor: 'verbatim', prompt: '', required: false },
+    ])
+    for (const value of ['false', 'TRUE', '1', '']) {
+      const result = parse(`<ask label="시작" required="${value}"/>`, options)
+      expect(result).toMatchObject({ ok: false, failure: { reason: 'malformed_tag' } })
+    }
+    expect(parse('<ask label="시작" required="true" required="true"/>', options)).toMatchObject({
+      ok: false,
+      failure: { reason: 'malformed_tag' },
+    })
+    expect(parse('<ask required="false"/>', options)).toMatchObject({
+      ok: false,
+      failure: { reason: 'malformed_tag' },
+    })
+  })
+
   it('lists them in body order with the flavor each one feeds', () => {
     expect(
       askFields(
@@ -248,14 +270,14 @@ describe('the data fields a body asks for', () => {
         options,
       ),
     ).toEqual([
-      { label: '방문일', flavor: 'verbatim' },
-      { label: '총평', flavor: 'write' },
+      { label: '방문일', flavor: 'verbatim', prompt: '', required: false },
+      { label: '총평', flavor: 'write', prompt: '총평을 쓰세요', required: false },
     ])
   })
 
   it('decodes a title the way the builder shows it', () => {
     expect(askFields('<ask label="네이버 &quot;별점&quot;"/>', options)).toEqual([
-      { label: '네이버 "별점"', flavor: 'verbatim' },
+      { label: '네이버 "별점"', flavor: 'verbatim', prompt: '', required: false },
     ])
   })
 
@@ -280,8 +302,8 @@ describe('the data fields a template asks for', () => {
         options,
       ),
     ).toEqual([
-      { label: '가게 이름', flavor: 'verbatim' },
-      { label: '총평', flavor: 'write' },
+      { label: '가게 이름', flavor: 'verbatim', prompt: '', required: false },
+      { label: '총평', flavor: 'write', prompt: '총평을 쓰세요', required: false },
     ])
   })
 

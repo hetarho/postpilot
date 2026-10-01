@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r18 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one or several side by side), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder, by an outside AI handed the format guide or by the 글 작성 모델 on the owner's request, previewed live beside the composition, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
+> r19 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one or several side by side), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder, by an outside AI handed the format guide or by the 글 작성 모델 on the owner's request, previewed live beside the composition, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -35,7 +35,7 @@
   - `<write>메뉴 소개</write>` is prose the writer writes here about what its text names (tags intact in the prompt)
   - `<slot kind="photo" count="n"/>` is a place where photos the writer chooses stand, `count` side by side per row (a marked place in the prompt; IMAGE blocks in the post)
   - `<repeat each="photo">…</repeat>` is a part the writer repeats once per photo group of its storyline
-  - `<ask label="제목">…</ask>` takes the facts for its position from the post's author instead of the model (→TMPL-43)
+  - `<ask label="제목">…</ask>` takes the facts for its position from the post's author instead of the model; `required="true"` marks an answer required before a new write (→TMPL-43 →TMPL-68)
   - `slot` is self-closing only, `kind` is required and the only authorable value is `photo`, `count` is optional (1 … `TEMPLATE_PHOTO_ROW_MAX`, default 1)
   - `place` · `link` kinds and `slot`'s `label` attribute are not authorable and parse only as read-compatibility for stored bodies (→TMPL-37)
   - `repeat` requires `each` whose only value is `photo` and may hold literal · write · slot
@@ -92,7 +92,7 @@
   - version history, soft-delete, sharing, a file-based import/export (the only import is pasting text →TMPL-42)
   - per-voice templates or a template–voice link
   - changing the memo's role
-  - for a data field — a typed one (number, date, rating, select), any validation of what was typed, blocking 생성 on a blank one, one field per photo or per repeat iteration, a default, a placeholder or a remembered previous answer, and a value reaching the observe stage
+  - for a data field — a typed one (number, date, rating, select), validation of the contents beyond nonblank for a required field, one field per photo or per repeat iteration, a default, a placeholder or a remembered previous answer, and a value reaching the observe stage
 - TMPL-35 [o] the shared fixtures pin two cross-language cases: Go and JS agree on blank characters (`U+FEFF` vs `U+0085`), and a label containing `"` — a data field's title or a stored slot's — round-trips through `&quot;` into a body the builder's own parser accepts
 - TMPL-36 [o] every block kind is named by what the reader of the finished post gets, in plain Korean a first-time user needs no legend for, and the add toolbar shows each name with its one-line help on the button itself rather than in a tooltip
   - the four names are `AI가 쓰는 글` (write) · `고정 문구` (literal) · `사진` (photo) · `사진마다 반복` (repeat), and the collapsed row badge uses the same name as the toolbar button
@@ -122,15 +122,18 @@
   - the server applies the same field rules and parse refusal as to any body and is authoritative (→TMPL-6 →TMPL-7)
 - TMPL-43 [o] `<ask label="총평 별점">지시</ask>` is a position whose facts the post's author supplies instead of the model inventing them ← a template can require a section the memo has no way to anticipate (a rating, a price, a date), and prose about a shape cannot ask a question
   - `label` is required, non-empty, ≤ `TEMPLATE_ASK_LABEL_MAX_CHARS` and unique across the body and the title area, and it is both the answer's key (→POST-62) and the title shown over the field in the write screen
-  - an empty element puts what the author typed on the page verbatim (the 고정 문구 flavor), an element holding text names what that position is about, as a `<write>` does (→TMPL-57), and the typed value is that position's facts (the AI가 쓰는 글 flavor)
+  - `required="true"` is optional and its only accepted value is `true`; an absent attribute means optional, and any other value is `malformed_tag` ← existing templates keep their current behavior without migration
+  - an empty element puts what the author typed on the page verbatim (the 고정 문구 flavor); an element holding text asks the author for the facts of that position, shows the question as field help on ①, and names the position's topic for the writer (the AI가 쓰는 글 flavor, →TMPL-57)
   - it holds text only and may not appear inside a `repeat` ← how many fields a template asks for is the template's own answer and must not depend on how many photos this post happens to carry
   - a body carries at most `TEMPLATE_ASK_MAX_PER_BODY` of them ← a form long enough to push the memo off a 360 px screen would cost more than the invented sentence it prevents
 - TMPL-44 [o] the builder offers 데이터 받기 as a switch on the AI가 쓰는 글 and 고정 문구 rows and on no other kind ← those are the two positions whose text a post decides, a 사진 holds an attachment
   - turning it on adds a 제목 field seeded from the row's own text and the row keeps its kind with its badge extended, turning it off restores the authored text and drops the title
+  - a data-receiving row offers 필수 입력; on emits `required="true"`, off removes that attribute, and a parsed row round-trips it through the builder
   - on a row inside 사진마다 반복 the switch is shown disabled with its reason in place ← a control that silently disappears in a nested list reads as a bug
   - the flip is an edit of that block like any other and makes the draft dirty by itself
 - TMPL-45 [o] a field is resolved at enqueue against the post's answers, before expansion:
-  - a field whose switch is off or whose text is blank after trimming has its whole `ask` node removed, so the frozen body neither names it nor leaves a gap and a template with the field off produces a byte-identical prompt to one that never carried it ← the guarantee being bought is that the model is never handed a section it has no facts for, and a blank answer must not buy less than the switch does
+  - an optional field whose switch is off or whose text is blank after trimming has its whole `ask` node removed, so the frozen body neither names it nor leaves a gap and a template with the field off produces a byte-identical prompt to one that never carried it ← the guarantee being bought is that the model is never handed a section it has no facts for, and a blank answer must not buy less than the switch does
+  - a required field is never removed; a blank or disabled answer is refused before a new writing job is enqueued (→TMPL-68)
   - a field with a value renders the verbatim flavor as literal text and the AI가 쓰는 글 flavor as what the position is about with the value beside it as that position's facts
   - the frozen copy rules apply as to the body, so editing an answer after a start cannot reach the run (→TMPL-11 →TMPL-14)
 - TMPL-47 [o] a template carries two optional generation numbers beside its shape, `target_length` and `tag_count`, each saying what the posts this template shapes usually want and each meaning 의견 없음 when left unset; they are seeds for the post's own options and nothing else — no prompt, payload, freeze, snapshot or experiment hash reads a template's number, and a run freezes the post's values (→GEN-5 →GEN-46) ← the two numbers belong to the shape that decides them, but a second place a prompt could read a length from would give one run two answers to one question
@@ -145,7 +148,7 @@
 - TMPL-53 [x] a separate 제목 템플릿 entity chosen beside the post template
 - TMPL-54 [x] an account-level default title form for template-less posts
 - TMPL-55 [o] a title-area `<ask>` shares one label namespace with the body's and its field appears among the same data fields on ①, title labels first (→TMPL-43 →POST-62) ← an author answering questions about one post should meet one list
-- TMPL-57 [o] a template holds form alone: the text of a `<write>`, of an instructing `<ask>` and of a title-area `<write>` says what stands at that place (메뉴 소개, 총평), never how to write it — tone, length, emphasis, what to leave out and the order a story takes belong to 지침 (→GUIDE-1); the builder's help and the 형식 안내 say so, and no parser or server check enforces it ← a topic and an instruction are the same string to a parser
+- TMPL-57 [o] a template holds form alone: the text of a `<write>` and of a title-area `<write>` says what stands at that place (메뉴 소개, 총평); an instructing `<ask>` may phrase that topic as a concrete question to the author about their facts, experience and uncertainty (→TMPL-43), but does not command the model's tone, length, formatting, omission or repetition — those writing rules belong to 지침 (→GUIDE-1); the builder's help and the 형식 안내 say so, and no parser or server check enforces it ← a topic and an instruction are the same string to a parser
 
 - TMPL-58 [o] the template editor carries a template request: one free-text box where the owner describes the template, pastes a sample post, both mixed, or says what to change in the current draft, answered by the account's active write selection (the 글 작성 모델) with the draft's `name`, `description`, `title_area` and `body` ← describing a post in words is quicker than assembling blocks, and the outside-AI path (→TMPL-41 →TMPL-42) stays unchanged beside it
   - one request is one job (I5) for one draft and carries the current draft and nothing earlier — there is no conversation ← a chat would keep a history and grow every request's input and cost
@@ -182,6 +185,11 @@
   - a 데이터 받기 field shows its 제목 over an 입력한 내용 placeholder in its flavor's stand-in (→TMPL-43)
   - a 사진마다 반복 is drawn twice, marked 사진 그룹마다 반복 ← two passes show that it repeats, with nothing to operate
 - TMPL-67 [o] at `lg` and wider the preview stands to the right of the composition and stays in view while the composition scrolls; below `lg` a 구성 / 미리보기 `SegmentedControl` above the composition switches the two, each at full width ← a 360 px screen has no room beside the composition, and a preview under a long composition is never seen with the edit
+- TMPL-68 [o] required data fields are a new-write gate for the selected template:
+  - ① marks each required field, keeps it editable even if an older saved answer was switched off, and offers no off switch; a field with no answer stays empty and visible
+  - StartGeneration, StartStoryline, storyline requests that rewrite the plan, and write comparisons refuse before any job or credit hold when any required field has no enabled nonblank answer; the refusal names the first missing label in template order, and the editor guides the owner to it
+  - StartRevision on existing content does not gain this gate ← tightening a template after a post was written must not block an edit of that post
+  - the server checks the current template and saved answers at enqueue; the client mirrors the check for immediate feedback, and only a successfully enqueued job freezes the rendered answer
 
 ## flow
 - author: `/templates` → `새 템플릿` → `/templates/new`(toolbar names: AI가 쓰는 글 · 고정 문구 · 사진(n장) · 사진마다 반복 → rows(데이터 받기 → 제목) → complete blocks → body) → 저장(parse ok → row | TEMPLATE_PARSE_FAILED line + reason)
@@ -201,4 +209,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r18 261001 TMPL-16✎ no model-written template→the owner's request only · TMPL-34✎ model-writing→unasked model-writing out of scope · TMPL-41✎ static client text→backend-owned, read by the client · TMPL-6✎ eight→ten mirrored limits · TMPL-58+ TMPL-59+ TMPL-60+ TMPL-61+ TMPL-62+ TMPL-63+ request · TMPL-64+ from a post · TMPL-65+ TMPL-66+ TMPL-67+ preview
+-

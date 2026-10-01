@@ -178,7 +178,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", ErrWriteModelRequired
 	}
 	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
-	brief, err := s.freezeTemplate(ctx, post)
+	brief, err := s.freezeTemplate(ctx, post, false)
 	if err != nil {
 		return "", err
 	}
@@ -392,12 +392,19 @@ func observeTargets(images []Image, observeFiles *[]string) []Image {
 //
 // Only whether the post has a photo reaches the render, videos not counted: a photo repeat and
 // a photo place are about photos, and a video-only post has none to fill.
-func (s *Service) freezeTemplate(ctx context.Context, post PostInput) (*TemplateBrief, error) {
+func (s *Service) freezeTemplate(ctx context.Context, post PostInput, requireAnswers bool) (*TemplateBrief, error) {
 	if s.templates == nil || post.TemplateID == "" {
 		return nil, nil
 	}
 	photos, _ := AttachmentNames(post.Images)
-	brief, ok, err := s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, len(photos) > 0, post.TemplateAnswers)
+	var brief TemplateBrief
+	var ok bool
+	var err error
+	if requireAnswers {
+		brief, ok, err = s.templates.RenderedForNewWrite(ctx, post.UserID, post.TemplateID, len(photos) > 0, post.TemplateAnswers)
+	} else {
+		brief, ok, err = s.templates.RenderedFor(ctx, post.UserID, post.TemplateID, len(photos) > 0, post.TemplateAnswers)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("render template: %w", err)
 	}
@@ -464,7 +471,7 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 // freeze before the 지침, whose memories-only 기본 지침 follows a [기억] section into the prompt
 // and nowhere else (GEN-73).
 func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writeMaterial, error) {
-	brief, err := s.freezeTemplate(ctx, post)
+	brief, err := s.freezeTemplate(ctx, post, true)
 	if err != nil {
 		return writeMaterial{}, err
 	}
