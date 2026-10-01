@@ -112,6 +112,8 @@ export interface LeaderboardEntry {
   matches: number
   wins: number
   losses: number
+  draws: number
+  evaluatedComparisons: number
   winRate: number
   successfulCalls: number
   averageLatencyMs: bigint

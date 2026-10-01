@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
+import { initializeI18n } from '@/app/providers/i18n'
 import type { LeaderboardEntry } from '@/entities/model-experiment'
 import { ModelLeaderboard } from './ModelLeaderboard'
 
@@ -14,6 +15,8 @@ function entryFixture(): LeaderboardEntry {
     matches: 4,
     wins: 3,
     losses: 1,
+    draws: 0,
+    evaluatedComparisons: 1,
     winRate: 0.75,
     successfulCalls: 8,
     averageLatencyMs: 900n,
@@ -29,7 +32,7 @@ function entryFixture(): LeaderboardEntry {
   }
 }
 
-it('renders server rank and badges without treating unavailable cost as zero', () => {
+it('renders Elo and pairwise evidence without supplier cost', () => {
   const entry: LeaderboardEntry = {
     rank: 1,
     model: { providerId: 'p', modelId: 'gone' },
@@ -38,6 +41,8 @@ it('renders server rank and badges without treating unavailable cost as zero', (
     matches: 1,
     wins: 1,
     losses: 0,
+    draws: 0,
+    evaluatedComparisons: 1,
     winRate: 1,
     successfulCalls: 1,
     averageLatencyMs: 200n,
@@ -53,18 +58,19 @@ it('renders server rank and badges without treating unavailable cost as zero', (
   }
   render(<ModelLeaderboard entries={[entry]} window="week" />)
   expect(screen.getByText('#1')).toBeInTheDocument()
-  expect(screen.getByText('데이터 수집 중')).toBeInTheDocument()
+  expect(screen.getByText('평가 3회 미만')).toBeInTheDocument()
   expect(screen.getByText('등록 해제')).toBeInTheDocument()
-  expect(screen.getByText(/비용 미제공/)).toBeInTheDocument()
+  expect(screen.getByText('1회 평가 · 상대별 1전 1승 0패 0무')).toBeInTheDocument()
+  expect(screen.queryByText(/비용 미제공/)).not.toBeInTheDocument()
   expect(screen.queryByText('$0.000000')).not.toBeInTheDocument()
 })
 
 // An empty board is not the same statement in every window: told which period produced
 // nothing, the reader can ask for a longer one instead of concluding they have no history.
 it.each([
-  ['day', '최근 24시간 안에는 비교 결과가 없어요.'],
-  ['week', '최근 7일 안에는 비교 결과가 없어요.'],
-  ['month', '최근 30일 안에는 비교 결과가 없어요.'],
+  ['day', '최근 24시간 안에는 순위를 매긴 비교가 없어요.'],
+  ['week', '최근 7일 안에는 순위를 매긴 비교가 없어요.'],
+  ['month', '최근 30일 안에는 순위를 매긴 비교가 없어요.'],
 ] as const)('names the period that produced nothing (%s)', (window, message) => {
   render(<ModelLeaderboard entries={[]} window={window} />)
   expect(screen.getByText(message)).toBeInTheDocument()
@@ -155,14 +161,12 @@ it('shows the losses a dismissal counts, with no reference opponent on the board
       ]}
     />,
   )
-  expect(screen.getByText('1전 0승 1패 · 승률 0%')).toBeInTheDocument()
+  expect(screen.getByText('1회 평가 · 상대별 1전 0승 1패 0무')).toBeInTheDocument()
   expect(screen.getByText('Elo 1484')).toBeInTheDocument()
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
 })
 
-// QUOTA-66: provider spend reaches the operator only. A row the server withheld it from says
-// nothing about cost — not a zero, not "비용 미제공" — and keeps the rest of its metrics.
-it('shows no cost at all on a row whose cost was withheld', () => {
+it('shows usage but no cost when the server withholds it', () => {
   render(
     <ModelLeaderboard entries={[{ ...entryFixture(), costQuality: 'withheld' }]} window="week" />,
   )
@@ -171,12 +175,65 @@ it('shows no cost at all on a row whose cost was withheld', () => {
   expect(screen.queryByText(/비용 미제공/)).not.toBeInTheDocument()
 })
 
-it('shows the operator the cost it was sent', () => {
+it('does not show supplier cost even when it is still delivered on the old wire', () => {
   render(
     <ModelLeaderboard
       entries={[{ ...entryFixture(), costQuality: 'reported', totalCostMicrousd: 4200n }]}
       window="week"
     />,
   )
-  expect(screen.getByText(/토큰 10 \/ 20 · \$0\.004200/)).toBeInTheDocument()
+  expect(screen.getByText(/토큰 10 \/ 20/)).toBeInTheDocument()
+  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+})
+
+it('counts one five-way ranking once and labels four pairwise outcomes including ties', () => {
+  render(
+    <ModelLeaderboard
+      entries={[
+        {
+          ...entryFixture(),
+          evaluatedComparisons: 1,
+          matches: 4,
+          wins: 2,
+          losses: 1,
+          draws: 1,
+          provisional: true,
+        },
+      ]}
+      window="week"
+    />,
+  )
+  expect(screen.getByText('1회 평가 · 상대별 4전 2승 1패 1무')).toBeInTheDocument()
+  expect(screen.getByText('평가 3회 미만')).toBeInTheDocument()
+})
+
+it('explains a provisional tie in English without supplier cost', () => {
+  initializeI18n('en')
+  try {
+    render(
+      <ModelLeaderboard
+        entries={[
+          {
+            ...entryFixture(),
+            matches: 4,
+            wins: 2,
+            losses: 1,
+            draws: 1,
+            evaluatedComparisons: 1,
+            provisional: true,
+            costQuality: 'reported',
+            totalCostMicrousd: 4000n,
+          },
+        ]}
+        window="week"
+      />,
+    )
+    expect(
+      screen.getByText('Evaluated comparisons 1 · Pairwise outcomes 4: Wins 2, Losses 1, Draws 1'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Fewer than 3 evaluations')).toBeInTheDocument()
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+  } finally {
+    initializeI18n('ko')
+  }
 })

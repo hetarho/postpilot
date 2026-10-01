@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
   BadgeTally,
@@ -56,12 +55,11 @@ export function ModelLeaderboard({
             <BadgeTallies tallies={entry.badgeTallies} />
             <Typography variant="meta" as="p" className="mt-1">
               {t('leaderboard.record', {
+                evaluations: entry.evaluatedComparisons,
                 matches: entry.matches,
                 wins: entry.wins,
                 losses: entry.losses,
-                rate: formatNumber(entry.winRate * 100, undefined, {
-                  maximumFractionDigits: 0,
-                }),
+                draws: entry.draws,
               })}
             </Typography>
             {/* The accounting detail is the desktop's; on a phone the record and the rating are
@@ -73,8 +71,6 @@ export function ModelLeaderboard({
                 prompt: formatNumber(entry.promptTokens),
                 completion: formatNumber(entry.completionTokens),
               })}
-              {/* Provider spend reaches the operator only (QUOTA-66); anyone else is sent none. */}
-              {entry.costQuality !== 'withheld' && ` · ${costLabel(entry, t)}`}
             </Typography>
           </div>
           <Typography variant="label" as="span" className="text-content-primary whitespace-nowrap">
@@ -107,21 +103,4 @@ function BadgeTallies({ tallies }: { tallies: BadgeTally[] }) {
       ))}
     </div>
   )
-}
-
-function costLabel(entry: LeaderboardEntry, t: TFunction<'models'>): string {
-  if (entry.costQuality === 'unavailable') return t('leaderboard.costUnavailable')
-  const prefix =
-    entry.costQuality === 'estimated'
-      ? '≈ '
-      : entry.costQuality === 'mixed'
-        ? t('leaderboard.partlyEstimated')
-        : ''
-  return `${prefix}${formatNumber(Number(entry.totalCostMicrousd) / 1_000_000, undefined, {
-    style: 'currency',
-    currency: 'USD',
-    currencyDisplay: 'narrowSymbol',
-    minimumFractionDigits: 6,
-    maximumFractionDigits: 6,
-  })}`
 }

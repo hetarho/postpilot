@@ -100,7 +100,7 @@ it('renders five shuffled blind outputs as A through E in two desktop columns', 
   expect(screen.queryByText(/secret-provider/)).not.toBeInTheDocument()
 })
 
-it('reveals label, tokens, latency, and estimated cost only after verdict', () => {
+it('reveals label, tokens and latency without supplier cost after review', () => {
   const revealed: ModelExperiment = {
     ...base,
     status: 'decided',
@@ -122,7 +122,8 @@ it('reveals label, tokens, latency, and estimated cost only after verdict', () =
   expect(screen.getByText('모델 left')).toBeInTheDocument()
   // Both candidates' accounting is on screen at once, outside the panels, so the reveal can be
   // compared without switching (THEME-24).
-  expect(screen.getAllByText(/≈ \$0\.000012/)).toHaveLength(2)
+  expect(screen.getAllByText('100 입력 · 20 출력 · 500ms')).toHaveLength(2)
+  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
 })
 
 // QUOTA-66: an owner's reveal names the models and keeps tokens and latency, but the server

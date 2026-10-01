@@ -148,6 +148,8 @@ export function toLeaderboardEntry(value: ProtoLeaderboardEntry): LeaderboardEnt
     matches: value.matches,
     wins: value.wins,
     losses: value.losses,
+    draws: value.draws,
+    evaluatedComparisons: value.evaluatedComparisons,
     winRate: value.winRate,
     successfulCalls: value.successfulCalls,
     averageLatencyMs: value.averageLatencyMs,
