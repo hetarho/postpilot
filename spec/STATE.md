@@ -25,13 +25,13 @@
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
-| POST | 30 | 30 | - | 0 |
+| POST | 31 | 30 | POST-105✎ POST-107+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
-| GEN | 22 | 22 | - | 0 |
+| GEN | 23 | 22 | GEN-77✎ GEN-78✎ GEN-14✎ GEN-40✎ GEN-79+ | 0 |
 | MODEL | 28 | 28 | - | 0 |
-| TMPL | 20 | 20 | - | 0 |
+| TMPL | 21 | 20 | TMPL-38✎ | 0 |
 | GUIDE | 13 | 13 | - | 0 |
-| EXPORT | 9 | 9 | - | 0 |
+| EXPORT | 10 | 9 | EXPORT-15✎ | 0 |
 | LANG | 7 | 7 | - | 0 |
 | THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
@@ -61,11 +61,13 @@
 |---|---|---|---|---|
 
 ## next
+- create-task GEN POST TMPL EXPORT: groups of ≤3 of one orientation, always captioned; observed photo rotation (GEN r23 POST r31 TMPL r21 EXPORT r10).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
-- photo groups (T524–T529) are committed, not pushed; a live generation check needs a paid run (owner's call).
 
 ## log
+- 261004 update-ssot GEN r23 POST r31 TMPL r21 EXPORT r10: groups of at most 3 of one orientation, every part captioned; photo rotation from the observation until the owner turns it
+- 261004 update-ssot GEN POST TMPL EXPORT start: photo groups of at most 3, one orientation, always captioned; observe suggests photo rotation
 - 261004 T529 done: template builder and 형식 안내 read count as a suggested group; photo-group wave complete
 - 261004 T529 start
 - 261004 T528 done: four exports and the Naver tab carry photo groups; FE suite green except the pre-existing ClipGeneration failure
@@ -84,5 +86,3 @@
 - 261004 create-task GEN POST EXPORT TMPL GUIDE QUAL start: GEN-77+ GEN-78+ POST-105+ POST-106+ EXPORT-26+ TMPL-39✎ GUIDE-41✎ QUAL-10✎
 - 261004 update-ssot GEN r22 POST r30 EXPORT r8 TMPL r20 GUIDE r13 QUAL r7: photo groups (콜라주 · 슬라이드, one caption) through writing, reading view, editor and the four exports; TMPL-39 decided
 - 261004 update-ssot TMPL GEN EXPORT start: decide TMPL-39 — photo groups (collage/slide, one caption) through the post, rendering and export
-- 261003 T523 done: captions excluded from intro/outro; local 31-second DB render and full test suites verified
-- 261003 T523 start: keep generated and edited captions out of enabled regions
