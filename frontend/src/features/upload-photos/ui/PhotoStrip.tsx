@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { RotateCw, X } from 'lucide-react'
 import { type PostImage, Thumbnail } from '@/entities/image'
 import { type PostVideo, VideoTile } from '@/entities/video'
 import type { AppFailure } from '@/shared/api'
@@ -15,6 +15,10 @@ interface PhotoStripProps {
   /** This session's uploads for the post that are not attachments yet. */
   items: readonly UploadItem[]
   onDelete: (image: PostImage) => void
+  /** Turns a photo a quarter clockwise (POST-107). */
+  onRotate?: (image: PostImage) => void
+  /** The photo whose turn is in flight. */
+  rotatingId?: string
   onDeleteVideo?: (video: PostVideo) => void
   deletingId?: string
   deleteFailedId?: string
@@ -31,6 +35,8 @@ export function PhotoStrip({
   videos = [],
   items,
   onDelete,
+  onRotate,
+  rotatingId,
   onDeleteVideo,
   deletingId,
   deleteFailedId,
@@ -106,8 +112,22 @@ export function PhotoStrip({
               alt={image.filename}
               width={image.width}
               height={image.height}
+              rotation={image.rotation}
               dimmed={deletingId === image.id}
             >
+              {!readOnly && onRotate && (
+                // The opposite corner from the delete, so neither press lands on the other.
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRotate(image)}
+                  disabled={rotatingId === image.id || deletingId === image.id}
+                  aria-label={t('upload.rotateAria', { ns: 'posts', filename: image.filename })}
+                  className="bg-media-scrim-bg text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 left-1"
+                >
+                  <RotateCw aria-hidden="true" className="size-5" />
+                </Button>
+              )}
               {!readOnly && (
                 <Button
                   variant="danger"

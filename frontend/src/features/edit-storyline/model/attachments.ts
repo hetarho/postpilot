@@ -14,6 +14,7 @@ export function storylineAttachments(
       viewUrl: image.viewUrl || undefined,
       width: image.width,
       height: image.height,
+      rotation: image.rotation,
     })
   for (const video of post.videos)
     byName.set(video.filename, {

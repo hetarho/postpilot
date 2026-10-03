@@ -18,6 +18,7 @@ export const i18n = {
       // A 200 MB PUT over mobile takes a minute; the card says how far along it is.
       progressPercent: '올리는 중 {{percent}}%',
       deleteAria: '{{filename}} 삭제',
+      rotateAria: '사진 돌리기 · {{filename}}',
       dismiss: '지우기',
       deleteTitle: '사진을 지울까요?',
       deleteDescription: '“{{filename}}”을(를) 지우면 되돌릴 수 없어요.',
@@ -64,6 +65,7 @@ export const i18n = {
       // A 200 MB PUT over mobile takes a minute; the card says how far along it is.
       progressPercent: 'Uploading {{percent}}%',
       deleteAria: 'Delete {{filename}}',
+      rotateAria: 'Rotate · {{filename}}',
       dismiss: 'Remove',
       deleteTitle: 'Delete this photo?',
       deleteDescription: 'Deleting “{{filename}}” cannot be undone.',

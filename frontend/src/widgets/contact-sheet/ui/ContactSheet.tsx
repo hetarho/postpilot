@@ -6,7 +6,7 @@ import type { PostVideo } from '@/entities/video'
 import { observationByFile } from '@/entities/post'
 import type { Observation } from '@/shared/api'
 import { formatDuration } from '@/shared/lib'
-import { Typography, typographyStyles } from '@/shared/ui'
+import { RotatedImage, Typography, typographyStyles } from '@/shared/ui'
 
 interface ContactSheetProps {
   images: readonly PostImage[]
@@ -82,7 +82,9 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
               className="bg-surface-raised w-carousel-card shrink-0 snap-start rounded-lg p-3 sm:w-60"
             >
               {viewUrl ? (
-                <img
+                <RotatedImage
+                  fit="fill"
+                  rotation={image.rotation}
                   src={viewUrl}
                   alt={t('observation.imageAlt', { filename: image.filename })}
                   width={image.width}

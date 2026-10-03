@@ -180,3 +180,31 @@ it('renders a GALLERY block of the block array as one group', () => {
   expect(within(article).getAllByRole('img')).toHaveLength(2)
   expect(within(article).getByText('창가')).toBeInTheDocument()
 })
+
+// POST-107: the reading view shows a turned photo upright — a single photo in a frame of the
+// turned shape, a group's cell turned in place.
+it('shows turned photos upright in the reading view', () => {
+  const content = create(PostContentSchema, {
+    title: '회전',
+    blocks: [
+      create(BlockSchema, { type: BlockType.IMAGE, file: 'a.jpg', alt: '한 장' }),
+      group(GalleryLayout.COLLAGE, ['b.jpg', 'c.jpg'], '', '묶음'),
+    ],
+  })
+  render(
+    <BlockList
+      content={content}
+      images={[
+        { ...photo('a.jpg'), width: 400, height: 300, rotation: 90 },
+        { ...photo('b.jpg'), rotation: 180 },
+        photo('c.jpg'),
+      ]}
+    />,
+  )
+  const single = screen.getByRole('img', { name: '한 장' })
+  expect(single.parentElement).toHaveStyle({ aspectRatio: '300 / 400' })
+  expect(screen.getByRole('img', { name: '묶음 (1/2)' })).toHaveStyle({
+    transform: 'rotate(180deg)',
+  })
+  expect(screen.getByRole('img', { name: '묶음 (2/2)' }).getAttribute('style')).toBeNull()
+})

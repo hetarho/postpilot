@@ -20,6 +20,8 @@ import { getPostQueryKey } from './post-queries'
 export function usePostImagesCache(): {
   append: (slug: string, image: PostImage) => void
   remove: (slug: string, imageId: string) => void
+  /** Puts a photo back as the server now answers it — a turn (POST-107) — keeping its place. */
+  replace: (slug: string, image: PostImage) => void
   appendVideo: (slug: string, video: PostVideo) => void
   removeVideo: (slug: string, videoId: string) => void
 } {
@@ -48,6 +50,12 @@ export function usePostImagesCache(): {
       remove: (slug: string, imageId: string) =>
         update(slug, (post) => {
           post.images = post.images.filter((existing) => existing.id !== imageId)
+        }),
+      replace: (slug: string, image: PostImage) =>
+        update(slug, (post) => {
+          post.images = post.images.map((existing) =>
+            existing.id === image.id ? toProtoImage(image) : existing,
+          )
         }),
       // The clip half, patched for exactly the same reason: a refetch would re-mint a view
       // URL for every attachment and pull them all again, mid-upload, on cellular.

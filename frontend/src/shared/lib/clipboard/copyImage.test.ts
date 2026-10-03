@@ -188,3 +188,31 @@ describe('copyImage', () => {
     }
   })
 })
+
+// EXPORT-15, POST-107: a turned photo is copied turned — the PNG is drawn on a canvas of the
+// turned shape, as the panel shows it.
+it('copies a turned photo on a canvas of the turned shape', async () => {
+  const { items } = stub()
+  const sizes: Array<[number, number]> = []
+  vi.stubGlobal(
+    'OffscreenCanvas',
+    class {
+      constructor(
+        readonly width: number,
+        readonly height: number,
+      ) {
+        sizes.push([width, height])
+      }
+      getContext() {
+        return { translate: vi.fn(), rotate: vi.fn(), drawImage: vi.fn() }
+      }
+      convertToBlob({ type }: { type: string }) {
+        return Promise.resolve(new Blob([new Uint8Array([9])], { type }))
+      }
+    },
+  )
+  expect(await copyImage(painted(), 90)).toEqual({ kind: 'copied' })
+  // The stub bitmap is 4×3; a quarter turn copies it 3×4.
+  expect(sizes).toEqual([[3, 4]])
+  expect(Object.keys(items[0]!)).toEqual(['image/png'])
+})

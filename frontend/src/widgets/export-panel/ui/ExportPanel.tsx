@@ -18,7 +18,15 @@ import {
   type CopyFallbackElement,
   type CopyImageResult,
 } from '@/shared/lib'
-import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
+import {
+  Button,
+  FieldLabel,
+  RotatedImage,
+  SegmentedControl,
+  Textarea,
+  TextField,
+  Typography,
+} from '@/shared/ui'
 import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
 import { toHashtags } from '../lib/hashtags'
 
@@ -199,7 +207,7 @@ export function ExportPanel({
    *  stale async result cannot land, one queue so two presses do not race for the clipboard, the
    *  same `COPY_FEEDBACK_MS` dwell, and the same always-mounted live region. It reports the
    *  failure KIND instead of a manual-selection hint, because an image has no manual fallback. */
-  async function copyPhoto(target: CopyTarget, image: HTMLImageElement) {
+  async function copyPhoto(target: CopyTarget, image: HTMLImageElement, rotation: number) {
     const generation = ++copyGeneration.current
     const isCurrent = () => mounted.current && copyGeneration.current === generation
     setCopied(undefined)
@@ -211,7 +219,7 @@ export function ExportPanel({
     // variable the way the text copy does: an image copy answers with a kind, and a `let` holding
     // one narrows to the literal it was initialized with.
     const operation = copyQueue.current
-      .then(() => copyImage(image))
+      .then(() => copyImage(image, rotation))
       .catch((): CopyImageResult => ({ kind: 'unreadable' }))
     copyQueue.current = operation.then(() => undefined)
     const result = await operation
@@ -565,7 +573,7 @@ export function ExportPanel({
                       failure={
                         image && photoFailure?.target === target ? photoFailure.kind : undefined
                       }
-                      onCopy={(element) => void copyPhoto(target, element)}
+                      onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
                       onStale={onPhotoUrlsStale}
                       fit={fit}
                     />
@@ -603,7 +611,7 @@ export function ExportPanel({
                   image={imagesByFilename.get(block.file)}
                   copied={copied?.target === target}
                   failure={photoFailure?.target === target ? photoFailure.kind : undefined}
-                  onCopy={(element) => void copyPhoto(target, element)}
+                  onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
                   onStale={onPhotoUrlsStale}
                   {...copyProps}
                 />
@@ -689,7 +697,8 @@ interface PhotoCopyProps {
   marker: number
   copied: boolean
   failure: FailedCopyKind | undefined
-  onCopy: (element: HTMLImageElement) => void
+  /** The photo's turn rides along so the copy is turned as the screen shows it (EXPORT-15). */
+  onCopy: (element: HTMLImageElement, rotation: number) => void
   onStale: (() => void) | undefined
   /** Set inside a photo group: the cell shape the group's layout gives the photo (POST-105). */
   fit?: PhotoFit
@@ -785,11 +794,14 @@ function PhotoCopy({
             disabled={unreachable}
             aria-label={t('export.photoCopyAria', { number: marker + 1, file })}
             aria-describedby={reason ? statusId : undefined}
-            onClick={() => imageRef.current && onCopy(imageRef.current)}
+            onClick={() => imageRef.current && onCopy(imageRef.current, image.rotation ?? 0)}
             className="block w-full cursor-pointer rounded-lg active:brightness-90 disabled:cursor-default disabled:active:brightness-100"
           >
-            <img
-              ref={imageRef}
+            <RotatedImage
+              fit={fit ? 'fill' : 'natural'}
+              rotation={image.rotation}
+              frameClassName="rounded-lg"
+              imgRef={imageRef}
               src={image.viewUrl}
               alt={alt || file}
               width={image.width}

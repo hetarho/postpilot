@@ -16,6 +16,8 @@ export interface StorylineAttachment {
   viewUrl?: string
   width?: number
   height?: number
+  /** A photo's clockwise turn (POST-107). */
+  rotation?: number
   durationMs?: number
   contentType?: string
 }
@@ -195,6 +197,7 @@ export function StorylineTile({
       alt={filename}
       width={attachment?.width}
       height={attachment?.height}
+      rotation={attachment?.rotation}
     >
       {overlay}
     </Thumbnail>

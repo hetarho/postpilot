@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { twMerge } from 'tailwind-merge'
 import { BlockType, type PostContent } from '@/shared/api'
-import { Typography } from '@/shared/ui'
+import { RotatedImage, Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
 import { blockKey, imageByFile } from '../model/content'
@@ -143,7 +143,10 @@ export function BlockList({
                       cropped away (THEME-8). Here it fills the column at its own
                       aspect ratio, which `width`/`height` reserve before the pixels land (THEME-32). */}
                   {image.viewUrl ? (
-                    <img
+                    <RotatedImage
+                      fit="natural"
+                      rotation={image.rotation}
+                      frameClassName="rounded-lg"
                       src={image.viewUrl}
                       alt={block.alt || block.file}
                       width={image.width}

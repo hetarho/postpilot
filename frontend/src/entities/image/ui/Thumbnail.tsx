@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
+import { RotatedImage } from '@/shared/ui'
 
 interface ThumbnailProps {
   /** Where the pixels come from; undefined renders an empty tile (for a photo still
@@ -18,6 +19,8 @@ interface ThumbnailProps {
   onError?: () => void
   /** `small` for a photo named inside other content — a storyline paragraph — rather than a strip. */
   size?: 'strip' | 'small'
+  /** The photo's clockwise turn (POST-107); the square tile turns the picture in place. */
+  rotation?: number
 }
 
 /** One square tile of the photo strip. */
@@ -30,6 +33,7 @@ export function Thumbnail({
   dimmed,
   onError,
   size = 'strip',
+  rotation,
 }: ThumbnailProps) {
   return (
     <figure
@@ -39,7 +43,9 @@ export function Thumbnail({
       )}
     >
       {src && (
-        <img
+        <RotatedImage
+          fit="fill"
+          rotation={rotation}
           src={src}
           alt={alt}
           width={width}

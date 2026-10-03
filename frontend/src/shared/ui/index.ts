@@ -45,3 +45,4 @@ export { typographyStyles, type TypographyVariant } from './typography/typograph
 export { Editable } from './editable/Editable'
 export { TechnicalDetail } from './technical-detail/TechnicalDetail'
 export { AppFailureMessage } from './app-failure/AppFailureMessage'
+export { RotatedImage, type RotatedImageProps } from './rotated-image/RotatedImage'

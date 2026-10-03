@@ -205,3 +205,67 @@ describe('the strip with photos', () => {
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
   })
 })
+
+// POST-107: a photo tile carries a 회전 control that asks for the photo's turn, shows the photo
+// turned, holds while its turn is in flight, and is absent with every other action on a post that
+// takes no write.
+describe('the 회전 control', () => {
+  const photo: PostImage = {
+    id: 'img-1',
+    filename: 'IMG_1.jpg',
+    width: 1024,
+    height: 768,
+    bytes: 1,
+    viewUrl: 'https://storage.test/IMG_1.jpg',
+    rotation: 90,
+  }
+
+  it('turns the pressed photo and shows the photo turned', async () => {
+    const user = userEvent.setup()
+    const onRotate = vi.fn()
+    render(
+      <PhotoStrip
+        images={[photo]}
+        items={[]}
+        onDelete={vi.fn()}
+        onRotate={onRotate}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: '사진 돌리기 · IMG_1.jpg' }))
+    expect(onRotate).toHaveBeenCalledWith(photo)
+    expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toHaveStyle({
+      transform: 'rotate(90deg)',
+    })
+  })
+
+  it('holds while the turn is in flight and is absent on a read-only strip', () => {
+    const { rerender } = render(
+      <PhotoStrip
+        images={[photo]}
+        items={[]}
+        onDelete={vi.fn()}
+        onRotate={vi.fn()}
+        rotatingId="img-1"
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '사진 돌리기 · IMG_1.jpg' })).toBeDisabled()
+    rerender(
+      <PhotoStrip
+        images={[photo]}
+        items={[]}
+        onDelete={vi.fn()}
+        onRotate={vi.fn()}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+        readOnly
+      />,
+    )
+    expect(
+      screen.queryByRole('button', { name: '사진 돌리기 · IMG_1.jpg' }),
+    ).not.toBeInTheDocument()
+  })
+})

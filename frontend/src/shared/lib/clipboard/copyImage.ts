@@ -1,4 +1,4 @@
-import { encodePng } from '../image'
+import { encodePng, quarterTurn } from '../image'
 
 /** Why a photo did not reach the clipboard, so the caller can say WHICH thing went wrong on the
  *  photo the user pressed rather than showing one message for four different situations. */
@@ -47,7 +47,11 @@ type ReadFailure = 'blocked' | 'unreadable'
  *  `blocked` names (DEPLOY.md §5). The stored photo is a JPEG ([I6] converts every upload before
  *  it leaves the device), so it is re-encoded to PNG here, on demand, for the one photo pressed.
  *  Nothing encoded here is ever uploaded. */
-export async function copyImage(image: HTMLImageElement): Promise<CopyImageResult> {
+export async function copyImage(
+  image: HTMLImageElement,
+  /** The photo's turn (POST-107): the pixels are copied turned, as the screen shows them. */
+  rotation = 0,
+): Promise<CopyImageResult> {
   if (
     typeof navigator === 'undefined' ||
     !navigator.clipboard?.write ||
@@ -60,7 +64,7 @@ export async function copyImage(image: HTMLImageElement): Promise<CopyImageResul
   // needs, and WebKit then rejects every copy — on iOS the control would fail permanently while
   // telling the user to try again. The payload is unchanged; only when the bytes arrive is.
   let readFailure: ReadFailure | undefined
-  const png = readPixels(image).catch((error: unknown) => {
+  const png = readPixels(image, rotation).catch((error: unknown) => {
     readFailure = originUnclean(error) ? 'blocked' : 'unreadable'
     throw error
   })
@@ -84,10 +88,10 @@ export async function copyImage(image: HTMLImageElement): Promise<CopyImageResul
  *  that has not finished loading — the two cases this function can fail with, told apart by their
  *  error below rather than by pre-checking `complete`/`naturalWidth`, which describe the element
  *  and not the decision the browser is about to make. */
-async function readPixels(image: HTMLImageElement): Promise<Blob> {
+async function readPixels(image: HTMLImageElement, rotation: number): Promise<Blob> {
   const bitmap = await createImageBitmap(image)
   try {
-    return await encodePng(bitmap)
+    return await encodePng(bitmap, quarterTurn(rotation))
   } finally {
     bitmap.close()
   }

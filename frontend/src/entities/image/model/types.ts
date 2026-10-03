@@ -11,6 +11,9 @@ export interface PostImage {
    *  uploaded it is a local object URL of the converted copy, until the next `GetPost`
    *  replaces it — the confirm answer carries no URL, and the bytes are already here. */
   viewUrl: string
+  /** The clockwise turn, in degrees (0, 90, 180, 270), every surface applies when it shows or
+   *  copies the photo (POST-107). Absent reads as no turn. */
+  rotation?: number
 }
 
 /** Why the server refused an upload step. Final: a retry would get the same answer. */

@@ -59,14 +59,15 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T532 | show and copy photos turned, and let the owner turn them | POST EXPORT | T531 | todo |
 
 ## next
-- implement-task T532, then push (owner asked for commit and push).
+- photo-group fixes and rotation (T530–T532) are committed; push and confirm CI.
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 T532 done: photos shown and copied turned, 회전 control on ①'s tiles; FE suite green
+- 261004 T532 start
 - 261004 T531 done: observed and owner photo rotation stored and served; BE and FE suites green
 - 261004 T531 start
 - 261004 T530 done: groups of at most three, one orientation, always captioned; BE and FE suites green
@@ -85,5 +86,3 @@
 - 261004 T525 start
 - 261004 out of scope: ClipGeneration.test.tsx 'reuses retained originals after done…' fails on a clean HEAD (no 바로 만들기 button), unrelated to photo groups
 - 261004 T526 done: reading view renders photo groups (collage grid, slide strip); FE suite green except a ClipGeneration failure that also fails on a clean HEAD
-- 261004 T526 start
-- 261004 T524 done: GALLERY block validated, stored, served, finalized and measured on the server; BE suite and FE build pass

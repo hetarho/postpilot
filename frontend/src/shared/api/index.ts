@@ -209,6 +209,7 @@ export {
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
+  RotateImageResponseSchema,
   DeletePostResponseSchema,
   GetPostResponseSchema,
   GetGenerationResponseSchema,

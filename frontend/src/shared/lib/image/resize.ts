@@ -1,3 +1,5 @@
+import type { QuarterTurn } from './rotation'
+
 export interface Dimensions {
   width: number
   height: number
@@ -49,12 +51,24 @@ export async function resizeToJpeg(
  *
  *  It exists because the system clipboard takes PNG and not JPEG — see `shared/lib/clipboard`.
  *  The caller owns `bitmap` and closes it. */
-export async function encodePng(bitmap: ImageBitmap): Promise<Blob> {
-  const canvas = createCanvas(bitmap.width, bitmap.height)
+export async function encodePng(bitmap: ImageBitmap, rotation: QuarterTurn = 0): Promise<Blob> {
+  // A quarter turn swaps the sides, so the canvas takes the turned shape and the bitmap is drawn
+  // about its centre — the copy is the photo as the screen shows it (POST-107, EXPORT-15).
+  const sideways = rotation === 90 || rotation === 270
+  const canvas = createCanvas(
+    sideways ? bitmap.height : bitmap.width,
+    sideways ? bitmap.width : bitmap.height,
+  )
   const context = canvas.getContext('2d') as
     OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
   if (!context) throw new Error('2d canvas unavailable')
-  context.drawImage(bitmap, 0, 0)
+  if (rotation !== 0) {
+    context.translate(canvas.width / 2, canvas.height / 2)
+    context.rotate((rotation * Math.PI) / 180)
+    context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
+  } else {
+    context.drawImage(bitmap, 0, 0)
+  }
   return toBlob(canvas, 'image/png')
 }
 

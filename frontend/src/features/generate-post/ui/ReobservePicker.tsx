@@ -5,7 +5,7 @@ import type { PostImage } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
 import type { Observation } from '@/shared/api'
 import { formatDuration } from '@/shared/lib'
-import { Button, Checkbox, Dialog, Notice, Typography } from '@/shared/ui'
+import { Button, Checkbox, Dialog, Notice, RotatedImage, Typography } from '@/shared/ui'
 import {
   defaultSelection,
   reobserveRows,
@@ -181,7 +181,9 @@ function PhotoRow({
   return (
     <li className="flex items-start gap-3 py-3">
       {viewUrl && attachment.kind === 'photo' ? (
-        <img
+        <RotatedImage
+          fit="fill"
+          rotation={attachment.image.rotation}
           src={viewUrl}
           alt={t('observation.imageAlt', { filename: row.filename })}
           width={attachment.image.width}

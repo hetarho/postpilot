@@ -11,6 +11,7 @@ import {
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
+  RotateImageResponseSchema,
   FinalizePostResponseSchema,
   GetPostResponseSchema,
   AttachmentKind,
@@ -63,6 +64,7 @@ export interface FakeImageRow {
   width?: number
   height?: number
   viewUrl?: string
+  rotation?: number
 }
 
 /** A voice as the post fake knows it: just enough to answer a post's `voice` projection and to
@@ -462,6 +464,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           bytes: 200_000n,
           viewUrl:
             image.viewUrl ?? `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=1`,
+          rotation: image.rotation ?? 0,
         }),
       ),
       videos: (row.videos ?? []).map((video) =>
@@ -936,6 +939,29 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         refuseIfPublished(row)
         row.videos.splice(index, 1)
         return create(DeleteVideoResponseSchema, {})
+      }
+    }
+    throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+  })
+
+  // Like the server (POST-107): a quarter turn of a confirmed photo, refused on a published post
+  // or for a value that is not a quarter turn, answered with the photo and a fresh view URL.
+  rpc(PostService.method.rotateImage, (req) => {
+    calls?.push('RotateImage')
+    if (![0, 90, 180, 270].includes(req.rotation))
+      throw connectAppError('POST_IMAGE_ROTATION_INVALID', Code.InvalidArgument)
+    for (const row of rows.values()) {
+      const image = row.images.find((candidate) => candidate.id === req.imageId)
+      if (image) {
+        refuseIfPublished(row)
+        image.rotation = req.rotation
+        return create(RotateImageResponseSchema, {
+          image: create(ImageSchema, {
+            ...image,
+            viewUrl:
+              image.viewUrl || `${FAKE_STORAGE_ORIGIN}/posts/${row.slug}/${image.id}.jpg?sig=get`,
+          }),
+        })
       }
     }
     throw connectAppError('POST_NOT_FOUND', Code.NotFound)

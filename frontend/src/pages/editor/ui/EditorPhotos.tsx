@@ -6,6 +6,7 @@ import {
   SkippedList,
   UploadProgress,
   useDeletePhoto,
+  useRotatePhoto,
   useUploadPhotos,
 } from '@/features/upload-photos'
 import { AppFailureMessage, Notice } from '@/shared/ui'
@@ -36,6 +37,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
     failedId,
     failure: deleteFailure,
   } = useDeletePhoto(slug)
+  const { rotatePhoto, rotatingId, failure: rotateFailure } = useRotatePhoto(slug)
 
   return (
     <PhotoDropZone
@@ -61,11 +63,18 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
             <AppFailureMessage failure={upload.createFailure} />
           </Notice>
         )}
+        {rotateFailure && (
+          <Notice tone="danger" role="alert">
+            <AppFailureMessage failure={rotateFailure} />
+          </Notice>
+        )}
         <PhotoStrip
           images={images}
           videos={videos}
           items={upload.items}
           onDelete={deletePhoto}
+          onRotate={rotatePhoto}
+          rotatingId={rotatingId}
           onDeleteVideo={deleteVideo}
           deletingId={deletingId}
           deleteFailedId={failedId}

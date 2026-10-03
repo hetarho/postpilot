@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { Button, Sheet, Typography } from '@/shared/ui'
+import { Button, RotatedImage, Sheet, Typography } from '@/shared/ui'
 import type { StorylineAttachment } from './StorylineParagraphEditor'
 
 /** One storyline attachment, large (POST-100): a photo fitted to the view, a clip playing with its
@@ -143,7 +143,11 @@ export function StorylineAttachmentViewer({
               )}
             </video>
           ) : (
-            <img
+            <RotatedImage
+              fit="natural"
+              rotation={attachment.rotation}
+              maxFrameHeight="var(--spacing-media-view)"
+              frameClassName="mx-auto rounded-lg"
               src={attachment.viewUrl}
               alt={attachment.filename}
               width={attachment.width}

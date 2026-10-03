@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GalleryLayout, type Block } from '@/shared/api'
 import { prefersReducedMotion } from '@/shared/lib'
-import { Button, Typography } from '@/shared/ui'
+import { Button, RotatedImage, Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 
 interface PhotoGroupProps {
@@ -52,7 +52,9 @@ export function PhotoGroup({
     }
     if (renderPhoto) return renderPhoto(file, position, image, fit)
     return image.viewUrl ? (
-      <img
+      <RotatedImage
+        fit="fill"
+        rotation={image.rotation}
         src={image.viewUrl}
         // The group's one alt names the whole group; the position keeps two of its photos from
         // reading as the same image to a screen reader.

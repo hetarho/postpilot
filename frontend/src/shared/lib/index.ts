@@ -62,7 +62,7 @@ export type {
   ThemeStorageReader,
   ThemeStorageWriter,
 } from './theme'
-export type { DecodeFailure, ResizedJpeg } from './image'
+export type { DecodeFailure, QuarterTurn, ResizedJpeg } from './image'
 export {
   formatDuration,
   probeEncoderSupport,
@@ -77,6 +77,8 @@ export {
   dedupeFilename,
   fileExtension,
   jpegFilename,
+  nextQuarterTurn,
+  quarterTurn,
   resizeToJpeg,
 } from './image'
 export type { I18nFragment } from './localization'

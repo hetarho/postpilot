@@ -11,6 +11,7 @@ export function toPostImage(image: Image): PostImage {
     // Safe: the server caps an object at 10 MiB, far inside Number's exact range.
     bytes: Number(image.bytes),
     viewUrl: image.viewUrl,
+    rotation: image.rotation,
   }
 }
 
@@ -22,5 +23,6 @@ export function toProtoImage(image: PostImage): Image {
     height: image.height,
     bytes: BigInt(image.bytes),
     viewUrl: image.viewUrl,
+    rotation: image.rotation ?? 0,
   })
 }
