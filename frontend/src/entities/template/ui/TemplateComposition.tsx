@@ -488,10 +488,13 @@ function BlockRow({
   const id = useId()
   const open = context.openId === block.id
   // A photo row's summary is the only one the UI FORMATS: it is a count, not text the author
-  // typed, and it has to say whether the photos stand side by side (TMPL-38).
+  // typed, and it has to say whether the author suggests a group there (TMPL-38). Two keys
+  // rather than a plural: Korean has no plural form to pick `1장` with.
   const summary =
     block.kind === 'photo'
-      ? t('composition.summary.photo', { count: block.count })
+      ? block.count > 1
+        ? t('composition.summary.photoGroup', { count: block.count })
+        : t('composition.summary.photoSingle')
       : blockSummary(block)
 
   return (

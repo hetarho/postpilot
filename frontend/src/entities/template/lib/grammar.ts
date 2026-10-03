@@ -43,9 +43,9 @@ export interface TemplateNode {
   label?: string
   /** An ask with required="true" must have an enabled, nonblank answer before a run. */
   required?: boolean
-  /** How many photos a photo position holds side by side. 1 when the attribute is absent and
-   *  0 on every node that is not a photo slot, so a non-zero count always means "this position
-   *  binds this many photos". */
+  /** How many photos the author suggests standing together at a photo position, as one group
+   *  when above 1 (TMPL-38). 1 when the attribute is absent and 0 on every node that is not a
+   *  photo slot, so a non-zero count always means "a photo position". */
   count?: number
   /** repeat */
   each?: string

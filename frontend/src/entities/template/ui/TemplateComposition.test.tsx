@@ -55,7 +55,7 @@ describe('the composition editor', () => {
       'AI가 쓰는 글인트로를 씁니다',
       '고정 문구지도는 아래에',
       '사진마다 반복스토리라인의 사진 묶음마다 되풀이합니다',
-      '사진한 줄에 1장',
+      '사진1장',
       'AI가 쓰는 글이 사진에 대한 설명',
       'AI가 쓰는 글총평 및 재방문 의사',
     ])
@@ -100,7 +100,7 @@ describe('the composition editor', () => {
     render(<Editor initial={REVIEW} />)
 
     await user.click(toggle(3))
-    const value = screen.getByRole('spinbutton', { name: '한 줄에 놓을 사진 수' })
+    const value = screen.getByRole('spinbutton', { name: '함께 묶을 사진 수' })
     expect(value).toHaveAttribute('aria-valuenow', '1')
     expect(value).toHaveAttribute('aria-valuemin', '1')
     expect(value).toHaveAttribute('aria-valuemax', '4')
@@ -110,7 +110,7 @@ describe('the composition editor', () => {
     await user.click(screen.getByRole('button', { name: '늘리기' }))
     expect(body()).toContain('<slot kind="photo" count="2"/>')
     // The collapsed summary says they stand side by side, which is the point of the count.
-    expect(summaries()[3]).toBe('사진한 줄에 2장')
+    expect(summaries()[3]).toBe('사진2장 묶음')
     // And the repeat's help states what one iteration now takes.
     await user.click(toggle(2))
     expect(screen.getByText(/한 번 되풀이할 때 사진 자리 2장이 있어요/)).toBeInTheDocument()

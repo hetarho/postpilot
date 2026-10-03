@@ -329,7 +329,7 @@ export function blockSummary(block: BuilderBlock): string {
       return block.text.replace(/\s+/g, ' ').trim()
     case 'photo':
       // A photo row's summary is a COUNT, not text the author typed, so it is the one summary
-      // the UI formats rather than reads (`composition.summary.photo`).
+      // the UI formats rather than reads (`composition.summary.photoGroup` · `photoSingle`).
       return ''
     case 'repeat':
       // A repeat's content IS its children, and they are rows of their own directly beneath it.

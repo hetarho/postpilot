@@ -22,7 +22,7 @@ var ErrUnsupportedLanguage = errors.New("template: unsupported guide language")
 // down. It is a BODY, not prose: the guide test parses it with the real parser, so an example
 // that drifted from the grammar fails the build rather than teaching an outside AI to write
 // something this app refuses (TMPL-41). It uses every construct a person authors today,
-// including a photo row and a data field, and none of the retired ones; each `<write>` names
+// including a suggested photo group and a data field, and none of the retired ones; each `<write>` names
 // what stands at its place, never how to write it (TMPL-57).
 const GuideExampleBody = "<write>방문한 이유와 첫인상</write>\n" +
 	"<repeat each=\"photo\">\n" +
@@ -45,7 +45,7 @@ const guideKorean = `아래 형식으로 블로그 글 템플릿의 본문을 �
 [쓸 수 있는 표기 다섯 가지]
 - 그냥 쓴 문장: 글에 그대로 나옵니다.
 - <write>메뉴 소개</write>: AI가 그 자리에 적힌 주제로 글을 씁니다. 말투·길이·강조 같은 쓰는 방식은 여기에 적지 말고 지침으로 정하세요. 태그 안의 글은 글에 나오지 않습니다.
-- <slot kind="photo"/>: 사진이 들어갈 자리입니다. <slot kind="photo" count="2"/>처럼 count를 줄 수 있습니다. count는 한 줄에 나란히 놓을 사진 수이고, 어떤 사진을 놓을지는 AI가 스토리라인을 따라 고릅니다.
+- <slot kind="photo"/>: 사진이 들어갈 자리입니다. <slot kind="photo" count="2"/>처럼 count를 줄 수 있습니다. count는 이 자리에 콜라주나 슬라이드 하나로 함께 보여 주기를 제안하는 사진 수이고, 실제로 몇 장을 어떻게 묶을지와 어떤 사진을 놓을지는 AI가 스토리라인을 따라 정합니다.
 - <repeat each="photo">…</repeat>: 안쪽 내용이 스토리라인의 사진 묶음마다 한 번씩 되풀이됩니다.
 - <ask label="입력란 제목"/>: 글을 쓸 때 사용자가 직접 입력한 내용이 그 자리에 그대로 들어갑니다.
 - <ask label="총평 별점">직접 매긴 별점과 그 이유는 무엇인가요?</ask>: 작성자가 질문에 답하면 AI가 그 답을 근거로 이 자리의 총평을 씁니다.
@@ -81,7 +81,7 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 [The five things you can write]
 - Plain text: appears in the post exactly as written.
 - <write>the menu</write>: the AI writes here about the topic named. How to write it — tone, length, emphasis — belongs to guidelines, not here. The text inside the tag never appears in the post.
-- <slot kind="photo"/>: photos go here. It can take a count, as in <slot kind="photo" count="2"/>: count is how many photos stand side by side in one row, and the AI chooses which photos stand there along the storyline.
+- <slot kind="photo"/>: photos go here. It can take a count, as in <slot kind="photo" count="2"/>: count is how many photos you suggest showing together there as one collage or slide; the AI decides the actual group and which photos stand there along the storyline.
 - <repeat each="photo">…</repeat>: what is inside repeats once per photo group of the storyline.
 - <ask label="field title"/>: what the author types on the write screen goes here exactly as typed.
 - <ask label="overall rating">What rating did you give, and why?</ask>: the author answers the question, and the AI writes this section from that answer.

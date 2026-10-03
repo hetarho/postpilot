@@ -29,7 +29,7 @@ export const TEMPLATE_TITLE_AREA_MAX_CHARS = positiveIntEnv(
   200,
 )
 
-/** How many photos one photo position may place side by side. Unlike the ceilings above this
+/** The largest photo count a photo position may suggest as one group (TMPL-38). Unlike the ceilings above this
  *  one is not only a counter: the builder's stepper cannot offer a value the server's parser
  *  would refuse on save, so the two numbers have to be raised together. */
 export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(ENV_LIMIT_OVERRIDES.templatePhotoRowMax, 4)

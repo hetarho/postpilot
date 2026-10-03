@@ -210,8 +210,8 @@ type TemplateCeilings struct {
 	// post, so its source is bounded like a short field rather than like the body.
 	TitleAreaMaxChars int
 	MaxPerAccount     int
-	// PhotoRowMax is the largest `count` a photo position may carry — how many photos stand
-	// side by side in one row (TMPL-38). It is env because the browser mirrors it as
+	// PhotoRowMax is the largest `count` a photo position may carry — how many photos the author
+	// suggests standing together there as one group (TMPL-38). It is env because the browser mirrors it as
 	// VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
 	PhotoRowMax int
 	// The data-field ceilings (TMPL-43): a field's title and how many fields one body may

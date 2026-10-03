@@ -59,14 +59,15 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T529 | template count reads as a suggested group | TMPL | - | todo |
 
 ## next
-- implement-task T529 (template copy for the photo count).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
+- photo groups (T524–T529) are committed, not pushed; a live generation check needs a paid run (owner's call).
 
 ## log
+- 261004 T529 done: template builder and 형식 안내 read count as a suggested group; photo-group wave complete
+- 261004 T529 start
 - 261004 T528 done: four exports and the Naver tab carry photo groups; FE suite green except the pre-existing ClipGeneration failure
 - 261004 T528 start
 - 261004 T527 done: block editor makes, edits and undoes photo groups; FE suite green except the pre-existing ClipGeneration failure
@@ -85,5 +86,3 @@
 - 261004 update-ssot TMPL GEN EXPORT start: decide TMPL-39 — photo groups (collage/slide, one caption) through the post, rendering and export
 - 261003 T523 done: captions excluded from intro/outro; local 31-second DB render and full test suites verified
 - 261003 T523 start: keep generated and edited captions out of enabled regions
-- 261003 create-task CLIP r54 → T523
-- 261003 create-task CLIP start: CLIP-196+
