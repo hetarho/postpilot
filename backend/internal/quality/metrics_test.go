@@ -237,15 +237,21 @@ func TestCompositionCountsCharactersPhotosTypesAndSentences(t *testing.T) {
 		{Type: BlockVideo, File: "clip.mp4"},
 		{Type: BlockList, Items: []string{"감자탕 대", "볶음밥"}},
 		{Type: BlockQuote, Content: " "},
+		{Type: BlockGallery, Files: []string{"IMG_2.jpg", " ", "IMG_3.jpg"}},
 	}}
 	got := MeasureComposition(Sample{Slug: "a", Doc: doc, Language: LanguageKorean})
-	// 18 + 2 + 5 + 3 runes; the title and a blank quote do not count.
-	if got.CharCount != 28 || got.PhotoCount != 1 {
-		t.Fatalf("chars = %d, photos = %d; want 28 and 1", got.CharCount, got.PhotoCount)
+	// 18 + 2 + 5 + 3 runes; the title and a blank quote do not count. Every non-blank photo of
+	// a group is a photo (QUAL-10).
+	if got.CharCount != 28 || got.PhotoCount != 3 {
+		t.Fatalf("chars = %d, photos = %d; want 28 and 3", got.CharCount, got.PhotoCount)
 	}
-	// TEXT, HEADING, IMAGE, VIDEO and LIST carry something; the blank QUOTE does not.
-	if got.DistinctBlockTypes != 5 {
-		t.Fatalf("distinct types = %d, want 5", got.DistinctBlockTypes)
+	// TEXT, HEADING, IMAGE, VIDEO, LIST and GALLERY carry something; the blank QUOTE does not.
+	if got.DistinctBlockTypes != 6 {
+		t.Fatalf("distinct types = %d, want 6", got.DistinctBlockTypes)
+	}
+	blankGroup := MeasureComposition(Sample{Slug: "d", Language: LanguageKorean, Doc: Document{Blocks: []Block{{Type: BlockGallery, Files: []string{" "}}}}})
+	if blankGroup.PhotoCount != 0 || blankGroup.DistinctBlockTypes != 0 {
+		t.Fatalf("a group with no photo = %+v", blankGroup)
 	}
 	// Sentences of TEXT alone: 9 and 8 runes.
 	near(t, "average sentence length", got.AvgSentenceLength, 8.5)

@@ -45,6 +45,11 @@ func ValidateContent(content PostContent, attached []Image, videos []Video) erro
 		bad := func(reason string) error {
 			return &InvalidContentError{Reason: fmt.Sprintf("block %d: %s", i+1, reason)}
 		}
+		// Files and Layout are a photo group's alone (GEN-77), so on any other block they are
+		// fields for another block type exactly as a stray file is.
+		if block.Type != BlockGallery && (len(block.Files) != 0 || block.Layout != "") {
+			return bad("contains fields for another block type")
+		}
 		switch block.Type {
 		case BlockText, BlockQuote:
 			if strings.TrimSpace(block.Content) == "" {
@@ -76,6 +81,10 @@ func ValidateContent(content PostContent, attached []Image, videos []Video) erro
 			if block.Content != "" || block.Level != 0 || len(block.Items) != 0 {
 				return bad("contains fields for another block type")
 			}
+		case BlockGallery:
+			if err := validateGallery(block, files, clips); err != "" {
+				return bad(err)
+			}
 		case BlockVideo:
 			if strings.TrimSpace(block.File) == "" {
 				return bad("video filename is required")
@@ -106,4 +115,38 @@ func ValidateContent(content PostContent, attached []Image, videos []Video) erro
 		}
 	}
 	return nil
+}
+
+// validateGallery is a photo group's shape (GEN-77, POST-106): two to PhotoGroupMax distinct
+// attached photos, a layout, and none of the fields that belong to other block types. It
+// returns the refusal reason, or "" when the group is valid. Unlike the model path, which
+// repairs a group photo by photo (GEN-78), an edit is refused whole: the editor never sends a
+// group it would not accept.
+func validateGallery(block Block, photos, videos map[string]struct{}) string {
+	if len(block.Files) < 2 || len(block.Files) > PhotoGroupMax {
+		return fmt.Sprintf("a photo group holds 2 to %d photos", PhotoGroupMax)
+	}
+	seen := make(map[string]struct{}, len(block.Files))
+	for _, file := range block.Files {
+		if strings.TrimSpace(file) == "" {
+			return "photo group filename is required"
+		}
+		if _, ok := photos[file]; !ok {
+			if _, isVideo := videos[file]; isVideo {
+				return "file is a video and belongs in a VIDEO block"
+			}
+			return "image is not attached to this post"
+		}
+		if _, repeated := seen[file]; repeated {
+			return "photo appears twice in one group"
+		}
+		seen[file] = struct{}{}
+	}
+	if block.Layout != GalleryCollage && block.Layout != GallerySlide {
+		return "photo group layout is required"
+	}
+	if block.File != "" || block.Content != "" || block.Level != 0 || len(block.Items) != 0 {
+		return "contains fields for another block type"
+	}
+	return ""
 }

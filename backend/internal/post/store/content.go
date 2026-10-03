@@ -18,6 +18,10 @@ type blockJSON struct {
 	Alt     string   `json:"alt,omitempty"`
 	Caption string   `json:"caption,omitempty"`
 	Items   []string `json:"items,omitempty"`
+	// A photo group's own (GEN-77), omitted on every other block so content stored before
+	// groups existed decodes unchanged.
+	Files  []string `json:"files,omitempty"`
+	Layout string   `json:"layout,omitempty"`
 }
 
 type contentJSON struct {
@@ -49,6 +53,7 @@ func marshalContent(content post.PostContent) (string, error) {
 		wire.Blocks = append(wire.Blocks, blockJSON{
 			Type: string(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: string(block.Layout),
 		})
 	}
 	data, err := json.Marshal(wire)
@@ -68,6 +73,7 @@ func unmarshalContent(data string) (*post.PostContent, error) {
 		content.Blocks = append(content.Blocks, post.Block{
 			Type: post.BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: post.GalleryLayout(block.Layout),
 		})
 	}
 	return content, nil

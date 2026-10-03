@@ -299,7 +299,7 @@ func MeasureRepetition(s Sample) Repetition {
 	return result
 }
 
-// Composition is M4 for one post (QUAL-10): its character and photo counts, how many of the six
+// Composition is M4 for one post (QUAL-10): its character and photo counts, how many of the seven
 // block types it uses, and its average sentence length, nil when it has no sentence. Only the
 // type count carries a band; the rest is context shown beside it.
 type Composition struct {
@@ -307,8 +307,8 @@ type Composition struct {
 	AvgSentenceLength                         *float64
 }
 
-// MeasureComposition counts the text of TEXT, HEADING, QUOTE and LIST in runes, the photos as IMAGE
-// blocks carrying a file (a clip is not a photo), a type only where one of its blocks carries
+// MeasureComposition counts the text of TEXT, HEADING, QUOTE and LIST in runes, the photos as the
+// files IMAGE blocks and photo groups carry (a clip is not a photo), a type only where one of its blocks carries
 // something (an unfilled template position is not composition), and sentence length over TEXT
 // alone — in runes for Korean and in words for English.
 func MeasureComposition(s Sample) Composition {
@@ -324,6 +324,14 @@ func MeasureComposition(s Sample) Composition {
 			used[block.Type] = true
 			if block.Type == BlockImage {
 				c.PhotoCount++
+			}
+		}
+		if block.Type == BlockGallery {
+			for _, file := range block.Files {
+				if strings.TrimSpace(file) != "" {
+					used[BlockGallery] = true
+					c.PhotoCount++
+				}
 			}
 		}
 	}

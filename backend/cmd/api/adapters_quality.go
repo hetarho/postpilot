@@ -76,6 +76,7 @@ func qualityDocument(content post.PostContent) (quality.Document, error) {
 		}
 		doc.Blocks = append(doc.Blocks, quality.Block{
 			Type: kind, Content: block.Content, File: block.File, Items: append([]string(nil), block.Items...),
+			Files: append([]string(nil), block.Files...),
 		})
 	}
 	return doc, nil
@@ -91,6 +92,8 @@ func qualityBlockType(kind post.BlockType) (quality.BlockType, bool) {
 		return quality.BlockImage, true
 	case post.BlockVideo:
 		return quality.BlockVideo, true
+	case post.BlockGallery:
+		return quality.BlockGallery, true
 	case post.BlockQuote:
 		return quality.BlockQuote, true
 	case post.BlockList:

@@ -313,7 +313,7 @@ func toConnectError(op string, err error) error {
 	}
 	var photoMissing *post.PhotoMissingError
 	if errors.As(err, &photoMissing) {
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "image blocks name photos no longer attached", postpilotv1.FailureReason_POST_PHOTO_MISSING, map[string]string{
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "photo places name photos no longer attached", postpilotv1.FailureReason_POST_PHOTO_MISSING, map[string]string{
 			"count": strconv.Itoa(photoMissing.Count),
 		})
 	}
@@ -602,7 +602,11 @@ func fromProtoContent(content *postpilotv1.PostContent) (post.PostContent, error
 		if block == nil {
 			return post.PostContent{}, errors.New("content contains an empty block")
 		}
-		out.Blocks = append(out.Blocks, post.Block{Type: fromProtoBlockType(block.GetType()), Content: block.GetContent(), Level: block.GetLevel(), File: block.GetFile(), Alt: block.GetAlt(), Caption: block.GetCaption(), Items: append([]string(nil), block.GetItems()...)})
+		out.Blocks = append(out.Blocks, post.Block{
+			Type: fromProtoBlockType(block.GetType()), Content: block.GetContent(), Level: block.GetLevel(),
+			File: block.GetFile(), Alt: block.GetAlt(), Caption: block.GetCaption(), Items: append([]string(nil), block.GetItems()...),
+			Files: append([]string(nil), block.GetFiles()...), Layout: fromProtoGalleryLayout(block.GetLayout()),
+		})
 	}
 	return out, nil
 }
@@ -621,8 +625,34 @@ func fromProtoBlockType(value postpilotv1.BlockType) post.BlockType {
 		return post.BlockList
 	case postpilotv1.BlockType_VIDEO:
 		return post.BlockVideo
+	case postpilotv1.BlockType_GALLERY:
+		return post.BlockGallery
 	default:
 		return ""
+	}
+}
+
+// fromProtoGalleryLayout reads UNSPECIFIED as no layout, which ValidateContent refuses on a
+// photo group and requires on every other block.
+func fromProtoGalleryLayout(value postpilotv1.GalleryLayout) post.GalleryLayout {
+	switch value {
+	case postpilotv1.GalleryLayout_GALLERY_LAYOUT_COLLAGE:
+		return post.GalleryCollage
+	case postpilotv1.GalleryLayout_GALLERY_LAYOUT_SLIDE:
+		return post.GallerySlide
+	default:
+		return ""
+	}
+}
+
+func toProtoGalleryLayout(value post.GalleryLayout) postpilotv1.GalleryLayout {
+	switch value {
+	case post.GalleryCollage:
+		return postpilotv1.GalleryLayout_GALLERY_LAYOUT_COLLAGE
+	case post.GallerySlide:
+		return postpilotv1.GalleryLayout_GALLERY_LAYOUT_SLIDE
+	default:
+		return postpilotv1.GalleryLayout_GALLERY_LAYOUT_UNSPECIFIED
 	}
 }
 
@@ -635,6 +665,7 @@ func toProtoContent(content *post.PostContent) *postpilotv1.PostContent {
 		blocks = append(blocks, &postpilotv1.Block{
 			Type: toProtoBlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: toProtoGalleryLayout(block.Layout),
 		})
 	}
 	return &postpilotv1.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags, Blocks: blocks}
@@ -654,6 +685,8 @@ func toProtoBlockType(value post.BlockType) postpilotv1.BlockType {
 		return postpilotv1.BlockType_LIST
 	case post.BlockVideo:
 		return postpilotv1.BlockType_VIDEO
+	case post.BlockGallery:
+		return postpilotv1.BlockType_GALLERY
 	default:
 		return postpilotv1.BlockType_BLOCK_TYPE_UNSPECIFIED
 	}

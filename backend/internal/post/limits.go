@@ -18,6 +18,11 @@ const (
 	TargetLengthMax = 10_000
 )
 
+// PhotoGroupMax is how many photos one photo group may hold (GEN-77); a group holds at least two.
+// The generation context splits a longer model-written group at this bound, and the frontend
+// mirrors it as PHOTO_GROUP_MAX.
+const PhotoGroupMax = 10
+
 // TargetLengthError is a 목표 글자 수 outside TargetLengthMin … TargetLengthMax.
 type TargetLengthError struct{ Min, Max int }
 
@@ -25,12 +30,12 @@ func (e *TargetLengthError) Error() string {
 	return fmt.Sprintf("target length must be between %d and %d", e.Min, e.Max)
 }
 
-// PhotoMissingError refuses a finalize while IMAGE blocks name photos no longer attached to
-// the post; Count is how many such places remain (POST-13).
+// PhotoMissingError refuses a finalize while IMAGE blocks or photo groups name photos no longer
+// attached to the post; Count is how many such photo places remain (POST-13).
 type PhotoMissingError struct{ Count int }
 
 func (e *PhotoMissingError) Error() string {
-	return fmt.Sprintf("%d image blocks name photos no longer attached", e.Count)
+	return fmt.Sprintf("%d photo places name photos no longer attached", e.Count)
 }
 
 // TagCount is a tag-count range with the value an unset post reads as.

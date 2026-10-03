@@ -3,6 +3,7 @@ package post
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,9 +17,52 @@ func TestValidateContentAcceptsEveryCanonicalBlockType(t *testing.T) {
 		{Type: BlockList, Items: []string{"하나", "둘"}},
 		{Type: BlockImage, File: "photo.jpg", Alt: "대체 텍스트", Caption: "캡션"},
 		{Type: BlockVideo, File: "clip.mp4", Alt: "대체 텍스트", Caption: "캡션"},
+		{Type: BlockGallery, Files: []string{"photo.jpg", "second.jpg"}, Layout: GalleryCollage, Alt: "묶음", Caption: "캡션"},
+		{Type: BlockGallery, Files: []string{"second.jpg", "photo.jpg"}, Layout: GallerySlide},
 	}}
-	if err := ValidateContent(content, []Image{{Filename: "photo.jpg"}}, []Video{{Filename: "clip.mp4"}}); err != nil {
+	if err := ValidateContent(content, []Image{{Filename: "photo.jpg"}, {Filename: "second.jpg"}}, []Video{{Filename: "clip.mp4"}}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A photo group holds two to PhotoGroupMax distinct attached photos and a layout, and nothing
+// that belongs to another block type; Files and Layout belong to it alone (GEN-77, POST-106).
+func TestValidateContentRefusesMalformedPhotoGroups(t *testing.T) {
+	photos := []Image{{Filename: "a.jpg"}, {Filename: "b.jpg"}}
+	for i := 0; i < PhotoGroupMax; i++ {
+		photos = append(photos, Image{Filename: fmt.Sprintf("p%d.jpg", i)})
+	}
+	tooMany := make([]string, 0, PhotoGroupMax+1)
+	for i := 0; i < PhotoGroupMax; i++ {
+		tooMany = append(tooMany, fmt.Sprintf("p%d.jpg", i))
+	}
+	tooMany = append(tooMany, "a.jpg")
+	group := func(files ...string) Block { return Block{Type: BlockGallery, Files: files, Layout: GalleryCollage} }
+	for name, tc := range map[string]struct {
+		block  Block
+		reason string
+	}{
+		"one photo":         {group("a.jpg"), "a photo group holds 2 to 10 photos"},
+		"no photo":          {group(), "a photo group holds 2 to 10 photos"},
+		"too many":          {group(tooMany...), "a photo group holds 2 to 10 photos"},
+		"repeated photo":    {group("a.jpg", "a.jpg"), "photo appears twice in one group"},
+		"unattached photo":  {group("a.jpg", "foreign.jpg"), "image is not attached to this post"},
+		"video in a group":  {group("a.jpg", "clip.mp4"), "file is a video and belongs in a VIDEO block"},
+		"blank name":        {group("a.jpg", " "), "photo group filename is required"},
+		"no layout":         {Block{Type: BlockGallery, Files: []string{"a.jpg", "b.jpg"}}, "photo group layout is required"},
+		"unknown layout":    {Block{Type: BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: "GRID"}, "photo group layout is required"},
+		"stray file":        {Block{Type: BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: GallerySlide, File: "a.jpg"}, "contains fields for another block type"},
+		"stray content":     {Block{Type: BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: GallerySlide, Content: "문단"}, "contains fields for another block type"},
+		"files on an image": {Block{Type: BlockImage, File: "a.jpg", Files: []string{"b.jpg"}}, "contains fields for another block type"},
+		"layout on text":    {Block{Type: BlockText, Content: "문단", Layout: GalleryCollage}, "contains fields for another block type"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var invalid *InvalidContentError
+			err := ValidateContent(PostContent{Blocks: []Block{tc.block}}, photos, []Video{{Filename: "clip.mp4"}})
+			if !errors.As(err, &invalid) || invalid.Reason != "block 1: "+tc.reason {
+				t.Fatalf("error=%v, want %q", err, tc.reason)
+			}
+		})
 	}
 }
 

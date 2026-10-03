@@ -66,8 +66,8 @@ func (a memoryPosts) ExtractionSource(ctx context.Context, userID, slug string) 
 	}, nil
 }
 
-// extractionBody is the canonical content as prose. IMAGE and VIDEO blocks contribute their
-// caption and nothing else: a filename is not a fact about the author's world, and the
+// extractionBody is the canonical content as prose. IMAGE, photo-group and VIDEO blocks
+// contribute their caption and nothing else: a filename is not a fact about the author's world, and the
 // pixels never reach this path at all (MEM-14).
 func extractionBody(content *post.PostContent) string {
 	if content == nil {
@@ -90,7 +90,7 @@ func extractionBody(content *post.PostContent) string {
 			write(block.Content)
 		case post.BlockList:
 			write(strings.Join(block.Items, "\n"))
-		case post.BlockImage, post.BlockVideo:
+		case post.BlockImage, post.BlockGallery, post.BlockVideo:
 			write(block.Caption)
 		}
 	}

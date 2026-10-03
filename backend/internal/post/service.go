@@ -963,8 +963,9 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if found.Content == nil {
 		return Post{}, ErrNoMachineBaseline
 	}
-	// An IMAGE block naming a photo the post no longer has is content that cannot be exported
-	// as written, so the finalize says how many such places remain instead (POST-13).
+	// An IMAGE block or a photo group naming a photo the post no longer has is content that
+	// cannot be exported as written, so the finalize says how many such places remain instead
+	// (POST-13): one per missing photo, a group counting each of its own.
 	images, err := s.images.ListImages(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list images for finalize: %w", err)
@@ -975,8 +976,10 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	}
 	missing := 0
 	for _, block := range found.Content.Blocks {
-		if block.Type == BlockImage && block.File != "" && !attached[block.File] {
-			missing++
+		for _, file := range block.Photos() {
+			if file != "" && !attached[file] {
+				missing++
+			}
 		}
 	}
 	if missing > 0 {

@@ -70,16 +70,19 @@ const (
 	BlockVideo   BlockType = "VIDEO"
 	BlockQuote   BlockType = "QUOTE"
 	BlockList    BlockType = "LIST"
+	// BlockGallery is a photo group, whose Files are each a photo (QUAL-10).
+	BlockGallery BlockType = "GALLERY"
 )
 
 // Block carries only what a metric reads: the text of a TEXT, HEADING or QUOTE block, a LIST's
-// items, and a file, which is what makes an IMAGE block a photo (QUAL-10). Level, alt text and
-// captions are never measured.
+// items, and the files, which are what make an IMAGE block or a photo group photos (QUAL-10).
+// Level, alt text and captions are never measured.
 type Block struct {
 	Type    BlockType
 	Content string
 	File    string
 	Items   []string
+	Files   []string
 }
 
 // Document is one post's content as QUAL measures it. Title is the content's title, never the

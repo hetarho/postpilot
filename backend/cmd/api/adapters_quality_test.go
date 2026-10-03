@@ -35,8 +35,13 @@ func TestQualityAdapterMapsEveryBlockType(t *testing.T) {
 		}
 		mapped[kind] = true
 	}
-	if len(mapped) != 6 {
-		t.Fatalf("mapped %d distinct kinds, want 6: %v", len(mapped), mapped)
+	if len(mapped) != 7 {
+		t.Fatalf("mapped %d distinct kinds, want 7: %v", len(mapped), mapped)
+	}
+	// A photo group's photos reach the measurement, which counts each one (QUAL-10).
+	doc, err := qualityDocument(post.PostContent{Blocks: []post.Block{{Type: post.BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: post.GalleryCollage}}})
+	if err != nil || len(doc.Blocks) != 1 || doc.Blocks[0].Type != quality.BlockGallery || len(doc.Blocks[0].Files) != 2 {
+		t.Fatalf("group document = %+v, %v", doc, err)
 	}
 	if _, ok := qualityBlockType("POEM"); ok {
 		t.Fatal("an unknown block type was mapped")

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/postpilot/backend/internal/job"
@@ -26,8 +27,13 @@ func (a templateModels) Complete(ctx context.Context, ref llm.ModelRef, request 
 
 // templateSamples hands the template context a post as a sample, ownership already checked and
 // the canonical blocks already flattened HERE: the template context speaks in text, and the post
-// context never learns that a template request exists (TMPL-64).
-type templateSamples struct{ service *post.Service }
+// context never learns that a template request exists (TMPL-64). photoRowMax is the largest
+// photo-position count a template may carry, which bounds the count a photo group's position
+// reads as.
+type templateSamples struct {
+	service     *post.Service
+	photoRowMax int
+}
 
 func (a templateSamples) RequestSample(ctx context.Context, userID, slug string) (template.Sample, error) {
 	found, err := a.service.Get(ctx, userID, slug)
@@ -37,7 +43,7 @@ func (a templateSamples) RequestSample(ctx context.Context, userID, slug string)
 		}
 		return template.Sample{}, err
 	}
-	text := sampleText(found.Content)
+	text := sampleText(found.Content, a.photoRowMax)
 	if text == "" {
 		return template.Sample{}, template.ErrSampleUnavailable
 	}
@@ -49,9 +55,11 @@ func (a templateSamples) RequestSample(ctx context.Context, userID, slug string)
 }
 
 // sampleText is a post's shape as plain text: its prose blocks as written and every photo as a
-// position, `[사진]`, so the order and the photo places survive while nothing about a photo does
-// — no file, caption or video, and no summary or tags (TMPL-64).
-func sampleText(content *post.PostContent) string {
+// position, `[사진]`, a photo group as one position of its photo count, `[사진 n장 묶음]`, so the
+// order and the photo places survive while nothing about a photo does — no file, caption or
+// video, and no summary or tags (TMPL-64). A group's count is capped at photoRowMax: the sample
+// teaches a template's photo positions, and a count past the ceiling is one the parser refuses.
+func sampleText(content *post.PostContent, photoRowMax int) string {
 	if content == nil {
 		return ""
 	}
@@ -86,6 +94,8 @@ func sampleText(content *post.PostContent) string {
 			}
 		case post.BlockImage:
 			lines = append(lines, "[사진]")
+		case post.BlockGallery:
+			lines = append(lines, fmt.Sprintf("[사진 %d장 묶음]", min(len(block.Files), photoRowMax)))
 		}
 	}
 	return strings.Join(lines, "\n\n")

@@ -17,6 +17,8 @@ const (
 	// attached VIDEO: a filename is unique across the two kinds, so a mismatch is the wrong
 	// block type rather than an unknown file.
 	BlockVideo BlockType = "VIDEO"
+	// BlockGallery is a photo group (GEN-77), mirrored here so the closed list follows the proto.
+	BlockGallery BlockType = "GALLERY"
 )
 
 type Block struct {

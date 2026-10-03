@@ -437,6 +437,20 @@ const (
 	// attached VIDEO, never a photo — the two are one filename namespace, so a mismatch is
 	// the wrong block type rather than an unknown file.
 	BlockVideo BlockType = "VIDEO"
+	// BlockGallery is a photo group (GEN-77): Files names two to PhotoGroupMax attached photos in
+	// the order they stand, Layout says how they stand, and the one Alt and Caption belong to the
+	// whole group. It carries no File.
+	BlockGallery BlockType = "GALLERY"
+)
+
+// GalleryLayout is how a photo group lays its photos out, in the protojson spelling.
+type GalleryLayout string
+
+const (
+	// GalleryCollage stands the photos side by side (콜라주).
+	GalleryCollage GalleryLayout = "COLLAGE"
+	// GallerySlide shows them one at a time, swiped (슬라이드).
+	GallerySlide GalleryLayout = "SLIDE"
 )
 
 type Block struct {
@@ -447,6 +461,22 @@ type Block struct {
 	Alt     string
 	Caption string
 	Items   []string
+	// Files and Layout belong to a GALLERY block alone.
+	Files  []string
+	Layout GalleryLayout
+}
+
+// Photos is the attached photos a block names: an IMAGE block's one file, a photo group's files
+// in order, and none for any other block type.
+func (b Block) Photos() []string {
+	switch b.Type {
+	case BlockImage:
+		return []string{b.File}
+	case BlockGallery:
+		return b.Files
+	default:
+		return nil
+	}
 }
 
 type PostContent struct {

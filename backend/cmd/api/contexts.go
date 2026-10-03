@@ -270,7 +270,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// The template request (TMPL-58) is the one template surface that calls a model: the
 	// metered registry, the post it may read as a sample, and the job it runs as.
 	c.template.ConfigureRequests(
-		templateModels{registry: c.metered}, templateSamples{service: c.post},
+		templateModels{registry: c.metered}, templateSamples{service: c.post, photoRowMax: cfg.Template.PhotoRowMax},
 		templateRequestJobs{queue: c.jobs}, template.RequestLimits(cfg.TemplateRequest),
 	)
 	c.template.ConfigureEstimate(templateEstimates{rates: c.ledger})

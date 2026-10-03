@@ -17,6 +17,7 @@ func TestGenerationBlockTypesCoverGeneratedEnumAndProtoJSONNames(t *testing.T) {
 		"QUOTE":   generation.BlockQuote,
 		"LIST":    generation.BlockList,
 		"VIDEO":   generation.BlockVideo,
+		"GALLERY": generation.BlockGallery,
 	}
 	if got, want := len(postpilotv1.BlockType_name), len(domainByName)+1; got != want {
 		t.Fatalf("generated block types = %d, want %d; update generation's closed mirror", got, want)

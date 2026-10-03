@@ -60,6 +60,19 @@ enum BlockType {
   // sixth member rather than a flag on IMAGE because every surface that renders one has to
   // render a <video> instead of an <img>, and every export maps it to its own marker.
   VIDEO = 6;
+  // A photo group: two or more attached photos standing together in one place under one
+  // caption (GEN-77). It carries `files`, `layout`, `alt` and `caption` and no `file`: a group
+  // is its own member rather than an IMAGE with a list because every surface that renders or
+  // exports one lays several photos out as one unit.
+  GALLERY = 7;
+}
+
+// How a photo group lays its photos out (GEN-77): side by side (콜라주) or one at a time,
+// swiped (슬라이드). The values carry the enum's own prefix for the reason AttachmentKind gives.
+enum GalleryLayout {
+  GALLERY_LAYOUT_UNSPECIFIED = 0;
+  GALLERY_LAYOUT_COLLAGE = 1;
+  GALLERY_LAYOUT_SLIDE = 2;
 }
 
 // Which attachment kind an upload handshake is for. UNSPECIFIED reads as PHOTO so every
@@ -102,6 +115,9 @@ message Block {
   // The retired template slot marker (TMPL-37): a stored place/link position is literal text.
   reserved 8;
   reserved "slot";
+  // GALLERY only: the group's photos in the order they stand, and how they are laid out.
+  repeated string files = 9;
+  GalleryLayout layout = 10;
 }
 
 message PostContent {

@@ -190,15 +190,19 @@ func TestSampleTextKeepsTheShapeAndDropsThePhotos(t *testing.T) {
 			{Type: post.BlockList, Items: []string{"라떼", " ", "케이크"}},
 			{Type: post.BlockQuote, Content: "또 오고 싶다"},
 			{Type: post.BlockVideo, File: "c.mp4", Caption: "영상은 빠진다"},
+			{Type: post.BlockGallery, Files: []string{"d.jpg", "e.jpg", "f.jpg"}, Layout: post.GalleryCollage, Caption: "묶음 캡션도 빠진다"},
+			// A group larger than the template ceiling reads as a position the parser accepts.
+			{Type: post.BlockGallery, Files: []string{"g.jpg", "h.jpg", "i.jpg", "j.jpg", "k.jpg", "l.jpg"}, Layout: post.GallerySlide},
 		},
-	})
+	}, 4)
 	want := strings.Join([]string{
 		"들어가자마자 향이 좋았다", "[사진]", "[사진]", "## 메뉴", "### 디저트", "- 라떼\n- 케이크", "> 또 오고 싶다",
+		"[사진 3장 묶음]", "[사진 4장 묶음]",
 	}, "\n\n")
 	if got != want {
 		t.Fatalf("sampleText =\n%s\nwant\n%s", got, want)
 	}
-	if sampleText(nil) != "" || sampleText(&post.PostContent{}) != "" {
+	if sampleText(nil, 4) != "" || sampleText(&post.PostContent{}, 4) != "" {
 		t.Fatal("a post with no content must have no sample")
 	}
 }

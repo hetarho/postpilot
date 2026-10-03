@@ -561,8 +561,9 @@ func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
 	})
 }
 
-// POST-13: a finalize refuses content in which IMAGE blocks name photos no longer attached,
-// saying how many such places remain, and finalizes once none do.
+// POST-13: a finalize refuses content in which IMAGE blocks or photo groups name photos no
+// longer attached, saying how many such places remain — one per photo, a group counting each of
+// its own — and finalizes once none do.
 func TestFinalizeRefusesImageBlocksNamingDetachedPhotos(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
@@ -577,9 +578,8 @@ func TestFinalizeRefusesImageBlocksNamingDetachedPhotos(t *testing.T) {
 	attach("1", "2", "3")
 	content := PostContent{Title: "사진 글", Blocks: []Block{
 		{Type: BlockText, Content: "도착"},
-		{Type: BlockImage, File: "IMG_1.jpg"},
 		{Type: BlockImage, File: "IMG_2.jpg"},
-		{Type: BlockImage, File: "IMG_3.jpg"},
+		{Type: BlockGallery, Files: []string{"IMG_1.jpg", "IMG_3.jpg"}, Layout: GalleryCollage},
 	}}
 	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)

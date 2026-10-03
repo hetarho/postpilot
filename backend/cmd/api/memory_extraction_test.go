@@ -13,6 +13,7 @@ import (
 	"github.com/postpilot/backend/internal/memory"
 	memorystore "github.com/postpilot/backend/internal/memory/store"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/post"
 )
 
 // extractionHarness is the real queue over a real database with the real memory context on
@@ -237,5 +238,17 @@ func TestACompletedExtractionLeavesTheMemoryTablesEmpty(t *testing.T) {
 	}
 	if _, _, err := h.service.Extraction(ctx, "alice", "no-such-job"); !errors.Is(err, memory.ErrNotFound) {
 		t.Fatalf("an unknown id = %v, want ErrNotFound", err)
+	}
+}
+
+// A photo group contributes its one caption to the extraction body, as a photo does, and no
+// filename (MEM-14).
+func TestExtractionBodyReadsAPhotoGroupCaption(t *testing.T) {
+	body := extractionBody(&post.PostContent{Summary: "요약", Blocks: []post.Block{
+		{Type: post.BlockText, Content: "도착했다"},
+		{Type: post.BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: post.GallerySlide, Caption: "창가 자리"},
+	}})
+	if body != "요약\n\n도착했다\n\n창가 자리" {
+		t.Fatalf("body = %q", body)
 	}
 }
