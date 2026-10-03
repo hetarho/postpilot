@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r12 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r13 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the direction layer: it says what kind of writing is wanted — what a post or a clip states and leaves out, the order it tells things in and how its sentences are written beyond their register — beside the voice (how sentences sound, VOICE), the template (the form, TMPL) and the system prompt, which holds the input and output format alone (→GEN-14); a guideline outranks the template on content while leaving register to the voice ← a rule about what may be written, fixed in the system prompt, would forbid every kind of writing that needs its opposite
@@ -92,6 +92,7 @@
   | 일어난 순서대로 | told in the order it happened, inside each template place when the post has a template |
   | 첫머리에 이유와 기대 | opening with why the owner went or what they expected, when the memo says so |
   | 사진은 이야기의 한 장면 | a photo stands between the sentences about its moment, no paragraph opens as a description of a photo and each paragraph picks up from the last |
+  | 비슷한 사진은 한 묶음으로 | consecutive photos of one moment or subject — one dish from several angles, one room from several sides — stand as one photo group under one caption, 콜라주 to see them side by side and 슬라이드 to follow them in order, while a photo that needs words of its own stands alone (→GEN-77) |
   | 끝에서 한 번 정리 | closing by drawing the day together, a verdict or a will to return only as the owner gave one |
   | 관찰을 나열하지 않기 | →GEN-47 |
   | 제목 규칙 | →GEN-49 |
@@ -143,4 +144,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r13 261004 GUIDE-41✎ +기본 지침 비슷한 사진은 한 묶음으로 after 사진은 이야기의 한 장면

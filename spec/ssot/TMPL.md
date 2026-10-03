@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r19 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one or several side by side), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder, by an outside AI handed the format guide or by the 글 작성 모델 on the owner's request, previewed live beside the composition, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
+> r20 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one photo or a suggested group), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder, by an outside AI handed the format guide or by the 글 작성 모델 on the owner's request, previewed live beside the composition, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -33,7 +33,7 @@
 - TMPL-18 [o] five constructs:
   - bare text is literal (verbatim in prompt and post)
   - `<write>메뉴 소개</write>` is prose the writer writes here about what its text names (tags intact in the prompt)
-  - `<slot kind="photo" count="n"/>` is a place where photos the writer chooses stand, `count` side by side per row (a marked place in the prompt; IMAGE blocks in the post)
+  - `<slot kind="photo" count="n"/>` is a place where photos the writer chooses stand, `count` the number of photos the author suggests standing together there (a marked place in the prompt; single photos or photo groups in the post →GEN-77)
   - `<repeat each="photo">…</repeat>` is a part the writer repeats once per photo group of its storyline
   - `<ask label="제목">…</ask>` takes the facts for its position from the post's author instead of the model; `required="true"` marks an answer required before a new write (→TMPL-43 →TMPL-68)
   - `slot` is self-closing only, `kind` is required and the only authorable value is `photo`, `count` is optional (1 … `TEMPLATE_PHOTO_ROW_MAX`, default 1)
@@ -53,12 +53,12 @@
   - each error naming the area it sits in, an `ask` with no `label` or an empty one being `missing_attribute`
   - the Go parser (`backend/internal/template`) and the TypeScript parser (`frontend/src/entities/template/lib`) are tested against one shared fixture file `backend/internal/template/testdata/grammar/cases.json` plus a committed differential corpus, and a new rule lands in the fixture first ← that file is the only mechanism keeping two implementations of one grammar honest
 - TMPL-21 [o] a photo place binds no photo ← binding the attached photos in attachment order put each where the upload order said, which is whichever upload finished first and says nothing about the visit
-  - the rendered body marks each place with its `count` as a row size, and the writer chooses which attached photos stand there, and in how many rows, from the storyline it follows (→GEN-67 →GEN-70), by what the section around the place is about
+  - the rendered body marks each place with its `count` as a suggested group size, and the writer chooses which attached photos stand there, and whether alone, as one group or as several, from the storyline it follows (→GEN-67 →GEN-70), by what the section around the place is about
   - a `<repeat each="photo">` renders once, marked as a part the writer repeats once per photo group its storyline gives there
   - zero photos drops every repeat block whole including its literals
   - rendering keeps literals and `write` tags as written
   - nothing expands per photo, so no expansion bound exists
-- TMPL-22 [o] a run's output is taken as the model wrote it: its IMAGE blocks pass the attachment filter like any other block (→GEN-2), and literal fidelity, section order and whether every photo token came back are neither verified nor repaired — no deviation fails, retries or discards a usable generation
+- TMPL-22 [o] a run's output is taken as the model wrote it: its single photos and photo groups pass the attachment filter like any other block (→GEN-2 →GEN-78), and literal fidelity, section order and whether every photo token came back are neither verified nor repaired — no deviation fails, retries or discards a usable generation
 - TMPL-24 [o] `/templates` is a destination of the 글 group (→CLIP-3 →THEME-38 →GUIDE-26) labelled `글 템플릿`, after 말투, lazily split, and a LIST: one-target rows carrying the name, the description and the post count, the whole row linking to the template and the delete painted above the link layer; one docked `새 템플릿` is the only thing that adds; the empty state says what a template is for in plain language, shows no worked body and no marker syntax, and creates no row — there are no shipped presets
 - TMPL-25 [o] `/templates/$templateId` edits one template and `/templates/new` is the same component with nothing in it; the screen holds one draft (name, description, composition) and one 저장 as its only committing action, disabled while the draft equals what is stored; in-app navigation away from a dirty draft is warned about, and `beforeunload` warns only when something unsaved would be lost; the clean baseline is the mutation's own response, not the directory query ← the query lags a save by a refetch, which would leave 저장 re-enabled and the guard warning about a template just written; the create path's own post-save redirect is exempted from the guard through a ref
 - TMPL-26 [o] the composition is authored through one control in two modes over the same `body` string: the block builder (default) and `원문`, a plain text view of the stored body with the title area as its own field above it, the 형식 안내 staying body-only (→TMPL-41)
@@ -102,12 +102,11 @@
   - a composition edit writes it back as that literal text, while a save that leaves the composition untouched sends the body as stored
   - expansion renders it as the same text, so no run carries a slot token, a slot block or a slot marker and nothing downstream renders one
   - the app fills nothing (TMPL-34 stands)
-- TMPL-38 [o] a photo position carries how many photos stand side by side in one row: `count` 1 … `TEMPLATE_PHOTO_ROW_MAX` (4), default 1, the place taking as many rows as the photos the writer puts there need (→TMPL-21) ← Naver lays several photos in one row and a template that could only stack them one per row could not describe the posts people already write
-  - it is edited on the expanded 사진 row with a stepper and read in the collapsed summary as `한 줄에 n장`
+- TMPL-38 [o] a photo position carries how many photos the author suggests standing together there: `count` 1 … `TEMPLATE_PHOTO_ROW_MAX` (4), default 1, a count above 1 suggesting one photo group of about that size while the writer decides the group, its layout and whether to group at all (→TMPL-21 →GEN-77) ← Naver shows several photos as one collage or slide and a template that could only stack them could not describe the posts people already write
+  - it is edited on the expanded 사진 row with a stepper and read in the collapsed summary as `n장 묶음`, a count of 1 as `1장`
   - inside a 사진마다 반복 the help says the part repeats once per photo group of the story
-  - the ceiling is 4 ← beyond four a row's thumbnails are unreadable on a 360 px phone
-- TMPL-39 [?] how a photo row of n > 1 travels from the frozen template through the canonical post and manual export: GEN-1 knows one file per IMAGE block and EXPORT-5's `사진_<n>_<캡션>_사진` marker is a user-facing contract; candidates are consecutive IMAGE blocks sharing a row marker vs. one IMAGE block naming several files, and one export marker per row vs. per photo; decide in GEN and EXPORT
-- TMPL-40 [o] until →TMPL-39 is decided the post carries the photos at a place as consecutive single-photo IMAGE blocks, and the row size reaches the writer only as that place's `count` ← the author's intent is recorded now and nothing downstream has to change to stay correct
+  - the ceiling is 4 ← the preview draws the count as one row of cells, and beyond four they are unreadable on a 360 px phone
+- TMPL-39 [o] a photo position's suggested group travels as a photo group: the writer puts the photos it chooses there as one GALLERY block with one caption, or as single photos (→GEN-77), and export maps a group to one place (→EXPORT-26)
 - TMPL-41 [o] `원문` carries a copyable 형식 안내: one button puts on the clipboard a self-contained instruction a user can hand to any outside AI (ChatGPT, Claude, …) so it writes a body in our format — the five authorable constructs of →TMPL-18 with their meaning — a `<write>` or an instructing `<ask>` naming what stands at its place and never how to write it (→TMPL-57) — the rules that make a body refuse (→TMPL-20), the size ceilings, one worked example, and the instruction to answer with the body only ← the owner wants to describe a post to an AI and import the result rather than click a shape together, and an AI can only write our format if it is told the format exactly
   - it teaches no read-compatibility-only construct (`place` · `link`, `slot`'s `label`)
   - the prose follows the UI language (LANG) while tags, attributes and the example stay as they are
@@ -173,7 +172,7 @@
   - one 요청 전으로 되돌리기 restores the draft as it stood before the last request, until the next request starts or the editor is left ← hand edits made before a request are never lost
   - success empties the box, a failure keeps its text so it can be sent again
 - TMPL-64 [o] a new template can start from a post: ③'s 이 글 형식으로 템플릿 만들기 (→POST-103) opens `/templates/new` with that post attached as a 참고 글: <제목> chip above the empty box ← an in-app post carries its photo positions as blocks, which a post pasted from Naver loses
-  - the sample is the post's title and body blocks as they stand when the request is sent, its photos as positions only — no file, caption, memo, observation, voice, guideline or tag
+  - the sample is the post's title and body blocks as they stand when the request is sent, its photos as positions only, a photo group as one position of its photo count — no file, caption, memo, observation, voice, guideline or tag
   - opening never starts a request, the owner sends it; removing the chip makes an ordinary request; the chip does not count toward `TEMPLATE_REQUEST_MAX_CHARS`
   - it is an explicit act that makes a new template, never a pick (TMPL-16 stands)
 - TMPL-65 [o] a live preview redraws on every change of the draft from whichever side made it — the builder, `원문` as typed (its last parsable state, with the parse error noted while it does not parse →TMPL-42), a request's result, an undo — and shows the post the template makes the way a post's reading view shows one, the title area first ← a template is used by seeing the post it makes, and the builder's outline (→TMPL-26) shows blocks, not a post
@@ -195,7 +194,7 @@
 - author: `/templates` → `새 템플릿` → `/templates/new`(toolbar names: AI가 쓰는 글 · 고정 문구 · 사진(n장) · 사진마다 반복 → rows(데이터 받기 → 제목) → complete blocks → body) → 저장(parse ok → row | TEMPLATE_PARSE_FAILED line + reason)
 - import: `/templates/new` → `원문` → `형식 안내 복사` → outside AI writes a body → paste(parse ok → outline in builder | error line + reason, 저장 disabled) → 저장 → same run/delete paths as any body
 - assign: post picks template → each set number copied onto the post's option in the assigning save(unset → post's own value kept) → 없음 or a later template edit copies nothing
-- run: post picks template → ① fills the template's data fields (제목 + textarea + switch, autosaved →POST-62) → StartGeneration / StartRevision(resolve once → drop every off or blank field's node → render photo places and repeats unbound → freeze) → prompt section after the voice projection → model output(the storyline → photos placed along it) → attachment filter(→GEN-2) → post with photo rows(→TMPL-39 | interim consecutive blocks →TMPL-40)
+- run: post picks template → ① fills the template's data fields (제목 + textarea + switch, autosaved →POST-62) → StartGeneration / StartRevision(resolve once → drop every off or blank field's node → render photo places and repeats unbound → freeze) → prompt section after the voice projection → model output(the storyline → photos placed along it) → attachment filter(→GEN-2) → post with single photos and photo groups(→TMPL-39)
 - request: editor box (description | sample | what to change, or a 참고 글 chip) → send(write ref explicit → admission →QUOTA-67) → job(형식 안내 + request-only rules + current draft + sample → 글 작성 모델 → parse and field check(fail → back with area + line + reason, ≤ 3 | still failing → stable failure, draft untouched)) → draft replaced + wishes listed with 지침 만들기 + 요청 전으로 되돌리기 → 저장
 - from a post: ③ 이 글 형식으로 템플릿 만들기 → `/templates/new` + 참고 글 chip → the owner sends
 - preview: any draft change(builder | `원문` parsable | result | undo) → preview redrawn from stand-ins
@@ -209,4 +208,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
--
+- r20 261004 TMPL-39✎ [?]→[o] a suggested group travels as a photo group (GALLERY block, one caption) · TMPL-40- interim consecutive single-photo IMAGE blocks removed · TMPL-38✎ count side by side per row→suggested group size, summary 한 줄에 n장→n장 묶음 · TMPL-18✎ TMPL-21✎ TMPL-22✎ count reads as a suggestion · TMPL-64✎ a sample's photo group is one position of its count

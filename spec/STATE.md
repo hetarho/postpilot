@@ -25,13 +25,13 @@
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
-| POST | 29 | 29 | - | 0 |
+| POST | 30 | 29 | POST-105+ POST-106+ POST-13✎ POST-14✎ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
-| GEN | 21 | 21 | - | 0 |
+| GEN | 22 | 21 | GEN-77+ GEN-78+ GEN-1✎ GEN-14✎ GEN-41✎ | 0 |
 | MODEL | 28 | 28 | - | 0 |
-| TMPL | 19 | 19 | - | 1 |
-| GUIDE | 12 | 12 | - | 0 |
-| EXPORT | 7 | 7 | - | 0 |
+| TMPL | 20 | 19 | TMPL-39✎ TMPL-40- TMPL-38✎ TMPL-18✎ TMPL-21✎ TMPL-22✎ TMPL-64✎ | 0 |
+| GUIDE | 13 | 12 | GUIDE-41✎ | 0 |
+| EXPORT | 8 | 7 | EXPORT-26+ EXPORT-5✎ EXPORT-12✎ | 0 |
 | LANG | 7 | 7 | - | 0 |
 | THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
@@ -40,7 +40,7 @@
 | CDS | 31 | 31 | - | 1 |
 | BILL | 8 | 8 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
-| QUAL | 6 | 6 | - | 0 |
+| QUAL | 7 | 6 | QUAL-10✎ | 0 |
 | GIFT | 3 | 3 | - | 0 |
 
 ## review
@@ -61,10 +61,12 @@
 |---|---|---|---|---|
 
 ## next
+- create-task GEN POST EXPORT TMPL GUIDE QUAL: photo groups (GEN r22 POST r30 EXPORT r8 TMPL r20 GUIDE r13 QUAL r7).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 update-ssot GEN r22 POST r30 EXPORT r8 TMPL r20 GUIDE r13 QUAL r7: photo groups (콜라주 · 슬라이드, one caption) through writing, reading view, editor and the four exports; TMPL-39 decided
 - 261004 update-ssot TMPL GEN EXPORT start: decide TMPL-39 — photo groups (collage/slide, one caption) through the post, rendering and export
 - 261003 T523 done: captions excluded from intro/outro; local 31-second DB render and full test suites verified
 - 261003 T523 start: keep generated and edited captions out of enabled regions
@@ -84,5 +86,3 @@
 - 261002 T521 done: one learning screen and sequential quiz with live readiness; Node 24 FE 3048 tests, lint/FSD/style/build and local CI checks passed
 - 261002 T520 done: write-stage check/reflection requests admitted by model registry; BE full tests and local CI checks passed
 - 261002 T521 start
-- 261002 T520 start
-- 261002 create-task VOICE r7 → T520 (write-stage verification admission), T521 (learning quiz and navigation)
