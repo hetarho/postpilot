@@ -43,7 +43,7 @@ describe('a 콜라주 group', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  it('fills rows of two for two and four photos', () => {
+  it('lays two photos in two columns and three in three, in one row', () => {
     const { rerender } = render(
       <PhotoGroup
         block={group(GalleryLayout.COLLAGE, ['a.jpg', 'b.jpg'])}
@@ -53,11 +53,11 @@ describe('a 콜라주 group', () => {
     expect(screen.getAllByRole('img')[0]!.closest('.grid')).toHaveClass('grid-cols-2')
     rerender(
       <PhotoGroup
-        block={group(GalleryLayout.COLLAGE, ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'])}
-        images={photos('a.jpg', 'b.jpg', 'c.jpg', 'd.jpg')}
+        block={group(GalleryLayout.COLLAGE, ['a.jpg', 'b.jpg', 'c.jpg'])}
+        images={photos('a.jpg', 'b.jpg', 'c.jpg')}
       />,
     )
-    expect(screen.getAllByRole('img')[0]!.closest('.grid')).toHaveClass('grid-cols-2')
+    expect(screen.getAllByRole('img')[0]!.closest('.grid')).toHaveClass('grid-cols-3')
   })
 
   it('reads an unspecified layout as a collage and falls back to the filename for alt', () => {

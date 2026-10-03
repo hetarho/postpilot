@@ -32,7 +32,7 @@ export const TEMPLATE_TITLE_AREA_MAX_CHARS = positiveIntEnv(
 /** The largest photo count a photo position may suggest as one group (TMPL-38). Unlike the ceilings above this
  *  one is not only a counter: the builder's stepper cannot offer a value the server's parser
  *  would refuse on save, so the two numbers have to be raised together. */
-export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(ENV_LIMIT_OVERRIDES.templatePhotoRowMax, 4)
+export const TEMPLATE_PHOTO_ROW_MAX = positiveIntEnv(ENV_LIMIT_OVERRIDES.templatePhotoRowMax, 3)
 
 /** The data-field ceilings (TMPL-43): a field's title, one answer's text, and how many
  *  fields one body may declare. The first two are live counters and the third is a refusal the

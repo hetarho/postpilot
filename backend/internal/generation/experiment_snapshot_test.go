@@ -163,7 +163,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
 	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
-	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200}}
+	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200, Width: 1080, Height: 1920}}
 	fixture.post.Content.Blocks = []Block{{
 		Type: BlockText, Content: "본문", Level: 2, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판",
 		Items: []string{"하나"}, Files: []string{"IMG_1.jpg", "IMG_2.jpg"}, Layout: GallerySlide,

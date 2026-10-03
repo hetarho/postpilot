@@ -106,6 +106,10 @@ type snapshotImage struct {
 	Kind        string `json:"Kind"`
 	ContentType string `json:"ContentType"`
 	DurationMs  int64  `json:"DurationMs"`
+	// A photo's dimensions decide its orientation for grouping (GEN-77); omitempty keeps every
+	// snapshot frozen before they rode along byte-identical, hash and all.
+	Width  int32 `json:"Width,omitempty"`
+	Height int32 `json:"Height,omitempty"`
 }
 
 type snapshotObservation struct {
@@ -341,11 +345,11 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 }
 
 func toSnapshotImage(image Image) snapshotImage {
-	return snapshotImage{Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs}
+	return snapshotImage{Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs, Width: image.Width, Height: image.Height}
 }
 
 func fromSnapshotImage(wire snapshotImage) Image {
-	return Image{Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs}
+	return Image{Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs, Width: wire.Width, Height: wire.Height}
 }
 
 func toSnapshotObservation(o Observation) snapshotObservation {

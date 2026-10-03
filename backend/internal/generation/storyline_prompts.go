@@ -89,7 +89,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	}
 	writeGuidelinesSectionClosedBy(&stable, input.DefaultGuidelines, input.Guidelines, storylineGuidelinePrecedence)
 
-	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations))
+	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations, nil))
 	if revising {
 		user += fmt.Sprintf("\n\n[현재 스토리라인]\n%s\n\n[수정 요청]\n%s", marshalPromptJSON(storylineForPrompt(input.Current)), input.Request)
 	}

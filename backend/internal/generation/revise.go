@@ -113,6 +113,13 @@ func BuildRevisePrompt(profile Profile, content PostContent, filenames []string,
 }
 
 func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines FrozenGuidelines) (string, string) {
+	return buildRevisePrompt(language, profile, content, filenames, nil, nil, instruction, targetLength, tagCount, template, guidelines)
+}
+
+// buildRevisePrompt is BuildRevisePromptForLanguage with the attached photos and their
+// orientations, which the revision handler passes so a regrouping request keeps one orientation
+// per group (GEN-40, GEN-77). nil portraits writes no 사진 방향 section.
+func buildRevisePrompt(language Language, profile Profile, content PostContent, filenames, photos []string, portraits map[string]bool, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines FrozenGuidelines) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -142,9 +149,13 @@ func BuildRevisePromptForLanguage(language Language, profile Profile, content Po
 	if len(filenames) > 0 {
 		files = strings.Join(filenames, ", ")
 	}
+	orientation := ""
+	if line := orientationLine(photos, portraits); line != "" {
+		orientation = "\n\n[사진 방향]\n" + strings.TrimPrefix(line, "\n사진 방향: ")
+	}
 	user := fmt.Sprintf(
-		"[현재 PostContent]\n%s\n\n[첨부 파일명]\n%s\n\n[수정 요청]\n%s",
-		marshalPromptJSON(contentForPrompt(content)), files, instruction,
+		"[현재 PostContent]\n%s\n\n[첨부 파일명]\n%s%s\n\n[수정 요청]\n%s",
+		marshalPromptJSON(contentForPrompt(content)), files, orientation, instruction,
 	)
 	return stable.String(), user
 }

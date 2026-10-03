@@ -81,11 +81,11 @@ func TestRenderWithNoPhotosDropsTheWholeRepeat(t *testing.T) {
 	}
 }
 
-// TMPL-40: each place carries its own row size, and a place outside a repeat marks nothing when
-// the post has no photo to stand there.
+// TMPL-38: each place carries its suggested group size, a stored count above the group cap renders
+// as the cap, and a place outside a repeat marks nothing when the post has no photo to stand there.
 func TestRenderMarksEachPlaceWithItsRowSize(t *testing.T) {
 	body := `<slot kind="photo"/>|<slot kind="photo" count="3"/>|<slot kind="photo" count="4"/>`
-	if got, want := renderBody(t, body, true), "{{사진 자리}}|{{사진 자리 · 3장 묶음}}|{{사진 자리 · 4장 묶음}}"; got != want {
+	if got, want := renderBody(t, body, true), "{{사진 자리}}|{{사진 자리 · 3장 묶음}}|{{사진 자리 · 3장 묶음}}"; got != want {
 		t.Fatalf("body = %q, want %q", got, want)
 	}
 	if got := renderBody(t, body, false); got != "||" {

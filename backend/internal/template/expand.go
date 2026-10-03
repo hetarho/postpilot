@@ -33,14 +33,20 @@ const (
 	factClose      = "</facts>"
 )
 
+// PhotoGroupCap is the most photos one photo group holds, so the largest group a photo position
+// can suggest (TMPL-38). It mirrors post.PhotoGroupMax, which this context may not import; the
+// composition root's test pins the two equal.
+const PhotoGroupCap = 3
+
 // PhotoPlace is the marked place a photo position renders as: `{{사진 자리}}` for a count of one,
-// and `{{사진 자리 · n장 묶음}}` where the author suggests a group of n (TMPL-38). A suggestion,
-// not a binding: the writer decides whether and how to group (GEN-77).
+// and `{{사진 자리 · n장 묶음}}` where the author suggests a group of n (TMPL-38), a stored count
+// above the cap rendering as the cap. A suggestion, not a binding: the writer decides whether and
+// how to group (GEN-77).
 func PhotoPlace(count int) string {
 	if count <= 1 {
 		return photoPlaceSingle
 	}
-	return photoPlacePrefix + strconv.Itoa(count) + photoPlaceSuffix
+	return photoPlacePrefix + strconv.Itoa(min(count, PhotoGroupCap)) + photoPlaceSuffix
 }
 
 // Render resolves a parsed template for one post and renders it into the text the write and

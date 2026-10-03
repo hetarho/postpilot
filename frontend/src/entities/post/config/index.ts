@@ -28,4 +28,4 @@ export const POST_PUBLISHED_URL_MAX_CHARS = 2048
 
 /** How many photos one photo group holds at most (GEN-77); a group holds at least two. Mirrors the
  *  server's `post.PhotoGroupMax`, which stays authoritative and refuses a save past it. */
-export const PHOTO_GROUP_MAX = 10
+export const PHOTO_GROUP_MAX = 3

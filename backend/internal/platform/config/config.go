@@ -211,7 +211,7 @@ type TemplateCeilings struct {
 	TitleAreaMaxChars int
 	MaxPerAccount     int
 	// PhotoRowMax is the largest `count` a photo position may carry — how many photos the author
-	// suggests standing together there as one group (TMPL-38). It is env because the browser mirrors it as
+	// suggests standing together there as one group (TMPL-38), which defaults to the group cap (3). It is env because the browser mirrors it as
 	// VITE_TEMPLATE_PHOTO_ROW_MAX and both sides have to move together.
 	PhotoRowMax int
 	// The data-field ceilings (TMPL-43): a field's title and how many fields one body may
@@ -529,7 +529,7 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.Template.MaxPerAccount = templateCap
-	templatePhotoRow, err := positiveInt("TEMPLATE_PHOTO_ROW_MAX", "4")
+	templatePhotoRow, err := positiveInt("TEMPLATE_PHOTO_ROW_MAX", "3")
 	if err != nil {
 		return nil, err
 	}

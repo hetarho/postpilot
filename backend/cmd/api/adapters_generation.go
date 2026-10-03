@@ -254,7 +254,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	for _, image := range found.Images {
 		input.Images = append(input.Images, generation.Image{
 			Filename: image.Filename, Key: image.Key, Kind: generation.AttachmentPhoto,
-			ContentType: "image/jpeg",
+			ContentType: "image/jpeg", Width: image.Width, Height: image.Height,
 		})
 	}
 	for _, video := range found.Videos {

@@ -89,9 +89,10 @@ export function PhotoGroup({
       {block.layout === GalleryLayout.SLIDE ? (
         <SlideStrip files={block.files} cell={cell} custom={custom} />
       ) : (
-        // An even count fills rows of two (2 → one row, 4 → two), anything else rows of three.
-        // A collage crops each photo to an even square cell, as Naver's does.
-        <div className={`grid gap-2 ${total === 2 || total === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        // One row, as many columns as photos: a group holds at most three, so its caption stands
+        // right under every photo it describes. A collage crops each photo to an even square cell,
+        // as Naver's does.
+        <div className={`grid gap-2 ${total === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {block.files.map((file, position) => (
             <div
               key={`${file}:${position}`}

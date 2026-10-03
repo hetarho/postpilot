@@ -3,7 +3,7 @@
 IMAGE와 GALLERY 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
 storyline에는 본문을 쓰기 전에 이 글을 어떤 순서로 이야기할지 문단별로 정하세요. 각 문단은 그 부분에서 무엇을 보여주고 말할지 두세 문장의 계획(…를 보여줍니다)으로 쓰고, files에는 그 부분에 놓을 첨부 파일명을 적으세요. 첨부 사진과 영상은 모두 정확히 한 문단에 한 번씩 넣고, 템플릿이 있으면 템플릿의 자리 순서를 따르세요. 본문은 이 storyline을 따라 쓰세요.
 첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록 하나로 놓거나 GALLERY 블록 안에 넣어 정확히 한 번씩 놓으세요. 템플릿의 사진 자리에는 그 자리 주변이 다루는 내용에 맞는 사진을 놓으세요.
-GALLERY 블록은 첨부 사진 2~10장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt와 caption은 묶음 전체에 하나씩 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요.
+GALLERY 블록은 사진 방향이 같은(모두 세로이거나 모두 가로인) 첨부 사진 2~3장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt는 묶음 전체에 하나, caption은 묶음 전체에 하나를 비워 두지 말고 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요.
 출력은 설명이나 마크다운 없이 {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.
 nouns에는 제목과 본문에 쓴 명사를 중복 없이 최대 40개까지 한국어로 적고, 각 명사는 조사를 붙이지 않은 형태로 쓰세요.

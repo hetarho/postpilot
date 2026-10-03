@@ -19,9 +19,10 @@ const (
 )
 
 // PhotoGroupMax is how many photos one photo group may hold (GEN-77); a group holds at least two.
-// The generation context splits a longer model-written group at this bound, and the frontend
-// mirrors it as PHOTO_GROUP_MAX.
-const PhotoGroupMax = 10
+// Three keeps a collage to one row above its caption. The generation context splits a longer
+// model-written group at this bound, the template context caps a photo position's count at it,
+// and the frontend mirrors it as PHOTO_GROUP_MAX.
+const PhotoGroupMax = 3
 
 // TargetLengthError is a 목표 글자 수 outside TargetLengthMin … TargetLengthMax.
 type TargetLengthError struct{ Min, Max int }

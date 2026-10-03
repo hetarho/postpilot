@@ -42,9 +42,9 @@ func TestValidateContentRefusesMalformedPhotoGroups(t *testing.T) {
 		block  Block
 		reason string
 	}{
-		"one photo":         {group("a.jpg"), "a photo group holds 2 to 10 photos"},
-		"no photo":          {group(), "a photo group holds 2 to 10 photos"},
-		"too many":          {group(tooMany...), "a photo group holds 2 to 10 photos"},
+		"one photo":         {group("a.jpg"), fmt.Sprintf("a photo group holds 2 to %d photos", PhotoGroupMax)},
+		"no photo":          {group(), fmt.Sprintf("a photo group holds 2 to %d photos", PhotoGroupMax)},
+		"too many":          {group(tooMany...), fmt.Sprintf("a photo group holds 2 to %d photos", PhotoGroupMax)},
 		"repeated photo":    {group("a.jpg", "a.jpg"), "photo appears twice in one group"},
 		"unattached photo":  {group("a.jpg", "foreign.jpg"), "image is not attached to this post"},
 		"video in a group":  {group("a.jpg", "clip.mp4"), "file is a video and belongs in a VIDEO block"},

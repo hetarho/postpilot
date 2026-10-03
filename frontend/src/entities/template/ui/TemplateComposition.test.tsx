@@ -103,7 +103,7 @@ describe('the composition editor', () => {
     const value = screen.getByRole('spinbutton', { name: '함께 묶을 사진 수' })
     expect(value).toHaveAttribute('aria-valuenow', '1')
     expect(value).toHaveAttribute('aria-valuemin', '1')
-    expect(value).toHaveAttribute('aria-valuemax', '4')
+    expect(value).toHaveAttribute('aria-valuemax', '3')
     // At the floor there is nothing to take away.
     expect(screen.getByRole('button', { name: '줄이기' })).toBeDisabled()
 
@@ -117,8 +117,7 @@ describe('the composition editor', () => {
 
     await user.click(toggle(3))
     await user.click(screen.getByRole('button', { name: '늘리기' }))
-    await user.click(screen.getByRole('button', { name: '늘리기' }))
-    expect(body()).toContain('<slot kind="photo" count="4"/>')
+    expect(body()).toContain('<slot kind="photo" count="3"/>')
     // The ceiling is the server's, so the control cannot offer a value the save would refuse.
     expect(screen.getByRole('button', { name: '늘리기' })).toBeDisabled()
   })

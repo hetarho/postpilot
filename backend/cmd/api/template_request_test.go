@@ -333,3 +333,11 @@ func TestTemplateRequestCancelAfterItFinishedChangesNothing(t *testing.T) {
 		t.Fatalf("another account's cancel = %v, want ErrNotFound", err)
 	}
 }
+
+// The template context caps a photo position's suggested group at its own copy of the post's
+// group cap, since it may not import post (TMPL-38, GEN-77); the two must stay one number.
+func TestTemplateGroupCapIsThePostGroupCap(t *testing.T) {
+	if template.PhotoGroupCap != post.PhotoGroupMax {
+		t.Fatalf("template cap %d, post cap %d", template.PhotoGroupCap, post.PhotoGroupMax)
+	}
+}

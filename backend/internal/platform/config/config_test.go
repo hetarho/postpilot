@@ -160,9 +160,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ObserveBatchSize != 4 {
 		t.Errorf("ObserveBatchSize = %d, want 4", cfg.ObserveBatchSize)
 	}
-	// Four photos side by side is the ceiling a 360 px phone can still show (TMPL-38).
-	if cfg.Template.PhotoRowMax != 4 {
-		t.Errorf("Template.PhotoRowMax = %d, want 4", cfg.Template.PhotoRowMax)
+	// A photo position's count suggests one group, and no group holds more than three (TMPL-38).
+	if cfg.Template.PhotoRowMax != 3 {
+		t.Errorf("Template.PhotoRowMax = %d, want 3", cfg.Template.PhotoRowMax)
 	}
 	// A8: the cap is deployment-resolvable, with 8192 as its default.
 	if cfg.LLMMaxTokensDefault != 8192 {

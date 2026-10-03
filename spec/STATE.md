@@ -59,16 +59,17 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T530 | photo groups of three, one orientation, always captioned | GEN POST TMPL | - | todo |
 | T531 | observed photo rotation on the server | GEN POST | T530 | todo |
 | T532 | show and copy photos turned, and let the owner turn them | POST EXPORT | T531 | todo |
 
 ## next
-- implement-task T530 → T531 → T532, then push (owner asked for commit and push).
+- implement-task T531 → T532, then push (owner asked for commit and push).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 T530 done: groups of at most three, one orientation, always captioned; BE and FE suites green
+- 261004 T530 start
 - 261004 create-task GEN r23 POST r31 TMPL r21 EXPORT r10 → T530 (groups of three), T531 (rotation on the server), T532 (rotation on screen)
 - 261004 create-task GEN POST TMPL EXPORT start: GEN-77✎ GEN-78✎ GEN-79+ POST-107+ TMPL-38✎ EXPORT-15✎
 - 261004 update-ssot GEN r23 POST r31 TMPL r21 EXPORT r10: groups of at most 3 of one orientation, every part captioned; photo rotation from the observation until the owner turns it
@@ -87,5 +88,3 @@
 - 261004 T524 done: GALLERY block validated, stored, served, finalized and measured on the server; BE suite and FE build pass
 - 261004 T524 start
 - 261004 create-task GEN r22 POST r30 EXPORT r9 TMPL r20 GUIDE r13 QUAL r7 → T524 (server block), T525 (writer), T526 (reading view), T527 (editor), T528 (exports), T529 (template copy)
-- 261004 update-ssot EXPORT r9: EXPORT-26✎ the site stylesheet carries the group rules for every post
-- 261004 create-task GEN POST EXPORT TMPL GUIDE QUAL start: GEN-77+ GEN-78+ POST-105+ POST-106+ EXPORT-26+ TMPL-39✎ GUIDE-41✎ QUAL-10✎

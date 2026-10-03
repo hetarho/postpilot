@@ -393,7 +393,7 @@ func TestFilterAttachmentsKeepsTheTwoKindsApart(t *testing.T) {
 		{Type: BlockVideo, File: "IMG_1.jpg"},
 		{Type: BlockVideo, File: "ghost.mp4"},
 	}}
-	got := FilterAttachments(content, []string{"IMG_1.jpg"}, []string{"a.mp4"})
+	got := FilterAttachments(content, []string{"IMG_1.jpg"}, []string{"a.mp4"}, nil)
 	if len(got.Blocks) != 3 {
 		t.Fatalf("blocks = %+v, want the text, the image and the video", got.Blocks)
 	}

@@ -125,6 +125,9 @@ type Image struct {
 	// ContentType is the object's stored type; DurationMs is zero for a photo.
 	ContentType string
 	DurationMs  int64
+	// Width and Height are a photo's dimensions on record, which decide its orientation for
+	// grouping (GEN-77); zero for a video.
+	Width, Height int32
 }
 
 // VoiceRef is the post's voice as the post context projects it. Deleted is what makes a

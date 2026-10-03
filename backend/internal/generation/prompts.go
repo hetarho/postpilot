@@ -54,11 +54,11 @@ const koreanStorylineRule = "storyline에는 본문을 쓰기 전에 이 글을 
 const englishStorylineRule = "Before writing, set in storyline how this post will tell things, paragraph by paragraph: each paragraph is a plan of two or three sentences saying what that part shows and says, and files names the attachments that part uses. Put every attached photo and video in exactly one paragraph, following the template's places in order when there is a template. Then write the post along this storyline."
 
 // koreanGalleryRule / englishGalleryRule define the photo group's format (GEN-77): which fields it
-// fills and the 2 … post.PhotoGroupMax bound. Format only — when photos are better grouped is the
+// fills, the 2 … post.PhotoGroupMax bound, one orientation and a caption that is never empty. Format only — when photos are better grouped is the
 // 비슷한 사진은 한 묶음으로 기본 지침 (GUIDE-41). A test pins the number to post.PhotoGroupMax.
-const koreanGalleryRule = "GALLERY 블록은 첨부 사진 2~10장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt와 caption은 묶음 전체에 하나씩 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요."
+const koreanGalleryRule = "GALLERY 블록은 사진 방향이 같은(모두 세로이거나 모두 가로인) 첨부 사진 2~3장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt는 묶음 전체에 하나, caption은 묶음 전체에 하나를 비워 두지 말고 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요."
 
-const englishGalleryRule = "A GALLERY block shows 2 to 10 attached photos together in one place under one caption: list their filenames in files in the order they stand, set layout to COLLAGE (side by side) or SLIDE (one at a time, swiped), write one alt and one caption for the whole group, and leave file empty. On every other block, leave files as an empty array and layout as an empty string."
+const englishGalleryRule = "A GALLERY block shows 2 to 3 attached photos of one orientation (all 세로 or all 가로 in 사진 방향) together in one place under one caption: list their filenames in files in the order they stand, set layout to COLLAGE (side by side) or SLIDE (one at a time, swiped), write one alt and a caption that is never empty for the whole group, and leave file empty. On every other block, leave files as an empty array and layout as an empty string."
 
 // WritePrompt / englishWritePrompt are the write pass's static rules, and they hold the input
 // and output format alone (GUIDE-1, GEN-14): the task, one paragraph per TEXT block, attached
@@ -392,6 +392,9 @@ type WritePromptInput struct {
 	// FollowStoryline is the frozen storyline a from-storyline run follows (GEN-70): it selects
 	// the storyline-path static rules and closes the per-post half as [스토리라인].
 	FollowStoryline []StorylineParagraph
+	// Portraits names the attached photos that stand portrait (PhotoPortraits); nil writes no
+	// 사진 방향 line, which keeps a caller that has no dimensions at its old bytes (GEN-77).
+	Portraits map[string]bool
 }
 
 // BuildWritePromptForLanguage builds the write pass's system and user prompts from one input.
@@ -442,7 +445,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	writeTemplateSection(&stable, input.Template, templateTitleInstruction, input.Profile.NoVoice)
 	writeGuidelinesSection(&stable, input.DefaultGuidelines, input.Guidelines, input.Profile.NoVoice)
 
-	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
+	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations, input.Portraits)
 	// The memory section sits between the memo and the attachments and renders to the empty
 	// string when it has nothing — which is what keeps a post without it byte-identical.
 	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), photoMaterial) +
@@ -507,12 +510,12 @@ func writeGenericLength(stable *strings.Builder, language Language, targetLength
 // A post with no video produces BYTE-IDENTICAL text to before videos existed — one filename
 // line and one 사진 관찰 line — because that is what every golden pins and what every prompt
 // cache prefix depends on. The video lines exist only when the post actually has a clip.
-func attachmentMaterial(photos, videos []string, observations []Observation) string {
+func attachmentMaterial(photos, videos []string, observations []Observation, portraits map[string]bool) string {
 	if len(photos) == 0 && len(videos) == 0 {
 		return "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
 	}
 	if len(videos) == 0 {
-		return "첨부 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") +
+		return "첨부 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits) +
 			"\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(observations))
 	}
 
@@ -535,13 +538,32 @@ func attachmentMaterial(photos, videos []string, observations []Observation) str
 
 	var out strings.Builder
 	if len(photos) > 0 {
-		out.WriteString("첨부 사진 파일명(정확히 일치해야 함): " + strings.Join(photos, ", "))
+		out.WriteString("첨부 사진 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits))
 		out.WriteString("\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(photoObservations)))
 		out.WriteString("\n")
 	}
 	out.WriteString("첨부 영상 파일명(정확히 일치해야 함): " + strings.Join(videos, ", "))
 	out.WriteString("\n영상 관찰: " + marshalPromptJSON(videoObservationsForPrompt(videoObservations)))
 	return out.String()
+}
+
+// orientationLine is the per-post 사진 방향 line (GEN-77): every attached photo, in post order,
+// named 세로 or 가로, so the writer can group portrait with portrait and landscape with landscape.
+// The per-post half's framing is Korean for every target language, like the lines around it.
+// nil portraits — a caller with no dimensions — writes nothing.
+func orientationLine(photos []string, portraits map[string]bool) string {
+	if portraits == nil || len(photos) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(photos))
+	for _, photo := range photos {
+		word := "가로"
+		if portraits[photo] {
+			word = "세로"
+		}
+		parts = append(parts, photo+" "+word)
+	}
+	return "\n사진 방향: " + strings.Join(parts, ", ")
 }
 
 // videoObservationsForPrompt carries the two fields a photo entry has no use for. They are

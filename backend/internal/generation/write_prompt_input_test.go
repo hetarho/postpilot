@@ -30,6 +30,7 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 		},
 		"Memories":     func(in *WritePromptInput) { in.Memories = testMemories() },
 		"QualityRules": func(in *WritePromptInput) { in.QualityRules = testQualityRules() },
+		"Portraits":    func(in *WritePromptInput) { in.Portraits = map[string]bool{"IMG_1.jpg": true} },
 	}
 	baseSystem, baseUser := BuildWritePromptForLanguage(base)
 	members := reflect.TypeOf(WritePromptInput{})
