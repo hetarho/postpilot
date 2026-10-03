@@ -107,7 +107,8 @@
 
 ```proto
 enum BlockType { BLOCK_TYPE_UNSPECIFIED = 0; TEXT = 1; HEADING = 2;
-                 IMAGE = 3; QUOTE = 4; LIST = 5; }
+                 IMAGE = 3; QUOTE = 4; LIST = 5; VIDEO = 6;
+                 GALLERY = 7; }  // GALLERY: 같은 방향 사진 2~3장 묶음(files · layout · 설명 하나)
 
 message Block {
   BlockType type = 1;
@@ -393,7 +394,7 @@ Set-Cookie: pp_session=<불투명 토큰>; HttpOnly; Secure; SameSite=Lax; Path=
 
 | 형식          | 출력                                              | 안내 문구                                    |
 | ------------- | ------------------------------------------------- | -------------------------------------------- |
-| 네이버 블로그 | 평문. 사진 위치를 `사진_번호_캡션_사진`으로 표시   | 붙여넣고 표시된 자리에 사진 드래그           |
+| 네이버 블로그 | 평문. 사진 위치를 `사진_번호_캡션_사진`, 사진 묶음(2~3장, 설명 하나)을 `콜라주_번호_…_캡션_콜라주` · `슬라이드_번호_…_슬라이드`로 표시 | 붙여넣고 표시된 자리에 사진 드래그, 묶음은 그 번호의 사진을 한 번에 올리고 같은 배치 선택 |
 | 티스토리      | HTML 조각. 이미지 태그 옆에 교체 안내 주석        | HTML 모드에 붙여넣고 사진 업로드 후 src 교체 |
 | 자체 사이트   | 완성된 단독 HTML 페이지                           | 그대로 저장                                  |
 | 마크다운      | front matter 포함                                 | Hugo / Jekyll / Obsidian                     |
