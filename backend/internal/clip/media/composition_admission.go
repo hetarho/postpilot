@@ -64,14 +64,29 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 						continue
 					}
 					c := clip.Copy{Text: element.Text, Style: in.Design.AllowedCaptionStyles()[0], Align: element.Element.Align, Anchor: element.Element.Position, Accent: doc.Accent}
-					layout, err := r.layoutCopy(ctx, ws, canvas, c)
-					if err != nil {
-						return elementProblem(text, "copy_limit")
-					}
-					if c.Anchor != "auto" {
-						if _, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, layout.Region.Width, layout.Region.Height); err != nil {
-							return elementProblem(text, "copy_limit")
+					// "auto" names no anchor of its own: the renderer walks the style's
+					// anchor and then its alternate, so the caption is admitted where
+					// either holds it. A template caption declares no position (CLIP-112),
+					// so without this every fixed caption was refused before a quote.
+					anchors := []string{c.Anchor}
+					if c.Anchor == "auto" {
+						rule := captionStyle(c.Style).Rule()
+						anchors = []string{rule.Anchor}
+						if rule.AnchorAlt != "" && rule.AnchorAlt != rule.Anchor {
+							anchors = append(anchors, rule.AnchorAlt)
 						}
+					}
+					fits := false
+					for _, anchor := range anchors {
+						c.Anchor = anchor
+						// layoutCopy returns only a layout PlaceCopy accepted at this anchor.
+						if _, err := r.layoutCopy(ctx, ws, canvas, c); err == nil {
+							fits = true
+							break
+						}
+					}
+					if !fits {
+						return elementProblem(text, "copy_limit")
 					}
 				}
 			}

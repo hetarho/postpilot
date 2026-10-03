@@ -215,6 +215,24 @@ func TestAuthoredAdmissionLeavesTheRegionsToTheirSlots(t *testing.T) {
 	}
 }
 
+// A template caption declares no position (CLIP-112), so admission places a fixed
+// one at its style's own anchor as the renderer does, and still refuses one that
+// no anchor can hold.
+func TestAuthoredAdmissionPlacesAnUnpinnedFixedCaption(t *testing.T) {
+	_, r := measured(t)
+	admit := func(text string) error {
+		body := `<clip version="1"><text id="title" kind="fixed" role="caption">` + text + `</text></clip>`
+		return r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 30000, Design: clip.ProjectDesign{CaptionStyles: []string{"bold"}}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
+	}
+	if err := admit("어쩌다 가게 됐냐면요..."); err != nil {
+		t.Fatal("a fixed caption with no position was refused", err)
+	}
+	var problem *composition.Problem
+	if err := admit(strings.Repeat("하나둘셋넷", 8)); !errors.As(err, &problem) || problem.Reason != "copy_limit" {
+		t.Fatal("a fixed caption no anchor can hold was admitted", err)
+	}
+}
+
 // CDS-73 and CDS-87: an empty slot closes up with the gap before it while the
 // block keeps its rules and its centre; a line no slot holds is drawn by nobody;
 // a newline or a line too wide at the floor is refused.
