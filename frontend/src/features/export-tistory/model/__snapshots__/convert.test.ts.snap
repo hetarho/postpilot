@@ -12,6 +12,14 @@ exports[`converts every block to the Tistory fragment contract 1`] = `
 <ul><li>우산</li><li>따뜻한 차</li></ul>"
 `;
 
+exports[`writes a photo group as one figure with its layout, its photos and one caption 1`] = `
+"<p class="summary">사진을 묶어 보여 주는 글</p>
+<p>도착했다.</p>
+<figure><img src="" alt="" data-file="IMG_1.jpg"><!-- IMG_1.jpg 업로드 후 src 교체 --><figcaption>입구</figcaption></figure>
+<figure data-layout="collage"><img src="" alt="창가" data-file="IMG_2.jpg"><!-- IMG_2.jpg 업로드 후 src 교체 --><img src="" alt="창가" data-file="IMG_3.jpg"><!-- IMG_3.jpg 업로드 후 src 교체 --><figcaption>창가 자리(2층)</figcaption></figure>
+<figure data-layout="slide"><img src="" alt="" data-file="IMG_4.jpg"><!-- IMG_4.jpg 업로드 후 src 교체 --><img src="" alt="" data-file="IMG_5.jpg"><!-- IMG_5.jpg 업로드 후 src 교체 --></figure>"
+`;
+
 exports[`writes a video as an empty element with the replacement instruction 1`] = `
 "<p class="summary">비가 그친 뒤 천천히 걸은 하루</p>
 <p>비가 그치기를 기다렸다.</p>

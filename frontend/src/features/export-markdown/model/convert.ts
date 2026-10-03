@@ -38,6 +38,16 @@ export function toMarkdown(
         ]
           .filter(Boolean)
           .join('\n')
+      case BlockType.GALLERY:
+        // Markdown has no collage or slide: the photos in order, then the group's one caption.
+        return [
+          ...block.files.map(
+            (file) => `![${escapeMarkdownLabel(block.alt)}](${relativeFileUrl(file)})`,
+          ),
+          block.caption ? `*${escapeHtml(block.caption)}*` : '',
+        ]
+          .filter(Boolean)
+          .join('\n')
       case BlockType.VIDEO:
         // Markdown has no video syntax, and a link is what every renderer keeps (VIDEO-14).
         return [

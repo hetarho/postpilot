@@ -2,9 +2,10 @@ import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import {
-  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_GROUPS_FIXTURE,
   POST_CONTENT_WITH_VIDEO_FIXTURE,
   POST_IMAGES_FIXTURE,
+  POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toMarkdown } from './convert'
 
@@ -55,4 +56,13 @@ it('writes a video as a link line with its optional caption', () => {
   expect(output).toMatchSnapshot()
   expect(output).toContain('[동영상: clip.mp4](clip.mp4)')
   expect(output).toContain('*파도가 밀려온다*')
+})
+
+// EXPORT-26: Markdown has no collage or slide, so a group is its image lines in order and then
+// its one italic caption.
+it('writes a photo group as its image lines and one caption', () => {
+  const output = toMarkdown(POST_CONTENT_WITH_GROUPS_FIXTURE, [], '2026-08-29T03:04:05Z', 'ko')
+  expect(output).toMatchSnapshot()
+  expect(output).toContain('![창가](IMG_2.jpg)\n![창가](IMG_3.jpg)\n*창가 자리(2층)*')
+  expect(output).toContain('![](IMG_4.jpg)\n![](IMG_5.jpg)')
 })

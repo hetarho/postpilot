@@ -1,11 +1,12 @@
 import { expect, it } from 'vitest'
 import {
   POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_GROUPS_FIXTURE,
   POST_CONTENT_WITH_VIDEO_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { create } from '@bufbuild/protobuf'
-import { BlockSchema, BlockType } from '@/shared/api'
+import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { naverPhotoOrder, naverVideoOrder, toNaver } from './convert'
 
 it('converts every block to the Naver plain-text contract', () => {
@@ -114,4 +115,34 @@ it('uses the content provenance for the English video marker too', () => {
   const output = toNaver(POST_CONTENT_WITH_VIDEO_FIXTURE, POST_IMAGES_FIXTURE, 'en')
   expect(output).toContain('[Video clip.mp4 — 파도가 밀려온다]')
   expect(output).not.toContain('[동영상')
+})
+
+// EXPORT-26: a photo group is one marker naming its layout and the number of every photo it
+// holds, its caption folded as a photo marker's is; photos count one by one across singles and
+// groups, so the numbers here and naverPhotoOrder agree by position.
+it('writes one marker per photo group, numbering each of its photos', () => {
+  const output = toNaver(POST_CONTENT_WITH_GROUPS_FIXTURE, [], 'ko')
+  expect(output).toBe(
+    [
+      '도착했다.',
+      '사진_1_입구_사진',
+      '콜라주_2_3_창가_자리_2층_콜라주',
+      '슬라이드_4_5_슬라이드',
+    ].join('\n\n'),
+  )
+  expect(naverPhotoOrder(POST_CONTENT_WITH_GROUPS_FIXTURE)).toEqual([
+    'IMG_1.jpg',
+    'IMG_2.jpg',
+    'IMG_3.jpg',
+    'IMG_4.jpg',
+    'IMG_5.jpg',
+  ])
+  const english = toNaver(POST_CONTENT_WITH_GROUPS_FIXTURE, [], 'en')
+  expect(english).toContain('collage_2_3_창가_자리_2층_collage')
+  expect(english).toContain('slide_4_5_slide')
+  // A layout the writer left unset reads as a collage, as everywhere else (GEN-78).
+  const unset = create(PostContentSchema, {
+    blocks: [create(BlockSchema, { type: BlockType.GALLERY, files: ['a.jpg', 'b.jpg'] })],
+  })
+  expect(toNaver(unset, [], 'ko')).toBe('콜라주_1_2_콜라주')
 })

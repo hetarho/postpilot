@@ -1,5 +1,5 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
+import { BlockType, GalleryLayout, type ContentLanguage, type PostContent } from '@/shared/api'
 import { escapeHtml, escapeHtmlComment, headingTag, walkBlocks } from '@/shared/lib'
 
 /** HTML fragment for Tistory's HTML editor; photo URLs are deliberately left blank. */
@@ -25,6 +25,21 @@ export function toTistory(
         const instruction =
           contentLanguage === 'en' ? 'replace src after uploading' : '업로드 후 src 교체'
         return `<figure><img src="" alt="${escapeHtml(block.alt)}" data-file="${file}"><!-- ${commentFile} ${instruction} -->${caption}</figure>`
+      }
+      case BlockType.GALLERY: {
+        // One figure naming its layout, each photo the IMAGE case's empty-src image with its own
+        // replacement comment, and the group's one caption (EXPORT-26).
+        const instruction =
+          contentLanguage === 'en' ? 'replace src after uploading' : '업로드 후 src 교체'
+        const layout = block.layout === GalleryLayout.SLIDE ? 'slide' : 'collage'
+        const photos = block.files
+          .map(
+            (file) =>
+              `<img src="" alt="${escapeHtml(block.alt)}" data-file="${escapeHtml(file)}"><!-- ${escapeHtmlComment(file)} ${instruction} -->`,
+          )
+          .join('')
+        const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
+        return `<figure data-layout="${layout}">${photos}${caption}</figure>`
       }
       case BlockType.VIDEO: {
         // The same empty-source-plus-instruction shape an image takes, for the same reason: the

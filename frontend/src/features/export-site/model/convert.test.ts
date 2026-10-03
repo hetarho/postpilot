@@ -2,9 +2,10 @@ import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import {
-  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_GROUPS_FIXTURE,
   POST_CONTENT_WITH_VIDEO_FIXTURE,
   POST_IMAGES_FIXTURE,
+  POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toSite } from './convert'
 
@@ -66,4 +67,19 @@ it('writes a video as a figure with a relative source', () => {
   expect(output).toMatchSnapshot()
   expect(output).toContain('<video controls src="clip.mp4"></video>')
   expect(output).toContain('<figcaption>파도가 밀려온다</figcaption>')
+})
+
+// EXPORT-26: the photos in one row of their own, laid out by the fixed stylesheet, with one
+// caption; the stylesheet is the same for every post.
+it('writes a photo group as one figure the fixed stylesheet lays out', () => {
+  const output = toSite(POST_CONTENT_WITH_GROUPS_FIXTURE, [], '2026-08-29T03:04:05Z', 'ko')
+  expect(output).toMatchSnapshot()
+  expect(output).toContain(
+    '<figure class="gallery gallery-collage"><div class="photos"><img src="IMG_2.jpg" alt="창가"><img src="IMG_3.jpg" alt="창가"></div><figcaption>창가 자리(2층)</figcaption></figure>',
+  )
+  expect(output).toContain('<figure class="gallery gallery-slide"><div class="photos">')
+  const plain = toSite(POST_CONTENT_FIXTURE, [], '2026-08-29T03:04:05Z', 'ko')
+  expect(output.match(/<style>[\s\S]*<\/style>/)?.[0]).toBe(
+    plain.match(/<style>[\s\S]*<\/style>/)?.[0],
+  )
 })

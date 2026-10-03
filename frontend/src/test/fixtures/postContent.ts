@@ -1,7 +1,13 @@
 import { create } from '@bufbuild/protobuf'
 import type { PostImage } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
-import { BlockSchema, BlockType, ObservationSchema, PostContentSchema } from '@/shared/api'
+import {
+  BlockSchema,
+  BlockType,
+  GalleryLayout,
+  ObservationSchema,
+  PostContentSchema,
+} from '@/shared/api'
 
 export const POST_IMAGES_FIXTURE: PostImage[] = [
   {
@@ -77,6 +83,31 @@ export const POST_CONTENT_WITH_VIDEO_FIXTURE = create(PostContentSchema, {
       caption: '파도가 밀려온다',
     }),
     create(BlockSchema, { type: BlockType.VIDEO, file: 'clip.mp4' }),
+  ],
+})
+
+/** A post that stands photos together as groups (GEN-77): a single photo, a captioned collage
+ *  and an uncaptioned slide. Separate from the shared fixture for the reason the video one is: the
+ *  export snapshots of a post without a group stay byte for byte (EXPORT-26). */
+export const POST_CONTENT_WITH_GROUPS_FIXTURE = create(PostContentSchema, {
+  title: '창가 자리',
+  summary: '사진을 묶어 보여 주는 글',
+  tags: ['카페'],
+  blocks: [
+    create(BlockSchema, { type: BlockType.TEXT, content: '도착했다.' }),
+    create(BlockSchema, { type: BlockType.IMAGE, file: 'IMG_1.jpg', caption: '입구' }),
+    create(BlockSchema, {
+      type: BlockType.GALLERY,
+      files: ['IMG_2.jpg', 'IMG_3.jpg'],
+      layout: GalleryLayout.COLLAGE,
+      alt: '창가',
+      caption: '창가 자리(2층)',
+    }),
+    create(BlockSchema, {
+      type: BlockType.GALLERY,
+      files: ['IMG_4.jpg', 'IMG_5.jpg'],
+      layout: GalleryLayout.SLIDE,
+    }),
   ],
 })
 

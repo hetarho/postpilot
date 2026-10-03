@@ -86,15 +86,13 @@ describe('a 콜라주 group', () => {
       <PhotoGroup
         block={group(GalleryLayout.COLLAGE, ['a.jpg', 'b.jpg'], '설명')}
         images={photos('a.jpg', 'b.jpg')}
-        renderPhoto={(file, position, _image, rendered) => (
-          <button type="button" aria-label={`${position + 1}번 ${file} 복사`}>
-            {rendered}
-          </button>
+        renderPhoto={(file, position, _image, fit) => (
+          <button type="button" aria-label={`${position + 1}번 ${file} 복사 (${fit})`} />
         )}
         renderCaption={(block) => <p>{`캡션 복사: ${block.caption}`}</p>}
       />,
     )
-    expect(screen.getByRole('button', { name: '2번 b.jpg 복사' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2번 b.jpg 복사 (cover)' })).toBeInTheDocument()
     expect(screen.getByText('캡션 복사: 설명')).toBeInTheDocument()
     expect(screen.queryByText('설명')).not.toBeInTheDocument()
   })

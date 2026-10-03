@@ -22,6 +22,7 @@ export const i18n = {
       photoCopyAria: '{{number}}번 사진 복사 · {{file}}',
       photoCopied: '{{file}} 사진이 복사됐어요',
       captionCopyAria: '{{number}}번 사진 캡션 복사',
+      groupCaptionCopyAria: '{{numbers}}번 사진 묶음 캡션 복사',
       captionCopied: '캡션이 복사됐어요',
       captionField: '캡션 텍스트',
       photoUnsupported:
@@ -40,7 +41,7 @@ export const i18n = {
       guidance: {
         naver: '본문을 그대로 붙여넣으세요',
         naverPhotos:
-          '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
+          '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요. 콜라주_…_콜라주·슬라이드_…_슬라이드 자리는 그 번호의 사진을 한 번에 올린 뒤 같은 배치를 고르세요',
         tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
         site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
         markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',
@@ -66,6 +67,7 @@ export const i18n = {
       photoCopyAria: 'Copy photo {{number}} · {{file}}',
       photoCopied: 'Copied the photo {{file}}',
       captionCopyAria: 'Copy the caption of photo {{number}}',
+      groupCaptionCopyAria: 'Copy the caption of the photo group {{numbers}}',
       captionCopied: 'Caption copied',
       captionField: 'Caption text',
       photoUnsupported:
@@ -86,7 +88,7 @@ export const i18n = {
       guidance: {
         naver: 'Paste the text as it is',
         naverPhotos:
-          "Paste the text, then replace each photo_1_caption_photo marker with the matching photo from the preview — a double-click selects the whole marker. The marker goes with the photo, so copy each caption separately into the editor's caption box",
+          "Paste the text, then replace each photo_1_caption_photo marker with the matching photo from the preview — a double-click selects the whole marker. The marker goes with the photo, so copy each caption separately into the editor's caption box. For a collage_…_collage or slide_…_slide marker, upload those numbered photos together and pick the same layout",
         tistory: 'Paste in HTML mode, upload the photos, then replace each src',
         site: 'Save it as an .html file and place the photo files beside it',
         markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',

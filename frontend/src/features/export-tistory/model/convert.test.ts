@@ -2,9 +2,10 @@ import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import {
-  POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_GROUPS_FIXTURE,
   POST_CONTENT_WITH_VIDEO_FIXTURE,
   POST_IMAGES_FIXTURE,
+  POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toTistory } from './convert'
 
@@ -56,4 +57,16 @@ it('writes a video as an empty element with the replacement instruction', () => 
   expect(output).toContain('<video controls data-file="clip.mp4"></video>')
   expect(output).toContain('<!-- clip.mp4 업로드 후 영상 첨부 -->')
   expect(output).not.toContain('src="https')
+})
+
+// EXPORT-26: one figure naming its layout, each photo an empty-src image with its own replacement
+// comment, and the group's one caption.
+it('writes a photo group as one figure with its layout, its photos and one caption', () => {
+  const output = toTistory(POST_CONTENT_WITH_GROUPS_FIXTURE, [], 'ko')
+  expect(output).toMatchSnapshot()
+  expect(output).toContain(
+    '<figure data-layout="collage"><img src="" alt="창가" data-file="IMG_2.jpg"><!-- IMG_2.jpg 업로드 후 src 교체 --><img src="" alt="창가" data-file="IMG_3.jpg"><!-- IMG_3.jpg 업로드 후 src 교체 --><figcaption>창가 자리(2층)</figcaption></figure>',
+  )
+  expect(output).toContain('<figure data-layout="slide"><img src="" alt="" data-file="IMG_4.jpg">')
+  expect(output.match(/<figcaption>/g)).toHaveLength(2)
 })

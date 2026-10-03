@@ -1,5 +1,5 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
+import { BlockType, GalleryLayout, type ContentLanguage, type PostContent } from '@/shared/api'
 import { escapeHtml, headingTag, relativeFileUrl, walkBlocks } from '@/shared/lib'
 import { SITE_DOCUMENT_PREFIX, SITE_DOCUMENT_SUFFIX, SITE_STYLE } from '../config/template'
 
@@ -22,6 +22,19 @@ export function toSite(
       case BlockType.IMAGE: {
         const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
         return `<figure><img src="${escapeHtml(relativeFileUrl(block.file))}" alt="${escapeHtml(block.alt)}">${caption}</figure>`
+      }
+      case BlockType.GALLERY: {
+        // The photos in one row of their own (a grid or a snap strip by the fixed stylesheet)
+        // with the group's one caption under them (EXPORT-26).
+        const layout = block.layout === GalleryLayout.SLIDE ? 'slide' : 'collage'
+        const photos = block.files
+          .map(
+            (file) =>
+              `<img src="${escapeHtml(relativeFileUrl(file))}" alt="${escapeHtml(block.alt)}">`,
+          )
+          .join('')
+        const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
+        return `<figure class="gallery gallery-${layout}"><div class="photos">${photos}</div>${caption}</figure>`
       }
       case BlockType.VIDEO: {
         // A real element with a relative source, like the image beside it: the site export is

@@ -28,6 +28,28 @@ tags: ["제주", "산책", "여행"]
 - 따뜻한 차"
 `;
 
+exports[`writes a photo group as its image lines and one caption 1`] = `
+"---
+title: "창가 자리"
+date: 2026-08-29
+language: ko
+summary: "사진을 묶어 보여 주는 글"
+tags: ["카페"]
+---
+
+도착했다.
+
+![](IMG_1.jpg)
+*입구*
+
+![창가](IMG_2.jpg)
+![창가](IMG_3.jpg)
+*창가 자리(2층)*
+
+![](IMG_4.jpg)
+![](IMG_5.jpg)"
+`;
+
 exports[`writes a video as a link line with its optional caption 1`] = `
 "---
 title: "비 온 뒤의 제주"

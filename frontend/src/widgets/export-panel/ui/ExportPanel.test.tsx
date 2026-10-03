@@ -5,6 +5,7 @@ import { naverPhotoOrder, toNaver } from '@/features/export-naver'
 import { BlockType } from '@/shared/api'
 import {
   POST_CONTENT_FIXTURE,
+  POST_CONTENT_WITH_GROUPS_FIXTURE,
   POST_CONTENT_WITH_VIDEO_FIXTURE,
   POST_IMAGES_FIXTURE,
   POST_VIDEOS_FIXTURE,
@@ -63,7 +64,7 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
   expect(
     screen.getByText(
-      '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
+      '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요. 콜라주_…_콜라주·슬라이드_…_슬라이드 자리는 그 번호의 사진을 한 번에 올린 뒤 같은 배치를 고르세요',
     ),
   ).toBeInTheDocument()
 
@@ -801,4 +802,48 @@ it('plays a clip in the Naver preview with no copy control, and says why', () =>
   for (const button of copyButtons) {
     expect(button).not.toHaveAccessibleName(/clip\.mp4/)
   }
+})
+
+// EXPORT-26: on the Naver tab a photo group is one place — every photo its own copy control named
+// by its own number, in the same running count the copied text uses, one caption control under
+// the group, and a photo the post no longer has keeping its cell with the filename.
+it('renders a photo group with a copy control per photo and one caption control', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  const images = ['IMG_1.jpg', 'IMG_2.jpg', 'IMG_3.jpg', 'IMG_4.jpg'].map((filename, index) => ({
+    ...POST_IMAGES_FIXTURE[0]!,
+    id: `image-${index + 1}`,
+    filename,
+    viewUrl: `https://storage.test/${filename}?X-Amz-Date=20990101T000000Z&X-Amz-Expires=600`,
+  }))
+  render(
+    <ExportPanel
+      content={POST_CONTENT_WITH_GROUPS_FIXTURE}
+      images={images}
+      createdAt="2026-08-29T03:04:05Z"
+      contentLanguage="ko"
+    />,
+  )
+
+  expect(
+    screen
+      .getAllByRole('button', { name: PHOTO_COPY })
+      .map((button) => button.getAttribute('aria-label')),
+  ).toEqual([
+    '1번 사진 복사 · IMG_1.jpg',
+    '2번 사진 복사 · IMG_2.jpg',
+    '3번 사진 복사 · IMG_3.jpg',
+    '4번 사진 복사 · IMG_4.jpg',
+  ])
+  // IMG_5.jpg is gone: its cell stays, naming the file, so later photos keep their numbers.
+  expect(screen.getByText('IMG_5.jpg')).toBeInTheDocument()
+
+  const groupCaption = screen.getByRole('button', { name: '2, 3번 사진 묶음 캡션 복사' })
+  expect(screen.getAllByText('창가 자리(2층)')).toHaveLength(1)
+  await user.click(groupCaption)
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('창가 자리(2층)'))
+  expect(await screen.findByText('캡션이 복사됐어요')).toBeInTheDocument()
+  // The uncaptioned slide renders no caption control at all.
+  expect(screen.queryByRole('button', { name: /4, 5번 사진 묶음/ })).not.toBeInTheDocument()
 })

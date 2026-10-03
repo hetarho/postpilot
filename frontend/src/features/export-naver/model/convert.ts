@@ -1,6 +1,6 @@
 import type { PostImage } from '@/entities/image'
-import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
-import { walkBlocks } from '@/shared/lib'
+import { BlockType, GalleryLayout, type ContentLanguage, type PostContent } from '@/shared/api'
+import { blockPhotos, walkBlocks } from '@/shared/lib'
 
 /** The `VIDEO` blocks' filenames in the order their `[동영상 …]` markers appear, for the same
  *  reason `naverPhotoOrder` exists: the export tab plays each clip beside its own marker, and
@@ -11,8 +11,10 @@ export function naverVideoOrder(content: Pick<PostContent, 'blocks'>): string[] 
   ).filter((file): file is string => file !== null)
 }
 
-/** The `IMAGE` blocks' filenames in the exact order their `사진_<n>_…_사진` markers appear in
- *  `toNaver`'s output — one entry per marker, always, so position n-1 here is marker n there.
+/** The photos' filenames in the exact order their numbers appear in `toNaver`'s output — one
+ *  entry per photo number, always, so position n-1 here is photo n there. A single photo's
+ *  `사진_<n>_…_사진` marker spends one number and a group's `콜라주_…`/`슬라이드_…` marker one per
+ *  photo it holds (EXPORT-5, EXPORT-26).
  *
  *  It walks the same canonical block array `toNaver` does, so the photo strip beside the text and
  *  the markers inside it cannot drift: a photo on screen matches a marker in the pasted text by
@@ -26,9 +28,7 @@ export function naverVideoOrder(content: Pick<PostContent, 'blocks'>): string[] 
  *  Duplicates are kept as-is. A filename is unique within a post, so two markers for one file
  *  would be two markers in the text too, and the strip must say the same thing the text says. */
 export function naverPhotoOrder(content: Pick<PostContent, 'blocks'>): string[] {
-  return walkBlocks(content, (block) =>
-    block.type === BlockType.IMAGE ? block.file : null,
-  ).filter((file): file is string => file !== null)
+  return walkBlocks(content, blockPhotos).flat()
 }
 
 /** One photo's marker: the word, the number, the folded caption, the word again. A block with
@@ -38,6 +38,29 @@ function photoMarker(contentLanguage: ContentLanguage, number: number, caption: 
   const word = contentLanguage === 'en' ? 'photo' : '사진'
   const folded = foldCaption(caption)
   return folded === '' ? `${word}_${number}_${word}` : `${word}_${number}_${folded}_${word}`
+}
+
+/** One photo group's marker (EXPORT-26): the layout word, the number of every photo it holds, the
+ *  folded caption, the word again — one double-click selection that says which photos to upload
+ *  together and which layout to pick. No caption leaves `콜라주_3_4_5_콜라주`. */
+function groupMarker(
+  contentLanguage: ContentLanguage,
+  layout: GalleryLayout,
+  numbers: readonly number[],
+  caption: string,
+): string {
+  const english = contentLanguage === 'en'
+  const word =
+    layout === GalleryLayout.SLIDE
+      ? english
+        ? 'slide'
+        : '슬라이드'
+      : english
+        ? 'collage'
+        : '콜라주'
+  const folded = foldCaption(caption)
+  const photos = numbers.join('_')
+  return folded === '' ? `${word}_${photos}_${word}` : `${word}_${photos}_${folded}_${word}`
 }
 
 /** The caption as one `_`-joined token (EXPORT-5).
@@ -83,6 +106,15 @@ export function toNaver(
         // numbering and `naverPhotoOrder` agree by position, so a hole here would shift every
         // later photo against its marker.
         return photoMarker(contentLanguage, ++markerNumber, block.caption)
+      case BlockType.GALLERY:
+        // One marker for the group, numbering each of its photos in the same running count, so
+        // the preview's per-photo copy controls and the text agree by position (EXPORT-26).
+        return groupMarker(
+          contentLanguage,
+          block.layout,
+          block.files.map(() => ++markerNumber),
+          block.caption,
+        )
       case BlockType.VIDEO:
         // A marker, never a URL and never bytes: the clipboard cannot carry a video file from a
         // page, and the file the author filmed is on the device they are pasting from
