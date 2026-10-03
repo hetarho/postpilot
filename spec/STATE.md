@@ -25,13 +25,13 @@
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
 | QUOTA | 32 | 32 | - | 0 |
-| POST | 30 | 29 | POST-105+ POST-106+ POST-13✎ POST-14✎ | 0 |
+| POST | 30 | 30 | - | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
-| GEN | 22 | 21 | GEN-77+ GEN-78+ GEN-1✎ GEN-14✎ GEN-41✎ | 0 |
+| GEN | 22 | 22 | - | 0 |
 | MODEL | 28 | 28 | - | 0 |
-| TMPL | 20 | 19 | TMPL-39✎ TMPL-40- TMPL-38✎ TMPL-18✎ TMPL-21✎ TMPL-22✎ TMPL-64✎ | 0 |
-| GUIDE | 13 | 12 | GUIDE-41✎ | 0 |
-| EXPORT | 8 | 7 | EXPORT-26+ EXPORT-5✎ EXPORT-12✎ | 0 |
+| TMPL | 20 | 20 | - | 0 |
+| GUIDE | 13 | 13 | - | 0 |
+| EXPORT | 9 | 9 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
 | THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
@@ -40,7 +40,7 @@
 | CDS | 31 | 31 | - | 1 |
 | BILL | 8 | 8 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
-| QUAL | 7 | 6 | QUAL-10✎ | 0 |
+| QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 
 ## review
@@ -59,13 +59,22 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T524 | photo group block on the server | POST GEN QUAL TMPL | - | todo |
+| T525 | writer places photo groups | GEN GUIDE TMPL | T524 | todo |
+| T526 | reading view shows photo groups | POST GEN | T524 | todo |
+| T527 | block editor edits photo groups | POST | T526 | todo |
+| T528 | exports map photo groups | EXPORT | T526 | todo |
+| T529 | template count reads as a suggested group | TMPL | - | todo |
 
 ## next
-- create-task GEN POST EXPORT TMPL GUIDE QUAL: photo groups (GEN r22 POST r30 EXPORT r8 TMPL r20 GUIDE r13 QUAL r7).
+- implement-task T524 → T525 → T526 → T527 → T528 → T529 (photo groups; T529 has no dep).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 create-task GEN r22 POST r30 EXPORT r9 TMPL r20 GUIDE r13 QUAL r7 → T524 (server block), T525 (writer), T526 (reading view), T527 (editor), T528 (exports), T529 (template copy)
+- 261004 update-ssot EXPORT r9: EXPORT-26✎ the site stylesheet carries the group rules for every post
+- 261004 create-task GEN POST EXPORT TMPL GUIDE QUAL start: GEN-77+ GEN-78+ POST-105+ POST-106+ EXPORT-26+ TMPL-39✎ GUIDE-41✎ QUAL-10✎
 - 261004 update-ssot GEN r22 POST r30 EXPORT r8 TMPL r20 GUIDE r13 QUAL r7: photo groups (콜라주 · 슬라이드, one caption) through writing, reading view, editor and the four exports; TMPL-39 decided
 - 261004 update-ssot TMPL GEN EXPORT start: decide TMPL-39 — photo groups (collage/slide, one caption) through the post, rendering and export
 - 261003 T523 done: captions excluded from intro/outro; local 31-second DB render and full test suites verified
@@ -83,6 +92,3 @@
 - 261002 update-ssot VOICE r8: VOICE-32✎ the readiness meter says how many more sentences are needed (already live in 68ae9a79)
 - 261002 update-ssot VOICE start: readiness meter states the sentences still needed
 - 261002 T521 integration: rebased the template fix onto the voice rewrite hotfix; the sequential quiz continues with answer rewrites below 100% and preserves the photo
-- 261002 T521 done: one learning screen and sequential quiz with live readiness; Node 24 FE 3048 tests, lint/FSD/style/build and local CI checks passed
-- 261002 T520 done: write-stage check/reflection requests admitted by model registry; BE full tests and local CI checks passed
-- 261002 T521 start

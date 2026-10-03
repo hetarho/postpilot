@@ -144,4 +144,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r13 261004 GUIDE-41✎ +기본 지침 비슷한 사진은 한 묶음으로 after 사진은 이야기의 한 장면
+-

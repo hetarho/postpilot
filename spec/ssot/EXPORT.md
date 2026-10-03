@@ -1,5 +1,5 @@
 # EXPORT platform export
-> r8 | Four copy-ready formats derived in the browser from the canonical block array — Naver plain text with numbered, captioned photo and photo-group markers (and per-photo image and caption copy), a Tistory HTML fragment, a standalone fixed-template HTML page, Markdown with front matter — never stored, never served, never publishing.
+> r9 | Four copy-ready formats derived in the browser from the canonical block array — Naver plain text with numbered, captioned photo and photo-group markers (and per-photo image and caption copy), a Tistory HTML fragment, a standalone fixed-template HTML page, Markdown with front matter — never stored, never served, never publishing.
 
 ## decisions
 - EXPORT-1 [o] Naver, Tistory, standalone site HTML and Markdown are pure synchronous conversions `(PostContent, attachments) → string` of the same block array (I2), computed in the browser; switching formats makes no request; no derived format is stored or served by the API; the export surface never publishes and the copy-ready path is the blog handoff (I1) ← SmartEditor ONE has no HTML input and discards pasted markup, so the Naver output must be plain text the user drags photos into
@@ -45,7 +45,7 @@
   | site | one `<figure>` naming the layout, its photos side by side for 콜라주 or in one horizontal snap strip for 슬라이드 by the fixed stylesheet (→EXPORT-7), and one `<figcaption>` |
   | Markdown | its photos' image lines in order, then the one italic caption (→EXPORT-8) |
   - on the Naver tab each photo of a group stays its own copy control (→EXPORT-12) and the group's caption is one caption control (→EXPORT-24)
-  - the four outputs are byte-identical for a post with no photo group
+  - the Naver, Tistory and Markdown outputs are byte-identical for a post with no photo group, while the site's fixed stylesheet carries the group rules for every post (→EXPORT-7)
 
 ## flow
 - open panel(content exists) → tab(naver rendered | tistory · site · markdown raw) → copy(text | photo | caption) → 복사됨 1500 ms | fallback(select field, hint) — no request, no state change
@@ -57,4 +57,4 @@
 - ops: the production bucket's CORS rule must allow browser `GET` (and PUT/HEAD for uploads) from the FE origin; the deploy asserts the preflight (DEPLOY.md §5)
 
 ## chg
-- r8 261004 EXPORT-26+ photo groups export as one place with one caption in all four formats (Naver 콜라주_…_콜라주 / 슬라이드_…_슬라이드 marker) · EXPORT-5✎ numbering marker order→photo order · EXPORT-12✎ copy control named by marker number→photo number
+-

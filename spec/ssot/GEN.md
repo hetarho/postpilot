@@ -152,4 +152,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
-- r22 261004 GEN-77+ photo groups (콜라주 · 슬라이드, one caption) placed by the writer · GEN-78+ group validation · GEN-1✎ block types +GALLERY · GEN-14✎ static rules define the group format · GEN-41✎ revision filter IMAGE/VIDEO→IMAGE/group/VIDEO
+-

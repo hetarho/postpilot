@@ -64,4 +64,4 @@
 - config: the M2 run length (8 어절), M1's window (100 titles), M2/M3/M4's window (20 posts), the per-metric minimums and the bands are product-owned settings, not per-account options
 
 ## chg
-- r7 261004 QUAL-10✎ photo count IMAGE blocks with a file→photos IMAGE blocks and photo groups name
+-

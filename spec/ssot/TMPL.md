@@ -208,4 +208,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r20 261004 TMPL-39✎ [?]→[o] a suggested group travels as a photo group (GALLERY block, one caption) · TMPL-40- interim consecutive single-photo IMAGE blocks removed · TMPL-38✎ count side by side per row→suggested group size, summary 한 줄에 n장→n장 묶음 · TMPL-18✎ TMPL-21✎ TMPL-22✎ count reads as a suggestion · TMPL-64✎ a sample's photo group is one position of its count
+-

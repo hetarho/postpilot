@@ -171,4 +171,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r30 261004 POST-105+ reading view shows a photo group (콜라주 rows · 슬라이드 strip, one caption) · POST-106+ block editor edits a photo group · POST-13✎ finalize counts missing photos in IMAGE→IMAGE and group places · POST-14✎ direct editing +photo-group blocks
+-
