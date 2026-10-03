@@ -255,6 +255,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		input.Images = append(input.Images, generation.Image{
 			Filename: image.Filename, Key: image.Key, Kind: generation.AttachmentPhoto,
 			ContentType: "image/jpeg", Width: image.Width, Height: image.Height,
+			Rotation: image.Rotation, RotationByOwner: image.RotationByOwner,
 		})
 	}
 	for _, video := range found.Videos {
@@ -268,7 +269,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: observation.Events, Speech: observation.Speech,
+			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	if found.Storyline != nil {
@@ -311,7 +312,7 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: observation.Events, Speech: observation.Speech,
+			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))

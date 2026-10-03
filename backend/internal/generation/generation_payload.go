@@ -36,6 +36,9 @@ type observationPayload struct {
 	// decodes unchanged — and a resumable job never becomes unresumable.
 	Events []string `json:"events,omitempty"`
 	Speech string   `json:"speech,omitempty"`
+	// Omitted at 0 for the same reason: a payload frozen before rotations existed decodes as
+	// no turn (GEN-79).
+	Rotation int `json:"rotation,omitempty"`
 }
 
 type generationPayload struct {
@@ -215,7 +218,7 @@ func encodeObservations(observations []Observation) []observationPayload {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: cloneTexts(observation.Events), Speech: observation.Speech,
+			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	return wire
@@ -231,7 +234,7 @@ func decodeObservations(wire []observationPayload) []Observation {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: cloneTexts(observation.Events), Speech: observation.Speech,
+			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	return out

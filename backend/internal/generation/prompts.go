@@ -12,7 +12,8 @@ import (
 // position, which is the binding this change exists to remove.
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
 각 사진 바로 앞에 그 사진의 파일명이 "file: 이름" 한 줄로 옵니다. 파일명은 순서로 짐작하지 말고 그 사진 바로 앞 줄에서 그대로 가져오세요.
-출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false}]} 형태의 JSON 객체 하나여야 합니다.`
+rotation은 사진 속 장면이 똑바로 보이도록 시계 방향으로 돌려야 하는 각도이며 0, 90, 180, 270 중 하나입니다. 이미 똑바르면 0입니다.
+출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false,"rotation":0}]} 형태의 JSON 객체 하나여야 합니다.`
 
 // videoWriteInstructions are appended to the fixed write prompt ONLY for a post that actually
 // has a clip. Two reasons, and both matter: a post without one keeps a byte-identical prompt —

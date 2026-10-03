@@ -59,15 +59,16 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T531 | observed photo rotation on the server | GEN POST | T530 | todo |
 | T532 | show and copy photos turned, and let the owner turn them | POST EXPORT | T531 | todo |
 
 ## next
-- implement-task T531 → T532, then push (owner asked for commit and push).
+- implement-task T532, then push (owner asked for commit and push).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 T531 done: observed and owner photo rotation stored and served; BE and FE suites green
+- 261004 T531 start
 - 261004 T530 done: groups of at most three, one orientation, always captioned; BE and FE suites green
 - 261004 T530 start
 - 261004 create-task GEN r23 POST r31 TMPL r21 EXPORT r10 → T530 (groups of three), T531 (rotation on the server), T532 (rotation on screen)
@@ -86,5 +87,3 @@
 - 261004 T526 done: reading view renders photo groups (collage grid, slide strip); FE suite green except a ClipGeneration failure that also fails on a clean HEAD
 - 261004 T526 start
 - 261004 T524 done: GALLERY block validated, stored, served, finalized and measured on the server; BE suite and FE build pass
-- 261004 T524 start
-- 261004 create-task GEN r22 POST r30 EXPORT r9 TMPL r20 GUIDE r13 QUAL r7 → T524 (server block), T525 (writer), T526 (reading view), T527 (editor), T528 (exports), T529 (template copy)

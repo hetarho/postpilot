@@ -242,6 +242,7 @@ export const errors = {
   POST_PHOTO_MISSING:
     '글에 사진이 없는 자리가 {{count}}곳 남아 있어요. ②에서 그 사진 블록을 지우거나 사진을 다시 올린 뒤 완성해 주세요.',
   POST_STORYLINE_MISSING: '아직 스토리라인이 없어요. 먼저 스토리라인을 만들어 주세요.',
+  POST_IMAGE_ROTATION_INVALID: '사진은 90도씩만 돌릴 수 있어요. 다시 시도해 주세요.',
   POST_STORYLINE_FILE_UNKNOWN:
     '{{file}} 파일은 이 스토리라인에 넣을 수 없어요. 스토리라인을 다시 만들어 주세요.',
   POST_STORYLINE_INVALID: '스토리라인을 저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요.',

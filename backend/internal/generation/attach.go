@@ -134,16 +134,30 @@ func evenParts(files []string, max int) [][]string {
 	return parts
 }
 
-// PhotoPortraits names every attached photo that stands portrait — taller than wide on record —
-// for the orientation rule (GEN-77). A square photo, or one with no dimensions, is landscape.
-// It is the one place a photo's orientation is decided.
-func PhotoPortraits(images []Image) map[string]bool {
+// PhotoPortraits names every attached photo that stands portrait — taller than wide once turned
+// by its rotation — for the orientation rule (GEN-77). The rotation is the owner's when they set
+// it, else the photo's observation's (POST-107, GEN-79); a quarter turn swaps the dimensions. A
+// square photo, or one with no dimensions, is landscape. It is the one place a photo's
+// orientation is decided.
+func PhotoPortraits(images []Image, observations []Observation) map[string]bool {
+	observed := make(map[string]int, len(observations))
+	for _, observation := range observations {
+		observed[observation.File] = observation.Rotation
+	}
 	portrait := make(map[string]bool, len(images))
 	for _, image := range images {
 		if image.Kind == AttachmentVideo {
 			continue
 		}
-		if image.Height > image.Width {
+		rotation := observed[image.Filename]
+		if image.RotationByOwner {
+			rotation = int(image.Rotation)
+		}
+		width, height := image.Width, image.Height
+		if rotation == 90 || rotation == 270 {
+			width, height = height, width
+		}
+		if height > width {
 			portrait[image.Filename] = true
 		}
 	}

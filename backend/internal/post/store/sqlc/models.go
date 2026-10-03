@@ -9,14 +9,16 @@ import (
 )
 
 type Image struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	R2Key     string
-	Width     int64
-	Height    int64
-	Bytes     int64
-	CreatedAt string
+	ID              string
+	PostSlug        string
+	Filename        string
+	R2Key           string
+	Width           int64
+	Height          int64
+	Bytes           int64
+	CreatedAt       string
+	Rotation        int64
+	RotationByOwner int64
 }
 
 type Post struct {

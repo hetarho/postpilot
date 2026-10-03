@@ -122,6 +122,8 @@ type PostCatalog interface {
 // DraftWriter is every guarded write the drafting screen makes to a post that exists.
 type DraftWriter interface {
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
+	// UpdateObservations also turns each observed photo by its entry's rotation, in the same
+	// transaction, unless the owner has turned that photo (GEN-79).
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
 	// UpdateStoryline replaces the storyline alone, nil for none (GEN-68, GEN-69).
 	UpdateStoryline(ctx context.Context, slug, userID string, storyline *Storyline, updatedAt time.Time) (bool, error)
@@ -170,6 +172,9 @@ type ImageCatalog interface {
 	// DeleteImage reports false when nothing was deleted: the row is already gone, or its
 	// post is published and the photo is locked with it (POST-74).
 	DeleteImage(ctx context.Context, id string) (bool, error)
+	// SetImageRotation records the owner's turn of a photo (POST-107) and reports false when
+	// nothing changed: the row is gone, or its post is published (POST-74).
+	SetImageRotation(ctx context.Context, id string, rotation int32) (bool, error)
 	// ImageFilenameTaken reports a CONFIRMED photo with this name. A pending upload
 	// does not count — that case is a retry, which CreateUpload replaces.
 	ImageFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error)

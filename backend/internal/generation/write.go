@@ -29,7 +29,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
 		DefaultGuidelines: post.DefaultGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
-		FollowStoryline: post.FollowStoryline, Portraits: PhotoPortraits(post.Images),
+		FollowStoryline: post.FollowStoryline, Portraits: PhotoPortraits(post.Images, observations),
 	})
 	request := llm.Request{
 		System:    system,
@@ -63,7 +63,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		answer.Storyline.MadeWith = shown
 	}
 	answer.Content.Blocks = ValidateBlocks(answer.Content.Blocks)
-	answer.Content = FilterAttachments(answer.Content, photos, videos, PhotoPortraits(post.Images))
+	answer.Content = FilterAttachments(answer.Content, photos, videos, PhotoPortraits(post.Images, observations))
 	return *answer, response.Usage, nil
 }
 

@@ -46,7 +46,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// live rows, exactly as the generate handler does it.
 	tagCount := resolveTagCount(payload.TagCount)
 	photos, _ := AttachmentNames(post.Images)
-	system, user := buildRevisePrompt(payload.ContentLanguage, profile, *post.Content, filenames, photos, PhotoPortraits(post.Images), payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Owner: payload.Guidelines})
+	system, user := buildRevisePrompt(payload.ContentLanguage, profile, *post.Content, filenames, photos, PhotoPortraits(post.Images, post.Observations), payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Owner: payload.Guidelines})
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -85,7 +85,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// The FRESH attachment snapshot, both kinds: a revision is filtered against what the post
 	// carries now, not against what it carried when the job was queued.
 	currentPhotos, currentVideos := AttachmentNames(current.Images)
-	filtered := FilterAttachments(*content, currentPhotos, currentVideos, PhotoPortraits(current.Images))
+	filtered := FilterAttachments(*content, currentPhotos, currentVideos, PhotoPortraits(current.Images, current.Observations))
 	// nil keeps the post's nouns: a revision has no nouns answer (GEN-55), so what the last
 	// generation said stands.
 	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil); err != nil {

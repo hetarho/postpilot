@@ -45,6 +45,8 @@ type observationJSON struct {
 	// entry written before videos existed has to decode unchanged.
 	Events []string `json:"events,omitempty"`
 	Speech string   `json:"speech,omitempty"`
+	// The photo's upright turn (GEN-79), omitted at 0 like the members above.
+	Rotation int `json:"rotation,omitempty"`
 }
 
 func marshalContent(content post.PostContent) (string, error) {
@@ -86,7 +88,7 @@ func marshalObservations(observations []post.Observation) (string, error) {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: observation.Events, Speech: observation.Speech,
+			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	data, err := json.Marshal(wire)
@@ -107,7 +109,7 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
-			Events: observation.Events, Speech: observation.Speech,
+			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
 		})
 	}
 	return out, nil

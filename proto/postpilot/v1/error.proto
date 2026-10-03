@@ -360,6 +360,8 @@ enum FailureReason {
   // A new writing start is missing the selected template's first required data field.
   // AppErrorDetail.params carries its display-safe `label` (TMPL-68, GEN-76).
   TEMPLATE_REQUIRED_ANSWER_MISSING = 290;
+  // A photo turn that is not 0, 90, 180 or 270 degrees (POST-107).
+  POST_IMAGE_ROTATION_INVALID = 291;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

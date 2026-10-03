@@ -73,6 +73,8 @@ func VideoContentType(filename string) (extension, contentType string, ok bool) 
 var (
 	// ErrNotFound is a slug or id that does not exist.
 	ErrNotFound = errors.New("not found")
+	// ErrInvalidRotation is a photo turn other than 0, 90, 180 or 270 degrees (POST-107).
+	ErrInvalidRotation = errors.New("rotation must be 0, 90, 180 or 270 degrees")
 	// ErrForbidden is a slug or id that exists but belongs to someone else. It is
 	// deliberately distinguishable from ErrNotFound: the PRD (§7) specifies 403 here,
 	// and at two users there is no enumeration concern worth hiding it for.
@@ -503,6 +505,9 @@ type Observation struct {
 	// existed decodes unchanged.
 	Events []string
 	Speech string
+	// Rotation is the clockwise turn in degrees (0, 90, 180, 270) the observation says makes the
+	// photo's scene upright (GEN-79); stored only when non-zero, so older rows read as 0.
+	Rotation int
 }
 
 // Summary is a row of the post list.
@@ -566,9 +571,19 @@ type Image struct {
 	Height    int32
 	Bytes     int64
 	CreatedAt time.Time
+	// Rotation is the photo's clockwise turn in degrees (0, 90, 180, 270), applied wherever the
+	// photo is shown or copied; RotationByOwner says the owner set it, after which no
+	// observation changes it (POST-107, GEN-79).
+	Rotation        int32
+	RotationByOwner bool
 
 	// ViewURL is a short-lived presigned GET, minted per read and never stored.
 	ViewURL string
+}
+
+// ValidRotation reports whether degrees is one of the four quarter turns a photo may carry.
+func ValidRotation(degrees int32) bool {
+	return degrees == 0 || degrees == 90 || degrees == 180 || degrees == 270
 }
 
 // Video is a clip attached to a post. Like an Image this is the record that names bytes

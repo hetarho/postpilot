@@ -6,12 +6,23 @@ INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, creat
 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListImagesByPost :many
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
 FROM images WHERE post_slug = ? ORDER BY created_at, id;
 
 -- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
 FROM images WHERE id = ?;
+
+-- name: SetImageRotation :execrows
+-- The owner turns a photo (POST-107). A published post's photos are locked with it (POST-74),
+-- so zero rows is a photo already gone or a post that is published, as DeleteImage reads it.
+UPDATE images SET rotation = ?, rotation_by_owner = 1
+WHERE id = ? AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = images.post_slug AND posts.status <> 'published');
+
+-- name: SetObservedImageRotation :exec
+-- An observation turns its photo only while the owner never has (GEN-79).
+UPDATE images SET rotation = ?
+WHERE post_slug = ? AND filename = ? AND rotation_by_owner = 0;
 
 -- name: DeleteImage :execrows
 -- A published post's photos are locked with it (POST-74): zero rows is a row already gone or

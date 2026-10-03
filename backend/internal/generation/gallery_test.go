@@ -94,8 +94,9 @@ func TestFilterAttachmentsRepairsPhotoGroups(t *testing.T) {
 	}
 }
 
-// Orientation is decided once, from the dimensions on record: taller than wide is portrait, a
-// square photo or one with no dimensions landscape, and a video none (GEN-77).
+// Orientation is decided once, from the dimensions on record turned by the photo's rotation —
+// the owner's when they set one, else its observation's: taller than wide is portrait, a square
+// photo or one with no dimensions landscape, and a video none (GEN-77, GEN-79, POST-107).
 func TestPhotoPortraits(t *testing.T) {
 	got := PhotoPortraits([]Image{
 		{Filename: "tall.jpg", Width: 768, Height: 1024},
@@ -103,9 +104,43 @@ func TestPhotoPortraits(t *testing.T) {
 		{Filename: "square.jpg", Width: 800, Height: 800},
 		{Filename: "unknown.jpg"},
 		{Filename: "clip.mp4", Kind: AttachmentVideo, Width: 1080, Height: 1920},
+		// A sideways shot the observation turns a quarter: stored wide, shown tall.
+		{Filename: "turned.jpg", Width: 1024, Height: 768},
+		// Half a turn changes nothing about the shape.
+		{Filename: "upside.jpg", Width: 768, Height: 1024},
+		// The owner's own turn stands over the observation's.
+		{Filename: "owner.jpg", Width: 768, Height: 1024, Rotation: 270, RotationByOwner: true},
+	}, []Observation{
+		{File: "turned.jpg", Rotation: 90},
+		{File: "upside.jpg", Rotation: 180},
+		{File: "owner.jpg", Rotation: 0},
 	})
-	if !reflect.DeepEqual(got, map[string]bool{"tall.jpg": true}) {
+	if !reflect.DeepEqual(got, map[string]bool{"tall.jpg": true, "turned.jpg": true, "upside.jpg": true}) {
 		t.Fatalf("portraits = %v", got)
+	}
+}
+
+// The observe answer's rotation is kept only as one of the four quarter turns (GEN-79).
+func TestParseObservationsKeepsOnlyQuarterTurns(t *testing.T) {
+	got, err := parseObservations(`{"observations":[
+		{"file":"a.jpg","scene":"","mood":"","visible_text":"","objects":[],"people_present":false,"rotation":90},
+		{"file":"b.jpg","scene":"","mood":"","visible_text":"","objects":[],"people_present":false,"rotation":270},
+		{"file":"c.jpg","scene":"","mood":"","visible_text":"","objects":[],"people_present":false,"rotation":45},
+		{"file":"d.jpg","scene":"","mood":"","visible_text":"","objects":[],"people_present":false,"rotation":-90},
+		{"file":"e.jpg","scene":"","mood":"","visible_text":"","objects":[],"people_present":false}
+	]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var turns []int
+	for _, observation := range got {
+		turns = append(turns, observation.Rotation)
+	}
+	if !reflect.DeepEqual(turns, []int{90, 270, 0, 0, 0}) {
+		t.Fatalf("turns = %v", turns)
+	}
+	if !strings.Contains(ObservePrompt, `"rotation":0`) || !strings.Contains(ObservePrompt, "0, 90, 180, 270") {
+		t.Fatal("the observe prompt does not ask for the rotation")
 	}
 }
 

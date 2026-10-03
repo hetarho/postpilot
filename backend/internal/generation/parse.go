@@ -62,6 +62,19 @@ type observationJSON struct {
 	// what comes back.
 	Events []string `json:"events,omitempty"`
 	Speech string   `json:"speech,omitempty"`
+	// The photo's upright turn (GEN-79). Required of the photo answer by its schema, read
+	// leniently here: anything but 0, 90, 180 or 270 is no turn.
+	Rotation int `json:"rotation,omitempty"`
+}
+
+// uprightRotation keeps a reported turn only when it is one of the four quarter turns (GEN-79).
+func uprightRotation(degrees int) int {
+	switch degrees {
+	case 90, 180, 270:
+		return degrees
+	default:
+		return 0
+	}
 }
 
 type observationsJSON struct {
@@ -267,7 +280,7 @@ func parseObservations(raw string) ([]Observation, error) {
 		out = append(out, Observation{
 			File: item.File, Scene: item.Scene, Mood: item.Mood, VisibleText: item.VisibleText,
 			Objects: item.Objects, PeoplePresent: item.PeoplePresent,
-			Events: item.Events, Speech: item.Speech,
+			Events: item.Events, Speech: item.Speech, Rotation: uprightRotation(item.Rotation),
 		})
 	}
 	return out, nil

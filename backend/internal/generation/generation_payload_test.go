@@ -20,7 +20,7 @@ func filledGenerationOptions() generationOptions {
 		ObserveFiles:   &files,
 		Observations: []Observation{{
 			File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},
-			PeoplePresent: true, Model: "p/observer", Events: []string{"문이 열린다"}, Speech: "어서 오세요",
+			PeoplePresent: true, Model: "p/observer", Events: []string{"문이 열린다"}, Speech: "어서 오세요", Rotation: 90,
 		}},
 		WriteNativeEffort: true,
 		FollowStoryline:   []StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg"}}},
@@ -121,7 +121,7 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 func TestStartFreezesEveryOption(t *testing.T) {
 	observation := Observation{
 		File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},
-		PeoplePresent: true, Model: observeRef.String(), Events: []string{"문이 열린다"}, Speech: "어서 오세요",
+		PeoplePresent: true, Model: observeRef.String(), Events: []string{"문이 열린다"}, Speech: "어서 오세요", Rotation: 90,
 	}
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean, TagCount: 7,

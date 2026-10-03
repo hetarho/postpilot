@@ -103,6 +103,9 @@ type Observation struct {
 	// what happens in the clip in order, and what is said or heard, summarized (VIDEO-9).
 	Events []string
 	Speech string
+	// Rotation is the clockwise turn, in degrees (0, 90, 180, 270), that makes a photo's scene
+	// upright (GEN-79); always 0 for a video.
+	Rotation int
 }
 
 // AttachmentKind is which kind of attachment an Image entry describes. The generation
@@ -128,6 +131,10 @@ type Image struct {
 	// Width and Height are a photo's dimensions on record, which decide its orientation for
 	// grouping (GEN-77); zero for a video.
 	Width, Height int32
+	// Rotation is the photo's clockwise turn in degrees and RotationByOwner whether the owner
+	// set it (POST-107): an owner's turn stands over any observation's.
+	Rotation        int32
+	RotationByOwner bool
 }
 
 // VoiceRef is the post's voice as the post context projects it. Deleted is what makes a

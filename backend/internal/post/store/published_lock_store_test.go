@@ -104,7 +104,8 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 		return s.UpdateDraft(context.Background(), "p", "alice", "새 제목", "새 메모", nil, lockLater)
 	},
 	"UpdatePostObservations": func(s *store.Store) (bool, error) {
-		return s.UpdateObservations(context.Background(), "p", "alice", []post.Observation{{File: "IMG_1.jpg", Scene: "바다"}}, lockLater)
+		// A turn rides the entry, so the refusal also proves the photo kept its rotation (GEN-79).
+		return s.UpdateObservations(context.Background(), "p", "alice", []post.Observation{{File: "IMG_1.jpg", Scene: "바다", Rotation: 90}}, lockLater)
 	},
 	"UpdatePostStoryline": func(s *store.Store) (bool, error) {
 		return s.UpdateStoryline(context.Background(), "p", "alice", &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞"}}}, lockLater)
@@ -136,6 +137,9 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 		return s.AssignField(context.Background(), "p", "alice", &field, lockLater)
 	},
 	"DeleteImage": func(s *store.Store) (bool, error) { return s.DeleteImage(context.Background(), "i1") },
+	"SetImageRotation": func(s *store.Store) (bool, error) {
+		return s.SetImageRotation(context.Background(), "i1", 90)
+	},
 	"DeleteVideo": func(s *store.Store) (bool, error) { return s.DeleteVideo(context.Background(), "v1") },
 }
 
@@ -165,11 +169,12 @@ var transactionGuarded = map[string]func(*store.Store) error{
 
 // publishedLockExemptStatements are the writes the lock deliberately lets through, with why.
 var publishedLockExemptStatements = map[string]string{
-	"CreatePost":    "the create: no post exists to be locked",
-	"PublishPost":   "records or replaces the address (POST-73, POST-75)",
-	"UnpublishPost": "clears the address",
-	"DeletePost":    "POST-74 lets a published post be deleted",
-	"DeleteUpload":  "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
+	"CreatePost":               "the create: no post exists to be locked",
+	"PublishPost":              "records or replaces the address (POST-73, POST-75)",
+	"UnpublishPost":            "clears the address",
+	"DeletePost":               "POST-74 lets a published post be deleted",
+	"DeleteUpload":             "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
+	"SetObservedImageRotation": "runs only inside UpdateObservations' transaction, after UpdatePostObservations' published predicate matched a row (GEN-79)",
 }
 
 // namedStatement is one `-- name:` statement from the queries directory.

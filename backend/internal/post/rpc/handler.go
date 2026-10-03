@@ -276,6 +276,20 @@ func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilo
 	return connect.NewResponse(&postpilotv1.DeleteImageResponse{}), nil
 }
 
+// RotateImage records the owner's turn of a photo (POST-107) and answers the photo as it now
+// stands, view URL minted, so the strip can show it without refetching the post.
+func (h *Handler) RotateImage(ctx context.Context, req *connect.Request[postpilotv1.RotateImageRequest]) (*connect.Response[postpilotv1.RotateImageResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	image, err := h.svc.RotateImage(ctx, userID, req.Msg.GetImageId(), req.Msg.GetRotation())
+	if err != nil {
+		return nil, toConnectError("rotate image", err)
+	}
+	return connect.NewResponse(&postpilotv1.RotateImageResponse{Image: toProtoImage(image)}), nil
+}
+
 func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilotv1.DeleteVideoRequest]) (*connect.Response[postpilotv1.DeleteVideoResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -338,6 +352,8 @@ func toConnectError(op string, err error) error {
 		})
 	}
 	switch {
+	case errors.Is(err, post.ErrInvalidRotation):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "rotation must be 0, 90, 180 or 270", postpilotv1.FailureReason_POST_IMAGE_ROTATION_INVALID, nil)
 	case errors.Is(err, post.ErrNotFound):
 		if op == "confirm upload" {
 			return rpcserver.NewAppError(connect.CodeNotFound, "upload not found", postpilotv1.FailureReason_UPLOAD_NOT_FOUND, nil)
@@ -745,6 +761,7 @@ func toProtoImage(img post.Image) *postpilotv1.Image {
 		Height:   img.Height,
 		Bytes:    img.Bytes,
 		ViewUrl:  img.ViewURL,
+		Rotation: img.Rotation,
 	}
 }
 

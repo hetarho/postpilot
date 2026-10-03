@@ -276,6 +276,7 @@ export const appFailureSpecs = {
   CLIP_STORYLINE_MISSING: {},
   CLIP_STORYLINE_INVALID: {},
   POST_PHOTO_MISSING: { required: ['count'] },
+  POST_IMAGE_ROTATION_INVALID: {},
   GENERATION_ALREADY_RUNNING: { optional: ['active_job_id'] },
   GENERATION_VOICE_MISMATCH: {},
   REVISION_INSTRUCTION_REQUIRED: {},

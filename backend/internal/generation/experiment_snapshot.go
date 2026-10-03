@@ -110,6 +110,10 @@ type snapshotImage struct {
 	// snapshot frozen before they rode along byte-identical, hash and all.
 	Width  int32 `json:"Width,omitempty"`
 	Height int32 `json:"Height,omitempty"`
+	// The photo's turn and whose it is (POST-107) decide its orientation too; omitempty for the
+	// same reason.
+	Rotation        int32 `json:"Rotation,omitempty"`
+	RotationByOwner bool  `json:"RotationByOwner,omitempty"`
 }
 
 type snapshotObservation struct {
@@ -122,6 +126,8 @@ type snapshotObservation struct {
 	Model         string   `json:"Model"`
 	Events        []string `json:"Events"`
 	Speech        string   `json:"Speech"`
+	// omitempty keeps every snapshot frozen before rotations existed byte-identical (GEN-79).
+	Rotation int `json:"Rotation,omitempty"`
 }
 
 type snapshotContent struct {
@@ -345,24 +351,24 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 }
 
 func toSnapshotImage(image Image) snapshotImage {
-	return snapshotImage{Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs, Width: image.Width, Height: image.Height}
+	return snapshotImage{Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs, Width: image.Width, Height: image.Height, Rotation: image.Rotation, RotationByOwner: image.RotationByOwner}
 }
 
 func fromSnapshotImage(wire snapshotImage) Image {
-	return Image{Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs, Width: wire.Width, Height: wire.Height}
+	return Image{Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs, Width: wire.Width, Height: wire.Height, Rotation: wire.Rotation, RotationByOwner: wire.RotationByOwner}
 }
 
 func toSnapshotObservation(o Observation) snapshotObservation {
 	return snapshotObservation{
 		File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: copyTexts(o.Objects),
-		PeoplePresent: o.PeoplePresent, Model: o.Model, Events: copyTexts(o.Events), Speech: o.Speech,
+		PeoplePresent: o.PeoplePresent, Model: o.Model, Events: copyTexts(o.Events), Speech: o.Speech, Rotation: o.Rotation,
 	}
 }
 
 func fromSnapshotObservation(wire snapshotObservation) Observation {
 	return Observation{
 		File: wire.File, Scene: wire.Scene, Mood: wire.Mood, VisibleText: wire.VisibleText, Objects: copyTexts(wire.Objects),
-		PeoplePresent: wire.PeoplePresent, Model: wire.Model, Events: copyTexts(wire.Events), Speech: wire.Speech,
+		PeoplePresent: wire.PeoplePresent, Model: wire.Model, Events: copyTexts(wire.Events), Speech: wire.Speech, Rotation: wire.Rotation,
 	}
 }
 

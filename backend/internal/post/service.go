@@ -1489,6 +1489,41 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	return nil
 }
 
+// RotateImage records the owner's turn of a photo (POST-107): from then on no observation
+// changes it. It is a write like any other photo change, so a published post refuses it
+// (POST-74), and it returns the photo as it now stands, its view URL minted.
+func (s *Service) RotateImage(ctx context.Context, userID, imageID string, rotation int32) (Image, error) {
+	if !ValidRotation(rotation) {
+		return Image{}, ErrInvalidRotation
+	}
+	image, err := s.images.GetImage(ctx, imageID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Image{}, ErrNotFound
+		}
+		return Image{}, fmt.Errorf("load image: %w", err)
+	}
+	if _, err := s.writablePost(ctx, userID, image.PostSlug); err != nil {
+		return Image{}, err
+	}
+	turned, err := s.images.SetImageRotation(ctx, imageID, rotation)
+	if err != nil {
+		return Image{}, fmt.Errorf("rotate image: %w", err)
+	}
+	if !turned {
+		return Image{}, s.lockedOrGone(ctx, userID, image.PostSlug, ErrNotFound)
+	}
+	updated, err := s.images.GetImage(ctx, imageID)
+	if err != nil {
+		return Image{}, fmt.Errorf("reload image: %w", err)
+	}
+	// Minted like GetPost's, so the strip can show the turned photo without a refetch.
+	if updated.ViewURL, err = s.blobs.PresignGet(ctx, updated.Key, s.getTTL); err != nil {
+		return Image{}, fmt.Errorf("presign view url for %s: %w", updated.Filename, err)
+	}
+	return updated, nil
+}
+
 // DeleteVideo removes the video and its object in DeleteImage's order — the guarded row first,
 // then the object, a failed object delete left to the sweep — and drops the observation entry
 // the filename owned (VIDEO-12).

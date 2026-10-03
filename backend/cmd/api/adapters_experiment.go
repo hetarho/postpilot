@@ -371,6 +371,9 @@ type outputObservation struct {
 	// snapshot it replaces — which would make the next picker report every photo as observed
 	// by an unrecorded model.
 	Model string `json:"model,omitempty"`
+	// The winner's upright turns ride along so applying it turns the photos as a run would
+	// (GEN-79).
+	Rotation int `json:"rotation,omitempty"`
 }
 
 func toOutputPost(answer generation.WriteAnswer) outputPost {
@@ -408,14 +411,14 @@ func fromOutputPost(value outputPost) generation.WriteAnswer {
 func toOutputObservations(values []generation.Observation) []outputObservation {
 	out := make([]outputObservation, 0, len(values))
 	for _, value := range values {
-		out = append(out, outputObservation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model})
+		out = append(out, outputObservation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model, Rotation: value.Rotation})
 	}
 	return out
 }
 func fromOutputObservations(values []outputObservation) []generation.Observation {
 	out := make([]generation.Observation, 0, len(values))
 	for _, value := range values {
-		out = append(out, generation.Observation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model})
+		out = append(out, generation.Observation{File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText, Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model, Rotation: value.Rotation})
 	}
 	return out
 }

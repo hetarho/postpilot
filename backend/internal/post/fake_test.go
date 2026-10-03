@@ -104,6 +104,16 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 	existing.Observations = append([]Observation(nil), observations...)
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
+	// As the store does in the same transaction: an observed photo takes its entry's turn unless
+	// its owner turned it (GEN-79).
+	for _, observation := range observations {
+		for id, image := range f.images {
+			if image.PostSlug == slug && image.Filename == observation.File && !image.RotationByOwner {
+				image.Rotation = int32(observation.Rotation)
+				f.images[id] = image
+			}
+		}
+	}
 	return true, nil
 }
 
@@ -543,6 +553,19 @@ func (f *fakeStore) GetImage(_ context.Context, id string) (Image, error) {
 		return Image{}, ErrNotFound
 	}
 	return img, nil
+}
+
+// SetImageRotation mirrors the statement: a published post's photo keeps its turn.
+func (f *fakeStore) SetImageRotation(_ context.Context, id string, rotation int32) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	image, ok := f.images[id]
+	if !ok || f.publishedLocked(image.PostSlug) {
+		return false, nil
+	}
+	image.Rotation, image.RotationByOwner = rotation, true
+	f.images[id] = image
+	return true, nil
 }
 
 // DeleteImage mirrors the statement's subquery: a published post's photo stays, and zero

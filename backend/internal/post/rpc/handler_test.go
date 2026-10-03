@@ -351,6 +351,7 @@ func TestTheRangeAndTheMissingCountTravelAsParams(t *testing.T) {
 	}{
 		{&post.TargetLengthError{Min: 100, Max: 10_000}, connect.CodeInvalidArgument, "POST_TARGET_LENGTH_INVALID", map[string]string{"min": "100", "max": "10000"}},
 		{&post.PhotoMissingError{Count: 2}, connect.CodeFailedPrecondition, "POST_PHOTO_MISSING", map[string]string{"count": "2"}},
+		{post.ErrInvalidRotation, connect.CodeInvalidArgument, "POST_IMAGE_ROTATION_INVALID", nil},
 		{&post.StorylineTextTooLongError{Max: 1000}, connect.CodeInvalidArgument, "POST_STORYLINE_INVALID", map[string]string{"max": "1000"}},
 		{&post.StorylineFileUnknownError{File: "later.jpg"}, connect.CodeInvalidArgument, "POST_STORYLINE_FILE_UNKNOWN", map[string]string{"file": "later.jpg"}},
 	} {

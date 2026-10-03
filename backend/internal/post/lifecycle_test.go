@@ -366,6 +366,12 @@ var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture
 			return svc.DeleteVideo(context.Background(), alice, f.video)
 		},
 	},
+	"RotateImage": {
+		"a confirmed photo": func(svc *Service, f publishedFixture) error {
+			_, err := svc.RotateImage(context.Background(), alice, f.image, 90)
+			return err
+		},
+	},
 }
 
 // publishedLockExempt is every exported Service method the lock deliberately lets through, with

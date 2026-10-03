@@ -227,14 +227,35 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	if err != nil {
 		return false, fmt.Errorf("encode observations: %w", err)
 	}
-	n, err := s.write.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin observations: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+	q := s.write.WithTx(tx)
+	n, err := q.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
 		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update observations: %w", err)
 	}
-	return n > 0, nil
+	if n == 0 {
+		return false, nil
+	}
+	// Each observed photo takes its entry's turn unless its owner turned it (GEN-79); a video's
+	// filename names no image row, so its entry turns nothing.
+	for _, observation := range observations {
+		if err := q.SetObservedImageRotation(ctx, sqlc.SetObservedImageRotationParams{
+			Rotation: int64(observation.Rotation), PostSlug: slug, Filename: observation.File,
+		}); err != nil {
+			return false, fmt.Errorf("turn observed photo: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit observations: %w", err)
+	}
+	return true, nil
 }
 
 // UpdateStoryline replaces the post's storyline, nil for none (GEN-68, GEN-69).
@@ -563,6 +584,16 @@ func (s *Store) GetImage(ctx context.Context, id string) (post.Image, error) {
 		return post.Image{}, fmt.Errorf("select image: %w", err)
 	}
 	return toImage(row)
+}
+
+// SetImageRotation records the owner's turn; false is a photo already gone or a published post
+// (POST-74), which the caller tells apart by re-reading the post.
+func (s *Store) SetImageRotation(ctx context.Context, id string, rotation int32) (bool, error) {
+	n, err := s.write.SetImageRotation(ctx, sqlc.SetImageRotationParams{Rotation: int64(rotation), ID: id})
+	if err != nil {
+		return false, fmt.Errorf("rotate image: %w", err)
+	}
+	return n > 0, nil
 }
 
 // DeleteImage reports false for a photo already gone or one whose post is published: the
@@ -1071,6 +1102,9 @@ func toImage(row sqlc.Image) (post.Image, error) {
 		Height:    int32(row.Height),
 		Bytes:     row.Bytes,
 		CreatedAt: createdAt,
+		// The CHECK keeps the column to the four quarter turns (POST-107).
+		Rotation:        int32(row.Rotation),
+		RotationByOwner: row.RotationByOwner != 0,
 	}, nil
 }
 

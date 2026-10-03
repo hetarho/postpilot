@@ -59,7 +59,7 @@ func (q *Queries) DeleteImage(ctx context.Context, id string) (int64, error) {
 }
 
 const getImage = `-- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
 FROM images WHERE id = ?
 `
 
@@ -75,6 +75,8 @@ func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
 		&i.Height,
 		&i.Bytes,
 		&i.CreatedAt,
+		&i.Rotation,
+		&i.RotationByOwner,
 	)
 	return i, err
 }
@@ -134,7 +136,7 @@ func (q *Queries) ListAllImageKeys(ctx context.Context) ([]string, error) {
 }
 
 const listImagesByPost = `-- name: ListImagesByPost :many
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
 FROM images WHERE post_slug = ? ORDER BY created_at, id
 `
 
@@ -156,6 +158,8 @@ func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Imag
 			&i.Height,
 			&i.Bytes,
 			&i.CreatedAt,
+			&i.Rotation,
+			&i.RotationByOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -168,4 +172,41 @@ func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Imag
 		return nil, err
 	}
 	return items, nil
+}
+
+const setImageRotation = `-- name: SetImageRotation :execrows
+UPDATE images SET rotation = ?, rotation_by_owner = 1
+WHERE id = ? AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = images.post_slug AND posts.status <> 'published')
+`
+
+type SetImageRotationParams struct {
+	Rotation int64
+	ID       string
+}
+
+// The owner turns a photo (POST-107). A published post's photos are locked with it (POST-74),
+// so zero rows is a photo already gone or a post that is published, as DeleteImage reads it.
+func (q *Queries) SetImageRotation(ctx context.Context, arg SetImageRotationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setImageRotation, arg.Rotation, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setObservedImageRotation = `-- name: SetObservedImageRotation :exec
+UPDATE images SET rotation = ?
+WHERE post_slug = ? AND filename = ? AND rotation_by_owner = 0
+`
+
+type SetObservedImageRotationParams struct {
+	Rotation int64
+	PostSlug string
+	Filename string
+}
+
+// An observation turns its photo only while the owner never has (GEN-79).
+func (q *Queries) SetObservedImageRotation(ctx context.Context, arg SetObservedImageRotationParams) error {
+	_, err := q.db.ExecContext(ctx, setObservedImageRotation, arg.Rotation, arg.PostSlug, arg.Filename)
+	return err
 }

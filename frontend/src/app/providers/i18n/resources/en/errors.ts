@@ -251,6 +251,7 @@ export const errors = {
   POST_PHOTO_MISSING:
     '{{count}} photo places in the text name photos that are no longer attached. Remove those photo blocks in ② or upload the photos again, then finalize.',
   POST_STORYLINE_MISSING: 'This post has no storyline yet. Make one first.',
+  POST_IMAGE_ROTATION_INVALID: 'A photo turns only in steps of 90 degrees. Try again.',
   POST_STORYLINE_FILE_UNKNOWN: '{{file}} cannot go in this storyline. Make the storyline again.',
   POST_STORYLINE_INVALID: 'Could not save the storyline. Refresh and edit it again.',
   GENERATION_STORYLINE_REOBSERVE:

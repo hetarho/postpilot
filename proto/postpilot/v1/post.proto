@@ -34,6 +34,8 @@ service PostService {
   // Step 2: the server verifies the object landed, then records the photo.
   rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse) {}
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse) {}
+  // The owner turns a photo (POST-107); from then on no observation changes its rotation.
+  rpc RotateImage(RotateImageRequest) returns (RotateImageResponse) {}
   rpc DeleteVideo(DeleteVideoRequest) returns (DeleteVideoResponse) {}
 }
 
@@ -250,6 +252,9 @@ message Image {
   // A short-lived presigned GET, minted fresh on every GetPost. The client must not
   // persist it; the bucket is private and this is the only way in.
   string view_url = 6;
+  // The clockwise turn, in degrees (0, 90, 180, 270), every surface applies when it shows or
+  // copies the photo (POST-107). The stored bytes and the dimensions above are unturned.
+  int32 rotation = 7;
 }
 
 // A video attached to a post. The bytes live in object storage exactly as the user
@@ -557,6 +562,16 @@ message DeleteImageRequest {
 }
 
 message DeleteImageResponse {}
+
+message RotateImageRequest {
+  string image_id = 1;
+  // Degrees clockwise: 0, 90, 180 or 270; anything else is POST_IMAGE_ROTATION_INVALID.
+  int32 rotation = 2;
+}
+
+message RotateImageResponse {
+  Image image = 1;
+}
 
 message DeleteVideoRequest {
   string video_id = 1;
