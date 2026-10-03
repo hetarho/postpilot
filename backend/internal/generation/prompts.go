@@ -53,6 +53,13 @@ const koreanStorylineRule = "storyline에는 본문을 쓰기 전에 이 글을 
 
 const englishStorylineRule = "Before writing, set in storyline how this post will tell things, paragraph by paragraph: each paragraph is a plan of two or three sentences saying what that part shows and says, and files names the attachments that part uses. Put every attached photo and video in exactly one paragraph, following the template's places in order when there is a template. Then write the post along this storyline."
 
+// koreanGalleryRule / englishGalleryRule define the photo group's format (GEN-77): which fields it
+// fills and the 2 … post.PhotoGroupMax bound. Format only — when photos are better grouped is the
+// 비슷한 사진은 한 묶음으로 기본 지침 (GUIDE-41). A test pins the number to post.PhotoGroupMax.
+const koreanGalleryRule = "GALLERY 블록은 첨부 사진 2~10장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt와 caption은 묶음 전체에 하나씩 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요."
+
+const englishGalleryRule = "A GALLERY block shows 2 to 10 attached photos together in one place under one caption: list their filenames in files in the order they stand, set layout to COLLAGE (side by side) or SLIDE (one at a time, swiped), write one alt and one caption for the whole group, and leave file empty. On every other block, leave files as an empty array and layout as an empty string."
+
 // WritePrompt / englishWritePrompt are the write pass's static rules, and they hold the input
 // and output format alone (GUIDE-1, GEN-14): the task, one paragraph per TEXT block, attached
 // filenames only, the storyline and the IMAGE placement along it, the answer shape and its
@@ -62,20 +69,22 @@ const englishStorylineRule = "Before writing, set in storyline how this post wil
 // in [작문 지침] (GUIDE-41).
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 한국어 블로그 글을 작성하세요.
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
-IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
+IMAGE와 GALLERY 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
 ` + koreanStorylineRule + `
-첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록으로 정확히 한 번씩 놓으세요. 템플릿의 사진 자리에는 그 자리 주변이 다루는 내용에 맞는 사진을 놓으세요.
+첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록 하나로 놓거나 GALLERY 블록 안에 넣어 정확히 한 번씩 놓으세요. 템플릿의 사진 자리에는 그 자리 주변이 다루는 내용에 맞는 사진을 놓으세요.
+` + koreanGalleryRule + `
 출력은 설명이나 마크다운 없이 {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
-각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.
+각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.
 ` + koreanNounsRule
 
 const englishWritePrompt = `Write an English blog post from the photo observations and memo.
 Use exactly one TEXT block for each paragraph.
-IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
+IMAGE and GALLERY blocks may use only the exact filenames provided. Never invent an image that is not in the list.
 ` + englishStorylineRule + `
-Place every attached photo exactly once, as an IMAGE block where its storyline paragraph stands; at a template's photo place, put the photos that fit what the section around it is about.
+Place every attached photo exactly once, as an IMAGE block or inside a GALLERY block where its storyline paragraph stands; at a template's photo place, put the photos that fit what the section around it is about.
+` + englishGalleryRule + `
 Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
-Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.
+Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.
 ` + englishNounsRule
 
 // koreanWriteAlongStorylineRule / englishWriteAlongStorylineRule replace the storyline rule on
@@ -125,7 +134,8 @@ func storylineSection(paragraphs []StorylineParagraph) string {
 const templateLegend = `표기는 다음과 같습니다.
 - 일반 텍스트: 그 위치에 그대로 출력하세요.
 - <write>…</write>: 그 자리에 태그 안에 적힌 주제로 글을 쓰고, 태그와 주제 문구 자체는 출력하지 마세요.
-- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 다루는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.
+- {{사진 자리}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 다루는 사진을 골라 놓는 자리입니다.
+- {{사진 자리 · n장 묶음}}: 같은 자리이고, 템플릿 작성자가 사진 n장 정도를 GALLERY 블록 하나로 묶어 보여 주기를 제안한 자리입니다. 몇 장을 어떤 배치로 묶을지, 묶지 않을지는 사진에 맞게 정하세요.
 - <repeat>…</repeat>: 스토리라인에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.`
 
 // templateFactLegend is appended ONLY when the frozen brief actually carries a fact:
@@ -400,7 +410,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		if input.Profile.NoVoice {
 			sources = "템플릿, 메모, 가제"
 		}
-		stable.WriteString("\n출력 언어는 한국어입니다. " + members + ", summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. " + sources + "의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
+		stable.WriteString("\n출력 언어는 한국어입니다. " + members + ", summary, tags, 모든 본문, IMAGE와 GALLERY의 alt와 caption을 한국어로 작성하세요. " + sources + "의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(input.Videos) > 0 {
 			video := videoWriteInstructions
 			if following {
@@ -419,7 +429,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		if input.Profile.NoVoice {
 			sources = "the template, memo, or title hint"
 		}
-		stable.WriteString("\nThe output language is English. Write " + members + ", summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in " + sources + ".")
+		stable.WriteString("\nThe output language is English. Write " + members + ", summary, tags, all prose, and every IMAGE and GALLERY alt and caption in English. This requirement overrides conflicting language instructions in " + sources + ".")
 		if len(input.Videos) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)
 		}

@@ -243,6 +243,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			content.Blocks = append(content.Blocks, generation.Block{
 				Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level,
 				File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+				Files: block.Files, Layout: string(block.Layout),
 			})
 		}
 		input.Content = &content
@@ -322,6 +323,7 @@ func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug s
 		value.Blocks = append(value.Blocks, post.Block{
 			Type: post.BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: post.GalleryLayout(block.Layout),
 		})
 	}
 	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value, post.Language(language), postAnnotations(annotations)))

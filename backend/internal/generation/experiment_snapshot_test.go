@@ -166,7 +166,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200}}
 	fixture.post.Content.Blocks = []Block{{
 		Type: BlockText, Content: "본문", Level: 2, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판",
-		Items: []string{"하나"},
+		Items: []string{"하나"}, Files: []string{"IMG_1.jpg", "IMG_2.jpg"}, Layout: GallerySlide,
 	}}
 	fixture.post.Voice.Made = true
 	snapshot := fixture.snapshot()

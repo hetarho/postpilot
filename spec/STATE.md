@@ -59,17 +59,18 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T525 | writer places photo groups | GEN GUIDE TMPL | T524 | todo |
 | T527 | block editor edits photo groups | POST | T526 | todo |
 | T528 | exports map photo groups | EXPORT | T526 | todo |
 | T529 | template count reads as a suggested group | TMPL | - | todo |
 
 ## next
-- implement-task T525 → T527 → T528 → T529 (photo groups; T529 has no dep).
+- implement-task T527 → T528 → T529 (photo groups; T529 has no dep).
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
 
 ## log
+- 261004 T525 done: writer schemas, rules, normalization, template legend and the photo_groups 기본 지침; BE suite green
+- 261004 T525 start
 - 261004 out of scope: ClipGeneration.test.tsx 'reuses retained originals after done…' fails on a clean HEAD (no 바로 만들기 button), unrelated to photo groups
 - 261004 T526 done: reading view renders photo groups (collage grid, slide strip); FE suite green except a ClipGeneration failure that also fails on a clean HEAD
 - 261004 T526 start
@@ -88,5 +89,3 @@
 - 261003 update-ssot CLIP start: reserve enabled intro/outro spans for region text without captions
 - 261002 T522 done: finish entry scroll and Naver body-with-tags copy; Node 24 FE 3054 tests and local CI checks passed
 - 261002 T522 start: finish scroll and Naver body-with-tags copy
-- 261002 create-task POST r29 EXPORT r7 → T522
-- 261002 create-task POST EXPORT start

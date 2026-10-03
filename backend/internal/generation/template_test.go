@@ -36,7 +36,7 @@ func loadGolden(t *testing.T, name string) (system, user string) {
 func testBrief() *TemplateBrief {
 	return &TemplateBrief{
 		Name: "정보성 식당 리뷰",
-		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n네이버 지도\n\n{{사진 자리 · 한 줄 1장}}\n<write>이 사진에 대한 설명</write>",
+		Body: "<write>인트로를 작성합니다.</write>\n\n=========================\n네이버 지도\n\n{{사진 자리}}\n<write>이 사진에 대한 설명</write>",
 	}
 }
 
@@ -95,12 +95,13 @@ func TestWritePromptAppendsOneTemplateSectionAfterTheCompleteVoiceProfile(t *tes
 func TestWritePromptExplainsThePlaceAndRepeatMarkers(t *testing.T) {
 	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
 	brief := testBrief()
-	brief.Body = "<repeat>{{사진 자리 · 한 줄 2장}}\n<write>이 사진들에 대한 설명</write></repeat>"
+	brief.Body = "<repeat>{{사진 자리 · 2장 묶음}}\n<write>이 사진들에 대한 설명</write></repeat>"
 
 	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, brief, nil)
 	section := strings.TrimPrefix(system, baseline)
 	for _, line := range []string{
-		"- {{사진 자리 · 한 줄 n장}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 다루는 사진을 골라 IMAGE 블록으로 놓는 자리입니다. 한 줄에 n장씩 놓고, 사진이 더 있으면 줄을 이어도 됩니다.",
+		"- {{사진 자리}}: 첨부 사진 가운데 이 자리 앞뒤 내용이 다루는 사진을 골라 놓는 자리입니다.",
+		"- {{사진 자리 · n장 묶음}}: 같은 자리이고, 템플릿 작성자가 사진 n장 정도를 GALLERY 블록 하나로 묶어 보여 주기를 제안한 자리입니다. 몇 장을 어떤 배치로 묶을지, 묶지 않을지는 사진에 맞게 정하세요.",
 		"- <repeat>…</repeat>: 스토리라인에서 이 부분에 해당하는 사진 묶음마다 안쪽을 한 번씩 되풀이해 쓰는 부분입니다. 묶음마다 안쪽의 사진 자리에는 그 묶음의 사진을 놓고, 태그 자체는 출력하지 마세요.",
 	} {
 		if !strings.Contains(section, line) {

@@ -85,7 +85,7 @@ func TestRenderWithNoPhotosDropsTheWholeRepeat(t *testing.T) {
 // the post has no photo to stand there.
 func TestRenderMarksEachPlaceWithItsRowSize(t *testing.T) {
 	body := `<slot kind="photo"/>|<slot kind="photo" count="3"/>|<slot kind="photo" count="4"/>`
-	if got, want := renderBody(t, body, true), "{{사진 자리 · 한 줄 1장}}|{{사진 자리 · 한 줄 3장}}|{{사진 자리 · 한 줄 4장}}"; got != want {
+	if got, want := renderBody(t, body, true), "{{사진 자리}}|{{사진 자리 · 3장 묶음}}|{{사진 자리 · 4장 묶음}}"; got != want {
 		t.Fatalf("body = %q, want %q", got, want)
 	}
 	if got := renderBody(t, body, false); got != "||" {

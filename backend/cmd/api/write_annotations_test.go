@@ -160,3 +160,33 @@ func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
 		t.Fatalf("after a revision: revision %d nouns %v storyline %+v", kept.ContentRevision, kept.ContentNouns, kept.Storyline)
 	}
 }
+
+// A candidate's photo group survives the stored output both ways, and a candidate without one
+// keeps the bytes it had before groups existed (GEN-77).
+func TestCandidateOutputCarriesPhotoGroups(t *testing.T) {
+	answer := generation.WriteAnswer{Content: generation.PostContent{Title: "t", Blocks: []generation.Block{
+		{Type: generation.BlockGallery, Files: []string{"a.jpg", "b.jpg"}, Layout: generation.GallerySlide, Caption: "넘겨 보기"},
+	}}}
+	encoded, err := json.Marshal(toOutputPost(answer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"files":["a.jpg","b.jpg"],"layout":"SLIDE"`) {
+		t.Fatalf("output %s lacks the group", encoded)
+	}
+	var value outputPost
+	if err := json.Unmarshal(encoded, &value); err != nil {
+		t.Fatal(err)
+	}
+	if got := fromOutputPost(value); !reflect.DeepEqual(got.Content.Blocks, answer.Content.Blocks) {
+		t.Fatalf("round trip = %+v", got.Content.Blocks)
+	}
+	plain, err := json.Marshal(toOutputPost(writeAnnotationsAnswer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The storyline carries its own `files`; a block's would follow its `items`.
+	if strings.Contains(string(plain), `"items":null,"files"`) || strings.Contains(string(plain), `"layout"`) {
+		t.Fatalf("a candidate without a group grew members: %s", plain)
+	}
+}

@@ -95,8 +95,8 @@ func TestStaticRulesHoldTheFormatAlone(t *testing.T) {
 // "most natural position" placement line is gone everywhere.
 func TestTheWriteAsksForAStorylineAndPlacesAlongIt(t *testing.T) {
 	placement := map[Language]string{
-		LanguageKorean:  "첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록으로 정확히 한 번씩 놓으세요.",
-		LanguageEnglish: "Place every attached photo exactly once, as an IMAGE block where its storyline paragraph stands",
+		LanguageKorean:  "첨부 사진은 storyline에서 그 사진이 놓인 문단의 자리에 IMAGE 블록 하나로 놓거나 GALLERY 블록 안에 넣어 정확히 한 번씩 놓으세요.",
+		LanguageEnglish: "Place every attached photo exactly once, as an IMAGE block or inside a GALLERY block where its storyline paragraph stands",
 	}
 	rule := map[Language]string{LanguageKorean: koreanStorylineRule, LanguageEnglish: englishStorylineRule}
 	videoLine := map[Language]string{

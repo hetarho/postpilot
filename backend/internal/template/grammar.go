@@ -53,9 +53,9 @@ type Node struct {
 	SlotKind SlotKind // slot
 	Label    string   // slot · ask
 	Required bool     // ask; absent required attribute is false
-	// Count is how many photos a photo position holds side by side (TMPL-38). It is 1
-	// when the attribute is absent and 0 on every node that is not a photo slot, so a
-	// non-zero Count always means "this position binds this many photos".
+	// Count is how many photos the author suggests standing together at a photo position, as
+	// one group when above 1 (TMPL-38). It is 1 when the attribute is absent and 0 on every node
+	// that is not a photo slot, so a non-zero Count always means "a photo position".
 	Count    int
 	Each     string // repeat
 	Children []Node // repeat

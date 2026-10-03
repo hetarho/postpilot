@@ -458,3 +458,24 @@ func TestFiveCandidateReviewWireKeepsEveryIdentityBlind(t *testing.T) {
 		}
 	}
 }
+
+// A write candidate's output reaches the wire with its photo groups and its clips: every block
+// type the writer can return maps to its proto value (GEN-1, GEN-77).
+func TestSetOutputMapsEveryWrittenBlockType(t *testing.T) {
+	var out postpilotv1.ExperimentCandidate
+	setOutput(&out, experiment.StageWrite, []byte(`{"title":"t","summary":"","tags":[],"blocks":[
+		{"type":"GALLERY","content":"","level":0,"file":"","alt":"","caption":"묶음","items":null,"files":["a.jpg","b.jpg"],"layout":"SLIDE"},
+		{"type":"VIDEO","content":"","level":0,"file":"clip.mp4","alt":"","caption":"","items":null},
+		{"type":"IMAGE","content":"","level":0,"file":"c.jpg","alt":"","caption":"","items":null}
+	]}`))
+	blocks := out.GetPostContent().GetBlocks()
+	if len(blocks) != 3 {
+		t.Fatalf("blocks = %v", blocks)
+	}
+	if blocks[0].GetType() != postpilotv1.BlockType_GALLERY || blocks[0].GetLayout() != postpilotv1.GalleryLayout_GALLERY_LAYOUT_SLIDE || len(blocks[0].GetFiles()) != 2 {
+		t.Fatalf("group = %v", blocks[0])
+	}
+	if blocks[1].GetType() != postpilotv1.BlockType_VIDEO || blocks[2].GetType() != postpilotv1.BlockType_IMAGE || blocks[2].GetLayout() != postpilotv1.GalleryLayout_GALLERY_LAYOUT_UNSPECIFIED {
+		t.Fatalf("other blocks = %v", blocks[1:])
+	}
+}

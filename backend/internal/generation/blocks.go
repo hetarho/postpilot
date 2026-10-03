@@ -22,6 +22,15 @@ func ValidateBlocks(blocks []Block) []Block {
 			// meaning outside headings, so a schema-obedient value is normalized away.
 			block.Level = 0
 		}
+		if block.Type == BlockGallery {
+			// The files list is the group; a model that also filled `file` mixed the two
+			// shapes, and dropping the whole group over it would lose every photo in it.
+			block.File = ""
+		} else {
+			// Files and layout are schema-required on every block too (GEN-77), so like level
+			// they are normalized away wherever they mean nothing.
+			block.Files, block.Layout = nil, ""
+		}
 		valid = append(valid, block)
 	}
 	return valid
@@ -47,6 +56,26 @@ func invalidField(block Block) string {
 		// and that is the attachment filter's question, not this one's.
 		if strings.TrimSpace(block.File) == "" {
 			return "file"
+		}
+		if hasContent {
+			return "content"
+		}
+		if hasItems {
+			return "items"
+		}
+		return ""
+	case BlockGallery:
+		// Whether each photo is attached, repeated or one too many is the attachment filter's
+		// question (GEN-78); here a group needs at least one name to be a group at all.
+		named := false
+		for _, file := range block.Files {
+			if strings.TrimSpace(file) != "" {
+				named = true
+				break
+			}
+		}
+		if !named {
+			return "files"
 		}
 		if hasContent {
 			return "content"

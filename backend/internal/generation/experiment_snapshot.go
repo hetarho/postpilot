@@ -135,6 +135,10 @@ type snapshotBlock struct {
 	Alt     string   `json:"Alt"`
 	Caption string   `json:"Caption"`
 	Items   []string `json:"Items"`
+	// omitempty so a snapshot frozen before photo groups existed, and the input hash of content
+	// without one, keep their bytes.
+	Files  []string `json:"Files,omitempty"`
+	Layout string   `json:"Layout,omitempty"`
 }
 
 // snapshotProfile freezes the projection text itself (MODEL-31): a comparison writes from the
@@ -362,7 +366,7 @@ func toSnapshotContent(content PostContent) snapshotContent {
 	return snapshotContent{
 		Title: content.Title, Summary: content.Summary, Tags: copyTexts(content.Tags),
 		Blocks: mapSlice(content.Blocks, func(b Block) snapshotBlock {
-			return snapshotBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items)}
+			return snapshotBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items), Files: copyTexts(b.Files), Layout: b.Layout}
 		}),
 	}
 }
@@ -371,7 +375,7 @@ func fromSnapshotContent(wire snapshotContent) PostContent {
 	return PostContent{
 		Title: wire.Title, Summary: wire.Summary, Tags: copyTexts(wire.Tags),
 		Blocks: mapSlice(wire.Blocks, func(b snapshotBlock) Block {
-			return Block{Type: BlockType(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items)}
+			return Block{Type: BlockType(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: copyTexts(b.Items), Files: copyTexts(b.Files), Layout: b.Layout}
 		}),
 	}
 }

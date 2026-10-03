@@ -17,7 +17,7 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		}
 		return out
 	}
-	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "closing", "no_listing", "titles", "tags", "ending_run", "natural_korean"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "photo_groups", "closing", "no_listing", "titles", "tags", "ending_run", "natural_korean"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("post defaults = %v, want %v", got, want)
 	}
 	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {

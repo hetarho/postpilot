@@ -356,6 +356,9 @@ type outputBlock struct {
 	Alt     string   `json:"alt"`
 	Caption string   `json:"caption"`
 	Items   []string `json:"items"`
+	// A photo group's own (GEN-77), omitted elsewhere so stored candidate output keeps its bytes.
+	Files  []string `json:"files,omitempty"`
+	Layout string   `json:"layout,omitempty"`
 }
 type outputObservation struct {
 	File          string   `json:"file"`
@@ -374,7 +377,7 @@ func toOutputPost(answer generation.WriteAnswer) outputPost {
 	content := answer.Content
 	out := outputPost{Title: content.Title, Summary: content.Summary, Tags: content.Tags, Nouns: answer.Nouns}
 	for _, block := range content.Blocks {
-		out.Blocks = append(out.Blocks, outputBlock{Type: string(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+		out.Blocks = append(out.Blocks, outputBlock{Type: string(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items, Files: block.Files, Layout: block.Layout})
 	}
 	if story := answer.Storyline; story != nil {
 		out.Storyline = &outputStoryline{MadeWith: story.MadeWith}
@@ -392,7 +395,7 @@ func fromOutputPost(value outputPost) generation.WriteAnswer {
 		Nouns:   value.Nouns,
 	}
 	for _, block := range value.Blocks {
-		out.Content.Blocks = append(out.Content.Blocks, generation.Block{Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+		out.Content.Blocks = append(out.Content.Blocks, generation.Block{Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items, Files: block.Files, Layout: block.Layout})
 	}
 	if story := value.Storyline; story != nil {
 		out.Storyline = &generation.Storyline{MadeWith: story.MadeWith}

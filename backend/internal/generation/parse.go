@@ -36,6 +36,10 @@ type blockJSON struct {
 	Alt     string   `json:"alt"`
 	Caption string   `json:"caption"`
 	Items   []string `json:"items"`
+	// A photo group's own (GEN-77). omitempty so the current content a revise prompt shows names
+	// them on a group alone; the schema still asks for both on every block.
+	Files  []string `json:"files,omitempty"`
+	Layout string   `json:"layout,omitempty"`
 }
 
 type contentJSON struct {
@@ -197,6 +201,7 @@ func parseContentFields(raw string, tagCount int) (*PostContent, map[string]json
 		content.Blocks = append(content.Blocks, Block{
 			Type: BlockType(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: block.Layout,
 		})
 	}
 	return content, fields, nil

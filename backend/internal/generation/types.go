@@ -17,8 +17,16 @@ const (
 	// attached VIDEO: a filename is unique across the two kinds, so a mismatch is the wrong
 	// block type rather than an unknown file.
 	BlockVideo BlockType = "VIDEO"
-	// BlockGallery is a photo group (GEN-77), mirrored here so the closed list follows the proto.
+	// BlockGallery is a photo group (GEN-77): Files names the photos in the order they stand,
+	// Layout how they stand, and the one Alt and Caption belong to the whole group.
 	BlockGallery BlockType = "GALLERY"
+)
+
+// The two photo-group layouts, in the protojson spelling the model writes (GEN-77). Anything else
+// the model writes reads as GalleryCollage (GEN-78).
+const (
+	GalleryCollage = "COLLAGE"
+	GallerySlide   = "SLIDE"
 )
 
 type Block struct {
@@ -29,6 +37,9 @@ type Block struct {
 	Alt     string
 	Caption string
 	Items   []string
+	// Files and Layout belong to a GALLERY block alone.
+	Files  []string
+	Layout string
 }
 
 type PostContent struct {

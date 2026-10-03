@@ -513,21 +513,21 @@ func TestForPromptPutsTheEnabledDefaultsFirst(t *testing.T) {
 			koreanWithoutMemories = append(koreanWithoutMemories, d.Ko.Text)
 		}
 	}
-	if !reflect.DeepEqual(korean.Defaults, koreanWithoutMemories) || len(korean.Defaults) != 12 {
+	if !reflect.DeepEqual(korean.Defaults, koreanWithoutMemories) || len(korean.Defaults) != 13 {
 		t.Fatalf("Korean defaults = %d, %q", len(korean.Defaults), korean.Defaults)
 	}
 	if !reflect.DeepEqual(korean.Owner, []string{"사용자 지침"}) {
 		t.Fatalf("owner = %q", korean.Owner)
 	}
 	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish, false)
-	if len(english.Defaults) != 10 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
+	if len(english.Defaults) != 11 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
 		t.Fatalf("English defaults = %q", english.Defaults)
 	}
 	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "facts", false); err != nil {
 		t.Fatal(err)
 	}
 	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
-	if len(off.Defaults) != 11 || off.Defaults[0] != Defaults(KindPost)[1].Ko.Text {
+	if len(off.Defaults) != 12 || off.Defaults[0] != Defaults(KindPost)[1].Ko.Text {
 		t.Fatalf("a switched-off default still reached the run: %q", off.Defaults)
 	}
 	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean, false)

@@ -5,12 +5,14 @@ import (
 	"strings"
 )
 
-// The marked place a photo position renders as, carrying its row size (TMPL-21, TMPL-40), and
-// the marked part a photo repeat renders as. They are code, not author text, so the write legend
-// can name them; the repeat marker carries no attribute for the same reason.
+// The marked place a photo position renders as — bare for one photo, carrying the suggested group
+// size above one (TMPL-21, TMPL-38) — and the marked part a photo repeat renders as. They are code,
+// not author text, so the write legend can name them; the repeat marker carries no attribute for
+// the same reason.
 const (
-	photoPlacePrefix = "{{사진 자리 · 한 줄 "
-	photoPlaceSuffix = "장}}"
+	photoPlaceSingle = "{{사진 자리}}"
+	photoPlacePrefix = "{{사진 자리 · "
+	photoPlaceSuffix = "장 묶음}}"
 	repeatOpen       = "<repeat>"
 	repeatClose      = "</repeat>"
 )
@@ -31,8 +33,13 @@ const (
 	factClose      = "</facts>"
 )
 
-// PhotoPlace is the marked place a photo position of row size count renders as.
+// PhotoPlace is the marked place a photo position renders as: `{{사진 자리}}` for a count of one,
+// and `{{사진 자리 · n장 묶음}}` where the author suggests a group of n (TMPL-38). A suggestion,
+// not a binding: the writer decides whether and how to group (GEN-77).
 func PhotoPlace(count int) string {
+	if count <= 1 {
+		return photoPlaceSingle
+	}
 	return photoPlacePrefix + strconv.Itoa(count) + photoPlaceSuffix
 }
 

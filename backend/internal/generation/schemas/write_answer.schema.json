@@ -23,12 +23,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "content", "level", "file", "alt", "caption", "items"],
+        "required": ["type", "content", "level", "file", "files", "layout", "alt", "caption", "items"],
         "properties": {
-          "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "VIDEO", "QUOTE", "LIST"]},
+          "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "GALLERY", "VIDEO", "QUOTE", "LIST"]},
           "content": {"type": "string"},
           "level": {"type": "integer"},
           "file": {"type": "string"},
+          "files": {"type": "array", "items": {"type": "string"}},
+          "layout": {"type": "string"},
           "alt": {"type": "string"},
           "caption": {"type": "string"},
           "items": {"type": "array", "items": {"type": "string"}}

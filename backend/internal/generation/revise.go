@@ -39,18 +39,20 @@ const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최�
 ` + koreanReviseScope + `
 ` + koreanReviseLiteral + `
 제목, 한 줄 요약, 태그는 사용자가 그것들을 고쳐 달라고 한 경우에만 바꾸세요.
-IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순서 변경이나 요청에 따른 제거는 가능하지만 파일명을 바꾸거나 새 이미지를 만들지 마세요.
+IMAGE와 GALLERY 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 요청이 있으면 순서를 바꾸거나 사진을 묶거나 나누거나 뺄 수 있지만, 파일명을 바꾸거나 새 이미지를 만들지 마세요.
+` + koreanGalleryRule + `
 출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
-각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
+각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.`
 
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
 ` + englishReviseScope + `
 ` + englishReviseLiteral + `
 Change the title, one-line summary, or tags only when the user explicitly asks to change them.
-IMAGE blocks may use only exact attached filenames. They may be reordered or removed when requested, but never rename a file or invent an image.
+IMAGE and GALLERY blocks may use only exact attached filenames. When requested, photos may be reordered, grouped, split or removed, but never rename a file or invent an image.
+` + englishGalleryRule + `
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
-Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.`
+Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.`
 
 // A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
 // because encoding/json ignores a key the struct no longer names.
@@ -162,6 +164,7 @@ func contentForPrompt(content PostContent) contentJSON {
 		wire.Blocks = append(wire.Blocks, blockJSON{
 			Type: string(block.Type), Content: block.Content, Level: block.Level,
 			File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items,
+			Files: block.Files, Layout: block.Layout,
 		})
 	}
 	return wire

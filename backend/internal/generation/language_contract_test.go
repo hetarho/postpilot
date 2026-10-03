@@ -141,7 +141,7 @@ func TestLanguageAwarePromptsKeepKoreanBaselineAndDefendPortableProjection(t *te
 		Text: "[Portable voice habits]\nPORTABLE-STRUCTURE", Excerpts: []string{"DO-NOT-LEAK-EXCERPT"}, Portable: true,
 	}
 	english, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: leaky, Memo: "memo", Title: "title", TagCount: 4})
-	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE alt and caption", "PORTABLE-STRUCTURE", "[Portable voice habits]"} {
+	for _, required := range []string{"The output language is English", "title, summary, tags", "IMAGE and GALLERY alt and caption", "PORTABLE-STRUCTURE", "[Portable voice habits]"} {
 		if !strings.Contains(english, required) {
 			t.Errorf("English prompt missing %q", required)
 		}

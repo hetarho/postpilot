@@ -516,6 +516,8 @@ type outputBlock struct {
 	Alt     string   `json:"alt"`
 	Caption string   `json:"caption"`
 	Items   []string `json:"items"`
+	Files   []string `json:"files"`
+	Layout  string   `json:"layout"`
 }
 type outputObservation struct {
 	File          string   `json:"file"`
@@ -538,7 +540,7 @@ func setOutput(out *postpilotv1.ExperimentCandidate, stage experiment.Stage, raw
 		}
 		content := &postpilotv1.PostContent{Title: value.Title, Summary: value.Summary, Tags: value.Tags}
 		for _, block := range value.Blocks {
-			content.Blocks = append(content.Blocks, &postpilotv1.Block{Type: blockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+			content.Blocks = append(content.Blocks, &postpilotv1.Block{Type: blockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items, Files: block.Files, Layout: galleryLayout(block.Layout)})
 		}
 		out.Output = &postpilotv1.ExperimentCandidate_PostContent{PostContent: content}
 	case experiment.StageObserve:
@@ -731,7 +733,10 @@ func toProtoOutcome(outcome experiment.Outcome) postpilotv1.ExperimentOutcome {
 	return map[experiment.Outcome]postpilotv1.ExperimentOutcome{experiment.OutcomeWinner: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_WINNER, experiment.OutcomeSkipped: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_SKIPPED, experiment.OutcomeUnpaired: postpilotv1.ExperimentOutcome_EXPERIMENT_OUTCOME_UNPAIRED}[outcome]
 }
 func blockType(value string) postpilotv1.BlockType {
-	return map[string]postpilotv1.BlockType{"TEXT": postpilotv1.BlockType_TEXT, "HEADING": postpilotv1.BlockType_HEADING, "IMAGE": postpilotv1.BlockType_IMAGE, "QUOTE": postpilotv1.BlockType_QUOTE, "LIST": postpilotv1.BlockType_LIST}[value]
+	return map[string]postpilotv1.BlockType{"TEXT": postpilotv1.BlockType_TEXT, "HEADING": postpilotv1.BlockType_HEADING, "IMAGE": postpilotv1.BlockType_IMAGE, "QUOTE": postpilotv1.BlockType_QUOTE, "LIST": postpilotv1.BlockType_LIST, "VIDEO": postpilotv1.BlockType_VIDEO, "GALLERY": postpilotv1.BlockType_GALLERY}[value]
+}
+func galleryLayout(value string) postpilotv1.GalleryLayout {
+	return map[string]postpilotv1.GalleryLayout{"COLLAGE": postpilotv1.GalleryLayout_GALLERY_LAYOUT_COLLAGE, "SLIDE": postpilotv1.GalleryLayout_GALLERY_LAYOUT_SLIDE}[value]
 }
 func formatTime(value time.Time) string { return value.UTC().Format(time.RFC3339) }
 func formatOptional(value *time.Time) string {

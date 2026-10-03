@@ -392,7 +392,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatalf("the place position did not render as its label:\n%s", brief.Body)
 	}
 	// The repeat renders once, marked, and its photo place names no attachment (TMPL-21).
-	if !strings.Contains(brief.Body, "<repeat>\n{{사진 자리 · 한 줄 1장}}") || strings.Contains(brief.Body, "{{photo:") {
+	if !strings.Contains(brief.Body, "<repeat>\n{{사진 자리}}") || strings.Contains(brief.Body, "{{photo:") {
 		t.Fatalf("the repeat did not render once, unbound:\n%s", brief.Body)
 	}
 	if got := strings.Count(brief.Body, "<write>사진 설명</write>"); got != 1 {

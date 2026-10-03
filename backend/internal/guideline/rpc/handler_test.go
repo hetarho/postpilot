@@ -319,7 +319,7 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	// GUIDE-14, GUIDE-43: the post list carries every 기본 지침 with its switch, both copies, and a
 	// switch saves on change and reads back; the clip kind lists its own defaults and no owner row.
 	defaults := listed.Msg.GetDefaults()
-	if len(defaults) != 13 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[11].GetKoreanTargetOnly() || !defaults[12].GetKoreanTargetOnly() {
+	if len(defaults) != 14 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[12].GetKoreanTargetOnly() || !defaults[13].GetKoreanTargetOnly() {
 		t.Fatalf("defaults = %v", defaults)
 	}
 	// GEN-73: the memories default says so on the wire, and it alone does.
