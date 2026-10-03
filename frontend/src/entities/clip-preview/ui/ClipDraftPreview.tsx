@@ -74,6 +74,7 @@ function PreviewVideo({
 }) {
   const { t } = useTranslation('clips')
   const video = useRef<HTMLVideoElement>(null)
+  const picture = useRef<HTMLCanvasElement>(null)
   const [media, setMedia] = useState<{ fingerprint: string; url?: string; error?: string }>({
     fingerprint: '',
   })
@@ -104,6 +105,30 @@ function PreviewVideo({
     canvas.height,
     item.cut.focal,
   )
+  // Native video layers can briefly disappear or change brightness when the browser composites
+  // them with the caption PNGs. Keep the last decoded frame in an ordinary canvas layer; a
+  // delayed frame leaves that picture in place instead of exposing the canvas background.
+  const paintFrame = useCallback(() => {
+    const el = video.current
+    const layer = picture.current
+    if (!el || !layer || el.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || el.seeking) return
+    const bounds = layer.getBoundingClientRect()
+    if (bounds.width <= 0 || bounds.height <= 0) return
+    const density = Math.min(window.devicePixelRatio || 1, 2)
+    const width = Math.max(1, Math.round(bounds.width * density))
+    const height = Math.max(1, Math.round(bounds.height * density))
+    try {
+      const context = layer.getContext('2d')
+      if (!context) return
+      if (layer.width !== width || layer.height !== height) {
+        layer.width = width
+        layer.height = height
+      }
+      context.drawImage(el, 0, 0, width, height)
+    } catch {
+      // A newly loaded source may not have a drawable frame yet. The last picture stays put.
+    }
+  }, [])
   useEffect(() => {
     let active = true
     const epoch = ++playbackEpoch.current
@@ -181,6 +206,43 @@ function PreviewVideo({
       el.pause()
     }
   }, [playing, url, fp, onPlayRefused])
+
+  useEffect(() => {
+    const el = video.current
+    const layer = picture.current
+    if (!el || !layer || !url) return
+    let active = true
+    let handle = 0
+    const precise = typeof el.requestVideoFrameCallback === 'function'
+    const tick = () => {
+      if (!active) return
+      if (precise)
+        handle = el.requestVideoFrameCallback(() => {
+          paintFrame()
+          tick()
+        })
+      else
+        handle = requestAnimationFrame(() => {
+          paintFrame()
+          tick()
+        })
+    }
+    el.addEventListener('loadeddata', paintFrame)
+    el.addEventListener('seeked', paintFrame)
+    const observer =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(paintFrame)
+    observer?.observe(layer)
+    paintFrame()
+    if (precise || playing) tick()
+    return () => {
+      active = false
+      if (precise) el.cancelVideoFrameCallback(handle)
+      else cancelAnimationFrame(handle)
+      el.removeEventListener('loadeddata', paintFrame)
+      el.removeEventListener('seeked', paintFrame)
+      observer?.disconnect()
+    }
+  }, [url, playing, paintFrame])
 
   useEffect(() => {
     const el = video.current
@@ -265,26 +327,35 @@ function PreviewVideo({
   return (
     <>
       {url && (
-        <video
-          ref={video}
-          src={url}
-          muted={muted}
-          playsInline
-          preload="auto"
-          aria-hidden="true"
-          className="absolute max-w-none"
-          onError={() => {
-            void failed()
-          }}
-          style={{
-            width: `${crop.width}%`,
-            height: `${crop.height}%`,
-            left: `${crop.left}%`,
-            top: `${crop.top}%`,
-            opacity,
-            zIndex: item.index,
-          }}
-        />
+        <>
+          <video
+            ref={video}
+            src={url}
+            muted={muted}
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+            data-clip-preview-decoder
+            className="pointer-events-none absolute size-px opacity-0"
+            onError={() => {
+              void failed()
+            }}
+          />
+          <canvas
+            ref={picture}
+            aria-hidden="true"
+            data-clip-preview-picture
+            className="pointer-events-none absolute max-w-none"
+            style={{
+              width: `${crop.width}%`,
+              height: `${crop.height}%`,
+              left: `${crop.left}%`,
+              top: `${crop.top}%`,
+              opacity,
+              zIndex: item.index,
+            }}
+          />
+        </>
       )}
       {master && (!url || error) && (
         <Typography

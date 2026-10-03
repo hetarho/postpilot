@@ -239,6 +239,35 @@ it.each(['vertical', 'horizontal', 'square'])(
   },
 )
 
+it('keeps the last painted footage frame when the video decoder has no current frame', async () => {
+  const drawImage = vi.fn()
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    drawImage,
+  } as unknown as CanvasRenderingContext2D)
+  vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width: 270,
+    height: 480,
+  } as DOMRect)
+  vi.stubGlobal('devicePixelRatio', 1)
+  const view = mount()
+  const [decoder] = await syncedPlayers(view.container, 2, (player) =>
+    expect(player).toHaveAttribute('data-clip-preview-decoder'),
+  )
+  const picture = view.container.querySelector<HTMLCanvasElement>('[data-clip-preview-picture]')!
+  expect(decoder).toHaveClass('opacity-0')
+  expect(picture.style.opacity).toBe('1')
+
+  Object.defineProperty(decoder, 'readyState', { configurable: true, value: 4 })
+  fireEvent.loadedData(decoder)
+  expect(drawImage).toHaveBeenCalledWith(decoder, 0, 0, 270, 480)
+  const painted = drawImage.mock.calls.length
+  Object.defineProperty(decoder, 'readyState', { configurable: true, value: 1 })
+  fireEvent.seeked(decoder)
+  expect(drawImage).toHaveBeenCalledTimes(painted)
+  expect(picture.width).toBe(270)
+  expect(picture.height).toBe(480)
+})
+
 it('releases background footage and caption layers while the correction sheet owns the frame', async () => {
   const view = mount()
   await syncedPlayers(view.container, 2, (player) => expect(player).toHaveAttribute('src'))
