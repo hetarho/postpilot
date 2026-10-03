@@ -14,16 +14,20 @@ import {
   blockWith,
   copyPostContent,
   newBlock,
+  PHOTO_GROUP_MAX,
   postContentWith,
   type PostDraft,
 } from '@/entities/post'
-import { BlockType, type Block, type PostContent } from '@/shared/api'
+import { BlockType, GalleryLayout, type Block, type PostContent } from '@/shared/api'
+import { blockPhotos } from '@/shared/lib'
 import {
   Button,
   Editable,
   FieldLabel,
   FieldMessage,
   Listbox,
+  SegmentedControl,
+  SortableList,
   Textarea,
   TextField,
   Typography,
@@ -64,13 +68,13 @@ export const BlockEditor = forwardRef<
       ),
     [content, post.images, post.videos],
   )
-  // A photo deleted after the text was written leaves its IMAGE block naming nothing: that is
-  // not an empty block, and the finalize says how many such places remain (POST-13).
+  // A photo deleted after the text was written leaves its IMAGE block or its place in a group
+  // naming nothing: that is not an empty block, and the finalize says how many such places remain
+  // — one per photo, a group counting each of its own (POST-13).
   const detachedPhotos = useMemo(() => {
     const attached = new Set(post.images.map((image) => image.filename))
-    return content.blocks.filter(
-      (block) => block.type === BlockType.IMAGE && block.file !== '' && !attached.has(block.file),
-    ).length
+    return content.blocks.flatMap(blockPhotos).filter((file) => file !== '' && !attached.has(file))
+      .length
   }, [content, post.images])
   const autosave = useContentAutosave({
     slug: post.slug,
@@ -268,6 +272,15 @@ function BlockControls({
                   },
                 ]
               : []),
+            // A group holds at least two photos (POST-106), so a post with one has no group to make.
+            ...(filenames.length > 1
+              ? [
+                  {
+                    value: BlockType.GALLERY,
+                    label: t('edit.blockTypeOption.gallery', { ns: 'posts' }),
+                  },
+                ]
+              : []),
             // Offered only when the post actually has a clip: a VIDEO block names an attached
             // video, and the save refuses one that names nothing (VIDEO-2).
             ...(videoFilenames.length > 0
@@ -279,7 +292,7 @@ function BlockControls({
                 ]
               : []),
           ]}
-          onChange={(type) => onChange(freshBlock(type, filenames[0], videoFilenames[0]))}
+          onChange={(type) => onChange(convertBlock(block, type, filenames, videoFilenames))}
           className="w-auto min-w-32"
         />
         <span className="ml-auto flex gap-1">
@@ -433,6 +446,9 @@ function BlockFields({
   onChange: (block: Block) => void
 }) {
   const { t } = useTranslation('posts')
+  if (block.type === BlockType.GALLERY) {
+    return <GalleryFields block={block} index={index} filenames={filenames} onChange={onChange} />
+  }
   if (block.type === BlockType.IMAGE || block.type === BlockType.VIDEO) {
     // A VIDEO block carries the IMAGE fields and none of its own (VIDEO-2), so the same three
     // controls edit it — only the list it picks from differs.
@@ -501,7 +517,120 @@ function BlockFields({
   )
 }
 
-function freshBlock(type: BlockType, firstImage?: string, firstVideo?: string): Block {
+/** A photo group's card (POST-106): its layout, its photos as an ordered list that can be moved,
+ *  removed down to two and added to up to PHOTO_GROUP_MAX, and the group's one alt and caption. */
+function GalleryFields({
+  block,
+  index,
+  filenames,
+  onChange,
+}: {
+  block: Block
+  index: number
+  filenames: string[]
+  onChange: (block: Block) => void
+}) {
+  const { t } = useTranslation('posts')
+  const remaining = filenames.filter((filename) => !block.files.includes(filename))
+  const layout = block.layout === GalleryLayout.SLIDE ? 'slide' : 'collage'
+  const setFiles = (files: string[]) => onChange(blockWith(block, { files }))
+  return (
+    <div className="mt-3 grid gap-3">
+      <SegmentedControl
+        ariaLabel={t('edit.group.layout')}
+        value={layout}
+        options={[
+          { value: 'collage', label: t('photoGroup.collage') },
+          { value: 'slide', label: t('photoGroup.slide') },
+        ]}
+        onChange={(value) =>
+          onChange(
+            blockWith(block, {
+              layout: value === 'slide' ? GalleryLayout.SLIDE : GalleryLayout.COLLAGE,
+            }),
+          )
+        }
+      />
+      <FieldLabel id={`block-group-photos-${index}`}>{t('edit.group.photos')}</FieldLabel>
+      <SortableList
+        density="compact"
+        labels={{ drag: t('edit.group.drag'), up: t('edit.group.up'), down: t('edit.group.down') }}
+        onReorder={(from, to) => {
+          const files = [...block.files]
+          const [moved] = files.splice(from, 1)
+          files.splice(to, 0, moved!)
+          setFiles(files)
+        }}
+        items={block.files.map((file, position) => ({
+          id: `${file}:${position}`,
+          content: (
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              <Typography variant="body" as="span" className="min-w-0 break-all">
+                {file}
+              </Typography>
+              <Button
+                variant="ghost"
+                aria-label={t('edit.group.remove', { filename: file })}
+                // A group holds at least two photos; to stand one alone, turn it into a 사진.
+                disabled={block.files.length <= 2}
+                onClick={() => setFiles(block.files.filter((_, at) => at !== position))}
+              >
+                ✕
+              </Button>
+            </span>
+          ),
+        }))}
+      />
+      <Listbox<string>
+        aria-label={t('edit.group.add')}
+        value=""
+        placeholder={t('edit.group.add')}
+        options={remaining.map((filename) => ({ value: filename, label: filename }))}
+        disabled={remaining.length === 0 || block.files.length >= PHOTO_GROUP_MAX}
+        onChange={(filename) => setFiles([...block.files, filename])}
+      />
+      <TextField
+        aria-label={t('edit.altText')}
+        value={block.alt}
+        onChange={(event) => onChange(blockWith(block, { alt: event.target.value }))}
+        placeholder={t('edit.photoDescription')}
+      />
+      <TextField
+        aria-label={t('edit.caption')}
+        value={block.caption}
+        onChange={(event) => onChange(blockWith(block, { caption: event.target.value }))}
+        placeholder={t('edit.captionPlaceholder')}
+      />
+    </div>
+  )
+}
+
+/** The type picker's change (POST-106). A 사진 turned into a group keeps its photo first and adds
+ *  the next attached photo; a group turned into a 사진 keeps its first photo with the alt and the
+ *  caption; every other change starts the new type fresh, as it always has. */
+function convertBlock(
+  block: Block,
+  type: BlockType,
+  filenames: string[],
+  videoFilenames: string[],
+): Block {
+  if (block.type === BlockType.IMAGE && type === BlockType.GALLERY && block.file !== '') {
+    const next = filenames.find((filename) => filename !== block.file)
+    return newBlock({
+      type,
+      files: next ? [block.file, next] : [block.file],
+      layout: GalleryLayout.COLLAGE,
+      alt: block.alt,
+      caption: block.caption,
+    })
+  }
+  if (block.type === BlockType.GALLERY && type === BlockType.IMAGE && block.files.length > 0) {
+    return newBlock({ type, file: block.files[0], alt: block.alt, caption: block.caption })
+  }
+  return freshBlock(type, filenames, videoFilenames[0])
+}
+
+function freshBlock(type: BlockType, images: string[] = [], firstVideo?: string): Block {
   switch (type) {
     case BlockType.HEADING:
       return newBlock({
@@ -520,7 +649,9 @@ function freshBlock(type: BlockType, firstImage?: string, firstVideo?: string): 
         items: [i18next.t('edit.newBlock.list', { ns: 'posts' })],
       })
     case BlockType.IMAGE:
-      return newBlock({ type, file: firstImage ?? '' })
+      return newBlock({ type, file: images[0] ?? '' })
+    case BlockType.GALLERY:
+      return newBlock({ type, files: images.slice(0, 2), layout: GalleryLayout.COLLAGE })
     case BlockType.VIDEO:
       return newBlock({ type, file: firstVideo ?? '' })
     default:
@@ -539,6 +670,15 @@ function validContent(
   if (content.blocks.length === 0) return false
   return content.blocks.every((block) => {
     if (block.type === BlockType.IMAGE) return filenames.includes(block.file)
+    // What the server's save refuses, refused here first (POST-106).
+    if (block.type === BlockType.GALLERY)
+      return (
+        block.files.length >= 2 &&
+        block.files.length <= PHOTO_GROUP_MAX &&
+        new Set(block.files).size === block.files.length &&
+        block.files.every((file) => filenames.includes(file)) &&
+        (block.layout === GalleryLayout.COLLAGE || block.layout === GalleryLayout.SLIDE)
+      )
     // A filename is unique across the two kinds, so a VIDEO block naming a photo is the wrong
     // block type — refused here exactly as the server refuses it.
     if (block.type === BlockType.VIDEO) return videoFilenames.includes(block.file)

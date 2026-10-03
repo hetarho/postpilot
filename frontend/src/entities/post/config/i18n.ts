@@ -53,9 +53,19 @@ export const i18n = {
         quote: '인용',
         list: '목록',
         image: '사진',
+        gallery: '사진 묶음',
         video: '영상',
       },
       newBlock: { text: '새 문단', heading: '새 소제목', quote: '새 인용문', list: '새 항목' },
+      group: {
+        layout: '배치',
+        photos: '묶을 사진',
+        add: '사진 추가',
+        remove: '{{filename}} 빼기',
+        drag: '끌어서 옮기기',
+        up: '위로',
+        down: '아래로',
+      },
     },
     editor: {
       answers: {
@@ -224,6 +234,7 @@ export const i18n = {
         quote: 'Quote',
         list: 'List',
         image: 'Photo',
+        gallery: 'Photo group',
         video: 'Video',
       },
       newBlock: {
@@ -231,6 +242,15 @@ export const i18n = {
         heading: 'New heading',
         quote: 'New quote',
         list: 'New item',
+      },
+      group: {
+        layout: 'Layout',
+        photos: 'Photos',
+        add: 'Add photo',
+        remove: 'Remove {{filename}}',
+        drag: 'Drag to move',
+        up: 'Move up',
+        down: 'Move down',
       },
     },
     editor: {
