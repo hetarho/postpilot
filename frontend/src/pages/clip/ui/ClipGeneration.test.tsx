@@ -364,6 +364,9 @@ it.each(['done', 'failed', 'cancelled'])(
         }),
       }),
     )
+    // A successful generation carries the workspace to ② so its result shows there; the next run
+    // starts from ① again. A failed or cancelled run never moves it.
+    if (status === 'done') await goToStep('생성')
     const approve = await openApproval(20)
     await waitFor(() => expect(approve).toBeEnabled())
     expect(starts).toHaveLength(1)
