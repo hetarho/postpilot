@@ -176,4 +176,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r31 261004 POST-105✎ collage rows of ≤3 (2 and 4 as rows of two)→one row · POST-107+ photo rotation shown everywhere and in the Naver copy, from the observation until the owner turns it · constraints PHOTO_GROUP_MAX 10→3, images +rotation +rotation_by_owner
+-

@@ -57,4 +57,4 @@
 - ops: the production bucket's CORS rule must allow browser `GET` (and PUT/HEAD for uploads) from the FE origin; the deploy asserts the preflight (DEPLOY.md §5)
 
 ## chg
-- r10 261004 EXPORT-15✎ the photo copy is turned by the photo's rotation
+-

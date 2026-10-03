@@ -209,4 +209,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r21 261004 TMPL-38✎ count ceiling 4→3 (the group cap), a stored count above it renders as the cap · constraints TEMPLATE_PHOTO_ROW_MAX 4→3
+-
