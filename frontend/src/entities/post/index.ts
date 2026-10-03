@@ -29,6 +29,7 @@ export {
   postContentWith,
 } from './model/content'
 export { BlockList } from './ui/BlockList'
+export { PhotoGroup } from './ui/PhotoGroup'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
 export { usePosts } from './api/usePosts'

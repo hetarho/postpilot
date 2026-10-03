@@ -6,6 +6,7 @@ import { Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
 import { blockKey, imageByFile } from '../model/content'
+import { PhotoGroup } from './PhotoGroup'
 
 interface BlockListProps {
   content: PostContent
@@ -164,6 +165,13 @@ export function BlockList({
                 </div>,
               )
             }
+            case BlockType.GALLERY:
+              // One place with one caption, laid out as a collage or a slide strip (POST-105).
+              return wrap(
+                block,
+                index,
+                <PhotoGroup key={key} block={block} images={imagesByFile} />,
+              )
             case BlockType.VIDEO: {
               const video = videosByFile.get(block.file)
               const rendered = (

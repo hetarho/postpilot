@@ -5,5 +5,5 @@ export {
   relativeFileUrl,
   yamlString,
 } from './escape'
-export { headingTag, walkBlocks } from './walk'
+export { blockPhotos, headingTag, walkBlocks } from './walk'
 export type { BlockVisitor } from './walk'

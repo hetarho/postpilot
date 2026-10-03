@@ -14,6 +14,14 @@ export const i18n = {
     generatedContent: '생성된 글',
     draftLabel: '초안',
     tags: '태그',
+    photoGroup: {
+      collage: '콜라주',
+      slide: '슬라이드',
+      previous: '이전 사진',
+      next: '다음 사진',
+      position: '{{current}} / {{total}}',
+      photoAlt: '{{alt}} ({{current}}/{{total}})',
+    },
     edit: {
       refine: '글 다듬기',
       conflict: '다른 화면에서 글이 바뀌었어요. 이 화면을 새로고침한 뒤 다시 수정해 주세요.',
@@ -177,6 +185,14 @@ export const i18n = {
     generatedContent: 'Generated post',
     draftLabel: 'Draft',
     tags: 'Tags',
+    photoGroup: {
+      collage: 'Collage',
+      slide: 'Slide',
+      previous: 'Previous photo',
+      next: 'Next photo',
+      position: '{{current}} / {{total}}',
+      photoAlt: '{{alt}} ({{current}}/{{total}})',
+    },
     edit: {
       refine: 'Refine post',
       conflict: 'This post changed in another screen. Reload this screen before editing again.',

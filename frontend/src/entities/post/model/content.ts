@@ -45,7 +45,9 @@ export function imageByFile(images: readonly PostImage[]): ReadonlyMap<string, P
 
 /** Stable enough for a read-only model result while still disambiguating repeats. */
 export function blockKey(block: Block, index: number): string {
-  return `${block.type}:${block.file || block.content || block.items.join('\u001f')}:${index}`
+  const identity =
+    block.file || block.content || block.items.join('\u001f') || block.files.join('\u001f')
+  return `${block.type}:${identity}:${index}`
 }
 
 export function hasContent(post: Pick<PostDraft, 'content'>): boolean {

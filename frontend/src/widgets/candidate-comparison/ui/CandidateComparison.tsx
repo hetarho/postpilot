@@ -169,6 +169,22 @@ function CandidateOutput({
                 {t('comparison.photo', { filename: block.file })}
                 {block.caption ? `: ${block.caption}` : ''}
               </Typography>
+            ) : block.type === 7 ? (
+              // A photo group is one line, as it is one place in the post (GEN-77); layout 2 is
+              // SLIDE, anything else reads as a collage (GEN-78).
+              <Typography
+                key={index}
+                variant="body"
+                className="bg-surface-recessed rounded-md px-3 py-2 break-words"
+              >
+                {t('comparison.photoGroup', {
+                  layout: t(
+                    block.layout === 2 ? 'comparison.layout.slide' : 'comparison.layout.collage',
+                  ),
+                  filenames: block.files.join(', '),
+                })}
+                {block.caption ? `: ${block.caption}` : ''}
+              </Typography>
             ) : (
               <Typography key={index} variant="body" className="whitespace-pre-wrap">
                 {block.content}

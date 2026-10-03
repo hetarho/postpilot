@@ -18,6 +18,7 @@ export { formatAppFailure } from './localization'
 export { activeLocale } from './localization'
 export type { Locale } from './localization'
 export {
+  blockPhotos,
   escapeHtml,
   escapeHtmlComment,
   escapeMarkdownLabel,

@@ -2,7 +2,13 @@ import { create } from '@bufbuild/protobuf'
 import { render, screen, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import type { ExperimentCandidate, ModelExperiment } from '@/entities/model-experiment'
-import { ObservationSchema } from '@/shared/api'
+import {
+  BlockSchema,
+  BlockType,
+  GalleryLayout,
+  ObservationSchema,
+  PostContentSchema,
+} from '@/shared/api'
 import { CandidateComparison } from './CandidateComparison'
 
 function written(title: string): ExperimentCandidate['output'] {
@@ -263,4 +269,34 @@ it('shows the owner answer above each piece and its comparison', () => {
   expect(screen.getByRole('region', { name: '내 답' })).toHaveTextContent(
     '보관 기간이 지나 내 답은 지워졌어요.',
   )
+})
+
+it('lists a photo group as one line naming its layout, files and caption', () => {
+  const output: ExperimentCandidate['output'] = {
+    kind: 'write',
+    content: create(PostContentSchema, {
+      title: '묶음 결과',
+      blocks: [
+        create(BlockSchema, {
+          type: BlockType.GALLERY,
+          files: ['a.jpg', 'b.jpg'],
+          layout: GalleryLayout.SLIDE,
+          caption: '넘겨 보기',
+        }),
+        create(BlockSchema, { type: BlockType.GALLERY, files: ['c.jpg', 'd.jpg'] }),
+      ],
+    }),
+  }
+  render(
+    <CandidateComparison
+      experiment={{
+        ...base,
+        candidates: base.candidates.map((candidate) => ({ ...candidate, output })),
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  expect(screen.getAllByText('사진 묶음(슬라이드) · a.jpg, b.jpg: 넘겨 보기')).toHaveLength(2)
+  // An unspecified layout reads as a collage, as the writer's filter makes it (GEN-78).
+  expect(screen.getAllByText('사진 묶음(콜라주) · c.jpg, d.jpg')).toHaveLength(2)
 })

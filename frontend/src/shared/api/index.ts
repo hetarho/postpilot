@@ -205,6 +205,7 @@ export {
   BlogField as ProtoBlogField,
   BlockSchema,
   BlockType,
+  GalleryLayout,
   ConfirmUploadResponseSchema,
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
