@@ -60,6 +60,12 @@ export function formatAppFailure(
         actual: failure.params.actual,
       })
   }
+  if (
+    failure.reason === 'CLIP_COMPOSITION_INVALID' &&
+    failure.params.reason === 'caption_region_overlap'
+  ) {
+    return i18next.getFixedT(locale, 'clips')('composition.errors.caption_region_overlap')
+  }
   // A narration caption is the model's, not a template line's, so it carries no
   // line to point at: say which caption instead, and never show a line 0.
   if (failure.reason === 'CLIP_COMPOSITION_INVALID') {

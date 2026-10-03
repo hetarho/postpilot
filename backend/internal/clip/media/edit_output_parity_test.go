@@ -34,11 +34,11 @@ func editedPlan(t *testing.T, ratio, pace string) (clip.EditPlan, clip.ProjectRe
 		plan.Cuts, plan.Portable.Cuts = append(plan.Cuts, edit), append(plan.Portable.Cuts, portable)
 	}
 	safe, _ := design.Safe(ratio)
-	owned := clip.NarrationCaption("narration-1", "여기 좋아요", 500, 3500)
+	owned := clip.NarrationCaption("narration-1", "여기 좋아요", 2600, 5500)
 	at := clip.CaptionPlacement{X: int(safe.X) + 24, Y: int(safe.Y+safe.Height) - 400}
 	owned.Owner = clip.OwnerCaption{Style: "neon", Size: 72, Position: &at}
 	owned.OwnerEdited = true
-	crossing := clip.NarrationCaption("narration-2", "두 컷을 지나요", 9500, 12500)
+	crossing := clip.NarrationCaption("narration-2", "두 컷을 지나요", 8500, 11500)
 	crossing.Resolved.Element.Style = "film"
 	if pace == "rapid" {
 		owned.Pace, crossing.Pace = "rapid", "rapid"
@@ -99,7 +99,7 @@ func TestEditedRegionsAndCaptionsReachPreviewAndExportAlike(t *testing.T) {
 				if owner.Style != "neon" || writer.Style != "film" {
 					t.Fatalf("the captions were restyled: %q %q", owner.Style, writer.Style)
 				}
-				if owner.Text != "여기 좋아요" || owner.StartMS != 500 || owner.EndMS != 3500 || writer.StartMS != 9500 || writer.EndMS != 12500 {
+				if owner.Text != "여기 좋아요" || owner.StartMS != 2600 || owner.EndMS != 5500 || writer.StartMS != 8500 || writer.EndMS != 11500 {
 					t.Fatalf("the captions moved: %+v %+v", owner, writer)
 				}
 				safe, _ := design.Safe(ratio)

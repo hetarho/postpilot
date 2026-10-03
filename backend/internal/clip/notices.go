@@ -8,15 +8,17 @@ import (
 	"github.com/postpilot/backend/internal/clip/composition"
 )
 
-// The three reasons the SERVER has for not placing a narration caption it was
+// The four reasons the SERVER has for not placing a narration caption it was
 // given: two captions claiming the same moment, an interval the output does not
-// hold, and a window too short to read (CLIP-66, CLIP-67, CDS-62). CLIP-138
+// hold, a project region claiming that interval, and a window too short to read
+// (CLIP-66, CLIP-67, CDS-62, CLIP-196). CLIP-138
 // admits nothing else here — a moment the writer left without a caption and a
 // fact the narration did not state are the writer's own choices, not events.
 const (
 	NoticeCaptionOverlap       = "caption_overlap"
 	NoticeCaptionOutsideOutput = "caption_outside_output"
 	NoticeCaptionFloor         = "caption_floor"
+	NoticeCaptionRegionOverlap = "caption_region_overlap"
 )
 
 // PlanNotice extends the existing text fallback vocabulary to cut and plan

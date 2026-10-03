@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r53 | Source-based short-form video creation and explicit browser/server exports, with outputs of 15–60 seconds and plan-bound monthly successful server-export allowances.
+> r54 | Source-based short-form video creation and explicit browser/server exports, with outputs of 15–60 seconds and plan-bound monthly successful server-export allowances.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -302,6 +302,11 @@
   - failure/cancellation releases the originating reservation; a later period never gains a replacement for an already-expired slot
   - an admitted render crossing reset or paid expiry completes against its original slot; a new explicit export requires current entitlement
 - CLIP-195 [o] exhausted server allowance offers next monthly renewal, an available upgrade or a supported browser export; existing-result download remains available. There is no separate export-count purchase and no AI-credit-to-export exchange. Browser support stays bounded by existing device, preparation and storage contracts rather than an unlimited-server promise.
+- CLIP-196 [o] drawn intro and outro intervals belong to their region text, with no caption visible in either interval in draft preview, browser export or server export (→CLIP-66 →CLIP-170).
+  - narration generation writes captions only in the interval between the regions; an unedited generated or template caption in a retained plan is fitted inside that interval or omitted with an element notice when it cannot fit
+  - a caption interval explicitly edited by the owner is never moved or removed to clear a region; an overlap is identified on that caption and blocks saving or rendering until corrected (→CLIP-67)
+  - adding a caption offers only free time between the regions; the disclosure badge remains governed by CLIP-46
+  - an enabled region with no drawable text has no region interval to reserve (→CLIP-170 →CLIP-187)
 
 ## flow
 - create: choose title and ratio, optionally starting from a video template whose design selection the project takes, to mint the project → select source footage in the order the clip should follow and explicitly enable any original sound to retain → enable each intro/outro with a preset or leave it off, and choose the AI caption style set, accent and caption pace → fill required facts, the target duration and any project instruction → choose 스토리라인 먼저 or 바로 만들기 and approve its ceiling

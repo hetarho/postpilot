@@ -155,6 +155,7 @@ func narrationCaptions(plan *clip.EditPlan, wire narrationJSON, timeline composi
 // off (GUIDE-42).
 func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, portable *clip.PortablePlan, captions []narrationCaptionJSON, pace string) {
 	ordered := slices.Clone(captions)
+	bodyStart, bodyEnd := clip.CaptionBodyWindow(input.Flow)
 	slices.SortStableFunc(ordered, func(a, b narrationCaptionJSON) int { return a.StartMS - b.StartMS })
 	used := map[string]bool{}
 	admitted := []clip.PortableText{}
@@ -175,6 +176,12 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 		}
 		if caption.StartMS < 0 || caption.EndMS <= caption.StartMS || caption.EndMS > plan.DurationMS {
 			drop(clip.NoticeCaptionOutsideOutput)
+			continue
+		}
+		caption.StartMS = max(caption.StartMS, bodyStart)
+		caption.EndMS = min(caption.EndMS, bodyEnd)
+		if caption.StartMS >= caption.EndMS {
+			drop(clip.NoticeCaptionRegionOverlap)
 			continue
 		}
 		// Ordered by start, so only the caption before this one can collide.
@@ -241,7 +248,7 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			if short := caption.ShortText; fallback == "" && check(short) == "" && end-start >= clip.MinExposureMS(short) {
 				chosen, fallback = short, "short_text"
 			} else {
-				room := plan.DurationMS
+				room := bodyEnd
 				if index+1 < len(ordered) {
 					room = min(room, ordered[index+1].StartMS)
 				}

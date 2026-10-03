@@ -14,7 +14,7 @@ import (
 // (CLIP-139, CLIP-142). The body below says intro="b" and the project says "a".
 const designedBody = `<clip version="1" intro="b" caption="bold" outro="e">` +
 	`<text id="hello" kind="fixed" role="hook" basis="output-start"><row>안녕하세요</row></text>` +
-	`<text id="one" kind="fixed" role="caption" basis="whole">첫 문장</text>` +
+	`<text id="one" kind="fixed" role="caption" basis="output-start" start="3" end="12">첫 문장</text>` +
 	`<text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 
 func TestLayoutTakesTheRegionPresetFromTheProjectNotTheFrozenDocument(t *testing.T) {

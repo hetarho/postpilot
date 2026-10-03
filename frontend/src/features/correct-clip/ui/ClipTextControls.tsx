@@ -36,6 +36,7 @@ export function ClipTextControls({
   text,
   change,
   invalid,
+  regionOverlap,
   notices = [],
   language,
   captionStyles = [],
@@ -49,6 +50,7 @@ export function ClipTextControls({
   text: ClipEditableText
   change: (edit: TimelineEdit, group?: string) => void
   invalid: boolean
+  regionOverlap?: boolean
   /** The project's AI caption set (CLIP-142). It bounds what a writer picks, not the owner:
    *  here it only says what a caption naming no style is drawn in. */
   captionStyles?: readonly string[]
@@ -118,7 +120,11 @@ export function ClipTextControls({
           end: clipSeconds(interval.endMs),
         })}
       </Typography>
-      {invalid && <FieldMessage>{t('timeline.textInvalid')}</FieldMessage>}
+      {invalid && (
+        <FieldMessage>
+          {t(regionOverlap ? 'timeline.captionRegionOverlap' : 'timeline.textInvalid')}
+        </FieldMessage>
+      )}
       {refusal && (
         <div role="alert">
           <AppFailureMessage failure={refusal} />

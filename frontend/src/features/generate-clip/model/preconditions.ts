@@ -85,3 +85,17 @@ export function readyClipBatch(batch: ReadyClipBatch | undefined, projectId: str
     batch.sources.every((s) => s.state === 'ready' && s.actualBytes === s.metadata.bytes)
   )
 }
+
+/** A saved edit may use only part of the retained batch. Match the server's
+ * render admission: every used fingerprint must be present, and retained
+ * fingerprints must remain unique. */
+export function renderClipSourcesAvailable(
+  batch: ReadyClipBatch,
+  usedFingerprints: readonly string[],
+) {
+  const retained = new Set(batch.sources.map((source) => source.metadata.fingerprint))
+  return (
+    retained.size === batch.sources.length &&
+    usedFingerprints.every((fingerprint) => retained.has(fingerprint))
+  )
+}

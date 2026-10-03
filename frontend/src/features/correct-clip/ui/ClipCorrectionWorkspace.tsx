@@ -52,6 +52,7 @@ export interface ClipEditorPreviewProps {
   onDisplayedFrame: (frame: ClipDisplayedFrame) => void
   maxHeight: number
   compact: boolean
+  suspended: boolean
   stickyTop?: number
   /** ②'s info control, overlaid at the frame's top-right beside the player's own (CLIP-148). */
   corner?: ReactNode
@@ -239,6 +240,7 @@ export function ClipCorrectionWorkspace({
     timeline.selection?.kind === 'text'
       ? draft.elements?.find((text) => text.instanceId === timeline.selection?.id)
       : undefined
+  const sheetOpen = !!cut || !!text
   const index = cut ? draft.cuts.indexOf(cut) : -1
   const source = state.sources.find((s) => s.id === cut?.sourceId)
   const errors = correction.validation?.cuts[index]
@@ -298,6 +300,7 @@ export function ClipCorrectionWorkspace({
           timeMs: timeline.timeMs,
           onTimeChange: seek,
           onDisplayedFrame: setFrame,
+          suspended: sheetOpen,
           maxHeight: Math.min(
             previewBudget ?? Infinity,
             viewport.height *
@@ -515,7 +518,7 @@ export function ClipCorrectionWorkspace({
           The body is the sheet's one scroller, so the destructive control in
           its pinned footer stays reachable at 360px with the keyboard open. */}
       <Sheet
-        open={!!cut || !!text}
+        open={sheetOpen}
         labelledBy="clip-item-sheet-title"
         onClose={() => dispatch({ type: 'select' })}
         header={
@@ -861,6 +864,9 @@ export function ClipCorrectionWorkspace({
                 notices={notices}
                 language={language}
                 change={change}
+                regionOverlap={correction.validation?.elements.some(
+                  (e) => e.id === text.instanceId && e.regionOverlap,
+                )}
                 invalid={
                   !!correction.validation?.elements.some(
                     (e) =>

@@ -61,6 +61,11 @@ func TestAnEditedClipWithNoTemplateReachesBothRenderKindsAsEdited(t *testing.T) 
 		switch {
 		case text.Role == "caption" && styled == "":
 			draft.Elements[i].Owner.Style, styled = "neon", text.InstanceID
+			// This owner's caption must leave the enabled intro and outro to
+			// their region words; the stored writer interval predates that rule.
+			start, end := 3000, 6000
+			draft.Elements[i].Basis = "output-start"
+			draft.Elements[i].StartMS, draft.Elements[i].EndMS = &start, &end
 		case text.InstanceID == "project-intro":
 			draft.Elements[i].Rows[1].Text = "연남동"
 		}

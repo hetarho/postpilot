@@ -25,6 +25,7 @@ import {
   clipModelsReady,
   clipQuoteBinding,
   readyClipBatch,
+  renderClipSourcesAvailable,
   selectedClipStatus,
   type ClipEligibilityState,
 } from '../model/preconditions'
@@ -341,11 +342,12 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       consumed.current.has(batch.id)
     )
       return
-    const required = new Set(project.editing.plan.cuts.map((c) => c.fingerprint))
     if (
       !readyClipBatch(batch, project.id, Date.now()) ||
-      batch.sources.length !== required.size ||
-      batch.sources.some((s) => !required.delete(s.metadata.fingerprint))
+      !renderClipSourcesAvailable(
+        batch,
+        project.editing.plan.cuts.map((cut) => cut.fingerprint),
+      )
     ) {
       setLocalFailure({ reason: 'CLIP_SOURCE_UNAVAILABLE', params: {} })
       return

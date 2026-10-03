@@ -215,6 +215,51 @@ it('returning to the list never cancels work; opening it again restores focused 
   expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
 })
 
+it('opens the new storyline in 수정 after a request from 생성 on an existing plan', async () => {
+  const job: FakeGenerationJobRow = {
+    id: 'storyline-again',
+    kind: 'storyline_clip',
+    status: 'running',
+    stage: 'storyline',
+    clipProjectId: 'clip',
+  }
+  let started = false
+  const view = mount(
+    {
+      readProject: (p) => ({
+        ...p,
+        latestJob: started ? job : undefined,
+        storyline:
+          job.status === 'done'
+            ? {
+                paragraphs: [{ text: '새로 작성한 스토리라인', observationIds: [] }],
+                editedByHand: false,
+                addedSourceIds: [],
+                takenOutObservationIds: [],
+              }
+            : undefined,
+      }),
+    },
+    [job],
+  )
+  await userEvent.click(await screen.findByRole('tab', { name: '생성' }))
+  expect(screen.getByRole('tab', { name: '생성' })).toHaveAttribute('aria-selected', 'true')
+  started = true
+  await act(() =>
+    view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
+  )
+  await screen.findByRole('progressbar', { name: '스토리라인 작성 중' })
+  job.status = 'done'
+  await act(() =>
+    view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
+  )
+  await waitFor(() =>
+    expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true'),
+  )
+  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  expect(await screen.findByText('새로 작성한 스토리라인')).toBeVisible()
+})
+
 it('keeps cancellation unavailable for a legacy attempt', async () => {
   const job = {
     id: 'legacy',

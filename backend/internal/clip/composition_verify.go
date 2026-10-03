@@ -160,6 +160,10 @@ func verifyElementIdentity(element CompositionElement, r composition.ResolvedEle
 // the per-cut reading they were rendered under; a narration caption holds its
 // window against every caption on the timeline.
 func (v *manifestVerifier) verifyCaptionWindow(element CompositionElement, text PortableText) string {
+	bodyStart, bodyEnd := CaptionBodyWindow(v.plan)
+	if element.StartMS < bodyStart || element.EndMS > bodyEnd {
+		return NoticeCaptionRegionOverlap
+	}
 	if text.Scope == NarrationScope {
 		for _, other := range v.narrationWindows {
 			if element.StartMS < other.EndMS && other.StartMS < element.EndMS {

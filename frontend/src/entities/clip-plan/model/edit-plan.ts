@@ -134,6 +134,9 @@ export interface ClipEditableText {
    *  absolute times on the output timeline, and the template declares none of
    *  them. A read projection carried back unchanged (CLIP-134). */
   narration?: boolean
+  /** Server-owned authorship flag: generated captions can be fitted around
+   * regions, while a person's edited caption must keep its exact interval. */
+  ownerEdited?: boolean
   /** Request-only marker for a caption the owner is adding. The server mints
    *  the identity and never returns this, so it is never read back. */
   creation?: { kind: string }

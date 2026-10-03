@@ -34,6 +34,9 @@ type CorrectionText struct {
 	// ids beside it: a draft carries it back unchanged, and only `Creation`
 	// makes a new one.
 	Narration bool
+	// Read-only origin of the current caption interval. A correction request
+	// cannot change this flag; the server compares the submitted fields instead.
+	OwnerEdited bool
 	// Request-only provenance for a caption the plan does not yet contain. It
 	// is never stored and never projected back, so one caption is created
 	// exactly once — the rule a created cut follows.
@@ -52,7 +55,7 @@ func correctionText(t PortableText) CorrectionText {
 		StartMS: e.StartMS, EndMS: e.EndMS, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword,
 		ResolvedStartMS: r.StartMS, ResolvedEndMS: r.EndMS, GroupID: r.GroupID, ItemID: r.ItemID,
 		Phrases: slices.Clone(t.Phrases), StaleEvidence: t.StaleEvidence, Evidence: slices.Clone(t.Evidence), FallbackReason: t.FallbackReason,
-		Owner: t.Owner, Narration: t.Scope == NarrationScope}
+		Owner: t.Owner, Narration: t.Scope == NarrationScope, OwnerEdited: t.OwnerEdited}
 	if t.Placement != nil {
 		a, b := t.Placement.StartMS, t.Placement.EndMS
 		result.EffectiveStartMS, result.EffectiveEndMS = &a, &b
@@ -266,6 +269,7 @@ func (c *nativeCorrection) validateElementEdit(edit CorrectionText) error {
 // placement and the stale-evidence mark untouched.
 func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociation) PortableText {
 	before := correctionText(t)
+	edit.OwnerEdited = before.OwnerEdited
 	edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
 	edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
 	reviewed := edit.EvidenceReviewed

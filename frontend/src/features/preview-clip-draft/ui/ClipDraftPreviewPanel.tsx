@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react'
+import { useCallback, useState, type ComponentProps } from 'react'
 import { ClipDraftPreview } from '@/entities/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import { useClipDraftPreview } from '../model/useClipDraftPreview'
@@ -24,16 +24,22 @@ export function ClipDraftPreviewPanel({
   const [localTime, setLocalTime] = useState(0)
   const timeMs = controlledTime ?? localTime
   const preview = useClipDraftPreview({ projectId, revision, plan, timeMs })
+  // The player uses this callback to register its frame clock. Keep its identity through
+  // playhead updates so a new video-frame callback is not torn down on every frame.
+  const changeTime = useCallback(
+    (ms: number) => {
+      setLocalTime(ms)
+      onTimeChange?.(ms)
+    },
+    [onTimeChange],
+  )
   return (
     <ClipDraftPreview
       {...rest}
       plan={plan}
       preview={preview}
       timeMs={timeMs}
-      onTimeChange={(ms) => {
-        setLocalTime(ms)
-        onTimeChange?.(ms)
-      }}
+      onTimeChange={changeTime}
     />
   )
 }

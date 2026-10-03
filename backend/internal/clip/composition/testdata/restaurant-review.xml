@@ -1,0 +1,29 @@
+<clip version="1">
+  <field id="place" label="상호명" required="true" chars="9">간판에 적힌 상호명만 적어 주세요. 지역명과 상세 주소는 빼고, 공백 제외 9자 이내로 적어 주세요. 첫 화면의 큰 제목입니다. 예: 성수 곱창</field>
+  <field id="region" label="지역" required="true" chars="12">동네나 가까운 지역을 짧게 적어 주세요. 첫 화면에서 상호명 아래의 작은 글씨입니다. 상세 주소, 건물명, 층수는 빼 주세요. 예: 성수동</field>
+  <field id="extra" label="방문 정보 한 가지" required="false" chars="28">예약, 대기, 주차, 브레이크타임, 휴무 중 직접 확인한 사실이 있다면 한 가지만 적어 주세요. 방문 당시 조건과 시간은 그대로 두고, 현재도 같다고 단정하지 마세요. 없으면 비워 두세요. 예: 평일 저녁 예약</field>
+  <field id="menu" label="화면에 표시할 메뉴 전체" required="true" chars="18">먹은 메뉴를 하나씩 추가하지 말고, 한 칸에 모두 적어 주세요. 한 화면에 여러 메뉴가 함께 나오면 빠짐없이 보이도록 짧은 이름을 · 로 연결하세요. 예: 피자 · 링귀니 · 라구. 이 문구가 주문 장면에 그대로 나오므로 공백 제외 18자 이내로 적고 가격은 넣지 마세요.</field>
+  <field id="verdict" label="한줄평" required="true" chars="18">이번 식사의 좋았던 점이나 아쉬웠던 점을 한 문장으로 적어 주세요. 마지막 화면에 그대로 표시됩니다. 공백 제외 18자 이내로 적어 주세요. 예: 음식도 야경도 기억에 남아요</field>
+  <field id="score" label="다시 갈 마음" required="true" chars="6">숫자 평점 대신 다시 갈 마음을 짧은 말로 적어 주세요. 마지막 화면에서 크게 표시됩니다. 공백 제외 6자 이내로 적어 주세요. 예: 또 갈래요 / 한 번이면 충분</field>
+  <field id="disclosure" label="광고·협찬 표시" required="false">화면에 그대로 표시할 광고·협찬 문구를 적어 주세요. 제공받은 것이 있다면 내용을 분명히 밝히고, 없으면 비워 두세요.</field>
+
+  <text id="disclosure_badge" kind="fixed" role="badge" position="top"><value field="disclosure"/></text>
+  <text id="intro" kind="fixed" role="hook">
+    <row kind="fixed"><value field="place"/></row>
+    <row kind="fixed"><value field="region"/></row>
+  </text>
+
+  <stage name="도착">촬영된 간판, 외관 또는 입장 장면. 첫 화면의 큰 제목은 상호명, 작은 글씨는 지역입니다.</stage>
+  <stage name="주문">입력한 메뉴가 함께 보이는 주문 또는 음식 장면. 여러 접시가 한 화면에 나오면 메뉴를 하나만 고르지 않습니다.</stage>
+  <text id="menu_callout" kind="fixed" role="caption"><value field="menu"/></text>
+  <stage name="식사">화면에서 확인되는 음식의 모양과 변화. 함께 보이는 접시를 한 메뉴로 단정하지 않습니다.</stage>
+  <text id="food_detail" kind="ai" role="caption">화면에서 확인되는 특징을 친구에게 한마디 하듯 짧게 쓰세요. 한 화면에 여러 메뉴가 보이면 그중 하나만 전체 메뉴처럼 부르지 마세요. 입력한 메뉴 목록은 앞 문구에 그대로 나오므로 여기서 반복하지 말고, 맛과 향처럼 화면으로 알 수 없는 것은 쓰지 마세요.</text>
+  <text id="visit_info" kind="fixed" role="caption"><value field="extra"/></text>
+  <stage name="마무리">식사 후 촬영된 가게, 자리 또는 주변 분위기</stage>
+
+  <text id="closing_card" kind="fixed" role="ending">
+    <row kind="fixed"><value field="place"/></row>
+    <row kind="fixed"><value field="score"/></row>
+    <row kind="fixed"><value field="verdict"/></row>
+  </text>
+</clip>

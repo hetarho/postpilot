@@ -114,7 +114,7 @@ func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	out := &v1.ClipEditableText{InstanceId: t.InstanceID, ElementId: t.ElementID, CutId: t.CutID, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMs: int32(t.ResolvedStartMS), ResolvedEndMs: int32(t.ResolvedEndMS), GroupId: t.GroupID, ItemId: t.ItemID}
 	// Creation is request-only: the projection hands a caption back as an
 	// ordinary one, so a resave corrects it rather than creating it again.
-	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration
+	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration, out.OwnerEdited = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration, t.OwnerEdited
 	out.OwnerSizePx, out.OwnerStyle = int32(t.Owner.Size), t.Owner.Style
 	if at := t.Owner.Position; at != nil {
 		out.OwnerPosition = &v1.ClipCaptionPlacement{X: int32(at.X), Y: int32(at.Y)}

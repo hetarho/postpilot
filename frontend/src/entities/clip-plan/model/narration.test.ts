@@ -37,6 +37,53 @@ it('adds a caption at the playhead in free room, and none where the narration al
   expect(narrationSlot(crowded, 12100)).toBeUndefined()
 })
 
+it('keeps new and edited captions out of the intro and outro', () => {
+  const plan = clipNarrationFixture().plan
+  const sample = plan.elements![0]
+  plan.elements!.push(
+    {
+      ...sample,
+      instanceId: 'project-intro',
+      elementId: 'project-intro',
+      role: 'hook',
+      narration: false,
+      startMs: 0,
+      endMs: 2500,
+    },
+    {
+      ...sample,
+      instanceId: 'project-outro',
+      elementId: 'project-outro',
+      role: 'ending',
+      narration: false,
+      startMs: 16800,
+      endMs: plan.durationMs,
+    },
+  )
+  expect(nativeTextErrors(plan).find((e) => e.id === 'narration-1')).toMatchObject({
+    regionOverlap: false,
+  })
+  expect(narrationSlot(plan, 0)).toEqual({ startMs: 5000, endMs: 7000 })
+  expect(narrationSlot(plan, 15500)).toEqual({ startMs: 15500, endMs: 16800 })
+  expect(narrationSlot(plan, 17500)).toBeUndefined()
+  const edited = applyTimelineEdit(plan, {
+    type: 'text',
+    id: 'narration-1',
+    patch: { text: '직접 고친 자막' },
+  })
+  expect(nativeTextErrors(edited).find((e) => e.id === 'narration-1')).toMatchObject({
+    regionOverlap: true,
+  })
+  const corrected = applyTimelineEdit(edited, {
+    type: 'text',
+    id: 'narration-1',
+    patch: { startMs: 2500 },
+  })
+  expect(nativeTextErrors(corrected).find((e) => e.id === 'narration-1')).toMatchObject({
+    regionOverlap: false,
+  })
+})
+
 it('adds, retimes and removes a caption on absolute output time', () => {
   const plan = clipNarrationFixture().plan
   const added = applyTimelineEdit(plan, {
@@ -105,6 +152,7 @@ it('reads the narration removal reasons and no longer knows the retired ones', (
   // CLIP-147's own removal joins them: a region line the chosen preset cannot draw.
   for (const code of [
     'caption_overlap',
+    'caption_region_overlap',
     'caption_outside_output',
     'caption_floor',
     'region_line_surplus',

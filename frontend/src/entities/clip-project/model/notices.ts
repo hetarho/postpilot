@@ -72,6 +72,7 @@ export const clipNoticeKeys = {
   caption_overlap: 'captionOverlap',
   caption_outside_output: 'captionOutsideOutput',
   caption_floor: 'captionFloor',
+  caption_region_overlap: 'captionRegionOverlap',
   // The content checks are gone (CLIP-184): a plan stored under them still
   // carries their reasons, which read as the generic detail below.
   copy_omitted: 'textOmitted',

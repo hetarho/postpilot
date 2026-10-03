@@ -2917,6 +2917,9 @@ type ClipEditableText struct {
 	OwnerPosition *ClipCaptionPlacement `protobuf:"bytes,30,opt,name=owner_position,json=ownerPosition,proto3" json:"owner_position,omitempty"`
 	OwnerSizePx   int32                 `protobuf:"varint,31,opt,name=owner_size_px,json=ownerSizePx,proto3" json:"owner_size_px,omitempty"`
 	OwnerStyle    string                `protobuf:"bytes,32,opt,name=owner_style,json=ownerStyle,proto3" json:"owner_style,omitempty"`
+	// Read projection of the stored caption authorship. The server decides it
+	// from the saved plan and ignores this value when accepting a correction.
+	OwnerEdited   bool `protobuf:"varint,33,opt,name=owner_edited,json=ownerEdited,proto3" json:"owner_edited,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3173,6 +3176,13 @@ func (x *ClipEditableText) GetOwnerStyle() string {
 		return x.OwnerStyle
 	}
 	return ""
+}
+
+func (x *ClipEditableText) GetOwnerEdited() bool {
+	if x != nil {
+		return x.OwnerEdited
+	}
+	return false
 }
 
 // An absolute caption position in whole canvas pixels, never a fraction: the
@@ -5200,7 +5210,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12 \n" +
 	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x19\n" +
 	"\bstart_ms\x18\x03 \x01(\x05R\astartMs\x12\x15\n" +
-	"\x06end_ms\x18\x04 \x01(\x05R\x05endMs\"\xc1\t\n" +
+	"\x06end_ms\x18\x04 \x01(\x05R\x05endMs\"\xe4\t\n" +
 	"\x10ClipEditableText\x12\x1f\n" +
 	"\vinstance_id\x18\x01 \x01(\tR\n" +
 	"instanceId\x12\x1d\n" +
@@ -5237,7 +5247,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x0eowner_position\x18\x1e \x01(\v2\".postpilot.v1.ClipCaptionPlacementR\rownerPosition\x12\"\n" +
 	"\rowner_size_px\x18\x1f \x01(\x05R\vownerSizePx\x12\x1f\n" +
 	"\vowner_style\x18  \x01(\tR\n" +
-	"ownerStyleB\v\n" +
+	"ownerStyle\x12!\n" +
+	"\fowner_edited\x18! \x01(\bR\vownerEditedB\v\n" +
 	"\t_start_msB\t\n" +
 	"\a_end_msB\x15\n" +
 	"\x13_effective_start_msB\x13\n" +

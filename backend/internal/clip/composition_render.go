@@ -127,6 +127,9 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 		v.Elements = append(v.Elements, text)
 	}
 	plan.DurationMS, plan.Portable = duration, &v
+	if err := ValidateOwnerCaptionRegions(plan); err != nil {
+		return plan, err
+	}
 	return plan, nil
 }
 

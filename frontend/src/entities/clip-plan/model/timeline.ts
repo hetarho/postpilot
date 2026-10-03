@@ -110,7 +110,20 @@ export function textInterval(plan: ClipEditPlan, text: ClipEditableText) {
   return { startMs, endMs, valid, cutOffsetMs: cut?.startMs ?? 0 }
 }
 
+function captionBodyWindow(plan: ClipEditPlan) {
+  let startMs = 0
+  let endMs = plan.durationMs
+  for (const text of plan.elements ?? []) {
+    const interval = textInterval(plan, text)
+    if (!interval.valid) continue
+    if (text.role === 'hook') startMs = Math.max(startMs, interval.endMs)
+    if (text.role === 'ending') endMs = Math.min(endMs, interval.startMs)
+  }
+  return { startMs, endMs }
+}
+
 export function nativeTextErrors(plan: ClipEditPlan, aiSet: readonly string[] = []) {
+  const body = captionBodyWindow(plan)
   return (plan.elements ?? []).map((text) => {
     const interval = textInterval(plan, text)
     const phrases = text.phrases ?? []
@@ -118,6 +131,11 @@ export function nativeTextErrors(plan: ClipEditPlan, aiSet: readonly string[] = 
     return {
       id: text.instanceId,
       interval: !interval.valid,
+      regionOverlap:
+        text.role === 'caption' &&
+        !!text.ownerEdited &&
+        interval.valid &&
+        (interval.startMs < body.startMs || interval.endMs > body.endMs),
       identity:
         !text.instanceId ||
         (plan.elements ?? []).filter((t) => t.instanceId === text.instanceId).length !== 1,
@@ -173,13 +191,14 @@ export function nativeTextErrors(plan: ClipEditPlan, aiSet: readonly string[] = 
  *  when the narration already fills that moment — a caption never displaces
  *  another (CLIP-66). */
 export function narrationSlot(plan: ClipEditPlan, atMs: number, defaultMs = 2000) {
+  const body = captionBodyWindow(plan)
   const windows = (plan.elements ?? [])
     .filter((text) => text.narration)
     .map((text) => textInterval(plan, text))
     .filter((window) => window.valid)
     .sort((a, b) => a.startMs - b.startMs)
-  const duration = plan.durationMs
-  let startMs = Math.max(0, Math.min(atMs, duration - 1))
+  const duration = body.endMs
+  let startMs = Math.max(body.startMs, Math.min(atMs, duration - 1))
   for (const window of windows) {
     if (window.startMs <= startMs && startMs < window.endMs) startMs = window.endMs
   }
@@ -301,6 +320,9 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
         ...text,
         ...edit.patch,
         ...(Object.keys(edit.patch).some((key) => key !== 'evidenceReviewed')
+          ? { ownerEdited: true }
+          : {}),
+        ...(Object.keys(edit.patch).some((key) => key !== 'evidenceReviewed')
           ? { effectiveStartMs: undefined, effectiveEndMs: undefined }
           : {}),
         ...(edit.patch.phrases?.length
@@ -320,6 +342,7 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
       ...(next.elements ?? []),
       {
         narration: true,
+        ownerEdited: true,
         creation: { kind: 'add' },
         instanceId: edit.id,
         elementId: edit.id,

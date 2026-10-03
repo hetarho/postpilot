@@ -36,7 +36,7 @@
 | THEME | 21 | 21 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 53 | 53 | - | 2 |
+| CLIP | 54 | 54 | - | 2 |
 | CDS | 31 | 31 | - | 1 |
 | BILL | 8 | 8 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
@@ -63,9 +63,15 @@
 ## next
 - next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
 - create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
-- Template request job content retention is open in JOB-RETENTION-TODO.md; doc-review VOICE for lint's split candidate.
 
 ## log
+- 261004 update-ssot TMPL GEN EXPORT start: decide TMPL-39 — photo groups (collage/slide, one caption) through the post, rendering and export
+- 261003 T523 done: captions excluded from intro/outro; local 31-second DB render and full test suites verified
+- 261003 T523 start: keep generated and edited captions out of enabled regions
+- 261003 create-task CLIP r54 → T523
+- 261003 create-task CLIP start: CLIP-196+
+- 261003 update-ssot CLIP r54: CLIP-196+ caption-free intro/outro intervals in preview and both exports
+- 261003 update-ssot CLIP start: reserve enabled intro/outro spans for region text without captions
 - 261002 T522 done: finish entry scroll and Naver body-with-tags copy; Node 24 FE 3054 tests and local CI checks passed
 - 261002 T522 start: finish scroll and Naver body-with-tags copy
 - 261002 create-task POST r29 EXPORT r7 → T522
@@ -80,9 +86,3 @@
 - 261002 T521 start
 - 261002 T520 start
 - 261002 create-task VOICE r7 → T520 (write-stage verification admission), T521 (learning quiz and navigation)
-- 261002 create-task VOICE start
-- 261002 update-ssot VOICE r7: learning screen before first analysis, sequential prompts with readiness progress, renamed tab, and analysis title removed
-- 261002 update-ssot VOICE start: simplify voice learning flow, labels, and verification recovery
-- 261001 T519 done: six production templates updated after the matching API rollout; SQLite backup and 49 posts/273 saved answers verified unchanged
-- 261001 T519 start
-- 261001 T518 done: required experience answers gate new writing; Node 24 FE 3,041 tests, BE full tests, build/lint/codegen passed

@@ -251,7 +251,7 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 // Each unplated role samples the glyph union, including region slots with no
 // stroke. A bright canvas outside that union must not trigger a scrim.
 func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
-	body := `<clip version="1"><text id="caption" kind="fixed" role="caption" basis="whole">현재 장면</text><text id="intro" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"><row>평점</row><row>4.5</row><row>또 올 곳</row></text><text id="info" kind="fixed" role="info" basis="whole"><row role="label">메뉴</row><row role="caption">된장찌개</row></text></clip>`
+	body := `<clip version="1"><text id="caption" kind="fixed" role="caption" basis="output-start" start="3" end="12">현재 장면</text><text id="intro" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"><row>평점</row><row>4.5</row><row>또 올 곳</row></text><text id="info" kind="fixed" role="info" basis="whole"><row role="label">메뉴</row><row role="caption">된장찌개</row></text></clip>`
 	layout := measuredDeclared(t, declaredPlan(t, body, "vertical"))
 	canvas, _ := clip.ClipCanvas("vertical")
 	for _, visual := range layout.visuals {

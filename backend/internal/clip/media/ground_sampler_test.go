@@ -192,7 +192,7 @@ func TestSampledGroundsDrawTheSameAfterARoundTrip(t *testing.T) {
 	bright := Luminance{Mean: .82, Sigma: .01, R: .9, G: .9, B: .88, Frames: []float64{.81, .82, .83}}
 	dark := Luminance{Mean: .05, Sigma: .01, R: .1, G: .1, B: .1, Frames: []float64{.05, .05, .05}}
 	for _, tc := range []struct{ name, body string }{
-		{"regions", `<clip version="1" intro="a" outro="b"><text id="caption" kind="fixed" role="caption" basis="whole">현재 장면</text><text id="intro" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"><row>또 올 곳</row><row>성수</row></text></clip>`},
+		{"regions", `<clip version="1" intro="a" outro="b"><text id="caption" kind="fixed" role="caption" basis="output-start" start="3" end="12">현재 장면</text><text id="intro" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"><row>또 올 곳</row><row>성수</row></text></clip>`},
 		{"rapid", `<clip version="1" pace="rapid" styles="neon"><scene id="scene"><text id="caption" kind="ai" role="caption" basis="cut">여기 진짜 좋아요</text></scene></clip>`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

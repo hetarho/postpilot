@@ -320,6 +320,7 @@ export function ClipDraftPreview({
   onDisplayedFrame,
   maxHeight,
   compact = false,
+  suspended = false,
   stickyTop,
   corner,
 }: {
@@ -335,6 +336,9 @@ export function ClipDraftPreview({
   onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
   maxHeight?: number
   compact?: boolean
+  /** A selected item's sheet has its own source frame. Release this preview's video layers
+   *  while the sheet is open, so a browser cannot composite them through its scrim. */
+  suspended?: boolean
   stickyTop?: number
   /** Controls the caller overlays at the frame's top-right beside the player's own — ②'s info
    *  control (CLIP-148). Rendered outside the clipped frame so a panel it opens is not cut off. */
@@ -343,6 +347,11 @@ export function ClipDraftPreview({
   const { t } = useTranslation('clips')
   const [localTime, setLocalTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [lastSuspended, setLastSuspended] = useState(suspended)
+  if (lastSuspended !== suspended) {
+    setLastSuspended(suspended)
+    if (suspended) setPlaying(false)
+  }
   // A timeline selection/scrub is an external seek. Frame-driven updates use
   // changeTime below and already have the same local value, so playback keeps running.
   if (controlledTime !== undefined && !Object.is(controlledTime, localTime)) {
@@ -413,10 +422,10 @@ export function ClipDraftPreview({
         >
           <div
             data-clip-preview-canvas
-            className="bg-media-canvas-bg relative w-full overflow-hidden rounded-md"
+            className="bg-media-canvas-bg relative isolate w-full overflow-hidden rounded-md"
             style={{ aspectRatio: `${canvas.width} / ${canvas.height}` }}
           >
-            {flow && (
+            {flow && !suspended && (
               <ClipFlowFrame
                 timeline={timeline}
                 timeMs={timeMs}
@@ -427,6 +436,7 @@ export function ClipDraftPreview({
               />
             )}
             {!flow &&
+              !suspended &&
               slots.map((slot) => (
                 <PreviewVideo
                   key={slot.index % 2}
@@ -449,6 +459,7 @@ export function ClipDraftPreview({
                 />
               ))}
             {!flow &&
+              !suspended &&
               preview.ready &&
               preview.assets.map((asset, index) => {
                 const motion = previewMotion(asset, timeMs)

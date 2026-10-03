@@ -151,16 +151,17 @@ it('leaves ② without a dialog and saves the edit waiting for its autosave', as
   await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('떠나기 전 장면'))
 })
 
-// CLIP-53, CLIP-174: an item's sheet opens over whichever of the two previews is showing, and the
-// info control says what the flow view is (CLIP-176).
+// CLIP-53, CLIP-174: the selected item's sheet owns the visible source frame. The background
+// preview releases its media while the sheet is open, then returns to the chosen view.
 it('opens an item sheet over the flow view, and says the flow view is still frames', async () => {
   const view = await mount()
   await userEvent.click(screen.getByRole('button', { name: '흐름 보기' }))
   expect(view.container.querySelector('[data-flow-simulation]')).toBeInTheDocument()
   await selectCut()
   expect(screen.getByRole('dialog', { name: /컷 1/ })).toBeInTheDocument()
-  expect(view.container.querySelector('[data-flow-simulation]')).toBeInTheDocument()
+  expect(view.container.querySelector('[data-flow-simulation]')).not.toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
+  expect(view.container.querySelector('[data-flow-simulation]')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '이 미리보기에 대해' }))
   expect(
     await screen.findByText('멈춘 장면으로 흐름만 보여줘요. 실제 렌더와 다를 수 있어요.'),
@@ -563,6 +564,43 @@ it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', 
   // The edit reached the server BEFORE the render started.
   expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')
   expect(calls.indexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('StartClipRender'))
+})
+
+it('starts a server render when the retained batch includes an unused original', async () => {
+  const project = fixture()
+  const batch = create(ClipSourceBatchSchema, {
+    id: 'retained',
+    projectId: project.id,
+    current: true,
+    state: 'ready',
+    expiresAt: '2099-01-01T00:00:00Z',
+    sources: [
+      ...project.editing!.sources,
+      {
+        id: 'unused',
+        fingerprint: 'c'.repeat(64),
+        filename: 'unused.mp4',
+        durationMs: 40000,
+        width: 1920,
+        height: 1080,
+      },
+    ].map((source) => ({
+      id: source.id,
+      state: 'ready',
+      availability: 'available',
+      actualBytes: 5n,
+      retentionExpiresAt: '2099-01-01T00:00:00Z',
+      metadata: { ...source, contentType: 'video/mp4', bytes: 5n },
+    })),
+  })
+  const calls: string[] = []
+  const renderStarts: NonNullable<FakeClipsOptions['renderStarts']> = []
+  await mount({ projects: [project], retainedBatches: [batch], calls, renderStarts })
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+  await userEvent.click(screen.getByRole('button', { name: RENDER }))
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+  await waitFor(() => expect(calls).toContain('StartClipRender'))
+  expect(renderStarts.at(-1)).toMatchObject({ batchId: 'retained', expectedRevision: 1 })
 })
 
 const styleRadio = (name: string) =>

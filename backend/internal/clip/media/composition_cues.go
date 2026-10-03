@@ -16,6 +16,36 @@ import (
 func scheduleDeclaredCaptions(plan clip.EditPlan) ([]clip.PortableText, []clip.CopyFallback) {
 	result := slices.Clone(plan.Portable.Elements)
 	dropped, fallbacks := map[int]bool{}, []clip.CopyFallback{}
+	// Older composition plans can still carry cut-bound or fixed captions.
+	// They share the same output regions as narration, even when their original
+	// declaration used a whole-output or cut-relative interval.
+	bodyStart, bodyEnd := clip.CaptionBodyWindow(plan)
+	for i := range result {
+		text := &result[i]
+		if text.Resolved.Element.Role != "caption" || text.Scope == clip.NarrationScope || text.OwnerEdited {
+			continue
+		}
+		start, end := max(text.Resolved.StartMS, bodyStart), min(text.Resolved.EndMS, bodyEnd)
+		if start == text.Resolved.StartMS && end == text.Resolved.EndMS {
+			continue
+		}
+		if start >= end || end-start < readingFloor(*text, text.Resolved.Text) {
+			dropped[i] = true
+			reason := clip.NoticeCaptionFloor
+			if start >= end {
+				reason = clip.NoticeCaptionRegionOverlap
+			}
+			fallbacks = append(fallbacks, clip.CopyFallback{ElementID: text.Resolved.Element.ID, CutID: text.Resolved.CutID, Reason: reason})
+			continue
+		}
+		text.Resolved.StartMS, text.Resolved.EndMS = start, end
+		text.Phrases = nil
+		if text.Placement != nil {
+			placed := *text.Placement
+			placed.StartMS, placed.EndMS = start, end
+			text.Placement = &placed
+		}
+	}
 	scheduleNarration(plan, result, dropped, &fallbacks)
 	scheduleCutCaptions(result, dropped, &fallbacks)
 	kept := result[:0]
@@ -45,6 +75,7 @@ func readingFloor(t clip.PortableText, text string) int {
 // An owner-written or owner-edited caption keeps its own window exactly: a
 // manual interval is a decision, not a proposal (CDS-60, CDS-64).
 func scheduleNarration(plan clip.EditPlan, result []clip.PortableText, dropped map[int]bool, fallbacks *[]clip.CopyFallback) {
+	bodyStart, bodyEnd := clip.CaptionBodyWindow(plan)
 	order := []int{}
 	for i, text := range result {
 		if text.Scope == clip.NarrationScope && text.Resolved.Element.Role == "caption" {
@@ -59,24 +90,34 @@ func scheduleNarration(plan clip.EditPlan, result []clip.PortableText, dropped m
 	previousEnd := 0
 	for at, i := range order {
 		text := &result[i]
+		if !text.OwnerEdited {
+			start := max(text.Resolved.StartMS, bodyStart)
+			end := min(text.Resolved.EndMS, bodyEnd)
+			if start >= end {
+				drop(i, clip.NoticeCaptionRegionOverlap)
+				continue
+			}
+			setNarrationWindow(text, start, end)
+		}
 		if text.Resolved.StartMS < previousEnd {
 			drop(i, clip.NoticeCaptionOverlap)
 			continue
 		}
-		previousEnd = text.Resolved.EndMS
-		if text.OwnerEdited || text.Placement != nil {
+		if text.OwnerEdited {
+			previousEnd = text.Resolved.EndMS
 			continue
 		}
 		// The room this caption may take is what the next one leaves free.
-		room := plan.DurationMS
+		room := bodyEnd
 		for _, next := range order[at+1:] {
 			if !dropped[next] {
-				room = min(room, result[next].Resolved.StartMS)
+				room = min(room, max(bodyStart, result[next].Resolved.StartMS))
 				break
 			}
 		}
 		window := text.Resolved.EndMS - text.Resolved.StartMS
 		if window >= readingFloor(*text, text.Resolved.Text) {
+			previousEnd = text.Resolved.EndMS
 			continue
 		}
 		shorter := ""
@@ -88,14 +129,31 @@ func scheduleNarration(plan clip.EditPlan, result []clip.PortableText, dropped m
 		}
 		if shorter != "" {
 			text.Resolved.Text, text.FallbackReason = shorter, "shorter_copy"
+			previousEnd = text.Resolved.EndMS
 			continue
 		}
 		if end := text.Resolved.StartMS + readingFloor(*text, text.Resolved.Text); end <= room {
-			text.Resolved.EndMS, previousEnd = end, end
+			setNarrationWindow(text, text.Resolved.StartMS, end)
+			previousEnd = end
 			continue
 		}
 		drop(i, clip.NoticeCaptionFloor)
 	}
+}
+
+func setNarrationWindow(text *clip.PortableText, start, end int) {
+	if text.Resolved.StartMS == start && text.Resolved.EndMS == end {
+		return
+	}
+	text.Resolved.StartMS, text.Resolved.EndMS = start, end
+	text.Resolved.Element.StartMS, text.Resolved.Element.EndMS = &start, &end
+	if text.Placement != nil {
+		placed := *text.Placement
+		placed.StartMS, placed.EndMS = start, end
+		text.Placement = &placed
+	}
+	// An automatic rapid caption's phrase windows are rebuilt in the new span.
+	text.Phrases = nil
 }
 
 // scheduleCutCaptions is the sequencing a FROZEN legacy plan was written under:
@@ -105,7 +163,7 @@ func scheduleCutCaptions(result []clip.PortableText, dropped map[int]bool, fallb
 	groups := map[string][]int{}
 	order := []string{}
 	for i, text := range result {
-		if text.Scope != clip.NarrationScope && text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
+		if !dropped[i] && text.Scope != clip.NarrationScope && text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
 			if _, seen := groups[text.Resolved.CutID]; !seen {
 				order = append(order, text.Resolved.CutID)
 			}

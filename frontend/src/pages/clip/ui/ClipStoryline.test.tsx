@@ -137,6 +137,14 @@ function bare(extra: Partial<FakeClipProject> = {}): FakeClipProject {
     ...extra,
   }
 }
+
+function regionSafeEditing() {
+  const editing = clipTimelineFixture()
+  const first = editing.plan.elements!.find((text) => text.instanceId === 'caption-a')!
+  first.startMs = first.resolvedStartMs = 2600
+  first.endMs = first.resolvedEndMs = 6360
+  return editing
+}
 const block = (name: '인트로' | '아웃트로') => within(screen.getByRole('region', { name }))
 const line = (name: '인트로' | '아웃트로', n: number) =>
   within(block(name).getAllByRole('listitem')[n - 1])
@@ -558,7 +566,7 @@ it('lands a delayed slot save before the correction and the render it precedes',
     outroPreset: 'b',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
-    editing: clipTimelineFixture(),
+    editing: regionSafeEditing(),
     regions: regions({
       slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
     }),
@@ -615,7 +623,7 @@ it('shares one set of region words between the storyline block and the correctio
     outroPreset: 'b',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
-    editing: clipTimelineFixture(),
+    editing: regionSafeEditing(),
     regions: regions({
       slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
     }),
@@ -673,7 +681,7 @@ function rendered(): FakeClipProject {
     outroPreset: 'b',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
-    editing: clipTimelineFixture(),
+    editing: regionSafeEditing(),
     regions: regions({
       slots: [slot('intro', 1, '성수 로컬', { ownerFixed: true }), slot('intro', 2)],
     }),

@@ -239,6 +239,33 @@ it.each(['vertical', 'horizontal', 'square'])(
   },
 )
 
+it('releases background footage and caption layers while the correction sheet owns the frame', async () => {
+  const view = mount()
+  await syncedPlayers(view.container, 2, (player) => expect(player).toHaveAttribute('src'))
+  expect(view.container.querySelectorAll('img')).toHaveLength(1)
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  expect(screen.getByRole('button', { name: '일시 정지' })).toBeInTheDocument()
+
+  const rerender = (suspended: boolean) =>
+    view.rerender(
+      <ClipDraftPreview
+        plan={draft}
+        ratio="vertical"
+        sources={sources}
+        resolvePlayback={view.access}
+        preview={view.preview}
+        suspended={suspended}
+      />,
+    )
+  rerender(true)
+  expect(view.container.querySelectorAll('video')).toHaveLength(0)
+  expect(view.container.querySelectorAll('img')).toHaveLength(0)
+  expect(screen.getByRole('button', { name: '재생' })).toBeInTheDocument()
+  rerender(false)
+  await syncedPlayers(view.container, 2, (player) => expect(player).toHaveAttribute('src'))
+  expect(view.container.querySelectorAll('img')).toHaveLength(1)
+})
+
 it('keeps the missing original state separate from successful text preparation', async () => {
   mount(
     'vertical',

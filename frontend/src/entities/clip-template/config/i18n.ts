@@ -175,6 +175,8 @@ export const i18n = {
       errors: {
         items_required: '“{{element}}”의 부족한 항목을 추가한 뒤 클립을 생성해 주세요.',
         caption: '영상의 {{n}}번째 자막을 확인해 주세요.',
+        caption_region_overlap:
+          '인트로·아웃트로 구간에는 자막을 놓을 수 없어요. 자막 시간을 옮겨 주세요.',
         caption_size:
           '영상의 {{n}}번째 자막 크기를 {{min}}~{{max}} 사이로 맞춰 주세요(지금 {{actual}}).',
         element: '영상 구성의 {{element}} 항목을 확인해 주세요.',
@@ -388,6 +390,8 @@ export const i18n = {
       errors: {
         items_required: 'Add the missing items in “{{element}}” before generating the clip.',
         caption: 'Check caption {{n}} in the video.',
+        caption_region_overlap:
+          'Captions cannot appear during the intro or outro. Move this caption.',
         caption_size: 'Caption {{n}} must be sized {{min}}–{{max}}; it is {{actual}}.',
         element: 'Check {{element}} in the video composition.',
         items_required_count:

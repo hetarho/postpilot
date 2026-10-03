@@ -410,6 +410,9 @@ message ClipEditableText {
   ClipCaptionPlacement owner_position = 30;
   int32 owner_size_px = 31;
   string owner_style = 32;
+  // Read projection of the stored caption authorship. The server decides it
+  // from the saved plan and ignores this value when accepting a correction.
+  bool owner_edited = 33;
 }
 // An absolute caption position in whole canvas pixels, never a fraction: the
 // layout resolves everything to canvas pixels and the preview places the served

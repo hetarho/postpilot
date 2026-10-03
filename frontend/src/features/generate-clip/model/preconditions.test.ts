@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { emptyClipProject, type ClipProject, type ReadyClipBatch } from '@/entities/clip-project'
 import type { CatalogModel, StageSelectionState } from '@/entities/model-catalog'
-import { clipModelsReady, clipQuoteBinding, selectedClipStatus } from './preconditions'
+import {
+  clipModelsReady,
+  clipQuoteBinding,
+  renderClipSourcesAvailable,
+  selectedClipStatus,
+} from './preconditions'
 
 const model = (id: string, extra: Partial<CatalogModel> = {}): CatalogModel => ({
   ref: { providerId: 'p', modelId: id },
@@ -83,5 +88,25 @@ describe('clip model readiness (T112)', () => {
     expect(selectedClipStatus({ kind: 'ready', rows: rows('eligible') }, observe)).toBe('eligible')
     expect(selectedClipStatus({ kind: 'loading' }, observe)).toBeUndefined()
     expect(selectedClipStatus({ kind: 'ready', rows: rows('eligible') }, null)).toBeUndefined()
+  })
+})
+
+describe('render source admission', () => {
+  const batch = (fingerprints: string[]) =>
+    ({
+      sources: fingerprints.map((fingerprint) => ({ metadata: { fingerprint } })),
+    }) as ReadyClipBatch
+
+  it('allows retained originals that the edited plan no longer uses', () => {
+    expect(
+      renderClipSourcesAvailable(batch(['first', 'second', 'unused']), ['first', 'second']),
+    ).toBe(true)
+  })
+
+  it('refuses missing or duplicated retained fingerprints', () => {
+    expect(renderClipSourcesAvailable(batch(['first', 'unused']), ['first', 'second'])).toBe(false)
+    expect(
+      renderClipSourcesAvailable(batch(['first', 'first', 'second']), ['first', 'second']),
+    ).toBe(false)
   })
 })

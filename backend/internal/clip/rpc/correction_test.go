@@ -65,6 +65,16 @@ func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
 	}
 }
 
+func TestCaptionOwnerEditStatusIsReadOnlyOnTheWire(t *testing.T) {
+	wire := correctionTextProto(clip.CorrectionText{InstanceID: "narration-1", Role: "caption", OwnerEdited: true})
+	if !wire.OwnerEdited {
+		t.Fatal("the editing projection lost the saved owner edit")
+	}
+	if correctionText(wire).OwnerEdited {
+		t.Fatal("a correction request was allowed to set owner authorship")
+	}
+}
+
 func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
 	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}, 120, 1420)
 	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{Cuts: []clip.CorrectionCut{{ID: "one", PlaybackRatePermille: 1000, Copies: copies}}}}

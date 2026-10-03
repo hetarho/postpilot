@@ -178,7 +178,7 @@ func TestVerifierHoldsTheNarrationToTheTimelineAndItsFacts(t *testing.T) {
 	outside[0].EndMS = beyond.plan.DurationMS + 1
 	beyond.plan.Portable.Elements[0].Resolved.EndMS = outside[0].EndMS
 	err = clip.VerifyCompositionManifest(beyond.plan, outside, clip.DefaultCompositionLimits())
-	if !errors.As(err, &problem) || problem.Reason != "interval_outside" {
+	if !errors.As(err, &problem) || problem.Reason != clip.NoticeCaptionRegionOverlap {
 		t.Fatal("a caption past the end was rendered", err)
 	}
 }
