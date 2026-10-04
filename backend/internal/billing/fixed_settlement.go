@@ -464,7 +464,9 @@ func (s *Service) failFixedIntent(ctx context.Context, intent Intent, providerSt
 			if err != nil {
 				return err
 			}
-			if found && sub.Status == "active" && sub.UpdatedAt.Equal(current.SubscriptionUpdatedAt) {
+			// The renewal paid for one term: a refusal ends coverage while the subscription is still
+			// on that term, whatever else the owner changed since the order (BILL-8).
+			if found && sub.Status == "active" && sub.TermEnd.Equal(current.EffectiveAt) {
 				if err := s.failRenewalInTx(ctx, tx, plans, sub, current.Tier, current.Term,
 					Quote{KRW: current.KRW}, now); err != nil {
 					return err
