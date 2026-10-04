@@ -83,6 +83,8 @@
 | T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | doing@261005.pc |
 | T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | doing@261005.pc |
 | T579 | Make the clip release smoke green again | ARCH | T574 | doing@261005.pc |
+| T581 | Price the model-combo estimates through FX alone | QUOTA ARCH | - | doing@261005.pc |
+| T582 | Delete the billing regime production no longer runs | BILL ARCH | T581 | doing@261005.pc |
 
 ## next
 - implement-task T569–T579 (perf-cost follow-ups, QUOTA r34, BILL r9, release smoke), one commit per task, then push and watch CI.
@@ -91,6 +93,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 create-task T581 T582 (follow-ups found in T572: USD-terms estimator, the unused non-fixed billing regime) and start
 - 261005 T576 done: one export-window rule (usage.ExportWindowAt) for ledger, root and seed; proration via plan.QuoteUpgrade; TermEnd via plan.CoverageEnd; refundWindow constant; BE suite green
 - 261005 T572 done: the ledger prices through FX alone (required rate selector), legacy branches and copies deleted, migration 0131 closes pre-FX admissions and legacy monthly lots once; BE suite green
 - 261005 T569 done: a voice analysis freezes its 학습 글 snapshot at start and holds max(30 000, prompt runes); the run reads only the frozen ids; BE suite green
