@@ -57,7 +57,7 @@
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
 | conformance-all-260927 | converted@260927 |
-| perf-cost-261004 | open@261004 |
+| perf-cost-261004 | converted@261004 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -80,13 +80,34 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
+| T551 | Index the job and admission lookups every poll and provider call makes | ARCH | - | todo |
+| T552 | Run a clip hold's live model-access check before its write transaction | ARCH | - | todo |
+| T553 | Size storyline and template-request completions through the stage budget policy | ARCH | - | todo |
+| T554 | Send a template-request correction with only the answer it corrects | ARCH | T553 | todo |
+| T555 | Make the comparison list light and bound a comparison's candidate fan-out | ARCH | - | todo |
+| T556 | Read voice samples once and leave an unchanged answer alone | ARCH | - | todo |
+| T557 | Keep FX selection and balance reads off the writer and out of the lock | ARCH | - | todo |
+| T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
+| T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
+| T560 | Stop re-laying out a clip per caption-frames request and re-decoding JSON per poll | ARCH | - | todo |
+| T561 | Take job-kind lists out of generation_jobs' CHECKs and the dispatcher SQL | ARCH | T551 | todo |
+| T562 | Keep the billing pass running, charge each order once and never revert a cancel | ARCH | - | todo |
+| T563 | Record every confirmed refund and release credits a refused refund froze | ARCH | T562 | todo |
+| T564 | Stop the clip detail polling forever and stop each settings save from refetching it | ARCH | - | todo |
+| T565 | Send each clip autosave through its own project's sender and queue the clip storyline | ARCH | - | todo |
+| T566 | Keep lazily routed pages out of the entry chunk | ARCH | - | todo |
+| T567 | Keep every photo turn in the cache, and stop per-autosave fingerprint reads and poll listener leaks | ARCH | - | todo |
 
 ## next
+- implement-task T551–T567 (review perf-cost-261004), in order, one commit per task; update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for the `review` order exit (review notes).
 - implement-task T533; complete T533–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 create-task review/perf-cost-261004: T551–T567 (17 tasks) from 29 adopted findings; F10 back to [?] (VOICE-23/QUOTA-14 planning change); review converted
+- 261004 create-task review/perf-cost-261004 start: 30 adopted findings (P1/P2 + cost/bug P3) → tasks from T551; implemented in order, one commit per task
+- 261004 review-code perf-cost-261004 ready: 38 findings (P1 3 · P2 16 · P3 19); 30 adopted, maintainability P3 F22 F24–F28 F36 F37 held [?]
 - 261004 T533 start: sequential implementation with one validated commit per task; spoken provider boundary first
 - 261004 update-ssot POST r32: POST-108+ ①'s actions ask once (사진 없이 만들까요?) before a run with no photo or video attached (already live in 12d2f428)
 - 261004 spec validation passed: 18 tasks, full changed-decision coverage, current bases, acyclic dependencies and voice-first qualification; lint 0 errors (41 format/history warnings), git diff --check clean; no implementation
@@ -104,6 +125,3 @@
 - 261004 ideation familiar-video-editing-and-dubbing open: voice-creation milestone precedes dubbing; selective regeneration, independent captions and audio controls adopted; creation method/device/timing pending
 - 261004 ideation familiar-video-editing-and-dubbing start: voice creation precedes dubbing; record adopted regeneration, caption appearance and audio parity policies
 - 261004 ideation familiar-video-editing-and-dubbing open: first-round device/content/timing choices requested; remaining product proposals and engineering verification obligations separated
-- 261004 ideation familiar-video-editing-and-dubbing start: resolve editor, dubbing, synchronization and regeneration choices with the owner
-- 261004 ideation familiar-video-editing-and-dubbing open: editing-discoverability findings and TTS feasibility recorded; speech absent from current preview/export; device, dubbing and timing choices pending
-- 261004 ideation familiar-video-editing-and-dubbing start
