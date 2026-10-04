@@ -198,5 +198,3 @@ func optionalString(value string) any {
 	}
 	return value
 }
-
-var _ billing.IntentStore = (*Store)(nil)

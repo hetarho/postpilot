@@ -26,7 +26,6 @@ import (
 // at that size instead: a voice analysis reads every 학습 글 (QUOTA-14).
 const holdInputTokens = 30_000
 
-var ErrLotTouched = errors.New("credit lot has already been touched")
 var ErrLotNotFound = errors.New("credit lot was not found")
 var ErrSettlementOutcome = errors.New("settlement requires a persisted terminal outcome")
 
@@ -245,24 +244,6 @@ func (s *Service) VoucherLotStandings(ctx context.Context, lotIDs []string, at t
 	return standings, nil
 }
 
-func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	ok, err := s.purchases.VoidUntouchedLot(ctx, lotID)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrLotTouched
-	}
-	return nil
-}
-
-func (s *Service) LotUntouched(ctx context.Context, lotID string) (bool, error) {
-	if lotID == "" {
-		return false, nil
-	}
-	return s.purchases.LotUntouched(ctx, lotID)
-}
-
 // UntouchedLots answers, for each of the given purchased lots, whether it is still whole.
 //
 // It is the plural read behind a screen that renders a refund button per purchase: one
@@ -282,20 +263,6 @@ func (s *Service) UntouchedLots(ctx context.Context, lotIDs []string) (map[strin
 		untouched[id] = true
 	}
 	return untouched, nil
-}
-
-func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) error {
-	if credits <= 0 {
-		return errors.New("restore lot: credits must be positive")
-	}
-	ok, err := s.purchases.RestoreLot(ctx, lotID, credits)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrLotNotFound
-	}
-	return nil
 }
 
 func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits int) (bool, error) {

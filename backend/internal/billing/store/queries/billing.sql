@@ -35,31 +35,27 @@ SELECT user_id, provider, billing_key, customer_key, card_label, registered_at
 FROM payment_methods WHERE user_id = ?;
 
 -- name: ListBillingEvents :many
-SELECT id, user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
-       krw, provider_payment_key, order_id, note, created_at
+SELECT id, user_id, kind, tier, term, credits, krw, provider_payment_key, order_id, note,
+       created_at
 FROM billing_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?;
 
 -- name: ListCreditPurchases :many
-SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
-       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
-       p.charged_at, p.refunded_at
-FROM credit_purchases p
-JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
-WHERE p.user_id = ? ORDER BY p.charged_at DESC, p.id DESC;
+SELECT id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id,
+       charged_at, refunded_at
+FROM credit_purchases
+WHERE user_id = ? ORDER BY charged_at DESC, id DESC;
 
 -- name: GetCreditPurchase :one
-SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
-       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
-       p.charged_at, p.refunded_at
-FROM credit_purchases p
-JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
-WHERE p.user_id = ? AND p.id = ?;
+SELECT id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id,
+       charged_at, refunded_at
+FROM credit_purchases
+WHERE user_id = ? AND id = ?;
 
 -- name: InsertCreditPurchase :exec
 INSERT INTO credit_purchases (
-    id, user_id, lot_id, pack_id, credits, usd_cents, krw, provider_payment_key, order_id,
-    charged_at, refunded_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL);
+    id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id, charged_at,
+    refunded_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL);
 
 -- name: MarkCreditPurchaseRefunded :execrows
 UPDATE credit_purchases SET refunded_at = ?
@@ -90,9 +86,8 @@ DELETE FROM payment_methods WHERE user_id = ?;
 
 -- name: InsertBillingEvent :exec
 INSERT INTO billing_events (
-    user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
-    krw, provider_payment_key, order_id, note, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    user_id, kind, tier, term, credits, krw, provider_payment_key, order_id, note, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: UpsertSubscription :exec
 INSERT INTO subscriptions (

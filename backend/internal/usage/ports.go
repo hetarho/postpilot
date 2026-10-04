@@ -38,15 +38,12 @@ type LotLedger interface {
 	RaiseLot(ctx context.Context, lotID string, credits int) error
 }
 
-// PurchasedLotLedger is what a refund needs to know and do about a bought grant.
+// PurchasedLotLedger is what the billing screen needs to know about bought grants.
 type PurchasedLotLedger interface {
-	VoidUntouchedLot(ctx context.Context, lotID string) (bool, error)
-	LotUntouched(ctx context.Context, lotID string) (bool, error)
-	// UntouchedPurchasedLots answers the same question for many lots at once, on the read
-	// pool. It is for a screen deciding what to render, never for an answer about to decide
-	// a write — that is what LotUntouched's writer read is for.
+	// UntouchedPurchasedLots answers which of these purchased lots are still whole, on the
+	// read pool. It is for a screen deciding what to render, never for an answer about to
+	// decide a write.
 	UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error)
-	RestoreLot(ctx context.Context, lotID string, credits int) (bool, error)
 }
 
 // VoucherLotLedger is what a voucher's revocation and the operator's voucher list need about

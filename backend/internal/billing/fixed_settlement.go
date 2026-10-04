@@ -18,11 +18,7 @@ import (
 // review, and any other failure is logged and collected while the pass moves on. Orders
 // younger than pendingSettleGrace are left to the request path that created them.
 func (s *Service) ReconcilePending(ctx context.Context) error {
-	journals, err := s.intentStore()
-	if err != nil {
-		return err
-	}
-	intents, err := journals.DueIntents(ctx, s.now().Add(-pendingSettleGrace))
+	intents, err := s.store.DueIntents(ctx, s.now().Add(-pendingSettleGrace))
 	if err != nil {
 		return err
 	}
@@ -42,11 +38,7 @@ func (s *Service) ReconcilePending(ctx context.Context) error {
 // not emit a completion webhook for automatic billing, so the direct server
 // charge response and periodic order lookup use the same settlement function.
 func (s *Service) ReconcileOrder(ctx context.Context, orderID string) error {
-	journals, err := s.intentStore()
-	if err != nil {
-		return err
-	}
-	intent, found, err := journals.Intent(ctx, orderID)
+	intent, found, err := s.store.Intent(ctx, orderID)
 	if err != nil || !found {
 		return err
 	}
@@ -131,9 +123,8 @@ func (s *Service) reconcileFixedPayment(ctx context.Context, intent Intent, paym
 func (s *Service) reviewFixedIntent(ctx context.Context, intent Intent, payment Payment) error {
 	var marked bool
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-		journals := tx.(IntentStore)
 		var err error
-		marked, err = journals.MarkIntent(ctx, intent.OrderID, "review", payment.Status, payment.PaymentKey, s.now())
+		marked, err = tx.MarkIntent(ctx, intent.OrderID, "review", payment.Status, payment.PaymentKey, s.now())
 		return err
 	})
 	if err != nil {
@@ -169,8 +160,7 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 	var firstApply bool
 	var review error
 	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
-		journals := tx.(IntentStore)
-		current, found, err := journals.Intent(ctx, intent.OrderID)
+		current, found, err := tx.Intent(ctx, intent.OrderID)
 		if err != nil {
 			return err
 		}
@@ -187,7 +177,7 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 			// Every refusal returns before the apply path writes, so this transaction
 			// commits the review mark alone.
 			if unapplicable(err) {
-				if _, markErr := journals.MarkIntent(ctx, current.OrderID, "review", payment.Status, payment.PaymentKey, now); markErr != nil {
+				if _, markErr := tx.MarkIntent(ctx, current.OrderID, "review", payment.Status, payment.PaymentKey, now); markErr != nil {
 					return markErr
 				}
 				review = err
@@ -211,7 +201,7 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 				}
 			}
 		}
-		marked, err := journals.MarkIntent(ctx, current.OrderID, "applied", payment.Status, payment.PaymentKey, now)
+		marked, err := tx.MarkIntent(ctx, current.OrderID, "applied", payment.Status, payment.PaymentKey, now)
 		if err != nil {
 			return err
 		}
@@ -445,8 +435,7 @@ func (s *Service) failFixedIntent(ctx context.Context, intent Intent, providerSt
 	var firstFailure bool
 	var lapsed bool
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
-		journals := tx.(IntentStore)
-		current, found, err := journals.Intent(ctx, intent.OrderID)
+		current, found, err := tx.Intent(ctx, intent.OrderID)
 		if err != nil {
 			return err
 		}
@@ -478,7 +467,7 @@ func (s *Service) failFixedIntent(ctx context.Context, intent Intent, providerSt
 				return err
 			}
 		}
-		marked, err := journals.MarkIntent(ctx, current.OrderID, "failed", providerStatus, "", now)
+		marked, err := tx.MarkIntent(ctx, current.OrderID, "failed", providerStatus, "", now)
 		firstFailure = marked
 		return err
 	})

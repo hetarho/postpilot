@@ -86,10 +86,6 @@ func (c *Client) PaymentByOrder(ctx context.Context, orderID string) (billing.Pa
 	return response.domain(), true, nil
 }
 
-func (c *Client) Refund(ctx context.Context, paymentKey, reason string) error {
-	return c.do(ctx, http.MethodPost, "/v1/payments/"+url.PathEscape(paymentKey)+"/cancel", map[string]string{"cancelReason": reason}, nil)
-}
-
 func (c *Client) CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (billing.Payment, error) {
 	var response paymentResponse
 	_, err := c.doStatusWithKey(ctx, http.MethodPost, "/v1/payments/"+url.PathEscape(paymentKey)+"/cancel",

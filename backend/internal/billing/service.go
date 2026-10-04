@@ -2,6 +2,8 @@ package billing
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -51,6 +53,14 @@ func (s *Service) masterAccount(ctx context.Context, userID string) (bool, error
 		return err
 	})
 	return master, err
+}
+
+func newID() string {
+	buffer := make([]byte, 16)
+	if _, err := rand.Read(buffer); err != nil {
+		panic("billing: cannot read random bytes for an id: " + err.Error())
+	}
+	return hex.EncodeToString(buffer)
 }
 
 func NewService(store Store, provider Provider, credits Credits, plans Plans, accounts Accounts, mailer Mailer) *Service {

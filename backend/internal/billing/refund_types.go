@@ -18,6 +18,10 @@ var (
 	ErrInvalidRefundRequest   = errors.New("refund request is invalid")
 )
 
+// refundWindow is BILL-11's seven days: an untouched payment requested inside it is refunded
+// in full.
+const refundWindow = 7 * 24 * time.Hour
+
 type RefundPayment struct {
 	OrderID, UserID, Kind, PaymentKey string
 	PackLotID, CoverageID             string

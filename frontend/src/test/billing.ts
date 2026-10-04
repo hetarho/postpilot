@@ -73,7 +73,7 @@ export interface FakeBillingOptions {
     requestedAt: string
     payment: { orderId: string; kind: string; chargedKrw: bigint; chargedAt: string }
   }>
-  purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'PURCHASE_TOO_SMALL'
+  purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED'
   refundFailure?: 'REFUND_FAILED'
   /** Rows listed above the populated history, newest first, e.g. a refund. */
   extraHistory?: NonNullable<MessageInitShape<typeof GetMyBillingResponseSchema>['history']>

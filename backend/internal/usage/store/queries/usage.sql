@@ -44,15 +44,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- write that edits a lot the account was already given.
 UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id = ?;
 
--- name: VoidUntouchedLot :execrows
-UPDATE credit_lots SET remaining = 0 WHERE id = ? AND remaining = granted;
-
--- name: LotUntouched :one
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
-);
-
 -- name: UntouchedPurchasedLots :many
 -- Which of these purchased lots are still whole, in one statement. A billing screen asks
 -- about every purchase it is about to render, and the answer only decides whether a button
@@ -83,9 +74,6 @@ SELECT id, user_id, kind, granted, remaining, expires_at, created_at,
 FROM credit_lots
 WHERE id IN (sqlc.slice('ids'))
   AND kind = 'voucher';
-
--- name: RestoreLot :execrows
-UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
 
 -- name: SpendFromLot :exec
 -- The `remaining >= ?` guard is in the statement rather than in a read before it: two

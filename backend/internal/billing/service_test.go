@@ -203,12 +203,9 @@ func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)     
 func (*registrationCredits) OpenPurchasedLot(context.Context, string, int) (string, error) {
 	return "", nil
 }
-func (*registrationCredits) VoidUntouchedLot(context.Context, string) error { return nil }
 func (*registrationCredits) UntouchedLots(context.Context, []string) (map[string]bool, error) {
 	return nil, nil
 }
-
-func (*registrationCredits) RestoreLot(context.Context, string, int) error { return nil }
 func (c *registrationCredits) GrantBonusOnce(_ context.Context, id, _ string, _ int) (bool, error) {
 	if c.grants[id] {
 		return false, nil
@@ -256,7 +253,8 @@ func TestDisabledServiceStillReadsButWillNotQuote(t *testing.T) {
 	}
 }
 
-type emptyStore struct{}
+// emptyStore holds nothing, its checkout journal included.
+type emptyStore struct{ noIntents }
 
 func (emptyStore) InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error {
 	return fn(emptyStore{}, nil, nil)
@@ -297,7 +295,6 @@ func (stubProvider) Charge(context.Context, ChargeRequest) (Payment, error) { re
 func (stubProvider) PaymentByOrder(context.Context, string) (Payment, bool, error) {
 	return Payment{}, false, nil
 }
-func (stubProvider) Refund(context.Context, string, string) error { return nil }
 func (stubProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
 }

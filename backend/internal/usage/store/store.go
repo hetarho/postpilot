@@ -184,14 +184,6 @@ func lotsInConsumptionOrder(ctx context.Context, q *sqlc.Queries, userID string,
 	return lots, nil
 }
 
-func (s *Store) LotUntouched(ctx context.Context, lotID string) (bool, error) {
-	untouched, err := s.write.LotUntouched(ctx, lotID)
-	if err != nil {
-		return false, fmt.Errorf("read purchased credit lot: %w", err)
-	}
-	return untouched, nil
-}
-
 func (s *Store) ActiveMonthlyLot(
 	ctx context.Context, userID string, now time.Time,
 ) (usage.Lot, bool, error) {
@@ -265,14 +257,6 @@ func (s *Store) RaiseLot(ctx context.Context, lotID string, credits int) error {
 	return nil
 }
 
-func (s *Store) VoidUntouchedLot(ctx context.Context, lotID string) (bool, error) {
-	rows, err := s.write.VoidUntouchedLot(ctx, lotID)
-	if err != nil {
-		return false, fmt.Errorf("void untouched credit lot: %w", err)
-	}
-	return rows > 0, nil
-}
-
 func (s *Store) UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error) {
 	if len(lotIDs) == 0 {
 		return nil, nil
@@ -312,16 +296,6 @@ func (s *Store) VoucherLots(ctx context.Context, lotIDs []string) ([]usage.Lot, 
 		lots = append(lots, lot)
 	}
 	return lots, nil
-}
-
-func (s *Store) RestoreLot(ctx context.Context, lotID string, credits int) (bool, error) {
-	rows, err := s.write.RestoreLot(ctx, sqlc.RestoreLotParams{
-		Remaining: int64(credits), ID: lotID, Remaining_2: int64(credits),
-	})
-	if err != nil {
-		return false, fmt.Errorf("restore credit lot: %w", err)
-	}
-	return rows > 0, nil
 }
 
 func (s *Store) SpendFromLot(ctx context.Context, lotID string, credits int) error {

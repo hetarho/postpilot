@@ -135,7 +135,9 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 	}
 }
 
-func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
+// BILL-15: a pack persists one charge row and one whole credit lot, and the billing view
+// reads back the KRW it charged.
+func TestPurchasePersistsOneMoneyLedgerRowAndOneCreditLot(t *testing.T) {
 	ctx := context.Background()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "purchase.db"))
 	if err != nil {
@@ -178,18 +180,26 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	if err != nil || len(view.Purchases) != 1 || !view.Purchases[0].Refundable {
 		t.Fatalf("billing view=%+v err=%v", view, err)
 	}
-	refunded, err := service.RefundPurchase(ctx, "alice", purchase.ID)
-	if err != nil || refunded.RefundedAt == nil {
-		t.Fatalf("refund=%+v err=%v", refunded, err)
+	if read := view.Purchases[0]; read.ID != purchase.ID || read.KRW != 3000 || read.Credits != 1000 || read.PackID != "pack-1000" {
+		t.Fatalf("purchase read back = %+v", read)
+	}
+	var charge *billing.Event
+	for index := range view.History {
+		if event := view.History[index]; event.Kind == "charge" && event.Note != nil && *event.Note == purchase.ID {
+			charge = &view.History[index]
+		}
+	}
+	if charge == nil || charge.KRW == nil || *charge.KRW != 3000 || charge.Credits == nil || *charge.Credits != 1000 {
+		t.Fatalf("pack charge in history = %+v (history %+v)", charge, view.History)
 	}
 	var remaining, events int
 	if err := handle.Reader.QueryRowContext(ctx, "SELECT remaining FROM credit_lots WHERE id = ?", purchase.LotID).Scan(&remaining); err != nil {
 		t.Fatal(err)
 	}
-	if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id = ? AND kind IN ('charge','refund') AND note = ?", "alice", purchase.ID).Scan(&events); err != nil {
+	if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id = ? AND note = ?", "alice", purchase.ID).Scan(&events); err != nil {
 		t.Fatal(err)
 	}
-	if remaining != 0 || events != 2 {
+	if remaining != 1000 || events != 1 {
 		t.Fatalf("remaining=%d events=%d", remaining, events)
 	}
 }
@@ -234,7 +244,6 @@ func (p *registrationProvider) PaymentByOrder(_ context.Context, orderID string)
 	payment, found := p.orders[orderID]
 	return payment, found, nil
 }
-func (*registrationProvider) Refund(context.Context, string, string) error { return nil }
 func (*registrationProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
 }

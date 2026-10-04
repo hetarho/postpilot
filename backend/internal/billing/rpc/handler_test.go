@@ -80,12 +80,8 @@ func TestPurchaseFailuresHaveStableCodesAndReasons(t *testing.T) {
 		code   connect.Code
 		reason string
 	}{
-		{billing.ErrPurchaseTooSmall, connect.CodeInvalidArgument, "PURCHASE_TOO_SMALL"},
 		{billing.ErrPaymentMethodRequired, connect.CodeFailedPrecondition, "PAYMENT_METHOD_REQUIRED"},
 		{billing.ErrChargeFailed, connect.CodeFailedPrecondition, "CHARGE_FAILED"},
-		{billing.ErrPurchaseNotFound, connect.CodeNotFound, "PURCHASE_NOT_FOUND"},
-		{billing.ErrRefundWindowClosed, connect.CodeFailedPrecondition, "REFUND_WINDOW_CLOSED"},
-		{billing.ErrPurchaseSpent, connect.CodeFailedPrecondition, "PURCHASE_SPENT"},
 		{billing.ErrRefundFailed, connect.CodeFailedPrecondition, "REFUND_FAILED"},
 	}
 	for _, test := range tests {
@@ -98,12 +94,12 @@ func TestPurchaseFailuresHaveStableCodesAndReasons(t *testing.T) {
 
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
-	tier, term, amount := plan.Pro, billing.TermMonthly, 500
+	tier, term, amount := plan.Pro, billing.TermMonthly, 9_900
 	store := handlerStore{
 		subscription: &billing.Subscription{UserID: "alice", Tier: tier, Term: term, AnchorAt: now, TermStart: now, TermEnd: now.AddDate(0, 1, 0), NextGrantAt: now.AddDate(0, 1, 0), AutoRenew: true, Status: "active"},
 		method:       &billing.PaymentMethod{UserID: "alice", BillingKey: "must-not-cross-rpc", CustomerKey: "server-only", CardLabel: "11 1234", RegisteredAt: now},
-		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", USDCents: &amount, CreatedAt: now}},
-		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, USDCents: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
+		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", KRW: &amount, CreatedAt: now}},
+		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
 	}
 	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil))
 	response, err := handler.GetMyBilling(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.GetMyBillingRequest{}))
@@ -115,6 +111,13 @@ func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	}
 	if response.Msg.GetPaymentMethod().GetRegisteredAt() != now.Format(time.RFC3339) {
 		t.Fatalf("registered_at = %q", response.Msg.GetPaymentMethod().GetRegisteredAt())
+	}
+	// BILL-15: history and purchases carry the whole KRW the store holds, and nothing else.
+	if krw := response.Msg.GetHistory()[0].GetKrw(); krw != 9_900 {
+		t.Fatalf("history krw = %d", krw)
+	}
+	if purchase := response.Msg.GetPurchases()[0]; purchase.GetKrw() != 7000 || purchase.GetCredits() != 500 {
+		t.Fatalf("purchase = %+v", purchase)
 	}
 }
 
@@ -171,6 +174,7 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 }
 
 type handlerStore struct {
+	noJournal
 	subscription *billing.Subscription
 	method       *billing.PaymentMethod
 	events       []billing.Event
@@ -229,25 +233,28 @@ func (handlerStore) AdvanceNextGrant(context.Context, string, time.Time, time.Ti
 	return false, nil
 }
 
-// The checkout journal holds no order: these cases quote and read, they never settle.
-func (handlerStore) PutQuote(context.Context, billing.QuoteRecord) error { return nil }
-func (handlerStore) Quote(context.Context, string) (billing.QuoteRecord, bool, error) {
+// noJournal is a checkout journal holding no order: these cases quote, read and record
+// notifications, they never settle.
+type noJournal struct{}
+
+func (noJournal) PutQuote(context.Context, billing.QuoteRecord) error { return nil }
+func (noJournal) Quote(context.Context, string) (billing.QuoteRecord, bool, error) {
 	return billing.QuoteRecord{}, false, nil
 }
-func (handlerStore) PurgeExpiredQuotes(context.Context, time.Time) (int, error) { return 0, nil }
-func (handlerStore) InsertIntent(context.Context, billing.Intent) error         { return nil }
-func (handlerStore) Intent(context.Context, string) (billing.Intent, bool, error) {
+func (noJournal) PurgeExpiredQuotes(context.Context, time.Time) (int, error) { return 0, nil }
+func (noJournal) InsertIntent(context.Context, billing.Intent) error         { return nil }
+func (noJournal) Intent(context.Context, string) (billing.Intent, bool, error) {
 	return billing.Intent{}, false, nil
 }
-func (handlerStore) PendingIntent(context.Context, string) (billing.Intent, bool, error) {
+func (noJournal) PendingIntent(context.Context, string) (billing.Intent, bool, error) {
 	return billing.Intent{}, false, nil
 }
-func (handlerStore) DueIntents(context.Context, time.Time) ([]billing.Intent, error) { return nil, nil }
-func (handlerStore) MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error) {
+func (noJournal) DueIntents(context.Context, time.Time) ([]billing.Intent, error) { return nil, nil }
+func (noJournal) MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error) {
 	return false, nil
 }
-func (handlerStore) ReviewIntents(context.Context, int) ([]billing.Intent, error) { return nil, nil }
-func (handlerStore) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
+func (noJournal) ReviewIntents(context.Context, int) ([]billing.Intent, error) { return nil, nil }
+func (noJournal) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
 	return false, nil
 }
 
@@ -262,7 +269,6 @@ func (handlerProvider) Charge(context.Context, billing.ChargeRequest) (billing.P
 func (handlerProvider) PaymentByOrder(context.Context, string) (billing.Payment, bool, error) {
 	return billing.Payment{}, false, nil
 }
-func (handlerProvider) Refund(context.Context, string, string) error { return nil }
 func (handlerProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
 }

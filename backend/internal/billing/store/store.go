@@ -28,6 +28,8 @@ type Store struct {
 	refundBenefits      billing.RefundBenefits
 }
 
+var _ billing.Store = (*Store)(nil)
+
 func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, db: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
@@ -113,9 +115,7 @@ func (s *Store) DeletePaymentMethod(ctx context.Context, userID string) error {
 func (s *Store) InsertEvent(ctx context.Context, event billing.Event) error {
 	err := s.write.InsertBillingEvent(ctx, sqlc.InsertBillingEventParams{
 		UserID: event.UserID, Kind: event.Kind, Tier: planNull(event.Tier),
-		Term: termNull(event.Term), Credits: nullableInt(event.Credits),
-		UsdCents: nullableInt(event.USDCents), KrwPerUsdE4: nullableInt64(event.KRWPerUSDE4),
-		RateDate: stringNull(event.RateDate), Krw: nullableInt(event.KRW),
+		Term: termNull(event.Term), Credits: nullableInt(event.Credits), Krw: nullableInt(event.KRW),
 		ProviderPaymentKey: stringNull(event.ProviderPaymentKey), OrderID: stringNull(event.OrderID),
 		Note: stringNull(event.Note), CreatedAt: formatTime(event.CreatedAt),
 	})
@@ -280,17 +280,9 @@ func (s *Store) Purchases(ctx context.Context, userID string) ([]billing.Purchas
 	}
 	result := make([]billing.Purchase, 0, len(rows))
 	for _, row := range rows {
-		charged, err := parseTime(row.ChargedAt)
+		purchase, err := toPurchase(row)
 		if err != nil {
 			return nil, err
-		}
-		purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, PackID: row.PackID.String, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
-		if row.RefundedAt.Valid {
-			refunded, err := parseTime(row.RefundedAt.String)
-			if err != nil {
-				return nil, err
-			}
-			purchase.RefundedAt = &refunded
 		}
 		result = append(result, purchase)
 	}
@@ -305,25 +297,14 @@ func (s *Store) Purchase(ctx context.Context, userID, purchaseID string) (billin
 	if err != nil {
 		return billing.Purchase{}, false, fmt.Errorf("read credit purchase: %w", err)
 	}
-	charged, err := parseTime(row.ChargedAt)
-	if err != nil {
-		return billing.Purchase{}, false, err
-	}
-	purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, PackID: row.PackID.String, Credits: int(row.Credits), USDCents: int(row.UsdCents), KRW: int(row.Krw), RatePerUSDE4: row.KrwPerUsdE4.Int64, RateDate: row.RateDate.String, ProviderPaymentKey: row.ProviderPaymentKey, OrderID: row.OrderID, ChargedAt: charged}
-	if row.RefundedAt.Valid {
-		refunded, err := parseTime(row.RefundedAt.String)
-		if err != nil {
-			return billing.Purchase{}, false, err
-		}
-		purchase.RefundedAt = &refunded
-	}
-	return purchase, true, nil
+	purchase, err := toPurchase(row)
+	return purchase, err == nil, err
 }
 
 func (s *Store) InsertPurchase(ctx context.Context, purchase billing.Purchase) error {
 	err := s.write.InsertCreditPurchase(ctx, sqlc.InsertCreditPurchaseParams{
 		ID: purchase.ID, UserID: purchase.UserID, LotID: purchase.LotID, PackID: nullString(purchase.PackID),
-		Credits: int64(purchase.Credits), UsdCents: int64(purchase.USDCents), Krw: int64(purchase.KRW),
+		Credits: int64(purchase.Credits), Krw: int64(purchase.KRW),
 		ProviderPaymentKey: purchase.ProviderPaymentKey, OrderID: purchase.OrderID,
 		ChargedAt: formatTime(purchase.ChargedAt),
 	})
@@ -399,6 +380,24 @@ func toSubscription(row sqlc.GetSubscriptionRow) (billing.Subscription, error) {
 	return result, nil
 }
 
+func toPurchase(row sqlc.CreditPurchase) (billing.Purchase, error) {
+	charged, err := parseTime(row.ChargedAt)
+	if err != nil {
+		return billing.Purchase{}, err
+	}
+	purchase := billing.Purchase{ID: row.ID, UserID: row.UserID, LotID: row.LotID, PackID: row.PackID.String,
+		Credits: int(row.Credits), KRW: int(row.Krw), ProviderPaymentKey: row.ProviderPaymentKey,
+		OrderID: row.OrderID, ChargedAt: charged}
+	if row.RefundedAt.Valid {
+		refunded, err := parseTime(row.RefundedAt.String)
+		if err != nil {
+			return billing.Purchase{}, err
+		}
+		purchase.RefundedAt = &refunded
+	}
+	return purchase, nil
+}
+
 func toEvent(row sqlc.ListBillingEventsRow) (billing.Event, error) {
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
@@ -417,13 +416,7 @@ func toEvent(row sqlc.ListBillingEventsRow) (billing.Event, error) {
 		result.Term = &value
 	}
 	result.Credits = intPtr(row.Credits)
-	result.USDCents = intPtr(row.UsdCents)
 	result.KRW = intPtr(row.Krw)
-	if row.KrwPerUsdE4.Valid {
-		value := row.KrwPerUsdE4.Int64
-		result.KRWPerUSDE4 = &value
-	}
-	result.RateDate = stringPtr(row.RateDate)
 	result.ProviderPaymentKey = stringPtr(row.ProviderPaymentKey)
 	result.OrderID = stringPtr(row.OrderID)
 	result.Note = stringPtr(row.Note)
@@ -458,12 +451,6 @@ func nullableInt(value *int) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: int64(*value), Valid: true}
-}
-func nullableInt64(value *int64) sql.NullInt64 {
-	if value == nil {
-		return sql.NullInt64{}
-	}
-	return sql.NullInt64{Int64: *value, Valid: true}
 }
 func boolInt(value bool) int64 {
 	if value {

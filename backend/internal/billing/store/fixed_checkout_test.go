@@ -28,7 +28,6 @@ func (p *fixedPayments) IssueBillingKey(context.Context, string, string) (billin
 func (p *fixedPayments) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
 }
-func (p *fixedPayments) Refund(context.Context, string, string) error { return nil }
 func (p *fixedPayments) PaymentByOrder(_ context.Context, orderID string) (billing.Payment, bool, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -122,7 +121,7 @@ func TestFixedKRWCheckoutUpgradeAndPackFromRealStore(t *testing.T) {
 		t.Fatalf("stale quote accepted: %v", err)
 	}
 	pack, err := h.service.PurchasePack(ctx, "alice", "pack-1000")
-	if err != nil || pack.KRW != 3000 || pack.Credits != 1000 || pack.PackID != "pack-1000" || pack.RatePerUSDE4 != 0 {
+	if err != nil || pack.KRW != 3000 || pack.Credits != 1000 || pack.PackID != "pack-1000" {
 		t.Fatalf("pack=%+v err=%v", pack, err)
 	}
 	var lotCount, expiryCount int
@@ -130,10 +129,10 @@ func TestFixedKRWCheckoutUpgradeAndPackFromRealStore(t *testing.T) {
       WHERE id=? AND kind='purchased'`, pack.LotID).Scan(&lotCount, &expiryCount); err != nil || lotCount != 1 || expiryCount != 0 {
 		t.Fatalf("purchased lot count=%d expiries=%d err=%v", lotCount, expiryCount, err)
 	}
-	var fxFields int
-	if err := h.handle.Reader.QueryRowContext(ctx, `SELECT count(*) FROM billing_events WHERE kind='charge'
-      AND (usd_cents IS NOT NULL OR krw_per_usd_e4 IS NOT NULL OR rate_date IS NOT NULL)`).Scan(&fxFields); err != nil || fxFields != 0 {
-		t.Fatalf("checkout FX fields=%d err=%v", fxFields, err)
+	var chargedKRW int
+	if err := h.handle.Reader.QueryRowContext(ctx, `SELECT krw FROM billing_events WHERE kind='charge' AND order_id=?`,
+		pack.OrderID).Scan(&chargedKRW); err != nil || chargedKRW != 3000 {
+		t.Fatalf("pack charge krw=%d err=%v", chargedKRW, err)
 	}
 }
 

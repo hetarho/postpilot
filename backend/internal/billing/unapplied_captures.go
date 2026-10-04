@@ -20,11 +20,7 @@ func unappliedRefundKey(orderID string) string { return "unapplied:" + orderID }
 // answer, or a refusal the payment does not explain, leaves the order in review for the next
 // pass; only a storage failure is returned.
 func (s *Service) RefundUnappliedCaptures(ctx context.Context) error {
-	journals, err := s.intentStore()
-	if err != nil {
-		return err
-	}
-	orders, err := journals.ReviewIntents(ctx, unappliedRefundBatch)
+	orders, err := s.store.ReviewIntents(ctx, unappliedRefundBatch)
 	if err != nil || len(orders) == 0 {
 		return err
 	}
@@ -95,7 +91,7 @@ func (s *Service) completeUnappliedRefund(ctx context.Context, intent Intent, ob
 	now := s.now()
 	var refunded, lapsed bool
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
-		failed, err := tx.(IntentStore).FailReviewIntent(ctx, intent.OrderID, observed.Status, now)
+		failed, err := tx.FailReviewIntent(ctx, intent.OrderID, observed.Status, now)
 		if err != nil || !failed {
 			return err
 		}

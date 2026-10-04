@@ -320,10 +320,10 @@ func (c voucherCredits) VoucherLotStandings(ctx context.Context, lotIDs []string
 	return out, nil
 }
 
-// billingCredits is the ledger as the billing context asks for it. The only thing it adds is
-// the translation ARCH-7 wants at the boundary: the ledger's sentinel for "this lot is no
-// longer whole" becomes billing's own, so the refund path matches an error it owns and the
-// billing package imports no ledger at all.
+// billingCredits is the ledger as the billing context asks for it. What it adds is the
+// translation ARCH-7 wants at the boundary: billing's coverage becomes the ledger's, and
+// opening or raising a paid coverage opens its clip export window too, so the billing
+// package imports neither the ledger nor clip.
 type billingCredits struct {
 	*usage.Service
 	exports clip.ExportWindows
@@ -400,12 +400,4 @@ func (c billingCredits) openExport(ctx context.Context, userID string, coverage 
 		return errors.New("billing export window: invalid tier")
 	}
 	return c.exports.OpenExportWindow(ctx, clipExportWindow(window), correlationID)
-}
-
-func (c billingCredits) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	err := c.Service.VoidUntouchedLot(ctx, lotID)
-	if errors.Is(err, usage.ErrLotTouched) {
-		return billing.ErrLotTouched
-	}
-	return err
 }

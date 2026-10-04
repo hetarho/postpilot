@@ -264,8 +264,6 @@ func purchaseError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a master account starts no payment", postpilotv1.FailureReason_BILLING_MASTER_ACCOUNT, nil)
 	case errors.Is(err, billing.ErrUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
-	case errors.Is(err, billing.ErrPurchaseTooSmall):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "purchase must be at least one dollar", postpilotv1.FailureReason_PURCHASE_TOO_SMALL, nil)
 	case errors.Is(err, billing.ErrInvalidPack):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "choose a listed credit pack", postpilotv1.FailureReason_BILLING_PACK_INVALID, nil)
 	case errors.Is(err, billing.ErrSubscriptionRequired):
@@ -274,12 +272,6 @@ func purchaseError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
-	case errors.Is(err, billing.ErrPurchaseNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "purchase not found", postpilotv1.FailureReason_PURCHASE_NOT_FOUND, nil)
-	case errors.Is(err, billing.ErrRefundWindowClosed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund window closed", postpilotv1.FailureReason_REFUND_WINDOW_CLOSED, nil)
-	case errors.Is(err, billing.ErrPurchaseSpent):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "purchased credits were spent", postpilotv1.FailureReason_PURCHASE_SPENT, nil)
 	case errors.Is(err, billing.ErrRefundFailed):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund failed", postpilotv1.FailureReason_REFUND_FAILED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):

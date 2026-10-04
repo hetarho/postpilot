@@ -4,6 +4,23 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
+type CreditPurchase struct {
+	ID                 string
+	UserID             string
+	LotID              string
+	PackID             sql.NullString
+	Credits            int64
+	Krw                int64
+	ProviderPaymentKey string
+	OrderID            string
+	ChargedAt          string
+	RefundedAt         sql.NullString
+}
+
 type PaymentMethod struct {
 	UserID       string
 	Provider     string

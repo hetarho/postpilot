@@ -30,12 +30,9 @@ type Store interface {
 	SupportCoverage(ctx context.Context, userID string) (SupportCoverage, bool, error)
 	UpsertSupportCoverage(ctx context.Context, coverage SupportCoverage) error
 	DeleteSupportCoverage(ctx context.Context, userID string) error
-}
 
-// IntentStore is the fixed-KRW checkout journal every payment runs through. A Store without
-// it still reads billing and assigns support tiers, but starts and settles no payment
-// (ErrUnavailable).
-type IntentStore interface {
+	// The checkout journal every payment runs through: a change quote, then one order per
+	// charge that leaves pending (or review) once.
 	PutQuote(context.Context, QuoteRecord) error
 	Quote(context.Context, string) (QuoteRecord, bool, error)
 	// PurgeExpiredQuotes deletes the quotes that expired before expiredBefore.
@@ -57,7 +54,6 @@ type Provider interface {
 	IssueBillingKey(ctx context.Context, authKey, customerKey string) (BillingKey, error)
 	Charge(ctx context.Context, request ChargeRequest) (Payment, error)
 	PaymentByOrder(ctx context.Context, orderID string) (Payment, bool, error)
-	Refund(ctx context.Context, paymentKey, reason string) error
 	// ParseNotification reads one provider notification out of the POSTed body. The
 	// transport is unwrapped by the http adapter (ARCH-7): a domain port takes bytes, not a
 	// `*http.Request`.
@@ -74,14 +70,9 @@ type Credits interface {
 	OpenCoverage(ctx context.Context, userID string, coverage Coverage, at time.Time, correlationID string) error
 	AddUpgradeBonus(ctx context.Context, userID string, coverage Coverage, at time.Time, credits, exportDelta int, correlationID string) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
-	// VoidUntouchedLot reports ErrLotTouched when the lot is no longer whole.
-	VoidUntouchedLot(ctx context.Context, lotID string) error
 	// UntouchedLots answers "is this purchase still whole" for a screenful of purchases in
-	// one read-pool query. Billing consumes only the plural read — the single writer-bound
-	// one is for an answer about to decide a write, which billing reaches through
-	// VoidUntouchedLot instead. Billing still learns nothing about credit_lots (ARCH-7).
+	// one read-pool query. Billing still learns nothing about credit_lots (ARCH-7).
 	UntouchedLots(ctx context.Context, lotIDs []string) (map[string]bool, error)
-	RestoreLot(ctx context.Context, lotID string, credits int) error
 	GrantBonusOnce(ctx context.Context, id, userID string, credits int) (created bool, err error)
 }
 

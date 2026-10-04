@@ -35,21 +35,19 @@ func TestBillingMailsAreKoreanFirstAndCarryChargeFacts(t *testing.T) {
 	}
 }
 
-func TestPurchaseAndRefundMailsCarryBilingualPurchaseFacts(t *testing.T) {
-	purchase := Purchase{Credits: 500, USDCents: 500, KRW: 6_963, RatePerUSDE4: 13_925_000, RateDate: "2026-09-07"}
-	for name, message := range map[string]MailMessage{"purchase": PurchaseMail(purchase), "refund": RefundMail(purchase)} {
-		if !strings.HasPrefix(message.Text, "Postpilot 크레딧 500개") {
-			t.Errorf("%s is not Korean first: %q", name, message.Text)
+func TestPurchaseMailCarriesBilingualPurchaseFacts(t *testing.T) {
+	message := PurchaseMail(Purchase{Credits: 500, KRW: 6_963})
+	if !strings.HasPrefix(message.Text, "Postpilot 크레딧 500개") {
+		t.Errorf("purchase mail is not Korean first: %q", message.Text)
+	}
+	for _, fact := range []string{"500 credits", "6,963원"} {
+		if !strings.Contains(message.Text, fact) {
+			t.Errorf("purchase mail missing %q: %s", fact, message.Text)
 		}
-		for _, fact := range []string{"500 credits", "6,963원"} {
-			if !strings.Contains(message.Text, fact) {
-				t.Errorf("%s missing %q: %s", name, fact, message.Text)
-			}
-		}
-		for _, leak := range []string{"$", "원/$", "2026-09-07"} {
-			if strings.Contains(message.Text, leak) {
-				t.Errorf("%s carries %q: %s", name, leak, message.Text)
-			}
+	}
+	for _, leak := range []string{"$", "원/$"} {
+		if strings.Contains(message.Text, leak) {
+			t.Errorf("purchase mail carries %q: %s", leak, message.Text)
 		}
 	}
 }

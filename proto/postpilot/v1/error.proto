@@ -48,6 +48,10 @@ enum FailureReason {
   // Profile versions and per-field overrides were retired in T471.
   reserved 205, 221;
   reserved "VOICE_LEARNING_NOT_FOUND", "VOICE_PROFILE_FIELD_REQUIRED";
+  // The self-serve credit purchase refund and the dollar purchase minimum were retired in T583:
+  // refunds are requested and operator-reviewed (BILL-11) and packs are fixed KRW (BILL-2).
+  reserved 161, 162, 163, 166;
+  reserved "PURCHASE_NOT_FOUND", "PURCHASE_SPENT", "PURCHASE_TOO_SMALL", "REFUND_WINDOW_CLOSED";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -186,12 +190,8 @@ enum FailureReason {
   POST_TEMPLATE_ANSWER_TOO_LONG = 140;
   POST_VIDEO_LIMIT = 141;
   PROVIDER_DISABLED = 142;
-  PURCHASE_NOT_FOUND = 161;
-  PURCHASE_SPENT = 162;
-  PURCHASE_TOO_SMALL = 163;
   PURPOSE_NOT_FOUND = 164;
   REFUND_FAILED = 165;
-  REFUND_WINDOW_CLOSED = 166;
   RESET_LINK_INVALID = 167;
   REVISION_CONTENT_REQUIRED = 168;
   REVISION_INSTRUCTION_REQUIRED = 169;

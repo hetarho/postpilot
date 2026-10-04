@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/usage"
 )
 
 // seoul is the product's home zone, the clock these cases are written in.
@@ -89,9 +88,9 @@ func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	if len(provider.requests) != 1 || provider.requests[0].KRW != offer.AnnualKRW || !strings.HasPrefix(provider.requests[0].OrderID, "pp-sub-") {
 		t.Fatalf("charge requests = %+v", provider.requests)
 	}
-	// BILL-15: the charge records the fixed KRW amount and no exchange rate.
+	// BILL-15: the charge records the fixed KRW amount.
 	charge := store.events[0]
-	if kinds(store.events) != "charge,tier_change" || charge.KRW == nil || *charge.KRW != offer.AnnualKRW || charge.USDCents != nil || charge.KRWPerUSDE4 != nil {
+	if kinds(store.events) != "charge,tier_change" || charge.KRW == nil || *charge.KRW != offer.AnnualKRW {
 		t.Fatalf("events = %+v", store.events)
 	}
 }
@@ -312,15 +311,12 @@ type subscriptionStore struct {
 	plans             *subscriptionPlans
 	mailer            *subscriptionMailer
 	upsertFailureUser string
-	// quotes and intents are the checkout journal (IntentStore) every payment runs through.
+	// quotes and intents are the checkout journal every payment runs through.
 	quotes  map[string]QuoteRecord
 	intents []Intent
 	// afterDue runs once DueSubscriptions has handed out its snapshot: a write it makes is one
 	// landing between the pass's read and its steps.
 	afterDue func()
-	// markRefundedErr fails the step that marks a purchase refunded, which is the crash a
-	// resumable refund has to survive.
-	markRefundedErr error
 }
 
 func newSubscriptionStore() *subscriptionStore {
@@ -385,9 +381,6 @@ func (s *subscriptionStore) InsertPurchase(_ context.Context, purchase Purchase)
 	return nil
 }
 func (s *subscriptionStore) MarkPurchaseRefunded(_ context.Context, userID, purchaseID string, at time.Time) (bool, error) {
-	if s.markRefundedErr != nil {
-		return false, s.markRefundedErr
-	}
 	purchase, found := s.purchases[purchaseID]
 	if !found || purchase.UserID != userID || purchase.RefundedAt != nil {
 		return false, nil
@@ -539,14 +532,6 @@ func (c *subscriptionCredits) OpenPurchasedLot(_ context.Context, _ string, cred
 	c.lots[id] = &purchaseLot{granted: credits, remaining: credits}
 	return id, nil
 }
-func (c *subscriptionCredits) VoidUntouchedLot(_ context.Context, lotID string) error {
-	lot, found := c.lots[lotID]
-	if !found || lot.remaining != lot.granted {
-		return ErrLotTouched
-	}
-	lot.remaining = 0
-	return nil
-}
 func (c *subscriptionCredits) UntouchedLots(_ context.Context, lotIDs []string) (map[string]bool, error) {
 	c.untouchedReads++
 	untouched := map[string]bool{}
@@ -555,14 +540,6 @@ func (c *subscriptionCredits) UntouchedLots(_ context.Context, lotIDs []string) 
 		untouched[id] = found && lot.granted > 0 && lot.remaining == lot.granted
 	}
 	return untouched, nil
-}
-func (c *subscriptionCredits) RestoreLot(_ context.Context, lotID string, credits int) error {
-	lot, found := c.lots[lotID]
-	if !found || lot.remaining+credits > lot.granted {
-		return usage.ErrLotNotFound
-	}
-	lot.remaining += credits
-	return nil
 }
 func (*subscriptionCredits) GrantBonusOnce(context.Context, string, string, int) (bool, error) {
 	return false, nil
@@ -592,8 +569,6 @@ type subscriptionProvider struct {
 	payments        map[string]Payment
 	chargeErr       error
 	failAfterCharge bool
-	refunds         []string
-	refundErr       error
 }
 
 func newSubscriptionProvider() *subscriptionProvider {
@@ -622,21 +597,6 @@ func (p *subscriptionProvider) Charge(_ context.Context, request ChargeRequest) 
 func (p *subscriptionProvider) PaymentByOrder(_ context.Context, orderID string) (Payment, bool, error) {
 	payment, ok := p.payments[orderID]
 	return payment, ok, nil
-}
-func (p *subscriptionProvider) Refund(_ context.Context, paymentKey, reason string) error {
-	if p.refundErr != nil {
-		return p.refundErr
-	}
-	p.refunds = append(p.refunds, paymentKey+":"+reason)
-	// A refunded payment stops being a live charge. It is the only evidence a resumed refund
-	// has that the money already left, so the fake has to report it the way the provider does.
-	for orderID, payment := range p.payments {
-		if payment.PaymentKey == paymentKey {
-			payment.Status = "CANCELED"
-			p.payments[orderID] = payment
-		}
-	}
-	return nil
 }
 func (*subscriptionProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil

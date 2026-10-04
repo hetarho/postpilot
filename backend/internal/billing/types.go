@@ -24,19 +24,10 @@ var (
 	ErrChangeUnsupported         = errors.New("changing tier and term together is unsupported")
 	ErrPaymentMethodRequired     = errors.New("payment method required")
 	ErrChargeFailed              = errors.New("charge failed")
-	ErrPurchaseTooSmall          = errors.New("purchase must be at least one dollar")
-	ErrPurchaseNotFound          = errors.New("purchase not found")
-	ErrRefundWindowClosed        = errors.New("refund window closed")
-	ErrPurchaseSpent             = errors.New("purchased credits were spent")
 	ErrRefundFailed              = errors.New("refund failed")
-	// ErrLotTouched is what the credits port reports when a purchased lot is no longer
-	// whole. It is billing's own sentinel, translated from whatever the ledger says by the
-	// adapter that wires the two (ARCH-7): billing knows a lot can be spent, not how the
-	// ledger names that.
-	ErrLotTouched     = errors.New("purchased credit lot has already been touched")
-	ErrPaymentPending = errors.New("payment outcome is pending")
-	ErrStaleQuote     = errors.New("billing quote no longer matches subscription")
-	ErrInvalidPack    = errors.New("unknown fixed credit pack")
+	ErrPaymentPending            = errors.New("payment outcome is pending")
+	ErrStaleQuote                = errors.New("billing quote no longer matches subscription")
+	ErrInvalidPack               = errors.New("unknown fixed credit pack")
 	// ErrMasterAccount refuses every payment a master account would start (BILL-20): the
 	// operator tier is not sold, and a paid tier it bought would demote it.
 	ErrMasterAccount = errors.New("a master account starts no payment")
@@ -100,9 +91,6 @@ type Event struct {
 	Tier               *plan.Plan
 	Term               *Term
 	Credits            *int
-	USDCents           *int
-	KRWPerUSDE4        *int64
-	RateDate           *string
 	KRW                *int
 	ProviderPaymentKey *string
 	OrderID            *string
@@ -116,10 +104,7 @@ type Purchase struct {
 	UserID             string
 	LotID              string
 	Credits            int
-	USDCents           int
 	KRW                int
-	RatePerUSDE4       int64
-	RateDate           string
 	ProviderPaymentKey string
 	OrderID            string
 	ChargedAt          time.Time

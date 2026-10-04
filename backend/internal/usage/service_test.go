@@ -177,25 +177,6 @@ func (f *fakeStore) RaiseLot(_ context.Context, lotID string, credits int) error
 	return nil
 }
 
-func (f *fakeStore) VoidUntouchedLot(_ context.Context, lotID string) (bool, error) {
-	for i := range f.lots {
-		if f.lots[i].ID == lotID && f.lots[i].Remaining == f.lots[i].Granted {
-			f.lots[i].Remaining = 0
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (f *fakeStore) LotUntouched(_ context.Context, lotID string) (bool, error) {
-	for _, lot := range f.lots {
-		if lot.ID == lotID && lot.Kind == LotPurchased && lot.Granted > 0 && lot.Remaining == lot.Granted {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func (f *fakeStore) UntouchedPurchasedLots(_ context.Context, lotIDs []string) ([]string, error) {
 	wanted := map[string]bool{}
 	for _, id := range lotIDs {
@@ -208,16 +189,6 @@ func (f *fakeStore) UntouchedPurchasedLots(_ context.Context, lotIDs []string) (
 		}
 	}
 	return untouched, nil
-}
-
-func (f *fakeStore) RestoreLot(_ context.Context, lotID string, credits int) (bool, error) {
-	for i := range f.lots {
-		if f.lots[i].ID == lotID && f.lots[i].Remaining+credits <= f.lots[i].Granted {
-			f.lots[i].Remaining += credits
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 func (f *fakeStore) SpendFromLot(_ context.Context, lotID string, credits int) error {
@@ -456,23 +427,6 @@ func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 	purchased := store.lots[0]
 	if purchased.ID != purchasedID || !strings.HasPrefix(purchasedID, "purchased:") || purchased.Kind != LotPurchased || purchased.ExpiresAt != nil || purchased.Granted != 100 || purchased.Remaining != 100 {
 		t.Fatalf("purchased lot = %+v", purchased)
-	}
-	if err := svc.VoidUntouchedLot(ctx, purchasedID); err != nil {
-		t.Fatalf("VoidUntouchedLot: %v", err)
-	}
-	if store.lots[0].Remaining != 0 {
-		t.Fatalf("voided remaining = %d", store.lots[0].Remaining)
-	}
-	if err := svc.RestoreLot(ctx, purchasedID, 100); err != nil {
-		t.Fatalf("RestoreLot: %v", err)
-	}
-	if err := svc.RestoreLot(ctx, purchasedID, 1); !errors.Is(err, ErrLotNotFound) {
-		t.Fatalf("over-grant restore = %v, want ErrLotNotFound", err)
-	}
-
-	store.lots[0].Remaining = 99
-	if err := svc.VoidUntouchedLot(ctx, purchasedID); !errors.Is(err, ErrLotTouched) {
-		t.Fatalf("touched void = %v, want ErrLotTouched", err)
 	}
 	if created, err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil || !created {
 		t.Fatalf("GrantBonusOnce: %v", err)
