@@ -58,6 +58,10 @@ func jobKindsForTest() jobstore.Kinds {
 		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		FirstStages: map[string]string{
+			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
+			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",
+		},
 	}
 }
 

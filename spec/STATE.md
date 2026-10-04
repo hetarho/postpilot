@@ -85,7 +85,6 @@
 | T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
 | T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
 | T560 | Stop re-laying out a clip per caption-frames request and re-decoding JSON per poll | ARCH | - | todo |
-| T561 | Take job-kind lists out of generation_jobs' CHECKs and the dispatcher SQL | ARCH | T551 | todo |
 | T562 | Keep the billing pass running, charge each order once and never revert a cancel | ARCH | - | todo |
 | T563 | Record every confirmed refund and release credits a refused refund froze | ARCH | T562 | todo |
 | T564 | Stop the clip detail polling forever and stop each settings save from refetching it | ARCH | - | todo |
@@ -100,6 +99,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T561 done: migration 0129 rebuilds generation_jobs without kind-naming CHECKs (scoped FK guard); PickNextQueued takes first stages from Go; BE suite green
 - 261004 T551 done: migration 0128 indexes generation_jobs project/post lookups and usage job_id; the checkpoint trigger skips sampling jobs; HoldForJob reads the read pool; BE suite green
 - 261004 T557 done: FX day selection served from memory with one shared fetch outside the lock; BalanceFor takes the writer only when renewing would write; Settle drops eligible lots; BE suite green
 - 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
@@ -119,4 +119,3 @@
 - 261004 create-ssot DUB start: confirmed custom spoken voices, account reuse and selective narration generation from adopted ideation
 - 261004 ideation familiar-video-editing-and-dubbing ready: complete v1 product policy adopted; description-generated reusable voices first, responsive editor and speech-led clips next
 - 261004 ideation familiar-video-editing-and-dubbing start: owner adopted the complete editor, timing, voice-library and initial-scope recommendation
-- 261004 ideation familiar-video-editing-and-dubbing open: description-generated voice recommendation accepted; full editor/timing and reusable-voice packages proposed with a concrete creation flow

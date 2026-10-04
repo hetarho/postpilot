@@ -6,18 +6,15 @@ INSERT INTO generation_jobs (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL);
 
 -- name: PickNextQueued :one
+-- Each kind's first stage is the composition root's answer, passed in as a JSON object of
+-- kind to stage, so the queue's SQL names no product; a kind it does not name starts in
+-- observe. A resumed job keeps the stage it parked in.
 UPDATE generation_jobs
 SET status = 'running',
-    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE CASE kind
-        WHEN 'generate_clip' THEN 'prepare'
-        WHEN 'revise_clip' THEN 'prepare'
-        WHEN 'storyline_clip' THEN 'prepare'
-        WHEN 'revise_storyline_clip' THEN 'prepare'
-        WHEN 'analyze_voice' THEN 'analyze'
-        WHEN 'check_voice' THEN 'write'
-        WHEN 'revise' THEN 'write'
-        ELSE 'observe'
-    END END,
+    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE COALESCE(
+        (SELECT value FROM json_each(sqlc.arg(first_stages)) WHERE key = generation_jobs.kind),
+        'observe'
+    ) END,
     error = NULL,
     error_reason = NULL,
     error_params = NULL,

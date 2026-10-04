@@ -18,20 +18,25 @@ func TestMigration0063CancelsRevisionsWithoutLosingAttemptEvidence(t *testing.T)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { d.Close() })
-	prior := fstest.MapFS{}
+	// The schema through 0063 is the subject: 0129 takes every kind list out of these CHECKs,
+	// and which policy a stop needs is then Go's rule (cmd/api jobCancellation).
+	prior, through := fstest.MapFS{}, fstest.MapFS{}
 	entries, err := fs.ReadDir(migrationsFS, "migrations")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if strings.Compare(e.Name(), "0063_") >= 0 {
+		if strings.Compare(e.Name(), "0064_") >= 0 {
 			continue
 		}
 		raw, err := migrationsFS.ReadFile("migrations/" + e.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
-		prior[e.Name()] = &fstest.MapFile{Data: raw}
+		through[e.Name()] = &fstest.MapFile{Data: raw}
+		if strings.Compare(e.Name(), "0063_") < 0 {
+			prior[e.Name()] = &fstest.MapFile{Data: raw}
+		}
 	}
 	ctx := t.Context()
 	if err := migrate(ctx, d.Writer, prior); err != nil {
@@ -52,10 +57,10 @@ func TestMigration0063CancelsRevisionsWithoutLosingAttemptEvidence(t *testing.T)
 	if _, err := d.Writer.Exec(`UPDATE generation_jobs SET cancel_requested_at='2026-09-18T00:01:00Z' WHERE id='revision'`); err == nil {
 		t.Fatal("the pre-0063 table already accepted a cancelled revision")
 	}
-	if err := Migrate(ctx, d.Writer); err != nil {
+	if err := migrate(ctx, d.Writer, through); err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(ctx, d.Writer); err != nil {
+	if err := migrate(ctx, d.Writer, through); err != nil {
 		t.Fatal("migration was not idempotent", err)
 	}
 	for _, table := range []string{"clip_attempt_checkpoints", "clip_recovery_states"} {

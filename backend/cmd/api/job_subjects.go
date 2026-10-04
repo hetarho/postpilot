@@ -10,14 +10,22 @@ import (
 
 // jobKinds is what the queue's store is told about the work it holds. Clip work exists as
 // a row while its owner is still deciding whether to pay for it, so nothing may pick it
-// up until they approve (Deferred); an owner may stop any of it (Cancellable); and the
-// two charged kinds authorize every model call against that stop (Authorized). The store
-// is given the lists, so its SQL names no product.
+// up until they approve (Deferred); an owner may stop any of it and a template request
+// (Cancellable — no schema CHECK repeats it, so this is the only such list); and the
+// charged kinds authorize every model call against that stop (Authorized). FirstStages is
+// the stage each kind's handler reports first, which the dispatcher writes as it picks the
+// job up: charged clip work prepares its sources before its hold (clip/app's Reserve accepts
+// only a job in `prepare`), voice learning analyzes, and a 검증 or a revision writes; every
+// other kind starts in `observe`. The store is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
 		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
 		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest},
 		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		FirstStages: map[string]string{
+			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
+			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",
+		},
 	}
 }
 

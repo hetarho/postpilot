@@ -39,13 +39,17 @@ func attachableDimension(dimension string) bool {
 
 // Kinds is what the composition root tells the store about the work it will hold, so no
 // statement here names a product: which kinds wait for an activation before they may be
-// dispatched, which an owner may cancel, and which must authorize every model call
-// against that cancellation. Empty lists are a real mode — a queue where nothing waits,
-// nothing is cancelled and nothing is authorized — and must be stated, not defaulted into.
+// dispatched, which an owner may cancel, which must authorize every model call against
+// that cancellation, and the stage each kind is dispatched in (any other kind starts in
+// `observe`). Empty lists are a real mode — a queue where nothing waits, nothing is
+// cancelled, nothing is authorized and everything starts in `observe` — and must be stated,
+// not defaulted into. No schema CHECK repeats these: Cancellable is the only place which
+// kinds may be stopped lives.
 type Kinds struct {
 	Deferred    []string
 	Cancellable []string
 	Authorized  []string
+	FirstStages map[string]string
 }
 
 type Store struct {
@@ -79,6 +83,18 @@ func kindsJSON(kinds []string) (string, error) {
 	raw, err := json.Marshal(kinds)
 	if err != nil {
 		return "", fmt.Errorf("encode job kinds: %w", err)
+	}
+	return string(raw), nil
+}
+
+// stagesJSON encodes each kind's first stage as the JSON object the dispatcher reads.
+func stagesJSON(stages map[string]string) (string, error) {
+	if stages == nil {
+		stages = map[string]string{}
+	}
+	raw, err := json.Marshal(stages)
+	if err != nil {
+		return "", fmt.Errorf("encode job first stages: %w", err)
 	}
 	return string(raw), nil
 }
@@ -117,8 +133,12 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 }
 
 func (s *Store) PickNextQueued(ctx context.Context, now time.Time) (job.Job, error) {
+	stages, err := stagesJSON(s.kinds.FirstStages)
+	if err != nil {
+		return job.Job{}, err
+	}
 	return withWriter(ctx, s, func(q *sqlc.Queries) (job.Job, error) {
-		row, err := q.PickNextQueued(ctx, sqlc.PickNextQueuedParams{StartedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
+		row, err := q.PickNextQueued(ctx, sqlc.PickNextQueuedParams{FirstStages: stages, StartedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
 		if err != nil {
 			return job.Job{}, mapNotFound(err, "pick runnable job")
 		}

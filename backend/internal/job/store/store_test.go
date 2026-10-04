@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/job"
+	jobstore "github.com/postpilot/backend/internal/job/store"
 )
 
 // The queue's own row lifecycle, over a migrated temp database: what a worker writes as it
@@ -120,6 +121,33 @@ func TestSweepRunningFailsWhatARestartAbandoned(t *testing.T) {
 	waiting, err := store.GetByID(ctx, "queued")
 	if err != nil || waiting.Status != job.StatusQueued {
 		t.Fatalf("the sweep touched queued work: %+v, %v", waiting, err)
+	}
+}
+
+// F13: the stage a job is dispatched in is the root's answer, not a list in the queue's SQL.
+// A kind the root names starts where it says, whatever the kind is called; any other starts in
+// observe; and a store told nothing starts everything in observe.
+func TestDispatchStartsAKindInTheStageTheRootNames(t *testing.T) {
+	_, handle := subjectHarness(t)
+	ctx := context.Background()
+	for _, tc := range []struct {
+		stages map[string]string
+		kind   string
+		want   string
+	}{
+		{map[string]string{"made_up_work": "draft"}, "made_up_work", "draft"},
+		{map[string]string{"made_up_work": "draft"}, job.KindGenerate, "observe"},
+		{nil, "made_up_work", "observe"},
+	} {
+		store := jobstore.New(handle.Writer, handle.Reader, jobstore.Kinds{FirstStages: tc.stages})
+		queued := insert(t, store, job.Job{ID: tc.kind + "-" + tc.want, Kind: tc.kind, UserID: "alice"})
+		picked, err := store.PickNextQueued(ctx, time.Now().UTC())
+		if err != nil || picked.ID != queued.ID || picked.Stage != tc.want {
+			t.Fatalf("%s under %v picked %+v, %v; want stage %q", tc.kind, tc.stages, picked, err, tc.want)
+		}
+		if err := store.Finish(ctx, picked.ID, job.StatusDone, nil, time.Now().UTC()); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

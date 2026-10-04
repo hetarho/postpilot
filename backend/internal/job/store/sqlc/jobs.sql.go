@@ -683,22 +683,16 @@ func (q *Queries) LatestForVoiceKind(ctx context.Context, arg LatestForVoiceKind
 const pickNextQueued = `-- name: PickNextQueued :one
 UPDATE generation_jobs
 SET status = 'running',
-    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE CASE kind
-        WHEN 'generate_clip' THEN 'prepare'
-        WHEN 'revise_clip' THEN 'prepare'
-        WHEN 'storyline_clip' THEN 'prepare'
-        WHEN 'revise_storyline_clip' THEN 'prepare'
-        WHEN 'analyze_voice' THEN 'analyze'
-        WHEN 'check_voice' THEN 'write'
-        WHEN 'revise' THEN 'write'
-        ELSE 'observe'
-    END END,
+    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE COALESCE(
+        (SELECT value FROM json_each(?1) WHERE key = generation_jobs.kind),
+        'observe'
+    ) END,
     error = NULL,
     error_reason = NULL,
     error_params = NULL,
     technical_detail = NULL,
-    started_at = CASE WHEN generation_jobs.status='queued' THEN ?1 ELSE generation_jobs.started_at END,
-    updated_at = ?2
+    started_at = CASE WHEN generation_jobs.status='queued' THEN ?2 ELSE generation_jobs.started_at END,
+    updated_at = ?3
 WHERE id = (
     SELECT j.id FROM generation_jobs j LEFT JOIN job_continuations c ON c.job_id=j.id
     WHERE j.cancel_requested_at IS NULL
@@ -710,12 +704,16 @@ RETURNING id, post_slug, user_id, voice_id, kind, status, stage, progress_done, 
 `
 
 type PickNextQueuedParams struct {
-	StartedAt sql.NullString
-	UpdatedAt string
+	FirstStages interface{}
+	StartedAt   sql.NullString
+	UpdatedAt   string
 }
 
+// Each kind's first stage is the composition root's answer, passed in as a JSON object of
+// kind to stage, so the queue's SQL names no product; a kind it does not name starts in
+// observe. A resumed job keeps the stage it parked in.
 func (q *Queries) PickNextQueued(ctx context.Context, arg PickNextQueuedParams) (GenerationJob, error) {
-	row := q.db.QueryRowContext(ctx, pickNextQueued, arg.StartedAt, arg.UpdatedAt)
+	row := q.db.QueryRowContext(ctx, pickNextQueued, arg.FirstStages, arg.StartedAt, arg.UpdatedAt)
 	var i GenerationJob
 	err := row.Scan(
 		&i.ID,
