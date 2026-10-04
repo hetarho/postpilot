@@ -11,14 +11,6 @@ import (
 	"unicode/utf8"
 )
 
-func (s *Service) refundStore() (RefundStore, error) {
-	store, ok := s.store.(RefundStore)
-	if !ok {
-		return nil, ErrUnavailable
-	}
-	return store, nil
-}
-
 // RequestRefund never moves money. The owner's reason and the funding payment
 // become a durable review item even after seven days or after benefit use.
 func (s *Service) RequestRefund(ctx context.Context, userID, orderID, reason string) (RefundRequest, error) {
@@ -26,26 +18,22 @@ func (s *Service) RequestRefund(ctx context.Context, userID, orderID, reason str
 	if userID == "" || orderID == "" || utf8.RuneCountInString(reason) < 1 || utf8.RuneCountInString(reason) > 500 {
 		return RefundRequest{}, ErrInvalidRefundRequest
 	}
-	if _, err := s.refundStore(); err != nil {
-		return RefundRequest{}, err
-	}
 	request := RefundRequest{ID: s.newID(), UserID: userID, OrderID: orderID, Reason: reason,
 		Status: "requested", RequestedAt: s.now().UTC()}
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-		ref := tx.(RefundStore)
-		payment, found, err := ref.RefundPayment(ctx, userID, orderID)
+		payment, found, err := tx.RefundPayment(ctx, userID, orderID)
 		if err != nil {
 			return err
 		}
 		if !found {
 			return ErrRefundNotFound
 		}
-		if open, err := ref.OpenRefundForOrder(ctx, orderID); err != nil {
+		if open, err := tx.OpenRefundForOrder(ctx, orderID); err != nil {
 			return err
 		} else if open {
 			return ErrRefundConflict
 		}
-		prior, err := ref.ConfirmedRefundTotal(ctx, orderID)
+		prior, err := tx.ConfirmedRefundTotal(ctx, orderID)
 		if err != nil {
 			return err
 		}
@@ -53,11 +41,11 @@ func (s *Service) RequestRefund(ctx context.Context, userID, orderID, reason str
 			return ErrRefundAmount
 		}
 		request.PriorRefundedKRW = prior
-		if err := ref.InsertRefundRequest(ctx, request); err != nil {
+		if err := tx.InsertRefundRequest(ctx, request); err != nil {
 			return err
 		}
 		request.Payment = payment
-		benefits := ref.RefundBenefits()
+		benefits := tx.RefundBenefits()
 		if benefits == nil {
 			return ErrUnavailable
 		}
@@ -68,26 +56,22 @@ func (s *Service) RequestRefund(ctx context.Context, userID, orderID, reason str
 }
 
 func (s *Service) RefundRequests(ctx context.Context, userID string) ([]RefundRequest, error) {
-	ref, err := s.refundStore()
-	if err != nil {
-		return nil, err
-	}
-	items, err := ref.Refunds(ctx, userID)
+	items, err := s.store.Refunds(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	for i := range items {
-		payment, found, err := ref.RefundPayment(ctx, items[i].UserID, items[i].OrderID)
+		payment, found, err := s.store.RefundPayment(ctx, items[i].UserID, items[i].OrderID)
 		if err != nil {
 			return nil, err
 		}
 		if found {
 			items[i].Payment = payment
-			items[i].PriorRefundedKRW, err = ref.ConfirmedRefundTotal(ctx, items[i].OrderID)
+			items[i].PriorRefundedKRW, err = s.store.ConfirmedRefundTotal(ctx, items[i].OrderID)
 			if err != nil {
 				return nil, err
 			}
-			items[i].Evidence, err = s.refundEvidence(ctx, ref, items[i], payment)
+			items[i].Evidence, err = s.refundEvidence(ctx, items[i], payment)
 			if err != nil {
 				return nil, err
 			}
@@ -97,28 +81,24 @@ func (s *Service) RefundRequests(ctx context.Context, userID string) ([]RefundRe
 }
 
 func (s *Service) RefundRequest(ctx context.Context, requestID string) (RefundRequest, error) {
-	ref, err := s.refundStore()
-	if err != nil {
-		return RefundRequest{}, err
-	}
-	item, found, err := ref.RefundRequest(ctx, requestID)
+	item, found, err := s.store.RefundRequest(ctx, requestID)
 	if err != nil {
 		return RefundRequest{}, err
 	}
 	if !found {
 		return RefundRequest{}, ErrRefundNotFound
 	}
-	payment, found, err := ref.RefundPayment(ctx, item.UserID, item.OrderID)
+	payment, found, err := s.store.RefundPayment(ctx, item.UserID, item.OrderID)
 	if err != nil {
 		return RefundRequest{}, err
 	}
 	if found {
 		item.Payment = payment
-		item.PriorRefundedKRW, err = ref.ConfirmedRefundTotal(ctx, item.OrderID)
+		item.PriorRefundedKRW, err = s.store.ConfirmedRefundTotal(ctx, item.OrderID)
 		if err != nil {
 			return RefundRequest{}, err
 		}
-		item.Evidence, err = s.refundEvidence(ctx, ref, item, payment)
+		item.Evidence, err = s.refundEvidence(ctx, item, payment)
 	}
 	return item, err
 }
@@ -126,11 +106,7 @@ func (s *Service) RefundRequest(ctx context.Context, requestID string) (RefundRe
 // ReconcilePendingRefunds is called by the billing worker. A lost response
 // stays visible as processing and is retried with its original idempotency key.
 func (s *Service) ReconcilePendingRefunds(ctx context.Context) error {
-	ref, err := s.refundStore()
-	if err != nil {
-		return err
-	}
-	ids, err := ref.ProcessingRefundIDs(ctx, s.now().Add(-7*24*time.Hour), 100)
+	ids, err := s.store.ProcessingRefundIDs(ctx, s.now().Add(-7*24*time.Hour), 100)
 	if err != nil {
 		return err
 	}
@@ -143,15 +119,15 @@ func (s *Service) ReconcilePendingRefunds(ctx context.Context) error {
 	return errors.Join(failures...)
 }
 
-func (s *Service) refundEvidence(ctx context.Context, ref RefundStore, request RefundRequest, payment RefundPayment) (RefundEvidence, error) {
+func (s *Service) refundEvidence(ctx context.Context, request RefundRequest, payment RefundPayment) (RefundEvidence, error) {
 	if request.Status != "requested" {
-		if snapshot, found, err := ref.ReviewedEvidence(ctx, request.ID); err != nil {
+		if snapshot, found, err := s.store.ReviewedEvidence(ctx, request.ID); err != nil {
 			return RefundEvidence{}, err
 		} else if found {
 			return snapshot, nil
 		}
 	}
-	if benefits := ref.RefundBenefits(); benefits != nil {
+	if benefits := s.store.RefundBenefits(); benefits != nil {
 		return benefits.Inspect(ctx, payment, s.now())
 	}
 	return RefundEvidence{}, ErrUnavailable
@@ -164,11 +140,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 	if reviewerID == "" || requestID == "" || (outcome != "approve" && outcome != "reject") {
 		return RefundRequest{}, ErrInvalidRefundRequest
 	}
-	ref, err := s.refundStore()
-	if err != nil {
-		return RefundRequest{}, err
-	}
-	stored, found, err := ref.RefundRequest(ctx, requestID)
+	stored, found, err := s.store.RefundRequest(ctx, requestID)
 	if err != nil {
 		return RefundRequest{}, err
 	}
@@ -180,7 +152,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 	}
 	var providerPayment Payment
 	if outcome == "approve" {
-		if s.provider == nil {
+		if !s.Enabled() {
 			return RefundRequest{}, ErrUnavailable
 		}
 		providerPayment, found, err = s.provider.PaymentByOrder(ctx, stored.OrderID)
@@ -191,22 +163,21 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 	now := s.now().UTC()
 	var reviewed RefundRequest
 	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-		ref := tx.(RefundStore)
-		request, found, err := ref.RefundRequest(ctx, requestID)
+		request, found, err := tx.RefundRequest(ctx, requestID)
 		if err != nil {
 			return err
 		}
 		if !found || request.Status != "requested" {
 			return ErrRefundConflict
 		}
-		payment, found, err := ref.RefundPayment(ctx, request.UserID, request.OrderID)
+		payment, found, err := tx.RefundPayment(ctx, request.UserID, request.OrderID)
 		if err != nil {
 			return err
 		}
 		if !found {
 			return ErrRefundNotFound
 		}
-		benefits := ref.RefundBenefits()
+		benefits := tx.RefundBenefits()
 		if benefits == nil {
 			return ErrUnavailable
 		}
@@ -215,7 +186,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 			return err
 		}
 		request.Payment, request.Evidence = payment, evidence
-		request.PriorRefundedKRW, err = ref.ConfirmedRefundTotal(ctx, request.OrderID)
+		request.PriorRefundedKRW, err = tx.ConfirmedRefundTotal(ctx, request.OrderID)
 		if err != nil {
 			return err
 		}
@@ -235,7 +206,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 			if evidence.Active() {
 				return ErrRefundActiveUse
 			}
-			if dependent, err := ref.HasUnresolvedDependentUpgrade(ctx, payment); err != nil {
+			if dependent, err := tx.HasUnresolvedDependentUpgrade(ctx, payment); err != nil {
 				return err
 			} else if dependent {
 				return ErrRefundDependentPayment
@@ -256,7 +227,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 				return err
 			}
 		}
-		if err := ref.RecordRefundDecision(ctx, request, decision); err != nil {
+		if err := tx.RecordRefundDecision(ctx, request, decision); err != nil {
 			return err
 		}
 		request.Status, request.ReviewedBy = "rejected", reviewerID
@@ -281,7 +252,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 	if err := s.ReconcileRefund(ctx, requestID); err != nil && !errors.Is(err, ErrRefundProviderPending) {
 		return reviewed, err
 	}
-	latest, _, err := ref.RefundRequest(ctx, requestID)
+	latest, _, err := s.store.RefundRequest(ctx, requestID)
 	if err == nil {
 		latest.Payment, latest.Evidence = reviewed.Payment, reviewed.Evidence
 	}
@@ -297,11 +268,7 @@ func encodeRefundJSON(value any) (string, error) {
 // idempotency key is used every time; no second local entitlement reversal is
 // possible once the request becomes completed.
 func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
-	ref, err := s.refundStore()
-	if err != nil {
-		return err
-	}
-	request, found, err := ref.RefundRequest(ctx, requestID)
+	request, found, err := s.store.RefundRequest(ctx, requestID)
 	if err != nil {
 		return err
 	}
@@ -314,12 +281,11 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 	if request.Status != "processing" {
 		return ErrRefundConflict
 	}
-	payment, found, err := ref.RefundPayment(ctx, request.UserID, request.OrderID)
+	payment, found, err := s.store.RefundPayment(ctx, request.UserID, request.OrderID)
 	if err != nil || !found {
 		return errors.Join(ErrRefundNotFound, err)
 	}
-	provider, ok := s.provider.(RefundProvider)
-	if !ok {
+	if !s.Enabled() {
 		return ErrUnavailable
 	}
 	transaction := request.ProviderTransactionKey
@@ -330,7 +296,7 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 		if request.ReviewedAt != nil && s.now().Sub(*request.ReviewedAt) >= 7*24*time.Hour {
 			return ErrRefundProviderPending
 		}
-		canceled, refusal, err := s.cancelOrReadBack(ctx, provider, payment.PaymentKey, payment.OrderID,
+		canceled, refusal, err := s.cancelOrReadBack(ctx, payment.PaymentKey, payment.OrderID,
 			request.ReviewedAmountKRW, "Postpilot reviewed refund", request.IdempotencyKey)
 		if err != nil {
 			return err
@@ -343,13 +309,12 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 			// anything else stays processing.
 			if canceled.BalanceKRW == request.ProviderBalanceBeforeKRW {
 				failure := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-					ref := tx.(RefundStore)
-					if benefits := ref.RefundBenefits(); benefits != nil {
+					if benefits := tx.RefundBenefits(); benefits != nil {
 						if err := benefits.Release(ctx, request, payment); err != nil {
 							return err
 						}
 					}
-					return ref.FailRefund(ctx, request.ID, refusal.Code, s.now())
+					return tx.FailRefund(ctx, request.ID, refusal.Code, s.now())
 				})
 				return errors.Join(ErrRefundFailed, refusal, failure)
 			}
@@ -365,7 +330,7 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 			return errors.Join(ErrRefundProviderPending, cancelErr)
 		}
 		if err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-			return tx.(RefundStore).RecordRefundProviderAttempt(ctx, request.ID, transaction)
+			return tx.RecordRefundProviderAttempt(ctx, request.ID, transaction)
 		}); err != nil {
 			return err
 		}
@@ -385,8 +350,7 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 	request.ConfirmedAmountKRW = request.ReviewedAmountKRW
 	var applied bool
 	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
-		ref := tx.(RefundStore)
-		current, found, err := ref.RefundRequest(ctx, request.ID)
+		current, found, err := tx.RefundRequest(ctx, request.ID)
 		if err != nil {
 			return err
 		}
@@ -399,7 +363,7 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 		if current.Status != "processing" {
 			return ErrRefundConflict
 		}
-		benefits := ref.RefundBenefits()
+		benefits := tx.RefundBenefits()
 		if benefits == nil {
 			return ErrUnavailable
 		}
@@ -409,7 +373,7 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 		if err := s.reverseRefundedEntitlements(ctx, tx, plans, request, payment, now); err != nil {
 			return err
 		}
-		if err := ref.RecordRefundOutcome(ctx, request, confirmed, now); err != nil {
+		if err := tx.RecordRefundOutcome(ctx, request, confirmed, now); err != nil {
 			return err
 		}
 		amount := request.ConfirmedAmountKRW

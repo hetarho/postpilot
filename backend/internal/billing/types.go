@@ -24,7 +24,6 @@ var (
 	ErrChangeUnsupported         = errors.New("changing tier and term together is unsupported")
 	ErrPaymentMethodRequired     = errors.New("payment method required")
 	ErrChargeFailed              = errors.New("charge failed")
-	ErrRefundFailed              = errors.New("refund failed")
 	ErrPaymentPending            = errors.New("payment outcome is pending")
 	ErrStaleQuote                = errors.New("billing quote no longer matches subscription")
 	ErrInvalidPack               = errors.New("unknown fixed credit pack")

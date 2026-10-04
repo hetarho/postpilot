@@ -624,3 +624,66 @@ func TestDefinitiveCancelRefusalIsSettledByThePaymentReadBack(t *testing.T) {
 		}
 	})
 }
+
+// ARCH-40: a reviewed refund answers ErrUnavailable only where its surface is unwired in a legal
+// mode — billing disabled, so no provider, or a store built without refund benefits — and
+// changes nothing there.
+func TestReviewedRefundIsUnavailableOnlyWhereItsSurfaceIsUnwired(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	t.Run("billing disabled moves no money", func(t *testing.T) {
+		h, provider, clock := refundHarness(t, at)
+		if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+			t.Fatal(err)
+		}
+		request, err := h.service.RequestRefund(ctx, "alice", chargeOrder(t, h, "subscribe"), "billing switched off")
+		if err != nil {
+			t.Fatal(err)
+		}
+		disabled := billing.NewService(h.store, nil, testCredits{Service: h.ledger}, nil, nil, nil).
+			WithClock(func() time.Time { return *clock })
+		if _, err := disabled.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled review = %v, want ErrUnavailable", err)
+		}
+		if stored, err := h.service.RefundRequest(ctx, request.ID); err != nil || stored.Status != "requested" {
+			t.Fatalf("after the disabled review: %+v err=%v", stored, err)
+		}
+		provider.timeout = true
+		if started, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW); err != nil || started.Status != "processing" {
+			t.Fatalf("lost cancel answer = %+v err=%v", started, err)
+		}
+		if err := disabled.ReconcileRefund(ctx, request.ID); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled reconcile = %v, want ErrUnavailable", err)
+		}
+		if stored, err := h.service.RefundRequest(ctx, request.ID); err != nil || stored.Status != "processing" {
+			t.Fatalf("after the disabled reconcile: %+v err=%v", stored, err)
+		}
+		if err := h.store.InsertIntent(ctx, packIntent("alice", "pp-buy-review", 3000, at)); err != nil {
+			t.Fatal(err)
+		}
+		if marked, err := h.store.MarkIntent(ctx, "pp-buy-review", "review", "DONE", "pay-review", at); err != nil || !marked {
+			t.Fatalf("review mark=%t err=%v", marked, err)
+		}
+		if err := disabled.RefundUnappliedCaptures(ctx); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled unapplied refund = %v, want ErrUnavailable", err)
+		}
+		if got := intentStatus(t, h, "pp-buy-review"); got != "review" {
+			t.Fatalf("order in review after the disabled pass = %s", got)
+		}
+	})
+
+	t.Run("a store without refund benefits records no request", func(t *testing.T) {
+		h, _, _ := fixedService(t, at)
+		if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.service.RequestRefund(ctx, "alice", chargeOrder(t, h, "subscribe"), "no benefits wired"); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("request = %v, want ErrUnavailable", err)
+		}
+		var requests int
+		if err := h.handle.Reader.QueryRow(`SELECT count(*) FROM billing_refund_requests`).Scan(&requests); err != nil || requests != 0 {
+			t.Fatalf("refund requests = %d err=%v", requests, err)
+		}
+	})
+}

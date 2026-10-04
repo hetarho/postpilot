@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T584 | Make the reviewed-refund ports required and name a failed refund | ARCH BILL | - | doing@261005.pc |
 
 ## next
 - implement-task T569–T579 (perf-cost follow-ups, QUOTA r34, BILL r9, release smoke), one commit per task, then push and watch CI.
@@ -89,6 +88,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T584 done: refund store and provider behaviour are required billing ports (no type assertions); a provider-failed reviewed refund answers REFUND_FAILED with operator copy; BE and FE suites green
 - 261005 create-task T584 (left open by T583: optional refund ports, untyped failed refund) and start
 - 261005 T583 done: retired purchase-refund reasons reserved in proto, RefundPurchase and its ports deleted, billing USD columns dropped (0132), IntentStore folded into Store; BE and FE suites green
 - 261005 create-task T583 (left open by T582: PURCHASE_TOO_SMALL, RefundPurchase, USD columns, IntentStore) and start
@@ -108,5 +108,3 @@
 - 261005 T575 done: one precondition chain for every generation start (each keeps its check order), one observe+write call plan, one refusal mapping, one comparison create-enqueue-link helper; BE suite green
 - 261005 T577 done: export panel and template editor state machines moved into widget model hooks and a new features/edit-template slice; FE suite 382/3186 green
 - 261005 T569–T579 start (tag pc): five isolated worktrees by blast radius
-- 261005 create-task QUOTA r34 BILL r9 review/perf-cost-261004: T569–T579 (11 tasks: F10 hold, BILL-22 refunds, the 8 held maintainability findings, release smoke); review converted again
-- 261005 update-ssot QUOTA r34 BILL r9: QUOTA-14✎ a voice analysis holds its real prompt size (perf-cost F10); BILL-22+ a captured payment that cannot be applied is refunded in full automatically (perf-cost F12)

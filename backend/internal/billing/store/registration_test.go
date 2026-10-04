@@ -219,6 +219,7 @@ func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)     
 // registrationProvider captures every charge in full and answers the order read-back with it,
 // the evidence settlement applies a payment on.
 type registrationProvider struct {
+	noCancel
 	label  string
 	mu     sync.Mutex
 	orders map[string]billing.Payment

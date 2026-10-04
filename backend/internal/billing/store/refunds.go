@@ -264,12 +264,6 @@ func (s *Store) RecordRefundOutcome(ctx context.Context, request billing.RefundR
 	return err
 }
 
-func (s *Store) RejectRefund(ctx context.Context, requestID string, at time.Time) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='rejected',reviewed_at=?
-		WHERE id=? AND status='requested'`, formatTime(at), requestID)
-	return err
-}
-
 func (s *Store) FailRefund(ctx context.Context, requestID, providerStatus string, at time.Time) error {
 	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='failed',provider_status=?
 		WHERE id=? AND status='processing'`, providerStatus, requestID)
@@ -353,5 +347,3 @@ func mapRefundRequest(request *billing.RefundRequest, requestedAt string,
 	}
 	return nil
 }
-
-var _ billing.RefundStore = (*Store)(nil)

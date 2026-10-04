@@ -298,7 +298,8 @@ export const errors = {
   CHANGE_UNSUPPORTED: 'Change the plan and billing term one at a time.',
   PAYMENT_METHOD_REQUIRED: 'Register a payment method first.',
   CHARGE_FAILED: 'The charge could not be completed. Check your payment method and try again.',
-  REFUND_FAILED: 'The refund could not be completed. Try again shortly.',
+  REFUND_FAILED:
+    'The payment provider refused this refund, so no money was returned. The request closes as failed and the benefits it held are released.',
   INSUFFICIENT_CREDITS:
     'This needs {{required}} credits and you have {{balance}}. Tops up {{renews_at, instant}}.',
   PLAN_REQUIRED: 'Choose a plan.',

@@ -193,12 +193,8 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 			if !found || sub.CoverageID == "" {
 				return ErrPaymentPending
 			}
-			if recorder, ok := tx.(interface {
-				SetIntentFunding(context.Context, string, string, time.Time) error
-			}); ok {
-				if err := recorder.SetIntentFunding(ctx, current.OrderID, sub.CoverageID, sub.TermEnd); err != nil {
-					return err
-				}
+			if err := tx.SetIntentFunding(ctx, current.OrderID, sub.CoverageID, sub.TermEnd); err != nil {
+				return err
 			}
 		}
 		marked, err := tx.MarkIntent(ctx, current.OrderID, "applied", payment.Status, payment.PaymentKey, now)

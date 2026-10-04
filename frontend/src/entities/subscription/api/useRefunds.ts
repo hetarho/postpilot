@@ -5,7 +5,7 @@ import {
   useTransport,
 } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { BillingService } from '@/shared/api'
+import { appFailureFromConnect, BillingService } from '@/shared/api'
 
 export function useMyRefunds() {
   const query = useQuery(BillingService.method.listMyRefunds, {})
@@ -52,23 +52,29 @@ export function useRequestRefund() {
   }
 }
 
+/** The operator's decision on one request. The lists refresh when it settles, not only when it
+ *  succeeds: an approval whose cancel the provider refused has still decided the request, and
+ *  the row must show it failed beside the refusal (REFUND_FAILED). */
 export function useReviewRefund() {
   const mutation = useMutation(BillingService.method.reviewRefund, {
-    onSuccess: useRefundInvalidation(),
+    onSettled: useRefundInvalidation(),
   })
   return {
     ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     reviewRefund: (requestId: string, outcome: string, reviewedAmountKrw: bigint) =>
       mutation.mutateAsync({ requestId, outcome, reviewedAmountKrw }),
   }
 }
 
+/** The operator's re-check of a processing request, refreshed on settle for the same reason. */
 export function useReconcileRefund() {
   const mutation = useMutation(BillingService.method.reconcileRefund, {
-    onSuccess: useRefundInvalidation(),
+    onSettled: useRefundInvalidation(),
   })
   return {
     ...mutation,
+    failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     reconcileRefund: (requestId: string) => mutation.mutateAsync({ requestId }),
   }
 }

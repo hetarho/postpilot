@@ -67,9 +67,9 @@ func definitiveChargeRefusal(err error) bool {
 // provider's answer on success, or on a definitive refusal the payment read back by its order —
 // a refusal is not proof that no money moved, so the caller decides by what the payment shows.
 // Any other answer leaves the outcome unknown (ErrRefundProviderPending).
-func (s *Service) cancelOrReadBack(ctx context.Context, provider RefundProvider, paymentKey, orderID string,
+func (s *Service) cancelOrReadBack(ctx context.Context, paymentKey, orderID string,
 	amountKRW int, reason, idempotencyKey string) (Payment, *ProviderError, error) {
-	canceled, err := provider.CancelPayment(ctx, paymentKey, amountKRW, reason, idempotencyKey)
+	canceled, err := s.provider.CancelPayment(ctx, paymentKey, amountKRW, reason, idempotencyKey)
 	if err == nil {
 		return canceled, nil, nil
 	}

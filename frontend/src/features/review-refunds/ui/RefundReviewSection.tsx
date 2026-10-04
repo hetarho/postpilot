@@ -7,7 +7,7 @@ import {
   useReviewRefund,
 } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { Button, Notice, Typography } from '@/shared/ui'
+import { AppFailureMessage, Button, Notice, Typography } from '@/shared/ui'
 
 export function RefundReviewSection() {
   const { t } = useTranslation('billing')
@@ -46,6 +46,7 @@ function RefundReviewRow({ item }: { item: BillingRefundRequest }) {
   }
   const review = useReviewRefund()
   const reconcile = useReconcileRefund()
+  const failure = review.failure ?? reconcile.failure
   const [amount, setAmount] = useState(String(item.payment?.chargedKrw ?? 0n))
   const validAmount =
     /^\d+$/.test(amount) &&
@@ -117,9 +118,15 @@ function RefundReviewRow({ item }: { item: BillingRefundRequest }) {
           {t('refundReview.reconcile')}
         </Button>
       )}
-      {(review.isError || reconcile.isError) && (
+      {failure && (
         <Notice tone="danger" role="alert">
-          {t('refundReview.actionFailed')}
+          {/* A refusal the server names (the provider's, REFUND_FAILED) says why; an untyped
+              failure keeps the screen's own line. */}
+          {failure.reason === 'UNKNOWN_FAILURE' ? (
+            t('refundReview.actionFailed')
+          ) : (
+            <AppFailureMessage failure={failure} />
+          )}
         </Notice>
       )}
       {item.status === 'completed' && (

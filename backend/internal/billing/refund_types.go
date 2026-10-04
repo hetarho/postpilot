@@ -16,6 +16,9 @@ var (
 	ErrRefundDependentPayment = errors.New("a later upgrade payment must be reviewed first")
 	ErrRefundProviderPending  = errors.New("refund provider outcome is unresolved")
 	ErrInvalidRefundRequest   = errors.New("refund request is invalid")
+	// ErrRefundFailed is a reviewed refund the provider refused for good while the payment
+	// shows no money moved: the frozen funding goes back and the request closes as failed.
+	ErrRefundFailed = errors.New("refund failed")
 )
 
 // refundWindow is BILL-11's seven days: an untouched payment requested inside it is refunded
@@ -130,22 +133,4 @@ type RefundBenefits interface {
 	Guard(ctx context.Context, request RefundRequest, payment RefundPayment, at time.Time) error
 	Release(ctx context.Context, request RefundRequest, payment RefundPayment) error
 	Confirm(ctx context.Context, request RefundRequest, payment RefundPayment, at time.Time) error
-}
-
-type RefundStore interface {
-	RefundPayment(ctx context.Context, userID, orderID string) (RefundPayment, bool, error)
-	RefundRequest(ctx context.Context, id string) (RefundRequest, bool, error)
-	OpenRefundForOrder(ctx context.Context, orderID string) (bool, error)
-	Refunds(ctx context.Context, userID string) ([]RefundRequest, error)
-	ProcessingRefundIDs(ctx context.Context, since time.Time, limit int) ([]string, error)
-	ReviewedEvidence(ctx context.Context, requestID string) (RefundEvidence, bool, error)
-	InsertRefundRequest(ctx context.Context, request RefundRequest) error
-	RecordRefundDecision(ctx context.Context, request RefundRequest, decision RefundDecision) error
-	RecordRefundProviderAttempt(ctx context.Context, requestID, transactionKey string) error
-	RecordRefundOutcome(ctx context.Context, request RefundRequest, payment Payment, at time.Time) error
-	RejectRefund(ctx context.Context, requestID string, at time.Time) error
-	FailRefund(ctx context.Context, requestID, providerStatus string, at time.Time) error
-	ConfirmedRefundTotal(ctx context.Context, orderID string) (int, error)
-	HasUnresolvedDependentUpgrade(ctx context.Context, payment RefundPayment) (bool, error)
-	RefundBenefits() RefundBenefits
 }

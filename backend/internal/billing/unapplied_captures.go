@@ -24,13 +24,12 @@ func (s *Service) RefundUnappliedCaptures(ctx context.Context) error {
 	if err != nil || len(orders) == 0 {
 		return err
 	}
-	provider, ok := s.provider.(RefundProvider)
-	if !ok {
+	if !s.Enabled() {
 		return ErrUnavailable
 	}
 	var failures []error
 	for _, intent := range orders {
-		err := s.refundUnapplied(ctx, provider, intent)
+		err := s.refundUnapplied(ctx, intent)
 		if err == nil || errors.Is(err, ErrRefundProviderPending) {
 			continue
 		}
@@ -39,14 +38,14 @@ func (s *Service) RefundUnappliedCaptures(ctx context.Context) error {
 	return errors.Join(failures...)
 }
 
-func (s *Service) refundUnapplied(ctx context.Context, provider RefundProvider, intent Intent) error {
+func (s *Service) refundUnapplied(ctx context.Context, intent Intent) error {
 	captured, found, err := s.provider.PaymentByOrder(ctx, intent.OrderID)
 	if err != nil || !found || captured.OrderID != intent.OrderID || captured.PaymentKey == "" {
 		slog.Warn("unapplied order refund unresolved: captured payment not read; order stays in review",
 			"user_id", intent.UserID, "order_id", intent.OrderID, "found", found, "err", err)
 		return errors.Join(ErrRefundProviderPending, err)
 	}
-	observed, refusal, err := s.cancelOrReadBack(ctx, provider, captured.PaymentKey, intent.OrderID,
+	observed, refusal, err := s.cancelOrReadBack(ctx, captured.PaymentKey, intent.OrderID,
 		captured.AmountKRW, "Postpilot could not apply this payment", unappliedRefundKey(intent.OrderID))
 	if err != nil {
 		slog.Warn("unapplied order refund unresolved; order stays in review",

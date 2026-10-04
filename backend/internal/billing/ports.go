@@ -48,22 +48,42 @@ type Store interface {
 	ReviewIntents(ctx context.Context, limit int) ([]Intent, error)
 	// FailReviewIntent moves an order from review to failed; false means it had already left.
 	FailReviewIntent(ctx context.Context, orderID, providerStatus string, at time.Time) (bool, error)
+
+	// The reviewed-refund ledger (BILL-11): the funding an applied payment recorded, the
+	// owner's requests, the operator's decisions and the provider's outcomes.
+	SetIntentFunding(ctx context.Context, orderID, coverageID string, end time.Time) error
+	RefundPayment(ctx context.Context, userID, orderID string) (RefundPayment, bool, error)
+	RefundRequest(ctx context.Context, id string) (RefundRequest, bool, error)
+	OpenRefundForOrder(ctx context.Context, orderID string) (bool, error)
+	Refunds(ctx context.Context, userID string) ([]RefundRequest, error)
+	ProcessingRefundIDs(ctx context.Context, since time.Time, limit int) ([]string, error)
+	ReviewedEvidence(ctx context.Context, requestID string) (RefundEvidence, bool, error)
+	InsertRefundRequest(ctx context.Context, request RefundRequest) error
+	RecordRefundDecision(ctx context.Context, request RefundRequest, decision RefundDecision) error
+	RecordRefundProviderAttempt(ctx context.Context, requestID, transactionKey string) error
+	RecordRefundOutcome(ctx context.Context, request RefundRequest, payment Payment, at time.Time) error
+	FailRefund(ctx context.Context, requestID, providerStatus string, at time.Time) error
+	ConfirmedRefundTotal(ctx context.Context, orderID string) (int, error)
+	HasUnresolvedDependentUpgrade(ctx context.Context, payment RefundPayment) (bool, error)
+	// RefundBenefits is the funded-benefit owner on this store's connection, a transaction's own
+	// inside InWriteTx. A support-only store — the dev seed's, the operator shell's, the
+	// voucher's coverage reads — is built without one and answers nil, and every reviewed refund
+	// over it is ErrUnavailable.
+	RefundBenefits() RefundBenefits
 }
 
 type Provider interface {
 	IssueBillingKey(ctx context.Context, authKey, customerKey string) (BillingKey, error)
 	Charge(ctx context.Context, request ChargeRequest) (Payment, error)
 	PaymentByOrder(ctx context.Context, orderID string) (Payment, bool, error)
+	// CancelPayment returns amountKRW of a captured payment: a reviewed partial cancel or an
+	// unapplied capture's full one. The idempotency key makes a retry after a lost answer the
+	// same cancel, never a second one.
+	CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (Payment, error)
 	// ParseNotification reads one provider notification out of the POSTed body. The
 	// transport is unwrapped by the http adapter (ARCH-7): a domain port takes bytes, not a
 	// `*http.Request`.
 	ParseNotification(body []byte) (Notification, error)
-}
-
-// RefundProvider is the provider's reviewed partial-cancel and reconciliation
-// capability. It is optional so older charge adapters remain isolated.
-type RefundProvider interface {
-	CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (Payment, error)
 }
 
 type Credits interface {

@@ -106,6 +106,7 @@ func TestRemovePaymentMethodRefusesOnlyAnActiveRenewingSubscription(t *testing.T
 
 type registrationStore struct {
 	noIntents
+	noRefunds
 	method       *PaymentMethod
 	subscription *Subscription
 	events       []Event
@@ -135,6 +136,40 @@ func (noIntents) ReviewIntents(context.Context, int) ([]Intent, error) { return 
 func (noIntents) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
 	return false, nil
 }
+
+// noRefunds is a refund ledger holding no request, for the cases that never refund: an applied
+// payment's funding goes nowhere and the store carries no refund benefits.
+type noRefunds struct{}
+
+func (noRefunds) SetIntentFunding(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) RefundPayment(context.Context, string, string) (RefundPayment, bool, error) {
+	return RefundPayment{}, false, nil
+}
+func (noRefunds) RefundRequest(context.Context, string) (RefundRequest, bool, error) {
+	return RefundRequest{}, false, nil
+}
+func (noRefunds) OpenRefundForOrder(context.Context, string) (bool, error) { return false, nil }
+func (noRefunds) Refunds(context.Context, string) ([]RefundRequest, error) { return nil, nil }
+func (noRefunds) ProcessingRefundIDs(context.Context, time.Time, int) ([]string, error) {
+	return nil, nil
+}
+func (noRefunds) ReviewedEvidence(context.Context, string) (RefundEvidence, bool, error) {
+	return RefundEvidence{}, false, nil
+}
+func (noRefunds) InsertRefundRequest(context.Context, RefundRequest) error { return nil }
+func (noRefunds) RecordRefundDecision(context.Context, RefundRequest, RefundDecision) error {
+	return nil
+}
+func (noRefunds) RecordRefundProviderAttempt(context.Context, string, string) error { return nil }
+func (noRefunds) RecordRefundOutcome(context.Context, RefundRequest, Payment, time.Time) error {
+	return nil
+}
+func (noRefunds) FailRefund(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) ConfirmedRefundTotal(context.Context, string) (int, error)   { return 0, nil }
+func (noRefunds) HasUnresolvedDependentUpgrade(context.Context, RefundPayment) (bool, error) {
+	return false, nil
+}
+func (noRefunds) RefundBenefits() RefundBenefits { return nil }
 
 func newRegistrationStore() *registrationStore {
 	return &registrationStore{credits: &registrationCredits{grants: map[string]bool{}}}
@@ -253,8 +288,11 @@ func TestDisabledServiceStillReadsButWillNotQuote(t *testing.T) {
 	}
 }
 
-// emptyStore holds nothing, its checkout journal included.
-type emptyStore struct{ noIntents }
+// emptyStore holds nothing, its checkout journal and refund ledger included.
+type emptyStore struct {
+	noIntents
+	noRefunds
+}
 
 func (emptyStore) InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error {
 	return fn(emptyStore{}, nil, nil)
@@ -286,7 +324,15 @@ func (emptyStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time
 	return false, nil
 }
 
-type stubProvider struct{}
+type stubProvider struct{ noCancel }
+
+// noCancel is a provider that never answers a cancel, for the cases that refund nothing: an
+// unapplied capture stays in review as it would after a lost answer.
+type noCancel struct{}
+
+func (noCancel) CancelPayment(context.Context, string, int, string, string) (Payment, error) {
+	return Payment{}, errors.New("no cancel answered")
+}
 
 func (stubProvider) IssueBillingKey(context.Context, string, string) (BillingKey, error) {
 	return BillingKey{}, nil

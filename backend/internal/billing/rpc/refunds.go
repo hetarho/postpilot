@@ -110,8 +110,13 @@ func toProtoRefund(item billing.RefundRequest) *postpilotv1.BillingRefundRequest
 	return result
 }
 
+// refundError names the refusal the reviewing operator acts on, the provider's (REFUND_FAILED),
+// before anything joined to it, so a store failure that followed still reads as that refusal.
+// The rest stay UNKNOWN_FAILURE behind their Connect codes.
 func refundError(err error) error {
 	switch {
+	case errors.Is(err, billing.ErrRefundFailed):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "provider refused the refund", postpilotv1.FailureReason_REFUND_FAILED, nil)
 	case errors.Is(err, billing.ErrRefundNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "refund payment or request not found", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	case errors.Is(err, billing.ErrInvalidRefundRequest), errors.Is(err, billing.ErrRefundAmount):

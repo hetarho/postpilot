@@ -289,7 +289,8 @@ export const errors = {
   CHANGE_UNSUPPORTED: '플랜과 결제 주기는 한 번에 하나씩 바꿔 주세요.',
   PAYMENT_METHOD_REQUIRED: '먼저 결제 수단을 등록해 주세요.',
   CHARGE_FAILED: '결제를 완료하지 못했어요. 결제 수단을 확인하고 다시 시도해 주세요.',
-  REFUND_FAILED: '환불을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',
+  REFUND_FAILED:
+    '결제사가 이 환불을 거절해 돈이 돌아가지 않았어요. 요청은 처리 실패로 닫히고, 묶어 둔 혜택은 다시 쓸 수 있어요.',
   INSUFFICIENT_CREDITS:
     '크레딧이 {{required}} 필요한데 {{balance}}만 남았어요. {{renews_at, instant}}에 충전돼요.',
   PLAN_REQUIRED: '플랜을 선택해 주세요.',

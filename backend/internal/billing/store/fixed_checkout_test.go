@@ -12,6 +12,7 @@ import (
 )
 
 type fixedPayments struct {
+	noCancel
 	mu                 sync.Mutex
 	orders             map[string]billing.Payment
 	charges            map[string]int
@@ -20,6 +21,15 @@ type fixedPayments struct {
 	wrongAmount        bool
 	// chargeErr answers every charge with this error and captures nothing.
 	chargeErr error
+}
+
+// noCancel is a provider that never answers a cancel, for the cases that return no money: an
+// unapplied capture stays in review as it would after a lost answer. reviewPayments answers
+// its own.
+type noCancel struct{}
+
+func (noCancel) CancelPayment(context.Context, string, int, string, string) (billing.Payment, error) {
+	return billing.Payment{}, errors.New("no cancel answered")
 }
 
 func (p *fixedPayments) IssueBillingKey(context.Context, string, string) (billing.BillingKey, error) {

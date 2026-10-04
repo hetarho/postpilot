@@ -51,6 +51,7 @@ func TestWebhookRejectsUnparseableBody(t *testing.T) {
 }
 
 type webhookProvider struct {
+	noCancel
 	parseErr       error
 	unknownPayment bool
 }
@@ -73,6 +74,7 @@ func (p webhookProvider) ParseNotification([]byte) (billing.Notification, error)
 
 type webhookStore struct {
 	noJournal
+	noRefunds
 	notifications []billing.ProviderNotification
 }
 

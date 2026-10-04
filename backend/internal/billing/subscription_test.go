@@ -303,6 +303,7 @@ func TestAnnualBenefitStepNeverRevertsAWriteLandingDuringThePass(t *testing.T) {
 }
 
 type subscriptionStore struct {
+	noRefunds
 	subscriptions     map[string]Subscription
 	methods           map[string]PaymentMethod
 	events            []Event
@@ -565,6 +566,7 @@ func (p *subscriptionPlans) TierOf(_ context.Context, userID string) (plan.Plan,
 }
 
 type subscriptionProvider struct {
+	noCancel
 	requests        []ChargeRequest
 	payments        map[string]Payment
 	chargeErr       error

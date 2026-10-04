@@ -29,6 +29,8 @@ type Client struct {
 	endpoint  string
 }
 
+var _ billing.Provider = (*Client)(nil)
+
 func New(secretKey string, client *http.Client) *Client {
 	if client == nil {
 		client = http.DefaultClient

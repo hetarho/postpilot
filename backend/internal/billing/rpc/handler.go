@@ -272,8 +272,6 @@ func purchaseError(userID string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment outcome is pending", postpilotv1.FailureReason_BILLING_PAYMENT_PENDING, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
-	case errors.Is(err, billing.ErrRefundFailed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund failed", postpilotv1.FailureReason_REFUND_FAILED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", postpilotv1.FailureReason_CHARGE_FAILED, nil)
 	default:
