@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
@@ -12,22 +11,17 @@ import (
 
 var ErrUnavailable = errors.New("billing unavailable")
 
-var seoul = time.FixedZone("Asia/Seoul", 9*60*60)
-
+// Service charges the fixed VAT-inclusive KRW prices of the code-owned offer (BILL-2); FX
+// never reaches a subscription or pack price.
 type Service struct {
 	store    Store
 	provider Provider
-	rates    Rates
 	credits  Credits
 	plans    Plans
 	accounts Accounts
 	mailer   Mailer
 	now      func() time.Time
 	newID    func() string
-	fixedKRW bool
-
-	rateMu    sync.Mutex
-	rateCache map[string]int64
 }
 
 // refuseMaster is BILL-20's gate, read through a transaction's Plans port so the check and
@@ -59,29 +53,22 @@ func (s *Service) masterAccount(ctx context.Context, userID string) (bool, error
 	return master, err
 }
 
-func NewService(store Store, provider Provider, rates Rates, credits Credits, plans Plans, accounts Accounts, mailer Mailer) *Service {
+func NewService(store Store, provider Provider, credits Credits, plans Plans, accounts Accounts, mailer Mailer) *Service {
 	return &Service{
-		store: store, provider: provider, rates: rates, credits: credits,
+		store: store, provider: provider, credits: credits,
 		plans: plans, accounts: accounts, mailer: mailer, now: time.Now,
-		newID:     newID,
-		rateCache: make(map[string]int64),
+		newID: newID,
 	}
 }
 
-func (s *Service) Enabled() bool  { return s.provider != nil && (s.fixedKRW || s.rates != nil) }
-func (s *Service) FixedKRW() bool { return s.fixedKRW }
+// Enabled reports whether payments can start: without a provider the service still reads
+// billing and assigns support tiers, but charges nothing.
+func (s *Service) Enabled() bool { return s.provider != nil }
 
 func (s *Service) WithClock(now func() time.Time) *Service {
 	if now != nil {
 		s.now = now
 	}
-	return s
-}
-
-// WithFixedKRW selects the code-owned commercial offer. The legacy USD path is
-// retained only for pre-transition records and tests until T487 retires it.
-func (s *Service) WithFixedKRW() *Service {
-	s.fixedKRW = true
 	return s
 }
 
@@ -198,29 +185,19 @@ func (s *Service) RemovePaymentMethod(ctx context.Context, userID string) error 
 	if !s.Enabled() {
 		return ErrUnavailable
 	}
-	if s.fixedKRW {
-		return s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-			if err := s.requireNoPending(ctx, tx, userID); err != nil {
-				return err
-			}
-			sub, found, err := tx.Subscription(ctx, userID)
-			if err != nil {
-				return err
-			}
-			if found && sub.Status == "active" && sub.AutoRenew {
-				return ErrSubscriptionNeedsMethod
-			}
-			return tx.DeletePaymentMethod(ctx, userID)
-		})
-	}
-	subscription, found, err := s.store.Subscription(ctx, userID)
-	if err != nil {
-		return err
-	}
-	if found && subscription.Status == "active" && subscription.AutoRenew {
-		return ErrSubscriptionNeedsMethod
-	}
-	return s.store.DeletePaymentMethod(ctx, userID)
+	return s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+		if err := s.requireNoPending(ctx, tx, userID); err != nil {
+			return err
+		}
+		sub, found, err := tx.Subscription(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if found && sub.Status == "active" && sub.AutoRenew {
+			return ErrSubscriptionNeedsMethod
+		}
+		return tx.DeletePaymentMethod(ctx, userID)
+	})
 }
 
 func (s *Service) QuotePrice(ctx context.Context, tier plan.Plan, term Term) (Quote, error) {
@@ -233,39 +210,5 @@ func (s *Service) QuotePrice(ctx context.Context, tier plan.Plan, term Term) (Qu
 	if !term.Valid() {
 		return Quote{}, fmt.Errorf("term %q is invalid", term)
 	}
-	return s.quoteAt(ctx, tier, term, s.now())
-}
-
-// rateFor starts at the previous Seoul date because today's reference rate may not be final.
-// Ten fallbacks means eleven candidate dates in total: yesterday plus ten older dates.
-func (s *Service) rateFor(ctx context.Context, now time.Time) (int64, string, error) {
-	if s.rates == nil {
-		return 0, "", ErrUnavailable
-	}
-	day := now.In(seoul)
-	day = time.Date(day.Year(), day.Month(), day.Day()-1, 0, 0, 0, 0, seoul)
-	for attempts := 0; attempts <= 10; attempts++ {
-		key := day.Format(time.DateOnly)
-		s.rateMu.Lock()
-		cached, ok := s.rateCache[key]
-		s.rateMu.Unlock()
-		if ok {
-			return cached, key, nil
-		}
-		rate, published, err := s.rates.KRWPerUSD(ctx, day)
-		if err != nil {
-			return 0, "", fmt.Errorf("read exchange rate for %s: %w", key, err)
-		}
-		if published {
-			if rate <= 0 {
-				return 0, "", fmt.Errorf("exchange rate for %s is not positive", key)
-			}
-			s.rateMu.Lock()
-			s.rateCache[key] = rate
-			s.rateMu.Unlock()
-			return rate, key, nil
-		}
-		day = day.AddDate(0, 0, -1)
-	}
-	return 0, "", errors.New("no published KRW/USD rate in the previous 11 calendar days")
+	return offerQuote(tier, term)
 }

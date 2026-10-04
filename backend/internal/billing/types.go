@@ -127,12 +127,10 @@ type Purchase struct {
 	Refundable         bool
 }
 
+// Quote is a fixed KRW amount payable (BILL-2), with the id a change confirms it by.
 type Quote struct {
-	ID           string
-	USDCents     int
-	KRW          int
-	RatePerUSDE4 int64
-	RateDate     string
+	ID  string
+	KRW int
 }
 
 type ChangeQuote struct {
@@ -243,25 +241,6 @@ func CustomerKey(userID string) string {
 	// permitted special character. The prefix guarantees `_`; raw base64url keeps the full
 	// 256-bit digest while fitting in 46 characters.
 	return "pp_" + base64.RawURLEncoding.EncodeToString(sum[:])
-}
-
-// KRWFor converts an all-in USD-cent price through a KRW/USD rate stored at four decimal
-// places, rounding half up to one won without introducing floating point.
-func KRWFor(usdCents int, rateE4 int64) int {
-	if usdCents <= 0 || rateE4 <= 0 {
-		return 0
-	}
-	return int((int64(usdCents)*rateE4 + 500_000) / 1_000_000)
-}
-
-func AnnualPriceCents(monthlyCents int) int { return monthlyCents * 10 }
-
-func PriceCents(tier plan.Plan, term Term) int {
-	monthly := plan.MonthlyPriceCents(tier)
-	if term == TermAnnual {
-		return AnnualPriceCents(monthly)
-	}
-	return monthly
 }
 
 // TermEnd is where a paid term that starts at start ends: plan.CoverageEnd, one or twelve

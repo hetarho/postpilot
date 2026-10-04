@@ -9,7 +9,7 @@ import (
 )
 
 func TestBillingMailsAreKoreanFirstAndCarryChargeFacts(t *testing.T) {
-	quote := Quote{USDCents: 500, KRW: 6_962, RatePerUSDE4: 13_925_000, RateDate: "2026-09-07"}
+	quote := Quote{KRW: 6_962}
 	for name, message := range map[string]MailMessage{
 		"renewed": RenewalMail(plan.Pro, TermMonthly, quote),
 		"failed":  RenewalFailedMail(plan.Pro, TermMonthly, quote),
@@ -22,8 +22,7 @@ func TestBillingMailsAreKoreanFirstAndCarryChargeFacts(t *testing.T) {
 				t.Errorf("%s missing %q: %s", name, fact, message.Text)
 			}
 		}
-		// QUOTA-65: a mail never states a dollar amount or an exchange rate, even for a row
-		// that recorded one.
+		// QUOTA-65: a mail never states a dollar amount or an exchange rate.
 		for _, leak := range []string{"$", "원/$", "1,392"} {
 			if strings.Contains(message.Text, leak) {
 				t.Errorf("%s carries %q: %s", name, leak, message.Text)
@@ -57,7 +56,7 @@ func TestPurchaseAndRefundMailsCarryBilingualPurchaseFacts(t *testing.T) {
 
 func TestBillingMailIsSkippedWithoutAVerifiedAddress(t *testing.T) {
 	store := newSubscriptionStore()
-	service := NewService(store, newSubscriptionProvider(), subscriptionRates{}, store.credits, store.plans, subscriptionAccounts{}, store.mailer)
+	service := NewService(store, newSubscriptionProvider(), store.credits, store.plans, subscriptionAccounts{}, store.mailer)
 	if err := service.sendMail(context.Background(), "alice", CancellationMail(plan.Pro, TermMonthly)); err != nil {
 		t.Fatal(err)
 	}

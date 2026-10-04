@@ -87,7 +87,7 @@ func run(ctx context.Context) error {
 	benefitStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	})
-	support := billing.NewService(benefitStore, nil, nil, nil, nil, nil, nil)
+	support := billing.NewService(benefitStore, nil, nil, nil, nil, nil)
 	report, err := devseed.Run(ctx, devseed.Deps{
 		Accounts: accounts{svc: authSvc, store: authstore.New(handle.Writer, handle.Reader)},
 		Credits:  credits{support: support},
@@ -126,11 +126,12 @@ func (a accounts) Create(ctx context.Context, loginID, password string, tier pla
 	return a.svc.CreateUser(ctx, loginID, password, tier)
 }
 
-// credits adapts the ledger, making the same call `adduser` makes so a seeded account's
+// credits adapts billing's support assignment, the call `adduser` and `setplan` make: it opens
+// the tier's coverage (daily and monthly grants, server-export window) so a seeded account's
 // balance is the one its plan entitles it to rather than a number invented here.
 type credits struct{ support *billing.Service }
 
-func (c credits) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan) error {
+func (c credits) OpenBenefits(ctx context.Context, userID string, tier plan.Plan) error {
 	if tier == plan.Free || tier == plan.Master {
 		return nil
 	}

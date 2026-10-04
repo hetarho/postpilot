@@ -67,8 +67,19 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 	}
 	return &ledgerHarness{
 		handle: handle, ledger: ledger, store: store,
-		service: billing.NewService(store, &registrationProvider{}, registrationRates{}, testCredits{Service: ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, nil, nil, nil),
+		service: billing.NewService(store, &registrationProvider{}, testCredits{Service: ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, nil, nil, nil),
 	}
+}
+
+// upgrade confirms a change through the quote that priced it, the only way a change reaches
+// the card.
+func (h *ledgerHarness) upgrade(t *testing.T, tier plan.Plan, term billing.Term) (billing.Subscription, bool, error) {
+	t.Helper()
+	quote, err := h.service.QuoteChange(context.Background(), "alice", tier, term)
+	if err != nil {
+		t.Fatalf("quote %s %s: %v", tier, term, err)
+	}
+	return h.service.ChangeSubscriptionQuoted(context.Background(), "alice", tier, term, quote.ID)
 }
 
 // monthlyLots reports the account's non-expired monthly lots as of now, with what they hold.
@@ -244,7 +255,7 @@ func TestUpgradeCommitsWhenNoMonthlyLotIsOpen(t *testing.T) {
 		t.Fatalf("open monthly lots = %d, want the gap", count)
 	}
 
-	updated, applied, err := h.service.ChangeSubscription(ctx, "alice", plan.Pro, billing.TermMonthly)
+	updated, applied, err := h.upgrade(t, plan.Pro, billing.TermMonthly)
 	if err != nil || !applied || updated.Tier != plan.Pro {
 		t.Fatalf("upgrade = %+v applied=%v err=%v", updated, applied, err)
 	}
@@ -365,7 +376,7 @@ func TestCoverageExpiresBeforeRenewalWorkerAndUpgradeKeepsTodaysDailyTier(t *tes
 	if _, found, err := h.service.CoverageAt(ctx, "alice", sub.TermEnd.Add(time.Nanosecond)); err != nil || found {
 		t.Fatalf("expired coverage found=%v err=%v", found, err)
 	}
-	if _, applied, err := h.service.ChangeSubscription(ctx, "alice", plan.Pro, billing.TermMonthly); err != nil || !applied {
+	if _, applied, err := h.upgrade(t, plan.Pro, billing.TermMonthly); err != nil || !applied {
 		t.Fatalf("upgrade applied=%v err=%v", applied, err)
 	}
 	current, found, err := h.service.CoverageAt(ctx, "alice", time.Now())

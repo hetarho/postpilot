@@ -11,37 +11,25 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-func TestCreditsPerUSDCentIsAtPar(t *testing.T) {
-	if plan.CreditsPerUSDCent != 1 || 100*plan.CreditsPerUSDCent != 100 {
-		t.Fatalf("credits per USD cent = %d", plan.CreditsPerUSDCent)
-	}
-}
-
-func TestQuotePurchaseUsesWholeCentParAndDailyRate(t *testing.T) {
-	service := newSubscriptionService(newSubscriptionStore(), newSubscriptionProvider(), time.Date(2026, 9, 8, 12, 0, 0, 0, seoul))
-	if _, err := service.QuotePurchase(context.Background(), 99); !errors.Is(err, ErrPurchaseTooSmall) {
-		t.Fatalf("small quote = %v", err)
-	}
-	quote, err := service.QuotePurchase(context.Background(), 500)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if quote.Credits != 500 || quote.KRW != 6_963 || quote.RatePerUSDE4 != 13_925_000 || quote.RateDate != "2026-09-07" {
-		t.Fatalf("quote = %+v", quote)
-	}
-}
-
-func TestPurchaseCreditsRequiresMethodAndWritesNoLotOnChargeFailure(t *testing.T) {
+// subscribedStore holds alice on an active paid subscription, which a pack needs (BILL-9).
+func subscribedStore(now time.Time) *subscriptionStore {
 	store := newSubscriptionStore()
+	store.subscriptions["alice"] = activeSubscription("alice", plan.Pro, TermMonthly, now, now.AddDate(0, 1, 0), now.AddDate(0, 1, 0), true)
+	return store
+}
+
+func TestPurchasePackRequiresMethodAndWritesNoLotOnChargeFailure(t *testing.T) {
+	ctx := context.Background()
+	store := subscribedStore(time.Date(2026, 9, 8, 12, 0, 0, 0, seoul))
 	provider := newSubscriptionProvider()
 	service := newSubscriptionService(store, provider, time.Date(2026, 9, 8, 12, 0, 0, 0, seoul))
 	delete(store.methods, "alice")
-	if _, err := service.PurchaseCredits(context.Background(), "alice", 500); !errors.Is(err, ErrPaymentMethodRequired) {
+	if _, err := service.PurchasePack(ctx, "alice", "pack-1000"); !errors.Is(err, ErrPaymentMethodRequired) {
 		t.Fatalf("missing method = %v", err)
 	}
 	store.methods["alice"] = testMethod("alice")
-	provider.chargeErr = errors.New("declined")
-	if _, err := service.PurchaseCredits(context.Background(), "alice", 500); !errors.Is(err, ErrChargeFailed) {
+	provider.chargeErr = declined
+	if _, err := service.PurchasePack(ctx, "alice", "pack-1000"); !errors.Is(err, ErrChargeFailed) {
 		t.Fatalf("declined charge = %v", err)
 	}
 	if len(store.credits.lots) != 0 || len(store.purchases) != 0 || kinds(store.events) != "charge_failed" {
@@ -49,32 +37,33 @@ func TestPurchaseCreditsRequiresMethodAndWritesNoLotOnChargeFailure(t *testing.T
 	}
 }
 
-func TestPurchaseCreditsDoesNotReadOrChangeSubscription(t *testing.T) {
+// BILL-9: a pack changes no tier, anchor, renewal or subscription row.
+func TestPurchasePackChangesNoSubscription(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
-	store := newSubscriptionStore()
-	store.subscriptions["alice"] = activeSubscription("alice", plan.Pro, TermMonthly, now, now.AddDate(0, 1, 0), now.AddDate(0, 1, 0), true)
+	store := subscribedStore(now)
+	store.plans.tiers["alice"] = plan.Pro
 	before := store.subscriptions["alice"]
 	provider := newSubscriptionProvider()
 	service := newSubscriptionService(store, provider, now)
 	service.newID = func() string { return "purchase-1" }
 
-	purchase, err := service.PurchaseCredits(context.Background(), "alice", 500)
+	purchase, err := service.PurchasePack(context.Background(), "alice", "pack-1000")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.subscriptionReads != 0 || !reflect.DeepEqual(store.subscriptions["alice"], before) {
-		t.Fatalf("subscription reads=%d before=%+v after=%+v", store.subscriptionReads, before, store.subscriptions["alice"])
+	if !reflect.DeepEqual(store.subscriptions["alice"], before) || store.plans.tiers["alice"] != plan.Pro {
+		t.Fatalf("before=%+v after=%+v tier=%s", before, store.subscriptions["alice"], store.plans.tiers["alice"])
 	}
-	if purchase.ID != "purchase-1" || purchase.OrderID != "buy:purchase-1" || purchase.Credits != 500 || purchase.KRW != 6_963 || !purchase.Refundable {
+	if purchase.ID != "pp-buy-purchase-1" || purchase.OrderID != "pp-buy-purchase-1" || purchase.PackID != "pack-1000" || purchase.Credits != 1000 || purchase.KRW != 3000 {
 		t.Fatalf("purchase = %+v", purchase)
 	}
-	if len(provider.requests) != 1 || provider.requests[0].OrderID != "buy:purchase-1" || provider.requests[0].Name != "Postpilot 500 credits" {
+	if len(provider.requests) != 1 || provider.requests[0].OrderID != "pp-buy-purchase-1" || provider.requests[0].KRW != 3000 || provider.requests[0].Name != "Postpilot credit pack pack-1000" {
 		t.Fatalf("charge requests = %+v", provider.requests)
 	}
-	if kinds(store.events) != "charge" || len(store.purchases) != 1 || store.credits.lots[purchase.LotID].remaining != 500 {
+	if kinds(store.events) != "charge" || len(store.purchases) != 1 || store.credits.lots[purchase.LotID].remaining != 1000 {
 		t.Fatalf("events=%+v purchases=%+v lots=%+v", store.events, store.purchases, store.credits.lots)
 	}
-	if len(store.mailer.messages) != 1 || !strings.Contains(store.mailer.messages[0].text, "500 credits") {
+	if len(store.mailer.messages) != 1 || !strings.Contains(store.mailer.messages[0].text, "1000 credits") {
 		t.Fatalf("mail = %+v", store.mailer.messages)
 	}
 }
@@ -126,8 +115,9 @@ func TestRefundPurchaseEnforcesWindowAndUntouchedLot(t *testing.T) {
 		if refunded.RefundedAt == nil || refunded.Refundable || store.credits.lots[purchase.LotID].remaining != 0 || len(provider.refunds) != 1 || provider.refunds[0] != purchase.ProviderPaymentKey+":purchase refund" {
 			t.Fatalf("refunded=%+v lot=%+v provider=%+v", refunded, store.credits.lots[purchase.LotID], provider.refunds)
 		}
+		// BILL-15: the refund records the KRW the purchase charged and no exchange rate.
 		refund := store.events[len(store.events)-1]
-		if refund.Kind != "refund" || *refund.USDCents != purchase.USDCents || *refund.KRW != purchase.KRW || *refund.KRWPerUSDE4 != purchase.RatePerUSDE4 || *refund.RateDate != purchase.RateDate {
+		if refund.Kind != "refund" || *refund.KRW != purchase.KRW || *refund.Credits != purchase.Credits || refund.USDCents != nil || refund.KRWPerUSDE4 != nil || refund.RateDate != nil {
 			t.Fatalf("refund event = %+v", refund)
 		}
 	})
@@ -260,24 +250,24 @@ func TestGetMyBillingComputesRefundableFromWindowAndLot(t *testing.T) {
 func TestGetMyBillingResolvesEveryPurchaseInOneRead(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
-	store := newSubscriptionStore()
+	store := subscribedStore(now)
 	provider := newSubscriptionProvider()
 	service := newSubscriptionService(store, provider, now)
 
 	ids := []string{"whole", "spent", "refunded", "expired"}
 	for _, id := range ids {
 		service.newID = func() string { return id }
-		if _, err := service.PurchaseCredits(ctx, "alice", 500); err != nil {
+		if _, err := service.PurchasePack(ctx, "alice", "pack-1000"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	store.credits.lots[store.purchases["spent"].LotID].remaining--
-	if _, err := service.RefundPurchase(ctx, "alice", "refunded"); err != nil {
+	store.credits.lots[store.purchases["pp-buy-spent"].LotID].remaining--
+	if _, err := service.RefundPurchase(ctx, "alice", "pp-buy-refunded"); err != nil {
 		t.Fatal(err)
 	}
-	expired := store.purchases["expired"]
+	expired := store.purchases["pp-buy-expired"]
 	expired.ChargedAt = now.Add(-refundWindow)
-	store.purchases["expired"] = expired
+	store.purchases["pp-buy-expired"] = expired
 	store.credits.untouchedReads = 0
 
 	view, err := service.GetMyBilling(ctx, "alice")
@@ -288,7 +278,7 @@ func TestGetMyBillingResolvesEveryPurchaseInOneRead(t *testing.T) {
 	for _, purchase := range view.Purchases {
 		refundable[purchase.ID] = purchase.Refundable
 	}
-	if !refundable["whole"] || refundable["spent"] || refundable["refunded"] || refundable["expired"] {
+	if !refundable["pp-buy-whole"] || refundable["pp-buy-spent"] || refundable["pp-buy-refunded"] || refundable["pp-buy-expired"] {
 		t.Fatalf("refundability = %+v", refundable)
 	}
 	if store.credits.untouchedReads != 1 {
@@ -309,11 +299,11 @@ func TestGetMyBillingResolvesEveryPurchaseInOneRead(t *testing.T) {
 
 func purchasedFixture(t *testing.T, now time.Time) (*subscriptionStore, *subscriptionProvider, *Service, Purchase) {
 	t.Helper()
-	store := newSubscriptionStore()
+	store := subscribedStore(now)
 	provider := newSubscriptionProvider()
 	service := newSubscriptionService(store, provider, now)
 	service.newID = func() string { return "purchase-1" }
-	purchase, err := service.PurchaseCredits(context.Background(), "alice", 500)
+	purchase, err := service.PurchasePack(context.Background(), "alice", "pack-1000")
 	if err != nil {
 		t.Fatal(err)
 	}

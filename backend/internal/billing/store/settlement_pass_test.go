@@ -227,8 +227,8 @@ func TestAnnualBenefitStepKeepsACancelWrittenDuringThePass(t *testing.T) {
 			t.Error(err)
 		}
 	}}
-	service := billing.NewService(hooked, provider, nil, testCredits{Service: h.ledger}, nil, nil, nil).
-		WithFixedKRW().WithClock(func() time.Time { return *clock })
+	service := billing.NewService(hooked, provider, testCredits{Service: h.ledger}, nil, nil, nil).
+		WithClock(func() time.Time { return *clock })
 	if err := service.RunDue(ctx, *clock); err != nil {
 		t.Fatal(err)
 	}

@@ -174,15 +174,15 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		c.payments = tosspay.New(cfg.TossSecretKey, &http.Client{Timeout: tosspay.RequestTimeout})
 	}
 	c.billing = billing.NewService(
-		c.billingStore, c.payments, nil, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
+		c.billingStore, c.payments, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
-	).WithFixedKRW()
+	)
 	voucherStore := voucherstore.New(handle.Writer, handle.Reader)
 	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
 		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, rates, approvedCeilingKinds()...)}
 	})
 	voucherStore.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
-		return voucherPaidCoverage{billing: billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
+		return voucherPaidCoverage{billing: billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil)}
 	})
 	c.voucher = voucher.NewService(voucherStore, voucherCredits{c.ledger})
 	c.metered = meteredRegistry{Registry: registry, ledger: c.ledger}

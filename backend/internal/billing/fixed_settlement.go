@@ -18,9 +18,6 @@ import (
 // review, and any other failure is logged and collected while the pass moves on. Orders
 // younger than pendingSettleGrace are left to the request path that created them.
 func (s *Service) ReconcilePending(ctx context.Context) error {
-	if !s.fixedKRW {
-		return nil
-	}
 	journals, err := s.intentStore()
 	if err != nil {
 		return err
@@ -45,9 +42,6 @@ func (s *Service) ReconcilePending(ctx context.Context) error {
 // not emit a completion webhook for automatic billing, so the direct server
 // charge response and periodic order lookup use the same settlement function.
 func (s *Service) ReconcileOrder(ctx context.Context, orderID string) error {
-	if !s.fixedKRW {
-		return nil
-	}
 	journals, err := s.intentStore()
 	if err != nil {
 		return err

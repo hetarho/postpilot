@@ -148,7 +148,7 @@ func refundHarness(t *testing.T, at time.Time) (*ledgerHarness, *reviewPayments,
 	h.store.SetRefundBenefitsForTx(func(tx *sql.Tx) billing.RefundBenefits {
 		return refundTestBenefits{usagestore.NewTx(tx), clipstore.NewTx(tx)}
 	})
-	h.service = billing.NewService(h.store, p, nil, testCredits{Service: h.ledger, exports: clipstore.New(h.handle.Writer, h.handle.Reader)}, nil, nil, nil).WithFixedKRW().WithClock(func() time.Time { return *clock })
+	h.service = billing.NewService(h.store, p, testCredits{Service: h.ledger, exports: clipstore.New(h.handle.Writer, h.handle.Reader)}, nil, nil, nil).WithClock(func() time.Time { return *clock })
 	return h, p, clock
 }
 

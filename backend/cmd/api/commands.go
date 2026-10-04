@@ -47,7 +47,7 @@ func assignSupportPlan(ctx context.Context, handle *db.DB, userID string, target
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	})
-	service := billing.NewService(store, nil, nil, nil, nil, nil, nil)
+	service := billing.NewService(store, nil, nil, nil, nil, nil)
 	return service.AssignSupportTier(ctx, userID, target)
 }
 

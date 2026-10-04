@@ -86,7 +86,9 @@ func (s *Service) fixedQuoteInTx(ctx context.Context, tx Store, userID string,
 	return subscription, quote, nil
 }
 
-func (s *Service) changeFixed(ctx context.Context, userID string, tier plan.Plan, term Term,
+// ChangeSubscriptionQuoted applies the change a QuoteChange quote priced: an upgrade is
+// charged now through a recorded order, anything else is scheduled for the term end.
+func (s *Service) ChangeSubscriptionQuoted(ctx context.Context, userID string, tier plan.Plan, term Term,
 	quoteID string) (Subscription, bool, error) {
 	if !s.Enabled() {
 		return Subscription{}, false, ErrUnavailable
@@ -174,7 +176,9 @@ func (s *Service) classifyFixedSnapshot(subscription Subscription, tier plan.Pla
 	return subscription, changeScheduled, nil
 }
 
-func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
+// Subscribe records an order for the tier and term's fixed price and settles it; the
+// subscription exists only once the provider confirms the charge (BILL-16).
+func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
 	if !s.Enabled() {
 		return Subscription{}, ErrUnavailable
 	}
@@ -185,7 +189,7 @@ func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.P
 		return Subscription{}, ErrChangeUnsupported
 	}
 	now := s.now()
-	quote, err := s.quoteAt(ctx, tier, term, now)
+	quote, err := offerQuote(tier, term)
 	if err != nil {
 		return Subscription{}, err
 	}
@@ -243,7 +247,7 @@ func fixedRenewOrderID(userID string, end time.Time) string {
 	return "pp-ren-" + hex.EncodeToString(sum[:16])
 }
 
-func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
+func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
 	var intent Intent
 	var inReview Intent
 	var failedTier plan.Plan
@@ -277,7 +281,7 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 		if current.ScheduledTerm != nil {
 			term = *current.ScheduledTerm
 		}
-		quote, err := s.quoteAt(ctx, tier, term, now)
+		quote, err := offerQuote(tier, term)
 		if err != nil {
 			return err
 		}
@@ -322,7 +326,7 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 }
 
 func (s *Service) QuotePack(ctx context.Context, packID string) (PurchaseQuote, error) {
-	if !s.fixedKRW || !s.Enabled() {
+	if !s.Enabled() {
 		return PurchaseQuote{}, ErrUnavailable
 	}
 	pack, found := plan.PackByID(packID)
@@ -386,9 +390,6 @@ func (s *Service) PurchasePack(ctx context.Context, userID, packID string) (Purc
 }
 
 func (s *Service) requireNoPending(ctx context.Context, tx Store, userID string) error {
-	if !s.fixedKRW {
-		return nil
-	}
 	journals, ok := tx.(IntentStore)
 	if !ok {
 		return ErrUnavailable

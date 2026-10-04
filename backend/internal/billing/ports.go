@@ -32,8 +32,9 @@ type Store interface {
 	DeleteSupportCoverage(ctx context.Context, userID string) error
 }
 
-// IntentStore is the fixed-KRW checkout journal. The legacy Store remains
-// compatible with historical tests while production installs this extension.
+// IntentStore is the fixed-KRW checkout journal every payment runs through. A Store without
+// it still reads billing and assigns support tiers, but starts and settles no payment
+// (ErrUnavailable).
 type IntentStore interface {
 	PutQuote(context.Context, QuoteRecord) error
 	Quote(context.Context, string) (QuoteRecord, bool, error)
@@ -69,20 +70,9 @@ type RefundProvider interface {
 	CancelPayment(ctx context.Context, paymentKey string, amountKRW int, reason, idempotencyKey string) (Payment, error)
 }
 
-type Rates interface {
-	KRWPerUSD(ctx context.Context, date time.Time) (rateE4 int64, published bool, err error)
-}
-
 type Credits interface {
 	OpenCoverage(ctx context.Context, userID string, coverage Coverage, at time.Time, correlationID string) error
 	AddUpgradeBonus(ctx context.Context, userID string, coverage Coverage, at time.Time, credits, exportDelta int, correlationID string) error
-	// StartMonthlyWindow opens the window a first subscription charge paid for: the running
-	// window closes with no carry-over and the tier's whole grant opens (QUOTA-42).
-	StartMonthlyWindow(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error
-	// OpenMonthlyLot opens a renewal's window, which is absent-only: a renewal keeps the
-	// anchor it already has, so re-running one must not rewrite a window already granted.
-	OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error
-	RaiseMonthlyLot(ctx context.Context, userID string, credits int) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
 	// VoidUntouchedLot reports ErrLotTouched when the lot is no longer whole.
 	VoidUntouchedLot(ctx context.Context, lotID string) error

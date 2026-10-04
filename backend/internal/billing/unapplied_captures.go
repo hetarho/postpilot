@@ -20,9 +20,6 @@ func unappliedRefundKey(orderID string) string { return "unapplied:" + orderID }
 // answer, or a refusal the payment does not explain, leaves the order in review for the next
 // pass; only a storage failure is returned.
 func (s *Service) RefundUnappliedCaptures(ctx context.Context) error {
-	if !s.fixedKRW {
-		return nil
-	}
 	journals, err := s.intentStore()
 	if err != nil {
 		return err

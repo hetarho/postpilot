@@ -75,8 +75,8 @@ func fixedService(t *testing.T, at time.Time) (*ledgerHarness, *fixedPayments, *
 	h := newLedgerHarness(t, "fixed-billing.db", at, at)
 	provider := &fixedPayments{}
 	clock := at
-	h.service = billing.NewService(h.store, provider, nil,
-		testCredits{Service: h.ledger}, nil, nil, nil).WithFixedKRW().WithClock(func() time.Time { return clock })
+	h.service = billing.NewService(h.store, provider,
+		testCredits{Service: h.ledger}, nil, nil, nil).WithClock(func() time.Time { return clock })
 	return h, provider, &clock
 }
 
@@ -85,7 +85,7 @@ func TestFixedKRWCheckoutUpgradeAndPackFromRealStore(t *testing.T) {
 	at := time.Date(2026, 1, 31, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
 	h, provider, clock := fixedService(t, at)
 	monthly, err := h.service.QuotePrice(ctx, plan.Light, billing.TermMonthly)
-	if err != nil || monthly.KRW != 1900 || monthly.RatePerUSDE4 != 0 {
+	if err != nil || monthly.KRW != 1900 {
 		t.Fatalf("fixed monthly quote=%+v err=%v", monthly, err)
 	}
 	annual, err := h.service.QuotePrice(ctx, plan.Max, billing.TermAnnual)

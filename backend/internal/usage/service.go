@@ -165,71 +165,6 @@ func newID() string {
 	return hex.EncodeToString(buf)
 }
 
-// OpenMonthlyLot installs one explicit subscription window. Its deterministic id makes a
-// provider retry harmless while retaining every lapsed window for history.
-func (s *Service) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	if userID == "" || !tier.Valid() || plan.Unlimited(tier) || !start.Before(end) {
-		return errors.New("open monthly lot: invalid user, tier, or window")
-	}
-	credits := plan.MonthlyCredits(tier)
-	_, err := s.lots.InsertLotIfAbsent(ctx, Lot{
-		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
-		Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: s.now(),
-	})
-	return err
-}
-
-// StartMonthlyWindow opens the window a subscription's first charge paid for (QUOTA-42).
-//
-// It is not OpenMonthlyLot with a different name. Starting a subscription is not a tier
-// change: the window the account was running closes at that instant with no carry-over,
-// and a whole month's grant opens on the subscription day. The two writes are one
-// transaction because a closed window with no replacement is an account with no credits.
-//
-// The overwrite is the point. A window's id is its start date, so an account that signed up
-// and subscribes on the same Seoul date derives the id it already holds its free window
-// under; an absent-only insert would keep the free 50 and drop the tier's grant. Deriving
-// granted, remaining and the expiry from the tier and the window rather than from the row
-// is also what makes a provider retry harmless.
-func (s *Service) StartMonthlyWindow(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	if userID == "" || !tier.Valid() || plan.Unlimited(tier) || !start.Before(end) {
-		return errors.New("start monthly window: invalid user, tier, or window")
-	}
-	credits := plan.MonthlyCredits(tier)
-	id := monthlyLotID(userID, start)
-	now := s.now()
-	return s.tx.InWriteTx(ctx, func(tx Storage) error {
-		if err := tx.ExpireMonthlyLotsExcept(ctx, userID, id, start); err != nil {
-			return err
-		}
-		return tx.UpsertLot(ctx, Lot{
-			ID: id, UserID: userID, Kind: LotMonthly,
-			Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: now,
-		})
-	})
-}
-
-// RaiseMonthlyLot is the credit half of an upgrade reached from the RPC path, the same
-// operation TopUpMonthlyLot performs (QUOTA-35).
-//
-// An account with no current monthly lot is a no-op, not an error, for the reason stated
-// there: its next request opens one at the new tier's size anyway. Refusing would be worse
-// than doing nothing — the card has already been charged outside the transaction (ARCH-10),
-// so an error here discards a captured payment along with the subscription row.
-func (s *Service) RaiseMonthlyLot(ctx context.Context, userID string, credits int) error {
-	if credits <= 0 {
-		return errors.New("raise monthly lot: credits must be positive")
-	}
-	lot, found, err := s.lots.ActiveMonthlyLot(ctx, userID, s.now())
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil
-	}
-	return s.lots.RaiseLot(ctx, lot.ID, credits)
-}
-
 func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits int) (string, error) {
 	if userID == "" || credits <= 0 {
 		return "", errors.New("open purchased lot: user and positive credits are required")
@@ -825,10 +760,6 @@ func (s *Service) AddUpgradeBonus(ctx context.Context, userID string, old Covera
 		})
 		return err
 	})
-}
-
-func monthlyLotID(userID string, start time.Time) string {
-	return "monthly:" + userID + ":" + start.In(time.FixedZone("Asia/Seoul", 9*60*60)).Format(time.DateOnly)
 }
 
 // worstCaseMicrousd prices every call the work will make at its largest possible shape.

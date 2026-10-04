@@ -54,14 +54,10 @@ func (p Plan) Rank() int { return rank[p] }
 // Ladder is every rung in order, for a surface that lists the tiers.
 func Ladder() []Plan { return []Plan{Free, Light, Basic, Pro, Max, Master} }
 
-const (
-	// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
-	// payment method (BILL-10, QUOTA-9). The usage context persists it; billing decides
-	// when the account qualifies.
-	PaymentMethodBonusCredits = 100
-	// CreditsPerUSDCent is the at-par top-up rule: one dollar buys 100 credits.
-	CreditsPerUSDCent = 1
-)
+// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
+// payment method (BILL-10, QUOTA-9). The usage context persists it; billing decides
+// when the account qualifies.
+const PaymentMethodBonusCredits = 100
 
 // monthlyCredits is the product rule for what a tier is granted each month. Zero means
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
@@ -72,23 +68,6 @@ var monthlyCredits = map[Plan]int{
 	Pro:    1150,
 	Max:    2400,
 	Master: 0,
-}
-
-// monthlyPriceUSDCents is what each tier is intended to cost. It lives beside the grant it
-// sizes: the two are one product decision, and a price that drifted from its grant would be
-// a promise the ladder cannot keep.
-//
-// A paid rung grants MORE than its price buys at the par purchase rate of one credit per
-// US cent: basic +10 %, pro +15 %, max +20 %. Subscribing must beat topping up, and more so
-// the higher the rung.
-//
-// Charging these figures is BILLING's, not this package's.
-var monthlyPriceUSDCents = map[Plan]int{
-	Free:  0,
-	Light: 0,
-	Basic: 300,
-	Pro:   1000,
-	Max:   2000,
 }
 
 // What one unit of a post costs in TOKENS. A comparison screen's post count is proportional
@@ -166,11 +145,6 @@ func MonthlyCredits(p Plan) int {
 	}
 	return found
 }
-
-// MonthlyPriceCents returns the USD-cent list price beside a rung's monthly grant.
-// Billing consumes this value so the amount charged and the ladder shown to the account
-// cannot drift into separate product rules.
-func MonthlyPriceCents(p Plan) int { return monthlyPriceUSDCents[p] }
 
 // Pricer prices one call's tokens in micro-USD. The llm package's cost resolver satisfies
 // it, which is how this stdlib-only package prices work without learning what a model is.

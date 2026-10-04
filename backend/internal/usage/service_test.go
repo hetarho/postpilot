@@ -166,33 +166,6 @@ func (f *fakeStore) InsertLotIfAbsent(ctx context.Context, lot Lot) (bool, error
 	return true, f.InsertLot(ctx, lot)
 }
 
-func (f *fakeStore) UpsertLot(ctx context.Context, lot Lot) error {
-	for i := range f.lots {
-		if f.lots[i].ID == lot.ID {
-			f.lots[i].Granted = lot.Granted
-			f.lots[i].Remaining = lot.Remaining
-			f.lots[i].ExpiresAt = lot.ExpiresAt
-			return nil
-		}
-	}
-	return f.InsertLot(ctx, lot)
-}
-
-func (f *fakeStore) ExpireMonthlyLotsExcept(_ context.Context, userID, exceptLotID string, at time.Time) error {
-	for i := range f.lots {
-		lot := f.lots[i]
-		if lot.UserID != userID || lot.Kind != LotMonthly || lot.ID == exceptLotID {
-			continue
-		}
-		if lot.ExpiresAt == nil || !lot.ExpiresAt.After(at) {
-			continue
-		}
-		stamp := at
-		f.lots[i].ExpiresAt = &stamp
-	}
-	return nil
-}
-
 func (f *fakeStore) RaiseLot(_ context.Context, lotID string, credits int) error {
 	f.raiseCalls++
 	for i := range f.lots {
@@ -475,42 +448,20 @@ func openMonthly(userID string, remaining int) Lot {
 func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
 	ctx := context.Background()
-	start := time.Date(2026, 9, 1, 0, 0, 0, 0, testAnchor.Location())
-	end := time.Date(2026, 10, 1, 0, 0, 0, 0, testAnchor.Location())
-
-	if err := svc.OpenMonthlyLot(ctx, "alice", plan.Pro, start, end); err != nil {
-		t.Fatalf("OpenMonthlyLot: %v", err)
-	}
-	if err := svc.OpenMonthlyLot(ctx, "alice", plan.Pro, start, end); err != nil {
-		t.Fatalf("OpenMonthlyLot retry: %v", err)
-	}
-	if got := len(store.lots); got != 1 {
-		t.Fatalf("monthly lot count = %d, want 1", got)
-	}
-	monthly := store.lots[0]
-	if monthly.ID != monthlyLotID("alice", start) || monthly.Kind != LotMonthly || monthly.Granted != 1150 || monthly.Remaining != 1150 || monthly.ExpiresAt == nil || !monthly.ExpiresAt.Equal(end) {
-		t.Fatalf("monthly lot = %+v", monthly)
-	}
-	if err := svc.RaiseMonthlyLot(ctx, "alice", 25); err != nil {
-		t.Fatalf("RaiseMonthlyLot: %v", err)
-	}
-	if store.lots[0].Granted != 1175 || store.lots[0].Remaining != 1175 {
-		t.Fatalf("raised monthly lot = %+v", store.lots[0])
-	}
 
 	purchasedID, err := svc.OpenPurchasedLot(ctx, "alice", 100)
 	if err != nil {
 		t.Fatalf("OpenPurchasedLot: %v", err)
 	}
-	purchased := store.lots[1]
+	purchased := store.lots[0]
 	if purchased.ID != purchasedID || !strings.HasPrefix(purchasedID, "purchased:") || purchased.Kind != LotPurchased || purchased.ExpiresAt != nil || purchased.Granted != 100 || purchased.Remaining != 100 {
 		t.Fatalf("purchased lot = %+v", purchased)
 	}
 	if err := svc.VoidUntouchedLot(ctx, purchasedID); err != nil {
 		t.Fatalf("VoidUntouchedLot: %v", err)
 	}
-	if store.lots[1].Remaining != 0 {
-		t.Fatalf("voided remaining = %d", store.lots[1].Remaining)
+	if store.lots[0].Remaining != 0 {
+		t.Fatalf("voided remaining = %d", store.lots[0].Remaining)
 	}
 	if err := svc.RestoreLot(ctx, purchasedID, 100); err != nil {
 		t.Fatalf("RestoreLot: %v", err)
@@ -519,7 +470,7 @@ func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 		t.Fatalf("over-grant restore = %v, want ErrLotNotFound", err)
 	}
 
-	store.lots[1].Remaining = 99
+	store.lots[0].Remaining = 99
 	if err := svc.VoidUntouchedLot(ctx, purchasedID); !errors.Is(err, ErrLotTouched) {
 		t.Fatalf("touched void = %v, want ErrLotTouched", err)
 	}
@@ -529,10 +480,10 @@ func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 	if created, err := svc.GrantBonusOnce(ctx, "payment-method:alice", "alice", 100); err != nil || created {
 		t.Fatalf("GrantBonusOnce retry: %v", err)
 	}
-	if got := len(store.lots); got != 3 {
-		t.Fatalf("lot count after idempotent bonus = %d, want 3", got)
+	if got := len(store.lots); got != 2 {
+		t.Fatalf("lot count after idempotent bonus = %d, want 2", got)
 	}
-	bonus := store.lots[2]
+	bonus := store.lots[1]
 	if bonus.Kind != LotBonus || bonus.ExpiresAt != nil || bonus.Granted != 100 || bonus.Remaining != 100 {
 		t.Fatalf("bonus lot = %+v", bonus)
 	}

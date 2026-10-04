@@ -41,9 +41,9 @@ func unappliedHarness(t *testing.T, at time.Time) (*ledgerHarness, *reviewPaymen
 	t.Helper()
 	h, provider, clock := refundHarness(t, at)
 	mailer := &recordingMailer{}
-	h.service = billing.NewService(h.store, provider, nil,
+	h.service = billing.NewService(h.store, provider,
 		testCredits{Service: h.ledger, exports: clipstore.New(h.handle.Writer, h.handle.Reader)},
-		nil, registrationAccounts{}, mailer).WithFixedKRW().WithClock(func() time.Time { return *clock })
+		nil, registrationAccounts{}, mailer).WithClock(func() time.Time { return *clock })
 	return h, provider, mailer, clock
 }
 

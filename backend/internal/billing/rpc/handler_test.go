@@ -105,7 +105,7 @@ func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", USDCents: &amount, CreatedAt: now}},
 		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, USDCents: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
 	}
-	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil, nil))
+	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil))
 	response, err := handler.GetMyBilling(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.GetMyBillingRequest{}))
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 }
 
 func TestBillingHandlerAuthenticatesAndMapsQuoteFailures(t *testing.T) {
-	disabled := NewHandler(billing.NewService(handlerStore{}, nil, nil, nil, nil, nil, nil))
+	disabled := NewHandler(billing.NewService(handlerStore{}, nil, nil, nil, nil, nil))
 	request := connect.NewRequest(&postpilotv1.QuotePriceRequest{Plan: postpilotv1.Plan_PLAN_BASIC, Term: postpilotv1.Term_TERM_MONTHLY})
 	if _, err := disabled.QuotePrice(context.Background(), request); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("anonymous quote = %v", err)
@@ -135,14 +135,15 @@ func TestBillingHandlerAuthenticatesAndMapsQuoteFailures(t *testing.T) {
 }
 
 func TestBillingHandlerReturnsTheContractQuoteWithoutDerivingItInTheTransport(t *testing.T) {
-	service := billing.NewService(handlerStore{}, handlerProvider{}, handlerRates{}, nil, nil, nil, nil)
+	service := billing.NewService(handlerStore{}, handlerProvider{}, nil, nil, nil, nil)
 	handler := NewHandler(service)
 	response, err := handler.QuotePrice(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.QuotePriceRequest{Plan: postpilotv1.Plan_PLAN_BASIC, Term: postpilotv1.Term_TERM_ANNUAL}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetKrw() != 41775 {
-		t.Fatalf("quote = %+v", response.Msg)
+	offer, _ := plan.CommercialOffer(plan.Basic)
+	if response.Msg.GetKrw() != int64(offer.AnnualKRW) {
+		t.Fatalf("quote = %+v, want the %d KRW annual offer", response.Msg, offer.AnnualKRW)
 	}
 }
 
@@ -152,7 +153,7 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 		UserID: "alice", Tier: plan.Basic, Term: billing.TermMonthly, AnchorAt: anchor,
 		TermStart: anchor, TermEnd: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC),
 		NextGrantAt: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC), AutoRenew: true, Status: "active",
-	}}, handlerProvider{}, handlerRates{}, nil, nil, nil, nil)
+	}}, handlerProvider{}, nil, nil, nil, nil)
 	handler := NewHandler(service)
 	response, err := handler.QuoteChange(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.QuoteChangeRequest{
 		Plan: postpilotv1.Plan_PLAN_MAX, Term: postpilotv1.Term_TERM_MONTHLY,
@@ -160,7 +161,11 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetKrw() != 23_673 || !response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" {
+	// The prorated amount moves with the clock; the transport carries it with the quote's id.
+	basic, _ := plan.CommercialOffer(plan.Basic)
+	maxOffer, _ := plan.CommercialOffer(plan.Max)
+	if krw := response.Msg.GetKrw(); krw <= 0 || krw > int64(maxOffer.MonthlyKRW-basic.MonthlyKRW) ||
+		!response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" || response.Msg.GetQuoteId() == "" {
 		t.Fatalf("quote = %+v", response.Msg)
 	}
 }
@@ -224,6 +229,28 @@ func (handlerStore) AdvanceNextGrant(context.Context, string, time.Time, time.Ti
 	return false, nil
 }
 
+// The checkout journal holds no order: these cases quote and read, they never settle.
+func (handlerStore) PutQuote(context.Context, billing.QuoteRecord) error { return nil }
+func (handlerStore) Quote(context.Context, string) (billing.QuoteRecord, bool, error) {
+	return billing.QuoteRecord{}, false, nil
+}
+func (handlerStore) PurgeExpiredQuotes(context.Context, time.Time) (int, error) { return 0, nil }
+func (handlerStore) InsertIntent(context.Context, billing.Intent) error         { return nil }
+func (handlerStore) Intent(context.Context, string) (billing.Intent, bool, error) {
+	return billing.Intent{}, false, nil
+}
+func (handlerStore) PendingIntent(context.Context, string) (billing.Intent, bool, error) {
+	return billing.Intent{}, false, nil
+}
+func (handlerStore) DueIntents(context.Context, time.Time) ([]billing.Intent, error) { return nil, nil }
+func (handlerStore) MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (handlerStore) ReviewIntents(context.Context, int) ([]billing.Intent, error) { return nil, nil }
+func (handlerStore) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+
 type handlerProvider struct{}
 
 func (handlerProvider) IssueBillingKey(context.Context, string, string) (billing.BillingKey, error) {
@@ -238,12 +265,6 @@ func (handlerProvider) PaymentByOrder(context.Context, string) (billing.Payment,
 func (handlerProvider) Refund(context.Context, string, string) error { return nil }
 func (handlerProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
-}
-
-type handlerRates struct{}
-
-func (handlerRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return 13_925_000, true, nil
 }
 
 func billingErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {

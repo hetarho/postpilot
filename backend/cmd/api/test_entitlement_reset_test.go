@@ -117,7 +117,7 @@ func TestTestEntitlementResetPreservesWorkAndBlocksOrderReplay(t *testing.T) {
 	if _, err := handle.Writer.Exec("UPDATE billing_intents SET order_id='old-order' WHERE order_id='new-order'"); err == nil || !strings.Contains(err.Error(), "retired test order") {
 		t.Fatalf("old order update accepted: %v", err)
 	}
-	service := billing.NewService(billingstore.New(handle.Writer, handle.Reader), nil, nil, nil, nil, nil, nil).WithFixedKRW()
+	service := billing.NewService(billingstore.New(handle.Writer, handle.Reader), nil, nil, nil, nil, nil)
 	if err := service.ReconcileOrder(ctx, "old-order"); err != nil || resetCount(t, handle.Reader, "SELECT count(*) FROM credit_lots") != 0 {
 		t.Fatalf("late provider notification regranted retired order: %v", err)
 	}

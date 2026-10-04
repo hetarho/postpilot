@@ -96,7 +96,7 @@ func newService(t *testing.T) (*voucher.Service, *voucherstore.Store, *db.DB) {
 		return ledgerCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchors{}, testRates)}
 	})
 	store.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
-		return paidCoverage{billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
+		return paidCoverage{billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil)}
 	})
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchors{}, testRates)
 	return voucher.NewService(store, ledgerCredits{ledger}), store, handle

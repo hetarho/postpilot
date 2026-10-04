@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestRegistrationReplacesTheCardWithoutMintingCredits(t *testing.T) {
 	})
 	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	provider := &registrationProvider{label: "11 1234"}
-	service := billing.NewService(store, provider, registrationRates{}, nil, nil, registrationAccounts{}, nil)
+	service := billing.NewService(store, provider, nil, nil, registrationAccounts{}, nil)
 
 	first, err := service.RegisterPaymentMethod(ctx, "alice", "auth-1", billing.CustomerKey("alice"))
 	if err != nil || first.BonusGranted {
@@ -109,7 +110,7 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 	}); err != nil {
 		t.Fatal(err)
 	}
-	service := billing.NewService(store, &registrationProvider{}, registrationRates{}, nil, nil, nil, nil)
+	service := billing.NewService(store, &registrationProvider{}, nil, nil, nil, nil)
 	subscription, err := service.Subscribe(ctx, "alice", plan.Pro, billing.TermMonthly)
 	if err != nil {
 		t.Fatal(err)
@@ -164,8 +165,12 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	service := billing.NewService(store, &registrationProvider{}, registrationRates{}, testCredits{Service: ledger}, nil, nil, nil)
-	purchase, err := service.PurchaseCredits(ctx, "alice", 500)
+	service := billing.NewService(store, &registrationProvider{}, testCredits{Service: ledger}, nil, nil, nil)
+	// A pack is for an active paid subscriber (BILL-9).
+	if _, err := service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly); err != nil {
+		t.Fatal(err)
+	}
+	purchase, err := service.PurchasePack(ctx, "alice", "pack-1000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +186,7 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	if err := handle.Reader.QueryRowContext(ctx, "SELECT remaining FROM credit_lots WHERE id = ?", purchase.LotID).Scan(&remaining); err != nil {
 		t.Fatal(err)
 	}
-	if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id = ? AND kind IN ('charge','refund')", "alice").Scan(&events); err != nil {
+	if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id = ? AND kind IN ('charge','refund') AND note = ?", "alice", purchase.ID).Scan(&events); err != nil {
 		t.Fatal(err)
 	}
 	if remaining != 0 || events != 2 {
@@ -195,28 +200,39 @@ func (registrationAccounts) VerifiedEmail(context.Context, string) (string, bool
 	return "alice@example.com", true, nil
 }
 
-type registrationRates struct{}
-
-func (registrationRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return 14_000_000, true, nil
-}
-
 type registrationPlans struct{}
 
 func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error   { return nil }
 func (registrationPlans) ReassignTier(context.Context, string, plan.Plan) error { return nil }
 func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)     { return plan.Free, nil }
 
-type registrationProvider struct{ label string }
+// registrationProvider captures every charge in full and answers the order read-back with it,
+// the evidence settlement applies a payment on.
+type registrationProvider struct {
+	label  string
+	mu     sync.Mutex
+	orders map[string]billing.Payment
+}
 
 func (p *registrationProvider) IssueBillingKey(_ context.Context, _, customerKey string) (billing.BillingKey, error) {
 	return billing.BillingKey{Value: "secret-billing-key", CustomerKey: customerKey, CardLabel: p.label}, nil
 }
-func (*registrationProvider) Charge(_ context.Context, request billing.ChargeRequest) (billing.Payment, error) {
-	return billing.Payment{PaymentKey: "payment-1", OrderID: request.OrderID, Status: "DONE"}, nil
+func (p *registrationProvider) Charge(_ context.Context, request billing.ChargeRequest) (billing.Payment, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.orders == nil {
+		p.orders = map[string]billing.Payment{}
+	}
+	payment := billing.Payment{PaymentKey: "payment-" + request.OrderID, OrderID: request.OrderID, Status: "DONE",
+		AmountKRW: request.KRW, BalanceKRW: request.KRW, Currency: "KRW"}
+	p.orders[request.OrderID] = payment
+	return payment, nil
 }
-func (*registrationProvider) PaymentByOrder(context.Context, string) (billing.Payment, bool, error) {
-	return billing.Payment{}, false, nil
+func (p *registrationProvider) PaymentByOrder(_ context.Context, orderID string) (billing.Payment, bool, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	payment, found := p.orders[orderID]
+	return payment, found, nil
 }
 func (*registrationProvider) Refund(context.Context, string, string) error { return nil }
 func (*registrationProvider) ParseNotification([]byte) (billing.Notification, error) {

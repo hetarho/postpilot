@@ -72,6 +72,44 @@ func TestSeedCreatesShortEmailFreeAccountsThatCanLogIn(t *testing.T) {
 	}
 }
 
+// A seeded paid account holds what a provisioned one of its tier holds: the coverage's daily
+// and monthly grants and its server-export window, opened through billing's support
+// assignment; free and master accounts get no paid benefits.
+func TestSeedOpensEachPaidAccountsCoverageBenefits(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "seed-benefits.db")
+	seed(t, path)
+	reader := open(t, path)
+	for _, fixture := range devseed.Fixtures {
+		var daily, monthly, exports, coverages int
+		if err := reader.QueryRowContext(ctx, `SELECT
+			COALESCE(SUM(CASE WHEN kind = 'daily' THEN granted END), 0),
+			COALESCE(SUM(CASE WHEN kind = 'monthly' THEN granted END), 0)
+			FROM credit_lots WHERE user_id = ?`, fixture.LoginID).Scan(&daily, &monthly); err != nil {
+			t.Fatal(err)
+		}
+		if err := reader.QueryRowContext(ctx, "SELECT COALESCE(SUM(allowance), 0) FROM server_export_windows WHERE user_id = ?",
+			fixture.LoginID).Scan(&exports); err != nil {
+			t.Fatal(err)
+		}
+		if err := reader.QueryRowContext(ctx, "SELECT COUNT(*) FROM support_coverages WHERE user_id = ?",
+			fixture.LoginID).Scan(&coverages); err != nil {
+			t.Fatal(err)
+		}
+		if fixture.Plan == plan.Free || fixture.Plan == plan.Master {
+			if daily != 0 || monthly != 0 || exports != 0 || coverages != 0 {
+				t.Errorf("%s holds paid benefits: daily=%d monthly=%d exports=%d coverages=%d", fixture.LoginID, daily, monthly, exports, coverages)
+			}
+			continue
+		}
+		offer, ok := plan.CommercialOffer(fixture.Plan)
+		if !ok || daily != offer.DailyCredits || monthly != offer.MonthlyBonus || exports != offer.ServerExports || coverages != 1 {
+			t.Errorf("%s benefits daily=%d monthly=%d exports=%d coverages=%d, want the %s offer %+v",
+				fixture.LoginID, daily, monthly, exports, coverages, fixture.Plan, offer)
+		}
+	}
+}
+
 // seed runs the command against path, the way `pnpm dev --seed` does.
 func seed(t *testing.T, path string) {
 	t.Helper()
