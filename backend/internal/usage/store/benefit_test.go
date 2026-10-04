@@ -315,7 +315,7 @@ func TestSettlementAfterDailyResetCannotDrawTheNewGrant(t *testing.T) {
 	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	anchor := time.Now().UTC().Add(-24*time.Hour + 2*time.Second)
-	end := plan.CoverageEnd(anchor, true)
+	end := plan.CoverageEnd(anchor, anchor, true)
 	coverage := usage.Coverage{ID: "paid:alice:reset", Anchor: anchor, End: end, Tier: plan.Basic, DailyTier: plan.Basic}
 	service := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion,
 		benefitCoverage{id: coverage.ID, anchor: anchor, end: end, tier: plan.Basic}, testRates)

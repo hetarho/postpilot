@@ -778,8 +778,20 @@ func (s *Service) benefitWindows(userID string, coverage Coverage, at time.Time,
 			Granted: grant.amount, Remaining: grant.amount, ExpiresAt: &end, CreatedAt: s.now(),
 		})
 	}
-	return grants, ExportWindow{UserID: userID, CoverageID: coverage.ID,
-		Start: bonusStart, End: earliest(bonusEnd, coverage.End), Allowance: bonusOffer.ServerExports}, nil
+	export, _ := ExportWindowAt(userID, coverage, at)
+	return grants, export, nil
+}
+
+// ExportWindowAt is the server-export window a coverage holds at an instant (QUOTA-62): the
+// anchored benefit month holding at, ended early by the coverage end, with the coverage tier's
+// monthly allowance. It is the one statement of that rule: the ledger's renewal, billing's
+// coverage and upgrade writes and the seed all take their window from it, never re-derive it.
+// False means the tier has no commercial offer.
+func ExportWindowAt(userID string, coverage Coverage, at time.Time) (ExportWindow, bool) {
+	offer, ok := plan.CommercialOffer(coverage.Tier)
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	return ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: earliest(end, coverage.End),
+		Allowance: offer.ServerExports}, ok
 }
 
 // OpenCoverage grants the first current day and month after a confirmed payment or

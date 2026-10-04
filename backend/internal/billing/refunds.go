@@ -245,7 +245,7 @@ func (s *Service) ReviewRefund(ctx context.Context, reviewerID, requestID, outco
 				amountKRW <= 0 || amountKRW > providerPayment.BalanceKRW {
 				return ErrRefundAmount
 			}
-			if now.Before(payment.ChargedAt.Add(7*24*time.Hour)) && evidence.Unused() &&
+			if now.Before(payment.ChargedAt.Add(refundWindow)) && evidence.Unused() &&
 				amountKRW != providerPayment.BalanceKRW {
 				return ErrRefundAmount
 			}

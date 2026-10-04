@@ -154,23 +154,27 @@ type seedBenefitCredits struct {
 }
 
 func (c seedBenefitCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlation string) error {
-	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, correlation); err != nil {
+	if err := c.Service.OpenCoverage(ctx, userID, seedCoverage(coverage), at, correlation); err != nil {
 		return err
 	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	if !coverage.End.IsZero() && coverage.End.Before(end) {
-		end = coverage.End
-	}
-	offer, _ := plan.CommercialOffer(coverage.Tier)
-	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, correlation)
+	window, _ := usage.ExportWindowAt(userID, seedCoverage(coverage), at)
+	return c.exports.OpenExportWindow(ctx, seedExportWindow(window), correlation)
 }
 func (c seedBenefitCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlation string) error {
-	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, credits, correlation); err != nil {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, seedCoverage(coverage), at, credits, correlation); err != nil {
 		return err
 	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	offer, _ := plan.CommercialOffer(coverage.Tier)
-	return c.exports.RaiseExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, exportDelta, correlation)
+	window, _ := usage.ExportWindowAt(userID, seedCoverage(coverage), at)
+	return c.exports.RaiseExportWindow(ctx, seedExportWindow(window), exportDelta, correlation)
+}
+
+// seedCoverage and seedExportWindow translate between the contexts the way the API's
+// billing adapter does; the window itself is the ledger's rule (usage.ExportWindowAt).
+func seedCoverage(coverage billing.Coverage) usage.Coverage {
+	return usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}
+}
+func seedExportWindow(window usage.ExportWindow) clip.ExportWindow {
+	return clip.ExportWindow{UserID: window.UserID, CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}
 }
 
 // noModels stands in for the model registry. The ledger only consults it to price a call,

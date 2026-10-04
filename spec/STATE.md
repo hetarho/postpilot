@@ -82,7 +82,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 | T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | doing@261005.pc |
 | T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | doing@261005.pc |
-| T576 | State the export window, upgrade proration and term end once | QUOTA BILL ARCH | T572 | doing@261005.pc |
 | T579 | Make the clip release smoke green again | ARCH | T574 | doing@261005.pc |
 
 ## next
@@ -92,6 +91,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T576 done: one export-window rule (usage.ExportWindowAt) for ledger, root and seed; proration via plan.QuoteUpgrade; TermEnd via plan.CoverageEnd; refundWindow constant; BE suite green
 - 261005 T572 done: the ledger prices through FX alone (required rate selector), legacy branches and copies deleted, migration 0131 closes pre-FX admissions and legacy monthly lots once; BE suite green
 - 261005 T569 done: a voice analysis freezes its 학습 글 snapshot at start and holds max(30 000, prompt runes); the run reads only the frozen ids; BE suite green
 - 261005 T580 done: a refused renewal lapses a subscription still on the term it paid for, even if another write touched the row (found in T570); BE suite green
@@ -111,4 +111,3 @@
 - 261005 T559 done: server render reads ground frames from its own lossless bare cut, browser sampling selects before scaling in one output; select joins the ffmpeg allowlist; render_footage 15.1–16.1 s → 8.9–10.0 s on the identity fixture; smokes and identity digest unchanged
 - 261005 T558 done: sampling jobs fetch only the originals their reads need with no full decode, a server render downloads and verifies each original once, cuts visited grouped by source; production smokes and identity digest unchanged; release smoke 9/28 red identically at base
 - 261004 T567 done: photo turns patch the cache on every call, the fingerprint reads once per autosave pause, one abortable delay frees its listeners; FE suite green
-- 261004 T565 done: clip settings and region queues send per project, the clip storyline saves through its own keyed queue flushed before builds and requests and keeps text on failure; FE suite green

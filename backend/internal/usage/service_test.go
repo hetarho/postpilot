@@ -737,6 +737,42 @@ func TestAccessOpensOnlyTheCurrentDailyAndMonthlyBenefits(t *testing.T) {
 	}
 }
 
+// QUOTA-62, QUOTA-37: the export window is the anchored benefit month holding the instant —
+// a boundary instant opens the next month, a day-31 anchor clamps to the month's end and
+// returns to the 31st — ended early by a coverage end inside it, with the tier's allowance.
+func TestExportWindowAtIsTheCappedBenefitMonth(t *testing.T) {
+	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
+	at := func(month time.Month, day, hour int) time.Time {
+		return time.Date(2027, month, day, hour, 0, 0, 0, seoul)
+	}
+	anchor := at(time.January, 31, 10)
+	open := Coverage{ID: "paid", Anchor: anchor, Tier: plan.Pro}
+	for _, tc := range []struct {
+		name       string
+		coverage   Coverage
+		at         time.Time
+		start, end time.Time
+	}{
+		{"just before a boundary", open, at(time.February, 28, 10).Add(-time.Nanosecond), anchor, at(time.February, 28, 10)},
+		{"at a boundary, clamped to February's end", open, at(time.February, 28, 10), at(time.February, 28, 10), at(time.March, 31, 10)},
+		{"back on the 31st", open, at(time.April, 1, 0), at(time.March, 31, 10), at(time.April, 30, 10)},
+		{"coverage ending inside the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.February, 15, 0), Tier: plan.Pro},
+			at(time.February, 10, 0), anchor, at(time.February, 15, 0)},
+		{"coverage ending after the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.June, 1, 0), Tier: plan.Pro},
+			at(time.February, 10, 0), anchor, at(time.February, 28, 10)},
+	} {
+		window, ok := ExportWindowAt("alice", tc.coverage, tc.at)
+		want := ExportWindow{UserID: "alice", CoverageID: "paid", Start: tc.start, End: tc.end, Allowance: 15}
+		if !ok || !window.Start.Equal(want.Start) || !window.End.Equal(want.End) || window.UserID != want.UserID ||
+			window.CoverageID != want.CoverageID || window.Allowance != want.Allowance {
+			t.Errorf("%s: window = %+v ok=%v, want %+v", tc.name, window, ok, want)
+		}
+	}
+	if _, ok := ExportWindowAt("alice", Coverage{ID: "op", Anchor: anchor, Tier: plan.Master}, anchor); ok {
+		t.Error("a tier with no commercial offer produced an export window")
+	}
+}
+
 func TestBenefitWindowsKeepExactAnchorAndIdempotentGrants(t *testing.T) {
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
 	anchor := time.Date(2025, 1, 20, 11, 0, 0, 0, seoul)

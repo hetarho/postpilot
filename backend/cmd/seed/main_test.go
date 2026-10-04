@@ -12,10 +12,14 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/billing"
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/devseed"
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
 
 func TestSeedCreatesShortEmailFreeAccountsThatCanLogIn(t *testing.T) {
@@ -257,5 +261,58 @@ func TestPrintReportShowsThePublishedColumn(t *testing.T) {
 	}
 	if !reflect.DeepEqual(row, []string{"master", "master", "23", "5", "4", "3", "11"}) {
 		t.Fatalf("row %v", row)
+	}
+}
+
+// capturedExports is clip's export windows as the seed's benefit adapter drives them.
+type capturedExports struct{ opened, raised []clip.ExportWindow }
+
+func (c *capturedExports) OpenExportWindow(_ context.Context, window clip.ExportWindow, _ string) error {
+	c.opened = append(c.opened, window)
+	return nil
+}
+func (c *capturedExports) RaiseExportWindow(_ context.Context, window clip.ExportWindow, _ int, _ string) error {
+	c.raised = append(c.raised, window)
+	return nil
+}
+func (c *capturedExports) CurrentExportWindow(context.Context, string, time.Time) (clip.ExportWindow, bool, error) {
+	return clip.ExportWindow{}, false, nil
+}
+
+// QUOTA-62: the seed takes its export windows from the ledger's rule, so a coverage that ends
+// inside its benefit month ends the window there, the upgrade's raise included, as production's
+// billing adapter does.
+func TestSeedExportWindowsEndWithTheCoverage(t *testing.T) {
+	ctx := context.Background()
+	handle, err := db.Open(filepath.Join(t.TempDir(), "seed-exports.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Basic, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	store := usagestore.New(handle.Writer, handle.Reader)
+	exports := &capturedExports{}
+	credits := seedBenefitCredits{Service: usage.NewService(store, noModels{}, 0, anchors{auth: authSvc}, usage.NewRateSelector(noRates{}, store)), exports: exports}
+	now := time.Now()
+	coverage := billing.Coverage{ID: "support:alice", Anchor: now.Add(-time.Hour), End: now.Add(24 * time.Hour), Tier: plan.Pro, DailyTier: plan.Basic}
+	if err := credits.OpenCoverage(ctx, "alice", coverage, now, "open"); err != nil {
+		t.Fatal(err)
+	}
+	if err := credits.AddUpgradeBonus(ctx, "alice", coverage, now, 10, 3, "upgrade"); err != nil {
+		t.Fatal(err)
+	}
+	if len(exports.opened) != 1 || len(exports.raised) != 1 {
+		t.Fatalf("export writes = opened %+v raised %+v", exports.opened, exports.raised)
+	}
+	for _, window := range []clip.ExportWindow{exports.opened[0], exports.raised[0]} {
+		if !window.Start.Equal(coverage.Anchor) || !window.End.Equal(coverage.End) || window.Allowance != 15 || window.CoverageID != coverage.ID {
+			t.Fatalf("window = %+v, want [%s, %s) with the Pro allowance", window, coverage.Anchor, coverage.End)
+		}
 	}
 }

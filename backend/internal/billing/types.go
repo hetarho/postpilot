@@ -264,14 +264,8 @@ func PriceCents(tier plan.Plan, term Term) int {
 	return monthly
 }
 
-// TermEnd advances by one or twelve anchor windows. Asking AnchorWindow at an exclusive
-// boundary advances to the next clamped month and naturally returns to the original day.
+// TermEnd is where a paid term that starts at start ends: plan.CoverageEnd, one or twelve
+// anchored months on.
 func TermEnd(anchor, start time.Time, term Term) time.Time {
-	windows := 1
-	if term == TermAnnual {
-		windows = 12
-	}
-	a, s := anchor.In(time.FixedZone("Asia/Seoul", 9*60*60)), start.In(time.FixedZone("Asia/Seoul", 9*60*60))
-	index := (s.Year()-a.Year())*12 + int(s.Month()-a.Month())
-	return plan.MonthBoundary(anchor, index+windows)
+	return plan.CoverageEnd(anchor, start, term == TermAnnual)
 }

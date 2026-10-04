@@ -197,7 +197,7 @@ func TestOpeningTheSameCoverageTwiceDoesNotReplenishSpentBenefits(t *testing.T) 
 	now := time.Now().UTC()
 	h := newLedgerHarness(t, "idempotent.db", now, now)
 
-	coverage := usage.Coverage{ID: "paid:alice:test", Anchor: now, End: plan.CoverageEnd(now, false), Tier: plan.Max, DailyTier: plan.Max}
+	coverage := usage.Coverage{ID: "paid:alice:test", Anchor: now, End: plan.CoverageEnd(now, now, false), Tier: plan.Max, DailyTier: plan.Max}
 	if err := h.ledger.OpenCoverage(ctx, "alice", coverage, now, "charge-1"); err != nil {
 		t.Fatal(err)
 	}

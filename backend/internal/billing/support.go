@@ -62,18 +62,15 @@ func (s *Service) AssignSupportTier(ctx context.Context, userID string, target p
 				return err
 			}
 			if target.Rank() > oldTier.Rank() {
+				// The upgrade quote's bonus and export differences (QUOTA-35). An assignment is
+				// not paid for, so the benefit month stands in for the paid term and the quote's
+				// KRW amount is not used.
 				start, end := plan.BenefitWindow(coverage.Anchor, now)
-				oldOffer, _ := plan.CommercialOffer(oldTier)
-				newOffer, _ := plan.CommercialOffer(target)
-				bonus, err := plan.ProrateCeil(int64(newOffer.MonthlyBonus-oldOffer.MonthlyBonus), start, end, now)
+				amounts, err := plan.QuoteUpgrade(oldTier, target, false, start, end, start, end, now)
 				if err != nil {
 					return err
 				}
-				exports, err := plan.ProrateFloor(int64(newOffer.ServerExports-oldOffer.ServerExports), start, end, now)
-				if err != nil {
-					return err
-				}
-				if err := credits.AddUpgradeBonus(ctx, userID, coverage, now, int(bonus), int(exports), correlation); err != nil {
+				if err := credits.AddUpgradeBonus(ctx, userID, coverage, now, int(amounts.BonusCredits), int(amounts.ServerExports), correlation); err != nil {
 					return err
 				}
 			}
