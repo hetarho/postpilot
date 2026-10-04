@@ -77,6 +77,11 @@ func (w waitFault) Wake(ctx context.Context, id, key string, at time.Time) (bool
 	return changed, err
 }
 
+// admitAccess is the guard's model-access check, which these media tests do not exercise.
+type admitAccess struct{}
+
+func (admitAccess) CheckAccess(context.Context, clipapp.Hold) error { return nil }
+
 type remoteAdmission struct {
 	tx      *sql.Tx
 	objects *remoteObjects
@@ -146,7 +151,7 @@ func remoteGenerationSetup(t *testing.T) *remoteGeneration {
 		t.Fatal(err)
 	}
 	finisher := clipapp.NewFinisher(h.db.Writer, g.bind, h.jobs, h.store, nil)
-	guard := clipapp.NewGuard(h.db.Writer, g.bind, h.jobs)
+	guard := clipapp.NewGuard(h.db.Writer, g.bind, h.jobs, admitAccess{})
 	deps := generationDeps(preparationFinisher{finisher, &g.fault}, &quotePricing{}, nil)
 	deps.RemoteMedia = dispatch
 	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, g.objects, h.media, h.planner, h.renderer, clipapp.NewJobs(h.queue, guard), h.cfg, deps)

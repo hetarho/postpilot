@@ -119,7 +119,7 @@ func remoteRenderSetup(t *testing.T, legacy bool) *remoteRender {
 	g.finisher = clipapp.NewFinisher(h.db.Writer, bind, h.jobs, h.store, nil)
 	deps := generationDeps(g.finisher, &quotePricing{}, nil)
 	deps.RemoteMedia = dispatch
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, g.objects, h.media, h.planner, h.renderer, clipapp.NewJobs(h.queue, clipapp.NewGuard(h.db.Writer, bind, h.jobs)), h.cfg, deps)
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, g.objects, h.media, h.planner, h.renderer, clipapp.NewJobs(h.queue, clipapp.NewGuard(h.db.Writer, bind, h.jobs, admitAccess{})), h.cfg, deps)
 	artifacts := clipapp.NewMediaArtifacts(h.db.Writer, bind, g.objects, h.cfg.Media, nil)
 	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"render-one": "one", "render-two": "two"}, clipapp.NewMediaWorker(h.store, artifacts, nil)).Handler)
 	t.Cleanup(api.Close)

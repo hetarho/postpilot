@@ -15,13 +15,14 @@ type Guard struct {
 	writer     *sql.DB
 	bind       Binder
 	authorizer Authorizer
+	access     AccessChecker
 }
 
-func NewGuard(writer *sql.DB, bind Binder, authorizer Authorizer) Guard {
-	if writer == nil || bind == nil || authorizer == nil {
-		panic("clip app: guard needs writer, binder and authorizer")
+func NewGuard(writer *sql.DB, bind Binder, authorizer Authorizer, access AccessChecker) Guard {
+	if writer == nil || bind == nil || authorizer == nil || access == nil {
+		panic("clip app: guard needs writer, binder, authorizer and access checker")
 	}
-	return Guard{writer: writer, bind: bind, authorizer: authorizer}
+	return Guard{writer: writer, bind: bind, authorizer: authorizer, access: access}
 }
 
 // Reservable is the state guard: only a running charged clip job in its
@@ -31,7 +32,14 @@ func Reservable(j job.Job, hold Hold) bool {
 	return j.UserID == hold.UserID && clip.ChargedJobKind(j.Kind) && j.Status == job.StatusRunning && j.Stage == "prepare" && j.CancelRequestedAt == nil && j.CancellationPolicyVersion == hold.Reservation.CancellationPolicyVersion
 }
 
+// Reserve qualifies the hold's model access first, outside the writer: a free path's
+// live check can fetch the provider's endpoint document, and no write transaction spans
+// a provider call (ARCH-10). The in-transaction hold is then told the check ran.
 func (g Guard) Reserve(ctx context.Context, hold Hold) error {
+	if err := g.access.CheckAccess(ctx, hold); err != nil {
+		return err
+	}
+	hold.AccessChecked = true
 	return WriteTx(ctx, g.writer, g.bind, func(p Ports) error {
 		j, err := p.Jobs.GetByID(ctx, hold.JobID)
 		if err != nil {

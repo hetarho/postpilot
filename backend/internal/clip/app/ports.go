@@ -71,6 +71,13 @@ type Admission interface {
 	Hold(context.Context, Hold) error
 }
 
+// AccessChecker qualifies a hold's planned calls against the acting plan and the
+// provider's live free-path document. It runs outside any transaction, because the
+// live document is a provider round trip (ARCH-10).
+type AccessChecker interface {
+	CheckAccess(ctx context.Context, hold Hold) error
+}
+
 // MediaPublicationTx consumes the accepted worker candidate with the canonical
 // result and parent job commit. Legacy embedded results have no media stage.
 type MediaPublicationTx interface {

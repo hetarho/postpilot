@@ -490,8 +490,10 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	} else if found {
 		return s.matchExistingHold(start, prior)
 	}
-	if err := s.CheckModelAccess(ctx, start.Plan, start.Kind, start.Calls); err != nil {
-		return err
+	if !start.AccessChecked {
+		if err := s.CheckModelAccess(ctx, start.Plan, start.Kind, start.Calls); err != nil {
+			return err
+		}
 	}
 
 	now := s.now()

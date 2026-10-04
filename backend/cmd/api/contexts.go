@@ -193,7 +193,10 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.jobs.Admit(jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth,
 		jobs: jobstore.New(handle.Writer, handle.Reader, jobKinds())})
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
-	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()))
+	// The guard checks model access on the non-transaction ledger before its hold's
+	// writer transaction opens; the hold inside reuses that answer.
+	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()),
+		clipAdmission{jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth}})
 
 	// Post reads voice, guideline and experiment through adapters that resolve their
 	// service after every context below exists (see adapters_post.go).

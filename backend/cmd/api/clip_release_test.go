@@ -456,7 +456,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	q.AllowCancellation(clipCancellation{})
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
-	guard := clipapp.NewGuard(d.Writer, bind, js)
+	guard := clipapp.NewGuard(d.Writer, bind, js, clipAdmission{admission.jobAdmission})
 	admission.hold = guard.Reserve
 	q.AllowCancellation(clipCancellation{})
 	clipGuard := releaseClipGuard{guard, admission}

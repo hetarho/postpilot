@@ -33,6 +33,9 @@ type Hold struct {
 	UserID, Kind, JobID string
 	Calls               []job.PlannedCall
 	Reservation         Reservation
+	// AccessChecked says the live model-access check already passed for this hold, before
+	// its transaction opened. Only Guard sets it, and only after that check returned.
+	AccessChecked bool
 }
 
 // The completion budgets and delivery shapes a clip reservation is allowed to name. They

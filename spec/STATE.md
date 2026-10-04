@@ -81,7 +81,6 @@
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 | T551 | Index the job and admission lookups every poll and provider call makes | ARCH | - | todo |
-| T552 | Run a clip hold's live model-access check before its write transaction | ARCH | - | todo |
 | T555 | Make the comparison list light and bound a comparison's candidate fan-out | ARCH | - | todo |
 | T556 | Read voice samples once and leave an unchanged answer alone | ARCH | - | todo |
 | T557 | Keep FX selection and balance reads off the writer and out of the lock | ARCH | - | todo |
@@ -103,6 +102,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
 - 261004 T554 done: a template-request correction carries only the request, the last answer and what it broke; BE suite green
 - 261004 T553 done: storyline and template-request caps sized by LLMCompletionBudget.Short with native-effort headroom, frozen at start, hold = call; BE suite green
 - 261004 create-task review/perf-cost-261004: T551–T567 (17 tasks) from 29 adopted findings; F10 back to [?] (VOICE-23/QUOTA-14 planning change); review converted
@@ -122,4 +122,3 @@
 - 261004 ideation familiar-video-editing-and-dubbing open: description-generated voice recommendation accepted; full editor/timing and reusable-voice packages proposed with a concrete creation flow
 - 261004 review-code perf-cost-261004 start: performance, provider cost and severe maintainability in code changed since conformance-all-260927 (87206229..3e6a14ea)
 - 261004 ideation familiar-video-editing-and-dubbing start: continue from description-generated voice recommendation and resolve remaining editor/lifecycle choices
-- 261004 ideation familiar-video-editing-and-dubbing open: voice-creation milestone precedes dubbing; selective regeneration, independent captions and audio controls adopted; creation method/device/timing pending

@@ -139,30 +139,57 @@ func (a clipAdmission) Hold(ctx context.Context, hold clipapp.Hold) error {
 	for _, c := range hold.Reservation.Calls {
 		reservation.Calls = append(reservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
 	}
-	return a.hold(ctx, job.Start{UserID: hold.UserID, Kind: hold.Kind, JobID: hold.JobID, Calls: hold.Calls}, reservation)
+	return a.hold(ctx, job.Start{UserID: hold.UserID, Kind: hold.Kind, JobID: hold.JobID, Calls: hold.Calls}, reservation, hold.AccessChecked)
+}
+
+// CheckAccess is the clip guard's model-access check, run on the non-transaction ledger
+// before the hold's writer transaction opens: a free path's live qualification fetches
+// the provider's endpoint document, which no write transaction may wait on (ARCH-10).
+func (a clipAdmission) CheckAccess(ctx context.Context, hold clipapp.Hold) error {
+	acting, err := a.actingPlan(ctx, hold.UserID, hold.Kind)
+	if err != nil {
+		return err
+	}
+	return a.ledger.CheckModelAccess(ctx, acting, hold.Kind, plannedCalls(hold.Calls))
 }
 
 func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
-	return a.hold(ctx, start, nil)
+	return a.hold(ctx, start, nil, false)
 }
 
-func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.Reservation) error {
-	// Admission uses the current stored tier even when a long-lived session still
-	// carries the tier from before a downgrade.
-	acting, err := a.plans.PlanOf(ctx, start.UserID)
+// hold admits the start on the ledger. accessChecked is true only on the clip path, whose
+// guard already ran the same plan's access check over the same calls before its transaction.
+func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.Reservation, accessChecked bool) error {
+	acting, err := a.actingPlan(ctx, start.UserID, start.Kind)
 	if err != nil {
-		return fmt.Errorf("hold %s: resolve acting plan: %w", start.Kind, err)
+		return err
 	}
-	calls := make([]usage.PlannedCall, 0, len(start.Calls))
-	for _, call := range start.Calls {
+	return a.ledger.Hold(ctx, usage.Start{
+		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: plannedCalls(start.Calls),
+		Approval: clipReservation, AccessChecked: accessChecked,
+	})
+}
+
+// actingPlan is the tier an admission is decided under: the current stored tier, even when
+// a long-lived session still carries the tier from before a downgrade.
+func (a jobAdmission) actingPlan(ctx context.Context, userID, kind string) (plan.Plan, error) {
+	acting, err := a.plans.PlanOf(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("hold %s: resolve acting plan: %w", kind, err)
+	}
+	return acting, nil
+}
+
+// plannedCalls is the queue's planned calls in the ledger's words, so the access check
+// and the hold price exactly the same calls.
+func plannedCalls(planned []job.PlannedCall) []usage.PlannedCall {
+	calls := make([]usage.PlannedCall, 0, len(planned))
+	for _, call := range planned {
 		calls = append(calls, usage.PlannedCall{
 			Ref: parseRegistryRef(call.Ref), Stage: call.Stage, Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
 		})
 	}
-	return a.ledger.Hold(ctx, usage.Start{
-		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
-		Approval: clipReservation,
-	})
+	return calls
 }
 
 func (a jobAdmission) Release(ctx context.Context, jobID string) {

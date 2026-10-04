@@ -40,6 +40,10 @@ type Start struct {
 	// Approval is the ceiling and priced lines this work was approved for. Work of a kind
 	// the root marked as needing one may not start without it.
 	Approval *Reservation
+	// AccessChecked says the caller already ran CheckModelAccess for this plan and these
+	// calls, outside the transaction this hold joins, so Hold does not repeat its live
+	// free-path fetch inside the writer (ARCH-10).
+	AccessChecked bool
 }
 
 // Admission is the durable record of an admitted start and the credits held for it.

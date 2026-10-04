@@ -31,6 +31,44 @@ func TestMissingFreeCapabilityRefusesBeforeAdmission(t *testing.T) {
 	}
 }
 
+// countingFreePath qualifies every free path and counts the live checks it was asked for.
+type countingFreePath struct {
+	fakeModels
+	calls *int
+}
+
+func (q countingFreePath) QualifyFree(context.Context, string, llm.FreePath) (bool, error) {
+	*q.calls++
+	return true, nil
+}
+
+func TestHoldSkipsTheLiveFreeCheckOnlyWhenTheCallerRanIt(t *testing.T) {
+	observe := llm.ModelRef{ProviderID: "openrouter", ModelID: "free-observe"}
+	write := llm.ModelRef{ProviderID: "openrouter", ModelID: "free-write"}
+	qualified := 0
+	models := countingFreePath{fakeModels{
+		observe: {Ref: observe, Stages: []string{"observe"}, Levels: map[string]string{"observe": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
+		write:   {Ref: write, Stages: []string{"write"}, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
+	}, &qualified}
+	store := newFakeStore()
+	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}).WithRateSelector(&RateSelector{}).WithModelGrades()
+	svc.now = func() time.Time { return seoulNoon }
+	calls := []PlannedCall{{Ref: observe, Stage: "observe", Count: 2}, {Ref: write, Stage: "write", Count: 1}}
+	ctx := context.Background()
+	if err := svc.Hold(ctx, Start{UserID: "alice", Plan: plan.Free, Kind: "generate", JobID: "unchecked", Calls: calls}); err != nil {
+		t.Fatal(err)
+	}
+	if qualified != 2 {
+		t.Fatalf("a hold without a prior check qualified %d free calls live, want 2", qualified)
+	}
+	if err := svc.Hold(ctx, Start{UserID: "alice", Plan: plan.Free, Kind: "generate", JobID: "checked", Calls: calls, AccessChecked: true}); err != nil {
+		t.Fatal(err)
+	}
+	if qualified != 2 || len(store.admissions) != 2 {
+		t.Fatalf("a checked hold qualified live again (%d checks) or was not admitted (%d admissions)", qualified, len(store.admissions))
+	}
+}
+
 type lightRateSource struct{}
 
 func (lightRateSource) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {

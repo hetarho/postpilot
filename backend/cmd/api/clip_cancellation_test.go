@@ -71,7 +71,7 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 	q.Admit(admission)
 	bind := clipTxPorts(ledger, nil, authSvc)
 	q.AllowCancellation(clipCancellation{})
-	guard := clipapp.NewGuard(d.Writer, bind, js)
+	guard := clipapp.NewGuard(d.Writer, bind, js, clipAdmission{admission})
 	return &cancellationHarness{d, js, cs, q, ledger, clipapp.NewFinisher(d.Writer, bind, js, cs, nil), admission, guard, bind}
 }
 
