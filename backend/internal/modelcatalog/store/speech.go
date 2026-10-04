@@ -133,17 +133,18 @@ var _ modelcatalog.SpeechProfileStore = (*Store)(nil)
 
 // JSON is an opaque versioned snapshot at this edge, never a transport/domain tag.
 type speechBindingRecord struct {
-	Version        int                  `json:"version"`
-	Provider       string               `json:"provider"`
-	Design         string               `json:"design"`
-	Synthesis      string               `json:"synthesis"`
-	Settings       speechSettingsRecord `json:"settings"`
-	Format         string               `json:"format"`
-	DescriptionMax int                  `json:"description_max"`
-	PreviewMax     int                  `json:"preview_max"`
-	SpeechMax      int                  `json:"speech_max"`
-	DesignModel    speechModelRecord    `json:"design_model"`
-	SpeechModel    speechModelRecord    `json:"speech_model"`
+	ConnectionScope string               `json:"connection_scope"`
+	Version         int                  `json:"version"`
+	Provider        string               `json:"provider"`
+	Design          string               `json:"design"`
+	Synthesis       string               `json:"synthesis"`
+	Settings        speechSettingsRecord `json:"settings"`
+	Format          string               `json:"format"`
+	DescriptionMax  int                  `json:"description_max"`
+	PreviewMax      int                  `json:"preview_max"`
+	SpeechMax       int                  `json:"speech_max"`
+	DesignModel     speechModelRecord    `json:"design_model"`
+	SpeechModel     speechModelRecord    `json:"speech_model"`
 }
 type speechSettingsRecord struct {
 	Stability    float64 `json:"stability"`

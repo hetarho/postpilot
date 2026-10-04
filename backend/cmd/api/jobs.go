@@ -17,6 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/voice"
+	"github.com/postpilot/backend/internal/voice/spoken"
 )
 
 // registerJobs binds every job kind to the context that owns it. `metered` stamps the
@@ -106,6 +107,10 @@ func registerJobs(c *contexts) {
 		}, progress)
 	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
+	for _, kind := range []string{spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe} {
+		q.Register(kind, metered(c.spokenGeneration.Run))
+		q.OnTerminal(kind, func(ctx context.Context, j job.Job, _ time.Time) error { return c.spokenGeneration.OnTerminal(ctx, j) })
+	}
 }
 
 // registerClipJobs binds the clip kinds and releases each attempt's held sources when its

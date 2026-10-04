@@ -11,7 +11,7 @@ import (
 func encodeSpeech(p modelcatalog.SpeechProfile) (string, string, error) {
 	b := p.Binding
 	v := b.Settings
-	binding, err := json.Marshal(speechBindingRecord{Version: 1, Provider: b.Design.ProviderID, Design: b.Design.ModelID, Synthesis: b.Synthesis.ModelID, Settings: speechSettingsRecord{v.Stability, v.SimilarityBoost, v.Style, v.SpeakerBoost, v.Speed}, Format: b.OutputFormat, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, DesignModel: encodeSpeechModel(b.DesignModel), SpeechModel: encodeSpeechModel(b.SpeechModel)})
+	binding, err := json.Marshal(speechBindingRecord{ConnectionScope: b.ConnectionScope, Version: 1, Provider: b.Design.ProviderID, Design: b.Design.ModelID, Synthesis: b.Synthesis.ModelID, Settings: speechSettingsRecord{v.Stability, v.SimilarityBoost, v.Style, v.SpeakerBoost, v.Speed}, Format: b.OutputFormat, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, DesignModel: encodeSpeechModel(b.DesignModel), SpeechModel: encodeSpeechModel(b.SpeechModel)})
 	if err != nil {
 		return "", "", err
 	}
@@ -48,7 +48,7 @@ func decodeSpeech(bindingJSON, pricesJSON string) (modelcatalog.SpeechBinding, [
 	}
 	design, speech := llm.ModelRef{ProviderID: b.Provider, ModelID: b.Design}, llm.ModelRef{ProviderID: b.Provider, ModelID: b.Synthesis}
 	v := b.Settings
-	bound := modelcatalog.SpeechBinding{Design: design, Synthesis: speech, Settings: llm.SpeechSettings{Stability: v.Stability, SimilarityBoost: v.Similarity, Style: v.Style, SpeakerBoost: v.SpeakerBoost, Speed: v.Speed}, OutputFormat: b.Format, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, DesignModel: decodeSpeechModel(b.DesignModel, design), SpeechModel: decodeSpeechModel(b.SpeechModel, speech)}
+	bound := modelcatalog.SpeechBinding{ConnectionScope: b.ConnectionScope, Design: design, Synthesis: speech, Settings: llm.SpeechSettings{Stability: v.Stability, SimilarityBoost: v.Similarity, Style: v.Style, SpeakerBoost: v.SpeakerBoost, Speed: v.Speed}, OutputFormat: b.Format, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, DesignModel: decodeSpeechModel(b.DesignModel, design), SpeechModel: decodeSpeechModel(b.SpeechModel, speech)}
 	out := make([]modelcatalog.SpeechPrice, 0, len(prices.Prices))
 	for _, price := range prices.Prices {
 		at, err := parseTime(price.CheckedAt)

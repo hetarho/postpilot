@@ -11,6 +11,7 @@ import (
 
 // Versioned persistence records deliberately do not serialize domain objects.
 type profileRecord struct {
+	ConnectionScope                                              string
 	Version                                                      int
 	ID                                                           string
 	Revision                                                     int64
@@ -22,7 +23,7 @@ type profileRecord struct {
 }
 
 func encodeProfile(p spoken.Profile) (string, error) {
-	b, err := json.Marshal(profileRecord{Version: 1, ID: p.ID, Revision: p.Revision, Provider: p.Design.ProviderID, Design: p.Design.ModelID, Synthesis: p.Synthesis.ModelID, DesignLabel: p.DesignLabel, SpeechLabel: p.SpeechLabel, Grade: p.Grade, Stability: p.Settings.Stability, Similarity: p.Settings.SimilarityBoost, Style: p.Settings.Style, Speed: p.Settings.Speed, SpeakerBoost: p.Settings.SpeakerBoost, DescriptionMax: p.DescriptionMax, PreviewMax: p.PreviewMax, SpeechMax: p.SpeechMax, OutputFormat: p.OutputFormat})
+	b, err := json.Marshal(profileRecord{ConnectionScope: p.ConnectionScope, Version: 1, ID: p.ID, Revision: p.Revision, Provider: p.Design.ProviderID, Design: p.Design.ModelID, Synthesis: p.Synthesis.ModelID, DesignLabel: p.DesignLabel, SpeechLabel: p.SpeechLabel, Grade: p.Grade, Stability: p.Settings.Stability, Similarity: p.Settings.SimilarityBoost, Style: p.Settings.Style, Speed: p.Settings.Speed, SpeakerBoost: p.Settings.SpeakerBoost, DescriptionMax: p.DescriptionMax, PreviewMax: p.PreviewMax, SpeechMax: p.SpeechMax, OutputFormat: p.OutputFormat})
 	return string(b), err
 }
 func decodeProfile(s string) (spoken.Profile, error) {
@@ -33,7 +34,7 @@ func decodeProfile(s string) (spoken.Profile, error) {
 	if r.Version != 1 {
 		return spoken.Profile{}, spoken.ErrInvalid
 	}
-	return spoken.Profile{ID: r.ID, Revision: r.Revision, Design: llm.ModelRef{ProviderID: r.Provider, ModelID: r.Design}, Synthesis: llm.ModelRef{ProviderID: r.Provider, ModelID: r.Synthesis}, DesignLabel: r.DesignLabel, SpeechLabel: r.SpeechLabel, Grade: r.Grade, Settings: llm.SpeechSettings{Stability: r.Stability, SimilarityBoost: r.Similarity, Style: r.Style, Speed: r.Speed, SpeakerBoost: r.SpeakerBoost}, DescriptionMax: r.DescriptionMax, PreviewMax: r.PreviewMax, SpeechMax: r.SpeechMax, OutputFormat: r.OutputFormat}, nil
+	return spoken.Profile{ConnectionScope: r.ConnectionScope, ID: r.ID, Revision: r.Revision, Design: llm.ModelRef{ProviderID: r.Provider, ModelID: r.Design}, Synthesis: llm.ModelRef{ProviderID: r.Provider, ModelID: r.Synthesis}, DesignLabel: r.DesignLabel, SpeechLabel: r.SpeechLabel, Grade: r.Grade, Settings: llm.SpeechSettings{Stability: r.Stability, SimilarityBoost: r.Similarity, Style: r.Style, Speed: r.Speed, SpeakerBoost: r.SpeakerBoost}, DescriptionMax: r.DescriptionMax, PreviewMax: r.PreviewMax, SpeechMax: r.SpeechMax, OutputFormat: r.OutputFormat}, nil
 }
 func (s *Store) draft(ctx context.Context, r sqlc.SpokenVoiceDraft) (spoken.Draft, error) {
 	p, err := decodeProfile(r.ProfileJson)

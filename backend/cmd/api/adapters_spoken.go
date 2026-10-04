@@ -15,5 +15,5 @@ func (a spokenProfiles) ResolveSpokenProfile(ctx context.Context, owner string, 
 		return spoken.Profile{}, err
 	}
 	b := p.Binding
-	return spoken.Profile{ID: p.ID, Revision: p.Revision, Design: b.Design, Synthesis: b.Synthesis, DesignLabel: b.DesignModel.Label, SpeechLabel: b.SpeechModel.Label, Grade: string(p.Level), Settings: b.Settings, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, OutputFormat: b.OutputFormat}, nil
+	return spoken.Profile{ConnectionScope: b.ConnectionScope, ID: p.ID, Revision: p.Revision, Design: b.Design, Synthesis: b.Synthesis, DesignLabel: b.DesignModel.Label, SpeechLabel: b.SpeechModel.Label, Grade: string(p.Level), Settings: b.Settings, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, OutputFormat: b.OutputFormat}, nil
 }

@@ -42,6 +42,7 @@ import (
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/spoken"
+	spokenapp "github.com/postpilot/backend/internal/voice/spoken/app"
 	spokenstore "github.com/postpilot/backend/internal/voice/spoken/store"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 	"github.com/postpilot/backend/internal/voucher"
@@ -79,13 +80,14 @@ type contexts struct {
 	clipGeneration    *clipapp.GenerationService
 	clipMediaRecovery *clipapp.MediaReconciler
 
-	template   *template.Service
-	guideline  *guideline.Service
-	memory     *memory.Service
-	provider   *provider.Service
-	voice      *voice.Service
-	spoken     *spoken.Service
-	generation *generation.Service
+	template         *template.Service
+	guideline        *guideline.Service
+	memory           *memory.Service
+	provider         *provider.Service
+	voice            *voice.Service
+	spoken           *spoken.Service
+	spokenGeneration *spokenapp.GenerationService
+	generation       *generation.Service
 
 	experimentStore *experimentstore.Store
 	experiment      *experiment.Service
@@ -237,6 +239,10 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
 	c.clipMediaRecovery = clipapp.NewMediaReconciler(handle.Writer, c.clipPorts, c.clipStore, jobstore.New(handle.Writer, handle.Reader, jobKinds()), c.jobs, p.bucket, cfg.OrphanMinAge, nil)
+	c.spokenGeneration = newSpokenGeneration(c)
+	if err := c.spokenGeneration.Recover(ctx); err != nil {
+		return nil, fmt.Errorf("spoken operation recovery: %w", err)
+	}
 	// External handoffs are reconciled before interruption/hold/source cleanup.
 	if err := c.clipMediaRecovery.Reconcile(ctx); err != nil {
 		return nil, fmt.Errorf("media handoff recovery: %w", err)

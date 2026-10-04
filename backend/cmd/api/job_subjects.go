@@ -6,6 +6,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/voice"
+	"github.com/postpilot/backend/internal/voice/spoken"
 )
 
 // jobKinds is what the queue's store is told about the work it holds. Clip work exists as
@@ -20,9 +21,10 @@ import (
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
 		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest},
-		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
 		FirstStages: map[string]string{
+			spoken.JobKindDesign: spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
 			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
 			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",
 		},
@@ -46,10 +48,13 @@ func ownerCancellableKinds() []string { return []string{job.KindTemplateRequest}
 type jobCancellation struct{ clip clipCancellation }
 
 func (c jobCancellation) Kind(kind string) bool {
-	return kind == job.KindTemplateRequest || c.clip.Kind(kind)
+	return kind == job.KindTemplateRequest || spoken.IsJobKind(kind) || c.clip.Kind(kind)
 }
 
 func (c jobCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
+	if spoken.IsJobKind(kind) {
+		return cancellationPolicyVersion == 1
+	}
 	if kind == job.KindTemplateRequest {
 		return cancellationPolicyVersion == templateRequestCancellationPolicy
 	}

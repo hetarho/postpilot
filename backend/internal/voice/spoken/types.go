@@ -29,6 +29,7 @@ var (
 // Profile is an immutable, price-free snapshot acquired through a catalog port.
 // Supplier sound handles never enter the customer projection.
 type Profile struct {
+	ConnectionScope                       string
 	ID                                    string
 	Revision                              int64
 	Design, Synthesis                     llm.ModelRef

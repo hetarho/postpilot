@@ -383,6 +383,9 @@ func (s *Store) AssetRetained(ctx context.Context, id string) (bool, error) {
 }
 func (s *Store) DeleteOwner(ctx context.Context, owner string) error {
 	return s.transaction(ctx, func(tx *Store) error {
+		if err := tx.write.DeleteOwnerOperations(ctx, owner); err != nil {
+			return err
+		}
 		if err := tx.write.DeleteOwnerVoices(ctx, owner); err != nil {
 			return err
 		}

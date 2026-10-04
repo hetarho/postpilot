@@ -4,7 +4,9 @@ package elevenlabs
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,6 +33,13 @@ type Provider struct {
 
 func Factory(cfg llm.SpeechAdapterConfig) (llm.SpeechProvider, error) {
 	return New(cfg, http.DefaultClient)
+}
+
+func (p *Provider) connectionScope() string {
+	// Key material never leaves this edge. Conservatively invalidate the binding
+	// even for a key rotation within one account; never infer account equivalence.
+	h := sha256.Sum256([]byte("elevenlabs-connection-v1\x00" + p.id + "\x00" + p.baseURL + "\x00" + p.key))
+	return hex.EncodeToString(h[:])
 }
 
 func New(cfg llm.SpeechAdapterConfig, client *http.Client) (*Provider, error) {

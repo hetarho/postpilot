@@ -14,4 +14,12 @@ func TestSpeechCurationAndQualificationAreInTheClosedMasterSet(t *testing.T) {
 	if masterProcedures[postpilotv1connect.SpeechProfileServiceListSpeechProfilesProcedure] {
 		t.Fatal("customer picker incorrectly requires master")
 	}
+	for _, procedure := range []string{postpilotv1connect.SpokenVoiceGenerationServiceQuoteVoiceReuseProbeProcedure, postpilotv1connect.SpokenVoiceGenerationServiceStartVoiceReuseProbeProcedure} {
+		if !masterProcedures[procedure] {
+			t.Fatal("probe not master-only", procedure)
+		}
+	}
+	if masterProcedures[postpilotv1connect.SpokenVoiceGenerationServiceStartVoiceCandidatesProcedure] {
+		t.Fatal("customer voice creation incorrectly requires master")
+	}
 }

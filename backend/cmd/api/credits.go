@@ -159,16 +159,9 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 		if err != nil {
 			return err
 		}
-		calls := plannedCalls(start.Calls)
-		if len(calls) != len(reservation.Units) {
-			return usage.ErrUnitApproval
-		}
-		for i := range calls {
-			budget := reservation.Units[i]
-			if calls[i].Ref != budget.Ref || calls[i].Stage != budget.Operation || calls[i].Count != budget.Count || calls[i].CompletionTokens != 0 {
-				return usage.ErrUnitApproval
-			}
-			calls[i].Units = &budget
+		calls, err := usage.UnitCallsForSchedule(plannedCalls(start.Calls), reservation.Units)
+		if err != nil {
+			return err
 		}
 		return a.ledger.Hold(ctx, usage.Start{UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls, Approval: reservation})
 	}

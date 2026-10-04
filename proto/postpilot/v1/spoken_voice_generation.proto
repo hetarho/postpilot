@@ -1,0 +1,35 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+import "postpilot/v1/spoken_voice.proto";
+
+// Explicit paid work is its own family; library reads never start a supplier call.
+service SpokenVoiceGenerationService {
+ rpc QuoteVoiceCandidates(SpokenDesignQuoteRequest) returns (SpokenWorkQuote) {}
+ rpc StartVoiceCandidates(SpokenDesignStartRequest) returns (SpokenOperationResponse) {}
+ rpc QuoteVoiceConfirmation(SpokenConfirmationQuoteRequest) returns (SpokenWorkQuote) {}
+ rpc StartVoiceConfirmation(SpokenConfirmationStartRequest) returns (SpokenOperationResponse) {}
+ rpc GetSpokenOperation(SpokenIDRequest) returns (SpokenOperationResponse) {}
+ rpc CancelSpokenOperation(SpokenIDRequest) returns (SpokenOperationResponse) {}
+ rpc RetrySpokenPublication(SpokenIDRequest) returns (SpokenOperationResponse) {}
+ // Both procedures are master-only and require an owned qualification session.
+ rpc QuoteVoiceReuseProbe(SpokenProbeQuoteRequest) returns (SpokenWorkQuote) {}
+ rpc StartVoiceReuseProbe(SpokenProbeStartRequest) returns (SpokenOperationResponse) {}
+}
+message SpokenWorkApproval { string quote_id = 1; optional int32 approved_max_credits = 2; int32 cancellation_policy_version = 3; }
+message SpokenWorkQuote { string quote_id = 1; int32 maximum_credits = 2; string expires_at = 3; bool approval_required = 4; string existing_voice_id = 5; }
+message SpokenDesignQuoteRequest { string draft_id = 1; int64 expected_revision = 2; }
+message SpokenDesignStartRequest { SpokenDesignQuoteRequest input = 1; string idempotency_key = 2; SpokenWorkApproval approval = 3; }
+message SpokenConfirmationQuoteRequest { string draft_id = 1; int64 expected_revision = 2; string candidate_id = 3; }
+message SpokenConfirmationStartRequest { SpokenConfirmationQuoteRequest input = 1; string idempotency_key = 2; SpokenWorkApproval approval = 3; }
+message SpokenProbeQuoteRequest { string voice_id = 1; int64 expected_revision = 2; string qualification_session_id = 3; string first_text = 4; string second_text = 5; }
+message SpokenProbeStartRequest { SpokenProbeQuoteRequest input = 1; string idempotency_key = 2; SpokenWorkApproval approval = 3; }
+message SpokenOperation {
+ string id = 1; string kind = 2; string state = 3; string job_id = 4;
+ string draft_id = 5; string voice_id = 6; string candidate_id = 7;
+ string result_id = 8; string failure_reason = 9;
+ string created_at = 10; string updated_at = 11;
+ repeated SpokenProbeSample probe_samples = 12;
+}
+message SpokenProbeSample { string asset_id = 1; int64 duration_ms = 2; bool has_character_timing = 3; }
+message SpokenOperationResponse { SpokenOperation operation = 1; }

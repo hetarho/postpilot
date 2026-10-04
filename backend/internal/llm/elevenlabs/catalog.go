@@ -69,7 +69,7 @@ func (p *Provider) ReadSpeechCatalog(ctx context.Context, refresh bool) (llm.Spe
 	if err := json.Unmarshal(body, &rows); err != nil || len(rows) > llm.SpeechCatalogMaxModels {
 		return llm.SpeechCatalog{}, llm.ErrBadOutput
 	}
-	out := llm.SpeechCatalog{CheckedAt: time.Now().UTC()}
+	out := llm.SpeechCatalog{CheckedAt: time.Now().UTC(), ConnectionScope: p.connectionScope()}
 	seen := map[string]bool{}
 	for _, row := range rows {
 		if !validHandle(row.ID) || row.Name == "" || seen[row.ID] {

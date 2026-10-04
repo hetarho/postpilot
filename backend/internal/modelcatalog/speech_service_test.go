@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func (s *speechSource) SpeechConnection() llm.SpeechConnection { return s.connec
 func speechFixture(t *testing.T) (*SpeechService, *speechMemory, *speechSource, SpeechProfile) {
 	t.Helper()
 	store := newSpeechMemory()
-	source := &speechSource{connection: llm.SpeechConnection{ProviderID: "speech-test"}, catalog: llm.SpeechCatalog{Models: []llm.SpeechModel{
+	source := &speechSource{connection: llm.SpeechConnection{ProviderID: "speech-test"}, catalog: llm.SpeechCatalog{ConnectionScope: strings.Repeat("a", 64), Models: []llm.SpeechModel{
 		{Ref: llm.ModelRef{ProviderID: "speech-test", ModelID: "design"}, Label: "Design", Design: true, MaxText: 1000},
 		{Ref: llm.ModelRef{ProviderID: "speech-test", ModelID: "synth"}, Label: "Synthesis", Synthesis: true, Korean: true, Style: true, SpeakerBoost: true, MaxText: 5000, TokenCostFactor: "1", CharacterCostMultiplier: "1", CostDiscountMultiplier: "1"},
 	}}}
@@ -103,6 +104,36 @@ func speechFixture(t *testing.T) (*SpeechService, *speechMemory, *speechSource, 
 		p.Prices = append(p.Prices, SpeechPrice{Operation: op, Source: "https://example.com/account-prices", BoundsSource: "https://example.com/bounds", CheckedAt: at, Complete: true, Charges: []SpeechCharge{{Unit: llm.SpeechUnitCharacterCost, USDPerUnit: "0.000100001", Multiplier: "1.25", MaximumUnits: "1000"}}})
 	}
 	return service, store, source, p
+}
+
+func TestSpeechConnectionRotationRefusesOldAccountBindingBeforeNewCalls(t *testing.T) {
+	s, _, source, input := speechFixture(t)
+	p, err := s.SaveSpeechProfile(t.Context(), input, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, err := s.StartSpeechQualification(t.Context(), "owner", p.ID, p.Revision, "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ResolveSpeechProfile(t.Context(), "owner", plan.Master, p.ID, p.Revision, q.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	source.catalog.ConnectionScope = strings.Repeat("b", 64)
+	if _, err := s.ResolveSpeechProfile(t.Context(), "owner", plan.Master, p.ID, p.Revision, q.ID, false); !errors.Is(err, ErrSpeechProfileUnavailable) {
+		t.Fatal(err)
+	}
+	choices, err := s.SpeechChoices(t.Context(), plan.Master)
+	if err != nil || choices[0].UnavailableReason != "SPEECH_BINDING_INCOMPATIBLE" {
+		t.Fatal(choices, err)
+	}
+	updated, err := s.SaveSpeechProfile(t.Context(), p, p.Revision)
+	if err != nil || updated.Binding.ConnectionScope != source.catalog.ConnectionScope || updated.VoiceEvidence != "" {
+		t.Fatal(updated, err)
+	}
+	if p.Binding.ConnectionScope == updated.Binding.ConnectionScope {
+		t.Fatal("historical account binding changed")
+	}
 }
 
 func TestSpeechProfilesPreserveRevisionsAndInvalidateReadiness(t *testing.T) {

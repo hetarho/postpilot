@@ -30,8 +30,11 @@ type SpeechModel struct {
 }
 
 type SpeechCatalog struct {
-	Models    []SpeechModel
-	CheckedAt time.Time
+	// Private connection identity. Rotation requires recuration/qualification;
+	// a catalog/model ID alone cannot authorize another supplier account's voice.
+	ConnectionScope string
+	Models          []SpeechModel
+	CheckedAt       time.Time
 }
 
 type SpeechCatalogReader interface {

@@ -57,7 +57,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 23 {
+	if len(got) != 24 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
@@ -71,10 +71,11 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	public := rpcserver.New(cfg, "test", rpcserver.Options{Handlers: got, Interceptors: []connect.Interceptor{authrpc.NewInterceptor(app.auth, app.throttle, cfg.ClientIPHeader)}})
 	for path, want := range map[string]int{
-		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus": http.StatusNotFound,
-		"/postpilot.v1.PostService/ListPosts":                        http.StatusUnauthorized,
-		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":      http.StatusUnauthorized,
-		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":          http.StatusUnauthorized,
+		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus":      http.StatusNotFound,
+		"/postpilot.v1.PostService/ListPosts":                             http.StatusUnauthorized,
+		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":           http.StatusUnauthorized,
+		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":               http.StatusUnauthorized,
+		"/postpilot.v1.SpokenVoiceGenerationService/QuoteVoiceCandidates": http.StatusUnauthorized,
 	} {
 		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
 		r.Header.Set("X-Media-Worker-ID", "prod-worker")

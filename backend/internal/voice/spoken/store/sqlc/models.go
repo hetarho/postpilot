@@ -37,6 +37,17 @@ type SpokenAudioCleanup struct {
 	CreatedAt string
 }
 
+type SpokenProbeAudio struct {
+	OwnerID           string
+	VoiceID           string
+	InputDigest       string
+	OriginOperationID string
+	OriginJobID       string
+	AssetID           string
+	EvidenceJson      string
+	TimingJson        string
+}
+
 type SpokenVoiceDraft struct {
 	ID                     string
 	OwnerID                string
@@ -51,4 +62,21 @@ type SpokenVoiceDraft struct {
 	ConfirmedVoiceID       string
 	CreatedAt              string
 	UpdatedAt              string
+}
+
+type SpokenVoiceOperation struct {
+	ID             string
+	OwnerID        string
+	Kind           string
+	State          string
+	JobID          string
+	IdempotencyKey string
+	RequestDigest  string
+	ScopeDigest    string
+	CandidateID    string
+	ReceivedHandle string
+	SampleAssetID  sql.NullString
+	SnapshotJson   string
+	CreatedAt      string
+	UpdatedAt      string
 }

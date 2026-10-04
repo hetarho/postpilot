@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -37,6 +38,16 @@ func TestAuthenticatedSpeechCatalogCachesWithoutInventingAnAccountPair(t *testin
 	}
 	if len(c.Models) != 3 || c.CheckedAt.IsZero() {
 		t.Fatalf("catalog: %+v", c)
+	}
+	if len(c.ConnectionScope) != 64 || strings.Contains(c.ConnectionScope, "private-test-key") {
+		t.Fatal("private scope missing")
+	}
+	rotated, err := New(llm.SpeechAdapterConfig{ProviderID: "custom-connection", BaseURL: server.URL, APIKey: "rotated-key"}, server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.connectionScope() == rotated.connectionScope() {
+		t.Fatal("rotated supplier key reused old scope")
 	}
 	m := c.Models[0]
 	if m.Ref.ProviderID != "custom-connection" || !m.Korean || !m.Synthesis || m.Design || m.MaxText != 5000 || m.TokenCostFactor != "0.500001" || m.CharacterCostMultiplier != "1.25" || m.CostDiscountMultiplier != "0.75" {

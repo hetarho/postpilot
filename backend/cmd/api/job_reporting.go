@@ -6,6 +6,7 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/voice/spoken"
 )
 
 // jobReporting is how the queue describes work it runs: the provider's own failure
@@ -44,6 +45,9 @@ func (jobReporting) LogAttrs(err error) []any {
 }
 
 func (jobReporting) SafeStage(kind, stage string) (string, bool) {
+	if spoken.IsJobKind(kind) && (stage == kind || stage == "complete") {
+		return stage, true
+	}
 	if !clip.IsJobKind(kind) {
 		return "", false
 	}
@@ -51,4 +55,4 @@ func (jobReporting) SafeStage(kind, stage string) (string, bool) {
 }
 
 // Clip failures may wrap subprocess stderr, media paths or provider bodies.
-func (jobReporting) Redacted(kind string) bool { return clip.IsJobKind(kind) }
+func (jobReporting) Redacted(kind string) bool { return clip.IsJobKind(kind) || spoken.IsJobKind(kind) }

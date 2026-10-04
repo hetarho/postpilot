@@ -105,6 +105,9 @@ func (s *SpeechService) readiness(p SpeechProfile, catalog llm.SpeechCatalog, fe
 	if fetchErr != nil {
 		return "SPEECH_CATALOG_UNAVAILABLE"
 	}
+	if len(catalog.ConnectionScope) != 64 || p.Binding.ConnectionScope != catalog.ConnectionScope {
+		return "SPEECH_BINDING_INCOMPATIBLE"
+	}
 	d, dok := speechCandidate(catalog, p.Binding.Design, true)
 	v, vok := speechCandidate(catalog, p.Binding.Synthesis, false)
 	if !dok || !vok || !v.Korean || v.RequiresAlpha || !validSpeechCapabilities(p.Binding, d, v) {
@@ -184,6 +187,7 @@ func (s *SpeechService) SaveSpeechProfile(ctx context.Context, p SpeechProfile, 
 	// This lets the operator amend prices/withdraw a profile during an outage.
 	b := p.Binding
 	b.DesignModel, b.SpeechModel = previous.Binding.DesignModel, previous.Binding.SpeechModel
+	b.ConnectionScope = previous.Binding.ConnectionScope
 	if previous.ID != "" && b == previous.Binding {
 		p.Binding = b
 		// A successful read can explicitly adopt changed capability/rate metadata
@@ -193,6 +197,7 @@ func (s *SpeechService) SaveSpeechProfile(ctx context.Context, p SpeechProfile, 
 			v, vok := speechCandidate(catalog, b.Synthesis, false)
 			if dok && vok && validSpeechCapabilities(b, d, v) {
 				p.Binding.DesignModel, p.Binding.SpeechModel = d, v
+				p.Binding.ConnectionScope = catalog.ConnectionScope
 			}
 		}
 	} else {
@@ -206,6 +211,7 @@ func (s *SpeechService) SaveSpeechProfile(ctx context.Context, p SpeechProfile, 
 			return SpeechProfile{}, ErrSpeechProfileInvalid
 		}
 		p.Binding.DesignModel, p.Binding.SpeechModel = d, v
+		p.Binding.ConnectionScope = catalog.ConnectionScope
 	}
 	// Binding, tariff or grade edits never inherit live evidence automatically.
 	p.Revision = expected + 1

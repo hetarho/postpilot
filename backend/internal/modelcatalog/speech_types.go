@@ -59,13 +59,14 @@ type SpeechPrice struct {
 }
 
 type SpeechBinding struct {
-	Design         llm.ModelRef
-	Synthesis      llm.ModelRef
-	Settings       llm.SpeechSettings
-	OutputFormat   string
-	DescriptionMax int
-	PreviewMax     int
-	SpeechMax      int
+	ConnectionScope string
+	Design          llm.ModelRef
+	Synthesis       llm.ModelRef
+	Settings        llm.SpeechSettings
+	OutputFormat    string
+	DescriptionMax  int
+	PreviewMax      int
+	SpeechMax       int
 	// Source snapshots detect capability and rate-factor drift before admission.
 	DesignModel llm.SpeechModel
 	SpeechModel llm.SpeechModel
