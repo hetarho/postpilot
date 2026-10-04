@@ -35,6 +35,7 @@ import (
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
+	spokenrpc "github.com/postpilot/backend/internal/voice/spoken/rpc"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 	voucherrpc "github.com/postpilot/backend/internal/voucher/rpc"
 )
@@ -51,6 +52,7 @@ func serve(ctx context.Context, c *contexts) error {
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), authrpc.NewSupplierRedaction()},
 		Handlers:     handlers(c),
 		Routes: map[string]http.Handler{
+			spokenrpc.SamplePath: spokenrpc.NewAudioHandler(c.spoken, c.auth),
 			// These plain routes bypass the Connect interceptors, so the throttle the
 			// authenticated public writes get has to be put on this one here. Composition is
 			// also the only place it can go: billing/rpc importing auth is the wrong
@@ -71,6 +73,7 @@ func serve(ctx context.Context, c *contexts) error {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
+	go c.spoken.RunCleanup(ctx, cfg.OrphanSweepInterval, cfg.OrphanMinAge)
 	// A photo prompt's photos, on the post sweep's interval and rules (VOICE-60).
 	go voice.NewPhotoSweeper(voicestore.New(handle.Writer, handle.Reader), voiceObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.Run(ctx)
@@ -170,6 +173,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewSpeechProfileServiceHandler(modelcatalogrpc.NewSpeechHandler(c.platform.speechCatalog), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewSpokenVoiceServiceHandler(spokenrpc.NewHandler(c.spoken), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(c.template), opts...)

@@ -62,6 +62,14 @@ sql:
         omit_unused_structs: true
   - engine: "sqlite"
     schema: "internal/platform/db/migrations"
+    queries: "internal/voice/spoken/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/voice/spoken/store/sqlc"
+        omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
     queries: "internal/experiment/store/queries"
     gen:
       go:

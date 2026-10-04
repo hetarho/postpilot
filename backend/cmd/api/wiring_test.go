@@ -57,7 +57,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 22 {
+	if len(got) != 23 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
@@ -74,6 +74,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus": http.StatusNotFound,
 		"/postpilot.v1.PostService/ListPosts":                        http.StatusUnauthorized,
 		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":      http.StatusUnauthorized,
+		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":          http.StatusUnauthorized,
 	} {
 		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
 		r.Header.Set("X-Media-Worker-ID", "prod-worker")

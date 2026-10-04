@@ -41,6 +41,8 @@ import (
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
+	"github.com/postpilot/backend/internal/voice/spoken"
+	spokenstore "github.com/postpilot/backend/internal/voice/spoken/store"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 	"github.com/postpilot/backend/internal/voucher"
 	voucherstore "github.com/postpilot/backend/internal/voucher/store"
@@ -82,6 +84,7 @@ type contexts struct {
 	memory     *memory.Service
 	provider   *provider.Service
 	voice      *voice.Service
+	spoken     *spoken.Service
 	generation *generation.Service
 
 	experimentStore *experimentstore.Store
@@ -100,6 +103,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		return nil, fmt.Errorf("CLIP_MEDIA_* stage limits: require 0 < lease < wait <= stage <= 6h and 1..5 attempts: %w", err)
 	}
 	c := &contexts{platform: p}
+	c.spoken = spoken.NewService(spokenstore.New(handle.Writer, handle.Reader), spokenProfiles{catalog: p.speechCatalog}, p.bucket)
 
 	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})
 	c.jobs.AllowCancellation(jobCancellation{})

@@ -477,3 +477,15 @@ export type {
   ExperimentCandidate as ProtoExperimentCandidate,
   LeaderboardEntry as ProtoLeaderboardEntry,
 } from './gen/postpilot/v1/model_experiment_pb'
+export {
+  SpokenVoiceService,
+  SpokenDraftSchema,
+  SpokenVoiceSchema,
+  SpokenProfileSnapshotSchema,
+  SpokenSampleAccessResponseSchema,
+} from './gen/postpilot/v1/spoken_voice_pb'
+export type {
+  SpokenDraft as ProtoSpokenDraft,
+  SpokenVoice as ProtoSpokenVoice,
+  SpokenProfileSnapshot as ProtoSpokenProfileSnapshot,
+} from './gen/postpilot/v1/spoken_voice_pb'
